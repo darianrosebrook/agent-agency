@@ -66,5 +66,39 @@
     },
     "previous_hash": "a9e5e386c9826db8896ccb0ac959740f96e6a5190b61220d8e192e5be5935f34",
     "hash": "5a35284869f2a8f909f39b16d0e978b0c149490125330fbc40016650cce1aae4"
+  },
+  {
+    "id": "prov-1759920122792",
+    "timestamp": "2025-10-08T10:42:02.792Z",
+    "commit": {
+      "hash": "d81b8bd25507cc1a578bf89608a9c96ae8862d19",
+      "message": "docs: update memory system documentation and add comprehensive usage example",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0001",
+      "title": "agent-agency",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-08T10:42:02.793Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "5a35284869f2a8f909f39b16d0e978b0c149490125330fbc40016650cce1aae4",
+    "hash": "b000c208dff1c766ba81caaa9036c44b9d5cda1f0a9445d1e16b0789d7ab0d65"
   }
 ]
