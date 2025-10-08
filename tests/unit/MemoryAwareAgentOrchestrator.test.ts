@@ -58,12 +58,13 @@ describe('MemoryAwareAgentOrchestrator', () => {
     it('should submit task with memory routing enabled', async () => {
       const task = {
         agentId: 'agent-1',
-        type: 'data_processing',
+        type: 'process' as const,
         description: 'Process customer data',
         priority: 'normal' as const,
         requirements: ['python', 'pandas'],
         maxRetries: 3,
-        timeout: 60000
+        timeout: 60000,
+        payload: {}
       };
 
       const taskId = await orchestrator.submitTask(task, {
@@ -78,12 +79,13 @@ describe('MemoryAwareAgentOrchestrator', () => {
     it('should submit task with memory routing disabled', async () => {
       const task = {
         agentId: 'agent-1',
-        type: 'data_processing',
+        type: 'process' as const,
         description: 'Process customer data',
         priority: 'normal' as const,
         requirements: ['python', 'pandas'],
         maxRetries: 3,
-        timeout: 60000
+        timeout: 60000,
+        payload: {}
       };
 
       const taskId = await orchestrator.submitTask(task, {
@@ -104,12 +106,13 @@ describe('MemoryAwareAgentOrchestrator', () => {
       // Submit a task
       taskId = await orchestrator.submitTask({
         agentId: 'agent-1',
-        type: 'data_processing',
+        type: 'process' as const,
         description: 'Process customer data',
         priority: 'normal' as const,
         requirements: ['python', 'pandas'],
         maxRetries: 3,
-        timeout: 60000
+        timeout: 60000,
+        payload: {}
       });
     });
 
@@ -164,10 +167,10 @@ describe('MemoryAwareAgentOrchestrator', () => {
     it('should register an agent successfully', async () => {
       const agentId = await orchestrator.registerAgent({
         name: 'Test Agent',
-        type: 'data_processor',
+        type: 'worker' as const,
         capabilities: ['python', 'pandas', 'machine_learning'],
         status: 'active',
-        config: {}
+        metadata: {}
       });
 
       expect(typeof agentId).toBe('string');
@@ -183,12 +186,13 @@ describe('MemoryAwareAgentOrchestrator', () => {
 
       taskId = await orchestrator.submitTask({
         agentId: 'agent-1',
-        type: 'data_processing',
+        type: 'process' as const,
         description: 'Process customer data',
         priority: 'normal' as const,
         requirements: ['python', 'pandas'],
         maxRetries: 3,
-        timeout: 60000
+        timeout: 60000,
+        payload: {}
       });
     });
 
@@ -214,10 +218,10 @@ describe('MemoryAwareAgentOrchestrator', () => {
 
       agentId = await orchestrator.registerAgent({
         name: 'Test Agent',
-        type: 'data_processor',
+        type: 'worker' as const,
         capabilities: ['python', 'pandas'],
         status: 'active',
-        config: {}
+        metadata: {}
       });
     });
 

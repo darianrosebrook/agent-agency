@@ -183,6 +183,8 @@ export class TaskManagementTools {
       const taskId = await this.context.orchestrator.submitTask({
         agentId: args.agentId,
         type: args.type,
+        description: args.description || `Task of type ${args.type}`,
+        priority: (args.priority || 'normal') as 'low' | 'normal' | 'high',
         payload: taskPayload,
       });
 
@@ -337,6 +339,8 @@ export class TaskManagementTools {
       const newTaskId = await this.context.orchestrator.submitTask({
         agentId: originalTask.agentId,
         type: originalTask.type,
+        description: `Retry of task ${args.taskId}: ${originalTask.description}`,
+        priority: (args.priority || originalTask.priority) as 'low' | 'normal' | 'high',
         payload: retryPayload,
       });
 

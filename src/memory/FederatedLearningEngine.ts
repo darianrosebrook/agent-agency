@@ -608,9 +608,9 @@ export class FederatedLearningEngine {
     const groups = this.groupSimilarInsights(weighted);
 
     return groups.map((group) => {
-      const totalWeight = group.reduce((sum, i) => sum + i.weight, 0);
+      const totalWeight = group.reduce((sum, i) => sum + (i.weight ?? 1.0), 0);
       const avgRelevance =
-        group.reduce((sum, i) => sum + i.relevanceScore * i.weight, 0) /
+        group.reduce((sum, i) => sum + i.relevanceScore * (i.weight ?? 1.0), 0) /
         totalWeight;
 
       return {

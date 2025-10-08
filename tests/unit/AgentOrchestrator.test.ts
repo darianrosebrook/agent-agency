@@ -84,6 +84,8 @@ describe("AgentOrchestrator", () => {
       const taskData = {
         agentId,
         type: "process" as const,
+        description: "Test task",
+        priority: "normal" as const,
         payload: { data: "test" },
       };
 
@@ -104,8 +106,8 @@ describe("AgentOrchestrator", () => {
       await orchestrator.initialize();
     });
 
-    it("should return system metrics", () => {
-      const metrics = orchestrator.getSystemMetrics();
+    it("should return system metrics", async () => {
+      const metrics = await orchestrator.getSystemMetrics();
 
       expect(metrics).toBeDefined();
       expect(metrics.totalAgents).toBe(0);
@@ -125,7 +127,7 @@ describe("AgentOrchestrator", () => {
         metadata: {},
       });
 
-      const metrics = orchestrator.getSystemMetrics();
+      const metrics = await orchestrator.getSystemMetrics();
       expect(metrics.totalAgents).toBe(1);
       expect(metrics.activeAgents).toBe(1);
     });

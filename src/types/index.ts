@@ -25,6 +25,12 @@ export interface Task {
   agentId: string;
   type: TaskType;
   status: TaskStatus;
+  description: string;
+  priority: 'low' | 'normal' | 'high';
+  requirements?: string[];
+  maxRetries?: number;
+  timeout?: number;
+  metadata?: Record<string, unknown>;
   payload: Record<string, unknown>;
   result?: Record<string, unknown>;
   error?: string;
@@ -169,6 +175,7 @@ export interface ContextualMemory {
   reasoningPath?: ReasoningPath;
   temporalRelevance?: TemporalRelevance;
   content: any;
+  weight?: number; // For federated learning aggregation
 }
 
 export interface ContextMatch {
@@ -262,12 +269,7 @@ export interface MultiTenantMemoryConfig {
     relevanceThreshold: number;
     embeddingDimensions: number;
   };
-  federatedLearning: {
-    enabled: boolean;
-    privacyLevel: "basic" | "differential" | "secure";
-    aggregationFrequency: number;
-    minParticipants: number;
-  };
+  federatedLearning: FederatedLearningConfig;
   performance: {
     cacheEnabled: boolean;
     cacheSize: number;

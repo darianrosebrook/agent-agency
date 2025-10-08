@@ -34,17 +34,14 @@ describe("FederatedLearningEngine", () => {
     } as any;
 
     mockTenantIsolator = {
-      validateTenantAccess: jest.fn(),
+      validateTenantAccess: jest.fn().mockResolvedValue({
+        allowed: true,
+        data: true,
+      }),
       listTenants: jest
         .fn()
         .mockReturnValue(["tenant-a", "tenant-b", "tenant-c"]),
     } as any;
-
-    // Mock the validateTenantAccess method
-    mockTenantIsolator.validateTenantAccess.mockResolvedValue({
-      allowed: true,
-      data: true,
-    });
 
     engine = new FederatedLearningEngine(
       testConfig,
@@ -70,11 +67,6 @@ describe("FederatedLearningEngine", () => {
         encryptionEnabled: false,
         auditLogging: true,
       };
-
-      mockTenantIsolator.validateTenantAccess.mockResolvedValue({
-        allowed: true,
-        data: true,
-      });
 
       const result = await engine.registerParticipant(
         "federated-tenant",
@@ -127,11 +119,6 @@ describe("FederatedLearningEngine", () => {
         encryptionEnabled: false,
         auditLogging: true,
       };
-
-      mockTenantIsolator.validateTenantAccess.mockResolvedValue({
-        allowed: true,
-        data: true,
-      });
 
       await engine.registerParticipant("participant-tenant", tenantConfig);
     });

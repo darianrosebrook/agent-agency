@@ -7,8 +7,8 @@
  * @description Command-line interface for running the Agent Agency MCP server
  */
 
-import { AgentOrchestrator } from "../src/services/AgentOrchestrator.js";
-import { AgentAgencyMCPServer } from "../src/mcp/server.js";
+import { AgentOrchestrator } from "../dist/src/services/AgentOrchestrator.js";
+import { AgentAgencyMCPServer } from "../dist/src/mcp/server.js";
 
 // Parse command line arguments
 const args = process.argv.slice(2);
