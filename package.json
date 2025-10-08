@@ -18,6 +18,9 @@
     "dev": "tsx watch src/index.ts",
     "mcp:start": "node bin/mcp-server.js start",
     "validate": "caws validate --suggestions",
+    "db:migrate": "node scripts/migrate-db.js up",
+    "db:migrate:status": "node scripts/migrate-db.js status",
+    "db:rollback": "node scripts/migrate-db.js down",
     "perf:budgets": "echo 'Performance budgets not configured yet'",
     "dep:policy": "npm audit --audit-level moderate"
   },
