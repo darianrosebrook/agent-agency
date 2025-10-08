@@ -8,6 +8,15 @@
 import { AgentOrchestrator } from "./services/AgentOrchestrator";
 import { Logger } from "./utils/Logger";
 
+// Multi-Tenant Memory System Exports
+export { TenantIsolator } from "./memory/TenantIsolator";
+export { ContextOffloader } from "./memory/ContextOffloader";
+export { MultiTenantMemoryManager } from "./memory/MultiTenantMemoryManager";
+export { FederatedLearningEngine } from "./memory/FederatedLearningEngine";
+
+// Type exports
+export type * from "./types/index";
+
 const logger = new Logger("main");
 
 /**
