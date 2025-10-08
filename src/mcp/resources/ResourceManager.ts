@@ -399,7 +399,7 @@ export class MCPResourceManager {
 
   private async getTaskQueue(): Promise<ResourceReadResult> {
     // Simplified implementation - get pending tasks
-    const metrics = this.orchestrator.getSystemMetrics();
+    const metrics = await this.orchestrator.getSystemMetrics();
 
     const queueData = {
       pendingTasks:
@@ -460,7 +460,7 @@ export class MCPResourceManager {
   }
 
   private async getTaskMetrics(): Promise<ResourceReadResult> {
-    const metrics = this.orchestrator.getSystemMetrics();
+    const metrics = await this.orchestrator.getSystemMetrics();
 
     const taskMetrics = {
       totalTasks: metrics.totalTasks,
@@ -486,7 +486,7 @@ export class MCPResourceManager {
   }
 
   private async getSystemMetrics(): Promise<ResourceReadResult> {
-    const metrics = this.orchestrator.getSystemMetrics();
+    const metrics = await this.orchestrator.getSystemMetrics();
 
     return {
       contents: [
@@ -521,7 +521,7 @@ export class MCPResourceManager {
   }
 
   private async getSystemHealth(): Promise<ResourceReadResult> {
-    const metrics = this.orchestrator.getSystemMetrics();
+    const metrics = await this.orchestrator.getSystemMetrics();
 
     const health = {
       status: "healthy",

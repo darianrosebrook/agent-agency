@@ -9,6 +9,7 @@ The MCP integration for Agent Agency is built on a modular, protocol-compliant a
 ### 1. MCP Server Layer
 
 #### AgentAgencyMCPServer
+
 ```typescript
 /**
  * Main MCP server implementation for Agent Agency
@@ -23,17 +24,23 @@ export class AgentAgencyMCPServer {
   private readonly orchestrator: AgentOrchestrator;
 
   constructor(config: MCPServerConfig) {
-    this.server = new Server({
-      name: 'agent-agency-mcp',
-      version: '1.0.0',
-    }, {
-      capabilities: {
-        resources: {},
-        tools: {},
+    this.server = new Server(
+      {
+        name: "agent-agency-mcp",
+        version: "1.0.0",
       },
-    });
+      {
+        capabilities: {
+          resources: {},
+          tools: {},
+        },
+      }
+    );
 
-    this.resourceManager = new MCPResourceManager(this.orchestrator, this.logger);
+    this.resourceManager = new MCPResourceManager(
+      this.orchestrator,
+      this.logger
+    );
     this.toolManager = new MCPToolManager(this.orchestrator, this.logger);
     this.evaluationOrchestrator = new EvaluationOrchestrator(
       config.evaluationConfig ?? this.getDefaultEvaluationConfig(),
@@ -49,9 +56,12 @@ export class AgentAgencyMCPServer {
       return this.resourceManager.listResources();
     });
 
-    this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-      return this.resourceManager.readResource(request.params.uri);
-    });
+    this.server.setRequestHandler(
+      ReadResourceRequestSchema,
+      async (request) => {
+        return this.resourceManager.readResource(request.params.uri);
+      }
+    );
 
     // Tool handlers
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -59,19 +69,23 @@ export class AgentAgencyMCPServer {
     });
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      return this.toolManager.executeTool(request.params.name, request.params.arguments);
+      return this.toolManager.executeTool(
+        request.params.name,
+        request.params.arguments
+      );
     });
   }
 
   async start(): Promise<void> {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    this.logger.info('MCP Server started successfully');
+    this.logger.info("MCP Server started successfully");
   }
 }
 ```
 
 #### MCPResourceManager
+
 ```typescript
 /**
  * Manages MCP resource access and retrieval
@@ -99,16 +113,16 @@ export class MCPResourceManager {
   }
 
   async readResource(uri: string): Promise<ReadResourceResult> {
-    const [scheme, type, ...pathParts] = uri.split('/');
+    const [scheme, type, ...pathParts] = uri.split("/");
 
     switch (scheme) {
-      case 'agent:':
+      case "agent:":
         return this.handleAgentResource(type, pathParts);
-      case 'task:':
+      case "task:":
         return this.handleTaskResource(type, pathParts);
-      case 'system:':
+      case "system:":
         return this.handleSystemResource(type, pathParts);
-      case 'memory:':
+      case "memory:":
         return this.handleMemoryResource(type, pathParts);
       default:
         throw new Error(`Unknown resource scheme: ${scheme}`);
@@ -118,6 +132,7 @@ export class MCPResourceManager {
 ```
 
 #### MCPToolManager
+
 ```typescript
 /**
  * Manages MCP tool registration and execution
@@ -133,47 +148,53 @@ export class MCPToolManager {
     const tools: Tool[] = [
       // Agent management tools
       {
-        name: 'register_agent',
-        description: 'Register a new agent with the orchestrator',
+        name: "register_agent",
+        description: "Register a new agent with the orchestrator",
         inputSchema: {
-          type: 'object',
+          type: "object",
           properties: {
-            name: { type: 'string' },
-            type: { type: 'string', enum: ['orchestrator', 'worker', 'monitor', 'coordinator'] },
-            capabilities: { type: 'array', items: { type: 'string' } },
-            metadata: { type: 'object' }
+            name: { type: "string" },
+            type: {
+              type: "string",
+              enum: ["orchestrator", "worker", "monitor", "coordinator"],
+            },
+            capabilities: { type: "array", items: { type: "string" } },
+            metadata: { type: "object" },
           },
-          required: ['name', 'type', 'capabilities']
-        }
+          required: ["name", "type", "capabilities"],
+        },
       },
       // Task management tools
       {
-        name: 'submit_task',
-        description: 'Submit a new task for execution',
+        name: "submit_task",
+        description: "Submit a new task for execution",
         inputSchema: {
-          type: 'object',
+          type: "object",
           properties: {
-            agentId: { type: 'string' },
-            type: { type: 'string', enum: ['process', 'analyze', 'coordinate', 'monitor'] },
-            payload: { type: 'object' }
+            agentId: { type: "string" },
+            type: {
+              type: "string",
+              enum: ["process", "analyze", "coordinate", "monitor"],
+            },
+            payload: { type: "object" },
           },
-          required: ['agentId', 'type', 'payload']
-        }
+          required: ["agentId", "type", "payload"],
+        },
       },
       // Evaluation tools
       {
-        name: 'evaluate_code',
-        description: 'Evaluate code quality and run tests',
+        name: "evaluate_code",
+        description: "Evaluate code quality and run tests",
         inputSchema: {
-          type: 'object',
+          type: "object",
           properties: {
-            taskId: { type: 'string' },
-            projectDir: { type: 'string' },
-            scripts: { type: 'object' }
+            taskId: { type: "string" },
+            projectDir: { type: "string" },
+            scripts: { type: "object" },
           },
-          required: ['taskId']
-        }
-      }
+          required: ["taskId"],
+        },
+      },
     ];
 
     return { tools };
@@ -183,13 +204,13 @@ export class MCPToolManager {
     try {
       const result = await this.executeToolInternal(name, args);
       return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }]
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
     } catch (error) {
       this.logger.error(`Tool execution failed: ${name}`, error);
       return {
-        content: [{ type: 'text', text: `Error: ${error.message}` }],
-        isError: true
+        content: [{ type: "text", text: `Error: ${error.message}` }],
+        isError: true,
       };
     }
   }
@@ -199,16 +220,14 @@ export class MCPToolManager {
 ### 2. Evaluation Orchestrator
 
 #### EvaluationOrchestrator
+
 ```typescript
 /**
  * Orchestrates autonomous evaluation loops with satisficing logic
  * @author @darianrosebrook
  */
 export class EvaluationOrchestrator {
-  constructor(
-    private config: EvaluationConfig,
-    private logger: Logger
-  ) {}
+  constructor(private config: EvaluationConfig, private logger: Logger) {}
 
   async evaluateTask(
     taskId: string,
@@ -223,8 +242,8 @@ export class EvaluationOrchestrator {
       iterations: iteration,
       acceptance: {
         minScore: this.config.minScore,
-        mandatoryGates: this.config.mandatoryGates
-      }
+        mandatoryGates: this.config.mandatoryGates,
+      },
     });
 
     return this.enhanceReportWithSatisficing(report, iteration);
@@ -234,19 +253,22 @@ export class EvaluationOrchestrator {
     report: EvaluationReport,
     iteration: number
   ): EvaluationReport {
-    const { maxIterations, minDeltaToContinue, noChangeBudget } = this.config.iterationPolicy;
+    const { maxIterations, minDeltaToContinue, noChangeBudget } =
+      this.config.iterationPolicy;
 
     // Check iteration limits
     if (iteration >= maxIterations) {
-      report.stopReason = 'max-iterations';
-      report.status = 'fail';
+      report.stopReason = "max-iterations";
+      report.status = "fail";
     }
 
     // Check satisficing conditions
-    if (report.score >= this.config.minScore &&
-        report.thresholdsMissed.length === 0) {
-      report.stopReason = 'satisficed';
-      report.status = 'pass';
+    if (
+      report.score >= this.config.minScore &&
+      report.thresholdsMissed.length === 0
+    ) {
+      report.stopReason = "satisficed";
+      report.status = "pass";
     }
 
     return report;
@@ -254,11 +276,11 @@ export class EvaluationOrchestrator {
 
   private getEvaluatorForTask(taskType: TaskType): Evaluator {
     switch (taskType) {
-      case 'code':
+      case "code":
         return new CodeEvaluator();
-      case 'text':
+      case "text":
         return new TextEvaluator();
-      case 'design':
+      case "design":
         return new DesignEvaluator();
       default:
         throw new Error(`No evaluator for task type: ${taskType}`);
@@ -268,6 +290,7 @@ export class EvaluationOrchestrator {
 ```
 
 #### CodeEvaluator Implementation
+
 ```typescript
 /**
  * Evaluates code quality with tests and linting
@@ -281,18 +304,39 @@ export class CodeEvaluator implements Evaluator {
     const criteria: EvalCriterion[] = [];
 
     // Run tests
-    results.tests = await this.runScript('npm run test --silent');
+    results.tests = await this.runScript("npm run test --silent");
 
     // Run linting
-    results.lint = await this.runScript('npm run lint --silent');
+    results.lint = await this.runScript("npm run lint --silent");
 
     // Run type checking
-    results.typecheck = await this.runScript('npm run typecheck --silent');
+    results.typecheck = await this.runScript("npm run typecheck --silent");
 
     // Create evaluation criteria
-    criteria.push(this.createGateCriterion('tests-pass', 'Unit tests pass', 0.4, results.tests));
-    criteria.push(this.createGateCriterion('lint-clean', 'Linting passes', 0.25, results.lint));
-    criteria.push(this.createGateCriterion('types-ok', 'Type checking passes', 0.25, results.typecheck));
+    criteria.push(
+      this.createGateCriterion(
+        "tests-pass",
+        "Unit tests pass",
+        0.4,
+        results.tests
+      )
+    );
+    criteria.push(
+      this.createGateCriterion(
+        "lint-clean",
+        "Linting passes",
+        0.25,
+        results.lint
+      )
+    );
+    criteria.push(
+      this.createGateCriterion(
+        "types-ok",
+        "Type checking passes",
+        0.25,
+        results.typecheck
+      )
+    );
 
     const score = criteria.reduce((s, c) => s + c.score * c.weight, 0);
 
@@ -301,45 +345,52 @@ export class CodeEvaluator implements Evaluator {
     const thresholdsMet: string[] = [];
 
     for (const gate of acceptance.mandatoryGates) {
-      const crit = criteria.find(c => c.id === gate);
+      const crit = criteria.find((c) => c.id === gate);
       if (crit) {
         (crit.passed ? thresholdsMet : thresholdsMissed).push(gate);
       }
     }
 
-    const passCore = score >= acceptance.minScore && thresholdsMissed.length === 0;
+    const passCore =
+      score >= acceptance.minScore && thresholdsMissed.length === 0;
 
     return {
       taskId,
       artifactPaths: [artifactPath],
-      status: passCore ? 'pass' : 'iterate',
+      status: passCore ? "pass" : "iterate",
       score: Number(score.toFixed(3)),
       thresholdsMet,
       thresholdsMissed,
       criteria,
       iterations,
-      stopReason: passCore ? 'satisficed' : undefined,
-      nextActions: passCore ? [] : ['Fix failing gates and re-run evaluation'],
+      stopReason: passCore ? "satisficed" : undefined,
+      nextActions: passCore ? [] : ["Fix failing gates and re-run evaluation"],
       timestamp: new Date().toISOString(),
-      logs: Object.values(results).map(r => r.out)
+      logs: Object.values(results).map((r) => r.out),
     };
   }
 
-  private async runScript(command: string): Promise<{ code: number; out: string }> {
+  private async runScript(
+    command: string
+  ): Promise<{ code: number; out: string }> {
     return new Promise((resolve) => {
-      const [cmd, ...args] = command.split(' ');
+      const [cmd, ...args] = command.split(" ");
       const child = spawn(cmd, args, { cwd: process.cwd() });
 
-      let stdout = '';
-      let stderr = '';
+      let stdout = "";
+      let stderr = "";
 
-      child.stdout?.on('data', (data) => { stdout += data.toString(); });
-      child.stderr?.on('data', (data) => { stderr += data.toString(); });
+      child.stdout?.on("data", (data) => {
+        stdout += data.toString();
+      });
+      child.stderr?.on("data", (data) => {
+        stderr += data.toString();
+      });
 
-      child.on('close', (code) => {
+      child.on("close", (code) => {
         resolve({
           code: code ?? 1,
-          out: stdout + stderr
+          out: stdout + stderr,
         });
       });
     });
@@ -357,7 +408,7 @@ export class CodeEvaluator implements Evaluator {
         description: `${description} (skipped)`,
         weight,
         passed: true,
-        score: 1
+        score: 1,
       };
     }
 
@@ -368,19 +419,20 @@ export class CodeEvaluator implements Evaluator {
       weight,
       passed,
       score: passed ? 1 : 0,
-      notes: passed ? undefined : this.truncateOutput(result.out)
+      notes: passed ? undefined : this.truncateOutput(result.out),
     };
   }
 
   private truncateOutput(output: string, maxLength: number = 1200): string {
     return output.length > maxLength
-      ? output.slice(0, maxLength) + ' …[truncated]'
+      ? output.slice(0, maxLength) + " …[truncated]"
       : output;
   }
 }
 ```
 
 #### TextEvaluator Implementation
+
 ```typescript
 /**
  * Evaluates text transformation quality
@@ -389,7 +441,7 @@ export class CodeEvaluator implements Evaluator {
 export class TextEvaluator implements Evaluator {
   async evaluate(params: EvaluationParams): Promise<EvaluationReport> {
     const { taskId, artifactPath, iterations, acceptance, config } = params;
-    const text = fs.readFileSync(artifactPath, 'utf8').trim();
+    const text = fs.readFileSync(artifactPath, "utf8").trim();
 
     const criteria: EvalCriterion[] = [];
 
@@ -397,38 +449,40 @@ export class TextEvaluator implements Evaluator {
     const withinMax = config?.maxChars ? text.length <= config.maxChars : true;
     const withinMin = config?.minChars ? text.length >= config.minChars : true;
     criteria.push({
-      id: 'length-band',
-      description: 'Text length within target bounds',
+      id: "length-band",
+      description: "Text length within target bounds",
       weight: 0.15,
       passed: withinMax && withinMin,
-      score: (withinMax && withinMin) ? 1 : 0,
-      notes: `len=${text.length}`
+      score: withinMax && withinMin ? 1 : 0,
+      notes: `len=${text.length}`,
     });
 
     // Banned phrases
-    const bannedHits = config?.bannedPhrases?.filter(p =>
-      text.toLowerCase().includes(p.toLowerCase())
-    ) ?? [];
+    const bannedHits =
+      config?.bannedPhrases?.filter((p) =>
+        text.toLowerCase().includes(p.toLowerCase())
+      ) ?? [];
     criteria.push({
-      id: 'no-banned-phrases',
-      description: 'Avoid banned phrases',
+      id: "no-banned-phrases",
+      description: "Avoid banned phrases",
       weight: 0.15,
       passed: bannedHits.length === 0,
       score: bannedHits.length === 0 ? 1 : 0,
-      notes: bannedHits.length ? `hits=${bannedHits.join(', ')}` : undefined
+      notes: bannedHits.length ? `hits=${bannedHits.join(", ")}` : undefined,
     });
 
     // Required phrases
-    const missingReq = config?.requiredPhrases?.filter(p =>
-      !text.toLowerCase().includes(p.toLowerCase())
-    ) ?? [];
+    const missingReq =
+      config?.requiredPhrases?.filter(
+        (p) => !text.toLowerCase().includes(p.toLowerCase())
+      ) ?? [];
     criteria.push({
-      id: 'required-phrases',
-      description: 'Include required phrases',
+      id: "required-phrases",
+      description: "Include required phrases",
       weight: 0.15,
       passed: missingReq.length === 0,
       score: missingReq.length === 0 ? 1 : 0,
-      notes: missingReq.length ? `missing=${missingReq.join(', ')}` : undefined
+      notes: missingReq.length ? `missing=${missingReq.join(", ")}` : undefined,
     });
 
     // Readability (optional)
@@ -439,36 +493,36 @@ export class TextEvaluator implements Evaluator {
       readabilityPass = grade <= config.readingGradeMax;
     }
     criteria.push({
-      id: 'readability',
-      description: 'Reading grade at or below max',
+      id: "readability",
+      description: "Reading grade at or below max",
       weight: 0.1,
       passed: readabilityPass,
       score: readabilityPass ? 1 : 0,
-      notes: `grade≈${grade.toFixed(1)}`
+      notes: `grade≈${grade.toFixed(1)}`,
     });
 
     // Style heuristics
     const hasContractions = /n't|'re|'s|'d|'ll|'ve|'m\b/.test(text);
-    const stylePass = config?.style === 'formal' ? !hasContractions : true;
+    const stylePass = config?.style === "formal" ? !hasContractions : true;
     criteria.push({
-      id: 'style-heuristic',
-      description: `Style conforms (${config?.style || 'neutral'})`,
+      id: "style-heuristic",
+      description: `Style conforms (${config?.style || "neutral"})`,
       weight: 0.1,
       passed: stylePass,
       score: stylePass ? 1 : 0,
-      notes: `contractions=${hasContractions}`
+      notes: `contractions=${hasContractions}`,
     });
 
     // Structure
     const paras = text.split(/\n{2,}/g).length;
     const structurePass = paras >= 1;
     criteria.push({
-      id: 'structure',
-      description: 'Basic structure present (≥1 paragraph)',
+      id: "structure",
+      description: "Basic structure present (≥1 paragraph)",
       weight: 0.1,
       passed: structurePass,
       score: structurePass ? 1 : 0,
-      notes: `paragraphs=${paras}`
+      notes: `paragraphs=${paras}`,
     });
 
     const score = criteria.reduce((s, c) => s + c.score * c.weight, 0);
@@ -477,34 +531,38 @@ export class TextEvaluator implements Evaluator {
     const thresholdsMet: string[] = [];
 
     for (const gate of acceptance.mandatoryGates) {
-      const crit = criteria.find(c => c.id === gate);
+      const crit = criteria.find((c) => c.id === gate);
       if (crit) {
         (crit.passed ? thresholdsMet : thresholdsMissed).push(gate);
       }
     }
 
-    const passCore = score >= acceptance.minScore && thresholdsMissed.length === 0;
+    const passCore =
+      score >= acceptance.minScore && thresholdsMissed.length === 0;
 
     return {
       taskId,
       artifactPaths: [artifactPath],
-      status: passCore ? 'pass' : 'iterate',
+      status: passCore ? "pass" : "iterate",
       score: Number(score.toFixed(3)),
       thresholdsMet,
       thresholdsMissed,
       criteria,
       iterations,
-      stopReason: passCore ? 'satisficed' : undefined,
-      nextActions: passCore ? [] : ['Tighten style or fix gates, then re-run'],
+      stopReason: passCore ? "satisficed" : undefined,
+      nextActions: passCore ? [] : ["Tighten style or fix gates, then re-run"],
       timestamp: new Date().toISOString(),
-      logs: []
+      logs: [],
     };
   }
 
   private calculateFleschKincaid(text: string): number {
-    const sentences = Math.max(1, (text.match(/[.!?]+/g)?.length ?? 1));
+    const sentences = Math.max(1, text.match(/[.!?]+/g)?.length ?? 1);
     const words = Math.max(1, text.trim().split(/\s+/g).length);
-    const syllables = Math.max(1, (text.match(/[aeiouy]+/gi)?.length ?? Math.ceil(words * 1.3)));
+    const syllables = Math.max(
+      1,
+      text.match(/[aeiouy]+/gi)?.length ?? Math.ceil(words * 1.3)
+    );
 
     // Flesch-Kincaid Grade Level
     return 0.39 * (words / sentences) + 11.8 * (syllables / words) - 15.59;
@@ -515,15 +573,19 @@ export class TextEvaluator implements Evaluator {
 ### 3. Resource Implementations
 
 #### Agent Resources
+
 ```typescript
 export class AgentResourceHandler {
-  async handleResource(type: string, pathParts: string[]): Promise<ReadResourceResult> {
+  async handleResource(
+    type: string,
+    pathParts: string[]
+  ): Promise<ReadResourceResult> {
     switch (type) {
-      case 'list':
+      case "list":
         return this.listAgents();
-      case 'capabilities':
+      case "capabilities":
         return this.getAgentCapabilities(pathParts[0]);
-      case 'relationships':
+      case "relationships":
         return this.getAgentRelationships(pathParts[0]);
       default:
         // Individual agent
@@ -535,11 +597,13 @@ export class AgentResourceHandler {
     // Implementation for listing all agents
     const agents = await this.orchestrator.getAllAgents();
     return {
-      contents: [{
-        uri: 'agents://list',
-        mimeType: 'application/json',
-        text: JSON.stringify(agents, null, 2)
-      }]
+      contents: [
+        {
+          uri: "agents://list",
+          mimeType: "application/json",
+          text: JSON.stringify(agents, null, 2),
+        },
+      ],
     };
   }
 
@@ -550,24 +614,30 @@ export class AgentResourceHandler {
     }
 
     return {
-      contents: [{
-        uri: `agent://${agentId}`,
-        mimeType: 'application/json',
-        text: JSON.stringify(agent, null, 2)
-      }]
+      contents: [
+        {
+          uri: `agent://${agentId}`,
+          mimeType: "application/json",
+          text: JSON.stringify(agent, null, 2),
+        },
+      ],
     };
   }
 }
 ```
 
 #### Task Resources
+
 ```typescript
 export class TaskResourceHandler {
-  async handleResource(type: string, pathParts: string[]): Promise<ReadResourceResult> {
+  async handleResource(
+    type: string,
+    pathParts: string[]
+  ): Promise<ReadResourceResult> {
     switch (type) {
-      case 'queue':
+      case "queue":
         return this.getTaskQueue();
-      case 'history':
+      case "history":
         return this.getTaskHistory(pathParts[0]);
       default:
         // Individual task
@@ -578,39 +648,47 @@ export class TaskResourceHandler {
   private async getTaskQueue(): Promise<ReadResourceResult> {
     const tasks = await this.orchestrator.getPendingTasks();
     return {
-      contents: [{
-        uri: 'tasks://queue',
-        mimeType: 'application/json',
-        text: JSON.stringify(tasks, null, 2)
-      }]
+      contents: [
+        {
+          uri: "tasks://queue",
+          mimeType: "application/json",
+          text: JSON.stringify(tasks, null, 2),
+        },
+      ],
     };
   }
 
   private async getTaskHistory(agentId: string): Promise<ReadResourceResult> {
     const history = await this.orchestrator.getAgentTaskHistory(agentId);
     return {
-      contents: [{
-        uri: `tasks://history/${agentId}`,
-        mimeType: 'application/json',
-        text: JSON.stringify(history, null, 2)
-      }]
+      contents: [
+        {
+          uri: `tasks://history/${agentId}`,
+          mimeType: "application/json",
+          text: JSON.stringify(history, null, 2),
+        },
+      ],
     };
   }
 }
 ```
 
 #### System Resources
+
 ```typescript
 export class SystemResourceHandler {
-  async handleResource(type: string, pathParts: string[]): Promise<ReadResourceResult> {
+  async handleResource(
+    type: string,
+    pathParts: string[]
+  ): Promise<ReadResourceResult> {
     switch (type) {
-      case 'metrics':
+      case "metrics":
         return this.getSystemMetrics();
-      case 'config':
+      case "config":
         return this.getSystemConfig();
-      case 'health':
+      case "health":
         return this.getSystemHealth();
-      case 'logs':
+      case "logs":
         return this.getRecentLogs();
       default:
         throw new Error(`Unknown system resource: ${type}`);
@@ -620,22 +698,26 @@ export class SystemResourceHandler {
   private async getSystemMetrics(): Promise<ReadResourceResult> {
     const metrics = this.orchestrator.getSystemMetrics();
     return {
-      contents: [{
-        uri: 'system://metrics',
-        mimeType: 'application/json',
-        text: JSON.stringify(metrics, null, 2)
-      }]
+      contents: [
+        {
+          uri: "system://metrics",
+          mimeType: "application/json",
+          text: JSON.stringify(metrics, null, 2),
+        },
+      ],
     };
   }
 
   private async getSystemHealth(): Promise<ReadResourceResult> {
     const health = await this.orchestrator.performHealthCheck();
     return {
-      contents: [{
-        uri: 'system://health',
-        mimeType: 'application/json',
-        text: JSON.stringify(health, null, 2)
-      }]
+      contents: [
+        {
+          uri: "system://health",
+          mimeType: "application/json",
+          text: JSON.stringify(health, null, 2),
+        },
+      ],
     };
   }
 }
@@ -644,6 +726,7 @@ export class SystemResourceHandler {
 ### 4. Tool Implementations
 
 #### Agent Management Tools
+
 ```typescript
 export class AgentManagementTools {
   async registerAgent(args: {
@@ -655,7 +738,7 @@ export class AgentManagementTools {
     const agentId = await this.orchestrator.registerAgent({
       name: args.name,
       type: args.type,
-      status: 'idle',
+      status: "idle",
       capabilities: args.capabilities,
       metadata: args.metadata || {},
     });
@@ -690,6 +773,7 @@ export class AgentManagementTools {
 ```
 
 #### Task Management Tools
+
 ```typescript
 export class TaskManagementTools {
   async submitTask(args: {
@@ -705,7 +789,9 @@ export class TaskManagementTools {
 
     // Validate agent capabilities
     if (!agent.capabilities.includes(args.type)) {
-      throw new Error(`Agent ${args.agentId} does not have capability: ${args.type}`);
+      throw new Error(
+        `Agent ${args.agentId} does not have capability: ${args.type}`
+      );
     }
 
     const taskId = await this.orchestrator.submitTask({
@@ -732,7 +818,7 @@ export class TaskManagementTools {
       throw new Error(`Task not found: ${args.taskId}`);
     }
 
-    if (task.status === 'completed' || task.status === 'failed') {
+    if (task.status === "completed" || task.status === "failed") {
       throw new Error(`Cannot cancel task in status: ${task.status}`);
     }
 
@@ -745,6 +831,7 @@ export class TaskManagementTools {
 ```
 
 #### Evaluation Tools
+
 ```typescript
 export class EvaluationTools {
   constructor(
@@ -768,7 +855,7 @@ export class EvaluationTools {
 
     return this.evaluationOrchestrator.evaluateTask(
       args.taskId,
-      'code',
+      "code",
       projectDir,
       iteration
     );
@@ -784,7 +871,7 @@ export class EvaluationTools {
 
     return this.evaluationOrchestrator.evaluateTask(
       args.taskId,
-      'text',
+      "text",
       args.artifactPath,
       iteration
     );
@@ -811,20 +898,20 @@ export class EvaluationTools {
       reports.push(report);
 
       // Check if we should stop
-      if (report.status === 'pass' || report.stopReason) {
+      if (report.status === "pass" || report.stopReason) {
         break;
       }
     }
 
     const finalReport = reports[reports.length - 1];
-    const successful = finalReport.status === 'pass';
+    const successful = finalReport.status === "pass";
 
     return {
       taskId: args.taskId,
       reports,
       finalReport,
       successful,
-      iterationsCompleted: reports.length
+      iterationsCompleted: reports.length,
     };
   }
 }
@@ -833,6 +920,7 @@ export class EvaluationTools {
 ### 5. Configuration and Types
 
 #### MCP Configuration
+
 ```typescript
 export interface MCPServerConfig {
   orchestrator: AgentOrchestrator;
@@ -851,8 +939,8 @@ export interface MCPServerConfig {
     maxSize: number;
   };
   logging?: {
-    level: 'debug' | 'info' | 'warn' | 'error';
-    format: 'json' | 'text';
+    level: "debug" | "info" | "warn" | "error";
+    format: "json" | "text";
     enableRequestLogging: boolean;
   };
   security?: {
@@ -865,6 +953,7 @@ export interface MCPServerConfig {
 ```
 
 #### Evaluation Types
+
 ```typescript
 export interface EvaluationConfig {
   minScore: number;
@@ -879,13 +968,17 @@ export interface EvaluationConfig {
 export interface EvaluationReport {
   taskId: string;
   artifactPaths: string[];
-  status: 'pass' | 'iterate' | 'fail';
+  status: "pass" | "iterate" | "fail";
   score: number;
   thresholdsMet: string[];
   thresholdsMissed: string[];
   criteria: EvalCriterion[];
   iterations: number;
-  stopReason?: 'satisficed' | 'max-iterations' | 'quality-ceiling' | 'failed-gates';
+  stopReason?:
+    | "satisficed"
+    | "max-iterations"
+    | "quality-ceiling"
+    | "failed-gates";
   nextActions?: string[];
   logs?: string[];
   timestamp: string;
@@ -907,7 +1000,7 @@ export interface TaskEvaluationConfig {
 }
 
 export interface TextEvaluationConfig {
-  style?: 'concise' | 'formal' | 'neutral';
+  style?: "concise" | "formal" | "neutral";
   maxChars?: number;
   minChars?: number;
   bannedPhrases?: string[];
@@ -919,6 +1012,7 @@ export interface TextEvaluationConfig {
 ## Communication Protocols
 
 ### MCP Message Flow
+
 ```mermaid
 sequenceDiagram
     participant AI as Local AI Model
@@ -947,6 +1041,7 @@ sequenceDiagram
 ```
 
 ### Error Handling
+
 ```typescript
 export class MCPError extends Error {
   constructor(
@@ -955,7 +1050,7 @@ export class MCPError extends Error {
     public details?: Record<string, unknown>
   ) {
     super(message);
-    this.name = 'MCPError';
+    this.name = "MCPError";
   }
 }
 
@@ -963,24 +1058,32 @@ export class MCPErrorHandler {
   static handleToolError(error: Error, toolName: string): CallToolResult {
     if (error instanceof MCPError) {
       return {
-        content: [{
-          type: 'text',
-          text: JSON.stringify({
-            error: error.message,
-            code: error.code,
-            details: error.details
-          }, null, 2)
-        }],
-        isError: true
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                error: error.message,
+                code: error.code,
+                details: error.details,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+        isError: true,
       };
     }
 
     return {
-      content: [{
-        type: 'text',
-        text: `Tool execution failed: ${toolName}\n${error.message}`
-      }],
-      isError: true
+      content: [
+        {
+          type: "text",
+          text: `Tool execution failed: ${toolName}\n${error.message}`,
+        },
+      ],
+      isError: true,
     };
   }
 }
@@ -989,6 +1092,7 @@ export class MCPErrorHandler {
 ## Performance Optimization
 
 ### Caching Strategy
+
 ```typescript
 export class MCPResourceCache {
   constructor(private redis: Redis, private ttl: number = 300) {}
@@ -999,7 +1103,11 @@ export class MCPResourceCache {
   }
 
   async set<T>(key: string, value: T): Promise<void> {
-    await this.redis.setex(`mcp:resource:${key}`, this.ttl, JSON.stringify(value));
+    await this.redis.setex(
+      `mcp:resource:${key}`,
+      this.ttl,
+      JSON.stringify(value)
+    );
   }
 
   async invalidate(pattern: string): Promise<void> {
@@ -1012,6 +1120,7 @@ export class MCPResourceCache {
 ```
 
 ### Connection Pooling
+
 ```typescript
 export class DatabaseConnectionPool {
   private pool: Pool;
@@ -1028,8 +1137,8 @@ export class DatabaseConnectionPool {
       connectionTimeoutMillis: config.connectionTimeout || 2000,
     });
 
-    this.pool.on('error', (err) => {
-      console.error('Unexpected database error:', err);
+    this.pool.on("error", (err) => {
+      console.error("Unexpected database error:", err);
     });
   }
 
@@ -1047,6 +1156,7 @@ export class DatabaseConnectionPool {
 ## Security Implementation
 
 ### Tool Permissions
+
 ```typescript
 export class MCPToolPermissions {
   constructor(private config: SecurityConfig) {}
@@ -1060,12 +1170,13 @@ export class MCPToolPermissions {
   filterToolList(tools: Tool[], context?: RequestContext): Tool[] {
     if (!this.config.enableToolPermissions) return tools;
 
-    return tools.filter(tool => this.canExecuteTool(tool.name, context));
+    return tools.filter((tool) => this.canExecuteTool(tool.name, context));
   }
 }
 ```
 
 ### Resource Filtering
+
 ```typescript
 export class MCPResourceFilter {
   constructor(private config: SecurityConfig) {}
@@ -1073,14 +1184,17 @@ export class MCPResourceFilter {
   canAccessResource(uri: string, context?: RequestContext): boolean {
     if (!this.config.enableResourceFiltering) return true;
 
-    const scheme = uri.split('://')[0];
+    const scheme = uri.split("://")[0];
     return this.config.allowedResourceSchemes.includes(scheme);
   }
 
-  filterResourceList(resources: Resource[], context?: RequestContext): Resource[] {
+  filterResourceList(
+    resources: Resource[],
+    context?: RequestContext
+  ): Resource[] {
     if (!this.config.enableResourceFiltering) return resources;
 
-    return resources.filter(resource =>
+    return resources.filter((resource) =>
       this.canAccessResource(resource.uri, context)
     );
   }
@@ -1090,6 +1204,7 @@ export class MCPResourceFilter {
 ## Monitoring and Observability
 
 ### Metrics Collection
+
 ```typescript
 export class MCPMetricsCollector {
   private metrics: Map<string, number> = new Map();
@@ -1109,7 +1224,11 @@ export class MCPMetricsCollector {
   }
 
   // MCP-specific metrics
-  recordToolExecution(toolName: string, success: boolean, duration: number): void {
+  recordToolExecution(
+    toolName: string,
+    success: boolean,
+    duration: number
+  ): void {
     this.incrementCounter(`tool_${toolName}_executions`);
     if (success) {
       this.incrementCounter(`tool_${toolName}_successes`);
@@ -1119,17 +1238,22 @@ export class MCPMetricsCollector {
     this.recordLatency(`tool_${toolName}`, duration);
   }
 
-  recordResourceAccess(resourceUri: string, success: boolean, duration: number): void {
-    this.incrementCounter('resource_access_total');
+  recordResourceAccess(
+    resourceUri: string,
+    success: boolean,
+    duration: number
+  ): void {
+    this.incrementCounter("resource_access_total");
     if (success) {
-      this.incrementCounter('resource_access_success');
+      this.incrementCounter("resource_access_success");
     }
-    this.recordLatency('resource_access', duration);
+    this.recordLatency("resource_access", duration);
   }
 }
 ```
 
 ### Logging Integration
+
 ```typescript
 export class MCPLogger {
   constructor(private config: LoggingConfig) {}
@@ -1142,29 +1266,37 @@ export class MCPLogger {
       request: {
         method: request.method,
         id: request.id,
-        params: this.sanitizeParams(request.params)
+        params: this.sanitizeParams(request.params),
       },
-      response: response ? {
-        id: response.id,
-        result: this.sanitizeResult(response.result)
-      } : undefined,
-      error: error ? {
-        message: error.message,
-        code: error.code
-      } : undefined,
-      duration: response?.duration || 0
+      response: response
+        ? {
+            id: response.id,
+            result: this.sanitizeResult(response.result),
+          }
+        : undefined,
+      error: error
+        ? {
+            message: error.message,
+            code: error.code,
+          }
+        : undefined,
+      duration: response?.duration || 0,
     };
 
-    if (this.config.format === 'json') {
+    if (this.config.format === "json") {
       console.log(JSON.stringify(logEntry));
     } else {
-      console.log(`[${logEntry.timestamp}] ${request.method} ${request.id} - ${response ? 'OK' : 'ERROR'}`);
+      console.log(
+        `[${logEntry.timestamp}] ${request.method} ${request.id} - ${
+          response ? "OK" : "ERROR"
+        }`
+      );
     }
   }
 
   private sanitizeParams(params: any): any {
     // Remove sensitive information from request parameters
-    if (params && typeof params === 'object') {
+    if (params && typeof params === "object") {
       const sanitized = { ...params };
       // Remove or mask sensitive fields
       return sanitized;
@@ -1180,4 +1312,3 @@ export class MCPLogger {
 ```
 
 This technical architecture provides a comprehensive, scalable, and secure foundation for MCP integration with the Agent Agency platform, enabling autonomous agent operation with sophisticated reasoning and validation capabilities.
-

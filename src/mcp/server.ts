@@ -16,9 +16,9 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { AgentOrchestrator } from "../services/AgentOrchestrator.js";
 import { Logger } from "../utils/Logger.js";
+import { EvaluationOrchestrator } from "./evaluation/EvaluationOrchestrator.js";
 import { MCPResourceManager } from "./resources/ResourceManager.js";
 import { MCPToolManager } from "./tools/ToolManager.js";
-import { EvaluationOrchestrator } from "./evaluation/EvaluationOrchestrator.js";
 
 export interface MCPServerConfig {
   orchestrator: AgentOrchestrator;

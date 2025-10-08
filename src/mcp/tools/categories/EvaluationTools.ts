@@ -6,8 +6,8 @@
  */
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { MCPToolContext } from "../ToolManager.js";
 import { TaskType } from "../../../types/index.js";
+import { MCPToolContext } from "../ToolManager.js";
 
 export class EvaluationTools {
   constructor(private context: MCPToolContext) {}
@@ -398,4 +398,3 @@ export class EvaluationTools {
     }
   }
 }
-

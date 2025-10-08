@@ -28,6 +28,7 @@ npm run mcp:start
 ### Basic Usage with Local AI
 
 1. **Start the MCP Server:**
+
    ```bash
    npm run mcp:start
    ```
@@ -36,6 +37,7 @@ npm run mcp:start
    Configure your local AI model (e.g., Gemma via Ollama) to connect to the MCP server using stdio transport.
 
 3. **Available Resources:**
+
    - `agents://list` - List all registered agents
    - `tasks://queue` - View current task queue
    - `system://metrics` - System performance metrics
@@ -52,6 +54,7 @@ npm run mcp:start
 ### Agent Resources
 
 #### `agents://list`
+
 Lists all registered agents with their status and capabilities.
 
 ```javascript
@@ -71,31 +74,39 @@ Lists all registered agents with their status and capabilities.
 ```
 
 #### `agent://{agentId}`
+
 Retrieves detailed information about a specific agent.
 
 #### `agents://capabilities/{agentId}`
+
 Shows agent capabilities and proficiency levels.
 
 #### `agents://relationships/{agentId}`
+
 Displays collaboration history and relationships with other agents.
 
 ### Task Resources
 
 #### `tasks://queue`
+
 Shows current task queue with pending and running tasks.
 
 #### `tasks://history/{agentId}`
+
 Provides task execution history for a specific agent.
 
 #### `task://{taskId}`
+
 Detailed information about a specific task including status, payload, and results.
 
 #### `tasks://metrics`
+
 Task performance and success metrics across the system.
 
 ### System Resources
 
 #### `system://metrics`
+
 Real-time system health and performance metrics.
 
 ```javascript
@@ -111,12 +122,15 @@ Real-time system health and performance metrics.
 ```
 
 #### `system://config`
+
 Current system configuration settings.
 
 #### `system://health`
+
 Comprehensive system health assessment with component status.
 
 #### `system://logs`
+
 Recent system activity and error logs.
 
 ## MCP Tools
@@ -124,9 +138,11 @@ Recent system activity and error logs.
 ### Agent Management Tools
 
 #### `register_agent`
+
 Register a new agent with the system.
 
 **Parameters:**
+
 ```javascript
 {
   "name": "Data Processor",
@@ -140,6 +156,7 @@ Register a new agent with the system.
 ```
 
 **Response:**
+
 ```javascript
 {
   "agentId": "agent_001",
@@ -152,20 +169,25 @@ Register a new agent with the system.
 ```
 
 #### `update_agent`
+
 Update an existing agent's information.
 
 #### `get_agent`
+
 Retrieve detailed agent information.
 
 #### `list_agents`
+
 List agents with optional filtering.
 
 ### Task Management Tools
 
 #### `submit_task`
+
 Submit a new task for execution.
 
 **Parameters:**
+
 ```javascript
 {
   "agentId": "agent_001",
@@ -178,6 +200,7 @@ Submit a new task for execution.
 ```
 
 **Response:**
+
 ```javascript
 {
   "taskId": "task_001",
@@ -191,23 +214,29 @@ Submit a new task for execution.
 ```
 
 #### `get_task`
+
 Retrieve task details.
 
 #### `cancel_task`
+
 Cancel a pending or running task.
 
 #### `list_tasks`
+
 List tasks with filtering options.
 
 #### `retry_task`
+
 Retry a failed task.
 
 ### Evaluation Tools
 
 #### `evaluate_code`
+
 Evaluate code quality with automated testing and linting.
 
 **Parameters:**
+
 ```javascript
 {
   "taskId": "task_001",
@@ -222,6 +251,7 @@ Evaluate code quality with automated testing and linting.
 ```
 
 **Response:**
+
 ```javascript
 {
   "taskId": "task_001",
@@ -245,32 +275,41 @@ Evaluate code quality with automated testing and linting.
 ```
 
 #### `evaluate_text`
+
 Evaluate text quality and adherence to requirements.
 
 #### `evaluate_design`
+
 Evaluate design token compliance and consistency.
 
 #### `run_evaluation_loop`
+
 Execute a complete autonomous evaluation loop.
 
 ### System Tools
 
 #### `get_system_metrics`
+
 Retrieve current system performance metrics.
 
 #### `perform_health_check`
+
 Execute comprehensive system health assessment.
 
 #### `clear_system_cache`
+
 Clear system caches and temporary data.
 
 #### `backup_system_data`
+
 Create backup of system data and configuration.
 
 #### `get_system_config`
+
 Retrieve current system configuration.
 
 #### `update_system_config`
+
 Update system configuration parameters.
 
 ## Autonomous Operation Examples
@@ -279,21 +318,21 @@ Update system configuration parameters.
 
 ```javascript
 // 1. Register an agent
-const registerResult = await mcp.callTool('register_agent', {
-  name: 'Code Reviewer',
-  type: 'worker',
-  capabilities: ['review', 'analyze'],
-  metadata: { version: '1.0.0' }
+const registerResult = await mcp.callTool("register_agent", {
+  name: "Code Reviewer",
+  type: "worker",
+  capabilities: ["review", "analyze"],
+  metadata: { version: "1.0.0" },
 });
 
 // 2. Submit a task
-const taskResult = await mcp.callTool('submit_task', {
+const taskResult = await mcp.callTool("submit_task", {
   agentId: registerResult.agentId,
-  type: 'review',
+  type: "review",
   payload: {
-    code: 'function example() { return true; }',
-    criteria: ['readability', 'best-practices']
-  }
+    code: "function example() { return true; }",
+    criteria: ["readability", "best-practices"],
+  },
 });
 
 // 3. Monitor task progress
@@ -310,23 +349,23 @@ async function improveCode(code, requirements) {
 
   while (iteration <= 3) {
     // Submit improvement task
-    const taskResult = await mcp.callTool('submit_task', {
-      agentId: 'code-improver-agent',
-      type: 'improve',
-      payload: { code: bestCode, requirements, iteration }
+    const taskResult = await mcp.callTool("submit_task", {
+      agentId: "code-improver-agent",
+      type: "improve",
+      payload: { code: bestCode, requirements, iteration },
     });
 
     // Wait for completion (simplified)
     let task = await mcp.readResource(`task://${taskResult.taskId}`);
-    while (task.status !== 'completed') {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    while (task.status !== "completed") {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       task = await mcp.readResource(`task://${taskResult.taskId}`);
     }
 
     // Evaluate the result
-    const evaluation = await mcp.callTool('evaluate_code', {
+    const evaluation = await mcp.callTool("evaluate_code", {
       taskId: task.id,
-      iteration
+      iteration,
     });
 
     if (evaluation.score > bestScore) {
@@ -357,18 +396,18 @@ class SelfMonitoringAgent {
 
   async executeTask(taskType, payload) {
     // Submit task
-    const taskResult = await mcp.callTool('submit_task', {
+    const taskResult = await mcp.callTool("submit_task", {
       agentId: this.agentId,
       type: taskType,
-      payload
+      payload,
     });
 
     // Monitor execution
     const startTime = Date.now();
     let task = await mcp.readResource(`task://${taskResult.taskId}`);
 
-    while (task.status === 'pending' || task.status === 'running') {
-      await new Promise(resolve => setTimeout(resolve, 500));
+    while (task.status === "pending" || task.status === "running") {
+      await new Promise((resolve) => setTimeout(resolve, 500));
       task = await mcp.readResource(`task://${taskResult.taskId}`);
     }
 
@@ -378,9 +417,9 @@ class SelfMonitoringAgent {
     this.performanceHistory.push({
       taskId: task.id,
       taskType,
-      success: task.status === 'completed',
+      success: task.status === "completed",
       executionTime,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     // Analyze performance trends
@@ -393,8 +432,11 @@ class SelfMonitoringAgent {
 
   async analyzePerformanceTrends() {
     const recentTasks = this.performanceHistory.slice(-10);
-    const successRate = recentTasks.filter(t => t.success).length / recentTasks.length;
-    const avgExecutionTime = recentTasks.reduce((sum, t) => sum + t.executionTime, 0) / recentTasks.length;
+    const successRate =
+      recentTasks.filter((t) => t.success).length / recentTasks.length;
+    const avgExecutionTime =
+      recentTasks.reduce((sum, t) => sum + t.executionTime, 0) /
+      recentTasks.length;
 
     // Trigger self-improvement if performance is declining
     if (successRate < 0.8) {
@@ -404,13 +446,13 @@ class SelfMonitoringAgent {
 
   async triggerSelfImprovement() {
     // Submit self-improvement task
-    await mcp.callTool('submit_task', {
+    await mcp.callTool("submit_task", {
       agentId: this.agentId,
-      type: 'self-improve',
+      type: "self-improve",
       payload: {
-        analysis: 'Performance declining',
-        performanceHistory: this.performanceHistory
-      }
+        analysis: "Performance declining",
+        performanceHistory: this.performanceHistory,
+      },
     });
   }
 }
@@ -424,12 +466,12 @@ class SelfMonitoringAgent {
 interface MCPServerConfig {
   orchestrator: AgentOrchestrator;
   evaluationConfig?: {
-    minScore: number;           // Minimum acceptable score (0.85)
-    mandatoryGates: string[];   // Required quality gates
+    minScore: number; // Minimum acceptable score (0.85)
+    mandatoryGates: string[]; // Required quality gates
     iterationPolicy: {
-      maxIterations: number;    // Maximum refinement cycles (3)
+      maxIterations: number; // Maximum refinement cycles (3)
       minDeltaToContinue: number; // Minimum improvement needed (0.02)
-      noChangeBudget: number;   // Plateau tolerance (1)
+      noChangeBudget: number; // Plateau tolerance (1)
     };
   };
 }
@@ -456,6 +498,7 @@ MCP_MAX_CONCURRENT_TASKS=10
 ### Common Issues
 
 #### MCP Server Won't Start
+
 ```bash
 # Check Node.js version
 node --version  # Should be 18+
@@ -468,6 +511,7 @@ lsof -i :3001
 ```
 
 #### Tool Execution Fails
+
 ```bash
 # Verify agent capabilities
 const agent = await mcp.readResource(`agent://${agentId}`);
@@ -480,6 +524,7 @@ console.log('Task schema:', tool.inputSchema);
 ```
 
 #### Evaluation Not Working
+
 ```bash
 # Check evaluation configuration
 const config = await mcp.readResource('system://config');
@@ -528,22 +573,22 @@ class CustomEvaluator extends BaseEvaluator {
     // Implement custom evaluation logic
     const customCriteria = [
       {
-        id: 'custom-metric',
-        description: 'Custom quality metric',
+        id: "custom-metric",
+        description: "Custom quality metric",
         weight: 0.3,
         passed: await this.checkCustomMetric(params.artifactPath),
-        score: await this.scoreCustomMetric(params.artifactPath)
-      }
+        score: await this.scoreCustomMetric(params.artifactPath),
+      },
     ];
 
     return {
       taskId: params.taskId,
       artifactPaths: [params.artifactPath],
-      status: 'completed',
+      status: "completed",
       score: customCriteria.reduce((s, c) => s + c.score * c.weight, 0),
       criteria: customCriteria,
       iterations: params.iterations,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 }
@@ -560,17 +605,17 @@ class MultiAgentCoordinator {
 
     for (const step of workflow.steps) {
       // Find suitable agent
-      const agents = await mcp.callTool('list_agents', {
-        capability: step.requiredCapability
+      const agents = await mcp.callTool("list_agents", {
+        capability: step.requiredCapability,
       });
 
       const agent = this.selectBestAgent(agents.agents, step);
 
       // Submit task to selected agent
-      const taskResult = await mcp.callTool('submit_task', {
+      const taskResult = await mcp.callTool("submit_task", {
         agentId: agent.id,
         type: step.type,
-        payload: { ...step.payload, previousResults: results }
+        payload: { ...step.payload, previousResults: results },
       });
 
       results.push(await this.waitForTaskCompletion(taskResult.taskId));
@@ -590,16 +635,19 @@ class MultiAgentCoordinator {
 ## Security Considerations
 
 ### Access Control
+
 - MCP tools validate agent permissions before execution
 - Resource access is filtered based on agent capabilities
 - Sensitive operations require explicit authorization
 
 ### Input Validation
+
 - All tool parameters are validated against schemas
 - File paths are sanitized to prevent directory traversal
 - Payload size limits prevent resource exhaustion
 
 ### Audit Logging
+
 - All tool executions are logged with timestamps
 - Resource access is tracked for compliance
 - Failed operations include error details for debugging
@@ -607,18 +655,21 @@ class MultiAgentCoordinator {
 ## Contributing
 
 ### Adding New Tools
+
 1. Implement tool logic in appropriate category class
 2. Add tool schema with proper validation
 3. Update documentation with usage examples
 4. Add unit tests for tool functionality
 
 ### Adding New Resources
+
 1. Implement resource handler in ResourceManager
 2. Add resource URI pattern and schema
 3. Update access control and filtering
 4. Document resource format and usage
 
 ### Extending Evaluation
+
 1. Create new evaluator extending BaseEvaluator
 2. Implement evaluation logic and criteria
 3. Add configuration options
@@ -627,6 +678,7 @@ class MultiAgentCoordinator {
 ## Support
 
 For issues and questions:
+
 - Check the troubleshooting section above
 - Review the integration test examples
 - Examine system logs for error details
@@ -635,4 +687,3 @@ For issues and questions:
 ## License
 
 This MCP integration is part of the Agent Agency project and follows the same MIT license.
-

@@ -134,5 +134,39 @@
     },
     "previous_hash": "b000c208dff1c766ba81caaa9036c44b9d5cda1f0a9445d1e16b0789d7ab0d65",
     "hash": "823eb4444d7e09f64dc7bedc64e0316be4cec79d939a9d1fdd7e1f7f5c72a9f9"
+  },
+  {
+    "id": "prov-1759921000368",
+    "timestamp": "2025-10-08T10:56:40.368Z",
+    "commit": {
+      "hash": "6b96730a77810a86d8cdeb79f401bca1b5d43f8d",
+      "message": "feat: enhance MCP integration with memory-aware orchestrator",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0001",
+      "title": "agent-agency",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-08T10:56:40.369Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "823eb4444d7e09f64dc7bedc64e0316be4cec79d939a9d1fdd7e1f7f5c72a9f9",
+    "hash": "f1a6ae1b68dddff8cb398f7ac36665687829ec530f637adca67f17b7cd9a4b6d"
   }
 ]

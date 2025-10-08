@@ -56,7 +56,15 @@ describe("MultiTenantMemoryManager", () => {
         tenantId: "test-tenant",
         projectId: "test-project",
         isolationLevel: "shared" as const,
-        accessPolicies: [],
+        accessPolicies: [
+          {
+            resourceType: "memory",
+            accessLevel: "write",
+            allowedTenants: ["test-tenant"],
+            restrictions: [],
+            conditions: [],
+          },
+        ],
         sharingRules: [],
         dataRetention: {
           defaultRetentionDays: 30,
@@ -106,7 +114,15 @@ describe("MultiTenantMemoryManager", () => {
         tenantId: "storage-test-tenant",
         projectId: "test-project",
         isolationLevel: "shared" as const,
-        accessPolicies: [],
+        accessPolicies: [
+          {
+            resourceType: "memory" as const,
+            accessLevel: "write" as const,
+            allowedTenants: ["storage-test-tenant"],
+            restrictions: [],
+            conditions: [],
+          },
+        ],
         sharingRules: [],
         dataRetention: {
           defaultRetentionDays: 30,
@@ -189,7 +205,15 @@ describe("MultiTenantMemoryManager", () => {
         tenantId: "retrieval-test-tenant",
         projectId: "test-project",
         isolationLevel: "shared" as const,
-        accessPolicies: [],
+        accessPolicies: [
+          {
+            resourceType: "memory",
+            accessLevel: "read",
+            allowedTenants: ["retrieval-test-tenant"],
+            restrictions: [],
+            conditions: [],
+          },
+        ],
         sharingRules: [],
         dataRetention: {
           defaultRetentionDays: 30,
@@ -253,7 +277,15 @@ describe("MultiTenantMemoryManager", () => {
         tenantId: "offload-test-tenant",
         projectId: "test-project",
         isolationLevel: "shared" as const,
-        accessPolicies: [],
+        accessPolicies: [
+          {
+            resourceType: "memory",
+            accessLevel: "write",
+            allowedTenants: ["offload-test-tenant"],
+            restrictions: [],
+            conditions: [],
+          },
+        ],
         sharingRules: [],
         dataRetention: {
           defaultRetentionDays: 30,

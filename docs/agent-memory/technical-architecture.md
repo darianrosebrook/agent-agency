@@ -9,6 +9,7 @@ The Agent Memory System is built on a microservices architecture that extends th
 ### 1. Memory Service Layer
 
 #### AgentMemoryManager
+
 ```typescript
 /**
  * Core memory management service for agent experiences and knowledge
@@ -41,16 +42,16 @@ export class AgentMemoryManager {
     // Extract entities and relationships
     const entities = await this.extractEntities(agentId, taskId, context);
     const relationships = await this.extractRelationships(entities);
-    
+
     // Update knowledge graph
     await this.knowledgeGraph.updateGraph(entities, relationships);
-    
+
     // Update agent capabilities
     await this.updateAgentCapabilities(agentId, outcome, context);
-    
+
     // Store temporal event
     await this.temporalReasoning.recordEvent(agentId, taskId, outcome);
-    
+
     // Update cache
     await this.cache.invalidateAgentCache(agentId);
   }
@@ -70,7 +71,7 @@ export class AgentMemoryManager {
 
     // Generate context embedding
     const contextEmbedding = await this.embeddingService.embed(context.query);
-    
+
     // Retrieve similar experiences
     const similarExperiences = await this.knowledgeGraph.findSimilarExperiences(
       agentId,
@@ -94,18 +95,19 @@ export class AgentMemoryManager {
     const memories = this.combineAndRankMemories([
       ...similarExperiences,
       ...relevantConversations,
-      ...capabilityMemories
+      ...capabilityMemories,
     ]);
 
     // Cache results
     await this.cache.set(cacheKey, memories, options.ttl || 3600);
-    
+
     return memories;
   }
 }
 ```
 
 #### KnowledgeGraphEngine
+
 ```typescript
 /**
  * Knowledge graph management for agent relationships and experiences
@@ -130,20 +132,20 @@ export class KnowledgeGraphEngine {
   ): Promise<void> {
     const client = await this.pool.connect();
     try {
-      await client.query('BEGIN');
+      await client.query("BEGIN");
 
       // Process entities with deduplication
       const processedEntities = await this.processEntities(entities, client);
-      
+
       // Process relationships
       await this.processRelationships(relationships, processedEntities, client);
-      
+
       // Update entity embeddings
       await this.updateEntityEmbeddings(processedEntities, client);
 
-      await client.query('COMMIT');
+      await client.query("COMMIT");
     } catch (error) {
-      await client.query('ROLLBACK');
+      await client.query("ROLLBACK");
       throw error;
     } finally {
       client.release();
@@ -173,11 +175,11 @@ export class KnowledgeGraphEngine {
 
     const result = await this.pool.query(query, [
       agentId,
-      `[${queryEmbedding.join(',')}]`,
-      1 - threshold
+      `[${queryEmbedding.join(",")}]`,
+      1 - threshold,
     ]);
 
-    return result.rows.map(row => this.mapToAgentExperience(row));
+    return result.rows.map((row) => this.mapToAgentExperience(row));
   }
 }
 ```
@@ -196,7 +198,7 @@ export class EmbeddingService {
 
   constructor(config: EmbeddingConfig) {
     this.ollamaClient = new Ollama({ host: config.host });
-    this.model = config.model || 'embeddinggemma';
+    this.model = config.model || "embeddinggemma";
     this.dimension = config.dimension || 768;
     this.cache = new Map();
   }
@@ -214,22 +216,24 @@ export class EmbeddingService {
     try {
       const response = await this.ollamaClient.embeddings({
         model: this.model,
-        prompt: text
+        prompt: text,
       });
 
       const embedding = response.embedding;
-      
+
       // Validate dimension
       if (embedding.length !== this.dimension) {
-        throw new Error(`Expected embedding dimension ${this.dimension}, got ${embedding.length}`);
+        throw new Error(
+          `Expected embedding dimension ${this.dimension}, got ${embedding.length}`
+        );
       }
 
       // Cache result
       this.cache.set(cacheKey, embedding);
-      
+
       return embedding;
     } catch (error) {
-      console.error('Embedding generation failed:', error);
+      console.error("Embedding generation failed:", error);
       throw new Error(`Failed to generate embedding: ${error.message}`);
     }
   }
@@ -239,12 +243,12 @@ export class EmbeddingService {
    */
   async embedBatch(texts: string[]): Promise<number[][]> {
     const embeddings: number[][] = [];
-    
+
     for (const text of texts) {
       const embedding = await this.embed(text);
       embeddings.push(embedding);
     }
-    
+
     return embeddings;
   }
 
@@ -253,7 +257,7 @@ export class EmbeddingService {
    */
   calculateSimilarity(embedding1: number[], embedding2: number[]): number {
     if (embedding1.length !== embedding2.length) {
-      throw new Error('Embedding dimensions must match');
+      throw new Error("Embedding dimensions must match");
     }
 
     let dotProduct = 0;
@@ -298,25 +302,30 @@ export class TemporalReasoningEngine {
     outcome: TaskOutcome
   ): Promise<void> {
     const event = {
-      entity_type: 'agent',
+      entity_type: "agent",
       entity_id: agentId,
-      event_type: 'task_completion',
+      event_type: "task_completion",
       event_data: {
         task_id: taskId,
         outcome: outcome.status,
         performance_score: outcome.score,
         execution_time: outcome.executionTime,
         capabilities_used: outcome.capabilitiesUsed,
-        lessons_learned: outcome.lessonsLearned
+        lessons_learned: outcome.lessonsLearned,
       },
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     await this.pool.query(
       `INSERT INTO temporal_events (entity_type, entity_id, event_type, event_data, timestamp)
        VALUES ($1, $2, $3, $4, $5)`,
-      [event.entity_type, event.entity_id, event.event_type, 
-       JSON.stringify(event.event_data), event.timestamp]
+      [
+        event.entity_type,
+        event.entity_id,
+        event.event_type,
+        JSON.stringify(event.event_data),
+        event.timestamp,
+      ]
     );
   }
 
@@ -342,11 +351,15 @@ export class TemporalReasoningEngine {
     const result = await this.pool.query(query, [
       agentId,
       timeWindow.start,
-      timeWindow.end
+      timeWindow.end,
     ]);
 
-    const scores = result.rows.map(row => parseFloat(row.score)).filter(s => !isNaN(s));
-    const executionTimes = result.rows.map(row => parseInt(row.execution_time)).filter(t => !isNaN(t));
+    const scores = result.rows
+      .map((row) => parseFloat(row.score))
+      .filter((s) => !isNaN(s));
+    const executionTimes = result.rows
+      .map((row) => parseInt(row.execution_time))
+      .filter((t) => !isNaN(t));
 
     return {
       agentId,
@@ -355,7 +368,7 @@ export class TemporalReasoningEngine {
       executionTimeTrend: this.calculateTrend(executionTimes),
       improvementRate: this.calculateImprovementRate(scores),
       stability: this.calculateStability(scores),
-      confidence: this.calculateConfidence(result.rows.length)
+      confidence: this.calculateConfidence(result.rows.length),
     };
   }
 
@@ -370,28 +383,31 @@ export class TemporalReasoningEngine {
   }
 
   private calculateTrend(values: number[]): TrendDirection {
-    if (values.length < 2) return 'insufficient_data';
-    
+    if (values.length < 2) return "insufficient_data";
+
     const slope = this.calculateLinearRegression(values).slope;
     const threshold = 0.05; // 5% change threshold
-    
-    if (slope > threshold) return 'increasing';
-    if (slope < -threshold) return 'decreasing';
-    return 'stable';
+
+    if (slope > threshold) return "increasing";
+    if (slope < -threshold) return "decreasing";
+    return "stable";
   }
 
-  private calculateLinearRegression(values: number[]): { slope: number; intercept: number } {
+  private calculateLinearRegression(values: number[]): {
+    slope: number;
+    intercept: number;
+  } {
     const n = values.length;
     const x = Array.from({ length: n }, (_, i) => i);
-    
+
     const sumX = x.reduce((a, b) => a + b, 0);
     const sumY = values.reduce((a, b) => a + b, 0);
     const sumXY = x.reduce((sum, xi, i) => sum + xi * values[i], 0);
     const sumXX = x.reduce((sum, xi) => sum + xi * xi, 0);
-    
+
     const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
     const intercept = (sumY - slope * sumX) / n;
-    
+
     return { slope, intercept };
   }
 }
@@ -421,10 +437,10 @@ export class ContextManager {
   ): Promise<ContextQuery> {
     // Extract key concepts from task context
     const concepts = await this.extractConcepts(taskContext);
-    
+
     // Generate embeddings for concepts
     const conceptEmbeddings = await Promise.all(
-      concepts.map(concept => this.embeddingService.embed(concept))
+      concepts.map((concept) => this.embeddingService.embed(concept))
     );
 
     // Find related capabilities
@@ -447,7 +463,9 @@ export class ContextManager {
       relatedCapabilities,
       similarTasks,
       timeWindow: this.calculateTimeWindow(taskContext.priority),
-      similarityThreshold: this.calculateSimilarityThreshold(taskContext.complexity)
+      similarityThreshold: this.calculateSimilarityThreshold(
+        taskContext.complexity
+      ),
     };
   }
 
@@ -491,20 +509,62 @@ export class ContextManager {
     // Extract key concepts from task description, requirements, and context
     const text = [
       taskContext.description,
-      taskContext.requirements?.join(' '),
-      taskContext.context?.join(' ')
-    ].filter(Boolean).join(' ');
+      taskContext.requirements?.join(" "),
+      taskContext.context?.join(" "),
+    ]
+      .filter(Boolean)
+      .join(" ");
 
     // Simple concept extraction - in production, use NLP libraries
-    const words = text.toLowerCase()
-      .replace(/[^\w\s]/g, ' ')
+    const words = text
+      .toLowerCase()
+      .replace(/[^\w\s]/g, " ")
       .split(/\s+/)
-      .filter(word => word.length > 3);
+      .filter((word) => word.length > 3);
 
     // Remove common stop words
-    const stopWords = new Set(['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'man', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'its', 'let', 'put', 'say', 'she', 'too', 'use']);
-    
-    return [...new Set(words.filter(word => !stopWords.has(word)))];
+    const stopWords = new Set([
+      "the",
+      "and",
+      "for",
+      "are",
+      "but",
+      "not",
+      "you",
+      "all",
+      "can",
+      "had",
+      "her",
+      "was",
+      "one",
+      "our",
+      "out",
+      "day",
+      "get",
+      "has",
+      "him",
+      "his",
+      "how",
+      "man",
+      "new",
+      "now",
+      "old",
+      "see",
+      "two",
+      "way",
+      "who",
+      "boy",
+      "did",
+      "its",
+      "let",
+      "put",
+      "say",
+      "she",
+      "too",
+      "use",
+    ]);
+
+    return [...new Set(words.filter((word) => !stopWords.has(word)))];
   }
 }
 ```
@@ -521,32 +581,32 @@ sequenceDiagram
     participant DB as Database
 
     Note over AO,DB: Task Execution Flow
-    
+
     AO->>AM: submitTaskWithContext(task, context)
     AM->>VE: embed(context.query)
     VE-->>AM: contextEmbedding
-    
+
     AM->>KG: retrieveRelevantMemories(agentId, contextEmbedding)
     KG-->>AM: relevantMemories
-    
+
     AM->>AM: rankMemoriesByRelevance()
     AM-->>AO: contextualInsights
-    
+
     Note over AO,DB: Experience Storage Flow
-    
+
     AO->>AM: storeExperience(agentId, taskId, outcome)
     AM->>KG: extractEntities(agentId, taskId, context)
     KG-->>AM: entities
-    
+
     AM->>KG: extractRelationships(entities)
     KG-->>AM: relationships
-    
+
     AM->>KG: updateGraph(entities, relationships)
     KG->>DB: INSERT/UPDATE knowledge graph
-    
+
     AM->>TR: recordEvent(agentId, taskId, outcome)
     TR->>DB: INSERT temporal event
-    
+
     AM->>AM: updateAgentCapabilities(agentId, outcome)
     AM->>DB: UPDATE agent capabilities
 ```
@@ -563,10 +623,10 @@ export class MemoryCache {
   private redis: Redis;
   private localCache: Map<string, CacheEntry>;
   private readonly TTL = {
-    AGENT_MEMORY: 3600,      // 1 hour
+    AGENT_MEMORY: 3600, // 1 hour
     SIMILARITY_RESULTS: 1800, // 30 minutes
-    EMBEDDINGS: 86400,       // 24 hours
-    CAPABILITY_MAP: 7200     // 2 hours
+    EMBEDDINGS: 86400, // 24 hours
+    CAPABILITY_MAP: 7200, // 2 hours
   };
 
   constructor(redisConfig: RedisConfig) {
@@ -594,10 +654,10 @@ export class MemoryCache {
 
   async set(key: string, data: any, ttl?: number): Promise<void> {
     const serialized = JSON.stringify(data);
-    
+
     // Set in Redis
     await this.redis.setex(key, ttl || 3600, serialized);
-    
+
     // Set in local cache
     this.localCache.set(key, { data, timestamp: Date.now() });
   }
@@ -629,7 +689,7 @@ export class MemoryBatchProcessor {
 
   async addOperation(operation: MemoryOperation): Promise<void> {
     this.batchQueue.push(operation);
-    
+
     if (this.batchQueue.length >= this.batchSize) {
       await this.flushBatch();
     }
@@ -639,15 +699,15 @@ export class MemoryBatchProcessor {
     if (this.batchQueue.length === 0) return;
 
     const batch = this.batchQueue.splice(0, this.batchSize);
-    
+
     // Group operations by type for efficient processing
     const groupedOps = this.groupOperations(batch);
-    
+
     // Process each group
     await Promise.all([
       this.processEntityOperations(groupedOps.entities),
       this.processRelationshipOperations(groupedOps.relationships),
-      this.processExperienceOperations(groupedOps.experiences)
+      this.processExperienceOperations(groupedOps.experiences),
     ]);
   }
 
@@ -676,36 +736,47 @@ export class MemoryMetrics {
     this.exporters = [];
   }
 
-  recordMemoryRetrieval(agentId: string, duration: number, resultCount: number): void {
-    this.incrementCounter('memory.retrievals.total');
-    this.recordHistogram('memory.retrieval.duration', duration);
-    this.recordHistogram('memory.retrieval.result_count', resultCount);
+  recordMemoryRetrieval(
+    agentId: string,
+    duration: number,
+    resultCount: number
+  ): void {
+    this.incrementCounter("memory.retrievals.total");
+    this.recordHistogram("memory.retrieval.duration", duration);
+    this.recordHistogram("memory.retrieval.result_count", resultCount);
     this.incrementCounter(`memory.retrievals.agent.${agentId}`);
   }
 
-  recordKnowledgeGraphUpdate(operation: string, duration: number, entityCount: number): void {
+  recordKnowledgeGraphUpdate(
+    operation: string,
+    duration: number,
+    entityCount: number
+  ): void {
     this.incrementCounter(`knowledge_graph.${operation}.total`);
     this.recordHistogram(`knowledge_graph.${operation}.duration`, duration);
-    this.recordHistogram(`knowledge_graph.${operation}.entity_count`, entityCount);
+    this.recordHistogram(
+      `knowledge_graph.${operation}.entity_count`,
+      entityCount
+    );
   }
 
   recordEmbeddingGeneration(count: number, duration: number): void {
-    this.incrementCounter('embeddings.generated', count);
-    this.recordHistogram('embeddings.generation.duration', duration);
+    this.incrementCounter("embeddings.generated", count);
+    this.recordHistogram("embeddings.generation.duration", duration);
   }
 
   private incrementCounter(name: string, value: number = 1): void {
-    const current = this.metrics.get(name) || { type: 'counter', value: 0 };
+    const current = this.metrics.get(name) || { type: "counter", value: 0 };
     current.value += value;
     this.metrics.set(name, current);
   }
 
   private recordHistogram(name: string, value: number): void {
-    const current = this.metrics.get(name) || { 
-      type: 'histogram', 
+    const current = this.metrics.get(name) || {
+      type: "histogram",
       values: [],
       count: 0,
-      sum: 0
+      sum: 0,
     };
     current.values.push(value);
     current.count++;
@@ -730,9 +801,9 @@ export class MemoryHealthMonitor {
       new DatabaseHealthCheck(),
       new RedisHealthCheck(),
       new EmbeddingServiceHealthCheck(),
-      new KnowledgeGraphHealthCheck()
+      new KnowledgeGraphHealthCheck(),
     ];
-    this.status = { status: 'unknown', checks: {} };
+    this.status = { status: "unknown", checks: {} };
   }
 
   async performHealthCheck(): Promise<HealthStatus> {
@@ -744,30 +815,32 @@ export class MemoryHealthMonitor {
         results[check.name] = result;
       } catch (error) {
         results[check.name] = {
-          status: 'error',
+          status: "error",
           message: error.message,
-          timestamp: new Date()
+          timestamp: new Date(),
         };
       }
     }
 
     const overallStatus = this.calculateOverallStatus(results);
-    
+
     this.status = {
       status: overallStatus,
       checks: results,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     return this.status;
   }
 
-  private calculateOverallStatus(checks: Record<string, HealthCheckResult>): HealthStatus['status'] {
-    const statuses = Object.values(checks).map(c => c.status);
-    
-    if (statuses.includes('error')) return 'error';
-    if (statuses.includes('warning')) return 'warning';
-    return 'healthy';
+  private calculateOverallStatus(
+    checks: Record<string, HealthCheckResult>
+  ): HealthStatus["status"] {
+    const statuses = Object.values(checks).map((c) => c.status);
+
+    if (statuses.includes("error")) return "error";
+    if (statuses.includes("warning")) return "warning";
+    return "healthy";
   }
 }
 ```
@@ -841,4 +914,3 @@ interface MemorySystemConfig {
 ```
 
 This technical architecture provides the foundation for implementing a sophisticated agent memory system that can scale with the Agent Agency platform while maintaining high performance and reliability.
-

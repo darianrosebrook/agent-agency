@@ -10,9 +10,9 @@ import { AgentOrchestrator } from "../../services/AgentOrchestrator.js";
 import { Logger } from "../../utils/Logger.js";
 import { EvaluationOrchestrator } from "../evaluation/EvaluationOrchestrator.js";
 import { AgentManagementTools } from "./categories/AgentManagementTools.js";
-import { TaskManagementTools } from "./categories/TaskManagementTools.js";
 import { EvaluationTools } from "./categories/EvaluationTools.js";
 import { SystemTools } from "./categories/SystemTools.js";
+import { TaskManagementTools } from "./categories/TaskManagementTools.js";
 
 export interface ToolExecutionResult {
   content: Array<{

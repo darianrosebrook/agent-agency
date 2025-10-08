@@ -6,13 +6,12 @@
  */
 
 import * as fs from "fs";
-import * as path from "path";
 import { Logger } from "../../../utils/Logger.js";
 import {
   BaseEvaluator,
+  EvalCriterion,
   EvaluationParams,
   EvaluationReport,
-  EvalCriterion,
 } from "../EvaluationOrchestrator.js";
 
 export interface TextEvaluationConfig {
@@ -321,4 +320,3 @@ export class TextEvaluator extends BaseEvaluator {
     return actions;
   }
 }
-

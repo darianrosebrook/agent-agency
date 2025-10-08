@@ -9,9 +9,9 @@ import { spawn } from "child_process";
 import { Logger } from "../../../utils/Logger.js";
 import {
   BaseEvaluator,
+  EvalCriterion,
   EvaluationParams,
   EvaluationReport,
-  EvalCriterion,
 } from "../EvaluationOrchestrator.js";
 
 export interface CodeEvaluationConfig {
@@ -239,4 +239,3 @@ export class CodeEvaluator extends BaseEvaluator {
     return actions;
   }
 }
-

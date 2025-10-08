@@ -5,7 +5,7 @@
  * @description Basic tests for MCP server integration with Agent Agency
  */
 
-import { describe, it, expect } from "@jest/globals";
+import { describe, expect, it } from "@jest/globals";
 
 describe("MCP Server Basic Integration", () => {
   it("should load MCP server module", async () => {
@@ -22,8 +22,11 @@ describe("MCP Server Basic Integration", () => {
       expect(orchestrator).toBeDefined();
       expect(logger).toBeDefined();
 
+      // Initialize orchestrator
+      await orchestrator.initialize();
+
       // Test basic orchestrator functionality
-      const metrics = orchestrator.getSystemMetrics();
+      const metrics = await orchestrator.getSystemMetrics();
       expect(metrics).toHaveProperty("totalAgents");
       expect(metrics).toHaveProperty("totalTasks");
     } catch (error) {

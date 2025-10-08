@@ -5,11 +5,11 @@
  * @description Orchestrates autonomous evaluation loops with satisficing logic
  */
 
-import { Logger } from "../../utils/Logger.js";
 import { TaskType } from "../../types/index.js";
+import { Logger } from "../../utils/Logger.js";
 import { CodeEvaluator } from "./evaluators/CodeEvaluator.js";
-import { TextEvaluator } from "./evaluators/TextEvaluator.js";
 import { DesignEvaluator } from "./evaluators/DesignEvaluator.js";
+import { TextEvaluator } from "./evaluators/TextEvaluator.js";
 
 export interface EvaluationConfig {
   minScore: number;
@@ -261,4 +261,3 @@ export class EvaluationOrchestrator {
     return { ...this.config };
   }
 }
-

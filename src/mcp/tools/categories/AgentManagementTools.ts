@@ -6,8 +6,8 @@
  */
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { MCPToolContext } from "../ToolManager.js";
 import { AgentType } from "../../../types/index.js";
+import { MCPToolContext } from "../ToolManager.js";
 
 export class AgentManagementTools {
   constructor(private context: MCPToolContext) {}

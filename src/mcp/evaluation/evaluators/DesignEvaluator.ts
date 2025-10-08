@@ -6,13 +6,12 @@
  */
 
 import * as fs from "fs";
-import * as path from "path";
 import { Logger } from "../../../utils/Logger.js";
 import {
   BaseEvaluator,
+  EvalCriterion,
   EvaluationParams,
   EvaluationReport,
-  EvalCriterion,
 } from "../EvaluationOrchestrator.js";
 
 export interface DesignTokenRegistry {
@@ -377,4 +376,3 @@ export class DesignEvaluator extends BaseEvaluator {
     return actions;
   }
 }
-

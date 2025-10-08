@@ -7,9 +7,9 @@
  * @description Simple test script for MCP server functionality
  */
 
+import { AgentAgencyMCPServer } from "../dist/src/mcp/server.js";
 import { AgentOrchestrator } from "../dist/src/services/AgentOrchestrator.js";
 import { Logger } from "../dist/src/utils/Logger.js";
-import { AgentAgencyMCPServer } from "../dist/src/mcp/server.js";
 
 async function runTests() {
   console.log("🧪 Running MCP Server Tests...\n");

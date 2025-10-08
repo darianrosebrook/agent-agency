@@ -12,7 +12,7 @@
     "test:mutation": "echo 'Mutation testing not configured yet'",
     "test:contract": "echo 'Contract testing not configured yet'",
     "test:axe": "echo 'A11y testing not configured yet'",
-    "lint": "eslint src tests",
+    "lint": "eslint src/**/*.ts tests/**/*.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
@@ -47,8 +47,16 @@
       "!src/**/*.d.ts"
     ],
     "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/src/$1"
-    }
+      "^@/(.*)$": "<rootDir>/src/$1",
+      "^(\\.\\.?\\/.*)\\.js$": "$1"
+    },
+    "moduleFileExtensions": [
+      "ts",
+      "js"
+    ],
+    "extensionsToTreatAsEsm": [
+      ".ts"
+    ]
   },
   "keywords": [
     "agent",
@@ -71,7 +79,10 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.6.0",
-    "fast-check": "^3.0.0"
+    "@types/pg": "^8.15.5",
+    "fast-check": "^3.0.0",
+    "pg": "^8.16.3",
+    "redis": "^5.8.3"
   },
   "bin": {
     "mcp-server": "./bin/mcp-server.js"
