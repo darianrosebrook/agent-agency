@@ -100,6 +100,8 @@ export interface VectorSearchOptions {
   threshold?: number;
   includeMetadata?: boolean;
   filter?: Record<string, any>;
+  vectorWeight?: number;
+  metadataWeight?: number;
 }
 
 export interface VectorSearchResult {

@@ -6,10 +6,11 @@
  * Provides unified interface for all data operations with connection pooling and caching.
  */
 
-import { EventEmitter } from "events";
-import { Logger } from "../utils/Logger";
-import { RedisCache } from "./cache/RedisCache";
-import { PostgreSQLConnection } from "./connection/PostgreSQLConnection";
+import { EventEmitter } from 'events';
+import { Logger } from '../utils/Logger';
+import { MultiLevelCache } from './cache/MultiLevelCache';
+import { PostgreSQLConnection } from './connection/PostgreSQLConnection';
+import { PerformanceMonitor } from './monitoring/PerformanceMonitor';
 import {
   CacheProvider,
   ConnectionPool,
@@ -17,11 +18,12 @@ import {
   DataLayerError,
   DataOperationMetrics,
   HealthCheckResult,
-} from "./types";
+} from './types';
 
 export class DataLayer extends EventEmitter {
   private connection: ConnectionPool;
   private cache?: CacheProvider;
+  private performanceMonitor: PerformanceMonitor;
   private logger: Logger;
   private config: DataLayerConfig;
   private initialized: boolean = false;
@@ -31,14 +33,26 @@ export class DataLayer extends EventEmitter {
   constructor(config: DataLayerConfig, logger?: Logger) {
     super();
     this.config = config;
-    this.logger = logger || new Logger("DataLayer");
+    this.logger = logger || new Logger('DataLayer');
+
+    // Initialize performance monitor
+    this.performanceMonitor = new PerformanceMonitor({
+      enableDetailedLogging: config.enableMetrics
+    }, this.logger);
 
     // Initialize database connection
     this.connection = new PostgreSQLConnection(config.database, this.logger);
 
-    // Initialize cache if enabled
+    // Initialize multi-level cache if enabled
     if (config.enableCache !== false) {
-      this.cache = new RedisCache(config.cache, this.logger);
+      this.cache = new MultiLevelCache({
+        ...config.cache,
+        l1MaxSize: 50 * 1024 * 1024, // 50MB L1 cache
+        l1MaxEntries: 5000,
+        promotionThreshold: 2,
+        demotionThreshold: 180000, // 3 minutes
+        enableMetrics: config.enableMetrics
+      }, this.logger);
     }
   }
 
@@ -47,22 +61,25 @@ export class DataLayer extends EventEmitter {
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
-      this.logger.warn("Data layer already initialized");
+      this.logger.warn('Data layer already initialized');
       return;
     }
 
     try {
-      this.logger.info("Initializing data layer...");
+      this.logger.info('Initializing data layer...');
 
       // Initialize database connection
-      this.logger.info("Initializing database connection...");
+      this.logger.info('Initializing database connection...');
       // PostgreSQL connection is lazy - no explicit init needed
 
       // Initialize cache if available
       if (this.cache) {
-        this.logger.info("Initializing cache...");
+        this.logger.info('Initializing multi-level cache...');
         await (this.cache as any).initialize();
       }
+
+      // Set up performance monitoring
+      this.setupPerformanceMonitoring();
 
       this.initialized = true;
 
@@ -71,16 +88,16 @@ export class DataLayer extends EventEmitter {
         this.startHealthMonitoring();
       }
 
-      this.logger.info("Data layer initialized successfully");
-      this.emit("initialized");
+      this.logger.info('Data layer initialized successfully');
+      this.emit('initialized');
     } catch (error) {
-      this.logger.error("Failed to initialize data layer", error);
+      this.logger.error('Failed to initialize data layer', error);
       throw new DataLayerError(
-        "Data layer initialization failed",
-        "INITIALIZATION_ERROR",
-        "initialize",
+        'Data layer initialization failed',
+        'INITIALIZATION_ERROR',
+        'initialize',
         undefined,
-        error as Error
+        error as Error,
       );
     }
   }
@@ -91,9 +108,9 @@ export class DataLayer extends EventEmitter {
   getConnection(): ConnectionPool {
     if (!this.initialized) {
       throw new DataLayerError(
-        "Data layer not initialized",
-        "NOT_INITIALIZED",
-        "getConnection"
+        'Data layer not initialized',
+        'NOT_INITIALIZED',
+        'getConnection',
       );
     }
     return this.connection;
@@ -105,9 +122,9 @@ export class DataLayer extends EventEmitter {
   getCache(): CacheProvider | undefined {
     if (!this.initialized) {
       throw new DataLayerError(
-        "Data layer not initialized",
-        "NOT_INITIALIZED",
-        "getCache"
+        'Data layer not initialized',
+        'NOT_INITIALIZED',
+        'getCache',
       );
     }
     return this.cache;
@@ -124,7 +141,7 @@ export class DataLayer extends EventEmitter {
       cacheKey?: string;
       cacheTtl?: number;
       timeout?: number;
-    } = {}
+    } = {},
   ): Promise<{ success: boolean; data?: T; error?: string; cached?: boolean }> {
     const startTime = Date.now();
 
@@ -138,11 +155,11 @@ export class DataLayer extends EventEmitter {
           cacheResult.data !== undefined
         ) {
           this.recordMetrics(
-            "query",
-            "cache_hit",
+            'query',
+            'cache_hit',
             Date.now() - startTime,
             true,
-            true
+            true,
           );
           return { success: true, data: cacheResult.data, cached: true };
         }
@@ -159,10 +176,10 @@ export class DataLayer extends EventEmitter {
       }
 
       this.recordMetrics(
-        "query",
-        "database",
+        'query',
+        'database',
         Date.now() - startTime,
-        result.success
+        result.success,
       );
 
       return {
@@ -173,14 +190,14 @@ export class DataLayer extends EventEmitter {
       };
     } catch (error) {
       const duration = Date.now() - startTime;
-      this.recordMetrics("query", "database", duration, false);
+      this.recordMetrics('query', 'database', duration, false);
 
       throw new DataLayerError(
         `Query failed: ${(error as Error).message}`,
-        "QUERY_ERROR",
-        "query",
+        'QUERY_ERROR',
+        'query',
         undefined,
-        error as Error
+        error as Error,
       );
     }
   }
@@ -189,7 +206,7 @@ export class DataLayer extends EventEmitter {
    * Execute operations within a database transaction
    */
   async transaction<T>(
-    callback: (connection: ConnectionPool) => Promise<T>
+    callback: (connection: ConnectionPool) => Promise<T>,
   ): Promise<T> {
     const startTime = Date.now();
 
@@ -200,7 +217,7 @@ export class DataLayer extends EventEmitter {
           connect: () => Promise.resolve(client),
           query: (text: string, params?: any[]) => client.query(text, params),
           transaction: () => {
-            throw new Error("Nested transactions not supported");
+            throw new Error('Nested transactions not supported');
           },
           healthCheck: () => this.connection.healthCheck(),
           getStats: () => Promise.resolve({}),
@@ -211,37 +228,58 @@ export class DataLayer extends EventEmitter {
       });
 
       this.recordMetrics(
-        "transaction",
-        "database",
+        'transaction',
+        'database',
         Date.now() - startTime,
-        true
+        true,
       );
       return result.data as T;
     } catch (error) {
       const duration = Date.now() - startTime;
-      this.recordMetrics("transaction", "database", duration, false);
+      this.recordMetrics('transaction', 'database', duration, false);
 
       throw new DataLayerError(
         `Transaction failed: ${(error as Error).message}`,
-        "TRANSACTION_ERROR",
-        "transaction",
+        'TRANSACTION_ERROR',
+        'transaction',
         undefined,
-        error as Error
+        error as Error,
       );
     }
+  }
+
+  /**
+   * Get performance statistics
+   */
+  getPerformanceStats(timeRangeMs?: number) {
+    return this.performanceMonitor.getPerformanceStats(timeRangeMs);
+  }
+
+  /**
+   * Get cache performance statistics
+   */
+  getCacheStats(timeRangeMs?: number) {
+    return this.performanceMonitor.getCacheStats(timeRangeMs);
+  }
+
+  /**
+   * Get active performance alerts
+   */
+  getActiveAlerts() {
+    return this.performanceMonitor.getActiveAlerts();
   }
 
   /**
    * Get cached value
    */
   async getCached<T>(
-    key: string
+    key: string,
   ): Promise<{ success: boolean; data?: T; error?: string; hit: boolean }> {
     if (!this.cache) {
       throw new DataLayerError(
-        "Cache not available",
-        "CACHE_NOT_AVAILABLE",
-        "getCached"
+        'Cache not available',
+        'CACHE_NOT_AVAILABLE',
+        'getCached',
       );
     }
 
@@ -249,11 +287,11 @@ export class DataLayer extends EventEmitter {
     const result = await this.cache.get<T>(key);
 
     this.recordMetrics(
-      "cache_get",
-      "cache",
+      'cache_get',
+      'cache',
       Date.now() - startTime,
       result.success,
-      result.hit
+      result.hit,
     );
 
     return {
@@ -270,13 +308,13 @@ export class DataLayer extends EventEmitter {
   async setCached<T>(
     key: string,
     value: T,
-    ttl?: number
+    ttl?: number,
   ): Promise<{ success: boolean; error?: string }> {
     if (!this.cache) {
       throw new DataLayerError(
-        "Cache not available",
-        "CACHE_NOT_AVAILABLE",
-        "setCached"
+        'Cache not available',
+        'CACHE_NOT_AVAILABLE',
+        'setCached',
       );
     }
 
@@ -284,10 +322,10 @@ export class DataLayer extends EventEmitter {
     const result = await this.cache.set(key, value, ttl);
 
     this.recordMetrics(
-      "cache_set",
-      "cache",
+      'cache_set',
+      'cache',
       Date.now() - startTime,
-      result.success
+      result.success,
     );
 
     return {
@@ -307,7 +345,7 @@ export class DataLayer extends EventEmitter {
       const dbHealth = await this.connection.healthCheck();
 
       // Check cache health
-      let cacheHealth: HealthCheckResult["cache"];
+      let cacheHealth: HealthCheckResult['cache'];
       if (this.cache) {
         try {
           const cacheStats = await this.cache.getStats();
@@ -324,21 +362,21 @@ export class DataLayer extends EventEmitter {
       }
 
       // Determine overall status
-      const dbStatus = dbHealth.database?.connected ? "healthy" : "unhealthy";
+      const dbStatus = dbHealth.database?.connected ? 'healthy' : 'unhealthy';
       const cacheStatus = cacheHealth?.connected
-        ? "healthy"
+        ? 'healthy'
         : cacheHealth
-        ? "degraded"
-        : "healthy";
+          ? 'degraded'
+          : 'healthy';
       const overallStatus =
-        dbStatus === "healthy" && cacheStatus === "healthy"
-          ? "healthy"
-          : dbStatus === "healthy"
-          ? "degraded"
-          : "unhealthy";
+        dbStatus === 'healthy' && cacheStatus === 'healthy'
+          ? 'healthy'
+          : dbStatus === 'healthy'
+            ? 'degraded'
+            : 'unhealthy';
 
       const result: HealthCheckResult = {
-        status: overallStatus as HealthCheckResult["status"],
+        status: overallStatus as HealthCheckResult['status'],
         database: dbHealth.database,
         cache: cacheHealth,
         details: {
@@ -349,13 +387,13 @@ export class DataLayer extends EventEmitter {
         },
       };
 
-      this.logger.debug("Health check completed", result);
+      this.logger.debug('Health check completed', result);
       return result;
     } catch (error) {
-      this.logger.error("Health check failed", error);
+      this.logger.error('Health check failed', error);
 
       return {
-        status: "unhealthy",
+        status: 'unhealthy',
         details: {
           error: (error as Error).message,
           duration: Date.now() - startTime,
@@ -426,7 +464,7 @@ export class DataLayer extends EventEmitter {
    * Gracefully shutdown the data layer
    */
   async shutdown(): Promise<void> {
-    this.logger.info("Shutting down data layer...");
+    this.logger.info('Shutting down data layer...');
 
     // Stop health monitoring
     if (this.healthCheckInterval) {
@@ -438,7 +476,7 @@ export class DataLayer extends EventEmitter {
       try {
         await this.cache.close();
       } catch (error) {
-        this.logger.error("Error closing cache", error);
+        this.logger.error('Error closing cache', error);
       }
     }
 
@@ -446,12 +484,30 @@ export class DataLayer extends EventEmitter {
     try {
       await this.connection.close();
     } catch (error) {
-      this.logger.error("Error closing database connections", error);
+      this.logger.error('Error closing database connections', error);
     }
 
     this.initialized = false;
-    this.logger.info("Data layer shutdown complete");
-    this.emit("shutdown");
+    this.logger.info('Data layer shutdown complete');
+    this.emit('shutdown');
+  }
+
+  /**
+   * Set up performance monitoring event listeners
+   */
+  private setupPerformanceMonitoring(): void {
+    // Listen for cache metrics and forward to performance monitor
+    if (this.cache) {
+      (this.cache as any).on('cacheMetric', (metric: any) => {
+        this.performanceMonitor.recordCacheMetric(metric);
+      });
+    }
+
+    // Listen for performance monitor alerts
+    this.performanceMonitor.on('alert', (alert: any) => {
+      this.logger.warn('Performance alert', alert);
+      this.emit('performanceAlert', alert);
+    });
   }
 
   /**
@@ -464,9 +520,9 @@ export class DataLayer extends EventEmitter {
     success: boolean,
     cacheHit?: boolean,
     queryCount?: number,
-    errorType?: string
+    errorType?: string,
   ): void {
-    if (!this.config.enableMetrics) return;
+    if (!this.config.enableMetrics) {return;}
 
     const metric: DataOperationMetrics = {
       operation,
@@ -478,14 +534,25 @@ export class DataLayer extends EventEmitter {
       errorType,
     };
 
+    // Record in both local metrics and performance monitor
     this.metrics.push(metric);
+    this.performanceMonitor.recordMetric({
+      timestamp: Date.now(),
+      operation,
+      entity,
+      duration,
+      success,
+      cacheHit,
+      queryCount,
+      errorType
+    });
 
     // Keep only last 1000 metrics to prevent memory leaks
     if (this.metrics.length > 1000) {
       this.metrics = this.metrics.slice(-500);
     }
 
-    this.emit("metric", metric);
+    this.emit('metric', metric);
   }
 
   /**
@@ -495,12 +562,12 @@ export class DataLayer extends EventEmitter {
     this.healthCheckInterval = setInterval(async () => {
       try {
         const health = await this.healthCheck();
-        if (health.status !== "healthy") {
-          this.logger.warn("Health check detected issues", health);
-          this.emit("health_issue", health);
+        if (health.status !== 'healthy') {
+          this.logger.warn('Health check detected issues', health);
+          this.emit('health_issue', health);
         }
       } catch (error) {
-        this.logger.error("Health monitoring failed", error);
+        this.logger.error('Health monitoring failed', error);
       }
     }, 30000); // Check every 30 seconds
   }
