@@ -1,0 +1,406 @@
+openapi: 3.0.3
+info:
+  title: Agent Agency API
+  description: API for managing and orchestrating agents
+  version: 1.0.0
+  contact:
+    name: @darianrosebrook
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+  - url: https://api.agent-agency.com/v1
+    description: Production server
+
+paths:
+  /agents:
+    get:
+      summary: List all agents
+      operationId: listAgents
+      tags:
+        - Agents
+      responses:
+        '200':
+          description: List of agents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agents:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Agent'
+                  total:
+                    type: integer
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    
+    post:
+      summary: Register a new agent
+      operationId: registerAgent
+      tags:
+        - Agents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRegistration'
+      responses:
+        '201':
+          description: Agent registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agentId:
+                    type: string
+                  agent:
+                    $ref: '#/components/schemas/Agent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /agents/{agentId}:
+    get:
+      summary: Get agent by ID
+      operationId: getAgent
+      tags:
+        - Agents
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Agent details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks:
+    get:
+      summary: List all tasks
+      operationId: listTasks
+      tags:
+        - Tasks
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, running, completed, failed, cancelled]
+        - name: agentId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+                  total:
+                    type: integer
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    
+    post:
+      summary: Submit a new task
+      operationId: submitTask
+      tags:
+        - Tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskSubmission'
+      responses:
+        '201':
+          description: Task submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  taskId:
+                    type: string
+                  task:
+                    $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks/{taskId}:
+    get:
+      summary: Get task by ID
+      operationId: getTask
+      tags:
+        - Tasks
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /metrics:
+    get:
+      summary: Get system metrics
+      operationId: getSystemMetrics
+      tags:
+        - System
+      responses:
+        '200':
+          description: System metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemMetrics'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    Agent:
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - status
+        - capabilities
+        - metadata
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: Unique agent identifier
+        name:
+          type: string
+          description: Human-readable agent name
+        type:
+          type: string
+          enum: [orchestrator, worker, monitor, coordinator]
+          description: Agent type
+        status:
+          type: string
+          enum: [idle, active, busy, error, offline]
+          description: Current agent status
+        capabilities:
+          type: array
+          items:
+            type: string
+          description: List of agent capabilities
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional agent metadata
+        createdAt:
+          type: string
+          format: date-time
+          description: Agent creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    AgentRegistration:
+      type: object
+      required:
+        - name
+        - type
+        - capabilities
+      properties:
+        name:
+          type: string
+          description: Human-readable agent name
+        type:
+          type: string
+          enum: [orchestrator, worker, monitor, coordinator]
+          description: Agent type
+        capabilities:
+          type: array
+          items:
+            type: string
+          description: List of agent capabilities
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional agent metadata
+
+    Task:
+      type: object
+      required:
+        - id
+        - agentId
+        - type
+        - status
+        - payload
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: Unique task identifier
+        agentId:
+          type: string
+          description: ID of the agent assigned to this task
+        type:
+          type: string
+          enum: [process, analyze, coordinate, monitor]
+          description: Task type
+        status:
+          type: string
+          enum: [pending, running, completed, failed, cancelled]
+          description: Current task status
+        payload:
+          type: object
+          additionalProperties: true
+          description: Task input data
+        result:
+          type: object
+          additionalProperties: true
+          description: Task output data (when completed)
+        error:
+          type: string
+          description: Error message (when failed)
+        createdAt:
+          type: string
+          format: date-time
+          description: Task creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+        completedAt:
+          type: string
+          format: date-time
+          description: Task completion timestamp
+
+    TaskSubmission:
+      type: object
+      required:
+        - agentId
+        - type
+        - payload
+      properties:
+        agentId:
+          type: string
+          description: ID of the agent to assign this task to
+        type:
+          type: string
+          enum: [process, analyze, coordinate, monitor]
+          description: Task type
+        payload:
+          type: object
+          additionalProperties: true
+          description: Task input data
+
+    SystemMetrics:
+      type: object
+      required:
+        - totalAgents
+        - activeAgents
+        - totalTasks
+        - completedTasks
+        - failedTasks
+        - averageTaskDuration
+        - systemUptime
+      properties:
+        totalAgents:
+          type: integer
+          description: Total number of registered agents
+        activeAgents:
+          type: integer
+          description: Number of currently active agents
+        totalTasks:
+          type: integer
+          description: Total number of tasks
+        completedTasks:
+          type: integer
+          description: Number of completed tasks
+        failedTasks:
+          type: integer
+          description: Number of failed tasks
+        averageTaskDuration:
+          type: number
+          description: Average task duration in milliseconds
+        systemUptime:
+          type: number
+          description: System uptime in seconds
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+tags:
+  - name: Agents
+    description: Agent management operations
+  - name: Tasks
+    description: Task management operations
+  - name: System
+    description: System monitoring operations
+

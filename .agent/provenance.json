@@ -1,0 +1,41 @@
+{
+  "agent": "caws-cli",
+  "model": "cli-interactive",
+  "modelHash": "1.0.0",
+  "toolAllowlist": [
+    "node",
+    "npm",
+    "git",
+    "fs-extra",
+    "inquirer",
+    "commander",
+    "js-yaml",
+    "ajv",
+    "chalk"
+  ],
+  "artifacts": [
+    ".caws/working-spec.yaml"
+  ],
+  "results": {
+    "project_id": "AGENT-0001",
+    "project_title": "agent-agency",
+    "risk_tier": 1,
+    "mode": "feature",
+    "change_budget": {
+      "max_files": 25,
+      "max_loc": 1000
+    },
+    "blast_radius": {
+      "modules": [
+        "src",
+        "tests"
+      ],
+      "data_migration": false
+    },
+    "operational_rollback_slo": "5m"
+  },
+  "approvals": [],
+  "timestamp": "2025-10-08T09:36:44.051Z",
+  "version": "1.0.0",
+  "hash": "6827ead92b7cc8101d478a94bec1d318064b53d59bc9d6e59697a049571ebe7d"
+}

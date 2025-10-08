@@ -1,0 +1,79 @@
+{
+  "name": "agent-agency",
+  "version": "1.0.0",
+  "description": "Agent Agency - A CAWS-managed project for agent orchestration",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "jest",
+    "test:unit": "jest --testPathPattern=unit",
+    "test:integration": "jest --testPathPattern=integration",
+    "test:e2e": "playwright test",
+    "test:mutation": "echo 'Mutation testing not configured yet'",
+    "test:contract": "echo 'Contract testing not configured yet'",
+    "test:axe": "echo 'A11y testing not configured yet'",
+    "lint": "eslint src tests",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "mcp:start": "node bin/mcp-server.js start",
+    "validate": "caws validate --suggestions",
+    "perf:budgets": "echo 'Performance budgets not configured yet'",
+    "dep:policy": "npm audit --audit-level moderate"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "roots": [
+      "<rootDir>/src",
+      "<rootDir>/tests"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.ts",
+      "**/?(*.)+(spec|test).ts"
+    ],
+    "transform": {
+      "^.+\\.ts$": [
+        "ts-jest",
+        {
+          "tsconfig": "tsconfig.json"
+        }
+      ]
+    },
+    "collectCoverageFrom": [
+      "src/**/*.{ts,js}",
+      "!src/**/*.d.ts"
+    ],
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    }
+  },
+  "keywords": [
+    "agent",
+    "agency",
+    "caws",
+    "automation"
+  ],
+  "author": "@darianrosebrook",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.4.4",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.6.0",
+    "fast-check": "^3.0.0"
+  },
+  "bin": {
+    "mcp-server": "./bin/mcp-server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

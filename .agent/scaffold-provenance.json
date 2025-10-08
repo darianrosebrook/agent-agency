@@ -1,0 +1,26 @@
+{
+  "agent": "caws-cli",
+  "model": "cli-scaffold",
+  "modelHash": "3.2.4",
+  "toolAllowlist": [
+    "node",
+    "fs-extra"
+  ],
+  "prompts": [
+    "scaffold",
+    "normal"
+  ],
+  "commit": null,
+  "artifacts": [],
+  "results": {
+    "operation": "scaffold",
+    "force_mode": false,
+    "target_directory": "/Users/darianrosebrook/Desktop/Projects/agent-agency",
+    "files_added": 0,
+    "files_skipped": 11
+  },
+  "approvals": [],
+  "timestamp": "2025-10-08T09:39:02.814Z",
+  "version": "3.2.4",
+  "hash": "edaa7c30887b342c8eff831714f2f248b6e827725fe87d9bf3098bc8f4612320"
+}

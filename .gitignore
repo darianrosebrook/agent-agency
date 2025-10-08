@@ -1,0 +1,53 @@
+# CAWS Configuration (tracked - these should be versioned)
+# Note: .caws/ and .agent/ are tracked for provenance
+# But we exclude temporary/generated files:
+
+# CAWS temporary files (ignored)
+.agent/temp/
+.agent/cache/
+.caws/.cache/
+.caws/tmp/
+
+# Build outputs (common patterns)
+dist/
+build/
+*.tsbuildinfo
+.next/
+.nuxt/
+.vite/
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage reports
+coverage/
+.nyc_output/
+
+# Test results
+test-results/
+playwright-report/
