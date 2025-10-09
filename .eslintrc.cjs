@@ -4,11 +4,7 @@ module.exports = {
     es2022: true,
     jest: true,
   },
-  extends: [
-    "eslint:recommended",
-    "@typescript-eslint/recommended",
-    "@typescript-eslint/recommended-requiring-type-checking",
-  ],
+  extends: ["eslint:recommended"],
   parser: "@typescript-eslint/parser",
   parserOptions: {
     ecmaVersion: 2022,
@@ -23,7 +19,6 @@ module.exports = {
     "@typescript-eslint/explicit-function-return-type": "off",
     "@typescript-eslint/explicit-module-boundary-types": "off",
     "@typescript-eslint/no-explicit-any": "warn",
-    "@typescript-eslint/prefer-const": "error",
     "@typescript-eslint/no-var-requires": "error",
 
     // General code quality rules

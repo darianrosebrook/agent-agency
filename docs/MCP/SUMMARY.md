@@ -11,7 +11,7 @@ Our analysis of the CAWS v1.0 framework and the agent-agency.md document reveale
 ### 1. Autonomous Operation Framework
 
 - **Self-Prompting Loops**: Continuous iteration with built-in evaluation and improvement cycles
-- **Satisficing Logic**: Prevents over-optimization by enforcing "good enough" thresholds
+- **Satisficing Logic**: Prevents over-optimization by enforcing 'good enough' thresholds
 - **Evaluation Orchestration**: Comprehensive evaluation framework with multiple assessment types
 - **Iteration Control**: Configurable limits on refinement cycles to prevent infinite loops
 
@@ -67,7 +67,7 @@ The MCP integration extends the existing Agent Agency with:
 
 - **Self-Prompting**: Agents can initiate their own refinement cycles
 - **Continuous Evaluation**: Built-in assessment loops with configurable criteria
-- **Satisficing Decisions**: Intelligent stopping when "good enough" is achieved
+- **Satisficing Decisions**: Intelligent stopping when 'good enough' is achieved
 - **Performance Learning**: Improvement through experience and feedback
 
 ### 2. Comprehensive Tool Ecosystem

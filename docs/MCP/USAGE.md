@@ -60,16 +60,16 @@ Lists all registered agents with their status and capabilities.
 ```javascript
 // Response format
 {
-  "agents": [
+  'agents': [
     {
-      "id": "agent_001",
-      "name": "Data Processor",
-      "type": "worker",
-      "status": "active",
-      "capabilities": ["process", "analyze"]
+      'id': 'agent_001',
+      'name': 'Data Processor',
+      'type': 'worker',
+      'status': 'active',
+      'capabilities': ['process', 'analyze']
     }
   ],
-  "total": 1
+  'total': 1
 }
 ```
 
@@ -111,13 +111,13 @@ Real-time system health and performance metrics.
 
 ```javascript
 {
-  "totalAgents": 5,
-  "activeAgents": 3,
-  "totalTasks": 42,
-  "completedTasks": 38,
-  "failedTasks": 2,
-  "averageTaskDuration": 1250,
-  "systemUptime": 3600
+  'totalAgents': 5,
+  'activeAgents': 3,
+  'totalTasks': 42,
+  'completedTasks': 38,
+  'failedTasks': 2,
+  'averageTaskDuration': 1250,
+  'systemUptime': 3600
 }
 ```
 
@@ -145,12 +145,12 @@ Register a new agent with the system.
 
 ```javascript
 {
-  "name": "Data Processor",
-  "type": "worker",
-  "capabilities": ["process", "analyze"],
-  "metadata": {
-    "version": "1.0.0",
-    "description": "Processes and analyzes data"
+  'name': 'Data Processor',
+  'type': 'worker',
+  'capabilities': ['process', 'analyze'],
+  'metadata': {
+    'version': '1.0.0',
+    'description': 'Processes and analyzes data'
   }
 }
 ```
@@ -159,10 +159,10 @@ Register a new agent with the system.
 
 ```javascript
 {
-  "agentId": "agent_001",
-  "agent": {
-    "id": "agent_001",
-    "name": "Data Processor",
+  'agentId': 'agent_001',
+  'agent': {
+    'id': 'agent_001',
+    'name': 'Data Processor',
     // ... full agent object
   }
 }
@@ -190,11 +190,11 @@ Submit a new task for execution.
 
 ```javascript
 {
-  "agentId": "agent_001",
-  "type": "process",
-  "payload": {
-    "data": "sample input",
-    "options": { "priority": "high" }
+  'agentId': 'agent_001',
+  'type': 'process',
+  'payload': {
+    'data': 'sample input',
+    'options': { 'priority': 'high' }
   }
 }
 ```
@@ -203,11 +203,11 @@ Submit a new task for execution.
 
 ```javascript
 {
-  "taskId": "task_001",
-  "task": {
-    "id": "task_001",
-    "agentId": "agent_001",
-    "status": "pending",
+  'taskId': 'task_001',
+  'task': {
+    'id': 'task_001',
+    'agentId': 'agent_001',
+    'status': 'pending',
     // ... full task object
   }
 }
@@ -239,14 +239,14 @@ Evaluate code quality with automated testing and linting.
 
 ```javascript
 {
-  "taskId": "task_001",
-  "projectDir": "./project",
-  "scripts": {
-    "test": "npm run test",
-    "lint": "npm run lint",
-    "typecheck": "npm run typecheck"
+  'taskId': 'task_001',
+  'projectDir': './project',
+  'scripts': {
+    'test': 'npm run test',
+    'lint': 'npm run lint',
+    'typecheck': 'npm run typecheck'
   },
-  "iteration": 1
+  'iteration': 1
 }
 ```
 
@@ -254,23 +254,23 @@ Evaluate code quality with automated testing and linting.
 
 ```javascript
 {
-  "taskId": "task_001",
-  "type": "code",
-  "iteration": 1,
-  "status": "pass",
-  "score": 0.92,
-  "criteria": [
+  'taskId': 'task_001',
+  'type': 'code',
+  'iteration': 1,
+  'status': 'pass',
+  'score': 0.92,
+  'criteria': [
     {
-      "id": "tests-pass",
-      "description": "Unit tests pass",
-      "weight": 0.4,
-      "passed": true,
-      "score": 1.0
+      'id': 'tests-pass',
+      'description': 'Unit tests pass',
+      'weight': 0.4,
+      'passed': true,
+      'score': 1.0
     }
     // ... more criteria
   ],
-  "nextActions": [],
-  "timestamp": "2024-01-01T12:00:00.000Z"
+  'nextActions': [],
+  'timestamp': '2024-01-01T12:00:00.000Z'
 }
 ```
 
@@ -318,20 +318,20 @@ Update system configuration parameters.
 
 ```javascript
 // 1. Register an agent
-const registerResult = await mcp.callTool("register_agent", {
-  name: "Code Reviewer",
-  type: "worker",
-  capabilities: ["review", "analyze"],
-  metadata: { version: "1.0.0" },
+const registerResult = await mcp.callTool('register_agent', {
+  name: 'Code Reviewer',
+  type: 'worker',
+  capabilities: ['review', 'analyze'],
+  metadata: { version: '1.0.0' },
 });
 
 // 2. Submit a task
-const taskResult = await mcp.callTool("submit_task", {
+const taskResult = await mcp.callTool('submit_task', {
   agentId: registerResult.agentId,
-  type: "review",
+  type: 'review',
   payload: {
-    code: "function example() { return true; }",
-    criteria: ["readability", "best-practices"],
+    code: 'function example() { return true; }',
+    criteria: ['readability', 'best-practices'],
   },
 });
 
@@ -349,21 +349,21 @@ async function improveCode(code, requirements) {
 
   while (iteration <= 3) {
     // Submit improvement task
-    const taskResult = await mcp.callTool("submit_task", {
-      agentId: "code-improver-agent",
-      type: "improve",
+    const taskResult = await mcp.callTool('submit_task', {
+      agentId: 'code-improver-agent',
+      type: 'improve',
       payload: { code: bestCode, requirements, iteration },
     });
 
     // Wait for completion (simplified)
     let task = await mcp.readResource(`task://${taskResult.taskId}`);
-    while (task.status !== "completed") {
+    while (task.status !== 'completed') {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       task = await mcp.readResource(`task://${taskResult.taskId}`);
     }
 
     // Evaluate the result
-    const evaluation = await mcp.callTool("evaluate_code", {
+    const evaluation = await mcp.callTool('evaluate_code', {
       taskId: task.id,
       iteration,
     });
@@ -396,7 +396,7 @@ class SelfMonitoringAgent {
 
   async executeTask(taskType, payload) {
     // Submit task
-    const taskResult = await mcp.callTool("submit_task", {
+    const taskResult = await mcp.callTool('submit_task', {
       agentId: this.agentId,
       type: taskType,
       payload,
@@ -406,7 +406,7 @@ class SelfMonitoringAgent {
     const startTime = Date.now();
     let task = await mcp.readResource(`task://${taskResult.taskId}`);
 
-    while (task.status === "pending" || task.status === "running") {
+    while (task.status === 'pending' || task.status === 'running') {
       await new Promise((resolve) => setTimeout(resolve, 500));
       task = await mcp.readResource(`task://${taskResult.taskId}`);
     }
@@ -417,7 +417,7 @@ class SelfMonitoringAgent {
     this.performanceHistory.push({
       taskId: task.id,
       taskType,
-      success: task.status === "completed",
+      success: task.status === 'completed',
       executionTime,
       timestamp: new Date().toISOString(),
     });
@@ -446,11 +446,11 @@ class SelfMonitoringAgent {
 
   async triggerSelfImprovement() {
     // Submit self-improvement task
-    await mcp.callTool("submit_task", {
+    await mcp.callTool('submit_task', {
       agentId: this.agentId,
-      type: "self-improve",
+      type: 'self-improve',
       payload: {
-        analysis: "Performance declining",
+        analysis: 'Performance declining',
         performanceHistory: this.performanceHistory,
       },
     });
@@ -573,8 +573,8 @@ class CustomEvaluator extends BaseEvaluator {
     // Implement custom evaluation logic
     const customCriteria = [
       {
-        id: "custom-metric",
-        description: "Custom quality metric",
+        id: 'custom-metric',
+        description: 'Custom quality metric',
         weight: 0.3,
         passed: await this.checkCustomMetric(params.artifactPath),
         score: await this.scoreCustomMetric(params.artifactPath),
@@ -584,7 +584,7 @@ class CustomEvaluator extends BaseEvaluator {
     return {
       taskId: params.taskId,
       artifactPaths: [params.artifactPath],
-      status: "completed",
+      status: 'completed',
       score: customCriteria.reduce((s, c) => s + c.score * c.weight, 0),
       criteria: customCriteria,
       iterations: params.iterations,
@@ -605,14 +605,14 @@ class MultiAgentCoordinator {
 
     for (const step of workflow.steps) {
       // Find suitable agent
-      const agents = await mcp.callTool("list_agents", {
+      const agents = await mcp.callTool('list_agents', {
         capability: step.requiredCapability,
       });
 
       const agent = this.selectBestAgent(agents.agents, step);
 
       // Submit task to selected agent
-      const taskResult = await mcp.callTool("submit_task", {
+      const taskResult = await mcp.callTool('submit_task', {
         agentId: agent.id,
         type: step.type,
         payload: { ...step.payload, previousResults: results },

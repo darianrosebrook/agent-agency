@@ -10,27 +10,27 @@ The Model Context Protocol (MCP) integration transforms the Agent Agency from a 
 
 ```mermaid
 graph TB
-    subgraph "MCP Server"
+    subgraph 'MCP Server'
         MCS[MCP Server]
         RM[Resource Manager]
         TM[Tool Manager]
         EO[Evaluation Orchestrator]
     end
 
-    subgraph "Agent Orchestrator"
+    subgraph 'Agent Orchestrator'
         AO[Agent Orchestrator]
         AM[Agent Manager]
         TQ[Task Queue]
         SM[System Metrics]
     end
 
-    subgraph "Local AI Model"
+    subgraph 'Local AI Model'
         LAM[Local AI Model<br/>Gemma 3N]
         EL[Evaluation Loop]
         SL[Satisficing Logic]
     end
 
-    subgraph "Data Layer"
+    subgraph 'Data Layer'
         PG[(PostgreSQL)]
         RD[(Redis Cache)]
         FS[(File System)]
@@ -61,7 +61,7 @@ graph TB
 
 ### 1. Autonomous Agent Operation
 - **Self-Prompting Loops**: Agents can iterate on tasks with built-in evaluation and improvement cycles
-- **Satisficing Logic**: Prevents endless optimization by enforcing "good enough" thresholds
+- **Satisficing Logic**: Prevents endless optimization by enforcing 'good enough' thresholds
 - **Continuous Reasoning**: Agents evaluate their own performance and adjust strategies autonomously
 
 ### 2. Comprehensive Tool Ecosystem
@@ -105,14 +105,14 @@ graph TB
 
 ```json
 {
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^0.6.0",
-    "@fastify/cors": "^9.0.0",
-    "pg": "^8.16.3",
-    "redis": "^4.6.0",
-    "ollama": "^0.6.0",
-    "graphql": "^16.11.0",
-    "ws": "^8.18.3"
+  'dependencies': {
+    '@modelcontextprotocol/sdk': '^0.6.0',
+    '@fastify/cors': '^9.0.0',
+    'pg': '^8.16.3',
+    'redis': '^4.6.0',
+    'ollama': '^0.6.0',
+    'graphql': '^16.11.0',
+    'ws': '^8.18.3'
   }
 }
 ```
@@ -367,12 +367,12 @@ interface MCPServerConfig {
 ### Evaluation Acceptance Criteria
 ```json
 {
-  "minScore": 0.85,
-  "mandatoryGates": ["tests-pass", "lint-clean", "typecheck-ok"],
-  "iterationPolicy": {
-    "maxIterations": 3,
-    "minDeltaToContinue": 0.02,
-    "noChangeBudget": 1
+  'minScore': 0.85,
+  'mandatoryGates': ['tests-pass', 'lint-clean', 'typecheck-ok'],
+  'iterationPolicy': {
+    'maxIterations': 3,
+    'minDeltaToContinue': 0.02,
+    'noChangeBudget': 1
   }
 }
 ```
