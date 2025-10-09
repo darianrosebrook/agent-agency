@@ -1,0 +1,40 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "packageManager": "npm",
+  "reporters": ["html", "clear-text", "progress", "dashboard"],
+  "testRunner": "jest",
+  "jest": {
+    "projectType": "custom",
+    "configFile": "jest.config.js",
+    "enableFindRelatedTests": true
+  },
+  "coverageAnalysis": "perTest",
+  "mutate": [
+    "src/**/*.ts",
+    "!src/**/*.d.ts",
+    "!src/**/index.ts",
+    "!src/ai/ollama-client.ts",
+    "!src/evaluation/orchestrator.ts",
+    "!src/data/dao/AgentDAO.ts",
+    "!src/data/dao/ExperienceDAO.ts",
+    "!src/data/migrations/MigrationManager.ts",
+    "!src/mcp/tools/categories/SystemTools.ts",
+    "!src/mcp/tools/categories/TaskManagementTools.ts"
+  ],
+  "thresholds": {
+    "high": 80,
+    "low": 60,
+    "break": 50
+  },
+  "maxConcurrentTestRunners": 4,
+  "timeoutMS": 30000,
+  "timeoutFactor": 1.5,
+  "plugins": [
+    "@stryker-mutator/jest-runner",
+    "@stryker-mutator/typescript-checker"
+  ],
+  "tsconfigFile": "tsconfig.json",
+  "typeChecker": "typescript",
+  "checkers": ["typescript"],
+  "buildCommand": "npm run build"
+}

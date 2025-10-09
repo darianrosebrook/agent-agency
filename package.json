@@ -1,100 +1,60 @@
 {
   "name": "agent-agency",
-  "version": "1.0.0",
-  "description": "Agent Agency - A CAWS-managed project for agent orchestration",
-  "main": "src/index.js",
+  "version": "0.1.0",
+  "description": "Intelligent Multi-Agent Orchestration Platform - Mono-repo",
+  "private": true,
   "type": "module",
+  "workspaces": [
+    "iterations/*"
+  ],
   "scripts": {
-    "test": "jest",
-    "test:unit": "jest --testPathPattern=unit",
-    "test:integration": "jest --testPathPattern=integration",
-    "test:e2e": "playwright test",
-    "test:mutation": "echo 'Mutation testing not configured yet'",
-    "test:contract": "echo 'Contract testing not configured yet'",
-    "test:axe": "echo 'A11y testing not configured yet'",
-    "lint": "eslint src/**/*.ts tests/**/*.ts",
-    "typecheck": "tsc --noEmit",
-    "build": "tsc",
-    "dev": "tsx watch src/index.ts",
-    "mcp:start": "node bin/mcp-server.js start",
-    "validate": "caws validate --suggestions",
-    "db:migrate": "node scripts/migrate-db.js up",
-    "db:migrate:status": "node scripts/migrate-db.js status",
-    "db:rollback": "node scripts/migrate-db.js down",
-    "perf:budgets": "echo 'Performance budgets not configured yet'",
-    "dep:policy": "npm audit --audit-level moderate"
+    "install:all": "npm install",
+    "build": "npm run --workspace=iterations/poc build",
+    "build:poc": "npm run --workspace=iterations/poc build",
+    "test": "npm run --workspace=iterations/poc test",
+    "test:poc": "npm run --workspace=iterations/poc test",
+    "test:all": "npm run --workspace=iterations/poc test",
+    "lint": "npm run --workspace=iterations/poc lint",
+    "lint:poc": "npm run --workspace=iterations/poc lint",
+    "typecheck": "npm run --workspace=iterations/poc typecheck",
+    "typecheck:poc": "npm run --workspace=iterations/poc typecheck",
+    "dev": "npm run --workspace=iterations/poc dev",
+    "dev:poc": "npm run --workspace=iterations/poc dev",
+    "clean": "npm run --workspace=iterations/poc clean",
+    "migrate": "npm run --workspace=iterations/poc migrate",
+    "migrate:poc": "npm run --workspace=iterations/poc migrate",
+    "iterations:list": "node scripts/manage-iterations.js list",
+    "iterations:validate": "node scripts/manage-iterations.js validate",
+    "iterations:stats": "node scripts/manage-iterations.js stats",
+    "iterations:run": "node scripts/manage-iterations.js run",
+    "iterations:run-all": "node scripts/manage-iterations.js run-all",
+    "caws:validate": "node scripts/caws-validate.js",
+    "caws:validate:all": "node scripts/caws-validate.js all"
   },
-  "jest": {
-    "testEnvironment": "node",
-    "roots": [
-      "<rootDir>/src",
-      "<rootDir>/tests"
-    ],
-    "testMatch": [
-      "**/__tests__/**/*.ts",
-      "**/?(*.)+(spec|test).ts"
-    ],
-    "transform": {
-      "^.+\\.ts$": [
-        "ts-jest",
-        {
-          "tsconfig": "tsconfig.json",
-          "useESM": true
-        }
-      ]
-    },
-    "collectCoverageFrom": [
-      "src/**/*.{ts,js}",
-      "!src/**/*.d.ts"
-    ],
-    "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/src/$1",
-      "^(\\.\\.?\\/.*)\\.js$": "$1"
-    },
-    "moduleFileExtensions": [
-      "ts",
-      "js"
-    ],
-    "extensionsToTreatAsEsm": [
-      ".ts"
-    ],
-    "transformIgnorePatterns": [
-      "node_modules/(?!(@modelcontextprotocol)/)"
-    ],
-    "setupFilesAfterEnv": [
-      "<rootDir>/tests/setup.ts"
-    ]
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-org/agent-agency.git"
   },
   "keywords": [
-    "agent",
-    "agency",
-    "caws",
-    "automation"
+    "ai",
+    "agents",
+    "orchestration",
+    "multi-agent",
+    "mcp",
+    "typescript"
   ],
   "author": "@darianrosebrook",
   "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/your-org/agent-agency/issues"
+  },
+  "homepage": "https://github.com/your-org/agent-agency#readme",
   "devDependencies": {
-    "@types/jest": "^29.5.0",
-    "@types/node": "^20.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.21.0",
-    "@typescript-eslint/parser": "^6.21.0",
-    "eslint": "^8.0.0",
-    "jest": "^29.5.0",
-    "ts-jest": "^29.4.4",
-    "tsx": "^4.0.0",
+    "@types/node": "^18.0.0",
     "typescript": "^5.0.0"
   },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^0.6.0",
-    "@types/pg": "^8.15.5",
-    "fast-check": "^3.0.0",
-    "pg": "^8.16.3",
-    "redis": "^5.8.3"
-  },
-  "bin": {
-    "mcp-server": "./bin/mcp-server.js"
-  },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }

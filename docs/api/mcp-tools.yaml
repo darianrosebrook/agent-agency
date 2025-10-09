@@ -1,0 +1,620 @@
+openapi: 3.0.3
+info:
+  title: MCP Tools API
+  description: API for Model Context Protocol tool management and execution
+  version: 1.0.0
+  contact:
+    name: @darianrosebrook
+
+servers:
+  - url: http://localhost:3000/api/v1/mcp/tools
+    description: Development server
+  - url: https://api.agent-agency.com/v1/mcp/tools
+    description: Production server
+
+paths:
+  /:
+    get:
+      summary: List all available tools
+      operationId: listTools
+      tags:
+        - Tool Management
+      responses:
+        '200':
+          description: List of available tools
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tools:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tool'
+                  total:
+                    type: integer
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /{toolId}:
+    get:
+      summary: Get tool details
+      operationId: getTool
+      tags:
+        - Tool Management
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tool details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tool'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /{toolId}/execute:
+    post:
+      summary: Execute a tool
+      operationId: executeTool
+      tags:
+        - Tool Execution
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolExecutionRequest'
+      responses:
+        '200':
+          description: Tool executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolExecutionResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /{toolId}/evaluate:
+    post:
+      summary: Evaluate tool performance
+      operationId: evaluateTool
+      tags:
+        - Tool Evaluation
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolEvaluationRequest'
+      responses:
+        '200':
+          description: Tool evaluation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolEvaluationResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /categories:
+    get:
+      summary: List tool categories
+      operationId: listCategories
+      tags:
+        - Tool Management
+      responses:
+        '200':
+          description: List of tool categories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ToolCategory'
+                  total:
+                    type: integer
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /search:
+    post:
+      summary: Search for tools by capability
+      operationId: searchTools
+      tags:
+        - Tool Discovery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolSearchRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolSearchResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /batch/execute:
+    post:
+      summary: Execute multiple tools in batch
+      operationId: batchExecuteTools
+      tags:
+        - Tool Execution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchToolExecutionRequest'
+      responses:
+        '200':
+          description: Batch execution completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchToolExecutionResult'
+        '207':
+          description: Partial batch execution (some tools failed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchToolExecutionResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    Tool:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - category
+        - capabilities
+        - inputSchema
+        - outputSchema
+      properties:
+        id:
+          type: string
+          description: Unique tool identifier
+        name:
+          type: string
+          description: Human-readable tool name
+        description:
+          type: string
+          description: Tool description and purpose
+        category:
+          type: string
+          description: Tool category
+        capabilities:
+          type: array
+          items:
+            type: string
+          description: What the tool can do
+        inputSchema:
+          type: object
+          description: JSON Schema for tool inputs
+          additionalProperties: true
+        outputSchema:
+          type: object
+          description: JSON Schema for tool outputs
+          additionalProperties: true
+        metadata:
+          type: object
+          properties:
+            version:
+              type: string
+            author:
+              type: string
+            license:
+              type: string
+            tags:
+              type: array
+              items:
+                type: string
+            performance:
+              type: object
+              properties:
+                avgExecutionTime:
+                  type: number
+                successRate:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+                costEstimate:
+                  type: number
+        examples:
+          type: array
+          items:
+            type: object
+            properties:
+              input:
+                type: object
+                additionalProperties: true
+              output:
+                type: object
+                additionalProperties: true
+              description:
+                type: string
+
+    ToolExecutionRequest:
+      type: object
+      required:
+        - inputs
+      properties:
+        inputs:
+          type: object
+          description: Tool input parameters
+          additionalProperties: true
+        options:
+          type: object
+          properties:
+            timeout:
+              type: integer
+              minimum: 1
+              maximum: 300000
+              default: 30000
+            retries:
+              type: integer
+              minimum: 0
+              maximum: 5
+              default: 0
+            async:
+              type: boolean
+              default: false
+            priority:
+              type: string
+              enum: [low, normal, high]
+              default: normal
+        context:
+          type: object
+          description: Execution context
+          additionalProperties: true
+
+    ToolExecutionResult:
+      type: object
+      required:
+        - toolId
+        - executionId
+        - status
+        - outputs
+      properties:
+        toolId:
+          type: string
+        executionId:
+          type: string
+        status:
+          type: string
+          enum: [success, error, timeout, cancelled]
+        outputs:
+          type: object
+          description: Tool execution outputs
+          additionalProperties: true
+        executionTime:
+          type: number
+          description: Execution time in milliseconds
+        error:
+          type: string
+        metadata:
+          type: object
+          properties:
+            retries:
+              type: integer
+            cost:
+              type: number
+            resourceUsage:
+              type: object
+              additionalProperties: true
+
+    ToolEvaluationRequest:
+      type: object
+      required:
+        - testCases
+        - criteria
+      properties:
+        testCases:
+          type: array
+          items:
+            type: object
+            required:
+              - inputs
+              - expectedOutputs
+            properties:
+              inputs:
+                type: object
+                additionalProperties: true
+              expectedOutputs:
+                type: object
+                additionalProperties: true
+              description:
+                type: string
+        criteria:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+              - type
+            properties:
+              name:
+                type: string
+              type:
+                type: string
+                enum: [exact_match, similarity, custom]
+              weight:
+                type: number
+                minimum: 0
+                maximum: 1
+                default: 1
+              config:
+                type: object
+                additionalProperties: true
+
+    ToolEvaluationResult:
+      type: object
+      required:
+        - toolId
+        - overallScore
+        - testResults
+      properties:
+        toolId:
+          type: string
+        overallScore:
+          type: number
+          minimum: 0
+          maximum: 1
+        testResults:
+          type: array
+          items:
+            type: object
+            properties:
+              testCase:
+                type: integer
+              score:
+                type: number
+                minimum: 0
+                maximum: 1
+              details:
+                type: object
+                additionalProperties: true
+              error:
+                type: string
+        evaluationTime:
+          type: number
+        recommendations:
+          type: array
+          items:
+            type: string
+
+    ToolCategory:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - toolCount
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        toolCount:
+          type: integer
+        capabilities:
+          type: array
+          items:
+            type: string
+
+    ToolSearchRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: Search query
+        category:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        sortBy:
+          type: string
+          enum: [relevance, name, category, performance]
+          default: relevance
+
+    ToolSearchResult:
+      type: object
+      required:
+        - tools
+        - total
+        - searchTime
+      properties:
+        tools:
+          type: array
+          items:
+            type: object
+            properties:
+              tool:
+                $ref: '#/components/schemas/Tool'
+              relevanceScore:
+                type: number
+                minimum: 0
+                maximum: 1
+              matchedCapabilities:
+                type: array
+                items:
+                  type: string
+        total:
+          type: integer
+        searchTime:
+          type: number
+
+    BatchToolExecutionRequest:
+      type: object
+      required:
+        - executions
+      properties:
+        executions:
+          type: array
+          items:
+            type: object
+            required:
+              - toolId
+              - inputs
+            properties:
+              toolId:
+                type: string
+              inputs:
+                type: object
+                additionalProperties: true
+              options:
+                $ref: '#/components/schemas/ToolExecutionRequest/properties/options'
+          maxItems: 50
+        options:
+          type: object
+          properties:
+            parallel:
+              type: boolean
+              default: true
+            failFast:
+              type: boolean
+              default: false
+            timeout:
+              type: integer
+              minimum: 1
+              maximum: 300000
+              default: 60000
+
+    BatchToolExecutionResult:
+      type: object
+      required:
+        - batchId
+        - total
+        - successful
+        - failed
+        - results
+      properties:
+        batchId:
+          type: string
+        total:
+          type: integer
+        successful:
+          type: integer
+        failed:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolExecutionResult'
+        executionTime:
+          type: number
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              toolId:
+                type: string
+              error:
+                type: string
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              details:
+                type: object
+                additionalProperties: true
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              requestId:
+                type: string
+
+tags:
+  - name: Tool Management
+    description: Tool registration, discovery, and metadata
+  - name: Tool Execution
+    description: Executing tools individually or in batches
+  - name: Tool Evaluation
+    description: Testing and evaluating tool performance
+  - name: Tool Discovery
+    description: Searching and filtering available tools

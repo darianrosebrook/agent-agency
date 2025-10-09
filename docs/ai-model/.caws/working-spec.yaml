@@ -73,6 +73,16 @@ observability:
     - inference_request_traces
     - evaluation_loop_traces
     - satisficing_decision_traces
+contracts:
+  - type: typescript
+    path: src/ai/index.ts
+    version: 1.0.0
+  - type: openapi
+    path: docs/api/ai-model.yaml
+    version: 1.0.0
+  - type: typescript
+    path: src/ai/ollama-client.ts
+    version: 1.0.0
 migrations: []
 rollback:
   - type: model_unload

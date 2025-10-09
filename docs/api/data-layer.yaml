@@ -1,0 +1,633 @@
+openapi: 3.0.3
+info:
+  title: Data Layer API
+  description: API for data persistence, caching, and database operations
+  version: 1.0.0
+  contact:
+    name: @darianrosebrook
+
+servers:
+  - url: http://localhost:3000/api/v1/data
+    description: Development server
+  - url: https://api.agent-agency.com/v1/data
+    description: Production server
+
+paths:
+  /health:
+    get:
+      summary: Check database health and connectivity
+      operationId: getHealth
+      tags:
+        - Health Monitoring
+      responses:
+        '200':
+          description: Database is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: Database is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /query:
+    post:
+      summary: Execute raw SQL query (admin only)
+      operationId: executeQuery
+      tags:
+        - Database Operations
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+      responses:
+        '200':
+          description: Query executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /cache/{key}:
+    get:
+      summary: Get cached value by key
+      operationId: getCache
+      tags:
+        - Caching
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tenantId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cache hit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheEntry'
+        '404':
+          description: Cache miss
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      summary: Set cache value
+      operationId: setCache
+      tags:
+        - Caching
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tenantId
+          in: query
+          schema:
+            type: string
+        - name: ttl
+          in: query
+          schema:
+            type: integer
+            description: Time to live in seconds
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Cache set successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      summary: Delete cached value
+      operationId: deleteCache
+      tags:
+        - Caching
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tenantId
+          in: query
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Cache entry deleted
+        '404':
+          description: Cache entry not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /vector/search:
+    post:
+      summary: Perform vector similarity search
+      operationId: vectorSearch
+      tags:
+        - Vector Operations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VectorSearchRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VectorSearchResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /transactions:
+    post:
+      summary: Execute transaction with multiple operations
+      operationId: executeTransaction
+      tags:
+        - Transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionRequest'
+      responses:
+        '200':
+          description: Transaction completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Transaction conflict
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /migrations/status:
+    get:
+      summary: Get database migration status
+      operationId: getMigrationStatus
+      tags:
+        - Migrations
+      responses:
+        '200':
+          description: Migration status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MigrationStatus'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /backups:
+    post:
+      summary: Create database backup
+      operationId: createBackup
+      tags:
+        - Backup & Recovery
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BackupRequest'
+      responses:
+        '202':
+          description: Backup initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  backupId:
+                    type: string
+                  status:
+                    type: string
+                    enum: [pending, running]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    get:
+      summary: List available backups
+      operationId: listBackups
+      tags:
+        - Backup & Recovery
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of backups
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  backups:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BackupInfo'
+                  total:
+                    type: integer
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required:
+        - status
+        - timestamp
+        - checks
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        checks:
+          type: object
+          properties:
+            database:
+              $ref: '#/components/schemas/ServiceHealth'
+            cache:
+              $ref: '#/components/schemas/ServiceHealth'
+            vector:
+              $ref: '#/components/schemas/ServiceHealth'
+        uptime:
+          type: number
+          description: Uptime in seconds
+        version:
+          type: string
+
+    ServiceHealth:
+      type: object
+      required:
+        - status
+        - responseTime
+      properties:
+        status:
+          type: string
+          enum: [up, down, degraded]
+        responseTime:
+          type: number
+          description: Response time in milliseconds
+        error:
+          type: string
+        lastChecked:
+          type: string
+          format: date-time
+
+    QueryRequest:
+      type: object
+      required:
+        - sql
+      properties:
+        sql:
+          type: string
+        parameters:
+          type: array
+          items:
+            type: string
+        tenantId:
+          type: string
+        timeout:
+          type: integer
+          minimum: 1
+          maximum: 300000
+          default: 30000
+
+    QueryResult:
+      type: object
+      required:
+        - success
+        - executionTime
+      properties:
+        success:
+          type: boolean
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        rowCount:
+          type: integer
+        executionTime:
+          type: number
+        error:
+          type: string
+
+    CacheEntry:
+      type: object
+      required:
+        - key
+        - value
+        - createdAt
+      properties:
+        key:
+          type: string
+        value:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        ttl:
+          type: integer
+        hits:
+          type: integer
+        tenantId:
+          type: string
+
+    VectorSearchRequest:
+      type: object
+      required:
+        - queryVector
+        - collection
+      properties:
+        queryVector:
+          type: array
+          items:
+            type: number
+          minItems: 1
+        collection:
+          type: string
+          enum: [experiences, entities, tasks]
+        tenantId:
+          type: string
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 10
+        threshold:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0.7
+        filters:
+          type: object
+          additionalProperties: true
+
+    VectorSearchResult:
+      type: object
+      required:
+        - results
+        - total
+        - searchTime
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              score:
+                type: number
+              data:
+                type: object
+                additionalProperties: true
+              metadata:
+                type: object
+                additionalProperties: true
+        total:
+          type: integer
+        searchTime:
+          type: number
+        averageScore:
+          type: number
+
+    TransactionRequest:
+      type: object
+      required:
+        - operations
+      properties:
+        operations:
+          type: array
+          items:
+            type: object
+            required:
+              - type
+              - table
+            properties:
+              type:
+                type: string
+                enum: [insert, update, delete, select]
+              table:
+                type: string
+              data:
+                type: object
+                additionalProperties: true
+              where:
+                type: object
+                additionalProperties: true
+              returning:
+                type: array
+                items:
+                  type: string
+        isolation:
+          type: string
+          enum: [read_uncommitted, read_committed, repeatable_read, serializable]
+          default: read_committed
+        tenantId:
+          type: string
+
+    TransactionResult:
+      type: object
+      required:
+        - success
+        - executionTime
+      properties:
+        success:
+          type: boolean
+        results:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        executionTime:
+          type: number
+        transactionId:
+          type: string
+        error:
+          type: string
+
+    MigrationStatus:
+      type: object
+      required:
+        - currentVersion
+        - pendingMigrations
+        - lastMigration
+      properties:
+        currentVersion:
+          type: string
+        pendingMigrations:
+          type: array
+          items:
+            type: string
+        lastMigration:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [up_to_date, pending, error]
+
+    BackupRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        includeData:
+          type: boolean
+          default: true
+        compression:
+          type: boolean
+          default: true
+        tenantId:
+          type: string
+        tables:
+          type: array
+          items:
+            type: string
+
+    BackupInfo:
+      type: object
+      required:
+        - id
+        - name
+        - createdAt
+        - size
+        - status
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        size:
+          type: integer
+          description: Size in bytes
+        status:
+          type: string
+          enum: [completed, failed, in_progress]
+        compression:
+          type: boolean
+        includesData:
+          type: boolean
+        tenantId:
+          type: string
+        downloadUrl:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              details:
+                type: object
+                additionalProperties: true
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              requestId:
+                type: string
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+tags:
+  - name: Health Monitoring
+    description: Database health and connectivity checks
+  - name: Database Operations
+    description: Raw SQL queries and database operations
+  - name: Caching
+    description: In-memory caching operations
+  - name: Vector Operations
+    description: Vector similarity search and operations
+  - name: Transactions
+    description: Multi-operation database transactions
+  - name: Migrations
+    description: Database schema migration management
+  - name: Backup & Recovery
+    description: Database backup and recovery operations

@@ -14,7 +14,7 @@ In practical terms, this might look like:
 
 Right, picking up where we left off: the idea is to create these **autonomous governance loops**. Essentially, you'd have agents that don't just follow rules but can measure their own adherence to those rules. They'd be equipped with a sort of built-in feedback mechanism that checks their output against CAWS-defined standards, and if they detect a drift or an inefficiency, they adapt their own process. This would be extremely powerful in maintaining high-quality, consistent output without constant human oversight.
 
-In other words, you're proposing a sort of meta-automation layer: agents that are both *workers* and *self-auditors*. Over time, these agents could evolve more robust heuristics or even suggest refinements to the CAWS framework itself. It’s kind of like giving them the tools to improve their own methods in a continuous loop.
+In other words, you're proposing a sort of meta-automation layer: agents that are both _workers_ and _self-auditors_. Over time, these agents could evolve more robust heuristics or even suggest refinements to the CAWS framework itself. It’s kind of like giving them the tools to improve their own methods in a continuous loop.
 
 So yes, this is a forward-thinking and quite innovative direction. And if you can successfully prototype that, you’d not only be pushing yourself into that Level 8 teacher-innovator territory but also carving out a pretty unique niche in AI governance.
 
@@ -22,9 +22,9 @@ So yes, this is a forward-thinking and quite innovative direction. And if you ca
 
 Absolutely, you’re spot on. The idea of a truly self-prompting, continuously self-improving agent is definitely pushing beyond what’s commonly available right now, especially in a commercial or off-the-shelf form. As you said, keeping something like GPT-4 running in a continuous prompting loop would be pretty resource-intensive and not practical without a huge budget or some form of local optimization.
 
-What you’re really hinting at is the need for a more *localized, efficient model* that can run these self-improvement cycles on-device. So, rather than relying on a large cloud-based model with continuous API calls, you’d have a streamlined local model fine-tuned for your specific CAWS tasks. This model would be optimized to run on local hardware—whether that’s an Apple Silicon chip or something similar—so that it can manage these loops efficiently without the overhead of cloud-based computation.
+What you’re really hinting at is the need for a more _localized, efficient model_ that can run these self-improvement cycles on-device. So, rather than relying on a large cloud-based model with continuous API calls, you’d have a streamlined local model fine-tuned for your specific CAWS tasks. This model would be optimized to run on local hardware—whether that’s an Apple Silicon chip or something similar—so that it can manage these loops efficiently without the overhead of cloud-based computation.
 
-In essence, you’d be building a kind of *local agent runtime* that is both lean and specialized. It would have the same rigor and quality standards you’ve defined, but it wouldn’t need the heavy infrastructure of a full-scale cloud model.
+In essence, you’d be building a kind of _local agent runtime_ that is both lean and specialized. It would have the same rigor and quality standards you’ve defined, but it wouldn’t need the heavy infrastructure of a full-scale cloud model.
 
 This aligns really nicely with your interest in building tools that are robust, self-governing, and locally executable. It’s a forward-thinking approach that would let you have a truly autonomous design technologist agent running right on your own hardware. It’s ambitious, but it’s definitely the kind of next-step challenge that would push your AI fluency to the next level.
 
@@ -38,7 +38,7 @@ First, you’ll want to look into lightweight models that can run efficiently on
 
 ### 2. **Frameworks for Self-Governance and Auditing**
 
-Next, think about how you’ll encode the self-auditing logic. You already have the CAWS framework, which is a great starting point. What you’ll do is effectively build a *meta-layer* where the agent can check its output against CAWS-defined criteria. This might involve building a simple rule engine or a feedback loop where after each task cycle, the agent “grades” itself based on whether it met the predefined quality or completion goals.
+Next, think about how you’ll encode the self-auditing logic. You already have the CAWS framework, which is a great starting point. What you’ll do is effectively build a _meta-layer_ where the agent can check its output against CAWS-defined criteria. This might involve building a simple rule engine or a feedback loop where after each task cycle, the agent “grades” itself based on whether it met the predefined quality or completion goals.
 
 ### 3. **Defining Completion and Quality Metrics**
 
@@ -122,9 +122,146 @@ The key is to keep each test small and focused. Run the agent through one of the
 
 Once you see it working on these small tasks, you can start layering on more complexity and refining the criteria. But these initial tests should give you a solid proof of concept and show you how well the continuous loop works in practice.
 
+---
+
+## POC E2E Vision: End-to-End Self-Prompting Agent Tests
+
+### Current POC Components Available for E2E Tests
+
+#### ✅ Already Working:
+
+- **MCP Server**: Full implementation with resource/tool handlers
+- **Data Layer**: PostgreSQL + pgvector + Redis with comprehensive monitoring
+- **Memory System**: Multi-tenant memory with context offloading and federated learning
+- **Agent Orchestrator**: Basic task routing with memory-aware capabilities
+- **Database Schema**: Complete migrations with vector support and Row Level Security
+- **Unit Tests**: 62/84 tests passing (74% coverage)
+
+#### ❌ Missing for E2E Tests:
+
+1. **Local AI Model Integration** (Gemma 3N/Ollama)
+2. **Evaluation Framework** (satisficing logic and quality gates)
+3. **E2E Test Runner Infrastructure**
+4. **Agent Loop Orchestration**
+5. **Test Data and Fixtures**
+
+### E2E Test Scenarios
+
+Based on the three efficient first tests, we'll implement these end-to-end flows:
+
+#### **Test 1: Text Transformation E2E**
+
+**Goal**: Verify agent can rewrite content and self-evaluate completion
+
+- **Input**: Raw paragraph requiring formal rewrite
+- **Process**: Agent generates → Evaluates (length, style, banned phrases) → Iterates if needed (max 3x)
+- **Success**: Output meets all criteria without over-optimization
+- **Validates**: Self-prompting loop, evaluation framework, satisficing logic
+
+#### **Test 2: Code Generation E2E**
+
+**Goal**: Verify agent produces production-quality code
+
+- **Input**: Component specification (e.g., React button with design requirements)
+- **Process**: Agent generates → Runs lint/test/typecheck → Fixes issues → Iterates (max 3x)
+- **Success**: Code passes all quality gates (tests, lint, types)
+- **Validates**: Tool calling, quality gate enforcement, iterative improvement
+
+#### **Test 3: Design Token Application E2E**
+
+**Goal**: Verify agent uses semantic design tokens, not hardcoded values
+
+- **Input**: UI component requirements with token registry
+- **Process**: Agent generates → Scans for hardcoded values → Replaces with tokens → Iterates (max 3x)
+- **Success**: No hex colors, no raw px spacing, proper token usage
+- **Validates**: Design system compliance, token awareness, semantic coding
+
+### Implementation Phases
+
+#### **Phase 1: Core Infrastructure (1-2 weeks)**
+
+1. **Add Ollama integration** to POC MCP server
+2. **Implement evaluation framework** from agent-agency.md
+3. **Create test fixtures** and sample data
+4. **Set up E2E test runner**
+
+#### **Phase 2: Basic E2E Tests (1 week)**
+
+1. **Text transformation test** (simplest to implement)
+2. **Basic MCP flow validation**
+3. **Evaluation framework testing**
+
+#### **Phase 3: Advanced E2E Tests (1-2 weeks)**
+
+1. **Code generation test** (requires linting setup)
+2. **Design token test** (requires token registry)
+3. **Multi-iteration scenarios**
+4. **Performance and reliability tests**
+
+### Success Criteria for E2E Tests
+
+#### **Test Validation:**
+
+- ✅ **Text transformation**: Agent can rewrite content and recognize completion
+- ✅ **Code generation**: Agent produces lint-clean, tested code
+- ✅ **Token application**: Agent uses semantic tokens, not hardcoded values
+- ✅ **Self-evaluation**: Agent stops iterating when quality thresholds met
+- ✅ **Performance**: Tests complete within 2 minutes each
+- ✅ **Reliability**: 95%+ test pass rate in CI
+
+#### **Infrastructure Validation:**
+
+- ✅ **Model integration**: Gemma 3N responds reliably
+- ✅ **MCP protocol**: Full request/response cycle works
+- ✅ **Data persistence**: Agent memory and results persist
+- ✅ **Evaluation framework**: All 3 evaluator types working
+
+### Required Dependencies & Setup
+
+#### **New Dependencies**
+
+```json
+{
+  "ollama": "^0.3.0",
+  "openai": "^4.24.7",
+  "@playwright/test": "^1.40.0",
+  "testcontainers": "^10.0.0"
+}
+```
+
+#### **Environment Setup**
+
+```bash
+# Start required services for E2E tests
+docker run -d -p 5432:5432 postgres:16
+docker run -d -p 6379:6379 redis:7
+ollama serve  # Start Ollama server
+ollama pull gemma:3n  # Pull the model
+```
+
+#### **Test Scripts**
+
+```json
+{
+  "test:e2e": "playwright test tests/e2e/",
+  "test:e2e:setup": "node scripts/setup-e2e-env.js",
+  "test:e2e:ci": "npm run test:e2e:setup && npm run test:e2e"
+}
+```
+
+### Next Steps Implementation
+
+1. **Start with evaluation framework** - Implement the scripts from agent-agency.md
+2. **Add Ollama client** - Integrate local model calling
+3. **Create test fixtures** - Sample inputs for each test type
+4. **Build E2E runner** - Test orchestration framework
+5. **Implement Text E2E test** - Start with the simplest scenario
+
+---
+
 > What should these evaluation scripts look like?
 
-Below is a concrete, “drop-in” evaluation kit you can adapt for your self-prompting loop. It’s **TypeScript/Node** (since your stack leans web). Each evaluator produces a **uniform JSON report** the agent can read to decide: *pass/iterate/stop (satisfice)*.
+Below is a concrete, “drop-in” evaluation kit you can adapt for your self-prompting loop. It’s **TypeScript/Node** (since your stack leans web). Each evaluator produces a **uniform JSON report** the agent can read to decide: _pass/iterate/stop (satisfice)_.
 
 ---
 
@@ -139,9 +276,9 @@ export type EvalStatus = "pass" | "iterate" | "fail";
 export interface EvalCriterion {
   id: string;
   description: string;
-  weight: number;          // 0..1, sum ≤ 1.0
+  weight: number; // 0..1, sum ≤ 1.0
   passed: boolean;
-  score: number;           // 0..1
+  score: number; // 0..1
   notes?: string;
 }
 
@@ -149,25 +286,30 @@ export interface EvalReport {
   taskId: string;
   artifactPaths: string[];
   // aggregate
-  status: EvalStatus;                // pass | iterate | fail
-  score: number;                     // 0..1 weighted
-  thresholdsMet: string[];           // names of thresholds met
-  thresholdsMissed: string[];        // names missed
+  status: EvalStatus; // pass | iterate | fail
+  score: number; // 0..1 weighted
+  thresholdsMet: string[]; // names of thresholds met
+  thresholdsMissed: string[]; // names missed
   criteria: EvalCriterion[];
   // meta for satisficing & yield
-  iterations: number;                // current iteration count
-  promptTokens?: number;             // optional for yield
+  iterations: number; // current iteration count
+  promptTokens?: number; // optional for yield
   completionTokens?: number;
   elapsedMs?: number;
   // stopping guidance
-  stopReason?: "satisficed" | "max-iterations" | "quality-ceiling" | "failed-gates" | "unknown";
-  nextActions?: string[];            // agent-facing hints
+  stopReason?:
+    | "satisficed"
+    | "max-iterations"
+    | "quality-ceiling"
+    | "failed-gates"
+    | "unknown";
+  nextActions?: string[]; // agent-facing hints
   // raw logs
   logs?: string[];
   // provenance / reproducibility
   seed?: number;
   toolVersions?: Record<string, string>;
-  timestamp: string;                 // ISO-8601
+  timestamp: string; // ISO-8601
 }
 ```
 
@@ -180,13 +322,13 @@ A simple **acceptance file** drives thresholds and “good-enough” rules:
   "mandatoryGates": ["tests-pass", "lint-clean"],
   "iterationPolicy": {
     "maxIterations": 3,
-    "minDeltaToContinue": 0.02,       // require ≥2% improvement to keep iterating
-    "noChangeBudget": 1                // allow 1 plateau before stopping as "satisficed"
+    "minDeltaToContinue": 0.02, // require ≥2% improvement to keep iterating
+    "noChangeBudget": 1 // allow 1 plateau before stopping as "satisficed"
   }
 }
 ```
 
-Your orchestrator compares the last N reports to decide **stop/iterate**, enforcing *satisficing* (see §4).
+Your orchestrator compares the last N reports to decide **stop/iterate**, enforcing _satisficing_ (see §4).
 
 ---
 
@@ -211,18 +353,23 @@ interface TextEvalConfig {
 
 function fleschKincaidApprox(text: string): number {
   // Lightweight heuristic: sentences, words, syllables (very rough)
-  const sentences = Math.max(1, (text.match(/[.!?]+/g)?.length ?? 1));
-  const words = Math.max(1, (text.trim().split(/\s+/g).length));
-  const syllables = Math.max(1, (text.match(/[aeiouy]+/gi)?.length ?? Math.ceil(words * 1.3)));
+  const sentences = Math.max(1, text.match(/[.!?]+/g)?.length ?? 1);
+  const words = Math.max(1, text.trim().split(/\s+/g).length);
+  const syllables = Math.max(
+    1,
+    text.match(/[aeiouy]+/gi)?.length ?? Math.ceil(words * 1.3)
+  );
   // Flesch-Kincaid Grade (approximate)
   return 0.39 * (words / sentences) + 11.8 * (syllables / words) - 15.59;
 }
 
-function scoreBoolean(passed: boolean) { return passed ? 1 : 0; }
+function scoreBoolean(passed: boolean) {
+  return passed ? 1 : 0;
+}
 
 export async function evaluateText(params: {
   taskId: string;
-  artifactPath: string;       // path to .txt or .md produced by the agent
+  artifactPath: string; // path to .txt or .md produced by the agent
   iterations: number;
   config: TextEvalConfig;
   acceptance: { minScore: number; mandatoryGates: string[] };
@@ -242,31 +389,35 @@ export async function evaluateText(params: {
     weight: 0.15,
     passed: withinMax && withinMin,
     score: scoreBoolean(withinMax && withinMin),
-    notes: `len=${text.length}`
+    notes: `len=${text.length}`,
   });
 
   // C2: banned phrases
   const banned = config.bannedPhrases ?? [];
-  const bannedHits = banned.filter(p => text.toLowerCase().includes(p.toLowerCase()));
+  const bannedHits = banned.filter((p) =>
+    text.toLowerCase().includes(p.toLowerCase())
+  );
   criteria.push({
     id: "no-banned-phrases",
     description: "Avoid banned phrases",
     weight: 0.15,
     passed: bannedHits.length === 0,
     score: scoreBoolean(bannedHits.length === 0),
-    notes: bannedHits.length ? `hits=${bannedHits.join(",")}` : undefined
+    notes: bannedHits.length ? `hits=${bannedHits.join(",")}` : undefined,
   });
 
   // C3: required phrases
   const required = config.requiredPhrases ?? [];
-  const missingReq = required.filter(p => !text.toLowerCase().includes(p.toLowerCase()));
+  const missingReq = required.filter(
+    (p) => !text.toLowerCase().includes(p.toLowerCase())
+  );
   criteria.push({
     id: "required-phrases",
     description: "Include required phrases",
     weight: 0.15,
     passed: missingReq.length === 0,
     score: scoreBoolean(missingReq.length === 0),
-    notes: missingReq.length ? `missing=${missingReq.join(",")}` : undefined
+    notes: missingReq.length ? `missing=${missingReq.join(",")}` : undefined,
   });
 
   // C4: readability ceiling (optional)
@@ -282,7 +433,7 @@ export async function evaluateText(params: {
     weight: 0.1,
     passed: readabilityPass,
     score: scoreBoolean(readabilityPass),
-    notes: `grade≈${grade.toFixed(1)}`
+    notes: `grade≈${grade.toFixed(1)}`,
   });
 
   // C5: style heuristic (very light)
@@ -295,7 +446,7 @@ export async function evaluateText(params: {
     weight: 0.1,
     passed: stylePass,
     score: scoreBoolean(stylePass),
-    notes: `contractions=${hasContractions}`
+    notes: `contractions=${hasContractions}`,
   });
 
   // C6: structure markers (paragraphs, headings)
@@ -307,7 +458,7 @@ export async function evaluateText(params: {
     weight: 0.1,
     passed: structurePass,
     score: scoreBoolean(structurePass),
-    notes: `paragraphs=${paras}`
+    notes: `paragraphs=${paras}`,
   });
 
   // “Mandatory gates” can be mapped to criteria IDs for text tasks if you wish
@@ -317,12 +468,13 @@ export async function evaluateText(params: {
 
   // Example: treat readability & no-banned as gates if listed
   for (const g of acceptance.mandatoryGates) {
-    const crit = criteria.find(c => c.id === g);
+    const crit = criteria.find((c) => c.id === g);
     if (!crit) continue;
     (crit.passed ? thresholdsMet : thresholdsMissed).push(g);
   }
 
-  const passCore = scores >= acceptance.minScore && thresholdsMissed.length === 0;
+  const passCore =
+    scores >= acceptance.minScore && thresholdsMissed.length === 0;
   const report: EvalReport = {
     taskId,
     artifactPaths: [path.resolve(artifactPath)],
@@ -335,7 +487,7 @@ export async function evaluateText(params: {
     stopReason: passCore ? "satisficed" : undefined,
     nextActions: passCore ? [] : ["Tighten style or fix gates, then re-run."],
     timestamp: new Date().toISOString(),
-    logs: []
+    logs: [],
   };
 
   return report;
@@ -346,7 +498,7 @@ export async function evaluateText(params: {
 
 # 2) Code Evaluator (tests + lint + typecheck + optional a11y)
 
-Runs your project’s scripts and treats exits as *gates*. Lightweight and language-agnostic.
+Runs your project’s scripts and treats exits as _gates_. Lightweight and language-agnostic.
 
 ```ts
 // eval/code-evaluator.ts
@@ -357,7 +509,10 @@ import { EvalReport, EvalCriterion } from "./types";
 
 function run(cmd: string, args: string[], cwd: string) {
   const res = spawnSync(cmd, args, { cwd, encoding: "utf8" });
-  return { code: res.status ?? 1, out: (res.stdout ?? "") + (res.stderr ?? "") };
+  return {
+    code: res.status ?? 1,
+    out: (res.stdout ?? "") + (res.stderr ?? ""),
+  };
 }
 
 export async function evaluateCode(params: {
@@ -376,7 +531,7 @@ export async function evaluateCode(params: {
     tests: scripts?.test ?? "npm run test --silent",
     lint: scripts?.lint ?? "npm run lint --silent",
     typecheck: scripts?.typecheck ?? "npm run typecheck --silent",
-    a11y: scripts?.a11y // optional (axe, eslint-plugin-jsx-a11y, etc.)
+    a11y: scripts?.a11y, // optional (axe, eslint-plugin-jsx-a11y, etc.)
   };
 
   function runScript(label: string, cmdLine?: string) {
@@ -390,32 +545,72 @@ export async function evaluateCode(params: {
   results.typecheck = runScript("typecheck", scriptMap.typecheck);
   if (scriptMap.a11y) results.a11y = runScript("a11y", scriptMap.a11y);
 
-  function gateCriterion(id: string, description: string, weight: number, r?: { code: number; out: string }) {
+  function gateCriterion(
+    id: string,
+    description: string,
+    weight: number,
+    r?: { code: number; out: string }
+  ) {
     if (!r) {
-      return <EvalCriterion>{ id, description: `${description} (skipped)`, weight, passed: true, score: 1 };
+      return <EvalCriterion>{
+        id,
+        description: `${description} (skipped)`,
+        weight,
+        passed: true,
+        score: 1,
+      };
     }
     const passed = r.code === 0;
-    return <EvalCriterion>{ id, description, weight, passed, score: passed ? 1 : 0, notes: passed ? undefined : truncate(r.out) };
+    return <EvalCriterion>{
+      id,
+      description,
+      weight,
+      passed,
+      score: passed ? 1 : 0,
+      notes: passed ? undefined : truncate(r.out),
+    };
   }
 
-  function truncate(s: string, n = 1200) { return s.length > n ? s.slice(0, n) + " …[truncated]" : s; }
+  function truncate(s: string, n = 1200) {
+    return s.length > n ? s.slice(0, n) + " …[truncated]" : s;
+  }
 
-  criteria.push(gateCriterion("tests-pass", "Unit/integration tests pass", 0.4, results.tests));
-  criteria.push(gateCriterion("lint-clean", "Lint passes with no errors", 0.25, results.lint));
-  criteria.push(gateCriterion("types-ok", "Typecheck passes", 0.25, results.typecheck));
-  if (results.a11y) criteria.push(gateCriterion("a11y-ok", "A11y checks pass", 0.10, results.a11y));
+  criteria.push(
+    gateCriterion(
+      "tests-pass",
+      "Unit/integration tests pass",
+      0.4,
+      results.tests
+    )
+  );
+  criteria.push(
+    gateCriterion(
+      "lint-clean",
+      "Lint passes with no errors",
+      0.25,
+      results.lint
+    )
+  );
+  criteria.push(
+    gateCriterion("types-ok", "Typecheck passes", 0.25, results.typecheck)
+  );
+  if (results.a11y)
+    criteria.push(
+      gateCriterion("a11y-ok", "A11y checks pass", 0.1, results.a11y)
+    );
 
   const score = criteria.reduce((s, c) => s + c.score * c.weight, 0);
   const thresholdsMissed: string[] = [];
   const thresholdsMet: string[] = [];
 
   for (const g of acceptance.mandatoryGates) {
-    const crit = criteria.find(c => c.id === g);
+    const crit = criteria.find((c) => c.id === g);
     if (!crit) continue;
     (crit.passed ? thresholdsMet : thresholdsMissed).push(g);
   }
 
-  const passCore = score >= acceptance.minScore && thresholdsMissed.length === 0;
+  const passCore =
+    score >= acceptance.minScore && thresholdsMissed.length === 0;
 
   const report = <EvalReport>{
     taskId,
@@ -428,8 +623,10 @@ export async function evaluateCode(params: {
     iterations,
     stopReason: passCore ? "satisficed" : undefined,
     nextActions: passCore ? [] : ["Fix failing gates (see notes) and re-run."],
-    logs: Object.values(results).map(r => r.out).slice(0, 3),
-    timestamp: new Date().toISOString()
+    logs: Object.values(results)
+      .map((r) => r.out)
+      .slice(0, 3),
+    timestamp: new Date().toISOString(),
   };
 
   return report;
@@ -449,7 +646,7 @@ import path from "node:path";
 import { EvalCriterion, EvalReport } from "./types";
 
 interface TokenRegistry {
-  colors: Record<string, string>;    // e.g., { "bg.default": "{palette.gray.50}" }
+  colors: Record<string, string>; // e.g., { "bg.default": "{palette.gray.50}" }
   space: Record<string, string>;
   radius: Record<string, string>;
   // ...
@@ -457,12 +654,13 @@ interface TokenRegistry {
 
 export async function evaluateTokens(params: {
   taskId: string;
-  artifactPath: string;      // css/tsx/html to scan
-  tokenJsonPath: string;     // registry (design-tokens.json)
+  artifactPath: string; // css/tsx/html to scan
+  tokenJsonPath: string; // registry (design-tokens.json)
   iterations: number;
   acceptance: { minScore: number; mandatoryGates: string[] };
 }): Promise<EvalReport> {
-  const { taskId, artifactPath, tokenJsonPath, iterations, acceptance } = params;
+  const { taskId, artifactPath, tokenJsonPath, iterations, acceptance } =
+    params;
   const text = fs.readFileSync(artifactPath, "utf8");
   const reg: TokenRegistry = JSON.parse(fs.readFileSync(tokenJsonPath, "utf8"));
 
@@ -477,7 +675,9 @@ export async function evaluateTokens(params: {
     weight: 0.35,
     passed: c1Pass,
     score: c1Pass ? 1 : 0,
-    notes: c1Pass ? undefined : `hex=${[...new Set(hexHits)].slice(0, 10).join(", ")}`
+    notes: c1Pass
+      ? undefined
+      : `hex=${[...new Set(hexHits)].slice(0, 10).join(", ")}`,
   });
 
   // C2: No raw pixel spacing (encourage tokens/variables)
@@ -489,16 +689,18 @@ export async function evaluateTokens(params: {
     weight: 0.25,
     passed: c2Pass,
     score: c2Pass ? 1 : 0,
-    notes: c2Pass ? undefined : `px=${[...new Set(pxHits)].slice(0, 10).join(", ")}`
+    notes: c2Pass
+      ? undefined
+      : `px=${[...new Set(pxHits)].slice(0, 10).join(", ")}`,
   });
 
   // C3: Token coverage (presence of known tokens)
   const tokenKeys = [
     ...Object.keys(reg.colors || {}),
     ...Object.keys(reg.space || {}),
-    ...Object.keys(reg.radius || {})
+    ...Object.keys(reg.radius || {}),
   ];
-  const usedTokens = tokenKeys.filter(k => text.includes(k));
+  const usedTokens = tokenKeys.filter((k) => text.includes(k));
   const coverage = usedTokens.length / Math.max(1, tokenKeys.length);
   const c3Pass = coverage >= 0.1; // low bar: ensure tokens appear
   criteria.push({
@@ -507,19 +709,22 @@ export async function evaluateTokens(params: {
     weight: 0.15,
     passed: c3Pass,
     score: c3Pass ? 1 : 0,
-    notes: `coverage≈${coverage.toFixed(2)} used=${usedTokens.slice(0, 10).join(", ")}`
+    notes: `coverage≈${coverage.toFixed(2)} used=${usedTokens
+      .slice(0, 10)
+      .join(", ")}`,
   });
 
   // C4: Disallow ad-hoc color names (heuristic)
-  const adHocColorNames = text.match(/\b(color|bg|background|fill|stroke)[-_:]\w+\b/g) ?? [];
-  const c4Pass = (adHocColorNames.filter(n => !n.includes(".")).length === 0);
+  const adHocColorNames =
+    text.match(/\b(color|bg|background|fill|stroke)[-_:]\w+\b/g) ?? [];
+  const c4Pass = adHocColorNames.filter((n) => !n.includes(".")).length === 0;
   criteria.push({
     id: "no-ad-hoc-color-names",
     description: "No ad-hoc color names; use semantic tokens",
     weight: 0.25,
     passed: c4Pass,
     score: c4Pass ? 1 : 0,
-    notes: c4Pass ? undefined : adHocColorNames.slice(0, 10).join(", ")
+    notes: c4Pass ? undefined : adHocColorNames.slice(0, 10).join(", "),
   });
 
   const score = criteria.reduce((s, c) => s + c.score * c.weight, 0);
@@ -527,12 +732,13 @@ export async function evaluateTokens(params: {
   const thresholdsMet: string[] = [];
 
   for (const g of acceptance.mandatoryGates) {
-    const crit = criteria.find(c => c.id === g);
+    const crit = criteria.find((c) => c.id === g);
     if (!crit) continue;
     (crit.passed ? thresholdsMet : thresholdsMissed).push(g);
   }
 
-  const passCore = score >= acceptance.minScore && thresholdsMissed.length === 0;
+  const passCore =
+    score >= acceptance.minScore && thresholdsMissed.length === 0;
 
   const report: EvalReport = {
     taskId,
@@ -544,7 +750,7 @@ export async function evaluateTokens(params: {
     criteria,
     iterations,
     stopReason: passCore ? "satisficed" : undefined,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   };
 
   return report;
@@ -569,7 +775,11 @@ import { EvalReport } from "./types";
 interface Acceptance {
   minScore: number;
   mandatoryGates: string[];
-  iterationPolicy: { maxIterations: number; minDeltaToContinue: number; noChangeBudget: number; };
+  iterationPolicy: {
+    maxIterations: number;
+    minDeltaToContinue: number;
+    noChangeBudget: number;
+  };
 }
 
 interface History {
@@ -578,7 +788,9 @@ interface History {
 }
 
 function loadAcceptance(): Acceptance {
-  return JSON.parse(fs.readFileSync(path.resolve("eval/acceptance.json"), "utf8"));
+  return JSON.parse(
+    fs.readFileSync(path.resolve("eval/acceptance.json"), "utf8")
+  );
 }
 
 function delta(prev: EvalReport | undefined, curr: EvalReport) {
@@ -592,7 +804,8 @@ function decide(history: History, current: EvalReport, a: Acceptance) {
   const iterations = current.iterations;
 
   let noChangeStreak = history.noChangeStreak;
-  if (d < a.minDeltaToContinue) noChangeStreak += 1; else noChangeStreak = 0;
+  if (d < a.minDeltaToContinue) noChangeStreak += 1;
+  else noChangeStreak = 0;
 
   if (current.status === "pass") {
     current.stopReason = "satisficed";
@@ -619,7 +832,7 @@ async function main() {
     ? JSON.parse(fs.readFileSync(historyPath, "utf8"))
     : { reports: [], noChangeStreak: 0 };
 
-  const task = process.argv[2];   // e.g., "text", "code", "tokens"
+  const task = process.argv[2]; // e.g., "text", "code", "tokens"
   const iterations = (hist.reports.at(-1)?.iterations ?? 0) + 1;
 
   let report: EvalReport;
@@ -633,9 +846,9 @@ async function main() {
         style: "formal",
         maxChars: 800,
         bannedPhrases: ["very", "really"],
-        requiredPhrases: ["acceptance criteria"]
+        requiredPhrases: ["acceptance criteria"],
       },
-      acceptance
+      acceptance,
     });
   } else if (task === "code") {
     report = await evaluateCode({
@@ -643,7 +856,11 @@ async function main() {
       projectDir: "./project",
       iterations,
       acceptance,
-      scripts: { test: "npm run test", lint: "npm run lint", typecheck: "npm run typecheck" }
+      scripts: {
+        test: "npm run test",
+        lint: "npm run lint",
+        typecheck: "npm run typecheck",
+      },
     });
   } else if (task === "tokens") {
     report = await evaluateTokens({
@@ -651,7 +868,7 @@ async function main() {
       artifactPath: "artifacts/Button.tsx",
       tokenJsonPath: "design-tokens.json",
       iterations,
-      acceptance
+      acceptance,
     });
   } else {
     throw new Error(`Unknown task '${task}'`);
@@ -661,15 +878,20 @@ async function main() {
   const decision = decide(hist, report, acceptance);
   const newHist: History = {
     reports: [...hist.reports, report],
-    noChangeStreak: decision.noChangeStreak
+    noChangeStreak: decision.noChangeStreak,
   };
   fs.writeFileSync(historyPath, JSON.stringify(newHist, null, 2));
 
   // Emit final machine-readable result to stdout for the agent
-  process.stdout.write(JSON.stringify({ report, decision: decision.decision }, null, 2));
+  process.stdout.write(
+    JSON.stringify({ report, decision: decision.decision }, null, 2)
+  );
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
 ```
 
 **CLI usage:**
@@ -686,20 +908,23 @@ ts-node eval/orchestrator.ts tokens
 
 # 5) Agent-Facing Decision Rules (summary)
 
-* **Stop (satisfice)** when:
+- **Stop (satisfice)** when:
 
-  * `score ≥ minScore` **AND** all `mandatoryGates` pass → `status: pass`, `stopReason: "satisficed"`.
-* **Iterate** when:
+  - `score ≥ minScore` **AND** all `mandatoryGates` pass → `status: pass`, `stopReason: "satisficed"`.
 
-  * `score < minScore` OR any mandatory gate fails **AND**
-  * `iterations < maxIterations` **AND**
-  * `delta ≥ minDeltaToContinue` **OR** `noChangeStreak ≤ noChangeBudget`.
-* **Stop (quality-ceiling)** when:
+- **Iterate** when:
 
-  * `delta < minDeltaToContinue` for more than `noChangeBudget` consecutive runs.
-* **Stop (max-iterations)** when:
+  - `score < minScore` OR any mandatory gate fails **AND**
+  - `iterations < maxIterations` **AND**
+  - `delta ≥ minDeltaToContinue` **OR** `noChangeStreak ≤ noChangeBudget`.
 
-  * `iterations ≥ maxIterations`.
+- **Stop (quality-ceiling)** when:
+
+  - `delta < minDeltaToContinue` for more than `noChangeBudget` consecutive runs.
+
+- **Stop (max-iterations)** when:
+
+  - `iterations ≥ maxIterations`.
 
 This enforces “good-enough,” prevents yes-man polishing, and caps loops.
 
@@ -755,11 +980,11 @@ You then merge `rubricScores` into `criteria` and recompute `score`.
 
 # 8) Why this works
 
-* **Uniform contract** → any new evaluator (docs, diagrams, datasets) is plug-compatible.
-* **Hard gates + soft scores** → production credibility without losing nuance.
-* **Satisficing** → explicit stop rules (+ plateau detection) defeat infinite polishing.
-* **Local-first** → works with Gemma/Ollama; no UI required; CLI orchestratable.
-* **CAWS-ready** → reports can be attached to PRs; diffs and provenance are built-in.
+- **Uniform contract** → any new evaluator (docs, diagrams, datasets) is plug-compatible.
+- **Hard gates + soft scores** → production credibility without losing nuance.
+- **Satisficing** → explicit stop rules (+ plateau detection) defeat infinite polishing.
+- **Local-first** → works with Gemma/Ollama; no UI required; CLI orchestratable.
+- **CAWS-ready** → reports can be attached to PRs; diffs and provenance are built-in.
 
 ---
 

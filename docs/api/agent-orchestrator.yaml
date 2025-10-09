@@ -1,0 +1,368 @@
+openapi: 3.0.3
+info:
+  title: Agent Orchestrator API
+  description: API for intelligent agent orchestration and coordination
+  version: 1.0.0
+  contact:
+    name: @darianrosebrook
+
+servers:
+  - url: http://localhost:3000/api/v1/orchestrator
+    description: Development server
+  - url: https://api.agent-agency.com/v1/orchestrator
+    description: Production server
+
+paths:
+  /agents/register:
+    post:
+      summary: Register an agent with the orchestrator
+      operationId: registerAgent
+      tags:
+        - Agent Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRegistration'
+      responses:
+        '200':
+          description: Agent registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agentId:
+                    type: string
+                  status:
+                    type: string
+                    enum: [registered, pending]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /agents/{agentId}/status:
+    get:
+      summary: Get agent status and metrics
+      operationId: getAgentStatus
+      tags:
+        - Agent Management
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Agent status information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentStatus'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks/assign:
+    post:
+      summary: Assign task to optimal agent
+      operationId: assignTask
+      tags:
+        - Task Orchestration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskAssignment'
+      responses:
+        '200':
+          description: Task assigned successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  taskId:
+                    type: string
+                  agentId:
+                    type: string
+                  estimatedDuration:
+                    type: number
+                  confidence:
+                    type: number
+                    minimum: 0
+                    maximum: 1
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks/balance:
+    get:
+      summary: Get current load balancing metrics
+      operationId: getLoadBalance
+      tags:
+        - Load Balancing
+      responses:
+        '200':
+          description: Load balancing status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoadBalanceStatus'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /memory/context:
+    post:
+      summary: Retrieve context-aware task routing
+      operationId: getContextRouting
+      tags:
+        - Memory Integration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContextQuery'
+      responses:
+        '200':
+          description: Context-aware routing recommendation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutingRecommendation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    AgentRegistration:
+      type: object
+      required:
+        - agentId
+        - capabilities
+        - metadata
+      properties:
+        agentId:
+          type: string
+          description: Unique agent identifier
+        capabilities:
+          type: array
+          items:
+            type: string
+          description: Agent capabilities
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Agent metadata for routing decisions
+
+    AgentStatus:
+      type: object
+      required:
+        - agentId
+        - status
+        - load
+        - capabilities
+        - lastActive
+      properties:
+        agentId:
+          type: string
+        status:
+          type: string
+          enum: [active, busy, idle, offline]
+        load:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Current load factor (0-1)
+        capabilities:
+          type: array
+          items:
+            type: string
+        lastActive:
+          type: string
+          format: date-time
+        performance:
+          type: object
+          properties:
+            avgResponseTime:
+              type: number
+            successRate:
+              type: number
+              minimum: 0
+              maximum: 1
+            taskCount:
+              type: integer
+
+    TaskAssignment:
+      type: object
+      required:
+        - taskId
+        - requirements
+        - priority
+      properties:
+        taskId:
+          type: string
+        requirements:
+          type: array
+          items:
+            type: string
+          description: Required capabilities
+        priority:
+          type: string
+          enum: [low, normal, high, critical]
+        context:
+          type: object
+          additionalProperties: true
+          description: Task context for routing
+
+    LoadBalanceStatus:
+      type: object
+      required:
+        - totalAgents
+        - activeAgents
+        - averageLoad
+        - variance
+        - recommendations
+      properties:
+        totalAgents:
+          type: integer
+        activeAgents:
+          type: integer
+        averageLoad:
+          type: number
+          minimum: 0
+          maximum: 1
+        variance:
+          type: number
+          description: Load distribution variance
+        recommendations:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: [scale_up, scale_down, redistribute]
+              reason:
+                type: string
+              impact:
+                type: string
+
+    ContextQuery:
+      type: object
+      required:
+        - taskType
+        - context
+      properties:
+        taskType:
+          type: string
+        context:
+          type: object
+          additionalProperties: true
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              taskId:
+                type: string
+              outcome:
+                type: string
+                enum: [success, failure, partial]
+
+    RoutingRecommendation:
+      type: object
+      required:
+        - recommendedAgents
+        - reasoning
+        - confidence
+      properties:
+        recommendedAgents:
+          type: array
+          items:
+            type: object
+            properties:
+              agentId:
+                type: string
+              score:
+                type: number
+                minimum: 0
+                maximum: 1
+              reasoning:
+                type: string
+        reasoning:
+          type: string
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        contextMatches:
+          type: array
+          items:
+            type: object
+            properties:
+              relevanceScore:
+                type: number
+              matchType:
+                type: string
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              details:
+                type: object
+                additionalProperties: true
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              requestId:
+                type: string
+
+tags:
+  - name: Agent Management
+    description: Agent registration and status monitoring
+  - name: Task Orchestration
+    description: Intelligent task assignment and routing
+  - name: Load Balancing
+    description: System load monitoring and balancing
+  - name: Memory Integration
+    description: Context-aware routing using memory systems

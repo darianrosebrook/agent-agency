@@ -1,0 +1,9 @@
+{
+  "minScore": 0.85,
+  "mandatoryGates": ["tests-pass", "lint-clean"],
+  "iterationPolicy": {
+    "maxIterations": 3,
+    "minDeltaToContinue": 0.02,
+    "noChangeBudget": 1
+  }
+}

@@ -1,0 +1,23 @@
+{../v1/dist../v1../v1../v1/src/*../v1/src/types/*../v1/src/utils/*../v1/src/services/*../v1/src/data/*../v1/src/memory/*../v1/src/mcp/*../v1/src/mcp/evaluation/*../v1/src/rl/*../v1/src/thinking/*../v1/src/**/*../v1/tests/**/*../v1/node_modules../v1/dist../v1/**/*.test.ts../v1/**/*.spec.ts
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@types/*": ["src/types/*"],
+      "@utils/*": ["src/utils/*"],
+      "@services/*": ["src/services/*"],
+      "@data/*": ["src/data/*"],
+      "@memory/*": ["src/memory/*"],
+      "@mcp/*": ["src/mcp/*"],
+      "@evaluation/*": ["src/mcp/evaluation/*"],
+      "@rl/*": ["src/rl/*"],
+      "@thinking/*": ["src/thinking/*"]
+    }
+  },
+  "include": ["src/**/*", "tests/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+}
+

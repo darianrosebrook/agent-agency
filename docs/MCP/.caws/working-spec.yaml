@@ -74,6 +74,16 @@ observability:
     - mcp_request_traces
     - tool_execution_traces
     - evaluation_loop_traces
+contracts:
+  - type: typescript
+    path: src/mcp/types/index.ts
+    version: 1.0.0
+  - type: openapi
+    path: docs/api/mcp-tools.yaml
+    version: 1.0.0
+  - type: jsonrpc
+    path: docs/api/mcp-protocol.yaml
+    version: 2.0
 migrations: []
 rollback:
   - type: mcp_service_stop

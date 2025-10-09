@@ -1,0 +1,714 @@
+openapi: 3.0.3
+info:
+  title: AI Model API
+  description: API for local AI model management, inference, and evaluation
+  version: 1.0.0
+  contact:
+    name: @darianrosebrook
+
+servers:
+  - url: http://localhost:3000/api/v1/ai
+    description: Development server
+  - url: https://api.agent-agency.com/v1/ai
+    description: Production server
+
+paths:
+  /models:
+    get:
+      summary: List available AI models
+      operationId: listModels
+      tags:
+        - Model Management
+      responses:
+        '200':
+          description: List of available models
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  models:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ModelInfo'
+                  defaultModel:
+                    type: string
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /models/{modelId}/status:
+    get:
+      summary: Get model status and health
+      operationId: getModelStatus
+      tags:
+        - Model Management
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Model status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelStatus'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /inference:
+    post:
+      summary: Run inference with specified model
+      operationId: runInference
+      tags:
+        - Inference
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InferenceRequest'
+      responses:
+        '200':
+          description: Inference completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InferenceResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          description: Model not available
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /evaluate:
+    post:
+      summary: Evaluate model performance on task
+      operationId: evaluateModel
+      tags:
+        - Evaluation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvaluationRequest'
+      responses:
+        '200':
+          description: Evaluation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /feedback:
+    post:
+      summary: Submit feedback for model improvement
+      operationId: submitFeedback
+      tags:
+        - Feedback & Learning
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+      responses:
+        '202':
+          description: Feedback accepted for processing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  feedbackId:
+                    type: string
+                  status:
+                    type: string
+                    enum: [accepted, queued]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /satisficing/check:
+    post:
+      summary: Check if solution meets satisficing criteria
+      operationId: checkSatisficing
+      tags:
+        - Satisficing Logic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SatisficingCheckRequest'
+      responses:
+        '200':
+          description: Satisficing check result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SatisficingResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /models/pull:
+    post:
+      summary: Pull/download a model
+      operationId: pullModel
+      tags:
+        - Model Management
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - modelName
+              properties:
+                modelName:
+                  type: string
+                  description: Name of the model to pull
+                tag:
+                  type: string
+                  default: latest
+      responses:
+        '202':
+          description: Model pull initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  modelName:
+                    type: string
+                  status:
+                    type: string
+                    enum: [pulling, queued]
+                  estimatedTime:
+                    type: number
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Model already exists
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /metrics:
+    get:
+      summary: Get AI system metrics
+      operationId: getAIMetrics
+      tags:
+        - Monitoring
+      responses:
+        '200':
+          description: AI system metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIMetrics'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    ModelInfo:
+      type: object
+      required:
+        - id
+        - name
+        - size
+        - status
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        size:
+          type: integer
+          description: Model size in bytes
+        status:
+          type: string
+          enum: [available, downloading, error, unavailable]
+        format:
+          type: string
+          enum: [gguf, safetensors, pytorch]
+        capabilities:
+          type: array
+          items:
+            type: string
+        performance:
+          type: object
+          properties:
+            avgInferenceTime:
+              type: number
+            memoryUsage:
+              type: integer
+            maxContextLength:
+              type: integer
+        lastUsed:
+          type: string
+          format: date-time
+
+    ModelStatus:
+      type: object
+      required:
+        - modelId
+        - status
+        - health
+      properties:
+        modelId:
+          type: string
+        status:
+          type: string
+          enum: [loaded, loading, unloaded, error]
+        health:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        memoryUsage:
+          type: integer
+          description: Memory usage in bytes
+        lastInference:
+          type: string
+          format: date-time
+        error:
+          type: string
+        uptime:
+          type: number
+          description: Uptime in seconds
+
+    InferenceRequest:
+      type: object
+      required:
+        - model
+        - prompt
+      properties:
+        model:
+          type: string
+          description: Model ID to use for inference
+        prompt:
+          type: string
+          description: Input prompt for the model
+        systemPrompt:
+          type: string
+          description: System prompt to set context
+        maxTokens:
+          type: integer
+          minimum: 1
+          maximum: 4096
+          default: 512
+        temperature:
+          type: number
+          minimum: 0
+          maximum: 2
+          default: 0.7
+        topP:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0.9
+        frequencyPenalty:
+          type: number
+          minimum: -2
+          maximum: 2
+          default: 0
+        presencePenalty:
+          type: number
+          minimum: -2
+          maximum: 2
+          default: 0
+        stop:
+          type: array
+          items:
+            type: string
+          maxItems: 4
+        stream:
+          type: boolean
+          default: false
+        context:
+          type: object
+          additionalProperties: true
+          description: Additional context for the inference
+
+    InferenceResult:
+      type: object
+      required:
+        - model
+        - response
+        - usage
+      properties:
+        model:
+          type: string
+        response:
+          type: string
+        usage:
+          type: object
+          required:
+            - promptTokens
+            - completionTokens
+            - totalTokens
+          properties:
+            promptTokens:
+              type: integer
+            completionTokens:
+              type: integer
+            totalTokens:
+              type: integer
+        finishReason:
+          type: string
+          enum: [stop, length, content_filter]
+        inferenceTime:
+          type: number
+          description: Inference time in milliseconds
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    EvaluationRequest:
+      type: object
+      required:
+        - model
+        - task
+        - criteria
+      properties:
+        model:
+          type: string
+        task:
+          type: object
+          required:
+            - type
+            - input
+            - expectedOutput
+          properties:
+            type:
+              type: string
+              enum: [text_generation, code_generation, reasoning, classification]
+            input:
+              type: string
+            expectedOutput:
+              type: string
+            context:
+              type: object
+              additionalProperties: true
+        criteria:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+              - type
+            properties:
+              name:
+                type: string
+              type:
+                type: string
+                enum: [exact_match, similarity, custom]
+              weight:
+                type: number
+                minimum: 0
+                maximum: 1
+                default: 1
+              config:
+                type: object
+                additionalProperties: true
+
+    EvaluationResult:
+      type: object
+      required:
+        - model
+        - task
+        - scores
+        - overallScore
+      properties:
+        model:
+          type: string
+        task:
+          type: object
+          properties:
+            type:
+              type: string
+            input:
+              type: string
+            expectedOutput:
+              type: string
+        scores:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              score:
+                type: number
+                minimum: 0
+                maximum: 1
+              details:
+                type: object
+                additionalProperties: true
+        overallScore:
+          type: number
+          minimum: 0
+          maximum: 1
+        evaluationTime:
+          type: number
+        feedback:
+          type: array
+          items:
+            type: string
+
+    FeedbackRequest:
+      type: object
+      required:
+        - model
+        - inferenceId
+        - rating
+        - feedback
+      properties:
+        model:
+          type: string
+        inferenceId:
+          type: string
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        feedback:
+          type: string
+        categories:
+          type: array
+          items:
+            type: string
+            enum: [accuracy, relevance, helpfulness, safety, speed]
+        suggestedImprovement:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    SatisficingCheckRequest:
+      type: object
+      required:
+        - task
+        - solution
+        - criteria
+      properties:
+        task:
+          type: object
+          required:
+            - type
+            - complexity
+          properties:
+            type:
+              type: string
+            complexity:
+              type: string
+              enum: [trivial, simple, moderate, complex, extreme]
+            requirements:
+              type: array
+              items:
+                type: string
+        solution:
+          type: object
+          required:
+            - quality
+            - effort
+            - timeSpent
+          properties:
+            quality:
+              type: number
+              minimum: 0
+              maximum: 1
+            effort:
+              type: number
+              minimum: 0
+              maximum: 1
+            timeSpent:
+              type: number
+            confidence:
+              type: number
+              minimum: 0
+              maximum: 1
+        criteria:
+          type: object
+          properties:
+            minQualityThreshold:
+              type: number
+              minimum: 0
+              maximum: 1
+              default: 0.8
+            maxEffortRatio:
+              type: number
+              minimum: 0
+              maximum: 1
+              default: 0.7
+            timeEfficiency:
+              type: boolean
+              default: true
+            diminishingReturns:
+              type: boolean
+              default: true
+
+    SatisficingResult:
+      type: object
+      required:
+        - isSatisficing
+        - score
+        - reasoning
+      properties:
+        isSatisficing:
+          type: boolean
+        score:
+          type: number
+          minimum: 0
+          maximum: 1
+        reasoning:
+          type: array
+          items:
+            type: string
+        thresholds:
+          type: object
+          properties:
+            qualityThreshold:
+              type: number
+            effortRatio:
+              type: number
+            timeEfficiency:
+              type: number
+        recommendations:
+          type: array
+          items:
+            type: string
+            enum: [continue, stop, adjust_criteria]
+
+    AIMetrics:
+      type: object
+      required:
+        - totalModels
+        - activeModels
+        - totalInferences
+        - averageInferenceTime
+      properties:
+        totalModels:
+          type: integer
+        activeModels:
+          type: integer
+        totalInferences:
+          type: integer
+        averageInferenceTime:
+          type: number
+        cacheHitRate:
+          type: number
+          minimum: 0
+          maximum: 1
+        errorRate:
+          type: number
+          minimum: 0
+          maximum: 1
+        modelUsage:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              inferences:
+                type: integer
+              avgTime:
+                type: number
+              errorCount:
+                type: integer
+        systemLoad:
+          type: number
+          minimum: 0
+          maximum: 1
+        memoryUsage:
+          type: integer
+          description: Memory usage in bytes
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              details:
+                type: object
+                additionalProperties: true
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              requestId:
+                type: string
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+tags:
+  - name: Model Management
+    description: AI model loading, status, and management
+  - name: Inference
+    description: Running inference with AI models
+  - name: Evaluation
+    description: Model performance evaluation and testing
+  - name: Feedback & Learning
+    description: Collecting feedback for model improvement
+  - name: Satisficing Logic
+    description: Good-enough solution determination
+  - name: Monitoring
+    description: AI system metrics and monitoring

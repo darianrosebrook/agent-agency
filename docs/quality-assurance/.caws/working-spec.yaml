@@ -49,6 +49,10 @@ acceptance:
     given: Performance benchmarks established
     when: Code changes deployed to staging
     then: Performance regression detection identifies any >5% degradation within 30 minutes
+  - id: QA-005
+    given: Contract tests defined for all external APIs
+    when: API changes submitted through CI/CD pipeline
+    then: Contract compatibility validated within 2 minutes with zero breaking changes
 non_functional:
   perf:
     test_execution_p95_ms: 600000
@@ -76,6 +80,16 @@ observability:
     - test_execution_traces
     - quality_assessment_traces
     - mutation_analysis_traces
+contracts:
+  - type: typescript
+    path: apps/tools/caws/shared/types.ts
+    version: 1.0.0
+  - type: json-schema
+    path: apps/tools/caws/schemas/working-spec.schema.json
+    version: 3.1.0
+  - type: openapi
+    path: docs/api/quality-gates.yaml
+    version: 1.0.0
 migrations: []
 rollback:
   - type: test_cleanup

@@ -1,0 +1,795 @@
+openapi: 3.0.3
+info:
+  title: MCP Protocol API
+  description: API for Model Context Protocol message handling and transport
+  version: 2.0
+  contact:
+    name: @darianrosebrook
+
+servers:
+  - url: http://localhost:3000/api/v1/mcp
+    description: Development server
+  - url: https://api.agent-agency.com/v1/mcp
+    description: Production server
+
+paths:
+  /initialize:
+    post:
+      summary: Initialize MCP connection
+      operationId: initialize
+      tags:
+        - Connection Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitializeRequest'
+      responses:
+        '200':
+          description: Connection initialized successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitializeResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /ping:
+    post:
+      summary: Ping the server
+      operationId: ping
+      tags:
+        - Connection Management
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Pong response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pong:
+                    type: boolean
+                    example: true
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /resources:
+    get:
+      summary: List available resources
+      operationId: listResources
+      tags:
+        - Resource Management
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor
+        - name: type
+          in: query
+          schema:
+            type: string
+          description: Filter by resource type
+      responses:
+        '200':
+          description: List of resources
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListResourcesResult'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /resources/{resourceId}:
+    get:
+      summary: Read a resource
+      operationId: readResource
+      tags:
+        - Resource Management
+      parameters:
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Resource content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadResourceResult'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /resources/subscribe:
+    post:
+      summary: Subscribe to resource updates
+      operationId: subscribeResource
+      tags:
+        - Resource Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscribeRequest'
+      responses:
+        '200':
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscriptionId:
+                    type: string
+                  status:
+                    type: string
+                    enum: [active]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tools:
+    get:
+      summary: List available tools
+      operationId: listTools
+      tags:
+        - Tool Management
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor
+      responses:
+        '200':
+          description: List of tools
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListToolsResult'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tools/call:
+    post:
+      summary: Call a tool
+      operationId: callTool
+      tags:
+        - Tool Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CallToolRequest'
+      responses:
+        '200':
+          description: Tool call result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallToolResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /prompts:
+    get:
+      summary: List available prompts
+      operationId: listPrompts
+      tags:
+        - Prompt Management
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor
+      responses:
+        '200':
+          description: List of prompts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListPromptsResult'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /prompts/{promptId}:
+    get:
+      summary: Get a prompt
+      operationId: getPrompt
+      tags:
+        - Prompt Management
+      parameters:
+        - name: promptId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Prompt details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPromptResult'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /notifications:
+    post:
+      summary: Send notification
+      operationId: sendNotification
+      tags:
+        - Notifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Notification'
+      responses:
+        '200':
+          description: Notification sent
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /logging:
+    post:
+      summary: Send log message
+      operationId: sendLog
+      tags:
+        - Logging
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogMessage'
+      responses:
+        '200':
+          description: Log message recorded
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /sampling:
+    post:
+      summary: Create message with sampling
+      operationId: createMessage
+      tags:
+        - Sampling
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMessageRequest'
+      responses:
+        '200':
+          description: Message created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateMessageResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    InitializeRequest:
+      type: object
+      required:
+        - protocolVersion
+        - capabilities
+        - clientInfo
+      properties:
+        protocolVersion:
+          type: string
+          example: "2024-11-05"
+        capabilities:
+          $ref: '#/components/schemas/ClientCapabilities'
+        clientInfo:
+          $ref: '#/components/schemas/Implementation'
+
+    InitializeResult:
+      type: object
+      required:
+        - protocolVersion
+        - capabilities
+        - serverInfo
+      properties:
+        protocolVersion:
+          type: string
+        capabilities:
+          $ref: '#/components/schemas/ServerCapabilities'
+        serverInfo:
+          $ref: '#/components/schemas/Implementation'
+        instructions:
+          type: string
+          description: Instructions for the client
+
+    ClientCapabilities:
+      type: object
+      properties:
+        experimental:
+          type: object
+          additionalProperties: true
+        sampling:
+          type: object
+          additionalProperties: true
+        roots:
+          type: object
+          properties:
+            listChanged:
+              type: boolean
+
+    ServerCapabilities:
+      type: object
+      properties:
+        experimental:
+          type: object
+          additionalProperties: true
+        logging:
+          type: object
+          additionalProperties: true
+        prompts:
+          type: object
+          properties:
+            listChanged:
+              type: boolean
+        resources:
+          type: object
+          properties:
+            subscribe:
+              type: boolean
+            listChanged:
+              type: boolean
+        tools:
+          type: object
+          properties:
+            listChanged:
+              type: boolean
+
+    Implementation:
+      type: object
+      required:
+        - name
+        - version
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+
+    ListResourcesResult:
+      type: object
+      required:
+        - resources
+      properties:
+        resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/Resource'
+        nextCursor:
+          type: string
+
+    Resource:
+      type: object
+      required:
+        - uri
+        - name
+        - description
+        - mimeType
+      properties:
+        uri:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        mimeType:
+          type: string
+
+    ReadResourceResult:
+      type: object
+      required:
+        - contents
+      properties:
+        contents:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResourceContent'
+
+    ResourceContent:
+      type: object
+      required:
+        - uri
+        - mimeType
+      properties:
+        uri:
+          type: string
+        mimeType:
+          type: string
+        text:
+          type: string
+        blob:
+          type: string
+          format: byte
+
+    SubscribeRequest:
+      type: object
+      required:
+        - uri
+      properties:
+        uri:
+          type: string
+
+    ListToolsResult:
+      type: object
+      required:
+        - tools
+      properties:
+        tools:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tool'
+        nextCursor:
+          type: string
+
+    Tool:
+      type: object
+      required:
+        - name
+        - description
+        - inputSchema
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        inputSchema:
+          type: object
+          additionalProperties: true
+
+    CallToolRequest:
+      type: object
+      required:
+        - name
+        - arguments
+      properties:
+        name:
+          type: string
+        arguments:
+          type: object
+          additionalProperties: true
+
+    CallToolResult:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolContent'
+        isError:
+          type: boolean
+
+    ToolContent:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [text, image, resource]
+        text:
+          type: string
+        image:
+          $ref: '#/components/schemas/ImageContent'
+        resource:
+          $ref: '#/components/schemas/ResourceContent'
+
+    ImageContent:
+      type: object
+      required:
+        - data
+        - mimeType
+      properties:
+        data:
+          type: string
+          format: byte
+        mimeType:
+          type: string
+
+    ListPromptsResult:
+      type: object
+      required:
+        - prompts
+      properties:
+        prompts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Prompt'
+        nextCursor:
+          type: string
+
+    Prompt:
+      type: object
+      required:
+        - name
+        - description
+        - arguments
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        arguments:
+          type: array
+          items:
+            $ref: '#/components/schemas/PromptArgument'
+
+    PromptArgument:
+      type: object
+      required:
+        - name
+        - description
+        - required
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        required:
+          type: boolean
+
+    GetPromptResult:
+      type: object
+      required:
+        - description
+        - messages
+      properties:
+        description:
+          type: string
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/PromptMessage'
+
+    PromptMessage:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          $ref: '#/components/schemas/PromptContent'
+
+    PromptContent:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum: [text, image, resource]
+        text:
+          type: string
+        image:
+          $ref: '#/components/schemas/ImageContent'
+        resource:
+          $ref: '#/components/schemas/ResourceContent'
+
+    Notification:
+      type: object
+      required:
+        - method
+        - params
+      properties:
+        method:
+          type: string
+        params:
+          type: object
+          additionalProperties: true
+
+    LogMessage:
+      type: object
+      required:
+        - level
+        - data
+      properties:
+        level:
+          type: string
+          enum: [debug, info, notice, warning, error, critical, alert, emergency]
+        data:
+          type: string
+
+    CreateMessageRequest:
+      type: object
+      required:
+        - messages
+        - maxTokens
+        - temperature
+        - modelPreferences
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/SamplingMessage'
+        modelPreferences:
+          $ref: '#/components/schemas/ModelPreferences'
+        systemPrompt:
+          type: string
+        includeContext:
+          type: string
+          enum: [none, thisServer, allServers]
+        temperature:
+          type: number
+        maxTokens:
+          type: integer
+        stopSequences:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    SamplingMessage:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          $ref: '#/components/schemas/TextContent'
+
+    TextContent:
+      type: object
+      required:
+        - type
+        - text
+      properties:
+        type:
+          type: string
+          enum: [text]
+        text:
+          type: string
+
+    ModelPreferences:
+      type: object
+      properties:
+        hints:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelHint'
+        costPriority:
+          type: number
+          minimum: 0
+          maximum: 1
+        speedPriority:
+          type: number
+          minimum: 0
+          maximum: 1
+        intelligencePriority:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    ModelHint:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+
+    CreateMessageResult:
+      type: object
+      required:
+        - role
+        - content
+        - model
+        - stopReason
+      properties:
+        role:
+          type: string
+          enum: [assistant]
+        content:
+          $ref: '#/components/schemas/TextContent'
+        model:
+          type: string
+        stopReason:
+          type: string
+          enum: [endTurn, stopSequence, maxTokens]
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              details:
+                type: object
+                additionalProperties: true
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              requestId:
+                type: string
+
+tags:
+  - name: Connection Management
+    description: MCP connection initialization and health checks
+  - name: Resource Management
+    description: Resource discovery, reading, and subscriptions
+  - name: Tool Management
+    description: Tool discovery and execution
+  - name: Prompt Management
+    description: Prompt templates and management
+  - name: Notifications
+    description: Event notifications and messaging
+  - name: Logging
+    description: Structured logging and monitoring
+  - name: Sampling
+    description: AI model sampling and message creation

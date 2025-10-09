@@ -75,6 +75,16 @@ observability:
     - data_access_operation_traces
     - vector_search_traces
     - cache_operation_traces
+contracts:
+  - type: typescript
+    path: src/data/types/index.ts
+    version: 1.0.0
+  - type: sql
+    path: migrations/001_create_core_schema.sql
+    version: 1.0.0
+  - type: openapi
+    path: docs/api/data-layer.yaml
+    version: 1.0.0
 migrations:
   - type: database_schema
     description: Create core tables for agents, tasks, experiences, and entities

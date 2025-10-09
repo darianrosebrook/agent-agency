@@ -46,6 +46,10 @@ acceptance:
     given: Federated learning enabled across multiple tenants
     when: Cross-tenant insights aggregated with differential privacy
     then: Collective intelligence improves without compromising individual tenant privacy
+  - id: MS-005
+    given: Knowledge graph populated with agent experiences and relationships
+    when: Multi-hop reasoning query executed across entity graph
+    then: Relevant relationship paths identified within 150ms with >85% accuracy
 non_functional:
   perf:
     memory_store_p95_ms: 50
@@ -76,6 +80,19 @@ observability:
     - memory_access_traces
     - context_offloading_traces
     - federated_aggregation_traces
+contracts:
+  - type: typescript
+    path: src/types/index.ts
+    version: 1.0.0
+  - type: typescript
+    path: src/memory/MultiTenantMemoryManager.ts
+    version: 1.0.0
+  - type: openapi
+    path: docs/api/memory-system.yaml
+    version: 1.0.0
+  - type: sql
+    path: migrations/001_create_multi_tenant_schema.sql
+    version: 1.0.0
 migrations:
   - type: database_schema
     description: Create multi-tenant tables with Row Level Security

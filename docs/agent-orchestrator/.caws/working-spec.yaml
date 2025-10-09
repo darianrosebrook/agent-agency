@@ -73,6 +73,16 @@ observability:
     - task_routing_traces
     - agent_selection_traces
     - memory_query_traces
+contracts:
+  - type: typescript
+    path: src/types/agent.ts
+    version: 1.0.0
+  - type: typescript
+    path: src/services/AgentOrchestrator.ts
+    version: 1.0.0
+  - type: openapi
+    path: docs/api/agent-orchestrator.yaml
+    version: 1.0.0
 migrations: []
 rollback:
   - type: feature_flag_rollback

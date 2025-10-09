@@ -236,5 +236,39 @@
     },
     "previous_hash": "03aa41b4447e3b67c0df27324522d3973129f4e06848df7d7a9cbc0e8799c239",
     "hash": "b326ce1ae1d1760ca6a35f5526683188b45995f89900a80eb9b90e7aa9503bde"
+  },
+  {
+    "id": "prov-1759980870018",
+    "timestamp": "2025-10-09T03:34:30.018Z",
+    "commit": {
+      "hash": "71826edff9c2bac46947f1bc8f38ee117383c325",
+      "message": "refactor: standardize quote usage to double quotes",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0001",
+      "title": "agent-agency",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-09T03:34:30.019Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "b326ce1ae1d1760ca6a35f5526683188b45995f89900a80eb9b90e7aa9503bde",
+    "hash": "579dce41afd433dc6b7cf7c595c498e7943549292841c918d3d4a2dbdf99fda1"
   }
 ]
