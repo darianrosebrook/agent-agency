@@ -1,7 +1,7 @@
 # Arbiter Stack Requirements for LLM Orchestration
 
-> **Implementation Status**: ✅ Agent Registry Manager (ARBITER-001) complete  
-> **Implementation References**: See [Implementation Map](#implementation-map) section below  
+> **Implementation Status**: ✅ ARBITER-001 complete, ⚠️ 12 specs ready for implementation
+> **CAWS Specifications**: [View All Specs](./../../../SPECS-INDEX.md) > **Capabilities Requirements**: [View Requirements](./capabilities-requirements.md) > **Implementation Map**: See [Implementation Map](#implementation-map) section below
 > **Code Location**: `iterations/v2/src/orchestrator/`
 
 ## Overview and Goals
@@ -11,6 +11,20 @@ An **arbiter stack** is essentially an orchestration system that coordinates mul
 What we are aiming for is a runtime governance system that enforces the Coding-Agent Working Standard (CAWS) during AI-assisted development. It coordinates multiple AI models (LLMs) and tools while ensuring all work complies with CAWS budgets, waivers, quality gates, and provenance requirements. The arbiter acts as a **constitutional authority** - not just a decision-maker, but the runtime enforcer of CAWS policies that no worker model can bypass.
 
 In this architecture, CAWS becomes the **executable contract** that governs all AI contributions. The arbiter interprets CAWS clauses as system calls, verifies compliance before merge, and records immutable provenance. This transforms multi-agent orchestration from an efficiency tool into a **governance mechanism** where diligence is a first-class habit baked into the process.
+
+---
+
+## Constitutional Architecture: CAWS as the Kernel
+
+**CAWS is the constitutional substrate** from which all agentic behavior derives its operating logic. The Arbiter, Benchmark Data layer, and RL system are processes executed _under_ CAWS jurisdiction, not alongside it.
+
+### Constitutional Functions
+
+- **Legislative Function (CAWS)**: Defines laws (budgets, waivers, gates, provenance)
+- **Executive Function (Arbiter)**: Enforces these laws across agent processes
+- **Judicial Function (Verifier)**: Audits adherence and issues verdicts
+
+Every verdict and waiver issued under CAWS is logged immutably, ensuring reproducibility of governance over agentic decisions.
 
 Key requirements for such a CAWS-integrated arbiter stack include:
 
@@ -35,13 +49,49 @@ For development, using a high-memory MacBook Pro (e.g. 32GB or 64GB RAM) allows 
 
 The hardware provides the raw horsepower. The next layers of the stack will ensure this power is used efficiently via smart orchestration.
 
+### Apple Silicon Runtime Specification
+
+To leverage Apple Silicon's unique architecture, the Arbiter stack implements hardware-aware optimizations:
+
+#### Threading Strategy
+
+- **Tokio Runtime**: Utilize Rust's `tokio` for Arbiter orchestration with concurrency caps based on CPU performance cluster cores
+- **Determinism Policy**: Arbiter decisions valid only when reproducible within ±0.001s variance; random seeds for judge LLMs logged to verdict ledger
+- **ANE Utilization**: Core ML judge models execute on ANE, freeing GPU for sandboxed verification tasks (mutation, testing)
+- **Thermal Safety**: `execution_window` parameter in `.caws/policy.yaml` throttles Arbiter inference if CPU/ANE utilization exceeds 90% for >10s
+
+This converts Apple Silicon's hardware characteristics into codified quality guarantees for local arbitration.
+
 ## Orchestration Model and Arbitration Mechanisms
 
 At the heart of the stack is the **arbiter/orchestrator component** – essentially the “brains” that coordinates multiple LLMs. This can be implemented as a standalone program or even as a specialized LLM (an _arbiter model_) that is designed or fine-tuned to handle orchestration. The arbiter’s responsibilities include: breaking down tasks, assigning work to one or more worker models, evaluating their outputs, resolving conflicts or inconsistencies, and composing the final result. In multi-agent AI literature, this is akin to a **centralized coordinator** agent[dominguezdaniel.medium.com](https://dominguezdaniel.medium.com/a-technical-guide-to-multi-agent-orchestration-5f979c831c0d#:~:text=3). Microsoft’s recent _Magentic-One_ system is a good example: it uses an _Orchestrator agent_ to coordinate several specialist agents (web browsing, code, etc.) and is built on a framework (AutoGen) that is **model-agnostic** (works with different LLM backends like GPT-4)[dominguezdaniel.medium.com](https://dominguezdaniel.medium.com/a-technical-guide-to-multi-agent-orchestration-5f979c831c0d#:~:text=Microsoft%20recently%20announced%20Magentic,4o). Our arbiter would play a similar top-level role.
 
 One critical design question is **how the arbiter makes decisions** and judges outputs. We have the option to leverage an LLM’s reasoning ability here. For instance, we can have each worker LLM provide not just an answer but also a rationale – essentially “pleading its case” for why its output is correct. The arbiter (which might itself be an LLM acting as a judge, or a coded heuristic) then compares these arguments and decides the winner. Research shows this _LLM debate_ approach can improve factual accuracy: two models debate a point over several rounds, and a separate **judge model** (with access only to the debate arguments, not the raw data) decides which side is more correct[aws.amazon.com](https://aws.amazon.com/blogs/machine-learning/improve-factual-consistency-with-llm-debates/#:~:text=In%20this%20post%2C%20we%20demonstrate,decides%20which%20side%20is%20correct)[aws.amazon.com](https://aws.amazon.com/blogs/machine-learning/improve-factual-consistency-with-llm-debates/#:~:text=correct,which%20summary%20choice%20is%20correct). In an AWS study, two LLMs were tasked with defending different summaries of a transcript (one correct, one incorrect) over 3 debate rounds, and a judge LLM determined which summary was factually consistent – effectively identifying the correct one[aws.amazon.com](https://aws.amazon.com/blogs/machine-learning/improve-factual-consistency-with-llm-debates/#:~:text=In%20this%20post%2C%20we%20demonstrate,decides%20which%20side%20is%20correct)[aws.amazon.com](https://aws.amazon.com/blogs/machine-learning/improve-factual-consistency-with-llm-debates/#:~:text=correct,which%20summary%20choice%20is%20correct). This kind of arbitration via debate could be built into our stack: when multiple candidate outputs or strategies are available, the arbiter could spawn a mini-debate between models or prompt the worker model to justify its solution, then evaluate those justifications.
 
-Even without an explicit multi-turn debate, the arbiter can use an LLM for **reasoning and verification**. For example, after a worker model produces a result, the arbiter might ask a smaller “verification model” to double-check the result or find errors. This concept is similar to having an _overseer_ or _critic_ agent. In complex systems, **conflict resolution** is a known challenge – the arbiter must handle cases where different agents’ outputs conflict[dominguezdaniel.medium.com](https://dominguezdaniel.medium.com/a-technical-guide-to-multi-agent-orchestration-5f979c831c0d#:~:text=1,Protecting%20against%20misuse%20or%20vulnerabilities). Having a reasoning mechanism (like a rule-based judge or an LLM judge) helps systematically resolve such conflicts. The stack should include this arbitration logic, possibly as:
+Even without an explicit multi-turn debate, the arbiter can use an LLM for **reasoning and verification**. For example, after a worker model produces a result, the arbiter might ask a smaller "verification model" to double-check the result or find errors. This concept is similar to having an _overseer_ or _critic_ agent. In complex systems, **conflict resolution** is a known challenge – the arbiter must handle cases where different agents' outputs conflict[dominguezdaniel.medium.com](https://dominguezdaniel.medium.com/a-technical-guide-to-multi-agent-orchestration-5f979c831c0d#:~:text=1,Protecting%20against%20misuse%20or%20vulnerabilities). Having a reasoning mechanism (like a rule-based judge or an LLM judge) helps systematically resolve such conflicts.
+
+#### Adversarial Arbitration Protocol
+
+The Arbiter implements a **two-phase deliberation model** for enhanced governance:
+
+**Phase 1 – Contradictory Submission**: Workers produce a `critique.md` outlining potential violations before Arbiter evaluation, preventing blind optimism and enriching benchmark data.
+
+**Phase 2 – Constitutional Deliberation**: The Arbiter's reasoning LLM references CAWS clauses explicitly:
+
+```yaml
+system: >
+  You are the Arbiter. Judge this submission against the Coding-Agent Working Standard.
+  Cite clause IDs for every pass/fail determination.
+
+criteria:
+  - CAWS:Section4.2 "Budgets must remain immutable"
+  - CAWS:Section5.1 "All waivers must be time-bounded and additive only"
+  - CAWS:Section6.4 "Proof obligations must include runnable evidence"
+```
+
+Each arbitration produces a **verdict.yaml** with cited clause references, improving transparency and RL interpretability.
+
+The stack should include this arbitration logic, possibly as:
 
 - **Built-in Judging Module:** This could be a separate LLM (which can be small/fast) that scores or chooses between outputs. For instance, a 7B parameter model fine-tuned to act as a judge could be used to rank answers. Notably, the AWS experiment found that even a relatively small model (Mistral 7B) can serve effectively as a judge, and one can swap in larger judges for more complex reasoning if needed[aws.amazon.com](https://aws.amazon.com/blogs/machine-learning/improve-factual-consistency-with-llm-debates/#:~:text=The%20choice%20of%20judge%20and,The%20model%20cards%20for). This means the arbitration model itself can be adjusted based on the task complexity.
 - **Self-Consistency & Voting:** Another approach the arbiter stack could use is running one model multiple times and taking a majority vote or the most consistent answer (this is known as _self-consistency_ in prompting[aws.amazon.com](https://aws.amazon.com/blogs/machine-learning/improve-factual-consistency-with-llm-debates/#:~:text=The%20LLM%20debating%20technique%20can,mentioned%20below%20in%20this%20post)). Or, have multiple different models attempt the task in parallel and then pick the result that is most common or cross-verify answers. These techniques, while less explicit than a debate, still rely on an arbiter mechanism to decide which output to trust.
@@ -213,10 +263,17 @@ class ContextAwareRouter {
     context: WorkspaceContext
   ): Promise<RoutingDecision> {
     // Analyze open files for relevant context
-    const relevantFiles = await this.analyzeFileRelevance(task, context.openFiles);
+    const relevantFiles = await this.analyzeFileRelevance(
+      task,
+      context.openFiles
+    );
 
     // Consider cursor position and visible code
-    const intent = await this.inferUserIntent(task, context.cursorPosition, context.visibleRange);
+    const intent = await this.inferUserIntent(
+      task,
+      context.cursorPosition,
+      context.visibleRange
+    );
 
     // Factor in recent edits and git status
     const complexity = await this.assessWorkspaceComplexity(context);
@@ -266,7 +323,7 @@ class MultiFileCoordinator {
 
     // Plan changes for each file
     const changes = await Promise.all(
-      affectedFiles.map(file => this.planFileChanges(task, file, context))
+      affectedFiles.map((file) => this.planFileChanges(task, file, context))
     );
 
     // Validate consistency across files
@@ -304,25 +361,31 @@ interface ProgressUpdate {
   currentStep: string;
   percentage: number;
   eta: Date;
-  status: 'running' | 'waiting' | 'completed' | 'failed';
+  status: "running" | "waiting" | "completed" | "failed";
   details: ProgressDetail[];
 }
 
 class ProgressManager {
   private progressStreams: Map<string, ProgressStream> = new Map();
 
-  async startProgressTracking(taskId: string, plan: ExecutionPlan): Promise<void> {
+  async startProgressTracking(
+    taskId: string,
+    plan: ExecutionPlan
+  ): Promise<void> {
     const stream = new ProgressStream(taskId);
     this.progressStreams.set(taskId, stream);
 
     // Send progress updates to IDE
-    stream.on('update', (update) => this.sendToIDE(update));
+    stream.on("update", (update) => this.sendToIDE(update));
 
     // Initialize progress
     await stream.initialize(plan);
   }
 
-  async updateProgress(taskId: string, update: Partial<ProgressUpdate>): Promise<void> {
+  async updateProgress(
+    taskId: string,
+    update: Partial<ProgressUpdate>
+  ): Promise<void> {
     const stream = this.progressStreams.get(taskId);
     if (stream) {
       await stream.update(update);
@@ -341,7 +404,7 @@ class ProgressManager {
 
 ```typescript
 interface HumanInteraction {
-  type: 'approval' | 'clarification' | 'choice' | 'feedback';
+  type: "approval" | "clarification" | "choice" | "feedback";
   taskId: string;
   prompt: string;
   options?: InteractionOption[];
@@ -402,7 +465,7 @@ class TaskDecomposer {
     // Analyze task complexity and requirements
     const complexity = await this.analyzeComplexity(task);
 
-    if (complexity.level === 'simple') {
+    if (complexity.level === "simple") {
       return this.createSimpleDecomposition(task);
     }
 
@@ -417,7 +480,10 @@ class TaskDecomposer {
     const successCriteria = await this.defineSuccessCriteria(task, subtasks);
 
     // Create recovery plan
-    const failureRecovery = await this.createRecoveryPlan(subtasks, dependencies);
+    const failureRecovery = await this.createRecoveryPlan(
+      subtasks,
+      dependencies
+    );
 
     return {
       originalTask: task,
@@ -476,7 +542,6 @@ class WorkflowOrchestrator {
         results,
         summary: finalResult.summary,
       };
-
     } catch (error) {
       // Execute recovery plan
       await this.executeRecovery(plan.failureRecovery, error, context);
@@ -512,7 +577,7 @@ class WorkflowOrchestrator {
 interface TaskDependency {
   from: SubTask;
   to: SubTask;
-  type: 'finish-to-start' | 'start-to-start' | 'finish-to-finish';
+  type: "finish-to-start" | "start-to-start" | "finish-to-finish";
   condition?: DependencyCondition;
 }
 
@@ -527,9 +592,9 @@ class DependencyManager {
     for (const dep of dependencies) {
       const status = await this.checkDependency(dep, completedTasks);
 
-      if (status === 'blocked') {
+      if (status === "blocked") {
         blocked.push(dep.to);
-      } else if (status === 'ready') {
+      } else if (status === "ready") {
         ready.push(dep.to);
       }
     }
@@ -540,16 +605,16 @@ class DependencyManager {
   private async checkDependency(
     dep: TaskDependency,
     completedTasks: SubTaskResult[]
-  ): Promise<'blocked' | 'ready' | 'completed'> {
-    const fromResult = completedTasks.find(r => r.subtask.id === dep.from.id);
+  ): Promise<"blocked" | "ready" | "completed"> {
+    const fromResult = completedTasks.find((r) => r.subtask.id === dep.from.id);
 
-    if (!fromResult) return 'blocked';
+    if (!fromResult) return "blocked";
 
     if (dep.condition) {
       return await this.evaluateCondition(dep.condition, fromResult);
     }
 
-    return fromResult.success ? 'ready' : 'blocked';
+    return fromResult.success ? "ready" : "blocked";
   }
 }
 ```
@@ -594,7 +659,9 @@ class ConversationManager {
     let context = this.contexts.get(sessionId);
 
     if (!context) {
-      context = await this.persistence.load(sessionId) || this.createNewContext(sessionId);
+      context =
+        (await this.persistence.load(sessionId)) ||
+        this.createNewContext(sessionId);
       this.contexts.set(sessionId, context);
     }
 
@@ -610,7 +677,9 @@ class ConversationManager {
     return context;
   }
 
-  private async analyzeIntentEvolution(context: ConversationContext): Promise<UserIntent> {
+  private async analyzeIntentEvolution(
+    context: ConversationContext
+  ): Promise<UserIntent> {
     // Analyze recent turns for intent changes
     // Consider: topic shifts, frustration indicators, success patterns
   }
@@ -647,12 +716,16 @@ class ContextAwareRouter {
     });
   }
 
-  private async extractPreferences(conversation: ConversationContext): Promise<UserPreferences> {
+  private async extractPreferences(
+    conversation: ConversationContext
+  ): Promise<UserPreferences> {
     // Learn from feedback and successful interactions
     // Consider: preferred agents, interaction styles, quality thresholds
   }
 
-  private async analyzeHistory(conversation: ConversationContext): Promise<ConversationInsights> {
+  private async analyzeHistory(
+    conversation: ConversationContext
+  ): Promise<ConversationInsights> {
     // Extract patterns: successful strategies, common issues, preferred approaches
   }
 }
@@ -665,8 +738,14 @@ class ContextAwareRouter {
 ```typescript
 interface LearningEngine {
   recordInteraction(interaction: ConversationInteraction): void;
-  learnUserPreferences(userId: string, conversations: Conversation[]): UserPreferences;
-  adaptRoutingStrategy(userId: string, preferences: UserPreferences): RoutingStrategy;
+  learnUserPreferences(
+    userId: string,
+    conversations: Conversation[]
+  ): UserPreferences;
+  adaptRoutingStrategy(
+    userId: string,
+    preferences: UserPreferences
+  ): RoutingStrategy;
   predictUserSatisfaction(task: Task, strategy: RoutingStrategy): number;
 }
 
@@ -692,9 +771,9 @@ class AdaptiveRouter {
 
 ```typescript
 interface CacheConfig {
-  l1Cache: Redis;           // Hot data (30s TTL)
-  l2Cache: Map;             // Session data (5min TTL)
-  l3Cache: LocalStorage;    // Persistent data (1hr TTL)
+  l1Cache: Redis; // Hot data (30s TTL)
+  l2Cache: Map; // Session data (5min TTL)
+  l3Cache: LocalStorage; // Persistent data (1hr TTL)
 }
 
 class MultiLevelCache {
@@ -759,23 +838,32 @@ class DatabaseManager {
 
   private initializePreparedStatements(): void {
     // Pre-compile frequently used queries
-    this.preparedStatements.set('getAgent', this.pool.prepare(`
+    this.preparedStatements.set(
+      "getAgent",
+      this.pool.prepare(`
       SELECT * FROM agents WHERE id = $1
-    `));
+    `)
+    );
 
-    this.preparedStatements.set('updatePerformance', this.pool.prepare(`
+    this.preparedStatements.set(
+      "updatePerformance",
+      this.pool.prepare(`
       UPDATE agent_performance
       SET success_rate = $1, task_count = task_count + 1
       WHERE agent_id = $2
-    `));
+    `)
+    );
 
-    this.preparedStatements.set('getAgentsByCapability', this.pool.prepare(`
+    this.preparedStatements.set(
+      "getAgentsByCapability",
+      this.pool.prepare(`
       SELECT a.*, ap.* FROM agents a
       JOIN agent_performance ap ON a.id = ap.agent_id
       WHERE a.capabilities @> $1
       ORDER BY ap.success_rate DESC
       LIMIT $2
-    `));
+    `)
+    );
   }
 
   async executePrepared(name: string, params: any[]): Promise<QueryResult> {
@@ -794,8 +882,8 @@ class DatabaseManager {
 ```typescript
 interface ResourceLimits {
   maxConcurrentTasks: number;
-  maxMemoryUsage: number;    // MB
-  maxCpuUsage: number;       // Percentage
+  maxMemoryUsage: number; // MB
+  maxCpuUsage: number; // Percentage
   maxAgentsPerTask: number;
 }
 
@@ -844,23 +932,23 @@ class ResourceManager {
 
 ```typescript
 interface CircuitBreakerConfig {
-  failureThreshold: number;      // Failures before opening
-  recoveryTimeout: number;       // Time before trying again
-  monitoringWindow: number;      // Time window for failure counting
+  failureThreshold: number; // Failures before opening
+  recoveryTimeout: number; // Time before trying again
+  monitoringWindow: number; // Time window for failure counting
 }
 
 class CircuitBreaker {
-  private state: 'closed' | 'open' | 'half-open' = 'closed';
+  private state: "closed" | "open" | "half-open" = "closed";
   private failures = 0;
   private lastFailureTime = 0;
   private nextAttemptTime = 0;
 
   async execute<T>(operation: () => Promise<T>): Promise<T> {
-    if (this.state === 'open') {
+    if (this.state === "open") {
       if (Date.now() < this.nextAttemptTime) {
-        throw new CircuitBreakerError('Circuit breaker is open');
+        throw new CircuitBreakerError("Circuit breaker is open");
       }
-      this.state = 'half-open';
+      this.state = "half-open";
     }
 
     try {
@@ -875,7 +963,7 @@ class CircuitBreaker {
 
   private onSuccess(): void {
     this.failures = 0;
-    this.state = 'closed';
+    this.state = "closed";
   }
 
   private onFailure(): void {
@@ -883,7 +971,7 @@ class CircuitBreaker {
     this.lastFailureTime = Date.now();
 
     if (this.failures >= this.config.failureThreshold) {
-      this.state = 'open';
+      this.state = "open";
       this.nextAttemptTime = Date.now() + this.config.recoveryTimeout;
     }
   }
@@ -919,7 +1007,10 @@ class RetryManager {
         lastError = error;
 
         if (attempt === config.maxAttempts) {
-          throw new RetryError(`Failed after ${config.maxAttempts} attempts`, lastError);
+          throw new RetryError(
+            `Failed after ${config.maxAttempts} attempts`,
+            lastError
+          );
         }
 
         const delay = this.calculateDelay(attempt, config);
@@ -931,7 +1022,8 @@ class RetryManager {
   }
 
   private calculateDelay(attempt: number, config: RetryConfig): number {
-    let delay = config.initialDelay * Math.pow(config.backoffMultiplier, attempt - 1);
+    let delay =
+      config.initialDelay * Math.pow(config.backoffMultiplier, attempt - 1);
     delay = Math.min(delay, config.maxDelay);
 
     if (config.jitterEnabled) {
@@ -950,7 +1042,7 @@ class RetryManager {
 
 ```typescript
 interface RecoveryStrategy {
-  type: 'retry' | 'fallback' | 'decompose' | 'escalate';
+  type: "retry" | "fallback" | "decompose" | "escalate";
   conditions: FailureCondition[];
   actions: RecoveryAction[];
 }
@@ -1269,6 +1361,14 @@ interface ModelPerformanceScore {
     rewardHackingIncidents: number; // Per-month violation count
     hallucinationRate: number; // Factual consistency score
     contextRetention: number; // Multi-turn coherence
+  };
+
+  // Apple Silicon-specific metrics
+  appleSilicon: {
+    aneUtilization: number; // Neural Engine usage %
+    thermalEfficiency: number; // CPU/GPU temperature vs performance
+    unifiedMemoryPressure: number; // Memory bandwidth utilization
+    metalPerformance: number; // GPU kernel execution efficiency
   };
 
   // Meta-metrics (system health)
@@ -1794,6 +1894,25 @@ interface AppleSiliconOptimizations {
 
 This optimization strategy applies the same rigorous, quality-preserving approach that delivered exceptional results for Kokoro TTS to the arbiter stack, ensuring we optimize for both speed and compliance without sacrificing the CAWS governance standards.
 
+## Reflexivity: Self-Audit and Meta-Governance
+
+The system implements **constitutional reflexivity** - the ability to audit and govern its own governance processes:
+
+### Self-Audit Mechanisms
+
+- **Release Self-Audit**: Every release triggers `caws audit self` ensuring Arbiter code and policies comply with CAWS rules
+- **Self-Waiver Registry**: Internal waivers are time-bound and version-locked (`WV-SELF-BOOT-*` with 30-day expiry)
+- **Reflexive Training**: RL training incorporates Arbiter's historical waiver frequency as negative reward, reducing exceptions over time
+- **Self-Provenance**: Arbiter verdicts are themselves governed by CAWS, producing meta-verdicts (CAWS adjudicating itself)
+
+### Constitutional Feedback Loop
+
+```
+Arbiter Verdicts (CAWS Metrics) → Benchmark Data → RL Training (Governance-Weighted Rewards) → Improved Agents → Reduced Waivers → Higher Gate Integrity
+```
+
+This creates a **self-regulating computational polity** that continually verifies the legitimacy of its own governance process.
+
 ## Conclusion and Bill of Materials
 
 Bringing it all together, what does the **CAWS-integrated arbiter stack** look like in concrete terms? Here's a breakdown of the components and requirements we need to implement or procure:
@@ -2088,9 +2207,13 @@ arxiv
 
 ## Implementation Map
 
-This section maps theoretical concepts from this document to actual implementations in the V2 codebase.
+This section maps theory concepts to concrete CAWS working specifications and implementation artifacts.
 
 ### Agent Registry System
+
+**CAWS Spec**: [ARBITER-001: Agent Registry Manager](./../../../agent-registry-manager/.caws/working-spec.yaml)  
+**Implementation**: `src/orchestrator/AgentRegistryManager.ts`, `src/types/agent-registry.ts`  
+**Status**: ✅ **Fully Implemented** - Complete with performance tracking and capability management
 
 **Theory**: Section "Model-Agnostic Design" discusses tracking agent performance and hot-swapping models.
 
@@ -2145,11 +2268,11 @@ This section maps theoretical concepts from this document to actual implementati
 
 ### Task Routing with Multi-Armed Bandit
 
-**Theory**: Sections on "Performance Tracking", "Dynamic Model Selection", and "Hybrid Routing"
+**CAWS Spec**: [ARBITER-002: Task Routing Manager](./../../../task-routing-manager/.caws/working-spec.yaml)  
+**Implementation**: `src/orchestrator/TaskRoutingManager.ts`, `src/orchestrator/MultiArmedBandit.ts`  
+**Status**: ⚠️ **Spec Complete** - Ready for implementation (Week 2 in roadmap)
 
-**Implementation**: ARBITER-002 - Task Routing Manager (planned)  
-**Status**: 🟡 Specification complete, implementation pending  
-**Spec**: `task-routing-manager/.caws/working-spec.yaml`
+**Theory**: Sections on "Performance Tracking", "Dynamic Model Selection", and "Hybrid Routing"
 
 **Planned Components**:
 
@@ -2161,11 +2284,11 @@ This section maps theoretical concepts from this document to actual implementati
 
 ### CAWS Constitutional Authority
 
-**Theory**: Section "CAWS-Compliant Arbitration Protocol" and "Arbiter Reasoning Engine"
+**CAWS Spec**: [ARBITER-003: CAWS Validator](./../../../caws-validator/.caws/working-spec.yaml)  
+**Implementation**: `src/orchestrator/CAWSValidator.ts`, `src/caws/BudgetEnforcer.ts`  
+**Status**: ⚠️ **Spec Complete** - Ready for implementation (Week 3 in roadmap)
 
-**Implementation**: ARBITER-003 - CAWS Validator (planned)  
-**Status**: 🟡 Specification complete, implementation pending  
-**Spec**: `caws-validator/.caws/working-spec.yaml`
+**Theory**: Section "CAWS-Compliant Arbitration Protocol" and "Arbiter Reasoning Engine"
 
 **Planned Components**:
 
@@ -2180,11 +2303,11 @@ This section maps theoretical concepts from this document to actual implementati
 
 ### Performance Tracking for RL
 
-**Theory**: Section "Reflexive Learning & Memory Integration"
+**CAWS Spec**: [ARBITER-004: Performance Tracker](./../../../performance-tracker/.caws/working-spec.yaml)  
+**Implementation**: `src/benchmark/PerformanceTracker.ts`, `src/benchmark/BenchmarkDataCollector.ts`  
+**Status**: ⚠️ **Spec Complete** - Ready for implementation (Week 4 in roadmap)
 
-**Implementation**: ARBITER-004 - Performance Tracker (planned)  
-**Status**: 🟡 Specification complete, implementation pending  
-**Spec**: `performance-tracker/.caws/working-spec.yaml`
+**Theory**: Section "Reflexive Learning & Memory Integration"
 
 **Planned Components**:
 
@@ -2192,20 +2315,37 @@ This section maps theoretical concepts from this document to actual implementati
 - `BenchmarkDataCollector` - Async buffering and batch writes
 - `DataAnonymizer` - Privacy-preserving data collection
 
+**Governance-Weighted Reward Function**:
+
+To align RL with CAWS constitutional authority, rewards incorporate governance metrics:
+
+[
+R = \alpha \cdot Q + \beta (1 - \text{waiver_rate}) + \gamma \cdot G + \delta \cdot M
+]
+
+Where:
+
+- _Q_: Task success rate (normalized 0.0-1.0)
+- _waiver_rate_: Proportion requiring exceptions (negative reward)
+- _G_: Gate integrity (passed/total gates)
+- _M_: Mutation robustness (fewer trivial mutations = higher robustness)
+
+This ensures agents are rewarded for **constitutional compliance**, teaching models to work _within law_ rather than around it.
+
 **Data Flow**:
 
 1. Routing decisions logged (from ARBITER-002)
-2. Task execution metrics captured
-3. Evaluation outcomes recorded
-4. Data fed to RL training pipeline (V2 Phase 3)
+2. Task execution metrics captured with governance context
+3. Evaluation outcomes recorded with CAWS-verifiable schema
+4. Governance-weighted data fed to RL training pipeline (V2 Phase 3)
 
 ### Main Orchestrator Integration
 
-**Theory**: Section "Orchestration Model and Arbitration Mechanisms"
+**CAWS Spec**: [ARBITER-005: Arbiter Orchestrator](./../../../arbiter-orchestrator/.caws/working-spec.yaml)  
+**Implementation**: `src/orchestrator/ArbiterOrchestrator.ts`, `src/orchestrator/TaskQueue.ts`  
+**Status**: ⚠️ **Spec Complete** - Ready for implementation (Week 1 in roadmap)
 
-**Implementation**: ARBITER-005 - Arbiter Orchestrator (planned)  
-**Status**: 🟡 Specification complete, implementation pending  
-**Spec**: `arbiter-orchestrator/.caws/working-spec.yaml`
+**Theory**: Section "Orchestration Model and Arbitration Mechanisms"
 
 **Planned Components**:
 
@@ -2216,23 +2356,126 @@ This section maps theoretical concepts from this document to actual implementati
 
 **Integration**: Coordinates all 4 subsystems (registry, routing, validation, tracking)
 
+### Advanced Capabilities (ARBITER-006 to ARBITER-013)
+
+### Knowledge Seeker
+
+**CAWS Spec**: [ARBITER-006: Knowledge Seeker](./../../../knowledge-seeker/.caws/working-spec.yaml)  
+**Implementation**: `src/knowledge/KnowledgeSeeker.ts` (partial)  
+**Status**: ⚠️ **Partial Implementation** - Has code but needs migration and database schema
+
+**Theory**: Section "Conversation Context & State Preservation" discusses information gathering and research.
+
+### Verification Engine
+
+**CAWS Spec**: [ARBITER-007: Verification Engine](./../../../verification-engine/.caws/working-spec.yaml)  
+**Implementation**: `src/verification/VerificationEngine.ts` (partial)  
+**Status**: ⚠️ **Partial Implementation** - Has code but needs migration and database schema
+
+**Theory**: Section "Ensuring Correctness and Traceability" discusses fact-checking and credibility scoring.
+
+### Web Navigator
+
+**CAWS Spec**: [ARBITER-008: Web Navigator](./../../../web-navigator/.caws/working-spec.yaml)  
+**Implementation**: None yet  
+**Status**: ⚠️ **Spec Only** - Ready for implementation
+
+**Theory**: Section "Model-Agnostic Design" discusses web search and content extraction.
+
+### Multi-Turn Learning Coordinator
+
+**CAWS Spec**: [ARBITER-009: Multi-Turn Learning Coordinator](./../../../multi-turn-learning-coordinator/.caws/working-spec.yaml)  
+**Implementation**: `src/learning/MultiTurnLearningCoordinator.ts`  
+**Status**: ⚠️ **Spec Complete** - High priority for learning systems
+
+**Theory**: Section "Reflexive Learning & Memory Integration" discusses iterative agent learning and error pattern recognition.
+
+### Workspace State Manager
+
+**CAWS Spec**: [ARBITER-010: Workspace State Manager](./../../../workspace-state-manager/.caws/working-spec.yaml)  
+**Implementation**: `src/workspace/WorkspaceStateManager.ts`, `src/workspace/DependencyTracker.ts`  
+**Status**: ⚠️ **Spec Complete** - Critical for developer experience
+
+**Theory**: Section "IDE Integration & Workspace Awareness" discusses file system operations and dependency tracking.
+
+### System Health Monitor
+
+**CAWS Spec**: [ARBITER-011: System Health Monitor](./../../../system-health-monitor/.caws/working-spec.yaml)  
+**Implementation**: `src/health/SystemHealthMonitor.ts`, `src/health/CircuitBreakerService.ts`  
+**Status**: ⚠️ **Spec Complete** - Essential for production reliability
+
+**Theory**: Section "Recovery & Retry Strategies" discusses circuit breakers and health monitoring.
+
+### Context Preservation Engine
+
+**CAWS Spec**: [ARBITER-012: Context Preservation Engine](./../../../context-preservation-engine/.caws/working-spec.yaml)  
+**Implementation**: `src/context/ContextPreservationEngine.ts`  
+**Status**: ⚠️ **Spec Complete** - Required for long-running tasks
+
+**Theory**: Section "Conversation Context & State Preservation" discusses semantic compression and session management.
+
+### Security Policy Enforcer
+
+**CAWS Spec**: [ARBITER-013: Security Policy Enforcer](./../../../security-policy-enforcer/.caws/working-spec.yaml)
+**Implementation**: `src/security/SecurityPolicyEnforcer.ts`
+**Status**: ⚠️ **Spec Complete** - Critical for production security
+
+**Theory**: Section "Ensuring Correctness and Traceability" discusses audit logging and access control.
+
+### Task Runner - Worker Agent Execution
+
+**CAWS Spec**: [ARBITER-014: Task Runner](./../../../task-runner/.caws/working-spec.yaml)
+**Implementation**: `src/workers/TaskRunner.ts`, `src/workers/WorkerManager.ts`
+**Status**: ⚠️ **Spec Complete** - Ready for implementation
+
+**Theory**: Section "Orchestration Model and Arbitration Mechanisms" discusses worker pleading and constitutional deliberation.
+
+**Planned Components**:
+
+- `TaskRunner` - Core worker agent execution engine
+- `WorkerManager` - Worker lifecycle and coordination
+- `PleadingEngine` - Self-critique and submission generation
+- `FeedbackProcessor` - Multi-turn feedback loop management
+
+**Key Integration Points**:
+
+- **Constitutional Pleading**: Workers generate self-critique artifacts before arbiter judgment
+- **Multi-Turn Feedback**: Context preservation across iterations with structured improvement
+- **Performance Telemetry**: Automatic data collection for RL training pipelines
+- **CAWS Compliance**: Workers cannot bypass constitutional validation
+
+**Critical Invariants**:
+
+1. All worker submissions include self-critique outlining potential violations
+2. Workers participate in adversarial arbitration protocol
+3. Feedback loops maintain context integrity across iterations
+4. Performance data automatically feeds RL training pipelines
+
 ---
 
 ## Implementation Timeline
 
 ### Phase 1: Foundation (Weeks 1-4)
 
-- ✅ **Week 1**: ARBITER-001 (Agent Registry Manager) - COMPLETE
-- 🔄 **Week 2**: ARBITER-002 (Task Routing Manager) - In Progress
-- 📋 **Week 3**: ARBITER-003 (CAWS Validator)
-- 📋 **Week 4**: ARBITER-004 (Performance Tracker)
+- ✅ **Week 1**: [ARBITER-005](./../../../arbiter-orchestrator/.caws/working-spec.yaml) (Arbiter Orchestrator) - Spec Complete
+- ✅ **Week 2**: [ARBITER-002](./../../../task-routing-manager/.caws/working-spec.yaml) (Task Routing Manager) - Spec Complete
+- ✅ **Week 3**: [ARBITER-003](./../../../caws-validator/.caws/working-spec.yaml) (CAWS Validator) - Spec Complete
+- ✅ **Week 4**: [ARBITER-004](./../../../performance-tracker/.caws/working-spec.yaml) (Performance Tracker) - Spec Complete
 
 ### Phase 2: Advanced Features (Weeks 5-8)
 
-- Capability-based routing enhancements
-- Load balancing and health monitoring
-- Cross-agent learning
-- Conflict resolution and debate
+- [ARBITER-011](./../../../system-health-monitor/.caws/working-spec.yaml): System Health Monitor (Circuit breakers, predictive monitoring)
+- [ARBITER-010](./../../../workspace-state-manager/.caws/working-spec.yaml): Workspace State Manager (File operations, dependency tracking)
+- [ARBITER-009](./../../../multi-turn-learning-coordinator/.caws/working-spec.yaml): Multi-Turn Learning Coordinator (Iterative agent learning)
+- [ARBITER-012](./../../../context-preservation-engine/.caws/working-spec.yaml): Context Preservation Engine (Long-running task state)
+
+### Phase 3: Intelligence & Security (Weeks 9-12)
+
+- [ARBITER-006](./../../../knowledge-seeker/.caws/working-spec.yaml): Knowledge Seeker (Information gathering, research capabilities)
+- [ARBITER-007](./../../../verification-engine/.caws/working-spec.yaml): Verification Engine (Fact-checking, credibility scoring)
+- [ARBITER-008](./../../../web-navigator/.caws/working-spec.yaml): Web Navigator (Web search, content extraction)
+- [ARBITER-013](./../../../security-policy-enforcer/.caws/working-spec.yaml): Security Policy Enforcer (Access control, tenant isolation)
+- [ARBITER-014](./../../../task-runner/.caws/working-spec.yaml): Task Runner (Worker agent execution, constitutional pleading)
 
 ---
 
@@ -2323,6 +2566,7 @@ graph TD
 **Output**: Clear acceptance criteria and implementation plan
 
 1. **Decompose the Problem**
+
    - Break complex tasks into verifiable subtasks
    - Define measurable success criteria for each subtask
    - Estimate effort and identify dependencies
@@ -2338,6 +2582,7 @@ graph TD
 **Output**: Working code that addresses core requirements
 
 1. **Core Functionality First**
+
    - Implement minimum viable solution
    - Focus on correctness over optimization
    - Ensure basic integration points work
@@ -2355,16 +2600,19 @@ graph TD
 **Verification Checklist**:
 
 1. **Functional Completeness**
+
    - [ ] All acceptance criteria addressed?
    - [ ] Core user flows working end-to-end?
    - [ ] Integration points functioning correctly?
 
 2. **Quality Standards**
+
    - [ ] Tests passing at required coverage levels?
    - [ ] Linting and type checking clean?
    - [ ] Performance within acceptable bounds?
 
 3. **Code Quality**
+
    - [ ] SOLID principles followed?
    - [ ] No critical technical debt introduced?
    - [ ] Documentation updated and accurate?
@@ -2376,12 +2624,12 @@ graph TD
 
 **Iteration Decision Matrix**:
 
-| Verification Result | Action Required |
-|-------------------|-----------------|
-| ❌ Critical gaps found | Immediate iteration required |
-| ⚠️ Minor gaps identified | Targeted improvements needed |
-| ✅ Requirements met | Proceed to quality gates |
-| ⭐ Above expectations | Consider enhancements or optimization |
+| Verification Result      | Action Required                       |
+| ------------------------ | ------------------------------------- |
+| ❌ Critical gaps found   | Immediate iteration required          |
+| ⚠️ Minor gaps identified | Targeted improvements needed          |
+| ✅ Requirements met      | Proceed to quality gates              |
+| ⭐ Above expectations    | Consider enhancements or optimization |
 
 #### Phase 4: Quality Gates Check
 
@@ -2389,11 +2637,13 @@ graph TD
 **Output**: Go/no-go decision for completion
 
 1. **Automated Gates**
+
    - Test suite execution (unit, integration, e2e)
    - Code quality metrics (coverage, complexity, duplication)
    - Security scanning and dependency checks
 
 2. **Manual Review Gates**
+
    - Code review for architecture compliance
    - Documentation completeness check
    - Performance benchmarking
@@ -2411,11 +2661,13 @@ graph TD
 **"Good Enough" Criteria**:
 
 1. **Functional Sufficiency**
+
    - Core requirements fully satisfied
    - No blocking bugs or critical issues
    - User acceptance criteria met
 
 2. **Quality Thresholds Met**
+
    - Required test coverage achieved
    - Performance SLAs maintained
    - Security standards complied with
@@ -2426,6 +2678,7 @@ graph TD
    - Maintenance overhead manageable
 
 **Enhancement Opportunities**:
+
 - Performance optimizations
 - Additional features (nice-to-have)
 - Code quality improvements
@@ -2437,11 +2690,13 @@ graph TD
 **Output**: Properly documented, ready-for-production component
 
 1. **Completion Documentation**
+
    - Update implementation status
    - Document known limitations
    - Note future improvement opportunities
 
 2. **Knowledge Transfer**
+
    - Code comments and documentation updated
    - Architecture decisions recorded
    - Troubleshooting guides provided
@@ -2456,12 +2711,14 @@ graph TD
 #### Know When to Stop Iterating
 
 **Completion Indicators**:
+
 - ✅ **Requirements Satisfied**: All acceptance criteria met
 - ✅ **Quality Gates Passed**: Automated and manual checks clear
 - ✅ **Risks Mitigated**: No critical issues blocking deployment
 - ✅ **Value Delivered**: Users can accomplish their goals
 
 **Stop Iteration Triggers**:
+
 - ⚠️ **Diminishing Returns**: Further improvements yield minimal value
 - ⚠️ **Scope Creep**: Changes exceed original requirements
 - ⚠️ **Time Boxing**: Allocated time/sprint capacity exhausted
@@ -2472,11 +2729,13 @@ graph TD
 **Common Scenarios**:
 
 1. **Performance Edge Cases**
+
    - Document known limitations
    - Create performance improvement tickets
    - Consider lazy loading or progressive enhancement
 
 2. **Rare Error Conditions**
+
    - Implement graceful error handling
    - Log for monitoring and analysis
    - Plan for future error recovery improvements

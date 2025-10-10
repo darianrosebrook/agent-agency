@@ -4,12 +4,12 @@
  */
 
 import {
-  SearchResult,
-  KnowledgeQuery,
   InformationProcessor as IInformationProcessor,
+  KnowledgeQuery,
+  RelevanceFactor,
   RelevanceScorer,
-  RelevanceFactor
-} from '../types/knowledge';
+  SearchResult,
+} from "../types/knowledge";
 
 export class InformationProcessor implements IInformationProcessor {
   private readonly scorer: RelevanceScorer;
@@ -18,14 +18,17 @@ export class InformationProcessor implements IInformationProcessor {
     this.scorer = scorer || new DefaultRelevanceScorer();
   }
 
-  async processResults(query: KnowledgeQuery, rawResults: SearchResult[]): Promise<SearchResult[]> {
+  async processResults(
+    query: KnowledgeQuery,
+    rawResults: SearchResult[]
+  ): Promise<SearchResult[]> {
     // 1. Filter results based on query constraints
     let filtered = this.applyFilters(rawResults, query);
 
     // 2. Calculate relevance scores
-    filtered = filtered.map(result => ({
+    filtered = filtered.map((result) => ({
       ...result,
-      relevanceScore: this.calculateRelevance(query.query, result)
+      relevanceScore: this.calculateRelevance(query.query, result),
     }));
 
     // 3. Deduplicate similar results
@@ -85,16 +88,21 @@ export class InformationProcessor implements IInformationProcessor {
     });
   }
 
-  private applyFilters(results: SearchResult[], query: KnowledgeQuery): SearchResult[] {
+  private applyFilters(
+    results: SearchResult[],
+    query: KnowledgeQuery
+  ): SearchResult[] {
     if (!query.filters) return results;
 
-    return results.filter(result => {
+    return results.filter((result) => {
       const filters = query.filters!;
 
       // Date range filter
       if (filters.dateRange && result.publishedDate) {
-        if (result.publishedDate < filters.dateRange.start ||
-            result.publishedDate > filters.dateRange.end) {
+        if (
+          result.publishedDate < filters.dateRange.start ||
+          result.publishedDate > filters.dateRange.end
+        ) {
           return false;
         }
       }
@@ -122,13 +130,17 @@ export class InformationProcessor implements IInformationProcessor {
 
       // Domain filters
       if (filters.excludeDomains && filters.excludeDomains.length > 0) {
-        if (filters.excludeDomains.some(domain => result.url.includes(domain))) {
+        if (
+          filters.excludeDomains.some((domain) => result.url.includes(domain))
+        ) {
           return false;
         }
       }
 
       if (filters.includeDomains && filters.includeDomains.length > 0) {
-        if (!filters.includeDomains.some(domain => result.url.includes(domain))) {
+        if (
+          !filters.includeDomains.some((domain) => result.url.includes(domain))
+        ) {
           return false;
         }
       }
@@ -157,13 +169,13 @@ export class InformationProcessor implements IInformationProcessor {
   private getProviderPriority(result: SearchResult): number {
     // Provider priority for tie-breaking (higher = better)
     const priorities: Record<string, number> = {
-      'wikipedia': 10,
-      'scholar': 9,
-      'github': 8,
-      'stackoverflow': 7,
-      'google': 5,
-      'bing': 4,
-      'duckduckgo': 3
+      wikipedia: 10,
+      scholar: 9,
+      github: 8,
+      stackoverflow: 7,
+      google: 5,
+      bing: 4,
+      duckduckgo: 3,
     };
 
     return priorities[result.provider.toString()] || 0;
@@ -177,8 +189,10 @@ export class DefaultRelevanceScorer implements RelevanceScorer {
 
     if (totalWeight === 0) return 0;
 
-    const weightedSum = factors.reduce((sum, factor) =>
-      sum + (factor.score * factor.weight), 0);
+    const weightedSum = factors.reduce(
+      (sum, factor) => sum + factor.score * factor.weight,
+      0
+    );
 
     return weightedSum / totalWeight;
   }
@@ -193,50 +207,55 @@ export class DefaultRelevanceScorer implements RelevanceScorer {
     // Title match factor
     const titleMatchScore = this.calculateTextMatch(queryLower, titleLower);
     factors.push({
-      name: 'title_match',
+      name: "title_match",
       weight: 0.4,
       score: titleMatchScore,
-      explanation: `Title contains ${Math.round(titleMatchScore * 100)}% of query terms`
+      explanation: `Title contains ${Math.round(
+        titleMatchScore * 100
+      )}% of query terms`,
     });
 
     // Snippet match factor
     const snippetMatchScore = this.calculateTextMatch(queryLower, snippetLower);
     factors.push({
-      name: 'snippet_match',
+      name: "snippet_match",
       weight: 0.3,
       score: snippetMatchScore,
-      explanation: `Snippet contains ${Math.round(snippetMatchScore * 100)}% of query terms`
+      explanation: `Snippet contains ${Math.round(
+        snippetMatchScore * 100
+      )}% of query terms`,
     });
 
     // Credibility factor
     factors.push({
-      name: 'credibility',
+      name: "credibility",
       weight: 0.2,
       score: result.credibilityScore,
-      explanation: `Source credibility score: ${result.credibilityScore}`
+      explanation: `Source credibility score: ${result.credibilityScore}`,
     });
 
     // Recency factor (if date available)
     let recencyScore = 0.5; // Neutral score if no date
     if (result.publishedDate) {
-      const daysOld = (Date.now() - result.publishedDate.getTime()) / (1000 * 60 * 60 * 24);
+      const daysOld =
+        (Date.now() - result.publishedDate.getTime()) / (1000 * 60 * 60 * 24);
       if (daysOld < 7) recencyScore = 1.0;
       else if (daysOld < 30) recencyScore = 0.8;
       else if (daysOld < 365) recencyScore = 0.6;
       else recencyScore = 0.3;
     }
     factors.push({
-      name: 'recency',
+      name: "recency",
       weight: 0.1,
       score: recencyScore,
-      explanation: `Content recency score: ${recencyScore}`
+      explanation: `Content recency score: ${recencyScore}`,
     });
 
     return factors;
   }
 
   private calculateTextMatch(query: string, text: string): number {
-    const queryTerms = query.split(/\s+/).filter(term => term.length > 2);
+    const queryTerms = query.split(/\s+/).filter((term) => term.length > 2);
     if (queryTerms.length === 0) return 0;
 
     const textLower = text.toLowerCase();
@@ -278,25 +297,30 @@ export class AdvancedRelevanceScorer extends DefaultRelevanceScorer {
 
   private isHighAuthorityDomain(url: string): boolean {
     const highAuthorityDomains = [
-      'wikipedia.org',
-      'github.com',
-      'stackoverflow.com',
-      'scholar.google.com',
-      'ieee.org',
-      'acm.org',
-      'nature.com',
-      'science.org'
+      "wikipedia.org",
+      "github.com",
+      "stackoverflow.com",
+      "scholar.google.com",
+      "ieee.org",
+      "acm.org",
+      "nature.com",
+      "science.org",
     ];
 
     try {
       const domain = new URL(url).hostname;
-      return highAuthorityDomains.some(authDomain => domain.includes(authDomain));
+      return highAuthorityDomains.some((authDomain) =>
+        domain.includes(authDomain)
+      );
     } catch {
       return false;
     }
   }
 
-  private calculateSemanticSimilarity(query: string, result: SearchResult): number {
+  private calculateSemanticSimilarity(
+    query: string,
+    result: SearchResult
+  ): number {
     // Placeholder for semantic similarity calculation
     // In production, this would use:
     // - BERT embeddings
@@ -308,14 +332,23 @@ export class AdvancedRelevanceScorer extends DefaultRelevanceScorer {
     const titleTerms = new Set(result.title.toLowerCase().split(/\s+/));
     const snippetTerms = new Set(result.snippet.toLowerCase().split(/\s+/));
 
-    const titleOverlap = this.calculateJaccardSimilarity(queryTerms, titleTerms);
-    const snippetOverlap = this.calculateJaccardSimilarity(queryTerms, snippetTerms);
+    const titleOverlap = this.calculateJaccardSimilarity(
+      queryTerms,
+      titleTerms
+    );
+    const snippetOverlap = this.calculateJaccardSimilarity(
+      queryTerms,
+      snippetTerms
+    );
 
     return Math.max(titleOverlap, snippetOverlap);
   }
 
-  private calculateJaccardSimilarity(set1: Set<string>, set2: Set<string>): number {
-    const intersection = new Set([...set1].filter(x => set2.has(x)));
+  private calculateJaccardSimilarity(
+    set1: Set<string>,
+    set2: Set<string>
+  ): number {
+    const intersection = new Set([...set1].filter((x) => set2.has(x)));
     const union = new Set([...set1, ...set2]);
 
     return intersection.size / union.size;

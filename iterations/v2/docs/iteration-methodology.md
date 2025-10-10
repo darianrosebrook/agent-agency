@@ -29,21 +29,25 @@ graph TD
 Use this checklist at each iteration point:
 
 #### Functional Completeness ✅
+
 - [ ] All acceptance criteria addressed?
 - [ ] Core user flows working end-to-end?
 - [ ] Integration points functioning correctly?
 
 #### Quality Standards ✅
+
 - [ ] Tests passing at required coverage levels?
 - [ ] Linting and type checking clean?
 - [ ] Performance within acceptable bounds?
 
 #### Code Quality ✅
+
 - [ ] SOLID principles followed?
 - [ ] No critical technical debt introduced?
 - [ ] Documentation updated and accurate?
 
 #### Risk Assessment ✅
+
 - [ ] Security vulnerabilities addressed?
 - [ ] Scalability concerns mitigated?
 - [ ] Maintenance burden acceptable?
@@ -55,12 +59,14 @@ Use this checklist at each iteration point:
 **Goal**: Create clear, verifiable milestones
 
 #### Steps:
+
 1. **Read the CAWS spec** - Understand acceptance criteria
 2. **Break down into subtasks** - Each should be independently verifiable
 3. **Define success metrics** - What "done" looks like for each subtask
 4. **Estimate effort** - Rough time estimates for planning
 
 #### Example:
+
 ```
 Task: Implement User Authentication
 ├── Subtask 1: Password hashing ✅ (2 hours)
@@ -75,12 +81,14 @@ Task: Implement User Authentication
 **Goal**: Working code that addresses core requirements
 
 #### Steps:
+
 1. **Implement core functionality first**
 2. **Write basic tests** - Ensure core paths work
 3. **Manual testing** - Verify end-to-end flows
 4. **Address critical bugs** - Don't proceed with known blockers
 
 #### Focus Areas:
+
 - Correctness over optimization
 - Basic integration points
 - Error handling for common cases
@@ -122,6 +130,7 @@ VERIFICATION RESULTS - Iteration #2
 **Goal**: Automated verification before manual review
 
 #### Automated Gates:
+
 ```bash
 # Run all quality checks
 npm run lint          # Code style
@@ -132,6 +141,7 @@ npm run test:security # Security scanning
 ```
 
 #### Manual Gates:
+
 - [ ] Code review completed
 - [ ] Documentation updated
 - [ ] Performance acceptable
@@ -144,18 +154,21 @@ npm run test:security # Security scanning
 #### Good Enough Criteria:
 
 **Must Have** (Blockers):
+
 - [ ] Core functionality works
 - [ ] No critical bugs
 - [ ] Tests pass
 - [ ] Security issues resolved
 
 **Should Have** (Strong preference):
+
 - [ ] Good performance
 - [ ] Clean code
 - [ ] Comprehensive tests
 - [ ] Documentation complete
 
 **Nice to Have** (Enhancements):
+
 - [ ] Advanced features
 - [ ] Performance optimizations
 - [ ] Additional test coverage
@@ -174,8 +187,10 @@ function shouldShip(feature: Feature): boolean {
   // 2. Time pressure is high, or
   // 3. Business value is delivered
 
-  return mustHaveScore >= 0.9 &&
-         (shouldHaveScore >= 0.7 || timePressure || businessValue >= 0.8);
+  return (
+    mustHaveScore >= 0.9 &&
+    (shouldHaveScore >= 0.7 || timePressure || businessValue >= 0.8)
+  );
 }
 ```
 
@@ -184,6 +199,7 @@ function shouldShip(feature: Feature): boolean {
 **Goal**: Prepare for production and knowledge transfer
 
 #### Completion Checklist:
+
 - [ ] Update CAWS spec status
 - [ ] Document known limitations
 - [ ] Create improvement backlog items
@@ -224,6 +240,7 @@ Security Review: Passed
 ### Scenario 1: Feature Mostly Works, Minor Issues
 
 **Symptoms:**
+
 - Core functionality working
 - Tests mostly passing
 - A few edge cases failing
@@ -232,6 +249,7 @@ Security Review: Passed
 **Decision:** Often ship with known issues documented
 
 **Action Plan:**
+
 1. Document edge cases as known limitations
 2. Create bug tickets for fixes
 3. Ensure core user flows work perfectly
@@ -239,6 +257,7 @@ Security Review: Passed
 ### Scenario 2: Performance Issues
 
 **Symptoms:**
+
 - Functionality complete
 - Tests passing
 - Response times too slow
@@ -247,6 +266,7 @@ Security Review: Passed
 **Decision:** Depends on severity
 
 **Action Plan:**
+
 1. Assess if performance meets minimum SLAs
 2. If not, optimize critical paths
 3. Document performance limitations
@@ -255,6 +275,7 @@ Security Review: Passed
 ### Scenario 3: Scope Creep Risk
 
 **Symptoms:**
+
 - Original requirements met
 - New "nice-to-have" features suggested
 - Timeline slipping
@@ -263,6 +284,7 @@ Security Review: Passed
 **Decision:** Cap at current scope
 
 **Action Plan:**
+
 1. Evaluate business value of additions
 2. Defer enhancements to future iterations
 3. Document as separate feature requests
@@ -271,6 +293,7 @@ Security Review: Passed
 ### Scenario 4: Quality vs. Timeline Tension
 
 **Symptoms:**
+
 - Code works but quality concerns
 - Tests incomplete
 - Documentation missing
@@ -279,6 +302,7 @@ Security Review: Passed
 **Decision:** Balance based on risk
 
 **Action Plan:**
+
 1. Prioritize critical quality issues
 2. Add basic documentation
 3. Create technical debt tickets
@@ -333,6 +357,7 @@ npm run reports:quality
 ### Know When to Stop
 
 **Ship When:**
+
 - ✅ Core requirements satisfied
 - ✅ Critical user flows working
 - ✅ Quality gates passed
@@ -340,6 +365,7 @@ npm run reports:quality
 - ✅ Business value delivered
 
 **Don't Ship When:**
+
 - ❌ Core functionality broken
 - ❌ Critical security vulnerabilities
 - ❌ Data corruption risks
@@ -348,12 +374,14 @@ npm run reports:quality
 ### Handling Perfectionism
 
 **Signs of Over-Engineering:**
+
 - Gold-plating features
 - Optimizing before measuring
 - Adding features not requested
 - Complex solutions for simple problems
 
 **Countermeasures:**
+
 - Regular time-boxing
 - Feature flag for enhancements
 - Separate improvement backlog
@@ -362,6 +390,7 @@ npm run reports:quality
 ### Team Communication
 
 **Iteration Updates:**
+
 ```
 Iteration #2 Complete - User Authentication
 
@@ -375,6 +404,7 @@ Risk: Low
 ```
 
 **Completion Announcements:**
+
 ```
 🎉 User Authentication - COMPLETE
 

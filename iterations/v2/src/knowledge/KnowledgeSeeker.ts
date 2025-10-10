@@ -4,18 +4,21 @@
  */
 
 import {
+  CacheEntry,
   KnowledgeQuery,
   KnowledgeResponse,
   KnowledgeSeekerConfig,
-  SearchProvider,
-  SearchResult,
   KnowledgeSeekerError,
   KnowledgeSeekerErrorCode,
   QueryPriority,
-  CacheEntry
-} from '../types/knowledge';
-import { SearchProvider as SearchProviderImpl, SearchProviderFactory } from './SearchProvider';
-import { InformationProcessor } from './InformationProcessor';
+  SearchProvider,
+  SearchResult,
+} from "../types/knowledge";
+import { InformationProcessor } from "./InformationProcessor";
+import {
+  SearchProviderFactory,
+  SearchProvider as SearchProviderImpl,
+} from "./SearchProvider";
 
 export class KnowledgeSeeker {
   private readonly config: KnowledgeSeekerConfig;
@@ -41,10 +44,11 @@ export class KnowledgeSeeker {
       circuitBreakerEnabled: true,
       retryAttempts: 3,
       retryDelayMs: 1000,
-      ...config
+      ...config,
     };
 
-    this.providers = providers || SearchProviderFactory.createDefaultProviders();
+    this.providers =
+      providers || SearchProviderFactory.createDefaultProviders();
     this.processor = processor || new InformationProcessor();
 
     this.initializeCapabilityTracking();
@@ -61,7 +65,7 @@ export class KnowledgeSeeker {
           return {
             ...cached,
             processingTimeMs: Date.now() - startTime,
-            cacheHit: true
+            cacheHit: true,
           };
         }
       }
@@ -72,7 +76,7 @@ export class KnowledgeSeeker {
       // Check concurrency limits
       if (this.activeSearches.size >= this.config.maxConcurrentSearches) {
         throw new KnowledgeSeekerError(
-          'Maximum concurrent searches exceeded',
+          "Maximum concurrent searches exceeded",
           KnowledgeSeekerErrorCode.RATE_LIMIT_EXCEEDED,
           query.id
         );
@@ -85,11 +89,14 @@ export class KnowledgeSeeker {
         const rawResults = await this.executeParallelSearch(query);
 
         // Process and rank results
-        const processedResults = await this.processor.processResults(query, rawResults);
+        const processedResults = await this.processor.processResults(
+          query,
+          rawResults
+        );
 
         // Filter by relevance threshold
         const filteredResults = processedResults.filter(
-          result => result.relevanceScore >= this.config.minRelevanceThreshold
+          (result) => result.relevanceScore >= this.config.minRelevanceThreshold
         );
 
         // Create response
@@ -99,7 +106,7 @@ export class KnowledgeSeeker {
           confidence: this.calculateOverallConfidence(filteredResults),
           processingTimeMs: Date.now() - startTime,
           sourcesUsed: this.getSourcesUsed(filteredResults),
-          cacheHit: false
+          cacheHit: false,
         };
 
         // Cache the response
@@ -122,7 +129,7 @@ export class KnowledgeSeeker {
           processingTimeMs: processingTime,
           sourcesUsed: [],
           cacheHit: false,
-          error: error.message
+          error: error.message,
         };
       }
 
@@ -130,15 +137,20 @@ export class KnowledgeSeeker {
     }
   }
 
-  async searchMultiple(queries: KnowledgeQuery[]): Promise<KnowledgeResponse[]> {
+  async searchMultiple(
+    queries: KnowledgeQuery[]
+  ): Promise<KnowledgeResponse[]> {
     // Prioritize queries by priority and submit in parallel with limits
     const prioritizedQueries = this.prioritizeQueries(queries);
 
     const results: KnowledgeResponse[] = [];
-    const batches = this.createBatches(prioritizedQueries, this.config.maxConcurrentSearches);
+    const batches = this.createBatches(
+      prioritizedQueries,
+      this.config.maxConcurrentSearches
+    );
 
     for (const batch of batches) {
-      const batchPromises = batch.map(query => this.search(query));
+      const batchPromises = batch.map((query) => this.search(query));
       const batchResults = await Promise.all(batchPromises);
       results.push(...batchResults);
     }
@@ -147,8 +159,10 @@ export class KnowledgeSeeker {
   }
 
   getCacheStats(): { size: number; hitRate: number; totalAccesses: number } {
-    const totalAccesses = Array.from(this.cache.values())
-      .reduce((sum, entry) => sum + entry.accessCount, 0);
+    const totalAccesses = Array.from(this.cache.values()).reduce(
+      (sum, entry) => sum + entry.accessCount,
+      0
+    );
 
     // Simple hit rate calculation (would need more sophisticated tracking in production)
     const hitRate = totalAccesses > 0 ? 0.7 : 0; // Mock hit rate
@@ -156,7 +170,7 @@ export class KnowledgeSeeker {
     return {
       size: this.cache.size,
       hitRate,
-      totalAccesses
+      totalAccesses,
     };
   }
 
@@ -170,16 +184,16 @@ export class KnowledgeSeeker {
 
   async healthCheck(): Promise<{ healthy: boolean; details: any }> {
     const providerStatus = await Promise.all(
-      this.providers.map(async provider => ({
+      this.providers.map(async (provider) => ({
         name: provider.name,
         available: await provider.isAvailable(),
-        rateLimitStatus: await provider.getRateLimitStatus()
+        rateLimitStatus: await provider.getRateLimitStatus(),
       }))
     );
 
-    const healthy = providerStatus.some(p => p.available);
+    const healthy = providerStatus.some((p) => p.available);
     const totalProviders = providerStatus.length;
-    const availableProviders = providerStatus.filter(p => p.available).length;
+    const availableProviders = providerStatus.filter((p) => p.available).length;
 
     return {
       healthy,
@@ -190,9 +204,9 @@ export class KnowledgeSeeker {
         activeSearches: this.activeSearches.size,
         providers: providerStatus.map((p, index) => ({
           ...p,
-          config: this.providers[index].getConfig() // Include config for health reporting
-        }))
-      }
+          config: this.providers[index].getConfig(), // Include config for health reporting
+        })),
+      },
     };
   }
 
@@ -221,7 +235,7 @@ export class KnowledgeSeeker {
       query: query.query,
       context: query.context,
       filters: query.filters,
-      sources: query.sources?.sort()
+      sources: query.sources?.sort(),
     };
 
     return `knowledge:${JSON.stringify(keyData)}`;
@@ -230,7 +244,7 @@ export class KnowledgeSeeker {
   private validateQuery(query: KnowledgeQuery): void {
     if (!query.query || query.query.trim().length === 0) {
       throw new KnowledgeSeekerError(
-        'Query cannot be empty',
+        "Query cannot be empty",
         KnowledgeSeekerErrorCode.INVALID_QUERY,
         query.id
       );
@@ -238,7 +252,7 @@ export class KnowledgeSeeker {
 
     if (query.query.length > 1000) {
       throw new KnowledgeSeekerError(
-        'Query too long (max 1000 characters)',
+        "Query too long (max 1000 characters)",
         KnowledgeSeekerErrorCode.INVALID_QUERY,
         query.id
       );
@@ -246,18 +260,20 @@ export class KnowledgeSeeker {
 
     if (query.maxResults && query.maxResults > 100) {
       throw new KnowledgeSeekerError(
-        'Too many results requested (max 100)',
+        "Too many results requested (max 100)",
         KnowledgeSeekerErrorCode.INVALID_QUERY,
         query.id
       );
     }
   }
 
-  private async executeParallelSearch(query: KnowledgeQuery): Promise<SearchResult[]> {
+  private async executeParallelSearch(
+    query: KnowledgeQuery
+  ): Promise<SearchResult[]> {
     const timeoutMs = query.timeoutMs || this.config.defaultTimeoutMs;
     const selectedProviders = this.selectProviders(query);
 
-    const searchPromises = selectedProviders.map(provider =>
+    const searchPromises = selectedProviders.map((provider) =>
       this.searchWithProvider(provider, query, timeoutMs)
     );
 
@@ -265,11 +281,11 @@ export class KnowledgeSeeker {
     const successfulResults: SearchResult[] = [];
 
     for (const result of results) {
-      if (result.status === 'fulfilled') {
+      if (result.status === "fulfilled") {
         successfulResults.push(...result.value);
       } else {
         // Log provider failures but continue with others
-        console.warn('Provider search failed:', result.reason);
+        console.warn("Provider search failed:", result.reason);
       }
     }
 
@@ -277,11 +293,11 @@ export class KnowledgeSeeker {
   }
 
   private selectProviders(query: KnowledgeQuery): SearchProviderImpl[] {
-    let candidates = this.providers.filter(p => p.getConfig().enabled);
+    let candidates = this.providers.filter((p) => p.getConfig().enabled);
 
     // If specific providers requested, filter to those
     if (query.sources && query.sources.length > 0) {
-      candidates = candidates.filter(p => query.sources!.includes(p.name));
+      candidates = candidates.filter((p) => query.sources!.includes(p.name));
     }
 
     // Sort by priority
@@ -296,7 +312,7 @@ export class KnowledgeSeeker {
     timeoutMs: number
   ): Promise<SearchResult[]> {
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Search timeout')), timeoutMs)
+      setTimeout(() => reject(new Error("Search timeout")), timeoutMs)
     );
 
     const searchPromise = provider.search(query);
@@ -309,27 +325,34 @@ export class KnowledgeSeeker {
   private calculateOverallConfidence(results: SearchResult[]): number {
     if (results.length === 0) return 0;
 
-    const avgRelevance = results.reduce((sum, r) => sum + r.relevanceScore, 0) / results.length;
-    const avgCredibility = results.reduce((sum, r) => sum + r.credibilityScore, 0) / results.length;
+    const avgRelevance =
+      results.reduce((sum, r) => sum + r.relevanceScore, 0) / results.length;
+    const avgCredibility =
+      results.reduce((sum, r) => sum + r.credibilityScore, 0) / results.length;
     const sourceDiversity = this.calculateSourceDiversity(results);
 
     // Weighted confidence calculation
-    return (avgRelevance * 0.4) + (avgCredibility * 0.4) + (sourceDiversity * 0.2);
+    return avgRelevance * 0.4 + avgCredibility * 0.4 + sourceDiversity * 0.2;
   }
 
   private calculateSourceDiversity(results: SearchResult[]): number {
-    const uniqueProviders = new Set(results.map(r => r.provider));
+    const uniqueProviders = new Set(results.map((r) => r.provider));
     return Math.min(uniqueProviders.size / this.providers.length, 1.0);
   }
 
   private getSourcesUsed(results: SearchResult[]): SearchProvider[] {
-    return Array.from(new Set(results.map(r => r.provider)));
+    return Array.from(new Set(results.map((r) => r.provider)));
   }
 
-  private cacheResponse(query: KnowledgeQuery, response: KnowledgeResponse): void {
+  private cacheResponse(
+    query: KnowledgeQuery,
+    response: KnowledgeResponse
+  ): void {
     const cacheKey = this.createCacheKey(query);
-    const ttlMs = query.priority === QueryPriority.CRITICAL ?
-      this.config.cacheTtlMs * 2 : this.config.cacheTtlMs;
+    const ttlMs =
+      query.priority === QueryPriority.CRITICAL
+        ? this.config.cacheTtlMs * 2
+        : this.config.cacheTtlMs;
 
     const entry: CacheEntry = {
       key: cacheKey,
@@ -337,7 +360,7 @@ export class KnowledgeSeeker {
       timestamp: new Date(),
       ttlMs,
       accessCount: 1,
-      lastAccessed: new Date()
+      lastAccessed: new Date(),
     };
 
     this.cache.set(cacheKey, entry);
@@ -348,10 +371,12 @@ export class KnowledgeSeeker {
       [QueryPriority.CRITICAL]: 4,
       [QueryPriority.HIGH]: 3,
       [QueryPriority.MEDIUM]: 2,
-      [QueryPriority.LOW]: 1
+      [QueryPriority.LOW]: 1,
     };
 
-    return queries.sort((a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]);
+    return queries.sort(
+      (a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
+    );
   }
 
   private createBatches<T>(items: T[], batchSize: number): T[][] {
@@ -364,10 +389,10 @@ export class KnowledgeSeeker {
 
   private initializeCapabilityTracking(): void {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
-    const profile = this.providers.map(p => ({
+    const profile = this.providers.map((p) => ({
       name: p.name,
       available: true, // Would check actual availability
-      rateLimit: p.getConfig().rateLimit
+      rateLimit: p.getConfig().rateLimit,
     }));
 
     // Set up periodic cache cleanup
@@ -389,7 +414,7 @@ export class KnowledgeSeeker {
       }
     }
 
-    expiredKeys.forEach(key => this.cache.delete(key));
+    expiredKeys.forEach((key) => this.cache.delete(key));
   }
 
   destroy(): void {

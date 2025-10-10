@@ -4,17 +4,17 @@
  */
 
 import {
-  VerificationProvider,
-  VerificationType,
-  VerificationRequest,
-  VerificationMethodResult,
-  VerificationVerdict,
   FactCheckClaim,
   FactCheckResult,
   MethodStatus,
   VerificationError,
-  VerificationErrorCode
-} from '../types/verification';
+  VerificationErrorCode,
+  VerificationMethodResult,
+  VerificationProvider,
+  VerificationRequest,
+  VerificationType,
+  VerificationVerdict,
+} from "../types/verification";
 
 export class FactChecker implements VerificationProvider {
   readonly type = VerificationType.FACT_CHECKING;
@@ -27,10 +27,12 @@ export class FactChecker implements VerificationProvider {
 
   constructor(config: { apiKey?: string; baseUrl?: string } = {}) {
     this.apiKey = config.apiKey;
-    this.baseUrl = config.baseUrl || 'https://factchecktools.googleapis.com';
+    this.baseUrl = config.baseUrl || "https://factchecktools.googleapis.com";
   }
 
-  async verify(request: VerificationRequest): Promise<VerificationMethodResult> {
+  async verify(
+    request: VerificationRequest
+  ): Promise<VerificationMethodResult> {
     const startTime = Date.now();
     this.lastUsed = new Date();
 
@@ -38,7 +40,7 @@ export class FactChecker implements VerificationProvider {
       const claim: FactCheckClaim = {
         text: request.content,
         context: request.context,
-        language: 'en'
+        language: "en",
       };
 
       const result = await this.performFactCheck(claim);
@@ -51,13 +53,15 @@ export class FactChecker implements VerificationProvider {
         confidence: result.confidence,
         reasoning: [result.explanation],
         processingTimeMs: Date.now() - startTime,
-        evidenceCount: result.sources.length
+        evidenceCount: result.sources.length,
       };
     } catch (error) {
       this.totalCount++;
 
       throw new VerificationError(
-        `Fact checking failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Fact checking failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
         VerificationErrorCode.EXTERNAL_SERVICE_ERROR,
         request.id,
         this.type
@@ -72,9 +76,9 @@ export class FactChecker implements VerificationProvider {
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
       const response = await fetch(`${this.baseUrl}/v1alpha1/claims:search`, {
-        method: 'GET',
+        method: "GET",
         signal: controller.signal,
-        headers: this.getHeaders()
+        headers: this.getHeaders(),
       });
 
       clearTimeout(timeoutId);
@@ -86,7 +90,8 @@ export class FactChecker implements VerificationProvider {
 
   async getHealth(): Promise<MethodStatus> {
     const available = await this.isAvailable();
-    const successRate = this.totalCount > 0 ? this.successCount / this.totalCount : 1.0;
+    const successRate =
+      this.totalCount > 0 ? this.successCount / this.totalCount : 1.0;
 
     return {
       type: this.type,
@@ -94,11 +99,13 @@ export class FactChecker implements VerificationProvider {
       healthy: available,
       lastUsed: this.lastUsed,
       successRate,
-      averageProcessingTime: 3000 // Estimated
+      averageProcessingTime: 3000, // Estimated
     };
   }
 
-  private async performFactCheck(claim: FactCheckClaim): Promise<FactCheckResult> {
+  private async performFactCheck(
+    claim: FactCheckClaim
+  ): Promise<FactCheckResult> {
     // This would integrate with actual fact-checking services
     // For now, return a mock result
 
@@ -106,30 +113,31 @@ export class FactChecker implements VerificationProvider {
       claim,
       verdict: VerificationVerdict.VERIFIED_TRUE,
       confidence: 0.85,
-      explanation: 'Based on multiple reliable sources, this claim appears to be accurate.',
+      explanation:
+        "Based on multiple reliable sources, this claim appears to be accurate.",
       sources: [
         {
-          url: 'https://example.com/source1',
-          title: 'Reliable Source 1',
-          publisher: 'Trusted Publisher',
+          url: "https://example.com/source1",
+          title: "Reliable Source 1",
+          publisher: "Trusted Publisher",
           credibilityScore: 0.9,
           publishDate: new Date(),
-          excerpt: 'Supporting evidence from source 1'
+          excerpt: "Supporting evidence from source 1",
         },
         {
-          url: 'https://example.com/source2',
-          title: 'Reliable Source 2',
-          publisher: 'Another Trusted Publisher',
+          url: "https://example.com/source2",
+          title: "Reliable Source 2",
+          publisher: "Another Trusted Publisher",
           credibilityScore: 0.85,
           publishDate: new Date(),
-          excerpt: 'Additional supporting evidence'
-        }
+          excerpt: "Additional supporting evidence",
+        },
       ],
-      relatedClaims: []
+      relatedClaims: [],
     };
 
     // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     return mockResult;
   }
@@ -141,11 +149,11 @@ export class FactChecker implements VerificationProvider {
 
   private getHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json'
+      "Content-Type": "application/json",
     };
 
     if (this.apiKey) {
-      headers['X-API-Key'] = this.apiKey;
+      headers["X-API-Key"] = this.apiKey;
     }
 
     return headers;
@@ -165,12 +173,15 @@ export class CredibilityScorer implements VerificationProvider {
     this.initializeCredibilityDatabase();
   }
 
-  async verify(request: VerificationRequest): Promise<VerificationMethodResult> {
+  async verify(
+    request: VerificationRequest
+  ): Promise<VerificationMethodResult> {
     const startTime = Date.now();
     this.lastUsed = new Date();
 
     try {
-      const sourceUrl = request.source || this.extractSourceFromContent(request.content);
+      const sourceUrl =
+        request.source || this.extractSourceFromContent(request.content);
       const credibilityScore = this.scoreSource(sourceUrl);
 
       const verdict = this.determineVerdict(credibilityScore);
@@ -185,13 +196,15 @@ export class CredibilityScorer implements VerificationProvider {
         confidence,
         reasoning: [`Source credibility score: ${credibilityScore.toFixed(2)}`],
         processingTimeMs: Date.now() - startTime,
-        evidenceCount: 1
+        evidenceCount: 1,
       };
     } catch (error) {
       this.totalCount++;
 
       throw new VerificationError(
-        `Source credibility scoring failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Source credibility scoring failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
         VerificationErrorCode.EXTERNAL_SERVICE_ERROR,
         request.id,
         this.type
@@ -205,7 +218,8 @@ export class CredibilityScorer implements VerificationProvider {
   }
 
   async getHealth(): Promise<MethodStatus> {
-    const successRate = this.totalCount > 0 ? this.successCount / this.totalCount : 1.0;
+    const successRate =
+      this.totalCount > 0 ? this.successCount / this.totalCount : 1.0;
 
     return {
       type: this.type,
@@ -213,51 +227,47 @@ export class CredibilityScorer implements VerificationProvider {
       healthy: true,
       lastUsed: this.lastUsed,
       successRate,
-      averageProcessingTime: 50 // Very fast
+      averageProcessingTime: 50, // Very fast
     };
   }
 
   private initializeCredibilityDatabase(): void {
     // High credibility sources
     const highCredibility = [
-      'wikipedia.org',
-      'scholar.google.com',
-      'nature.com',
-      'science.org',
-      'ieee.org',
-      'acm.org',
-      'reuters.com',
-      'apnews.com',
-      'bbc.com',
-      'nytimes.com'
+      "wikipedia.org",
+      "scholar.google.com",
+      "nature.com",
+      "science.org",
+      "ieee.org",
+      "acm.org",
+      "reuters.com",
+      "apnews.com",
+      "bbc.com",
+      "nytimes.com",
     ];
 
-    highCredibility.forEach(domain => {
+    highCredibility.forEach((domain) => {
       this.credibilityDatabase.set(domain, 0.9);
     });
 
     // Medium credibility sources
     const mediumCredibility = [
-      'github.com',
-      'stackoverflow.com',
-      'medium.com',
-      'techcrunch.com',
-      'wired.com',
-      'arstechnica.com'
+      "github.com",
+      "stackoverflow.com",
+      "medium.com",
+      "techcrunch.com",
+      "wired.com",
+      "arstechnica.com",
     ];
 
-    mediumCredibility.forEach(domain => {
+    mediumCredibility.forEach((domain) => {
       this.credibilityDatabase.set(domain, 0.7);
     });
 
     // Low credibility sources (common fake news or biased sites)
-    const lowCredibility = [
-      'breitbart.com',
-      'infowars.com',
-      'naturalnews.com'
-    ];
+    const lowCredibility = ["breitbart.com", "infowars.com", "naturalnews.com"];
 
-    lowCredibility.forEach(domain => {
+    lowCredibility.forEach((domain) => {
       this.credibilityDatabase.set(domain, 0.2);
     });
   }
@@ -304,6 +314,6 @@ export class CredibilityScorer implements VerificationProvider {
     }
 
     // Fallback to a generic unknown source
-    return 'unknown-source.com';
+    return "unknown-source.com";
   }
 }

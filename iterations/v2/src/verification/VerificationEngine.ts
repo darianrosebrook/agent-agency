@@ -4,20 +4,20 @@
  */
 
 import {
-  VerificationRequest,
-  VerificationResult,
-  VerificationEngine as IVerificationEngine,
-  VerificationEngineConfig,
-  VerificationPriority,
-  VerificationType,
-  VerificationVerdict,
-  MethodStatus,
   EngineHealth,
+  VerificationEngine as IVerificationEngine,
+  MethodStatus,
+  VerificationCacheEntry,
+  VerificationEngineConfig,
   VerificationError,
   VerificationErrorCode,
+  VerificationPriority,
   VerificationProvider,
-  VerificationCacheEntry
-} from '../types/verification';
+  VerificationRequest,
+  VerificationResult,
+  VerificationType,
+  VerificationVerdict,
+} from "../types/verification";
 
 export class VerificationEngine implements IVerificationEngine {
   private readonly config: VerificationEngineConfig;
@@ -40,12 +40,12 @@ export class VerificationEngine implements IVerificationEngine {
       cacheTtlMs: 1800000, // 30 minutes
       retryAttempts: 2,
       retryDelayMs: 1000,
-      ...config
+      ...config,
     };
 
     this.providers = new Map();
     if (providers) {
-      providers.forEach(provider => {
+      providers.forEach((provider) => {
         this.providers.set(provider.type, provider);
       });
     }
@@ -63,7 +63,7 @@ export class VerificationEngine implements IVerificationEngine {
         if (cached) {
           return {
             ...cached,
-            processingTimeMs: Date.now() - startTime
+            processingTimeMs: Date.now() - startTime,
           };
         }
       }
@@ -72,9 +72,11 @@ export class VerificationEngine implements IVerificationEngine {
       this.validateRequest(request);
 
       // Check concurrency limits
-      if (this.activeVerifications.size >= this.config.maxConcurrentVerifications) {
+      if (
+        this.activeVerifications.size >= this.config.maxConcurrentVerifications
+      ) {
         throw new VerificationError(
-          'Maximum concurrent verifications exceeded',
+          "Maximum concurrent verifications exceeded",
           VerificationErrorCode.RATE_LIMIT_EXCEEDED,
           request.id
         );
@@ -87,7 +89,10 @@ export class VerificationEngine implements IVerificationEngine {
         const methods = this.selectMethods(request);
 
         // Execute verification methods in parallel
-        const methodResults = await this.executeVerificationMethods(request, methods);
+        const methodResults = await this.executeVerificationMethods(
+          request,
+          methods
+        );
 
         // Aggregate results
         const result = this.aggregateResults(request, methodResults, startTime);
@@ -114,7 +119,7 @@ export class VerificationEngine implements IVerificationEngine {
           contradictoryEvidence: [],
           verificationMethods: [],
           processingTimeMs: processingTime,
-          error: error.message
+          error: error.message,
         };
       }
 
@@ -122,15 +127,20 @@ export class VerificationEngine implements IVerificationEngine {
     }
   }
 
-  async verifyBatch(requests: VerificationRequest[]): Promise<VerificationResult[]> {
+  async verifyBatch(
+    requests: VerificationRequest[]
+  ): Promise<VerificationResult[]> {
     // Prioritize requests and execute in batches
     const prioritizedRequests = this.prioritizeRequests(requests);
-    const batches = this.createBatches(prioritizedRequests, this.config.maxConcurrentVerifications);
+    const batches = this.createBatches(
+      prioritizedRequests,
+      this.config.maxConcurrentVerifications
+    );
 
     const results: VerificationResult[] = [];
 
     for (const batch of batches) {
-      const batchPromises = batch.map(request => this.verify(request));
+      const batchPromises = batch.map((request) => this.verify(request));
       const batchResults = await Promise.all(batchPromises);
       results.push(...batchResults);
     }
@@ -148,7 +158,7 @@ export class VerificationEngine implements IVerificationEngine {
       return {
         type: method,
         enabled: false,
-        healthy: false
+        healthy: false,
       };
     }
 
@@ -158,23 +168,27 @@ export class VerificationEngine implements IVerificationEngine {
       enabled: true,
       healthy: true,
       successRate: 0.95, // Mock value
-      averageProcessingTime: 2000 // Mock value
+      averageProcessingTime: 2000, // Mock value
     };
   }
 
   async healthCheck(): Promise<EngineHealth> {
     const totalMethods = this.providers.size;
-    const enabledMethods = Array.from(this.providers.values()).filter(p => this.isMethodEnabled(p.type)).length;
+    const enabledMethods = Array.from(this.providers.values()).filter((p) =>
+      this.isMethodEnabled(p.type)
+    ).length;
 
     // Check health of each provider
-    const healthPromises = Array.from(this.providers.values()).map(async provider => {
-      try {
-        const status = await provider.getHealth();
-        return status.healthy;
-      } catch {
-        return false;
+    const healthPromises = Array.from(this.providers.values()).map(
+      async (provider) => {
+        try {
+          const status = await provider.getHealth();
+          return status.healthy;
+        } catch {
+          return false;
+        }
       }
-    });
+    );
 
     const healthResults = await Promise.all(healthPromises);
     const healthyMethods = healthResults.filter(Boolean).length;
@@ -185,14 +199,14 @@ export class VerificationEngine implements IVerificationEngine {
       enabledMethods,
       healthyMethods,
       cacheSize: this.cache.size,
-      activeVerifications: this.activeVerifications.size
+      activeVerifications: this.activeVerifications.size,
     };
   }
 
   private validateRequest(request: VerificationRequest): void {
     if (!request.content || request.content.trim().length === 0) {
       throw new VerificationError(
-        'Verification request content cannot be empty',
+        "Verification request content cannot be empty",
         VerificationErrorCode.INVALID_REQUEST,
         request.id
       );
@@ -200,7 +214,7 @@ export class VerificationEngine implements IVerificationEngine {
 
     if (request.content.length > 10000) {
       throw new VerificationError(
-        'Verification request content too long (max 10000 characters)',
+        "Verification request content too long (max 10000 characters)",
         VerificationErrorCode.INVALID_REQUEST,
         request.id
       );
@@ -208,7 +222,7 @@ export class VerificationEngine implements IVerificationEngine {
 
     if (request.verificationTypes && request.verificationTypes.length === 0) {
       throw new VerificationError(
-        'At least one verification type must be specified',
+        "At least one verification type must be specified",
         VerificationErrorCode.INVALID_REQUEST,
         request.id
       );
@@ -227,7 +241,7 @@ export class VerificationEngine implements IVerificationEngine {
     }
 
     // Filter to enabled methods
-    candidates = candidates.filter(method => this.isMethodEnabled(method));
+    candidates = candidates.filter((method) => this.isMethodEnabled(method));
 
     // Sort by priority (this would be configurable)
     const priorityOrder = [
@@ -236,10 +250,12 @@ export class VerificationEngine implements IVerificationEngine {
       VerificationType.CROSS_REFERENCE,
       VerificationType.CONSISTENCY_CHECK,
       VerificationType.LOGICAL_VALIDATION,
-      VerificationType.STATISTICAL_VALIDATION
+      VerificationType.STATISTICAL_VALIDATION,
     ];
 
-    candidates.sort((a, b) => priorityOrder.indexOf(a) - priorityOrder.indexOf(b));
+    candidates.sort(
+      (a, b) => priorityOrder.indexOf(a) - priorityOrder.indexOf(b)
+    );
 
     return candidates;
   }
@@ -248,7 +264,7 @@ export class VerificationEngine implements IVerificationEngine {
     request: VerificationRequest,
     methods: VerificationType[]
   ): Promise<any[]> {
-    const methodPromises = methods.map(async method => {
+    const methodPromises = methods.map(async (method) => {
       const provider = this.providers.get(method);
       if (!provider) {
         throw new VerificationError(
@@ -272,9 +288,11 @@ export class VerificationEngine implements IVerificationEngine {
           method,
           verdict: VerificationVerdict.UNVERIFIED,
           confidence: 0,
-          reasoning: `Method failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          reasoning: `Method failed: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
           processingTimeMs: 0,
-          evidenceCount: 0
+          evidenceCount: 0,
         };
       }
     });
@@ -288,8 +306,8 @@ export class VerificationEngine implements IVerificationEngine {
     startTime: number
   ): VerificationResult {
     // Filter out failed methods
-    const validResults = methodResults.filter(result =>
-      result.verdict !== VerificationVerdict.UNVERIFIED
+    const validResults = methodResults.filter(
+      (result) => result.verdict !== VerificationVerdict.UNVERIFIED
     );
 
     if (validResults.length === 0) {
@@ -297,11 +315,11 @@ export class VerificationEngine implements IVerificationEngine {
         requestId: request.id,
         verdict: VerificationVerdict.UNVERIFIED,
         confidence: 0,
-        reasoning: ['No verification methods succeeded'],
+        reasoning: ["No verification methods succeeded"],
         supportingEvidence: [],
         contradictoryEvidence: [],
         verificationMethods: methodResults,
-        processingTimeMs: Date.now() - startTime
+        processingTimeMs: Date.now() - startTime,
       };
     }
 
@@ -310,10 +328,18 @@ export class VerificationEngine implements IVerificationEngine {
     const consensusVerdict = this.determineConsensusVerdict(verdictCounts);
 
     // Calculate overall confidence
-    const avgConfidence = validResults.reduce((sum, r) => sum + r.confidence, 0) / validResults.length;
-    const consensusConfidence = this.calculateConsensusConfidence(verdictCounts, validResults.length);
+    const avgConfidence =
+      validResults.reduce((sum, r) => sum + r.confidence, 0) /
+      validResults.length;
+    const consensusConfidence = this.calculateConsensusConfidence(
+      verdictCounts,
+      validResults.length
+    );
 
-    const overallConfidence = Math.min(avgConfidence * consensusConfidence, 1.0);
+    const overallConfidence = Math.min(
+      avgConfidence * consensusConfidence,
+      1.0
+    );
 
     // Generate reasoning
     const reasoning = this.generateReasoning(consensusVerdict, validResults);
@@ -326,14 +352,14 @@ export class VerificationEngine implements IVerificationEngine {
       supportingEvidence: [], // Would be populated from method results
       contradictoryEvidence: [], // Would be populated from method results
       verificationMethods: methodResults,
-      processingTimeMs: Date.now() - startTime
+      processingTimeMs: Date.now() - startTime,
     };
   }
 
   private countVerdicts(results: any[]): Map<VerificationVerdict, number> {
     const counts = new Map<VerificationVerdict, number>();
 
-    results.forEach(result => {
+    results.forEach((result) => {
       const count = counts.get(result.verdict) || 0;
       counts.set(result.verdict, count + 1);
     });
@@ -341,7 +367,9 @@ export class VerificationEngine implements IVerificationEngine {
     return counts;
   }
 
-  private determineConsensusVerdict(counts: Map<VerificationVerdict, number>): VerificationVerdict {
+  private determineConsensusVerdict(
+    counts: Map<VerificationVerdict, number>
+  ): VerificationVerdict {
     let maxCount = 0;
     let consensusVerdict = VerificationVerdict.UNVERIFIED;
 
@@ -377,16 +405,23 @@ export class VerificationEngine implements IVerificationEngine {
     return 0.4; // Low confidence for weak consensus
   }
 
-  private generateReasoning(verdict: VerificationVerdict, results: any[]): string[] {
+  private generateReasoning(
+    verdict: VerificationVerdict,
+    results: any[]
+  ): string[] {
     const reasoning: string[] = [];
 
     reasoning.push(`Consensus verdict: ${verdict}`);
 
     const methodCount = results.length;
-    reasoning.push(`${methodCount} verification method${methodCount === 1 ? '' : 's'} applied`);
+    reasoning.push(
+      `${methodCount} verification method${
+        methodCount === 1 ? "" : "s"
+      } applied`
+    );
 
     // Add method-specific reasoning
-    results.forEach(result => {
+    results.forEach((result) => {
       if (result.reasoning) {
         reasoning.push(`${result.method}: ${result.reasoning}`);
       }
@@ -420,16 +455,21 @@ export class VerificationEngine implements IVerificationEngine {
       content: request.content,
       source: request.source,
       context: request.context,
-      verificationTypes: request.verificationTypes?.sort()
+      verificationTypes: request.verificationTypes?.sort(),
     };
 
     return `verification:${JSON.stringify(keyData)}`;
   }
 
-  private cacheResult(request: VerificationRequest, result: VerificationResult): void {
+  private cacheResult(
+    request: VerificationRequest,
+    result: VerificationResult
+  ): void {
     const cacheKey = this.createCacheKey(request);
-    const ttlMs = request.priority === VerificationPriority.CRITICAL ?
-      this.config.cacheTtlMs * 2 : this.config.cacheTtlMs;
+    const ttlMs =
+      request.priority === VerificationPriority.CRITICAL
+        ? this.config.cacheTtlMs * 2
+        : this.config.cacheTtlMs;
 
     const entry: VerificationCacheEntry = {
       key: cacheKey,
@@ -437,21 +477,25 @@ export class VerificationEngine implements IVerificationEngine {
       timestamp: new Date(),
       ttlMs,
       accessCount: 1,
-      lastAccessed: new Date()
+      lastAccessed: new Date(),
     };
 
     this.cache.set(cacheKey, entry);
   }
 
-  private prioritizeRequests(requests: VerificationRequest[]): VerificationRequest[] {
+  private prioritizeRequests(
+    requests: VerificationRequest[]
+  ): VerificationRequest[] {
     const priorityOrder = {
       [VerificationPriority.CRITICAL]: 4,
       [VerificationPriority.HIGH]: 3,
       [VerificationPriority.MEDIUM]: 2,
-      [VerificationPriority.LOW]: 1
+      [VerificationPriority.LOW]: 1,
     };
 
-    return requests.sort((a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]);
+    return requests.sort(
+      (a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
+    );
   }
 
   private createBatches<T>(items: T[], batchSize: number): T[][] {
@@ -464,13 +508,16 @@ export class VerificationEngine implements IVerificationEngine {
 
   private isMethodEnabled(method: VerificationType): boolean {
     // Check if method is configured and enabled
-    const methodConfig = this.config.methods.find(m => m.type === method);
+    const methodConfig = this.config.methods.find((m) => m.type === method);
     return methodConfig?.enabled ?? false;
   }
 
-  private async executeWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  private async executeWithTimeout<T>(
+    promise: Promise<T>,
+    timeoutMs: number
+  ): Promise<T> {
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Operation timeout')), timeoutMs)
+      setTimeout(() => reject(new Error("Operation timeout")), timeoutMs)
     );
 
     return Promise.race([promise, timeoutPromise]);
@@ -493,7 +540,7 @@ export class VerificationEngine implements IVerificationEngine {
       }
     }
 
-    expiredKeys.forEach(key => this.cache.delete(key));
+    expiredKeys.forEach((key) => this.cache.delete(key));
   }
 
   destroy(): void {

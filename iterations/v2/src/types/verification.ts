@@ -15,19 +15,19 @@ export interface VerificationRequest {
 }
 
 export enum VerificationPriority {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical'
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
+  CRITICAL = "critical",
 }
 
 export enum VerificationType {
-  FACT_CHECKING = 'fact_checking',
-  SOURCE_CREDIBILITY = 'source_credibility',
-  CROSS_REFERENCE = 'cross_reference',
-  CONSISTENCY_CHECK = 'consistency_check',
-  LOGICAL_VALIDATION = 'logical_validation',
-  STATISTICAL_VALIDATION = 'statistical_validation'
+  FACT_CHECKING = "fact_checking",
+  SOURCE_CREDIBILITY = "source_credibility",
+  CROSS_REFERENCE = "cross_reference",
+  CONSISTENCY_CHECK = "consistency_check",
+  LOGICAL_VALIDATION = "logical_validation",
+  STATISTICAL_VALIDATION = "statistical_validation",
 }
 
 export interface VerificationResult {
@@ -43,12 +43,12 @@ export interface VerificationResult {
 }
 
 export enum VerificationVerdict {
-  VERIFIED_TRUE = 'verified_true',
-  VERIFIED_FALSE = 'verified_false',
-  PARTIALLY_TRUE = 'partially_true',
-  UNVERIFIED = 'unverified',
-  CONTRADICTORY = 'contradictory',
-  INSUFFICIENT_DATA = 'insufficient_data'
+  VERIFIED_TRUE = "verified_true",
+  VERIFIED_FALSE = "verified_false",
+  PARTIALLY_TRUE = "partially_true",
+  UNVERIFIED = "unverified",
+  CONTRADICTORY = "contradictory",
+  INSUFFICIENT_DATA = "insufficient_data",
 }
 
 export interface Evidence {
@@ -192,9 +192,9 @@ export interface LogicalValidationRequest {
 }
 
 export enum LogicType {
-  DEDUCTIVE = 'deductive',
-  INDUCTIVE = 'inductive',
-  ABDUCTIVE = 'abductive'
+  DEDUCTIVE = "deductive",
+  INDUCTIVE = "inductive",
+  ABDUCTIVE = "abductive",
 }
 
 export interface LogicalValidationResult {
@@ -260,18 +260,18 @@ export class VerificationError extends Error {
     public method?: VerificationType
   ) {
     super(message);
-    this.name = 'VerificationError';
+    this.name = "VerificationError";
   }
 }
 
 export enum VerificationErrorCode {
-  INVALID_REQUEST = 'invalid_request',
-  METHOD_UNAVAILABLE = 'method_unavailable',
-  TIMEOUT = 'timeout',
-  INSUFFICIENT_DATA = 'insufficient_data',
-  EXTERNAL_SERVICE_ERROR = 'external_service_error',
-  CONFIGURATION_ERROR = 'configuration_error',
-  RATE_LIMIT_EXCEEDED = 'rate_limit_exceeded'
+  INVALID_REQUEST = "invalid_request",
+  METHOD_UNAVAILABLE = "method_unavailable",
+  TIMEOUT = "timeout",
+  INSUFFICIENT_DATA = "insufficient_data",
+  EXTERNAL_SERVICE_ERROR = "external_service_error",
+  CONFIGURATION_ERROR = "configuration_error",
+  RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
 }
 
 // Caching interfaces

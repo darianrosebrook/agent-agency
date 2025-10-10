@@ -16,10 +16,10 @@ export interface KnowledgeQuery {
 }
 
 export enum QueryPriority {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical'
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
+  CRITICAL = "critical",
 }
 
 export interface QueryFilters {
@@ -37,24 +37,24 @@ export interface DateRange {
 }
 
 export enum ContentType {
-  ARTICLE = 'article',
-  BLOG_POST = 'blog_post',
-  NEWS = 'news',
-  ACADEMIC_PAPER = 'academic_paper',
-  DOCUMENTATION = 'documentation',
-  BOOK = 'book',
-  VIDEO = 'video',
-  PODCAST = 'podcast'
+  ARTICLE = "article",
+  BLOG_POST = "blog_post",
+  NEWS = "news",
+  ACADEMIC_PAPER = "academic_paper",
+  DOCUMENTATION = "documentation",
+  BOOK = "book",
+  VIDEO = "video",
+  PODCAST = "podcast",
 }
 
 export enum SearchProvider {
-  GOOGLE = 'google',
-  BING = 'bing',
-  DUCKDUCKGO = 'duckduckgo',
-  WIKIPEDIA = 'wikipedia',
-  SCHOLAR = 'scholar',
-  GITHUB = 'github',
-  STACK_OVERFLOW = 'stackoverflow'
+  GOOGLE = "google",
+  BING = "bing",
+  DUCKDUCKGO = "duckduckgo",
+  WIKIPEDIA = "wikipedia",
+  SCHOLAR = "scholar",
+  GITHUB = "github",
+  STACK_OVERFLOW = "stackoverflow",
 }
 
 export interface SearchResult {
@@ -146,7 +146,10 @@ export interface KnowledgeSeekerConfig {
 
 // Information processing interfaces
 export interface InformationProcessor {
-  processResults(query: KnowledgeQuery, rawResults: SearchResult[]): Promise<SearchResult[]>;
+  processResults(
+    query: KnowledgeQuery,
+    rawResults: SearchResult[]
+  ): Promise<SearchResult[]>;
   calculateRelevance(query: string, result: SearchResult): number;
   deduplicateResults(results: SearchResult[]): SearchResult[];
   rankResults(results: SearchResult[]): SearchResult[];
@@ -187,16 +190,16 @@ export class KnowledgeSeekerError extends Error {
     public provider?: SearchProvider
   ) {
     super(message);
-    this.name = 'KnowledgeSeekerError';
+    this.name = "KnowledgeSeekerError";
   }
 }
 
 export enum KnowledgeSeekerErrorCode {
-  PROVIDER_UNAVAILABLE = 'PROVIDER_UNAVAILABLE',
-  RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
-  INVALID_QUERY = 'INVALID_QUERY',
-  TIMEOUT = 'TIMEOUT',
-  PARSING_ERROR = 'PARSING_ERROR',
-  NETWORK_ERROR = 'NETWORK_ERROR',
-  CONFIGURATION_ERROR = 'CONFIGURATION_ERROR'
+  PROVIDER_UNAVAILABLE = "PROVIDER_UNAVAILABLE",
+  RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED",
+  INVALID_QUERY = "INVALID_QUERY",
+  TIMEOUT = "TIMEOUT",
+  PARSING_ERROR = "PARSING_ERROR",
+  NETWORK_ERROR = "NETWORK_ERROR",
+  CONFIGURATION_ERROR = "CONFIGURATION_ERROR",
 }

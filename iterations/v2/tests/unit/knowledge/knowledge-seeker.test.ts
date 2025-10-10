@@ -3,21 +3,18 @@
  * @author @darianrosebrook
  */
 
-import { KnowledgeSeeker } from '../../../src/knowledge/KnowledgeSeeker';
-import { SearchProviderFactory } from '../../../src/knowledge/SearchProvider';
-import { InformationProcessor } from '../../../src/knowledge/InformationProcessor';
+import { KnowledgeSeeker } from "../../../src/knowledge/KnowledgeSeeker";
 import {
+  ContentType,
   KnowledgeQuery,
-  KnowledgeResponse,
-  SearchResult,
-  QueryPriority,
-  SearchProvider,
   KnowledgeSeekerError,
   KnowledgeSeekerErrorCode,
-  ContentType
-} from '../../../src/types/knowledge';
+  QueryPriority,
+  SearchProvider,
+  SearchResult,
+} from "../../../src/types/knowledge";
 
-describe('KnowledgeSeeker', () => {
+describe("KnowledgeSeeker", () => {
   let knowledgeSeeker: KnowledgeSeeker;
   let mockSearchProvider: any;
   let mockProcessor: any;
@@ -30,29 +27,33 @@ describe('KnowledgeSeeker', () => {
       getRateLimitStatus: jest.fn().mockResolvedValue({
         remainingRequests: 100,
         resetTime: new Date(Date.now() + 60000),
-        isLimited: false
+        isLimited: false,
       }),
       name: SearchProvider.DUCKDUCKGO,
       config: {
         name: SearchProvider.DUCKDUCKGO,
-        baseUrl: 'https://duckduckgo.com',
-        rateLimit: { requestsPerMinute: 30, requestsPerHour: 100, burstLimit: 10 },
+        baseUrl: "https://duckduckgo.com",
+        rateLimit: {
+          requestsPerMinute: 30,
+          requestsPerHour: 100,
+          burstLimit: 10,
+        },
         enabled: true,
-        priority: 1
-      }
+        priority: 1,
+      },
     };
 
     mockProcessor = {
       processResults: jest.fn(),
       calculateRelevance: jest.fn(),
       deduplicateResults: jest.fn(),
-      rankResults: jest.fn()
+      rankResults: jest.fn(),
     };
 
     knowledgeSeeker = new KnowledgeSeeker(
       {
         cacheEnabled: false, // Disable cache for testing
-        minRelevanceThreshold: 0.3
+        minRelevanceThreshold: 0.3,
       },
       [mockSearchProvider],
       mockProcessor
@@ -63,37 +64,37 @@ describe('KnowledgeSeeker', () => {
     knowledgeSeeker.destroy();
   });
 
-  describe('search', () => {
+  describe("search", () => {
     const validQuery: KnowledgeQuery = {
-      id: 'test-query-123',
-      query: 'TypeScript best practices',
+      id: "test-query-123",
+      query: "TypeScript best practices",
       priority: QueryPriority.MEDIUM,
-      maxResults: 10
+      maxResults: 10,
     };
 
     const mockResults: SearchResult[] = [
       {
-        id: 'result-1',
-        title: 'TypeScript Best Practices Guide',
-        url: 'https://example.com/ts-guide',
-        snippet: 'Learn TypeScript best practices for scalable applications',
+        id: "result-1",
+        title: "TypeScript Best Practices Guide",
+        url: "https://example.com/ts-guide",
+        snippet: "Learn TypeScript best practices for scalable applications",
         provider: SearchProvider.DUCKDUCKGO,
         relevanceScore: 0.9,
         credibilityScore: 0.8,
         contentType: ContentType.ARTICLE,
-        metadata: { domain: 'example.com' }
+        metadata: { domain: "example.com" },
       },
       {
-        id: 'result-2',
-        title: 'Advanced TypeScript Patterns',
-        url: 'https://example.com/ts-patterns',
-        snippet: 'Explore advanced patterns in TypeScript development',
+        id: "result-2",
+        title: "Advanced TypeScript Patterns",
+        url: "https://example.com/ts-patterns",
+        snippet: "Explore advanced patterns in TypeScript development",
         provider: SearchProvider.DUCKDUCKGO,
         relevanceScore: 0.7,
         credibilityScore: 0.7,
         contentType: ContentType.ARTICLE,
-        metadata: { domain: 'example.com' }
-      }
+        metadata: { domain: "example.com" },
+      },
     ];
 
     beforeEach(() => {
@@ -101,7 +102,7 @@ describe('KnowledgeSeeker', () => {
       mockProcessor.processResults.mockResolvedValue(mockResults);
     });
 
-    it('should successfully execute a search and return results', async () => {
+    it("should successfully execute a search and return results", async () => {
       const response = await knowledgeSeeker.search(validQuery);
 
       expect(response).toBeDefined();
@@ -113,16 +114,16 @@ describe('KnowledgeSeeker', () => {
       expect(response.cacheHit).toBe(false);
     });
 
-    it('should filter results below relevance threshold', async () => {
+    it("should filter results below relevance threshold", async () => {
       const lowRelevanceResults = [
         {
           ...mockResults[0],
-          relevanceScore: 0.1 // Below threshold
+          relevanceScore: 0.1, // Below threshold
         },
         {
           ...mockResults[1],
-          relevanceScore: 0.8 // Above threshold
-        }
+          relevanceScore: 0.8, // Above threshold
+        },
       ];
 
       mockProcessor.processResults.mockResolvedValue(lowRelevanceResults);
@@ -133,43 +134,44 @@ describe('KnowledgeSeeker', () => {
       expect(response.results[0].relevanceScore).toBe(0.8);
     });
 
-    it('should handle empty query', async () => {
-      const invalidQuery = { ...validQuery, query: '' };
+    it("should handle empty query", async () => {
+      const invalidQuery = { ...validQuery, query: "" };
 
-      await expect(knowledgeSeeker.search(invalidQuery))
-        .rejects
-        .toThrow(KnowledgeSeekerError);
+      await expect(knowledgeSeeker.search(invalidQuery)).rejects.toThrow(
+        KnowledgeSeekerError
+      );
     });
 
-    it('should handle query too long', async () => {
-      const longQuery = 'a'.repeat(1001);
+    it("should handle query too long", async () => {
+      const longQuery = "a".repeat(1001);
       const invalidQuery = { ...validQuery, query: longQuery };
 
-      await expect(knowledgeSeeker.search(invalidQuery))
-        .rejects
-        .toThrow(KnowledgeSeekerError);
+      await expect(knowledgeSeeker.search(invalidQuery)).rejects.toThrow(
+        KnowledgeSeekerError
+      );
     });
 
-    it('should handle too many results requested', async () => {
+    it("should handle too many results requested", async () => {
       const invalidQuery = { ...validQuery, maxResults: 200 };
 
-      await expect(knowledgeSeeker.search(invalidQuery))
-        .rejects
-        .toThrow(KnowledgeSeekerError);
+      await expect(knowledgeSeeker.search(invalidQuery)).rejects.toThrow(
+        KnowledgeSeekerError
+      );
     });
 
-    it('should handle provider search failure gracefully', async () => {
-      mockSearchProvider.search.mockRejectedValue(new Error('Network error'));
+    it("should handle provider search failure gracefully", async () => {
+      mockSearchProvider.search.mockRejectedValue(new Error("Network error"));
 
       const response = await knowledgeSeeker.search(validQuery);
 
       expect(response.results).toHaveLength(0);
-      expect(response.error).toContain('Network error');
+      expect(response.error).toContain("Network error");
     });
 
-    it('should respect timeout configuration', async () => {
+    it("should respect timeout configuration", async () => {
       mockSearchProvider.search.mockImplementation(
-        () => new Promise(resolve => setTimeout(() => resolve(mockResults), 100))
+        () =>
+          new Promise((resolve) => setTimeout(() => resolve(mockResults), 100))
       );
 
       const timeoutQuery = { ...validQuery, timeoutMs: 50 };
@@ -181,23 +183,23 @@ describe('KnowledgeSeeker', () => {
     });
   });
 
-  describe('searchMultiple', () => {
+  describe("searchMultiple", () => {
     const queries: KnowledgeQuery[] = [
       {
-        id: 'query-1',
-        query: 'React hooks',
-        priority: QueryPriority.HIGH
+        id: "query-1",
+        query: "React hooks",
+        priority: QueryPriority.HIGH,
       },
       {
-        id: 'query-2',
-        query: 'Node.js performance',
-        priority: QueryPriority.MEDIUM
+        id: "query-2",
+        query: "Node.js performance",
+        priority: QueryPriority.MEDIUM,
       },
       {
-        id: 'query-3',
-        query: 'Docker best practices',
-        priority: QueryPriority.LOW
-      }
+        id: "query-3",
+        query: "Docker best practices",
+        priority: QueryPriority.LOW,
+      },
     ];
 
     beforeEach(() => {
@@ -205,24 +207,24 @@ describe('KnowledgeSeeker', () => {
       mockProcessor.processResults.mockResolvedValue([]);
     });
 
-    it('should process multiple queries', async () => {
+    it("should process multiple queries", async () => {
       const responses = await knowledgeSeeker.searchMultiple(queries);
 
       expect(responses).toHaveLength(3);
-      expect(responses.every(r => r.queryId)).toBe(true);
+      expect(responses.every((r) => r.queryId)).toBe(true);
     });
 
-    it('should prioritize queries by priority', async () => {
+    it("should prioritize queries by priority", async () => {
       const responses = await knowledgeSeeker.searchMultiple(queries);
 
       // Should maintain priority order (HIGH, MEDIUM, LOW)
-      expect(responses[0].queryId).toBe('query-1');
-      expect(responses[1].queryId).toBe('query-2');
-      expect(responses[2].queryId).toBe('query-3');
+      expect(responses[0].queryId).toBe("query-1");
+      expect(responses[1].queryId).toBe("query-2");
+      expect(responses[2].queryId).toBe("query-3");
     });
   });
 
-  describe('caching', () => {
+  describe("caching", () => {
     let cacheEnabledSeeker: KnowledgeSeeker;
 
     beforeEach(() => {
@@ -237,11 +239,11 @@ describe('KnowledgeSeeker', () => {
       cacheEnabledSeeker.destroy();
     });
 
-    it('should cache and return cached results', async () => {
+    it("should cache and return cached results", async () => {
       const query: KnowledgeQuery = {
-        id: 'cache-test',
-        query: 'test query',
-        priority: QueryPriority.MEDIUM
+        id: "cache-test",
+        query: "test query",
+        priority: QueryPriority.MEDIUM,
       };
 
       mockSearchProvider.search.mockResolvedValue([]);
@@ -260,8 +262,8 @@ describe('KnowledgeSeeker', () => {
     });
   });
 
-  describe('concurrency control', () => {
-    it('should limit concurrent searches', async () => {
+  describe("concurrency control", () => {
+    it("should limit concurrent searches", async () => {
       const limitedSeeker = new KnowledgeSeeker(
         { maxConcurrentSearches: 1 },
         [mockSearchProvider],
@@ -269,33 +271,33 @@ describe('KnowledgeSeeker', () => {
       );
 
       const query: KnowledgeQuery = {
-        id: 'concurrency-test',
-        query: 'test',
-        priority: QueryPriority.MEDIUM
+        id: "concurrency-test",
+        query: "test",
+        priority: QueryPriority.MEDIUM,
       };
 
       mockSearchProvider.search.mockImplementation(
-        () => new Promise(resolve => setTimeout(() => resolve([]), 100))
+        () => new Promise((resolve) => setTimeout(() => resolve([]), 100))
       );
       mockProcessor.processResults.mockResolvedValue([]);
 
       // Start multiple searches simultaneously
       const promises = [
         limitedSeeker.search(query),
-        limitedSeeker.search({ ...query, id: 'query-2' }),
-        limitedSeeker.search({ ...query, id: 'query-3' })
+        limitedSeeker.search({ ...query, id: "query-2" }),
+        limitedSeeker.search({ ...query, id: "query-3" }),
       ];
 
       const results = await Promise.all(promises);
 
       // All should complete eventually
       expect(results).toHaveLength(3);
-      expect(results.every(r => r.queryId)).toBe(true);
+      expect(results.every((r) => r.queryId)).toBe(true);
 
       limitedSeeker.destroy();
     });
 
-    it('should reject searches when at concurrency limit', async () => {
+    it("should reject searches when at concurrency limit", async () => {
       const limitedSeeker = new KnowledgeSeeker(
         { maxConcurrentSearches: 0 },
         [mockSearchProvider],
@@ -303,21 +305,21 @@ describe('KnowledgeSeeker', () => {
       );
 
       const query: KnowledgeQuery = {
-        id: 'limit-test',
-        query: 'test',
-        priority: QueryPriority.MEDIUM
+        id: "limit-test",
+        query: "test",
+        priority: QueryPriority.MEDIUM,
       };
 
-      await expect(limitedSeeker.search(query))
-        .rejects
-        .toThrow(KnowledgeSeekerError);
+      await expect(limitedSeeker.search(query)).rejects.toThrow(
+        KnowledgeSeekerError
+      );
 
       limitedSeeker.destroy();
     });
   });
 
-  describe('health check', () => {
-    it('should report healthy when providers are available', async () => {
+  describe("health check", () => {
+    it("should report healthy when providers are available", async () => {
       const health = await knowledgeSeeker.healthCheck();
 
       expect(health.healthy).toBe(true);
@@ -325,7 +327,7 @@ describe('KnowledgeSeeker', () => {
       expect(health.details.availableProviders).toBe(1);
     });
 
-    it('should report unhealthy when no providers available', async () => {
+    it("should report unhealthy when no providers available", async () => {
       mockSearchProvider.isAvailable.mockResolvedValue(false);
 
       const health = await knowledgeSeeker.healthCheck();
@@ -335,7 +337,7 @@ describe('KnowledgeSeeker', () => {
     });
   });
 
-  describe('cache management', () => {
+  describe("cache management", () => {
     let cacheEnabledSeeker: KnowledgeSeeker;
 
     beforeEach(() => {
@@ -350,15 +352,15 @@ describe('KnowledgeSeeker', () => {
       cacheEnabledSeeker.destroy();
     });
 
-    it('should provide cache statistics', () => {
+    it("should provide cache statistics", () => {
       const stats = cacheEnabledSeeker.getCacheStats();
 
-      expect(stats).toHaveProperty('size');
-      expect(stats).toHaveProperty('hitRate');
-      expect(stats).toHaveProperty('totalAccesses');
+      expect(stats).toHaveProperty("size");
+      expect(stats).toHaveProperty("hitRate");
+      expect(stats).toHaveProperty("totalAccesses");
     });
 
-    it('should clear cache', () => {
+    it("should clear cache", () => {
       cacheEnabledSeeker.clearCache();
       const stats = cacheEnabledSeeker.getCacheStats();
 
@@ -366,49 +368,55 @@ describe('KnowledgeSeeker', () => {
     });
   });
 
-  describe('active searches tracking', () => {
-    it('should track active searches', async () => {
+  describe("active searches tracking", () => {
+    it("should track active searches", async () => {
       const query: KnowledgeQuery = {
-        id: 'tracking-test',
-        query: 'test',
-        priority: QueryPriority.MEDIUM
+        id: "tracking-test",
+        query: "test",
+        priority: QueryPriority.MEDIUM,
       };
 
       mockSearchProvider.search.mockImplementation(
-        () => new Promise(resolve => setTimeout(() => resolve([]), 50))
+        () => new Promise((resolve) => setTimeout(() => resolve([]), 50))
       );
       mockProcessor.processResults.mockResolvedValue([]);
 
       const searchPromise = knowledgeSeeker.search(query);
 
-      expect(knowledgeSeeker.getActiveSearches()).toContain('tracking-test');
+      expect(knowledgeSeeker.getActiveSearches()).toContain("tracking-test");
 
       await searchPromise;
 
-      expect(knowledgeSeeker.getActiveSearches()).not.toContain('tracking-test');
+      expect(knowledgeSeeker.getActiveSearches()).not.toContain(
+        "tracking-test"
+      );
     });
   });
 
-  describe('error handling', () => {
-    it('should handle and classify different error types', async () => {
+  describe("error handling", () => {
+    it("should handle and classify different error types", async () => {
       const testCases = [
         {
-          error: new KnowledgeSeekerError('Test error', KnowledgeSeekerErrorCode.INVALID_QUERY, 'test-id'),
-          expectedCode: KnowledgeSeekerErrorCode.INVALID_QUERY
+          error: new KnowledgeSeekerError(
+            "Test error",
+            KnowledgeSeekerErrorCode.INVALID_QUERY,
+            "test-id"
+          ),
+          expectedCode: KnowledgeSeekerErrorCode.INVALID_QUERY,
         },
         {
-          error: new Error('Network failure'),
-          expectedCode: KnowledgeSeekerErrorCode.NETWORK_ERROR
-        }
+          error: new Error("Network failure"),
+          expectedCode: KnowledgeSeekerErrorCode.NETWORK_ERROR,
+        },
       ];
 
       for (const testCase of testCases) {
         mockSearchProvider.search.mockRejectedValue(testCase.error);
 
         const query: KnowledgeQuery = {
-          id: 'error-test',
-          query: 'test',
-          priority: QueryPriority.MEDIUM
+          id: "error-test",
+          query: "test",
+          priority: QueryPriority.MEDIUM,
         };
 
         const response = await knowledgeSeeker.search(query);

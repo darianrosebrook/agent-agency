@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document provides an overview of the five core CAWS working specifications created for the Agent Agency V2 Arbiter architecture. These specs define the modular components that together form the intelligent orchestration layer with CAWS constitutional authority.
+This document provides an overview of the 14 CAWS working specifications created for the Agent Agency V2 Arbiter architecture. These specs define the modular components that together form the intelligent orchestration layer with CAWS constitutional authority.
 
 ---
 
@@ -16,8 +16,8 @@ This document provides an overview of the five core CAWS working specifications 
 
 ### 1. Agent Registry Manager (ARBITER-001)
 
-**Risk Tier**: 2  
-**Purpose**: Agent catalog and capability tracking  
+**Risk Tier**: 2
+**Purpose**: Agent catalog and capability tracking
 **Location**: `agent-registry-manager/.caws/working-spec.yaml`
 
 **Key Responsibilities**:
@@ -195,6 +195,46 @@ This document provides an overview of the five core CAWS working specifications 
 
 ---
 
+### 6. Task Runner (ARBITER-014)
+
+**Risk Tier**: 2
+**Purpose**: Worker agent execution and constitutional pleading
+**Location**: `task-runner/.caws/working-spec.yaml`
+
+**Key Responsibilities**:
+
+- Execute tasks assigned by the arbiter orchestrator
+- Generate self-critique artifacts before constitutional judgment
+- Participate in multi-turn feedback loops with context preservation
+- Handle structured feedback and generate improved iterations
+- Automatically collect performance telemetry for RL training
+- Provide diagnostic information for graceful failure handling
+
+**Budget**: 20 files, 800 LOC
+**Performance Targets**:
+
+- Task execution: <30s P95
+- Feedback processing: <2s P95
+- Self-critique generation: <5s P95
+- Context preservation: <100MB memory
+
+**Critical Invariants**:
+
+- All worker submissions include self-critique outlining potential violations
+- Workers participate in adversarial arbitration protocol
+- Feedback loops maintain context integrity across iterations
+- Performance data automatically feeds RL training pipelines
+
+**Integration Points**:
+
+- Arbiter Orchestrator (task assignment and arbitration)
+- CAWS Validator (constitutional pleading and judgment)
+- Multi-Turn Learning Coordinator (feedback loop management)
+- Performance Tracker (telemetry collection)
+- Context Preservation Engine (state management)
+
+---
+
 ## Component Dependencies
 
 ```mermaid
@@ -203,10 +243,13 @@ graph TD
     A --> C[Task Routing Manager]
     A --> D[CAWS Validator]
     A --> E[Performance Tracker]
+    A --> H[Task Runner]
 
     C --> B
     D --> F[Provenance Recorder]
     D --> G[Waiver Manager]
+    H --> D
+    H --> I[Multi-Turn Learning Coordinator]
     E --> H[Benchmark Collector]
 
     A --> I[MCP Server]

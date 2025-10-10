@@ -4,16 +4,16 @@
  */
 
 import {
-  SearchProvider as ProviderType,
-  SearchResult,
-  SearchProviderInterface,
+  ContentType,
   KnowledgeQuery,
-  SearchProviderConfig,
-  RateLimitStatus,
   KnowledgeSeekerError,
   KnowledgeSeekerErrorCode,
-  ContentType
-} from '../types/knowledge';
+  SearchProvider as ProviderType,
+  RateLimitStatus,
+  SearchProviderConfig,
+  SearchProviderInterface,
+  SearchResult,
+} from "../types/knowledge";
 
 export class SearchProvider implements SearchProviderInterface {
   constructor(
@@ -46,7 +46,9 @@ export class SearchProvider implements SearchProviderInterface {
       }
 
       throw new KnowledgeSeekerError(
-        `Search failed for provider ${this.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Search failed for provider ${this.name}: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
         KnowledgeSeekerErrorCode.NETWORK_ERROR,
         query.id,
         this.name
@@ -61,8 +63,8 @@ export class SearchProvider implements SearchProviderInterface {
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
       const response = await fetch(`${this.config.baseUrl}/health`, {
-        method: 'GET',
-        signal: controller.signal
+        method: "GET",
+        signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
@@ -78,7 +80,7 @@ export class SearchProvider implements SearchProviderInterface {
     return {
       remainingRequests: 100,
       resetTime: new Date(Date.now() + 60000),
-      isLimited: false
+      isLimited: false,
     };
   }
 
@@ -125,10 +127,10 @@ export class SearchProvider implements SearchProviderInterface {
         title: `Google result for "${query.query}"`,
         link: `https://example.com/result1`,
         snippet: `This is a sample result snippet for the query: ${query.query}`,
-        displayLink: 'example.com',
-        formattedUrl: 'https://example.com/result1',
-        kind: 'customsearch#result'
-      }
+        displayLink: "example.com",
+        formattedUrl: "https://example.com/result1",
+        kind: "customsearch#result",
+      },
     ];
 
     return mockResults;
@@ -141,8 +143,8 @@ export class SearchProvider implements SearchProviderInterface {
         name: `Bing result for "${query.query}"`,
         url: `https://example.com/bing-result1`,
         snippet: `Bing search result snippet for: ${query.query}`,
-        displayUrl: 'example.com/bing-result1'
-      }
+        displayUrl: "example.com/bing-result1",
+      },
     ];
 
     return mockResults;
@@ -154,8 +156,8 @@ export class SearchProvider implements SearchProviderInterface {
       {
         title: `DuckDuckGo result for "${query.query}"`,
         url: `https://example.com/ddg-result1`,
-        body: `DuckDuckGo result snippet for: ${query.query}`
-      }
+        body: `DuckDuckGo result snippet for: ${query.query}`,
+      },
     ];
 
     return mockResults;
@@ -170,14 +172,17 @@ export class SearchProvider implements SearchProviderInterface {
         size: 54321,
         wordcount: 1234,
         snippet: `Wikipedia article snippet about: ${query.query}`,
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     ];
 
     return mockResults;
   }
 
-  private normalizeResults(rawResults: any[], query: KnowledgeQuery): SearchResult[] {
+  private normalizeResults(
+    rawResults: any[],
+    query: KnowledgeQuery
+  ): SearchResult[] {
     return rawResults.map((raw, index) => ({
       id: `${this.name}-${query.id}-${index}`,
       title: this.extractTitle(raw),
@@ -187,52 +192,54 @@ export class SearchProvider implements SearchProviderInterface {
       relevanceScore: 0.8, // This would be calculated by InformationProcessor
       credibilityScore: this.calculateCredibilityScore(raw),
       contentType: this.inferContentType(raw),
-      metadata: this.extractMetadata(raw)
+      metadata: this.extractMetadata(raw),
     }));
   }
 
   private extractTitle(raw: any): string {
     switch (this.name) {
       case ProviderType.GOOGLE:
-        return raw.title || 'Untitled';
+        return raw.title || "Untitled";
       case ProviderType.BING:
-        return raw.name || 'Untitled';
+        return raw.name || "Untitled";
       case ProviderType.DUCKDUCKGO:
-        return raw.title || 'Untitled';
+        return raw.title || "Untitled";
       case ProviderType.WIKIPEDIA:
-        return raw.title || 'Untitled';
+        return raw.title || "Untitled";
       default:
-        return raw.title || raw.name || 'Untitled';
+        return raw.title || raw.name || "Untitled";
     }
   }
 
   private extractUrl(raw: any): string {
     switch (this.name) {
       case ProviderType.GOOGLE:
-        return raw.link || raw.formattedUrl || '';
+        return raw.link || raw.formattedUrl || "";
       case ProviderType.BING:
-        return raw.url || '';
+        return raw.url || "";
       case ProviderType.DUCKDUCKGO:
-        return raw.url || '';
+        return raw.url || "";
       case ProviderType.WIKIPEDIA:
-        return `https://en.wikipedia.org/wiki/${encodeURIComponent(raw.title?.replace('Wikipedia: ', '') || '')}`;
+        return `https://en.wikipedia.org/wiki/${encodeURIComponent(
+          raw.title?.replace("Wikipedia: ", "") || ""
+        )}`;
       default:
-        return raw.url || raw.link || '';
+        return raw.url || raw.link || "";
     }
   }
 
   private extractSnippet(raw: any): string {
     switch (this.name) {
       case ProviderType.GOOGLE:
-        return raw.snippet || '';
+        return raw.snippet || "";
       case ProviderType.BING:
-        return raw.snippet || '';
+        return raw.snippet || "";
       case ProviderType.DUCKDUCKGO:
-        return raw.body || '';
+        return raw.body || "";
       case ProviderType.WIKIPEDIA:
-        return raw.snippet || '';
+        return raw.snippet || "";
       default:
-        return raw.snippet || raw.body || raw.description || '';
+        return raw.snippet || raw.body || raw.description || "";
     }
   }
 
@@ -265,17 +272,20 @@ export class SearchProvider implements SearchProviderInterface {
     return Math.min(score, 1.0);
   }
 
-  private inferContentType(raw: any): ContentType { // eslint-disable-line @typescript-eslint/no-unused-vars
+  private inferContentType(raw: any): ContentType {
+    // eslint-disable-line @typescript-eslint/no-unused-vars
     const url = this.extractUrl(raw).toLowerCase();
     const title = this.extractTitle(raw).toLowerCase();
 
-    if (url.includes('wikipedia.org')) return ContentType.ARTICLE;
-    if (url.includes('github.com')) return ContentType.DOCUMENTATION;
-    if (url.includes('stackoverflow.com')) return ContentType.ARTICLE;
-    if (url.includes('scholar.google.com')) return ContentType.ACADEMIC_PAPER;
-    if (url.includes('youtube.com') || url.includes('youtu.be')) return ContentType.VIDEO;
-    if (title.includes('blog') || url.includes('blog')) return ContentType.BLOG_POST;
-    if (title.includes('news') || url.includes('news')) return ContentType.NEWS;
+    if (url.includes("wikipedia.org")) return ContentType.ARTICLE;
+    if (url.includes("github.com")) return ContentType.DOCUMENTATION;
+    if (url.includes("stackoverflow.com")) return ContentType.ARTICLE;
+    if (url.includes("scholar.google.com")) return ContentType.ACADEMIC_PAPER;
+    if (url.includes("youtube.com") || url.includes("youtu.be"))
+      return ContentType.VIDEO;
+    if (title.includes("blog") || url.includes("blog"))
+      return ContentType.BLOG_POST;
+    if (title.includes("news") || url.includes("news")) return ContentType.NEWS;
 
     return ContentType.ARTICLE; // Default
   }
@@ -286,7 +296,7 @@ export class SearchProvider implements SearchProviderInterface {
     return {
       domain,
       providerSpecificData: raw,
-      extractedAt: new Date()
+      extractedAt: new Date(),
     };
   }
 
@@ -294,7 +304,7 @@ export class SearchProvider implements SearchProviderInterface {
     try {
       return new URL(url).hostname;
     } catch {
-      return 'unknown';
+      return "unknown";
     }
   }
 }
@@ -308,20 +318,28 @@ export class SearchProviderFactory {
     const defaultConfigs: SearchProviderConfig[] = [
       {
         name: ProviderType.DUCKDUCKGO,
-        baseUrl: 'https://duckduckgo.com',
-        rateLimit: { requestsPerMinute: 30, requestsPerHour: 100, burstLimit: 10 },
+        baseUrl: "https://duckduckgo.com",
+        rateLimit: {
+          requestsPerMinute: 30,
+          requestsPerHour: 100,
+          burstLimit: 10,
+        },
         enabled: true,
-        priority: 1
+        priority: 1,
       },
       {
         name: ProviderType.WIKIPEDIA,
-        baseUrl: 'https://en.wikipedia.org',
-        rateLimit: { requestsPerMinute: 60, requestsPerHour: 500, burstLimit: 20 },
+        baseUrl: "https://en.wikipedia.org",
+        rateLimit: {
+          requestsPerMinute: 60,
+          requestsPerHour: 500,
+          burstLimit: 20,
+        },
         enabled: true,
-        priority: 2
-      }
+        priority: 2,
+      },
     ];
 
-    return defaultConfigs.map(config => this.createProvider(config));
+    return defaultConfigs.map((config) => this.createProvider(config));
   }
 }
