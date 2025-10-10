@@ -146,6 +146,900 @@ When multiple local LLMs propose competing patches, the Arbiter orchestrates an 
 
 A compact reasoning LLM (e.g., 3-7 B parameters, Core ML-optimized) can serve as a linguistic judge. Its prompt template cites CAWS clauses directly, e.g.: _"Under CAWS Section 5.2, evaluate whether this waiver justification meets 'documented necessity' and 'time-bounded exception' requirements."_
 
+## IDE Integration & Workspace Awareness
+
+To rival Cursor/Windsurf's seamless user experience, the arbiter stack must deeply integrate with development environments, understanding workspace context, cursor position, open files, and user intent.
+
+### Workspace Context Collection
+
+**Continuous Context Monitoring**: The arbiter maintains real-time awareness of the development environment.
+
+```typescript
+interface WorkspaceContext {
+  openFiles: OpenFile[];
+  cursorPosition: Position;
+  visibleRange: Range;
+  gitStatus: GitState;
+  projectStructure: ProjectTree;
+  recentEdits: Edit[];
+  activeBreakpoints: Breakpoint[];
+  terminalState: TerminalSession;
+}
+
+interface OpenFile {
+  path: string;
+  content: string;
+  version: number;
+  lastModified: Date;
+  cursorPosition: Position;
+  unsavedChanges: boolean;
+}
+
+class WorkspaceProvider {
+  private watchers: Map<string, FileWatcher> = new Map();
+
+  async getCurrentContext(): Promise<WorkspaceContext> {
+    // Connect to IDE APIs (VSCode, Cursor, etc.)
+    const openFiles = await this.getOpenFiles();
+    const cursor = await this.getCursorPosition();
+    const git = await this.getGitStatus();
+
+    return {
+      openFiles,
+      cursorPosition: cursor,
+      gitStatus: git,
+      // ... other context
+    };
+  }
+
+  private async getOpenFiles(): Promise<OpenFile[]> {
+    // IDE integration: get currently open files with content
+  }
+
+  private async getCursorPosition(): Promise<Position> {
+    // IDE integration: get current cursor location
+  }
+}
+```
+
+### Context-Aware Task Routing
+
+**Intelligent Task Understanding**: Route tasks based on workspace context, not just task type.
+
+```typescript
+class ContextAwareRouter {
+  async routeWithContext(
+    task: Task,
+    context: WorkspaceContext
+  ): Promise<RoutingDecision> {
+    // Analyze open files for relevant context
+    const relevantFiles = await this.analyzeFileRelevance(task, context.openFiles);
+
+    // Consider cursor position and visible code
+    const intent = await this.inferUserIntent(task, context.cursorPosition, context.visibleRange);
+
+    // Factor in recent edits and git status
+    const complexity = await this.assessWorkspaceComplexity(context);
+
+    // Route to agents with matching capabilities and context experience
+    return this.selectAgent(task, relevantFiles, intent, complexity);
+  }
+
+  private async analyzeFileRelevance(
+    task: Task,
+    openFiles: OpenFile[]
+  ): Promise<FileRelevance[]> {
+    // Use code analysis to determine which files are relevant to the task
+    // Consider imports, function calls, type definitions, etc.
+  }
+
+  private async inferUserIntent(
+    task: Task,
+    cursor: Position,
+    visibleRange: Range
+  ): Promise<UserIntent> {
+    // Analyze cursor context and visible code to understand user intent
+    // Consider: are they in a function? Looking at imports? In a test file?
+  }
+}
+```
+
+### Multi-File Change Coordination
+
+**Atomic Multi-File Operations**: Handle changes across multiple files as a single transaction.
+
+```typescript
+interface MultiFileChange {
+  files: FileChange[];
+  dependencies: FileDependency[];
+  validationRules: ValidationRule[];
+  rollbackStrategy: RollbackPlan;
+}
+
+class MultiFileCoordinator {
+  async planChanges(
+    task: Task,
+    context: WorkspaceContext
+  ): Promise<MultiFileChange> {
+    // Analyze which files need changes
+    const affectedFiles = await this.analyzeDependencies(task, context);
+
+    // Plan changes for each file
+    const changes = await Promise.all(
+      affectedFiles.map(file => this.planFileChanges(task, file, context))
+    );
+
+    // Validate consistency across files
+    await this.validateConsistency(changes);
+
+    // Create rollback plan
+    const rollback = await this.createRollbackPlan(changes);
+
+    return {
+      files: changes,
+      dependencies: affectedFiles,
+      validationRules: this.generateValidationRules(changes),
+      rollbackStrategy: rollback,
+    };
+  }
+
+  async executeChanges(plan: MultiFileChange): Promise<ExecutionResult> {
+    // Execute changes atomically
+    // Roll back on failure
+    // Update workspace context
+  }
+}
+```
+
+### Real-Time Progress & Feedback
+
+**Live Progress Tracking**: Provide immediate feedback during task execution.
+
+```typescript
+interface ProgressUpdate {
+  taskId: string;
+  stage: ExecutionStage;
+  completedSteps: number;
+  totalSteps: number;
+  currentStep: string;
+  percentage: number;
+  eta: Date;
+  status: 'running' | 'waiting' | 'completed' | 'failed';
+  details: ProgressDetail[];
+}
+
+class ProgressManager {
+  private progressStreams: Map<string, ProgressStream> = new Map();
+
+  async startProgressTracking(taskId: string, plan: ExecutionPlan): Promise<void> {
+    const stream = new ProgressStream(taskId);
+    this.progressStreams.set(taskId, stream);
+
+    // Send progress updates to IDE
+    stream.on('update', (update) => this.sendToIDE(update));
+
+    // Initialize progress
+    await stream.initialize(plan);
+  }
+
+  async updateProgress(taskId: string, update: Partial<ProgressUpdate>): Promise<void> {
+    const stream = this.progressStreams.get(taskId);
+    if (stream) {
+      await stream.update(update);
+    }
+  }
+
+  private async sendToIDE(update: ProgressUpdate): Promise<void> {
+    // Send progress to IDE status bar, notifications, etc.
+  }
+}
+```
+
+### Human-in-the-Loop Integration
+
+**Seamless Human Collaboration**: Allow human guidance without breaking workflow.
+
+```typescript
+interface HumanInteraction {
+  type: 'approval' | 'clarification' | 'choice' | 'feedback';
+  taskId: string;
+  prompt: string;
+  options?: InteractionOption[];
+  timeout?: number;
+}
+
+class HumanCollaborationManager {
+  async requestApproval(
+    taskId: string,
+    changes: Change[],
+    context: WorkspaceContext
+  ): Promise<Approval> {
+    // Present changes in IDE
+    // Wait for user approval
+    // Handle rejections with explanations
+  }
+
+  async requestClarification(
+    taskId: string,
+    question: string
+  ): Promise<Clarification> {
+    // Show question in IDE
+    // Get user input
+    // Resume execution
+  }
+
+  async presentOptions(
+    taskId: string,
+    options: TaskOption[]
+  ): Promise<Selection> {
+    // Show options in IDE picker
+    // Get user selection
+    // Continue with chosen option
+  }
+}
+```
+
+## Task Decomposition & Complex Workflow Orchestration
+
+The arbiter must handle complex, multi-step tasks that require coordination across multiple agents and files.
+
+### Task Analysis & Decomposition
+
+**Intelligent Task Breaking**: Automatically decompose complex tasks into manageable subtasks.
+
+```typescript
+interface TaskDecomposition {
+  originalTask: Task;
+  subtasks: SubTask[];
+  dependencies: TaskDependency[];
+  parallelGroups: SubTask[][];
+  successCriteria: SuccessCriterion[];
+  failureRecovery: RecoveryPlan;
+}
+
+class TaskDecomposer {
+  async decomposeTask(task: Task): Promise<TaskDecomposition> {
+    // Analyze task complexity and requirements
+    const complexity = await this.analyzeComplexity(task);
+
+    if (complexity.level === 'simple') {
+      return this.createSimpleDecomposition(task);
+    }
+
+    // Break into logical subtasks
+    const subtasks = await this.identifySubtasks(task);
+
+    // Determine dependencies and parallelization
+    const dependencies = await this.analyzeDependencies(subtasks);
+    const parallelGroups = this.groupParallelTasks(subtasks, dependencies);
+
+    // Define success criteria
+    const successCriteria = await this.defineSuccessCriteria(task, subtasks);
+
+    // Create recovery plan
+    const failureRecovery = await this.createRecoveryPlan(subtasks, dependencies);
+
+    return {
+      originalTask: task,
+      subtasks,
+      dependencies,
+      parallelGroups,
+      successCriteria,
+      failureRecovery,
+    };
+  }
+
+  private async analyzeComplexity(task: Task): Promise<TaskComplexity> {
+    // Consider: files affected, domains involved, coordination required
+    // Return: simple | moderate | complex
+  }
+
+  private async identifySubtasks(task: Task): Promise<SubTask[]> {
+    // Use LLM or rule-based analysis to break task into steps
+    // Consider: research, implementation, testing, documentation
+  }
+}
+```
+
+### Execution Orchestration
+
+**Coordinated Multi-Agent Execution**: Manage parallel and sequential execution of subtasks.
+
+```typescript
+interface ExecutionOrchestrator {
+  executePlan(plan: TaskDecomposition): Promise<ExecutionResult>;
+  coordinateAgents(agents: Agent[], plan: ExecutionPlan): Promise<void>;
+  handleDependencies(dependencies: TaskDependency[]): Promise<void>;
+  manageResources(resources: ResourceAllocation[]): Promise<void>;
+}
+
+class WorkflowOrchestrator {
+  async executePlan(plan: TaskDecomposition): Promise<ExecutionResult> {
+    const results: SubTaskResult[] = [];
+    const context = new ExecutionContext(plan);
+
+    try {
+      // Execute parallel groups sequentially
+      for (const group of plan.parallelGroups) {
+        const groupResults = await this.executeParallelGroup(group, context);
+        results.push(...groupResults);
+
+        // Check success criteria
+        await this.validateProgress(results, plan.successCriteria, context);
+      }
+
+      // Final validation
+      const finalResult = await this.validateFinalResult(results, plan);
+
+      return {
+        success: finalResult.passed,
+        results,
+        summary: finalResult.summary,
+      };
+
+    } catch (error) {
+      // Execute recovery plan
+      await this.executeRecovery(plan.failureRecovery, error, context);
+      throw error;
+    }
+  }
+
+  private async executeParallelGroup(
+    group: SubTask[],
+    context: ExecutionContext
+  ): Promise<SubTaskResult[]> {
+    // Allocate agents to subtasks
+    const assignments = await this.assignAgents(group, context);
+
+    // Execute in parallel with coordination
+    const results = await Promise.allSettled(
+      assignments.map(({ subtask, agent }) =>
+        this.executeSubtask(subtask, agent, context)
+      )
+    );
+
+    // Handle partial failures
+    return this.processResults(results);
+  }
+}
+```
+
+### Dependency Management
+
+**Smart Dependency Resolution**: Handle complex inter-task dependencies.
+
+```typescript
+interface TaskDependency {
+  from: SubTask;
+  to: SubTask;
+  type: 'finish-to-start' | 'start-to-start' | 'finish-to-finish';
+  condition?: DependencyCondition;
+}
+
+class DependencyManager {
+  async resolveDependencies(
+    dependencies: TaskDependency[],
+    completedTasks: SubTaskResult[]
+  ): Promise<DependencyResolution> {
+    const blocked: SubTask[] = [];
+    const ready: SubTask[] = [];
+
+    for (const dep of dependencies) {
+      const status = await this.checkDependency(dep, completedTasks);
+
+      if (status === 'blocked') {
+        blocked.push(dep.to);
+      } else if (status === 'ready') {
+        ready.push(dep.to);
+      }
+    }
+
+    return { blocked, ready };
+  }
+
+  private async checkDependency(
+    dep: TaskDependency,
+    completedTasks: SubTaskResult[]
+  ): Promise<'blocked' | 'ready' | 'completed'> {
+    const fromResult = completedTasks.find(r => r.subtask.id === dep.from.id);
+
+    if (!fromResult) return 'blocked';
+
+    if (dep.condition) {
+      return await this.evaluateCondition(dep.condition, fromResult);
+    }
+
+    return fromResult.success ? 'ready' : 'blocked';
+  }
+}
+```
+
+## Conversation Context & State Preservation
+
+Enable continuous, stateful conversations that build on previous interactions.
+
+### Conversation State Management
+
+**Persistent Conversation Context**: Maintain conversation history and state across sessions.
+
+```typescript
+interface ConversationContext {
+  sessionId: string;
+  userId: string;
+  turns: ConversationTurn[];
+  currentIntent: UserIntent;
+  workingFiles: string[];
+  unresolvedIssues: Issue[];
+  learnedPreferences: Preference[];
+  workspaceState: WorkspaceContext;
+  activeTasks: ActiveTask[];
+}
+
+interface ConversationTurn {
+  id: string;
+  timestamp: Date;
+  userInput: string;
+  agentResponse: string;
+  contextChanges: ContextDiff[];
+  taskInitiated?: Task;
+  userFeedback?: Feedback;
+}
+
+class ConversationManager {
+  private contexts: Map<string, ConversationContext> = new Map();
+  private persistence: ConversationPersistence;
+
+  async maintainContext(sessionId: string): Promise<ConversationContext> {
+    // Load or create context
+    let context = this.contexts.get(sessionId);
+
+    if (!context) {
+      context = await this.persistence.load(sessionId) || this.createNewContext(sessionId);
+      this.contexts.set(sessionId, context);
+    }
+
+    // Update with latest workspace state
+    context.workspaceState = await this.workspaceProvider.getCurrentContext();
+
+    // Analyze for intent evolution
+    context.currentIntent = await this.analyzeIntentEvolution(context);
+
+    // Persist periodically
+    await this.persistence.save(sessionId, context);
+
+    return context;
+  }
+
+  private async analyzeIntentEvolution(context: ConversationContext): Promise<UserIntent> {
+    // Analyze recent turns for intent changes
+    // Consider: topic shifts, frustration indicators, success patterns
+  }
+}
+```
+
+### Context-Aware Task Routing
+
+**Leverage Conversation History**: Route tasks based on conversation context and user preferences.
+
+```typescript
+class ContextAwareRouter {
+  async routeWithConversation(
+    task: Task,
+    conversation: ConversationContext
+  ): Promise<RoutingDecision> {
+    // Consider user's demonstrated preferences
+    const preferences = await this.extractPreferences(conversation);
+
+    // Factor in conversation history
+    const history = await this.analyzeHistory(conversation);
+
+    // Consider current workspace state
+    const workspace = conversation.workspaceState;
+
+    // Consider active and unresolved tasks
+    const activeTasks = conversation.activeTasks;
+
+    return this.makeContextualDecision(task, {
+      preferences,
+      history,
+      workspace,
+      activeTasks,
+    });
+  }
+
+  private async extractPreferences(conversation: ConversationContext): Promise<UserPreferences> {
+    // Learn from feedback and successful interactions
+    // Consider: preferred agents, interaction styles, quality thresholds
+  }
+
+  private async analyzeHistory(conversation: ConversationContext): Promise<ConversationInsights> {
+    // Extract patterns: successful strategies, common issues, preferred approaches
+  }
+}
+```
+
+### Learning & Adaptation
+
+**Continuous Improvement**: Learn from conversation patterns and adapt routing.
+
+```typescript
+interface LearningEngine {
+  recordInteraction(interaction: ConversationInteraction): void;
+  learnUserPreferences(userId: string, conversations: Conversation[]): UserPreferences;
+  adaptRoutingStrategy(userId: string, preferences: UserPreferences): RoutingStrategy;
+  predictUserSatisfaction(task: Task, strategy: RoutingStrategy): number;
+}
+
+class AdaptiveRouter {
+  async learnFromConversations(): Promise<void> {
+    // Analyze conversation outcomes
+    // Update routing strategies
+    // Improve agent recommendations
+  }
+
+  async predictSatisfaction(task: Task, userId: string): Promise<number> {
+    // Predict user satisfaction with different routing options
+    // Consider: historical feedback, task type, user preferences
+  }
+}
+```
+
+## Performance Infrastructure & Scalability
+
+### Multi-Level Caching Strategy
+
+**Intelligent Caching**: Cache frequently accessed data at multiple levels.
+
+```typescript
+interface CacheConfig {
+  l1Cache: Redis;           // Hot data (30s TTL)
+  l2Cache: Map;             // Session data (5min TTL)
+  l3Cache: LocalStorage;    // Persistent data (1hr TTL)
+}
+
+class MultiLevelCache {
+  async get<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
+    // Try L1 cache first
+    const l1Result = await this.l1Cache.get(key);
+    if (l1Result) return l1Result;
+
+    // Try L2 cache
+    const l2Result = this.l2Cache.get(key);
+    if (l2Result) {
+      await this.l1Cache.set(key, l2Result, 30); // Promote to L1
+      return l2Result;
+    }
+
+    // Try L3 cache
+    const l3Result = await this.l3Cache.get(key);
+    if (l3Result) {
+      this.l2Cache.set(key, l3Result); // Promote to L2
+      await this.l1Cache.set(key, l3Result, 30); // Promote to L1
+      return l3Result;
+    }
+
+    // Fetch fresh data
+    const fresh = await fetcher();
+
+    // Cache at all levels
+    await this.l1Cache.set(key, fresh, 30);
+    this.l2Cache.set(key, fresh);
+    await this.l3Cache.set(key, fresh, 3600);
+
+    return fresh;
+  }
+}
+```
+
+### Database Connection Pooling & Optimization
+
+**Efficient Database Access**: Connection pooling and query optimization.
+
+```typescript
+interface DatabaseConfig {
+  host: string;
+  port: number;
+  database: string;
+  user: string;
+  password: string;
+  minConnections: number;
+  maxConnections: number;
+  connectionTimeout: number;
+  queryTimeout: number;
+}
+
+class DatabaseManager {
+  private pool: Pool;
+  private preparedStatements: Map<string, PreparedStatement> = new Map();
+
+  constructor(config: DatabaseConfig) {
+    this.pool = new Pool(config);
+    this.initializePreparedStatements();
+  }
+
+  private initializePreparedStatements(): void {
+    // Pre-compile frequently used queries
+    this.preparedStatements.set('getAgent', this.pool.prepare(`
+      SELECT * FROM agents WHERE id = $1
+    `));
+
+    this.preparedStatements.set('updatePerformance', this.pool.prepare(`
+      UPDATE agent_performance
+      SET success_rate = $1, task_count = task_count + 1
+      WHERE agent_id = $2
+    `));
+
+    this.preparedStatements.set('getAgentsByCapability', this.pool.prepare(`
+      SELECT a.*, ap.* FROM agents a
+      JOIN agent_performance ap ON a.id = ap.agent_id
+      WHERE a.capabilities @> $1
+      ORDER BY ap.success_rate DESC
+      LIMIT $2
+    `));
+  }
+
+  async executePrepared(name: string, params: any[]): Promise<QueryResult> {
+    const stmt = this.preparedStatements.get(name);
+    if (!stmt) throw new Error(`Prepared statement ${name} not found`);
+
+    return await stmt.execute(params);
+  }
+}
+```
+
+### Parallel Processing & Resource Management
+
+**Concurrent Task Execution**: Handle multiple tasks simultaneously with resource constraints.
+
+```typescript
+interface ResourceLimits {
+  maxConcurrentTasks: number;
+  maxMemoryUsage: number;    // MB
+  maxCpuUsage: number;       // Percentage
+  maxAgentsPerTask: number;
+}
+
+class ResourceManager {
+  private activeTasks: Map<string, TaskExecution> = new Map();
+  private resourceMonitor: ResourceMonitor;
+
+  async canExecuteTask(task: Task): Promise<boolean> {
+    const currentUsage = await this.resourceMonitor.getCurrentUsage();
+
+    // Check concurrent task limit
+    if (this.activeTasks.size >= this.config.maxConcurrentTasks) {
+      return false;
+    }
+
+    // Check memory usage
+    if (currentUsage.memory > this.config.maxMemoryUsage) {
+      return false;
+    }
+
+    // Check CPU usage
+    if (currentUsage.cpu > this.config.maxCpuUsage) {
+      return false;
+    }
+
+    return true;
+  }
+
+  async allocateResources(task: Task): Promise<ResourceAllocation> {
+    // Reserve resources for task execution
+    // Update active task tracking
+    // Set up resource monitoring
+  }
+
+  async releaseResources(taskId: string): Promise<void> {
+    // Clean up resources
+    // Update monitoring
+    // Remove from active tasks
+  }
+}
+```
+
+### Circuit Breaker Pattern
+
+**Fault Tolerance**: Prevent cascading failures from problematic agents.
+
+```typescript
+interface CircuitBreakerConfig {
+  failureThreshold: number;      // Failures before opening
+  recoveryTimeout: number;       // Time before trying again
+  monitoringWindow: number;      // Time window for failure counting
+}
+
+class CircuitBreaker {
+  private state: 'closed' | 'open' | 'half-open' = 'closed';
+  private failures = 0;
+  private lastFailureTime = 0;
+  private nextAttemptTime = 0;
+
+  async execute<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.state === 'open') {
+      if (Date.now() < this.nextAttemptTime) {
+        throw new CircuitBreakerError('Circuit breaker is open');
+      }
+      this.state = 'half-open';
+    }
+
+    try {
+      const result = await operation();
+      this.onSuccess();
+      return result;
+    } catch (error) {
+      this.onFailure();
+      throw error;
+    }
+  }
+
+  private onSuccess(): void {
+    this.failures = 0;
+    this.state = 'closed';
+  }
+
+  private onFailure(): void {
+    this.failures++;
+    this.lastFailureTime = Date.now();
+
+    if (this.failures >= this.config.failureThreshold) {
+      this.state = 'open';
+      this.nextAttemptTime = Date.now() + this.config.recoveryTimeout;
+    }
+  }
+}
+```
+
+## Recovery & Retry Strategies
+
+**Robust Error Handling**: Systematic recovery from failures.
+
+### Exponential Backoff Retry
+
+```typescript
+interface RetryConfig {
+  maxAttempts: number;
+  initialDelay: number;
+  maxDelay: number;
+  backoffMultiplier: number;
+  jitterEnabled: boolean;
+}
+
+class RetryManager {
+  async executeWithRetry<T>(
+    operation: () => Promise<T>,
+    config: RetryConfig
+  ): Promise<T> {
+    let lastError: Error;
+
+    for (let attempt = 1; attempt <= config.maxAttempts; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error;
+
+        if (attempt === config.maxAttempts) {
+          throw new RetryError(`Failed after ${config.maxAttempts} attempts`, lastError);
+        }
+
+        const delay = this.calculateDelay(attempt, config);
+        await this.sleep(delay);
+      }
+    }
+
+    throw lastError;
+  }
+
+  private calculateDelay(attempt: number, config: RetryConfig): number {
+    let delay = config.initialDelay * Math.pow(config.backoffMultiplier, attempt - 1);
+    delay = Math.min(delay, config.maxDelay);
+
+    if (config.jitterEnabled) {
+      // Add random jitter to prevent thundering herd
+      delay = delay * (0.5 + Math.random() * 0.5);
+    }
+
+    return delay;
+  }
+}
+```
+
+### Failure Recovery Orchestration
+
+**Intelligent Recovery**: Analyze failures and execute appropriate recovery strategies.
+
+```typescript
+interface RecoveryStrategy {
+  type: 'retry' | 'fallback' | 'decompose' | 'escalate';
+  conditions: FailureCondition[];
+  actions: RecoveryAction[];
+}
+
+class FailureRecoveryManager {
+  async recoverFromFailure(
+    failure: TaskFailure,
+    context: FailureContext
+  ): Promise<RecoveryResult> {
+    // Analyze failure type and context
+    const failureType = await this.analyzeFailure(failure);
+
+    // Select appropriate recovery strategy
+    const strategy = await this.selectStrategy(failureType, context);
+
+    // Execute recovery actions
+    const result = await this.executeRecovery(strategy, failure, context);
+
+    // Update learning data
+    await this.updateFailureLearning(failure, strategy, result);
+
+    return result;
+  }
+
+  private async analyzeFailure(failure: TaskFailure): Promise<FailureType> {
+    // Classify: network, agent, resource, logic, etc.
+  }
+
+  private async selectStrategy(
+    failureType: FailureType,
+    context: FailureContext
+  ): Promise<RecoveryStrategy> {
+    // Choose: retry, use different agent, break into smaller tasks, human intervention
+  }
+}
+```
+
+### Graceful Degradation
+
+**Progressive Fallback**: Maintain functionality when resources are constrained.
+
+```typescript
+interface DegradationLevel {
+  name: string;
+  enabledFeatures: string[];
+  disabledFeatures: string[];
+  performanceTargets: PerformanceTarget[];
+  qualityThresholds: QualityThreshold[];
+}
+
+class DegradationManager {
+  private currentLevel: DegradationLevel = this.fullServiceLevel;
+
+  async evaluateSystemHealth(): Promise<void> {
+    const health = await this.healthMonitor.getSystemHealth();
+
+    if (health.cpu > 90 || health.memory > 85) {
+      await this.degradeService();
+    } else if (health.cpu < 70 && health.memory < 70) {
+      await this.restoreService();
+    }
+  }
+
+  async degradeService(): Promise<void> {
+    // Move to next degradation level
+    const nextLevel = this.getNextDegradationLevel(this.currentLevel);
+
+    // Disable features
+    await this.disableFeatures(nextLevel.disabledFeatures);
+
+    // Update performance targets
+    await this.updateTargets(nextLevel.performanceTargets);
+
+    this.currentLevel = nextLevel;
+
+    // Notify users of degraded service
+    await this.notifyUsers(nextLevel);
+  }
+
+  private getNextDegradationLevel(current: DegradationLevel): DegradationLevel {
+    // Return progressively more restrictive levels
+    // Level 1: Full service
+    // Level 2: Disable advanced features
+    // Level 3: Reduce parallelism
+    // Level 4: Essential service only
+  }
+}
+```
+
 ## Reflexive Learning & Memory Integration
 
 The arbiter stack incorporates advanced reflexive capabilities drawn from V1/V2 research to enable continuous learning, progress tracking, and adaptive orchestration. These reflexive systems transform the arbiter from a static coordinator into a learning orchestrator that improves over time.
