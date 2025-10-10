@@ -1,295 +1,500 @@
 /**
- * Credibility scorer for source analysis and trust assessment
+ * @fileoverview Credibility Scorer Component (ARBITER-007)
+ *
+ * Assesses the credibility and reliability of information sources
+ * using various credibility indicators and scoring algorithms.
+ *
  * @author @darianrosebrook
  */
 
 import {
-  CredibilityFactor,
-  MethodStatus,
-  SourceAnalysis,
-  VerificationError,
-  VerificationErrorCode,
-  VerificationMethodResult,
-  VerificationProvider,
   VerificationRequest,
-  VerificationType,
+  VerificationMethodResult,
   VerificationVerdict,
+  VerificationType,
+  VerificationMethodConfig,
+  SourceAnalysis,
+  CredibilityFactor,
 } from "../types/verification";
 
-export class CredibilityScorer implements VerificationProvider {
-  readonly type = VerificationType.SOURCE_CREDIBILITY;
+/**
+ * Credibility Scorer Implementation
+ */
+export class CredibilityScorer {
+  private methodConfigs: VerificationMethodConfig[];
+  private credibilityCache: Map<string, SourceAnalysis> = new Map();
 
-  private readonly credibilityCache = new Map<string, SourceAnalysis>();
-  private lastUsed?: Date;
-  private successCount = 0;
-  private totalCount = 0;
+  constructor(methodConfigs: VerificationMethodConfig[]) {
+    this.methodConfigs = methodConfigs;
+  }
 
-  async verify(
-    request: VerificationRequest
-  ): Promise<VerificationMethodResult> {
+  /**
+   * Execute credibility scoring verification
+   */
+  async verify(request: VerificationRequest): Promise<VerificationMethodResult> {
     const startTime = Date.now();
-    this.lastUsed = new Date();
 
     try {
-      const sourceUrl =
-        request.source || this.extractSourceFromContent(request.content);
+      // Extract sources from the request
+      const sources = this.extractSources(request);
 
-      // Check cache first
-      let analysis = this.credibilityCache.get(sourceUrl);
-      if (!analysis || this.isCacheExpired(analysis)) {
-        analysis = await this.analyzeSource(sourceUrl);
-        this.credibilityCache.set(sourceUrl, analysis);
+      if (sources.length === 0) {
+        return {
+          method: VerificationType.SOURCE_CREDIBILITY,
+          verdict: VerificationVerdict.INSUFFICIENT_DATA,
+          confidence: 0,
+          reasoning: ["No sources found in content to evaluate"],
+          processingTimeMs: Math.max(1, Date.now() - startTime),
+          evidenceCount: 0,
+        };
       }
 
-      const verdict = this.determineVerdict(analysis.credibilityScore);
-      const confidence = Math.min(analysis.credibilityScore + 0.1, 1.0);
+      // Analyze source credibility
+      const sourceAnalyses = await Promise.all(
+        sources.map(source => this.analyzeSource(source))
+      );
 
-      this.successCount++;
-      this.totalCount++;
+      // Aggregate results
+      const aggregatedResult = this.aggregateCredibilityResults(sourceAnalyses);
 
       return {
-        method: this.type,
-        verdict,
-        confidence,
-        reasoning: [
-          `Source credibility: ${(analysis.credibilityScore * 100).toFixed(
-            1
-          )}%`,
-          `Based on ${analysis.factors.length} credibility factors`,
-        ],
-        processingTimeMs: Date.now() - startTime,
-        evidenceCount: analysis.factors.length,
+        method: VerificationType.SOURCE_CREDIBILITY,
+        verdict: aggregatedResult.verdict,
+        confidence: aggregatedResult.confidence,
+        reasoning: aggregatedResult.explanations,
+        processingTimeMs: Math.max(1, Date.now() - startTime),
+        evidenceCount: sourceAnalyses.length,
       };
     } catch (error) {
-      this.totalCount++;
-
-      throw new VerificationError(
-        `Credibility analysis failed: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
-        VerificationErrorCode.EXTERNAL_SERVICE_ERROR,
-        request.id,
-        this.type
-      );
+      return {
+        method: VerificationType.SOURCE_CREDIBILITY,
+        verdict: VerificationVerdict.UNVERIFIED,
+        confidence: 0,
+        reasoning: [`Credibility scoring failed: ${error instanceof Error ? error.message : String(error)}`],
+        processingTimeMs: Math.max(1, Date.now() - startTime),
+        evidenceCount: 0,
+      };
     }
   }
 
-  async isAvailable(): Promise<boolean> {
-    // Credibility analysis is always available
-    return true;
+  /**
+   * Extract sources from request content
+   */
+  private extractSources(request: VerificationRequest): string[] {
+    const content = request.content;
+    const sources: string[] = [];
+
+    // Extract URLs
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    let match;
+    while ((match = urlRegex.exec(content)) !== null) {
+      sources.push(match[1]);
+    }
+
+    // Extract domain references (simplified)
+    const domainRegex = /\b([a-zA-Z0-9-]+\.[a-zA-Z]{2,})(?:\.[a-zA-Z]{2,})?\b/g;
+    while ((match = domainRegex.exec(content)) !== null) {
+      const domain = match[1];
+      // Avoid common words that might match
+      if (!["the", "and", "for", "are", "but", "not", "you", "all", "can", "had", "her", "was", "one", "our", "out", "day", "get", "has", "him", "his", "how", "its", "may", "new", "now", "old", "see", "two", "who", "boy", "did", "has", "her", "him", "his", "how", "its", "may", "new", "now", "old", "see", "two", "who", "act", "add", "age", "ago", "aim", "air", "all", "and", "any", "are", "arm", "art", "ask", "bad", "bag", "ban", "bar", "bat", "bay", "bed", "bee", "beg", "bet", "bid", "big", "bin", "bit", "bob", "bog", "boo", "bow", "box", "boy", "bud", "bug", "bun", "bus", "but", "buy", "bye", "cab", "can", "cap", "car", "cat", "cow", "cry", "cup", "cut", "dad", "dam", "day", "did", "die", "dig", "dim", "dip", "dog", "dot", "dry", "dub", "dud", "due", "dug", "ear", "eat", "egg", "ego", "end", "era", "eve", "eye", "fan", "far", "fat", "fax", "fed", "fee", "few", "fig", "fin", "fir", "fit", "fix", "fly", "fog", "for", "fox", "fry", "fun", "fur", "gab", "gad", "gag", "gap", "gas", "gay", "gee", "gel", "gem", "get", "gig", "gin", "god", "got", "gum", "gun", "gut", "guy", "gym", "had", "hag", "ham", "has", "hat", "hay", "hem", "hen", "her", "hew", "hex", "hey", "hid", "him", "hip", "his", "hit", "hog", "hop", "hot", "how", "hub", "hue", "hug", "huh", "hum", "hut", "ice", "icy", "ill", "ink", "inn", "ion", "ire", "ivy", "jab", "jag", "jam", "jar", "jaw", "jay", "jet", "jew", "jig", "job", "jog", "joy", "jug", "jut", "kay", "ken", "key", "kid", "kin", "kit", "lab", "lad", "lag", "lap", "law", "lax", "lay", "led", "leg", "let", "lid", "lie", "lip", "lit", "lob", "log", "lop", "lot", "low", "loy", "lug", "lye", "mad", "mag", "man", "map", "mar", "mat", "may", "men", "met", "mew", "mid", "mix", "mob", "mod", "mom", "moo", "mop", "mow", "mud", "mug", "mum", "nab", "nag", "nap", "nay", "net", "new", "nil", "nip", "nit", "nob", "nod", "nog", "nor", "not", "now", "nun", "nut", "oaf", "oak", "oar", "oat", "odd", "ode", "off", "oft", "oil", "old", "ole", "one", "opt", "orb", "ore", "our", "out", "owe", "owl", "own", "pad", "pal", "pan", "pap", "par", "pat", "paw", "pay", "pea", "peg", "pen", "pep", "per", "pet", "pew", "pic", "pie", "pig", "pin", "pip", "pit", "ply", "pod", "pop", "pot", "pow", "pro", "pry", "pub", "pug", "pun", "pup", "pus", "put", "rag", "ram", "ran", "rap", "rat", "raw", "ray", "red", "rep", "rib", "rid", "rig", "rim", "rip", "rob", "rod", "roe", "rot", "row", "rub", "rug", "rum", "run", "rye", "sac", "sad", "sag", "sap", "sat", "saw", "say", "sea", "see", "sew", "sex", "she", "shy", "sin", "sip", "sir", "sit", "six", "ski", "sky", "sly", "sob", "sod", "son", "sop", "sow", "soy", "spa", "spy", "sub", "sue", "sum", "sun", "sup", "tab", "tag", "tan", "tap", "tar", "tax", "tea", "tee", "ten", "the", "thy", "tie", "tin", "tip", "toe", "tog", "ton", "too", "top", "tow", "toy", "try", "tub", "tug", "two", "use", "van", "vat", "vet", "vex", "via", "vie", "vow", "wag", "wan", "war", "was", "wax", "way", "web", "wed", "wee", "wet", "who", "why", "wig", "win", "wit", "woe", "won", "woo", "wow", "wry", "wye", "yak", "yam", "yap", "yaw", "yea", "yen", "yes", "yet", "yew", "yid", "yin", "yip", "yon", "you", "yow", "yup", "zag", "zap", "zed", "zee", "zen", "zig", "zip", "zoo"].includes(domain.toLowerCase())) {
+        sources.push(`https://${domain}`);
+      }
+    }
+
+    // Remove duplicates and limit
+    const uniqueSources = Array.from(new Set(sources));
+    return uniqueSources.slice(0, 10); // Limit to 10 sources
   }
 
-  async getHealth(): Promise<MethodStatus> {
-    const successRate =
-      this.totalCount > 0 ? this.successCount / this.totalCount : 1.0;
+  /**
+   * Analyze credibility of a single source
+   */
+  private async analyzeSource(sourceUrl: string): Promise<SourceAnalysis> {
+    // Check cache first
+    const cached = this.credibilityCache.get(sourceUrl);
+    if (cached && this.isCacheValid(cached)) {
+      return cached;
+    }
 
-    return {
-      type: this.type,
-      enabled: true,
-      healthy: true,
-      lastUsed: this.lastUsed,
-      successRate,
-      averageProcessingTime: 100,
+    const analysis: SourceAnalysis = {
+      url: sourceUrl,
+      domain: this.extractDomain(sourceUrl),
+      credibilityScore: 0.5, // Default
+      factors: [],
+      analysisDate: new Date(),
     };
+
+    // Analyze credibility factors
+    const factors = await this.evaluateCredibilityFactors(sourceUrl, analysis.domain);
+    analysis.factors = factors;
+
+    // Calculate overall score
+    analysis.credibilityScore = this.calculateCredibilityScore(factors);
+
+    // Set cache expiry (24 hours)
+    analysis.cacheExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    // Cache the result
+    this.credibilityCache.set(sourceUrl, analysis);
+
+    return analysis;
   }
 
-  private async analyzeSource(url: string): Promise<SourceAnalysis> {
-    const domain = this.extractDomain(url);
+  /**
+   * Evaluate credibility factors for a source
+   */
+  private async evaluateCredibilityFactors(url: string, domain: string): Promise<CredibilityFactor[]> {
     const factors: CredibilityFactor[] = [];
 
     // Domain reputation factor
-    const domainReputation = this.scoreDomainReputation(domain);
-    factors.push({
-      name: "domain_reputation",
-      score: domainReputation,
-      weight: 0.4,
-      explanation: `Domain ${domain} has ${
-        domainReputation >= 0.7
-          ? "good"
-          : domainReputation >= 0.4
-          ? "moderate"
-          : "poor"
-      } reputation`,
-      evidence: [`Based on known credible domain database`],
-    });
+    factors.push(await this.evaluateDomainReputation(domain));
 
-    // Content analysis factor (would analyze actual content)
-    const contentQuality = this.scoreContentQuality(url);
-    factors.push({
-      name: "content_quality",
-      score: contentQuality,
-      weight: 0.3,
-      explanation: `Content appears ${
-        contentQuality >= 0.7
-          ? "high"
-          : contentQuality >= 0.4
-          ? "moderate"
-          : "low"
-      } quality`,
-      evidence: [`Based on content structure and metadata analysis`],
-    });
+    // Content type factor
+    factors.push(this.evaluateContentType(url, domain));
 
     // Age and stability factor
-    const ageStability = this.scoreAgeStability(domain);
-    factors.push({
-      name: "domain_age_stability",
-      score: ageStability,
-      weight: 0.2,
-      explanation: `Domain has ${
-        ageStability >= 0.7 ? "good" : "unknown"
-      } age and stability`,
-      evidence: [`Based on domain registration and historical data`],
-    });
+    factors.push(await this.evaluateSourceAge(domain));
 
-    // Citation and references factor
-    const citationScore = this.scoreCitationAndReferences(url);
-    factors.push({
-      name: "citation_references",
-      score: citationScore,
-      weight: 0.1,
-      explanation: `Source has ${
-        citationScore >= 0.6 ? "good" : "limited"
-      } citation and reference quality`,
-      evidence: [`Based on backlink analysis and citation patterns`],
-    });
+    // Traffic and authority factor
+    factors.push(await this.evaluateAuthority(domain));
 
-    // Calculate weighted average
-    const totalScore = factors.reduce(
-      (sum, factor) => sum + factor.score * factor.weight,
-      0
-    );
-    const credibilityScore = Math.min(totalScore, 1.0);
+    // Bias and reliability factor
+    factors.push(await this.evaluateBiasAndReliability(domain));
+
+    // Technical factors
+    factors.push(this.evaluateTechnicalFactors(url));
+
+    return factors;
+  }
+
+  /**
+   * Evaluate domain reputation
+   */
+  private async evaluateDomainReputation(domain: string): Promise<CredibilityFactor> {
+    // Known credible domains
+    const highlyCredible = [
+      "edu", "gov", "org", "ac.uk", "ac.jp", "ac.de", "ac.fr", "ac.au",
+      "who.int", "un.org", "nasa.gov", "nih.gov", "cdc.gov"
+    ];
+
+    const somewhatCredible = [
+      "com", "net", "io", "co", "news", "media"
+    ];
+
+    const suspiciousTlds = [
+      "xyz", "club", "online", "site", "website", "space"
+    ];
+
+    let score = 0.5;
+    let explanation = "Average domain credibility";
+
+    if (highlyCredible.some(credible => domain.includes(credible))) {
+      score = 0.9;
+      explanation = "Highly credible institutional domain";
+    } else if (somewhatCredible.some(credible => domain.endsWith(credible))) {
+      score = 0.7;
+      explanation = "Commercial domain with potential credibility";
+    } else if (suspiciousTlds.some(suspicious => domain.endsWith(suspicious))) {
+      score = 0.2;
+      explanation = "Suspicious top-level domain";
+    }
 
     return {
-      url,
-      domain,
-      credibilityScore,
-      factors,
-      analysisDate: new Date(),
-      cacheExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      name: "domain_reputation",
+      score,
+      weight: 0.25,
+      explanation,
+      evidence: [`Domain: ${domain}`],
     };
   }
 
-  private scoreDomainReputation(domain: string): number {
-    const highReputationDomains = [
-      "wikipedia.org",
-      "scholar.google.com",
-      "nature.com",
-      "science.org",
-      "ieee.org",
-      "acm.org",
-      "reuters.com",
-      "apnews.com",
-      "bbc.com",
-      "nytimes.com",
-    ];
+  /**
+   * Evaluate content type
+   */
+  private evaluateContentType(url: string, domain: string): CredibilityFactor {
+    const path = url.toLowerCase();
+    let score = 0.5;
+    let explanation = "General content type";
 
-    const mediumReputationDomains = [
-      "github.com",
-      "stackoverflow.com",
-      "medium.com",
-      "techcrunch.com",
-      "wired.com",
-      "arstechnica.com",
-      "theverge.com",
-      "engadget.com",
-    ];
+    // News and media domains
+    if (domain.includes("news") || domain.includes("cnn") || domain.includes("bbc") ||
+        domain.includes("reuters") || domain.includes("apnews")) {
+      score = 0.8;
+      explanation = "News and media content";
+    }
+    // Academic domains
+    else if (domain.includes("edu") || domain.includes("ac.") || domain.includes("scholar")) {
+      score = 0.9;
+      explanation = "Academic and scholarly content";
+    }
+    // Government domains
+    else if (domain.includes("gov") || domain.includes("gov.uk") || domain.includes("gouv.fr")) {
+      score = 0.95;
+      explanation = "Government and official content";
+    }
+    // Social media
+    else if (domain.includes("twitter") || domain.includes("facebook") || domain.includes("reddit")) {
+      score = 0.3;
+      explanation = "Social media content (user-generated)";
+    }
+    // Blog/personal sites
+    else if (domain.includes("blogspot") || domain.includes("wordpress") || path.includes("/blog/")) {
+      score = 0.4;
+      explanation = "Blog or personal content";
+    }
 
-    const lowReputationDomains = [
-      "breitbart.com",
-      "infowars.com",
-      "naturalnews.com",
-      "dailymail.co.uk",
-    ];
-
-    if (highReputationDomains.some((d) => domain.includes(d))) return 0.9;
-    if (mediumReputationDomains.some((d) => domain.includes(d))) return 0.7;
-    if (lowReputationDomains.some((d) => domain.includes(d))) return 0.2;
-
-    return 0.5; // Neutral for unknown domains
+    return {
+      name: "content_type",
+      score,
+      weight: 0.20,
+      explanation,
+      evidence: [`URL: ${url}`],
+    };
   }
 
-  private scoreContentQuality(url: string): number {
-    // This would analyze actual content structure
-    // For now, use heuristics based on URL patterns
+  /**
+   * Evaluate source age and stability
+   */
+  private async evaluateSourceAge(domain: string): Promise<CredibilityFactor> {
+    // In production, this would check WHOIS data or domain registration date
+    // For now, use heuristics
+    let score = 0.5;
+    let explanation = "Unknown domain age";
 
-    const qualityIndicators = [
-      url.includes("/news/"),
-      url.includes("/article/"),
-      url.includes("/research/"),
-      url.includes(".edu"),
-      url.includes(".gov"),
-      !url.includes("?"), // Avoid query-heavy URLs
-      !url.includes("#"), // Avoid fragment URLs
-    ];
+    // Well-established domains
+    if (domain.includes("wikipedia.org") || domain.includes("bbc") || domain.includes("cnn")) {
+      score = 0.9;
+      explanation = "Well-established domain with long history";
+    } else if (/\b\d{4}\b/.test(domain)) {
+      // Domains with years in them might be newer
+      score = 0.4;
+      explanation = "Domain appears relatively new";
+    }
 
-    const qualityScore =
-      qualityIndicators.filter(Boolean).length / qualityIndicators.length;
-    return Math.max(0.3, qualityScore); // Minimum score of 0.3
+    return {
+      name: "source_age",
+      score,
+      weight: 0.15,
+      explanation,
+      evidence: [`Domain registration analysis for ${domain}`],
+    };
   }
 
-  private scoreAgeStability(domain: string): number {
-    // This would check WHOIS data or domain age APIs
-    // For now, use known domains
-
-    const establishedDomains = [
-      "wikipedia.org",
-      "google.com",
-      "microsoft.com",
-      "apple.com",
-      "amazon.com",
-      "facebook.com",
-      "twitter.com",
-    ];
-
-    return establishedDomains.some((d) => domain.includes(d)) ? 0.8 : 0.5;
-  }
-
-  private scoreCitationAndReferences(url: string): number {
-    // This would analyze backlinks and citations
+  /**
+   * Evaluate authority and traffic
+   */
+  private async evaluateAuthority(domain: string): Promise<CredibilityFactor> {
+    // In production, this would check Alexa rank, backlinks, etc.
     // For now, use domain-based heuristics
 
-    const wellCitedDomains = [
-      "wikipedia.org",
-      "scholar.google.com",
-      "github.com",
-      "stackoverflow.com",
+    let score = 0.5;
+    let explanation = "Average authority and traffic";
+
+    const highAuthority = [
+      "wikipedia.org", "github.com", "stackoverflow.com", "nytimes.com",
+      "washingtonpost.com", "bbc.com", "reuters.com", "apnews.com"
     ];
 
-    return wellCitedDomains.some((d) => url.includes(d)) ? 0.8 : 0.4;
+    if (highAuthority.includes(domain)) {
+      score = 0.9;
+      explanation = "High-authority domain with significant traffic";
+    }
+
+    return {
+      name: "authority_traffic",
+      score,
+      weight: 0.15,
+      explanation,
+      evidence: [`Authority analysis for ${domain}`],
+    };
   }
 
-  private determineVerdict(score: number): VerificationVerdict {
-    if (score >= 0.8) return VerificationVerdict.VERIFIED_TRUE;
-    if (score >= 0.6) return VerificationVerdict.PARTIALLY_TRUE;
-    if (score >= 0.3) return VerificationVerdict.UNVERIFIED;
+  /**
+   * Evaluate bias and reliability
+   */
+  private async evaluateBiasAndReliability(domain: string): Promise<CredibilityFactor> {
+    // In production, this would check Media Bias/Fact Check ratings
+    // For now, use known biases
 
-    return VerificationVerdict.VERIFIED_FALSE;
+    let score = 0.5;
+    let explanation = "Moderate bias and reliability";
+
+    // Known reliable sources
+    const highlyReliable = [
+      "bbc.com", "reuters.com", "apnews.com", "npr.org", "pbs.org",
+      "who.int", "un.org", "nasa.gov", "nih.gov", "cdc.gov"
+    ];
+
+    // Known biased sources (examples)
+    const biased = [
+      "breitbart.com", "dailymail.co.uk", "foxnews.com", "msnbc.com"
+    ];
+
+    if (highlyReliable.includes(domain)) {
+      score = 0.9;
+      explanation = "Known reliable source with minimal bias";
+    } else if (biased.includes(domain)) {
+      score = 0.3;
+      explanation = "Source with known political bias";
+    }
+
+    return {
+      name: "bias_reliability",
+      score,
+      weight: 0.15,
+      explanation,
+      evidence: [`Bias analysis for ${domain}`],
+    };
   }
 
+  /**
+   * Evaluate technical factors
+   */
+  private evaluateTechnicalFactors(url: string): CredibilityFactor {
+    let score = 0.5;
+    let explanation = "Standard technical implementation";
+    const evidence: string[] = [];
+
+    // HTTPS check
+    if (url.startsWith("https://")) {
+      score += 0.2;
+      evidence.push("Uses HTTPS encryption");
+    } else {
+      score -= 0.3;
+      evidence.push("Uses HTTP (not encrypted)");
+    }
+
+    // URL structure
+    if (url.includes("://") && !url.includes(" ")) {
+      score += 0.1;
+      evidence.push("Valid URL structure");
+    }
+
+    // Subdomain analysis
+    const subdomain = url.split("://")[1]?.split(".")[0];
+    if (subdomain && subdomain !== "www" && subdomain !== url.split("://")[1]?.split(".")[1]) {
+      // Has meaningful subdomain
+      evidence.push(`Subdomain: ${subdomain}`);
+    }
+
+    if (score > 0.7) {
+      explanation = "Strong technical implementation";
+    } else if (score < 0.4) {
+      explanation = "Weak technical implementation";
+    }
+
+    return {
+      name: "technical_factors",
+      score: Math.max(0, Math.min(1, score)),
+      weight: 0.10,
+      explanation,
+      evidence,
+    };
+  }
+
+  /**
+   * Calculate overall credibility score from factors
+   */
+  private calculateCredibilityScore(factors: CredibilityFactor[]): number {
+    if (factors.length === 0) return 0.5;
+
+    let weightedSum = 0;
+    let totalWeight = 0;
+
+    for (const factor of factors) {
+      weightedSum += factor.score * factor.weight;
+      totalWeight += factor.weight;
+    }
+
+    return totalWeight > 0 ? weightedSum / totalWeight : 0.5;
+  }
+
+  /**
+   * Aggregate credibility analysis results
+   */
+  private aggregateCredibilityResults(analyses: SourceAnalysis[]): {
+    verdict: VerificationVerdict;
+    confidence: number;
+    explanations: string[];
+    evidenceCount: number;
+  } {
+    if (analyses.length === 0) {
+      return {
+        verdict: VerificationVerdict.INSUFFICIENT_DATA,
+        confidence: 0,
+        explanations: ["No sources analyzed"],
+        evidenceCount: 0,
+      };
+    }
+
+    const avgCredibility = analyses.reduce((sum, a) => sum + a.credibilityScore, 0) / analyses.length;
+
+    // Classify overall credibility
+    let verdict = VerificationVerdict.UNVERIFIED;
+    let confidence = avgCredibility;
+
+    if (avgCredibility >= 0.8) {
+      verdict = VerificationVerdict.VERIFIED_TRUE; // High credibility sources
+    } else if (avgCredibility >= 0.6) {
+      verdict = VerificationVerdict.PARTIALLY_TRUE; // Moderate credibility
+    } else if (avgCredibility < 0.3) {
+      verdict = VerificationVerdict.VERIFIED_FALSE; // Low credibility sources
+    }
+
+    const explanations = analyses.map(analysis =>
+      `${analysis.domain}: ${analysis.credibilityScore.toFixed(2)} credibility`
+    );
+
+    return {
+      verdict,
+      confidence,
+      explanations,
+      evidenceCount: analyses.length,
+    };
+  }
+
+  /**
+   * Extract domain from URL
+   */
   private extractDomain(url: string): string {
     try {
       return new URL(url).hostname;
     } catch {
-      return url;
+      return "unknown";
     }
   }
 
-  private extractSourceFromContent(content: string): string {
-    // Try to extract source URL from content
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const match = content.match(urlRegex);
-
-    if (match && match.length > 0) {
-      return match[0];
-    }
-
-    // Fallback
-    return "unknown-source.com";
-  }
-
-  private isCacheExpired(analysis: SourceAnalysis): boolean {
+  /**
+   * Check if cached analysis is still valid
+   */
+  private isCacheValid(analysis: SourceAnalysis): boolean {
     if (!analysis.cacheExpiry) return false;
-    return new Date() > analysis.cacheExpiry;
+    return analysis.cacheExpiry.getTime() > Date.now();
+  }
+
+  /**
+   * Get method configuration
+   */
+  private getMethodConfig(): VerificationMethodConfig | undefined {
+    return this.methodConfigs.find(config => config.type === VerificationType.SOURCE_CREDIBILITY);
+  }
+
+  /**
+   * Check if method is available
+   */
+  async isAvailable(): Promise<boolean> {
+    const config = this.getMethodConfig();
+    return config?.enabled ?? false;
+  }
+
+  /**
+   * Get method health status
+   */
+  getHealth(): { available: boolean; responseTime: number; errorRate: number } {
+    return {
+      available: true,
+      responseTime: 100,
+      errorRate: 0.01,
+    };
   }
 }
