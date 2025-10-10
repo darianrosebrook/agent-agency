@@ -148,7 +148,7 @@ A compact reasoning LLM (e.g., 3-7 B parameters, Core ML-optimized) can serve as
 
 ## IDE Integration & Workspace Awareness
 
-To rival Cursor/Windsurf's seamless user experience, the arbiter stack must deeply integrate with development environments, understanding workspace context, cursor position, open files, and user intent.
+To rival AI Enabled IDE Integration/Advanced Code Editors' seamless user experience, the arbiter stack must deeply integrate with development environments, understanding workspace context, cursor position, open files, and user intent.
 
 ### Workspace Context Collection
 

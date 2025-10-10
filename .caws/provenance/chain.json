@@ -508,5 +508,39 @@
     },
     "previous_hash": "93a2c77a979b7be2c3f2f1bb432a56b4055f3039ac145ee17ad637c1cad2fa48",
     "hash": "5b40f2ef3bbee521f06df25d0d40e6581bdedb6b3e8f2ccab24a0b1d0dc94fdd"
+  },
+  {
+    "id": "prov-1760074045095",
+    "timestamp": "2025-10-10T05:27:25.095Z",
+    "commit": {
+      "hash": "043b86c2070159ceddf75a42dd6fcb332bc29117",
+      "message": "docs: Final cleanup of tool-specific references",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0001",
+      "title": "agent-agency",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-10T05:27:25.096Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "5b40f2ef3bbee521f06df25d0d40e6581bdedb6b3e8f2ccab24a0b1d0dc94fdd",
+    "hash": "370e259f17f360affbf08937dd29edd793d47d9e107ed9e8b429a0602d11708a"
   }
 ]
