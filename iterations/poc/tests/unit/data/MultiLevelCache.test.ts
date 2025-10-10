@@ -56,7 +56,9 @@ describe("MultiLevelCache", () => {
     RedisCacheMock.mockImplementation(() => mockRedisCache);
 
     // Spy on maintenance tasks to prevent intervals from running in tests
-    jest.spyOn(MultiLevelCache.prototype as any, 'startMaintenanceTasks').mockImplementation(() => {});
+    jest
+      .spyOn(MultiLevelCache.prototype as any, "startMaintenanceTasks")
+      .mockImplementation(() => {});
 
     // Create cache instance
     cache = new MultiLevelCache(cacheConfig, mockLogger);

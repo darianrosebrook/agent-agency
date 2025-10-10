@@ -984,5 +984,39 @@
     },
     "previous_hash": "902b5279a4ee7b75e8d45dbe5e4c93a25a76cb1a19e810b33184698798672392",
     "hash": "bfe85b2b2ef2b5cde3a3ccfd007062d4f5d9525611c4db2db777ba7040c7f915"
+  },
+  {
+    "id": "prov-1760115799388",
+    "timestamp": "2025-10-10T17:03:19.388Z",
+    "commit": {
+      "hash": "dff1176b5128cb051ad72d31db59980d8348ea2e",
+      "message": "fix: address critical issues identified in code audit",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0001",
+      "title": "agent-agency",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-10T17:03:19.389Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "bfe85b2b2ef2b5cde3a3ccfd007062d4f5d9525611c4db2db777ba7040c7f915",
+    "hash": "b36433444d774b619fcd43397383029045335c3fa5053305d02c9122c8fb18a2"
   }
 ]

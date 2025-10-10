@@ -26,6 +26,50 @@ try {
   process.exit(1);
 }
 
+// Start database services
+try {
+  console.log("🐳 Starting database services...");
+  execSync("docker-compose up -d postgres redis", { stdio: "inherit" });
+  console.log("✅ Database services started");
+} catch (error) {
+  console.error("❌ Failed to start database services");
+  process.exit(1);
+}
+
+// Wait for databases to be ready
+try {
+  console.log("⏳ Waiting for PostgreSQL...");
+  execSync("docker-compose exec -T postgres sh -c 'while ! pg_isready -U postgres -d agent_agency_test; do sleep 1; done'", { stdio: "pipe" });
+  console.log("✅ PostgreSQL ready");
+
+  console.log("⏳ Waiting for Redis...");
+  execSync("docker-compose exec -T redis sh -c 'while ! redis-cli ping | grep -q PONG; do sleep 1; done'", { stdio: "pipe" });
+  console.log("✅ Redis ready");
+} catch (error) {
+  console.error("❌ Database services failed to start");
+  process.exit(1);
+}
+
+// Run database migrations
+try {
+  console.log("🗃️ Running database migrations...");
+  execSync("node ../../../scripts/migrate-db.js up", {
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      DB_HOST: "localhost",
+      DB_PORT: "5432",
+      DB_NAME: "agent_agency_test",
+      DB_USER: "postgres",
+      DB_PASSWORD: "test123"
+    }
+  });
+  console.log("✅ Database migrations completed");
+} catch (error) {
+  console.error("❌ Database migrations failed");
+  process.exit(1);
+}
+
 // Check if Ollama is available (optional)
 try {
   execSync("ollama --version", { stdio: "pipe" });

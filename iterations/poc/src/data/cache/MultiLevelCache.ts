@@ -7,14 +7,14 @@
  * and performance monitoring for >95% hit rates.
  */
 
-import { RedisCache } from "./RedisCache";
 import { Logger } from "../../utils/Logger";
 import {
-  CacheProvider,
   CacheConfig,
+  CacheProvider,
   CacheResult,
-  DataLayerError
+  DataLayerError,
 } from "../types";
+import { RedisCache } from "./RedisCache";
 
 interface CacheEntry<T = any> {
   data: T;
@@ -58,7 +58,7 @@ export class MultiLevelCache implements CacheProvider {
     deletes: 0,
     evictions: 0,
     promotions: 0,
-    demotions: 0
+    demotions: 0,
   };
 
   private l1Size: number = 0;
@@ -80,7 +80,7 @@ export class MultiLevelCache implements CacheProvider {
       promotionThreshold: 3, // Promote after 3 accesses
       demotionThreshold: 300000, // Demote after 5 minutes of no access
       enableMetrics: true,
-      ...config
+      ...config,
     };
 
     this.logger = logger || new Logger("MultiLevelCache");
@@ -129,7 +129,7 @@ export class MultiLevelCache implements CacheProvider {
           success: true,
           data: l1Entry.data,
           hit: true,
-          duration: Date.now() - startTime
+          duration: Date.now() - startTime,
         };
       }
 
@@ -145,18 +145,21 @@ export class MultiLevelCache implements CacheProvider {
           success: true,
           data: l2Result.data,
           hit: true,
-          duration: Date.now() - startTime
+          duration: Date.now() - startTime,
         };
       }
 
       // If L2 cache operation failed, return the error
       if (!l2Result.success) {
-        this.logger.warn("L2 cache operation failed", { key, error: l2Result.error });
+        this.logger.warn("L2 cache operation failed", {
+          key,
+          error: l2Result.error,
+        });
         return {
           success: false,
           error: l2Result.error || "L2 cache operation failed",
           hit: false,
-          duration: Date.now() - startTime
+          duration: Date.now() - startTime,
         };
       }
 
@@ -167,9 +170,8 @@ export class MultiLevelCache implements CacheProvider {
       return {
         success: true,
         hit: false,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
       };
-
     } catch (error) {
       this.logger.error("Cache get operation failed", { key, error });
 
@@ -177,7 +179,7 @@ export class MultiLevelCache implements CacheProvider {
         success: false,
         error: (error as Error).message,
         hit: false,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
       };
     }
   }
@@ -185,7 +187,11 @@ export class MultiLevelCache implements CacheProvider {
   /**
    * Set a value in cache with intelligent placement
    */
-  async set<T>(key: string, value: T, ttl?: number): Promise<CacheResult<boolean>> {
+  async set<T>(
+    key: string,
+    value: T,
+    ttl?: number
+  ): Promise<CacheResult<boolean>> {
     const startTime = Date.now();
 
     try {
@@ -197,17 +203,21 @@ export class MultiLevelCache implements CacheProvider {
 
       // If L2 set failed, return error
       if (!l2Result.success) {
-        this.logger.warn("L2 cache set operation failed", { key, error: l2Result.error });
+        this.logger.warn("L2 cache set operation failed", {
+          key,
+          error: l2Result.error,
+        });
         return {
           success: false,
           error: l2Result.error || "L2 cache set operation failed",
           hit: false,
-          duration: Date.now() - startTime
+          duration: Date.now() - startTime,
         };
       }
 
       // Set in L1 if it fits and isn't too large
-      if (entrySize < (this.config.l1MaxSize || 100 * 1024 * 1024) / 10) { // Max 10% of L1 cache
+      if (entrySize < (this.config.l1MaxSize || 100 * 1024 * 1024) / 10) {
+        // Max 10% of L1 cache
         await this.setInL1(key, value, effectiveTtl, entrySize);
       }
 
@@ -217,9 +227,8 @@ export class MultiLevelCache implements CacheProvider {
         success: true,
         data: true,
         hit: false,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
       };
-
     } catch (error) {
       this.logger.error("Cache set operation failed", { key, error });
 
@@ -227,7 +236,7 @@ export class MultiLevelCache implements CacheProvider {
         success: false,
         error: (error as Error).message,
         hit: false,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
       };
     }
   }
@@ -252,9 +261,8 @@ export class MultiLevelCache implements CacheProvider {
         success: true,
         data: !!deleted,
         hit: false,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
       };
-
     } catch (error) {
       this.logger.error("Cache delete operation failed", { key, error });
 
@@ -262,7 +270,7 @@ export class MultiLevelCache implements CacheProvider {
         success: false,
         error: (error as Error).message,
         hit: false,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
       };
     }
   }
@@ -281,7 +289,7 @@ export class MultiLevelCache implements CacheProvider {
           success: true,
           data: true,
           hit: true,
-          duration: Date.now() - startTime
+          duration: Date.now() - startTime,
         };
       }
 
@@ -293,9 +301,8 @@ export class MultiLevelCache implements CacheProvider {
         data: l2Result.success && l2Result.data,
         hit: l2Result.hit,
         error: l2Result.error,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
       };
-
     } catch (error) {
       this.logger.error("Cache exists operation failed", { key, error });
 
@@ -303,7 +310,7 @@ export class MultiLevelCache implements CacheProvider {
         success: false,
         error: (error as Error).message,
         hit: false,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
       };
     }
   }
@@ -332,15 +339,15 @@ export class MultiLevelCache implements CacheProvider {
       // Clear L2 cache
       const l2Result = await this.l2Cache.clear(pattern);
 
-      const totalCleared = (pattern === "*" ? this.l1Cache.size : 0) + (l2Result.data || 0);
+      const totalCleared =
+        (pattern === "*" ? this.l1Cache.size : 0) + (l2Result.data || 0);
 
       return {
         success: true,
         data: totalCleared,
         hit: false,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
       };
-
     } catch (error) {
       this.logger.error("Cache clear operation failed", { pattern, error });
 
@@ -348,7 +355,7 @@ export class MultiLevelCache implements CacheProvider {
         success: false,
         error: (error as Error).message,
         hit: false,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
       };
     }
   }
@@ -362,10 +369,25 @@ export class MultiLevelCache implements CacheProvider {
     try {
       const l2Stats = await this.l2Cache.getStats();
 
-      const totalRequests = this.stats.l1Hits + this.stats.l1Misses + this.stats.l2Hits + this.stats.l2Misses;
-      const l1HitRate = totalRequests > 0 ? (this.stats.l1Hits / (this.stats.l1Hits + this.stats.l1Misses)) * 100 : 0;
-      const l2HitRate = totalRequests > 0 ? (this.stats.l2Hits / (this.stats.l2Hits + this.stats.l2Misses)) * 100 : 0;
-      const overallHitRate = totalRequests > 0 ? ((this.stats.l1Hits + this.stats.l2Hits) / totalRequests) * 100 : 0;
+      const totalRequests =
+        this.stats.l1Hits +
+        this.stats.l1Misses +
+        this.stats.l2Hits +
+        this.stats.l2Misses;
+      const l1HitRate =
+        totalRequests > 0
+          ? (this.stats.l1Hits / (this.stats.l1Hits + this.stats.l1Misses)) *
+            100
+          : 0;
+      const l2HitRate =
+        totalRequests > 0
+          ? (this.stats.l2Hits / (this.stats.l2Hits + this.stats.l2Misses)) *
+            100
+          : 0;
+      const overallHitRate =
+        totalRequests > 0
+          ? ((this.stats.l1Hits + this.stats.l2Hits) / totalRequests) * 100
+          : 0;
 
       const stats = {
         l1: {
@@ -375,7 +397,7 @@ export class MultiLevelCache implements CacheProvider {
           maxEntries: this.config.l1MaxEntries,
           hitRate: `${l1HitRate.toFixed(2)}%`,
           hits: this.stats.l1Hits,
-          misses: this.stats.l1Misses
+          misses: this.stats.l1Misses,
         },
         l2: l2Stats.success ? l2Stats.data : { error: l2Stats.error },
         overall: {
@@ -385,22 +407,21 @@ export class MultiLevelCache implements CacheProvider {
           deletes: this.stats.deletes,
           evictions: this.stats.evictions,
           promotions: this.stats.promotions,
-          demotions: this.stats.demotions
+          demotions: this.stats.demotions,
         },
         config: {
           promotionThreshold: this.config.promotionThreshold,
           demotionThreshold: this.config.demotionThreshold,
-          enableMetrics: this.config.enableMetrics
-        }
+          enableMetrics: this.config.enableMetrics,
+        },
       };
 
       return {
         success: true,
         data: stats,
         hit: false,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
       };
-
     } catch (error) {
       this.logger.error("Failed to get cache stats", error);
 
@@ -408,7 +429,7 @@ export class MultiLevelCache implements CacheProvider {
         success: false,
         error: (error as Error).message,
         hit: false,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
       };
     }
   }
@@ -436,7 +457,12 @@ export class MultiLevelCache implements CacheProvider {
 
   // Private methods
 
-  private async setInL1<T>(key: string, value: T, ttl: number, size: number): Promise<void> {
+  private async setInL1<T>(
+    key: string,
+    value: T,
+    ttl: number,
+    size: number
+  ): Promise<void> {
     // Check if we need to evict entries
     if (this.l1Size + size > (this.config.l1MaxSize || 100 * 1024 * 1024)) {
       this.evictL1Entries(size);
@@ -452,25 +478,33 @@ export class MultiLevelCache implements CacheProvider {
       ttl,
       accessCount: 1,
       lastAccessed: Date.now(),
-      size
+      size,
     };
 
     this.l1Cache.set(key, entry);
     this.l1Size += size;
   }
 
-  private async promoteToL1<T>(key: string, value: T, l2Latency: number): Promise<void> {
+  private async promoteToL1<T>(
+    key: string,
+    value: T,
+    l2Latency: number
+  ): Promise<void> {
     const size = this.calculateSize(value);
     const ttl = this.config.ttl || 3600;
 
     // Only promote if it's worth it (L2 was slower)
-    if (l2Latency > 10) { // If L2 took more than 10ms
+    if (l2Latency > 10) {
+      // If L2 took more than 10ms
       await this.setInL1(key, value, ttl, size);
       this.stats.promotions++;
     }
   }
 
-  private async promoteToL2<T>(key: string, entry: CacheEntry<T>): Promise<void> {
+  private async promoteToL2<T>(
+    key: string,
+    entry: CacheEntry<T>
+  ): Promise<void> {
     try {
       await this.l2Cache.set(key, entry.data, entry.ttl);
       this.stats.promotions++;
@@ -543,7 +577,9 @@ export class MultiLevelCache implements CacheProvider {
 
     if (cleaned > 0) {
       this.l1Size -= freedSpace;
-      this.logger.debug(`Cleaned up ${cleaned} expired L1 entries, freed ${freedSpace} bytes`);
+      this.logger.debug(
+        `Cleaned up ${cleaned} expired L1 entries, freed ${freedSpace} bytes`
+      );
     }
   }
 
