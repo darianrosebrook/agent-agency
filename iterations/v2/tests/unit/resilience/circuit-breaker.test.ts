@@ -126,11 +126,11 @@ describe("CircuitBreaker", () => {
       // Wait for reset timeout
       await new Promise((resolve) => setTimeout(resolve, 600));
 
-      // Next request should attempt recovery
+      // Next request should attempt recovery but fail, returning to OPEN
       await expect(circuitBreaker.execute(mockFn)).rejects.toThrow(
         "test error"
       );
-      expect(circuitBreaker.getState()).toBe(CircuitState.HALF_OPEN);
+      expect(circuitBreaker.getState()).toBe(CircuitState.OPEN);
     });
 
     it("should transition back to CLOSED after success threshold in HALF_OPEN", async () => {
@@ -143,11 +143,8 @@ describe("CircuitBreaker", () => {
         );
       }
 
-      // Wait for reset timeout and transition to HALF_OPEN
+      // Wait for reset timeout
       await new Promise((resolve) => setTimeout(resolve, 600));
-      await expect(circuitBreaker.execute(mockFn)).rejects.toThrow(
-        "test error"
-      );
 
       // Now in HALF_OPEN - need 2 successes to close
       const successFn = jest.fn().mockResolvedValue("success");
@@ -206,12 +203,12 @@ describe("CircuitBreaker", () => {
       // Wait for time window to pass
       await new Promise((resolve) => setTimeout(resolve, 150));
 
-      // Third failure should still be within new window
+      // Third failure should be the only one in the new window (previous failures expired)
       await expect(shortWindowBreaker.execute(mockFn)).rejects.toThrow(
         "test error"
       );
 
-      expect(shortWindowBreaker.getState()).toBe(CircuitState.OPEN);
+      expect(shortWindowBreaker.getState()).toBe(CircuitState.CLOSED); // Only 1 failure in window, below threshold
     });
   });
 

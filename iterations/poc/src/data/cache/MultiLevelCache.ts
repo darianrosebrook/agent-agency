@@ -149,6 +149,17 @@ export class MultiLevelCache implements CacheProvider {
         };
       }
 
+      // If L2 cache operation failed, return the error
+      if (!l2Result.success) {
+        this.logger.warn("L2 cache operation failed", { key, error: l2Result.error });
+        return {
+          success: false,
+          error: l2Result.error || "L2 cache operation failed",
+          hit: false,
+          duration: Date.now() - startTime
+        };
+      }
+
       // Cache miss
       this.stats.l1Misses++;
       this.stats.l2Misses++;
@@ -183,6 +194,17 @@ export class MultiLevelCache implements CacheProvider {
 
       // Always set in L2
       const l2Result = await this.l2Cache.set(key, value, effectiveTtl);
+
+      // If L2 set failed, return error
+      if (!l2Result.success) {
+        this.logger.warn("L2 cache set operation failed", { key, error: l2Result.error });
+        return {
+          success: false,
+          error: l2Result.error || "L2 cache set operation failed",
+          hit: false,
+          duration: Date.now() - startTime
+        };
+      }
 
       // Set in L1 if it fits and isn't too large
       if (entrySize < (this.config.l1MaxSize || 100 * 1024 * 1024) / 10) { // Max 10% of L1 cache

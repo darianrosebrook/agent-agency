@@ -8,15 +8,15 @@
  */
 
 import {
-  VerificationRequest,
-  VerificationMethodResult,
-  VerificationVerdict,
-  VerificationType,
-  VerificationMethodConfig,
   FactCheckClaim,
   FactCheckResult,
   FactCheckSource,
   RelatedClaim,
+  VerificationMethodConfig,
+  VerificationMethodResult,
+  VerificationRequest,
+  VerificationType,
+  VerificationVerdict,
 } from "../types/verification";
 
 /**
@@ -32,7 +32,9 @@ export class FactChecker {
   /**
    * Execute fact-checking verification
    */
-  async verify(request: VerificationRequest): Promise<VerificationMethodResult> {
+  async verify(
+    request: VerificationRequest
+  ): Promise<VerificationMethodResult> {
     const startTime = Date.now();
 
     try {
@@ -52,7 +54,7 @@ export class FactChecker {
 
       // Check claims against fact-checking sources
       const factCheckResults = await Promise.all(
-        claims.map(claim => this.checkClaim(claim))
+        claims.map((claim) => this.checkClaim(claim))
       );
 
       // Aggregate results
@@ -71,7 +73,11 @@ export class FactChecker {
         method: VerificationType.FACT_CHECKING,
         verdict: VerificationVerdict.UNVERIFIED,
         confidence: 0,
-        reasoning: [`Fact-checking failed: ${error instanceof Error ? error.message : String(error)}`],
+        reasoning: [
+          `Fact-checking failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        ],
         processingTimeMs: Math.max(1, Date.now() - startTime),
         evidenceCount: 0,
       };
@@ -89,7 +95,9 @@ export class FactChecker {
     const claims: FactCheckClaim[] = [];
 
     // Look for statements that could be fact-checked
-    const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 10);
+    const sentences = content
+      .split(/[.!?]+/)
+      .filter((s) => s.trim().length > 10);
 
     for (const sentence of sentences) {
       const trimmed = sentence.trim();
@@ -125,7 +133,7 @@ export class FactChecker {
       /\b(?:revolves|orbits|rotates|spins)\b/i, // Astronomical terms
     ];
 
-    return factIndicators.some(pattern => pattern.test(text));
+    return factIndicators.some((pattern) => pattern.test(text));
   }
 
   /**
@@ -147,7 +155,9 @@ export class FactChecker {
     // For now, we'll simulate fact-checking with mock responses
 
     // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
+    await new Promise((resolve) =>
+      setTimeout(resolve, 100 + Math.random() * 200)
+    );
 
     // Generate mock fact-check result based on claim content
     return this.generateMockFactCheckResult(claim);
@@ -165,23 +175,30 @@ export class FactChecker {
     let explanation = "Claim could not be verified";
 
     // Mock some common verifiable claims
-    if (text.includes("earth is round") || text.includes("earth revolves around") || text.includes("revolves around sun")) {
+    if (
+      text.includes("earth is round") ||
+      text.includes("earth revolves around") ||
+      text.includes("revolves around sun")
+    ) {
       verdict = VerificationVerdict.VERIFIED_TRUE;
       confidence = 0.95;
       explanation = "This is a well-established scientific fact";
     } else if (text.includes("moon landing") && text.includes("fake")) {
       verdict = VerificationVerdict.VERIFIED_FALSE;
-      confidence = 0.90;
-      explanation = "The Apollo moon landings are well-documented historical events";
+      confidence = 0.9;
+      explanation =
+        "The Apollo moon landings are well-documented historical events";
     } else if (text.includes("vaccine") && text.includes("autism")) {
       verdict = VerificationVerdict.VERIFIED_FALSE;
       confidence = 0.85;
-      explanation = "Multiple studies have shown no link between vaccines and autism";
+      explanation =
+        "Multiple studies have shown no link between vaccines and autism";
     } else if (/\b\d{4}\b/.test(text) && text.includes("born")) {
       // Birth year claims - often verifiable
       verdict = VerificationVerdict.UNVERIFIED;
       confidence = 0.6;
-      explanation = "Birth date claims require specific verification against reliable sources";
+      explanation =
+        "Birth date claims require specific verification against reliable sources";
     }
 
     // Mock sources
@@ -234,7 +251,10 @@ export class FactChecker {
     let totalEvidence = 0;
 
     for (const result of results) {
-      verdictCounts.set(result.verdict, (verdictCounts.get(result.verdict) || 0) + 1);
+      verdictCounts.set(
+        result.verdict,
+        (verdictCounts.get(result.verdict) || 0) + 1
+      );
       totalConfidence += result.confidence;
       explanations.push(result.explanation);
       totalEvidence += result.sources.length;
@@ -269,7 +289,9 @@ export class FactChecker {
    * Get method configuration
    */
   private getMethodConfig(): VerificationMethodConfig | undefined {
-    return this.methodConfigs.find(config => config.type === VerificationType.FACT_CHECKING);
+    return this.methodConfigs.find(
+      (config) => config.type === VerificationType.FACT_CHECKING
+    );
   }
 
   /**

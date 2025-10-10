@@ -7,24 +7,24 @@
  * @author @darianrosebrook
  */
 
-import {
-  VerificationEngine,
-  VerificationRequest,
-  VerificationResult,
-  VerificationVerdict,
-  VerificationType,
-  VerificationEngineConfig,
-  VerificationMethodResult,
-  MethodStatus,
-  EngineHealth,
-  VerificationError,
-  VerificationErrorCode,
-  Evidence,
-} from "../types/verification";
-import { FactChecker } from "./FactChecker";
-import { CredibilityScorer } from "./CredibilityScorer";
 import { events } from "../orchestrator/EventEmitter";
 import { EventTypes } from "../orchestrator/OrchestratorEvents";
+import {
+  EngineHealth,
+  Evidence,
+  MethodStatus,
+  VerificationEngine,
+  VerificationEngineConfig,
+  VerificationError,
+  VerificationErrorCode,
+  VerificationMethodResult,
+  VerificationRequest,
+  VerificationResult,
+  VerificationType,
+  VerificationVerdict,
+} from "../types/verification";
+import { CredibilityScorer } from "./CredibilityScorer";
+import { FactChecker } from "./FactChecker";
 
 /**
  * Main Verification Engine Implementation
@@ -88,13 +88,18 @@ export class VerificationEngineImpl implements VerificationEngine {
   /**
    * Verify multiple requests in batch
    */
-  async verifyBatch(requests: VerificationRequest[]): Promise<VerificationResult[]> {
+  async verifyBatch(
+    requests: VerificationRequest[]
+  ): Promise<VerificationResult[]> {
     // Process requests in parallel with concurrency control
-    const batches = this.createBatches(requests, this.config.maxConcurrentVerifications);
+    const batches = this.createBatches(
+      requests,
+      this.config.maxConcurrentVerifications
+    );
     const results: VerificationResult[] = [];
 
     for (const batch of batches) {
-      const batchPromises = batch.map(request => this.verify(request));
+      const batchPromises = batch.map((request) => this.verify(request));
       const batchResults = await Promise.allSettled(batchPromises);
 
       for (const result of batchResults) {
@@ -111,7 +116,10 @@ export class VerificationEngineImpl implements VerificationEngine {
             contradictoryEvidence: [],
             verificationMethods: [],
             processingTimeMs: 0,
-            error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+            error:
+              result.reason instanceof Error
+                ? result.reason.message
+                : String(result.reason),
           };
           results.push(errorResult);
         }
@@ -126,15 +134,15 @@ export class VerificationEngineImpl implements VerificationEngine {
    */
   getSupportedMethods(): VerificationType[] {
     return this.config.methods
-      .filter(method => method.enabled)
-      .map(method => method.type);
+      .filter((method) => method.enabled)
+      .map((method) => method.type);
   }
 
   /**
    * Get status of a specific verification method
    */
   getMethodStatus(method: VerificationType): MethodStatus {
-    const methodConfig = this.config.methods.find(m => m.type === method);
+    const methodConfig = this.config.methods.find((m) => m.type === method);
 
     if (!methodConfig) {
       return {
@@ -159,9 +167,11 @@ export class VerificationEngineImpl implements VerificationEngine {
    * Perform health check on the verification engine
    */
   async healthCheck(): Promise<EngineHealth> {
-    const methodStatuses = this.config.methods.map(method => this.getMethodStatus(method.type));
-    const enabledMethods = methodStatuses.filter(status => status.enabled);
-    const healthyMethods = methodStatuses.filter(status => status.healthy);
+    const methodStatuses = this.config.methods.map((method) =>
+      this.getMethodStatus(method.type)
+    );
+    const enabledMethods = methodStatuses.filter((status) => status.enabled);
+    const healthyMethods = methodStatuses.filter((status) => status.healthy);
 
     return {
       healthy: healthyMethods.length > 0,
@@ -211,7 +221,11 @@ export class VerificationEngineImpl implements VerificationEngine {
       const methodResults = await Promise.all(methodPromises);
 
       // Aggregate results
-      const aggregatedResult = this.aggregateResults(request, methodResults, startTime);
+      const aggregatedResult = this.aggregateResults(
+        request,
+        methodResults,
+        startTime
+      );
 
       // Cache result if enabled
       if (this.config.cacheEnabled) {
@@ -275,7 +289,8 @@ export class VerificationEngineImpl implements VerificationEngine {
       );
     }
 
-    if (request.content.length > 10000) { // Arbitrary limit
+    if (request.content.length > 10000) {
+      // Arbitrary limit
       throw new VerificationError(
         "Content too long (max 10000 characters)",
         VerificationErrorCode.INVALID_REQUEST,
@@ -283,7 +298,10 @@ export class VerificationEngineImpl implements VerificationEngine {
       );
     }
 
-    if (request.timeoutMs && (request.timeoutMs <= 0 || request.timeoutMs > 300000)) {
+    if (
+      request.timeoutMs &&
+      (request.timeoutMs <= 0 || request.timeoutMs > 300000)
+    ) {
       throw new VerificationError(
         "Invalid timeout (must be 1-300000ms)",
         VerificationErrorCode.INVALID_REQUEST,
@@ -295,22 +313,24 @@ export class VerificationEngineImpl implements VerificationEngine {
   /**
    * Select verification methods to use for the request
    */
-  private selectVerificationMethods(request: VerificationRequest): VerificationType[] {
+  private selectVerificationMethods(
+    request: VerificationRequest
+  ): VerificationType[] {
     // Use requested methods or fall back to all enabled methods
     const requestedMethods = request.verificationTypes || [];
 
     if (requestedMethods.length > 0) {
       // Filter to only enabled methods
-      return requestedMethods.filter(method =>
-        this.config.methods.some(m => m.type === method && m.enabled)
+      return requestedMethods.filter((method) =>
+        this.config.methods.some((m) => m.type === method && m.enabled)
       );
     }
 
     // Use all enabled methods by priority
     return this.config.methods
-      .filter(method => method.enabled)
+      .filter((method) => method.enabled)
       .sort((a, b) => a.priority - b.priority)
-      .map(method => method.type);
+      .map((method) => method.type);
   }
 
   /**
@@ -320,7 +340,7 @@ export class VerificationEngineImpl implements VerificationEngine {
     methodType: VerificationType,
     request: VerificationRequest
   ): Promise<VerificationMethodResult> {
-    const methodConfig = this.config.methods.find(m => m.type === methodType);
+    const methodConfig = this.config.methods.find((m) => m.type === methodType);
 
     if (!methodConfig) {
       throw new Error(`Method configuration not found: ${methodType}`);
@@ -341,19 +361,19 @@ export class VerificationEngineImpl implements VerificationEngine {
           break;
 
         case VerificationType.CROSS_REFERENCE:
-          result = await this.executeCrossReference(request);
+          result = await this.executeCrossReference();
           break;
 
         case VerificationType.CONSISTENCY_CHECK:
-          result = await this.executeConsistencyCheck(request);
+          result = await this.executeConsistencyCheck();
           break;
 
         case VerificationType.LOGICAL_VALIDATION:
-          result = await this.executeLogicalValidation(request);
+          result = await this.executeLogicalValidation();
           break;
 
         case VerificationType.STATISTICAL_VALIDATION:
-          result = await this.executeStatisticalValidation(request);
+          result = await this.executeStatisticalValidation();
           break;
 
         default:
@@ -374,7 +394,11 @@ export class VerificationEngineImpl implements VerificationEngine {
         method: methodType,
         verdict: VerificationVerdict.UNVERIFIED,
         confidence: 0,
-        reasoning: [`Method execution failed: ${error instanceof Error ? error.message : String(error)}`],
+        reasoning: [
+          `Method execution failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        ],
         processingTimeMs,
         evidenceCount: 0,
       };
@@ -392,7 +416,11 @@ export class VerificationEngineImpl implements VerificationEngine {
       method: methodType,
       verdict: VerificationVerdict.UNVERIFIED,
       confidence: 0,
-      reasoning: [`Method failed: ${error instanceof Error ? error.message : String(error)}`],
+      reasoning: [
+        `Method failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      ],
       processingTimeMs: 0,
       evidenceCount: 0,
     };
@@ -409,7 +437,9 @@ export class VerificationEngineImpl implements VerificationEngine {
     const processingTimeMs = Date.now() - startTime;
 
     // Filter out failed methods
-    const validResults = methodResults.filter(result => result.confidence > 0);
+    const validResults = methodResults.filter(
+      (result) => result.confidence > 0
+    );
 
     if (validResults.length === 0) {
       return {
@@ -429,7 +459,10 @@ export class VerificationEngineImpl implements VerificationEngine {
     let totalConfidence = 0;
 
     for (const result of validResults) {
-      verdictCounts.set(result.verdict, (verdictCounts.get(result.verdict) || 0) + 1);
+      verdictCounts.set(
+        result.verdict,
+        (verdictCounts.get(result.verdict) || 0) + 1
+      );
       totalConfidence += result.confidence;
     }
 
@@ -451,7 +484,7 @@ export class VerificationEngineImpl implements VerificationEngine {
     const adjustedConfidence = averageConfidence * (0.5 + 0.5 * consensusRatio);
 
     // Collect reasoning from all methods
-    const allReasoning = validResults.flatMap(result =>
+    const allReasoning = validResults.flatMap((result) =>
       Array.isArray(result.reasoning) ? result.reasoning : [result.reasoning]
     );
 
@@ -474,10 +507,7 @@ export class VerificationEngineImpl implements VerificationEngine {
     };
   }
 
-  /**
-   * Execute cross-reference verification
-   */
-  private async executeCrossReference(request: VerificationRequest): Promise<VerificationMethodResult> {
+  private async executeCrossReference(): Promise<VerificationMethodResult> {
     // Simplified cross-reference implementation
     // In production, this would search multiple sources and check for consistency
     return {
@@ -490,10 +520,7 @@ export class VerificationEngineImpl implements VerificationEngine {
     };
   }
 
-  /**
-   * Execute consistency check
-   */
-  private async executeConsistencyCheck(request: VerificationRequest): Promise<VerificationMethodResult> {
+  private async executeConsistencyCheck(): Promise<VerificationMethodResult> {
     // Simplified consistency check
     return {
       method: VerificationType.CONSISTENCY_CHECK,
@@ -505,10 +532,7 @@ export class VerificationEngineImpl implements VerificationEngine {
     };
   }
 
-  /**
-   * Execute logical validation
-   */
-  private async executeLogicalValidation(request: VerificationRequest): Promise<VerificationMethodResult> {
+  private async executeLogicalValidation(): Promise<VerificationMethodResult> {
     // Simplified logical validation
     return {
       method: VerificationType.LOGICAL_VALIDATION,
@@ -520,10 +544,7 @@ export class VerificationEngineImpl implements VerificationEngine {
     };
   }
 
-  /**
-   * Execute statistical validation
-   */
-  private async executeStatisticalValidation(request: VerificationRequest): Promise<VerificationMethodResult> {
+  private async executeStatisticalValidation(): Promise<VerificationMethodResult> {
     // Simplified statistical validation
     return {
       method: VerificationType.STATISTICAL_VALIDATION,
@@ -552,7 +573,10 @@ export class VerificationEngineImpl implements VerificationEngine {
   /**
    * Cache verification result
    */
-  private cacheResult(request: VerificationRequest, result: VerificationResult): void {
+  private cacheResult(
+    request: VerificationRequest,
+    result: VerificationResult
+  ): void {
     const cacheKey = this.generateCacheKey(request);
 
     // Store with TTL

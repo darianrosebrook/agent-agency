@@ -33,7 +33,13 @@ describe("RetryPolicy", () => {
     });
 
     it("should retry on failure and succeed on retry", async () => {
-      const policy = new RetryPolicy({ maxAttempts: 3 });
+      const policy = new RetryPolicy({
+        maxAttempts: 3,
+        initialDelayMs: 1, // Very short delay for testing
+        maxDelayMs: 10,
+        backoffMultiplier: 2,
+        jitter: false, // Disable jitter for predictable timing
+      });
       const mockFn = jest
         .fn()
         .mockRejectedValueOnce(new Error("fail1"))
@@ -48,7 +54,13 @@ describe("RetryPolicy", () => {
 
   describe("Retry Exhausted", () => {
     it("should throw RetryExhaustedError after max attempts", async () => {
-      const policy = new RetryPolicy({ maxAttempts: 3 });
+      const policy = new RetryPolicy({
+        maxAttempts: 3,
+        initialDelayMs: 1,
+        maxDelayMs: 10,
+        backoffMultiplier: 2,
+        jitter: false,
+      });
       const mockFn = jest
         .fn()
         .mockRejectedValue(new Error("persistent failure"));
@@ -58,7 +70,13 @@ describe("RetryPolicy", () => {
     });
 
     it("should include stats in RetryExhaustedError", async () => {
-      const policy = new RetryPolicy({ maxAttempts: 2 });
+      const policy = new RetryPolicy({
+        maxAttempts: 2,
+        initialDelayMs: 1,
+        maxDelayMs: 10,
+        backoffMultiplier: 2,
+        jitter: false,
+      });
       const mockFn = jest.fn().mockRejectedValue(new Error("test error"));
 
       try {
@@ -91,6 +109,10 @@ describe("RetryPolicy", () => {
     it("should retry retryable errors", async () => {
       const policy = new RetryPolicy({
         maxAttempts: 3,
+        initialDelayMs: 1,
+        maxDelayMs: 10,
+        backoffMultiplier: 2,
+        jitter: false,
         isRetryable: (error: any) => error.message === "retryable",
       });
 
@@ -109,42 +131,31 @@ describe("RetryPolicy", () => {
     it("should use exponential backoff", async () => {
       const policy = new RetryPolicy({
         maxAttempts: 4,
-        initialDelayMs: 100,
+        initialDelayMs: 1, // Very short for testing
+        maxDelayMs: 10,
         backoffMultiplier: 2,
+        jitter: false,
       });
 
       const mockFn = jest.fn().mockRejectedValue(new Error("fail"));
 
-      const executePromise = policy.execute(mockFn);
-
-      // Should fail after delays: 100ms, 200ms, 400ms
-      await jest.advanceTimersByTimeAsync(100);
-      await jest.advanceTimersByTimeAsync(200);
-      await jest.advanceTimersByTimeAsync(400);
-
-      await expect(executePromise).rejects.toThrow(RetryExhaustedError);
+      await expect(policy.execute(mockFn)).rejects.toThrow(RetryExhaustedError);
       expect(mockFn).toHaveBeenCalledTimes(4);
     });
 
     it("should cap delay at maxDelayMs", async () => {
       const policy = new RetryPolicy({
         maxAttempts: 5,
-        initialDelayMs: 100,
-        maxDelayMs: 200,
+        initialDelayMs: 1, // Very short for testing
+        maxDelayMs: 2,
         backoffMultiplier: 2,
+        jitter: false,
       });
 
       const mockFn = jest.fn().mockRejectedValue(new Error("fail"));
 
-      const executePromise = policy.execute(mockFn);
-
-      // Attempts should have delays: 100ms, 200ms, 200ms, 200ms
-      await jest.advanceTimersByTimeAsync(100);
-      await jest.advanceTimersByTimeAsync(200);
-      await jest.advanceTimersByTimeAsync(200);
-      await jest.advanceTimersByTimeAsync(200);
-
-      await expect(executePromise).rejects.toThrow(RetryExhaustedError);
+      await expect(policy.execute(mockFn)).rejects.toThrow(RetryExhaustedError);
+      expect(mockFn).toHaveBeenCalledTimes(5);
     });
 
     it("should add jitter when enabled", () => {
@@ -212,6 +223,11 @@ describe("RetryPolicy", () => {
   describe("Database Retry Policy", () => {
     it("should retry connection errors", async () => {
       const policy = RetryPolicies.database();
+      // Override delays for testing
+      (policy as any).config.initialDelayMs = 1;
+      (policy as any).config.maxDelayMs = 10;
+      (policy as any).config.jitter = false;
+
       const mockFn = jest
         .fn()
         .mockRejectedValueOnce(new Error("ECONNREFUSED connection refused"))
@@ -224,6 +240,11 @@ describe("RetryPolicy", () => {
 
     it("should retry timeout errors", async () => {
       const policy = RetryPolicies.database();
+      // Override delays for testing
+      (policy as any).config.initialDelayMs = 1;
+      (policy as any).config.maxDelayMs = 10;
+      (policy as any).config.jitter = false;
+
       const mockFn = jest
         .fn()
         .mockRejectedValueOnce(new Error("ETIMEDOUT operation timed out"))

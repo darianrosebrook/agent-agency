@@ -680,22 +680,6 @@ export class AgentAgencyMCPServer {
 
         try {
           switch (name) {
-            case "register_agent": {
-              const agentId = await this.orchestrator.registerAgent({
-                name: args.agentId as string,
-                type: args.type as any, // AgentType
-                capabilities: (args.capabilities as string[]) || [],
-              } as any);
-              return {
-                content: [
-                  {
-                    type: "text",
-                    text: `Agent registered successfully with ID: ${agentId}`,
-                  },
-                ],
-              };
-            }
-
             case "submit_task": {
               const taskId = await this.orchestrator.submitTask({
                 title: args.taskId as string,
@@ -1025,7 +1009,7 @@ System Uptime: ${Math.round(metrics.systemUptime)} seconds`,
               const path = await import("path");
 
               const dirPath = path.resolve(process.cwd(), args.path as string);
-              const recursive = (args.recursive as boolean) || false;
+              const _recursive = (args.recursive as boolean) || false;
               const includeHidden = (args.includeHidden as boolean) || false;
 
               // Security check - only allow directories within the project directory
@@ -1980,7 +1964,7 @@ Return only: SUCCESS or FAILED with brief explanation.`;
   private async callTool(toolName: string, args: any): Promise<any> {
     // Simplified tool calling for internal use
     // This bypasses the MCP protocol and calls tools directly
-    const mockRequest = { params: { name: toolName, arguments: args } };
+    const _mockRequest = { params: { name: toolName, arguments: args } };
 
     // Simulate the tool call
     switch (toolName) {

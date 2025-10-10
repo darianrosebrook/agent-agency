@@ -193,7 +193,7 @@ describe("Task Decomposition E2E", () => {
 
     // Should contain some form of task breakdown
     const output = (result.output || "").toLowerCase();
-    const hasDecomposition =
+    const _hasDecomposition =
       output.includes("step") ||
       output.includes("task") ||
       output.includes("break") ||

@@ -20,6 +20,8 @@ import {
   SourceType,
 } from "../types/knowledge";
 
+// Use standard RequestInit from DOM lib
+
 /**
  * Base Search Provider class with common functionality
  */

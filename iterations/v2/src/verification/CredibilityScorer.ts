@@ -8,13 +8,13 @@
  */
 
 import {
-  VerificationRequest,
-  VerificationMethodResult,
-  VerificationVerdict,
-  VerificationType,
-  VerificationMethodConfig,
-  SourceAnalysis,
   CredibilityFactor,
+  SourceAnalysis,
+  VerificationMethodConfig,
+  VerificationMethodResult,
+  VerificationRequest,
+  VerificationType,
+  VerificationVerdict,
 } from "../types/verification";
 
 /**
@@ -31,7 +31,9 @@ export class CredibilityScorer {
   /**
    * Execute credibility scoring verification
    */
-  async verify(request: VerificationRequest): Promise<VerificationMethodResult> {
+  async verify(
+    request: VerificationRequest
+  ): Promise<VerificationMethodResult> {
     const startTime = Date.now();
 
     try {
@@ -51,7 +53,7 @@ export class CredibilityScorer {
 
       // Analyze source credibility
       const sourceAnalyses = await Promise.all(
-        sources.map(source => this.analyzeSource(source))
+        sources.map((source) => this.analyzeSource(source))
       );
 
       // Aggregate results
@@ -70,7 +72,11 @@ export class CredibilityScorer {
         method: VerificationType.SOURCE_CREDIBILITY,
         verdict: VerificationVerdict.UNVERIFIED,
         confidence: 0,
-        reasoning: [`Credibility scoring failed: ${error instanceof Error ? error.message : String(error)}`],
+        reasoning: [
+          `Credibility scoring failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        ],
         processingTimeMs: Math.max(1, Date.now() - startTime),
         evidenceCount: 0,
       };
@@ -96,7 +102,469 @@ export class CredibilityScorer {
     while ((match = domainRegex.exec(content)) !== null) {
       const domain = match[1];
       // Avoid common words that might match
-      if (!["the", "and", "for", "are", "but", "not", "you", "all", "can", "had", "her", "was", "one", "our", "out", "day", "get", "has", "him", "his", "how", "its", "may", "new", "now", "old", "see", "two", "who", "boy", "did", "has", "her", "him", "his", "how", "its", "may", "new", "now", "old", "see", "two", "who", "act", "add", "age", "ago", "aim", "air", "all", "and", "any", "are", "arm", "art", "ask", "bad", "bag", "ban", "bar", "bat", "bay", "bed", "bee", "beg", "bet", "bid", "big", "bin", "bit", "bob", "bog", "boo", "bow", "box", "boy", "bud", "bug", "bun", "bus", "but", "buy", "bye", "cab", "can", "cap", "car", "cat", "cow", "cry", "cup", "cut", "dad", "dam", "day", "did", "die", "dig", "dim", "dip", "dog", "dot", "dry", "dub", "dud", "due", "dug", "ear", "eat", "egg", "ego", "end", "era", "eve", "eye", "fan", "far", "fat", "fax", "fed", "fee", "few", "fig", "fin", "fir", "fit", "fix", "fly", "fog", "for", "fox", "fry", "fun", "fur", "gab", "gad", "gag", "gap", "gas", "gay", "gee", "gel", "gem", "get", "gig", "gin", "god", "got", "gum", "gun", "gut", "guy", "gym", "had", "hag", "ham", "has", "hat", "hay", "hem", "hen", "her", "hew", "hex", "hey", "hid", "him", "hip", "his", "hit", "hog", "hop", "hot", "how", "hub", "hue", "hug", "huh", "hum", "hut", "ice", "icy", "ill", "ink", "inn", "ion", "ire", "ivy", "jab", "jag", "jam", "jar", "jaw", "jay", "jet", "jew", "jig", "job", "jog", "joy", "jug", "jut", "kay", "ken", "key", "kid", "kin", "kit", "lab", "lad", "lag", "lap", "law", "lax", "lay", "led", "leg", "let", "lid", "lie", "lip", "lit", "lob", "log", "lop", "lot", "low", "loy", "lug", "lye", "mad", "mag", "man", "map", "mar", "mat", "may", "men", "met", "mew", "mid", "mix", "mob", "mod", "mom", "moo", "mop", "mow", "mud", "mug", "mum", "nab", "nag", "nap", "nay", "net", "new", "nil", "nip", "nit", "nob", "nod", "nog", "nor", "not", "now", "nun", "nut", "oaf", "oak", "oar", "oat", "odd", "ode", "off", "oft", "oil", "old", "ole", "one", "opt", "orb", "ore", "our", "out", "owe", "owl", "own", "pad", "pal", "pan", "pap", "par", "pat", "paw", "pay", "pea", "peg", "pen", "pep", "per", "pet", "pew", "pic", "pie", "pig", "pin", "pip", "pit", "ply", "pod", "pop", "pot", "pow", "pro", "pry", "pub", "pug", "pun", "pup", "pus", "put", "rag", "ram", "ran", "rap", "rat", "raw", "ray", "red", "rep", "rib", "rid", "rig", "rim", "rip", "rob", "rod", "roe", "rot", "row", "rub", "rug", "rum", "run", "rye", "sac", "sad", "sag", "sap", "sat", "saw", "say", "sea", "see", "sew", "sex", "she", "shy", "sin", "sip", "sir", "sit", "six", "ski", "sky", "sly", "sob", "sod", "son", "sop", "sow", "soy", "spa", "spy", "sub", "sue", "sum", "sun", "sup", "tab", "tag", "tan", "tap", "tar", "tax", "tea", "tee", "ten", "the", "thy", "tie", "tin", "tip", "toe", "tog", "ton", "too", "top", "tow", "toy", "try", "tub", "tug", "two", "use", "van", "vat", "vet", "vex", "via", "vie", "vow", "wag", "wan", "war", "was", "wax", "way", "web", "wed", "wee", "wet", "who", "why", "wig", "win", "wit", "woe", "won", "woo", "wow", "wry", "wye", "yak", "yam", "yap", "yaw", "yea", "yen", "yes", "yet", "yew", "yid", "yin", "yip", "yon", "you", "yow", "yup", "zag", "zap", "zed", "zee", "zen", "zig", "zip", "zoo"].includes(domain.toLowerCase())) {
+      if (
+        ![
+          "the",
+          "and",
+          "for",
+          "are",
+          "but",
+          "not",
+          "you",
+          "all",
+          "can",
+          "had",
+          "her",
+          "was",
+          "one",
+          "our",
+          "out",
+          "day",
+          "get",
+          "has",
+          "him",
+          "his",
+          "how",
+          "its",
+          "may",
+          "new",
+          "now",
+          "old",
+          "see",
+          "two",
+          "who",
+          "boy",
+          "did",
+          "has",
+          "her",
+          "him",
+          "his",
+          "how",
+          "its",
+          "may",
+          "new",
+          "now",
+          "old",
+          "see",
+          "two",
+          "who",
+          "act",
+          "add",
+          "age",
+          "ago",
+          "aim",
+          "air",
+          "all",
+          "and",
+          "any",
+          "are",
+          "arm",
+          "art",
+          "ask",
+          "bad",
+          "bag",
+          "ban",
+          "bar",
+          "bat",
+          "bay",
+          "bed",
+          "bee",
+          "beg",
+          "bet",
+          "bid",
+          "big",
+          "bin",
+          "bit",
+          "bob",
+          "bog",
+          "boo",
+          "bow",
+          "box",
+          "boy",
+          "bud",
+          "bug",
+          "bun",
+          "bus",
+          "but",
+          "buy",
+          "bye",
+          "cab",
+          "can",
+          "cap",
+          "car",
+          "cat",
+          "cow",
+          "cry",
+          "cup",
+          "cut",
+          "dad",
+          "dam",
+          "day",
+          "did",
+          "die",
+          "dig",
+          "dim",
+          "dip",
+          "dog",
+          "dot",
+          "dry",
+          "dub",
+          "dud",
+          "due",
+          "dug",
+          "ear",
+          "eat",
+          "egg",
+          "ego",
+          "end",
+          "era",
+          "eve",
+          "eye",
+          "fan",
+          "far",
+          "fat",
+          "fax",
+          "fed",
+          "fee",
+          "few",
+          "fig",
+          "fin",
+          "fir",
+          "fit",
+          "fix",
+          "fly",
+          "fog",
+          "for",
+          "fox",
+          "fry",
+          "fun",
+          "fur",
+          "gab",
+          "gad",
+          "gag",
+          "gap",
+          "gas",
+          "gay",
+          "gee",
+          "gel",
+          "gem",
+          "get",
+          "gig",
+          "gin",
+          "god",
+          "got",
+          "gum",
+          "gun",
+          "gut",
+          "guy",
+          "gym",
+          "had",
+          "hag",
+          "ham",
+          "has",
+          "hat",
+          "hay",
+          "hem",
+          "hen",
+          "her",
+          "hew",
+          "hex",
+          "hey",
+          "hid",
+          "him",
+          "hip",
+          "his",
+          "hit",
+          "hog",
+          "hop",
+          "hot",
+          "how",
+          "hub",
+          "hue",
+          "hug",
+          "huh",
+          "hum",
+          "hut",
+          "ice",
+          "icy",
+          "ill",
+          "ink",
+          "inn",
+          "ion",
+          "ire",
+          "ivy",
+          "jab",
+          "jag",
+          "jam",
+          "jar",
+          "jaw",
+          "jay",
+          "jet",
+          "jew",
+          "jig",
+          "job",
+          "jog",
+          "joy",
+          "jug",
+          "jut",
+          "kay",
+          "ken",
+          "key",
+          "kid",
+          "kin",
+          "kit",
+          "lab",
+          "lad",
+          "lag",
+          "lap",
+          "law",
+          "lax",
+          "lay",
+          "led",
+          "leg",
+          "let",
+          "lid",
+          "lie",
+          "lip",
+          "lit",
+          "lob",
+          "log",
+          "lop",
+          "lot",
+          "low",
+          "loy",
+          "lug",
+          "lye",
+          "mad",
+          "mag",
+          "man",
+          "map",
+          "mar",
+          "mat",
+          "may",
+          "men",
+          "met",
+          "mew",
+          "mid",
+          "mix",
+          "mob",
+          "mod",
+          "mom",
+          "moo",
+          "mop",
+          "mow",
+          "mud",
+          "mug",
+          "mum",
+          "nab",
+          "nag",
+          "nap",
+          "nay",
+          "net",
+          "new",
+          "nil",
+          "nip",
+          "nit",
+          "nob",
+          "nod",
+          "nog",
+          "nor",
+          "not",
+          "now",
+          "nun",
+          "nut",
+          "oaf",
+          "oak",
+          "oar",
+          "oat",
+          "odd",
+          "ode",
+          "off",
+          "oft",
+          "oil",
+          "old",
+          "ole",
+          "one",
+          "opt",
+          "orb",
+          "ore",
+          "our",
+          "out",
+          "owe",
+          "owl",
+          "own",
+          "pad",
+          "pal",
+          "pan",
+          "pap",
+          "par",
+          "pat",
+          "paw",
+          "pay",
+          "pea",
+          "peg",
+          "pen",
+          "pep",
+          "per",
+          "pet",
+          "pew",
+          "pic",
+          "pie",
+          "pig",
+          "pin",
+          "pip",
+          "pit",
+          "ply",
+          "pod",
+          "pop",
+          "pot",
+          "pow",
+          "pro",
+          "pry",
+          "pub",
+          "pug",
+          "pun",
+          "pup",
+          "pus",
+          "put",
+          "rag",
+          "ram",
+          "ran",
+          "rap",
+          "rat",
+          "raw",
+          "ray",
+          "red",
+          "rep",
+          "rib",
+          "rid",
+          "rig",
+          "rim",
+          "rip",
+          "rob",
+          "rod",
+          "roe",
+          "rot",
+          "row",
+          "rub",
+          "rug",
+          "rum",
+          "run",
+          "rye",
+          "sac",
+          "sad",
+          "sag",
+          "sap",
+          "sat",
+          "saw",
+          "say",
+          "sea",
+          "see",
+          "sew",
+          "sex",
+          "she",
+          "shy",
+          "sin",
+          "sip",
+          "sir",
+          "sit",
+          "six",
+          "ski",
+          "sky",
+          "sly",
+          "sob",
+          "sod",
+          "son",
+          "sop",
+          "sow",
+          "soy",
+          "spa",
+          "spy",
+          "sub",
+          "sue",
+          "sum",
+          "sun",
+          "sup",
+          "tab",
+          "tag",
+          "tan",
+          "tap",
+          "tar",
+          "tax",
+          "tea",
+          "tee",
+          "ten",
+          "the",
+          "thy",
+          "tie",
+          "tin",
+          "tip",
+          "toe",
+          "tog",
+          "ton",
+          "too",
+          "top",
+          "tow",
+          "toy",
+          "try",
+          "tub",
+          "tug",
+          "two",
+          "use",
+          "van",
+          "vat",
+          "vet",
+          "vex",
+          "via",
+          "vie",
+          "vow",
+          "wag",
+          "wan",
+          "war",
+          "was",
+          "wax",
+          "way",
+          "web",
+          "wed",
+          "wee",
+          "wet",
+          "who",
+          "why",
+          "wig",
+          "win",
+          "wit",
+          "woe",
+          "won",
+          "woo",
+          "wow",
+          "wry",
+          "wye",
+          "yak",
+          "yam",
+          "yap",
+          "yaw",
+          "yea",
+          "yen",
+          "yes",
+          "yet",
+          "yew",
+          "yid",
+          "yin",
+          "yip",
+          "yon",
+          "you",
+          "yow",
+          "yup",
+          "zag",
+          "zap",
+          "zed",
+          "zee",
+          "zen",
+          "zig",
+          "zip",
+          "zoo",
+        ].includes(domain.toLowerCase())
+      ) {
         sources.push(`https://${domain}`);
       }
     }
@@ -125,7 +593,10 @@ export class CredibilityScorer {
     };
 
     // Analyze credibility factors
-    const factors = await this.evaluateCredibilityFactors(sourceUrl, analysis.domain);
+    const factors = await this.evaluateCredibilityFactors(
+      sourceUrl,
+      analysis.domain
+    );
     analysis.factors = factors;
 
     // Calculate overall score
@@ -143,7 +614,10 @@ export class CredibilityScorer {
   /**
    * Evaluate credibility factors for a source
    */
-  private async evaluateCredibilityFactors(url: string, domain: string): Promise<CredibilityFactor[]> {
+  private async evaluateCredibilityFactors(
+    url: string,
+    domain: string
+  ): Promise<CredibilityFactor[]> {
     const factors: CredibilityFactor[] = [];
 
     // Domain reputation factor
@@ -170,31 +644,49 @@ export class CredibilityScorer {
   /**
    * Evaluate domain reputation
    */
-  private async evaluateDomainReputation(domain: string): Promise<CredibilityFactor> {
+  private async evaluateDomainReputation(
+    domain: string
+  ): Promise<CredibilityFactor> {
     // Known credible domains
     const highlyCredible = [
-      "edu", "gov", "org", "ac.uk", "ac.jp", "ac.de", "ac.fr", "ac.au",
-      "who.int", "un.org", "nasa.gov", "nih.gov", "cdc.gov"
+      "edu",
+      "gov",
+      "org",
+      "ac.uk",
+      "ac.jp",
+      "ac.de",
+      "ac.fr",
+      "ac.au",
+      "who.int",
+      "un.org",
+      "nasa.gov",
+      "nih.gov",
+      "cdc.gov",
     ];
 
-    const somewhatCredible = [
-      "com", "net", "io", "co", "news", "media"
-    ];
+    const somewhatCredible = ["com", "net", "io", "co", "news", "media"];
 
     const suspiciousTlds = [
-      "xyz", "club", "online", "site", "website", "space"
+      "xyz",
+      "club",
+      "online",
+      "site",
+      "website",
+      "space",
     ];
 
     let score = 0.5;
     let explanation = "Average domain credibility";
 
-    if (highlyCredible.some(credible => domain.includes(credible))) {
+    if (highlyCredible.some((credible) => domain.includes(credible))) {
       score = 0.9;
       explanation = "Highly credible institutional domain";
-    } else if (somewhatCredible.some(credible => domain.endsWith(credible))) {
+    } else if (somewhatCredible.some((credible) => domain.endsWith(credible))) {
       score = 0.7;
       explanation = "Commercial domain with potential credibility";
-    } else if (suspiciousTlds.some(suspicious => domain.endsWith(suspicious))) {
+    } else if (
+      suspiciousTlds.some((suspicious) => domain.endsWith(suspicious))
+    ) {
       score = 0.2;
       explanation = "Suspicious top-level domain";
     }
@@ -217,28 +709,49 @@ export class CredibilityScorer {
     let explanation = "General content type";
 
     // News and media domains
-    if (domain.includes("news") || domain.includes("cnn") || domain.includes("bbc") ||
-        domain.includes("reuters") || domain.includes("apnews")) {
+    if (
+      domain.includes("news") ||
+      domain.includes("cnn") ||
+      domain.includes("bbc") ||
+      domain.includes("reuters") ||
+      domain.includes("apnews")
+    ) {
       score = 0.8;
       explanation = "News and media content";
     }
     // Academic domains
-    else if (domain.includes("edu") || domain.includes("ac.") || domain.includes("scholar")) {
+    else if (
+      domain.includes("edu") ||
+      domain.includes("ac.") ||
+      domain.includes("scholar")
+    ) {
       score = 0.9;
       explanation = "Academic and scholarly content";
     }
     // Government domains
-    else if (domain.includes("gov") || domain.includes("gov.uk") || domain.includes("gouv.fr")) {
+    else if (
+      domain.includes("gov") ||
+      domain.includes("gov.uk") ||
+      domain.includes("gouv.fr")
+    ) {
       score = 0.95;
       explanation = "Government and official content";
     }
     // Social media
-    else if (domain.includes("twitter") || domain.includes("facebook") || domain.includes("reddit")) {
+    else if (
+      domain.includes("twitter") ||
+      domain.includes("facebook") ||
+      domain.includes("reddit")
+    ) {
       score = 0.3;
       explanation = "Social media content (user-generated)";
     }
     // Blog/personal sites
-    else if (domain.includes("blogspot") || domain.includes("wordpress") || path.includes("/blog/")) {
+    else if (
+      domain.includes("blogspot") ||
+      domain.includes("wordpress") ||
+      path.includes("/blog/")
+    ) {
       score = 0.4;
       explanation = "Blog or personal content";
     }
@@ -246,7 +759,7 @@ export class CredibilityScorer {
     return {
       name: "content_type",
       score,
-      weight: 0.20,
+      weight: 0.2,
       explanation,
       evidence: [`URL: ${url}`],
     };
@@ -262,7 +775,11 @@ export class CredibilityScorer {
     let explanation = "Unknown domain age";
 
     // Well-established domains
-    if (domain.includes("wikipedia.org") || domain.includes("bbc") || domain.includes("cnn")) {
+    if (
+      domain.includes("wikipedia.org") ||
+      domain.includes("bbc") ||
+      domain.includes("cnn")
+    ) {
       score = 0.9;
       explanation = "Well-established domain with long history";
     } else if (/\b\d{4}\b/.test(domain)) {
@@ -291,8 +808,14 @@ export class CredibilityScorer {
     let explanation = "Average authority and traffic";
 
     const highAuthority = [
-      "wikipedia.org", "github.com", "stackoverflow.com", "nytimes.com",
-      "washingtonpost.com", "bbc.com", "reuters.com", "apnews.com"
+      "wikipedia.org",
+      "github.com",
+      "stackoverflow.com",
+      "nytimes.com",
+      "washingtonpost.com",
+      "bbc.com",
+      "reuters.com",
+      "apnews.com",
     ];
 
     if (highAuthority.includes(domain)) {
@@ -312,7 +835,9 @@ export class CredibilityScorer {
   /**
    * Evaluate bias and reliability
    */
-  private async evaluateBiasAndReliability(domain: string): Promise<CredibilityFactor> {
+  private async evaluateBiasAndReliability(
+    domain: string
+  ): Promise<CredibilityFactor> {
     // In production, this would check Media Bias/Fact Check ratings
     // For now, use known biases
 
@@ -321,13 +846,24 @@ export class CredibilityScorer {
 
     // Known reliable sources
     const highlyReliable = [
-      "bbc.com", "reuters.com", "apnews.com", "npr.org", "pbs.org",
-      "who.int", "un.org", "nasa.gov", "nih.gov", "cdc.gov"
+      "bbc.com",
+      "reuters.com",
+      "apnews.com",
+      "npr.org",
+      "pbs.org",
+      "who.int",
+      "un.org",
+      "nasa.gov",
+      "nih.gov",
+      "cdc.gov",
     ];
 
     // Known biased sources (examples)
     const biased = [
-      "breitbart.com", "dailymail.co.uk", "foxnews.com", "msnbc.com"
+      "breitbart.com",
+      "dailymail.co.uk",
+      "foxnews.com",
+      "msnbc.com",
     ];
 
     if (highlyReliable.includes(domain)) {
@@ -372,7 +908,11 @@ export class CredibilityScorer {
 
     // Subdomain analysis
     const subdomain = url.split("://")[1]?.split(".")[0];
-    if (subdomain && subdomain !== "www" && subdomain !== url.split("://")[1]?.split(".")[1]) {
+    if (
+      subdomain &&
+      subdomain !== "www" &&
+      subdomain !== url.split("://")[1]?.split(".")[1]
+    ) {
       // Has meaningful subdomain
       evidence.push(`Subdomain: ${subdomain}`);
     }
@@ -386,7 +926,7 @@ export class CredibilityScorer {
     return {
       name: "technical_factors",
       score: Math.max(0, Math.min(1, score)),
-      weight: 0.10,
+      weight: 0.1,
       explanation,
       evidence,
     };
@@ -427,11 +967,13 @@ export class CredibilityScorer {
       };
     }
 
-    const avgCredibility = analyses.reduce((sum, a) => sum + a.credibilityScore, 0) / analyses.length;
+    const avgCredibility =
+      analyses.reduce((sum, a) => sum + a.credibilityScore, 0) /
+      analyses.length;
 
     // Classify overall credibility
     let verdict = VerificationVerdict.UNVERIFIED;
-    let confidence = avgCredibility;
+    const confidence = avgCredibility;
 
     if (avgCredibility >= 0.8) {
       verdict = VerificationVerdict.VERIFIED_TRUE; // High credibility sources
@@ -441,8 +983,11 @@ export class CredibilityScorer {
       verdict = VerificationVerdict.VERIFIED_FALSE; // Low credibility sources
     }
 
-    const explanations = analyses.map(analysis =>
-      `${analysis.domain}: ${analysis.credibilityScore.toFixed(2)} credibility`
+    const explanations = analyses.map(
+      (analysis) =>
+        `${analysis.domain}: ${analysis.credibilityScore.toFixed(
+          2
+        )} credibility`
     );
 
     return {
@@ -476,7 +1021,9 @@ export class CredibilityScorer {
    * Get method configuration
    */
   private getMethodConfig(): VerificationMethodConfig | undefined {
-    return this.methodConfigs.find(config => config.type === VerificationType.SOURCE_CREDIBILITY);
+    return this.methodConfigs.find(
+      (config) => config.type === VerificationType.SOURCE_CREDIBILITY
+    );
   }
 
   /**

@@ -4,15 +4,13 @@
  * @author @darianrosebrook
  */
 
-import { VerificationEngineImpl } from "../../../src/verification/VerificationEngine";
 import {
-  VerificationRequest,
-  VerificationResult,
-  VerificationVerdict,
-  VerificationType,
   VerificationEngineConfig,
   VerificationPriority,
+  VerificationRequest,
+  VerificationType,
 } from "../../../src/types/verification";
+import { VerificationEngineImpl } from "../../../src/verification/VerificationEngine";
 
 describe("VerificationEngine", () => {
   let engine: VerificationEngineImpl;
@@ -122,7 +120,11 @@ describe("VerificationEngine", () => {
       const result = await engine.verify(request);
 
       expect(result.verificationMethods.length).toBeGreaterThan(0);
-      expect(result.verificationMethods.some(m => m.method === VerificationType.FACT_CHECKING)).toBe(true);
+      expect(
+        result.verificationMethods.some(
+          (m) => m.method === VerificationType.FACT_CHECKING
+        )
+      ).toBe(true);
     });
 
     it("should use all enabled methods when none specified", async () => {
@@ -143,15 +145,22 @@ describe("VerificationEngine", () => {
         id: "test-priority",
         content: "Test content for priority",
         priority: VerificationPriority.MEDIUM,
-        verificationTypes: [VerificationType.FACT_CHECKING, VerificationType.SOURCE_CREDIBILITY],
+        verificationTypes: [
+          VerificationType.FACT_CHECKING,
+          VerificationType.SOURCE_CREDIBILITY,
+        ],
         metadata: {},
       };
 
       const result = await engine.verify(request);
 
       // Should have results from both methods
-      const factChecking = result.verificationMethods.find(m => m.method === VerificationType.FACT_CHECKING);
-      const credibility = result.verificationMethods.find(m => m.method === VerificationType.SOURCE_CREDIBILITY);
+      const factChecking = result.verificationMethods.find(
+        (m) => m.method === VerificationType.FACT_CHECKING
+      );
+      const credibility = result.verificationMethods.find(
+        (m) => m.method === VerificationType.SOURCE_CREDIBILITY
+      );
 
       expect(factChecking).toBeDefined();
       expect(credibility).toBeDefined();

@@ -300,7 +300,7 @@ export class SecurityManager {
     }
 
     // Basic token validation (simplified)
-    if (!this.validateToken(credentials.token, agent)) {
+    if (!this.validateToken(credentials.token)) {
       this.logSecurityEvent({
         type: SecurityEventType.AUTH_FAILURE,
         context: null,
@@ -569,12 +569,10 @@ export class SecurityManager {
     };
   }
 
-  /**
-   * Validate authentication token
-   */
-  private validateToken(token: string, _agent: AgentProfile): boolean {
+  private validateToken(token: string): boolean {
     // Simplified token validation - in production use proper JWT/crypto
     // For now, accept any non-empty token for registered agents
+    // TODO: Implement proper token validation with agent context
     return Boolean(token && token.length > 10);
   }
 

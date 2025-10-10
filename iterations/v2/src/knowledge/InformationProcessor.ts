@@ -151,9 +151,11 @@ export class InformationProcessor implements IInformationProcessor {
     }
 
     // Exact phrase match bonus
-    const queryWords = queryText.split(/\s+/);
+    const queryWords = queryText
+      .split(/\s+/)
+      .map((word) => word.replace(/[!?.,;:'"()[\]]/g, ""));
     const exactPhraseMatches = queryWords.filter(
-      (word) => title.includes(word) || content.includes(word)
+      (word) => word && (title.includes(word) || content.includes(word))
     ).length;
     score += (exactPhraseMatches / queryWords.length) * 0.1;
 

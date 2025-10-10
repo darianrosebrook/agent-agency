@@ -470,4 +470,5 @@ export const events = {
     globalEventEmitter.getEvents(filter, limit),
   getStats: () => globalEventEmitter.getStats(),
   clear: () => globalEventEmitter.clear(),
+  shutdown: () => globalEventEmitter.shutdown(),
 };

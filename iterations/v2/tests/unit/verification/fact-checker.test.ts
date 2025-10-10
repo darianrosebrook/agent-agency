@@ -4,13 +4,13 @@
  * @author @darianrosebrook
  */
 
-import { FactChecker } from "../../../src/verification/FactChecker";
 import {
+  VerificationPriority,
   VerificationRequest,
   VerificationType,
   VerificationVerdict,
-  VerificationPriority,
 } from "../../../src/types/verification";
+import { FactChecker } from "../../../src/verification/FactChecker";
 
 describe("FactChecker", () => {
   let factChecker: FactChecker;
@@ -31,7 +31,8 @@ describe("FactChecker", () => {
     it("should extract verifiable claims from content", async () => {
       const request: VerificationRequest = {
         id: "test-extraction",
-        content: "The Earth is round and orbits the Sun. Albert Einstein was born in 1879. Vaccines cause autism according to some sources.",
+        content:
+          "The Earth is round and orbits the Sun. Albert Einstein was born in 1879. Vaccines cause autism according to some sources.",
         priority: VerificationPriority.MEDIUM,
         metadata: {},
       };
@@ -57,11 +58,14 @@ describe("FactChecker", () => {
       expect(result).toBeDefined();
       expect(result.verdict).toBe(VerificationVerdict.INSUFFICIENT_DATA);
       expect(result.confidence).toBe(0);
-      expect(result.reasoning).toContain("No verifiable claims found in content");
+      expect(result.reasoning).toContain(
+        "No verifiable claims found in content"
+      );
     });
 
     it("should identify factual statements", async () => {
-      const factualContent = "The United States declared independence in 1776. Water boils at 100 degrees Celsius.";
+      const factualContent =
+        "The United States declared independence in 1776. Water boils at 100 degrees Celsius.";
       const request: VerificationRequest = {
         id: "test-factual",
         content: factualContent,
@@ -78,7 +82,8 @@ describe("FactChecker", () => {
     it("should categorize claims appropriately", async () => {
       const request: VerificationRequest = {
         id: "test-categorization",
-        content: "Marie Curie discovered radium in 1898. The population of Tokyo is over 13 million.",
+        content:
+          "Marie Curie discovered radium in 1898. The population of Tokyo is over 13 million.",
         priority: VerificationPriority.MEDIUM,
         metadata: {},
       };
@@ -136,7 +141,8 @@ describe("FactChecker", () => {
     it("should aggregate multiple claims", async () => {
       const request: VerificationRequest = {
         id: "test-multiple-claims",
-        content: "The Earth revolves around the Sun. The Moon orbits Earth. Mars has two moons. Jupiter is the largest planet.",
+        content:
+          "The Earth revolves around the Sun. The Moon orbits Earth. Mars has two moons. Jupiter is the largest planet.",
         priority: VerificationPriority.MEDIUM,
         metadata: {},
       };
@@ -282,15 +288,19 @@ describe("FactChecker", () => {
     });
 
     it("should handle concurrent requests", async () => {
-      const requests = Array(5).fill(null).map((_, i) => ({
-        id: `concurrent-${i}`,
-        content: `Concurrent test content ${i}`,
-        priority: VerificationPriority.MEDIUM,
-        metadata: {},
-      }));
+      const requests = Array(5)
+        .fill(null)
+        .map((_, i) => ({
+          id: `concurrent-${i}`,
+          content: `Concurrent test content ${i}`,
+          priority: VerificationPriority.MEDIUM,
+          metadata: {},
+        }));
 
       const startTime = Date.now();
-      const results = await Promise.all(requests.map(req => factChecker.verify(req)));
+      const results = await Promise.all(
+        requests.map((req) => factChecker.verify(req))
+      );
       const duration = Date.now() - startTime;
 
       expect(results).toHaveLength(5);

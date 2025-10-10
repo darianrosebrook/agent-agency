@@ -1,0 +1,317 @@
+openapi: 3.0.0
+info:
+  title: Arbiter Routing API
+  version: 2.0.0
+  description: |
+    API for Agent Agency V2 Arbiter Orchestration system.
+    
+    Provides intelligent task routing, agent management, and performance tracking.
+
+servers:
+  - url: http://localhost:3000/api/v2
+    description: Local development server
+
+paths:
+  /arbiter/route:
+    post:
+      summary: Route task to optimal agent
+      description: |
+        Routes a task to the best available agent using multi-armed bandit
+        selection based on performance history and capability matching.
+      operationId: routeTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskRoutingRequest'
+      responses:
+        '200':
+          description: Routing decision with selected agent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutingDecision'
+        '400':
+          description: Invalid task specification
+        '503':
+          description: No available agents
+
+  /arbiter/agents:
+    get:
+      summary: List registered agents
+      description: Get all registered agents with their capability profiles
+      operationId: listAgents
+      parameters:
+        - name: capability
+          in: query
+          schema:
+            type: string
+          description: Filter by capability
+        - name: available
+          in: query
+          schema:
+            type: boolean
+          description: Only show available agents
+      responses:
+        '200':
+          description: List of agents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgentProfile'
+
+    post:
+      summary: Register new agent
+      description: Register an agent with the arbiter
+      operationId: registerAgent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRegistration'
+      responses:
+        '201':
+          description: Agent registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentProfile'
+        '400':
+          description: Invalid agent specification
+
+  /arbiter/agents/{agentId}/performance:
+    get:
+      summary: Get agent performance history
+      description: Retrieve performance metrics for a specific agent
+      operationId: getAgentPerformance
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: taskType
+          in: query
+          schema:
+            type: string
+          description: Filter by task type
+        - name: timeRange
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, all]
+          description: Time range for metrics
+      responses:
+        '200':
+          description: Agent performance metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentPerformanceMetrics'
+
+components:
+  schemas:
+    TaskRoutingRequest:
+      type: object
+      required:
+        - taskId
+        - taskType
+        - complexity
+      properties:
+        taskId:
+          type: string
+          format: uuid
+        taskType:
+          type: string
+          enum: [code-editing, research, data-analysis, design, planning]
+        complexity:
+          type: string
+          enum: [trivial, standard, complex]
+        requirements:
+          type: array
+          items:
+            type: string
+          description: Required capabilities
+        cawsSpecId:
+          type: string
+          description: Reference to CAWS working spec
+
+    RoutingDecision:
+      type: object
+      required:
+        - taskId
+        - selectedAgent
+        - strategy
+        - confidence
+      properties:
+        taskId:
+          type: string
+          format: uuid
+        selectedAgent:
+          $ref: '#/components/schemas/AgentReference'
+        strategy:
+          type: string
+          enum: [multi-armed-bandit, capability-match, load-balance, fallback]
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        rationale:
+          type: string
+          description: Human-readable explanation
+        alternativesConsidered:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlternativeAgent'
+
+    AgentProfile:
+      type: object
+      required:
+        - id
+        - name
+        - modelFamily
+        - capabilities
+        - performanceHistory
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        modelFamily:
+          type: string
+          example: "GPT-4"
+        capabilities:
+          $ref: '#/components/schemas/AgentCapabilities'
+        performanceHistory:
+          $ref: '#/components/schemas/PerformanceHistory'
+        currentLoad:
+          $ref: '#/components/schemas/AgentLoad'
+
+    AgentCapabilities:
+      type: object
+      properties:
+        taskTypes:
+          type: array
+          items:
+            type: string
+        languages:
+          type: array
+          items:
+            type: string
+        specializations:
+          type: array
+          items:
+            type: string
+
+    PerformanceHistory:
+      type: object
+      properties:
+        successRate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        averageQuality:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        averageLatency:
+          type: integer
+          description: Milliseconds
+        taskCount:
+          type: integer
+
+    AgentLoad:
+      type: object
+      properties:
+        activeTasks:
+          type: integer
+        queuedTasks:
+          type: integer
+        utilizationPercent:
+          type: number
+          format: float
+
+    AgentReference:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        modelFamily:
+          type: string
+
+    AlternativeAgent:
+      type: object
+      properties:
+        agentId:
+          type: string
+          format: uuid
+        score:
+          type: number
+          format: float
+        reason:
+          type: string
+
+    AgentRegistration:
+      type: object
+      required:
+        - name
+        - modelFamily
+        - capabilities
+      properties:
+        name:
+          type: string
+        modelFamily:
+          type: string
+        capabilities:
+          $ref: '#/components/schemas/AgentCapabilities'
+
+    AgentPerformanceMetrics:
+      type: object
+      properties:
+        agentId:
+          type: string
+          format: uuid
+        timeRange:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date-time
+            end:
+              type: string
+              format: date-time
+        metrics:
+          type: object
+          properties:
+            totalTasks:
+              type: integer
+            successRate:
+              type: number
+            avgQuality:
+              type: number
+            avgLatency:
+              type: integer
+        byTaskType:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              taskCount:
+                type: integer
+              successRate:
+                type: number
+              avgQuality:
+                type: number
+

@@ -193,8 +193,8 @@ export class ResilientDatabaseClient {
    */
   async getStats(): Promise<RegistryStats> {
     if (this.usingFallback && this.fallbackRegistry) {
-      return this.fallbackRegistry.getRegistryStats
-        ? this.fallbackRegistry.getRegistryStats()
+      return this.fallbackRegistry.getStats
+        ? this.fallbackRegistry.getStats()
         : {
             totalAgents: 0,
             activeAgents: 0,

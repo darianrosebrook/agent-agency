@@ -485,7 +485,7 @@ export class IntelligentCache<T = any> extends EventEmitter {
    */
   private calculateEvictionScore(entry: CacheEntry): number {
     const now = Date.now();
-    const age = now - entry.metadata.created.getTime();
+    const _age = now - entry.metadata.created.getTime();
     const timeSinceAccess = now - entry.metadata.lastAccessed.getTime();
 
     let score = 0;

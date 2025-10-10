@@ -140,33 +140,6 @@ export class TaskAssignmentManager {
   }
 
   /**
-   * Shutdown the assignment manager (disconnect from database, cleanup timers)
-   */
-  async shutdown(): Promise<void> {
-    try {
-      // Clear all timers
-      for (const timeout of this.timeouts.values()) {
-        clearTimeout(timeout);
-      }
-      for (const check of this.progressChecks.values()) {
-        clearInterval(check);
-      }
-      this.timeouts.clear();
-      this.progressChecks.clear();
-
-      // Disconnect from database if persistence is enabled
-      if (this.config.persistenceEnabled && this.dbClient) {
-        await this.dbClient.disconnect();
-      }
-
-      this.initialized = false;
-      console.log("TaskAssignmentManager shutdown successfully");
-    } catch (error) {
-      console.error("Error during TaskAssignmentManager shutdown:", error);
-    }
-  }
-
-  /**
    * Persist assignment to database
    */
   private async persistAssignment(assignment: TaskAssignment): Promise<void> {

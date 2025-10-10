@@ -104,21 +104,24 @@ export interface ArbiterOrchestratorStatus {
  */
 export class ArbiterOrchestrator {
   private config: ArbiterOrchestratorConfig;
-  private components: {
-    taskQueue: TaskQueue;
-    taskAssignment: TaskAssignmentManager;
-    agentRegistry: AgentRegistryManager;
-    security: SecurityManager;
-    healthMonitor: HealthMonitor;
-    recoveryManager: RecoveryManager;
-    knowledgeSeeker: KnowledgeSeeker;
-  };
+  private components:
+    | {
+        taskQueue: TaskQueue;
+        taskAssignment: TaskAssignmentManager;
+        agentRegistry: AgentRegistryManager;
+        security: SecurityManager;
+        healthMonitor: HealthMonitor;
+        recoveryManager: RecoveryManager;
+        knowledgeSeeker: KnowledgeSeeker;
+      }
+    | undefined;
   private eventEmitter: EventEmitter;
   private initialized = false;
 
   constructor(config: ArbiterOrchestratorConfig) {
     this.config = config;
     this.eventEmitter = new EventEmitter();
+    this.components = undefined;
 
     // Initialize event listeners
     this.setupEventListeners();
@@ -435,10 +438,11 @@ export class ArbiterOrchestrator {
    */
   private async setupComponentIntegrations(): Promise<void> {
     // Setup task queue with security
-    const secureQueue = new (await import("./TaskQueue")).SecureTaskQueue(
-      this.components.taskQueue,
-      this.components.security
-    );
+    // TODO: Implement SecureTaskQueue integration
+    // const secureQueue = new (await import("./TaskQueue")).SecureTaskQueue(
+    //   this.components.taskQueue,
+    //   this.components.security
+    // );
 
     // Setup event forwarding between components
     this.setupEventForwarding();
@@ -527,37 +531,45 @@ export class ArbiterOrchestrator {
   private async checkComponentHealth(componentName: string): Promise<boolean> {
     try {
       switch (componentName) {
-        case "taskQueue":
+        case "taskQueue": {
           const queueSize = await this.components.taskQueue.size();
           return queueSize >= 0; // Simple health check
+        }
 
-        case "taskAssignment":
+        case "taskAssignment": {
           // Would need a proper health check method
           return true;
+        }
 
-        case "agentRegistry":
+        case "agentRegistry": {
           const stats = await this.components.agentRegistry.getStats();
           return stats.totalAgents >= 0;
+        }
 
-        case "security":
+        case "security": {
           // Security manager health check
           return this.components.security ? true : false;
+        }
 
-        case "healthMonitor":
+        case "healthMonitor": {
           // Health monitor should monitor itself
           return true;
+        }
 
-        case "recoveryManager":
+        case "recoveryManager": {
           // Recovery manager health check
           return true;
+        }
 
-        case "knowledgeSeeker":
+        case "knowledgeSeeker": {
           const knowledgeStatus =
             await this.components.knowledgeSeeker.getStatus();
           return knowledgeStatus.enabled;
+        }
 
-        default:
+        default: {
           return false;
+        }
       }
     } catch (error) {
       console.error(`Health check failed for ${componentName}:`, error);
@@ -577,7 +589,7 @@ export class ArbiterOrchestrator {
         activeTasks: 0, // Would need to track active assignments
         queuedTasks: queueSize,
         registeredAgents: registryStats.totalAgents,
-        completedTasks: registryStats.totalTasksProcessed || 0,
+        completedTasks: 0, // TODO: Track completed tasks across agents
         failedTasks: 0, // Would need to track failures
       };
     } catch (error) {
