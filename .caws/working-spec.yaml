@@ -14,11 +14,13 @@ operational_rollback_slo: 5m
 threats: []
 scope:
   in:
-    - src/
-    - tests/
+    - iterations/poc/src/
+    - iterations/poc/tests/
   out:
     - node_modules/
     - dist/
+    - iterations/poc/dist/
+    - iterations/poc/coverage/
 invariants:
   - System maintains data consistency
 acceptance:

@@ -5,8 +5,7 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 2022,
     sourceType: "module",
-    // Temporarily disable project-based TypeScript parsing to fix commit issues
-    // project: "./tsconfig.eslint.json",
+    project: "./tsconfig.eslint.json",
   },
   plugins: ["@typescript-eslint"],
   env: {

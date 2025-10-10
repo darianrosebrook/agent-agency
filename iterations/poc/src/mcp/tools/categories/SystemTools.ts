@@ -6,6 +6,8 @@
  */
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import * as fs from "fs/promises";
+import * as path from "path";
 import { MCPToolContext } from "../ToolManager.js";
 
 export class SystemTools {
@@ -118,6 +120,77 @@ export class SystemTools {
           required: ["config"],
         },
       },
+      {
+        name: "read_file",
+        description: "Read the contents of a file",
+        inputSchema: {
+          type: "object",
+          properties: {
+            path: {
+              type: "string",
+              description: "Path to the file to read",
+            },
+            encoding: {
+              type: "string",
+              description: "File encoding (utf8, ascii, etc.)",
+              default: "utf8",
+            },
+          },
+          required: ["path"],
+        },
+      },
+      {
+        name: "write_file",
+        description: "Write content to a file",
+        inputSchema: {
+          type: "object",
+          properties: {
+            path: {
+              type: "string",
+              description: "Path to the file to write",
+            },
+            content: {
+              type: "string",
+              description: "Content to write to the file",
+            },
+            encoding: {
+              type: "string",
+              description: "File encoding (utf8, ascii, etc.)",
+              default: "utf8",
+            },
+            createDirectories: {
+              type: "boolean",
+              description: "Create parent directories if they don't exist",
+              default: false,
+            },
+          },
+          required: ["path", "content"],
+        },
+      },
+      {
+        name: "list_directory",
+        description: "List contents of a directory",
+        inputSchema: {
+          type: "object",
+          properties: {
+            path: {
+              type: "string",
+              description: "Path to the directory to list",
+            },
+            recursive: {
+              type: "boolean",
+              description: "Include subdirectories recursively",
+              default: false,
+            },
+            includeHidden: {
+              type: "boolean",
+              description: "Include hidden files (starting with .)",
+              default: false,
+            },
+          },
+          required: ["path"],
+        },
+      },
     ];
   }
 
@@ -140,6 +213,12 @@ export class SystemTools {
         return await this.getSystemConfig(args);
       case "update_system_config":
         return await this.updateSystemConfig(args);
+      case "read_file":
+        return await this.readFile(args);
+      case "write_file":
+        return await this.writeFile(args);
+      case "list_directory":
+        return await this.listDirectory(args);
       default:
         throw new Error(`Unknown system tool: ${name}`);
     }
@@ -438,6 +517,158 @@ export class SystemTools {
     } catch (error) {
       this.context.logger.error("Failed to update system config:", error);
       throw error;
+    }
+  }
+
+  private async readFile(args: {
+    path: string;
+    encoding?: string;
+  }): Promise<any> {
+    try {
+      // Security: restrict to project directory only
+      const resolvedPath = path.resolve(args.path);
+      const projectRoot = path.resolve(process.cwd());
+
+      if (!resolvedPath.startsWith(projectRoot)) {
+        throw new Error("Access denied: File path outside project directory");
+      }
+
+      const encoding = (args.encoding || "utf8") as BufferEncoding;
+      const content = await fs.readFile(resolvedPath, encoding);
+      const stats = await fs.stat(resolvedPath);
+
+      this.context.logger.info(`File read via MCP: ${args.path}`);
+
+      return {
+        path: args.path,
+        content,
+        size: stats.size,
+        encoding,
+        lastModified: stats.mtime.toISOString(),
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      this.context.logger.error(`Failed to read file ${args.path}:`, error);
+      throw new Error(
+        `File read failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
+  private async writeFile(args: {
+    path: string;
+    content: string;
+    encoding?: string;
+    createDirectories?: boolean;
+  }): Promise<any> {
+    try {
+      // Security: restrict to project directory only
+      const resolvedPath = path.resolve(args.path);
+      const projectRoot = path.resolve(process.cwd());
+
+      if (!resolvedPath.startsWith(projectRoot)) {
+        throw new Error("Access denied: File path outside project directory");
+      }
+
+      // Create directories if requested
+      if (args.createDirectories) {
+        const dir = path.dirname(resolvedPath);
+        await fs.mkdir(dir, { recursive: true });
+      }
+
+      const encoding = (args.encoding || "utf8") as BufferEncoding;
+      await fs.writeFile(resolvedPath, args.content, encoding);
+      const stats = await fs.stat(resolvedPath);
+
+      this.context.logger.info(`File written via MCP: ${args.path}`);
+
+      return {
+        path: args.path,
+        size: stats.size,
+        encoding,
+        created: stats.birthtime.toISOString(),
+        lastModified: stats.mtime.toISOString(),
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      this.context.logger.error(`Failed to write file ${args.path}:`, error);
+      throw new Error(
+        `File write failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
+  private async listDirectory(args: {
+    path: string;
+    recursive?: boolean;
+    includeHidden?: boolean;
+  }): Promise<any> {
+    try {
+      // Security: restrict to project directory only
+      const resolvedPath = path.resolve(args.path);
+      const projectRoot = path.resolve(process.cwd());
+
+      if (!resolvedPath.startsWith(projectRoot)) {
+        throw new Error(
+          "Access denied: Directory path outside project directory"
+        );
+      }
+
+      const entries = [];
+      const dirents = await fs.readdir(resolvedPath, {
+        withFileTypes: true,
+        recursive: args.recursive || false,
+      });
+
+      for (const dirent of dirents) {
+        // Skip hidden files unless requested
+        if (!args.includeHidden && dirent.name.startsWith(".")) {
+          continue;
+        }
+
+        const fullPath = path.join(dirent.path || resolvedPath, dirent.name);
+        const stats = await fs.stat(fullPath);
+        const relativePath = path.relative(projectRoot, fullPath);
+
+        entries.push({
+          name: dirent.name,
+          path: relativePath,
+          type: dirent.isDirectory() ? "directory" : "file",
+          size: stats.size,
+          lastModified: stats.mtime.toISOString(),
+        });
+      }
+
+      // Sort: directories first, then files alphabetically
+      entries.sort((a, b) => {
+        if (a.type !== b.type) {
+          return a.type === "directory" ? -1 : 1;
+        }
+        return a.name.localeCompare(b.name);
+      });
+
+      this.context.logger.info(`Directory listed via MCP: ${args.path}`);
+
+      return {
+        path: args.path,
+        entries,
+        totalCount: entries.length,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      this.context.logger.error(
+        `Failed to list directory ${args.path}:`,
+        error
+      );
+      throw new Error(
+        `Directory listing failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     }
   }
 }

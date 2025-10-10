@@ -15,13 +15,14 @@ describe("Design Token Application E2E", () => {
   beforeEach(async () => {
     runner = new E2EEvaluationRunner(false); // Live mode with real MCP server
     await runner.initialize();
-  }, 180000); // 3 minute timeout for setup
+  }, 240000); // 4 minute timeout for setup
 
   afterEach(async () => {
     await runner?.shutdown();
   }, 60000);
 
   it("should apply design tokens to component styling", async () => {
+    jest.setTimeout(180000); // 3 minutes for AI generation
     // Define the test scenario
     const scenario = {
       id: "design-token-e2e",
@@ -174,6 +175,7 @@ const Card = styled.div\`
   });
 
   it("should handle semantic token application", async () => {
+    jest.setTimeout(180000); // 3 minutes for AI generation
     // Test semantic token usage in different contexts
     const scenarios = [
       {
@@ -236,6 +238,7 @@ const Card = styled.div\`
   });
 
   it("should validate token consistency across components", async () => {
+    jest.setTimeout(240000); // 4 minutes for multiple AI generations
     // Test that similar components use consistent token patterns
     const componentTypes = ["Card", "Button", "Input"];
 
@@ -299,7 +302,7 @@ const Card = styled.div\`
   });
 
   it("should handle complex design systems", async () => {
-    jest.setTimeout(45000); // 45 seconds for comprehensive design system
+    jest.setTimeout(240000); // 4 minutes for complex AI generation
     // Test with a comprehensive design token system
     const comprehensiveTokens = {
       colors: {

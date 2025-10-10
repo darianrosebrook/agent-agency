@@ -411,87 +411,43 @@ export class E2EEvaluationRunner {
         result: mockResponse,
         duration: 150,
       });
-      console.log(
-        "✅ Interaction added, new length:",
-        this.interactions.length
-      );
 
       return mockResponse;
     }
 
-    if (!this.client) throw new Error("MCP client not initialized");
+    // Real MCP server execution
+    try {
+      console.log("🤖 Calling MCP server for text transformation...");
 
-    // Use the generate_text tool to transform the text
-    const startTime = Date.now();
+      // Use the AI tools to generate text
+      const response = await this.client.sendRequest("tools/call", {
+        name: "generate_text",
+        arguments: {
+          prompt: `Transform the following text to be more professional and formal. Remove any informal language, banned phrases, and ensure it meets professional communication standards:\n\n${inputText}`,
+          maxTokens: 500,
+          temperature: 0.3,
+        },
+      });
 
-    // Build prompt with feedback context if available
-    let prompt = `Transform the following text to be more professional and formal:\n\n${inputText}`;
-    let systemPrompt =
-      "You are a professional editor. Transform casual text into formal, professional language while maintaining the core meaning.";
+      const output =
+        response.result?.content || response.result || "No response generated";
 
-    if (context && context.feedbackHistory.length > 0) {
-      prompt += `\n\nPrevious attempts and feedback:\n${context.feedbackHistory.join(
-        "\n\n"
-      )}\n\nPlease address the feedback and improve your response.`;
-      systemPrompt +=
-        " You are iterating on a previous response. Use the feedback provided to improve your work.";
+      this.interactions.push({
+        type: "tool_call",
+        timestamp: new Date().toISOString(),
+        details: {
+          tool: "generate_text",
+          input: inputText.substring(0, 100) + "...",
+        },
+        result: output,
+        duration: response.result?.usage?.total_tokens || 150,
+      });
+
+      return output;
+    } catch (error) {
+      console.error("❌ MCP text transformation failed:", error);
+      throw error;
     }
-
-    // Check for mock errors on this iteration
-    if (context?.mockErrors) {
-      const mockError = context.mockErrors.find(
-        (e: any) => e.iteration === context.iteration
-      );
-      if (mockError) {
-        throw new Error(mockError.error);
-      }
-    }
-
-    const result = await this.client.callTool("generate_text", {
-      prompt,
-      systemPrompt,
-      maxTokens: 100, // Optimized for gemma3n:e2b speed
-    });
-
-    const duration = Date.now() - startTime;
-
-    // Extract text from MCP tool response
-    // MCP server returns: { content: [{ type: "text", text: "response" }] }
-    let output = "";
-    if (result && typeof result === "object") {
-      if (
-        result.content &&
-        Array.isArray(result.content) &&
-        result.content[0]?.text
-      ) {
-        output = result.content[0].text;
-      } else if (result.text) {
-        output = result.text;
-      } else if (typeof result === "string") {
-        output = result;
-      }
-    } else if (typeof result === "string") {
-      output = result;
-    }
-
-    this.interactions.push({
-      type: "tool_call",
-      timestamp: new Date().toISOString(),
-      details: {
-        tool: "generate_text",
-        input: inputText.substring(0, 100) + "...",
-      },
-      result: output,
-      duration,
-    });
-
-    // Fallback: if AI didn't work, return a simple transformation
-    if (!output || output.trim().length === 0) {
-      console.log("⚠️ AI generation failed, using fallback transformation");
-      return `Transformed: ${inputText}`;
-    }
-
-    return output;
   }
 
   /**

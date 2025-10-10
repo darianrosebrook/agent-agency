@@ -175,6 +175,7 @@ interface OrchestrationDataPoint {
 
 ## Documents in This Section
 
+- **capabilities-requirements.md** - Comprehensive capability requirements derived from POC learnings
 - **theory.md** - Comprehensive arbiter stack requirements and research
 - **arbiter-architecture.md** - Concrete implementation architecture
 - **intelligent-routing.md** - Task routing algorithms and strategies

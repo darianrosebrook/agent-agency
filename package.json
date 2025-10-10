@@ -51,6 +51,9 @@
   "homepage": "https://github.com/your-org/agent-agency#readme",
   "devDependencies": {
     "@types/node": "^18.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.57.1",
     "typescript": "^5.0.0"
   },
   "engines": {

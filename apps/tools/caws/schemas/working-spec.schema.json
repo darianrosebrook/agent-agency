@@ -7,6 +7,7 @@
     "title",
     "risk_tier",
     "mode",
+    "change_budget",
     "blast_radius",
     "operational_rollback_slo",
     "scope",
@@ -18,8 +19,22 @@
   "properties": {
     "id": { "type": "string", "pattern": "^(PROJ|FEAT|FIX|ARCH)-\\d{4}$" },
     "title": { "type": "string", "minLength": 10, "maxLength": 200 },
-    "risk_tier": { "type": ["integer", "string"], "enum": [1, 2, 3, "1", "2", "3"] },
-    "mode": { "type": "string", "enum": ["feature", "refactor", "fix", "doc", "chore"] },
+    "risk_tier": {
+      "type": ["integer", "string"],
+      "enum": [1, 2, 3, "1", "2", "3"]
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["feature", "refactor", "fix", "doc", "chore"]
+    },
+    "change_budget": {
+      "type": "object",
+      "required": ["max_files", "max_loc"],
+      "properties": {
+        "max_files": { "type": "integer", "minimum": 1 },
+        "max_loc": { "type": "integer", "minimum": 1 }
+      }
+    },
     "waiver_ids": {
       "type": "array",
       "items": { "type": "string", "pattern": "^WV-\\d{4}$" },
@@ -42,7 +57,11 @@
         "out": { "type": "array", "items": { "type": "string" } }
       }
     },
-    "invariants": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "invariants": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
     "acceptance": {
       "type": "array",
       "minItems": 1,
@@ -80,7 +99,18 @@
         "type": "object",
         "required": ["type", "path"],
         "properties": {
-          "type": { "type": "string", "enum": ["openapi", "graphql", "proto", "pact"] },
+          "type": {
+            "type": "string",
+            "enum": [
+              "openapi",
+              "graphql",
+              "proto",
+              "pact",
+              "sql",
+              "json-schema",
+              "typescript"
+            ]
+          },
           "path": { "type": "string" }
         }
       }
@@ -113,7 +143,12 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["mutation_testing", "contract_tests", "coverage", "manual_review"]
+            "enum": [
+              "mutation_testing",
+              "contract_tests",
+              "coverage",
+              "manual_review"
+            ]
           }
         },
         "expiry_date": { "type": "string", "format": "date-time" }

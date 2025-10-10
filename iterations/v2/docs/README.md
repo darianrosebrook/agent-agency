@@ -27,10 +27,15 @@ Agent Agency V2 is a **self-improving multi-agent orchestration system** governe
 
 **Key Capabilities**:
 
+- **Multi-turn Feedback**: Agents learn from errors and iteratively improve (POC-validated)
+- **File System Operations**: Secure workspace management with project boundaries
 - **CAWS Enforcement**: Budget validation, quality gates, waiver management, provenance
 - **Intelligent Routing**: Multi-armed bandit selection based on performance history
-- **Capability Tracking**: Agent skill profiles that evolve over time
-- **Performance Monitoring**: Real-time metrics and predictive analytics
+- **Cross-Agent Learning**: Federated intelligence sharing with privacy preservation
+- **Advanced Evaluation**: Multi-criteria assessment with satisficing logic
+- **Self-Healing Systems**: Circuit breakers and automated recovery mechanisms
+
+**Complete Requirements**: See `1-core-orchestration/capabilities-requirements.md` for the full capability matrix derived from POC implementation and benchmark results.
 
 **Governance & Audit Integration**:
 
