@@ -1,166 +1,181 @@
 id: ARBITER-004
-title: Performance Tracker - Benchmark Data Collection for RL Training
-risk_tier: 2
+title: "Performance Tracker - Benchmark Data Collection for RL Training"
+version: "2.0.0"
 mode: feature
+risk_tier: 2
+status: spec_complete
+
+executive_summary:
+  purpose: |
+    The Performance Tracker collects comprehensive benchmark data from all agent interactions to fuel reinforcement learning training. It captures task performance metrics, routing decisions, constitutional validations, and outcome data to build rich training datasets for continuous agent improvement.
+  scope:
+    - Real-time performance metric collection from all agent interactions
+    - Benchmark data aggregation and anonymization
+    - RL training data pipeline management
+    - Performance trend analysis and alerting
+    - Constitutional compliance tracking in performance data
+  success_criteria:
+    - Capture 100% of agent task completions with full performance metadata
+    - Generate RL training data within 5 seconds of task completion
+    - Maintain 99.99% data integrity with zero data loss
+    - Support analysis of 10,000+ concurrent agent tasks
+
 change_budget:
-  max_files: 25
-  max_loc: 1000
+  max_files: 18
+  max_loc: 950
+
 blast_radius:
-  modules:
-    - src/benchmark
-    - src/orchestrator
-    - tests/unit/benchmark
-    - tests/integration/benchmark
-  data_migration: true
-operational_rollback_slo: 5m
+  modules: ["performance-tracking", "benchmark-data", "rl-training-data"]
+  data_migration: false
+  breaking_changes: false
+  external_impact: low
+operational_rollback_slo: "15m"
+
 threats:
-  - threat: High-volume telemetry strains storage capacity
-    likelihood: high
-    impact: medium
-    mitigation: Implement compression, retention policies, and time-series optimization
-  - threat: Data collection overhead impacts routing latency
-    likelihood: medium
-    impact: medium
-    mitigation: Use async buffering and batch writes
-  - threat: PII or secrets leaked in telemetry data
-    likelihood: medium
-    impact: critical
-    mitigation: Implement automated scanning and anonymization validation
-  - threat: Data quality degradation makes RL training ineffective
-    likelihood: medium
-    impact: high
-    mitigation: Implement validation gates and automated cleanup
+  - "Performance overhead impacting agent response times"
+  - "Data loss during high-throughput periods"
+  - "Privacy violations in performance data collection"
+  - "Training data poisoning from corrupted metrics"
+
 scope:
   in:
-    - src/benchmark/PerformanceTracker.ts
-    - src/benchmark/BenchmarkDataCollector.ts
-    - src/benchmark/DataValidator.ts
-    - src/benchmark/DataBuffer.ts
-    - src/benchmark/DataAnonymizer.ts
-    - src/types/benchmark-data.ts
-    - tests/unit/benchmark/performance-tracker.test.ts
-    - tests/integration/benchmark/data-collection.test.ts
-    - migrations/003_create_benchmark_tables.sql
+    - "src/orchestrator/PerformanceTracker.ts"
+    - "src/benchmarking/DataCollector.ts"
+    - "src/benchmarking/MetricAggregator.ts"
+    - "src/benchmarking/RLDataPipeline.ts"
+    - "src/benchmarking/PerformanceAnalyzer.ts"
+    - "tests/unit/orchestrator/performance-tracker.test.ts"
+    - "tests/integration/benchmarking/data-collection.test.ts"
   out:
-    - node_modules/
-    - dist/
-    - coverage/
-    - iterations/poc/
-invariants:
-  - All collected data passes privacy validation before storage
-  - Data collection never blocks routing decisions
-  - Benchmark data points are immutable once stored
-  - Timestamps are millisecond-precision and monotonic
-  - Storage capacity is monitored and alerts trigger before 80% full
-acceptance:
-  - id: A1
-    given: Routing decision is made by arbiter
-    when: Performance tracker logs routing decision
-    then: Data point is buffered with decision details and eventually persisted without blocking
-  - id: A2
-    given: Task execution completes with measurable metrics
-    when: Performance tracker logs task execution
-    then: Execution metrics are captured including success, latency, tokens, quality score
-  - id: A3
-    given: Evaluation outcome is determined
-    when: Performance tracker logs evaluation outcome
-    then: Full evaluation details stored including rubric scores and CAWS compliance
-  - id: A4
-    given: Data buffer reaches threshold size or time limit
-    when: Batch write is triggered
-    then: Buffered data points are validated, compressed, and written to storage in single transaction
-  - id: A5
-    given: Collected data point contains potential PII or secrets
-    when: Privacy validation runs
-    then: Data point is rejected or anonymized before storage
-  - id: A6
-    given: Benchmark data accumulates over time
-    when: Retention policy is applied
-    then: Data older than hot/warm/cold thresholds is compressed or archived appropriately
-  - id: A7
-    given: RL training pipeline requests benchmark data
-    when: Data query is executed
-    then: Data is returned in format compatible with RL training schema with complete metadata
-non_functional:
-  perf:
-    collection_overhead_p95_ms: 50
-    batch_write_p95_ms: 200
-    data_query_p95_ms: 500
-    buffer_flush_frequency_sec: 30
-    compression_ratio_target: 0.6
-  security:
-    - pii-detection-and-anonymization
-    - secret-scanning
-    - data-encryption-at-rest
-    - access-control-for-benchmark-data
-  reliability:
-    data_collection_coverage_target: 0.95
-    data_validation_pass_rate: 0.95
-    storage_availability_sla: 99.9
-  scalability:
-    data_points_per_day: 10000
-    concurrent_collectors: 50
-    storage_capacity_gb: 100
-    retention_hot_days: 7
-    retention_warm_days: 30
-    retention_cold_days: 90
-contracts:
-  - type: typescript-interface
-    path: src/types/benchmark-data.ts
-    version: 1.0.0
-  - type: openapi
-    path: docs/api/benchmark-data.api.yaml
-    version: 1.0.0
-observability:
-  logs:
-    - data_collection_events
-    - batch_write_operations
-    - privacy_violations_detected
-    - validation_failures
-    - retention_policy_executions
-  metrics:
-    - data_points_collected_per_minute
-    - collection_overhead_ms
-    - buffer_size_current
-    - batch_write_latency_p95
-    - storage_utilization_percent
-    - data_validation_pass_rate
-    - compression_ratio_achieved
-    - privacy_scan_rejection_rate
-  traces:
-    - data_collection_flow
-    - batch_write_transaction
-    - privacy_validation_chain
-    - data_query_execution
-migrations:
-  - id: migration_003
-    description: Create benchmark tables optimized for time-series data with TimescaleDB
-    type: schema
-    requires_downtime: false
-    rollback_available: true
-rollback:
-  - strategy: feature_flag_rollback
-    description: Disable data collection and rely on existing baseline data
-    slo_minutes: 1
-    data_loss_risk: medium
-  - strategy: database_rollback
-    description: Revert benchmark schema while preserving existing data
-    slo_minutes: 5
-    data_loss_risk: low
-ai_assessment:
-  confidence_level: 0.85
-  uncertainty_areas:
-    - Optimal buffer size and flush frequency
-    - Retention policy duration thresholds
-    - Compression strategy selection
-  complexity_factors:
-    - Async buffering and batch write coordination
-    - Privacy validation and anonymization logic
-    - Time-series database optimization
-    - Integration with RL training pipeline schema
-  risk_factors:
-    - High-volume data could overwhelm storage
-    - Privacy violations could expose sensitive data
-    - Collection overhead could impact routing performance
-    - Data quality issues could invalidate RL training
+    - "src/database/*"  # Database handled by ARBITER-001
+    - "src/routing/*"   # Routing handled by ARBITER-002
+    - "src/caws/*"      # Constitutional validation handled by ARBITER-003
 
+invariants:
+  - "All agent task completions must be captured with performance metadata"
+  - "Performance data must be anonymized before RL training use"
+  - "Data integrity must be maintained through cryptographic hashing"
+  - "Performance tracking must not impact agent response times by >1ms"
+  - "RL training data must be available within 5 seconds of task completion"
+
+acceptance:
+  - id: "A1"
+    given: "Agent completes task successfully"
+    when: "Performance tracker receives completion event"
+    then: "Complete performance metadata captured within 1 second"
+
+  - id: "A2"
+    given: "High-throughput period with 10,000 concurrent tasks"
+    when: "Performance data collection runs for 1 hour"
+    then: "Zero data loss with 99.99% capture rate maintained"
+
+  - id: "A3"
+    given: "RL training pipeline requests data batch"
+    when: "Performance data is aggregated and anonymized"
+    then: "Training-ready dataset delivered within 5 seconds"
+
+  - id: "A4"
+    given: "Agent performance shows concerning trend"
+    when: "Performance analyzer processes metrics"
+    then: "Alert generated with trend analysis within 30 seconds"
+
+  - id: "A5"
+    given: "Performance data contains sensitive information"
+    when: "Data anonymization pipeline processes data"
+    then: "All personally identifiable information removed or hashed"
+
+  - id: "A6"
+    given: "System under sustained load of 1000 tasks/minute"
+    when: "Performance tracking operates for 24 hours"
+    then: "Memory usage remains under 200MB with no memory leaks"
+
+non_functional:
+  performance:
+    metric_collection_latency_ms: 1
+    data_aggregation_p95_ms: 100
+    rl_data_delivery_p95_ms: 5000
+    memory_usage_mb: 200
+
+  reliability:
+    availability_percent: 99.9
+    mean_time_between_failures_hours: 720  # 30 days
+    error_rate_percent: 0.1
+    data_loss_rate_percent: 0.01
+
+  scalability:
+    max_concurrent_tasks: 10000
+    max_data_points_per_hour: 1000000
+    horizontal_scaling: true
+    data_retention_days: 90
+
+  security:
+    input_validation: "strict"
+    data_anonymization: "required"
+    audit_logging: "performance-data-access"
+    encryption: "data-at-rest"
+
+  usability:
+    api_design: "fluent-metric-collection"
+    error_messages: "performance-context-aware"
+    monitoring: "comprehensive-performance-dashboards"
+    documentation: "data-schema-and-metric-definitions"
+
+contracts:
+  - type: "typescript"
+    path: "src/types/performance-tracking.ts"
+    description: "Performance metric and benchmark data interfaces"
+
+  - type: "openapi"
+    path: "docs/api/benchmark-data.api.yaml"
+    description: "Performance data collection and analysis API"
+
+observability:
+  metrics:
+    - "performance_collection_rate"
+    - "data_aggregation_throughput"
+    - "rl_training_data_latency"
+    - "performance_anomaly_detection"
+    - "data_integrity_violations"
+
+  logs:
+    - level: "info"
+      events: ["performance_data_captured", "rl_data_delivered", "anomaly_detected"]
+    - level: "warn"
+      events: ["data_collection_delay", "aggregation_backlog", "anomaly_threshold_exceeded"]
+    - level: "error"
+      events: ["data_loss_detected", "integrity_violation", "collection_failure"]
+
+  traces:
+    - "performance_collection_span"
+    - "data_aggregation_pipeline"
+    - "rl_data_delivery_pipeline"
+
+migrations:
+  - type: "sql"
+    path: "migrations/004_create_performance_tracking_tables.sql"
+    description: "Tables for performance metrics, benchmark data, and RL training datasets"
+
+rollback:
+  slo: "15m"
+  strategy: "data-isolation"
+  impact: "low"
+  monitoring: "performance_data_collection_disabled"
+
+ai_assessment:
+  reasoning: "Performance tracking involves complex data aggregation and analysis requirements. While AI can help optimize data collection patterns and anomaly detection, the core data integrity and anonymization logic requires careful human design to ensure reliability and privacy compliance."
+
+  risks:
+    - "Performance overhead could impact system responsiveness"
+    - "Data integrity issues could corrupt RL training"
+    - "Privacy concerns with detailed performance data collection"
+
+  opportunities:
+    - "Well-established metrics collection patterns exist"
+    - "Data aggregation logic is highly testable"
+    - "TypeScript provides strong typing for complex data structures"
+
+  recommendations:
+    - "Implement comprehensive data validation and integrity checks"
+    - "Use efficient data structures to minimize performance impact"
+    - "Include thorough anonymization and privacy protection measures"
+    - "Build extensive monitoring and alerting for data quality issues"

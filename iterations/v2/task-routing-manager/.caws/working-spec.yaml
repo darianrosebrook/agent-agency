@@ -1,126 +1,177 @@
 id: ARBITER-002
-title: Task Routing Manager - Intelligent Agent Selection with Multi-Armed Bandit
-risk_tier: 2
+title: "Task Routing Manager - Intelligent Agent Selection with Multi-Armed Bandit"
+version: "2.0.0"
 mode: feature
+risk_tier: 2
+status: spec_complete
+
+executive_summary:
+  purpose: |
+    The Task Routing Manager implements intelligent agent selection using multi-armed bandit algorithms to optimize task routing decisions. It balances exploration (trying new agents) with exploitation (using proven performers) while respecting CAWS constitutional constraints.
+  scope:
+    - Multi-armed bandit routing with epsilon-greedy and UCB scoring
+    - Dynamic agent capability matching and load balancing
+    - Performance-based routing decisions with constitutional compliance
+    - Real-time routing metrics and decision telemetry
+  success_criteria:
+    - Route tasks to optimal agents within 50ms P95 latency
+    - Achieve 15% improvement in task completion rates through intelligent routing
+    - Maintain 99.5% routing accuracy with <0.5% erroneous assignments
+    - Support 1000+ concurrent routing decisions per second
+
 change_budget:
-  max_files: 20
+  max_files: 15
   max_loc: 800
+
 blast_radius:
-  modules:
-    - src/orchestrator
-    - tests/unit/orchestrator
+  modules: ["task-routing", "agent-selection", "routing-metrics"]
   data_migration: false
-operational_rollback_slo: 5m
+  breaking_changes: false
+  external_impact: low
+operational_rollback_slo: "5m"
+
 threats:
-  - threat: Routing algorithm gets stuck in local optima
-    likelihood: medium
-    impact: medium
-    mitigation: Implement epsilon-greedy exploration with decay
-  - threat: Bandit state corruption leads to poor routing decisions
-    likelihood: low
-    impact: high
-    mitigation: Implement state validation and recovery mechanisms
-  - threat: Cold start problem for new agents without performance history
-    likelihood: high
-    impact: medium
-    mitigation: Use optimistic initialization and minimum sample size threshold
+  - "Routing starvation: Some agents never selected due to poor initial performance"
+  - "Over-exploration: Excessive time spent testing suboptimal agents"
+  - "Load imbalance: Poor distribution leading to agent bottlenecks"
+  - "Stale routing: Not adapting quickly enough to agent performance changes"
 scope:
   in:
-    - src/orchestrator/TaskRoutingManager.ts
-    - src/orchestrator/MultiArmedBandit.ts
-    - src/orchestrator/CapabilityMatcher.ts
-    - src/types/task-routing.ts
-    - tests/unit/orchestrator/task-routing-manager.test.ts
-    - tests/unit/orchestrator/multi-armed-bandit.test.ts
+    - "src/orchestrator/TaskRoutingManager.ts"
+    - "src/orchestrator/MultiArmedBandit.ts"
+    - "src/orchestrator/CapabilityMatcher.ts"
+    - "src/orchestrator/RoutingMetrics.ts"
+    - "tests/unit/orchestrator/task-routing-manager.test.ts"
+    - "tests/unit/orchestrator/multi-armed-bandit.test.ts"
   out:
-    - node_modules/
-    - dist/
-    - coverage/
-    - iterations/poc/
-invariants:
-  - Routing decisions are deterministic given same bandit state
-  - Exploration rate decreases monotonically over time
-  - All routing decisions are logged for provenance
-  - UCB scores are always computed with valid statistics
-acceptance:
-  - id: A1
-    given: Task requiring specific capabilities and pool of candidate agents
-    when: Routing decision is requested
-    then: Agent is selected based on multi-armed bandit algorithm and decision is logged with rationale
-  - id: A2
-    given: Bandit in exploration mode with epsilon threshold
-    when: Select method is called
-    then: Random or underutilized agent is selected for exploration with probability epsilon
-  - id: A3
-    given: Bandit in exploitation mode with agent performance history
-    when: Select method is called
-    then: Agent with highest UCB score is selected considering both success rate and exploration bonus
-  - id: A4
-    given: New agent with no performance history (cold start)
-    when: Routing decision includes this agent as candidate
-    then: Agent receives optimistic initialization score ensuring early trials
-  - id: A5
-    given: Multiple routing decisions over time
-    when: Epsilon decay is applied
-    then: Exploration rate decreases according to decay factor while maintaining minimum threshold
-  - id: A6
-    given: Task with specific capability requirements
-    when: Capability matching is performed
-    then: Agents are scored based on capability overlap and specialization relevance
-non_functional:
-  perf:
-    routing_decision_p95_ms: 100
-    ucb_calculation_p95_ms: 10
-    capability_matching_p95_ms: 50
-    routing_throughput_per_sec: 1000
-  security:
-    - routing-decision-integrity
-    - bandit-state-tampering-prevention
-  reliability:
-    routing_availability_sla: 99.9
-    decision_correctness_rate: 0.85
-  scalability:
-    concurrent_routing_decisions: 100
-    candidate_agents_per_decision: 50
-contracts:
-  - type: typescript-interface
-    path: src/types/task-routing.ts
-    version: 1.0.0
-observability:
-  logs:
-    - routing_decisions
-    - bandit_exploration_events
-    - bandit_exploitation_events
-    - capability_matching_operations
-    - routing_failures
-  metrics:
-    - routing_decision_latency_p95
-    - exploration_rate_current
-    - exploitation_rate_current
-    - routing_accuracy_rate
-    - ucb_score_distribution
-    - agent_selection_frequency
-  traces:
-    - routing_decision_flow
-    - multi_armed_bandit_selection
-    - capability_matching_chain
-migrations: []
-rollback:
-  - strategy: feature_flag_rollback
-    description: Disable intelligent routing and fall back to simple round-robin
-    slo_minutes: 1
-    data_loss_risk: none
-ai_assessment:
-  confidence_level: 0.8
-  uncertainty_areas:
-    - Optimal epsilon decay rate for exploration
-    - UCB confidence interval tuning
-    - Cold start initialization strategy
-  complexity_factors:
-    - Multi-armed bandit algorithm implementation
-    - Balancing exploration vs exploitation tradeoff
-    - Capability matching scoring function
-  risk_factors:
-    - Bandit may favor suboptimal agents in early stages
-    - Complex routing logic could introduce latency
+    - "src/database/*"  # Database layer handled by ARBITER-001
+    - "src/security/*"  # Security handled by ARBITER-001
+    - "src/caws/*"      # Constitutional validation separate
 
+invariants:
+  - "All routing decisions must complete within 100ms to avoid blocking task queues"
+  - "No agent shall be permanently excluded from routing (exploration guarantee)"
+  - "Routing decisions must respect agent capability constraints"
+  - "Performance metrics must be collected for every routing decision"
+  - "Multi-armed bandit parameters must remain within constitutional bounds"
+
+acceptance:
+  - id: "A1"
+    given: "Task requires TypeScript code editing capabilities"
+    when: "5 agents are available with varying TypeScript expertise"
+    then: "Route to highest-scoring agent based on UCB algorithm within 50ms"
+
+  - id: "A2"
+    given: "Agent has 95% success rate on similar tasks"
+    when: "Routing decision is made with epsilon=0.1"
+    then: "90% probability of selecting proven performer (exploitation)"
+
+  - id: "A3"
+    given: "New agent registers with unproven performance"
+    when: "Initial routing decisions are made"
+    then: "10% probability of selection for exploration testing"
+
+  - id: "A4"
+    given: "Agent is currently at 90% load capacity"
+    when: "Task routing decision is evaluated"
+    then: "Agent load factored into routing score with penalty applied"
+
+  - id: "A5"
+    given: "Task has specialized requirements (e.g., security audit)"
+    when: "Agents lack required specialization"
+    then: "Task rejected with clear capability mismatch error"
+
+  - id: "A6"
+    given: "Routing system under 1000 concurrent decisions/second"
+    when: "Load testing performed for 5 minutes"
+    then: "All decisions complete within 100ms P95 latency"
+
+non_functional:
+  performance:
+    routing_decision_p95_ms: 50
+    concurrent_decisions_per_second: 1000
+    memory_usage_mb: 50
+    cpu_usage_percent: 15
+
+  reliability:
+    availability_percent: 99.9
+    mean_time_between_failures_hours: 720  # 30 days
+    error_rate_percent: 0.1
+    graceful_degradation: true
+
+  scalability:
+    max_concurrent_agents: 100
+    max_concurrent_tasks: 5000
+    horizontal_scaling: true
+    stateful_scaling: false
+
+  security:
+    input_validation: "strict"
+    rate_limiting: "per-tenant"
+    audit_logging: "all-routing-decisions"
+    data_isolation: "tenant-scoped"
+
+  usability:
+    api_design: "fluent-typescript-interfaces"
+    error_messages: "descriptive-with-suggestions"
+    monitoring: "comprehensive-metrics"
+    documentation: "inline-jsdoc"
+
+contracts:
+  - type: "typescript"
+    path: "src/types/task-routing.ts"
+    description: "Core routing interfaces and types"
+
+  - type: "openapi"
+    path: "docs/api/arbiter-routing.api.yaml"
+    description: "REST API for routing decisions and metrics"
+
+observability:
+  metrics:
+    - "routing_decision_latency"
+    - "agent_selection_distribution"
+    - "exploration_vs_exploitation_ratio"
+    - "routing_success_rate"
+    - "load_balancing_effectiveness"
+
+  logs:
+    - level: "info"
+      events: ["routing_decision", "agent_selected", "capability_match"]
+    - level: "warn"
+      events: ["routing_timeout", "capability_mismatch", "load_imbalance"]
+    - level: "error"
+      events: ["routing_failure", "algorithm_error"]
+
+  traces:
+    - "routing_decision_span"
+    - "agent_scoring_pipeline"
+    - "bandit_algorithm_execution"
+
+migrations:
+  - type: "none"
+    description: "No database migrations required - routing is stateless"
+
+rollback:
+  slo: "5m"
+  strategy: "feature-flag"
+  impact: "low"
+  monitoring: "routing_metrics_revert_to_baseline"
+
+ai_assessment:
+  reasoning: "Multi-armed bandit algorithms require careful parameter tuning and exploration/exploitation balancing. The routing logic must be deterministic yet adaptive, making it suitable for AI-assisted implementation with human oversight for parameter validation."
+
+  risks:
+    - "Algorithmic complexity may introduce subtle bugs in scoring logic"
+    - "Performance requirements demand efficient implementation"
+    - "Testing stochastic algorithms requires statistical validation"
+
+  opportunities:
+    - "Well-established MAB literature provides solid algorithmic foundation"
+    - "TypeScript's type safety helps prevent routing logic errors"
+    - "Comprehensive testing possible with seeded random number generation"
+
+  recommendations:
+    - "Implement with seeded randomness for reproducible testing"
+    - "Include extensive statistical validation in test suite"
+    - "Monitor routing performance metrics in production"
+    - "Allow parameter tuning via configuration without code changes"

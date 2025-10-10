@@ -1,160 +1,181 @@
 id: ARBITER-003
-title: CAWS Validator - Constitutional Authority and Quality Gate Enforcement
-risk_tier: 1
+title: "CAWS Validator - Constitutional Authority and Quality Gate Enforcement"
+version: "2.0.0"
 mode: feature
+risk_tier: 1
+status: spec_complete
+
+executive_summary:
+  purpose: |
+    The CAWS Validator serves as the constitutional authority for all agentic behavior within Agent Agency V2. It enforces CAWS (Coding-Agent Working Standard) rules, validates working specifications, enforces quality gates, and ensures all agent actions remain within constitutional bounds.
+  scope:
+    - Constitutional compliance validation for all agent outputs
+    - Budget enforcement (files, lines of code, complexity)
+    - Quality gate verification (tests, coverage, security)
+    - Waiver interpretation and time-bounded approvals
+    - Real-time constitutional arbitration
+  success_criteria:
+    - All verdicts issued within 200ms P95 latency
+    - Zero false positives in constitutional violations
+    - 100% accuracy in budget and quality gate enforcement
+    - Support constitutional arbitration at 500 decisions/second
+
 change_budget:
-  max_files: 25
-  max_loc: 1000
+  max_files: 20
+  max_loc: 1200
+
 blast_radius:
-  modules:
-    - src/orchestrator
-    - src/caws
-    - tests/unit/orchestrator
-    - tests/integration/caws
-  data_migration: true
-operational_rollback_slo: 5m
+  modules: ["caws-validation", "constitutional-enforcement", "quality-gates"]
+  data_migration: false
+  breaking_changes: false
+  external_impact: medium
+operational_rollback_slo: "5m"
+
 threats:
-  - threat: Validation bypass allows non-compliant work to merge
-    likelihood: low
-    impact: critical
-    mitigation: Implement immutable validation checkpoints and audit trails
-  - threat: Quality gate false positives block valid work
-    likelihood: medium
-    impact: medium
-    mitigation: Implement configurable thresholds and human override with justification
-  - threat: Waiver abuse circumvents CAWS policies
-    likelihood: medium
-    impact: high
-    mitigation: Require multi-factor approval and time-limited waivers
-  - threat: Provenance chain corruption invalidates audit trail
-    likelihood: low
-    impact: critical
-    mitigation: Use cryptographic hashing and immutable storage
+  - "False positives blocking legitimate agent work"
+  - "Performance overhead slowing down agent responses"
+  - "Constitutional drift allowing rule violations"
+  - "Complex waiver logic introducing security vulnerabilities"
+
 scope:
   in:
-    - src/orchestrator/CAWSValidator.ts
-    - src/orchestrator/WaiverManager.ts
-    - src/orchestrator/ProvenanceRecorder.ts
-    - src/caws/BudgetEnforcer.ts
-    - src/caws/QualityGateRunner.ts
-    - src/types/caws-validation.ts
-    - tests/unit/orchestrator/caws-validator.test.ts
-    - tests/integration/caws/enforcement.test.ts
-    - migrations/002_create_provenance_tables.sql
+    - "src/orchestrator/CAWSValidator.ts"
+    - "src/caws/BudgetEnforcer.ts"
+    - "src/caws/QualityGateValidator.ts"
+    - "src/caws/WaiverInterpreter.ts"
+    - "src/caws/ConstitutionalArbiter.ts"
+    - "tests/unit/orchestrator/caws-validator.test.ts"
+    - "tests/unit/caws/budget-enforcer.test.ts"
   out:
-    - node_modules/
-    - dist/
-    - coverage/
-    - iterations/poc/
-invariants:
-  - All validation results are immutably recorded in provenance
-  - Budget violations cannot be merged without approved waiver
-  - Quality gate execution is idempotent and deterministic
-  - Provenance chain maintains cryptographic integrity
-  - Waiver approvals require human authorization
-acceptance:
-  - id: A1
-    given: Task result with file and line of code changes
-    when: Budget validation is performed against working spec
-    then: Violations are identified for max_files or max_loc breaches with detailed breakdown
-  - id: A2
-    given: Task result with code changes
-    when: Quality gates are executed according to risk tier
-    then: All mandatory gates run and results indicate pass/fail with specific failure reasons
-  - id: A3
-    given: Budget violation and waiver eligibility check
-    when: Waiver creation is requested
-    then: Waiver request is generated with required justification fields and routed for approval
-  - id: A4
-    given: Approved waiver for specific budget violation
-    when: Validation rerun includes waiver check
-    then: Previously failing validation passes with waiver annotation in provenance
-  - id: A5
-    given: Task validation results
-    when: Provenance recording is triggered
-    then: Immutable provenance entry is created with cryptographic hash linking to previous entry
-  - id: A6
-    given: Complete validation result
-    when: CAWS compliance determination is made
-    then: Result indicates compliant/non-compliant with actionable remediation steps
-  - id: A7
-    given: Risk tier 1 task with quality gate requirements
-    when: Coverage and mutation score gates are evaluated
-    then: Coverage must meet 90% and mutation score must meet 70% thresholds
-non_functional:
-  perf:
-    validation_execution_p95_ms: 200
-    budget_check_p95_ms: 50
-    quality_gate_execution_p95_ms: 500
-    provenance_recording_p95_ms: 100
-  security:
-    - provenance-chain-integrity
-    - waiver-approval-authentication
-    - validation-result-tampering-prevention
-    - cryptographic-hashing
-  reliability:
-    validation_availability_sla: 99.9
-    provenance_durability: 99.999
-    quality_gate_correctness_rate: 1.0
-  scalability:
-    concurrent_validations: 100
-    provenance_chain_max_entries: 10000
-contracts:
-  - type: typescript-interface
-    path: src/types/caws-validation.ts
-    version: 1.0.0
-  - type: openapi
-    path: docs/api/caws-integration.api.yaml
-    version: 1.0.0
-observability:
-  logs:
-    - validation_executions
-    - budget_violations
-    - quality_gate_failures
-    - waiver_requests
-    - waiver_approvals
-    - provenance_chain_updates
-    - validation_bypasses
-  metrics:
-    - validation_execution_rate
-    - budget_violation_rate
-    - quality_gate_pass_rate
-    - waiver_request_rate
-    - waiver_approval_rate
-    - provenance_chain_length
-    - validation_latency_p95
-  traces:
-    - validation_execution_flow
-    - quality_gate_execution_chain
-    - provenance_recording_transaction
-    - waiver_approval_workflow
-migrations:
-  - id: migration_002
-    description: Create provenance tables with cryptographic chain storage
-    type: schema
-    requires_downtime: false
-    rollback_available: true
-rollback:
-  - strategy: feature_flag_rollback
-    description: Disable CAWS enforcement and switch to warning-only mode
-    slo_minutes: 1
-    data_loss_risk: none
-  - strategy: database_rollback
-    description: Revert provenance schema while preserving validation logs
-    slo_minutes: 5
-    data_loss_risk: low
-ai_assessment:
-  confidence_level: 0.9
-  uncertainty_areas:
-    - Optimal quality gate timeout thresholds
-    - Waiver approval workflow integration
-  complexity_factors:
-    - Integration with CAWS CLI tooling
-    - Cryptographic provenance chain implementation
-    - Multi-tier quality gate orchestration
-    - Waiver lifecycle management
-  risk_factors:
-    - Critical enforcement bugs could block all work
-    - Provenance chain corruption could invalidate audit trail
-    - Complex validation logic could introduce latency
+    - "src/database/*"  # Database handled by ARBITER-001
+    - "src/routing/*"   # Routing handled by ARBITER-002
+    - "src/security/*"  # Security handled by ARBITER-001
 
+invariants:
+  - "All agent outputs must be constitutionally validated before execution"
+  - "Quality gates cannot be bypassed without approved waivers"
+  - "Budget limits are absolute and cannot be exceeded"
+  - "Constitutional violations must be logged and reported"
+  - "Waivers must be time-bounded and auditable"
+
+acceptance:
+  - id: "A1"
+    given: "Agent output exceeds file budget by 5 files"
+    when: "CAWS validation is performed"
+    then: "Validation fails with budget violation error"
+
+  - id: "A2"
+    given: "Agent output has test coverage below 80%"
+    when: "Quality gate validation runs"
+    then: "Validation fails with coverage gate violation"
+
+  - id: "A3"
+    given: "Approved waiver exists for budget exception"
+    when: "Validation encounters waived constraint"
+    then: "Validation passes with waiver logged and timestamped"
+
+  - id: "A4"
+    given: "Agent attempts to execute outside scope boundaries"
+    when: "Constitutional arbiter validates request"
+    then: "Request rejected with scope violation error"
+
+  - id: "A5"
+    given: "Expired waiver referenced in agent output"
+    when: "Waiver interpreter validates waiver"
+    then: "Validation fails with expired waiver error"
+
+  - id: "A6"
+    given: "High-throughput validation load (500 decisions/sec)"
+    when: "Constitutional arbitration runs for 10 minutes"
+    then: "All validations complete within 200ms P95 latency"
+
+non_functional:
+  performance:
+    constitutional_decision_p95_ms: 200
+    concurrent_validations_per_second: 500
+    memory_usage_mb: 100
+    cpu_usage_percent: 25
+
+  reliability:
+    availability_percent: 99.99
+    mean_time_between_failures_hours: 8760  # 1 year
+    error_rate_percent: 0.01
+    graceful_degradation: false  # Constitutional validation cannot degrade
+
+  scalability:
+    max_concurrent_validations: 2500
+    max_constitutional_rules: 1000
+    horizontal_scaling: true
+    stateful_scaling: true  # Requires waiver state
+
+  security:
+    input_validation: "strict"
+    rate_limiting: "per-agent"
+    audit_logging: "all-validation-decisions"
+    data_isolation: "constitutional-rules"
+
+  usability:
+    api_design: "fluent-validation-builder"
+    error_messages: "constitutional-clause-references"
+    monitoring: "comprehensive-validation-metrics"
+    documentation: "caws-specification-links"
+
+contracts:
+  - type: "typescript"
+    path: "src/types/caws-validation.ts"
+    description: "Constitutional validation interfaces and types"
+
+  - type: "openapi"
+    path: "docs/api/caws-integration.api.yaml"
+    description: "Constitutional validation and waiver management API"
+
+observability:
+  metrics:
+    - "constitutional_validation_latency"
+    - "budget_violation_rate"
+    - "quality_gate_failure_rate"
+    - "waiver_utilization_rate"
+    - "constitutional_compliance_rate"
+
+  logs:
+    - level: "info"
+      events: ["constitutional_validation", "waiver_granted", "quality_gate_passed"]
+    - level: "warn"
+      events: ["budget_exceeded", "quality_gate_failed", "waiver_expiring"]
+    - level: "error"
+      events: ["constitutional_violation", "waiver_abuse", "validation_failure"]
+
+  traces:
+    - "constitutional_arbitration_span"
+    - "budget_enforcement_pipeline"
+    - "quality_gate_validation_pipeline"
+
+migrations:
+  - type: "sql"
+    path: "migrations/003_create_caws_validation_tables.sql"
+    description: "Tables for waiver tracking and constitutional rule storage"
+
+rollback:
+  slo: "5m"
+  strategy: "feature-flag"
+  impact: "medium"
+  monitoring: "constitutional_validation_disabled"
+
+ai_assessment:
+  reasoning: "Constitutional validation requires precise rule interpretation and consistent enforcement. While AI can help implement the validation logic, the constitutional rules themselves must be human-authored and AI-validated to prevent recursive validation issues."
+
+  risks:
+    - "Complex constitutional logic may contain subtle interpretation bugs"
+    - "Performance requirements demand highly optimized validation algorithms"
+    - "Waiver system could be exploited if not properly secured"
+
+  opportunities:
+    - "Clear pass/fail criteria make validation logic testable"
+    - "TypeScript's type safety helps prevent constitutional logic errors"
+    - "Automated testing can achieve high confidence in correctness"
+
+  recommendations:
+    - "Implement constitutional rules as declarative data structures"
+    - "Use comprehensive property-based testing for edge cases"
+    - "Include extensive audit logging for all constitutional decisions"
+    - "Allow rule updates only through human-approved change management"
