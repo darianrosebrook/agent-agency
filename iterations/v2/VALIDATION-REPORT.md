@@ -8,7 +8,7 @@
 
 ## Validation Summary
 
-All five core arbiter component specifications have been validated and **PASSED** CAWS validation.
+All **eight** arbiter component specifications have been validated and **PASSED** CAWS validation.
 
 ---
 
@@ -106,6 +106,63 @@ All five core arbiter component specifications have been validated and **PASSED*
 ```
 
 **Location**: `arbiter-orchestrator/.caws/working-spec.yaml`
+
+---
+
+### ✅ ARBITER-006: Knowledge Seeker
+
+**Status**: PASSED
+**Risk Tier**: 2
+**Mode**: feature
+**Title**: Knowledge Seeker - Intelligent Information Gathering and Research
+
+**Validation Output**:
+
+```
+✅ Working spec validation passed
+   Risk tier: 2
+   Mode: feature
+```
+
+**Location**: `knowledge-seeker/.caws/working-spec.yaml`
+
+---
+
+### ✅ ARBITER-007: Verification Engine
+
+**Status**: PASSED
+**Risk Tier**: 2
+**Mode**: feature
+**Title**: Verification Engine - Information Validation and Fact-Checking
+
+**Validation Output**:
+
+```
+✅ Working spec validation passed
+   Risk tier: 2
+   Mode: feature
+```
+
+**Location**: `verification-engine/.caws/working-spec.yaml`
+
+---
+
+### ✅ ARBITER-008: Web Navigator
+
+**Status**: PASSED
+**Risk Tier**: 2
+**Mode**: feature
+**Title**: Web Navigator - Web Search and Traversal Engine
+
+**Validation Output**:
+
+```
+✅ Working spec validation passed
+   Risk tier: 2
+   Mode: feature
+```
+
+**Location**: `web-navigator/.caws/working-spec.yaml`
 
 ---
 

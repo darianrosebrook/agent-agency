@@ -15,6 +15,9 @@ Quick reference for navigating the CAWS working specifications for Agent Agency 
 | ARBITER-003 | CAWS Validator         | 1    | ✅ Spec Complete | [caws-validator/.caws/](./caws-validator/.caws/working-spec.yaml)                 |
 | ARBITER-004 | Performance Tracker    | 2    | ✅ Spec Complete | [performance-tracker/.caws/](./performance-tracker/.caws/working-spec.yaml)       |
 | ARBITER-005 | Arbiter Orchestrator   | 1    | ✅ Spec Complete | [arbiter-orchestrator/.caws/](./arbiter-orchestrator/.caws/working-spec.yaml)     |
+| ARBITER-006 | Knowledge Seeker       | 2    | ✅ Spec Complete | [knowledge-seeker/.caws/](./knowledge-seeker/.caws/working-spec.yaml)             |
+| ARBITER-007 | Verification Engine    | 2    | ✅ Spec Complete | [verification-engine/.caws/](./verification-engine/.caws/working-spec.yaml)       |
+| ARBITER-008 | Web Navigator          | 2    | ✅ Spec Complete | [web-navigator/.caws/](./web-navigator/.caws/working-spec.yaml)                   |
 
 ---
 
@@ -46,6 +49,9 @@ cd task-routing-manager && caws validate      # ✅ PASS
 cd caws-validator && caws validate            # ✅ PASS
 cd performance-tracker && caws validate       # ✅ PASS
 cd arbiter-orchestrator && caws validate      # ✅ PASS
+cd knowledge-seeker && caws validate          # ✅ PASS
+cd verification-engine && caws validate       # ✅ PASS
+cd web-navigator && caws validate             # ✅ PASS
 ```
 
 ---
@@ -62,8 +68,15 @@ Arbiter Orchestrator (ARBITER-005)
 │   ├── Budget enforcement
 │   ├── Quality gate execution
 │   └── Provenance recording
-└── Performance Tracker (ARBITER-004)
-    └── Benchmark data collection for RL
+├── Performance Tracker (ARBITER-004)
+│   └── Benchmark data collection for RL
+├── Knowledge Seeker (ARBITER-006)
+│   └── Intelligent information gathering and research
+├── Verification Engine (ARBITER-007)
+│   └── Information validation and fact-checking
+└── Web Navigator (ARBITER-008)
+    ├── Web search and traversal
+    └── Content extraction and processing
 ```
 
 ---
