@@ -440,5 +440,39 @@
     },
     "previous_hash": "dcd275c03a2dbaf42ea8466884a394915d5b9af40475a4ac2a4c14ed10bc551a",
     "hash": "10964abdb7cfe741d7957d14480fda04c0caf643018ec9dcf788f51f0e9015f7"
+  },
+  {
+    "id": "prov-1760073996649",
+    "timestamp": "2025-10-10T05:26:36.649Z",
+    "commit": {
+      "hash": "d973586c55a1e215eca75ef14cdb9906dbd9f338",
+      "message": "docs: Fix remaining directory references in canonical checklist",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0001",
+      "title": "agent-agency",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-10T05:26:36.650Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "10964abdb7cfe741d7957d14480fda04c0caf643018ec9dcf788f51f0e9015f7",
+    "hash": "93a2c77a979b7be2c3f2f1bb432a56b4055f3039ac145ee17ad637c1cad2fa48"
   }
 ]
