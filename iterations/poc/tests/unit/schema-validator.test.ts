@@ -22,8 +22,8 @@ describe("SchemaValidator", () => {
   describe("Working Spec Validation", () => {
     it("should validate a correct working spec", () => {
       const validSpec = {
-        id: "TEST-001",
-        title: "Test Feature",
+        id: "FEAT-0001",
+        title: "Test Feature Implementation",
         risk_tier: 2,
         mode: "feature",
         change_budget: {
@@ -42,7 +42,7 @@ describe("SchemaValidator", () => {
         invariants: ["Test invariant"],
         acceptance: [
           {
-            id: "TEST-001-A1",
+            id: "A1",
             given: "test condition",
             when: "test action",
             then: "test outcome",
@@ -57,9 +57,8 @@ describe("SchemaValidator", () => {
         },
         contracts: [
           {
-            type: "typescript",
-            path: "src/types/index.ts",
-            version: "1.0.0",
+            type: "openapi",
+            path: "docs/api/test.yaml",
           },
         ],
       };
@@ -229,7 +228,7 @@ describe("SchemaValidator", () => {
 
     it("should validate contract types correctly", () => {
       const specWithVariousContracts = {
-        id: "CONTRACTS-001",
+        id: "FEAT-0003",
         title: "Feature With Various Contracts",
         risk_tier: 2,
         mode: "feature",
@@ -249,7 +248,7 @@ describe("SchemaValidator", () => {
         invariants: ["Contract invariant"],
         acceptance: [
           {
-            id: "CONTRACTS-001-A1",
+            id: "A1",
             given: "contracts defined",
             when: "validation runs",
             then: "all contracts validate",
@@ -293,7 +292,7 @@ describe("SchemaValidator", () => {
 
     it("should validate scope boundaries correctly", () => {
       const specWithGoodScope = {
-        id: "SCOPE-001",
+        id: "FEAT-0002",
         title: "Feature With Good Scope",
         risk_tier: 2,
         mode: "feature",
@@ -313,7 +312,7 @@ describe("SchemaValidator", () => {
         invariants: ["Scope invariant"],
         acceptance: [
           {
-            id: "SCOPE-001-A1",
+            id: "A1",
             given: "scope defined",
             when: "changes made",
             then: "scope respected",

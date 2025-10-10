@@ -53,6 +53,7 @@ export interface QueryResult<T = any> {
   error?: string;
   duration: number;
   queryId: string;
+  cached?: boolean;
 }
 
 export interface CacheResult<T = any> {

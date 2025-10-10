@@ -59,7 +59,7 @@ describe("MCP Server Basic Integration", () => {
       const { Logger } = await import("../../src/utils/Logger.js");
 
       const orchestrator = new AgentOrchestrator();
-      const logger = new Logger("TestLogger");
+      const _logger = new Logger("TestLogger");
 
       const mcpServer = new AgentAgencyMCPServer({
         orchestrator,

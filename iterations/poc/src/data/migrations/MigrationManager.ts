@@ -265,11 +265,11 @@ export class MigrationManager {
   }
 
   private async getExecutedMigrations(): Promise<string[]> {
-    const result = await this.dataLayer.query<{ id: string }>(
+    const result = await this.dataLayer.query<{ id: string }[]>(
       "SELECT id FROM schema_migrations ORDER BY executed_at ASC"
     );
 
-    return result.success ? result.data?.map((row) => row.id) || [] : [];
+    return result.success ? result.data?.map((row: any) => row.id) || [] : [];
   }
 
   private getPendingMigrations(executedMigrations: string[]): Migration[] {

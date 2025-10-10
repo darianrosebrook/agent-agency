@@ -244,7 +244,7 @@ describe("FederatedLearningEngine", () => {
         mockLogger
       );
 
-      const insights = [
+      const _insights = [
         {
           memoryId: "original-insight",
           relevanceScore: 0.8,

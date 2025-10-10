@@ -91,8 +91,8 @@ class MockAgentOrchestrator {
 
   async getContextRouting(taskData: any) {
     // Simulate context-aware routing
-    const context = taskData.context || {};
-    const taskType = taskData.taskType || "generic";
+    const _context = taskData.context || {};
+    const _taskType = taskData.taskType || "generic";
 
     const recommendedAgents = [
       {
@@ -130,7 +130,7 @@ class MockAgentOrchestrator {
     };
   }
 
-  private selectOptimalAgent(requirements: string[]): string {
+  private selectOptimalAgent(_requirements: string[]): string {
     // Simple mock selection logic
     const agents = Array.from(this.agents.values());
     return agents[0]?.agentId || "agent_default";

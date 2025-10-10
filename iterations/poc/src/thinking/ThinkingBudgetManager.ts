@@ -204,7 +204,7 @@ export class ThinkingBudgetManager {
   private async adaptBudget(
     baseTokens: number,
     complexity: TaskComplexity,
-    request: BudgetAllocationRequest
+    _request: BudgetAllocationRequest
   ): Promise<number> {
     let adaptedTokens = baseTokens;
 
@@ -325,7 +325,7 @@ export class ThinkingBudgetManager {
     return "extreme";
   }
 
-  private async getHistoricalComplexity(description: string): Promise<number> {
+  private async getHistoricalComplexity(_description: string): Promise<number> {
     // TODO: Implement similarity matching with historical tasks
     // For now, return neutral score
     return 3.0;

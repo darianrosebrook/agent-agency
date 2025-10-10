@@ -33,7 +33,7 @@ export class AgentDAO extends BaseDAO<AgentEntity> {
       const placeholders = capabilities.map((_, i) => `$${i + 2}`).join(",");
       const params = [tenantId, ...capabilities];
 
-      const result = await this.dataLayer.query<AgentEntity>(
+      const result = await this.dataLayer.query<AgentEntity[]>(
         `SELECT * FROM agents WHERE tenant_id = $1 AND capabilities && ARRAY[${placeholders}] ORDER BY created_at DESC`,
         params,
         {
@@ -48,7 +48,9 @@ export class AgentDAO extends BaseDAO<AgentEntity> {
         );
       }
 
-      const agents = (result.data || []).map((row) => this.mapRowToEntity(row));
+      const agents = (result.data || []).map((row: any) =>
+        this.mapRowToEntity(row)
+      );
 
       return {
         success: true,
@@ -75,7 +77,7 @@ export class AgentDAO extends BaseDAO<AgentEntity> {
     options: QueryOptions = {}
   ): Promise<QueryResult<AgentEntity[]>> {
     try {
-      const result = await this.dataLayer.query<AgentEntity>(
+      const result = await this.dataLayer.query<AgentEntity[]>(
         `SELECT * FROM agents WHERE tenant_id = $1 AND status = $2 ORDER BY created_at DESC`,
         [tenantId, status],
         {
@@ -88,7 +90,9 @@ export class AgentDAO extends BaseDAO<AgentEntity> {
         throw new Error(`Failed to find agents by status: ${result.error}`);
       }
 
-      const agents = (result.data || []).map((row) => this.mapRowToEntity(row));
+      const agents = (result.data || []).map((row: any) =>
+        this.mapRowToEntity(row)
+      );
 
       return {
         success: true,

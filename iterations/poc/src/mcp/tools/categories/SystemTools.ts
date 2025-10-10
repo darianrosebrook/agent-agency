@@ -182,7 +182,7 @@ export class SystemTools {
 
   private async performHealthCheck(args: { detailed?: boolean }): Promise<any> {
     try {
-      const metrics = this.context.orchestrator.getSystemMetrics();
+      const metrics = await this.context.orchestrator.getSystemMetrics();
       const healthChecks = [];
 
       // Basic health checks

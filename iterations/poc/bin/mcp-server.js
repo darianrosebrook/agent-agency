@@ -7,19 +7,37 @@
  * @description Command-line interface for running the Agent Agency MCP server
  */
 
-import { OllamaClient } from "../dist/src/ai/index.js";
-import { AgentAgencyMCPServer } from "../dist/src/mcp/server.js";
-import { AgentOrchestrator } from "../dist/src/services/AgentOrchestrator.js";
-
-// Parse command line arguments
-const args = process.argv.slice(2);
-const command = args[0];
-
+// Main execution with CommonJS requires
 async function main() {
   try {
+    // CommonJS requires for compiled CommonJS modules
+    const {
+      OllamaClient,
+      OpenAIClient,
+      MultiModelOrchestrator,
+    } = require("../dist/ai/index.js");
+    const {
+      AgentAgencyMCPServer,
+    } = require("../dist/mcp/agent-agency-server.js");
+    const {
+      AgentOrchestrator,
+    } = require("../dist/services/AgentOrchestrator.js");
+    const {
+      MultiTenantMemoryManager,
+    } = require("../dist/memory/MultiTenantMemoryManager.js");
+
+    // Parse command line arguments
+    const args = process.argv.slice(2);
+    const command = args[0];
+
     switch (command) {
       case "start":
-        await startServer();
+        await startServer(
+          OllamaClient,
+          AgentAgencyMCPServer,
+          AgentOrchestrator,
+          MultiTenantMemoryManager
+        );
         break;
       case "help":
       default:
@@ -32,47 +50,160 @@ async function main() {
   }
 }
 
-async function startServer() {
+async function startServer(
+  OllamaClient,
+  AgentAgencyMCPServer,
+  AgentOrchestrator,
+  MultiTenantMemoryManager
+) {
   console.log("🚀 Starting Agent Agency MCP Server...");
 
   // Initialize the orchestrator
   const orchestrator = new AgentOrchestrator();
 
-  // Initialize the AI client (Ollama)
+  // Initialize the multi-model AI orchestrator
   let aiClient;
   try {
-    console.log("🤖 Initializing Ollama client...");
-    aiClient = new OllamaClient({
-      model: process.env.OLLAMA_MODEL || "gemma:3n",
-      host: process.env.OLLAMA_HOST || "http://localhost:11434",
+    console.log("🤖 Initializing multi-model AI orchestrator...");
+
+    // Create AI orchestrator (different from agent orchestrator)
+    const aiOrchestrator = new MultiModelOrchestrator({
+      defaultModel: "ollama-gemma",
+      fallbackModels: ["openai-gpt"],
+      enableCostOptimization: true,
+      enableQualityRouting: true,
+      maxRetries: 2,
+      timeout: 30000,
     });
 
-    // Check if Ollama is available
-    const isAvailable = await aiClient.isAvailable();
-    if (isAvailable) {
-      console.log("✅ Ollama client initialized successfully");
+    // Register Ollama model
+    let ollamaAvailable = false;
+    try {
+      const ollamaClient = new OllamaClient({
+        model: process.env.OLLAMA_MODEL || "gemma:3n",
+        host: process.env.OLLAMA_HOST || "http://localhost:11434",
+      });
+
+      if (await ollamaClient.isAvailable()) {
+        aiOrchestrator.registerModel({
+          name: "ollama-gemma",
+          client: ollamaClient,
+          strengths: ["code_generation", "analysis", "general"],
+          costPerToken: 0.0, // Free local model
+          maxTokens: 4096,
+          contextWindow: 8192,
+          supportsToolCalling: false,
+          priority: 10,
+        });
+        ollamaAvailable = true;
+        console.log("✅ Ollama model registered");
+      }
+    } catch (error) {
+      console.log("⚠️  Ollama model not available:", error.message);
+    }
+
+    // Register OpenAI model if API key is available
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        const openaiClient = new OpenAIClient({
+          apiKey: process.env.OPENAI_API_KEY,
+          model: process.env.OPENAI_MODEL || "gpt-4",
+          organization: process.env.OPENAI_ORG,
+          timeout: 30000,
+          maxRetries: 2,
+        });
+
+        if (await openaiClient.isAvailable()) {
+          aiOrchestrator.registerModel({
+            name: "openai-gpt",
+            client: openaiClient,
+            strengths: [
+              "code_generation",
+              "analysis",
+              "creative",
+              "tool_calling",
+            ],
+            costPerToken: 0.002, // Approximate cost per 1K tokens
+            maxTokens: 4096,
+            contextWindow: 128000,
+            supportsToolCalling: true,
+            priority: ollamaAvailable ? 5 : 15, // Higher if Ollama not available
+          });
+          console.log("✅ OpenAI model registered");
+        }
+      } catch (error) {
+        console.log("⚠️  OpenAI model registration failed:", error.message);
+      }
     } else {
-      console.log("⚠️  Ollama client created but service may not be available");
+      console.log(
+        "ℹ️  OpenAI API key not provided, skipping OpenAI integration"
+      );
+    }
+
+    // Check if aiOrchestrator has any models
+    if (await aiOrchestrator.isAvailable()) {
+      aiClient = aiOrchestrator;
+      console.log("✅ Multi-model orchestrator initialized successfully");
+      console.log(
+        `   Registered models: ${aiOrchestrator
+          .getRegisteredModels()
+          .join(", ")}`
+      );
+    } else {
+      console.log("⚠️  No AI models available");
+      aiClient = null;
     }
   } catch (error) {
-    console.log("⚠️  Failed to initialize Ollama client:", error.message);
+    console.log("⚠️  Failed to initialize AI orchestrator:", error.message);
     console.log("   AI tools will not be available");
+    aiClient = null;
+  }
+
+  // Initialize the memory manager
+  let memoryManager;
+  try {
+    console.log("🧠 Initializing memory system...");
+    memoryManager = new MultiTenantMemoryManager({
+      tenantIsolation: {
+        enabled: true,
+        defaultIsolationLevel: "federated",
+        auditLogging: true,
+        maxTenants: 100,
+      },
+      contextOffloading: {
+        enabled: true,
+        maxContextSize: 10000,
+        compressionThreshold: 5000,
+        relevanceThreshold: 0.7,
+        embeddingDimensions: 768,
+      },
+      federatedLearning: {
+        enabled: true,
+        privacyLevel: "differential",
+        aggregationFrequency: 3600000, // 1 hour
+        minParticipants: 3,
+      },
+      performance: {
+        cacheEnabled: true,
+        cacheSize: 1000,
+        batchProcessing: true,
+        asyncOperations: true,
+      },
+    });
+
+    // Memory system ready (no async initialization needed)
+    console.log("✅ Memory system ready");
+  } catch (error) {
+    console.log("⚠️  Failed to initialize memory system:", error.message);
+    memoryManager = null;
   }
 
   // Initialize the MCP server
-  const mcpServer = new AgentAgencyMCPServer({
+  const mcpServer = new AgentAgencyMCPServer(
     orchestrator,
-    aiClient,
-    evaluationConfig: {
-      minScore: 0.85,
-      mandatoryGates: ["tests-pass", "lint-clean"],
-      iterationPolicy: {
-        maxIterations: 3,
-        minDeltaToContinue: 0.02,
-        noChangeBudget: 1,
-      },
-    },
-  });
+    memoryManager,
+    aiClient
+  );
 
   // Handle graceful shutdown
   process.on("SIGINT", async () => {

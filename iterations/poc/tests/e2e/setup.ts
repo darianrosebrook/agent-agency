@@ -132,7 +132,10 @@ export class E2ETestRunner {
             });
           });
         } catch (error) {
-          console.warn(`Warning: Could not stop ${name}:`, error.message);
+          console.warn(
+            `Warning: Could not stop ${name}:`,
+            error instanceof Error ? error.message : String(error)
+          );
         }
       }
     }

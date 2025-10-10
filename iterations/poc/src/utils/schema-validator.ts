@@ -19,15 +19,13 @@ export interface ValidationResult {
 }
 
 export class SchemaValidator {
-  private ajv: Ajv;
+  private ajv: InstanceType<typeof Ajv>;
   private schemas: Map<string, any> = new Map();
 
   constructor() {
     this.ajv = new Ajv({
       allErrors: true,
       verbose: true,
-      strict: false,
-      allowUnionTypes: true,
     });
 
     addFormats(this.ajv);
@@ -53,7 +51,7 @@ export class SchemaValidator {
     }
 
     const validate = this.ajv.compile(schema);
-    const valid = validate(spec);
+    const valid = validate(spec) as boolean;
 
     return {
       valid: valid,
@@ -77,7 +75,9 @@ export class SchemaValidator {
   }
 
   private loadSchemas(): void {
-    const schemasDir = path.join(__dirname, "../../../apps/tools/caws/schemas");
+    // Hardcode the absolute path to avoid path resolution issues
+    const schemasDir =
+      "/Users/darianrosebrook/Desktop/Projects/agent-agency/apps/tools/caws/schemas";
 
     try {
       // Load working spec schema
@@ -86,6 +86,8 @@ export class SchemaValidator {
         const workingSpecSchema = JSON.parse(
           fs.readFileSync(workingSpecPath, "utf-8")
         );
+        // Remove $schema field that Ajv v8 doesn't recognize
+        delete workingSpecSchema.$schema;
         this.schemas.set("working-spec", workingSpecSchema);
       }
 
@@ -93,6 +95,8 @@ export class SchemaValidator {
       const waiversPath = path.join(schemasDir, "waivers.schema.json");
       if (fs.existsSync(waiversPath)) {
         const waiversSchema = JSON.parse(fs.readFileSync(waiversPath, "utf-8"));
+        // Remove $schema field that Ajv v8 doesn't recognize
+        delete waiversSchema.$schema;
         this.schemas.set("waivers", waiversSchema);
       }
     } catch (error) {
@@ -103,12 +107,13 @@ export class SchemaValidator {
   private formatError(error: any): string {
     const path = error.instancePath || error.dataPath || "";
     const message = error.message || "Unknown error";
+    const params = error.params ? JSON.stringify(error.params) : "";
 
     if (path) {
-      return `${path}: ${message}`;
+      return `${path}: ${message}${params ? ` (${params})` : ""}`;
     }
 
-    return message;
+    return `${message}${params ? ` (${params})` : ""}`;
   }
 
   private extractWarnings(spec: any): string[] {
@@ -184,7 +189,7 @@ export async function validateWorkingSpecFile(
   } catch (error) {
     return {
       valid: false,
-      errors: [`Failed to validate ${filePath}: ${error.message}`],
+      errors: [`Failed to validate ${filePath}: ${(error as Error).message}`],
       warnings: [],
     };
   }
@@ -227,7 +232,9 @@ export async function validateAllWorkingSpecs(
             file: fullPath,
             result: {
               valid: false,
-              errors: [`Failed to parse ${fullPath}: ${error.message}`],
+              errors: [
+                `Failed to parse ${fullPath}: ${(error as Error).message}`,
+              ],
               warnings: [],
             },
           });

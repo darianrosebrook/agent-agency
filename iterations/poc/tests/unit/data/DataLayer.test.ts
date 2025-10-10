@@ -4,8 +4,8 @@
  */
 
 import { DataLayer } from "../../../src/data/DataLayer";
+import { CacheProvider, ConnectionPool } from "../../../src/data/types";
 import { Logger } from "../../../src/utils/Logger";
-import { ConnectionPool, CacheProvider } from "../../../src/data/types";
 
 describe("DataLayer", () => {
   let dataLayer: DataLayer;
@@ -145,6 +145,12 @@ describe("DataLayer", () => {
     it("should initialize successfully", async () => {
       // Mock the cache initialize method
       (mockCache as any).initialize = jest.fn().mockResolvedValue(undefined);
+      // Also mock the healthCheck method that might be called during initialization
+      (mockCache as any).healthCheck = jest.fn().mockResolvedValue({
+        status: "healthy",
+        connected: true,
+        latency: 5,
+      });
 
       await expect(dataLayer.initialize()).resolves.not.toThrow();
 

@@ -6,8 +6,8 @@
  */
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { MCPToolContext } from "../ToolManager.js";
 import { TaskType } from "../../../types/index.js";
+import { MCPToolContext } from "../ToolManager.js";
 
 export class TaskManagementTools {
   constructor(private context: MCPToolContext) {}
@@ -183,8 +183,8 @@ export class TaskManagementTools {
       const taskId = await this.context.orchestrator.submitTask({
         agentId: args.agentId,
         type: args.type,
-        description: args.description || `Task of type ${args.type}`,
-        priority: (args.priority || 'normal') as 'low' | 'normal' | 'high',
+        description: `Task of type ${args.type}`,
+        priority: (args.priority || "normal") as "low" | "normal" | "high",
         payload: taskPayload,
       });
 
@@ -340,7 +340,10 @@ export class TaskManagementTools {
         agentId: originalTask.agentId,
         type: originalTask.type,
         description: `Retry of task ${args.taskId}: ${originalTask.description}`,
-        priority: (args.priority || originalTask.priority) as 'low' | 'normal' | 'high',
+        priority: (args.priority || originalTask.priority) as
+          | "low"
+          | "normal"
+          | "high",
         payload: retryPayload,
       });
 
@@ -365,4 +368,3 @@ export class TaskManagementTools {
     }
   }
 }
-

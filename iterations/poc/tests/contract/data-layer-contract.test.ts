@@ -129,15 +129,15 @@ describe("Data Layer Contracts", () => {
     it("should validate DAO interface", () => {
       const daoInterface = {
         create: async (entity: any) => ({ success: true, data: entity }),
-        findById: async (id: string) => ({ success: true, data: null }),
-        findAll: async (options?: any) => ({ success: true, data: [] }),
-        update: async (id: string, updates: any) => ({
+        findById: async (_id: string) => ({ success: true, data: null }),
+        findAll: async (_options?: any) => ({ success: true, data: [] }),
+        update: async (_id: string, _updates: any) => ({
           success: true,
           data: null,
         }),
-        delete: async (id: string) => ({ success: true, deleted: 1 }),
-        count: async (filter?: any) => ({ success: true, count: 0 }),
-        exists: async (id: string) => ({ success: true, exists: false }),
+        delete: async (_id: string) => ({ success: true, deleted: 1 }),
+        count: async (_filter?: any) => ({ success: true, count: 0 }),
+        exists: async (_id: string) => ({ success: true, exists: false }),
       };
 
       expect(typeof daoInterface.create).toBe("function");
@@ -217,11 +217,15 @@ describe("Data Layer Contracts", () => {
   describe("Caching Contract", () => {
     it("should validate cache interface", () => {
       const cacheInterface = {
-        get: async (key: string) => ({ success: true, data: null, hit: false }),
-        set: async (key: string, value: any, ttl?: number) => ({
+        get: async (_key: string) => ({
+          success: true,
+          data: null,
+          hit: false,
+        }),
+        set: async (_key: string, _value: any, _ttl?: number) => ({
           success: true,
         }),
-        delete: async (key: string) => ({ success: true, deleted: true }),
+        delete: async (_key: string) => ({ success: true, deleted: true }),
         clear: async () => ({ success: true }),
         getStats: async () => ({
           success: true,

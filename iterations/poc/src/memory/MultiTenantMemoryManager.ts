@@ -9,6 +9,15 @@
  * @author @darianrosebrook
  */
 
+import {
+  CacheManager,
+  PerformanceMonitor,
+  QueryOptimizer,
+} from "../performance/index.js";
+import {
+  ErrorRecoveryManager,
+  ProductionMonitor,
+} from "../production/index.js";
 import type {
   ContextualMemory,
   OffloadedContext,
@@ -18,6 +27,7 @@ import type {
 } from "../types/index.js";
 import { Logger } from "../utils/Logger";
 import { ContextOffloader } from "./ContextOffloader";
+import { FederatedLearningEngine } from "./FederatedLearningEngine";
 import { TenantIsolator } from "./TenantIsolator";
 
 export interface MultiTenantMemoryConfig {
@@ -77,6 +87,12 @@ export class MultiTenantMemoryManager {
   private config: MultiTenantMemoryConfig;
   private tenantIsolator: TenantIsolator;
   private contextOffloader: ContextOffloader;
+  private federatedLearningEngine?: FederatedLearningEngine;
+  private cacheManager: CacheManager;
+  private queryOptimizer: QueryOptimizer;
+  private performanceMonitor: PerformanceMonitor;
+  private errorRecoveryManager: ErrorRecoveryManager;
+  private productionMonitor: ProductionMonitor;
   private operationCache: Map<string, any> = new Map();
   private activeOperations: Map<string, Promise<any>> = new Map();
 
@@ -99,11 +115,157 @@ export class MultiTenantMemoryManager {
       this.logger
     );
 
+    // Initialize Federated Learning Engine if enabled
+    if (config.federatedLearning.enabled) {
+      this.federatedLearningEngine = new FederatedLearningEngine(
+        {
+          enabled: true,
+          privacyLevel: config.federatedLearning.privacyLevel,
+          aggregationFrequency: config.federatedLearning.aggregationFrequency,
+          minParticipants: config.federatedLearning.minParticipants,
+          maxParticipants: 50, // Default max participants
+          privacyBudget: 1.0, // Default privacy budget
+          aggregationMethod: "weighted",
+          learningRate: 0.01,
+          convergenceThreshold: 0.95,
+        },
+        this.tenantIsolator,
+        this.logger
+      );
+    }
+
+    // Initialize performance optimization components
+    this.cacheManager = new CacheManager(
+      {
+        enabled: config.performance.cacheEnabled,
+        maxSize: config.performance.cacheSize,
+        defaultTTL: 30 * 60 * 1000, // 30 minutes
+        compressionThreshold: 1024, // 1KB
+        enableMetrics: true,
+        evictionPolicy: "lru",
+      },
+      this.logger
+    );
+
+    this.queryOptimizer = new QueryOptimizer(this.logger);
+
+    this.performanceMonitor = new PerformanceMonitor(
+      {
+        cpu: { warning: 70, critical: 85 },
+        memory: { warning: 80, critical: 90 },
+        responseTime: { warning: 1000, critical: 3000 },
+        errorRate: { warning: 0.05, critical: 0.15 },
+        cacheHitRate: { warning: 0.7, critical: 0.5 },
+      },
+      this.logger
+    );
+
+    // Initialize production hardening components
+    this.errorRecoveryManager = new ErrorRecoveryManager(
+      {
+        enabled: true,
+        maxRetries: 3,
+        retryDelay: 1000,
+        circuitBreakerEnabled: true,
+        circuitBreakerThreshold: 5,
+        circuitBreakerTimeout: 60000, // 1 minute
+        gracefulDegradationEnabled: true,
+        alertOnFailures: true,
+      },
+      this.logger
+    );
+
+    this.productionMonitor = new ProductionMonitor(
+      {
+        enabled: true,
+        healthCheckInterval: 30000, // 30 seconds
+        metricsAggregationInterval: 60000, // 1 minute
+        alertThresholds: {
+          errorRate: 0.1,
+          responseTime: 2000,
+          availability: 0.99,
+        },
+        alertChannels: {
+          console: true,
+          file: true,
+        },
+        retentionPeriod: 24, // 24 hours
+      },
+      this.performanceMonitor,
+      this.logger
+    );
+
+    // Start performance monitoring
+    this.performanceMonitor.startMonitoring(60 * 1000); // Monitor every minute
+
     this.logger.info("MultiTenantMemoryManager initialized", {
       tenantIsolation: config.tenantIsolation.enabled,
       contextOffloading: config.contextOffloading.enabled,
       federatedLearning: config.federatedLearning.enabled,
+      performanceOptimization: true,
+      performanceMonitoring: true,
+      errorRecovery: true,
+      productionMonitoring: true,
     });
+  }
+
+  /**
+   * Get performance components for external access
+   */
+  getPerformanceComponents() {
+    return {
+      cacheManager: this.cacheManager,
+      queryOptimizer: this.queryOptimizer,
+      performanceMonitor: this.performanceMonitor,
+    };
+  }
+
+  /**
+   * Get performance metrics and recommendations
+   */
+  getPerformanceReport(hours: number = 1) {
+    return this.performanceMonitor.generateReport(hours);
+  }
+
+  /**
+   * Analyze a query and return optimization recommendations
+   */
+  async analyzeQuery(query: string) {
+    return this.queryOptimizer.analyzeQuery(query);
+  }
+
+  /**
+   * Get production components for external access
+   */
+  getProductionComponents() {
+    return {
+      errorRecoveryManager: this.errorRecoveryManager,
+      productionMonitor: this.productionMonitor,
+    };
+  }
+
+  /**
+   * Get production health status
+   */
+  getProductionHealth() {
+    return this.productionMonitor.getHealthStatus();
+  }
+
+  /**
+   * Get production report with recommendations
+   */
+  getProductionReport(hours: number = 1) {
+    return this.productionMonitor.getProductionReport(hours);
+  }
+
+  /**
+   * Execute operation with error recovery
+   */
+  async executeWithRecovery<T>(
+    operation: () => Promise<T>,
+    context: { operation: string; component: string; tenantId?: string }
+  ): Promise<T> {
+    return this.errorRecoveryManager.executeWithRecovery(operation, context);
   }
 
   /**
@@ -493,7 +655,7 @@ export class MultiTenantMemoryManager {
     tenantId: string,
     context: TaskContext
   ): Promise<FederatedInsights> {
-    if (!this.config.federatedLearning.enabled) {
+    if (!this.federatedLearningEngine) {
       return {
         insights: [],
         confidence: 0,
@@ -507,58 +669,32 @@ export class MultiTenantMemoryManager {
       contextType: context.type,
     });
 
-    // Get participating tenants (placeholder - would query federation network)
-    const participatingTenants = await this.getParticipatingTenants(tenantId);
-
-    // Collect insights from each tenant (with privacy preservation)
-    const allInsights: ContextualMemory[] = [];
-    const sourceTenants: string[] = [];
-
-    for (const participantTenant of participatingTenants) {
-      try {
-        // Check if sharing is allowed
-        const canShare = await this.tenantIsolator.canShareWithTenant(
-          participantTenant,
+    try {
+      // Get insights from the federated learning engine
+      const federatedInsights =
+        await this.federatedLearningEngine.getFederatedInsights(
           tenantId,
-          "memory"
+          context
         );
 
-        if (canShare.allowed) {
-          // Get anonymized insights from participant
-          const participantInsights = await this.getAnonymizedInsights(
-            participantTenant,
-            context
-          );
-          allInsights.push(...participantInsights);
-          sourceTenants.push(participantTenant);
+      return federatedInsights;
+    } catch (error) {
+      this.logger.error(
+        `Failed to get federated insights for tenant: ${tenantId}`,
+        {
+          error: error instanceof Error ? error.message : String(error),
         }
-      } catch (error) {
-        this.logger.warn(
-          `Failed to get insights from tenant: ${participantTenant}`,
-          {
-            error: error instanceof Error ? error.message : String(error),
-          }
-        );
-      }
+      );
+
+      // Fallback to empty result
+      return {
+        insights: [],
+        confidence: 0,
+        sourceTenants: [],
+        aggregationMethod: "weighted",
+        privacyPreserved: true,
+      };
     }
-
-    // Aggregate insights with privacy preservation
-    const aggregatedInsights = await this.aggregateFederatedInsights(
-      allInsights,
-      context,
-      this.config.federatedLearning.privacyLevel
-    );
-
-    return {
-      insights: aggregatedInsights,
-      confidence: this.calculateFederatedConfidence(
-        aggregatedInsights,
-        sourceTenants
-      ),
-      sourceTenants,
-      aggregationMethod: "weighted",
-      privacyPreserved: true,
-    };
   }
 
   /**
@@ -759,7 +895,19 @@ export class MultiTenantMemoryManager {
 
     // These would be implemented with actual metrics collection
     const offloadedContexts = 0; // Placeholder
-    const federatedParticipants = 0; // Placeholder
+
+    // Get federated participants count
+    let federatedParticipants = 0;
+    if (this.federatedLearningEngine) {
+      try {
+        const health = await this.federatedLearningEngine.getSystemHealth();
+        federatedParticipants = health.registeredParticipants;
+      } catch (error) {
+        this.logger.warn("Failed to get federated learning health", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
 
     return {
       tenants,
@@ -809,6 +957,31 @@ export class MultiTenantMemoryManager {
           error: error instanceof Error ? error.message : String(error),
         });
       }
+    }
+
+    // Perform federated learning maintenance
+    if (this.federatedLearningEngine) {
+      try {
+        await this.federatedLearningEngine.performMaintenance();
+        this.logger.info("Federated learning maintenance completed");
+      } catch (error) {
+        this.logger.warn("Failed to perform federated learning maintenance", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    // Perform performance optimization maintenance
+    try {
+      // Cache maintenance is handled automatically by CacheManager
+      // Query optimizer doesn't need explicit maintenance
+      // Performance monitor runs continuously
+
+      this.logger.info("Performance optimization maintenance completed");
+    } catch (error) {
+      this.logger.warn("Failed to perform performance maintenance", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
     this.logger.info("Maintenance operations completed");
@@ -866,7 +1039,7 @@ export class MultiTenantMemoryManager {
   private async persistExperience(
     tenantId: string,
     experience: ContextualMemory,
-    offloadedContext?: OffloadedContext
+    _offloadedContext?: OffloadedContext
   ): Promise<string> {
     // Placeholder - would integrate with actual persistence layer
     // For now, just return a generated ID
@@ -878,17 +1051,75 @@ export class MultiTenantMemoryManager {
     experience: ContextualMemory,
     sharingLevel: string
   ): Promise<void> {
-    // Placeholder - would implement sharing logic
     this.logger.debug(`Handling experience sharing: ${sharingLevel}`, {
       tenantId,
       experienceId: experience.memoryId,
     });
+
+    // Submit to federated learning if enabled and sharing level allows
+    if (
+      this.federatedLearningEngine &&
+      (sharingLevel === "shared" || sharingLevel === "federated")
+    ) {
+      try {
+        // Create tenant config for federated learning registration
+        const tenantConfig = {
+          tenantId,
+          projectId: tenantId, // Use tenantId as projectId for now
+          isolationLevel: "federated" as const,
+          accessPolicies: [],
+          sharingRules: [],
+          dataRetention: {
+            defaultRetentionDays: 30,
+            archivalPolicy: "compress" as const,
+            complianceRequirements: ["gdpr", "data-privacy"],
+            backupFrequency: "weekly" as const,
+          },
+          encryptionEnabled: true,
+          auditLogging: this.config.tenantIsolation.auditLogging,
+        };
+        await this.federatedLearningEngine.registerParticipant(
+          tenantId,
+          tenantConfig
+        );
+        await this.federatedLearningEngine.submitInsights(
+          tenantId,
+          [experience],
+          {
+            taskId: `federated_${experience.memoryId}`,
+            type: "federated_sharing",
+            description: `Federated sharing of experience: ${
+              experience.content?.action || "general"
+            }`,
+            requirements: [],
+            constraints: {},
+            metadata: {
+              topic: `experience_${experience.content?.action || "general"}`,
+              privacyLevel: this.config.federatedLearning.privacyLevel,
+              contributionWeight: 1.0,
+            },
+          } as any
+        );
+
+        this.logger.debug(`Experience submitted to federated learning`, {
+          tenantId,
+          experienceId: experience.memoryId,
+          sharingLevel,
+        });
+      } catch (error) {
+        this.logger.warn(`Failed to submit experience to federated learning`, {
+          tenantId,
+          experienceId: experience.memoryId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
   }
 
   private async retrieveTenantMemories(
-    tenantId: string,
-    queryContext: TaskContext,
-    options: any
+    _tenantId: string,
+    _queryContext: TaskContext,
+    _options: any
   ): Promise<ContextualMemory[]> {
     // Placeholder - would integrate with actual storage layer
     // Return empty array for now
@@ -896,9 +1127,9 @@ export class MultiTenantMemoryManager {
   }
 
   private async getSharedMemories(
-    tenantId: string,
-    queryContext: TaskContext,
-    options: any
+    _tenantId: string,
+    _queryContext: TaskContext,
+    _options: any
   ): Promise<ContextualMemory[]> {
     // Placeholder - would implement shared memory retrieval
     return [];
@@ -911,8 +1142,8 @@ export class MultiTenantMemoryManager {
   }
 
   private async getAnonymizedInsights(
-    tenantId: string,
-    context: TaskContext
+    _tenantId: string,
+    _context: TaskContext
   ): Promise<ContextualMemory[]> {
     // Placeholder - would get anonymized insights from tenant
     // Return empty array for now
@@ -920,13 +1151,13 @@ export class MultiTenantMemoryManager {
   }
 
   private async aggregateFederatedInsights(
-    insights: ContextualMemory[],
-    context: TaskContext,
-    privacyLevel: string
+    _insights: ContextualMemory[],
+    _context: TaskContext,
+    _privacyLevel: string
   ): Promise<ContextualMemory[]> {
     // Placeholder - would aggregate insights based on privacy level
     // For now, return top insights
-    return insights.slice(0, 5);
+    return _insights.slice(0, 5);
   }
 
   private calculateFederatedConfidence(

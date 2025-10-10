@@ -531,14 +531,15 @@ export class TenantIsolator {
 
   private checkRestriction(
     restriction: AccessRestriction,
-    context: any
+    _context: any
   ): boolean {
     switch (restriction.type) {
-      case "time_based":
+      case "time_based": {
         const now = new Date();
         const startTime = new Date(restriction.value.start);
         const endTime = new Date(restriction.value.end);
         return now >= startTime && now <= endTime;
+      }
 
       case "data_sensitivity":
         // Implement sensitivity checks based on your data classification
@@ -586,9 +587,9 @@ export class TenantIsolator {
 
   private evaluateSharingConditions(
     conditions: SharingCondition[],
-    context: any
+    _context: any
   ): boolean {
-    return conditions.every((condition) => {
+    return conditions.every((_condition) => {
       // Implement condition evaluation logic
       // This is a placeholder - you'd implement specific logic for each condition type
       return true;

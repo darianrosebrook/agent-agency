@@ -12,7 +12,7 @@ import { Logger } from "../../src/utils/Logger";
 
 describe("MemoryAwareAgentOrchestrator", () => {
   let orchestrator: AgentOrchestrator;
-  let mockLogger: Logger;
+  let _mockLogger: Logger;
 
   const memoryConfig: MemoryAwareAgentOrchestratorConfig = {
     maxConcurrentTasks: 10,

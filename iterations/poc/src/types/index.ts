@@ -372,7 +372,14 @@ export interface TaskContext {
   tenantId?: string;
   userId?: string;
   sessionId?: string;
+  agentId?: string;
+  taskId?: string;
+  type?: string;
+  description?: string;
+  requirements?: string[];
+  constraints?: Record<string, any>;
   metadata?: Record<string, any>;
+  historicalContext?: any[];
 }
 
 // Evaluation Report contracts

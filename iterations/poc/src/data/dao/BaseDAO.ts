@@ -189,7 +189,7 @@ export abstract class BaseDAO<
         );
       }
 
-      const entities = (result.data || []).map((row) =>
+      const entities = (result.data || []).map((row: any) =>
         this.mapRowToEntity(row)
       );
 

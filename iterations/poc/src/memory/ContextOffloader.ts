@@ -214,7 +214,7 @@ export class ContextOffloader {
       score: number;
     }> = [];
 
-    for (const [contextId, context] of this.contextStore.entries()) {
+    for (const [_contextId, context] of this.contextStore.entries()) {
       if (context.tenantId !== tenantId) continue;
 
       const relevanceScore = await this.calculateContextRelevance(
@@ -337,13 +337,17 @@ export class ContextOffloader {
     const entities: string[] = [];
 
     // Extract from requirements
-    entities.push(...context.requirements);
+    if (context.requirements) {
+      entities.push(...context.requirements);
+    }
 
     // Extract from constraints keys
-    entities.push(...Object.keys(context.constraints));
+    if (context.constraints) {
+      entities.push(...Object.keys(context.constraints));
+    }
 
     // Extract from metadata
-    if (context.metadata.entities) {
+    if (context.metadata?.entities) {
       entities.push(...(context.metadata.entities as string[]));
     }
 
@@ -354,7 +358,7 @@ export class ContextOffloader {
     // Simplified relationship extraction
     const relationships: string[] = [];
 
-    if (context.metadata.relationships) {
+    if (context.metadata?.relationships) {
       relationships.push(...(context.metadata.relationships as string[]));
     }
 
@@ -363,13 +367,13 @@ export class ContextOffloader {
 
   private createMinimalSummary(context: TaskContext): SummarizedContext {
     return {
-      coreTask: context.description,
-      keyRequirements: context.requirements.slice(0, 5),
-      criticalConstraints: context.constraints,
+      coreTask: context.description || "Unknown task",
+      keyRequirements: context.requirements?.slice(0, 5) || [],
+      criticalConstraints: context.constraints || {},
       essentialEntities: this.extractEntities(context).slice(0, 10),
-      summary: `Task: ${
-        context.description
-      }. Requirements: ${context.requirements.join(", ")}`,
+      summary: `Task: ${context.description || "Unknown task"}. Requirements: ${
+        context.requirements?.join(", ") || "None"
+      }`,
       compressionLevel: "minimal",
     };
   }
@@ -379,7 +383,7 @@ export class ContextOffloader {
   ): Promise<number[]> {
     // Placeholder for embedding generation
     // In real implementation, this would use an embedding service like Ollama
-    const text = `${
+    const _text = `${
       summarizedContext.coreTask
     } ${summarizedContext.keyRequirements.join(" ")} ${
       summarizedContext.summary
@@ -416,9 +420,9 @@ export class ContextOffloader {
     queryContext: TaskContext
   ): Promise<number> {
     // Simplified relevance calculation
-    const queryText = `${
-      queryContext.description
-    } ${queryContext.requirements.join(" ")}`;
+    const queryText = `${queryContext.description || ""} ${
+      queryContext.requirements?.join(" ") || ""
+    }`;
     const contextText = offloadedContext.summarizedContext.summary;
 
     // Simple text similarity (would use embeddings in real implementation)
@@ -584,9 +588,10 @@ export class ContextSummarizer {
   }
 
   private extractCoreTask(context: TaskContext): string {
-    return context.description.length > 100
-      ? `${context.description.substring(0, 100)}...`
-      : context.description;
+    const description = context.description || "";
+    return description.length > 100
+      ? `${description.substring(0, 100)}...`
+      : description;
   }
 
   private extractKeyRequirements(
@@ -595,7 +600,7 @@ export class ContextSummarizer {
   ): string[] {
     const maxRequirements =
       level === "aggressive" ? 3 : level === "moderate" ? 5 : 10;
-    return context.requirements.slice(0, maxRequirements);
+    return context.requirements?.slice(0, maxRequirements) || [];
   }
 
   private extractCriticalConstraints(
@@ -604,13 +609,14 @@ export class ContextSummarizer {
   ): Record<string, any> {
     if (level === "aggressive") {
       // Only keep most critical constraints
-      const criticalKeys = Object.keys(context.constraints).slice(0, 3);
+      const constraints = context.constraints || {};
+      const criticalKeys = Object.keys(constraints).slice(0, 3);
       return criticalKeys.reduce((acc, key) => {
-        acc[key] = context.constraints[key];
+        acc[key] = constraints[key];
         return acc;
       }, {} as Record<string, any>);
     }
-    return context.constraints;
+    return context.constraints || {};
   }
 
   private generateSummary(
@@ -619,8 +625,8 @@ export class ContextSummarizer {
     level: string
   ): string {
     const parts = [
-      `Task: ${context.description}`,
-      `Requirements: ${context.requirements.slice(0, 5).join(", ")}`,
+      `Task: ${context.description || "Unknown task"}`,
+      `Requirements: ${context.requirements?.slice(0, 5).join(", ") || "None"}`,
       `Complexity: ${analysis.complexity.toFixed(2)}`,
     ];
 

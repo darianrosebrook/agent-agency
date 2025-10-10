@@ -370,7 +370,7 @@ export class FederatedLearningEngine {
     this.logger.info("Starting federated learning maintenance");
 
     // Clean up old aggregation queues
-    const cutoffTime = Date.now() - 24 * 60 * 60 * 1000; // 24 hours
+    const _cutoffTime = Date.now() - 24 * 60 * 60 * 1000; // 24 hours
     for (const [topicKey, queue] of this.aggregationQueue.entries()) {
       if (queue.length === 0) {
         this.aggregationQueue.delete(topicKey);
@@ -448,7 +448,7 @@ export class FederatedLearningEngine {
       this.aggregationQueue.delete(topicKey);
 
       // Cache the results for participants to access
-      const cacheKey = `federated_${topicKey}`;
+      const _cacheKey = `federated_${topicKey}`;
       // In a real implementation, this would be stored in a distributed cache
 
       this.logger.info(`Completed aggregation for topic: ${topicKey}`, {
@@ -610,8 +610,10 @@ export class FederatedLearningEngine {
     return groups.map((group) => {
       const totalWeight = group.reduce((sum, i) => sum + (i.weight ?? 1.0), 0);
       const avgRelevance =
-        group.reduce((sum, i) => sum + i.relevanceScore * (i.weight ?? 1.0), 0) /
-        totalWeight;
+        group.reduce(
+          (sum, i) => sum + i.relevanceScore * (i.weight ?? 1.0),
+          0
+        ) / totalWeight;
 
       return {
         ...group[0], // Use first as template
@@ -666,7 +668,7 @@ export class FederatedLearningEngine {
   }
 
   private async getAggregatedInsights(
-    topicKey: string
+    _topicKey: string
   ): Promise<ContextualMemory[]> {
     // In a real implementation, this would fetch from distributed cache/database
     // For now, return empty array
@@ -703,13 +705,14 @@ export class FederatedLearningEngine {
     return Math.min(1.0, (avgRelevance + diversity) / 2);
   }
 
-  private getSourceTenants(topicKey: string): string[] {
+  private getSourceTenants(_topicKey: string): string[] {
     // In a real implementation, this would track which tenants contributed to each topic
     return Array.from(this.participantRegistry.keys()).slice(0, 3); // Placeholder
   }
 
   private generateTopicKey(context: TaskContext): string {
-    return `${context.type}_${context.description
+    const description = context.description || "";
+    return `${context.type || "unknown"}_${description
       .substring(0, 50)
       .replace(/\s+/g, "_")}`;
   }

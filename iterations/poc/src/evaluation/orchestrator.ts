@@ -44,7 +44,7 @@ function decide(history: History, current: EvalReport, a: Acceptance) {
   const iterations = current.iterations;
 
   let noChangeStreak = history.noChangeStreak;
-  if (d < a.minDeltaToContinue) noChangeStreak += 1;
+  if (d < a.iterationPolicy.minDeltaToContinue) noChangeStreak += 1;
   else noChangeStreak = 0;
 
   if (current.status === "pass") {
@@ -139,7 +139,7 @@ async function main() {
   process.stdout.write(JSON.stringify(result, null, 2));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (require.main === module) {
   main().catch((e) => {
     console.error(e);
     process.exit(1);

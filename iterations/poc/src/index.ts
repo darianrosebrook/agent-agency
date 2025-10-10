@@ -52,7 +52,7 @@ process.on("SIGTERM", () => {
 });
 
 // Start the application
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (require.main === module) {
   main().catch((error) => {
     logger.error("Unhandled error in main:", error);
     process.exit(1);

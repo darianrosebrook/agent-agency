@@ -101,7 +101,7 @@ export class ContractTestFramework {
    */
   async testOpenAPIContract(
     specPath: string,
-    implementationBaseUrl: string = "http://localhost:3000"
+    _implementationBaseUrl: string = "http://localhost:3000"
   ): Promise<ContractTestResult> {
     const result: ContractTestResult = {
       passed: true,
@@ -219,7 +219,7 @@ export class ContractTestFramework {
       let result: ContractTestResult;
 
       switch (contract.type) {
-        case "typescript":
+        case "typescript": {
           // For TypeScript, we need to find the implementation
           const implPath = contract.path.replace(".ts", ".impl.ts");
           result = await this.testTypeScriptContract(
@@ -228,6 +228,7 @@ export class ContractTestFramework {
             contract.description || "Interface"
           );
           break;
+        }
 
         case "openapi":
           result = await this.testOpenAPIContract(contract.path);

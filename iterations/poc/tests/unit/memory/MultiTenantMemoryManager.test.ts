@@ -138,6 +138,33 @@ describe("MultiTenantMemoryManager", () => {
     });
 
     it("should store experience successfully", async () => {
+      // Register tenant first
+      const tenantConfig = {
+        tenantId: "storage-test-tenant",
+        projectId: "test-project",
+        isolationLevel: "shared" as const,
+        accessPolicies: [
+          {
+            resourceType: "memory" as const,
+            accessLevel: "write" as const,
+            allowedTenants: ["storage-test-tenant"],
+            restrictions: [],
+            conditions: [],
+          },
+        ],
+        sharingRules: [],
+        dataRetention: {
+          defaultRetentionDays: 30,
+          archivalPolicy: "delete" as const,
+          complianceRequirements: [],
+          backupFrequency: "weekly" as const,
+        },
+        encryptionEnabled: false,
+        auditLogging: true,
+      };
+
+      await memoryManager.registerTenant(tenantConfig);
+
       const experience = {
         memoryId: "test-experience-1",
         relevanceScore: 0.85,

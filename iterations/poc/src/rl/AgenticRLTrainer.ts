@@ -191,8 +191,8 @@ export class AgenticRLTrainer {
    * Evaluate tool call utility and credit assignment
    */
   private async evaluateToolCall(
-    action: RLAction,
-    state: RLState
+    _action: RLAction,
+    _state: RLState
   ): Promise<number> {
     // TODO: Implement tool utility evaluation
     // - Check if tool call was necessary
@@ -209,8 +209,8 @@ export class AgenticRLTrainer {
   /**
    * Evaluate thinking efficiency
    */
-  private evaluateThinking(action: RLAction, state: RLState): number {
-    const tokens = action.thinkingTokens || 0;
+  private evaluateThinking(_action: RLAction, _state: RLState): number {
+    const tokens = _action.thinkingTokens || 0;
     const efficiency = Math.max(0, 1 - tokens / 1000); // Penalize excessive thinking
     return efficiency * 0.05; // Small reward for efficient thinking
   }
@@ -219,8 +219,8 @@ export class AgenticRLTrainer {
    * Evaluate final response quality
    */
   private async evaluateResponse(
-    action: RLAction,
-    state: RLState
+    _action: RLAction,
+    _state: RLState
   ): Promise<number> {
     // TODO: Use enhanced evaluator to score response
     // - Minimal diff checking
@@ -233,7 +233,7 @@ export class AgenticRLTrainer {
   /**
    * Update policy using PPO/GROPO algorithm
    */
-  private async updatePolicy(step: TrainingStep): Promise<void> {
+  private async updatePolicy(_step: TrainingStep): Promise<void> {
     // TODO: Implement policy gradient updates
     // - Calculate advantage
     // - Update actor network
@@ -241,7 +241,7 @@ export class AgenticRLTrainer {
     // - Apply PPO clipping
   }
 
-  private randomAction(state: RLState): RLAction {
+  private randomAction(_state: RLState): RLAction {
     const actions: RLAction[] = [
       {
         type: "thinking",
@@ -263,7 +263,7 @@ export class AgenticRLTrainer {
     const toolCalls = steps.filter((s) => s.action.type === "tool_call").length;
     const avgReward =
       steps.reduce((sum, s) => sum + s.reward, 0) / steps.length;
-    const thinkingEfficiency =
+    const _thinkingEfficiency =
       steps
         .filter((s) => s.action.type === "thinking")
         .reduce((sum, s) => sum + (s.action.thinkingTokens || 0), 0) / 1000;

@@ -5,7 +5,7 @@
  * @description Ollama integration for local AI model inference
  */
 
-import * as ollama from "ollama";
+// Dynamic import for ES module compatibility
 import { Logger } from "../utils/Logger";
 import { AIModelClient, GenerateRequest, GenerateResponse } from "./types";
 
@@ -18,6 +18,7 @@ export interface OllamaConfig {
 export class OllamaClient implements AIModelClient {
   private config: OllamaConfig;
   private logger: Logger;
+  private client?: any;
 
   constructor(config: OllamaConfig, logger?: Logger) {
     this.config = {
@@ -28,66 +29,68 @@ export class OllamaClient implements AIModelClient {
     this.logger = logger || new Logger("OllamaClient");
   }
 
+  private async ensureClient(): Promise<void> {
+    if (!this.client) {
+      const { Ollama } = await import("ollama");
+      this.client = new Ollama();
+    }
+  }
+
   async generate(request: GenerateRequest): Promise<GenerateResponse> {
+    await this.ensureClient();
+    const startTime = Date.now();
+
     try {
-      const startTime = Date.now();
-
-      // Prepare the messages array for Ollama
-      const messages: Array<{
-        role: "system" | "user" | "assistant";
-        content: string;
-      }> = [];
-
-      // Add system prompt if provided
+      // Prepare the prompt with system message if provided
+      let fullPrompt = request.prompt;
       if (request.systemPrompt) {
-        messages.push({
-          role: "system",
-          content: request.systemPrompt,
-        });
+        fullPrompt = `${request.systemPrompt}\n\n${request.prompt}`;
       }
 
-      // Add user prompt
-      messages.push({
-        role: "user",
-        content: request.prompt,
-      });
-
-      // Call Ollama API
-      const response = await ollama.chat({
-        model: this.config.model,
-        messages,
-        options: {
-          temperature: request.config?.temperature ?? 0.7,
+      // Call Ollama API using the generate method
+      const generator = await this.client.generate(
+        this.config.model,
+        fullPrompt,
+        {
           num_predict: request.config?.maxTokens ?? 1024,
-          top_p: request.config?.topP ?? 0.9,
-          frequency_penalty: request.config?.frequencyPenalty ?? 0,
-          presence_penalty: request.config?.presencePenalty ?? 0,
-          stop: request.config?.stopSequences,
-          timeout: this.config.timeout,
-        },
-        host: this.config.host,
-      });
+        } as any
+      );
+
+      let fullResponse = "";
+      let finalResult: any = {};
+
+      // Collect all generated text from the async generator
+      for await (const part of generator) {
+        if (typeof part === "string") {
+          fullResponse += part;
+        } else {
+          finalResult = part;
+        }
+      }
 
       const duration = Date.now() - startTime;
       this.logger.debug(`Ollama generation completed in ${duration}ms`, {
         model: this.config.model,
-        promptTokens: response.prompt_eval_count,
-        completionTokens: response.eval_count,
+        responseLength: fullResponse.length,
       });
 
       return {
-        text: response.message.content,
+        text: fullResponse,
         usage: {
-          promptTokens: response.prompt_eval_count || 0,
-          completionTokens: response.eval_count || 0,
+          promptTokens: finalResult.prompt_eval_count || 0,
+          completionTokens: finalResult.eval_count || 0,
           totalTokens:
-            (response.prompt_eval_count || 0) + (response.eval_count || 0),
+            (finalResult.prompt_eval_count || 0) +
+            (finalResult.eval_count || 0),
         },
-        finishReason: response.done_reason || "stop",
+        finishReason: finalResult.done ? "completed" : "unknown",
       };
     } catch (error) {
-      this.logger.error("Ollama generation failed", error);
-      throw new Error(`Ollama generation failed: ${(error as Error).message}`);
+      throw new Error(
+        `Ollama generation failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
 
@@ -102,9 +105,10 @@ export class OllamaClient implements AIModelClient {
   }
 
   async isAvailable(): Promise<boolean> {
+    await this.ensureClient();
     try {
       // Try to list models to check if Ollama is running
-      await ollama.list({ host: this.config.host });
+      await this.client.tags();
       return true;
     } catch (error) {
       this.logger.warn("Ollama service not available", error);
@@ -117,8 +121,8 @@ export class OllamaClient implements AIModelClient {
    */
   async listModels(): Promise<string[]> {
     try {
-      const response = await ollama.list({ host: this.config.host });
-      return response.models.map((model) => model.name);
+      const response = await this.client.tags();
+      return (response as any).models?.map((model: any) => model.name) || [];
     } catch (error) {
       this.logger.error("Failed to list Ollama models", error);
       return [];
@@ -131,10 +135,7 @@ export class OllamaClient implements AIModelClient {
   async pullModel(modelName: string): Promise<void> {
     try {
       this.logger.info(`Pulling Ollama model: ${modelName}`);
-      await ollama.pull({
-        model: modelName,
-        host: this.config.host,
-      });
+      await this.client.pull({ model: modelName } as any);
       this.logger.info(`Successfully pulled model: ${modelName}`);
     } catch (error) {
       this.logger.error(`Failed to pull model ${modelName}`, error);
