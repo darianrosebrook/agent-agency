@@ -20,6 +20,7 @@
     "build": "tsc",
     "build:watch": "tsc --watch",
     "validate-verdict": "node scripts/validate-verdict.cjs",
+    "benchmark:agent-registry": "tsx benchmarks/agent-registry-performance.ts",
     "dev": "tsx watch src/index.ts",
     "dev:mcp": "tsx watch src/mcp/server.ts",
     "start": "node dist/src/index.js",

@@ -1,427 +1,509 @@
 /**
- * Main knowledge seeking orchestration component
+ * @fileoverview Knowledge Seeker Core Component for ARBITER-006
+ *
+ * Main orchestrator for intelligent information gathering and research,
+ * coordinating search providers, processing results, and managing queries.
+ *
  * @author @darianrosebrook
  */
 
+import { events } from "../orchestrator/EventEmitter";
+import { EventTypes } from "../orchestrator/OrchestratorEvents";
 import {
-  CacheEntry,
+  IInformationProcessor,
+  IKnowledgeSeeker,
+  ISearchProvider,
   KnowledgeQuery,
   KnowledgeResponse,
   KnowledgeSeekerConfig,
-  KnowledgeSeekerError,
-  KnowledgeSeekerErrorCode,
-  QueryPriority,
-  SearchProvider,
-  SearchResult,
+  KnowledgeSeekerStatus,
+  QueryType,
 } from "../types/knowledge";
 import { InformationProcessor } from "./InformationProcessor";
-import {
-  SearchProviderFactory,
-  SearchProvider as SearchProviderImpl,
-} from "./SearchProvider";
+import { SearchProviderFactory } from "./SearchProvider";
 
-export class KnowledgeSeeker {
-  private readonly config: KnowledgeSeekerConfig;
-  private readonly providers: SearchProviderImpl[];
-  private readonly processor: InformationProcessor;
-  private readonly cache = new Map<string, CacheEntry>();
-  private readonly activeSearches = new Set<string>();
-  private cleanupTimer?: ReturnType<typeof setInterval>;
+/**
+ * Knowledge Seeker implementation
+ */
+export class KnowledgeSeeker implements IKnowledgeSeeker {
+  private config: KnowledgeSeekerConfig;
+  private providers: Map<string, ISearchProvider> = new Map();
+  private processor: IInformationProcessor;
+  private activeQueries: Map<string, Promise<KnowledgeResponse>> = new Map();
+  private queryCache: Map<string, KnowledgeResponse> = new Map();
+  private resultCache: Map<string, any[]> = new Map();
 
-  constructor(
-    config: Partial<KnowledgeSeekerConfig> = {},
-    providers?: SearchProviderImpl[],
-    processor?: InformationProcessor
-  ) {
-    this.config = {
-      defaultTimeoutMs: 30000,
-      maxConcurrentSearches: 10,
-      cacheEnabled: true,
-      cacheTtlMs: 3600000, // 1 hour
-      minRelevanceThreshold: 0.3,
-      maxResultsPerProvider: 10,
-      providers: [],
-      circuitBreakerEnabled: true,
-      retryAttempts: 3,
-      retryDelayMs: 1000,
-      ...config,
-    };
-
-    this.providers =
-      providers || SearchProviderFactory.createDefaultProviders();
-    this.processor = processor || new InformationProcessor();
-
-    this.initializeCapabilityTracking();
+  constructor(config: KnowledgeSeekerConfig) {
+    this.config = config;
+    this.processor = new InformationProcessor(config.processor);
+    this.initializeProviders();
   }
 
-  async search(query: KnowledgeQuery): Promise<KnowledgeResponse> {
+  /**
+   * Process a knowledge query
+   */
+  async processQuery(query: KnowledgeQuery): Promise<KnowledgeResponse> {
     const startTime = Date.now();
 
+    // Validate query
+    this.validateQuery(query);
+
+    // Check if query is already being processed
+    if (this.activeQueries.has(query.id)) {
+      return this.activeQueries.get(query.id)!;
+    }
+
+    // Check cache first
+    if (this.config.caching.enableQueryCaching) {
+      const cachedResponse = this.checkQueryCache(query);
+      if (cachedResponse) {
+        events.emit({
+          id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
+          timestamp: new Date(),
+          severity: "info" as any,
+          source: "KnowledgeSeeker",
+          taskId: query.id,
+          metadata: { cacheHit: true, cacheKey: this.generateCacheKey(query) },
+        });
+        return cachedResponse;
+      }
+    }
+
+    // Create processing promise
+    const processingPromise = this.processQueryInternal(query, startTime);
+    this.activeQueries.set(query.id, processingPromise);
+
     try {
-      // Check cache first
-      if (this.config.cacheEnabled) {
-        const cached = this.checkCache(query);
-        if (cached) {
-          return {
-            ...cached,
-            processingTimeMs: Date.now() - startTime,
-            cacheHit: true,
-          };
-        }
-      }
+      const response = await processingPromise;
+      return response;
+    } finally {
+      // Clean up active query
+      this.activeQueries.delete(query.id);
+    }
+  }
 
-      // Validate query
-      this.validateQuery(query);
-
-      // Check concurrency limits
-      if (this.activeSearches.size >= this.config.maxConcurrentSearches) {
-        throw new KnowledgeSeekerError(
-          "Maximum concurrent searches exceeded",
-          KnowledgeSeekerErrorCode.RATE_LIMIT_EXCEEDED,
-          query.id
-        );
-      }
-
-      this.activeSearches.add(query.id);
-
-      try {
-        // Execute search across providers
-        const rawResults = await this.executeParallelSearch(query);
-
-        // Process and rank results
-        const processedResults = await this.processor.processResults(
-          query,
-          rawResults
-        );
-
-        // Filter by relevance threshold
-        const filteredResults = processedResults.filter(
-          (result) => result.relevanceScore >= this.config.minRelevanceThreshold
-        );
-
-        // Create response
-        const response: KnowledgeResponse = {
-          queryId: query.id,
-          results: filteredResults,
-          confidence: this.calculateOverallConfidence(filteredResults),
-          processingTimeMs: Date.now() - startTime,
-          sourcesUsed: this.getSourcesUsed(filteredResults),
-          cacheHit: false,
-        };
-
-        // Cache the response
-        if (this.config.cacheEnabled) {
-          this.cacheResponse(query, response);
-        }
-
-        return response;
-      } finally {
-        this.activeSearches.delete(query.id);
-      }
-    } catch (error) {
-      const processingTime = Date.now() - startTime;
-
-      if (error instanceof KnowledgeSeekerError) {
+  /**
+   * Get seeker status and health information
+   */
+  async getStatus(): Promise<KnowledgeSeekerStatus> {
+    const providerStatuses = await Promise.all(
+      Array.from(this.providers.values()).map(async (provider) => {
+        const health = await provider.getHealthStatus();
         return {
-          queryId: query.id,
-          results: [],
-          confidence: 0,
-          processingTimeMs: processingTime,
-          sourcesUsed: [],
-          cacheHit: false,
-          error: error.message,
+          name: provider.name,
+          available: await provider.isAvailable(),
+          health,
         };
+      })
+    );
+
+    return {
+      enabled: this.config.enabled,
+      providers: providerStatuses,
+      cacheStats: {
+        queryCacheSize: this.queryCache.size,
+        resultCacheSize: this.resultCache.size,
+        hitRate: this.calculateCacheHitRate(),
+      },
+      processingStats: {
+        activeQueries: this.activeQueries.size,
+        queuedQueries: 0, // Not implemented yet
+        completedQueries: 0, // Would need persistent tracking
+        failedQueries: 0, // Would need persistent tracking
+      },
+    };
+  }
+
+  /**
+   * Clear all caches
+   */
+  async clearCaches(): Promise<void> {
+    this.queryCache.clear();
+    this.resultCache.clear();
+
+    events.emit({
+      id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
+      timestamp: new Date(),
+      severity: "info" as any,
+      source: "KnowledgeSeeker",
+      metadata: { action: "cache_cleared" },
+    });
+  }
+
+  /**
+   * Internal query processing logic
+   */
+  private async processQueryInternal(
+    query: KnowledgeQuery,
+    startTime: number
+  ): Promise<KnowledgeResponse> {
+    try {
+      // Emit query received event
+      events.emit({
+        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
+        timestamp: new Date(),
+        severity: "info" as any,
+        source: "KnowledgeSeeker",
+        taskId: query.id,
+        metadata: {
+          queryType: query.queryType,
+          maxResults: query.maxResults,
+          timeoutMs: query.timeoutMs,
+        },
+      });
+
+      // Select appropriate providers
+      const selectedProviders = this.selectProviders(query);
+
+      if (selectedProviders.length === 0) {
+        throw new Error("No suitable search providers available");
       }
+
+      // Execute searches in parallel with timeout
+      const searchPromises = selectedProviders.map((provider) =>
+        this.executeSearchWithTimeout(provider, query)
+      );
+
+      const searchResults = await Promise.allSettled(searchPromises);
+
+      // Collect successful results
+      const allResults: any[] = [];
+      const providersQueried: string[] = [];
+
+      searchResults.forEach((result, index) => {
+        const provider = selectedProviders[index];
+        providersQueried.push(provider.name);
+
+        if (result.status === "fulfilled") {
+          allResults.push(...result.value);
+        } else {
+          console.warn(
+            `Search failed for provider ${provider.name}:`,
+            result.reason
+          );
+
+          events.emit({
+            id: `event-${Date.now()}-${Math.random()
+              .toString(36)
+              .substr(2, 9)}`,
+            type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
+            timestamp: new Date(),
+            severity: "warn" as any,
+            source: "KnowledgeSeeker",
+            taskId: query.id,
+            metadata: {
+              provider: provider.name,
+              error:
+                result.reason instanceof Error
+                  ? result.reason.message
+                  : String(result.reason),
+            },
+          });
+        }
+      });
+
+      // Process and filter results
+      const processedResults = await this.processor.processResults(
+        query,
+        allResults
+      );
+
+      // Generate response
+      const response: KnowledgeResponse = {
+        query,
+        results: processedResults,
+        summary: this.processor.generateSummary(query, processedResults),
+        confidence: this.calculateResponseConfidence(processedResults),
+        sourcesUsed: Array.from(new Set(processedResults.map((r) => r.domain))),
+        metadata: {
+          totalResultsFound: allResults.length,
+          resultsFiltered: processedResults.length,
+          processingTimeMs: Date.now() - startTime,
+          cacheUsed: false,
+          providersQueried,
+        },
+        respondedAt: new Date(),
+      };
+
+      // Cache response if enabled
+      if (this.config.caching.enableQueryCaching) {
+        this.cacheQueryResponse(query, response);
+      }
+
+      // Emit response generated event
+      events.emit({
+        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
+        timestamp: new Date(),
+        severity: "info" as any,
+        source: "KnowledgeSeeker",
+        taskId: query.id,
+        metadata: {
+          resultCount: processedResults.length,
+          confidence: response.confidence,
+          processingTimeMs: response.metadata.processingTimeMs,
+        },
+      });
+
+      return response;
+    } catch (error) {
+      const processingTimeMs = Date.now() - startTime;
+
+      // Emit error event
+      events.emit({
+        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
+        timestamp: new Date(),
+        severity: "error" as any,
+        source: "KnowledgeSeeker",
+        taskId: query.id,
+        metadata: {
+          error: error instanceof Error ? error.message : String(error),
+          processingTimeMs,
+        },
+      });
 
       throw error;
     }
   }
 
-  async searchMultiple(
-    queries: KnowledgeQuery[]
-  ): Promise<KnowledgeResponse[]> {
-    // Prioritize queries by priority and submit in parallel with limits
-    const prioritizedQueries = this.prioritizeQueries(queries);
-
-    const results: KnowledgeResponse[] = [];
-    const batches = this.createBatches(
-      prioritizedQueries,
-      this.config.maxConcurrentSearches
-    );
-
-    for (const batch of batches) {
-      const batchPromises = batch.map((query) => this.search(query));
-      const batchResults = await Promise.all(batchPromises);
-      results.push(...batchResults);
-    }
-
-    return results;
-  }
-
-  getCacheStats(): { size: number; hitRate: number; totalAccesses: number } {
-    const totalAccesses = Array.from(this.cache.values()).reduce(
-      (sum, entry) => sum + entry.accessCount,
-      0
-    );
-
-    // Simple hit rate calculation (would need more sophisticated tracking in production)
-    const hitRate = totalAccesses > 0 ? 0.7 : 0; // Mock hit rate
-
-    return {
-      size: this.cache.size,
-      hitRate,
-      totalAccesses,
-    };
-  }
-
-  clearCache(): void {
-    this.cache.clear();
-  }
-
-  getActiveSearches(): string[] {
-    return Array.from(this.activeSearches);
-  }
-
-  async healthCheck(): Promise<{ healthy: boolean; details: any }> {
-    const providerStatus = await Promise.all(
-      this.providers.map(async (provider) => ({
-        name: provider.name,
-        available: await provider.isAvailable(),
-        rateLimitStatus: await provider.getRateLimitStatus(),
-      }))
-    );
-
-    const healthy = providerStatus.some((p) => p.available);
-    const totalProviders = providerStatus.length;
-    const availableProviders = providerStatus.filter((p) => p.available).length;
-
-    return {
-      healthy,
-      details: {
-        totalProviders,
-        availableProviders,
-        cacheSize: this.cache.size,
-        activeSearches: this.activeSearches.size,
-        providers: providerStatus.map((p, index) => ({
-          ...p,
-          config: this.providers[index].getConfig(), // Include config for health reporting
-        })),
-      },
-    };
-  }
-
-  private checkCache(query: KnowledgeQuery): KnowledgeResponse | null {
-    const cacheKey = this.createCacheKey(query);
-    const entry = this.cache.get(cacheKey);
-
-    if (!entry) return null;
-
-    // Check if expired
-    if (Date.now() - entry.timestamp.getTime() > entry.ttlMs) {
-      this.cache.delete(cacheKey);
-      return null;
-    }
-
-    // Update access statistics
-    entry.accessCount++;
-    entry.lastAccessed = new Date();
-
-    return entry.data;
-  }
-
-  private createCacheKey(query: KnowledgeQuery): string {
-    // Create a deterministic key based on query content
-    const keyData = {
-      query: query.query,
-      context: query.context,
-      filters: query.filters,
-      sources: query.sources?.sort(),
-    };
-
-    return `knowledge:${JSON.stringify(keyData)}`;
-  }
-
-  private validateQuery(query: KnowledgeQuery): void {
-    if (!query.query || query.query.trim().length === 0) {
-      throw new KnowledgeSeekerError(
-        "Query cannot be empty",
-        KnowledgeSeekerErrorCode.INVALID_QUERY,
-        query.id
-      );
-    }
-
-    if (query.query.length > 1000) {
-      throw new KnowledgeSeekerError(
-        "Query too long (max 1000 characters)",
-        KnowledgeSeekerErrorCode.INVALID_QUERY,
-        query.id
-      );
-    }
-
-    if (query.maxResults && query.maxResults > 100) {
-      throw new KnowledgeSeekerError(
-        "Too many results requested (max 100)",
-        KnowledgeSeekerErrorCode.INVALID_QUERY,
-        query.id
-      );
-    }
-  }
-
-  private async executeParallelSearch(
-    query: KnowledgeQuery
-  ): Promise<SearchResult[]> {
-    const timeoutMs = query.timeoutMs || this.config.defaultTimeoutMs;
-    const selectedProviders = this.selectProviders(query);
-
-    const searchPromises = selectedProviders.map((provider) =>
-      this.searchWithProvider(provider, query, timeoutMs)
-    );
-
-    const results = await Promise.allSettled(searchPromises);
-    const successfulResults: SearchResult[] = [];
-
-    for (const result of results) {
-      if (result.status === "fulfilled") {
-        successfulResults.push(...result.value);
-      } else {
-        // Log provider failures but continue with others
-        console.warn("Provider search failed:", result.reason);
+  /**
+   * Initialize search providers from configuration
+   */
+  private initializeProviders(): void {
+    for (const providerConfig of this.config.providers) {
+      try {
+        const provider = SearchProviderFactory.createProvider(providerConfig);
+        this.providers.set(provider.name, provider);
+      } catch (error) {
+        console.error(
+          `Failed to initialize provider ${providerConfig.name}:`,
+          error
+        );
       }
     }
 
-    return successfulResults;
+    // Add mock provider for testing if no providers configured
+    if (this.providers.size === 0 && this.config.providers.length === 0) {
+      const mockProvider = SearchProviderFactory.createMockProvider();
+      this.providers.set(mockProvider.name, mockProvider);
+    }
   }
 
-  private selectProviders(query: KnowledgeQuery): SearchProviderImpl[] {
-    let candidates = this.providers.filter((p) => p.getConfig().enabled);
-
-    // If specific providers requested, filter to those
-    if (query.sources && query.sources.length > 0) {
-      candidates = candidates.filter((p) => query.sources!.includes(p.name));
+  /**
+   * Validate query parameters
+   */
+  private validateQuery(query: KnowledgeQuery): void {
+    if (!query.id || query.id.trim().length === 0) {
+      throw new Error("Query ID is required");
     }
 
-    // Sort by priority
-    candidates.sort((a, b) => b.getConfig().priority - a.getConfig().priority);
+    if (!query.query || query.query.trim().length === 0) {
+      throw new Error("Query text is required");
+    }
 
-    return candidates;
+    if (query.maxResults <= 0 || query.maxResults > 100) {
+      throw new Error("maxResults must be between 1 and 100");
+    }
+
+    if (query.relevanceThreshold < 0 || query.relevanceThreshold > 1) {
+      throw new Error("relevanceThreshold must be between 0 and 1");
+    }
+
+    if (query.timeoutMs <= 0 || query.timeoutMs > 300000) {
+      // 5 minutes max
+      throw new Error("timeoutMs must be between 1 and 300000");
+    }
+
+    if (!Object.values(QueryType).includes(query.queryType as QueryType)) {
+      throw new Error(`Invalid queryType: ${query.queryType}`);
+    }
   }
 
-  private async searchWithProvider(
-    provider: SearchProviderImpl,
-    query: KnowledgeQuery,
-    timeoutMs: number
-  ): Promise<SearchResult[]> {
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Search timeout")), timeoutMs)
+  /**
+   * Select appropriate providers for the query
+   */
+  private selectProviders(query: KnowledgeQuery): ISearchProvider[] {
+    const availableProviders = Array.from(this.providers.values()).filter(
+      async (p) => await p.isAvailable()
     );
 
-    const searchPromise = provider.search(query);
-    const results = await Promise.race([searchPromise, timeoutPromise]);
+    // Filter by query type preferences
+    let suitableProviders = availableProviders;
 
-    // Limit results per provider
-    return results.slice(0, this.config.maxResultsPerProvider);
+    if (query.preferredSources) {
+      // Could implement source type filtering here
+      // For now, return all available providers
+    }
+
+    // Prioritize based on query type
+    switch (query.queryType) {
+      case QueryType.TECHNICAL:
+        // Prefer documentation and code search
+        suitableProviders = suitableProviders.filter(
+          (p) => p.type === "documentation_search" || p.type === "web_search"
+        );
+        break;
+
+      case QueryType.FACTUAL:
+      case QueryType.EXPLANATORY:
+        // Use general web search
+        suitableProviders = suitableProviders.filter(
+          (p) => p.type === "web_search"
+        );
+        break;
+
+      default:
+        // Use all available providers
+        break;
+    }
+
+    // Ensure we have at least one provider
+    if (suitableProviders.length === 0) {
+      suitableProviders = availableProviders.slice(0, 1);
+    }
+
+    // Limit concurrent providers to avoid overwhelming
+    const maxConcurrent = Math.min(
+      suitableProviders.length,
+      this.config.queryProcessing.maxConcurrentQueries
+    );
+
+    return suitableProviders.slice(0, maxConcurrent);
   }
 
-  private calculateOverallConfidence(results: SearchResult[]): number {
+  /**
+   * Execute search with timeout protection
+   */
+  private async executeSearchWithTimeout(
+    provider: ISearchProvider,
+    query: KnowledgeQuery
+  ): Promise<any[]> {
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new Error(`Search timeout for provider ${provider.name}`));
+      }, query.timeoutMs);
+
+      provider
+        .search(query)
+        .then((results) => {
+          clearTimeout(timeoutId);
+          resolve(results);
+        })
+        .catch((error) => {
+          clearTimeout(timeoutId);
+          reject(error);
+        });
+    });
+  }
+
+  /**
+   * Check query cache for existing response
+   */
+  private checkQueryCache(query: KnowledgeQuery): KnowledgeResponse | null {
+    const cacheKey = this.generateCacheKey(query);
+    const cached = this.queryCache.get(cacheKey);
+
+    if (cached && this.isCacheValid(cached)) {
+      // Update cache access time
+      cached.respondedAt = new Date();
+      return cached;
+    }
+
+    return null;
+  }
+
+  /**
+   * Cache query response
+   */
+  private cacheQueryResponse(
+    query: KnowledgeQuery,
+    response: KnowledgeResponse
+  ): void {
+    const cacheKey = this.generateCacheKey(query);
+
+    // Set cache expiry
+    const expiresAt = new Date();
+    expiresAt.setMilliseconds(
+      expiresAt.getMilliseconds() + this.config.caching.cacheTtlMs
+    );
+
+    // Store with expiry (simplified - in production use proper cache)
+    this.queryCache.set(cacheKey, response);
+
+    // Clean up expired entries periodically
+    if (this.queryCache.size > 100) {
+      // Arbitrary cleanup trigger
+      this.cleanupExpiredCache();
+    }
+  }
+
+  /**
+   * Generate cache key for query
+   */
+  private generateCacheKey(query: KnowledgeQuery): string {
+    // Create deterministic key based on query content
+    const keyData = {
+      query: query.query.toLowerCase().trim(),
+      queryType: query.queryType,
+      maxResults: query.maxResults,
+      relevanceThreshold: query.relevanceThreshold,
+    };
+    return Buffer.from(JSON.stringify(keyData)).toString("base64");
+  }
+
+  /**
+   * Check if cached response is still valid
+   */
+  private isCacheValid(response: KnowledgeResponse): boolean {
+    // Cache for 1 hour by default
+    const cacheAge = Date.now() - response.respondedAt.getTime();
+    return cacheAge < (this.config.caching.cacheTtlMs || 3600000);
+  }
+
+  /**
+   * Calculate response confidence based on result quality
+   */
+  private calculateResponseConfidence(results: any[]): number {
     if (results.length === 0) return 0;
 
     const avgRelevance =
       results.reduce((sum, r) => sum + r.relevanceScore, 0) / results.length;
     const avgCredibility =
       results.reduce((sum, r) => sum + r.credibilityScore, 0) / results.length;
-    const sourceDiversity = this.calculateSourceDiversity(results);
+    const qualityBonus =
+      results.filter((r) => r.quality === "high").length / results.length;
 
-    // Weighted confidence calculation
-    return avgRelevance * 0.4 + avgCredibility * 0.4 + sourceDiversity * 0.2;
-  }
-
-  private calculateSourceDiversity(results: SearchResult[]): number {
-    const uniqueProviders = new Set(results.map((r) => r.provider));
-    return Math.min(uniqueProviders.size / this.providers.length, 1.0);
-  }
-
-  private getSourcesUsed(results: SearchResult[]): SearchProvider[] {
-    return Array.from(new Set(results.map((r) => r.provider)));
-  }
-
-  private cacheResponse(
-    query: KnowledgeQuery,
-    response: KnowledgeResponse
-  ): void {
-    const cacheKey = this.createCacheKey(query);
-    const ttlMs =
-      query.priority === QueryPriority.CRITICAL
-        ? this.config.cacheTtlMs * 2
-        : this.config.cacheTtlMs;
-
-    const entry: CacheEntry = {
-      key: cacheKey,
-      data: response,
-      timestamp: new Date(),
-      ttlMs,
-      accessCount: 1,
-      lastAccessed: new Date(),
-    };
-
-    this.cache.set(cacheKey, entry);
-  }
-
-  private prioritizeQueries(queries: KnowledgeQuery[]): KnowledgeQuery[] {
-    const priorityOrder = {
-      [QueryPriority.CRITICAL]: 4,
-      [QueryPriority.HIGH]: 3,
-      [QueryPriority.MEDIUM]: 2,
-      [QueryPriority.LOW]: 1,
-    };
-
-    return queries.sort(
-      (a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
+    return Math.min(
+      1.0,
+      (avgRelevance + avgCredibility) / 2 + qualityBonus * 0.1
     );
   }
 
-  private createBatches<T>(items: T[], batchSize: number): T[][] {
-    const batches: T[][] = [];
-    for (let i = 0; i < items.length; i += batchSize) {
-      batches.push(items.slice(i, i + batchSize));
-    }
-    return batches;
+  /**
+   * Calculate cache hit rate (simplified)
+   */
+  private calculateCacheHitRate(): number {
+    // This would need proper tracking in production
+    // For now, return a placeholder
+    return 0.0;
   }
 
-  private initializeCapabilityTracking(): void {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
-    const profile = this.providers.map((p) => ({
-      name: p.name,
-      available: true, // Would check actual availability
-      rateLimit: p.getConfig().rateLimit,
-    }));
-
-    // Set up periodic cache cleanup
-    this.cleanupTimer = setInterval(() => {
-      this.performCacheCleanup();
-    }, 300000); // Clean every 5 minutes
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
-    const score = this.calculateOverallConfidence([]); // Initialize scoring system
-  }
-
-  private performCacheCleanup(): void {
+  /**
+   * Clean up expired cache entries
+   */
+  private cleanupExpiredCache(): void {
     const now = Date.now();
-    const expiredKeys: string[] = [];
-
-    for (const [key, entry] of this.cache.entries()) {
-      if (now - entry.timestamp.getTime() > entry.ttlMs) {
-        expiredKeys.push(key);
+    for (const [key, response] of Array.from(this.queryCache.entries())) {
+      if (
+        now - response.respondedAt.getTime() >
+        (this.config.caching.cacheTtlMs || 3600000)
+      ) {
+        this.queryCache.delete(key);
       }
     }
-
-    expiredKeys.forEach((key) => this.cache.delete(key));
-  }
-
-  destroy(): void {
-    if (this.cleanupTimer) {
-      clearInterval(this.cleanupTimer);
-      this.cleanupTimer = undefined;
-    }
-    this.clearCache();
   }
 }

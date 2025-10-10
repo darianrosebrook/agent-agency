@@ -8,10 +8,10 @@
  */
 
 import {
-  AgentProfile,
   AgentId,
-  PerformanceMetrics,
+  AgentProfile,
   AgentQuery,
+  PerformanceMetrics,
 } from "../types/agent-registry";
 
 /**
@@ -149,10 +149,7 @@ export class AgentRegistrySecurity {
     const parts = Buffer.from(token, "base64").toString("utf8").split(":");
 
     if (parts.length < 3) {
-      throw new SecurityError(
-        "Invalid authentication token",
-        "INVALID_TOKEN"
-      );
+      throw new SecurityError("Invalid authentication token", "INVALID_TOKEN");
     }
 
     return {
@@ -312,10 +309,7 @@ export class AgentRegistrySecurity {
       }
 
       if (agent.capabilities.languages.length > 50) {
-        throw new SecurityError(
-          "Too many languages (max 50)",
-          "INVALID_INPUT"
-        );
+        throw new SecurityError("Too many languages (max 50)", "INVALID_INPUT");
       }
 
       if (agent.capabilities.specializations.length > 50) {
@@ -345,7 +339,10 @@ export class AgentRegistrySecurity {
       );
     }
 
-    if (metrics.tokensUsed !== undefined && (metrics.tokensUsed < 0 || metrics.tokensUsed > 1000000)) {
+    if (
+      metrics.tokensUsed !== undefined &&
+      (metrics.tokensUsed < 0 || metrics.tokensUsed > 1000000)
+    ) {
       throw new SecurityError(
         "Tokens used must be between 0 and 1,000,000",
         "INVALID_INPUT"
@@ -386,10 +383,7 @@ export class AgentRegistrySecurity {
   /**
    * Enforce tenant isolation
    */
-  scopeToTenant(
-    agentId: AgentId,
-    context: SecurityContext
-  ): AgentId {
+  scopeToTenant(agentId: AgentId, context: SecurityContext): AgentId {
     if (!this.config.multiTenantEnabled) {
       return agentId;
     }
@@ -414,10 +408,7 @@ export class AgentRegistrySecurity {
   /**
    * Verify agent belongs to tenant
    */
-  verifyTenantOwnership(
-    agentId: AgentId,
-    context: SecurityContext
-  ): void {
+  verifyTenantOwnership(agentId: AgentId, context: SecurityContext): void {
     if (!this.config.multiTenantEnabled) {
       return;
     }
@@ -442,16 +433,17 @@ export class AgentRegistrySecurity {
     this.auditLog.push(entry);
 
     // TODO: Persist to database or external audit system
-    console.log(`[AUDIT] ${entry.operation} on ${entry.resource}:${entry.resourceId} by ${entry.userId} - ${entry.success ? "SUCCESS" : "FAILURE"}`);
+    console.log(
+      `[AUDIT] ${entry.operation} on ${entry.resource}:${entry.resourceId} by ${
+        entry.userId
+      } - ${entry.success ? "SUCCESS" : "FAILURE"}`
+    );
   }
 
   /**
    * Get audit log
    */
-  getAuditLog(
-    tenantId?: string,
-    limit: number = 100
-  ): AuditEntry[] {
+  getAuditLog(tenantId?: string, limit: number = 100): AuditEntry[] {
     let filtered = this.auditLog;
 
     if (tenantId) {
@@ -559,7 +551,12 @@ export class SecureAgentRegistry {
 
       // Audit log
       this.security.logAuditEntry({
-        ...this.createBaseAuditEntry(context, "register_agent", "agent", agent.id),
+        ...this.createBaseAuditEntry(
+          context,
+          "register_agent",
+          "agent",
+          agent.id
+        ),
         success: true,
       });
 
@@ -567,7 +564,12 @@ export class SecureAgentRegistry {
     } catch (error) {
       // Audit log failure
       this.security.logAuditEntry({
-        ...this.createBaseAuditEntry(context, "register_agent", "agent", agent.id),
+        ...this.createBaseAuditEntry(
+          context,
+          "register_agent",
+          "agent",
+          agent.id
+        ),
         success: false,
         errorMessage: error instanceof Error ? error.message : String(error),
       });
@@ -663,7 +665,12 @@ export class SecureAgentRegistry {
 
       // Audit log
       this.security.logAuditEntry({
-        ...this.createBaseAuditEntry(context, "update_performance", "agent", agentId),
+        ...this.createBaseAuditEntry(
+          context,
+          "update_performance",
+          "agent",
+          agentId
+        ),
         success: true,
         metadata: {
           requestId: context.requestId,
@@ -677,7 +684,12 @@ export class SecureAgentRegistry {
     } catch (error) {
       // Audit log failure
       this.security.logAuditEntry({
-        ...this.createBaseAuditEntry(context, "update_performance", "agent", agentId),
+        ...this.createBaseAuditEntry(
+          context,
+          "update_performance",
+          "agent",
+          agentId
+        ),
         success: false,
         errorMessage: error instanceof Error ? error.message : String(error),
       });
@@ -708,7 +720,12 @@ export class SecureAgentRegistry {
 
       // Audit log
       this.security.logAuditEntry({
-        ...this.createBaseAuditEntry(context, "unregister_agent", "agent", agentId),
+        ...this.createBaseAuditEntry(
+          context,
+          "unregister_agent",
+          "agent",
+          agentId
+        ),
         success: true,
       });
 
@@ -716,7 +733,12 @@ export class SecureAgentRegistry {
     } catch (error) {
       // Audit log failure
       this.security.logAuditEntry({
-        ...this.createBaseAuditEntry(context, "unregister_agent", "agent", agentId),
+        ...this.createBaseAuditEntry(
+          context,
+          "unregister_agent",
+          "agent",
+          agentId
+        ),
         success: false,
         errorMessage: error instanceof Error ? error.message : String(error),
       });
@@ -757,4 +779,3 @@ export class SecureAgentRegistry {
     };
   }
 }
-

@@ -14,7 +14,13 @@ import {
   TaskStatus,
 } from "../types/arbiter-orchestration";
 import { DatabaseClientFactory, IDatabaseClient } from "./DatabaseClient";
+import { events } from "./EventEmitter";
 import { Mutex } from "./Mutex";
+import {
+  EventSeverity,
+  EventTypes,
+  TaskDequeuedEvent,
+} from "./OrchestratorEvents";
 import {
   AuthCredentials,
   Permission,
@@ -504,6 +510,23 @@ export class TaskQueue implements ITaskQueue {
         // Update statistics
         this.stats.depth--;
         this.stats.totalDequeued++;
+
+        // Emit task dequeued event
+        const dequeuedEvent: TaskDequeuedEvent = {
+          id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: EventTypes.TASK_DEQUEUED,
+          timestamp: new Date(),
+          severity: EventSeverity.INFO,
+          source: "TaskQueue",
+          taskId: task.id,
+          queueDepth: this.stats.depth,
+          waitTimeMs: this.calculateWaitTime(task.id),
+          metadata: {
+            taskType: task.type,
+            priority: task.priority,
+          },
+        };
+        events.emit(dequeuedEvent);
       }
 
       return task || null;
@@ -654,6 +677,28 @@ export class TaskQueue implements ITaskQueue {
   ): void {
     this.stats.statusDistribution[fromStatus]--;
     this.stats.statusDistribution[toStatus]++;
+  }
+
+  /**
+   * Calculate estimated wait time for a task
+   */
+  private calculateEstimatedWaitTime(task: Task): number {
+    // Simple estimation based on queue depth and priority
+    const baseTime = 5000; // 5 seconds base
+    const depthMultiplier = Math.min(this.stats.depth * 0.1, 2); // Max 2x multiplier
+    const priorityMultiplier = task.priority <= 5 ? 1 : 0.5; // High priority waits less
+    return Math.round(baseTime * depthMultiplier * priorityMultiplier);
+  }
+
+  /**
+   * Calculate actual wait time for a dequeued task
+   */
+  private calculateWaitTime(taskId: string): number {
+    const taskState = this.taskStates.get(taskId);
+    if (!taskState) return 0;
+
+    const enqueuedAt = (taskState as any).enqueuedAt || new Date();
+    return Date.now() - enqueuedAt.getTime();
   }
 
   /**
