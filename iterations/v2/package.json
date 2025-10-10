@@ -19,6 +19,7 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "build:watch": "tsc --watch",
+    "validate-verdict": "node scripts/validate-verdict.cjs",
     "dev": "tsx watch src/index.ts",
     "dev:mcp": "tsx watch src/mcp/server.ts",
     "start": "node dist/src/index.js",

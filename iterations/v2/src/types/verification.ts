@@ -65,7 +65,7 @@ export interface VerificationMethodResult {
   method: VerificationType;
   verdict: VerificationVerdict;
   confidence: number;
-  reasoning: string;
+  reasoning: string | string[];
   processingTimeMs: number;
   evidenceCount: number;
 }

@@ -156,7 +156,7 @@ export class AgentRegistryManager {
   async getAgentsByCapability(query: AgentQuery): Promise<AgentQueryResult[]> {
     const results: AgentQueryResult[] = [];
 
-    for (const profile of this.agents.values()) {
+    for (const profile of Array.from(this.agents.values())) {
       // Check task type match
       if (!profile.capabilities.taskTypes.includes(query.taskType)) {
         continue;
@@ -472,7 +472,8 @@ export class AgentRegistryManager {
     const now = new Date().toISOString();
     const staleAgents: AgentId[] = [];
 
-    for (const [agentId, profile] of this.agents.entries()) {
+    const agents = Array.from(this.agents.entries());
+    for (const [agentId, profile] of agents) {
       if (
         AgentProfileHelper.isStale(
           profile,

@@ -1,0 +1,57 @@
+{
+  "id": "verdict-INVALID-001",
+  "taskId": "task-001",
+  "timestamp": "2025-10-10T14:30:00Z",
+  "compliance": {
+    "budgetAdherence": {
+      "passed": true,
+      "filesUsed": 50,
+      "filesLimit": 40,
+      "locUsed": 2000,
+      "locLimit": 1500,
+      "violations": ["Budget exceeded"]
+    },
+    "qualityGates": [
+      {
+        "name": "tests-pass",
+        "passed": false,
+        "score": 0.5,
+        "threshold": 0.8
+      }
+    ]
+  },
+  "waivers": [
+    {
+      "id": "WV-001",
+      "reason": "invalid-reason",
+      "approved": false,
+      "expiresAt": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "verdict": "pass",
+  "constitutionalContext": {
+    "specHash": "invalid-hash",
+    "clauseCitations": [
+      {
+        "clauseId": "INVALID:CLAUSE",
+        "decision": "invalid",
+        "rationale": "",
+        "evidence": []
+      }
+    ],
+    "governanceMetrics": {
+      "waiverRate": 1.5,
+      "gateIntegrity": -0.1,
+      "budgetCompliance": 1.2,
+      "evidenceCompleteness": 2.0
+    }
+  },
+  "signature": {
+    "algorithm": "invalid",
+    "publicKey": "invalid",
+    "signature": "invalid"
+  },
+  "provenance": {
+    "chainHash": "invalid"
+  }
+}
