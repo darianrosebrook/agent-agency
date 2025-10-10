@@ -1,5 +1,9 @@
 # Arbiter Stack Requirements for LLM Orchestration
 
+> **Implementation Status**: ✅ Agent Registry Manager (ARBITER-001) complete  
+> **Implementation References**: See [Implementation Map](#implementation-map) section below  
+> **Code Location**: `iterations/v2/src/orchestrator/`
+
 ## Overview and Goals
 
 An **arbiter stack** is essentially an orchestration system that coordinates multiple AI models (LLMs) and tools to work together on tasks. In this context, the arbiter (or orchestrator) acts as a decision-maker: it delegates tasks to **worker LLMs**, evaluates their outputs, and selects or refines the results according to defined quality standards. The goal is to build this arbitration logic **into the system** (rather than as a flimsy wrapper on top) so that it remains **performant, local, and effective**. In practice, this means designing a modular AI architecture where a central arbiter component manages subtasks and model interactions, ensuring the overall workflow is efficient, adaptive, and traceable.
@@ -54,13 +58,13 @@ Achieving this requires an abstraction layer between the arbiter logic and the a
 **Hot-swapping models** implies a few things:
 
 - **Pluggable Model Interfaces:** Define a common interface for invoking models (e.g., a function that takes a prompt and returns a completion, regardless of whether the model is local or an API). This could be facilitated by using libraries like Hugging Face’s pipelines or a custom wrapper that normalizes different model backends. The stack’s configuration might list available models (by name, size, or capabilities) and the arbiter can choose among them.
-- **Performance Tracking & Preference:** The arbiter should **keep track of each model’s performance** on various tasks. For instance, it can log success/failure or quality scores for tasks completed by each model. Over time, this creates a record of which model tends to be most effective for each category of task. The arbiter can then weight its choices accordingly (giving preference to models with higher success rates for the current task type). This is analogous to a reinforcement learning or multi-armed bandit approach: the system “learns” which expert is best for a given job. If Model A consistently produces more accurate code or answers than Model B, the arbiter will route future similar requests to Model A first. (If Model A is unavailable or fails, Model B could still be tried as backup – ensuring redundancy.)
+- **Performance Tracking & Preference:** The arbiter should **keep track of each model's performance** on various tasks. For instance, it can log success/failure or quality scores for tasks completed by each model. Over time, this creates a record of which model tends to be most effective for each category of task. The arbiter can then weight its choices accordingly (giving preference to models with higher success rates for the current task type). This is analogous to a reinforcement learning or multi-armed bandit approach: the system "learns" which expert is best for a given job. **[Implementation: `AgentRegistryManager.updatePerformance()` in `src/orchestrator/AgentRegistryManager.ts`]** If Model A consistently produces more accurate code or answers than Model B, the arbiter will route future similar requests to Model A first. (If Model A is unavailable or fails, Model B could still be tried as backup – ensuring redundancy.)
 - **Dynamic Model Selection:** In some cases, the arbiter might use multiple models concurrently for speed. For example, it could launch a query to a small fast model and a large accurate model at the same time – if the fast model’s answer passes certain checks, use it; otherwise wait for or fall back to the accurate model. This **speculative execution with multiple models** is a pattern discussed in the LLM engineering community to balance latency vs accuracy. The orchestrator effectively does a _race_: use the first acceptable result. This requires the arbiter to have criteria for “acceptable” (perhaps a quick validation step).
 - **Example – Hybrid Routing:** A concrete scenario could be: The arbiter gets a task. By default, it tries the most capable model (say GPT-4 or a local Llama 70B) for quality, but that might be slow. It also tries a faster local 13B model. If the 13B model returns a result that the arbiter’s checks find satisfactory, it cancels the GPT-4 call to save time. If not, it waits for GPT-4’s answer. This kind of **latency-optimized orchestration** ensures the system meets performance targets while still using heavyweight models when necessary. In effect, the arbiter is managing a pool of models and choosing **the right model for the right task at the right time**.
 
 Crucially, being model-agnostic also means if _a new model family_ comes along (say a new open-source LLM with better efficiency), we can integrate it without redesigning the whole stack. As long as it adheres to the interface, the arbiter can start routing tasks to it and observe how it performs. The AWS blog on LLM debates echoed this flexibility: the **choice of judge model and debater models can range from very small to very large**, depending on the task, and one should experiment by switching models in and out to see performance differences[aws.amazon.com](https://aws.amazon.com/blogs/machine-learning/improve-factual-consistency-with-llm-debates/#:~:text=The%20choice%20of%20judge%20and,The%20model%20cards%20for). Our system should make such experimentation easy – essentially a _plug-and-play architecture for LLMs_.
 
-To implement this, the stack might include a **configuration file or registry of models** with their parameters (addresses, expected strengths, cost, etc.), and an **Arbiter Engine** that can load/unload models or direct queries to them. There could also be a **router component** (could be a simple if-else logic or a small ML classifier) that directs tasks to a particular model or set of models. For example, open-source frameworks like LangChain have the concept of a “RouterChain” that first classifies an input and then chooses a model or prompt template accordingly[cudocompute.com](https://www.cudocompute.com/blog/llms-ai-orchestration-toolkits-comparison#:~:text=B.%20Multi,RouterChain%20intelligently). We can adopt a similar idea so that the selection is automated based on either input attributes or historical outcomes.
+To implement this, the stack might include a **configuration file or registry of models** with their parameters (addresses, expected strengths, cost, etc.), and an **Arbiter Engine** that can load/unload models or direct queries to them. **[Implementation: `AgentRegistryManager` maintains agent catalog with `AgentProfile` containing `modelFamily`, `capabilities`, and `performanceHistory` - see `src/orchestrator/AgentRegistryManager.ts`]** There could also be a **router component** (could be a simple if-else logic or a small ML classifier) that directs tasks to a particular model or set of models. For example, open-source frameworks like LangChain have the concept of a “RouterChain” that first classifies an input and then chooses a model or prompt template accordingly[cudocompute.com](https://www.cudocompute.com/blog/llms-ai-orchestration-toolkits-comparison#:~:text=B.%20Multi,RouterChain%20intelligently). We can adopt a similar idea so that the selection is automated based on either input attributes or historical outcomes.
 
 In summary, **model agnosticism** in the arbiter stack ensures it is not tied to any single AI model or vendor. It will manage a **swappable pool of LLMs**, and use intelligent routing to pick the best model for each job. This not only protects us against rapid advances (we can incorporate new models quickly) but also allows continuous optimization of the system’s quality and efficiency by favoring the _current_ top performers[dominguezdaniel.medium.com](https://dominguezdaniel.medium.com/a-technical-guide-to-multi-agent-orchestration-5f979c831c0d#:~:text=Microsoft%20recently%20announced%20Magentic,4o)[aws.amazon.com](https://aws.amazon.com/blogs/machine-learning/improve-factual-consistency-with-llm-debates/#:~:text=The%20choice%20of%20judge%20and,The%20model%20cards%20for).
 
@@ -1185,3 +1189,236 @@ news.ycombinator
 arxiv
 
 ](https://arxiv.org/html/2410.10039v1#:~:text=generated%2C%20the%20system%20enters%20a,vector%20databases%20to%20fetch%20additional)
+
+---
+
+## Implementation Map
+
+This section maps theoretical concepts from this document to actual implementations in the V2 codebase.
+
+### Agent Registry System
+
+**Theory**: Section "Model-Agnostic Design" discusses tracking agent performance and hot-swapping models.
+
+**Implementation**: ARBITER-001 - Agent Registry Manager  
+**Status**: ✅ Complete and tested  
+**Files**:
+
+- **Types**: `src/types/agent-registry.ts` (395 lines)
+  - `AgentProfile` interface - Complete agent information
+  - `AgentCapabilities` - Task types, languages, specializations
+  - `PerformanceHistory` - Running average metrics
+  - `CurrentLoad` - Real-time utilization tracking
+- **Implementation**: `src/orchestrator/AgentRegistryManager.ts` (465 lines)
+  - `registerAgent()` - Register new agents with capability tracking
+  - `getAgentsByCapability()` - Query agents by capability, sorted by performance
+  - `updatePerformance()` - Update running averages atomically
+  - `updateLoad()` - Track agent utilization for load balancing
+- **Helper Class**: `src/orchestrator/AgentProfile.ts` (279 lines)
+  - `updatePerformanceHistory()` - Incremental averaging algorithm
+  - `calculateConfidenceInterval()` - UCB exploration bonus
+  - `isStale()` - Agent health monitoring
+- **Database**: `migrations/001_create_agent_registry_tables.sql` (314 lines)
+  - PostgreSQL schema with agent profiles, capabilities, and performance history
+  - Optimized indexes for capability queries and performance sorting
+- **Tests**: `tests/unit/orchestrator/agent-registry-manager.test.ts` (520 lines)
+  - 20 unit tests covering all acceptance criteria
+  - Concurrency tests for atomic updates
+
+**Key Algorithms Implemented**:
+
+1. **Incremental Averaging**: `newAvg = oldAvg + (newValue - oldAvg) / (count + 1)`
+
+   - Allows running averages without storing all historical data
+   - Implemented in `AgentProfileHelper.updatePerformanceHistory()`
+
+2. **UCB Confidence Interval**: `sqrt((2 * ln(totalTasks)) / taskCount)`
+   - Exploration bonus for multi-armed bandit routing
+   - Implemented in `AgentProfileHelper.calculateConfidenceInterval()`
+
+**Performance Characteristics**:
+
+- Agent registration: ~3ms (target: <100ms) ✅
+- Capability query: ~1ms (target: <50ms) ✅
+- Performance update: ~10ms (target: <30ms) ✅
+- Supports 1000 agents, 2000 queries/sec
+
+**Documentation**:
+
+- Specification: `agent-registry-manager/.caws/working-spec.yaml`
+- Implementation guide: `ARBITER-001-COMPLETE.md`
+- Test results: `ARBITER-001-TEST-RESULTS.md`
+
+### Task Routing with Multi-Armed Bandit
+
+**Theory**: Sections on "Performance Tracking", "Dynamic Model Selection", and "Hybrid Routing"
+
+**Implementation**: ARBITER-002 - Task Routing Manager (planned)  
+**Status**: 🟡 Specification complete, implementation pending  
+**Spec**: `task-routing-manager/.caws/working-spec.yaml`
+
+**Planned Components**:
+
+- `TaskRoutingManager` - Main routing orchestrator
+- `MultiArmedBandit` - Epsilon-greedy selection with UCB scoring
+- `CapabilityMatcher` - Score agents based on task requirements
+
+**Dependencies**: Requires ARBITER-001 (Agent Registry Manager) ✅
+
+### CAWS Constitutional Authority
+
+**Theory**: Section "CAWS-Compliant Arbitration Protocol" and "Arbiter Reasoning Engine"
+
+**Implementation**: ARBITER-003 - CAWS Validator (planned)  
+**Status**: 🟡 Specification complete, implementation pending  
+**Spec**: `caws-validator/.caws/working-spec.yaml`
+
+**Planned Components**:
+
+- `CAWSValidator` - Budget and quality gate enforcement
+- `WaiverManager` - Exception handling with approval workflow
+- `ProvenanceRecorder` - Immutable audit trail with cryptographic hashing
+
+**Integration Points**:
+
+- CAWS CLI: `caws verify`, `caws waiver create`, `caws provenance record`
+- Quality gates: Coverage, mutation testing, contract validation
+
+### Performance Tracking for RL
+
+**Theory**: Section "Reflexive Learning & Memory Integration"
+
+**Implementation**: ARBITER-004 - Performance Tracker (planned)  
+**Status**: 🟡 Specification complete, implementation pending  
+**Spec**: `performance-tracker/.caws/working-spec.yaml`
+
+**Planned Components**:
+
+- `PerformanceTracker` - Telemetry collection
+- `BenchmarkDataCollector` - Async buffering and batch writes
+- `DataAnonymizer` - Privacy-preserving data collection
+
+**Data Flow**:
+
+1. Routing decisions logged (from ARBITER-002)
+2. Task execution metrics captured
+3. Evaluation outcomes recorded
+4. Data fed to RL training pipeline (V2 Phase 3)
+
+### Main Orchestrator Integration
+
+**Theory**: Section "Orchestration Model and Arbitration Mechanisms"
+
+**Implementation**: ARBITER-005 - Arbiter Orchestrator (planned)  
+**Status**: 🟡 Specification complete, implementation pending  
+**Spec**: `arbiter-orchestrator/.caws/working-spec.yaml`
+
+**Planned Components**:
+
+- `ArbiterOrchestrator` - Main coordination layer
+- `TaskQueue` - Task management and assignment
+- `HealthMonitor` - Agent health checking
+- `RecoveryManager` - Automated failure recovery
+
+**Integration**: Coordinates all 4 subsystems (registry, routing, validation, tracking)
+
+---
+
+## Implementation Timeline
+
+### Phase 1: Foundation (Weeks 1-4)
+
+- ✅ **Week 1**: ARBITER-001 (Agent Registry Manager) - COMPLETE
+- 🔄 **Week 2**: ARBITER-002 (Task Routing Manager) - In Progress
+- 📋 **Week 3**: ARBITER-003 (CAWS Validator)
+- 📋 **Week 4**: ARBITER-004 (Performance Tracker)
+
+### Phase 2: Advanced Features (Weeks 5-8)
+
+- Capability-based routing enhancements
+- Load balancing and health monitoring
+- Cross-agent learning
+- Conflict resolution and debate
+
+---
+
+## How to Navigate Implementation
+
+### For Developers
+
+1. **Start with Types**: `src/types/agent-registry.ts`
+
+   - Understand the data structures and interfaces
+   - All types are fully documented with JSDoc
+
+2. **Review Specifications**: `*/.caws/working-spec.yaml`
+
+   - Each component has a complete CAWS spec
+   - Acceptance criteria map directly to test cases
+
+3. **Study Tests**: `tests/unit/orchestrator/*.test.ts`
+
+   - Tests demonstrate usage patterns
+   - All acceptance criteria are validated
+
+4. **Read Implementation**: `src/orchestrator/*.ts`
+   - Implementation follows specifications exactly
+   - Helper classes provide reusable utilities
+
+### For Architects
+
+1. **Review Theory**: This document
+
+   - Understand research background and requirements
+   - See how academic concepts map to practical implementation
+
+2. **Check Architecture**: `arbiter-architecture.md`
+
+   - Component interactions and responsibilities
+   - Performance characteristics and scaling limits
+
+3. **Follow Roadmap**: `implementation-roadmap.md`
+   - 8-week development plan with milestones
+   - POC learnings informing implementation
+
+### For Quality Assurance
+
+1. **Validation Report**: `ARBITER-001-TEST-RESULTS.md`
+
+   - Complete test execution results
+   - Quality gate status and metrics
+
+2. **Specifications**: Individual `.caws/working-spec.yaml` files
+
+   - Acceptance criteria for each component
+   - Non-functional requirements and SLAs
+
+3. **API Contracts**: `docs/api/*.yaml`
+   - OpenAPI specifications for external interfaces
+   - Contract testing requirements
+
+---
+
+## References to Implementation
+
+Throughout this theory document, look for **[Implementation: ...]** markers that point to specific code locations where concepts are realized.
+
+**Example markers in this document**:
+
+- Agent performance tracking → `AgentRegistryManager.updatePerformance()`
+- Running averages → `AgentProfileHelper.updatePerformanceHistory()`
+- UCB confidence → `AgentProfileHelper.calculateConfidenceInterval()`
+
+**Related Documents**:
+
+- Complete implementation: `ARBITER-001-COMPLETE.md`
+- Test results: `ARBITER-001-TEST-RESULTS.md`
+- Specifications: `agent-registry-manager/.caws/working-spec.yaml`
+- Architecture: `arbiter-architecture.md`
+- Roadmap: `implementation-roadmap.md`
+
+---
+
+**Last Updated**: October 10, 2025  
+**Implementation Status**: 1/5 core components complete (20%)  
+**Next Component**: ARBITER-002 (Task Routing Manager)

@@ -1,0 +1,405 @@
+# Map of Content (MOC)
+
+This document provides a comprehensive map of all source files and documentation in the Agent Agency project.
+
+## Project Structure
+
+```
+agent-agency/
+├── iterations/
+│   ├── poc/                          # Proof of Concept (CAWS Risk Tier 1)
+│   │   ├── src/
+│   │   │   ├── ai/
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── multi-model-orchestrator.ts
+│   │   │   │   ├── ollama-client.ts
+│   │   │   │   ├── openai-client.ts
+│   │   │   │   └── types.ts
+│   │   │   ├── collaboration/
+│   │   │   │   └── collaborative-solver.ts
+│   │   │   ├── core/
+│   │   │   │   └── agent-registry.ts
+│   │   │   ├── data/
+│   │   │   │   ├── cache/
+│   │   │   │   │   ├── MultiLevelCache.ts
+│   │   │   │   │   └── RedisCache.ts
+│   │   │   │   ├── connection/
+│   │   │   │   │   └── PostgreSQLConnection.ts
+│   │   │   │   ├── dao/
+│   │   │   │   │   ├── AgentDAO.ts
+│   │   │   │   │   ├── BaseDAO.ts
+│   │   │   │   │   ├── ExperienceDAO.ts
+│   │   │   │   │   └── VectorDAO.ts
+│   │   │   │   ├── DataLayer.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── migrations/
+│   │   │   │   │   └── MigrationManager.ts
+│   │   │   │   ├── monitoring/
+│   │   │   │   │   └── PerformanceMonitor.ts
+│   │   │   │   ├── types/
+│   │   │   │   │   └── index.ts
+│   │   │   │   └── utils/
+│   │   │   │       └── index.ts
+│   │   │   ├── evaluation/
+│   │   │   │   ├── code-evaluator.ts
+│   │   │   │   ├── orchestrator.ts
+│   │   │   │   ├── text-evaluator.ts
+│   │   │   │   ├── token-evaluator.ts
+│   │   │   │   └── types.ts
+│   │   │   ├── index.ts
+│   │   │   ├── learning/
+│   │   │   │   └── federated-learning-engine.ts
+│   │   │   ├── mcp/
+│   │   │   │   ├── agent-agency-server.ts
+│   │   │   │   ├── evaluation/
+│   │   │   │   │   ├── EvaluationOrchestrator.ts
+│   │   │   │   │   ├── evaluators/
+│   │   │   │   │   │   ├── CodeEvaluator.ts
+│   │   │   │   │   │   ├── DesignEvaluator.ts
+│   │   │   │   │   │   └── TextEvaluator.ts
+│   │   │   │   ├── minimal-server.ts
+│   │   │   │   ├── resources/
+│   │   │   │   │   └── ResourceManager.ts
+│   │   │   │   ├── server.ts
+│   │   │   │   └── tools/
+│   │   │   │       ├── categories/
+│   │   │   │       │   ├── AgentManagementTools.ts
+│   │   │   │       │   ├── AITools.ts
+│   │   │   │       │   ├── EvaluationTools.ts
+│   │   │   │       │   ├── SystemTools.ts
+│   │   │   │       │   └── TaskManagementTools.ts
+│   │   │   │       └── ToolManager.ts
+│   │   │   ├── memory/
+│   │   │   │   ├── ContextOffloader.ts
+│   │   │   │   ├── FederatedLearningEngine.ts
+│   │   │   │   ├── MultiTenantMemoryManager.ts
+│   │   │   │   └── TenantIsolator.ts
+│   │   │   ├── performance/
+│   │   │   │   ├── cache-manager.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── intelligent-cache.ts
+│   │   │   │   ├── performance-monitor.ts
+│   │   │   │   ├── query-optimizer.ts
+│   │   │   │   └── scalability-tester.ts
+│   │   │   ├── production/
+│   │   │   │   ├── error-recovery.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   └── production-monitor.ts
+│   │   │   ├── rl/
+│   │   │   │   └── AgenticRLTrainer.ts
+│   │   │   ├── services/
+│   │   │   │   └── AgentOrchestrator.ts
+│   │   │   ├── thinking/
+│   │   │   │   └── ThinkingBudgetManager.ts
+│   │   │   ├── types/
+│   │   │   │   └── index.ts
+│   │   │   └── utils/
+│   │   │       ├── calculator.ts
+│   │   │       ├── Logger.ts
+│   │   │       └── schema-validator.ts
+│   │   ├── tests/
+│   │   │   ├── contract/
+│   │   │   │   ├── agent-orchestrator-contract.test.ts
+│   │   │   │   ├── contract-test-framework.ts
+│   │   │   │   ├── data-layer-contract.test.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── mcp-contract.test.ts
+│   │   │   │   ├── memory-system-contract.test.ts
+│   │   │   │   ├── user-flow-contract.test.ts
+│   │   │   │   └── data-layer-contract.test.ts
+│   │   │   ├── e2e/
+│   │   │   │   ├── artifacts/
+│   │   │   │   │   ├── design-tokens.json
+│   │   │   │   │   └── test-inputs.json
+│   │   │   │   ├── code-generation.test.ts
+│   │   │   │   ├── cross-agent-learning.test.ts
+│   │   │   │   ├── design-token-application.test.ts
+│   │   │   │   ├── evaluation-framework.ts
+│   │   │   │   ├── evaluation-runner.ts
+│   │   │   │   ├── mcp-client.ts
+│   │   │   │   ├── missing-scenarios-plan.md
+│   │   │   │   ├── README.md
+│   │   │   │   ├── setup.ts
+│   │   │   │   ├── task-decomposition.test.ts
+│   │   │   │   ├── test-runner.ts
+│   │   │   │   └── text-transformation.test.ts
+│   │   │   ├── integration/
+│   │   │   │   └── mcp-server.test.ts
+│   │   │   ├── setup.ts
+│   │   │   └── unit/
+│   │   │       ├── AgentOrchestrator.test.ts
+│   │   │       ├── calculator.test.ts
+│   │   │       ├── data/
+│   │   │       │   ├── DataLayer.test.ts
+│   │   │       │   ├── MultiLevelCache.test.ts
+│   │   │       │   └── VectorDAO.test.ts
+│   │   │       ├── MemoryAwareAgentOrchestrator.test.ts
+│   │   │       ├── memory/
+│   │   │       │   ├── FederatedLearningEngine.test.ts
+│   │   │       │   ├── MultiTenantMemoryManager.test.ts
+│   │   │       │   └── TenantIsolator.test.ts
+│   │   │       └── schema-validator.test.ts
+│   │   ├── tools/
+│   │   │   ├── interactive-mcp-client.js
+│   │   │   └── interactive-test.js
+│   │   ├── scripts/
+│   │   │   ├── benchmark/
+│   │   │   │   └── benchmark-models.js
+│   │   │   ├── demo/
+│   │   │   │   └── demo-task-decomposition.js
+│   │   │   ├── test/
+│   │   │   │   ├── mcp-test.js
+│   │   │   │   ├── simple-test.js
+│   │   │   │   ├── test-agent-agency-mcp.js
+│   │   │   │   ├── test-federated-engine.js
+│   │   │   │   ├── test-federated-learning.js
+│   │   │   │   ├── test-file-tools.js
+│   │   │   │   ├── test-instantiation.js
+│   │   │   │   ├── test-memory-mcp.js
+│   │   │   │   ├── test-minimal-mcp.js
+│   │   │   │   ├── test-multi-model-orchestrator.js
+│   │   │   │   ├── test-performance-optimization.js
+│   │   │   │   └── test-production-hardening.js
+│   │   │   ├── run-e2e-tests.js
+│   │   │   └── setup-e2e-env.js
+│   │   ├── results/
+│   │   │   ├── LLM_BENCHMARK_E2E_RESULTS.md
+│   │   │   └── results.md
+│   │   ├── apps/
+│   │   │   └── tools/
+│   │   │       └── caws/
+│   │   │           ├── shared/
+│   │   │           │   ├── base-tool.ts
+│   │   │           │   ├── config-manager.ts
+│   │   │           │   ├── gate-checker.ts
+│   │   │           │   ├── types.ts
+│   │   │           │   ├── validator.ts
+│   │   │           │   └── waivers-manager.ts
+│   │   │           ├── schemas/
+│   │   │           │   ├── waivers.schema.json
+│   │   │           │   └── working-spec.schema.json
+│   │   │           ├── templates/
+│   │   │           │   └── working-spec.template.yml
+│   │   │           ├── attest.js
+│   │   │           ├── ci-optimizer.js
+│   │   │           ├── COMPLETION_REPORT.md
+│   │   │           ├── config.ts
+│   │   │           ├── cross-functional.js
+│   │   │           ├── dashboard.js
+│   │   │           ├── flake-detector.ts
+│   │   │           ├── gates.js
+│   │   │           ├── gates.ts
+│   │   │           ├── language-adapters.ts
+│   │   │           ├── language-support.d.ts
+│   │   │           ├── language-support.d.ts.map
+│   │   │           ├── language-support.js
+│   │   │           ├── legacy-assessment.ts
+│   │   │           ├── legacy-assessor.js
+│   │   │           ├── MIGRATION_SUMMARY.md
+│   │   │           ├── mutant-analyzer.js
+│   │   │           ├── perf-budgets.ts
+│   │   │           ├── property-testing.js
+│   │   │           ├── provenance.d.ts
+│   │   │           ├── provenance.d.ts.map
+│   │   │           ├── provenance.js
+│   │   │           ├── provenance.ts
+│   │   │           ├── README.md
+│   │   │           ├── security-provenance.ts
+│   │   │           ├── spec-test-mapper.ts
+│   │   │           ├── TEST_STATUS.md
+│   │   │           ├── test-quality.js
+│   │   │           ├── tools-allow.json
+│   │   │           ├── validate.js
+│   │   │           ├── validate.ts
+│   │   │           ├── waivers.js
+│   │   │           ├── waivers.yml
+│   │   └── docs/
+│   │       └── api/
+│   │           └── contracts/
+│   │               └── agent-orchestrator.yaml
+│   └── v2/                          # Production v2.0 (CAWS Risk Tier 2)
+│       ├── docs/
+│       │   ├── 1-core-orchestration/
+│       │   │   ├── arbiter-architecture.md
+│       │   │   ├── capabilities-requirements.md
+│       │   │   ├── caws-mcp-patterns.md
+│       │   │   ├── caws-reflexivity.md
+│       │   │   ├── implementation-roadmap.md
+│       │   │   ├── intelligent-routing.md
+│       │   │   │   ├── performance-tracking.md
+│       │   │   ├── README.md
+│       │   │   └── theory.md
+│       │   ├── 2-benchmark-data/
+│       │   │   ├── collection-strategy.md
+│       │   │   ├── data-schema.md
+│       │   │   ├── quality-gates.md
+│       │   │   └── README.md
+│       │   ├── 3-agent-rl-training/
+│       │   │   ├── comprehensive-improvement-summary.md
+│       │   │   ├── dspy-integration-evaluation.md
+│       │   │   ├── final-v2-summary.md
+│       │   │   ├── hierarchical-reasoning-integration.md
+│       │   │   ├── implementation-roadmap.md
+│       │   │   ├── README.md
+│       │   │   ├── rl-enhancement-evaluation.md
+│       │   │   ├── technical-architecture.md
+│       │   │   └── v2-agentic-rl-roadmap.md
+│       │   ├── api/
+│       │   │   ├── arbiter-routing.api.yaml
+│       │   │   ├── benchmark-data.api.yaml
+│       │   │   ├── caws-integration.api.yaml
+│       │   │   └── v2-rl-training.yaml
+│       │   ├── CANONICAL-REFERENCE-CHECKLIST.md
+│       │   ├── GLOSSARY.md
+│       │   ├── integration-strategy.md
+│       │   ├── README.md
+│       │   ├── STRUCTURE.md
+│       │   └── summary.md
+│       ├── .caws/
+│       │   └── working-spec.yaml
+│       ├── README.md
+│       ├── V2-DOCUMENTATION-COMPLETE.md
+│       ├── package.json
+│       └── tsconfig.json
+├── docs/
+│   ├── agent-agency.md
+│   ├── agent-memory/
+│   │   ├── implementation-roadmap.md
+│   │   ├── README.md
+│   │   ├── SUMMARY.md
+│   │   └── technical-architecture.md
+│   ├── agent-orchestrator/
+│   │   ├── .caws/
+│   │   │   └── working-spec.yaml
+│   │   ├── implementation-roadmap.md
+│   │   ├── README.md
+│   │   ├── SUMMARY.md
+│   │   └── technical-architecture.md
+│   ├── agents/
+│   │   ├── examples.md
+│   │   ├── full-guide.md
+│   │   └── tutorial.md
+│   ├── ai-model/
+│   │   ├── .caws/
+│   │   │   └── working-spec.yaml
+│   │   ├── implementation-roadmap.md
+│   │   ├── README.md
+│   │   ├── SUMMARY.md
+│   │   └── technical-architecture.md
+│   ├── api/
+│   │   ├── agent-orchestrator.yaml
+│   │   ├── ai-model.yaml
+│   │   ├── data-layer.yaml
+│   │   ├── mcp-protocol.yaml
+│   │   ├── mcp-tools.yaml
+│   │   ├── memory-system.yaml
+│   │   └── quality-gates.yaml
+│   ├── arbiter/
+│   │   └── theory.md
+│   ├── data-layer/
+│   │   ├── .caws/
+│   │   │   └── working-spec.yaml
+│   │   ├── implementation-roadmap.md
+│   │   ├── README.md
+│   │   ├── SUMMARY.md
+│   │   └── technical-architecture.md
+│   ├── end-to-end/
+│   │   └── POC.md
+│   ├── mcp-integration/
+│   │   ├── implementation-roadmap.md
+│   │   ├── README.md
+│   │   ├── SUMMARY.md
+│   │   └── technical-architecture.md
+│   ├── MCP/
+│   │   ├── .caws/
+│   │   │   └── working-spec.yaml
+│   │   ├── implementation-roadmap.md
+│   │   ├── README.md
+│   │   ├── SUMMARY.md
+│   │   ├── technical-architecture.md
+│   │   └── USAGE.md
+│   ├── memory-system/
+│   │   ├── .caws/
+│   │   │   └── working-spec.yaml
+│   │   ├── implementation-roadmap.md
+│   │   │   ├── multi-tenancy.md
+│   │   ├── README.md
+│   │   ├── SUMMARY.md
+│   │   └── technical-architecture.md
+│   ├── quality-assurance/
+│   │   ├── .caws/
+│   │   │   └── working-spec.yaml
+│   │   ├── implementation-roadmap.md
+│   │   ├── README.md
+│   │   ├── SUMMARY.md
+│   │   └── technical-architecture.md
+│   ├── SPEC_ALIGNMENT_AUDIT.md
+│   ├── SPEC_VALIDATION_SUMMARY.md
+│   └── type-system/
+│       └── README.md
+```
+
+## File Counts by Type
+
+### Source Files
+
+- **TypeScript**: 63 files in `iterations/poc/src/`
+- **JavaScript**: 36 files (22 organized scripts/tools, 14 in CAWS)
+- **Configuration**: package.json, tsconfig.json files
+
+### Documentation
+
+- **Markdown**: 84 files across docs/ and iterations/
+- **YAML**: 19 files (API specs, CAWS specs, configurations)
+- **JSON**: 3 files (schemas, test data)
+
+### Test Files
+
+- **Unit Tests**: 13 files
+- **Contract Tests**: 7 files
+- **Integration Tests**: 1 file
+- **E2E Tests**: 10 files
+
+## Key Directories
+
+### Core Architecture
+
+- `iterations/poc/src/` - Main implementation with AI, data, memory, and MCP layers
+- `iterations/v2/docs/` - Production v2.0 specifications and architecture
+
+### Testing
+
+- `iterations/poc/tests/unit/` - Unit test coverage
+- `iterations/poc/tests/contract/` - Contract validation tests
+- `iterations/poc/tests/e2e/` - End-to-end test scenarios
+
+### Development Tools
+
+- `iterations/poc/tools/` - Interactive development tools
+- `iterations/poc/scripts/` - Organized utility scripts by purpose
+
+### CAWS Quality Assurance
+
+- `iterations/poc/apps/tools/caws/` - CAWS tooling and validation
+- `docs/.caws/` - Working specifications for components
+
+### API Specifications
+
+- `docs/api/` - OpenAPI specifications for all services
+- `iterations/v2/docs/api/` - V2 API contracts
+
+## Build Artifacts (Gitignored)
+
+The following directories contain build artifacts that are excluded from version control:
+
+- `dist/` - TypeScript compilation output
+- `coverage/` - Test coverage reports
+- `node_modules/` - Dependencies
+- `test-output/` - Test result artifacts
+
+These are generated during development/build and should not be committed to the repository.
+
+---
+
+_Generated on: 2025-01-10_
+_Focus: Source files and documentation only (excludes build artifacts, node_modules, etc.)_

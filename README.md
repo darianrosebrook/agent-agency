@@ -15,7 +15,7 @@ This mono-repo contains multiple iterations of the Agent Agency platform:
 agent-agency/
 ├── iterations/
 │   ├── poc/              # Proof of Concept (CAWS Risk Tier 1)
-│   └── main/             # Production v1.0 (CAWS Risk Tier 2)
+│   └── v2/               # Production v2.0 (CAWS Risk Tier 2)
 ├── docs/                 # Shared documentation
 ├── scripts/              # Shared build/deployment scripts
 ├── package.json          # Mono-repo management
@@ -517,7 +517,7 @@ This compliance ensures the codebase maintains high quality standards and provid
 
 ## Current Implementation Status
 
-### **Implemented Features** ✅
+### **Implemented POC Features** ✅
 
 - ✅ **Core Agent Orchestration**: Complete agent registration, task routing, and system metrics
 - ✅ **MCP Integration**: Full Model Context Protocol server with tools and resource management
@@ -527,7 +527,7 @@ This compliance ensures the codebase maintains high quality standards and provid
 - ✅ **Quality Gates**: Automated testing (98 passing tests), linting, and CI/CD pipelines
 - ✅ **CAWS Compliance**: Engineering-grade development practices with comprehensive testing
 
-### **Architecture Components** 🏗️
+### **Architecture POC Components** 🏗️
 
 - ✅ **Agent Orchestrator**: Memory-aware task routing and capability evolution
 - ✅ **Memory Management**: Multi-tenant context offloading and knowledge graph foundations
@@ -536,7 +536,7 @@ This compliance ensures the codebase maintains high quality standards and provid
 - ✅ **Testing Infrastructure**: Comprehensive unit and integration test suites
 - ✅ **MCP Server**: Autonomous AI reasoning with evaluation loops and satisficing logic
 
-### **In Development** 🚧
+### **In Development POC** 🚧
 
 - 🚧 **Vector Embeddings**: Semantic similarity search and context-aware retrieval algorithms
 - 🚧 **Knowledge Graph Engine**: Entity extraction, relationship building, and graph traversal
@@ -544,7 +544,7 @@ This compliance ensures the codebase maintains high quality standards and provid
 - 🚧 **Cross-Agent Learning**: Experience sharing and capability evolution
 - 🚧 **Federated Learning**: Privacy-preserving cross-project intelligence algorithms
 
-### **Planned Features** 📋
+### **Planned POC Features** 📋
 
 - 📋 **Production Database Schema**: Complete PostgreSQL schema with optimized indexes
 - 📋 **Advanced Scheduling**: Priority queues and distributed task distribution

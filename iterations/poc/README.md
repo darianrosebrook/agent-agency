@@ -223,7 +223,7 @@ const agent = await register_agent({
   id: "typescript-expert",
   name: "TypeScript Specialist",
   expertise: ["typescript", "react", "type-safety"],
-  initialCapabilities: { typescript: 0.8, react: 0.7, testing: 0.6 }
+  initialCapabilities: { typescript: 0.8, react: 0.7, testing: 0.6 },
 });
 
 // Share knowledge patterns between agents
@@ -234,8 +234,8 @@ await share_knowledge({
     type: "success-pattern",
     domain: "react-typescript",
     description: "Strict null checks prevent runtime errors",
-    quality: 0.95
-  }
+    quality: 0.95,
+  },
 });
 
 // Evolve agent capabilities through experience
@@ -244,7 +244,7 @@ await evolve_capability({
   capability: "typescript",
   success: true,
   quality: 0.88,
-  complexity: "medium"
+  complexity: "medium",
 });
 
 // Result: Agent learns from peers and evolves capabilities through practice
@@ -259,7 +259,7 @@ const update = await submit_federated_update({
   taskId: "code-pattern-discovery",
   round: 3,
   localModel: privacyPreservedModel, // Differential privacy applied
-  sampleCount: 50
+  sampleCount: 50,
 });
 
 // Aggregate global model from privacy-preserved updates
@@ -280,7 +280,7 @@ const session = await start_collaboration({
   description: "Full-stack checkout with payments, inventory, and fulfillment",
   scope: "full-stack-application",
   constraints: ["microservices", "high-availability", "secure-payments"],
-  complexity: "expert"
+  complexity: "expert",
 });
 
 // System automatically assembles optimal team
@@ -292,7 +292,8 @@ await update_task_progress({
   subTaskId: "api-implementation",
   status: "completed",
   quality: 0.92,
-  message: "RESTful API endpoints implemented with comprehensive error handling"
+  message:
+    "RESTful API endpoints implemented with comprehensive error handling",
 });
 
 // Result: Complex multi-disciplinary problems solved through coordinated teamwork

@@ -17,6 +17,28 @@ Agent Agency V2 transforms the POC foundation into a production-ready agentic sy
 - **Turn-Level RL Training** - Multi-turn conversation learning with intermediate rewards
 - **Intelligent Evaluation** - Model-based judges complementing rule-based assessment
 - **Enhanced Tool Learning** - 3-5x improvement in tool adoption rates
+- **CAWS Constitutional Authority** - Runtime enforcement of quality gates and provenance
+
+---
+
+## 📋 Component Specifications
+
+V2 includes comprehensive CAWS working specifications for all core arbiter components:
+
+- **[SPECS-INDEX.md](./SPECS-INDEX.md)** - Quick reference for all component specs
+- **[ARBITER-SPECS-SUMMARY.md](./ARBITER-SPECS-SUMMARY.md)** - Detailed overview with architecture diagrams
+
+### Core Components
+
+| Component              | Spec ID     | Risk Tier | Status           |
+| ---------------------- | ----------- | --------- | ---------------- |
+| Agent Registry Manager | ARBITER-001 | T2        | ✅ Spec Complete |
+| Task Routing Manager   | ARBITER-002 | T2        | ✅ Spec Complete |
+| CAWS Validator         | ARBITER-003 | T1        | ✅ Spec Complete |
+| Performance Tracker    | ARBITER-004 | T2        | ✅ Spec Complete |
+| Arbiter Orchestrator   | ARBITER-005 | T1        | ✅ Spec Complete |
+
+See [SPECS-INDEX.md](./SPECS-INDEX.md) for detailed specifications and validation status.
 
 ---
 

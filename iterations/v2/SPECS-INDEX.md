@@ -1,0 +1,141 @@
+# Arbiter V2 - Component Specifications Index
+
+Quick reference for navigating the CAWS working specifications for Agent Agency V2 Arbiter components.
+
+---
+
+## Component Specifications
+
+### Core Components
+
+| ID          | Component              | Tier | Status           | Location                                                                          |
+| ----------- | ---------------------- | ---- | ---------------- | --------------------------------------------------------------------------------- |
+| ARBITER-001 | Agent Registry Manager | 2    | ✅ Spec Complete | [agent-registry-manager/.caws/](./agent-registry-manager/.caws/working-spec.yaml) |
+| ARBITER-002 | Task Routing Manager   | 2    | ✅ Spec Complete | [task-routing-manager/.caws/](./task-routing-manager/.caws/working-spec.yaml)     |
+| ARBITER-003 | CAWS Validator         | 1    | ✅ Spec Complete | [caws-validator/.caws/](./caws-validator/.caws/working-spec.yaml)                 |
+| ARBITER-004 | Performance Tracker    | 2    | ✅ Spec Complete | [performance-tracker/.caws/](./performance-tracker/.caws/working-spec.yaml)       |
+| ARBITER-005 | Arbiter Orchestrator   | 1    | ✅ Spec Complete | [arbiter-orchestrator/.caws/](./arbiter-orchestrator/.caws/working-spec.yaml)     |
+
+---
+
+## Quick Links
+
+### Documentation
+
+- [Specifications Summary](./ARBITER-SPECS-SUMMARY.md) - Comprehensive overview
+- [Arbiter Architecture](./docs/1-core-orchestration/arbiter-architecture.md) - Technical architecture
+- [Implementation Roadmap](./docs/1-core-orchestration/implementation-roadmap.md) - Development timeline
+- [Theory Background](./docs/1-core-orchestration/theory.md) - Research and requirements
+
+### API Contracts
+
+- [Arbiter Routing API](./docs/api/arbiter-routing.api.yaml)
+- [CAWS Integration API](./docs/api/caws-integration.api.yaml)
+- [Benchmark Data API](./docs/api/benchmark-data.api.yaml)
+
+---
+
+## Validation Status
+
+All specifications have passed CAWS validation:
+
+```bash
+# Validate all specs
+cd agent-registry-manager && caws validate    # ✅ PASS
+cd task-routing-manager && caws validate      # ✅ PASS
+cd caws-validator && caws validate            # ✅ PASS
+cd performance-tracker && caws validate       # ✅ PASS
+cd arbiter-orchestrator && caws validate      # ✅ PASS
+```
+
+---
+
+## Component Relationships
+
+```
+Arbiter Orchestrator (ARBITER-005)
+├── Agent Registry Manager (ARBITER-001)
+│   └── Tracks agent capabilities and performance
+├── Task Routing Manager (ARBITER-002)
+│   └── Intelligent agent selection with MAB
+├── CAWS Validator (ARBITER-003)
+│   ├── Budget enforcement
+│   ├── Quality gate execution
+│   └── Provenance recording
+└── Performance Tracker (ARBITER-004)
+    └── Benchmark data collection for RL
+```
+
+---
+
+## Implementation Priority
+
+### Phase 1 - Foundation (Weeks 1-4)
+
+1. **Week 1**: ARBITER-005 (Core infrastructure)
+2. **Week 2**: ARBITER-002 (Routing)
+3. **Week 3**: ARBITER-003 (CAWS enforcement)
+4. **Week 4**: ARBITER-004 (Performance tracking)
+
+### Phase 2 - Enhancement (Weeks 5-8)
+
+- Capability matching extensions
+- Load balancing and health monitoring
+- Cross-agent learning
+- Conflict resolution
+
+---
+
+## Key Metrics
+
+| Component   | Primary Metric               | Target     |
+| ----------- | ---------------------------- | ---------- |
+| ARBITER-001 | Registry query latency       | <50ms P95  |
+| ARBITER-002 | Routing decision latency     | <100ms P95 |
+| ARBITER-003 | Validation execution latency | <200ms P95 |
+| ARBITER-004 | Collection overhead          | <50ms P95  |
+| ARBITER-005 | Task routing latency         | <200ms P95 |
+
+---
+
+## Risk Tiers
+
+- **Tier 1 (Critical)**: ARBITER-003, ARBITER-005
+
+  - Require manual review
+  - 100% CAWS compliance
+  - Coverage ≥90%, Mutation ≥70%
+
+- **Tier 2 (Standard)**: ARBITER-001, ARBITER-002, ARBITER-004
+  - Automated deployment
+  - Coverage ≥80%, Mutation ≥50%
+
+---
+
+## Usage
+
+### View a Spec
+
+```bash
+cd iterations/v2/<component-directory>
+cat .caws/working-spec.yaml
+```
+
+### Validate a Spec
+
+```bash
+cd iterations/v2/<component-directory>
+caws validate
+```
+
+### Get Status
+
+```bash
+cd iterations/v2/<component-directory>
+caws status
+```
+
+---
+
+**Last Updated**: 2025-10-10  
+**Author**: @darianrosebrook
