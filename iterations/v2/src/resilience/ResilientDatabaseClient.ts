@@ -60,7 +60,8 @@ export class ResilientDatabaseClient {
         successThreshold: 2,
       },
       enableRetry: true,
-    }
+    },
+    fallbackRegistry?: AgentRegistryManager
   ) {
     this.circuitBreaker = new CircuitBreaker({
       name: "AgentRegistryDatabase",
@@ -69,10 +70,12 @@ export class ResilientDatabaseClient {
 
     // Initialize fallback registry if enabled
     if (config.enableFallback) {
-      this.fallbackRegistry = new AgentRegistryManager({
-        maxAgents: 10000,
-        staleAgentThresholdMs: 3600000,
-      });
+      this.fallbackRegistry =
+        fallbackRegistry ||
+        new AgentRegistryManager({
+          maxAgents: 10000,
+          staleAgentThresholdMs: 3600000,
+        });
     }
   }
 
@@ -237,7 +240,13 @@ export class ResilientDatabaseClient {
    * Shutdown
    */
   async shutdown(): Promise<void> {
-    // Database client doesn't have shutdown method, but we could add connection cleanup here if needed
+    // Shutdown the database client if it has a shutdown method
+    if (
+      this.databaseClient &&
+      typeof (this.databaseClient as any).shutdown === "function"
+    ) {
+      await (this.databaseClient as any).shutdown();
+    }
   }
 
   /**

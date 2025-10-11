@@ -9,6 +9,7 @@ import {
   MockSearchProvider,
   SearchProviderFactory,
 } from "../../../src/knowledge/SearchProvider";
+import { events } from "../../../src/orchestrator/EventEmitter";
 import {
   KnowledgeQuery,
   QueryType,
@@ -176,16 +177,43 @@ describe("SearchProvider", () => {
     });
 
     it("should respect rate limits", async () => {
-      // Make many rapid requests to test rate limiting
-      const requests = Array(15)
-        .fill(null)
-        .map(() => provider.isAvailable());
+      // Mock executeRequest to avoid real API calls but still increment counters
+      const originalExecuteRequest = (provider as any).executeRequest;
+      const mockExecuteRequest = jest
+        .spyOn(provider as any, "executeRequest")
+        .mockImplementation(async (...args) => {
+          // Call the original method to increment counters, but mock the HTTP call
+          const mockFetch = jest
+            .spyOn(global, "fetch")
+            .mockResolvedValue(new Response("{}"));
 
-      const results = await Promise.all(requests);
-      const availableCount = results.filter(Boolean).length;
+          try {
+            return await originalExecuteRequest.apply(provider, args);
+          } finally {
+            mockFetch.mockRestore();
+          }
+        });
 
-      // Should respect rate limits
-      expect(availableCount).toBeLessThanOrEqual(10); // requestsPerMinute limit
+      try {
+        // Make 35 search requests (more than the 30 per minute limit)
+        const searchPromises = Array(35)
+          .fill(null)
+          .map((_, i) =>
+            provider.search({
+              ...testQuery,
+              id: `rate-limit-test-${i}`,
+            })
+          );
+
+        // Wait for all to complete
+        await Promise.allSettled(searchPromises);
+
+        // After consuming rate limit slots, check availability
+        const available = await provider.isAvailable();
+        expect(available).toBe(false); // Should be rate limited
+      } finally {
+        mockExecuteRequest.mockRestore();
+      }
     });
   });
 
@@ -268,5 +296,9 @@ describe("SearchProvider", () => {
       const results = await provider.search(invalidQuery);
       expect(results).toBeInstanceOf(Array);
     });
+  });
+
+  afterAll(() => {
+    events.shutdown();
   });
 });

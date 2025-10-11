@@ -5,6 +5,7 @@
  */
 
 import { ArbiterOrchestrator } from "../../../src/orchestrator/ArbiterOrchestrator";
+import { events } from "../../../src/orchestrator/EventEmitter";
 import { Task, TaskType } from "../../../src/types/arbiter-orchestration";
 import { KnowledgeQuery, QueryType } from "../../../src/types/knowledge";
 
@@ -267,5 +268,9 @@ describe("ArbiterOrchestrator", () => {
       // Should handle concurrent operations
       expect(error).toBeNull();
     });
+  });
+
+  afterAll(() => {
+    events.shutdown();
   });
 });

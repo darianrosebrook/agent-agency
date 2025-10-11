@@ -66,6 +66,8 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
           taskId: query.id,
           metadata: { cacheHit: true, cacheKey: this.generateCacheKey(query) },
         });
+        // Mark response as cached
+        cachedResponse.metadata.cacheUsed = true;
         return cachedResponse;
       }
     }

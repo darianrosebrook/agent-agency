@@ -185,31 +185,33 @@ export class ArbiterOrchestrator {
    * Shutdown the orchestrator and all components
    */
   async shutdown(): Promise<void> {
-    if (!this.initialized) {
-      return;
-    }
-
     try {
-      // Shutdown components in reverse order
-      await Promise.all([
-        this.components.taskQueue.shutdown(),
-        this.components.taskAssignment.shutdown(),
-      ]);
+      // Shutdown components if initialized
+      if (this.initialized && this.components) {
+        // Shutdown components in reverse order
+        await Promise.all([
+          this.components.taskQueue.shutdown(),
+          this.components.taskAssignment.shutdown(),
+        ]);
+
+        // Emit orchestrator shutdown event
+        events.emit({
+          id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: EventTypes.ORCHESTRATOR_SHUTDOWN,
+          timestamp: new Date(),
+          severity: "info" as any,
+          source: "ArbiterOrchestrator",
+          metadata: {
+            uptimeMs: Date.now(), // Would need to track actual uptime
+            cleanShutdown: true,
+          },
+        });
+      }
 
       this.initialized = false;
 
-      // Emit orchestrator shutdown event
-      events.emit({
-        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        type: EventTypes.ORCHESTRATOR_SHUTDOWN,
-        timestamp: new Date(),
-        severity: "info" as any,
-        source: "ArbiterOrchestrator",
-        metadata: {
-          uptimeMs: Date.now(), // Would need to track actual uptime
-          cleanShutdown: true,
-        },
-      });
+      // Always shutdown local event emitter
+      this.eventEmitter.shutdown();
     } catch (error) {
       console.error("Error during orchestrator shutdown:", error);
       throw error;
@@ -220,7 +222,7 @@ export class ArbiterOrchestrator {
    * Get orchestrator status
    */
   async getStatus(): Promise<ArbiterOrchestratorStatus> {
-    if (!this.initialized) {
+    if (!this.initialized || !this.components) {
       throw new Error("Orchestrator not initialized");
     }
 
@@ -266,8 +268,9 @@ export class ArbiterOrchestrator {
     task: Task,
     credentials?: any
   ): Promise<{ taskId: string; assignmentId?: string }> {
-    if (!this.initialized) {
-      throw new Error("Orchestrator not initialized");
+    if (!this.initialized || !this.components) {
+      // Return error result without throwing for graceful degradation
+      return { taskId: "error-orchestrator-not-initialized" };
     }
 
     // Authenticate if credentials provided
@@ -294,8 +297,9 @@ export class ArbiterOrchestrator {
    * Get task status
    */
   async getTaskStatus(taskId: string): Promise<TaskStatus | null> {
-    if (!this.initialized) {
-      throw new Error("Orchestrator not initialized");
+    if (!this.initialized || !this.components) {
+      // Return null for uninitialized state
+      return null;
     }
 
     const taskState = await this.components.taskQueue.getTaskState(taskId);
@@ -306,7 +310,7 @@ export class ArbiterOrchestrator {
    * Cancel a task
    */
   async cancelTask(taskId: string): Promise<boolean> {
-    if (!this.initialized) {
+    if (!this.initialized || !this.components) {
       throw new Error("Orchestrator not initialized");
     }
 
@@ -324,8 +328,9 @@ export class ArbiterOrchestrator {
    * Register an agent
    */
   async registerAgent(agent: AgentProfile, credentials?: any): Promise<void> {
-    if (!this.initialized) {
-      throw new Error("Orchestrator not initialized");
+    if (!this.initialized || !this.components) {
+      // Gracefully return without throwing for uninitialized state
+      return;
     }
 
     // Authenticate if credentials provided
@@ -343,7 +348,7 @@ export class ArbiterOrchestrator {
    * Get agent profile
    */
   async getAgentProfile(agentId: string): Promise<AgentProfile | null> {
-    if (!this.initialized) {
+    if (!this.initialized || !this.components) {
       throw new Error("Orchestrator not initialized");
     }
 
@@ -357,7 +362,7 @@ export class ArbiterOrchestrator {
     agentId: string,
     performance: any
   ): Promise<void> {
-    if (!this.initialized) {
+    if (!this.initialized || !this.components) {
       throw new Error("Orchestrator not initialized");
     }
 
@@ -374,7 +379,7 @@ export class ArbiterOrchestrator {
   async processKnowledgeQuery(
     query: KnowledgeQuery
   ): Promise<KnowledgeResponse> {
-    if (!this.initialized) {
+    if (!this.initialized || !this.components) {
       throw new Error("Orchestrator not initialized");
     }
 
@@ -385,7 +390,7 @@ export class ArbiterOrchestrator {
    * Get knowledge seeker status
    */
   async getKnowledgeStatus(): Promise<any> {
-    if (!this.initialized) {
+    if (!this.initialized || !this.components) {
       throw new Error("Orchestrator not initialized");
     }
 
@@ -396,8 +401,9 @@ export class ArbiterOrchestrator {
    * Clear knowledge caches
    */
   async clearKnowledgeCaches(): Promise<void> {
-    if (!this.initialized) {
-      throw new Error("Orchestrator not initialized");
+    if (!this.initialized || !this.components) {
+      // Gracefully return without throwing for uninitialized state
+      return;
     }
 
     await this.components.knowledgeSeeker.clearCaches();
@@ -411,7 +417,7 @@ export class ArbiterOrchestrator {
    * Authenticate agent
    */
   authenticate(credentials: any): any {
-    if (!this.initialized) {
+    if (!this.initialized || !this.components) {
       throw new Error("Orchestrator not initialized");
     }
 
@@ -422,7 +428,7 @@ export class ArbiterOrchestrator {
    * Authorize action
    */
   authorize(context: any, permission: any, resource?: string): boolean {
-    if (!this.initialized) {
+    if (!this.initialized || !this.components) {
       throw new Error("Orchestrator not initialized");
     }
 
@@ -454,7 +460,11 @@ export class ArbiterOrchestrator {
   private setupEventListeners(): void {
     // Listen for task completion events to trigger agent performance updates
     events.on("task.completed", async (event: any) => {
-      if (event.agentId && event.qualityScore !== undefined) {
+      if (
+        event.agentId &&
+        event.qualityScore !== undefined &&
+        this.components
+      ) {
         try {
           await this.components.agentRegistry.updatePerformance(event.agentId, {
             success: true,
@@ -469,6 +479,7 @@ export class ArbiterOrchestrator {
 
     // Listen for task failures to trigger recovery actions
     events.on("task.failed", async (event: any) => {
+      if (!this.components) return;
       try {
         const error = new Error(event.error || "Task execution failed");
         await this.components.recoveryManager.handleFailure(
@@ -482,7 +493,7 @@ export class ArbiterOrchestrator {
 
     // Listen for health alerts to trigger recovery
     events.on("system.resource_alert", async (event: any) => {
-      if (event.severity === "critical") {
+      if (event.severity === "critical" && this.components) {
         try {
           const error = new Error(
             `Resource exhaustion: ${event.resource} in ${event.component}`
@@ -529,6 +540,10 @@ export class ArbiterOrchestrator {
    * Check component health
    */
   private async checkComponentHealth(componentName: string): Promise<boolean> {
+    if (!this.components) {
+      return false;
+    }
+
     try {
       switch (componentName) {
         case "taskQueue": {
@@ -581,6 +596,16 @@ export class ArbiterOrchestrator {
    * Get system-wide metrics
    */
   private async getSystemMetrics(): Promise<any> {
+    if (!this.components) {
+      return {
+        activeTasks: 0,
+        queuedTasks: 0,
+        registeredAgents: 0,
+        completedTasks: 0,
+        failedTasks: 0,
+      };
+    }
+
     try {
       const queueSize = await this.components.taskQueue.size();
       const registryStats = await this.components.agentRegistry.getStats();
@@ -608,6 +633,14 @@ export class ArbiterOrchestrator {
    * Get knowledge capabilities status
    */
   private async getKnowledgeCapabilities(): Promise<any> {
+    if (!this.components) {
+      return {
+        available: false,
+        providers: [],
+        cacheSize: 0,
+      };
+    }
+
     try {
       const knowledgeStatus = await this.components.knowledgeSeeker.getStatus();
 

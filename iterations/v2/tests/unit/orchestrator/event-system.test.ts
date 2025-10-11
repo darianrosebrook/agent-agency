@@ -317,4 +317,9 @@ describe("EventEmitter", () => {
       expect(disabledEmitter.getEvents()).toHaveLength(0);
     });
   });
+
+  afterAll(() => {
+    // Clean up global event emitter to prevent Jest from hanging
+    events.shutdown();
+  });
 });

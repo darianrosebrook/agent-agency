@@ -5,6 +5,7 @@
  */
 
 import { InformationProcessor } from "../../../src/knowledge/InformationProcessor";
+import { events } from "../../../src/orchestrator/EventEmitter";
 import {
   InformationProcessorConfig,
   KnowledgeQuery,
@@ -13,7 +14,6 @@ import {
   SearchResult,
   SourceType,
 } from "../../../src/types/knowledge";
-import { events } from "../../../src/orchestrator/EventEmitter";
 
 describe("InformationProcessor", () => {
   let processor: InformationProcessor;

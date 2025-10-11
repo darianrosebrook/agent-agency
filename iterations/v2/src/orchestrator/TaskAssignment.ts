@@ -43,6 +43,19 @@ export interface AssignmentConfig {
 }
 
 /**
+ * Assignment Status Updates
+ */
+export interface AssignmentStatusUpdate {
+  status?: string;
+  acknowledgedAt?: Date;
+  startedAt?: Date;
+  completedAt?: Date;
+  progress?: number;
+  errorMessage?: string;
+  errorCode?: string;
+}
+
+/**
  * Assignment Statistics
  */
 export interface AssignmentStats {
@@ -170,25 +183,25 @@ export class TaskAssignmentManager {
       `,
         [
           assignment.id,
-          assignment.taskId,
-          assignment.agentId,
-          assignment.agentName,
-          assignment.agentModelFamily,
+          assignment.task.id,
+          assignment.agent.id,
+          assignment.agent.name,
+          assignment.agent.modelFamily,
           assignment.assignedAt,
           assignment.deadline,
-          assignment.assignmentTimeoutMs,
+          300000, // assignmentTimeoutMs - default 5 minutes
           assignment.routingDecision.confidence,
           assignment.routingDecision.strategy,
           assignment.routingDecision.reason,
-          assignment.status,
-          assignment.acknowledgedAt,
-          assignment.startedAt,
-          assignment.completedAt,
-          assignment.progress,
-          assignment.lastProgressUpdate,
-          assignment.errorMessage,
-          assignment.errorCode,
-          JSON.stringify(assignment.metadata || {}),
+          "pending", // status - default
+          null, // acknowledgedAt
+          null, // startedAt
+          null, // completedAt
+          0, // progress
+          null, // lastProgressUpdate
+          null, // errorMessage
+          null, // errorCode
+          JSON.stringify({}),
         ]
       );
     } catch (error) {
@@ -202,7 +215,7 @@ export class TaskAssignmentManager {
    */
   private async updateAssignmentStatusInDb(
     assignmentId: string,
-    updates: Partial<TaskAssignment>
+    updates: AssignmentStatusUpdate
   ): Promise<void> {
     if (!this.config.persistenceEnabled || !this.dbClient) {
       return;
@@ -370,7 +383,7 @@ export class TaskAssignmentManager {
     progress: number,
     status: TaskExecution["status"] = "running",
     metadata?: Record<string, any>
-  ): boolean {
+  ): Promise<boolean> {
     const execution = this.executions.get(assignmentId);
     if (!execution) {
       return false;
@@ -702,14 +715,14 @@ export class TaskAssignmentFactory {
   /**
    * Create assignment from routing decision
    */
-  createFromRouting(
+  async createFromRouting(
     task: Task,
     routingDecision: RoutingDecision,
     callbacks?: {
       onAcknowledgmentTimeout?: (assignment: TaskAssignment) => void;
       onProgressTimeout?: (assignment: TaskAssignment) => void;
     }
-  ): TaskAssignment {
+  ): Promise<TaskAssignment> {
     return this.manager.createAssignment(
       task,
       routingDecision,

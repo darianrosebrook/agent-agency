@@ -131,8 +131,9 @@ export class PostgresDatabaseClient implements IDatabaseClient {
 
       console.log("Database connection established");
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       throw new ConnectionError(
-        `Failed to connect to database: ${error.message}`,
+        `Failed to connect to database: ${message}`,
         error
       );
     }
@@ -190,9 +191,10 @@ export class PostgresDatabaseClient implements IDatabaseClient {
       return mockResult;
     } catch (error) {
       const executionTime = Date.now() - startTime;
+      const message = error instanceof Error ? error.message : String(error);
       console.error(`Query failed after ${executionTime}ms:`, error);
       throw new QueryError(
-        `Query execution failed: ${error.message}`,
+        `Query execution failed: ${message}`,
         sql,
         params,
         error
@@ -233,8 +235,9 @@ export class PostgresDatabaseClient implements IDatabaseClient {
       console.log("Transaction committed successfully");
       return result;
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       console.log("Transaction failed, rolling back");
-      throw new TransactionError(`Transaction failed: ${error.message}`, error);
+      throw new TransactionError(`Transaction failed: ${message}`, error);
     }
   }
 

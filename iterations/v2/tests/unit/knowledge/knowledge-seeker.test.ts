@@ -6,6 +6,7 @@
 
 import { KnowledgeSeeker } from "../../../src/knowledge/KnowledgeSeeker";
 import { SearchProviderFactory } from "../../../src/knowledge/SearchProvider";
+import { events } from "../../../src/orchestrator/EventEmitter";
 import {
   KnowledgeQuery,
   QueryType,
@@ -351,5 +352,9 @@ describe("KnowledgeSeeker", () => {
       const seekerNoCache = new KnowledgeSeeker(noCacheConfig);
       expect(seekerNoCache).toBeDefined();
     });
+  });
+
+  afterAll(() => {
+    events.shutdown();
   });
 });
