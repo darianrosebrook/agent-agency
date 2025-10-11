@@ -7,16 +7,15 @@
  * @author @darianrosebrook
  */
 
+import { MultiArmedBandit } from "../rl/MultiArmedBandit";
 import {
-  AgentProfile,
   AgentQuery,
   AgentQueryResult,
   TaskType,
 } from "../types/agent-registry";
-import { Task, RoutingDecision } from "../types/arbiter-orchestration";
 import { RoutingStrategy } from "../types/agentic-rl";
+import { RoutingDecision, Task } from "../types/arbiter-orchestration";
 import { AgentRegistryManager } from "./AgentRegistryManager";
-import { MultiArmedBandit } from "../rl/MultiArmedBandit";
 
 /**
  * Task Routing Manager Configuration
@@ -198,8 +197,8 @@ export class TaskRoutingManager {
     // Build agent query from task requirements
     const query: AgentQuery = {
       taskType: task.type as TaskType,
-      languages: task.requirements?.languages,
-      specializations: task.requirements?.specializations,
+      languages: task.requiredCapabilities?.languages,
+      specializations: task.requiredCapabilities?.specializations,
       maxUtilization: 90, // Don't overload agents
       minSuccessRate: 0.0, // Consider all agents (bandit will optimize)
     };
@@ -307,7 +306,9 @@ export class TaskRoutingManager {
     // Keep history size manageable (last 1000 decisions)
     if (this.routingHistory.size > 1000) {
       const firstKey = this.routingHistory.keys().next().value;
-      this.routingHistory.delete(firstKey);
+      if (firstKey) {
+        this.routingHistory.delete(firstKey);
+      }
     }
   }
 
@@ -318,26 +319,25 @@ export class TaskRoutingManager {
     routingTimeMs: number,
     decision: RoutingDecision
   ): void {
+    // Increment count first
+    this.metrics.totalRoutingDecisions++;
     const count = this.metrics.totalRoutingDecisions;
 
     // Update average routing time (incremental average)
     this.metrics.averageRoutingTimeMs =
-      (this.metrics.averageRoutingTimeMs * count + routingTimeMs) /
-      (count + 1);
+      (this.metrics.averageRoutingTimeMs * (count - 1) + routingTimeMs) / count;
 
     // Track exploration vs exploitation
     if (decision.strategy === "epsilon-greedy") {
       // Check if this was exploration (lower confidence often means exploration)
       if (decision.confidence < 0.8) {
         this.metrics.explorationRate =
-          (this.metrics.explorationRate * count + 1) / (count + 1);
+          (this.metrics.explorationRate * (count - 1) + 1) / count;
       } else {
         this.metrics.exploitationRate =
-          (this.metrics.exploitationRate * count + 1) / (count + 1);
+          (this.metrics.exploitationRate * (count - 1) + 1) / count;
       }
     }
-
-    this.metrics.totalRoutingDecisions++;
   }
 
   /**
@@ -457,4 +457,3 @@ export const defaultTaskRoutingConfig: TaskRoutingConfig = {
   loadBalancingWeight: 0.3,
   capabilityMatchWeight: 0.7,
 };
-

@@ -99,13 +99,13 @@ export class DatabaseTestUtils {
    */
   static mockQueryFailure(): void {
     const mockPool = require("pg").Pool;
-    const mockClient = {
-      query: jest.fn().mockRejectedValue(new Error("Query failed") as never),
-      release: jest.fn(),
-    };
-
+    const errorMock: any = new Error("Query failed");
+    
     mockPool.mockImplementation(() => ({
-      connect: jest.fn().mockResolvedValue(mockClient),
+      connect: jest.fn().mockResolvedValue({
+        query: jest.fn().mockRejectedValue(errorMock),
+        release: jest.fn(),
+      }),
       end: jest.fn(),
       on: jest.fn(),
       removeListener: jest.fn(),

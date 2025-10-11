@@ -50,13 +50,15 @@
 ### 2. Database Integration Partially Complete ⚠️
 
 **Status**: PostgreSQL client implemented (`AgentRegistryDbClient`), TypeScript compilation fixed
-**Achievement**: 
+**Achievement**:
+
 - `AgentRegistryDbClient` class with full CRUD operations
 - Connection pooling, retry logic, and health checks
 - Integration with `AgentRegistryManager`
 - TypeScript type safety verified
 
 **Remaining**:
+
 - Integration tests with real database
 - Connection pool optimization
 - Query performance tuning

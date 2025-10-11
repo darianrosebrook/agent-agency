@@ -19,12 +19,16 @@ import {
   ToolExample,
   TurnLevelReward,
 } from "../types/agentic-rl";
-import { Task, TaskResult, RoutingDecision } from "../types/arbiter-orchestration";
+import {
+  RoutingDecision,
+  Task,
+  TaskResult,
+} from "../types/arbiter-orchestration";
 import {
   ArbiterOrchestrator,
   ArbiterOrchestratorConfig,
 } from "./ArbiterOrchestrator";
-import { TaskRoutingManager, RoutingOutcome } from "./TaskRoutingManager";
+import { RoutingOutcome, TaskRoutingManager } from "./TaskRoutingManager";
 
 /**
  * Enhanced Arbiter Orchestrator Configuration
@@ -98,8 +102,14 @@ export class EnhancedArbiterOrchestrator extends ArbiterOrchestrator {
       this.rlConfig.enableToolAdoption
     ) {
       // Initialize Task Routing Manager (integrates multi-armed bandit)
+      // Note: components is protected in parent class, accessed via getter
+      const agentRegistry = (this as any).components?.agentRegistry;
+      if (!agentRegistry) {
+        throw new Error("Agent registry not initialized");
+      }
+      
       const taskRoutingManager = new TaskRoutingManager(
-        this.components.agentRegistry,
+        agentRegistry,
         {
           enableBandit: this.rlConfig.enableMultiArmedBandit,
           ...this.rlConfig.banditConfig,
@@ -163,22 +173,27 @@ export class EnhancedArbiterOrchestrator extends ArbiterOrchestrator {
 
     try {
       // Use TaskRoutingManager for intelligent routing
-      const routingDecision = await this.rlComponents.taskRoutingManager.routeTask(task);
+      const routingDecision =
+        await this.rlComponents.taskRoutingManager.routeTask(task);
 
       // Record decision for RL training
       if (this.rlComponents.performanceTracker) {
         // Convert to RL routing decision format
         const rlRoutingDecision: RLRoutingDecision = {
           taskId: task.id,
-          selectedAgentId: routingDecision.selectedAgent.id,
+          selectedAgent: routingDecision.selectedAgent.id,
+          routingStrategy: routingDecision.strategy as any,
           confidence: routingDecision.confidence,
           rationale: routingDecision.reason,
-          alternativesConsidered: routingDecision.alternatives.map(alt => ({
+          alternativesConsidered: routingDecision.alternatives.map((alt) => ({
             agentId: alt.agent.id,
             score: alt.score,
             reason: alt.reason,
           })),
-          timestamp: routingDecision.timestamp,
+          timestamp:
+            typeof routingDecision.timestamp === "string"
+              ? routingDecision.timestamp
+              : routingDecision.timestamp.toISOString(),
         };
 
         await this.rlComponents.performanceTracker.recordRoutingDecision(
@@ -262,7 +277,8 @@ export class EnhancedArbiterOrchestrator extends ArbiterOrchestrator {
       // Record routing outcome with TaskRoutingManager for feedback loop
       if (this.rlComponents.taskRoutingManager && assignmentId) {
         // Find the routing decision for this task
-        const routingStats = await this.rlComponents.taskRoutingManager.getRoutingStats();
+        const routingStats =
+          await this.rlComponents.taskRoutingManager.getRoutingStats();
         const routingDecision = routingStats.recentDecisions.find(
           (decision) => decision.taskId === taskId
         );
@@ -285,7 +301,7 @@ export class EnhancedArbiterOrchestrator extends ArbiterOrchestrator {
             success: taskResult.success,
             qualityScore: taskResult.qualityScore,
             latencyMs: taskResult.executionTimeMs,
-            errorReason: taskResult.error?.message,
+            errorReason: taskResult.errors?.[0] || undefined,
           };
 
           // Record outcome for RL feedback
@@ -442,13 +458,13 @@ export class EnhancedArbiterOrchestrator extends ArbiterOrchestrator {
 
     // Create a mock routing decision for tracking
     // In a full implementation, this would come from the actual assignment
-    const mockDecision: RoutingDecision = {
+    const mockDecision: RLRoutingDecision = {
       taskId: task.id,
       selectedAgent: "agent-1", // Would be extracted from assignment
       routingStrategy: "multi-armed-bandit",
       confidence: 0.8,
-      alternativesConsidered: [],
       rationale: "RL-based routing decision",
+      alternativesConsidered: [],
       timestamp: new Date().toISOString(),
     };
 
