@@ -24,25 +24,25 @@ export class Logger {
 
   debug(message: string, data?: any): void {
     if (this.level <= LogLevel.DEBUG) {
-      console.debug(`[${this.name}] DEBUG: ${message}`, data || '');
+      console.debug(`[${this.name}] DEBUG: ${message}`, data || "");
     }
   }
 
   info(message: string, data?: any): void {
     if (this.level <= LogLevel.INFO) {
-      console.info(`[${this.name}] INFO: ${message}`, data || '');
+      console.info(`[${this.name}] INFO: ${message}`, data || "");
     }
   }
 
   warn(message: string, data?: any): void {
     if (this.level <= LogLevel.WARN) {
-      console.warn(`[${this.name}] WARN: ${message}`, data || '');
+      console.warn(`[${this.name}] WARN: ${message}`, data || "");
     }
   }
 
   error(message: string, data?: any): void {
     if (this.level <= LogLevel.ERROR) {
-      console.error(`[${this.name}] ERROR: ${message}`, data || '');
+      console.error(`[${this.name}] ERROR: ${message}`, data || "");
     }
   }
 

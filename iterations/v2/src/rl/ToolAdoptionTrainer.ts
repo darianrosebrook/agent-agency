@@ -592,7 +592,7 @@ export class ToolAdoptionTrainer {
    */
   private assessExampleDifficulty(
     tool: Tool,
-    toolCall: ToolCall
+    _toolCall: ToolCall
   ): "easy" | "medium" | "hard" {
     // Simple heuristic based on tool complexity
     const complexTools = ["run_terminal_cmd"];

@@ -38,6 +38,12 @@ export interface DataLayerConfig {
   enableCache?: boolean;
   enableMetrics?: boolean;
   queryTimeout?: number;
+  security?: {
+    enableEncryption?: boolean;
+    enableAccessControl?: boolean;
+    masterKey?: string;
+    defaultTenantIsolation?: boolean;
+  };
 }
 
 export interface QueryOptions {

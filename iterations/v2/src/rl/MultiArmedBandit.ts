@@ -127,10 +127,10 @@ export class MultiArmedBandit {
    * @param latencyMs - Task completion latency
    */
   updateWithOutcome(
-    agentId: string,
-    success: boolean,
-    qualityScore: number,
-    latencyMs: number
+    _agentId: string,
+    _success: boolean,
+    _qualityScore: number,
+    _latencyMs: number
   ): void {
     // In a full implementation, this would update agent performance history
     // For now, we rely on the AgentRegistryManager to handle performance updates
@@ -212,7 +212,7 @@ export class MultiArmedBandit {
    * @param taskType - Task type for context
    * @returns UCB score
    */
-  private calculateUCB(agent: AgentProfile, taskType: TaskType): number {
+  private calculateUCB(agent: AgentProfile, _taskType: TaskType): number {
     const history = agent.performanceHistory;
     const taskCount = history.taskCount;
 
@@ -236,7 +236,7 @@ export class MultiArmedBandit {
    * @param taskType - Task type
    * @returns Confidence score (0-1)
    */
-  private calculateConfidence(agent: AgentProfile, taskType: TaskType): number {
+  private calculateConfidence(agent: AgentProfile, _taskType: TaskType): number {
     const history = agent.performanceHistory;
     const taskCount = history.taskCount;
 

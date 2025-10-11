@@ -21,6 +21,7 @@ import {
 } from "../types/knowledge";
 
 // Use standard RequestInit from DOM lib
+type RequestInit = any; // Simplified for Node.js environment
 
 /**
  * Base Search Provider class with common functionality
@@ -80,7 +81,7 @@ export abstract class BaseSearchProvider implements ISearchProvider {
     return { ...this.healthStatus };
   }
 
-  abstract search(query: KnowledgeQuery): Promise<SearchResult[]>;
+  abstract search(query: KnowledgeQuery): Promise<SearchResult[]>; // eslint-disable-line no-unused-vars
 
   /**
    * Execute HTTP request with error handling and metrics

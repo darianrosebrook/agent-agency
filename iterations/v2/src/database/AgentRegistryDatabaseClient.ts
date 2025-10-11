@@ -614,7 +614,7 @@ export class AgentRegistryDatabaseClient {
    * Execute query with retry logic
    */
   private async executeWithRetry<T>(
-    operation: (client: PoolClient) => Promise<T>
+    operation: (client: PoolClient) => Promise<T> // eslint-disable-line no-unused-vars
   ): Promise<T> {
     let lastError: Error | null = null;
 

@@ -26,7 +26,7 @@ export interface QueryResult<T = any> {
 }
 
 export interface Transaction {
-  query<T = any>(sql: string, params?: any[]): Promise<QueryResult<T>>;
+  query<T = any>(sql: string, params?: any[]): Promise<QueryResult<T>>; // eslint-disable-line no-unused-vars
   commit(): Promise<void>;
   rollback(): Promise<void>;
 }
@@ -39,8 +39,8 @@ export interface IDatabaseClient {
   disconnect(): Promise<void>;
   isConnected(): boolean;
 
-  query<T = any>(sql: string, params?: any[]): Promise<QueryResult<T>>;
-  transaction<T>(callback: (tx: Transaction) => Promise<T>): Promise<T>;
+  query<T = any>(sql: string, params?: any[]): Promise<QueryResult<T>>; // eslint-disable-line no-unused-vars
+  transaction<T>(callback: (tx: Transaction) => Promise<T>): Promise<T>; // eslint-disable-line no-unused-vars
 
   healthCheck(): Promise<boolean>;
   getStats(): Promise<DatabaseStats>;

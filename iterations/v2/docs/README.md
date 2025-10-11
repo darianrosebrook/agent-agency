@@ -443,6 +443,7 @@ iterations/v2/
 │
 ├── docs/
 │   ├── README.md                            # This overview
+│   ├── THEORY-ALIGNMENT-AUDIT.md           # V2 vs theory comparison
 │   ├── integration-strategy.md             # How the three pillars integrate
 │   ├── summary.md                          # Quick reference
 │   ├── GLOSSARY.md                          # Key terms and concepts
@@ -513,9 +514,10 @@ iterations/v2/
 ### For Research & Design
 
 1. **Arbiter theory**: `1-core-orchestration/theory.md` (1,188 lines)
-2. **CAWS reflexivity**: `1-core-orchestration/caws-reflexivity.md` ← Philosophical foundation
-3. **RL enhancements**: `3-agent-rl-training/comprehensive-improvement-summary.md`
-4. **DSPy integration**: `3-agent-rl-training/dspy-integration-evaluation.md`
+2. **Theory alignment audit**: `THEORY-ALIGNMENT-AUDIT.md` ← V2 implementation vs theory comparison
+3. **CAWS reflexivity**: `1-core-orchestration/caws-reflexivity.md` ← Philosophical foundation
+4. **RL enhancements**: `3-agent-rl-training/comprehensive-improvement-summary.md`
+5. **DSPy integration**: `3-agent-rl-training/dspy-integration-evaluation.md`
 
 ---
 
@@ -713,6 +715,7 @@ Agents continuously improve. System learns from every task. Compounding returns.
 **For Product/Strategy**:
 
 - `README.md` - This overview
+- `THEORY-ALIGNMENT-AUDIT.md` - Implementation progress vs theory
 - `3-agent-rl-training/final-v2-summary.md` - Executive summary
 - `3-agent-rl-training/comprehensive-improvement-summary.md` - Complete synthesis
 

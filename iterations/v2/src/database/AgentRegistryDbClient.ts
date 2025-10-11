@@ -7,16 +7,20 @@
  * @author @darianrosebrook
  */
 
-import { Pool, PoolClient, QueryResult } from 'pg';
-import { Logger } from '../utils/Logger.js';
+import { Pool, PoolClient } from "pg";
 import {
+  AgentCapabilities,
   AgentProfile,
-  AgentCapability,
-  AgentPerformanceHistory,
-  AgentRegistryQuery,
-  AgentRegistryResult,
-  DatabaseConfig
-} from '../types/agent-registry.js';
+  AgentQuery,
+  AgentQueryResult,
+  DatabaseConfig,
+  PerformanceHistory,
+  PerformanceMetrics,
+  ProgrammingLanguage,
+  Specialization,
+  TaskType,
+} from "../types/agent-registry.js";
+import { Logger } from "../utils/Logger.js";
 
 export interface AgentRegistryDatabaseConfig extends DatabaseConfig {
   maxConnections: number;
@@ -31,9 +35,19 @@ export class AgentRegistryDbClient {
   private logger: Logger;
   private config: AgentRegistryDatabaseConfig;
 
-  constructor(config: AgentRegistryDatabaseConfig | { host: string; port: number; database: string; user: string; password: string }) {
+  constructor(
+    config:
+      | AgentRegistryDatabaseConfig
+      | {
+          host: string;
+          port: number;
+          database: string;
+          user: string;
+          password: string;
+        }
+  ) {
     // Handle legacy constructor for backward compatibility
-    if ('host' in config && 'user' in config && !('maxConnections' in config)) {
+    if ("host" in config && "user" in config && !("maxConnections" in config)) {
       this.config = {
         host: config.host,
         port: config.port,
@@ -50,7 +64,7 @@ export class AgentRegistryDbClient {
       this.config = config as AgentRegistryDatabaseConfig;
     }
 
-    this.logger = new Logger('AgentRegistryDbClient');
+    this.logger = new Logger("AgentRegistryDbClient");
 
     this.pool = new Pool({
       host: this.config.host,
@@ -72,25 +86,31 @@ export class AgentRegistryDbClient {
    */
   async initialize(): Promise<void> {
     try {
-      this.logger.info('Initializing Agent Registry database client...');
+      this.logger.info("Initializing Agent Registry database client...");
 
       // Test connection
       const client = await this.pool.connect();
       try {
-        await client.query('SELECT 1');
-        this.logger.info('Database connection established');
+        await client.query("SELECT 1");
+        this.logger.info("Database connection established");
       } finally {
         client.release();
       }
 
       // Verify schema exists
       await this.verifySchema();
-      this.logger.info('Database schema verified');
+      this.logger.info("Database schema verified");
 
-      this.logger.info('Agent Registry database client initialized successfully');
+      this.logger.info(
+        "Agent Registry database client initialized successfully"
+      );
     } catch (error) {
-      this.logger.error('Failed to initialize database client:', error);
-      throw new Error(`Database initialization failed: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error("Failed to initialize database client:", error);
+      throw new Error(
+        `Database initialization failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     }
   }
 
@@ -99,84 +119,132 @@ export class AgentRegistryDbClient {
    */
   async shutdown(): Promise<void> {
     try {
-      this.logger.info('Shutting down Agent Registry database client...');
+      this.logger.info("Shutting down Agent Registry database client...");
       await this.pool.end();
-      this.logger.info('Database connections closed');
+      this.logger.info("Database connections closed");
     } catch (error) {
-      this.logger.error('Error during database shutdown:', error);
+      this.logger.error("Error during database shutdown:", error);
     }
   }
 
   /**
    * Register a new agent profile
    */
-  async registerAgent(profile: Omit<AgentProfile, 'id' | 'registeredAt' | 'lastActiveAt' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  async registerAgent(
+    profile: Omit<
+      AgentProfile,
+      "id" | "registeredAt" | "lastActiveAt" | "createdAt" | "updatedAt"
+    >
+  ): Promise<string> {
     const client = await this.pool.connect();
 
     try {
-      await client.query('BEGIN');
+      await client.query("BEGIN");
 
       // Insert agent profile
-      const profileResult = await client.query(`
+      const profileResult = await client.query(
+        `
         INSERT INTO agent_profiles (
           name, model_family, active_tasks, queued_tasks, utilization_percent
         ) VALUES ($1, $2, $3, $4, $5)
         RETURNING id
-      `, [
-        profile.name,
-        profile.modelFamily,
-        profile.activeTasks || 0,
-        profile.queuedTasks || 0,
-        profile.utilizationPercent || 0
-      ]);
+      `,
+        [
+          profile.name,
+          profile.modelFamily,
+          profile.currentLoad?.activeTasks || 0,
+          profile.currentLoad?.queuedTasks || 0,
+          profile.currentLoad?.utilizationPercent || 0,
+        ]
+      );
 
       const agentId = profileResult.rows[0].id;
 
       // Insert capabilities if provided
-      if (profile.capabilities && profile.capabilities.length > 0) {
-        for (const capability of profile.capabilities) {
-          await client.query(`
+      if (profile.capabilities) {
+        // Insert task types
+        for (const taskType of profile.capabilities.taskTypes) {
+          await client.query(
+            `
             INSERT INTO agent_capabilities (agent_id, capability_name, score, metadata)
             VALUES ($1, $2, $3, $4)
-          `, [
-            agentId,
-            capability.name,
-            capability.score,
-            JSON.stringify(capability.metadata || {})
-          ]);
+          `,
+            [
+              agentId,
+              `task_${taskType}`,
+              1.0, // Default score for task types
+              JSON.stringify({ type: "task", value: taskType }),
+            ]
+          );
+        }
+
+        // Insert languages
+        for (const language of profile.capabilities.languages) {
+          await client.query(
+            `
+            INSERT INTO agent_capabilities (agent_id, capability_name, score, metadata)
+            VALUES ($1, $2, $3, $4)
+          `,
+            [
+              agentId,
+              `lang_${language}`,
+              1.0, // Default score for languages
+              JSON.stringify({ type: "language", value: language }),
+            ]
+          );
+        }
+
+        // Insert specializations
+        for (const specialization of profile.capabilities.specializations) {
+          await client.query(
+            `
+            INSERT INTO agent_capabilities (agent_id, capability_name, score, metadata)
+            VALUES ($1, $2, $3, $4)
+          `,
+            [
+              agentId,
+              `spec_${specialization}`,
+              1.0, // Default score for specializations
+              JSON.stringify({ type: "specialization", value: specialization }),
+            ]
+          );
         }
       }
 
       // Insert performance history if provided
-      if (profile.performanceHistory && profile.performanceHistory.length > 0) {
-        for (const perf of profile.performanceHistory) {
-          await client.query(`
-            INSERT INTO agent_performance_history (
-              agent_id, task_type, success_rate, average_latency,
-              total_tasks, quality_score, confidence_score, metadata
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-          `, [
+      if (profile.performanceHistory) {
+        await client.query(
+          `
+          INSERT INTO agent_performance_history (
+            agent_id, task_type, success_rate, average_latency,
+            total_tasks, quality_score, confidence_score, metadata
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `,
+          [
             agentId,
-            perf.taskType,
-            perf.successRate,
-            perf.averageLatency,
-            perf.totalTasks,
-            perf.qualityScore,
-            perf.confidenceScore,
-            JSON.stringify(perf.metadata || {})
-          ]);
-        }
+            "general", // Default task type for overall performance
+            profile.performanceHistory.successRate,
+            profile.performanceHistory.averageLatency,
+            profile.performanceHistory.taskCount,
+            profile.performanceHistory.averageQuality,
+            1.0, // Default confidence score
+            JSON.stringify({}),
+          ]
+        );
       }
 
-      await client.query('COMMIT');
+      await client.query("COMMIT");
 
       this.logger.info(`Agent registered with ID: ${agentId}`);
       return agentId;
-
     } catch (error) {
-      await client.query('ROLLBACK');
-      this.logger.error('Failed to register agent:', error);
-      throw new Error(`Agent registration failed: ${error instanceof Error ? error.message : String(error)}`);
+      await client.query("ROLLBACK");
+      this.logger.error("Failed to register agent:", error);
+      throw new Error(
+        `Agent registration failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     } finally {
       client.release();
     }
@@ -190,9 +258,12 @@ export class AgentRegistryDbClient {
 
     try {
       // Get profile
-      const profileResult = await client.query(`
+      const profileResult = await client.query(
+        `
         SELECT * FROM agent_profiles WHERE id = $1
-      `, [agentId]);
+      `,
+        [agentId]
+      );
 
       if (profileResult.rows.length === 0) {
         return null;
@@ -201,33 +272,59 @@ export class AgentRegistryDbClient {
       const profileRow = profileResult.rows[0];
 
       // Get capabilities
-      const capabilitiesResult = await client.query(`
+      const capabilitiesResult = await client.query(
+        `
         SELECT capability_name, score, metadata FROM agent_capabilities
         WHERE agent_id = $1 ORDER BY capability_name
-      `, [agentId]);
+      `,
+        [agentId]
+      );
 
-      const capabilities: AgentCapability[] = capabilitiesResult.rows.map(row => ({
-        name: row.capability_name,
-        score: row.score,
-        metadata: row.metadata || {}
-      }));
+      // Reconstruct capabilities from database records
+      const taskTypes: TaskType[] = [];
+      const languages: ProgrammingLanguage[] = [];
+      const specializations: Specialization[] = [];
 
-      // Get performance history
-      const performanceResult = await client.query(`
+      capabilitiesResult.rows.forEach((row) => {
+        const metadata = row.metadata || {};
+        if (metadata.type === "task") {
+          taskTypes.push(metadata.value);
+        } else if (metadata.type === "language") {
+          languages.push(metadata.value);
+        } else if (metadata.type === "specialization") {
+          specializations.push(metadata.value);
+        }
+      });
+
+      const capabilities: AgentCapabilities = {
+        taskTypes,
+        languages,
+        specializations,
+      };
+
+      // Get performance history (take the most recent record)
+      const performanceResult = await client.query(
+        `
         SELECT * FROM agent_performance_history
-        WHERE agent_id = $1 ORDER BY recorded_at DESC
-      `, [agentId]);
+        WHERE agent_id = $1 ORDER BY recorded_at DESC LIMIT 1
+      `,
+        [agentId]
+      );
 
-      const performanceHistory: AgentPerformanceHistory[] = performanceResult.rows.map(row => ({
-        taskType: row.task_type,
-        successRate: row.success_rate,
-        averageLatency: row.average_latency,
-        totalTasks: row.total_tasks,
-        qualityScore: row.quality_score,
-        confidenceScore: row.confidence_score,
-        metadata: row.metadata || {},
-        recordedAt: row.recorded_at
-      }));
+      const performanceHistory: PerformanceHistory =
+        performanceResult.rows.length > 0
+          ? {
+              successRate: performanceResult.rows[0].success_rate,
+              averageQuality: performanceResult.rows[0].quality_score,
+              averageLatency: performanceResult.rows[0].average_latency,
+              taskCount: performanceResult.rows[0].total_tasks,
+            }
+          : {
+              successRate: 0,
+              averageQuality: 0,
+              averageLatency: 0,
+              taskCount: 0,
+            };
 
       return {
         id: profileRow.id,
@@ -235,18 +332,21 @@ export class AgentRegistryDbClient {
         modelFamily: profileRow.model_family,
         capabilities,
         performanceHistory,
+        currentLoad: {
+          activeTasks: profileRow.active_tasks || 0,
+          queuedTasks: profileRow.queued_tasks || 0,
+          utilizationPercent: profileRow.utilization_percent || 0,
+        },
         registeredAt: profileRow.registered_at,
         lastActiveAt: profileRow.last_active_at,
-        activeTasks: profileRow.active_tasks,
-        queuedTasks: profileRow.queued_tasks,
-        utilizationPercent: profileRow.utilization_percent,
-        createdAt: profileRow.created_at,
-        updatedAt: profileRow.updated_at,
       };
-
     } catch (error) {
-      this.logger.error('Failed to get agent:', error);
-      throw new Error(`Failed to retrieve agent: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error("Failed to get agent:", error);
+      throw new Error(
+        `Failed to retrieve agent: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     } finally {
       client.release();
     }
@@ -255,11 +355,14 @@ export class AgentRegistryDbClient {
   /**
    * Update agent profile
    */
-  async updateAgent(agentId: string, updates: Partial<AgentProfile>): Promise<void> {
+  async updateAgent(
+    agentId: string,
+    updates: Partial<AgentProfile>
+  ): Promise<void> {
     const client = await this.pool.connect();
 
     try {
-      await client.query('BEGIN');
+      await client.query("BEGIN");
 
       // Update profile
       const updateFields: string[] = [];
@@ -274,57 +377,101 @@ export class AgentRegistryDbClient {
         updateFields.push(`last_active_at = $${paramIndex++}`);
         values.push(updates.lastActiveAt);
       }
-      if (updates.activeTasks !== undefined) {
+      if (updates.currentLoad?.activeTasks !== undefined) {
         updateFields.push(`active_tasks = $${paramIndex++}`);
-        values.push(updates.activeTasks);
+        values.push(updates.currentLoad.activeTasks);
       }
-      if (updates.queuedTasks !== undefined) {
+      if (updates.currentLoad?.queuedTasks !== undefined) {
         updateFields.push(`queued_tasks = $${paramIndex++}`);
-        values.push(updates.queuedTasks);
+        values.push(updates.currentLoad.queuedTasks);
       }
-      if (updates.utilizationPercent !== undefined) {
+      if (updates.currentLoad?.utilizationPercent !== undefined) {
         updateFields.push(`utilization_percent = $${paramIndex++}`);
-        values.push(updates.utilizationPercent);
+        values.push(updates.currentLoad.utilizationPercent);
       }
 
       if (updateFields.length > 0) {
         updateFields.push(`updated_at = NOW()`);
         values.push(agentId);
 
-        await client.query(`
+        await client.query(
+          `
           UPDATE agent_profiles
-          SET ${updateFields.join(', ')}
+          SET ${updateFields.join(", ")}
           WHERE id = $${paramIndex}
-        `, values);
+        `,
+          values
+        );
       }
 
       // Update capabilities if provided
       if (updates.capabilities) {
         // Delete existing capabilities
-        await client.query('DELETE FROM agent_capabilities WHERE agent_id = $1', [agentId]);
+        await client.query(
+          "DELETE FROM agent_capabilities WHERE agent_id = $1",
+          [agentId]
+        );
 
-        // Insert new capabilities
-        for (const capability of updates.capabilities) {
-          await client.query(`
+        // Insert new capabilities - task types
+        for (const taskType of updates.capabilities.taskTypes) {
+          await client.query(
+            `
             INSERT INTO agent_capabilities (agent_id, capability_name, score, metadata)
             VALUES ($1, $2, $3, $4)
-          `, [
-            agentId,
-            capability.name,
-            capability.score,
-            JSON.stringify(capability.metadata || {})
-          ]);
+          `,
+            [
+              agentId,
+              `task_${taskType}`,
+              1.0,
+              JSON.stringify({ type: "task", value: taskType }),
+            ]
+          );
+        }
+
+        // Insert new capabilities - languages
+        for (const language of updates.capabilities.languages) {
+          await client.query(
+            `
+            INSERT INTO agent_capabilities (agent_id, capability_name, score, metadata)
+            VALUES ($1, $2, $3, $4)
+          `,
+            [
+              agentId,
+              `lang_${language}`,
+              1.0,
+              JSON.stringify({ type: "language", value: language }),
+            ]
+          );
+        }
+
+        // Insert new capabilities - specializations
+        for (const specialization of updates.capabilities.specializations) {
+          await client.query(
+            `
+            INSERT INTO agent_capabilities (agent_id, capability_name, score, metadata)
+            VALUES ($1, $2, $3, $4)
+          `,
+            [
+              agentId,
+              `spec_${specialization}`,
+              1.0,
+              JSON.stringify({ type: "specialization", value: specialization }),
+            ]
+          );
         }
       }
 
-      await client.query('COMMIT');
+      await client.query("COMMIT");
 
       this.logger.info(`Agent updated: ${agentId}`);
-
     } catch (error) {
-      await client.query('ROLLBACK');
-      this.logger.error('Failed to update agent:', error);
-      throw new Error(`Agent update failed: ${error instanceof Error ? error.message : String(error)}`);
+      await client.query("ROLLBACK");
+      this.logger.error("Failed to update agent:", error);
+      throw new Error(
+        `Agent update failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     } finally {
       client.release();
     }
@@ -337,21 +484,29 @@ export class AgentRegistryDbClient {
     const client = await this.pool.connect();
 
     try {
-      await client.query('BEGIN');
+      await client.query("BEGIN");
 
       // Delete in reverse dependency order
-      await client.query('DELETE FROM agent_performance_history WHERE agent_id = $1', [agentId]);
-      await client.query('DELETE FROM agent_capabilities WHERE agent_id = $1', [agentId]);
-      await client.query('DELETE FROM agent_profiles WHERE id = $1', [agentId]);
+      await client.query(
+        "DELETE FROM agent_performance_history WHERE agent_id = $1",
+        [agentId]
+      );
+      await client.query("DELETE FROM agent_capabilities WHERE agent_id = $1", [
+        agentId,
+      ]);
+      await client.query("DELETE FROM agent_profiles WHERE id = $1", [agentId]);
 
-      await client.query('COMMIT');
+      await client.query("COMMIT");
 
       this.logger.info(`Agent deleted: ${agentId}`);
-
     } catch (error) {
-      await client.query('ROLLBACK');
-      this.logger.error('Failed to delete agent:', error);
-      throw new Error(`Agent deletion failed: ${error instanceof Error ? error.message : String(error)}`);
+      await client.query("ROLLBACK");
+      this.logger.error("Failed to delete agent:", error);
+      throw new Error(
+        `Agent deletion failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     } finally {
       client.release();
     }
@@ -360,116 +515,99 @@ export class AgentRegistryDbClient {
   /**
    * Query agents with advanced filtering
    */
-  async queryAgents(query: AgentRegistryQuery): Promise<AgentRegistryResult> {
+  async queryAgents(query: AgentQuery): Promise<AgentQueryResult[]> {
     const client = await this.pool.connect();
 
     try {
-      let whereConditions: string[] = [];
-      let joinClauses: string[] = [];
+      const whereConditions: string[] = [];
       const values: any[] = [];
       let paramIndex = 1;
 
-      // Build WHERE conditions
-      if (query.name) {
-        whereConditions.push(`p.name ILIKE $${paramIndex++}`);
-        values.push(`%${query.name}%`);
-      }
-
-      if (query.modelFamily) {
-        whereConditions.push(`p.model_family = $${paramIndex++}`);
-        values.push(query.modelFamily);
-      }
-
-      if (query.capability) {
-        joinClauses.push('JOIN agent_capabilities c ON p.id = c.agent_id');
-        whereConditions.push(`c.capability_name = $${paramIndex++}`);
-        values.push(query.capability);
-      }
-
-      if (query.minCapabilityScore !== undefined) {
-        if (!joinClauses.includes('JOIN agent_capabilities c ON p.id = c.agent_id')) {
-          joinClauses.push('JOIN agent_capabilities c ON p.id = c.agent_id');
-        }
-        whereConditions.push(`c.score >= $${paramIndex++}`);
-        values.push(query.minCapabilityScore);
-      }
-
+      // Build WHERE conditions based on available AgentQuery fields
       if (query.maxUtilization !== undefined) {
         whereConditions.push(`p.utilization_percent <= $${paramIndex++}`);
         values.push(query.maxUtilization);
       }
 
       if (query.minSuccessRate !== undefined) {
-        joinClauses.push(`
-          JOIN agent_performance_history ph ON p.id = ph.agent_id
-          AND ph.task_type = $${paramIndex}
+        whereConditions.push(`
+          EXISTS (
+            SELECT 1 FROM agent_performance_history ph
+            WHERE ph.agent_id = p.id AND ph.success_rate >= $${paramIndex}
+          )
         `);
-        values.push(query.taskTypeForSuccess || 'general');
-        whereConditions.push(`ph.success_rate >= $${paramIndex++}`);
         values.push(query.minSuccessRate);
       }
 
-      // Build query
-      const whereClause = whereConditions.length > 0 ?
-        `WHERE ${whereConditions.join(' AND ')}` : '';
-
-      const joinClause = joinClauses.join(' ');
-
-      let orderBy = 'ORDER BY p.last_active_at DESC';
-      if (query.orderBy === 'utilization') {
-        orderBy = 'ORDER BY p.utilization_percent ASC';
-      } else if (query.orderBy === 'performance') {
-        orderBy = 'ORDER BY p.utilization_percent ASC, p.last_active_at DESC';
+      // Add capability filtering for languages
+      if (query.languages && query.languages.length > 0) {
+        const placeholders = query.languages
+          .map(() => `$${paramIndex++}`)
+          .join(", ");
+        whereConditions.push(`
+          EXISTS (
+            SELECT 1 FROM agent_capabilities c
+            WHERE c.agent_id = p.id AND c.metadata->>'type' = 'language'
+            AND c.metadata->>'value' = ANY(ARRAY[${placeholders}])
+          )
+        `);
+        values.push(...query.languages);
       }
 
-      const limit = query.limit || 50;
-      const offset = query.offset || 0;
+      // Add capability filtering for specializations
+      if (query.specializations && query.specializations.length > 0) {
+        const placeholders = query.specializations
+          .map(() => `$${paramIndex++}`)
+          .join(", ");
+        whereConditions.push(`
+          EXISTS (
+            SELECT 1 FROM agent_capabilities c
+            WHERE c.agent_id = p.id AND c.metadata->>'type' = 'specialization'
+            AND c.metadata->>'value' = ANY(ARRAY[${placeholders}])
+          )
+        `);
+        values.push(...query.specializations);
+      }
 
-      const sql = `
-        SELECT DISTINCT p.* FROM agent_profiles p
-        ${joinClause}
+      const whereClause =
+        whereConditions.length > 0
+          ? `WHERE ${whereConditions.join(" AND ")}`
+          : "";
+
+      const result = await client.query(
+        `
+        SELECT p.* FROM agent_profiles p
         ${whereClause}
-        ${orderBy}
-        LIMIT $${paramIndex++} OFFSET $${paramIndex++}
-      `;
+        ORDER BY p.last_active_at DESC
+        LIMIT 50
+      `,
+        values
+      );
 
-      values.push(limit, offset);
+      // Convert results to AgentQueryResult format
+      const queryResults: AgentQueryResult[] = [];
 
-      const result = await client.query(sql, values);
-
-      // Get total count for pagination
-      const countSql = `
-        SELECT COUNT(DISTINCT p.id) as total FROM agent_profiles p
-        ${joinClause}
-        ${whereClause}
-      `;
-
-      const countResult = await client.query(countSql, values.slice(0, -2));
-      const total = parseInt(countResult.rows[0].total);
-
-      // Convert rows to AgentProfile objects
-      const agents: AgentProfile[] = [];
       for (const row of result.rows) {
+        // Reconstruct the full agent profile
         const agent = await this.getAgent(row.id);
         if (agent) {
-          agents.push(agent);
+          queryResults.push({
+            agent,
+            matchScore: 0.8, // Placeholder - would calculate based on query criteria
+            matchReason: "Matches query criteria",
+          });
         }
       }
 
-      return {
-        agents,
-        total,
-        hasMore: offset + limit < total,
-        query: {
-          ...query,
-          limit,
-          offset,
-        },
-      };
-
+      this.logger.debug(`Found ${queryResults.length} agents matching query`);
+      return queryResults;
     } catch (error) {
-      this.logger.error('Failed to query agents:', error);
-      throw new Error(`Agent query failed: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error("Failed to query agents:", error);
+      throw new Error(
+        `Agent query failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     } finally {
       client.release();
     }
@@ -478,31 +616,40 @@ export class AgentRegistryDbClient {
   /**
    * Record performance metrics for an agent
    */
-  async recordPerformance(agentId: string, performance: Omit<AgentPerformanceHistory, 'recordedAt'>): Promise<void> {
+  async recordPerformance(
+    agentId: string,
+    performance: PerformanceMetrics
+  ): Promise<void> {
     const client = await this.pool.connect();
 
     try {
-      await client.query(`
+      await client.query(
+        `
         INSERT INTO agent_performance_history (
           agent_id, task_type, success_rate, average_latency,
           total_tasks, quality_score, confidence_score, metadata
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      `, [
-        agentId,
-        performance.taskType,
-        performance.successRate,
-        performance.averageLatency,
-        performance.totalTasks,
-        performance.qualityScore,
-        performance.confidenceScore,
-        JSON.stringify(performance.metadata || {})
-      ]);
+      `,
+        [
+          agentId,
+          performance.taskType || "general",
+          performance.success ? 1.0 : 0.0,
+          performance.latencyMs,
+          1, // Single task
+          performance.qualityScore,
+          1.0, // Default confidence
+          JSON.stringify({ tokensUsed: performance.tokensUsed }),
+        ]
+      );
 
       this.logger.debug(`Performance recorded for agent: ${agentId}`);
-
     } catch (error) {
-      this.logger.error('Failed to record performance:', error);
-      throw new Error(`Performance recording failed: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error("Failed to record performance:", error);
+      throw new Error(
+        `Performance recording failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     } finally {
       client.release();
     }
@@ -516,12 +663,16 @@ export class AgentRegistryDbClient {
     averageSuccessRate: number;
     averageLatency: number;
     averageQuality: number;
-    taskTypeBreakdown: Record<string, { count: number; successRate: number; avgLatency: number }>;
+    taskTypeBreakdown: Record<
+      string,
+      { count: number; successRate: number; avgLatency: number }
+    >;
   }> {
     const client = await this.pool.connect();
 
     try {
-      const result = await client.query(`
+      const result = await client.query(
+        `
         SELECT
           task_type,
           COUNT(*) as task_count,
@@ -531,13 +682,18 @@ export class AgentRegistryDbClient {
         FROM agent_performance_history
         WHERE agent_id = $1
         GROUP BY task_type
-      `, [agentId]);
+      `,
+        [agentId]
+      );
 
       let totalTasks = 0;
       let totalSuccessRate = 0;
       let totalLatency = 0;
       let totalQuality = 0;
-      const taskTypeBreakdown: Record<string, { count: number; successRate: number; avgLatency: number }> = {};
+      const taskTypeBreakdown: Record<
+        string,
+        { count: number; successRate: number; avgLatency: number }
+      > = {};
 
       for (const row of result.rows) {
         const count = parseInt(row.task_count);
@@ -560,10 +716,13 @@ export class AgentRegistryDbClient {
         averageQuality: totalTasks > 0 ? totalQuality / totalTasks : 0,
         taskTypeBreakdown,
       };
-
     } catch (error) {
-      this.logger.error('Failed to get agent stats:', error);
-      throw new Error(`Agent stats retrieval failed: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error("Failed to get agent stats:", error);
+      throw new Error(
+        `Agent stats retrieval failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     } finally {
       client.release();
     }
@@ -572,13 +731,17 @@ export class AgentRegistryDbClient {
   /**
    * Health check for database connectivity
    */
-  async healthCheck(): Promise<{ healthy: boolean; latency: number; error?: string }> {
+  async healthCheck(): Promise<{
+    healthy: boolean;
+    latency: number;
+    error?: string;
+  }> {
     const startTime = Date.now();
 
     try {
       const client = await this.pool.connect();
       try {
-        await client.query('SELECT 1');
+        await client.query("SELECT 1");
         const latency = Date.now() - startTime;
         return { healthy: true, latency };
       } finally {
@@ -589,7 +752,7 @@ export class AgentRegistryDbClient {
       return {
         healthy: false,
         latency,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
@@ -602,25 +765,35 @@ export class AgentRegistryDbClient {
 
     try {
       // Check if required tables exist
-      const tables = ['agent_profiles', 'agent_capabilities', 'agent_performance_history'];
+      const tables = [
+        "agent_profiles",
+        "agent_capabilities",
+        "agent_performance_history",
+      ];
       for (const table of tables) {
-        const result = await client.query(`
+        const result = await client.query(
+          `
           SELECT EXISTS (
             SELECT FROM information_schema.tables
             WHERE table_schema = 'public'
             AND table_name = $1
           )
-        `, [table]);
+        `,
+          [table]
+        );
 
         if (!result.rows[0].exists) {
           throw new Error(`Required table '${table}' does not exist`);
         }
       }
 
-      this.logger.debug('All required tables verified');
-
+      this.logger.debug("All required tables verified");
     } catch (error) {
-      throw new Error(`Schema verification failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Schema verification failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     } finally {
       client.release();
     }
@@ -630,48 +803,43 @@ export class AgentRegistryDbClient {
    * Setup pool error handling
    */
   private setupPoolErrorHandling(): void {
-    this.pool.on('error', (err) => {
-      this.logger.error('Unexpected database pool error:', err);
+    this.pool.on("error", (err) => {
+      this.logger.error("Unexpected database pool error:", err);
     });
 
-    this.pool.on('connect', () => {
-      this.logger.debug('New database connection established');
+    this.pool.on("connect", () => {
+      this.logger.debug("New database connection established");
     });
 
-    this.pool.on('remove', () => {
-      this.logger.debug('Database connection removed from pool');
+    this.pool.on("remove", () => {
+      this.logger.debug("Database connection removed from pool");
     });
   }
 
   /**
    * Update agent performance metrics (legacy method for compatibility)
    */
-  async updatePerformance(agentId: string, metrics: PerformanceMetrics): Promise<void> {
-    const performanceRecord = {
-      taskType: metrics.taskType || 'general',
-      successRate: metrics.success ? 1.0 : 0.0,
-      averageLatency: metrics.latencyMs,
-      totalTasks: 1,
-      qualityScore: metrics.qualityScore,
-      confidenceScore: 0.8, // Default confidence
-      metadata: {
-        tokensUsed: metrics.tokensUsed,
-        timestamp: new Date().toISOString(),
-      },
-    };
-
-    await this.recordPerformance(agentId, performanceRecord);
+  async updatePerformance(
+    agentId: string,
+    metrics: PerformanceMetrics
+  ): Promise<void> {
+    await this.recordPerformance(agentId, metrics);
   }
 
   /**
    * Update agent load (active and queued tasks)
    */
-  async updateLoad(agentId: string, activeTasksDelta: number, queuedTasksDelta: number): Promise<void> {
+  async updateLoad(
+    agentId: string,
+    activeTasksDelta: number,
+    queuedTasksDelta: number
+  ): Promise<void> {
     const client = await this.pool.connect();
 
     try {
       // Update with atomic increment/decrement
-      await client.query(`
+      await client.query(
+        `
         UPDATE agent_profiles
         SET
           active_tasks = GREATEST(0, active_tasks + $2),
@@ -684,13 +852,20 @@ export class AgentRegistryDbClient {
           )),
           updated_at = NOW()
         WHERE id = $1
-      `, [agentId, activeTasksDelta, queuedTasksDelta]);
+      `,
+        [agentId, activeTasksDelta, queuedTasksDelta]
+      );
 
-      this.logger.debug(`Updated load for agent: ${agentId} (+${activeTasksDelta} active, +${queuedTasksDelta} queued)`);
-
+      this.logger.debug(
+        `Updated load for agent: ${agentId} (+${activeTasksDelta} active, +${queuedTasksDelta} queued)`
+      );
     } catch (error) {
-      this.logger.error('Failed to update agent load:', error);
-      throw new Error(`Load update failed: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error("Failed to update agent load:", error);
+      throw new Error(
+        `Load update failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     } finally {
       client.release();
     }
@@ -703,26 +878,37 @@ export class AgentRegistryDbClient {
     const client = await this.pool.connect();
 
     try {
-      await client.query('BEGIN');
+      await client.query("BEGIN");
 
       // Delete in reverse dependency order
-      await client.query('DELETE FROM agent_performance_history WHERE agent_id = $1', [agentId]);
-      await client.query('DELETE FROM agent_capabilities WHERE agent_id = $1', [agentId]);
-      const result = await client.query('DELETE FROM agent_profiles WHERE id = $1', [agentId]);
+      await client.query(
+        "DELETE FROM agent_performance_history WHERE agent_id = $1",
+        [agentId]
+      );
+      await client.query("DELETE FROM agent_capabilities WHERE agent_id = $1", [
+        agentId,
+      ]);
+      const result = await client.query(
+        "DELETE FROM agent_profiles WHERE id = $1",
+        [agentId]
+      );
 
-      await client.query('COMMIT');
+      await client.query("COMMIT");
 
-      const deleted = result.rowCount > 0;
+      const deleted = (result.rowCount ?? 0) > 0;
       if (deleted) {
         this.logger.info(`Agent unregistered: ${agentId}`);
       }
 
       return deleted;
-
     } catch (error) {
-      await client.query('ROLLBACK');
-      this.logger.error('Failed to unregister agent:', error);
-      throw new Error(`Agent unregistration failed: ${error instanceof Error ? error.message : String(error)}`);
+      await client.query("ROLLBACK");
+      this.logger.error("Failed to unregister agent:", error);
+      throw new Error(
+        `Agent unregistration failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     } finally {
       client.release();
     }
@@ -756,24 +942,26 @@ export class AgentRegistryDbClient {
         totalCapabilities: parseInt(stats.total_capabilities),
         averagePerformance: parseFloat(stats.avg_performance) || 0,
       };
-
     } catch (error) {
-      this.logger.error('Failed to get registry stats:', error);
-      throw new Error(`Stats retrieval failed: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error("Failed to get registry stats:", error);
+      throw new Error(
+        `Stats retrieval failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     } finally {
       client.release();
     }
   }
 
-
   /**
    * Execute query with retry logic
    */
   private async executeWithRetry<T>(
-    operation: (client: PoolClient) => Promise<T>,
+    operation: (client: PoolClient) => Promise<T>, // eslint-disable-line no-unused-vars
     operationName: string
   ): Promise<T> {
-    let lastError: Error;
+    let lastError: Error = new Error("Unknown error");
 
     for (let attempt = 1; attempt <= this.config.retryAttempts; attempt++) {
       const client = await this.pool.connect();
@@ -781,20 +969,25 @@ export class AgentRegistryDbClient {
       try {
         const result = await operation(client);
         return result;
-
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        this.logger.warn(`${operationName} failed on attempt ${attempt}:`, lastError.message);
+        this.logger.warn(
+          `${operationName} failed on attempt ${attempt}:`,
+          lastError.message
+        );
 
         if (attempt < this.config.retryAttempts) {
-          await new Promise(resolve => setTimeout(resolve, this.config.retryDelayMs));
+          await new Promise((resolve) =>
+            setTimeout(resolve, this.config.retryDelayMs)
+          );
         }
-
       } finally {
         client.release();
       }
     }
 
-    throw new Error(`${operationName} failed after ${this.config.retryAttempts} attempts: ${lastError.message}`);
+    throw new Error(
+      `${operationName} failed after ${this.config.retryAttempts} attempts: ${lastError.message}`
+    );
   }
 }

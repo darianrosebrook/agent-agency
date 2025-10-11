@@ -8,6 +8,14 @@
  * Implements ARBITER-001 specification with capability tracking and atomic updates.
  */
 
+import {
+  AgentRegistryDatabaseConfig,
+  AgentRegistryDbClient,
+} from "../database/AgentRegistryDbClient.js";
+import {
+  AgentRegistrySecurity,
+  SecurityContext,
+} from "../security/AgentRegistrySecurity.js";
 import type {
   AgentId,
   AgentProfile,
@@ -19,8 +27,6 @@ import type {
 } from "../types/agent-registry";
 import { RegistryError, RegistryErrorType } from "../types/agent-registry";
 import { AgentProfileHelper } from "./AgentProfile";
-import { AgentRegistryDbClient, AgentRegistryDatabaseConfig } from "../database/AgentRegistryDbClient.js";
-import { AgentRegistrySecurity, SecurityContext, SecurityConfig } from "../security/AgentRegistrySecurity.js";
 
 /**
  * Default configuration for the agent registry.
@@ -103,7 +109,6 @@ export class AgentRegistryManager {
     }
   }
 
-
   /**
    * Load existing agents from database into memory cache.
    */
@@ -111,24 +116,24 @@ export class AgentRegistryManager {
     if (!this.dbClient) return;
 
     try {
-      // Query all agents (with pagination for large datasets)
+      // Query all agents (simplified query for loading)
       const result = await this.dbClient.queryAgents({
-        limit: this.config.maxAgents,
-        offset: 0,
+        taskType: "code-editing", // Required field
       });
 
       // Load agents into memory cache
-      for (const agent of result.agents) {
-        this.agents.set(agent.id, agent);
+      for (const queryResult of result) {
+        this.agents.set(queryResult.agent.id, queryResult.agent);
       }
 
       // Log successful loading
-      console.log(`Loaded ${result.agents.length} agents from database`);
-
+      console.log(`Loaded ${result.length} agents from database`);
     } catch (error) {
       throw new RegistryError(
         RegistryErrorType.DATABASE_ERROR,
-        `Failed to load agents from database: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to load agents from database: ${
+          error instanceof Error ? error.message : String(error)
+        }`
       );
     }
   }
@@ -143,7 +148,10 @@ export class AgentRegistryManager {
    * @remarks
    * Acceptance Criterion A1: Agent profile created with capability tracking initialized
    */
-  async registerAgent(agent: Partial<AgentProfile>, securityContext?: SecurityContext): Promise<AgentProfile> {
+  async registerAgent(
+    agent: Partial<AgentProfile>,
+    securityContext?: SecurityContext
+  ): Promise<AgentProfile> {
     // Security check: authenticate and authorize
     if (this.config.enableSecurity && this.securityManager) {
       if (!securityContext) {
@@ -155,9 +163,9 @@ export class AgentRegistryManager {
 
       const authorized = await this.securityManager.authorize(
         securityContext,
-        'create' as any,
-        'agent',
-        agent.id || 'unknown',
+        "create" as any,
+        "agent",
+        agent.id || "unknown",
         agent
       );
 
@@ -165,17 +173,17 @@ export class AgentRegistryManager {
         await this.securityManager.logAuditEvent({
           id: this.generateId(),
           timestamp: new Date(),
-          eventType: 'agent_registration' as any,
+          eventType: "agent_registration" as any,
           actor: {
             tenantId: securityContext.tenantId,
             userId: securityContext.userId,
             sessionId: securityContext.sessionId,
           },
-          resource: { type: 'agent', id: agent.id || 'unknown' },
-          action: 'create' as any,
+          resource: { type: "agent", id: agent.id || "unknown" },
+          action: "create" as any,
           details: { agentData: agent },
-          result: 'failure',
-          errorMessage: 'Authorization failed',
+          result: "failure",
+          errorMessage: "Authorization failed",
           ipAddress: securityContext.ipAddress,
           userAgent: securityContext.userAgent,
         });
@@ -193,7 +201,7 @@ export class AgentRegistryManager {
       if (!validation.valid) {
         throw new RegistryError(
           RegistryErrorType.INVALID_AGENT_DATA,
-          `Validation failed: ${validation.errors.join(', ')}`
+          `Validation failed: ${validation.errors.join(", ")}`
         );
       }
       // Use sanitized data if available
@@ -260,7 +268,9 @@ export class AgentRegistryManager {
         this.agents.delete(profile.id);
         throw new RegistryError(
           RegistryErrorType.DATABASE_ERROR,
-          `Failed to persist agent to database: ${error instanceof Error ? error.message : String(error)}`,
+          `Failed to persist agent to database: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
           { agentId: profile.id }
         );
       }
@@ -271,16 +281,16 @@ export class AgentRegistryManager {
       await this.securityManager.logAuditEvent({
         id: this.generateId(),
         timestamp: new Date(),
-        eventType: 'agent_registration' as any,
+        eventType: "agent_registration" as any,
         actor: {
           tenantId: securityContext.tenantId,
           userId: securityContext.userId,
           sessionId: securityContext.sessionId,
         },
-        resource: { type: 'agent', id: profile.id },
-        action: 'create' as any,
+        resource: { type: "agent", id: profile.id },
+        action: "create" as any,
         details: { agentProfile: profile },
-        result: 'success',
+        result: "success",
         ipAddress: securityContext.ipAddress,
         userAgent: securityContext.userAgent,
       });
@@ -296,7 +306,10 @@ export class AgentRegistryManager {
    * @returns Agent profile
    * @throws RegistryError if agent not found
    */
-  async getProfile(agentId: AgentId, securityContext?: SecurityContext): Promise<AgentProfile> {
+  async getProfile(
+    agentId: AgentId,
+    securityContext?: SecurityContext
+  ): Promise<AgentProfile> {
     // Security check: authenticate and authorize
     if (this.config.enableSecurity && this.securityManager) {
       if (!securityContext) {
@@ -308,8 +321,8 @@ export class AgentRegistryManager {
 
       const authorized = await this.securityManager.authorize(
         securityContext,
-        'read' as any,
-        'agent',
+        "read" as any,
+        "agent",
         agentId
       );
 
@@ -317,17 +330,17 @@ export class AgentRegistryManager {
         await this.securityManager.logAuditEvent({
           id: this.generateId(),
           timestamp: new Date(),
-          eventType: 'agent_query' as any,
+          eventType: "agent_query" as any,
           actor: {
             tenantId: securityContext.tenantId,
             userId: securityContext.userId,
             sessionId: securityContext.sessionId,
           },
-          resource: { type: 'agent', id: agentId },
-          action: 'read' as any,
-          details: { queryType: 'getProfile' },
-          result: 'failure',
-          errorMessage: 'Authorization failed',
+          resource: { type: "agent", id: agentId },
+          action: "read" as any,
+          details: { queryType: "getProfile" },
+          result: "failure",
+          errorMessage: "Authorization failed",
           ipAddress: securityContext.ipAddress,
           userAgent: securityContext.userAgent,
         });
@@ -353,7 +366,9 @@ export class AgentRegistryManager {
       } catch (error) {
         throw new RegistryError(
           RegistryErrorType.DATABASE_ERROR,
-          `Failed to retrieve agent from database: ${error instanceof Error ? error.message : String(error)}`,
+          `Failed to retrieve agent from database: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
           { agentId }
         );
       }
@@ -372,16 +387,16 @@ export class AgentRegistryManager {
       await this.securityManager.logAuditEvent({
         id: this.generateId(),
         timestamp: new Date(),
-        eventType: 'agent_query' as any,
+        eventType: "agent_query" as any,
         actor: {
           tenantId: securityContext.tenantId,
           userId: securityContext.userId,
           sessionId: securityContext.sessionId,
         },
-        resource: { type: 'agent', id: agentId },
-        action: 'read' as any,
-        details: { queryType: 'getProfile', found: true },
-        result: 'success',
+        resource: { type: "agent", id: agentId },
+        action: "read" as any,
+        details: { queryType: "getProfile", found: true },
+        result: "success",
         ipAddress: securityContext.ipAddress,
         userAgent: securityContext.userAgent,
       });
@@ -515,24 +530,13 @@ export class AgentRegistryManager {
       // Record performance metrics to database if enabled
       if (this.dbClient) {
         try {
-          // Convert metrics to database format
-          const performanceRecord = {
-            taskType: metrics.taskType || 'general',
-            successRate: metrics.success ? 1.0 : 0.0,
-            averageLatency: metrics.latencyMs,
-            totalTasks: 1,
-            qualityScore: metrics.qualityScore,
-            confidenceScore: 0.8, // Default confidence
-            metadata: {
-              tokensUsed: metrics.tokensUsed,
-              timestamp: new Date().toISOString(),
-            },
-          };
-
-          await this.dbClient.recordPerformance(agentId, performanceRecord);
+          await this.dbClient.recordPerformance(agentId, metrics);
         } catch (error) {
           // Log database error but don't fail the operation
-          console.error(`Failed to record performance to database for agent ${agentId}:`, error);
+          console.error(
+            `Failed to record performance to database for agent ${agentId}:`,
+            error
+          );
         }
       }
 

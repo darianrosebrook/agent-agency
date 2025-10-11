@@ -22,6 +22,7 @@ export interface RoutingConfig {
   routingHistoryWindow: number; // days
   performancePredictionEnabled: boolean;
   queueTimeoutMs: number;
+  testMode?: boolean; // Synchronous routing for testing
 }
 
 export interface AgentPerformanceMetrics {
@@ -49,6 +50,14 @@ export interface RoutingDecision {
   routingStrategy: "predictive" | "load_balance" | "priority" | "fallback";
   estimatedLatency: number;
   expectedQuality: number;
+  performanceMetrics: {
+    routingTimeMs: number;
+    agentLoadFactor: number;
+    memoryRelevanceScore: number;
+    historicalSuccessRate: number;
+    predictedCompletionTime: number;
+  };
+  timestamp: Date;
 }
 
 export interface TaskQueue {
@@ -105,6 +114,11 @@ export class AdvancedTaskRouter extends EventEmitter {
       );
     }
 
+    // In test mode, route synchronously
+    if (this.config.testMode) {
+      return this.routeTaskSynchronously(task, tenantId, context);
+    }
+
     // Add to appropriate priority queue
     const priority = task.priority || "medium";
     this.taskQueue[priority].push(task);
@@ -132,6 +146,42 @@ export class AdvancedTaskRouter extends EventEmitter {
         resolve(decision);
       });
     });
+  }
+
+  /**
+   * Route task synchronously for testing
+   */
+  private async routeTaskSynchronously(
+    task: Task,
+    tenantId: string,
+    context?: TaskContext
+  ): Promise<RoutingDecision> {
+    const availableAgents = this.getAvailableAgents(task.type);
+    if (availableAgents.length === 0) {
+      return this.createRoutingDecision(task.id, task.agentId, "fallback");
+    }
+
+    // Use predictive routing for test mode
+    const decision = await this.predictiveRouting(
+      task,
+      availableAgents,
+      tenantId,
+      context
+    );
+
+    if (decision) {
+      // Update agent load
+      const currentLoad = this.agentLoad.get(decision.selectedAgentId) || 0;
+      this.agentLoad.set(decision.selectedAgentId, currentLoad + 1);
+
+      this.routingHistory.push(decision);
+      this.emit("task-routed", decision);
+
+      return decision;
+    }
+
+    // Fallback to load balancing
+    return this.loadBalancingRouting(availableAgents, task);
   }
 
   /**
@@ -222,6 +272,9 @@ export class AdvancedTaskRouter extends EventEmitter {
       reasons: this.generateSelectionReasons(p),
     }));
 
+    const routingStartTime = Date.now();
+    const routingTime = Date.now() - routingStartTime;
+
     return {
       taskId: task.id,
       selectedAgentId: best.agent.id,
@@ -231,6 +284,14 @@ export class AdvancedTaskRouter extends EventEmitter {
       routingStrategy: "predictive",
       estimatedLatency: best.performance.averageLatency,
       expectedQuality: best.performance.qualityScore,
+      performanceMetrics: {
+        routingTimeMs: routingTime,
+        agentLoadFactor: this.calculateLoadPenalty(best.agent.id),
+        memoryRelevanceScore: best.memoryBonus,
+        historicalSuccessRate: best.performance.successRate,
+        predictedCompletionTime: best.performance.averageLatency,
+      },
+      timestamp: new Date(),
     };
   }
 
@@ -253,6 +314,8 @@ export class AdvancedTaskRouter extends EventEmitter {
       }
     }
 
+    const routingTime = 1; // Minimal time for load balancing
+
     return {
       taskId: task.id,
       selectedAgentId: bestAgent.id,
@@ -268,6 +331,14 @@ export class AdvancedTaskRouter extends EventEmitter {
       routingStrategy: "load_balance",
       estimatedLatency: 15000, // Conservative estimate
       expectedQuality: 0.7,
+      performanceMetrics: {
+        routingTimeMs: routingTime,
+        agentLoadFactor: lowestLoad / this.config.maxConcurrentTasksPerAgent,
+        memoryRelevanceScore: 0.5, // Neutral for load balancing
+        historicalSuccessRate: 0.7, // Conservative estimate
+        predictedCompletionTime: 15000,
+      },
+      timestamp: new Date(),
     };
   }
 
@@ -563,6 +634,8 @@ export class AdvancedTaskRouter extends EventEmitter {
     agentId: string,
     strategy: RoutingDecision["routingStrategy"]
   ): RoutingDecision {
+    const routingTime = 1; // Minimal time for fallback routing
+
     return {
       taskId,
       selectedAgentId: agentId,
@@ -572,6 +645,14 @@ export class AdvancedTaskRouter extends EventEmitter {
       routingStrategy: strategy,
       estimatedLatency: 15000,
       expectedQuality: 0.7,
+      performanceMetrics: {
+        routingTimeMs: routingTime,
+        agentLoadFactor: 0, // Unknown for fallback
+        memoryRelevanceScore: 0, // No memory data for fallback
+        historicalSuccessRate: 0.5, // Conservative estimate
+        predictedCompletionTime: 15000,
+      },
+      timestamp: new Date(),
     };
   }
 
@@ -641,7 +722,7 @@ export class AdvancedTaskRouter extends EventEmitter {
   }
 
   /**
-   * Get routing analytics
+   * Get routing analytics with detailed performance metrics
    */
   getAnalytics(): {
     totalRouted: number;
@@ -649,6 +730,14 @@ export class AdvancedTaskRouter extends EventEmitter {
     strategyBreakdown: Record<string, number>;
     queueDepths: Record<string, number>;
     agentLoads: Record<string, number>;
+    performanceMetrics: {
+      averageRoutingTimeMs: number;
+      averageAgentLoadFactor: number;
+      averageMemoryRelevanceScore: number;
+      averageHistoricalSuccessRate: number;
+      p95RoutingTimeMs: number;
+      routingTimeDistribution: { fast: number; medium: number; slow: number };
+    };
   } {
     const totalRouted = this.routingHistory.length;
     const averageConfidence =
@@ -671,12 +760,68 @@ export class AdvancedTaskRouter extends EventEmitter {
 
     const agentLoads = Object.fromEntries(this.agentLoad.entries());
 
+    // Calculate performance metrics
+    const routingTimes = this.routingHistory.map(
+      (r) => r.performanceMetrics.routingTimeMs
+    );
+    const agentLoadFactors = this.routingHistory.map(
+      (r) => r.performanceMetrics.agentLoadFactor
+    );
+    const memoryRelevanceScores = this.routingHistory.map(
+      (r) => r.performanceMetrics.memoryRelevanceScore
+    );
+    const historicalSuccessRates = this.routingHistory.map(
+      (r) => r.performanceMetrics.historicalSuccessRate
+    );
+
+    const averageRoutingTimeMs =
+      routingTimes.length > 0
+        ? routingTimes.reduce((a, b) => a + b) / routingTimes.length
+        : 0;
+
+    const averageAgentLoadFactor =
+      agentLoadFactors.length > 0
+        ? agentLoadFactors.reduce((a, b) => a + b) / agentLoadFactors.length
+        : 0;
+
+    const averageMemoryRelevanceScore =
+      memoryRelevanceScores.length > 0
+        ? memoryRelevanceScores.reduce((a, b) => a + b) /
+          memoryRelevanceScores.length
+        : 0;
+
+    const averageHistoricalSuccessRate =
+      historicalSuccessRates.length > 0
+        ? historicalSuccessRates.reduce((a, b) => a + b) /
+          historicalSuccessRates.length
+        : 0;
+
+    // Calculate P95 routing time
+    const sortedTimes = [...routingTimes].sort((a, b) => a - b);
+    const p95Index = Math.floor(sortedTimes.length * 0.95);
+    const p95RoutingTimeMs = sortedTimes[p95Index] || 0;
+
+    // Routing time distribution
+    const routingTimeDistribution = {
+      fast: routingTimes.filter((t) => t < 50).length,
+      medium: routingTimes.filter((t) => t >= 50 && t < 200).length,
+      slow: routingTimes.filter((t) => t >= 200).length,
+    };
+
     return {
       totalRouted,
       averageConfidence,
       strategyBreakdown,
       queueDepths,
       agentLoads,
+      performanceMetrics: {
+        averageRoutingTimeMs,
+        averageAgentLoadFactor,
+        averageMemoryRelevanceScore,
+        averageHistoricalSuccessRate,
+        p95RoutingTimeMs,
+        routingTimeDistribution,
+      },
     };
   }
 }

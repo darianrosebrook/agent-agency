@@ -371,7 +371,7 @@ export class TaskQueuePersistence {
     `;
 
     const result = await this.db.query(sql);
-    return result.rowCount || 0;
+    return result.length;
   }
 
   /**

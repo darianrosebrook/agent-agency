@@ -7,29 +7,32 @@
  */
 
 // Core data layer
-export { DataLayer } from './DataLayer';
+export { DataLayer } from "./DataLayer";
 
 // Connection management
-export { PostgreSQLConnection } from './connection/PostgreSQLConnection';
+export { PostgreSQLConnection } from "./connection/PostgreSQLConnection";
 
 // Caching
-export { RedisCache } from './cache/RedisCache';
-export { MultiLevelCache } from './cache/MultiLevelCache';
+export { MultiLevelCache } from "./cache/MultiLevelCache";
+export { RedisCache } from "./cache/RedisCache";
 
 // DAOs
-export { AgentDAO } from './dao/AgentDAO';
-export { BaseDAO } from './dao/BaseDAO';
-export { VectorDAO } from './dao/VectorDAO';
-export { ExperienceDAO } from './dao/ExperienceDAO';
+export { AgentDAO } from "./dao/AgentDAO";
+export { BaseDAO } from "./dao/BaseDAO";
+export { ExperienceDAO } from "./dao/ExperienceDAO";
+export { VectorDAO } from "./dao/VectorDAO";
 
 // Monitoring
-export { PerformanceMonitor } from './monitoring/PerformanceMonitor';
+export { PerformanceMonitor } from "./monitoring/PerformanceMonitor";
+
+// Security
+export * from "./security";
 
 // Migrations
-export { MigrationManager } from './migrations/MigrationManager';
+export { MigrationManager } from "./migrations/MigrationManager";
 
 // Types and interfaces
-export * from './types';
+export * from "./types";
 
 // Utils
-export * from './utils';
+export * from "./utils";

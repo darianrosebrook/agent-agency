@@ -14,16 +14,17 @@ import { ToolAdoptionTrainer } from "../rl/ToolAdoptionTrainer";
 import { TurnLevelRLTrainer } from "../rl/TurnLevelRLTrainer";
 import {
   ConversationTrajectory,
-  RoutingDecision,
+  RoutingDecision as RLRoutingDecision,
   TaskOutcome,
   ToolExample,
   TurnLevelReward,
 } from "../types/agentic-rl";
-import { Task, TaskResult } from "../types/arbiter-orchestration";
+import { Task, TaskResult, RoutingDecision } from "../types/arbiter-orchestration";
 import {
   ArbiterOrchestrator,
   ArbiterOrchestratorConfig,
 } from "./ArbiterOrchestrator";
+import { TaskRoutingManager, RoutingOutcome } from "./TaskRoutingManager";
 
 /**
  * Enhanced Arbiter Orchestrator Configuration
@@ -71,6 +72,7 @@ export class EnhancedArbiterOrchestrator extends ArbiterOrchestrator {
         performanceTracker: PerformanceTracker;
         rlTrainer: TurnLevelRLTrainer;
         toolAdoptionTrainer: ToolAdoptionTrainer;
+        taskRoutingManager: TaskRoutingManager;
       }
     | undefined;
 
@@ -95,6 +97,15 @@ export class EnhancedArbiterOrchestrator extends ArbiterOrchestrator {
       this.rlConfig.enableRLTraining ||
       this.rlConfig.enableToolAdoption
     ) {
+      // Initialize Task Routing Manager (integrates multi-armed bandit)
+      const taskRoutingManager = new TaskRoutingManager(
+        this.components.agentRegistry,
+        {
+          enableBandit: this.rlConfig.enableMultiArmedBandit,
+          ...this.rlConfig.banditConfig,
+        }
+      );
+
       this.rlComponents = {
         multiArmedBandit: this.rlConfig.enableMultiArmedBandit
           ? new MultiArmedBandit(this.rlConfig.banditConfig)
@@ -111,6 +122,8 @@ export class EnhancedArbiterOrchestrator extends ArbiterOrchestrator {
         toolAdoptionTrainer: this.rlConfig.enableToolAdoption
           ? new ToolAdoptionTrainer(this.rlConfig.toolAdoptionConfig)
           : (null as any),
+
+        taskRoutingManager,
       };
 
       // Start performance tracking if enabled
@@ -140,41 +153,36 @@ export class EnhancedArbiterOrchestrator extends ArbiterOrchestrator {
   }
 
   /**
-   * Attempt RL-enhanced task assignment using multi-armed bandit
+   * Attempt RL-enhanced task assignment using TaskRoutingManager
    */
   private async attemptRLAssignment(task: Task): Promise<any> {
-    if (!this.rlComponents?.multiArmedBandit) {
+    if (!this.rlComponents?.taskRoutingManager) {
       // Fall back to no assignment (will be queued)
       return null;
     }
 
     try {
-      // Get available agents for the task
-      const availableAgents = await this.getAvailableAgentsForTask(task);
-
-      if (availableAgents.length === 0) {
-        return null; // No agents available
-      }
-
-      // Use multi-armed bandit for intelligent selection
-      const selectedAgent = await this.rlComponents.multiArmedBandit.select(
-        availableAgents,
-        task.type as any
-      );
-
-      // Create routing decision for tracking
-      const routingDecision =
-        this.rlComponents.multiArmedBandit.createRoutingDecision(
-          task.id,
-          availableAgents,
-          selectedAgent,
-          task.type as any
-        );
+      // Use TaskRoutingManager for intelligent routing
+      const routingDecision = await this.rlComponents.taskRoutingManager.routeTask(task);
 
       // Record decision for RL training
       if (this.rlComponents.performanceTracker) {
+        // Convert to RL routing decision format
+        const rlRoutingDecision: RLRoutingDecision = {
+          taskId: task.id,
+          selectedAgentId: routingDecision.selectedAgent.id,
+          confidence: routingDecision.confidence,
+          rationale: routingDecision.reason,
+          alternativesConsidered: routingDecision.alternatives.map(alt => ({
+            agentId: alt.agent.id,
+            score: alt.score,
+            reason: alt.reason,
+          })),
+          timestamp: routingDecision.timestamp,
+        };
+
         await this.rlComponents.performanceTracker.recordRoutingDecision(
-          routingDecision
+          rlRoutingDecision
         );
       }
 
@@ -182,14 +190,15 @@ export class EnhancedArbiterOrchestrator extends ArbiterOrchestrator {
       const assignment: any = {
         id: `assignment-${task.id}-${Date.now()}`,
         taskId: task.id,
-        agentId: selectedAgent.id,
+        agentId: routingDecision.selectedAgent.id,
         assignedAt: new Date(),
         status: "assigned",
       };
 
       console.log(
-        `RL-enhanced assignment: Task ${task.id} assigned to agent ${selectedAgent.id} ` +
-          `with confidence ${(routingDecision.confidence * 100).toFixed(1)}%`
+        `RL-enhanced assignment: Task ${task.id} assigned to agent ${routingDecision.selectedAgent.id} ` +
+          `with confidence ${(routingDecision.confidence * 100).toFixed(1)}% ` +
+          `via ${routingDecision.strategy} strategy`
       );
 
       return assignment;
@@ -210,7 +219,7 @@ export class EnhancedArbiterOrchestrator extends ArbiterOrchestrator {
     taskResult: TaskResult,
     assignmentId?: string
   ): Promise<void> {
-    if (!this.rlComponents?.performanceTracker) {
+    if (!this.rlComponents) {
       return;
     }
 
@@ -224,28 +233,67 @@ export class EnhancedArbiterOrchestrator extends ArbiterOrchestrator {
         completionTimeMs: taskResult.executionTimeMs,
       };
 
-      // Start task execution tracking
-      const executionId =
-        this.rlComponents.performanceTracker.startTaskExecution(
-          taskId,
-          "agent-1", // Would need to get from assignment
-          {} as any // Mock routing decision
+      // Record with performance tracker if enabled
+      if (this.rlComponents.performanceTracker) {
+        // Start task execution tracking
+        const executionId =
+          this.rlComponents.performanceTracker.startTaskExecution(
+            taskId,
+            "agent-1", // Would need to get from assignment
+            {} as any // Mock routing decision
+          );
+
+        // Complete the task execution tracking
+        await this.rlComponents.performanceTracker.completeTaskExecution(
+          executionId,
+          outcome
         );
 
-      // Complete the task execution tracking
-      await this.rlComponents.performanceTracker.completeTaskExecution(
-        executionId,
-        outcome
-      );
+        // Record evaluation outcome
+        await this.rlComponents.performanceTracker.recordEvaluationOutcome(
+          taskId,
+          {
+            passed: taskResult.success,
+            score: taskResult.qualityScore,
+          }
+        );
+      }
 
-      // Record evaluation outcome
-      await this.rlComponents.performanceTracker.recordEvaluationOutcome(
-        taskId,
-        {
-          passed: taskResult.success,
-          score: taskResult.qualityScore,
+      // Record routing outcome with TaskRoutingManager for feedback loop
+      if (this.rlComponents.taskRoutingManager && assignmentId) {
+        // Find the routing decision for this task
+        const routingStats = await this.rlComponents.taskRoutingManager.getRoutingStats();
+        const routingDecision = routingStats.recentDecisions.find(
+          (decision) => decision.taskId === taskId
+        );
+
+        if (routingDecision) {
+          // Create routing outcome
+          const routingOutcome: RoutingOutcome = {
+            routingDecision: {
+              id: assignmentId,
+              taskId,
+              selectedAgent: {
+                id: routingDecision.agentId,
+              } as any,
+              confidence: routingDecision.confidence,
+              reason: "Routing decision for task completion",
+              strategy: routingDecision.strategy as any,
+              alternatives: [],
+              timestamp: routingDecision.timestamp,
+            },
+            success: taskResult.success,
+            qualityScore: taskResult.qualityScore,
+            latencyMs: taskResult.executionTimeMs,
+            errorReason: taskResult.error?.message,
+          };
+
+          // Record outcome for RL feedback
+          await this.rlComponents.taskRoutingManager.recordRoutingOutcome(
+            routingOutcome
+          );
         }
-      );
+      }
     } catch (error) {
       console.error("Failed to record task completion for RL:", error);
     }
@@ -386,7 +434,7 @@ export class EnhancedArbiterOrchestrator extends ArbiterOrchestrator {
    */
   private async recordRoutingDecisionForRL(
     task: Task,
-    assignmentId: string
+    _assignmentId: string
   ): Promise<void> {
     if (!this.rlComponents?.performanceTracker) {
       return;

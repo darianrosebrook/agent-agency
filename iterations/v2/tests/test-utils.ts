@@ -6,24 +6,70 @@
  * @author @darianrosebrook
  */
 
-import { jest } from '@jest/globals';
+import { jest } from "@jest/globals";
 
 // Database test utilities
 export class DatabaseTestUtils {
+  private static mockData: Map<string, any> = new Map();
+
   /**
    * Setup mock database for testing
    */
   static setupMockDatabase(): void {
-    // Mock pg Pool and PoolClient
-    jest.mock('pg', () => ({
-      Pool: jest.fn().mockImplementation(() => ({
-        connect: jest.fn(),
-        end: jest.fn(),
-        on: jest.fn(),
-        removeListener: jest.fn(),
-      })),
-      PoolClient: jest.fn(),
-    }));
+    // Clear previous mock data
+    this.mockData.clear();
+
+    // Simple mock setup - Jest typing issues prevent complex mocks
+    // Tests will use manual mocks instead
+  }
+
+  /**
+   * Mock database query implementation
+   */
+  private static mockQuery(sql: string, params: any[]): Promise<any> {
+    // Simple mock implementation for basic operations
+    if (sql.includes("SELECT 1")) {
+      return Promise.resolve({ rows: [{ "?column?": 1 }], rowCount: 1 });
+    }
+
+    if (sql.includes("INSERT INTO agent_profiles")) {
+      const agentId = params[0];
+      const name = params[1];
+      const modelFamily = params[2];
+      const activeTasks = params[3];
+      const queuedTasks = params[4];
+      const utilizationPercent = params[5];
+
+      this.mockData.set(`agent:${agentId}`, {
+        id: agentId,
+        name,
+        model_family: modelFamily,
+        active_tasks: activeTasks,
+        queued_tasks: queuedTasks,
+        utilization_percent: utilizationPercent,
+        registered_at: new Date().toISOString(),
+        last_active_at: new Date().toISOString(),
+      });
+      return Promise.resolve({ rows: [{ id: agentId }], rowCount: 1 });
+    }
+
+    if (sql.includes("SELECT * FROM agent_profiles WHERE id = $1")) {
+      const agentId = params[0];
+      const agent = this.mockData.get(`agent:${agentId}`);
+      if (agent) {
+        return Promise.resolve({ rows: [agent], rowCount: 1 });
+      }
+      return Promise.resolve({ rows: [], rowCount: 0 });
+    }
+
+    if (sql.includes("DELETE FROM agent_profiles WHERE id = $1")) {
+      const agentId = params[0];
+      this.mockData.delete(`agent:${agentId}`);
+      return Promise.resolve({ rowCount: 1 });
+    }
+
+    // Default mock response
+    return Promise.resolve({ rows: [], rowCount: 0 });
   }
 
   /**
@@ -37,9 +83,11 @@ export class DatabaseTestUtils {
    * Mock database connection failure
    */
   static mockConnectionFailure(): void {
-    const mockPool = require('pg').Pool;
+    const mockPool = require("pg").Pool;
     mockPool.mockImplementation(() => ({
-      connect: jest.fn().mockRejectedValue(new Error('Connection failed')),
+      connect: jest
+        .fn()
+        .mockRejectedValue(new Error("Connection failed") as never),
       end: jest.fn(),
       on: jest.fn(),
       removeListener: jest.fn(),
@@ -50,9 +98,9 @@ export class DatabaseTestUtils {
    * Mock database query failure
    */
   static mockQueryFailure(): void {
-    const mockPool = require('pg').Pool;
+    const mockPool = require("pg").Pool;
     const mockClient = {
-      query: jest.fn().mockRejectedValue(new Error('Query failed')),
+      query: jest.fn().mockRejectedValue(new Error("Query failed") as never),
       release: jest.fn(),
     };
 
@@ -72,7 +120,7 @@ export class RedisTestUtils {
    */
   static setupMockRedis(): void {
     // Mock redis client
-    jest.mock('redis', () => ({
+    jest.mock("redis", () => ({
       createClient: jest.fn().mockReturnValue({
         connect: jest.fn(),
         disconnect: jest.fn(),
@@ -98,14 +146,14 @@ export class TestEnvironment {
     this.originalEnv = { ...process.env };
 
     // Set test environment variables
-    process.env.NODE_ENV = 'test';
-    process.env.DB_HOST = 'localhost';
-    process.env.DB_PORT = '5432';
-    process.env.DB_NAME = 'agent_agency_test';
-    process.env.DB_USER = 'postgres';
-    process.env.DB_PASSWORD = 'test123';
-    process.env.REDIS_HOST = 'localhost';
-    process.env.REDIS_PORT = '6379';
+    process.env.NODE_ENV = "test";
+    process.env.DB_HOST = "localhost";
+    process.env.DB_PORT = "5432";
+    process.env.DB_NAME = "agent_agency_test";
+    process.env.DB_USER = "postgres";
+    process.env.DB_PASSWORD = "test123";
+    process.env.REDIS_HOST = "localhost";
+    process.env.REDIS_PORT = "6379";
 
     return new TestEnvironment();
   }
@@ -126,12 +174,12 @@ export class MockFactory {
    */
   static createMockAgent(overrides: Partial<any> = {}): any {
     return {
-      id: 'mock-agent-id',
-      name: 'Mock Agent',
-      modelFamily: 'gpt-4',
+      id: "mock-agent-id",
+      name: "Mock Agent",
+      modelFamily: "gpt-4",
       capabilities: [
-        { name: 'code-editing', score: 0.9 },
-        { name: 'debugging', score: 0.8 },
+        { name: "code-editing", score: 0.9 },
+        { name: "debugging", score: 0.8 },
       ],
       performanceHistory: [],
       registeredAt: new Date().toISOString(),
@@ -154,8 +202,8 @@ export class MockFactory {
       latency: 150,
       quality: 0.85,
       confidence: 0.9,
-      taskType: 'code-editing',
-      taskId: 'task-123',
+      taskType: "code-editing",
+      taskId: "task-123",
       ...overrides,
     };
   }
@@ -180,45 +228,45 @@ export class AssertionHelpers {
    * Assert agent profile matches expected structure
    */
   static assertValidAgentProfile(profile: any): void {
-    expect(profile).toHaveProperty('id');
-    expect(profile).toHaveProperty('name');
-    expect(profile).toHaveProperty('modelFamily');
-    expect(profile).toHaveProperty('capabilities');
-    expect(profile).toHaveProperty('performanceHistory');
-    expect(profile).toHaveProperty('registeredAt');
-    expect(profile).toHaveProperty('lastActiveAt');
-    expect(profile).toHaveProperty('activeTasks');
-    expect(profile).toHaveProperty('queuedTasks');
-    expect(profile).toHaveProperty('utilizationPercent');
-    expect(profile).toHaveProperty('createdAt');
-    expect(profile).toHaveProperty('updatedAt');
+    expect(profile).toHaveProperty("id");
+    expect(profile).toHaveProperty("name");
+    expect(profile).toHaveProperty("modelFamily");
+    expect(profile).toHaveProperty("capabilities");
+    expect(profile).toHaveProperty("performanceHistory");
+    expect(profile).toHaveProperty("registeredAt");
+    expect(profile).toHaveProperty("lastActiveAt");
+    expect(profile).toHaveProperty("activeTasks");
+    expect(profile).toHaveProperty("queuedTasks");
+    expect(profile).toHaveProperty("utilizationPercent");
+    expect(profile).toHaveProperty("createdAt");
+    expect(profile).toHaveProperty("updatedAt");
 
     expect(Array.isArray(profile.capabilities)).toBe(true);
     expect(Array.isArray(profile.performanceHistory)).toBe(true);
-    expect(typeof profile.activeTasks).toBe('number');
-    expect(typeof profile.queuedTasks).toBe('number');
-    expect(typeof profile.utilizationPercent).toBe('number');
+    expect(typeof profile.activeTasks).toBe("number");
+    expect(typeof profile.queuedTasks).toBe("number");
+    expect(typeof profile.utilizationPercent).toBe("number");
   }
 
   /**
    * Assert performance metrics are valid
    */
   static assertValidPerformanceMetrics(metrics: any): void {
-    expect(metrics).toHaveProperty('success');
-    expect(metrics).toHaveProperty('latency');
-    expect(metrics).toHaveProperty('quality');
-    expect(metrics).toHaveProperty('confidence');
+    expect(metrics).toHaveProperty("success");
+    expect(metrics).toHaveProperty("latency");
+    expect(metrics).toHaveProperty("quality");
+    expect(metrics).toHaveProperty("confidence");
 
-    expect(typeof metrics.success).toBe('boolean');
-    expect(typeof metrics.latency).toBe('number');
-    expect(typeof metrics.quality).toBe('number');
-    expect(typeof metrics.confidence).toBe('number');
+    expect(typeof metrics.success).toBe("boolean");
+    expect(typeof metrics.latency).toBe("number");
+    expect(typeof metrics.quality).toBe("number");
+    expect(typeof metrics.confidence).toBe("number");
 
     if (metrics.taskType) {
-      expect(typeof metrics.taskType).toBe('string');
+      expect(typeof metrics.taskType).toBe("string");
     }
     if (metrics.taskId) {
-      expect(typeof metrics.taskId).toBe('string');
+      expect(typeof metrics.taskId).toBe("string");
     }
   }
 }

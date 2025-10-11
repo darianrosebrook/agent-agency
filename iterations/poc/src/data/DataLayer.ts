@@ -11,6 +11,7 @@ import { Logger } from "../utils/Logger";
 import { MultiLevelCache } from "./cache/MultiLevelCache";
 import { PostgreSQLConnection } from "./connection/PostgreSQLConnection";
 import { PerformanceMonitor } from "./monitoring/PerformanceMonitor";
+import { AccessControlManager, EncryptionManager } from "./security";
 import {
   CacheProvider,
   ConnectionPool,
@@ -26,6 +27,8 @@ export class DataLayer extends EventEmitter {
   private connection: ConnectionPool;
   private cache?: CacheProvider;
   private performanceMonitor: PerformanceMonitor;
+  private encryptionManager?: EncryptionManager;
+  private accessControlManager?: AccessControlManager;
   private logger: Logger;
   private config: DataLayerConfig;
   private initialized: boolean = false;
@@ -59,6 +62,22 @@ export class DataLayer extends EventEmitter {
           demotionThreshold: 180000, // 3 minutes
           enableMetrics: config.enableMetrics,
         },
+        this.logger
+      );
+    }
+
+    // Initialize security components if enabled
+    if (config.security?.enableEncryption !== false) {
+      this.encryptionManager = new EncryptionManager(
+        { enableEncryption: true },
+        config.security?.masterKey,
+        this.logger
+      );
+    }
+
+    if (config.security?.enableAccessControl !== false) {
+      this.accessControlManager = new AccessControlManager(
+        { enableAccessControl: true },
         this.logger
       );
     }
@@ -588,5 +607,36 @@ export class DataLayer extends EventEmitter {
         this.logger.error("Health monitoring failed", error);
       }
     }, 30000); // Check every 30 seconds
+  }
+
+  /**
+   * Get the encryption manager instance
+   */
+  getEncryptionManager(): EncryptionManager | undefined {
+    return this.encryptionManager;
+  }
+
+  /**
+   * Get the access control manager instance
+   */
+  getAccessControlManager(): AccessControlManager | undefined {
+    return this.accessControlManager;
+  }
+
+  /**
+   * Get security status
+   */
+  getSecurityStatus(): {
+    encryptionEnabled: boolean;
+    accessControlEnabled: boolean;
+    encryptionStatus?: any;
+    accessControlStatus?: any;
+  } {
+    return {
+      encryptionEnabled: !!this.encryptionManager,
+      accessControlEnabled: !!this.accessControlManager,
+      encryptionStatus: this.encryptionManager?.getStatus(),
+      accessControlStatus: this.accessControlManager?.getStatus(),
+    };
   }
 }
