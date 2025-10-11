@@ -1324,5 +1324,39 @@
     },
     "previous_hash": "08d8df20726db3088a2b1935da4f0e7e990dc7ca3e4e18a8e8f479681143092f",
     "hash": "403c66f22b6d75a9063804432f9dd1a318684f6a67b839d5c25ae95a70bc0369"
+  },
+  {
+    "id": "prov-1760217234453",
+    "timestamp": "2025-10-11T21:13:54.453Z",
+    "commit": {
+      "hash": "5d1a04596ee5c9de1f7844f77f036b77f506227a",
+      "message": "feat: add E2E integration tests, performance benchmarks, and mutation testing config",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0001",
+      "title": "agent-agency",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-11T21:13:54.454Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "403c66f22b6d75a9063804432f9dd1a318684f6a67b839d5c25ae95a70bc0369",
+    "hash": "25274c48542880f3c5022c22a62f24b5dc310de55d057c9b1eac50667e213d1b"
   }
 ]
