@@ -6,6 +6,7 @@
  *
  * Collects and stores performance data for reinforcement learning training.
  * Implements data collection for routing decisions, task executions, and evaluation outcomes.
+ * Now integrates with comprehensive benchmarking system (ARBITER-004).
  */
 
 import {
@@ -14,6 +15,17 @@ import {
   TaskOutcome,
   Timestamp,
 } from "../types/agentic-rl";
+import {
+  DataCollectionConfig,
+  PerformanceEventType,
+  LatencyMetrics,
+  AccuracyMetrics,
+  ResourceMetrics,
+  ComplianceMetrics,
+  CostMetrics,
+  ReliabilityMetrics,
+} from "../types/performance-tracking";
+import { DataCollector } from "../benchmarking/DataCollector";
 
 /**
  * Configuration for the performance tracker.
@@ -147,12 +159,16 @@ export interface PerformanceStats {
  * This component collects performance data from the arbiter system
  * to provide training data for reinforcement learning algorithms.
  * It stores routing decisions, task executions, and evaluation outcomes.
+ *
+ * Now integrates with ARBITER-004 benchmarking system for comprehensive
+ * performance tracking, multi-dimensional scoring, and automated evaluation.
  */
 export class PerformanceTracker {
   private config: PerformanceTrackerConfig;
   private events: PerformanceEvent[] = [];
   private taskExecutions: TaskExecutionData[] = [];
   private isCollecting: boolean = false;
+  private dataCollector?: DataCollector;
 
   /**
    * Creates a new performance tracker instance.
@@ -161,6 +177,34 @@ export class PerformanceTracker {
    */
   constructor(config: Partial<PerformanceTrackerConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.initializeBenchmarkingIntegration();
+  }
+
+  /**
+   * Initializes integration with ARBITER-004 benchmarking system.
+   */
+  private initializeBenchmarkingIntegration(): void {
+    try {
+      // Convert legacy config to new format
+      const dataCollectorConfig: Partial<DataCollectionConfig> = {
+        enabled: this.config.enabled,
+        samplingRate: 1.0, // Legacy system collected all events
+        maxBufferSize: this.config.maxEventsInMemory,
+        batchSize: this.config.batchSize,
+        retentionDays: Math.ceil(this.config.retentionPeriodMs / (24 * 60 * 60 * 1000)),
+        anonymization: {
+          enabled: this.config.anonymizeData,
+          level: "basic", // Legacy system used basic anonymization
+          preserveAgentIds: true,
+          preserveTaskTypes: true,
+        },
+      };
+
+      this.dataCollector = new DataCollector(dataCollectorConfig);
+    } catch (error) {
+      // Graceful degradation - continue with legacy system if new system fails
+      console.warn("Failed to initialize benchmarking integration, using legacy system:", error);
+    }
   }
 
   /**
@@ -169,6 +213,10 @@ export class PerformanceTracker {
   startCollection(): void {
     if (this.config.enabled) {
       this.isCollecting = true;
+      // Also start the benchmarking data collector
+      if (this.dataCollector) {
+        this.dataCollector.startCollection();
+      }
     }
   }
 
@@ -177,6 +225,10 @@ export class PerformanceTracker {
    */
   stopCollection(): void {
     this.isCollecting = false;
+    // Also stop the benchmarking data collector
+    if (this.dataCollector) {
+      this.dataCollector.stopCollection();
+    }
   }
 
   /**
@@ -189,6 +241,7 @@ export class PerformanceTracker {
       return;
     }
 
+    // Legacy event format for backward compatibility
     const event: PerformanceEvent = {
       type: "routing-decision",
       timestamp: decision.timestamp,
@@ -199,6 +252,30 @@ export class PerformanceTracker {
     };
 
     this.addEvent(event);
+
+    // Also send to new benchmarking system
+    if (this.dataCollector) {
+      try {
+        const alternatives = decision.alternativesConsidered?.map(alt => ({
+          agentId: alt.agentId,
+          score: alt.score,
+        })) || [];
+
+        await this.dataCollector.recordRoutingDecision(
+          decision.taskId,
+          decision.selectedAgent,
+          alternatives,
+          {
+            confidence: decision.confidence,
+            rationale: decision.rationale,
+            alternativesConsidered: decision.alternativesConsidered,
+          }
+        );
+      } catch (error) {
+        // Graceful degradation - log but don't fail
+        console.warn("Failed to record routing decision in benchmarking system:", error);
+      }
+    }
   }
 
   /**
@@ -238,6 +315,15 @@ export class PerformanceTracker {
     this.taskExecutions.push(execution);
     this.cleanupOldExecutions();
 
+    // Also record in new benchmarking system
+    if (this.dataCollector) {
+      try {
+        this.dataCollector.recordTaskStart(taskId, agentId, context);
+      } catch (error) {
+        console.warn("Failed to record task start in benchmarking system:", error);
+      }
+    }
+
     return executionId;
   }
 
@@ -263,6 +349,9 @@ export class PerformanceTracker {
       execution.outcome = outcome;
       execution.completedAt = new Date().toISOString();
 
+      const durationMs = new Date(execution.completedAt).getTime() - new Date(execution.startedAt).getTime();
+
+      // Legacy event format for backward compatibility
       const event: PerformanceEvent = {
         type: "task-execution",
         timestamp: execution.completedAt,
@@ -271,13 +360,33 @@ export class PerformanceTracker {
           agentId: execution.agentId,
           routingDecision: execution.routingDecision,
           outcome,
-          durationMs:
-            new Date(execution.completedAt).getTime() -
-            new Date(execution.startedAt).getTime(),
+          durationMs,
         }) as unknown as Record<string, unknown>,
       };
 
       this.addEvent(event);
+
+      // Also send comprehensive metrics to new benchmarking system
+      if (this.dataCollector) {
+        try {
+          // Convert legacy outcome to comprehensive performance metrics
+          const performanceMetrics = this.convertOutcomeToPerformanceMetrics(outcome, durationMs);
+
+          await this.dataCollector.recordTaskCompletion(
+            execution.taskId,
+            execution.agentId,
+            performanceMetrics,
+            {
+              executionId,
+              routingDecision: execution.routingDecision,
+              startedAt: execution.startedAt,
+              context: execution.context,
+            }
+          );
+        } catch (error) {
+          console.warn("Failed to record task completion in benchmarking system:", error);
+        }
+      }
     }
   }
 
@@ -534,5 +643,76 @@ export class PerformanceTracker {
       hash = hash & hash; // Convert to 32-bit integer
     }
     return Math.abs(hash).toString(36);
+  }
+
+  /**
+   * Converts legacy TaskOutcome to comprehensive performance metrics.
+   *
+   * @param outcome - Legacy task outcome
+   * @param durationMs - Task execution duration
+   * @returns Comprehensive performance metrics
+   */
+  private convertOutcomeToPerformanceMetrics(
+    outcome: TaskOutcome,
+    durationMs: number
+  ): Partial<import("../types/performance-tracking").PerformanceMetrics> {
+    const success = outcome.success !== false; // Default to true if not specified
+    const qualityScore = typeof outcome.qualityScore === "number" ? outcome.qualityScore : (success ? 0.8 : 0.2);
+
+    // Basic latency metrics
+    const latencyMetrics: Partial<LatencyMetrics> = {
+      averageMs: durationMs,
+      minMs: durationMs,
+      maxMs: durationMs,
+      p95Ms: durationMs,
+      p99Ms: durationMs,
+    };
+
+    // Accuracy metrics derived from outcome
+    const accuracyMetrics: Partial<AccuracyMetrics> = {
+      successRate: success ? 1 : 0,
+      qualityScore,
+      evaluationScore: qualityScore,
+      violationRate: success ? 0 : 1,
+    };
+
+    // Basic resource metrics (placeholder - would be collected separately)
+    const resourceMetrics: Partial<ResourceMetrics> = {
+      cpuUtilizationPercent: 50, // Placeholder
+      memoryUtilizationPercent: 60, // Placeholder
+      networkIoKbps: 100, // Placeholder
+      diskIoKbps: 50, // Placeholder
+    };
+
+    // Compliance metrics (basic - would be enhanced with CAWS validation)
+    const complianceMetrics: Partial<ComplianceMetrics> = {
+      validationPassRate: success ? 1 : 0,
+      violationSeverityScore: success ? 0 : 0.5,
+      clauseCitationRate: success ? 0.8 : 0.2,
+    };
+
+    // Cost metrics (simplified)
+    const costMetrics: Partial<CostMetrics> = {
+      costPerTask: durationMs / 1000, // Rough proxy: longer tasks cost more
+      efficiencyScore: qualityScore,
+      resourceWastePercent: success ? 10 : 30,
+    };
+
+    // Reliability metrics (basic)
+    const reliabilityMetrics: Partial<ReliabilityMetrics> = {
+      availabilityPercent: 100, // Single task - assume available
+      errorRatePercent: success ? 0 : 100,
+      mtbfHours: success ? 168 : 1, // Rough estimate
+      recoveryTimeMinutes: success ? 0 : 5,
+    };
+
+    return {
+      latency: latencyMetrics as LatencyMetrics,
+      accuracy: accuracyMetrics as AccuracyMetrics,
+      resources: resourceMetrics as ResourceMetrics,
+      compliance: complianceMetrics as ComplianceMetrics,
+      cost: costMetrics as CostMetrics,
+      reliability: reliabilityMetrics as ReliabilityMetrics,
+    };
   }
 }

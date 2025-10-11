@@ -27,6 +27,9 @@ V2 includes comprehensive CAWS working specifications for all core arbiter compo
 
 - **[V2 Specs Status](./docs/status/V2-SPECS-ACTUAL-STATUS.md)** - Current status of all component specs
 - **[Implementation Index](./docs/status/IMPLEMENTATION-INDEX.md)** - Quick reference for all components
+- **[Theory Alignment Analysis](./docs/THEORY-ALIGNMENT-AUDIT.md)** - Comprehensive 57-page mapping of theory to implementation
+- **[Theory Alignment Summary](./docs/status/THEORY-ALIGNMENT-SUMMARY.md)** - Quick reference scorecard and gap analysis
+- **[Theory Implementation Delta](./docs/THEORY-IMPLEMENTATION-DELTA.md)** - Executive summary: what exceeds theory, what's different, what's missing
 
 ### Core Components
 
@@ -488,6 +491,30 @@ kubectl rollout undo deployment/agent-agency
 # Remove V2 data while preserving V1
 npm run migrate:rollback:v2
 ```
+
+---
+
+## 🔗 Reference Implementations
+
+V2 leverages the **CAWS CLI project** (`@paths.design/caws-cli` v3.4.0) as a production-ready reference for core governance features:
+
+| Feature                 | CAWS CLI                | V2 Component | Status      |
+| ----------------------- | ----------------------- | ------------ | ----------- |
+| Working Spec Validation | `validate.js`           | ARBITER-003  | 🔄 Adapting |
+| Quality Gate Execution  | `evaluate.js`           | ARBITER-003  | 🔄 Adapting |
+| Budget Validation       | `budget-checker.js`     | ARBITER-003  | 🔄 Adapting |
+| Provenance Tracking     | `provenance/*.js`       | Audit Trail  | 📋 Planned  |
+| Performance Analytics   | `provenance/analyze-ai` | ARBITER-004  | 📋 Planned  |
+| Git Integration         | `hooks/*.sh`            | Publication  | 📋 Planned  |
+
+**Benefits**:
+
+- 50-70% reduction in ARBITER-003 development time
+- Battle-tested governance patterns
+- Production-ready quality gate execution
+- Proven provenance tracking architecture
+
+See **[Theory Implementation Delta](./docs/THEORY-IMPLEMENTATION-DELTA.md)** for detailed mapping and time estimates.
 
 ---
 

@@ -14,7 +14,7 @@
 
 import { performance } from "perf_hooks";
 import { AgentRegistryManager } from "../src/orchestrator/AgentRegistryManager.js";
-import { AgentProfile, PerformanceMetrics } from "../src/types/agent-registry.js";
+import { PerformanceMetrics } from "../src/types/agent-registry.js";
 
 // Performance SLA targets
 const SLA_TARGETS = {
@@ -100,7 +100,7 @@ async function runBenchmarks(): Promise<void> {
   console.log(`  Memory (RSS): ${formatBytes(memoryResult.rss)}`);
   console.log(`  Heap Used: ${formatBytes(memoryResult.heapUsed)}`);
   console.log(`  Heap Total: ${formatBytes(memoryResult.heapTotal)}`);
-  
+
   const memoryUsageMB = memoryResult.heapUsed / 1024 / 1024;
   const memoryPassed = memoryUsageMB < SLA_TARGETS.memoryUsageMB;
   console.log(`  Target: < ${SLA_TARGETS.memoryUsageMB}MB`);
@@ -112,16 +112,21 @@ async function runBenchmarks(): Promise<void> {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
   const allPassed = results.every((r) => r.passed) && memoryPassed;
-  const passedCount = results.filter((r) => r.passed).length + (memoryPassed ? 1 : 0);
+  const passedCount =
+    results.filter((r) => r.passed).length + (memoryPassed ? 1 : 0);
   const totalCount = results.length + 1;
 
   results.forEach((r) => {
     console.log(
-      `${r.passed ? "✅" : "❌"} ${r.operation}: P95=${r.p95Ms.toFixed(2)}ms (target: <${r.target}ms)`
+      `${r.passed ? "✅" : "❌"} ${r.operation}: P95=${r.p95Ms.toFixed(
+        2
+      )}ms (target: <${r.target}ms)`
     );
   });
   console.log(
-    `${memoryPassed ? "✅" : "❌"} Memory Usage: ${memoryUsageMB.toFixed(2)}MB (target: <${SLA_TARGETS.memoryUsageMB}MB)`
+    `${memoryPassed ? "✅" : "❌"} Memory Usage: ${memoryUsageMB.toFixed(
+      2
+    )}MB (target: <${SLA_TARGETS.memoryUsageMB}MB)`
   );
 
   console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -146,7 +151,7 @@ async function benchmarkAgentRegistration(
 
   for (let i = 0; i < iterations; i++) {
     const start = performance.now();
-    
+
     await registry.registerAgent({
       name: `Benchmark Agent ${i}`,
       modelFamily: (i % 2 === 0 ? "gpt-4" : "claude-3") as const,
@@ -161,7 +166,11 @@ async function benchmarkAgentRegistration(
     samples.push(duration);
   }
 
-  return calculateStats("Agent Registration", samples, SLA_TARGETS.p95LatencyMs);
+  return calculateStats(
+    "Agent Registration",
+    samples,
+    SLA_TARGETS.p95LatencyMs
+  );
 }
 
 /**
@@ -248,7 +257,11 @@ async function benchmarkPerformanceUpdate(
     samples.push(duration);
   }
 
-  return calculateStats("Performance Update", samples, SLA_TARGETS.p95LatencyMs);
+  return calculateStats(
+    "Performance Update",
+    samples,
+    SLA_TARGETS.p95LatencyMs
+  );
 }
 
 /**
@@ -349,7 +362,7 @@ function calculateStats(
     p50Ms: sorted[Math.floor(sorted.length * 0.5)],
     p95Ms: sorted[Math.floor(sorted.length * 0.95)],
     p99Ms: sorted[Math.floor(sorted.length * 0.99)],
-    throughputOpsPerSec: (1000 / (sum / sorted.length)),
+    throughputOpsPerSec: 1000 / (sum / sorted.length),
     passed: sorted[Math.floor(sorted.length * 0.95)] < target,
     target,
   };
@@ -368,9 +381,7 @@ function printResult(result: BenchmarkResult): void {
   console.log(`  P95: ${result.p95Ms.toFixed(2)}ms`);
   console.log(`  P99: ${result.p99Ms.toFixed(2)}ms`);
   console.log(`  Max: ${result.maxMs.toFixed(2)}ms`);
-  console.log(
-    `  Throughput: ${result.throughputOpsPerSec.toFixed(2)} ops/sec`
-  );
+  console.log(`  Throughput: ${result.throughputOpsPerSec.toFixed(2)} ops/sec`);
   console.log(`  Target: P95 < ${result.target}ms`);
   console.log(`  Status: ${result.passed ? "✅ PASSED" : "❌ FAILED"}`);
 }

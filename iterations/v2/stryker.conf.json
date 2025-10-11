@@ -24,10 +24,7 @@
   ],
   "mutator": {
     "plugins": ["typescript"],
-    "excludedMutations": [
-      "StringLiteral",
-      "ArrayDeclaration"
-    ]
+    "excludedMutations": ["StringLiteral", "ArrayDeclaration"]
   },
   "timeoutMS": 60000,
   "timeoutFactor": 2,
