@@ -1222,5 +1222,39 @@
     },
     "previous_hash": "ceb188336f633b911bd70066234d882a704a1fea5621f9ad9b3843c1f1b92e11",
     "hash": "387de527c4b99636f11d3dfa15dd989b7cf5b8ac402a71bf98b2e9726f341bca"
+  },
+  {
+    "id": "prov-1760216554214",
+    "timestamp": "2025-10-11T21:02:34.214Z",
+    "commit": {
+      "hash": "2797a1d490e9a32507058ceb4ffb6702aea9ede6",
+      "message": "feat(arbiter): implement Task Routing Manager (ARBITER-002) with multi-armed bandit integration",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0001",
+      "title": "agent-agency",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-11T21:02:34.215Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "387de527c4b99636f11d3dfa15dd989b7cf5b8ac402a71bf98b2e9726f341bca",
+    "hash": "c06f2bee9ce0466ccde474ad42ef88d39e023111f69b987411b301b891e7c08e"
   }
 ]
