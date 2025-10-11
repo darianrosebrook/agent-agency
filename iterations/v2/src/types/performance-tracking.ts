@@ -668,6 +668,69 @@ export interface DataCollectionConfig {
 /**
  * Performance analysis configuration.
  */
+/**
+ * Aggregation configuration for metric processing.
+ */
+export interface AggregationConfig {
+  /**
+   * Time windows for different aggregation levels.
+   */
+  windows: {
+    realtime: AggregationWindow;
+    short: AggregationWindow;
+    medium: AggregationWindow;
+    long: AggregationWindow;
+  };
+
+  /**
+   * Statistical thresholds for outlier detection.
+   */
+  outlierThresholds: {
+    zScoreThreshold: number;
+    iqrMultiplier: number;
+  };
+
+  /**
+   * Trend analysis configuration.
+   */
+  trendAnalysis: {
+    minDataPoints: number;
+    confidenceThreshold: number;
+  };
+
+  /**
+   * Anonymization settings for aggregated data.
+   */
+  anonymization: {
+    enabled: boolean;
+    noiseLevel: number;
+    preserveAgentIds: boolean;
+  };
+}
+
+/**
+ * Aggregation time window configuration.
+ */
+export interface AggregationWindow {
+  /**
+   * Window duration in milliseconds.
+   */
+  durationMs: number;
+
+  /**
+   * Window slide interval in milliseconds.
+   */
+  slideMs: number;
+
+  /**
+   * Minimum sample size required for aggregation.
+   */
+  minSampleSize: number;
+}
+
+/**
+ * Performance analysis configuration.
+ */
 export interface AnalysisConfig {
   /**
    * Anomaly detection thresholds.
@@ -694,5 +757,73 @@ export interface AnalysisConfig {
     criticalLatencyMs: number;
     criticalErrorRatePercent: number;
     criticalAccuracyDropPercent: number;
+  };
+}
+
+/**
+ * Trend analysis result.
+ */
+export interface TrendAnalysisResult {
+  agentId: string;
+  overallTrend: PerformanceTrend;
+  metricTrends: Record<MetricCategory, PerformanceTrend>;
+  confidence: number;
+  analysisTimeRange: {
+    start: Timestamp;
+    end: Timestamp;
+  };
+}
+
+/**
+ * RL data pipeline configuration.
+ */
+export interface RLDataPipelineConfig {
+  /**
+   * Data quality thresholds.
+   */
+  qualityThresholds: {
+    minSampleDiversity: number;
+    maxTemporalGapMinutes: number;
+    minRewardVariance: number;
+    maxDuplicateRatio: number;
+  };
+
+  /**
+   * Batch configuration.
+   */
+  batching: {
+    maxBatchSize: number;
+    maxBatchAgeMinutes: number;
+    minBatchSize: number;
+  };
+
+  /**
+   * Training data retention and cleanup.
+   */
+  retention: {
+    maxSamplesInMemory: number;
+    maxBatchesInMemory: number;
+    cleanupIntervalMinutes: number;
+  };
+
+  /**
+   * State representation configuration.
+   */
+  stateRepresentation: {
+    includeHistoricalMetrics: boolean;
+    includeAgentLoad: boolean;
+    includeTaskContext: boolean;
+    temporalWindowSize: number;
+  };
+
+  /**
+   * Reward function configuration.
+   */
+  rewardFunction: {
+    latencyWeight: number;
+    accuracyWeight: number;
+    costWeight: number;
+    complianceWeight: number;
+    temporalDecayFactor: number;
   };
 }

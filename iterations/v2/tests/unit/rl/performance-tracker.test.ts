@@ -4,7 +4,7 @@
  * @author @darianrosebrook
  */
 
-import { beforeEach, describe, expect, it } from "@jest/globals";
+import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { PerformanceTracker } from "../../../src/rl/PerformanceTracker";
 import { RoutingDecision, TaskOutcome } from "../../../src/types/agentic-rl";
 
@@ -409,6 +409,163 @@ describe("PerformanceTracker", () => {
       await Promise.all(promises);
 
       expect(tracker.getStats().totalRoutingDecisions).toBe(10);
+    });
+  });
+
+  describe("benchmarking integration", () => {
+    beforeEach(() => {
+      tracker = new PerformanceTracker();
+      tracker.startCollection();
+    });
+
+    it("should convert legacy TaskOutcome to comprehensive metrics", () => {
+      const executionId = tracker.startTaskExecution("task-123", "agent-1");
+
+      const legacyOutcome: TaskOutcome = {
+        success: true,
+        qualityScore: 0.85,
+        efficiencyScore: 0.9,
+        tokensConsumed: 1500,
+        completionTimeMs: 2500,
+      };
+
+      const conversionMethod = (tracker as any).convertOutcomeToPerformanceMetrics;
+      const metrics = conversionMethod(legacyOutcome, 2500);
+
+      expect(metrics.latency.averageMs).toBe(2500);
+      expect(metrics.accuracy.successRate).toBe(1);
+      expect(metrics.accuracy.qualityScore).toBe(0.85);
+      expect(metrics.cost.efficiencyScore).toBe(0.85);
+    });
+
+    it("should handle failed task outcomes", () => {
+      const executionId = tracker.startTaskExecution("task-123", "agent-1");
+
+      const failedOutcome: TaskOutcome = {
+        success: false,
+        qualityScore: 0.3,
+        efficiencyScore: 0.4,
+        tokensConsumed: 800,
+        completionTimeMs: 1500,
+      };
+
+      const conversionMethod = (tracker as any).convertOutcomeToPerformanceMetrics;
+      const metrics = conversionMethod(failedOutcome, 1500);
+
+      expect(metrics.accuracy.successRate).toBe(0);
+      expect(metrics.accuracy.violationRate).toBe(1);
+      expect(metrics.compliance.validationPassRate).toBe(0);
+    });
+
+    it("should gracefully handle missing data collector", () => {
+      // Remove data collector to test graceful degradation
+      (tracker as any).dataCollector = null;
+
+      const executionId = tracker.startTaskExecution("task-123", "agent-1");
+
+      const outcome: TaskOutcome = {
+        success: true,
+        qualityScore: 0.8,
+        efficiencyScore: 0.85,
+        tokensConsumed: 1200,
+        completionTimeMs: 2000,
+      };
+
+      // Should not throw error even without data collector
+      expect(() => {
+        tracker.completeTaskExecution(executionId, outcome);
+      }).not.toThrow();
+    });
+
+    it("should integrate with DataCollector for comprehensive tracking", async () => {
+      const mockDataCollector = {
+        recordTaskStart: jest.fn(),
+        recordTaskCompletion: jest.fn(),
+        recordRoutingDecision: jest.fn(),
+        startCollection: jest.fn(),
+        stopCollection: jest.fn(),
+      };
+
+      (tracker as any).dataCollector = mockDataCollector;
+
+      // Test task execution integration
+      const executionId = tracker.startTaskExecution("task-123", "agent-1", {
+        priority: "high",
+      });
+
+      expect(mockDataCollector.recordTaskStart).toHaveBeenCalledWith(
+        "task-123",
+        "agent-1",
+        expect.objectContaining({ priority: "high" })
+      );
+
+      // Test routing decision integration
+      await tracker.recordRoutingDecision(mockRoutingDecision);
+
+      expect(mockDataCollector.recordRoutingDecision).toHaveBeenCalledWith(
+        "task-123",
+        "agent-1",
+        expect.any(Array),
+        expect.objectContaining({
+          confidence: 0.8,
+          rationale: "Selected best performing agent",
+        })
+      );
+
+      // Test task completion integration
+      const comprehensiveMetrics = {
+        latency: {
+          averageMs: 2500,
+          p95Ms: 3000,
+          p99Ms: 3500,
+          minMs: 2000,
+          maxMs: 4000,
+        },
+        accuracy: {
+          successRate: 0.9,
+          qualityScore: 0.85,
+          violationRate: 0.1,
+          evaluationScore: 0.8,
+        },
+        resources: {
+          cpuUtilizationPercent: 75,
+          memoryUtilizationPercent: 65,
+          networkIoKbps: 120,
+          diskIoKbps: 60,
+        },
+        compliance: {
+          validationPassRate: 0.95,
+          violationSeverityScore: 0.05,
+          clauseCitationRate: 0.9,
+        },
+        cost: {
+          costPerTask: 0.55,
+          efficiencyScore: 0.85,
+          resourceWastePercent: 15,
+        },
+        reliability: {
+          mtbfHours: 160,
+          availabilityPercent: 99,
+          errorRatePercent: 1,
+          recoveryTimeMinutes: 7,
+        },
+      };
+
+      await tracker.completeTaskExecution(executionId, mockTaskOutcome);
+
+      expect(mockDataCollector.recordTaskCompletion).toHaveBeenCalledWith(
+        "task-123",
+        "agent-1",
+        expect.objectContaining({
+          latency: expect.any(Object),
+          accuracy: expect.any(Object),
+          resources: expect.any(Object),
+          compliance: expect.any(Object),
+          cost: expect.any(Object),
+          reliability: expect.any(Object),
+        }),
+        expect.any(Object)
+      );
     });
   });
 });

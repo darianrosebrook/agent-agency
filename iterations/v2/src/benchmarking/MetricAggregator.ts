@@ -648,6 +648,92 @@ export class MetricAggregator extends EventEmitter {
   }
 
   /**
+   * Calculates overall performance trend across all metrics.
+   */
+  private calculateOverallTrend(metrics: AgentPerformanceProfile[]): PerformanceTrend {
+    // Simplified: weight different aspects of performance
+    const weights = {
+      accuracy: 0.4,
+      latency: 0.3,
+      compliance: 0.2,
+      cost: 0.1,
+    };
+
+    const scores = metrics.map(m => ({
+      accuracy: m.metrics.accuracy.successRate,
+      latency: 1 / (1 + m.metrics.latency.averageMs / 1000), // Normalize latency
+      compliance: m.metrics.compliance.validationPassRate,
+      cost: m.metrics.cost.efficiencyScore,
+      timestamp: new Date(m.lastUpdated).getTime(),
+    }));
+
+    // Calculate weighted score for each data point
+    const weightedScores = scores.map(s => ({
+      score: (
+        weights.accuracy * s.accuracy +
+        weights.latency * s.latency +
+        weights.compliance * s.compliance +
+        weights.cost * s.cost
+      ),
+      timestamp: s.timestamp,
+    }));
+
+    return this.calculateLinearTrend(weightedScores);
+  }
+
+  /**
+   * Calculates linear trend from time series data.
+   */
+  private calculateLinearTrend(data: Array<{ score: number; timestamp: number }>): PerformanceTrend {
+    if (data.length < 2) {
+      return {
+        direction: "stable",
+        magnitude: 0,
+        confidence: 0.5,
+        timeWindowHours: 1,
+      };
+    }
+
+    const n = data.length;
+    const timestamps = data.map(d => d.timestamp);
+    const scores = data.map(d => d.score);
+
+    // Normalize timestamps to hours from start
+    const startTime = Math.min(...timestamps);
+    const hours = timestamps.map(t => (t - startTime) / (1000 * 60 * 60));
+
+    // Calculate linear regression
+    const sumX = hours.reduce((sum, x) => sum + x, 0);
+    const sumY = scores.reduce((sum, score) => sum + score, 0);
+    const sumXY = hours.reduce((sum, x, i) => sum + x * scores[i], 0);
+    const sumXX = hours.reduce((sum, x) => sum + x * x, 0);
+
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+
+    // Calculate R-squared for confidence
+    const yMean = sumY / n;
+    const ssRes = scores.reduce((sum, score, i) => {
+      const predicted = slope * hours[i] + intercept;
+      return sum + Math.pow(score - predicted, 2);
+    }, 0);
+    const ssTot = scores.reduce((sum, score) => sum + Math.pow(score - yMean, 2), 0);
+    const rSquared = ssTot > 0 ? 1 - (ssRes / ssTot) : 0;
+
+    const direction = slope > 0.001 ? "improving" : slope < -0.001 ? "declining" : "stable";
+    const magnitude = Math.abs(slope);
+    const confidence = Math.sqrt(Math.max(0, rSquared));
+    const timeWindowHours = (Math.max(...timestamps) - startTime) / (1000 * 60 * 60);
+
+    return {
+      direction: direction as "improving" | "declining" | "stable",
+      magnitude,
+      confidence,
+      timeWindowHours,
+    };
+  }
+
+  /**
    * Calculates performance trend from historical data.
    */
   private calculateTrend(events: PerformanceEvent[]): PerformanceTrend {

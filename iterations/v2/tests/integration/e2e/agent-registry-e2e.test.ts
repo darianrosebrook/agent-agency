@@ -20,7 +20,10 @@ import { createClient as createRedisClient, RedisClientType } from "redis";
 import { AgentRegistryDbClient } from "../../../src/database/AgentRegistryDbClient.js";
 import { AgentRegistryManager } from "../../../src/orchestrator/AgentRegistryManager.js";
 import { AgentRegistrySecurity } from "../../../src/security/AgentRegistrySecurity.js";
-import { PerformanceMetrics, ModelFamily } from "../../../src/types/agent-registry.js";
+import {
+  ModelFamily,
+  PerformanceMetrics,
+} from "../../../src/types/agent-registry.js";
 
 // Test configuration (using legacy format for simplicity)
 const TEST_DB_CONFIG = {
@@ -233,7 +236,8 @@ describe("ARBITER-001 End-to-End Integration", () => {
       // Arrange: Create 10 agents concurrently
       const agents = Array.from({ length: 10 }, (_, i) => ({
         name: `Concurrent Agent ${i}`,
-        modelFamily: i % 2 === 0 ? "gpt-4" as ModelFamily : "claude-3" as ModelFamily,
+        modelFamily:
+          i % 2 === 0 ? ("gpt-4" as ModelFamily) : ("claude-3" as ModelFamily),
         capabilities: {
           taskTypes: ["code-editing" as const],
           languages: ["TypeScript" as const],
@@ -270,7 +274,10 @@ describe("ARBITER-001 End-to-End Integration", () => {
         capabilities: {
           taskTypes: ["code-editing", "code-review"],
           languages: ["TypeScript" as const],
-          specializations: ["AST analysis" as const, "Performance optimization" as const],
+          specializations: [
+            "AST analysis" as const,
+            "Performance optimization" as const,
+          ],
         },
       });
 
@@ -330,7 +337,10 @@ describe("ARBITER-001 End-to-End Integration", () => {
         Array.from({ length: 50 }, (_, i) =>
           registry.registerAgent({
             name: `Load Test Agent ${i}`,
-            modelFamily: i % 3 === 0 ? "gpt-4" as ModelFamily : "claude-3" as ModelFamily,
+            modelFamily:
+              i % 3 === 0
+                ? ("gpt-4" as ModelFamily)
+                : ("claude-3" as ModelFamily),
             capabilities: {
               taskTypes: ["code-editing" as const],
               languages: ["TypeScript" as const],
@@ -435,7 +445,9 @@ describe("ARBITER-001 End-to-End Integration", () => {
 
       // Verify no partial data persisted by checking if agent exists
       try {
-        const transactionTestAgent = await registry.getProfile("acid-test-agent");
+        const transactionTestAgent = await registry.getProfile(
+          "acid-test-agent"
+        );
         // If agent exists, it should have complete data
         expect(transactionTestAgent.capabilities).toBeDefined();
         expect(transactionTestAgent.performanceHistory).toBeDefined();
