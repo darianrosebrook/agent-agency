@@ -193,7 +193,8 @@ export class SystemTools {
       },
       {
         name: "get_routing_analytics",
-        description: "Retrieve advanced task routing analytics and performance metrics",
+        description:
+          "Retrieve advanced task routing analytics and performance metrics",
         inputSchema: {
           type: "object",
           properties: {
@@ -213,7 +214,8 @@ export class SystemTools {
       },
       {
         name: "check_caws_constitution",
-        description: "Check if a task complies with CAWS constitutional limits and quality gates",
+        description:
+          "Check if a task complies with CAWS constitutional limits and quality gates",
         inputSchema: {
           type: "object",
           properties: {
@@ -258,7 +260,16 @@ export class SystemTools {
             },
             reason: {
               type: "string",
-              enum: ["emergency_hotfix", "legacy_integration", "experimental_feature", "third_party_constraint", "performance_critical", "security_patch", "infrastructure_limitation", "other"],
+              enum: [
+                "emergency_hotfix",
+                "legacy_integration",
+                "experimental_feature",
+                "third_party_constraint",
+                "performance_critical",
+                "security_patch",
+                "infrastructure_limitation",
+                "other",
+              ],
               description: "Reason for requesting waiver",
             },
             description: {
@@ -292,7 +303,14 @@ export class SystemTools {
               description: "Plan to mitigate risks during waiver period",
             },
           },
-          required: ["title", "reason", "description", "gates", "expiresAt", "mitigationPlan"],
+          required: [
+            "title",
+            "reason",
+            "description",
+            "gates",
+            "expiresAt",
+            "mitigationPlan",
+          ],
         },
       },
       {
@@ -830,8 +848,8 @@ export class SystemTools {
 - Total tasks routed: ${analytics.totalRouted}
 - Average confidence: ${(analytics.averageConfidence * 100).toFixed(1)}%
 - Strategy breakdown: ${Object.entries(analytics.strategyBreakdown)
-  .map(([strategy, count]) => `${strategy}: ${count}`)
-  .join(", ")}
+        .map(([strategy, count]) => `${strategy}: ${count}`)
+        .join(", ")}
 
 **Queue Status:**
 - Critical: ${analytics.queueDepths.critical} tasks
@@ -915,7 +933,9 @@ ${Object.entries(analytics.agentLoads)
       let response = `⚖️ **CAWS Constitutional Check for Task ${args.taskId}**
 
 **Status:** ${result.allowed ? "✅ ALLOWED" : "❌ BLOCKED"}
-**Tier:** ${tier} (${tier === 1 ? "Critical/Auth" : tier === 2 ? "Standard" : "Low-risk"})
+**Tier:** ${tier} (${
+        tier === 1 ? "Critical/Auth" : tier === 2 ? "Standard" : "Low-risk"
+      })
 **Tenant:** ${tenantId}
 
 **Budget Status:**
@@ -924,33 +944,49 @@ ${Object.entries(analytics.agentLoads)
 - Time Remaining: ${Math.round(result.budgetStatus.remainingTimeMs / 1000)}s
 
 **Quality Gates:**
-- Coverage: ${result.gateStatus.coverageMet ? "✅" : "❌"} ≥ ${tier === 1 ? "90%" : tier === 2 ? "80%" : "70%"}
-- Mutation Score: ${result.gateStatus.mutationMet ? "✅" : "❌"} ≥ ${tier === 1 ? "70%" : tier === 2 ? "50%" : "30%"}
-- Contracts: ${result.gateStatus.contractsMet ? "✅" : "❌"} ${tier <= 2 ? "Required" : "Optional"}
-- Trust Score: ${result.gateStatus.trustScoreMet ? "✅" : "❌"} ≥ ${tier === 1 ? "85" : tier === 2 ? "82" : "75"}`;
+- Coverage: ${result.gateStatus.coverageMet ? "✅" : "❌"} ≥ ${
+        tier === 1 ? "90%" : tier === 2 ? "80%" : "70%"
+      }
+- Mutation Score: ${result.gateStatus.mutationMet ? "✅" : "❌"} ≥ ${
+        tier === 1 ? "70%" : tier === 2 ? "50%" : "30%"
+      }
+- Contracts: ${result.gateStatus.contractsMet ? "✅" : "❌"} ${
+        tier <= 2 ? "Required" : "Optional"
+      }
+- Trust Score: ${result.gateStatus.trustScoreMet ? "✅" : "❌"} ≥ ${
+        tier === 1 ? "85" : tier === 2 ? "82" : "75"
+      }`;
 
       if (result.violations.length > 0) {
         response += `
 
 **Violations:**
-${result.violations.map(v => `- ${v}`).join("\n")}`;
+${result.violations.map((v) => `- ${v}`).join("\n")}`;
       }
 
       if (result.waivers.length > 0) {
         response += `
 
 **Active Waivers:**
-${result.waivers.map(w => `- ${w.title} (expires: ${w.expiresAt.toISOString().split('T')[0]})`).join("\n")}`;
+${result.waivers
+  .map(
+    (w) => `- ${w.title} (expires: ${w.expiresAt.toISOString().split("T")[0]})`
+  )
+  .join("\n")}`;
       }
 
       if (result.recommendations.length > 0) {
         response += `
 
 **Recommendations:**
-${result.recommendations.map(r => `- ${r}`).join("\n")}`;
+${result.recommendations.map((r) => `- ${r}`).join("\n")}`;
       }
 
-      this.context.logger.info(`CAWS constitutional check completed for task ${args.taskId}: ${result.allowed ? "ALLOWED" : "BLOCKED"}`);
+      this.context.logger.info(
+        `CAWS constitutional check completed for task ${args.taskId}: ${
+          result.allowed ? "ALLOWED" : "BLOCKED"
+        }`
+      );
 
       return {
         content: [
@@ -978,7 +1014,15 @@ ${result.recommendations.map(r => `- ${r}`).join("\n")}`;
 
   private async requestCawsWaiver(args: {
     title: string;
-    reason: "emergency_hotfix" | "legacy_integration" | "experimental_feature" | "third_party_constraint" | "performance_critical" | "security_patch" | "infrastructure_limitation" | "other";
+    reason:
+      | "emergency_hotfix"
+      | "legacy_integration"
+      | "experimental_feature"
+      | "third_party_constraint"
+      | "performance_critical"
+      | "security_patch"
+      | "infrastructure_limitation"
+      | "other";
     description: string;
     gates: string[];
     expiresAt: string;
@@ -1019,7 +1063,7 @@ ${result.recommendations.map(r => `- ${r}`).join("\n")}`;
 ${args.description}
 
 **Gates to Waive:**
-${args.gates.map(g => `- ${g}`).join("\n")}
+${args.gates.map((g) => `- ${g}`).join("\n")}
 
 **Mitigation Plan:**
 ${args.mitigationPlan}
@@ -1027,7 +1071,9 @@ ${args.mitigationPlan}
 **Status:** ⏳ Pending approval
 **Next Steps:** Waiver requires human approval before taking effect.`;
 
-      this.context.logger.info(`CAWS waiver requested: ${waiverId} (${args.title})`);
+      this.context.logger.info(
+        `CAWS waiver requested: ${waiverId} (${args.title})`
+      );
 
       return {
         content: [
@@ -1084,18 +1130,25 @@ ${args.mitigationPlan}
         response += `
 
 **Recent Budget Violations:**
-${analytics.recentViolations.slice(0, 5).map(v =>
-  `- ${v.taskId}: ${v.violations.join(", ")}`
-).join("\n")}`;
+${analytics.recentViolations
+  .slice(0, 5)
+  .map((v) => `- ${v.taskId}: ${v.violations.join(", ")}`)
+  .join("\n")}`;
       }
 
       if (args.includeWaivers && analytics.waiverRequests.length > 0) {
         response += `
 
 **Recent Waiver Requests:**
-${analytics.waiverRequests.slice(0, 5).map(w =>
-  `- ${w.title} (${w.status}) - ${w.requestedAt.toISOString().split('T')[0]}`
-).join("\n")}`;
+${analytics.waiverRequests
+  .slice(0, 5)
+  .map(
+    (w) =>
+      `- ${w.title} (${w.status}) - ${
+        w.requestedAt.toISOString().split("T")[0]
+      }`
+  )
+  .join("\n")}`;
       }
 
       if (args.includeBudgetDetails) {

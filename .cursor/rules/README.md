@@ -6,12 +6,17 @@ This directory contains modular rule files in MDC (Markdown Configuration) forma
 
 ### Always Applied (Core Governance)
 
+- `00-claims-verification.mdc` - Production readiness claims require verification
 - `01-working-style.mdc` - Working style, risk limits, and when to ask first
 - `02-quality-gates.mdc` - Tests, linting, commit discipline, and TODOs
 - `03-naming-and-refactor.mdc` - Canonical naming and anti-duplication enforcement
 - `04-logging-language-style.mdc` - Logging clarity, emoji policy, commit tone
 - `07-process-ops.mdc` - Server management and hung command handling
 - `08-solid-and-architecture.mdc` - SOLID principles and change isolation
+- `11-testing-standards.mdc` - Comprehensive testing standards and verification
+- `12-infrastructure-standards.mdc` - Infrastructure, deployment, and operational standards
+- `13-documentation-integrity.mdc` - Documentation must match implementation reality
+- `14-production-readiness-checklist.mdc` - Quick reference checklist for production readiness
 
 ### Context-Specific (Auto-Attached or Agent-Requested)
 
@@ -28,7 +33,7 @@ Each `.mdc` file has frontmatter that controls when it applies:
 ---
 description: Brief description of the rule
 globs:
-  - '**/*.ts' # Auto-attach to matching files
+  - "**/*.ts" # Auto-attach to matching files
 alwaysApply: true # Or false for opt-in rules
 ---
 ```

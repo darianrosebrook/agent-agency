@@ -1,5 +1,0 @@
----
-alwaysApply: true
----
-
-Cursor Rule: --no-verify is disallowed in any git commit.

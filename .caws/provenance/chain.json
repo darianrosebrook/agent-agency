@@ -1120,5 +1120,39 @@
     },
     "previous_hash": "5d0492820d35531c2eb0a4e0119766f64dc0a329d4761b9cde90038e64fe78d0",
     "hash": "b6d2b91386f01c977464d29dbada4250d14a45d7dbb49f05aa0ed766c764c51c"
+  },
+  {
+    "id": "prov-1760208371275",
+    "timestamp": "2025-10-11T18:46:11.275Z",
+    "commit": {
+      "hash": "126facef534c7c64b52464039f612005c5dca057",
+      "message": "Reorganize v2 directory structure with components/ workspace",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0001",
+      "title": "agent-agency",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-11T18:46:11.275Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "b6d2b91386f01c977464d29dbada4250d14a45d7dbb49f05aa0ed766c764c51c",
+    "hash": "8632053af9a70dab6b7694e547a767ea2748d81092cdf9d84c3225ba1bfe1094"
   }
 ]

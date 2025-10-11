@@ -8,8 +8,8 @@
  */
 
 import { EventEmitter } from "events";
-import { Logger } from "../utils/Logger.js";
 import { MultiTenantMemoryManager } from "../memory/MultiTenantMemoryManager.js";
+import { Logger } from "../utils/Logger.js";
 
 export interface ErrorPattern {
   id: string;
@@ -107,29 +107,50 @@ export class ErrorPatternAnalyzer extends EventEmitter {
 
     try {
       // Extract error patterns
-      analysis.patterns = await this.identifyPatterns(error, taskType, tenantId);
+      analysis.patterns = await this.identifyPatterns(
+        error,
+        taskType,
+        tenantId
+      );
 
       // Generate recommendations
-      analysis.recommendations = this.generateRecommendations(analysis.patterns, taskType);
+      analysis.recommendations = this.generateRecommendations(
+        analysis.patterns,
+        taskType
+      );
 
       // Create adaptive prompt
-      analysis.adaptivePrompt = await this.generateAdaptivePrompt(taskType, analysis.patterns, tenantId);
+      analysis.adaptivePrompt = await this.generateAdaptivePrompt(
+        taskType,
+        analysis.patterns,
+        tenantId
+      );
 
       // Update confidence based on pattern matches
-      analysis.confidence = analysis.patterns.length > 0 ?
-        Math.min(1.0, analysis.patterns.reduce((sum, p) => sum + p.confidence, 0) / analysis.patterns.length) :
-        0.3;
+      analysis.confidence =
+        analysis.patterns.length > 0
+          ? Math.min(
+              1.0,
+              analysis.patterns.reduce((sum, p) => sum + p.confidence, 0) /
+                analysis.patterns.length
+            )
+          : 0.3;
 
       // Store analysis
       this.storeFailureAnalysis(analysis, tenantId);
 
-      this.logger.info(`Failure analyzed for task ${taskId}: ${analysis.patterns.length} patterns identified`);
+      this.logger.info(
+        `Failure analyzed for task ${taskId}: ${analysis.patterns.length} patterns identified`
+      );
 
       this.emit("failure-analyzed", analysis);
 
       return analysis;
     } catch (analysisError) {
-      this.logger.error(`Error pattern analysis failed for ${taskId}:`, analysisError);
+      this.logger.error(
+        `Error pattern analysis failed for ${taskId}:`,
+        analysisError
+      );
       return analysis; // Return basic analysis even if advanced analysis fails
     }
   }
@@ -146,15 +167,21 @@ export class ErrorPatternAnalyzer extends EventEmitter {
 
     // Check existing patterns
     for (const pattern of this.patterns.values()) {
-      if (pattern.affectedTaskTypes.includes(taskType) &&
-          this.patternMatchesError(pattern, error)) {
+      if (
+        pattern.affectedTaskTypes.includes(taskType) &&
+        this.patternMatchesError(pattern, error)
+      ) {
         matches.push(pattern);
       }
     }
 
     // Query memory for similar failures if memory is available
     if (this.memoryManager) {
-      const similarFailures = await this.querySimilarFailures(error, taskType, tenantId);
+      const similarFailures = await this.querySimilarFailures(
+        error,
+        taskType,
+        tenantId
+      );
       for (const failure of similarFailures) {
         const pattern = this.extractPatternFromFailure(failure, taskType);
         if (pattern) {
@@ -164,7 +191,7 @@ export class ErrorPatternAnalyzer extends EventEmitter {
     }
 
     // Update pattern frequencies
-    matches.forEach(pattern => {
+    matches.forEach((pattern) => {
       pattern.frequency++;
       pattern.lastSeen = new Date();
       if (pattern.affectedTaskTypes.indexOf(taskType) === -1) {
@@ -188,7 +215,10 @@ export class ErrorPatternAnalyzer extends EventEmitter {
     }
 
     // Fuzzy matching for similar errors
-    return this.calculateSimilarity(errorLower, patternLower) >= this.PATTERN_SIMILARITY_THRESHOLD;
+    return (
+      this.calculateSimilarity(errorLower, patternLower) >=
+      this.PATTERN_SIMILARITY_THRESHOLD
+    );
   }
 
   /**
@@ -208,7 +238,9 @@ export class ErrorPatternAnalyzer extends EventEmitter {
    * Levenshtein distance for fuzzy matching
    */
   private levenshteinDistance(str1: string, str2: string): number {
-    const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+    const matrix = Array(str2.length + 1)
+      .fill(null)
+      .map(() => Array(str1.length + 1).fill(null));
 
     for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
     for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
@@ -217,9 +249,9 @@ export class ErrorPatternAnalyzer extends EventEmitter {
       for (let i = 1; i <= str1.length; i++) {
         const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
         matrix[j][i] = Math.min(
-          matrix[j][i - 1] + 1,     // deletion
-          matrix[j - 1][i] + 1,     // insertion
-          matrix[j - 1][i - 1] + indicator, // substitution
+          matrix[j][i - 1] + 1, // deletion
+          matrix[j - 1][i] + 1, // insertion
+          matrix[j - 1][i - 1] + indicator // substitution
         );
       }
     }
@@ -248,10 +280,14 @@ export class ErrorPatternAnalyzer extends EventEmitter {
         },
       };
 
-      const memories = await this.memoryManager.getContextualMemories(tenantId, query, {
-        limit: 10,
-        minRelevance: 0.6,
-      });
+      const memories = await this.memoryManager.getContextualMemories(
+        tenantId,
+        query,
+        {
+          limit: 10,
+          minRelevance: 0.6,
+        }
+      );
 
       return memories.success ? memories.data || [] : [];
     } catch (error) {
@@ -263,7 +299,10 @@ export class ErrorPatternAnalyzer extends EventEmitter {
   /**
    * Extract pattern from failure data
    */
-  private extractPatternFromFailure(failure: any, taskType: string): ErrorPattern | null {
+  private extractPatternFromFailure(
+    failure: any,
+    taskType: string
+  ): ErrorPattern | null {
     if (!failure.content || !failure.content.error) return null;
 
     const error = failure.content.error;
@@ -285,7 +324,9 @@ export class ErrorPatternAnalyzer extends EventEmitter {
       lastSeen: new Date(),
       impact: {
         failureRate: 0.1,
-        averageSeverity: this.getSeverityScore(failure.content.severity || "medium"),
+        averageSeverity: this.getSeverityScore(
+          failure.content.severity || "medium"
+        ),
         affectedTasks: 1,
       },
     };
@@ -297,31 +338,63 @@ export class ErrorPatternAnalyzer extends EventEmitter {
   private categorizeError(error: string): ErrorCategory {
     const errorLower = error.toLowerCase();
 
-    if (errorLower.includes("syntax") || errorLower.includes("parse") || errorLower.includes("unexpected token")) {
+    if (
+      errorLower.includes("syntax") ||
+      errorLower.includes("parse") ||
+      errorLower.includes("unexpected token")
+    ) {
       return ErrorCategory.SYNTAX;
     }
-    if (errorLower.includes("logic") || errorLower.includes("algorithm") || errorLower.includes("incorrect")) {
+    if (
+      errorLower.includes("logic") ||
+      errorLower.includes("algorithm") ||
+      errorLower.includes("incorrect")
+    ) {
       return ErrorCategory.LOGIC;
     }
-    if (errorLower.includes("context") || errorLower.includes("memory") || errorLower.includes("undefined")) {
+    if (
+      errorLower.includes("context") ||
+      errorLower.includes("memory") ||
+      errorLower.includes("undefined")
+    ) {
       return ErrorCategory.CONTEXT;
     }
-    if (errorLower.includes("resource") || errorLower.includes("memory") || errorLower.includes("disk")) {
+    if (
+      errorLower.includes("resource") ||
+      errorLower.includes("memory") ||
+      errorLower.includes("disk")
+    ) {
       return ErrorCategory.RESOURCE;
     }
     if (errorLower.includes("timeout") || errorLower.includes("timed out")) {
       return ErrorCategory.TIMEOUT;
     }
-    if (errorLower.includes("validation") || errorLower.includes("invalid") || errorLower.includes("required")) {
+    if (
+      errorLower.includes("validation") ||
+      errorLower.includes("invalid") ||
+      errorLower.includes("required")
+    ) {
       return ErrorCategory.VALIDATION;
     }
-    if (errorLower.includes("dependency") || errorLower.includes("import") || errorLower.includes("module")) {
+    if (
+      errorLower.includes("dependency") ||
+      errorLower.includes("import") ||
+      errorLower.includes("module")
+    ) {
       return ErrorCategory.DEPENDENCY;
     }
-    if (errorLower.includes("config") || errorLower.includes("setting") || errorLower.includes("parameter")) {
+    if (
+      errorLower.includes("config") ||
+      errorLower.includes("setting") ||
+      errorLower.includes("parameter")
+    ) {
       return ErrorCategory.CONFIGURATION;
     }
-    if (errorLower.includes("network") || errorLower.includes("connection") || errorLower.includes("http")) {
+    if (
+      errorLower.includes("network") ||
+      errorLower.includes("connection") ||
+      errorLower.includes("http")
+    ) {
       return ErrorCategory.NETWORK;
     }
 
@@ -333,31 +406,54 @@ export class ErrorPatternAnalyzer extends EventEmitter {
    */
   private extractErrorPattern(error: string): string {
     // Simple pattern extraction - in practice, this would use NLP
-    const words = error.split(/\s+/).filter(word => word.length > 3);
+    const words = error.split(/\s+/).filter((word) => word.length > 3);
     return words.slice(0, 5).join(" ");
   }
 
   /**
    * Identify common causes for error category
    */
-  private identifyCommonCauses(error: string, category: ErrorCategory): string[] {
+  private identifyCommonCauses(
+    error: string,
+    category: ErrorCategory
+  ): string[] {
     const causes: string[] = [];
 
     switch (category) {
       case ErrorCategory.SYNTAX:
-        causes.push("Incorrect language syntax", "Missing semicolons/brackets", "Invalid variable names");
+        causes.push(
+          "Incorrect language syntax",
+          "Missing semicolons/brackets",
+          "Invalid variable names"
+        );
         break;
       case ErrorCategory.LOGIC:
-        causes.push("Incorrect algorithm implementation", "Wrong conditional logic", "Off-by-one errors");
+        causes.push(
+          "Incorrect algorithm implementation",
+          "Wrong conditional logic",
+          "Off-by-one errors"
+        );
         break;
       case ErrorCategory.CONTEXT:
-        causes.push("Undefined variables", "Incorrect context usage", "Memory leaks");
+        causes.push(
+          "Undefined variables",
+          "Incorrect context usage",
+          "Memory leaks"
+        );
         break;
       case ErrorCategory.TIMEOUT:
-        causes.push("Long-running operations", "Infinite loops", "Network delays");
+        causes.push(
+          "Long-running operations",
+          "Infinite loops",
+          "Network delays"
+        );
         break;
       case ErrorCategory.VALIDATION:
-        causes.push("Missing required fields", "Invalid data formats", "Constraint violations");
+        causes.push(
+          "Missing required fields",
+          "Invalid data formats",
+          "Constraint violations"
+        );
         break;
       default:
         causes.push("Unknown cause - requires investigation");
@@ -374,22 +470,46 @@ export class ErrorPatternAnalyzer extends EventEmitter {
 
     switch (category) {
       case ErrorCategory.SYNTAX:
-        strategies.push("Use syntax highlighting and linters", "Follow language style guides", "Test compilation frequently");
+        strategies.push(
+          "Use syntax highlighting and linters",
+          "Follow language style guides",
+          "Test compilation frequently"
+        );
         break;
       case ErrorCategory.LOGIC:
-        strategies.push("Write comprehensive unit tests", "Use code reviews", "Implement logging for debugging");
+        strategies.push(
+          "Write comprehensive unit tests",
+          "Use code reviews",
+          "Implement logging for debugging"
+        );
         break;
       case ErrorCategory.CONTEXT:
-        strategies.push("Initialize variables properly", "Use strict mode", "Implement context validation");
+        strategies.push(
+          "Initialize variables properly",
+          "Use strict mode",
+          "Implement context validation"
+        );
         break;
       case ErrorCategory.TIMEOUT:
-        strategies.push("Set reasonable timeouts", "Implement progress monitoring", "Use asynchronous processing");
+        strategies.push(
+          "Set reasonable timeouts",
+          "Implement progress monitoring",
+          "Use asynchronous processing"
+        );
         break;
       case ErrorCategory.VALIDATION:
-        strategies.push("Implement input validation", "Use schema validation", "Add comprehensive error handling");
+        strategies.push(
+          "Implement input validation",
+          "Use schema validation",
+          "Add comprehensive error handling"
+        );
         break;
       default:
-        strategies.push("Implement comprehensive error handling", "Add logging and monitoring", "Conduct thorough testing");
+        strategies.push(
+          "Implement comprehensive error handling",
+          "Add logging and monitoring",
+          "Conduct thorough testing"
+        );
     }
 
     return strategies;
@@ -398,11 +518,14 @@ export class ErrorPatternAnalyzer extends EventEmitter {
   /**
    * Generate recommendations based on identified patterns
    */
-  private generateRecommendations(patterns: ErrorPattern[], taskType: string): string[] {
+  private generateRecommendations(
+    patterns: ErrorPattern[],
+    taskType: string
+  ): string[] {
     const recommendations: string[] = [];
 
     // Aggregate recommendations from all patterns
-    const allStrategies = patterns.flatMap(p => p.preventionStrategies);
+    const allStrategies = patterns.flatMap((p) => p.preventionStrategies);
     const uniqueStrategies = [...new Set(allStrategies)];
 
     recommendations.push(...uniqueStrategies.slice(0, 3));
@@ -432,7 +555,7 @@ export class ErrorPatternAnalyzer extends EventEmitter {
     // Add prevention instructions based on patterns
     if (patterns.length > 0) {
       prompt += "IMPORTANT: Avoid these common errors:\n";
-      patterns.slice(0, 3).forEach(pattern => {
+      patterns.slice(0, 3).forEach((pattern) => {
         prompt += `- ${pattern.commonCauses[0]}\n`;
       });
       prompt += "\n";
@@ -455,10 +578,13 @@ export class ErrorPatternAnalyzer extends EventEmitter {
 
     // Query memory for successful prompts if available
     if (this.memoryManager) {
-      const successfulPrompts = await this.querySuccessfulPrompts(taskType, tenantId);
+      const successfulPrompts = await this.querySuccessfulPrompts(
+        taskType,
+        tenantId
+      );
       if (successfulPrompts.length > 0) {
         prompt += "\nReference successful approaches:\n";
-        successfulPrompts.slice(0, 2).forEach(success => {
+        successfulPrompts.slice(0, 2).forEach((success) => {
           prompt += `- ${success.content.prompt?.substring(0, 100)}...\n`;
         });
       }
@@ -470,7 +596,10 @@ export class ErrorPatternAnalyzer extends EventEmitter {
   /**
    * Query successful prompts from memory
    */
-  private async querySuccessfulPrompts(taskType: string, tenantId: string): Promise<any[]> {
+  private async querySuccessfulPrompts(
+    taskType: string,
+    tenantId: string
+  ): Promise<any[]> {
     if (!this.memoryManager) return [];
 
     try {
@@ -481,10 +610,14 @@ export class ErrorPatternAnalyzer extends EventEmitter {
         constraints: { taskType, outcome: "success" },
       };
 
-      const memories = await this.memoryManager.getContextualMemories(tenantId, query, {
-        limit: 5,
-        minRelevance: 0.7,
-      });
+      const memories = await this.memoryManager.getContextualMemories(
+        tenantId,
+        query,
+        {
+          limit: 5,
+          minRelevance: 0.7,
+        }
+      );
 
       return memories.success ? memories.data || [] : [];
     } catch (error) {
@@ -496,24 +629,39 @@ export class ErrorPatternAnalyzer extends EventEmitter {
   /**
    * Determine error severity
    */
-  private determineSeverity(error: string, context: Record<string, any>): "low" | "medium" | "high" | "critical" {
+  private determineSeverity(
+    error: string,
+    context: Record<string, any>
+  ): "low" | "medium" | "high" | "critical" {
     const errorLower = error.toLowerCase();
 
     // Critical errors
-    if (errorLower.includes("security") || errorLower.includes("breach") ||
-        errorLower.includes("critical") || errorLower.includes("system failure")) {
+    if (
+      errorLower.includes("security") ||
+      errorLower.includes("breach") ||
+      errorLower.includes("critical") ||
+      errorLower.includes("system failure")
+    ) {
       return "critical";
     }
 
     // High severity
-    if (errorLower.includes("timeout") || errorLower.includes("crash") ||
-        errorLower.includes("exception") || errorLower.includes("fatal")) {
+    if (
+      errorLower.includes("timeout") ||
+      errorLower.includes("crash") ||
+      errorLower.includes("exception") ||
+      errorLower.includes("fatal")
+    ) {
       return "high";
     }
 
     // Medium severity
-    if (errorLower.includes("error") || errorLower.includes("warning") ||
-        errorLower.includes("invalid") || errorLower.includes("failed")) {
+    if (
+      errorLower.includes("error") ||
+      errorLower.includes("warning") ||
+      errorLower.includes("invalid") ||
+      errorLower.includes("failed")
+    ) {
       return "medium";
     }
 
@@ -525,22 +673,33 @@ export class ErrorPatternAnalyzer extends EventEmitter {
    */
   private getSeverityScore(severity: string): number {
     switch (severity) {
-      case "critical": return 10;
-      case "high": return 7;
-      case "medium": return 4;
-      case "low": return 1;
-      default: return 4;
+      case "critical":
+        return 10;
+      case "high":
+        return 7;
+      case "medium":
+        return 4;
+      case "low":
+        return 1;
+      default:
+        return 4;
     }
   }
 
   /**
    * Store failure analysis in memory
    */
-  private async storeFailureAnalysis(analysis: FailureAnalysis, tenantId: string): Promise<void> {
+  private async storeFailureAnalysis(
+    analysis: FailureAnalysis,
+    tenantId: string
+  ): Promise<void> {
     // Store in recent failures (limited size)
     this.recentFailures.unshift(analysis);
     if (this.recentFailures.length > this.MAX_RECENT_FAILURES) {
-      this.recentFailures = this.recentFailures.slice(0, this.MAX_RECENT_FAILURES);
+      this.recentFailures = this.recentFailures.slice(
+        0,
+        this.MAX_RECENT_FAILURES
+      );
     }
 
     // Store in memory if available
@@ -552,7 +711,11 @@ export class ErrorPatternAnalyzer extends EventEmitter {
           contextMatch: {
             similarityScore: 0.8,
             keywordMatches: ["failure", "error", analysis.taskType],
-            semanticMatches: ["error analysis", "failure pattern", "task failure"],
+            semanticMatches: [
+              "error analysis",
+              "failure pattern",
+              "task failure",
+            ],
             temporalAlignment: 0.9,
           },
           content: {
@@ -560,14 +723,17 @@ export class ErrorPatternAnalyzer extends EventEmitter {
             taskId: analysis.taskId,
             taskType: analysis.taskType,
             error: analysis.error,
-            patterns: analysis.patterns.map(p => p.id),
+            patterns: analysis.patterns.map((p) => p.id),
             recommendations: analysis.recommendations,
             severity: analysis.severity,
             confidence: analysis.confidence,
           },
         });
       } catch (error) {
-        this.logger.warn(`Failed to store failure analysis for ${analysis.taskId}:`, error);
+        this.logger.warn(
+          `Failed to store failure analysis for ${analysis.taskId}:`,
+          error
+        );
       }
     }
   }
@@ -578,7 +744,11 @@ export class ErrorPatternAnalyzer extends EventEmitter {
   getAnalytics(): {
     totalPatterns: number;
     recentFailures: number;
-    topPatterns: Array<{ pattern: string; frequency: number; category: ErrorCategory }>;
+    topPatterns: Array<{
+      pattern: string;
+      frequency: number;
+      category: ErrorCategory;
+    }>;
     categoryBreakdown: Record<ErrorCategory, number>;
     severityDistribution: Record<string, number>;
     averageConfidence: number;
@@ -586,25 +756,32 @@ export class ErrorPatternAnalyzer extends EventEmitter {
     const topPatterns = Array.from(this.patterns.values())
       .sort((a, b) => b.frequency - a.frequency)
       .slice(0, 5)
-      .map(p => ({
+      .map((p) => ({
         pattern: p.pattern,
         frequency: p.frequency,
         category: p.category,
       }));
 
-    const categoryBreakdown = Object.values(ErrorCategory).reduce((acc, category) => {
-      acc[category] = Array.from(this.patterns.values())
-        .filter(p => p.category === category).length;
-      return acc;
-    }, {} as Record<ErrorCategory, number>);
+    const categoryBreakdown = Object.values(ErrorCategory).reduce(
+      (acc, category) => {
+        acc[category] = Array.from(this.patterns.values()).filter(
+          (p) => p.category === category
+        ).length;
+        return acc;
+      },
+      {} as Record<ErrorCategory, number>
+    );
 
     const severityDistribution = this.recentFailures.reduce((acc, failure) => {
       acc[failure.severity] = (acc[failure.severity] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    const averageConfidence = this.recentFailures.length > 0 ?
-      this.recentFailures.reduce((sum, f) => sum + f.confidence, 0) / this.recentFailures.length : 0;
+    const averageConfidence =
+      this.recentFailures.length > 0
+        ? this.recentFailures.reduce((sum, f) => sum + f.confidence, 0) /
+          this.recentFailures.length
+        : 0;
 
     return {
       totalPatterns: this.patterns.size,

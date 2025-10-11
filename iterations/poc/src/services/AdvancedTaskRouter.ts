@@ -8,9 +8,9 @@
  */
 
 import { EventEmitter } from "events";
+import { MultiTenantMemoryManager } from "../memory/MultiTenantMemoryManager.js";
 import { Agent, Task, TaskContext } from "../types/index.js";
 import { Logger } from "../utils/Logger.js";
-import { MultiTenantMemoryManager } from "../memory/MultiTenantMemoryManager.js";
 
 export interface RoutingConfig {
   enabled: boolean;
@@ -98,7 +98,11 @@ export class AdvancedTaskRouter extends EventEmitter {
       // Fallback routing
       const agents = this.getAvailableAgents(task.type);
       const selectedAgent = agents[0];
-      return this.createRoutingDecision(task.id, selectedAgent?.id || task.agentId, "fallback");
+      return this.createRoutingDecision(
+        task.id,
+        selectedAgent?.id || task.agentId,
+        "fallback"
+      );
     }
 
     // Add to appropriate priority queue
@@ -142,11 +146,18 @@ export class AdvancedTaskRouter extends EventEmitter {
     if (availableAgents.length === 0) return null;
 
     // For critical tasks, use predictive routing with highest confidence
-    const decision = await this.predictiveRouting(task, availableAgents, tenantId, context);
+    const decision = await this.predictiveRouting(
+      task,
+      availableAgents,
+      tenantId,
+      context
+    );
 
     if (decision && decision.confidence > 0.8) {
       // Remove from queue since we're routing immediately
-      this.taskQueue.critical = this.taskQueue.critical.filter(t => t.id !== task.id);
+      this.taskQueue.critical = this.taskQueue.critical.filter(
+        (t) => t.id !== task.id
+      );
 
       // Update agent load
       const currentLoad = this.agentLoad.get(decision.selectedAgentId) || 0;
@@ -172,14 +183,24 @@ export class AdvancedTaskRouter extends EventEmitter {
     // Get performance predictions for each candidate
     const predictions = await Promise.all(
       candidates.map(async (agent) => {
-        const performance = await this.getAgentPerformancePrediction(agent.id, taskType, tenantId);
+        const performance = await this.getAgentPerformancePrediction(
+          agent.id,
+          taskType,
+          tenantId
+        );
         const loadPenalty = this.calculateLoadPenalty(agent.id);
-        const memoryBonus = await this.getMemoryBasedScore(agent.id, task, tenantId, context);
+        const memoryBonus = await this.getMemoryBasedScore(
+          agent.id,
+          task,
+          tenantId,
+          context
+        );
 
-        const finalScore = performance.successRate * 0.4 +
-                          (1 - performance.averageLatency / 30000) * 0.3 + // Faster is better
-                          memoryBonus * 0.2 -
-                          loadPenalty * 0.1;
+        const finalScore =
+          performance.successRate * 0.4 +
+          (1 - performance.averageLatency / 30000) * 0.3 + // Faster is better
+          memoryBonus * 0.2 -
+          loadPenalty * 0.1;
 
         return {
           agent,
@@ -195,7 +216,7 @@ export class AdvancedTaskRouter extends EventEmitter {
     predictions.sort((a, b) => b.score - a.score);
 
     const best = predictions[0];
-    const alternatives = predictions.slice(1, 4).map(p => ({
+    const alternatives = predictions.slice(1, 4).map((p) => ({
       agentId: p.agent.id,
       score: p.score,
       reasons: this.generateSelectionReasons(p),
@@ -216,7 +237,10 @@ export class AdvancedTaskRouter extends EventEmitter {
   /**
    * Load balancing routing for even distribution
    */
-  private loadBalancingRouting(candidates: Agent[], task: Task): RoutingDecision {
+  private loadBalancingRouting(
+    candidates: Agent[],
+    task: Task
+  ): RoutingDecision {
     // Find agent with lowest current load
     let bestAgent = candidates[0];
     let lowestLoad = this.agentLoad.get(bestAgent.id) || 0;
@@ -234,11 +258,13 @@ export class AdvancedTaskRouter extends EventEmitter {
       selectedAgentId: bestAgent.id,
       confidence: 0.7,
       reasoning: `Load balancing: selected ${bestAgent.id} with current load ${lowestLoad}`,
-      alternatives: candidates.filter(a => a.id !== bestAgent.id).map(a => ({
-        agentId: a.id,
-        score: 0.5,
-        reasons: [`Load: ${this.agentLoad.get(a.id) || 0}`],
-      })),
+      alternatives: candidates
+        .filter((a) => a.id !== bestAgent.id)
+        .map((a) => ({
+          agentId: a.id,
+          score: 0.5,
+          reasons: [`Load: ${this.agentLoad.get(a.id) || 0}`],
+        })),
       routingStrategy: "load_balance",
       estimatedLatency: 15000, // Conservative estimate
       expectedQuality: 0.7,
@@ -254,17 +280,24 @@ export class AdvancedTaskRouter extends EventEmitter {
     tenantId: string
   ): Promise<AgentPerformanceMetrics> {
     // Check cached performance metrics first
-    const cached = this.agentPerformance.get(agentId)?.find(p => p.taskType === taskType);
-    if (cached && (Date.now() - cached.lastUpdated.getTime()) < 3600000) { // 1 hour cache
+    const cached = this.agentPerformance
+      .get(agentId)
+      ?.find((p) => p.taskType === taskType);
+    if (cached && Date.now() - cached.lastUpdated.getTime() < 3600000) {
+      // 1 hour cache
       return cached;
     }
 
     // Calculate from historical data
-    const performance = await this.calculateAgentPerformance(agentId, taskType, tenantId);
+    const performance = await this.calculateAgentPerformance(
+      agentId,
+      taskType,
+      tenantId
+    );
 
     // Cache the result
     const existing = this.agentPerformance.get(agentId) || [];
-    const updated = existing.filter(p => p.taskType !== taskType);
+    const updated = existing.filter((p) => p.taskType !== taskType);
     updated.push(performance);
     this.agentPerformance.set(agentId, updated);
 
@@ -292,10 +325,14 @@ export class AdvancedTaskRouter extends EventEmitter {
         constraints: { agentId, taskType },
       };
 
-      const memories = await this.memoryManager.getContextualMemories(tenantId, query, {
-        limit: 50,
-        minRelevance: 0.5,
-      });
+      const memories = await this.memoryManager.getContextualMemories(
+        tenantId,
+        query,
+        {
+          limit: 50,
+          minRelevance: 0.5,
+        }
+      );
 
       if (!memories.success || !memories.data || memories.data.length === 0) {
         return this.createDefaultPerformance(agentId, taskType);
@@ -309,7 +346,10 @@ export class AdvancedTaskRouter extends EventEmitter {
       const latencies: number[] = [];
 
       for (const memory of memories.data) {
-        if (memory.content.agentId === agentId && memory.content.taskType === taskType) {
+        if (
+          memory.content.agentId === agentId &&
+          memory.content.taskType === taskType
+        ) {
           totalCount++;
           if (memory.content.outcome === "success") {
             successCount++;
@@ -331,7 +371,8 @@ export class AdvancedTaskRouter extends EventEmitter {
       }
 
       const successRate = successCount / totalCount;
-      const averageLatency = latencies.length > 0 ? totalLatency / latencies.length : 15000;
+      const averageLatency =
+        latencies.length > 0 ? totalLatency / latencies.length : 15000;
       const qualityScore = totalCount > 0 ? totalQuality / totalCount : 0.7;
       const throughput = this.calculateThroughput(latencies);
 
@@ -378,10 +419,14 @@ export class AdvancedTaskRouter extends EventEmitter {
         },
       };
 
-      const memories = await this.memoryManager.getContextualMemories(tenantId, query, {
-        limit: 5,
-        minRelevance: 0.7,
-      });
+      const memories = await this.memoryManager.getContextualMemories(
+        tenantId,
+        query,
+        {
+          limit: 5,
+          minRelevance: 0.7,
+        }
+      );
 
       if (!memories.success || !memories.data) {
         return 0.5;
@@ -389,11 +434,12 @@ export class AdvancedTaskRouter extends EventEmitter {
 
       // Calculate similarity score based on successful similar tasks
       const successfulSimilarTasks = memories.data.filter(
-        m => m.content.outcome === "success" && m.content.agentId === agentId
+        (m) => m.content.outcome === "success" && m.content.agentId === agentId
       );
 
-      return successfulSimilarTasks.length > 0 ?
-        Math.min(1.0, successfulSimilarTasks.length / memories.data.length) : 0.3;
+      return successfulSimilarTasks.length > 0
+        ? Math.min(1.0, successfulSimilarTasks.length / memories.data.length)
+        : 0.3;
     } catch (error) {
       this.logger.warn(`Memory-based scoring failed for ${agentId}:`, error);
       return 0.5;
@@ -425,7 +471,10 @@ export class AdvancedTaskRouter extends EventEmitter {
   /**
    * Create default performance metrics
    */
-  private createDefaultPerformance(agentId: string, taskType: string): AgentPerformanceMetrics {
+  private createDefaultPerformance(
+    agentId: string,
+    taskType: string
+  ): AgentPerformanceMetrics {
     return {
       agentId,
       taskType,
@@ -443,11 +492,15 @@ export class AdvancedTaskRouter extends EventEmitter {
    * Generate routing reasoning
    */
   private generateRoutingReasoning(prediction: any): string {
-    return `Selected ${prediction.agent.id} with score ${(prediction.score * 100).toFixed(1)}% ` +
-           `(success: ${(prediction.performance.successRate * 100).toFixed(1)}%, ` +
-           `latency: ${prediction.performance.averageLatency}ms, ` +
-           `load penalty: ${(prediction.loadPenalty * 100).toFixed(1)}%, ` +
-           `memory bonus: ${(prediction.memoryBonus * 100).toFixed(1)}%)`;
+    return (
+      `Selected ${prediction.agent.id} with score ${(
+        prediction.score * 100
+      ).toFixed(1)}% ` +
+      `(success: ${(prediction.performance.successRate * 100).toFixed(1)}%, ` +
+      `latency: ${prediction.performance.averageLatency}ms, ` +
+      `load penalty: ${(prediction.loadPenalty * 100).toFixed(1)}%, ` +
+      `memory bonus: ${(prediction.memoryBonus * 100).toFixed(1)}%)`
+    );
   }
 
   /**
@@ -456,7 +509,11 @@ export class AdvancedTaskRouter extends EventEmitter {
   private generateSelectionReasons(prediction: any): string[] {
     const reasons = [];
     if (prediction.performance.successRate > 0.8) {
-      reasons.push(`High success rate: ${(prediction.performance.successRate * 100).toFixed(1)}%`);
+      reasons.push(
+        `High success rate: ${(
+          prediction.performance.successRate * 100
+        ).toFixed(1)}%`
+      );
     }
     if (prediction.performance.averageLatency < 10000) {
       reasons.push(`Fast response: ${prediction.performance.averageLatency}ms`);
@@ -477,9 +534,24 @@ export class AdvancedTaskRouter extends EventEmitter {
     // This would be implemented to query the agent registry
     // For now, return mock agents
     return [
-      { id: "agent-1", type: "worker", capabilities: [taskType], status: "idle" },
-      { id: "agent-2", type: "worker", capabilities: [taskType], status: "idle" },
-      { id: "agent-3", type: "specialist", capabilities: [taskType, "advanced"], status: "idle" },
+      {
+        id: "agent-1",
+        type: "worker",
+        capabilities: [taskType],
+        status: "idle",
+      },
+      {
+        id: "agent-2",
+        type: "worker",
+        capabilities: [taskType],
+        status: "idle",
+      },
+      {
+        id: "agent-3",
+        type: "specialist",
+        capabilities: [taskType, "advanced"],
+        status: "idle",
+      },
     ];
   }
 
@@ -536,7 +608,11 @@ export class AdvancedTaskRouter extends EventEmitter {
     try {
       // Use predictive routing for queued tasks
       const availableAgents = this.getAvailableAgents(task.type);
-      const decision = await this.predictiveRouting(task, availableAgents, "default-tenant");
+      const decision = await this.predictiveRouting(
+        task,
+        availableAgents,
+        "default-tenant"
+      );
 
       // Update agent load
       const currentLoad = this.agentLoad.get(decision.selectedAgentId) || 0;
@@ -546,7 +622,9 @@ export class AdvancedTaskRouter extends EventEmitter {
       this.emit("task-routed", decision);
       this.emit(`routed-${task.id}`, decision);
 
-      this.logger.info(`Routed queued task ${task.id} to ${decision.selectedAgentId}`);
+      this.logger.info(
+        `Routed queued task ${task.id} to ${decision.selectedAgentId}`
+      );
     } catch (error) {
       this.logger.error(`Failed to route queued task ${task.id}:`, error);
       // Re-queue task for retry
@@ -573,8 +651,11 @@ export class AdvancedTaskRouter extends EventEmitter {
     agentLoads: Record<string, number>;
   } {
     const totalRouted = this.routingHistory.length;
-    const averageConfidence = totalRouted > 0 ?
-      this.routingHistory.reduce((sum, r) => sum + r.confidence, 0) / totalRouted : 0;
+    const averageConfidence =
+      totalRouted > 0
+        ? this.routingHistory.reduce((sum, r) => sum + r.confidence, 0) /
+          totalRouted
+        : 0;
 
     const strategyBreakdown = this.routingHistory.reduce((acc, r) => {
       acc[r.routingStrategy] = (acc[r.routingStrategy] || 0) + 1;

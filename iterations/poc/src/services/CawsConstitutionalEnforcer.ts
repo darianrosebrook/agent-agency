@@ -8,8 +8,8 @@
  */
 
 import { EventEmitter } from "events";
-import { Logger } from "../utils/Logger.js";
 import { MultiTenantMemoryManager } from "../memory/MultiTenantMemoryManager.js";
+import { Logger } from "../utils/Logger.js";
 
 export interface BudgetLimits {
   maxFiles: number;
@@ -29,7 +29,15 @@ export interface QualityGates {
 export interface WaiverRequest {
   id: string;
   title: string;
-  reason: "emergency_hotfix" | "legacy_integration" | "experimental_feature" | "third_party_constraint" | "performance_critical" | "security_patch" | "infrastructure_limitation" | "other";
+  reason:
+    | "emergency_hotfix"
+    | "legacy_integration"
+    | "experimental_feature"
+    | "third_party_constraint"
+    | "performance_critical"
+    | "security_patch"
+    | "infrastructure_limitation"
+    | "other";
   description: string;
   gates: string[];
   expiresAt: Date;
@@ -85,19 +93,22 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
 
   // Default CAWS constitutional limits by tier
   private readonly CONSTITUTIONAL_LIMITS = {
-    1: { // Critical/Auth tier
+    1: {
+      // Critical/Auth tier
       maxFiles: 40,
       maxLoc: 1500,
       maxDurationMs: 3600000, // 1 hour
       maxConcurrentTasks: 3,
     },
-    2: { // Standard tier
+    2: {
+      // Standard tier
       maxFiles: 25,
       maxLoc: 1000,
       maxDurationMs: 1800000, // 30 minutes
       maxConcurrentTasks: 5,
     },
-    3: { // Low-risk tier
+    3: {
+      // Low-risk tier
       maxFiles: 15,
       maxLoc: 500,
       maxDurationMs: 900000, // 15 minutes
@@ -186,24 +197,39 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
       result.gateStatus = gateResult.gateStatus;
 
       // Check for applicable waivers
-      const applicableWaivers = this.getApplicableWaivers(tenantId, result.violations);
+      const applicableWaivers = this.getApplicableWaivers(
+        tenantId,
+        result.violations
+      );
       result.waivers = applicableWaivers;
 
       // If we have waivers that cover all violations, allow the task
-      if (applicableWaivers.length > 0 && this.waiversCoverViolations(applicableWaivers, result.violations)) {
+      if (
+        applicableWaivers.length > 0 &&
+        this.waiversCoverViolations(applicableWaivers, result.violations)
+      ) {
         result.allowed = true;
         result.violations = []; // Waived violations don't count
         this.logger.info(`Task ${taskId} allowed via constitutional waiver(s)`);
       }
 
       // Log enforcement decision
-      this.logger.info(`Constitutional enforcement for task ${taskId}: ${result.allowed ? "ALLOWED" : "BLOCKED"} (${result.violations.length} violations, ${applicableWaivers.length} waivers)`);
+      this.logger.info(
+        `Constitutional enforcement for task ${taskId}: ${
+          result.allowed ? "ALLOWED" : "BLOCKED"
+        } (${result.violations.length} violations, ${
+          applicableWaivers.length
+        } waivers)`
+      );
 
       this.emit("enforcement-decision", { taskId, tenantId, result });
 
       return result;
     } catch (error) {
-      this.logger.error(`Constitutional enforcement failed for task ${taskId}:`, error);
+      this.logger.error(
+        `Constitutional enforcement failed for task ${taskId}:`,
+        error
+      );
       // Default to allowing if enforcement fails (fail-open for safety)
       return result;
     }
@@ -213,7 +239,8 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
    * Start budget tracking for a task
    */
   startBudgetTracking(taskId: string, tenantId: string, tier: number): void {
-    const limits = this.CONSTITUTIONAL_LIMITS[tier] || this.CONSTITUTIONAL_LIMITS[2];
+    const limits =
+      this.CONSTITUTIONAL_LIMITS[tier] || this.CONSTITUTIONAL_LIMITS[2];
 
     const budget: TaskBudget = {
       taskId,
@@ -225,16 +252,20 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
         durationMs: 0,
       },
       startTime: new Date(),
-      checkIns: [{
-        timestamp: new Date(),
-        files: 0,
-        loc: 0,
-        message: "Budget tracking started",
-      }],
+      checkIns: [
+        {
+          timestamp: new Date(),
+          files: 0,
+          loc: 0,
+          message: "Budget tracking started",
+        },
+      ],
     };
 
     this.activeBudgets.set(taskId, budget);
-    this.logger.info(`Started budget tracking for task ${taskId} (tier ${tier})`);
+    this.logger.info(
+      `Started budget tracking for task ${taskId} (tier ${tier})`
+    );
   }
 
   /**
@@ -268,7 +299,10 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
     // Check limits
     const violations = this.checkBudgetViolations(budget);
     if (violations.length > 0) {
-      this.logger.warn(`Budget violations detected for task ${taskId}:`, violations);
+      this.logger.warn(
+        `Budget violations detected for task ${taskId}:`,
+        violations
+      );
       this.emit("budget-violation", { taskId, budget, violations });
       return false;
     }
@@ -300,8 +334,12 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
   /**
    * Request a constitutional waiver
    */
-  async requestWaiver(request: Omit<WaiverRequest, "id" | "requestedAt" | "status">): Promise<string> {
-    const waiverId = `waiver-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  async requestWaiver(
+    request: Omit<WaiverRequest, "id" | "requestedAt" | "status">
+  ): Promise<string> {
+    const waiverId = `waiver-${Date.now()}-${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
 
     const waiver: WaiverRequest = {
       ...request,
@@ -315,7 +353,9 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
     // Store in memory for persistence
     await this.storeWaiverInMemory(waiver);
 
-    this.logger.info(`Constitutional waiver requested: ${waiverId} (${request.title})`);
+    this.logger.info(
+      `Constitutional waiver requested: ${waiverId} (${request.title})`
+    );
     this.emit("waiver-requested", waiver);
 
     return waiverId;
@@ -324,7 +364,12 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
   /**
    * Approve or reject a waiver
    */
-  async processWaiver(waiverId: string, approved: boolean, approver: string, notes?: string): Promise<boolean> {
+  async processWaiver(
+    waiverId: string,
+    approved: boolean,
+    approver: string,
+    notes?: string
+  ): Promise<boolean> {
     const waiver = this.waivers.get(waiverId);
     if (!waiver) {
       throw new Error(`Waiver ${waiverId} not found`);
@@ -358,8 +403,10 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
    */
   getActiveWaivers(tenantId: string): WaiverRequest[] {
     const now = new Date();
-    return Array.from(this.waivers.values())
-      .filter(w => w.tenantId === tenantId && w.status === "approved" && w.expiresAt > now);
+    return Array.from(this.waivers.values()).filter(
+      (w) =>
+        w.tenantId === tenantId && w.status === "approved" && w.expiresAt > now
+    );
   }
 
   /**
@@ -381,8 +428,8 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
     }>;
   } {
     const recentViolations = Array.from(this.activeBudgets.values())
-      .filter(b => this.checkBudgetViolations(b).length > 0)
-      .map(b => ({
+      .filter((b) => this.checkBudgetViolations(b).length > 0)
+      .map((b) => ({
         taskId: b.taskId,
         violations: this.checkBudgetViolations(b),
         timestamp: b.startTime,
@@ -390,7 +437,7 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
       .slice(-10); // Last 10 violations
 
     const waiverRequests = Array.from(this.waivers.values())
-      .map(w => ({
+      .map((w) => ({
         id: w.id,
         title: w.title,
         status: w.status,
@@ -401,7 +448,9 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
 
     return {
       activeBudgets: this.activeBudgets.size,
-      activeWaivers: Array.from(this.waivers.values()).filter(w => w.status === "approved" && w.expiresAt > new Date()).length,
+      activeWaivers: Array.from(this.waivers.values()).filter(
+        (w) => w.status === "approved" && w.expiresAt > new Date()
+      ).length,
       recentViolations,
       waiverRequests,
     };
@@ -410,30 +459,42 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
   /**
    * Check budget limits for a task
    */
-  private async checkBudgetLimits(taskId: string, tenantId: string, tier: number): Promise<{
+  private async checkBudgetLimits(
+    taskId: string,
+    tenantId: string,
+    tier: number
+  ): Promise<{
     allowed: boolean;
     violations: string[];
     recommendations: string[];
     budgetStatus: EnforcementResult["budgetStatus"];
   }> {
-    const limits = this.CONSTITUTIONAL_LIMITS[tier] || this.CONSTITUTIONAL_LIMITS[2];
+    const limits =
+      this.CONSTITUTIONAL_LIMITS[tier] || this.CONSTITUTIONAL_LIMITS[2];
 
     // Check concurrent tasks
-    const tenantTasks = Array.from(this.activeBudgets.values())
-      .filter(b => b.tenantId === tenantId).length;
+    const tenantTasks = Array.from(this.activeBudgets.values()).filter(
+      (b) => b.tenantId === tenantId
+    ).length;
 
     const violations: string[] = [];
     const recommendations: string[] = [];
 
     if (tenantTasks >= limits.maxConcurrentTasks) {
-      violations.push(`Exceeded concurrent task limit (${tenantTasks}/${limits.maxConcurrentTasks})`);
-      recommendations.push("Wait for existing tasks to complete or request a waiver");
+      violations.push(
+        `Exceeded concurrent task limit (${tenantTasks}/${limits.maxConcurrentTasks})`
+      );
+      recommendations.push(
+        "Wait for existing tasks to complete or request a waiver"
+      );
     }
 
     // Check for recent large tasks that might indicate scope creep
     const recentLargeTasks = await this.getRecentLargeTasks(tenantId);
     if (recentLargeTasks.length > 2) {
-      recommendations.push("Consider breaking large tasks into smaller, focused tasks");
+      recommendations.push(
+        "Consider breaking large tasks into smaller, focused tasks"
+      );
     }
 
     const budgetStatus = {
@@ -479,12 +540,20 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
     };
 
     if (!gateStatus.coverageMet) {
-      violations.push(`Coverage ${qualityMetrics.coverage.toFixed(2)} below required ${(gates.minCoverage * 100).toFixed(0)}%`);
+      violations.push(
+        `Coverage ${qualityMetrics.coverage.toFixed(2)} below required ${(
+          gates.minCoverage * 100
+        ).toFixed(0)}%`
+      );
       recommendations.push("Add more unit tests to improve coverage");
     }
 
     if (!gateStatus.mutationMet) {
-      violations.push(`Mutation score ${qualityMetrics.mutation.toFixed(2)} below required ${(gates.minMutationScore * 100).toFixed(0)}%`);
+      violations.push(
+        `Mutation score ${qualityMetrics.mutation.toFixed(2)} below required ${(
+          gates.minMutationScore * 100
+        ).toFixed(0)}%`
+      );
       recommendations.push("Improve test quality to catch more mutations");
     }
 
@@ -494,7 +563,9 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
     }
 
     if (!gateStatus.trustScoreMet) {
-      violations.push(`Trust score ${qualityMetrics.trustScore} below required ${gates.trustScore}`);
+      violations.push(
+        `Trust score ${qualityMetrics.trustScore} below required ${gates.trustScore}`
+      );
       recommendations.push("Address code quality issues and security concerns");
     }
 
@@ -537,7 +608,12 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
     trustScore: number;
   }> {
     if (!this.memoryManager) {
-      return { averageCoverage: 0.75, averageMutation: 0.4, contractTests: false, trustScore: 80 };
+      return {
+        averageCoverage: 0.75,
+        averageMutation: 0.4,
+        contractTests: false,
+        trustScore: 80,
+      };
     }
 
     try {
@@ -548,13 +624,22 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
         constraints: { tenantId },
       };
 
-      const memories = await this.memoryManager.getContextualMemories(tenantId, query, {
-        limit: 10,
-        minRelevance: 0.5,
-      });
+      const memories = await this.memoryManager.getContextualMemories(
+        tenantId,
+        query,
+        {
+          limit: 10,
+          minRelevance: 0.5,
+        }
+      );
 
       if (!memories.success || !memories.data) {
-        return { averageCoverage: 0.75, averageMutation: 0.4, contractTests: false, trustScore: 80 };
+        return {
+          averageCoverage: 0.75,
+          averageMutation: 0.4,
+          contractTests: false,
+          trustScore: 80,
+        };
       }
 
       // Aggregate metrics from memories
@@ -585,14 +670,21 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
       }
 
       return {
-        averageCoverage: coverageCount > 0 ? totalCoverage / coverageCount : 0.75,
-        averageMutation: mutationCount > 0 ? totalMutation / mutationCount : 0.4,
+        averageCoverage:
+          coverageCount > 0 ? totalCoverage / coverageCount : 0.75,
+        averageMutation:
+          mutationCount > 0 ? totalMutation / mutationCount : 0.4,
         contractTests: hasContracts,
         trustScore: trustCount > 0 ? totalTrust / trustCount : 80,
       };
     } catch (error) {
       this.logger.warn("Failed to get tenant performance metrics:", error);
-      return { averageCoverage: 0.75, averageMutation: 0.4, contractTests: false, trustScore: 80 };
+      return {
+        averageCoverage: 0.75,
+        averageMutation: 0.4,
+        contractTests: false,
+        trustScore: 80,
+      };
     }
   }
 
@@ -603,15 +695,23 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
     const violations: string[] = [];
 
     if (budget.currentUsage.files > budget.limits.maxFiles) {
-      violations.push(`File limit exceeded: ${budget.currentUsage.files}/${budget.limits.maxFiles}`);
+      violations.push(
+        `File limit exceeded: ${budget.currentUsage.files}/${budget.limits.maxFiles}`
+      );
     }
 
     if (budget.currentUsage.loc > budget.limits.maxLoc) {
-      violations.push(`LOC limit exceeded: ${budget.currentUsage.loc}/${budget.limits.maxLoc}`);
+      violations.push(
+        `LOC limit exceeded: ${budget.currentUsage.loc}/${budget.limits.maxLoc}`
+      );
     }
 
     if (budget.currentUsage.durationMs > budget.limits.maxDurationMs) {
-      violations.push(`Time limit exceeded: ${Math.round(budget.currentUsage.durationMs / 1000)}s/${Math.round(budget.limits.maxDurationMs / 1000)}s`);
+      violations.push(
+        `Time limit exceeded: ${Math.round(
+          budget.currentUsage.durationMs / 1000
+        )}s/${Math.round(budget.limits.maxDurationMs / 1000)}s`
+      );
     }
 
     return violations;
@@ -620,11 +720,16 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
   /**
    * Get applicable waivers for violations
    */
-  private getApplicableWaivers(tenantId: string, violations: string[]): WaiverRequest[] {
+  private getApplicableWaivers(
+    tenantId: string,
+    violations: string[]
+  ): WaiverRequest[] {
     const activeWaivers = this.getActiveWaivers(tenantId);
-    return activeWaivers.filter(waiver =>
-      violations.some(violation =>
-        waiver.gates.some(gate => violation.toLowerCase().includes(gate.toLowerCase()))
+    return activeWaivers.filter((waiver) =>
+      violations.some((violation) =>
+        waiver.gates.some((gate) =>
+          violation.toLowerCase().includes(gate.toLowerCase())
+        )
       )
     );
   }
@@ -632,10 +737,13 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
   /**
    * Check if waivers cover all violations
    */
-  private waiversCoverViolations(waivers: WaiverRequest[], violations: string[]): boolean {
-    const coveredGates = new Set(waivers.flatMap(w => w.gates));
-    return violations.every(violation =>
-      Array.from(coveredGates).some(gate =>
+  private waiversCoverViolations(
+    waivers: WaiverRequest[],
+    violations: string[]
+  ): boolean {
+    const coveredGates = new Set(waivers.flatMap((w) => w.gates));
+    return violations.every((violation) =>
+      Array.from(coveredGates).some((gate) =>
         violation.toLowerCase().includes(gate.toLowerCase())
       )
     );
@@ -647,8 +755,11 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
   private async getRecentLargeTasks(tenantId: string): Promise<TaskBudget[]> {
     // This would query memory for recent tasks that exceeded certain thresholds
     return Array.from(this.activeBudgets.values())
-      .filter(b => b.tenantId === tenantId &&
-                   (b.currentUsage.files > 10 || b.currentUsage.loc > 500))
+      .filter(
+        (b) =>
+          b.tenantId === tenantId &&
+          (b.currentUsage.files > 10 || b.currentUsage.loc > 500)
+      )
       .slice(-5); // Last 5 large tasks
   }
 
@@ -665,7 +776,11 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
         contextMatch: {
           similarityScore: 0.7,
           keywordMatches: ["budget", "limits", "enforcement"],
-          semanticMatches: ["task budget", "resource usage", "constitutional limits"],
+          semanticMatches: [
+            "task budget",
+            "resource usage",
+            "constitutional limits",
+          ],
           temporalAlignment: 0.8,
         },
         content: {
@@ -679,7 +794,10 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
         },
       });
     } catch (error) {
-      this.logger.warn(`Failed to store budget analysis for ${budget.taskId}:`, error);
+      this.logger.warn(
+        `Failed to store budget analysis for ${budget.taskId}:`,
+        error
+      );
     }
   }
 
@@ -710,7 +828,11 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
         contextMatch: {
           similarityScore: 0.9,
           keywordMatches: ["waiver", "exception", waiver.reason],
-          semanticMatches: ["constitutional waiver", "policy exception", "emergency override"],
+          semanticMatches: [
+            "constitutional waiver",
+            "policy exception",
+            "emergency override",
+          ],
           temporalAlignment: 0.9,
         },
         content: {

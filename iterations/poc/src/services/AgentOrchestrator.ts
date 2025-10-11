@@ -5,22 +5,23 @@
  * @description Core service for managing and coordinating agent activities
  */
 
+import { MultiTenantMemoryManager } from "../memory/MultiTenantMemoryManager";
 import {
   Agent,
-  Task,
   AgentOrchestratorConfig,
-  SystemMetrics,
   ContextualMemory,
-  TaskContext,
   MultiTenantMemoryConfig,
+  SystemMetrics,
+  Task,
+  TaskContext,
 } from "../types/index";
 import { Logger } from "../utils/Logger";
-import { MultiTenantMemoryManager } from "../memory/MultiTenantMemoryManager";
 import { AdvancedTaskRouter, RoutingConfig } from "./AdvancedTaskRouter.js";
-import { ErrorPatternAnalyzer } from "./ErrorPatternAnalyzer.js";
 import { CawsConstitutionalEnforcer } from "./CawsConstitutionalEnforcer.js";
+import { ErrorPatternAnalyzer } from "./ErrorPatternAnalyzer.js";
 
-export interface MemoryAwareAgentOrchestratorConfig extends AgentOrchestratorConfig {
+export interface MemoryAwareAgentOrchestratorConfig
+  extends AgentOrchestratorConfig {
   memoryEnabled: boolean;
   memoryConfig?: Partial<MultiTenantMemoryConfig>;
   defaultTenantId?: string;
@@ -58,7 +59,7 @@ export class AgentOrchestrator {
       errorAnalysisEnabled: true,
       cawsEnforcementEnabled: true,
       defaultTier: 2,
-      defaultTenantId: 'default-tenant',
+      defaultTenantId: "default-tenant",
       ...config,
     };
   }
@@ -122,7 +123,10 @@ export class AgentOrchestrator {
         ...this.config.routingConfig,
       };
 
-      this.taskRouter = new AdvancedTaskRouter(routingConfig, this.memoryManager);
+      this.taskRouter = new AdvancedTaskRouter(
+        routingConfig,
+        this.memoryManager
+      );
 
       this.logger.info("Advanced task router initialized successfully");
     } catch (error) {
@@ -174,7 +178,7 @@ export class AgentOrchestrator {
       const defaultMemoryConfig: MultiTenantMemoryConfig = {
         tenantIsolation: {
           enabled: true,
-          defaultIsolationLevel: 'shared',
+          defaultIsolationLevel: "shared",
           auditLogging: true,
           maxTenants: 50,
         },
@@ -187,12 +191,12 @@ export class AgentOrchestrator {
         },
         federatedLearning: {
           enabled: false, // Disabled by default for orchestrator
-          privacyLevel: 'basic',
+          privacyLevel: "basic",
           aggregationFrequency: 3600000, // 1 hour
           minParticipants: 3,
           maxParticipants: 10,
           privacyBudget: 1.0,
-          aggregationMethod: 'weighted',
+          aggregationMethod: "weighted",
           learningRate: 0.1,
           convergenceThreshold: 0.01,
         },
@@ -205,29 +209,34 @@ export class AgentOrchestrator {
         ...this.config.memoryConfig,
       };
 
-      this.memoryManager = new MultiTenantMemoryManager(defaultMemoryConfig, this.logger);
+      this.memoryManager = new MultiTenantMemoryManager(
+        defaultMemoryConfig,
+        this.logger
+      );
 
       // Register default tenant if specified
       if (this.config.defaultTenantId) {
         const tenantConfig = {
           tenantId: this.config.defaultTenantId,
-          projectId: 'agent-orchestrator',
-          name: 'Agent Orchestrator Default Tenant',
-          isolationLevel: 'shared' as const,
+          projectId: "agent-orchestrator",
+          name: "Agent Orchestrator Default Tenant",
+          isolationLevel: "shared" as const,
           accessPolicies: [],
           sharingRules: [],
           dataRetention: {
             defaultRetentionDays: 30,
-            archivalPolicy: 'delete' as const,
+            archivalPolicy: "delete" as const,
             complianceRequirements: [],
-            backupFrequency: 'weekly' as const,
+            backupFrequency: "weekly" as const,
           },
           encryptionEnabled: false,
           auditLogging: true,
         };
 
         await this.memoryManager.registerTenant(tenantConfig);
-        this.logger.info(`Registered default tenant: ${this.config.defaultTenantId}`);
+        this.logger.info(
+          `Registered default tenant: ${this.config.defaultTenantId}`
+        );
       }
 
       this.logger.info("Memory management system initialized");
@@ -274,11 +283,16 @@ export class AgentOrchestrator {
   ): Promise<string> {
     const taskId = this.generateId();
     const now = new Date();
-    const tenantId = options?.tenantId || this.config.defaultTenantId || 'default-tenant';
+    const tenantId =
+      options?.tenantId || this.config.defaultTenantId || "default-tenant";
     const tier = options?.tier || this.config.defaultTier || 2;
 
     // Enforce CAWS constitution before task creation
-    if (this.config.cawsEnforcementEnabled && this.cawsEnforcer && !options?.skipConstitutionCheck) {
+    if (
+      this.config.cawsEnforcementEnabled &&
+      this.cawsEnforcer &&
+      !options?.skipConstitutionCheck
+    ) {
       const enforcement = await this.cawsEnforcer.enforceConstitution(
         taskId,
         tenantId,
@@ -292,8 +306,13 @@ export class AgentOrchestrator {
       );
 
       if (!enforcement.allowed) {
-        const errorMsg = `CAWS Constitutional violation: ${enforcement.violations.join(", ")}`;
-        this.logger.warn(`Task ${taskId} blocked by CAWS constitution:`, enforcement.violations);
+        const errorMsg = `CAWS Constitutional violation: ${enforcement.violations.join(
+          ", "
+        )}`;
+        this.logger.warn(
+          `Task ${taskId} blocked by CAWS constitution:`,
+          enforcement.violations
+        );
         throw new Error(errorMsg);
       }
 
@@ -318,11 +337,16 @@ export class AgentOrchestrator {
 
     // Use advanced routing if available and enabled
     if (this.config.advancedRoutingEnabled && this.taskRouter) {
-      const tenantId = options?.tenantId || this.config.defaultTenantId || 'default-tenant';
+      const tenantId =
+        options?.tenantId || this.config.defaultTenantId || "default-tenant";
       const context = options?.context || this.createTaskContext(newTask);
 
       try {
-        const routingDecision = await this.taskRouter.submitTask(newTask, tenantId, context);
+        const routingDecision = await this.taskRouter.submitTask(
+          newTask,
+          tenantId,
+          context
+        );
 
         // Update task with routing decision
         if (routingDecision.selectedAgentId !== task.agentId) {
@@ -338,14 +362,27 @@ export class AgentOrchestrator {
             expectedQuality: routingDecision.expectedQuality,
           };
           this.tasks.set(taskId, newTask);
-          this.logger.info(`Advanced routing: Task ${taskId} assigned to ${routingDecision.selectedAgentId} (${routingDecision.routingStrategy}, ${(routingDecision.confidence * 100).toFixed(1)}% confidence)`);
+          this.logger.info(
+            `Advanced routing: Task ${taskId} assigned to ${
+              routingDecision.selectedAgentId
+            } (${routingDecision.routingStrategy}, ${(
+              routingDecision.confidence * 100
+            ).toFixed(1)}% confidence)`
+          );
         }
       } catch (error) {
-        this.logger.warn(`Advanced routing failed for task ${taskId}, falling back to basic routing:`, error);
+        this.logger.warn(
+          `Advanced routing failed for task ${taskId}, falling back to basic routing:`,
+          error
+        );
         // Fall back to basic memory routing
         await this.fallbackMemoryRouting(newTask, taskId, options);
       }
-    } else if (this.config.memoryBasedRoutingEnabled && options?.useMemoryRouting !== false && this.memoryManager) {
+    } else if (
+      this.config.memoryBasedRoutingEnabled &&
+      options?.useMemoryRouting !== false &&
+      this.memoryManager
+    ) {
       // Fallback to basic memory routing
       await this.fallbackMemoryRouting(newTask, taskId, options);
     }
@@ -361,7 +398,7 @@ export class AgentOrchestrator {
   async completeTask(
     taskId: string,
     result: any,
-    outcome: 'success' | 'failure' | 'partial',
+    outcome: "success" | "failure" | "partial",
     metadata?: Record<string, any>
   ): Promise<void> {
     const task = this.tasks.get(taskId);
@@ -370,14 +407,14 @@ export class AgentOrchestrator {
     }
 
     const completedAt = new Date();
-    task.status = outcome === 'failure' ? 'failed' : 'completed';
+    task.status = outcome === "failure" ? "failed" : "completed";
     task.updatedAt = completedAt;
     task.metadata = {
       ...task.metadata,
       completedAt,
       outcome,
       result,
-      ...metadata
+      ...metadata,
     };
 
     this.logger.info(`Completed task: ${taskId} with outcome: ${outcome}`);
@@ -388,12 +425,17 @@ export class AgentOrchestrator {
     }
 
     // Analyze failures for pattern recognition if error analysis is enabled
-    if (outcome === 'failure' && this.errorAnalyzer && this.memoryManager) {
-      const tenantId = (task.metadata as any)?.tenantId || this.config.defaultTenantId || 'default-tenant';
+    if (outcome === "failure" && this.errorAnalyzer && this.memoryManager) {
+      const tenantId =
+        (task.metadata as any)?.tenantId ||
+        this.config.defaultTenantId ||
+        "default-tenant";
 
       try {
-        const error = typeof result === 'string' ? result :
-                     result?.error || result?.message || 'Unknown error';
+        const error =
+          typeof result === "string"
+            ? result
+            : result?.error || result?.message || "Unknown error";
 
         const analysis = await this.errorAnalyzer.analyzeFailure(
           taskId,
@@ -403,7 +445,7 @@ export class AgentOrchestrator {
             agentId: task.agentId,
             taskMetadata: task.metadata,
             result,
-            ...metadata
+            ...metadata,
           },
           tenantId
         );
@@ -414,9 +456,14 @@ export class AgentOrchestrator {
           errorAnalysis: analysis,
         };
 
-        this.logger.info(`Error analysis completed for failed task ${taskId}: ${analysis.patterns.length} patterns identified`);
+        this.logger.info(
+          `Error analysis completed for failed task ${taskId}: ${analysis.patterns.length} patterns identified`
+        );
       } catch (analysisError) {
-        this.logger.warn(`Error analysis failed for task ${taskId}:`, analysisError);
+        this.logger.warn(
+          `Error analysis failed for task ${taskId}:`,
+          analysisError
+        );
         // Continue with normal completion even if analysis fails
       }
     }
@@ -427,7 +474,12 @@ export class AgentOrchestrator {
       const finalFiles = (task.metadata as any)?.finalFiles || 0;
       const finalLoc = (task.metadata as any)?.finalLoc || 0;
 
-      this.cawsEnforcer.updateBudgetUsage(taskId, finalFiles, finalLoc, `Task ${outcome}`);
+      this.cawsEnforcer.updateBudgetUsage(
+        taskId,
+        finalFiles,
+        finalLoc,
+        `Task ${outcome}`
+      );
       this.cawsEnforcer.stopBudgetTracking(taskId);
     }
 
@@ -451,11 +503,16 @@ export class AgentOrchestrator {
   ): Promise<void> {
     if (!this.memoryManager) return;
 
-    const tenantId = options?.tenantId || this.config.defaultTenantId || 'default-tenant';
+    const tenantId =
+      options?.tenantId || this.config.defaultTenantId || "default-tenant";
     const context = options?.context || this.createTaskContext(task);
 
     try {
-      const optimalAgentId = await this.findOptimalAgentWithMemory(task, tenantId, context);
+      const optimalAgentId = await this.findOptimalAgentWithMemory(
+        task,
+        tenantId,
+        context
+      );
       if (optimalAgentId && optimalAgentId !== task.agentId) {
         // Update task with memory-recommended agent
         task.agentId = optimalAgentId;
@@ -463,13 +520,18 @@ export class AgentOrchestrator {
           ...task.metadata,
           memoryRouted: true,
           originalAgentId: task.agentId,
-          routingReason: 'memory_based_optimization'
+          routingReason: "memory_based_optimization",
         };
         this.tasks.set(taskId, task);
-        this.logger.info(`Memory routing: Task ${taskId} rerouted to agent ${optimalAgentId}`);
+        this.logger.info(
+          `Memory routing: Task ${taskId} rerouted to agent ${optimalAgentId}`
+        );
       }
     } catch (error) {
-      this.logger.warn(`Memory-based routing failed for task ${taskId}:`, error);
+      this.logger.warn(
+        `Memory-based routing failed for task ${taskId}:`,
+        error
+      );
       // Continue with original agent assignment
     }
   }
@@ -488,37 +550,49 @@ export class AgentOrchestrator {
       // Query memory for similar tasks and their outcomes
       const memoryQuery: TaskContext = {
         ...context,
-        type: 'agent_selection',
+        type: "agent_selection",
         description: `Find optimal agent for task: ${task.description}`,
-        requirements: ['agent_performance', 'task_similarity'],
+        requirements: ["agent_performance", "task_similarity"],
         constraints: {
           taskType: task.type,
-          priority: task.priority
-        }
+          priority: task.priority,
+        },
       };
 
-      const memories = await this.memoryManager.getContextualMemories(tenantId, memoryQuery, {
-        limit: 10,
-        minRelevance: 0.6
-      });
+      const memories = await this.memoryManager.getContextualMemories(
+        tenantId,
+        memoryQuery,
+        {
+          limit: 10,
+          minRelevance: 0.6,
+        }
+      );
 
       if (!memories.success || !memories.data || memories.data.length === 0) {
         return null;
       }
 
       // Analyze agent performance from memories
-      const agentPerformance = new Map<string, { success: number; total: number; avgRelevance: number }>();
+      const agentPerformance = new Map<
+        string,
+        { success: number; total: number; avgRelevance: number }
+      >();
 
       for (const memory of memories.data) {
         if (memory.content.agentId) {
           const agentId = memory.content.agentId;
-          const existing = agentPerformance.get(agentId) || { success: 0, total: 0, avgRelevance: 0 };
+          const existing = agentPerformance.get(agentId) || {
+            success: 0,
+            total: 0,
+            avgRelevance: 0,
+          };
 
           existing.total++;
-          if (memory.content.outcome === 'success') {
+          if (memory.content.outcome === "success") {
             existing.success++;
           }
-          existing.avgRelevance = (existing.avgRelevance + memory.relevanceScore) / 2;
+          existing.avgRelevance =
+            (existing.avgRelevance + memory.relevanceScore) / 2;
 
           agentPerformance.set(agentId, existing);
         }
@@ -529,7 +603,8 @@ export class AgentOrchestrator {
       let bestScore = 0;
 
       for (const [agentId, stats] of agentPerformance.entries()) {
-        if (stats.total >= 3) { // Require minimum sample size
+        if (stats.total >= 3) {
+          // Require minimum sample size
           const successRate = stats.success / stats.total;
           const relevanceBonus = stats.avgRelevance;
           const score = successRate * 0.7 + relevanceBonus * 0.3;
@@ -542,7 +617,11 @@ export class AgentOrchestrator {
       }
 
       if (bestAgent) {
-        this.logger.debug(`Selected agent ${bestAgent} for task ${task.id} with score ${(bestScore * 100).toFixed(1)}%`);
+        this.logger.debug(
+          `Selected agent ${bestAgent} for task ${task.id} with score ${(
+            bestScore * 100
+          ).toFixed(1)}%`
+        );
       }
 
       return bestAgent;
@@ -558,22 +637,23 @@ export class AgentOrchestrator {
   private async learnFromTaskOutcome(
     task: Task,
     result: any,
-    outcome: 'success' | 'failure' | 'partial'
+    outcome: "success" | "failure" | "partial"
   ): Promise<void> {
     if (!this.memoryManager) return;
 
     try {
-      const tenantId = this.config.defaultTenantId || 'default-tenant';
+      const tenantId = this.config.defaultTenantId || "default-tenant";
 
       // Create contextual memory from task experience
       const experience: ContextualMemory = {
         memoryId: `task_${task.id}_${Date.now()}`,
-        relevanceScore: outcome === 'success' ? 0.85 : outcome === 'partial' ? 0.6 : 0.3,
+        relevanceScore:
+          outcome === "success" ? 0.85 : outcome === "partial" ? 0.6 : 0.3,
         contextMatch: {
           similarityScore: 0.8,
-          keywordMatches: task.description.toLowerCase().split(' '),
+          keywordMatches: task.description.toLowerCase().split(" "),
           semanticMatches: [task.type, outcome],
-          temporalAlignment: 0.9
+          temporalAlignment: 0.9,
         },
         content: {
           taskType: task.type,
@@ -581,20 +661,32 @@ export class AgentOrchestrator {
           agentId: task.agentId,
           taskId: task.id,
           duration: task.updatedAt.getTime() - task.createdAt.getTime(),
-          result: typeof result === 'object' ? JSON.stringify(result) : String(result),
-          lessons: this.extractLessonsFromOutcome(task, result, outcome)
-        }
+          result:
+            typeof result === "object"
+              ? JSON.stringify(result)
+              : String(result),
+          lessons: this.extractLessonsFromOutcome(task, result, outcome),
+        },
       };
 
-      const storeResult = await this.memoryManager.storeExperience(tenantId, experience, {
-        offloadContext: true,
-        sharingLevel: outcome === 'success' ? 'shared' : 'private'
-      });
+      const storeResult = await this.memoryManager.storeExperience(
+        tenantId,
+        experience,
+        {
+          offloadContext: true,
+          sharingLevel: outcome === "success" ? "shared" : "private",
+        }
+      );
 
       if (storeResult.success) {
-        this.logger.info(`Learned from task ${task.id}: stored experience ${storeResult.data}`);
+        this.logger.info(
+          `Learned from task ${task.id}: stored experience ${storeResult.data}`
+        );
       } else {
-        this.logger.warn(`Failed to store experience for task ${task.id}:`, storeResult.error);
+        this.logger.warn(
+          `Failed to store experience for task ${task.id}:`,
+          storeResult.error
+        );
       }
     } catch (error) {
       this.logger.error(`Learning from task ${task.id} failed:`, error);
@@ -607,27 +699,31 @@ export class AgentOrchestrator {
   private extractLessonsFromOutcome(
     task: Task,
     result: any,
-    outcome: 'success' | 'failure' | 'partial'
+    outcome: "success" | "failure" | "partial"
   ): string[] {
     const lessons: string[] = [];
 
-    if (outcome === 'success') {
-      lessons.push(`${task.type} tasks can be completed efficiently by ${task.agentId}`);
-      if (task.priority === 'high') {
-        lessons.push('High priority tasks benefit from experienced agents');
+    if (outcome === "success") {
+      lessons.push(
+        `${task.type} tasks can be completed efficiently by ${task.agentId}`
+      );
+      if (task.priority === "high") {
+        lessons.push("High priority tasks benefit from experienced agents");
       }
-    } else if (outcome === 'failure') {
+    } else if (outcome === "failure") {
       lessons.push(`${task.agentId} may not be optimal for ${task.type} tasks`);
-      lessons.push('Consider agent reassignment for failed task types');
+      lessons.push("Consider agent reassignment for failed task types");
     }
 
     // Extract additional insights based on result structure
-    if (typeof result === 'object' && result) {
+    if (typeof result === "object" && result) {
       if (result.performance) {
-        lessons.push(`Task performance metrics: ${JSON.stringify(result.performance)}`);
+        lessons.push(
+          `Task performance metrics: ${JSON.stringify(result.performance)}`
+        );
       }
       if (result.errors && result.errors.length > 0) {
-        lessons.push(`Common failure patterns: ${result.errors.join(', ')}`);
+        lessons.push(`Common failure patterns: ${result.errors.join(", ")}`);
       }
     }
 
@@ -647,9 +743,9 @@ export class AgentOrchestrator {
       constraints: {
         priority: task.priority,
         maxRetries: task.maxRetries,
-        timeout: task.timeout
+        timeout: task.timeout,
       },
-      metadata: task.metadata || {}
+      metadata: task.metadata || {},
     };
   }
 
@@ -674,9 +770,11 @@ export class AgentOrchestrator {
       .filter((t) => t.status === "completed")
       .map((t) => t.updatedAt.getTime() - t.createdAt.getTime());
 
-    const averageTaskDuration = completedTaskDurations.length > 0
-      ? completedTaskDurations.reduce((sum, duration) => sum + duration, 0) / completedTaskDurations.length
-      : 0;
+    const averageTaskDuration =
+      completedTaskDurations.length > 0
+        ? completedTaskDurations.reduce((sum, duration) => sum + duration, 0) /
+          completedTaskDurations.length
+        : 0;
 
     const baseMetrics: SystemMetrics = {
       totalAgents,
@@ -700,8 +798,8 @@ export class AgentOrchestrator {
             cacheSize: memoryHealth.cacheSize,
             offloadedContexts: memoryHealth.offloadedContexts,
             federatedParticipants: memoryHealth.federatedParticipants,
-            memoryEnabled: true
-          }
+            memoryEnabled: true,
+          },
         };
       } catch (error) {
         this.logger.warn("Failed to get memory system health:", error);

@@ -267,6 +267,41 @@ export interface AgentQueryResult {
 }
 
 /**
+ * Database connection configuration.
+ */
+export interface DatabaseConfig {
+  /**
+   * Database host address.
+   */
+  host: string;
+
+  /**
+   * Database port number.
+   */
+  port: number;
+
+  /**
+   * Database name.
+   */
+  database: string;
+
+  /**
+   * Database username.
+   */
+  username: string;
+
+  /**
+   * Database password.
+   */
+  password: string;
+
+  /**
+   * Whether to use SSL for database connections.
+   */
+  ssl?: boolean;
+}
+
+/**
  * Configuration for the agent registry.
  */
 export interface AgentRegistryConfig {
@@ -289,6 +324,26 @@ export interface AgentRegistryConfig {
    * Interval in milliseconds for running cleanup operations.
    */
   cleanupIntervalMs: number;
+
+  /**
+   * Database configuration for persistence.
+   */
+  database?: DatabaseConfig;
+
+  /**
+   * Whether to enable database persistence.
+   */
+  enablePersistence: boolean;
+
+  /**
+   * Security configuration.
+   */
+  security?: any; // Will be imported from security module
+
+  /**
+   * Whether to enable security controls.
+   */
+  enableSecurity: boolean;
 }
 
 /**
@@ -336,6 +391,7 @@ export enum RegistryErrorType {
   INVALID_AGENT_DATA = "INVALID_AGENT_DATA",
   QUERY_FAILED = "QUERY_FAILED",
   UPDATE_FAILED = "UPDATE_FAILED",
+  DATABASE_ERROR = "DATABASE_ERROR",
 }
 
 /**

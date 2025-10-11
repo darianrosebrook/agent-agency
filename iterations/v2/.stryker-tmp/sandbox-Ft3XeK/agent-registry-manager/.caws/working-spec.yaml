@@ -1,0 +1,119 @@
+id: ARBITER-001
+title: Agent Registry Manager - Agent Catalog and Capability Tracking
+risk_tier: 2
+mode: feature
+change_budget:
+  max_files: 20
+  max_loc: 800
+blast_radius:
+  modules:
+    - src/orchestrator
+    - tests/unit/orchestrator
+  data_migration: true
+operational_rollback_slo: 5m
+threats:
+  - threat: Agent registry corruption leads to unavailable agents
+    likelihood: low
+    impact: high
+    mitigation: Implement backup, validation, and recovery procedures
+  - threat: Performance tracking data grows unbounded
+    likelihood: medium
+    impact: medium
+    mitigation: Implement retention policies and data aggregation
+scope:
+  in:
+    - src/orchestrator/AgentRegistryManager.ts
+    - src/orchestrator/AgentProfile.ts
+    - src/types/agent-registry.ts
+    - tests/unit/orchestrator/agent-registry-manager.test.ts
+    - migrations/001_create_agent_registry_tables.sql
+  out:
+    - node_modules/
+    - dist/
+    - coverage/
+    - iterations/poc/
+invariants:
+  - Agent profiles remain immutable after registration except for performance metrics
+  - Performance history updates are atomic and isolated per agent
+  - Registry queries never block agent registration operations
+  - All capability changes are versioned and auditable
+acceptance:
+  - id: A1
+    given: A new agent with defined capabilities
+    when: Agent registers with the registry
+    then: Agent profile is created with capability tracking initialized and agent is queryable
+  - id: A2
+    given: Agent registry contains multiple agents with varying capabilities
+    when: Query for agents by specific capability and task type
+    then: Agents matching criteria are returned sorted by performance history success rate
+  - id: A3
+    given: An agent completes a task with measurable performance metrics
+    when: Performance metrics are updated for the agent
+    then: Agent's running average performance history is computed correctly and persisted
+  - id: A4
+    given: Agent registry contains agents with current load information
+    when: Query for agents filters by utilization threshold
+    then: Only agents with utilization below threshold are returned
+  - id: A5
+    given: Agent registry is operational with active agents
+    when: Registry backup and recovery is triggered
+    then: Full registry state can be restored with zero data loss
+non_functional:
+  perf:
+    registry_query_p95_ms: 50
+    agent_registration_p95_ms: 100
+    performance_update_p95_ms: 30
+    concurrent_queries_per_sec: 2000
+  security:
+    - agent-identity-verification
+    - capability-tampering-prevention
+    - access-control-for-registry-operations
+  reliability:
+    registry_availability_sla: 99.9
+    data_durability: 99.999
+  scalability:
+    max_registered_agents: 1000
+    max_queries_per_second: 2000
+contracts:
+  - type: typescript-interface
+    path: src/types/agent-registry.ts
+    version: 1.0.0
+observability:
+  logs:
+    - agent_registration_events
+    - capability_query_operations
+    - performance_update_operations
+    - registry_health_checks
+  metrics:
+    - agent_registration_rate
+    - registry_query_latency_p95
+    - registry_query_throughput
+    - active_agent_count
+    - agent_utilization_average
+    - performance_update_frequency
+  traces:
+    - agent_registration_flow
+    - capability_matching_chain
+    - performance_update_transaction
+migrations:
+  - id: migration_001
+    description: Create agent registry tables with performance tracking
+    type: schema
+    requires_downtime: false
+    rollback_available: true
+rollback:
+  - strategy: database_rollback
+    description: Revert schema changes while preserving agent data
+    slo_minutes: 5
+    data_loss_risk: low
+ai_assessment:
+  confidence_level: 0.85
+  uncertainty_areas:
+    - Optimal data structure for high-frequency performance updates
+    - Retention policy for historical performance data
+  complexity_factors:
+    - Concurrent read/write patterns for registry and performance tracking
+    - Running average computation for performance metrics
+  risk_factors:
+    - Registry becomes bottleneck if query patterns are inefficient
+    - Performance tracking data growth could impact storage

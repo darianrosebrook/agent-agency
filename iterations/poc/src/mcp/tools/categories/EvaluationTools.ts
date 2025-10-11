@@ -154,7 +154,8 @@ export class EvaluationTools {
       },
       {
         name: "analyze_error_patterns",
-        description: "Analyze task failures to identify patterns and generate adaptive improvements",
+        description:
+          "Analyze task failures to identify patterns and generate adaptive improvements",
         inputSchema: {
           type: "object",
           properties: {
@@ -186,7 +187,8 @@ export class EvaluationTools {
       },
       {
         name: "get_error_analytics",
-        description: "Retrieve error pattern analytics and system-wide failure insights",
+        description:
+          "Retrieve error pattern analytics and system-wide failure insights",
         inputSchema: {
           type: "object",
           properties: {
@@ -508,12 +510,14 @@ export class EvaluationTools {
       response += `
 
 **Recommendations:**
-${analysis.recommendations.map(r => `- ${r}`).join("\n")}
+${analysis.recommendations.map((r) => `- ${r}`).join("\n")}
 
 **Adaptive Prompt Suggestion:**
 ${analysis.adaptivePrompt || "No specific prompt adaptations recommended"}`;
 
-      this.context.logger.info(`Error analysis completed for task ${args.taskId}`);
+      this.context.logger.info(
+        `Error analysis completed for task ${args.taskId}`
+      );
 
       return {
         content: [
@@ -567,30 +571,37 @@ ${analysis.adaptivePrompt || "No specific prompt adaptations recommended"}`;
 - Average confidence: ${(analytics.averageConfidence * 100).toFixed(1)}%
 
 **Top Error Patterns:**
-${analytics.topPatterns.slice(0, 5).map((p, i) =>
-  `${i + 1}. ${p.pattern} (${p.category}) - ${p.frequency} occurrences`
-).join("\n")}
+${analytics.topPatterns
+  .slice(0, 5)
+  .map(
+    (p, i) =>
+      `${i + 1}. ${p.pattern} (${p.category}) - ${p.frequency} occurrences`
+  )
+  .join("\n")}
 
 **Category Breakdown:**
-${Object.entries(analytics.categoryBreakdown).map(([category, count]) =>
-  `- ${category}: ${count} patterns`
-).join("\n")}
+${Object.entries(analytics.categoryBreakdown)
+  .map(([category, count]) => `- ${category}: ${count} patterns`)
+  .join("\n")}
 
 **Severity Distribution:**
-${Object.entries(analytics.severityDistribution).map(([severity, count]) =>
-  `- ${severity}: ${count} failures`
-).join("\n")}`;
+${Object.entries(analytics.severityDistribution)
+  .map(([severity, count]) => `- ${severity}: ${count} failures`)
+  .join("\n")}`;
 
       if (args.includePatterns) {
         response += `
 
 **Detailed Pattern Analysis:**
-${analytics.topPatterns.map(p =>
-  `\n**${p.pattern}** (${p.category})
+${analytics.topPatterns
+  .map(
+    (p) =>
+      `\n**${p.pattern}** (${p.category})
 - Frequency: ${p.frequency}
 - Category: ${p.category}
 - Affected tasks: ${p.frequency} (estimated)`
-).join("")}`;
+  )
+  .join("")}`;
       }
 
       this.context.logger.info("Error analytics retrieved");

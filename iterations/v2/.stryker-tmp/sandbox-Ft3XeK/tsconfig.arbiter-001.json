@@ -1,0 +1,32 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist-arbiter-001",
+    "noEmit": false
+  },
+  "include": [
+    "src/types/agent-registry.ts",
+    "src/orchestrator/AgentRegistryManager.ts",
+    "src/orchestrator/AgentProfile.ts",
+    "src/database/AgentRegistryDatabaseClient.ts",
+    "src/security/AgentRegistrySecurity.ts",
+    "tests/unit/orchestrator/agent-registry-manager.test.ts",
+    "tests/unit/orchestrator/agent-profile.test.ts",
+    "tests/unit/security/agent-registry-security.test.ts",
+    "benchmarks/agent-registry-performance.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-arbiter-001",
+    "coverage",
+    ".stryker-tmp",
+    "src/orchestrator/TaskAssignment.ts",
+    "src/orchestrator/TaskQueue.ts",
+    "src/orchestrator/HealthMonitor.ts",
+    "src/orchestrator/RecoveryManager.ts",
+    "src/orchestrator/DatabaseClient.ts",
+    "src/orchestrator/TaskQueuePersistence.ts"
+  ]
+}
