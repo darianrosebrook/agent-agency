@@ -1256,5 +1256,39 @@
     },
     "previous_hash": "387de527c4b99636f11d3dfa15dd989b7cf5b8ac402a71bf98b2e9726f341bca",
     "hash": "c06f2bee9ce0466ccde474ad42ef88d39e023111f69b987411b301b891e7c08e"
+  },
+  {
+    "id": "prov-1760216623778",
+    "timestamp": "2025-10-11T21:03:43.778Z",
+    "commit": {
+      "hash": "1095acd4bb2454c0e6868c41b4e126bcf27405cc",
+      "message": "fix: resolve all remaining TypeScript compilation errors",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0001",
+      "title": "agent-agency",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-11T21:03:43.779Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "c06f2bee9ce0466ccde474ad42ef88d39e023111f69b987411b301b891e7c08e",
+    "hash": "08d8df20726db3088a2b1935da4f0e7e990dc7ca3e4e18a8e8f479681143092f"
   }
 ]
