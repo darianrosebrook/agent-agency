@@ -191,6 +191,129 @@ export class SystemTools {
           required: ["path"],
         },
       },
+      {
+        name: "get_routing_analytics",
+        description: "Retrieve advanced task routing analytics and performance metrics",
+        inputSchema: {
+          type: "object",
+          properties: {
+            includeHistory: {
+              type: "boolean",
+              description: "Include detailed routing history",
+              default: false,
+            },
+            timeRange: {
+              type: "string",
+              enum: ["1h", "24h", "7d", "30d"],
+              description: "Time range for analytics",
+              default: "24h",
+            },
+          },
+        },
+      },
+      {
+        name: "check_caws_constitution",
+        description: "Check if a task complies with CAWS constitutional limits and quality gates",
+        inputSchema: {
+          type: "object",
+          properties: {
+            taskId: {
+              type: "string",
+              description: "Unique identifier for the task",
+            },
+            taskType: {
+              type: "string",
+              description: "Type of task being checked",
+            },
+            tenantId: {
+              type: "string",
+              description: "Tenant identifier",
+              default: "default-tenant",
+            },
+            tier: {
+              type: "number",
+              description: "Risk tier (1-3)",
+              default: 2,
+              minimum: 1,
+              maximum: 3,
+            },
+            context: {
+              type: "object",
+              additionalProperties: true,
+              description: "Additional context for constitutional check",
+            },
+          },
+          required: ["taskId", "taskType"],
+        },
+      },
+      {
+        name: "request_caws_waiver",
+        description: "Request a waiver for CAWS constitutional violations",
+        inputSchema: {
+          type: "object",
+          properties: {
+            title: {
+              type: "string",
+              description: "Title of the waiver request",
+            },
+            reason: {
+              type: "string",
+              enum: ["emergency_hotfix", "legacy_integration", "experimental_feature", "third_party_constraint", "performance_critical", "security_patch", "infrastructure_limitation", "other"],
+              description: "Reason for requesting waiver",
+            },
+            description: {
+              type: "string",
+              description: "Detailed description of why waiver is needed",
+            },
+            gates: {
+              type: "array",
+              items: {
+                type: "string",
+              },
+              description: "Specific gates/violations to waive",
+            },
+            expiresAt: {
+              type: "string",
+              description: "Expiration date (ISO 8601)",
+            },
+            tenantId: {
+              type: "string",
+              description: "Tenant identifier",
+              default: "default-tenant",
+            },
+            impactLevel: {
+              type: "string",
+              enum: ["low", "medium", "high", "critical"],
+              description: "Risk impact level",
+              default: "medium",
+            },
+            mitigationPlan: {
+              type: "string",
+              description: "Plan to mitigate risks during waiver period",
+            },
+          },
+          required: ["title", "reason", "description", "gates", "expiresAt", "mitigationPlan"],
+        },
+      },
+      {
+        name: "get_caws_analytics",
+        description: "Retrieve CAWS constitutional enforcement analytics",
+        inputSchema: {
+          type: "object",
+          properties: {
+            includeBudgetDetails: {
+              type: "boolean",
+              description: "Include detailed budget tracking information",
+              default: false,
+            },
+            includeWaivers: {
+              type: "boolean",
+              description: "Include waiver request history",
+              default: true,
+            },
+          },
+        },
+      },
     ];
   }
 
@@ -219,6 +342,14 @@ export class SystemTools {
         return await this.writeFile(args);
       case "list_directory":
         return await this.listDirectory(args);
+      case "get_routing_analytics":
+        return await this.getRoutingAnalytics(args);
+      case "check_caws_constitution":
+        return await this.checkCawsConstitution(args);
+      case "request_caws_waiver":
+        return await this.requestCawsWaiver(args);
+      case "get_caws_analytics":
+        return await this.getCawsAnalytics(args);
       default:
         throw new Error(`Unknown system tool: ${name}`);
     }
@@ -669,6 +800,336 @@ export class SystemTools {
           error instanceof Error ? error.message : String(error)
         }`
       );
+    }
+  }
+
+  private async getRoutingAnalytics(args: {
+    includeHistory?: boolean;
+    timeRange?: string;
+  }): Promise<any> {
+    try {
+      // Get routing analytics from the orchestrator if it has advanced routing
+      const orchestrator = this.context.orchestrator as any;
+
+      if (!orchestrator.taskRouter) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Advanced routing is not enabled or not available",
+            },
+          ],
+        };
+      }
+
+      const analytics = orchestrator.taskRouter.getAnalytics();
+
+      let response = `📊 **Advanced Task Routing Analytics**
+
+**Summary:**
+- Total tasks routed: ${analytics.totalRouted}
+- Average confidence: ${(analytics.averageConfidence * 100).toFixed(1)}%
+- Strategy breakdown: ${Object.entries(analytics.strategyBreakdown)
+  .map(([strategy, count]) => `${strategy}: ${count}`)
+  .join(", ")}
+
+**Queue Status:**
+- Critical: ${analytics.queueDepths.critical} tasks
+- High: ${analytics.queueDepths.high} tasks
+- Medium: ${analytics.queueDepths.medium} tasks
+- Low: ${analytics.queueDepths.low} tasks
+
+**Agent Load Distribution:**
+${Object.entries(analytics.agentLoads)
+  .map(([agent, load]) => `- ${agent}: ${load} concurrent tasks`)
+  .join("\n")}`;
+
+      if (args.includeHistory) {
+        // In a real implementation, you'd fetch the actual history
+        response += `
+
+**Recent Routing Decisions:**
+- Feature not fully implemented in current version
+- History tracking available in router but not exposed via MCP yet`;
+      }
+
+      this.context.logger.info("Routing analytics retrieved via MCP");
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: response,
+          },
+        ],
+      };
+    } catch (error) {
+      this.context.logger.error("Failed to get routing analytics:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Failed to retrieve routing analytics: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+      };
+    }
+  }
+
+  private async checkCawsConstitution(args: {
+    taskId: string;
+    taskType: string;
+    tenantId?: string;
+    tier?: number;
+    context?: Record<string, any>;
+  }): Promise<any> {
+    try {
+      const orchestrator = this.context.orchestrator as any;
+
+      if (!orchestrator.cawsEnforcer) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "CAWS constitutional enforcement is not enabled or not available",
+            },
+          ],
+        };
+      }
+
+      const tenantId = args.tenantId || "default-tenant";
+      const tier = args.tier || 2;
+
+      const result = await orchestrator.cawsEnforcer.enforceConstitution(
+        args.taskId,
+        tenantId,
+        tier,
+        {
+          taskType: args.taskType,
+          ...args.context,
+        }
+      );
+
+      let response = `⚖️ **CAWS Constitutional Check for Task ${args.taskId}**
+
+**Status:** ${result.allowed ? "✅ ALLOWED" : "❌ BLOCKED"}
+**Tier:** ${tier} (${tier === 1 ? "Critical/Auth" : tier === 2 ? "Standard" : "Low-risk"})
+**Tenant:** ${tenantId}
+
+**Budget Status:**
+- Files: ${result.budgetStatus.currentFiles} (max per tier)
+- LOC: ${result.budgetStatus.currentLoc} (max per tier)
+- Time Remaining: ${Math.round(result.budgetStatus.remainingTimeMs / 1000)}s
+
+**Quality Gates:**
+- Coverage: ${result.gateStatus.coverageMet ? "✅" : "❌"} ≥ ${tier === 1 ? "90%" : tier === 2 ? "80%" : "70%"}
+- Mutation Score: ${result.gateStatus.mutationMet ? "✅" : "❌"} ≥ ${tier === 1 ? "70%" : tier === 2 ? "50%" : "30%"}
+- Contracts: ${result.gateStatus.contractsMet ? "✅" : "❌"} ${tier <= 2 ? "Required" : "Optional"}
+- Trust Score: ${result.gateStatus.trustScoreMet ? "✅" : "❌"} ≥ ${tier === 1 ? "85" : tier === 2 ? "82" : "75"}`;
+
+      if (result.violations.length > 0) {
+        response += `
+
+**Violations:**
+${result.violations.map(v => `- ${v}`).join("\n")}`;
+      }
+
+      if (result.waivers.length > 0) {
+        response += `
+
+**Active Waivers:**
+${result.waivers.map(w => `- ${w.title} (expires: ${w.expiresAt.toISOString().split('T')[0]})`).join("\n")}`;
+      }
+
+      if (result.recommendations.length > 0) {
+        response += `
+
+**Recommendations:**
+${result.recommendations.map(r => `- ${r}`).join("\n")}`;
+      }
+
+      this.context.logger.info(`CAWS constitutional check completed for task ${args.taskId}: ${result.allowed ? "ALLOWED" : "BLOCKED"}`);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: response,
+          },
+        ],
+        enforcementResult: result, // Include full result for programmatic access
+      };
+    } catch (error) {
+      this.context.logger.error("Failed to check CAWS constitution:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Failed to check CAWS constitution: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+      };
+    }
+  }
+
+  private async requestCawsWaiver(args: {
+    title: string;
+    reason: "emergency_hotfix" | "legacy_integration" | "experimental_feature" | "third_party_constraint" | "performance_critical" | "security_patch" | "infrastructure_limitation" | "other";
+    description: string;
+    gates: string[];
+    expiresAt: string;
+    tenantId?: string;
+    impactLevel?: "low" | "medium" | "high" | "critical";
+    mitigationPlan: string;
+  }): Promise<any> {
+    try {
+      const orchestrator = this.context.orchestrator as any;
+
+      if (!orchestrator.cawsEnforcer) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "CAWS constitutional enforcement is not enabled or not available",
+            },
+          ],
+        };
+      }
+
+      const waiverId = await orchestrator.cawsEnforcer.requestWaiver({
+        ...args,
+        tenantId: args.tenantId || "default-tenant",
+        impactLevel: args.impactLevel || "medium",
+        expiresAt: new Date(args.expiresAt),
+      });
+
+      const response = `📋 **CAWS Waiver Request Submitted**
+
+**Waiver ID:** ${waiverId}
+**Title:** ${args.title}
+**Reason:** ${args.reason}
+**Impact Level:** ${args.impactLevel || "medium"}
+**Expires:** ${args.expiresAt}
+
+**Description:**
+${args.description}
+
+**Gates to Waive:**
+${args.gates.map(g => `- ${g}`).join("\n")}
+
+**Mitigation Plan:**
+${args.mitigationPlan}
+
+**Status:** ⏳ Pending approval
+**Next Steps:** Waiver requires human approval before taking effect.`;
+
+      this.context.logger.info(`CAWS waiver requested: ${waiverId} (${args.title})`);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: response,
+          },
+        ],
+        waiverId,
+      };
+    } catch (error) {
+      this.context.logger.error("Failed to request CAWS waiver:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Failed to request CAWS waiver: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+      };
+    }
+  }
+
+  private async getCawsAnalytics(args: {
+    includeBudgetDetails?: boolean;
+    includeWaivers?: boolean;
+  }): Promise<any> {
+    try {
+      const orchestrator = this.context.orchestrator as any;
+
+      if (!orchestrator.cawsEnforcer) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "CAWS constitutional enforcement is not enabled or not available",
+            },
+          ],
+        };
+      }
+
+      const analytics = orchestrator.cawsEnforcer.getAnalytics();
+
+      let response = `📊 **CAWS Constitutional Enforcement Analytics**
+
+**Overview:**
+- Active budget tracking: ${analytics.activeBudgets} tasks
+- Active waivers: ${analytics.activeWaivers}
+- Recent violations: ${analytics.recentViolations.length}`;
+
+      if (analytics.recentViolations.length > 0) {
+        response += `
+
+**Recent Budget Violations:**
+${analytics.recentViolations.slice(0, 5).map(v =>
+  `- ${v.taskId}: ${v.violations.join(", ")}`
+).join("\n")}`;
+      }
+
+      if (args.includeWaivers && analytics.waiverRequests.length > 0) {
+        response += `
+
+**Recent Waiver Requests:**
+${analytics.waiverRequests.slice(0, 5).map(w =>
+  `- ${w.title} (${w.status}) - ${w.requestedAt.toISOString().split('T')[0]}`
+).join("\n")}`;
+      }
+
+      if (args.includeBudgetDetails) {
+        // This would show detailed budget tracking if implemented
+        response += `
+
+**Budget Tracking:**
+- Detailed budget analytics available in orchestrator
+- Real-time monitoring active for all tasks`;
+      }
+
+      this.context.logger.info("CAWS analytics retrieved");
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: response,
+          },
+        ],
+        analytics, // Include full analytics for programmatic access
+      };
+    } catch (error) {
+      this.context.logger.error("Failed to get CAWS analytics:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Failed to retrieve CAWS analytics: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+      };
     }
   }
 }

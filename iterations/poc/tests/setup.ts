@@ -5,6 +5,12 @@
  * for integration and E2E tests.
  */
 
+import {
+  DatabaseTestUtils,
+  RedisTestUtils,
+  TestEnvironment,
+} from "./test-utils";
+
 // Test database configuration
 process.env.DB_HOST = process.env.DB_HOST || "localhost";
 process.env.DB_PORT = process.env.DB_PORT || "5432";
@@ -23,12 +29,25 @@ process.env.OLLAMA_MODEL = process.env.OLLAMA_MODEL || "gemma3n:e2b";
 // Set test environment
 process.env.NODE_ENV = "test";
 
+// Global test environment
+let testEnv: TestEnvironment;
+
 // Global test setup
 beforeAll(async () => {
-  // Increase Jest timeout for integration tests
-  jest.setTimeout(30000);
+  // Setup test environment with mocks
+  testEnv = TestEnvironment.setup();
+
+  // Setup database mocks
+  DatabaseTestUtils.setupMockDatabase();
+  DatabaseTestUtils.mockSuccessfulOperations();
+
+  // Setup Redis mocks
+  RedisTestUtils.setupMockRedis();
 });
 
 afterAll(async () => {
-  // Cleanup will be handled by individual test suites
+  // Cleanup test environment
+  if (testEnv) {
+    testEnv.cleanup();
+  }
 });

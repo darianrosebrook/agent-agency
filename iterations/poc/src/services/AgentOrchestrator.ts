@@ -16,6 +16,9 @@ import {
 } from "../types/index";
 import { Logger } from "../utils/Logger";
 import { MultiTenantMemoryManager } from "../memory/MultiTenantMemoryManager";
+import { AdvancedTaskRouter, RoutingConfig } from "./AdvancedTaskRouter.js";
+import { ErrorPatternAnalyzer } from "./ErrorPatternAnalyzer.js";
+import { CawsConstitutionalEnforcer } from "./CawsConstitutionalEnforcer.js";
 
 export interface MemoryAwareAgentOrchestratorConfig extends AgentOrchestratorConfig {
   memoryEnabled: boolean;
@@ -23,6 +26,11 @@ export interface MemoryAwareAgentOrchestratorConfig extends AgentOrchestratorCon
   defaultTenantId?: string;
   experienceLearningEnabled: boolean;
   memoryBasedRoutingEnabled: boolean;
+  advancedRoutingEnabled: boolean;
+  routingConfig?: Partial<RoutingConfig>;
+  errorAnalysisEnabled: boolean;
+  cawsEnforcementEnabled: boolean;
+  defaultTier: number;
 }
 
 export class AgentOrchestrator {
@@ -32,6 +40,9 @@ export class AgentOrchestrator {
   private tasks: Map<string, Task> = new Map();
   private isInitialized = false;
   private memoryManager?: MultiTenantMemoryManager;
+  private taskRouter?: AdvancedTaskRouter;
+  private errorAnalyzer?: ErrorPatternAnalyzer;
+  private cawsEnforcer?: CawsConstitutionalEnforcer;
 
   constructor(config?: Partial<MemoryAwareAgentOrchestratorConfig>) {
     this.logger = new Logger("AgentOrchestrator");
@@ -43,6 +54,10 @@ export class AgentOrchestrator {
       memoryEnabled: true,
       experienceLearningEnabled: true,
       memoryBasedRoutingEnabled: true,
+      advancedRoutingEnabled: true,
+      errorAnalysisEnabled: true,
+      cawsEnforcementEnabled: true,
+      defaultTier: 2,
       defaultTenantId: 'default-tenant',
       ...config,
     };
@@ -64,12 +79,88 @@ export class AgentOrchestrator {
       await this.initializeMemorySystem();
     }
 
+    // Initialize advanced task router if enabled
+    if (this.config.advancedRoutingEnabled) {
+      await this.initializeTaskRouter();
+    }
+
+    // Initialize error pattern analyzer if enabled
+    if (this.config.errorAnalysisEnabled) {
+      await this.initializeErrorAnalyzer();
+    }
+
+    // Initialize CAWS constitutional enforcer if enabled
+    if (this.config.cawsEnforcementEnabled) {
+      await this.initializeCawsEnforcer();
+    }
+
     // TODO: Initialize agent registry
     // TODO: Set up task queue
     // TODO: Start health monitoring
 
     this.isInitialized = true;
     this.logger.info("Agent Orchestrator initialized successfully");
+  }
+
+  /**
+   * Initialize the advanced task router
+   */
+  private async initializeTaskRouter(): Promise<void> {
+    try {
+      this.logger.info("Initializing advanced task router...");
+
+      const routingConfig: RoutingConfig = {
+        enabled: true,
+        priorityQueuing: true,
+        predictiveRouting: true,
+        loadBalancing: true,
+        memoryAwareRouting: this.config.memoryBasedRoutingEnabled,
+        maxConcurrentTasksPerAgent: this.config.maxConcurrentTasks,
+        routingHistoryWindow: 7, // 7 days
+        performancePredictionEnabled: true,
+        queueTimeoutMs: 300000, // 5 minutes
+        ...this.config.routingConfig,
+      };
+
+      this.taskRouter = new AdvancedTaskRouter(routingConfig, this.memoryManager);
+
+      this.logger.info("Advanced task router initialized successfully");
+    } catch (error) {
+      this.logger.error("Failed to initialize task router:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Initialize the error pattern analyzer
+   */
+  private async initializeErrorAnalyzer(): Promise<void> {
+    try {
+      this.logger.info("Initializing error pattern analyzer...");
+
+      this.errorAnalyzer = new ErrorPatternAnalyzer(this.memoryManager);
+
+      this.logger.info("Error pattern analyzer initialized successfully");
+    } catch (error) {
+      this.logger.error("Failed to initialize error analyzer:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Initialize the CAWS constitutional enforcer
+   */
+  private async initializeCawsEnforcer(): Promise<void> {
+    try {
+      this.logger.info("Initializing CAWS constitutional enforcer...");
+
+      this.cawsEnforcer = new CawsConstitutionalEnforcer(this.memoryManager);
+
+      this.logger.info("CAWS constitutional enforcer initialized successfully");
+    } catch (error) {
+      this.logger.error("Failed to initialize CAWS enforcer:", error);
+      throw error;
+    }
   }
 
   /**
@@ -177,10 +268,37 @@ export class AgentOrchestrator {
       tenantId?: string;
       useMemoryRouting?: boolean;
       context?: TaskContext;
+      tier?: number;
+      skipConstitutionCheck?: boolean;
     }
   ): Promise<string> {
     const taskId = this.generateId();
     const now = new Date();
+    const tenantId = options?.tenantId || this.config.defaultTenantId || 'default-tenant';
+    const tier = options?.tier || this.config.defaultTier || 2;
+
+    // Enforce CAWS constitution before task creation
+    if (this.config.cawsEnforcementEnabled && this.cawsEnforcer && !options?.skipConstitutionCheck) {
+      const enforcement = await this.cawsEnforcer.enforceConstitution(
+        taskId,
+        tenantId,
+        tier,
+        {
+          taskType: task.type,
+          description: task.description,
+          priority: task.priority,
+          ...options?.context,
+        }
+      );
+
+      if (!enforcement.allowed) {
+        const errorMsg = `CAWS Constitutional violation: ${enforcement.violations.join(", ")}`;
+        this.logger.warn(`Task ${taskId} blocked by CAWS constitution:`, enforcement.violations);
+        throw new Error(errorMsg);
+      }
+
+      this.logger.info(`Task ${taskId} passed CAWS constitutional check`);
+    }
 
     const newTask: Task = {
       ...task,
@@ -193,29 +311,43 @@ export class AgentOrchestrator {
     this.tasks.set(taskId, newTask);
     this.logger.info(`Submitted task: ${taskId} for agent: ${task.agentId}`);
 
-    // Memory-aware agent selection if enabled
-    if (this.config.memoryBasedRoutingEnabled && options?.useMemoryRouting !== false && this.memoryManager) {
+    // Start budget tracking for approved tasks
+    if (this.cawsEnforcer) {
+      this.cawsEnforcer.startBudgetTracking(taskId, tenantId, tier);
+    }
+
+    // Use advanced routing if available and enabled
+    if (this.config.advancedRoutingEnabled && this.taskRouter) {
       const tenantId = options?.tenantId || this.config.defaultTenantId || 'default-tenant';
       const context = options?.context || this.createTaskContext(newTask);
 
       try {
-        const optimalAgentId = await this.findOptimalAgentWithMemory(newTask, tenantId, context);
-        if (optimalAgentId && optimalAgentId !== task.agentId) {
-          // Update task with memory-recommended agent
-          newTask.agentId = optimalAgentId;
+        const routingDecision = await this.taskRouter.submitTask(newTask, tenantId, context);
+
+        // Update task with routing decision
+        if (routingDecision.selectedAgentId !== task.agentId) {
+          newTask.agentId = routingDecision.selectedAgentId;
           newTask.metadata = {
             ...newTask.metadata,
-            memoryRouted: true,
+            routed: true,
             originalAgentId: task.agentId,
-            routingReason: 'memory_based_optimization'
+            routingDecision,
+            routingStrategy: routingDecision.routingStrategy,
+            routingConfidence: routingDecision.confidence,
+            estimatedLatency: routingDecision.estimatedLatency,
+            expectedQuality: routingDecision.expectedQuality,
           };
           this.tasks.set(taskId, newTask);
-          this.logger.info(`Rerouted task ${taskId} to agent ${optimalAgentId} based on memory analysis`);
+          this.logger.info(`Advanced routing: Task ${taskId} assigned to ${routingDecision.selectedAgentId} (${routingDecision.routingStrategy}, ${(routingDecision.confidence * 100).toFixed(1)}% confidence)`);
         }
       } catch (error) {
-        this.logger.warn(`Memory-based routing failed for task ${taskId}:`, error);
-        // Continue with original agent assignment
+        this.logger.warn(`Advanced routing failed for task ${taskId}, falling back to basic routing:`, error);
+        // Fall back to basic memory routing
+        await this.fallbackMemoryRouting(newTask, taskId, options);
       }
+    } else if (this.config.memoryBasedRoutingEnabled && options?.useMemoryRouting !== false && this.memoryManager) {
+      // Fallback to basic memory routing
+      await this.fallbackMemoryRouting(newTask, taskId, options);
     }
 
     // TODO: Queue task for execution
@@ -250,9 +382,95 @@ export class AgentOrchestrator {
 
     this.logger.info(`Completed task: ${taskId} with outcome: ${outcome}`);
 
+    // Notify task router of completion for load tracking
+    if (this.taskRouter) {
+      this.taskRouter.taskCompleted(task.agentId);
+    }
+
+    // Analyze failures for pattern recognition if error analysis is enabled
+    if (outcome === 'failure' && this.errorAnalyzer && this.memoryManager) {
+      const tenantId = (task.metadata as any)?.tenantId || this.config.defaultTenantId || 'default-tenant';
+
+      try {
+        const error = typeof result === 'string' ? result :
+                     result?.error || result?.message || 'Unknown error';
+
+        const analysis = await this.errorAnalyzer.analyzeFailure(
+          taskId,
+          task.type,
+          error,
+          {
+            agentId: task.agentId,
+            taskMetadata: task.metadata,
+            result,
+            ...metadata
+          },
+          tenantId
+        );
+
+        // Store error analysis in task metadata
+        task.metadata = {
+          ...task.metadata,
+          errorAnalysis: analysis,
+        };
+
+        this.logger.info(`Error analysis completed for failed task ${taskId}: ${analysis.patterns.length} patterns identified`);
+      } catch (analysisError) {
+        this.logger.warn(`Error analysis failed for task ${taskId}:`, analysisError);
+        // Continue with normal completion even if analysis fails
+      }
+    }
+
+    // Stop budget tracking and update final usage
+    if (this.cawsEnforcer) {
+      // Estimate final usage from task metadata if available
+      const finalFiles = (task.metadata as any)?.finalFiles || 0;
+      const finalLoc = (task.metadata as any)?.finalLoc || 0;
+
+      this.cawsEnforcer.updateBudgetUsage(taskId, finalFiles, finalLoc, `Task ${outcome}`);
+      this.cawsEnforcer.stopBudgetTracking(taskId);
+    }
+
     // Learn from task outcome if memory system is enabled
     if (this.config.experienceLearningEnabled && this.memoryManager) {
       await this.learnFromTaskOutcome(task, result, outcome);
+    }
+  }
+
+  /**
+   * Fallback memory-based routing (original logic)
+   */
+  private async fallbackMemoryRouting(
+    task: Task,
+    taskId: string,
+    options?: {
+      tenantId?: string;
+      useMemoryRouting?: boolean;
+      context?: TaskContext;
+    }
+  ): Promise<void> {
+    if (!this.memoryManager) return;
+
+    const tenantId = options?.tenantId || this.config.defaultTenantId || 'default-tenant';
+    const context = options?.context || this.createTaskContext(task);
+
+    try {
+      const optimalAgentId = await this.findOptimalAgentWithMemory(task, tenantId, context);
+      if (optimalAgentId && optimalAgentId !== task.agentId) {
+        // Update task with memory-recommended agent
+        task.agentId = optimalAgentId;
+        task.metadata = {
+          ...task.metadata,
+          memoryRouted: true,
+          originalAgentId: task.agentId,
+          routingReason: 'memory_based_optimization'
+        };
+        this.tasks.set(taskId, task);
+        this.logger.info(`Memory routing: Task ${taskId} rerouted to agent ${optimalAgentId}`);
+      }
+    } catch (error) {
+      this.logger.warn(`Memory-based routing failed for task ${taskId}:`, error);
+      // Continue with original agent assignment
     }
   }
 

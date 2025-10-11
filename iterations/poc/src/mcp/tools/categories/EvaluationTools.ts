@@ -152,6 +152,58 @@ export class EvaluationTools {
           required: ["taskId", "taskType", "artifactPath"],
         },
       },
+      {
+        name: "analyze_error_patterns",
+        description: "Analyze task failures to identify patterns and generate adaptive improvements",
+        inputSchema: {
+          type: "object",
+          properties: {
+            taskId: {
+              type: "string",
+              description: "ID of the failed task to analyze",
+            },
+            taskType: {
+              type: "string",
+              description: "Type of task that failed",
+            },
+            error: {
+              type: "string",
+              description: "Error message or description",
+            },
+            context: {
+              type: "object",
+              additionalProperties: true,
+              description: "Additional context about the failure",
+            },
+            tenantId: {
+              type: "string",
+              description: "Tenant ID for contextual analysis",
+              default: "default-tenant",
+            },
+          },
+          required: ["taskId", "taskType", "error"],
+        },
+      },
+      {
+        name: "get_error_analytics",
+        description: "Retrieve error pattern analytics and system-wide failure insights",
+        inputSchema: {
+          type: "object",
+          properties: {
+            includePatterns: {
+              type: "boolean",
+              description: "Include detailed error patterns",
+              default: true,
+            },
+            timeRange: {
+              type: "string",
+              enum: ["1h", "24h", "7d", "30d"],
+              description: "Time range for analytics",
+              default: "24h",
+            },
+          },
+        },
+      },
     ];
   }
 
@@ -170,6 +222,10 @@ export class EvaluationTools {
         return await this.evaluateDesign(args);
       case "run_evaluation_loop":
         return await this.runEvaluationLoop(args);
+      case "analyze_error_patterns":
+        return await this.analyzeErrorPatterns(args);
+      case "get_error_analytics":
+        return await this.getErrorAnalytics(args);
       default:
         throw new Error(`Unknown evaluation tool: ${name}`);
     }
@@ -395,6 +451,171 @@ export class EvaluationTools {
     } catch (error) {
       this.context.logger.error("Failed to run evaluation loop:", error);
       throw error;
+    }
+  }
+
+  private async analyzeErrorPatterns(args: {
+    taskId: string;
+    taskType: string;
+    error: string;
+    context?: Record<string, any>;
+    tenantId?: string;
+  }): Promise<any> {
+    try {
+      const orchestrator = this.context.orchestrator as any;
+
+      if (!orchestrator.errorAnalyzer) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Error pattern analysis is not enabled or not available",
+            },
+          ],
+        };
+      }
+
+      const tenantId = args.tenantId || "default-tenant";
+
+      const analysis = await orchestrator.errorAnalyzer.analyzeFailure(
+        args.taskId,
+        args.taskType,
+        args.error,
+        args.context || {},
+        tenantId
+      );
+
+      let response = `🔍 **Error Pattern Analysis for Task ${args.taskId}**
+
+**Error:** ${args.error}
+**Task Type:** ${args.taskType}
+**Severity:** ${analysis.severity.toUpperCase()}
+**Confidence:** ${(analysis.confidence * 100).toFixed(1)}%
+
+**Identified Patterns:**`;
+
+      if (analysis.patterns.length === 0) {
+        response += "\n- No patterns identified (insufficient historical data)";
+      } else {
+        analysis.patterns.forEach((pattern, i) => {
+          response += `\n${i + 1}. **${pattern.pattern}** (${pattern.category})
+   - Frequency: ${pattern.frequency}
+   - Confidence: ${(pattern.confidence * 100).toFixed(1)}%
+   - Common Causes: ${pattern.commonCauses.slice(0, 2).join(", ")}`;
+        });
+      }
+
+      response += `
+
+**Recommendations:**
+${analysis.recommendations.map(r => `- ${r}`).join("\n")}
+
+**Adaptive Prompt Suggestion:**
+${analysis.adaptivePrompt || "No specific prompt adaptations recommended"}`;
+
+      this.context.logger.info(`Error analysis completed for task ${args.taskId}`);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: response,
+          },
+        ],
+        analysis, // Include full analysis for programmatic access
+      };
+    } catch (error) {
+      this.context.logger.error("Failed to analyze error patterns:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Failed to analyze error patterns: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+      };
+    }
+  }
+
+  private async getErrorAnalytics(args: {
+    includePatterns?: boolean;
+    timeRange?: string;
+  }): Promise<any> {
+    try {
+      const orchestrator = this.context.orchestrator as any;
+
+      if (!orchestrator.errorAnalyzer) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Error analytics are not enabled or not available",
+            },
+          ],
+        };
+      }
+
+      const analytics = orchestrator.errorAnalyzer.getAnalytics();
+
+      let response = `📊 **Error Pattern Analytics**
+
+**Overview:**
+- Total patterns identified: ${analytics.totalPatterns}
+- Recent failures analyzed: ${analytics.recentFailures}
+- Average confidence: ${(analytics.averageConfidence * 100).toFixed(1)}%
+
+**Top Error Patterns:**
+${analytics.topPatterns.slice(0, 5).map((p, i) =>
+  `${i + 1}. ${p.pattern} (${p.category}) - ${p.frequency} occurrences`
+).join("\n")}
+
+**Category Breakdown:**
+${Object.entries(analytics.categoryBreakdown).map(([category, count]) =>
+  `- ${category}: ${count} patterns`
+).join("\n")}
+
+**Severity Distribution:**
+${Object.entries(analytics.severityDistribution).map(([severity, count]) =>
+  `- ${severity}: ${count} failures`
+).join("\n")}`;
+
+      if (args.includePatterns) {
+        response += `
+
+**Detailed Pattern Analysis:**
+${analytics.topPatterns.map(p =>
+  `\n**${p.pattern}** (${p.category})
+- Frequency: ${p.frequency}
+- Category: ${p.category}
+- Affected tasks: ${p.frequency} (estimated)`
+).join("")}`;
+      }
+
+      this.context.logger.info("Error analytics retrieved");
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: response,
+          },
+        ],
+        analytics, // Include full analytics for programmatic access
+      };
+    } catch (error) {
+      this.context.logger.error("Failed to get error analytics:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Failed to retrieve error analytics: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+      };
     }
   }
 }

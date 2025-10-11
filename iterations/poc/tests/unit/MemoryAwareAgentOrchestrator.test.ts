@@ -26,7 +26,7 @@ describe("MemoryAwareAgentOrchestrator", () => {
   };
 
   beforeEach(() => {
-    mockLogger = {
+    _mockLogger = {
       info: jest.fn(),
       warn: jest.fn(),
       error: jest.fn(),
