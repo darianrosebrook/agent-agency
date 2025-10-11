@@ -61,7 +61,7 @@ Generates training data for RL pipeline:
 ### Agent Registry Manager
 
 > **Implementation Status**: ✅ **COMPLETE AND TESTED**  
-> **Specification**: `agent-registry-manager/.caws/working-spec.yaml` (ARBITER-001)  
+> **Specification**: `components/agent-registry-manager/.caws/working-spec.yaml` (ARBITER-001)  
 > **Code**: `src/orchestrator/AgentRegistryManager.ts`  
 > **Types**: `src/types/agent-registry.ts`  
 > **Tests**: `tests/unit/orchestrator/agent-registry-manager.test.ts` (20/20 passing)
@@ -131,7 +131,7 @@ class AgentRegistryManager {
 ### Task Routing Manager
 
 > **Implementation Status**: 📋 Specification complete, implementation planned  
-> **Specification**: `task-routing-manager/.caws/working-spec.yaml` (ARBITER-002)  
+> **Specification**: `components/task-routing-manager/.caws/working-spec.yaml` (ARBITER-002)  
 > **Dependencies**: Requires ARBITER-001 ✅
 
 **Purpose**: Intelligent task-to-agent assignment
@@ -251,7 +251,7 @@ class MultiArmedBandit {
 ### CAWS Validator
 
 > **Implementation Status**: 📋 Specification complete, implementation planned  
-> **Specification**: `caws-validator/.caws/working-spec.yaml` (ARBITER-003)  
+> **Specification**: `components/caws-validator/.caws/working-spec.yaml` (ARBITER-003)  
 > **Risk Tier**: 1 (Critical) - Requires manual review
 
 **Purpose**: Enforce constitutional rules

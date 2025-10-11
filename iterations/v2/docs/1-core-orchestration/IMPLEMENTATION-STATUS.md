@@ -42,7 +42,7 @@
 
 - `ARBITER-001-COMPLETE.md` - Implementation guide
 - `ARBITER-001-TEST-RESULTS.md` - Test validation
-- `agent-registry-manager/.caws/working-spec.yaml` - CAWS specification
+- `components/agent-registry-manager/.caws/working-spec.yaml` - CAWS specification
 
 **Total**: 1,991 lines of production code and tests
 

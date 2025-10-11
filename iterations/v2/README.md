@@ -25,8 +25,8 @@ Agent Agency V2 transforms the POC foundation into a production-ready agentic sy
 
 V2 includes comprehensive CAWS working specifications for all core arbiter components:
 
-- **[SPECS-INDEX.md](./SPECS-INDEX.md)** - Quick reference for all component specs
-- **[ARBITER-SPECS-SUMMARY.md](./ARBITER-SPECS-SUMMARY.md)** - Detailed overview with architecture diagrams
+- **[V2 Specs Status](./docs/status/V2-SPECS-ACTUAL-STATUS.md)** - Current status of all component specs
+- **[Implementation Index](./docs/status/IMPLEMENTATION-INDEX.md)** - Quick reference for all components
 
 ### Core Components
 
@@ -38,7 +38,7 @@ V2 includes comprehensive CAWS working specifications for all core arbiter compo
 | Performance Tracker    | ARBITER-004 | T2        | ✅ Spec Complete |
 | Arbiter Orchestrator   | ARBITER-005 | T1        | ✅ Spec Complete |
 
-See [SPECS-INDEX.md](./SPECS-INDEX.md) for detailed specifications and validation status.
+See [V2 Specs Status](./docs/status/V2-SPECS-ACTUAL-STATUS.md) for detailed specifications and validation status.
 
 ---
 
@@ -158,13 +158,25 @@ const enhancedModel = await toolTrainer.rlFineTuning(warmedModel, examples);
 
 ```
 iterations/v2/
-├── src/
+├── components/             # Component spec workspaces (CAWS working specs)
+│   ├── agent-registry-manager/
+│   ├── task-routing-manager/
+│   ├── caws-validator/
+│   └── ... (14 components total)
+├── src/                    # Consolidated implementation
+│   ├── orchestrator/       # Agent registry, routing, orchestration
+│   ├── knowledge/          # Knowledge seeker implementation
 │   ├── rl/                 # Agentic RL training system
 │   ├── thinking/           # Budgeted thinking management
-│   └── evaluation/         # Enhanced evaluation with model judges
+│   ├── evaluation/         # Enhanced evaluation with model judges
+│   └── types/              # Shared type definitions
 ├── tests/                  # Comprehensive test suite
 ├── docs/                   # Technical documentation
-└── .caws/                  # Working specifications
+│   ├── status/             # Implementation status reports
+│   └── 1-core-orchestration/ # Architecture docs
+├── logs/                   # Output logs
+├── test-results/           # Test artifacts and coverage
+└── scripts/                # Build and utility scripts
 ```
 
 ### Integration Points

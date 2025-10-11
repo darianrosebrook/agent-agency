@@ -17,11 +17,11 @@ This document maps concepts from `docs/1-core-orchestration/theory.md` and `arbi
 | Component              | Theory Section        | Spec ID     | Status       | Location                                   |
 | ---------------------- | --------------------- | ----------- | ------------ | ------------------------------------------ |
 | Agent Registry Manager | Model-Agnostic Design | ARBITER-001 | ✅ Complete  | `src/orchestrator/AgentRegistryManager.ts` |
-| Task Routing Manager   | Orchestration Model   | ARBITER-002 | 📋 Spec only | `task-routing-manager/.caws/`              |
+| Task Routing Manager   | Orchestration Model   | ARBITER-002 | 📋 Spec only | `components/task-routing-manager/.caws/`   |
 | Multi-Armed Bandit     | Performance Tracking  | ARBITER-002 | 📋 Spec only | (Part of routing)                          |
-| CAWS Validator         | CAWS Protocol         | ARBITER-003 | 📋 Spec only | `caws-validator/.caws/`                    |
-| Performance Tracker    | Reflexive Learning    | ARBITER-004 | 📋 Spec only | `performance-tracker/.caws/`               |
-| Arbiter Orchestrator   | Orchestration Model   | ARBITER-005 | 📋 Spec only | `arbiter-orchestrator/.caws/`              |
+| CAWS Validator         | CAWS Protocol         | ARBITER-003 | 📋 Spec only | `components/caws-validator/.caws/`         |
+| Performance Tracker    | Reflexive Learning    | ARBITER-004 | 📋 Spec only | `components/performance-tracker/.caws/`    |
+| Arbiter Orchestrator   | Orchestration Model   | ARBITER-005 | 📋 Spec only | `components/arbiter-orchestrator/.caws/`   |
 
 ---
 
@@ -851,11 +851,11 @@ console.log(
 
 ### Specifications
 
-- **agent-registry-manager/.caws/working-spec.yaml** - CAWS spec for ARBITER-001
-- **task-routing-manager/.caws/working-spec.yaml** - CAWS spec for ARBITER-002
-- **caws-validator/.caws/working-spec.yaml** - CAWS spec for ARBITER-003
-- **performance-tracker/.caws/working-spec.yaml** - CAWS spec for ARBITER-004
-- **arbiter-orchestrator/.caws/working-spec.yaml** - CAWS spec for ARBITER-005
+- **components/agent-registry-manager/.caws/working-spec.yaml** - CAWS spec for ARBITER-001
+- **components/task-routing-manager/.caws/working-spec.yaml** - CAWS spec for ARBITER-002
+- **components/caws-validator/.caws/working-spec.yaml** - CAWS spec for ARBITER-003
+- **components/performance-tracker/.caws/working-spec.yaml** - CAWS spec for ARBITER-004
+- **components/arbiter-orchestrator/.caws/working-spec.yaml** - CAWS spec for ARBITER-005
 
 ---
 

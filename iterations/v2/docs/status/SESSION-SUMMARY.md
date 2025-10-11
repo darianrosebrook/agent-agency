@@ -13,13 +13,13 @@
 
 All five core arbiter components now have validated CAWS working specifications:
 
-| Component              | Spec ID     | Risk Tier | Location                        | Status       |
-| ---------------------- | ----------- | --------- | ------------------------------- | ------------ |
-| Agent Registry Manager | ARBITER-001 | T2        | `agent-registry-manager/.caws/` | ✅ Validated |
-| Task Routing Manager   | ARBITER-002 | T2        | `task-routing-manager/.caws/`   | ✅ Validated |
-| CAWS Validator         | ARBITER-003 | T1        | `caws-validator/.caws/`         | ✅ Validated |
-| Performance Tracker    | ARBITER-004 | T2        | `performance-tracker/.caws/`    | ✅ Validated |
-| Arbiter Orchestrator   | ARBITER-005 | T1        | `arbiter-orchestrator/.caws/`   | ✅ Validated |
+| Component              | Spec ID     | Risk Tier | Location                                   | Status       |
+| ---------------------- | ----------- | --------- | ------------------------------------------ | ------------ |
+| Agent Registry Manager | ARBITER-001 | T2        | `components/agent-registry-manager/.caws/` | ✅ Validated |
+| Task Routing Manager   | ARBITER-002 | T2        | `components/task-routing-manager/.caws/`   | ✅ Validated |
+| CAWS Validator         | ARBITER-003 | T1        | `components/caws-validator/.caws/`         | ✅ Validated |
+| Performance Tracker    | ARBITER-004 | T2        | `components/performance-tracker/.caws/`    | ✅ Validated |
+| Arbiter Orchestrator   | ARBITER-005 | T1        | `components/arbiter-orchestrator/.caws/`   | ✅ Validated |
 
 **Total Acceptance Criteria**: 34 across all components  
 **Total Change Budget**: 130 files, 5,100 LOC  
@@ -343,11 +343,11 @@ ARBITER-001 meets all CAWS requirements:
 
 ### Specifications (5 files)
 
-1. `agent-registry-manager/.caws/working-spec.yaml`
-2. `task-routing-manager/.caws/working-spec.yaml`
-3. `caws-validator/.caws/working-spec.yaml`
-4. `performance-tracker/.caws/working-spec.yaml`
-5. `arbiter-orchestrator/.caws/working-spec.yaml`
+1. `components/agent-registry-manager/.caws/working-spec.yaml`
+2. `components/task-routing-manager/.caws/working-spec.yaml`
+3. `components/caws-validator/.caws/working-spec.yaml`
+4. `components/performance-tracker/.caws/working-spec.yaml`
+5. `components/arbiter-orchestrator/.caws/working-spec.yaml`
 
 ### Implementation (3 files)
 

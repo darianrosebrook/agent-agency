@@ -2211,7 +2211,7 @@ This section maps theory concepts to concrete CAWS working specifications and im
 
 ### Agent Registry System
 
-**CAWS Spec**: [ARBITER-001: Agent Registry Manager](./../../../agent-registry-manager/.caws/working-spec.yaml)  
+**CAWS Spec**: [ARBITER-001: Agent Registry Manager](./../../../components/agent-registry-manager/.caws/working-spec.yaml)  
 **Implementation**: `src/orchestrator/AgentRegistryManager.ts`, `src/types/agent-registry.ts`  
 **Status**: ✅ **Fully Implemented** - Complete with performance tracking and capability management
 
@@ -2262,13 +2262,13 @@ This section maps theory concepts to concrete CAWS working specifications and im
 
 **Documentation**:
 
-- Specification: `agent-registry-manager/.caws/working-spec.yaml`
+- Specification: `components/agent-registry-manager/.caws/working-spec.yaml`
 - Implementation guide: `ARBITER-001-COMPLETE.md`
 - Test results: `ARBITER-001-TEST-RESULTS.md`
 
 ### Task Routing with Multi-Armed Bandit
 
-**CAWS Spec**: [ARBITER-002: Task Routing Manager](./../../../task-routing-manager/.caws/working-spec.yaml)  
+**CAWS Spec**: [ARBITER-002: Task Routing Manager](./../../../components/task-routing-manager/.caws/working-spec.yaml)  
 **Implementation**: `src/orchestrator/TaskRoutingManager.ts`, `src/orchestrator/MultiArmedBandit.ts`  
 **Status**: ⚠️ **Spec Complete** - Ready for implementation (Week 2 in roadmap)
 
@@ -2284,7 +2284,7 @@ This section maps theory concepts to concrete CAWS working specifications and im
 
 ### CAWS Constitutional Authority
 
-**CAWS Spec**: [ARBITER-003: CAWS Validator](./../../../caws-validator/.caws/working-spec.yaml)  
+**CAWS Spec**: [ARBITER-003: CAWS Validator](./../../../components/caws-validator/.caws/working-spec.yaml)  
 **Implementation**: `src/orchestrator/CAWSValidator.ts`, `src/caws/BudgetEnforcer.ts`  
 **Status**: ⚠️ **Spec Complete** - Ready for implementation (Week 3 in roadmap)
 
@@ -2341,7 +2341,7 @@ This ensures agents are rewarded for **constitutional compliance**, teaching mod
 
 ### Main Orchestrator Integration
 
-**CAWS Spec**: [ARBITER-005: Arbiter Orchestrator](./../../../arbiter-orchestrator/.caws/working-spec.yaml)  
+**CAWS Spec**: [ARBITER-005: Arbiter Orchestrator](./../../../components/arbiter-orchestrator/.caws/working-spec.yaml)  
 **Implementation**: `src/orchestrator/ArbiterOrchestrator.ts`, `src/orchestrator/TaskQueue.ts`  
 **Status**: ⚠️ **Spec Complete** - Ready for implementation (Week 1 in roadmap)
 
@@ -2457,25 +2457,25 @@ This ensures agents are rewarded for **constitutional compliance**, teaching mod
 
 ### Phase 1: Foundation (Weeks 1-4)
 
-- ✅ **Week 1**: [ARBITER-005](./../../../arbiter-orchestrator/.caws/working-spec.yaml) (Arbiter Orchestrator) - Spec Complete
-- ✅ **Week 2**: [ARBITER-002](./../../../task-routing-manager/.caws/working-spec.yaml) (Task Routing Manager) - Spec Complete
-- ✅ **Week 3**: [ARBITER-003](./../../../caws-validator/.caws/working-spec.yaml) (CAWS Validator) - Spec Complete
-- ✅ **Week 4**: [ARBITER-004](./../../../performance-tracker/.caws/working-spec.yaml) (Performance Tracker) - Spec Complete
+- ✅ **Week 1**: [ARBITER-005](./../../../components/arbiter-orchestrator/.caws/working-spec.yaml) (Arbiter Orchestrator) - Spec Complete
+- ✅ **Week 2**: [ARBITER-002](./../../../components/task-routing-manager/.caws/working-spec.yaml) (Task Routing Manager) - Spec Complete
+- ✅ **Week 3**: [ARBITER-003](./../../../components/caws-validator/.caws/working-spec.yaml) (CAWS Validator) - Spec Complete
+- ✅ **Week 4**: [ARBITER-004](./../../../components/performance-tracker/.caws/working-spec.yaml) (Performance Tracker) - Spec Complete
 
 ### Phase 2: Advanced Features (Weeks 5-8)
 
-- [ARBITER-011](./../../../system-health-monitor/.caws/working-spec.yaml): System Health Monitor (Circuit breakers, predictive monitoring)
-- [ARBITER-010](./../../../workspace-state-manager/.caws/working-spec.yaml): Workspace State Manager (File operations, dependency tracking)
-- [ARBITER-009](./../../../multi-turn-learning-coordinator/.caws/working-spec.yaml): Multi-Turn Learning Coordinator (Iterative agent learning)
-- [ARBITER-012](./../../../context-preservation-engine/.caws/working-spec.yaml): Context Preservation Engine (Long-running task state)
+- [ARBITER-011](./../../../components/system-health-monitor/.caws/working-spec.yaml): System Health Monitor (Circuit breakers, predictive monitoring)
+- [ARBITER-010](./../../../components/workspace-state-manager/.caws/working-spec.yaml): Workspace State Manager (File operations, dependency tracking)
+- [ARBITER-009](./../../../components/multi-turn-learning-coordinator/.caws/working-spec.yaml): Multi-Turn Learning Coordinator (Iterative agent learning)
+- [ARBITER-012](./../../../components/context-preservation-engine/.caws/working-spec.yaml): Context Preservation Engine (Long-running task state)
 
 ### Phase 3: Intelligence & Security (Weeks 9-12)
 
-- [ARBITER-006](./../../../knowledge-seeker/.caws/working-spec.yaml): Knowledge Seeker (Information gathering, research capabilities)
-- [ARBITER-007](./../../../verification-engine/.caws/working-spec.yaml): Verification Engine (Fact-checking, credibility scoring)
-- [ARBITER-008](./../../../web-navigator/.caws/working-spec.yaml): Web Navigator (Web search, content extraction)
-- [ARBITER-013](./../../../security-policy-enforcer/.caws/working-spec.yaml): Security Policy Enforcer (Access control, tenant isolation)
-- [ARBITER-014](./../../../task-runner/.caws/working-spec.yaml): Task Runner (Worker agent execution, constitutional pleading)
+- [ARBITER-006](./../../../components/knowledge-seeker/.caws/working-spec.yaml): Knowledge Seeker (Information gathering, research capabilities)
+- [ARBITER-007](./../../../components/verification-engine/.caws/working-spec.yaml): Verification Engine (Fact-checking, credibility scoring)
+- [ARBITER-008](./../../../components/web-navigator/.caws/working-spec.yaml): Web Navigator (Web search, content extraction)
+- [ARBITER-013](./../../../components/security-policy-enforcer/.caws/working-spec.yaml): Security Policy Enforcer (Access control, tenant isolation)
+- [ARBITER-014](./../../../components/task-runner/.caws/working-spec.yaml): Task Runner (Worker agent execution, constitutional pleading)
 
 ---
 
@@ -2808,7 +2808,7 @@ Throughout this theory document, look for **[Implementation: ...]** markers that
 
 - Complete implementation: `ARBITER-001-COMPLETE.md`
 - Test results: `ARBITER-001-TEST-RESULTS.md`
-- Specifications: `agent-registry-manager/.caws/working-spec.yaml`
+- Specifications: `components/agent-registry-manager/.caws/working-spec.yaml`
 - Architecture: `arbiter-architecture.md`
 - Roadmap: `implementation-roadmap.md`
 
