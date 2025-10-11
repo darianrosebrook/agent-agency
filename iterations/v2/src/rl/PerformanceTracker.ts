@@ -9,6 +9,7 @@
  * Now integrates with comprehensive benchmarking system (ARBITER-004).
  */
 
+import { DataCollector } from "../benchmarking/DataCollector";
 import {
   PerformanceEvent,
   RoutingDecision,
@@ -16,16 +17,14 @@ import {
   Timestamp,
 } from "../types/agentic-rl";
 import {
-  DataCollectionConfig,
-  PerformanceEventType,
-  LatencyMetrics,
   AccuracyMetrics,
-  ResourceMetrics,
   ComplianceMetrics,
   CostMetrics,
+  DataCollectionConfig,
+  LatencyMetrics,
   ReliabilityMetrics,
+  ResourceMetrics,
 } from "../types/performance-tracking";
-import { DataCollector } from "../benchmarking/DataCollector";
 
 /**
  * Configuration for the performance tracker.
@@ -191,7 +190,9 @@ export class PerformanceTracker {
         samplingRate: 1.0, // Legacy system collected all events
         maxBufferSize: this.config.maxEventsInMemory,
         batchSize: this.config.batchSize,
-        retentionDays: Math.ceil(this.config.retentionPeriodMs / (24 * 60 * 60 * 1000)),
+        retentionDays: Math.ceil(
+          this.config.retentionPeriodMs / (24 * 60 * 60 * 1000)
+        ),
         anonymization: {
           enabled: this.config.anonymizeData,
           level: "basic", // Legacy system used basic anonymization
@@ -203,7 +204,10 @@ export class PerformanceTracker {
       this.dataCollector = new DataCollector(dataCollectorConfig);
     } catch (error) {
       // Graceful degradation - continue with legacy system if new system fails
-      console.warn("Failed to initialize benchmarking integration, using legacy system:", error);
+      console.warn(
+        "Failed to initialize benchmarking integration, using legacy system:",
+        error
+      );
     }
   }
 
@@ -256,10 +260,11 @@ export class PerformanceTracker {
     // Also send to new benchmarking system
     if (this.dataCollector) {
       try {
-        const alternatives = decision.alternativesConsidered?.map(alt => ({
-          agentId: alt.agentId,
-          score: alt.score,
-        })) || [];
+        const alternatives =
+          decision.alternativesConsidered?.map((alt) => ({
+            agentId: alt.agentId,
+            score: alt.score,
+          })) || [];
 
         await this.dataCollector.recordRoutingDecision(
           decision.taskId,
@@ -273,7 +278,10 @@ export class PerformanceTracker {
         );
       } catch (error) {
         // Graceful degradation - log but don't fail
-        console.warn("Failed to record routing decision in benchmarking system:", error);
+        console.warn(
+          "Failed to record routing decision in benchmarking system:",
+          error
+        );
       }
     }
   }
@@ -320,7 +328,10 @@ export class PerformanceTracker {
       try {
         this.dataCollector.recordTaskStart(taskId, agentId, context);
       } catch (error) {
-        console.warn("Failed to record task start in benchmarking system:", error);
+        console.warn(
+          "Failed to record task start in benchmarking system:",
+          error
+        );
       }
     }
 
@@ -349,7 +360,9 @@ export class PerformanceTracker {
       execution.outcome = outcome;
       execution.completedAt = new Date().toISOString();
 
-      const durationMs = new Date(execution.completedAt).getTime() - new Date(execution.startedAt).getTime();
+      const durationMs =
+        new Date(execution.completedAt).getTime() -
+        new Date(execution.startedAt).getTime();
 
       // Legacy event format for backward compatibility
       const event: PerformanceEvent = {
@@ -370,7 +383,10 @@ export class PerformanceTracker {
       if (this.dataCollector) {
         try {
           // Convert legacy outcome to comprehensive performance metrics
-          const performanceMetrics = this.convertOutcomeToPerformanceMetrics(outcome, durationMs);
+          const performanceMetrics = this.convertOutcomeToPerformanceMetrics(
+            outcome,
+            durationMs
+          );
 
           await this.dataCollector.recordTaskCompletion(
             execution.taskId,
@@ -384,7 +400,10 @@ export class PerformanceTracker {
             }
           );
         } catch (error) {
-          console.warn("Failed to record task completion in benchmarking system:", error);
+          console.warn(
+            "Failed to record task completion in benchmarking system:",
+            error
+          );
         }
       }
     }
@@ -657,7 +676,12 @@ export class PerformanceTracker {
     durationMs: number
   ): Partial<import("../types/performance-tracking").PerformanceMetrics> {
     const success = outcome.success !== false; // Default to true if not specified
-    const qualityScore = typeof outcome.qualityScore === "number" ? outcome.qualityScore : (success ? 0.8 : 0.2);
+    const qualityScore =
+      typeof outcome.qualityScore === "number"
+        ? outcome.qualityScore
+        : success
+        ? 0.8
+        : 0.2;
 
     // Basic latency metrics
     const latencyMetrics: Partial<LatencyMetrics> = {

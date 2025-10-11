@@ -9,15 +9,15 @@
  */
 
 import { EventEmitter } from "events";
+import { Timestamp } from "../types/agent-registry";
 import {
   AgentPerformanceProfile,
-  PerformanceAnomaly,
-  PerformanceTrend,
-  MetricCategory,
-  PerformanceMetrics,
   AnalysisConfig,
+  MetricCategory,
+  PerformanceAnomaly,
+  PerformanceMetrics,
+  PerformanceTrend,
 } from "../types/performance-tracking";
-import { Timestamp } from "../types/agent-registry";
 
 /**
  * Default analysis configuration.
@@ -117,9 +117,7 @@ export class PerformanceAnalyzer extends EventEmitter {
    * @param profiles - Agent performance profiles to analyze
    * @returns Analysis results and detected anomalies
    */
-  async analyzePerformance(
-    profiles: AgentPerformanceProfile[]
-  ): Promise<{
+  async analyzePerformance(profiles: AgentPerformanceProfile[]): Promise<{
     trendResults: TrendAnalysisResult[];
     newAnomalies: PerformanceAnomaly[];
     resolvedAnomalies: PerformanceAnomaly[];
@@ -153,7 +151,7 @@ export class PerformanceAnalyzer extends EventEmitter {
         for (const anomaly of agentAnomalies) {
           // Check if this anomaly is new
           const existingAnomaly = this.activeAnomalies.find(
-            a => a.id === anomaly.id
+            (a) => a.id === anomaly.id
           );
 
           if (!existingAnomaly) {
@@ -168,7 +166,9 @@ export class PerformanceAnalyzer extends EventEmitter {
 
         // Remove resolved anomalies from active list
         for (const resolved of agentResolved) {
-          const index = this.activeAnomalies.findIndex(a => a.id === resolved.id);
+          const index = this.activeAnomalies.findIndex(
+            (a) => a.id === resolved.id
+          );
           if (index !== -1) {
             this.activeAnomalies.splice(index, 1);
           }
@@ -188,7 +188,6 @@ export class PerformanceAnalyzer extends EventEmitter {
         resolvedAnomalies: resolvedAnomalies.length,
         analysisTimeMs: analysisTime,
       });
-
     } catch (error) {
       this.emit("analysis_error", error);
     }
@@ -210,15 +209,16 @@ export class PerformanceAnalyzer extends EventEmitter {
     let anomalies = this.activeAnomalies;
 
     if (agentId) {
-      anomalies = anomalies.filter(a => a.agentId === agentId);
+      anomalies = anomalies.filter((a) => a.agentId === agentId);
     }
 
     if (severity) {
-      anomalies = anomalies.filter(a => a.severity === severity);
+      anomalies = anomalies.filter((a) => a.severity === severity);
     }
 
-    return anomalies.sort((a, b) =>
-      new Date(b.detectedAt).getTime() - new Date(a.detectedAt).getTime()
+    return anomalies.sort(
+      (a, b) =>
+        new Date(b.detectedAt).getTime() - new Date(a.detectedAt).getTime()
     );
   }
 
@@ -230,7 +230,10 @@ export class PerformanceAnalyzer extends EventEmitter {
    */
   getTrendAnalysis(agentId: string): TrendAnalysisResult | null {
     const state = this.analysisStates.get(agentId);
-    if (!state || state.recentMetrics.length < this.config.trendAnalysis.minDataPoints) {
+    if (
+      !state ||
+      state.recentMetrics.length < this.config.trendAnalysis.minDataPoints
+    ) {
       return null;
     }
 
@@ -244,12 +247,15 @@ export class PerformanceAnalyzer extends EventEmitter {
   getAnalysisStats() {
     const agentsTracked = this.analysisStates.size;
     const totalAnomalies = this.activeAnomalies.length;
-    const criticalAnomalies = this.activeAnomalies.filter(a => a.severity === "critical").length;
+    const criticalAnomalies = this.activeAnomalies.filter(
+      (a) => a.severity === "critical"
+    ).length;
 
     const anomalyBreakdown = {
-      low: this.activeAnomalies.filter(a => a.severity === "low").length,
-      medium: this.activeAnomalies.filter(a => a.severity === "medium").length,
-      high: this.activeAnomalies.filter(a => a.severity === "high").length,
+      low: this.activeAnomalies.filter((a) => a.severity === "low").length,
+      medium: this.activeAnomalies.filter((a) => a.severity === "medium")
+        .length,
+      high: this.activeAnomalies.filter((a) => a.severity === "high").length,
       critical: criticalAnomalies,
     };
 
@@ -311,7 +317,9 @@ export class PerformanceAnalyzer extends EventEmitter {
 
       // Update baseline metrics periodically (every 24 hours worth of data)
       if (state.recentMetrics.length % 24 === 0) {
-        state.baselineMetrics = this.calculateBaselineMetrics(state.recentMetrics);
+        state.baselineMetrics = this.calculateBaselineMetrics(
+          state.recentMetrics
+        );
       }
     }
   }
@@ -327,7 +335,9 @@ export class PerformanceAnalyzer extends EventEmitter {
       return null;
     }
 
-    const metrics = state.recentMetrics.slice(-this.config.trendAnalysis.minDataPoints);
+    const metrics = state.recentMetrics.slice(
+      -this.config.trendAnalysis.minDataPoints
+    );
     const startTime = metrics[0].lastUpdated;
     const endTime = metrics[metrics.length - 1].lastUpdated;
 
@@ -336,12 +346,28 @@ export class PerformanceAnalyzer extends EventEmitter {
 
     // Analyze trends for each metric category
     const metricTrends: Record<MetricCategory, PerformanceTrend> = {
-      latency: this.calculateMetricTrend(metrics, "latency", m => m.latency.averageMs),
+      latency: this.calculateMetricTrend(
+        metrics,
+        "latency",
+        (m) => m.latency.averageMs
+      ),
       throughput: this.calculateThroughputTrend(metrics), // Special case
-      accuracy: this.calculateMetricTrend(metrics, "accuracy", m => m.accuracy.successRate),
+      accuracy: this.calculateMetricTrend(
+        metrics,
+        "accuracy",
+        (m) => m.accuracy.successRate
+      ),
       resource_utilization: this.calculateResourceTrend(metrics),
-      constitutional_compliance: this.calculateMetricTrend(metrics, "compliance", m => m.compliance.validationPassRate),
-      cost_efficiency: this.calculateMetricTrend(metrics, "cost", m => m.cost.efficiencyScore),
+      constitutional_compliance: this.calculateMetricTrend(
+        metrics,
+        "compliance",
+        (m) => m.compliance.validationPassRate
+      ),
+      cost_efficiency: this.calculateMetricTrend(
+        metrics,
+        "cost",
+        (m) => m.cost.efficiencyScore
+      ),
       reliability: this.calculateReliabilityTrend(metrics),
     };
 
@@ -368,7 +394,9 @@ export class PerformanceAnalyzer extends EventEmitter {
   /**
    * Calculates overall performance trend across all metrics.
    */
-  private calculateOverallTrend(metrics: AgentPerformanceProfile[]): PerformanceTrend {
+  private calculateOverallTrend(
+    metrics: AgentPerformanceProfile[]
+  ): PerformanceTrend {
     // Simplified: weight different aspects of performance
     const weights = {
       accuracy: 0.4,
@@ -377,7 +405,7 @@ export class PerformanceAnalyzer extends EventEmitter {
       cost: 0.1,
     };
 
-    const scores = metrics.map(m => ({
+    const scores = metrics.map((m) => ({
       accuracy: m.metrics.accuracy.successRate,
       latency: 1 / (1 + m.metrics.latency.averageMs / 1000), // Normalize latency
       compliance: m.metrics.compliance.validationPassRate,
@@ -386,13 +414,12 @@ export class PerformanceAnalyzer extends EventEmitter {
     }));
 
     // Calculate weighted score for each data point
-    const weightedScores = scores.map(s => ({
-      score: (
+    const weightedScores = scores.map((s) => ({
+      score:
         weights.accuracy * s.accuracy +
         weights.latency * s.latency +
         weights.compliance * s.compliance +
-        weights.cost * s.cost
-      ),
+        weights.cost * s.cost,
       timestamp: s.timestamp,
     }));
 
@@ -402,26 +429,32 @@ export class PerformanceAnalyzer extends EventEmitter {
   /**
    * Calculates trend for a specific metric.
    */
-  private calculateMetricTrend<T>(
+  private calculateMetricTrend(
     metrics: AgentPerformanceProfile[],
     category: keyof PerformanceMetrics,
     extractor: (m: PerformanceMetrics) => number
   ): PerformanceTrend {
-    const values = metrics.map(m => ({
+    const values = metrics.map((m) => ({
       value: extractor(m.metrics[category] as any),
       timestamp: new Date(m.lastUpdated).getTime(),
     }));
 
-    return this.calculateLinearTrend(values.map(v => ({ score: v.value, timestamp: v.timestamp })));
+    return this.calculateLinearTrend(
+      values.map((v) => ({ score: v.value, timestamp: v.timestamp }))
+    );
   }
 
   /**
    * Calculates throughput trend (derived metric).
    */
-  private calculateThroughputTrend(metrics: AgentPerformanceProfile[]): PerformanceTrend {
+  private calculateThroughputTrend(
+    metrics: AgentPerformanceProfile[]
+  ): PerformanceTrend {
     // Throughput is derived from latency and success rate
-    const values = metrics.map(m => ({
-      score: m.metrics.accuracy.successRate / (1 + m.metrics.latency.averageMs / 1000),
+    const values = metrics.map((m) => ({
+      score:
+        m.metrics.accuracy.successRate /
+        (1 + m.metrics.latency.averageMs / 1000),
       timestamp: new Date(m.lastUpdated).getTime(),
     }));
 
@@ -431,14 +464,16 @@ export class PerformanceAnalyzer extends EventEmitter {
   /**
    * Calculates resource utilization trend.
    */
-  private calculateResourceTrend(metrics: AgentPerformanceProfile[]): PerformanceTrend {
-    const values = metrics.map(m => ({
-      score: (
-        m.metrics.resources.cpuUtilizationPercent +
-        m.metrics.resources.memoryUtilizationPercent +
-        m.metrics.resources.networkIoKbps +
-        m.metrics.resources.diskIoKbps
-      ) / 400, // Normalize to 0-1
+  private calculateResourceTrend(
+    metrics: AgentPerformanceProfile[]
+  ): PerformanceTrend {
+    const values = metrics.map((m) => ({
+      score:
+        (m.metrics.resources.cpuUtilizationPercent +
+          m.metrics.resources.memoryUtilizationPercent +
+          m.metrics.resources.networkIoKbps +
+          m.metrics.resources.diskIoKbps) /
+        400, // Normalize to 0-1
       timestamp: new Date(m.lastUpdated).getTime(),
     }));
 
@@ -448,13 +483,15 @@ export class PerformanceAnalyzer extends EventEmitter {
   /**
    * Calculates reliability trend.
    */
-  private calculateReliabilityTrend(metrics: AgentPerformanceProfile[]): PerformanceTrend {
-    const values = metrics.map(m => ({
-      score: (
-        m.metrics.reliability.availabilityPercent / 100 +
-        (1 - m.metrics.reliability.errorRatePercent / 100) +
-        m.metrics.reliability.mtbfHours / 168 // Normalize to week
-      ) / 3,
+  private calculateReliabilityTrend(
+    metrics: AgentPerformanceProfile[]
+  ): PerformanceTrend {
+    const values = metrics.map((m) => ({
+      score:
+        (m.metrics.reliability.availabilityPercent / 100 +
+          (1 - m.metrics.reliability.errorRatePercent / 100) +
+          m.metrics.reliability.mtbfHours / 168) / // Normalize to week
+        3,
       timestamp: new Date(m.lastUpdated).getTime(),
     }));
 
@@ -464,7 +501,9 @@ export class PerformanceAnalyzer extends EventEmitter {
   /**
    * Calculates linear trend from time series data.
    */
-  private calculateLinearTrend(data: Array<{ score: number; timestamp: number }>): PerformanceTrend {
+  private calculateLinearTrend(
+    data: Array<{ score: number; timestamp: number }>
+  ): PerformanceTrend {
     if (data.length < 2) {
       return {
         direction: "stable",
@@ -475,12 +514,12 @@ export class PerformanceAnalyzer extends EventEmitter {
     }
 
     const n = data.length;
-    const timestamps = data.map(d => d.timestamp);
-    const scores = data.map(d => d.score);
+    const timestamps = data.map((d) => d.timestamp);
+    const scores = data.map((d) => d.score);
 
     // Normalize timestamps to hours from start
     const startTime = Math.min(...timestamps);
-    const hours = timestamps.map(t => (t - startTime) / (1000 * 60 * 60));
+    const hours = timestamps.map((t) => (t - startTime) / (1000 * 60 * 60));
 
     // Calculate linear regression
     const sumX = hours.reduce((sum, x) => sum + x, 0);
@@ -497,13 +536,18 @@ export class PerformanceAnalyzer extends EventEmitter {
       const predicted = slope * hours[i] + intercept;
       return sum + Math.pow(score - predicted, 2);
     }, 0);
-    const ssTot = scores.reduce((sum, score) => sum + Math.pow(score - yMean, 2), 0);
-    const rSquared = ssTot > 0 ? 1 - (ssRes / ssTot) : 0;
+    const ssTot = scores.reduce(
+      (sum, score) => sum + Math.pow(score - yMean, 2),
+      0
+    );
+    const rSquared = ssTot > 0 ? 1 - ssRes / ssTot : 0;
 
-    const direction = slope > 0.001 ? "improving" : slope < -0.001 ? "declining" : "stable";
+    const direction =
+      slope > 0.001 ? "improving" : slope < -0.001 ? "declining" : "stable";
     const magnitude = Math.abs(slope);
     const confidence = Math.sqrt(Math.max(0, rSquared));
-    const timeWindowHours = (Math.max(...timestamps) - startTime) / (1000 * 60 * 60);
+    const timeWindowHours =
+      (Math.max(...timestamps) - startTime) / (1000 * 60 * 60);
 
     return {
       direction: direction as "improving" | "declining" | "stable",
@@ -516,9 +560,12 @@ export class PerformanceAnalyzer extends EventEmitter {
   /**
    * Calculates confidence score for trend analysis.
    */
-  private calculateTrendConfidence(metricTrends: Record<MetricCategory, PerformanceTrend>): number {
-    const confidences = Object.values(metricTrends).map(t => t.confidence);
-    const avgConfidence = confidences.reduce((sum, c) => sum + c, 0) / confidences.length;
+  private calculateTrendConfidence(
+    metricTrends: Record<MetricCategory, PerformanceTrend>
+  ): number {
+    const confidences = Object.values(metricTrends).map((t) => t.confidence);
+    const avgConfidence =
+      confidences.reduce((sum, c) => sum + c, 0) / confidences.length;
     const minConfidence = Math.min(...confidences);
 
     // Return weighted average favoring minimum confidence
@@ -563,16 +610,27 @@ export class PerformanceAnalyzer extends EventEmitter {
     const currentLatency = profile.metrics.latency.p95Ms;
     const baselineLatency = state.baselineMetrics.latency.p95Ms;
 
-    if (currentLatency > baselineLatency * this.config.anomalyThresholds.latencySpikeMultiplier) {
-      const degradationPercent = ((currentLatency - baselineLatency) / baselineLatency) * 100;
+    if (
+      currentLatency >
+      baselineLatency * this.config.anomalyThresholds.latencySpikeMultiplier
+    ) {
+      const degradationPercent =
+        ((currentLatency - baselineLatency) / baselineLatency) * 100;
 
       return {
         id: `latency_spike_${profile.agentId}_${Date.now()}`,
         type: "latency_spike",
-        severity: currentLatency > this.config.alertThresholds.criticalLatencyMs ? "critical" : "high",
+        severity:
+          currentLatency > this.config.alertThresholds.criticalLatencyMs
+            ? "critical"
+            : "high",
         agentId: profile.agentId,
         detectedAt: new Date().toISOString(),
-        description: `Latency spike detected: ${currentLatency.toFixed(0)}ms (baseline: ${baselineLatency.toFixed(0)}ms, +${degradationPercent.toFixed(1)}%)`,
+        description: `Latency spike detected: ${currentLatency.toFixed(
+          0
+        )}ms (baseline: ${baselineLatency.toFixed(
+          0
+        )}ms, +${degradationPercent.toFixed(1)}%)`,
         impact: {
           affectedTasksPerHour: Math.floor(3600000 / currentLatency), // Rough estimate
           performanceDegradationPercent: degradationPercent,
@@ -605,10 +663,17 @@ export class PerformanceAnalyzer extends EventEmitter {
       return {
         id: `accuracy_drop_${profile.agentId}_${Date.now()}`,
         type: "accuracy_drop",
-        severity: dropPercent > this.config.alertThresholds.criticalAccuracyDropPercent ? "critical" : "high",
+        severity:
+          dropPercent > this.config.alertThresholds.criticalAccuracyDropPercent
+            ? "critical"
+            : "high",
         agentId: profile.agentId,
         detectedAt: new Date().toISOString(),
-        description: `Accuracy drop detected: ${currentAccuracy.toFixed(1)}% (baseline: ${baselineAccuracy.toFixed(1)}%, -${dropPercent.toFixed(1)}%)`,
+        description: `Accuracy drop detected: ${currentAccuracy.toFixed(
+          1
+        )}% (baseline: ${baselineAccuracy.toFixed(1)}%, -${dropPercent.toFixed(
+          1
+        )}%)`,
         impact: {
           affectedTasksPerHour: Math.floor(dropPercent * 10), // Rough estimate
           performanceDegradationPercent: dropPercent,
@@ -634,17 +699,28 @@ export class PerformanceAnalyzer extends EventEmitter {
     state: AgentAnalysisState
   ): PerformanceAnomaly | null {
     const currentErrorRate = profile.metrics.reliability.errorRatePercent;
-    const baselineErrorRate = state.baselineMetrics.reliability.errorRatePercent;
+    const baselineErrorRate =
+      state.baselineMetrics.reliability.errorRatePercent;
     const increasePercent = currentErrorRate - baselineErrorRate;
 
-    if (increasePercent > this.config.anomalyThresholds.errorRateIncreasePercent) {
+    if (
+      increasePercent > this.config.anomalyThresholds.errorRateIncreasePercent
+    ) {
       return {
         id: `error_rate_increase_${profile.agentId}_${Date.now()}`,
         type: "error_rate_increase",
-        severity: currentErrorRate > this.config.alertThresholds.criticalErrorRatePercent ? "critical" : "medium",
+        severity:
+          currentErrorRate >
+          this.config.alertThresholds.criticalErrorRatePercent
+            ? "critical"
+            : "medium",
         agentId: profile.agentId,
         detectedAt: new Date().toISOString(),
-        description: `Error rate increase detected: ${currentErrorRate.toFixed(1)}% (baseline: ${baselineErrorRate.toFixed(1)}%, +${increasePercent.toFixed(1)}%)`,
+        description: `Error rate increase detected: ${currentErrorRate.toFixed(
+          1
+        )}% (baseline: ${baselineErrorRate.toFixed(
+          1
+        )}%, +${increasePercent.toFixed(1)}%)`,
         impact: {
           affectedTasksPerHour: Math.floor(increasePercent * 100), // Rough estimate
           performanceDegradationPercent: increasePercent,
@@ -675,14 +751,19 @@ export class PerformanceAnalyzer extends EventEmitter {
       resources.memoryUtilizationPercent
     );
 
-    if (saturationPercent > this.config.anomalyThresholds.resourceSaturationPercent) {
+    if (
+      saturationPercent >
+      this.config.anomalyThresholds.resourceSaturationPercent
+    ) {
       return {
         id: `resource_saturation_${profile.agentId}_${Date.now()}`,
         type: "resource_saturation",
         severity: saturationPercent > 95 ? "critical" : "medium",
         agentId: profile.agentId,
         detectedAt: new Date().toISOString(),
-        description: `Resource saturation detected: ${saturationPercent.toFixed(1)}% utilization`,
+        description: `Resource saturation detected: ${saturationPercent.toFixed(
+          1
+        )}% utilization`,
         impact: {
           affectedTasksPerHour: Math.floor(saturationPercent), // Rough estimate
           performanceDegradationPercent: saturationPercent - 80, // Degradation above 80%
@@ -723,14 +804,16 @@ export class PerformanceAnalyzer extends EventEmitter {
 
         case "accuracy_drop":
           const currentAccuracy = profile.metrics.accuracy.successRate * 100;
-          const baselineAccuracy = state.baselineMetrics.accuracy.successRate * 100;
-          isResolved = (baselineAccuracy - currentAccuracy) < 5; // Within 5% of baseline
+          const baselineAccuracy =
+            state.baselineMetrics.accuracy.successRate * 100;
+          isResolved = baselineAccuracy - currentAccuracy < 5; // Within 5% of baseline
           break;
 
         case "error_rate_increase":
           const currentErrorRate = profile.metrics.reliability.errorRatePercent;
-          const baselineErrorRate = state.baselineMetrics.reliability.errorRatePercent;
-          isResolved = (currentErrorRate - baselineErrorRate) < 2; // Within 2% of baseline
+          const baselineErrorRate =
+            state.baselineMetrics.reliability.errorRatePercent;
+          isResolved = currentErrorRate - baselineErrorRate < 2; // Within 2% of baseline
           break;
 
         case "resource_saturation":
@@ -754,13 +837,19 @@ export class PerformanceAnalyzer extends EventEmitter {
   /**
    * Calculates baseline metrics from historical data.
    */
-  private calculateBaselineMetrics(profiles: AgentPerformanceProfile[]): PerformanceMetrics {
+  private calculateBaselineMetrics(
+    profiles: AgentPerformanceProfile[]
+  ): PerformanceMetrics {
     // Use median of recent profiles as baseline
-    const sortedProfiles = profiles.sort((a, b) =>
-      new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
+    const sortedProfiles = profiles.sort(
+      (a, b) =>
+        new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
     );
 
-    const recentProfiles = sortedProfiles.slice(0, Math.min(20, sortedProfiles.length));
+    const recentProfiles = sortedProfiles.slice(
+      0,
+      Math.min(20, sortedProfiles.length)
+    );
 
     return {
       latency: this.calculateMedianLatency(recentProfiles),
@@ -775,14 +864,20 @@ export class PerformanceAnalyzer extends EventEmitter {
   /**
    * Calculates median latency metrics.
    */
-  private calculateMedianLatency(profiles: AgentPerformanceProfile[]): import("../types/performance-tracking").LatencyMetrics {
-    const latencies = profiles.map(p => p.metrics.latency.averageMs).sort((a, b) => a - b);
+  private calculateMedianLatency(
+    profiles: AgentPerformanceProfile[]
+  ): import("../types/performance-tracking").LatencyMetrics {
+    const latencies = profiles
+      .map((p) => p.metrics.latency.averageMs)
+      .sort((a, b) => a - b);
     const mid = Math.floor(latencies.length / 2);
 
     return {
       averageMs: latencies[mid] || 0,
-      p95Ms: latencies[Math.floor(latencies.length * 0.95)] || latencies[mid] || 0,
-      p99Ms: latencies[Math.floor(latencies.length * 0.99)] || latencies[mid] || 0,
+      p95Ms:
+        latencies[Math.floor(latencies.length * 0.95)] || latencies[mid] || 0,
+      p99Ms:
+        latencies[Math.floor(latencies.length * 0.99)] || latencies[mid] || 0,
       minMs: latencies[0] || 0,
       maxMs: latencies[latencies.length - 1] || 0,
     };
@@ -791,8 +886,12 @@ export class PerformanceAnalyzer extends EventEmitter {
   /**
    * Calculates median accuracy metrics.
    */
-  private calculateMedianAccuracy(profiles: AgentPerformanceProfile[]): import("../types/performance-tracking").AccuracyMetrics {
-    const accuracies = profiles.map(p => p.metrics.accuracy.successRate).sort((a, b) => a - b);
+  private calculateMedianAccuracy(
+    profiles: AgentPerformanceProfile[]
+  ): import("../types/performance-tracking").AccuracyMetrics {
+    const accuracies = profiles
+      .map((p) => p.metrics.accuracy.successRate)
+      .sort((a, b) => a - b);
     const mid = Math.floor(accuracies.length / 2);
     const medianAccuracy = accuracies[mid] || 0;
 
@@ -807,11 +906,21 @@ export class PerformanceAnalyzer extends EventEmitter {
   /**
    * Calculates median resource metrics.
    */
-  private calculateMedianResources(profiles: AgentPerformanceProfile[]): import("../types/performance-tracking").ResourceMetrics {
-    const cpuValues = profiles.map(p => p.metrics.resources.cpuUtilizationPercent).sort((a, b) => a - b);
-    const memoryValues = profiles.map(p => p.metrics.resources.memoryUtilizationPercent).sort((a, b) => a - b);
-    const networkValues = profiles.map(p => p.metrics.resources.networkIoKbps).sort((a, b) => a - b);
-    const diskValues = profiles.map(p => p.metrics.resources.diskIoKbps).sort((a, b) => a - b);
+  private calculateMedianResources(
+    profiles: AgentPerformanceProfile[]
+  ): import("../types/performance-tracking").ResourceMetrics {
+    const cpuValues = profiles
+      .map((p) => p.metrics.resources.cpuUtilizationPercent)
+      .sort((a, b) => a - b);
+    const memoryValues = profiles
+      .map((p) => p.metrics.resources.memoryUtilizationPercent)
+      .sort((a, b) => a - b);
+    const networkValues = profiles
+      .map((p) => p.metrics.resources.networkIoKbps)
+      .sort((a, b) => a - b);
+    const diskValues = profiles
+      .map((p) => p.metrics.resources.diskIoKbps)
+      .sort((a, b) => a - b);
 
     const mid = Math.floor(profiles.length / 2);
 
@@ -826,8 +935,12 @@ export class PerformanceAnalyzer extends EventEmitter {
   /**
    * Calculates median compliance metrics.
    */
-  private calculateMedianCompliance(profiles: AgentPerformanceProfile[]): import("../types/performance-tracking").ComplianceMetrics {
-    const passRates = profiles.map(p => p.metrics.compliance.validationPassRate).sort((a, b) => a - b);
+  private calculateMedianCompliance(
+    profiles: AgentPerformanceProfile[]
+  ): import("../types/performance-tracking").ComplianceMetrics {
+    const passRates = profiles
+      .map((p) => p.metrics.compliance.validationPassRate)
+      .sort((a, b) => a - b);
     const mid = Math.floor(passRates.length / 2);
     const medianPassRate = passRates[mid] || 0;
 
@@ -841,32 +954,49 @@ export class PerformanceAnalyzer extends EventEmitter {
   /**
    * Calculates median cost metrics.
    */
-  private calculateMedianCost(profiles: AgentPerformanceProfile[]): import("../types/performance-tracking").CostMetrics {
-    const costs = profiles.map(p => p.metrics.cost.costPerTask).sort((a, b) => a - b);
-    const efficiencies = profiles.map(p => p.metrics.cost.efficiencyScore).sort((a, b) => a - b);
+  private calculateMedianCost(
+    profiles: AgentPerformanceProfile[]
+  ): import("../types/performance-tracking").CostMetrics {
+    const costs = profiles
+      .map((p) => p.metrics.cost.costPerTask)
+      .sort((a, b) => a - b);
+    const efficiencies = profiles
+      .map((p) => p.metrics.cost.efficiencyScore)
+      .sort((a, b) => a - b);
     const mid = Math.floor(costs.length / 2);
 
     return {
       costPerTask: costs[mid] || 0,
       efficiencyScore: efficiencies[mid] || 0,
-      resourceWastePercent: ((1 - (efficiencies[mid] || 0)) * 100),
+      resourceWastePercent: (1 - (efficiencies[mid] || 0)) * 100,
     };
   }
 
   /**
    * Calculates median reliability metrics.
    */
-  private calculateMedianReliability(profiles: AgentPerformanceProfile[]): import("../types/performance-tracking").ReliabilityMetrics {
-    const availabilities = profiles.map(p => p.metrics.reliability.availabilityPercent).sort((a, b) => a - b);
-    const errorRates = profiles.map(p => p.metrics.reliability.errorRatePercent).sort((a, b) => a - b);
-    const mtbfs = profiles.map(p => p.metrics.reliability.mtbfHours).sort((a, b) => a - b);
+  private calculateMedianReliability(
+    profiles: AgentPerformanceProfile[]
+  ): import("../types/performance-tracking").ReliabilityMetrics {
+    const availabilities = profiles
+      .map((p) => p.metrics.reliability.availabilityPercent)
+      .sort((a, b) => a - b);
+    const errorRates = profiles
+      .map((p) => p.metrics.reliability.errorRatePercent)
+      .sort((a, b) => a - b);
+    const mtbfs = profiles
+      .map((p) => p.metrics.reliability.mtbfHours)
+      .sort((a, b) => a - b);
     const mid = Math.floor(availabilities.length / 2);
 
     return {
       mtbfHours: mtbfs[mid] || 0,
       availabilityPercent: availabilities[mid] || 0,
       errorRatePercent: errorRates[mid] || 0,
-      recoveryTimeMinutes: Math.max(0, (100 - (availabilities[mid] || 100)) * 10), // Rough estimate
+      recoveryTimeMinutes: Math.max(
+        0,
+        (100 - (availabilities[mid] || 100)) * 10
+      ), // Rough estimate
     };
   }
 
@@ -888,19 +1018,15 @@ export class PerformanceAnalyzer extends EventEmitter {
    * Cleans up old analysis data.
    */
   private cleanupOldData(): void {
-    const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
-    const cutoffTime = Date.now() - maxAge;
-
     // Clean up old trend history
     for (const state of this.analysisStates.values()) {
-      state.trendHistory = state.trendHistory.filter(trend =>
-        // Keep trends from the last 30 days
-        true // Simplified - would need trend timestamps
+      state.trendHistory = state.trendHistory.filter(
+        (_trend) =>
+          // Keep trends from the last 30 days
+          true // Simplified - would need trend timestamps
       );
     }
 
-    // Clean up resolved anomalies older than 7 days
-    const anomalyCutoffTime = Date.now() - (7 * 24 * 60 * 60 * 1000);
     // Note: Active anomalies are kept until resolved
   }
 

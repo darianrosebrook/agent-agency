@@ -1,0 +1,183 @@
+id: ARBITER-005
+title: "Arbiter Orchestrator - Main Integration and Constitutional Authority Runtime"
+version: "2.0.0"
+mode: feature
+risk_tier: 1
+status: spec_complete
+
+executive_summary:
+  purpose: |
+    The Arbiter Orchestrator serves as the central nervous system of Agent Agency V2, coordinating all agentic activities under CAWS constitutional authority. It integrates task routing, constitutional validation, performance tracking, and agent management into a cohesive, self-regulating system that maintains constitutional compliance while optimizing performance.
+  scope:
+    - End-to-end task orchestration from request to completion
+    - Constitutional authority runtime and decision enforcement
+    - Integration of all ARBITER components (001-004)
+    - Real-time system health monitoring and recovery
+    - Constitutional feedback loop management
+  success_criteria:
+    - Process 95% of tasks end-to-end within 500ms total latency
+    - Maintain 99.99% constitutional compliance across all operations
+    - Support 2000 concurrent agent tasks with full orchestration
+    - Achieve 99.9% uptime with automatic failure recovery
+
+change_budget:
+  max_files: 25
+  max_loc: 1500
+
+blast_radius:
+  modules: ["arbiter-core", "orchestration-engine", "constitutional-runtime"]
+  data_migration: false
+  breaking_changes: false
+  external_impact: high
+operational_rollback_slo: "15m"
+
+threats:
+  - "Cascading failures from component integration issues"
+  - "Constitutional authority bypass through orchestration gaps"
+  - "Performance bottlenecks in central orchestration path"
+  - "State inconsistency across distributed components"
+
+scope:
+  in:
+    - "src/orchestrator/ArbiterOrchestrator.ts"
+    - "src/orchestrator/TaskOrchestrator.ts"
+    - "src/orchestrator/ConstitutionalRuntime.ts"
+    - "src/orchestrator/SystemCoordinator.ts"
+    - "src/orchestrator/FeedbackLoopManager.ts"
+    - "tests/unit/orchestrator/arbiter-orchestrator.test.ts"
+    - "tests/integration/orchestrator/end-to-end.test.ts"
+  out:
+    - "src/database/*"  # Database handled by ARBITER-001
+    - "src/routing/*"   # Routing handled by ARBITER-002
+    - "src/caws/*"      # CAWS validation handled by ARBITER-003
+    - "src/benchmarking/*"  # Performance tracking handled by ARBITER-004
+
+invariants:
+  - "All tasks must pass constitutional validation before execution"
+  - "System state must remain consistent across all components"
+  - "Constitutional authority cannot be bypassed or delegated"
+  - "All orchestration decisions must be logged and auditable"
+  - "System health monitoring must be continuous and proactive"
+
+acceptance:
+  - id: "A1"
+    given: "Task request arrives at orchestration system"
+    when: "Complete orchestration pipeline executes"
+    then: "Task completes successfully within 500ms total latency"
+
+  - id: "A2"
+    given: "Constitutionally invalid task submitted"
+    when: "Orchestrator processes request"
+    then: "Task rejected with constitutional violation details"
+
+  - id: "A3"
+    given: "Component failure occurs during task processing"
+    when: "System coordinator detects failure"
+    then: "Automatic recovery initiated within 5 seconds"
+
+  - id: "A4"
+    given: "High-load period with 2000 concurrent tasks"
+    when: "Orchestration runs for 1 hour"
+    then: "All tasks processed with <1% failure rate"
+
+  - id: "A5"
+    given: "Constitutional rule update deployed"
+    when: "Runtime receives update signal"
+    then: "All subsequent decisions use updated rules within 10 seconds"
+
+  - id: "A6"
+    given: "System operates continuously for 30 days"
+    when: "Uptime monitoring tracks availability"
+    then: "Maintains 99.9% uptime with automatic recovery from failures"
+
+non_functional:
+  performance:
+    end_to_end_task_p95_ms: 500
+    concurrent_tasks_supported: 2000
+    orchestration_overhead_ms: 10
+    memory_usage_mb: 300
+
+  reliability:
+    availability_percent: 99.9
+    mean_time_between_failures_hours: 168  # 1 week
+    automatic_recovery_time_seconds: 30
+    data_consistency_percent: 99.999
+
+  scalability:
+    max_concurrent_orchestrations: 5000
+    max_integrated_components: 20
+    horizontal_scaling: true
+    orchestration_state_mb: 50
+
+  security:
+    input_validation: "strict"
+    constitutional_enforcement: "mandatory"
+    audit_logging: "all-orchestration-decisions"
+    component_isolation: "enforced"
+
+  usability:
+    api_design: "fluent-orchestration-builder"
+    error_messages: "constitutional-context-aware"
+    monitoring: "comprehensive-system-dashboard"
+    documentation: "orchestration-flow-diagrams"
+
+contracts:
+  - type: "typescript"
+    path: "src/types/arbiter-orchestration.ts"
+    description: "Main orchestration interfaces and component contracts"
+
+  - type: "openapi"
+    path: "docs/api/arbiter-orchestrator.api.yaml"
+    description: "Orchestration management and system coordination API"
+
+observability:
+  metrics:
+    - "orchestration_end_to_end_latency"
+    - "constitutional_compliance_rate"
+    - "component_health_status"
+    - "task_success_rate"
+    - "system_recovery_events"
+
+  logs:
+    - level: "info"
+      events: ["task_orchestrated", "constitutional_decision", "component_coordinated"]
+    - level: "warn"
+      events: ["orchestration_delay", "component_degradation", "recovery_initiated"]
+    - level: "error"
+      events: ["orchestration_failure", "constitutional_violation", "system_inconsistency"]
+
+  traces:
+    - "end_to_end_orchestration_span"
+    - "constitutional_validation_span"
+    - "component_coordination_span"
+
+migrations:
+  - type: "sql"
+    path: "migrations/005_create_orchestration_tables.sql"
+    description: "Tables for orchestration state, component coordination, and system health"
+
+rollback:
+  slo: "15m"
+  strategy: "orchestration-shutdown"
+  impact: "high"
+  monitoring: "system_coordination_disabled"
+
+ai_assessment:
+  reasoning: "Orchestration complexity requires careful integration of multiple components with strict ordering and failure handling. While AI can help implement individual coordination logic, the overall system integration and constitutional authority enforcement require human design to ensure correctness and prevent systemic failures."
+
+  risks:
+    - "Component integration complexity could introduce subtle race conditions"
+    - "Constitutional authority must be preserved across all orchestration paths"
+    - "System-level failures could cascade through poorly designed integration"
+
+  opportunities:
+    - "Well-established orchestration patterns exist (saga, circuit breaker)"
+    - "TypeScript's type safety helps prevent integration errors"
+    - "Comprehensive integration testing can validate system behavior"
+
+  recommendations:
+    - "Implement orchestration as a state machine with clear transitions"
+    - "Use circuit breakers and timeouts for all component interactions"
+    - "Include extensive integration testing with failure injection"
+    - "Design constitutional checks as mandatory pipeline steps"
+    - "Implement comprehensive health monitoring and alerting"

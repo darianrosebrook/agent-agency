@@ -8,16 +8,15 @@
  * with data quality validation, batching, and delivery to training systems.
  */
 
-import { EventEmitter } from "events";
 import { createHash } from "crypto";
-import {
-  PerformanceEvent,
-  RLTrainingSample,
-  RLTrainingBatch,
-  AgentPerformanceProfile,
-  PerformanceMetrics,
-} from "../types/performance-tracking";
+import { EventEmitter } from "events";
 import { Timestamp } from "../types/agent-registry";
+import {
+  AgentPerformanceProfile,
+  PerformanceEvent,
+  RLTrainingBatch,
+  RLTrainingSample,
+} from "../types/performance-tracking";
 
 /**
  * RL pipeline configuration.
@@ -207,10 +206,14 @@ export class RLDataPipeline extends EventEmitter {
       const eventsByAgent = this.groupEventsByAgent(events);
 
       for (const [agentId, agentEvents] of eventsByAgent) {
-        const agentProfile = agentProfiles.find(p => p.agentId === agentId);
+        const agentProfile = agentProfiles.find((p) => p.agentId === agentId);
         if (!agentProfile) continue;
 
-        const result = await this.processAgentEvents(agentId, agentEvents, agentProfile);
+        const result = await this.processAgentEvents(
+          agentId,
+          agentEvents,
+          agentProfile
+        );
         samplesGenerated += result.samplesGenerated;
         batchesCompleted += result.batchesCompleted;
         qualityIssues.push(...result.qualityIssues);
@@ -227,7 +230,6 @@ export class RLDataPipeline extends EventEmitter {
         processingTimeMs: processingTime,
         qualityIssues,
       });
-
     } catch (error) {
       this.emit("processing_error", error);
       qualityIssues.push(`Processing error: ${error}`);
@@ -243,22 +245,27 @@ export class RLDataPipeline extends EventEmitter {
    * @param maxBatches - Maximum number of batches to retrieve
    * @returns Array of training batches
    */
-  getTrainingBatches(agentId?: string, maxBatches: number = 10): RLTrainingBatch[] {
+  getTrainingBatches(
+    agentId?: string,
+    maxBatches: number = 10
+  ): RLTrainingBatch[] {
     let batches = this.completedBatches;
 
     if (agentId) {
-      batches = batches.filter(batch => batch.agentId === agentId);
+      batches = batches.filter((batch) => batch.agentId === agentId);
     }
 
     // Sort by creation time (newest first)
-    batches.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    batches.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
     const result = batches.slice(0, maxBatches);
 
     // Remove retrieved batches from completed queue
-    const remaining = batches.slice(maxBatches);
-    this.completedBatches = this.completedBatches.filter(batch =>
-      !result.some(retrieved => retrieved.id === batch.id)
+    this.completedBatches = this.completedBatches.filter(
+      (batch) => !result.some((retrieved) => retrieved.id === batch.id)
     );
 
     return result;
@@ -271,7 +278,11 @@ export class RLDataPipeline extends EventEmitter {
     const activeAgents = Array.from(this.pipelineStates.keys());
     const totalSamples = activeAgents.reduce((sum, agentId) => {
       const state = this.pipelineStates.get(agentId);
-      return sum + (state?.recentSamples.length || 0) + (state?.pendingBatch.length || 0);
+      return (
+        sum +
+        (state?.recentSamples.length || 0) +
+        (state?.pendingBatch.length || 0)
+      );
     }, 0);
 
     const totalBatches = this.completedBatches.length;
@@ -309,7 +320,9 @@ export class RLDataPipeline extends EventEmitter {
   /**
    * Groups events by agent for processing.
    */
-  private groupEventsByAgent(events: PerformanceEvent[]): Map<string, PerformanceEvent[]> {
+  private groupEventsByAgent(
+    events: PerformanceEvent[]
+  ): Map<string, PerformanceEvent[]> {
     const grouped = new Map<string, PerformanceEvent[]>();
 
     for (const event of events) {
@@ -350,14 +363,21 @@ export class RLDataPipeline extends EventEmitter {
 
     // Update performance history
     state.performanceHistory.push(agentProfile);
-    if (state.performanceHistory.length > this.config.stateRepresentation.temporalWindowSize) {
+    if (
+      state.performanceHistory.length >
+      this.config.stateRepresentation.temporalWindowSize
+    ) {
       state.performanceHistory.shift(); // Keep only recent history
     }
 
     // Process each event
     for (const event of events) {
       try {
-        const sample = await this.createTrainingSample(event, state, agentProfile);
+        const sample = await this.createTrainingSample(
+          event,
+          state,
+          agentProfile
+        );
         if (sample) {
           state.pendingBatch.push(sample);
           samplesGenerated++;
@@ -403,7 +423,11 @@ export class RLDataPipeline extends EventEmitter {
     }
 
     // Create state representation
-    const stateRepresentation = this.createStateRepresentation(event, state, agentProfile);
+    const stateRepresentation = this.createStateRepresentation(
+      event,
+      state,
+      agentProfile
+    );
 
     // Create action representation (simplified: agent selection decision)
     const action = {
@@ -429,7 +453,12 @@ export class RLDataPipeline extends EventEmitter {
       nextState,
       done: true, // Task completion marks episode end
       timestamp: event.timestamp,
-      integrityHash: this.calculateSampleHash(event, stateRepresentation, action, reward),
+      integrityHash: this.calculateSampleHash(
+        event,
+        stateRepresentation,
+        action,
+        reward
+      ),
     };
   }
 
@@ -479,8 +508,12 @@ export class RLDataPipeline extends EventEmitter {
   /**
    * Calculates reward for a performance event.
    */
-  private calculateReward(event: PerformanceEvent, agentProfile: AgentPerformanceProfile): number {
-    const { latencyWeight, accuracyWeight, costWeight, complianceWeight } = this.config.rewardFunction;
+  private calculateReward(
+    event: PerformanceEvent,
+    _agentProfile: AgentPerformanceProfile
+  ): number {
+    const { latencyWeight, accuracyWeight, costWeight, complianceWeight } =
+      this.config.rewardFunction;
 
     // Extract metrics from event
     const eventLatency = event.metrics.latency?.averageMs || 0;
@@ -501,18 +534,20 @@ export class RLDataPipeline extends EventEmitter {
     const complianceScore = eventCompliance;
 
     // Calculate weighted reward
-    let reward = (
+    let reward =
       latencyWeight * latencyScore +
       accuracyWeight * accuracyScore +
       costWeight * costScore +
-      complianceWeight * complianceScore
-    );
+      complianceWeight * complianceScore;
 
     // Apply temporal decay for delayed rewards
     const eventTime = new Date(event.timestamp).getTime();
     const now = Date.now();
     const ageMinutes = (now - eventTime) / (1000 * 60);
-    const decayFactor = Math.pow(this.config.rewardFunction.temporalDecayFactor, ageMinutes);
+    const decayFactor = Math.pow(
+      this.config.rewardFunction.temporalDecayFactor,
+      ageMinutes
+    );
     reward *= decayFactor;
 
     return reward;
@@ -521,7 +556,9 @@ export class RLDataPipeline extends EventEmitter {
   /**
    * Creates a training batch from pending samples.
    */
-  private async createTrainingBatch(state: PipelineState): Promise<RLTrainingBatch> {
+  private async createTrainingBatch(
+    state: PipelineState
+  ): Promise<RLTrainingBatch> {
     const batchId = `batch_${state.agentId}_${Date.now()}`;
     const qualityScore = this.calculateBatchQuality(state.pendingBatch);
 
@@ -540,7 +577,8 @@ export class RLDataPipeline extends EventEmitter {
    */
   private shouldCompleteBatch(state: PipelineState): boolean {
     const batchSize = state.pendingBatch.length;
-    const batchAge = (Date.now() - new Date(state.batchStartTime).getTime()) / (1000 * 60); // minutes
+    const batchAge =
+      (Date.now() - new Date(state.batchStartTime).getTime()) / (1000 * 60); // minutes
 
     return (
       batchSize >= this.config.batching.maxBatchSize ||
@@ -556,23 +594,35 @@ export class RLDataPipeline extends EventEmitter {
     if (samples.length === 0) return 0;
 
     // Calculate reward variance (higher variance = more informative)
-    const rewards = samples.map(s => s.reward);
+    const rewards = samples.map((s) => s.reward);
     const meanReward = rewards.reduce((sum, r) => sum + r, 0) / rewards.length;
-    const variance = rewards.reduce((sum, r) => sum + Math.pow(r - meanReward, 2), 0) / rewards.length;
-    const rewardVarianceScore = Math.min(1, variance / this.config.qualityThresholds.minRewardVariance);
+    const variance =
+      rewards.reduce((sum, r) => sum + Math.pow(r - meanReward, 2), 0) /
+      rewards.length;
+    const rewardVarianceScore = Math.min(
+      1,
+      variance / this.config.qualityThresholds.minRewardVariance
+    );
 
     // Calculate sample diversity (unique states/actions)
-    const uniqueStates = new Set(samples.map(s => JSON.stringify(s.state)));
+    const uniqueStates = new Set(samples.map((s) => JSON.stringify(s.state)));
     const stateDiversityScore = uniqueStates.size / samples.length;
 
     // Calculate temporal distribution (should be relatively even)
-    const timestamps = samples.map(s => new Date(s.timestamp).getTime()).sort((a, b) => a - b);
+    const timestamps = samples
+      .map((s) => new Date(s.timestamp).getTime())
+      .sort((a, b) => a - b);
     const timeSpan = timestamps[timestamps.length - 1] - timestamps[0];
     const avgInterval = timeSpan / (samples.length - 1);
-    const temporalScore = avgInterval > 0 ? Math.min(1, (5 * 60 * 1000) / avgInterval) : 0; // Prefer ~5min intervals
+    const temporalScore =
+      avgInterval > 0 ? Math.min(1, (5 * 60 * 1000) / avgInterval) : 0; // Prefer ~5min intervals
 
     // Weighted quality score
-    return (0.4 * rewardVarianceScore + 0.4 * stateDiversityScore + 0.2 * temporalScore);
+    return (
+      0.4 * rewardVarianceScore +
+      0.4 * stateDiversityScore +
+      0.2 * temporalScore
+    );
   }
 
   /**
@@ -623,33 +673,49 @@ export class RLDataPipeline extends EventEmitter {
 
     // Check temporal gaps
     if (state.recentSamples.length > 1) {
-      const timestamps = state.recentSamples.map(s => new Date(s.timestamp).getTime()).sort((a, b) => a - b);
-      const maxGap = Math.max(...timestamps.slice(1).map((t, i) => t - timestamps[i]));
+      const timestamps = state.recentSamples
+        .map((s) => new Date(s.timestamp).getTime())
+        .sort((a, b) => a - b);
+      const maxGap = Math.max(
+        ...timestamps.slice(1).map((t, i) => t - timestamps[i])
+      );
       const gapMinutes = maxGap / (1000 * 60);
 
       if (gapMinutes > this.config.qualityThresholds.maxTemporalGapMinutes) {
-        issues.push(`Large temporal gap detected: ${gapMinutes.toFixed(1)} minutes for agent ${agentId}`);
+        issues.push(
+          `Large temporal gap detected: ${gapMinutes.toFixed(
+            1
+          )} minutes for agent ${agentId}`
+        );
       }
     }
 
     // Check sample diversity
     if (state.pendingBatch.length > 10) {
-      const uniqueRewards = new Set(state.pendingBatch.map(s => s.reward.toFixed(2)));
+      const uniqueRewards = new Set(
+        state.pendingBatch.map((s) => s.reward.toFixed(2))
+      );
       const diversity = uniqueRewards.size / state.pendingBatch.length;
 
       if (diversity < this.config.qualityThresholds.minSampleDiversity) {
-        issues.push(`Low sample diversity: ${diversity.toFixed(2)} for agent ${agentId}`);
+        issues.push(
+          `Low sample diversity: ${diversity.toFixed(2)} for agent ${agentId}`
+        );
       }
     }
 
     // Check for duplicates
     if (state.pendingBatch.length > 0) {
-      const hashes = state.pendingBatch.map(s => s.integrityHash);
+      const hashes = state.pendingBatch.map((s) => s.integrityHash);
       const uniqueHashes = new Set(hashes);
-      const duplicateRatio = 1 - (uniqueHashes.size / hashes.length);
+      const duplicateRatio = 1 - uniqueHashes.size / hashes.length;
 
       if (duplicateRatio > this.config.qualityThresholds.maxDuplicateRatio) {
-        issues.push(`High duplicate ratio: ${(duplicateRatio * 100).toFixed(1)}% for agent ${agentId}`);
+        issues.push(
+          `High duplicate ratio: ${(duplicateRatio * 100).toFixed(
+            1
+          )}% for agent ${agentId}`
+        );
       }
     }
 
@@ -664,23 +730,28 @@ export class RLDataPipeline extends EventEmitter {
       const samples = [...state.recentSamples, ...state.pendingBatch];
       if (samples.length === 0) continue;
 
-      const rewards = samples.map(s => s.reward);
-      const meanReward = rewards.reduce((sum, r) => sum + r, 0) / rewards.length;
-      const rewardVariance = rewards.reduce((sum, r) => sum + Math.pow(r - meanReward, 2), 0) / rewards.length;
+      const rewards = samples.map((s) => s.reward);
+      const meanReward =
+        rewards.reduce((sum, r) => sum + r, 0) / rewards.length;
+      const rewardVariance =
+        rewards.reduce((sum, r) => sum + Math.pow(r - meanReward, 2), 0) /
+        rewards.length;
 
-      const uniqueStates = new Set(samples.map(s => JSON.stringify(s.state)));
+      const uniqueStates = new Set(samples.map((s) => JSON.stringify(s.state)));
       const diversity = uniqueStates.size / samples.length;
 
-      const timestamps = samples.map(s => new Date(s.timestamp).getTime()).sort((a, b) => a - b);
+      const timestamps = samples
+        .map((s) => new Date(s.timestamp).getTime())
+        .sort((a, b) => a - b);
       let maxGap = 0;
       for (let i = 1; i < timestamps.length; i++) {
         maxGap = Math.max(maxGap, timestamps[i] - timestamps[i - 1]);
       }
       const temporalGapMinutes = maxGap / (1000 * 60);
 
-      const hashes = samples.map(s => s.integrityHash);
+      const hashes = samples.map((s) => s.integrityHash);
       const uniqueHashes = new Set(hashes);
-      const duplicateRatio = 1 - (uniqueHashes.size / hashes.length);
+      const duplicateRatio = 1 - uniqueHashes.size / hashes.length;
 
       this.qualityMetrics.set(agentId, {
         sampleDiversity: diversity,
@@ -688,7 +759,8 @@ export class RLDataPipeline extends EventEmitter {
         rewardVariance,
         duplicateRatio,
         sampleCount: samples.length,
-        batchCount: this.completedBatches.filter(b => b.agentId === agentId).length,
+        batchCount: this.completedBatches.filter((b) => b.agentId === agentId)
+          .length,
       });
     }
   }
@@ -707,17 +779,22 @@ export class RLDataPipeline extends EventEmitter {
    */
   private performCleanup(): void {
     // Clean up old samples from pipeline states
-    for (const [agentId, state] of this.pipelineStates) {
+    for (const [_agentId, state] of this.pipelineStates) {
       const maxAge = 24 * 60 * 60 * 1000; // 24 hours
       const cutoffTime = Date.now() - maxAge;
 
       state.recentSamples = state.recentSamples.filter(
-        sample => new Date(sample.timestamp).getTime() > cutoffTime
+        (sample) => new Date(sample.timestamp).getTime() > cutoffTime
       );
 
       // Clean up old performance history
-      if (state.performanceHistory.length > this.config.stateRepresentation.temporalWindowSize) {
-        state.performanceHistory = state.performanceHistory.slice(-this.config.stateRepresentation.temporalWindowSize);
+      if (
+        state.performanceHistory.length >
+        this.config.stateRepresentation.temporalWindowSize
+      ) {
+        state.performanceHistory = state.performanceHistory.slice(
+          -this.config.stateRepresentation.temporalWindowSize
+        );
       }
     }
 
@@ -725,7 +802,7 @@ export class RLDataPipeline extends EventEmitter {
     const maxBatchAge = 7 * 24 * 60 * 60 * 1000; // 7 days
     const batchCutoffTime = Date.now() - maxBatchAge;
     this.completedBatches = this.completedBatches.filter(
-      batch => new Date(batch.createdAt).getTime() > batchCutoffTime
+      (batch) => new Date(batch.createdAt).getTime() > batchCutoffTime
     );
 
     // Enforce memory limits
@@ -739,10 +816,18 @@ export class RLDataPipeline extends EventEmitter {
       this.trimSamplesToLimit();
     }
 
-    if (this.completedBatches.length > this.config.retention.maxBatchesInMemory) {
+    if (
+      this.completedBatches.length > this.config.retention.maxBatchesInMemory
+    ) {
       // Keep only newest batches
-      this.completedBatches.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      this.completedBatches = this.completedBatches.slice(0, this.config.retention.maxBatchesInMemory);
+      this.completedBatches.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      this.completedBatches = this.completedBatches.slice(
+        0,
+        this.config.retention.maxBatchesInMemory
+      );
     }
 
     this.emit("cleanup_completed");
@@ -752,7 +837,11 @@ export class RLDataPipeline extends EventEmitter {
    * Trims samples to stay within memory limits.
    */
   private trimSamplesToLimit(): void {
-    const allSamples: Array<{ agentId: string; sample: RLTrainingSample; timestamp: number }> = [];
+    const allSamples: Array<{
+      agentId: string;
+      sample: RLTrainingSample;
+      timestamp: number;
+    }> = [];
 
     // Collect all samples with metadata
     for (const [agentId, state] of this.pipelineStates) {
@@ -769,13 +858,16 @@ export class RLDataPipeline extends EventEmitter {
     allSamples.sort((a, b) => b.timestamp - a.timestamp);
 
     // Keep only the newest samples up to the limit
-    const samplesToKeep = allSamples.slice(0, this.config.retention.maxSamplesInMemory);
+    const samplesToKeep = allSamples.slice(
+      0,
+      this.config.retention.maxSamplesInMemory
+    );
 
     // Update pipeline states
     for (const [agentId, state] of this.pipelineStates) {
       const agentSamples = samplesToKeep
-        .filter(s => s.agentId === agentId)
-        .map(s => s.sample);
+        .filter((s) => s.agentId === agentId)
+        .map((s) => s.sample);
 
       state.recentSamples = agentSamples;
     }
@@ -785,11 +877,11 @@ export class RLDataPipeline extends EventEmitter {
    * Sets up event handlers for internal events.
    */
   private setupEventHandlers(): void {
-    this.on("events_processed", (stats) => {
+    this.on("events_processed", (_stats) => {
       // Could trigger training system notifications
     });
 
-    this.on("processing_error", (error) => {
+    this.on("processing_error", (_error) => {
       // Could trigger alerting
     });
   }

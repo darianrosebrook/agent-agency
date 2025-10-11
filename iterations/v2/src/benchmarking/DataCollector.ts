@@ -8,21 +8,21 @@
  * in real-time with minimal performance impact and guaranteed data integrity.
  */
 
-import { EventEmitter } from "events";
 import { createHash } from "crypto";
+import { EventEmitter } from "events";
+import { Timestamp } from "../types/agent-registry";
 import {
-  PerformanceEvent,
-  PerformanceEventType,
-  DataCollectionConfig,
-  PerformanceMetrics,
-  LatencyMetrics,
   AccuracyMetrics,
-  ResourceMetrics,
   ComplianceMetrics,
   CostMetrics,
+  DataCollectionConfig,
+  LatencyMetrics,
+  PerformanceEvent,
+  PerformanceEventType,
+  PerformanceMetrics,
   ReliabilityMetrics,
+  ResourceMetrics,
 } from "../types/performance-tracking";
-import { Timestamp } from "../types/agent-registry";
 
 /**
  * Default data collection configuration.
@@ -369,17 +369,23 @@ export class DataCollector extends EventEmitter {
    * @param maxEvents - Maximum number of events to retrieve
    * @returns Array of pending events
    */
-  getPendingEvents(maxEvents: number = this.config.batchSize): PerformanceEvent[] {
+  getPendingEvents(
+    maxEvents: number = this.config.batchSize
+  ): PerformanceEvent[] {
     // Sort by priority (critical first) and then by timestamp
     const sortedBuffer = this.buffer.sort((a, b) => {
       const priorityOrder = { critical: 4, high: 3, normal: 2, low: 1 };
-      const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
+      const priorityDiff =
+        priorityOrder[b.priority] - priorityOrder[a.priority];
       if (priorityDiff !== 0) return priorityDiff;
 
-      return new Date(a.event.timestamp).getTime() - new Date(b.event.timestamp).getTime();
+      return (
+        new Date(a.event.timestamp).getTime() -
+        new Date(b.event.timestamp).getTime()
+      );
     });
 
-    const events = sortedBuffer.slice(0, maxEvents).map(entry => entry.event);
+    const events = sortedBuffer.slice(0, maxEvents).map((entry) => entry.event);
 
     // Remove retrieved events from buffer
     this.buffer = sortedBuffer.slice(maxEvents);
@@ -431,7 +437,10 @@ export class DataCollector extends EventEmitter {
   /**
    * Adds an event to the buffer with size management.
    */
-  private addToBuffer(event: PerformanceEvent, priority: BufferEntry["priority"]): void {
+  private addToBuffer(
+    event: PerformanceEvent,
+    priority: BufferEntry["priority"]
+  ): void {
     const entry: BufferEntry = {
       event,
       collectedAt: new Date().toISOString(),
@@ -444,7 +453,9 @@ export class DataCollector extends EventEmitter {
     // Manage buffer size
     if (this.buffer.length > this.config.maxBufferSize) {
       // Remove oldest low-priority events first
-      const lowPriorityEntries = this.buffer.filter(e => e.priority === "low");
+      const lowPriorityEntries = this.buffer.filter(
+        (e) => e.priority === "low"
+      );
       if (lowPriorityEntries.length > 0) {
         const entryToRemove = lowPriorityEntries[0];
         const index = this.buffer.indexOf(entryToRemove);
@@ -475,7 +486,9 @@ export class DataCollector extends EventEmitter {
   /**
    * Calculates integrity hash for data integrity verification.
    */
-  private calculateIntegrityHash(event: Omit<PerformanceEvent, "integrityHash">): string {
+  private calculateIntegrityHash(
+    event: Omit<PerformanceEvent, "integrityHash">
+  ): string {
     const data = JSON.stringify({
       id: event.id,
       type: event.type,
@@ -492,7 +505,9 @@ export class DataCollector extends EventEmitter {
   /**
    * Applies anonymization to context data based on configuration.
    */
-  private anonymizeContext(context?: Record<string, unknown>): Record<string, unknown> | undefined {
+  private anonymizeContext(
+    context?: Record<string, unknown>
+  ): Record<string, unknown> | undefined {
     if (!context || !this.config.anonymization.enabled) {
       return context;
     }
@@ -522,7 +537,9 @@ export class DataCollector extends EventEmitter {
   /**
    * Normalizes partial metrics to complete metrics structure.
    */
-  private normalizeMetrics(partialMetrics: Partial<PerformanceMetrics>): PerformanceMetrics {
+  private normalizeMetrics(
+    partialMetrics: Partial<PerformanceMetrics>
+  ): PerformanceMetrics {
     return {
       latency: this.normalizeLatencyMetrics(partialMetrics.latency),
       accuracy: this.normalizeAccuracyMetrics(partialMetrics.accuracy),
@@ -533,7 +550,9 @@ export class DataCollector extends EventEmitter {
     };
   }
 
-  private normalizeLatencyMetrics(metrics?: Partial<LatencyMetrics>): LatencyMetrics {
+  private normalizeLatencyMetrics(
+    metrics?: Partial<LatencyMetrics>
+  ): LatencyMetrics {
     return {
       averageMs: metrics?.averageMs || 0,
       p95Ms: metrics?.p95Ms || 0,
@@ -543,7 +562,9 @@ export class DataCollector extends EventEmitter {
     };
   }
 
-  private normalizeAccuracyMetrics(metrics?: Partial<AccuracyMetrics>): AccuracyMetrics {
+  private normalizeAccuracyMetrics(
+    metrics?: Partial<AccuracyMetrics>
+  ): AccuracyMetrics {
     return {
       successRate: metrics?.successRate || 0,
       qualityScore: metrics?.qualityScore || 0,
@@ -552,7 +573,9 @@ export class DataCollector extends EventEmitter {
     };
   }
 
-  private normalizeResourceMetrics(metrics?: Partial<ResourceMetrics>): ResourceMetrics {
+  private normalizeResourceMetrics(
+    metrics?: Partial<ResourceMetrics>
+  ): ResourceMetrics {
     return {
       cpuUtilizationPercent: metrics?.cpuUtilizationPercent || 0,
       memoryUtilizationPercent: metrics?.memoryUtilizationPercent || 0,
@@ -561,7 +584,9 @@ export class DataCollector extends EventEmitter {
     };
   }
 
-  private normalizeComplianceMetrics(metrics?: Partial<ComplianceMetrics>): ComplianceMetrics {
+  private normalizeComplianceMetrics(
+    metrics?: Partial<ComplianceMetrics>
+  ): ComplianceMetrics {
     return {
       validationPassRate: metrics?.validationPassRate || 0,
       violationSeverityScore: metrics?.violationSeverityScore || 0,
@@ -577,7 +602,9 @@ export class DataCollector extends EventEmitter {
     };
   }
 
-  private normalizeReliabilityMetrics(metrics?: Partial<ReliabilityMetrics>): ReliabilityMetrics {
+  private normalizeReliabilityMetrics(
+    metrics?: Partial<ReliabilityMetrics>
+  ): ReliabilityMetrics {
     return {
       mtbfHours: metrics?.mtbfHours || 0,
       availabilityPercent: metrics?.availabilityPercent || 100,
@@ -590,7 +617,13 @@ export class DataCollector extends EventEmitter {
    * Removes identifying fields for secure anonymization.
    */
   private removeIdentifyingFields(obj: Record<string, unknown>): void {
-    const identifyingFields = ["userId", "sessionId", "ipAddress", "userAgent", "email"];
+    const identifyingFields = [
+      "userId",
+      "sessionId",
+      "ipAddress",
+      "userAgent",
+      "email",
+    ];
 
     for (const field of identifyingFields) {
       if (field in obj) {
@@ -607,7 +640,10 @@ export class DataCollector extends EventEmitter {
 
     for (const field of sensitiveFields) {
       if (typeof obj[field] === "string") {
-        obj[field] = createHash("sha256").update(obj[field] as string).digest("hex").substring(0, 16);
+        obj[field] = createHash("sha256")
+          .update(obj[field] as string)
+          .digest("hex")
+          .substring(0, 16);
       }
     }
   }
@@ -634,7 +670,8 @@ export class DataCollector extends EventEmitter {
   private generateLaplaceNoise(sensitivity: number, epsilon: number): number {
     const uniform = Math.random() - 0.5;
     const sign = uniform > 0 ? 1 : -1;
-    const magnitude = -Math.log(Math.abs(uniform) * 2) * (sensitivity / epsilon);
+    const magnitude =
+      -Math.log(Math.abs(uniform) * 2) * (sensitivity / epsilon);
     return sign * magnitude;
   }
 

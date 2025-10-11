@@ -9,20 +9,19 @@
  */
 
 import { EventEmitter } from "events";
+import { Timestamp } from "../types/agent-registry";
 import {
-  PerformanceEvent,
-  AgentPerformanceProfile,
-  PerformanceMetrics,
-  LatencyMetrics,
   AccuracyMetrics,
-  ResourceMetrics,
+  AgentPerformanceProfile,
   ComplianceMetrics,
   CostMetrics,
-  ReliabilityMetrics,
+  LatencyMetrics,
+  PerformanceEvent,
+  PerformanceMetrics,
   PerformanceTrend,
-  MetricCategory,
+  ReliabilityMetrics,
+  ResourceMetrics,
 } from "../types/performance-tracking";
-import { Timestamp } from "../types/agent-registry";
 
 /**
  * Aggregation time window configuration.
@@ -89,10 +88,26 @@ export interface AggregationConfig {
  */
 const DEFAULT_CONFIG: AggregationConfig = {
   windows: {
-    realtime: { durationMs: 5 * 60 * 1000, slideMs: 60 * 1000, minSampleSize: 10 }, // 5 min window, 1 min slide
-    short: { durationMs: 60 * 60 * 1000, slideMs: 15 * 60 * 1000, minSampleSize: 50 }, // 1 hour window, 15 min slide
-    medium: { durationMs: 24 * 60 * 60 * 1000, slideMs: 4 * 60 * 60 * 1000, minSampleSize: 100 }, // 24 hour window, 4 hour slide
-    long: { durationMs: 7 * 24 * 60 * 60 * 1000, slideMs: 24 * 60 * 60 * 1000, minSampleSize: 500 }, // 7 day window, 1 day slide
+    realtime: {
+      durationMs: 5 * 60 * 1000,
+      slideMs: 60 * 1000,
+      minSampleSize: 10,
+    }, // 5 min window, 1 min slide
+    short: {
+      durationMs: 60 * 60 * 1000,
+      slideMs: 15 * 60 * 1000,
+      minSampleSize: 50,
+    }, // 1 hour window, 15 min slide
+    medium: {
+      durationMs: 24 * 60 * 60 * 1000,
+      slideMs: 4 * 60 * 60 * 1000,
+      minSampleSize: 100,
+    }, // 24 hour window, 4 hour slide
+    long: {
+      durationMs: 7 * 24 * 60 * 60 * 1000,
+      slideMs: 24 * 60 * 60 * 1000,
+      minSampleSize: 500,
+    }, // 7 day window, 1 day slide
   },
   outlierThresholds: {
     zScoreThreshold: 3.0,
@@ -177,7 +192,7 @@ export class MetricAggregator extends EventEmitter {
     }
 
     // Filter out outliers before adding to buffer
-    const filteredEvents = events.filter(event => !this.isOutlier(event));
+    const filteredEvents = events.filter((event) => !this.isOutlier(event));
     this.eventBuffer.push(...filteredEvents);
 
     // Emit event for new data availability
@@ -198,8 +213,8 @@ export class MetricAggregator extends EventEmitter {
     const agentData = this.aggregatedData.get(agentId) || [];
 
     return agentData
-      .filter(data => !taskType || data.taskType === taskType)
-      .map(data => this.convertToProfile(data));
+      .filter((data) => !taskType || data.taskType === taskType)
+      .map((data) => this.convertToProfile(data));
   }
 
   /**
@@ -222,7 +237,7 @@ export class MetricAggregator extends EventEmitter {
     for (const [agent, data] of this.aggregatedData) {
       if (agentId && agent !== agentId) continue;
 
-      const filteredData = data.filter(item => {
+      const filteredData = data.filter((item) => {
         if (taskType && item.taskType !== taskType) return false;
 
         const itemStart = new Date(item.startTime).getTime();
@@ -236,8 +251,8 @@ export class MetricAggregator extends EventEmitter {
       allData.push(...filteredData);
     }
 
-    return allData.sort((a, b) =>
-      new Date(b.endTime).getTime() - new Date(a.endTime).getTime()
+    return allData.sort(
+      (a, b) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime()
     );
   }
 
@@ -256,7 +271,9 @@ export class MetricAggregator extends EventEmitter {
       const groupedEvents = this.groupEventsByAgentAndTask();
 
       // Aggregate for each window size
-      for (const windowType of Object.keys(this.config.windows) as Array<keyof AggregationConfig["windows"]>) {
+      for (const windowType of Object.keys(this.config.windows) as Array<
+        keyof AggregationConfig["windows"]
+      >) {
         await this.aggregateForWindow(groupedEvents, windowType);
       }
 
@@ -274,7 +291,6 @@ export class MetricAggregator extends EventEmitter {
 
       // Clear processed events
       this.eventBuffer = [];
-
     } catch (error) {
       this.emit("aggregation_error", error);
     }
@@ -323,7 +339,10 @@ export class MetricAggregator extends EventEmitter {
   /**
    * Groups events by agent and task type for aggregation.
    */
-  private groupEventsByAgentAndTask(): Map<string, Map<string, PerformanceEvent[]>> {
+  private groupEventsByAgentAndTask(): Map<
+    string,
+    Map<string, PerformanceEvent[]>
+  > {
     const grouped = new Map<string, Map<string, PerformanceEvent[]>>();
 
     for (const event of this.eventBuffer) {
@@ -359,7 +378,7 @@ export class MetricAggregator extends EventEmitter {
     for (const [agentId, taskEvents] of groupedEvents) {
       for (const [taskType, events] of taskEvents) {
         // Filter events to current window
-        const windowEvents = events.filter(event => {
+        const windowEvents = events.filter((event) => {
           const eventTime = new Date(event.timestamp);
           return eventTime >= windowStart && eventTime <= now;
         });
@@ -387,7 +406,10 @@ export class MetricAggregator extends EventEmitter {
 
         // Keep only recent aggregations (limit memory usage)
         if (agentData.length > 100) {
-          agentData.sort((a, b) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime());
+          agentData.sort(
+            (a, b) =>
+              new Date(b.endTime).getTime() - new Date(a.endTime).getTime()
+          );
           agentData.splice(100);
         }
       }
@@ -429,22 +451,22 @@ export class MetricAggregator extends EventEmitter {
    */
   private aggregateMetrics(events: PerformanceEvent[]): PerformanceMetrics {
     const latencyValues = events
-      .map(e => e.metrics.latency)
-      .filter(l => l && l.averageMs > 0)
-      .map(l => l!.averageMs);
+      .map((e) => e.metrics.latency)
+      .filter((l) => l && l.averageMs > 0)
+      .map((l) => l!.averageMs);
 
     const accuracyValues = events
-      .map(e => e.metrics.accuracy)
-      .filter(a => a && a.successRate >= 0)
-      .map(a => a!.successRate);
+      .map((e) => e.metrics.accuracy)
+      .filter((a) => a && a.successRate >= 0)
+      .map((a) => a!.successRate);
 
     const resourceValues = events
-      .map(e => e.metrics.resources)
-      .filter(r => r && r.cpuUtilizationPercent >= 0);
+      .map((e) => e.metrics.resources)
+      .filter((r) => r && r.cpuUtilizationPercent >= 0);
 
     const complianceValues = events
-      .map(e => e.metrics.compliance)
-      .filter(c => c && c.validationPassRate >= 0);
+      .map((e) => e.metrics.compliance)
+      .filter((c) => c && c.validationPassRate >= 0);
 
     return {
       latency: this.aggregateLatencyMetrics(latencyValues),
@@ -465,7 +487,8 @@ export class MetricAggregator extends EventEmitter {
     }
 
     const sorted = latencyValues.sort((a, b) => a - b);
-    const average = latencyValues.reduce((sum, val) => sum + val, 0) / latencyValues.length;
+    const average =
+      latencyValues.reduce((sum, val) => sum + val, 0) / latencyValues.length;
     const p95Index = Math.floor(sorted.length * 0.95);
     const p99Index = Math.floor(sorted.length * 0.99);
 
@@ -483,10 +506,16 @@ export class MetricAggregator extends EventEmitter {
    */
   private aggregateAccuracyMetrics(accuracyValues: number[]): AccuracyMetrics {
     if (accuracyValues.length === 0) {
-      return { successRate: 0, qualityScore: 0, violationRate: 0, evaluationScore: 0 };
+      return {
+        successRate: 0,
+        qualityScore: 0,
+        violationRate: 0,
+        evaluationScore: 0,
+      };
     }
 
-    const averageSuccessRate = accuracyValues.reduce((sum, val) => sum + val, 0) / accuracyValues.length;
+    const averageSuccessRate =
+      accuracyValues.reduce((sum, val) => sum + val, 0) / accuracyValues.length;
 
     return {
       successRate: this.applyAnonymizationNoise(averageSuccessRate),
@@ -499,20 +528,33 @@ export class MetricAggregator extends EventEmitter {
   /**
    * Aggregates resource metrics.
    */
-  private aggregateResourceMetrics(resourceEvents: (ResourceMetrics | undefined)[]): ResourceMetrics {
-    const validEvents = resourceEvents.filter((r): r is ResourceMetrics => r !== undefined);
+  private aggregateResourceMetrics(
+    resourceEvents: (ResourceMetrics | undefined)[]
+  ): ResourceMetrics {
+    const validEvents = resourceEvents.filter(
+      (r): r is ResourceMetrics => r !== undefined
+    );
     if (validEvents.length === 0) {
-      return { cpuUtilizationPercent: 0, memoryUtilizationPercent: 0, networkIoKbps: 0, diskIoKbps: 0 };
+      return {
+        cpuUtilizationPercent: 0,
+        memoryUtilizationPercent: 0,
+        networkIoKbps: 0,
+        diskIoKbps: 0,
+      };
     }
 
-    const cpuValues = validEvents.map(r => r.cpuUtilizationPercent);
-    const memoryValues = validEvents.map(r => r.memoryUtilizationPercent);
-    const networkValues = validEvents.map(r => r.networkIoKbps);
-    const diskValues = validEvents.map(r => r.diskIoKbps);
+    const cpuValues = validEvents.map((r) => r.cpuUtilizationPercent);
+    const memoryValues = validEvents.map((r) => r.memoryUtilizationPercent);
+    const networkValues = validEvents.map((r) => r.networkIoKbps);
+    const diskValues = validEvents.map((r) => r.diskIoKbps);
 
     return {
-      cpuUtilizationPercent: this.applyAnonymizationNoise(this.average(cpuValues)),
-      memoryUtilizationPercent: this.applyAnonymizationNoise(this.average(memoryValues)),
+      cpuUtilizationPercent: this.applyAnonymizationNoise(
+        this.average(cpuValues)
+      ),
+      memoryUtilizationPercent: this.applyAnonymizationNoise(
+        this.average(memoryValues)
+      ),
       networkIoKbps: this.applyAnonymizationNoise(this.average(networkValues)),
       diskIoKbps: this.applyAnonymizationNoise(this.average(diskValues)),
     };
@@ -521,20 +563,32 @@ export class MetricAggregator extends EventEmitter {
   /**
    * Aggregates compliance metrics.
    */
-  private aggregateComplianceMetrics(complianceEvents: (ComplianceMetrics | undefined)[]): ComplianceMetrics {
-    const validEvents = complianceEvents.filter((c): c is ComplianceMetrics => c !== undefined);
+  private aggregateComplianceMetrics(
+    complianceEvents: (ComplianceMetrics | undefined)[]
+  ): ComplianceMetrics {
+    const validEvents = complianceEvents.filter(
+      (c): c is ComplianceMetrics => c !== undefined
+    );
     if (validEvents.length === 0) {
-      return { validationPassRate: 0, violationSeverityScore: 0, clauseCitationRate: 0 };
+      return {
+        validationPassRate: 0,
+        violationSeverityScore: 0,
+        clauseCitationRate: 0,
+      };
     }
 
-    const passRates = validEvents.map(c => c.validationPassRate);
-    const severityScores = validEvents.map(c => c.violationSeverityScore);
-    const citationRates = validEvents.map(c => c.clauseCitationRate);
+    const passRates = validEvents.map((c) => c.validationPassRate);
+    const severityScores = validEvents.map((c) => c.violationSeverityScore);
+    const citationRates = validEvents.map((c) => c.clauseCitationRate);
 
     return {
       validationPassRate: this.applyAnonymizationNoise(this.average(passRates)),
-      violationSeverityScore: this.applyAnonymizationNoise(this.average(severityScores)),
-      clauseCitationRate: this.applyAnonymizationNoise(this.average(citationRates)),
+      violationSeverityScore: this.applyAnonymizationNoise(
+        this.average(severityScores)
+      ),
+      clauseCitationRate: this.applyAnonymizationNoise(
+        this.average(citationRates)
+      ),
     };
   }
 
@@ -543,13 +597,17 @@ export class MetricAggregator extends EventEmitter {
    */
   private aggregateCostMetrics(events: PerformanceEvent[]): CostMetrics {
     // Simplified cost calculation based on resource usage
-    const resourceEvents = events.filter(e => e.metrics.resources);
+    const resourceEvents = events.filter((e) => e.metrics.resources);
     if (resourceEvents.length === 0) {
       return { costPerTask: 0, efficiencyScore: 0, resourceWastePercent: 0 };
     }
 
-    const avgCpu = this.average(resourceEvents.map(e => e.metrics.resources!.cpuUtilizationPercent));
-    const avgMemory = this.average(resourceEvents.map(e => e.metrics.resources!.memoryUtilizationPercent));
+    const avgCpu = this.average(
+      resourceEvents.map((e) => e.metrics.resources!.cpuUtilizationPercent)
+    );
+    const avgMemory = this.average(
+      resourceEvents.map((e) => e.metrics.resources!.memoryUtilizationPercent)
+    );
 
     // Simplified cost model: cost increases with resource usage
     const costPerTask = (avgCpu + avgMemory) / 100; // Scale to 0-1
@@ -565,18 +623,27 @@ export class MetricAggregator extends EventEmitter {
   /**
    * Aggregates reliability metrics.
    */
-  private aggregateReliabilityMetrics(events: PerformanceEvent[]): ReliabilityMetrics {
-    const taskEvents = events.filter(e => e.type === "task_execution_complete");
-    const successfulTasks = taskEvents.filter(e => e.metrics.accuracy?.successRate === 1);
+  private aggregateReliabilityMetrics(
+    events: PerformanceEvent[]
+  ): ReliabilityMetrics {
+    const taskEvents = events.filter(
+      (e) => e.type === "task_execution_complete"
+    );
+    const successfulTasks = taskEvents.filter(
+      (e) => e.metrics.accuracy?.successRate === 1
+    );
 
-    const successRate = taskEvents.length > 0 ? successfulTasks.length / taskEvents.length : 0;
+    const successRate =
+      taskEvents.length > 0 ? successfulTasks.length / taskEvents.length : 0;
     const availabilityPercent = successRate * 100;
 
     return {
       mtbfHours: 24 * successRate, // Simplified: higher success rate = higher MTBF
       availabilityPercent: this.applyAnonymizationNoise(availabilityPercent),
       errorRatePercent: this.applyAnonymizationNoise((1 - successRate) * 100),
-      recoveryTimeMinutes: this.applyAnonymizationNoise(Math.max(0, 60 * (1 - successRate))), // Simplified
+      recoveryTimeMinutes: this.applyAnonymizationNoise(
+        Math.max(0, 60 * (1 - successRate))
+      ), // Simplified
     };
   }
 
@@ -594,12 +661,13 @@ export class MetricAggregator extends EventEmitter {
     }
 
     // Sort events by time
-    const sortedEvents = events.sort((a, b) =>
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    const sortedEvents = events.sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
     // Extract performance scores over time
-    const scores = sortedEvents.map(event => {
+    const scores = sortedEvents.map((event) => {
       const accuracy = event.metrics.accuracy?.successRate || 0;
       const latency = event.metrics.latency?.averageMs || 0;
       // Simplified score: higher accuracy, lower latency = better performance
@@ -617,7 +685,8 @@ export class MetricAggregator extends EventEmitter {
     const intercept = (sumY - slope * sumX) / n;
 
     // Determine direction and magnitude
-    const direction = slope > 0.01 ? "improving" : slope < -0.01 ? "declining" : "stable";
+    const direction =
+      slope > 0.01 ? "improving" : slope < -0.01 ? "declining" : "stable";
     const magnitude = Math.abs(slope);
 
     // Calculate confidence using R-squared
@@ -626,12 +695,18 @@ export class MetricAggregator extends EventEmitter {
       const predicted = slope * index + intercept;
       return sum + Math.pow(score - predicted, 0);
     }, 0);
-    const ssTot = scores.reduce((sum, score) => sum + Math.pow(score - yMean, 2), 0);
-    const rSquared = ssTot > 0 ? 1 - (ssRes / ssTot) : 0;
+    const ssTot = scores.reduce(
+      (sum, score) => sum + Math.pow(score - yMean, 2),
+      0
+    );
+    const rSquared = ssTot > 0 ? 1 - ssRes / ssTot : 0;
     const confidence = Math.sqrt(Math.max(0, rSquared));
 
     const timeRange = sortedEvents[sortedEvents.length - 1].timestamp;
-    const timeWindowHours = (new Date(timeRange).getTime() - new Date(sortedEvents[0].timestamp).getTime()) / (1000 * 60 * 60);
+    const timeWindowHours =
+      (new Date(timeRange).getTime() -
+        new Date(sortedEvents[0].timestamp).getTime()) /
+      (1000 * 60 * 60);
 
     return {
       direction: direction as "improving" | "declining" | "stable",
@@ -648,7 +723,7 @@ export class MetricAggregator extends EventEmitter {
     if (events.length < 10) return []; // Need minimum sample size
 
     // Extract performance scores
-    const scores = events.map(event => {
+    const scores = events.map((event) => {
       const accuracy = event.metrics.accuracy?.successRate || 0;
       const latency = event.metrics.latency?.averageMs || 0;
       return accuracy * (1 / (1 + latency / 1000));
@@ -656,7 +731,10 @@ export class MetricAggregator extends EventEmitter {
 
     // Calculate mean and standard deviation
     const mean = this.average(scores);
-    const stdDev = Math.sqrt(scores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) / scores.length);
+    const stdDev = Math.sqrt(
+      scores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) /
+        scores.length
+    );
 
     // Detect outliers using Z-score
     const outliers: PerformanceEvent[] = [];
@@ -688,10 +766,20 @@ export class MetricAggregator extends EventEmitter {
   /**
    * Calculates confidence score for aggregated data.
    */
-  private calculateConfidence(sampleCount: number, window: keyof AggregationConfig["windows"]): number {
+  private calculateConfidence(
+    sampleCount: number,
+    window: keyof AggregationConfig["windows"]
+  ): number {
     const windowConfig = this.config.windows[window];
     const sampleRatio = Math.min(1, sampleCount / windowConfig.minSampleSize);
-    const timeFactor = window === "long" ? 1.0 : window === "medium" ? 0.8 : window === "short" ? 0.6 : 0.4;
+    const timeFactor =
+      window === "long"
+        ? 1.0
+        : window === "medium"
+        ? 0.8
+        : window === "short"
+        ? 0.6
+        : 0.4;
 
     return sampleRatio * timeFactor;
   }
@@ -718,7 +806,8 @@ export class MetricAggregator extends EventEmitter {
     if (!this.config.anonymization.enabled) return value;
 
     // Add Laplace noise for differential privacy
-    const noise = (Math.random() - 0.5) * 2 * this.config.anonymization.noiseLevel;
+    const noise =
+      (Math.random() - 0.5) * 2 * this.config.anonymization.noiseLevel;
     return Math.max(0, value + noise);
   }
 
@@ -765,8 +854,8 @@ export class MetricAggregator extends EventEmitter {
     const cutoffTime = Date.now() - maxAge;
 
     for (const [agentId, data] of this.aggregatedData) {
-      const filteredData = data.filter(item =>
-        new Date(item.endTime).getTime() > cutoffTime
+      const filteredData = data.filter(
+        (item) => new Date(item.endTime).getTime() > cutoffTime
       );
       this.aggregatedData.set(agentId, filteredData);
     }
@@ -791,7 +880,10 @@ export class MetricAggregator extends EventEmitter {
 
     for (const data of this.aggregatedData.values()) {
       for (const item of data) {
-        if (!oldest || new Date(item.startTime).getTime() < new Date(oldest).getTime()) {
+        if (
+          !oldest ||
+          new Date(item.startTime).getTime() < new Date(oldest).getTime()
+        ) {
           oldest = item.startTime;
         }
       }
@@ -808,7 +900,10 @@ export class MetricAggregator extends EventEmitter {
 
     for (const data of this.aggregatedData.values()) {
       for (const item of data) {
-        if (!newest || new Date(item.endTime).getTime() > new Date(newest).getTime()) {
+        if (
+          !newest ||
+          new Date(item.endTime).getTime() > new Date(newest).getTime()
+        ) {
           newest = item.endTime;
         }
       }
@@ -821,11 +916,11 @@ export class MetricAggregator extends EventEmitter {
    * Sets up event handlers for internal events.
    */
   private setupEventHandlers(): void {
-    this.on("aggregation_completed", (stats) => {
+    this.on("aggregation_completed", (_stats) => {
       // Could trigger downstream processing
     });
 
-    this.on("aggregation_error", (error) => {
+    this.on("aggregation_error", (_error) => {
       // Could trigger alerting or recovery
     });
   }

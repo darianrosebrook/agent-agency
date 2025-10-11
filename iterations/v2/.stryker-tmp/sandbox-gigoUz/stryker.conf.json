@@ -1,0 +1,53 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "ARBITER-001 Mutation Testing Configuration - Target: ≥50% mutation score for Tier 2 compliance",
+  "packageManager": "npm",
+  "reporters": ["html", "clear-text", "progress", "dashboard"],
+  "testRunner": "jest",
+  "jest": {
+    "projectType": "custom",
+    "configFile": "jest.config.js",
+    "enableFindRelatedTests": true
+  },
+  "coverageAnalysis": "perTest",
+  "mutate": [
+    "src/orchestrator/AgentRegistryManager.ts",
+    "src/database/AgentRegistryDbClient.ts",
+    "src/orchestrator/AgentRegistrySecurity.ts",
+    "src/orchestrator/TaskRoutingManager.ts",
+    "src/orchestrator/EventEmitter.ts",
+    "src/orchestrator/TaskQueue.ts",
+    "src/orchestrator/TaskAssignment.ts",
+    "!src/**/*.test.ts",
+    "!src/**/*.spec.ts",
+    "!src/**/index.ts"
+  ],
+  "mutator": {
+    "plugins": ["typescript"],
+    "excludedMutations": ["StringLiteral", "ArrayDeclaration"]
+  },
+  "timeoutMS": 60000,
+  "timeoutFactor": 2,
+  "maxConcurrentTestRunners": 4,
+  "thresholds": {
+    "high": 70,
+    "low": 50,
+    "break": 45
+  },
+  "dashboard": {
+    "reportType": "full"
+  },
+  "htmlReporter": {
+    "fileName": "mutation-report.html"
+  },
+  "ignorePatterns": [
+    "dist",
+    "node_modules",
+    "coverage",
+    "**/*.d.ts",
+    "**/*.js.map",
+    "tests/**/*"
+  ],
+  "incremental": true,
+  "incrementalFile": ".stryker-tmp/incremental.json"
+}

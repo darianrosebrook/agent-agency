@@ -1,0 +1,384 @@
+id: AGENT-AGENCY-V2
+title: Agent Agency V2 - Self-Improving Multi-Agent System (Orchestration + Benchmarking + RL)
+risk_tier: 2
+mode: feature
+change_budget:
+  max_files: 75
+  max_loc: 6000
+blast_radius:
+  modules:
+    - src/orchestrator/
+    - src/benchmark/
+    - src/rl/
+    - src/thinking/
+    - src/evaluation/
+    - src/mcp/
+    - src/services/AgentOrchestrator.ts
+  data_migration: false
+operational_rollback_slo: 10m
+threats:
+  - Arbiter routing failures causing task execution degradation
+  - Insufficient benchmark data preventing RL training
+  - Data quality issues leading to poor agent training
+  - Privacy violations in cross-tenant learning data
+  - RL training instability causing performance degradation
+  - Thinking budget exhaustion leading to infinite loops
+  - Reward hacking regression in evaluation accuracy
+  - Tool adoption failures breaking existing workflows
+scope:
+  in:
+    - iterations/v2/src/
+    - iterations/v2/tests/
+    - iterations/v2/docs/
+    - src/orchestrator/
+    - src/benchmark/
+    - src/rl/
+    - src/thinking/
+    - src/evaluation/
+    - src/mcp/
+  out:
+    - node_modules/
+    - dist/
+    - iterations/poc/
+    - iterations/v2.2/
+    - docs/legacy/
+invariants:
+  - All existing V1 functionality remains operational with feature flags
+  - Arbiter enforces CAWS policies that no worker model can bypass
+  - Benchmark data collection never blocks task execution
+  - RL training data is properly anonymized and tenant-isolated
+  - Thinking budgets prevent resource exhaustion with hard ceilings
+  - Model judgments complement not replace rule-based evaluation
+  - System maintains backward compatibility with V1 agent orchestration
+  - Data collection has <50ms overhead per task
+  - Improved agents must validate before deployment
+acceptance:
+  # Pillar 1: Arbiter Orchestration
+  - id: V2-ORG-001
+    given: Task arrives at arbiter
+    when: Agent selection algorithm runs
+    then: Best agent selected based on multi-armed bandit with performance history and routing decision logged
+  - id: V2-ORG-002
+    given: Agent produces result
+    when: CAWS constitutional authority evaluates
+    then: Budget limits enforced quality gates validated and provenance recorded
+  - id: V2-ORG-003
+    given: Multiple agents available for task
+    when: Arbiter uses capability matching
+    then: Agent with highest success rate for task type selected with ≥85% accuracy
+  - id: V2-ORG-004
+    given: Agent performance degrades
+    when: Multi-armed bandit detects trend
+    then: Routing preferences automatically adjust to favor better-performing agents
+  
+  # Pillar 2: Benchmark Data Collection
+  - id: V2-DATA-001
+    given: Task execution completes
+    when: Performance tracker collects metrics
+    then: Complete benchmark data point logged with routing context execution metrics and evaluation outcomes
+  - id: V2-DATA-002
+    given: Benchmark data point created
+    when: Quality gates validate
+    then: Data passes completeness type-safety privacy and consistency checks with ≥95% pass rate
+  - id: V2-DATA-003
+    given: Benchmark pool accumulates data
+    when: RL export criteria met (≥5000 points)
+    then: RL-ready batch exported with anonymization quality validation and diversity balancing
+  - id: V2-DATA-004
+    given: Data contains PII or secrets
+    when: Privacy gates scan
+    then: Data point rejected and quarantined with 0 violations in production
+  
+  # Pillar 3: RL Training & Agent Improvement
+  - id: V2-RL-001
+    given: Thinking budget manager is configured
+    when: Task complexity is assessed and budget allocated
+    then: Token allocation matches task complexity (trivial ≤500 standard ≤2000 complex ≤8000 tokens)
+  - id: V2-RL-002
+    given: Agent produces code solution
+    when: Minimal-diff evaluator analyzes the change
+    then: Reward is multiplied by minimality factor (0.1-1.0) based on AST similarity and scaffolding penalty
+  - id: V2-RL-003
+    given: Multi-turn conversation with tool usage
+    when: Turn-level RL trainer processes the conversation
+    then: Each turn receives intermediate rewards for tool choice appropriateness and information utility
+  - id: V2-RL-004
+    given: Model-based judge is available
+    when: Subjective evaluation criteria are assessed
+    then: LLM judge provides confidence-scored assessment for faithfulness relevance minimality and safety
+  - id: V2-RL-005
+    given: Agent with tool learning warmup
+    when: Tool call is required for task completion
+    then: Tool adoption rate improves by 3-5x compared to baseline with proper JSON formatting and error handling
+  - id: V2-RL-006
+    given: RL training completes on benchmark data
+    when: Improved agent is validated
+    then: Agent shows ≥10% quality improvement on held-out tasks before deployment
+  
+  # Integration: Closed Loop
+  - id: V2-INT-001
+    given: Arbiter operational and collecting data
+    when: Benchmark pool reaches 5000+ quality points
+    then: RL training pipeline automatically triggered and training batch exported
+  - id: V2-INT-002
+    given: RL training produces improved agent
+    when: Agent deployed back to arbiter
+    then: Arbiter recognizes new capabilities and updates routing preferences automatically
+  - id: V2-INT-003
+    given: Self-improvement loop operational
+    when: System runs for 90 days
+    then: Measurable continuous improvement in agent quality task completion and routing accuracy
+non_functional:
+  a11y:
+    - keyboard-navigation
+    - screen-reader-labels
+    - focus-management
+  perf:
+    # Arbiter performance
+    routing_decision_ms: 100
+    caws_validation_ms: 200
+    performance_tracking_overhead_ms: 50
+    
+    # API performance
+    api_p95_ms: 500
+    
+    # RL training performance
+    thinking_budget_max_ms: 10000
+    thinking_budget_allocation_ms: 50
+    tool_call_p95_ms: 200
+    rl_inference_p95_ms: 1000
+    ast_diff_analysis_ms: 200
+    model_judge_p95_ms: 500
+    
+    # Data pipeline performance
+    data_collection_latency_ms: 50
+    batch_export_time_ms: 300000
+    
+    # General
+    lcp_ms: 2500
+    bundle_kb: 600
+  security:
+    - input-validation
+    - tenant-isolation
+    - data-encryption-at-rest
+    - access-control
+    - rate-limiting
+    - rl-data-anonymization
+    - tool-permission-scopes
+    - caws-constitutional-authority
+    - benchmark-data-privacy
+  reliability:
+    uptime_sla: 99.5
+    error_rate_max: 0.05
+    rl_training_stability: 0.90
+    data_collection_coverage: 0.95
+  scalability:
+    concurrent_tenants: 1000
+    concurrent_agents: 50
+    tasks_per_day: 1000
+    memory_capacity_gb: 64
+    rl_training_concurrent: 10
+    benchmark_data_retention_days: 730
+contracts:
+  # Arbiter APIs
+  - type: openapi
+    path: docs/api/arbiter-routing.api.yaml
+    version: 2.0.0
+  
+  # Benchmark data APIs
+  - type: openapi
+    path: docs/api/benchmark-data.api.yaml
+    version: 2.0.0
+  
+  # CAWS integration (CLI interface)
+  - type: openapi
+    path: docs/api/caws-integration.api.yaml
+    version: 2.0.0
+    description: Local CLI handshake for CAWS constitutional enforcement
+  
+  # RL training APIs
+  - type: openapi
+    path: docs/api/v2-rl-training.yaml
+    version: 2.0.0
+  - type: openapi
+    path: docs/api/v2-thinking-budget.yaml
+    version: 2.0.0
+  - type: openapi
+    path: docs/api/v2-evaluation-enhanced.yaml
+    version: 2.0.0
+  
+  # TypeScript contracts
+  - type: typescript
+    path: src/types/agentic-rl.ts
+  - type: typescript
+    path: src/types/arbiter-orchestration.ts
+  - type: typescript
+    path: src/types/benchmark-data.ts
+  - type: typescript
+    path: src/types/caws-governance.ts
+observability:
+  logs:
+    # Arbiter logs
+    - arbiter_routing_decisions
+    - agent_capability_updates
+    - caws_validation_results
+    - performance_tracking_events
+    
+    # Benchmark data logs
+    - data_collection_events
+    - quality_gate_validations
+    - privacy_compliance_checks
+    - rl_batch_exports
+    
+    # RL training logs
+    - rl_training_events
+    - thinking_budget_usage
+    - turn_level_rewards
+    - minimal_diff_metrics
+    - tool_adoption_rates
+    - model_judge_confidence
+  metrics:
+    # Arbiter metrics
+    - routing_accuracy_rate
+    - agent_utilization_rate
+    - caws_compliance_rate
+    - task_completion_latency
+    
+    # Benchmark data metrics
+    - data_collection_rate
+    - data_quality_pass_rate
+    - rl_ready_data_percentage
+    - storage_growth_rate
+    
+    # RL training metrics
+    - rl_training_completion_rate
+    - agent_improvement_delta
+    - thinking_budget_efficiency
+    - reward_hacking_incidents
+    - tool_adoption_improvement
+    - evaluation_accuracy_delta
+  traces:
+    # End-to-end traces
+    - arbiter_to_rl_pipeline
+    - task_execution_complete_cycle
+    - agent_improvement_deployment
+    
+    # Component traces
+    - multi_armed_bandit_selection
+    - performance_data_collection
+    - rl_batch_preparation
+    - multi_turn_rl_trajectory
+    - thinking_budget_allocation
+    - minimal_diff_analysis
+    - model_based_judgment
+migrations: []
+rollback:
+  - strategy: feature_flag_rollback
+    description: Disable arbiter routing benchmark collection or RL training independently via configuration flags
+    slo_minutes: 1
+    data_loss_risk: none
+  - strategy: blue_green
+    description: Deploy V2 alongside V1 cut over after validation
+    slo_minutes: 15
+    data_loss_risk: none
+  - strategy: agent_version_rollback
+    description: Revert to previous agent version if RL deployment causes regressions
+    slo_minutes: 5
+    data_loss_risk: none
+  - strategy: data_rollback
+    description: Remove V2 data while preserving V1
+    slo_minutes: 30
+    data_loss_risk: low
+ai_assessment:
+  confidence_level: 0.85
+  uncertainty_areas:
+    - Optimal multi-armed bandit exploration rate for agent selection
+    - Minimum benchmark data volume for stable RL training
+    - RL training stability in production with diverse tasks
+    - Long-term reward hacking prevention effectiveness
+    - Optimal thinking budget allocation curves
+  complexity_factors:
+    - Multi-agent orchestration with CAWS enforcement
+    - Real-time performance tracking without overhead
+    - Privacy-preserving cross-tenant benchmark data
+    - Multi-turn RL credit assignment
+    - AST-based minimal diff analysis
+    - Model-based judgment integration
+    - Continuous deployment of RL-improved agents
+  risk_factors:
+    - Arbiter routing failures could cascade to all agents
+    - Insufficient benchmark data could delay RL training
+    - Poor quality data could train agents incorrectly
+    - RL training could introduce unpredictable behavior
+    - Thinking budgets might need calibration per use case
+    - Privacy violations in benchmark data would prevent cross-tenant learning
+phases:
+  - id: phase_1_arbiter_orchestration
+    name: Arbiter & Performance Tracking
+    duration_weeks: flexible
+    deliverables:
+      - CAWS constitutional authority arbiter implementation
+      - Multi-armed bandit intelligent task routing
+      - Agent registry with capability tracking
+      - Performance tracking system for benchmark data collection
+      - Memory-aware orchestration integration
+      - Cross-agent learning infrastructure
+    acceptance_criteria:
+      - Arbiter routes 100% of tasks with logged decisions
+      - CAWS policies enforced with 100% compliance
+      - Multi-armed bandit achieves ≥85% routing accuracy
+      - Performance data collected for ≥95% of executions
+      - Agent capability profiles maintained and updated
+  
+  - id: phase_2_benchmark_data
+    name: Benchmark Data Pools & Quality Infrastructure
+    duration_weeks: flexible
+    deliverables:
+      - Complete data schema for RL training
+      - Quality validation gates (completeness type-safety privacy consistency)
+      - Privacy-preserving anonymization system
+      - Data pipeline with batch export for RL consumption
+      - Storage infrastructure (time-series + document store)
+    acceptance_criteria:
+      - Data schema supports all RL training requirements
+      - Quality gates pass ≥95% of collected data
+      - 0 privacy violations (PII secrets tenant IDs)
+      - ≥5000 quality data points collected within 30 days
+      - RL batch export pipeline operational
+  
+  - id: phase_3_rl_training
+    name: Agent RL Training & Improvement
+    duration_weeks: flexible
+    deliverables:
+      - ThinkingBudgetManager with adaptive allocation
+      - Turn-level RL trainer using benchmark data
+      - Rubric engineering framework with multi-term rewards
+      - Minimal-diff evaluator with AST analysis
+      - Model-based judges for intelligent evaluation
+      - DSPy integration for prompt optimization
+      - Tool learning warmup (SFT + RL fine-tuning)
+    acceptance_criteria:
+      - RL training converges on benchmark data (≥90% stability)
+      - Agents show ≥10% quality improvement on held-out tasks
+      - Minimal diff penalties reduce reward hacking by ≥60%
+      - Tool adoption improves by ≥300% for small models
+      - Thinking budgets reduce token waste by ≥40%
+      - Model judges provide accurate subjective assessments
+  
+  - id: phase_4_feedback_loop
+    name: Closed-Loop Integration & Continuous Improvement
+    duration_weeks: flexible
+    deliverables:
+      - RL-improved agents deployed back to arbiter
+      - Continuous learning pipeline (weekly training cycles)
+      - Performance improvement validation framework
+      - A/B testing for safe agent deployments
+      - Automated rollback on regressions
+      - System-wide monitoring and observability
+    acceptance_criteria:
+      - Improved agents deployable without manual intervention
+      - Arbiter recognizes and utilizes new agent capabilities
+      - Continuous improvement demonstrated over 90-day period
+      - A/B tests validate improvements before full rollout
+      - System shows compounding performance gains
+      - Zero production incidents from RL deployments

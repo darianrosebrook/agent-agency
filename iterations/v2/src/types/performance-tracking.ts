@@ -579,7 +579,11 @@ export interface PerformanceAnomaly {
   /**
    * Type of anomaly detected.
    */
-  type: "latency_spike" | "accuracy_drop" | "resource_saturation" | "error_rate_increase";
+  type:
+    | "latency_spike"
+    | "accuracy_drop"
+    | "resource_saturation"
+    | "error_rate_increase";
 
   /**
    * Severity level.

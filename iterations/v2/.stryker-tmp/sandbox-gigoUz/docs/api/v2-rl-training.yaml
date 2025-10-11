@@ -1,0 +1,728 @@
+openapi: 3.0.0
+info:
+  title: Agent Agency V2 - RL Training API
+  version: 2.0.0
+  description: |
+    Reinforcement Learning training endpoints for agentic behavior improvement.
+    Supports turn-level rewards, conversation trajectory training, and model updates.
+  contact:
+    name: Agent Agency Team
+    email: hello@darianrosebrook.com
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3000/api/v2
+    description: Development server
+  - url: https://api.agent-agency.com/v2
+    description: Production server
+
+security:
+  - bearerAuth: []
+  - tenantId: []
+
+paths:
+  /rl/train:
+    post:
+      summary: Train agent on conversation trajectory
+      description: |
+        Submit a conversation for RL training with turn-level rewards.
+        Updates agent policy based on tool usage and task completion.
+      operationId: trainOnConversation
+      tags:
+        - RL Training
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationTrainingRequest'
+            example:
+              conversationId: "conv-12345"
+              tenantId: "tenant-abc"
+              turns:
+                - turnNumber: 1
+                  userMessage: "Implement user login with validation"
+                  agentResponse: "I'll help you implement user login. Let me check the existing authentication system."
+                  toolCalls: []
+                  rewards:
+                    informationGain: 0.2
+                    taskProgress: 0.1
+                    totalReward: 0.15
+                - turnNumber: 2
+                  userMessage: "Use the auth API"
+                  agentResponse: "I need to check available authentication tools."
+                  toolCalls:
+                    - name: "list_auth_apis"
+                      arguments: {}
+                  rewards:
+                    toolChoiceAppropriate: true
+                    informationUtility: 0.8
+                    formatCorrectness: 1.0
+                    taskProgress: 0.6
+                    totalReward: 0.85
+              finalOutcome:
+                success: true
+                completionQuality: 0.9
+                taskCompleted: true
+      responses:
+        '200':
+          description: Training completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainingResponse'
+              example:
+                trainingId: "train-67890"
+                status: "completed"
+                modelUpdateApplied: true
+                metrics:
+                  policyLoss: 0.0234
+                  valueLoss: 0.0156
+                  entropy: 0.87
+                  klDivergence: 0.0032
+                processingTimeMs: 1250
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /rl/train/batch:
+    post:
+      summary: Train on multiple conversation trajectories
+      description: |
+        Batch training for improved efficiency with multiple conversation trajectories.
+        Supports up to 50 conversations per batch for parallel processing.
+      operationId: trainOnConversationBatch
+      tags:
+        - RL Training
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchTrainingRequest'
+            example:
+              conversations:
+                - conversationId: "conv-123"
+                  tenantId: "tenant-a"
+                  turns: [...]
+                - conversationId: "conv-456"
+                  tenantId: "tenant-b"
+                  turns: [...]
+              batchConfig:
+                priority: "high"
+                maxProcessingTimeMs: 30000
+      responses:
+        '202':
+          description: Batch training queued for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchTrainingResponse'
+              example:
+                batchId: "batch-789"
+                status: "queued"
+                estimatedCompletionTime: "2025-10-15T10:30:00Z"
+                conversationCount: 25
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /rl/train/status/{trainingId}:
+    get:
+      summary: Get training status
+      description: Check the status of an ongoing or completed training session.
+      operationId: getTrainingStatus
+      tags:
+        - RL Training
+      parameters:
+        - name: trainingId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "train-67890"
+      responses:
+        '200':
+          description: Training status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainingStatus'
+              example:
+                trainingId: "train-67890"
+                status: "completed"
+                progress: 1.0
+                metrics:
+                  policyLoss: 0.0234
+                  valueLoss: 0.0156
+                  entropy: 0.87
+                startedAt: "2025-10-15T09:15:00Z"
+                completedAt: "2025-10-15T09:16:15Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /rl/models:
+    get:
+      summary: List available RL models
+      description: Get list of trained models available for agent deployment.
+      operationId: listRLModels
+      tags:
+        - RL Models
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: string
+          description: Filter models by tenant
+        - name: baseModel
+          in: query
+          schema:
+            type: string
+          enum: [gemma-3n, llama-3.2-3b, qwen2.5-7b]
+          description: Filter by base model type
+      responses:
+        '200':
+          description: Models retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelList'
+              example:
+                models:
+                  - modelId: "model-123"
+                    baseModel: "gemma-3n"
+                    tenantId: "tenant-abc"
+                    trainingSessions: 45
+                    lastTrained: "2025-10-15T08:00:00Z"
+                    performanceMetrics:
+                      toolAdoptionRate: 0.42
+                      taskCompletionRate: 0.88
+                      averageReward: 0.76
+                    status: "active"
+
+  /rl/models/{modelId}/deploy:
+    post:
+      summary: Deploy RL model to production
+      description: Deploy a trained RL model to the active agent pool.
+      operationId: deployRLModel
+      tags:
+        - RL Models
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeploymentRequest'
+            example:
+                trafficPercentage: 10
+                canaryDurationMinutes: 60
+                rollbackOnErrorRate: 0.05
+      responses:
+        '202':
+          description: Model deployment initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeploymentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /rl/metrics:
+    get:
+      summary: Get RL training metrics
+      description: Retrieve comprehensive metrics for RL training performance.
+      operationId: getRLMetrics
+      tags:
+        - RL Metrics
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: string
+        - name: timeRange
+          in: query
+          schema:
+            type: string
+            enum: [1h, 24h, 7d, 30d]
+            default: 24h
+      responses:
+        '200':
+          description: Metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RLMetrics'
+              example:
+                timeRange: "24h"
+                tenantId: "tenant-abc"
+                training:
+                  totalSessions: 156
+                  successfulSessions: 148
+                  averageProcessingTimeMs: 1250
+                  modelUpdatesApplied: 12
+                performance:
+                  averageToolAdoptionRate: 0.38
+                  averageTaskCompletionRate: 0.85
+                  averageRewardIncrease: 0.12
+                safety:
+                  rewardHackingIncidents: 2
+                  safetyViolations: 0
+
+components:
+  schemas:
+    ConversationTrainingRequest:
+      type: object
+      required:
+        - conversationId
+        - tenantId
+        - turns
+        - finalOutcome
+      properties:
+        conversationId:
+          type: string
+          description: Unique identifier for the conversation
+        tenantId:
+          type: string
+          description: Tenant that owns this conversation data
+        turns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationTurn'
+          description: Sequence of conversation turns with rewards
+        finalOutcome:
+          $ref: '#/components/schemas/TaskOutcome'
+        metadata:
+          type: object
+          description: Additional context for training
+
+    ConversationTurn:
+      type: object
+      required:
+        - turnNumber
+        - rewards
+      properties:
+        turnNumber:
+          type: integer
+          minimum: 1
+          description: Turn number in the conversation
+        userMessage:
+          type: string
+          description: User's message (optional for training)
+        agentResponse:
+          type: string
+          description: Agent's response (optional for training)
+        toolCalls:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolCall'
+          description: Tools called in this turn
+        rewards:
+          $ref: '#/components/schemas/TurnRewards'
+          description: Rewards for this turn's actions
+
+    ToolCall:
+      type: object
+      required:
+        - name
+        - arguments
+      properties:
+        name:
+          type: string
+          description: Name of the tool called
+        arguments:
+          type: object
+          description: Arguments passed to the tool
+
+    TurnRewards:
+      type: object
+      required:
+        - informationGain
+        - formatCorrectness
+        - taskProgress
+        - totalReward
+      properties:
+        informationGain:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: How useful the information provided was
+        formatCorrectness:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Correctness of JSON formatting and schema compliance
+        taskProgress:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: How much closer this turn brought the task to completion
+        safetyScore:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Safety of the actions taken
+        toolChoiceAppropriate:
+          type: boolean
+          description: Whether the tool choice was appropriate for the task
+        informationUtility:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Utility of information retrieved by tools
+        errorHandlingCorrect:
+          type: boolean
+          description: Whether errors were handled appropriately
+        totalReward:
+          type: number
+          description: Weighted combination of all reward factors
+
+    TaskOutcome:
+      type: object
+      required:
+        - success
+        - completionQuality
+        - taskCompleted
+      properties:
+        success:
+          type: boolean
+          description: Whether the overall task was successful
+        completionQuality:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Quality of the final solution
+        taskCompleted:
+          type: boolean
+          description: Whether the task reached completion
+        failureReason:
+          type: string
+          enum: [timeout, error, incorrect_solution, safety_violation]
+          description: Reason for failure (if applicable)
+
+    TrainingResponse:
+      type: object
+      required:
+        - trainingId
+        - status
+        - modelUpdateApplied
+      properties:
+        trainingId:
+          type: string
+          description: Unique identifier for this training session
+        status:
+          type: string
+          enum: [completed, failed]
+          description: Training completion status
+        modelUpdateApplied:
+          type: boolean
+          description: Whether the trained model was applied
+        metrics:
+          $ref: '#/components/schemas/TrainingMetrics'
+        processingTimeMs:
+          type: integer
+          description: Total processing time in milliseconds
+        error:
+          type: string
+          description: Error message if training failed
+
+    TrainingMetrics:
+      type: object
+      properties:
+        policyLoss:
+          type: number
+          description: Policy network loss
+        valueLoss:
+          type: number
+          description: Value network loss
+        entropy:
+          type: number
+          description: Policy entropy (exploration measure)
+        klDivergence:
+          type: number
+          description: KL divergence between old and new policies
+        learningRate:
+          type: number
+          description: Current learning rate used
+
+    BatchTrainingRequest:
+      type: object
+      required:
+        - conversations
+      properties:
+        conversations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationTrainingRequest'
+          maxItems: 50
+          description: Batch of conversations for training
+        batchConfig:
+          type: object
+          properties:
+            priority:
+              type: string
+              enum: [low, normal, high]
+              default: normal
+            maxProcessingTimeMs:
+              type: integer
+              default: 300000
+              description: Maximum time to spend on this batch
+
+    BatchTrainingResponse:
+      type: object
+      required:
+        - batchId
+        - status
+        - estimatedCompletionTime
+        - conversationCount
+      properties:
+        batchId:
+          type: string
+        status:
+          type: string
+          enum: [queued, processing, completed, failed]
+        estimatedCompletionTime:
+          type: string
+          format: date-time
+        conversationCount:
+          type: integer
+        priority:
+          type: string
+
+    TrainingStatus:
+      type: object
+      required:
+        - trainingId
+        - status
+        - progress
+      properties:
+        trainingId:
+          type: string
+        status:
+          type: string
+          enum: [queued, processing, completed, failed]
+        progress:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Training progress (0-1)
+        metrics:
+          $ref: '#/components/schemas/TrainingMetrics'
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        error:
+          type: string
+
+    ModelList:
+      type: object
+      required:
+        - models
+      properties:
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/RLModel'
+
+    RLModel:
+      type: object
+      required:
+        - modelId
+        - baseModel
+        - tenantId
+        - status
+      properties:
+        modelId:
+          type: string
+        baseModel:
+          type: string
+          enum: [gemma-3n, llama-3.2-3b, qwen2.5-7b]
+        tenantId:
+          type: string
+        trainingSessions:
+          type: integer
+          description: Number of training sessions completed
+        lastTrained:
+          type: string
+          format: date-time
+        performanceMetrics:
+          $ref: '#/components/schemas/ModelPerformanceMetrics'
+        status:
+          type: string
+          enum: [training, active, deprecated, failed]
+
+    ModelPerformanceMetrics:
+      type: object
+      properties:
+        toolAdoptionRate:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Rate at which tools are used appropriately
+        taskCompletionRate:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Rate of successful task completion
+        averageReward:
+          type: number
+          description: Average reward per conversation turn
+        thinkingEfficiency:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Efficiency of token usage
+
+    DeploymentRequest:
+      type: object
+      properties:
+        trafficPercentage:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+          description: Percentage of traffic to route to new model
+        canaryDurationMinutes:
+          type: integer
+          minimum: 5
+          maximum: 1440
+          default: 60
+          description: How long to run canary deployment
+        rollbackOnErrorRate:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0.05
+          description: Error rate threshold for automatic rollback
+
+    DeploymentResponse:
+      type: object
+      required:
+        - deploymentId
+        - status
+      properties:
+        deploymentId:
+          type: string
+        status:
+          type: string
+          enum: [initiated, running, completed, rolled_back, failed]
+        estimatedCompletionTime:
+          type: string
+          format: date-time
+
+    RLMetrics:
+      type: object
+      required:
+        - timeRange
+        - training
+        - performance
+        - safety
+      properties:
+        timeRange:
+          type: string
+        tenantId:
+          type: string
+        training:
+          type: object
+          properties:
+            totalSessions:
+              type: integer
+            successfulSessions:
+              type: integer
+            averageProcessingTimeMs:
+              type: integer
+            modelUpdatesApplied:
+              type: integer
+        performance:
+          type: object
+          properties:
+            averageToolAdoptionRate:
+              type: number
+            averageTaskCompletionRate:
+              type: number
+            averageRewardIncrease:
+              type: number
+        safety:
+          type: object
+          properties:
+            rewardHackingIncidents:
+              type: integer
+            safetyViolations:
+              type: integer
+            dataAnonymizationFailures:
+              type: integer
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Invalid conversation format"
+              details:
+                type: object
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Authentication required"
+
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Rate limit exceeded"
+              retryAfter:
+                type: integer
+                description: Seconds to wait before retrying
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Training session not found"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: JWT token for API authentication
+
+    tenantId:
+      type: apiKey
+      in: header
+      name: X-Tenant-ID
+      description: Tenant identifier for multi-tenant operations

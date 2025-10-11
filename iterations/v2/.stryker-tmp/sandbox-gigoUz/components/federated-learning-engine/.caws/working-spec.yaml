@@ -1,0 +1,49 @@
+id: "MEMORY-001"
+title: "Federated Learning Engine"
+risk_tier: 2
+mode: "feature"
+change_budget:
+  max_files: 15
+  max_loc: 800
+blast_radius:
+  modules: ["memory", "privacy"]
+  data_migration: false
+operational_rollback_slo: "5m"
+scope:
+  in:
+    - "src/memory/FederatedLearningEngine.ts"
+    - "src/types/memory.ts"
+    - "tests/unit/memory/FederatedLearningEngine.test.ts"
+  out:
+    - "src/database/"
+    - "src/orchestrator/"
+invariants:
+  - "Federated learning maintains tenant data isolation"
+  - "Privacy-preserving techniques prevent data leakage"
+  - "Participant reputation affects access to federated insights"
+acceptance:
+  - id: "A1"
+    given: "Tenant with federated isolation level"
+    when: "Tenant registers for federated learning"
+    then: "Tenant is registered as active participant"
+  - id: "A2"
+    given: "Multiple tenants submit insights on same topic"
+    when: "Minimum participants threshold is reached"
+    then: "Insights are aggregated using configured method"
+  - id: "A3"
+    given: "Tenant requests federated insights"
+    when: "Aggregated insights exist for topic"
+    then: "Tenant receives filtered insights based on reputation"
+  - id: "A4"
+    given: "Privacy level set to differential"
+    when: "Insights are submitted for aggregation"
+    then: "Differential privacy noise is applied to scores"
+non_functional:
+  a11y: []
+  perf:
+    aggregation_p95_ms: 5000
+    privacy_noise_overhead_percent: 5
+  security:
+    - "differential-privacy"
+    - "tenant-isolation"
+    - "input-validation"
