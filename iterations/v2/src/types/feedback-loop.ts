@@ -1,6 +1,6 @@
 import { TaskOutcome } from "./agentic-rl";
 import { ConstitutionalViolation } from "./caws-constitutional";
-import { ComponentHealth, FailureEvent } from "./coordinator";
+import { ComponentHealth } from "./coordinator";
 
 export enum FeedbackSource {
   PERFORMANCE_METRICS = "performance_metrics",
@@ -33,31 +33,38 @@ export interface FeedbackEvent {
   metadata?: Record<string, any>;
 }
 
-export interface PerformanceFeedback extends FeedbackEvent {
-  source: FeedbackSource.PERFORMANCE_METRICS;
-  metrics: {
-    latencyMs?: number;
-    throughput?: number;
-    errorRate?: number;
-    resourceUsage?: {
-      cpuPercent?: number;
-      memoryMb?: number;
-      networkMbps?: number;
-    };
-    qualityScore?: number;
+export interface PerformanceMetrics {
+  latencyMs?: number;
+  throughput?: number;
+  errorRate?: number;
+  resourceUsage?: {
+    cpuPercent?: number;
+    memoryMb?: number;
+    networkMbps?: number;
   };
+  qualityScore?: number;
 }
 
-export interface TaskOutcomeFeedback extends FeedbackEvent {
-  source: FeedbackSource.TASK_OUTCOMES;
+export interface PerformanceFeedback extends FeedbackEvent {
+  source: FeedbackSource.PERFORMANCE_METRICS;
+  type: FeedbackType.NUMERIC_METRIC;
+  value: PerformanceMetrics;
+}
+
+export interface TaskOutcomeData {
   outcome: TaskOutcome;
   executionTimeMs: number;
   retryCount: number;
   errorDetails?: string;
 }
 
-export interface UserRatingFeedback extends FeedbackEvent {
-  source: FeedbackSource.USER_RATINGS;
+export interface TaskOutcomeFeedback extends FeedbackEvent {
+  source: FeedbackSource.TASK_OUTCOMES;
+  type: FeedbackType.BINARY_OUTCOME;
+  value: TaskOutcomeData;
+}
+
+export interface UserRatingData {
   rating: number; // 1-5 scale
   comments?: string;
   criteria: {
@@ -68,57 +75,80 @@ export interface UserRatingFeedback extends FeedbackEvent {
   };
 }
 
+export interface UserRatingFeedback extends FeedbackEvent {
+  source: FeedbackSource.USER_RATINGS;
+  type: FeedbackType.RATING_SCALE;
+  value: UserRatingData;
+}
+
 export interface SystemEventFeedback extends FeedbackEvent {
   source: FeedbackSource.SYSTEM_EVENTS;
-  eventType: string;
-  severity: "low" | "medium" | "high" | "critical";
-  description: string;
-  impact: {
-    affectedComponents: string[];
-    estimatedDowntimeMinutes?: number;
-    userImpact: "none" | "minor" | "major" | "critical";
+  type: FeedbackType.CATEGORICAL_EVENT;
+  value: {
+    eventType: string;
+    severity: "low" | "medium" | "high" | "critical";
+    description: string;
+    impact: {
+      affectedComponents: string[];
+      estimatedDowntimeMinutes?: number;
+      userImpact: "none" | "minor" | "major" | "critical";
+    };
   };
 }
 
 export interface ConstitutionalViolationFeedback extends FeedbackEvent {
   source: FeedbackSource.CONSTITUTIONAL_VIOLATIONS;
-  violation: ConstitutionalViolation;
-  policyImpact: {
-    affectedTasks: number;
-    complianceScoreDelta: number;
-    riskLevel: "low" | "medium" | "high";
+  type: FeedbackType.CATEGORICAL_EVENT;
+  value: {
+    violation: ConstitutionalViolation;
+    policyImpact: {
+      affectedTasks: number;
+      complianceScoreDelta: number;
+      riskLevel: "low" | "medium" | "high";
+    };
   };
 }
 
 export interface ComponentHealthFeedback extends FeedbackEvent {
   source: FeedbackSource.COMPONENT_HEALTH;
-  health: ComponentHealth;
-  previousStatus?: ComponentHealth["status"];
-  statusChangeReason?: string;
+  type: FeedbackType.CATEGORICAL_EVENT;
+  value: {
+    health: ComponentHealth;
+    previousStatus?: ComponentHealth["status"];
+    statusChangeReason?: string;
+  };
 }
 
 export interface RoutingDecisionFeedback extends FeedbackEvent {
   source: FeedbackSource.ROUTING_DECISIONS;
-  decision: {
-    taskId: string;
-    selectedAgentId: string;
-    routingStrategy: string;
-    confidence: number;
-    alternativesCount: number;
-    routingTimeMs: number;
-  };
-  outcome?: {
-    success: boolean;
-    executionTimeMs?: number;
-    qualityScore?: number;
+  type: FeedbackType.CATEGORICAL_EVENT;
+  value: {
+    decision: {
+      taskId: string;
+      selectedAgentId: string;
+      routingStrategy: string;
+      confidence: number;
+      alternativesCount: number;
+      routingTimeMs: number;
+    };
+    outcome?: {
+      success: boolean;
+      executionTimeMs?: number;
+      qualityScore?: number;
+    };
   };
 }
 
 export interface AgentFeedback extends FeedbackEvent {
   source: FeedbackSource.AGENT_FEEDBACK;
-  feedback: {
+  type: FeedbackType.RATING_SCALE;
+  value: {
     agentId: string;
-    feedbackType: "performance" | "capability" | "reliability" | "communication";
+    feedbackType:
+      | "performance"
+      | "capability"
+      | "reliability"
+      | "communication";
     rating: number;
     details?: string;
     suggestedImprovements?: string[];
@@ -165,7 +195,12 @@ export interface FeedbackInsight {
 
 export interface FeedbackRecommendation {
   id: string;
-  type: "agent_update" | "routing_adjustment" | "resource_allocation" | "policy_change" | "system_configuration";
+  type:
+    | "agent_update"
+    | "routing_adjustment"
+    | "resource_allocation"
+    | "policy_change"
+    | "system_configuration";
   priority: "low" | "medium" | "high" | "critical";
   description: string;
   action: {

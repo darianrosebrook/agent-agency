@@ -6,10 +6,15 @@ import {
   FeedbackCollectionConfig,
   FeedbackProcessingResult,
   PerformanceFeedback,
+  PerformanceMetrics,
   TaskOutcomeFeedback,
+  TaskOutcomeData,
   UserRatingFeedback,
+  UserRatingData,
   SystemEventFeedback,
+  SystemEventData,
   ConstitutionalViolationFeedback,
+  ConstitutionalViolationData,
   ComponentHealthFeedback,
   RoutingDecisionFeedback,
   AgentFeedback,
@@ -76,7 +81,7 @@ export class FeedbackCollector extends EventEmitter {
   public collectPerformanceMetrics(
     entityId: string,
     entityType: string,
-    metrics: PerformanceFeedback["metrics"],
+    metrics: PerformanceMetrics,
     context: Record<string, any> = {}
   ): void {
     this.collectEvent({
@@ -91,18 +96,18 @@ export class FeedbackCollector extends EventEmitter {
         ...context,
         collectionTime: Date.now(),
       },
-      metrics,
     } as PerformanceFeedback);
   }
 
   public collectTaskOutcome(
     taskId: string,
-    outcome: TaskOutcomeFeedback["outcome"],
+    outcome: TaskOutcome,
     executionTimeMs: number,
     retryCount: number,
     errorDetails?: string,
     context: Record<string, any> = {}
   ): void {
+    const value: TaskOutcomeData = { outcome, executionTimeMs, retryCount, errorDetails };
     this.collectEvent({
       id: uuidv4(),
       source: FeedbackSource.TASK_OUTCOMES,
@@ -110,7 +115,7 @@ export class FeedbackCollector extends EventEmitter {
       entityId: taskId,
       entityType: "task",
       timestamp: new Date().toISOString(),
-      value: { outcome, executionTimeMs, retryCount, errorDetails },
+      value,
       context: {
         ...context,
         taskCompletion: outcome.success,
@@ -123,10 +128,11 @@ export class FeedbackCollector extends EventEmitter {
     entityId: string,
     entityType: string,
     rating: number,
-    criteria: UserRatingFeedback["criteria"],
+    criteria: { accuracy: number; speed: number; reliability: number; communication: number },
     comments?: string,
     context: Record<string, any> = {}
   ): void {
+    const value: UserRatingData = { rating, criteria, comments };
     this.collectEvent({
       id: uuidv4(),
       source: FeedbackSource.USER_RATINGS,
@@ -134,7 +140,7 @@ export class FeedbackCollector extends EventEmitter {
       entityId,
       entityType,
       timestamp: new Date().toISOString(),
-      value: { rating, criteria, comments },
+      value,
       context: {
         ...context,
         userId: context.userId || "anonymous",
@@ -174,7 +180,7 @@ export class FeedbackCollector extends EventEmitter {
       id: uuidv4(),
       source: FeedbackSource.CONSTITUTIONAL_VIOLATIONS,
       type: FeedbackType.CATEGORICAL_EVENT,
-      entityId: violation.taskId,
+      entityId: violation.taskId || "unknown",
       entityType: "task",
       timestamp: new Date().toISOString(),
       value: { violation, policyImpact },
@@ -196,7 +202,7 @@ export class FeedbackCollector extends EventEmitter {
       id: uuidv4(),
       source: FeedbackSource.COMPONENT_HEALTH,
       type: FeedbackType.CATEGORICAL_EVENT,
-      entityId: health.componentId,
+      entityId: health.id,
       entityType: "component",
       timestamp: new Date().toISOString(),
       value: { health, previousStatus, statusChangeReason },
@@ -345,7 +351,8 @@ export class FeedbackCollector extends EventEmitter {
           return true; // Basic validation passed
       }
     } catch (error) {
-      this.logger.error("Event validation error", { error: error.message, eventId: event.id });
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.logger.error("Event validation error", { error: errorMessage, eventId: event.id });
       return false;
     }
   }
@@ -365,10 +372,10 @@ export class FeedbackCollector extends EventEmitter {
   }
 
   private validateUserRating(event: UserRatingFeedback): boolean {
-    if (event.rating < 1 || event.rating > 5 || !Number.isInteger(event.rating)) {
+    if (event.value.rating < 1 || event.value.rating > 5 || !Number.isInteger(event.value.rating)) {
       return false;
     }
-    const criteria = event.criteria;
+    const criteria = event.value.criteria;
     const validCriteria = ["accuracy", "speed", "reliability", "communication"];
     for (const key of validCriteria) {
       const value = (criteria as any)[key];
@@ -380,10 +387,10 @@ export class FeedbackCollector extends EventEmitter {
   }
 
   private validateTaskOutcome(event: TaskOutcomeFeedback): boolean {
-    if (event.executionTimeMs < 0 || !isFinite(event.executionTimeMs)) {
+    if (event.value.executionTimeMs < 0 || !isFinite(event.value.executionTimeMs)) {
       return false;
     }
-    if (event.retryCount < 0 || !Number.isInteger(event.retryCount)) {
+    if (event.value.retryCount < 0 || !Number.isInteger(event.value.retryCount)) {
       return false;
     }
     return true;
@@ -445,7 +452,8 @@ export class FeedbackCollector extends EventEmitter {
           // Basic processing - in real system would do validation, enrichment, etc.
           processedEvents++;
         } catch (error) {
-          errors.push(`Failed to process event ${event.id}: ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          errors.push(`Failed to process event ${event.id}: ${errorMessage}`);
         }
       }
 
@@ -467,7 +475,7 @@ export class FeedbackCollector extends EventEmitter {
         processedEvents: 0,
         analysisPerformed: false,
         recommendations: [],
-        errors: [error.message],
+        errors: [error instanceof Error ? error.message : String(error)],
         processingTimeMs: Date.now() - startTime,
         qualityScore: 0,
       };

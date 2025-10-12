@@ -10,6 +10,7 @@
 
 import { EventEmitter } from "events";
 import {
+  ComponentHealth,
   ComponentRegistration,
   ComponentType,
   CoordinatorStats,
@@ -283,7 +284,11 @@ export class SystemCoordinator extends EventEmitter {
         totalRequests: this.stats.totalRequests,
         averageResponseTime,
       },
-      failures: failureStats,
+      failures: {
+        total: failureStats.totalFailures,
+        activeRecoveries: failureStats.activeRecoveries,
+        recentFailures: failureStats.recentFailures,
+      },
     };
   }
 
@@ -478,4 +483,3 @@ export class SystemCoordinator extends EventEmitter {
     }
   }
 }
-

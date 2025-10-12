@@ -267,7 +267,8 @@ export class PerformanceAnalyzer extends EventEmitter {
     // Calculate average analysis time based on last analysis of tracked agents
     const analysisTimeMs = Array.from(this.analysisStates.values()).reduce(
       (sum, state, _, arr) => {
-        const timeSinceLastAnalysis = Date.now() - new Date(state.lastAnalysisTime).getTime();
+        const timeSinceLastAnalysis =
+          Date.now() - new Date(state.lastAnalysisTime).getTime();
         return sum + timeSinceLastAnalysis / arr.length;
       },
       0

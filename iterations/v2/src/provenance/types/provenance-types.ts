@@ -410,6 +410,9 @@ export interface ProvenanceTrackerEvents {
   /** Emitted on tracker error */
   "tracker:error": (error: Error) => void;
 
+  /** Emitted when cleanup operation completes */
+  "tracker:cleanup": (result: { entriesRemoved: number; attributionsRemoved: number }) => void;
+
   /** Emitted when report is generated */
   "report:generated": (report: ProvenanceReport) => void;
 }
@@ -482,6 +485,9 @@ export interface ProvenanceStorage {
   /** Get provenance chain for a spec */
   getProvenanceChain(specId: string): Promise<ProvenanceChain | null>;
 
+  /** Store provenance chain */
+  storeProvenanceChain(chain: ProvenanceChain): Promise<void>;
+
   /** Store AI attribution */
   storeAttribution(attribution: AIAttribution): Promise<void>;
 
@@ -494,6 +500,9 @@ export interface ProvenanceStorage {
 
   /** Verify storage integrity */
   verifyIntegrity(): Promise<{ verified: boolean; issues?: string[] }>;
+
+  /** Clean up old data based on retention policy */
+  cleanup(retentionDays: number): Promise<{ entriesRemoved: number; attributionsRemoved: number }>;
 }
 
 /**
