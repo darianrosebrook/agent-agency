@@ -86,7 +86,12 @@ export class ResearchDetector {
    * Detect if a task requires research
    */
   detectResearchNeeds(task: Task): ResearchRequirement | null {
-    const text = `${task.description} ${task.metadata?.prompt || ""}`;
+    const text = `${task.description} ${task.metadata?.prompt || ""}`.trim();
+
+    // Early return for empty or whitespace-only text
+    if (!text || text.length === 0) {
+      return null;
+    }
 
     // Calculate indicators
     const indicators = {
@@ -250,41 +255,40 @@ export class ResearchDetector {
     requiresTechnicalInfo: boolean;
   }): number {
     let score = 0;
-    let activeWeightSum = 0;
 
-    // Questions are a strong indicator (weight: 0.3)
+    // Strong indicators (individually sufficient)
     if (indicators.hasQuestions) {
-      score += 0.3;
-      activeWeightSum += 0.3;
+      score = Math.max(score, 0.9); // Questions alone = 90% confidence
     }
-
-    // Uncertainty keywords are strong (weight: 0.3)
     if (indicators.hasUncertainty) {
-      score += 0.3;
-      activeWeightSum += 0.3;
+      score = Math.max(score, 0.85); // Uncertainty alone = 85% confidence
     }
-
-    // Comparison needs are moderate (weight: 0.2)
     if (indicators.needsComparison) {
-      score += 0.2;
-      activeWeightSum += 0.2;
+      score = Math.max(score, 0.8); // Comparison alone = 80% confidence
     }
 
-    // Technical info needs are moderate (weight: 0.15)
+    // Weaker indicators (need combination)
     if (indicators.requiresTechnicalInfo) {
-      score += 0.15;
-      activeWeightSum += 0.15;
+      score = Math.max(score, 0.5); // Technical alone = 50% confidence
     }
-
-    // Fact-checking is weaker (weight: 0.05)
     if (indicators.requiresFactChecking) {
-      score += 0.05;
-      activeWeightSum += 0.05;
+      score = Math.max(score, 0.4); // Fact-checking alone = 40% confidence
     }
 
-    // If any indicators are active, return 1.0 (full confidence in triggered indicators)
-    // Otherwise return 0
-    return activeWeightSum > 0 ? 1.0 : 0;
+    // Boost for combinations
+    const activeCount = [
+      indicators.hasQuestions,
+      indicators.hasUncertainty,
+      indicators.needsComparison,
+      indicators.requiresTechnicalInfo,
+      indicators.requiresFactChecking,
+    ].filter(Boolean).length;
+
+    if (activeCount >= 2) {
+      score = Math.min(1.0, score + 0.1 * (activeCount - 1)); // +10% per additional indicator
+    }
+
+    return score;
   }
 
   /**
