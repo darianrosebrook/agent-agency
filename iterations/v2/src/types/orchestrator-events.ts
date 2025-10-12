@@ -8,7 +8,6 @@
 
 import { RoutingDecision } from "./agentic-rl";
 import { Task } from "./arbiter-orchestration";
-import { ValidationResult } from "./caws-types";
 
 export interface TaskSubmittedEvent {
   taskId: string;
@@ -18,7 +17,10 @@ export interface TaskSubmittedEvent {
 
 export interface TaskValidatedEvent {
   taskId: string;
-  validationResult: ValidationResult;
+  validationResult: {
+    valid: boolean;
+    errors: string[];
+  };
   timestamp: Date;
 }
 

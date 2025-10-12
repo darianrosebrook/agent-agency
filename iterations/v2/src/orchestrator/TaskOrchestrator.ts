@@ -8,8 +8,11 @@
  */
 
 import { EventEmitter } from "events";
-import { RoutingDecision } from "../types/agentic-rl";
-import { Task } from "../types/arbiter-orchestration";
+import {
+  RoutingDecision as RLRoutingDecision,
+  TaskOutcome,
+} from "../types/agentic-rl";
+import { RoutingDecision, Task } from "../types/arbiter-orchestration";
 import {
   OrchestratorConfig,
   TaskExecutionResult,
@@ -278,7 +281,7 @@ export class TaskOrchestrator extends EventEmitter {
       span.setStatus({ code: 1, message: "Routing successful" });
       return routing;
     } catch (error) {
-      span.setStatus({ code: 2, message: error.message });
+      span.setStatus({ code: 2, message: (error as Error).message });
       throw error;
     } finally {
       span.end();
@@ -298,11 +301,25 @@ export class TaskOrchestrator extends EventEmitter {
 
     const startTime = Date.now();
 
-    // Start performance tracking
+    // Start performance tracking - convert to RL RoutingDecision format
+    const rlRoutingDecision: RLRoutingDecision = {
+      taskId: routing.taskId,
+      selectedAgent: routing.selectedAgent.id,
+      routingStrategy: routing.strategy as any,
+      confidence: routing.confidence,
+      alternativesConsidered: routing.alternatives.map((alt) => ({
+        agentId: alt.agent.id,
+        score: alt.score,
+        reason: alt.reason,
+      })),
+      rationale: routing.reason,
+      timestamp: routing.timestamp.toISOString(),
+    };
+
     const executionId = this.performanceTracker.startTaskExecution(
       task.id,
       routing.selectedAgent.id,
-      routing
+      rlRoutingDecision
     );
 
     try {
@@ -312,9 +329,7 @@ export class TaskOrchestrator extends EventEmitter {
         timestamp: new Date(),
       });
 
-      // Record performance tracking
-      // TODO: Fix performance tracking interface
-      // this.performanceTracker.startTaskExecution(task.id, routing.selectedAgent.id, routing);
+      // Performance tracking already started at line 319-322 via startTaskExecution()
 
       // In a real implementation, this would:
       // 1. Send task to agent via messaging system
@@ -327,17 +342,12 @@ export class TaskOrchestrator extends EventEmitter {
       const latencyMs = Date.now() - startTime;
 
       // Complete performance tracking
-      const taskOutcome = {
+      const taskOutcome: TaskOutcome = {
         success: result.success,
         qualityScore: result.qualityScore || 0.8,
         efficiencyScore: result.success ? Math.min(1.0, 5000 / latencyMs) : 0.1,
-        latencyMs,
-        cost: result.cost || 0,
-        metadata: {
-          taskType: task.type,
-          agentId: routing.selectedAgent.id,
-          routingStrategy: routing.strategy,
-        },
+        tokensConsumed: (result.metadata as any)?.tokensConsumed || 0,
+        completionTimeMs: latencyMs,
       };
 
       await this.performanceTracker.completeTaskExecution(
@@ -358,10 +368,16 @@ export class TaskOrchestrator extends EventEmitter {
     } catch (error) {
       const latencyMs = Date.now() - startTime;
 
-      // TODO: Fix performance tracking interface
-      // this.performanceTracker.completeTaskExecution(task.id, { success: false });
+      // Record failed execution
+      await this.performanceTracker.completeTaskExecution(executionId, {
+        success: false,
+        qualityScore: 0,
+        efficiencyScore: 0,
+        tokensConsumed: 0,
+        completionTimeMs: latencyMs,
+      });
 
-      span.setStatus({ code: 2, message: error.message });
+      span.setStatus({ code: 2, message: (error as Error).message });
       throw error;
     } finally {
       span.end();
@@ -417,10 +433,18 @@ export class TaskOrchestrator extends EventEmitter {
       );
     } else if (currentState === TaskState.RUNNING) {
       // Execution failed - mark as failed
-      this.stateMachine.transition(taskId, TaskState.FAILED, error.message);
+      this.stateMachine.transition(
+        taskId,
+        TaskState.FAILED,
+        (error as Error).message
+      );
     } else {
       // Other failure - mark as failed
-      this.stateMachine.transition(taskId, TaskState.FAILED, error.message);
+      this.stateMachine.transition(
+        taskId,
+        TaskState.FAILED,
+        (error as Error).message
+      );
     }
 
     this.emit("task:failed", {

@@ -65,11 +65,12 @@ export class GoogleFactCheckProvider {
 
       if (!response.claims || response.claims.length === 0) {
         return {
-          claimId: claim.id,
+          claim,
           verdict: VerificationVerdict.UNVERIFIED,
           confidence: 0.3,
           explanation: "No fact-checks found for this claim",
           sources: [],
+          relatedClaims: [],
           processingTimeMs: Date.now() - startTime,
         };
       }
@@ -81,24 +82,26 @@ export class GoogleFactCheckProvider {
       );
 
       return {
-        claimId: claim.id,
+        claim,
         verdict: analysis.verdict,
         confidence: analysis.confidence,
         explanation: analysis.explanation,
         sources: analysis.sources,
+        relatedClaims: analysis.relatedClaims || [],
         processingTimeMs: Date.now() - startTime,
       };
     } catch (error) {
       console.warn(`Google Fact Check API error for claim ${claim.id}:`, error);
 
       return {
-        claimId: claim.id,
+        claim,
         verdict: VerificationVerdict.ERROR,
         confidence: 0,
         explanation: `Fact-checking service unavailable: ${
           error instanceof Error ? error.message : "Unknown error"
         }`,
         sources: [],
+        relatedClaims: [],
         processingTimeMs: Date.now() - startTime,
       };
     }
@@ -177,10 +180,12 @@ export class GoogleFactCheckProvider {
       confidence,
       explanation: this.generateExplanation(verdict, allReviews),
       sources: allReviews.map((review) => ({
-        name: review.publisher,
         url: review.url,
-        credibility: this.getPublisherCredibility(review.publisher),
+        title: review.title,
+        publisher: review.publisher,
+        credibilityScore: this.getPublisherCredibility(review.publisher),
       })),
+      relatedClaims: [],
     };
   }
 

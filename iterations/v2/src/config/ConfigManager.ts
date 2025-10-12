@@ -168,7 +168,9 @@ export class ConfigManager {
         );
         return { valid: false, errors };
       }
-      return { valid: false, errors: [error.message] };
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      return { valid: false, errors: [errorMessage] };
     }
   }
 

@@ -64,8 +64,10 @@ export class ResilientDatabaseClient {
     fallbackRegistry?: AgentRegistryManager
   ) {
     this.circuitBreaker = new CircuitBreaker({
-      name: "AgentRegistryDatabase",
-      ...config.circuitBreaker,
+      failureThreshold: config.circuitBreaker.failureThreshold,
+      successThreshold: config.circuitBreaker.successThreshold,
+      timeout: config.circuitBreaker.resetTimeoutMs || 30000,
+      timeoutMs: config.circuitBreaker.failureWindowMs || 60000,
     });
 
     // Initialize fallback registry if enabled

@@ -56,6 +56,7 @@ export enum AuditEventType {
   PERFORMANCE_UPDATE = "performance_update",
   SECURITY_VIOLATION = "security_violation",
   AUTHENTICATION_FAILURE = "authentication_failure",
+  AUTHENTICATION_SUCCESS = "authentication_success",
   AUTHORIZATION_FAILURE = "authorization_failure",
 }
 
@@ -501,14 +502,24 @@ export class AgentRegistrySecurity {
 
   /**
    * Check if access is cross-tenant
+   * @param context - Security context with tenant information
+   * @param resource - Agent profile resource being accessed
+   * @returns true if cross-tenant access detected, false otherwise
    */
   private isCrossTenantAccess(
-    _context: SecurityContext,
-    _resource: Partial<AgentProfile>
+    context: SecurityContext,
+    resource: Partial<AgentProfile>
   ): boolean {
-    // TODO: Implement tenant extraction from resource
-    // For now, assume all resources are in the same tenant as the context
-    return false;
+    // Extract tenant ID from resource (if it has one)
+    const resourceTenantId = (resource as any).tenantId;
+
+    // If resource doesn't have tenant ID, allow access (legacy resources)
+    if (!resourceTenantId) {
+      return false;
+    }
+
+    // Check if context tenant matches resource tenant
+    return context.tenantId !== resourceTenantId;
   }
 
   /**
@@ -613,29 +624,47 @@ export class AgentRegistrySecurity {
   }
 
   /**
-   * Extract tenant ID from token (mock implementation)
+   * Extract tenant ID from JWT token
+   * @param token - JWT token string
+   * @returns Tenant ID from token claims, or null if not found
    */
   private extractTenantFromToken(token: string): string | null {
-    // TODO: Decode JWT and extract tenant claim
-    // Mock implementation
-    if (token.includes("tenant-")) {
-      const match = token.match(/tenant-(\w+)/);
-      return match ? match[1] : null;
+    try {
+      // Decode JWT without verification (verification done in validateJwtToken)
+      const decoded = jwt.decode(token) as any;
+
+      if (!decoded || typeof decoded !== "object") {
+        return null;
+      }
+
+      // Check standard tenant claim locations
+      return decoded.tenantId || decoded.tenant || decoded.tid || null;
+    } catch (error) {
+      return null;
     }
-    return "default-tenant";
   }
 
   /**
-   * Extract user ID from token (mock implementation)
+   * Extract user ID from JWT token
+   * @param token - JWT token string
+   * @returns User ID from token claims, or null if not found
    */
   private extractUserFromToken(token: string): string | null {
-    // TODO: Decode JWT and extract user claim
-    // Mock implementation
-    if (token.includes("user-")) {
-      const match = token.match(/user-(\w+)/);
-      return match ? match[1] : null;
+    try {
+      // Decode JWT without verification (verification done in validateJwtToken)
+      const decoded = jwt.decode(token) as any;
+
+      if (!decoded || typeof decoded !== "object") {
+        return null;
+      }
+
+      // Check standard user claim locations (JWT standards: sub, userId, user, uid)
+      return (
+        decoded.sub || decoded.userId || decoded.user || decoded.uid || null
+      );
+    } catch (error) {
+      return null;
     }
-    return "anonymous";
   }
 
   /**
@@ -700,11 +729,23 @@ export class AgentRegistrySecurity {
   private async validateJwtToken(token: string): Promise<any> {
     try {
       // Verify JWT token
-      const decoded = jwt.verify(token, this.config.jwtSecret!, {
+      // Note: JWT library expects single string or specific tuple format for audience
+      const verifyOptions: jwt.VerifyOptions = {
         issuer: this.config.jwtIssuer,
-        audience: this.config.jwtAudience,
         algorithms: ["HS256"], // Use HS256 for HMAC
-      });
+      };
+
+      // Add audience if configured - convert array to proper format
+      if (this.config.jwtAudience && this.config.jwtAudience.length > 0) {
+        // For single audience, pass as string
+        // For multiple audiences, pass first one (JWT library validates against any match)
+        verifyOptions.audience =
+          this.config.jwtAudience.length === 1
+            ? this.config.jwtAudience[0]
+            : (this.config.jwtAudience as any); // Type assertion for array validation
+      }
+
+      const decoded = jwt.verify(token, this.config.jwtSecret!, verifyOptions);
 
       return decoded;
     } catch (error) {
@@ -774,33 +815,5 @@ export class AgentRegistrySecurity {
     }
 
     return true;
-  }
-
-  /**
-   * Extract tenant ID from token (legacy mock method for backward compatibility)
-   * TODO: Remove when JWT validation is fully adopted
-   */
-  private extractTenantFromToken(token: string): string | null {
-    // TODO: Decode JWT and extract tenant claim
-    // Mock implementation for backward compatibility
-    if (token.includes("tenant-")) {
-      const match = token.match(/tenant-(\w+)/);
-      return match ? match[1] : null;
-    }
-    return "default-tenant";
-  }
-
-  /**
-   * Extract user ID from token (legacy mock method for backward compatibility)
-   * TODO: Remove when JWT validation is fully adopted
-   */
-  private extractUserFromToken(token: string): string | null {
-    // TODO: Decode JWT and extract user claim
-    // Mock implementation for backward compatibility
-    if (token.includes("user-")) {
-      const match = token.match(/user-(\w+)/);
-      return match ? match[1] : null;
-    }
-    return "anonymous";
   }
 }

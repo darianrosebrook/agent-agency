@@ -9,6 +9,7 @@
 
 import { KnowledgeSeeker } from "../../knowledge/KnowledgeSeeker";
 import { ContextGatheringConfig } from "../../types/agent-prompting";
+import { KnowledgeQuery, SourceType } from "../../types/knowledge";
 
 /**
  * Search query for context gathering
@@ -384,20 +385,28 @@ export class ContextGatheringCoordinator {
     if (this.knowledgeSeeker) {
       try {
         // Convert SearchQuery to KnowledgeQuery format
-        const knowledgeQuery = {
+        const knowledgeQuery: KnowledgeQuery = {
           id: query.id,
           query: query.terms.join(" "),
-          queryType: this.mapQueryType(query.expectedType),
+          queryType: this.mapQueryType(query.expectedType) as any, // Cast for QueryType compatibility
           maxResults: Math.min(query.terms.length * 2, 10), // Scale with term count
           relevanceThreshold: 0.3,
           timeoutMs: 10000,
-          sources: ["web", "academic"], // Use web and academic sources
+          preferredSources: ["web", "academic"] as SourceType[], // Use web and academic sources
+          metadata: {
+            requesterId: "ContextGatheringCoordinator",
+            priority: 1,
+            createdAt: new Date(),
+            tags: ["context-gathering", query.id],
+          },
         };
 
-        const searchResults = await this.knowledgeSeeker.search(knowledgeQuery);
+        const response = await this.knowledgeSeeker.processQuery(
+          knowledgeQuery
+        );
 
         // Convert KnowledgeResult[] to SearchResult[] format
-        return searchResults.map((result) => ({
+        return response.results.map((result: any) => ({
           id: result.id,
           content: result.snippet || result.content,
           relevanceScore: result.relevanceScore,

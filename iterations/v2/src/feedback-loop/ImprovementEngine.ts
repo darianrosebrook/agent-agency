@@ -155,11 +155,13 @@ export class ImprovementEngine extends EventEmitter {
         recommendationId: recommendation.id,
         targetEntity: recommendation.action.targetEntity,
         errorTime: new Date(),
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
       });
 
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Error applying recommendation ${recommendation.id}: ${error.message}`
+        `Error applying recommendation ${recommendation.id}: ${errorMessage}`
       );
       return false;
     }
@@ -197,8 +199,10 @@ export class ImprovementEngine extends EventEmitter {
           results.skipped.push(recommendation);
         }
       } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         this.logger.error(
-          `Error processing recommendation ${recommendation.id}: ${error.message}`
+          `Error processing recommendation ${recommendation.id}: ${errorMessage}`
         );
         results.failed.push(recommendation);
       }

@@ -219,6 +219,7 @@ export interface FeedbackRecommendation {
     monitoringRequired: boolean;
   };
   prerequisites?: string[];
+  updatedAt?: string;
   implementationStatus: "pending" | "in_progress" | "implemented" | "failed";
 }
 

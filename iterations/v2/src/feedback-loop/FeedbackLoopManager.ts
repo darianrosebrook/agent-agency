@@ -183,12 +183,34 @@ export class FeedbackLoopManager extends EventEmitter {
     );
   }
 
-  public collectRoutingDecision(decision: any, outcome?: any): void {
-    this.collector.collectRoutingDecision(decision, outcome);
+  public collectRoutingDecision(
+    decision: any,
+    outcome?: any,
+    context: Record<string, any> = {}
+  ): void {
+    this.collector.collectRoutingDecision(decision, outcome, context);
   }
 
-  public collectAgentFeedback(agentId: string, feedback: any): void {
-    this.collector.collectAgentFeedback(agentId, feedback);
+  public collectAgentFeedback(
+    agentId: string,
+    feedbackType:
+      | "performance"
+      | "capability"
+      | "reliability"
+      | "communication",
+    rating: number,
+    details?: string,
+    suggestedImprovements?: string[],
+    context: Record<string, any> = {}
+  ): void {
+    this.collector.collectAgentFeedback(
+      agentId,
+      feedbackType,
+      rating,
+      details,
+      suggestedImprovements,
+      context
+    );
   }
 
   // Public API for analysis

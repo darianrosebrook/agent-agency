@@ -49,6 +49,8 @@ export enum VerificationVerdict {
   UNVERIFIED = "unverified",
   CONTRADICTORY = "contradictory",
   INSUFFICIENT_DATA = "insufficient_data",
+  MIXED = "mixed",
+  ERROR = "error",
 }
 
 export interface Evidence {
@@ -92,6 +94,7 @@ export interface VerificationMethodConfig {
 
 // Fact checking interfaces
 export interface FactCheckClaim {
+  id?: string; // Optional identifier for the claim
   text: string;
   context?: string;
   language?: string;
@@ -105,6 +108,7 @@ export interface FactCheckResult {
   explanation: string;
   sources: FactCheckSource[];
   relatedClaims: RelatedClaim[];
+  processingTimeMs?: number;
 }
 
 export interface FactCheckSource {

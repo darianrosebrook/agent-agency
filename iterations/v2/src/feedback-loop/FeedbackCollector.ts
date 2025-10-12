@@ -1,29 +1,28 @@
 import { EventEmitter } from "events";
-import {
-  FeedbackEvent,
-  FeedbackSource,
-  FeedbackType,
-  FeedbackCollectionConfig,
-  FeedbackProcessingResult,
-  PerformanceFeedback,
-  PerformanceMetrics,
-  TaskOutcomeFeedback,
-  TaskOutcomeData,
-  UserRatingFeedback,
-  UserRatingData,
-  SystemEventFeedback,
-  SystemEventData,
-  ConstitutionalViolationFeedback,
-  ConstitutionalViolationData,
-  ComponentHealthFeedback,
-  RoutingDecisionFeedback,
-  AgentFeedback,
-} from "../types/feedback-loop";
-import { ComponentHealth, HealthStatus } from "../types/coordinator";
-import { ConstitutionalViolation } from "../types/caws-constitutional";
+import { v4 as uuidv4 } from "uuid";
 import { ConfigManager } from "../config/ConfigManager";
 import { Logger } from "../observability/Logger";
-import { v4 as uuidv4 } from "uuid";
+import { TaskOutcome } from "../types/agentic-rl";
+import { ConstitutionalViolation } from "../types/caws-constitutional";
+import { ComponentHealth, HealthStatus } from "../types/coordinator";
+import {
+  AgentFeedback,
+  ComponentHealthFeedback,
+  ConstitutionalViolationFeedback,
+  FeedbackCollectionConfig,
+  FeedbackEvent,
+  FeedbackProcessingResult,
+  FeedbackSource,
+  FeedbackType,
+  PerformanceFeedback,
+  PerformanceMetrics,
+  RoutingDecisionFeedback,
+  SystemEventFeedback,
+  TaskOutcomeData,
+  TaskOutcomeFeedback,
+  UserRatingData,
+  UserRatingFeedback,
+} from "../types/feedback-loop";
 
 export class FeedbackCollector extends EventEmitter {
   private config: FeedbackCollectionConfig;
@@ -109,7 +108,12 @@ export class FeedbackCollector extends EventEmitter {
     errorDetails?: string,
     context: Record<string, any> = {}
   ): void {
-    const value: TaskOutcomeData = { outcome, executionTimeMs, retryCount, errorDetails };
+    const value: TaskOutcomeData = {
+      outcome,
+      executionTimeMs,
+      retryCount,
+      errorDetails,
+    };
     this.collectEvent({
       id: uuidv4(),
       source: FeedbackSource.TASK_OUTCOMES,
@@ -130,7 +134,12 @@ export class FeedbackCollector extends EventEmitter {
     entityId: string,
     entityType: string,
     rating: number,
-    criteria: { accuracy: number; speed: number; reliability: number; communication: number },
+    criteria: {
+      accuracy: number;
+      speed: number;
+      reliability: number;
+      communication: number;
+    },
     comments?: string,
     context: Record<string, any> = {}
   ): void {
@@ -259,13 +268,23 @@ export class FeedbackCollector extends EventEmitter {
 
   public collectAgentFeedback(
     agentId: string,
-    feedbackType: "performance" | "capability" | "reliability" | "communication",
+    feedbackType:
+      | "performance"
+      | "capability"
+      | "reliability"
+      | "communication",
     rating: number,
     details?: string,
     suggestedImprovements?: string[],
     context: Record<string, any> = {}
   ): void {
-    const feedback = { agentId, feedbackType, rating, details, suggestedImprovements };
+    const feedback = {
+      agentId,
+      feedbackType,
+      rating,
+      details,
+      suggestedImprovements,
+    };
     this.collectEvent({
       id: uuidv4(),
       source: FeedbackSource.AGENT_FEEDBACK,
@@ -290,7 +309,10 @@ export class FeedbackCollector extends EventEmitter {
     }
 
     // Apply sampling for high-volume sources
-    if (this.config.samplingRate < 1.0 && Math.random() > this.config.samplingRate) {
+    if (
+      this.config.samplingRate < 1.0 &&
+      Math.random() > this.config.samplingRate
+    ) {
       this.stats.droppedEvents++;
       return;
     }
@@ -304,15 +326,20 @@ export class FeedbackCollector extends EventEmitter {
     // Validate event
     if (!this.validateEvent(event)) {
       this.stats.processingErrors++;
-      this.logger.warn("Invalid feedback event", { eventId: event.id, source: event.source });
+      this.logger.warn("Invalid feedback event", {
+        eventId: event.id,
+        source: event.source,
+      });
       return;
     }
 
     // Add to buffer
     this.eventBuffer.push(event);
     this.stats.totalEvents++;
-    this.stats.eventsBySource[event.source] = (this.stats.eventsBySource[event.source] || 0) + 1;
-    this.stats.eventsByType[event.type] = (this.stats.eventsByType[event.type] || 0) + 1;
+    this.stats.eventsBySource[event.source] =
+      (this.stats.eventsBySource[event.source] || 0) + 1;
+    this.stats.eventsByType[event.type] =
+      (this.stats.eventsByType[event.type] || 0) + 1;
 
     // Emit collection event
     this.emit("feedback:collected", event);
@@ -332,8 +359,14 @@ export class FeedbackCollector extends EventEmitter {
     // Filter by minimum severity for system events
     if (event.source === FeedbackSource.SYSTEM_EVENTS) {
       const severityLevels = { low: 1, medium: 2, high: 3, critical: 4 };
-      const minSeverityLevel = severityLevels[this.config.filters.minSeverity as keyof typeof severityLevels] || 0;
-      const eventSeverity = severityLevels[(event.value as any).severity as keyof typeof severityLevels] || 0;
+      const minSeverityLevel =
+        severityLevels[
+          this.config.filters.minSeverity as keyof typeof severityLevels
+        ] || 0;
+      const eventSeverity =
+        severityLevels[
+          (event.value as any).severity as keyof typeof severityLevels
+        ] || 0;
       if (eventSeverity < minSeverityLevel) {
         return true;
       }
@@ -354,7 +387,13 @@ export class FeedbackCollector extends EventEmitter {
   private validateEvent(event: FeedbackEvent): boolean {
     try {
       // Basic validation
-      if (!event.id || !event.source || !event.type || !event.entityId || !event.timestamp) {
+      if (
+        !event.id ||
+        !event.source ||
+        !event.type ||
+        !event.entityId ||
+        !event.timestamp
+      ) {
         return false;
       }
 
@@ -376,28 +415,45 @@ export class FeedbackCollector extends EventEmitter {
           return true; // Basic validation passed
       }
     } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            this.logger.error("Event validation error", { error: errorMessage, eventId: event.id });
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error("Event validation error", {
+        error: errorMessage,
+        eventId: event.id,
+      });
       return false;
     }
   }
 
   private validatePerformanceMetrics(event: PerformanceFeedback): boolean {
-    const metrics = event.metrics;
-    if (metrics.latencyMs !== undefined && (metrics.latencyMs < 0 || !isFinite(metrics.latencyMs))) {
+    const metrics = event.value;
+    if (
+      metrics.latencyMs !== undefined &&
+      (metrics.latencyMs < 0 || !isFinite(metrics.latencyMs))
+    ) {
       return false;
     }
-    if (metrics.throughput !== undefined && (metrics.throughput < 0 || !isFinite(metrics.throughput))) {
+    if (
+      metrics.throughput !== undefined &&
+      (metrics.throughput < 0 || !isFinite(metrics.throughput))
+    ) {
       return false;
     }
-    if (metrics.errorRate !== undefined && (metrics.errorRate < 0 || metrics.errorRate > 1)) {
+    if (
+      metrics.errorRate !== undefined &&
+      (metrics.errorRate < 0 || metrics.errorRate > 1)
+    ) {
       return false;
     }
     return true;
   }
 
   private validateUserRating(event: UserRatingFeedback): boolean {
-    if (event.value.rating < 1 || event.value.rating > 5 || !Number.isInteger(event.value.rating)) {
+    if (
+      event.value.rating < 1 ||
+      event.value.rating > 5 ||
+      !Number.isInteger(event.value.rating)
+    ) {
       return false;
     }
     const criteria = event.value.criteria;
@@ -412,10 +468,16 @@ export class FeedbackCollector extends EventEmitter {
   }
 
   private validateTaskOutcome(event: TaskOutcomeFeedback): boolean {
-    if (event.value.executionTimeMs < 0 || !isFinite(event.value.executionTimeMs)) {
+    if (
+      event.value.executionTimeMs < 0 ||
+      !isFinite(event.value.executionTimeMs)
+    ) {
       return false;
     }
-    if (event.value.retryCount < 0 || !Number.isInteger(event.value.retryCount)) {
+    if (
+      event.value.retryCount < 0 ||
+      !Number.isInteger(event.value.retryCount)
+    ) {
       return false;
     }
     return true;
@@ -464,7 +526,9 @@ export class FeedbackCollector extends EventEmitter {
     };
   }
 
-  public async processBatch(batch: FeedbackEvent[]): Promise<FeedbackProcessingResult> {
+  public async processBatch(
+    batch: FeedbackEvent[]
+  ): Promise<FeedbackProcessingResult> {
     const startTime = Date.now();
     let processedEvents = 0;
     const errors: string[] = [];
@@ -477,13 +541,17 @@ export class FeedbackCollector extends EventEmitter {
           // Basic processing - in real system would do validation, enrichment, etc.
           processedEvents++;
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
           errors.push(`Failed to process event ${event.id}: ${errorMessage}`);
         }
       }
 
       const processingTimeMs = Date.now() - startTime;
-      const qualityScore = errors.length === 0 ? 1.0 : Math.max(0, 1.0 - errors.length / batch.length);
+      const qualityScore =
+        errors.length === 0
+          ? 1.0
+          : Math.max(0, 1.0 - errors.length / batch.length);
 
       return {
         success: errors.length === 0,

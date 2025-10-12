@@ -144,10 +144,12 @@ export class FeedbackPipeline extends EventEmitter {
       return batch;
     } catch (error) {
       this.stats.processingErrors++;
-      this.logger.error(`Error processing batch: ${error.message}`);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(`Error processing batch: ${errorMessage}`);
 
       this.emit("pipeline:error", {
-        error: error.message,
+        error: errorMessage,
         batchSize: events.length,
         timestamp: new Date(),
         processingTimeMs: Date.now() - startTime.getTime(),
@@ -181,15 +183,17 @@ export class FeedbackPipeline extends EventEmitter {
           timestamp: new Date(),
         });
       } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         this.logger.error(
-          `Failed to send batch ${batch.id} to training: ${error.message}`
+          `Failed to send batch ${batch.id} to training: ${errorMessage}`
         );
         // Put back in pending queue for retry
         this.pendingBatches.push(batch);
 
         this.emit("pipeline:training-send-failed", {
           batchId: batch.id,
-          error: error.message,
+          error: errorMessage,
           timestamp: new Date(),
         });
       }

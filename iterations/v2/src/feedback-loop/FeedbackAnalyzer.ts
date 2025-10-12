@@ -23,7 +23,6 @@ export class FeedbackAnalyzer {
     new Map();
 
   constructor(configManager: ConfigManager) {
-    super();
     this.config = configManager.get("feedbackLoop.analysis");
     this.logger = new Logger("FeedbackAnalyzer");
   }
@@ -102,8 +101,10 @@ export class FeedbackAnalyzer {
         );
         analyses.push(analysis);
       } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         this.logger.error(`Failed to analyze ${entityId}`, {
-          error: error.message,
+          error: errorMessage,
         });
       }
     }
@@ -118,7 +119,8 @@ export class FeedbackAnalyzer {
     const anomalies: FeedbackInsight[] = [];
     const baselineEvents = this.getEntityFeedback(
       entityId,
-      new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      new Date()
     ); // Last 7 days
 
     if (baselineEvents.length < this.config.minDataPoints) {

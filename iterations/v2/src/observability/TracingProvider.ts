@@ -14,7 +14,9 @@ import {
   context,
   trace,
 } from "@opentelemetry/api";
+import { resourceFromAttributes } from "@opentelemetry/resources";
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
+import { SemanticResourceAttributes } from "@opentelemetry/semantic-conventions";
 
 /**
  * Tracing provider for distributed tracing
@@ -26,11 +28,10 @@ export class TracingProvider {
 
   constructor(serviceName: string = "arbiter-orchestrator") {
     this.serviceName = serviceName;
-    // TODO: Re-enable resource configuration when dependency issues resolved
     this.provider = new NodeTracerProvider({
-      // resource: new Resource({
-      //   [SemanticResourceAttributes.SERVICE_NAME]: serviceName,
-      // }),
+      resource: resourceFromAttributes({
+        [SemanticResourceAttributes.SERVICE_NAME]: serviceName,
+      }),
     });
 
     this.provider.register();

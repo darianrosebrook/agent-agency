@@ -411,7 +411,10 @@ export interface ProvenanceTrackerEvents {
   "tracker:error": (error: Error) => void;
 
   /** Emitted when cleanup operation completes */
-  "tracker:cleanup": (result: { entriesRemoved: number; attributionsRemoved: number }) => void;
+  "tracker:cleanup": (result: {
+    entriesRemoved: number;
+    attributionsRemoved: number;
+  }) => void;
 
   /** Emitted when report is generated */
   "report:generated": (report: ProvenanceReport) => void;
@@ -502,7 +505,9 @@ export interface ProvenanceStorage {
   verifyIntegrity(): Promise<{ verified: boolean; issues?: string[] }>;
 
   /** Clean up old data based on retention policy */
-  cleanup(retentionDays: number): Promise<{ entriesRemoved: number; attributionsRemoved: number }>;
+  cleanup(
+    retentionDays: number
+  ): Promise<{ entriesRemoved: number; attributionsRemoved: number }>;
 }
 
 /**

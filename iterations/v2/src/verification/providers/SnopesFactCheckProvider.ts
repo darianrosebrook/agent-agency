@@ -40,7 +40,7 @@ export class SnopesFactCheckProvider {
 
   constructor(config: SnopesFactCheckConfig = {}) {
     this.config = {
-      apiKey: config.apiKey,
+      apiKey: config.apiKey || "",
       baseUrl: config.baseUrl || "https://www.snopes.com",
       timeout: config.timeout || 15000, // Snopes can be slow
       maxRetries: config.maxRetries || 3,
@@ -59,11 +59,12 @@ export class SnopesFactCheckProvider {
 
       if (!searchResults.results || searchResults.results.length === 0) {
         return {
-          claimId: claim.id,
+          claim,
           verdict: VerificationVerdict.UNVERIFIED,
           confidence: 0.2,
           explanation: "No relevant Snopes fact-checks found for this claim",
           sources: [],
+          relatedClaims: [],
           processingTimeMs: Date.now() - startTime,
         };
       }
@@ -75,24 +76,26 @@ export class SnopesFactCheckProvider {
       );
 
       return {
-        claimId: claim.id,
+        claim,
         verdict: analysis.verdict,
         confidence: analysis.confidence,
         explanation: analysis.explanation,
         sources: analysis.sources,
+        relatedClaims: analysis.relatedClaims || [],
         processingTimeMs: Date.now() - startTime,
       };
     } catch (error) {
       console.warn(`Snopes fact-check error for claim ${claim.id}:`, error);
 
       return {
-        claimId: claim.id,
+        claim,
         verdict: VerificationVerdict.ERROR,
         confidence: 0,
         explanation: `Snopes service unavailable: ${
           error instanceof Error ? error.message : "Unknown error"
         }`,
         sources: [],
+        relatedClaims: [],
         processingTimeMs: Date.now() - startTime,
       };
     }
@@ -277,10 +280,12 @@ export class SnopesFactCheckProvider {
       confidence,
       explanation: this.generateSnopesExplanation(verdict, results),
       sources: results.map((result) => ({
-        name: "Snopes",
         url: result.url,
-        credibility: 0.9, // Snopes is highly reputable
+        title: result.title || "Snopes Fact Check",
+        publisher: "Snopes",
+        credibilityScore: 0.9, // Snopes is highly reputable
       })),
+      relatedClaims: [],
     };
   }
 
@@ -354,7 +359,7 @@ export class SnopesFactCheckProvider {
     verdict: VerificationVerdict,
     results: SnopesSearchResponse["results"]
   ): string {
-    const numResults = results.length;
+    const numResults = results?.length || 0;
 
     switch (verdict) {
       case VerificationVerdict.VERIFIED_TRUE:

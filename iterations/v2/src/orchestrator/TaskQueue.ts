@@ -205,4 +205,48 @@ export class TaskQueue extends EventEmitter {
 
     return stale;
   }
+
+  /**
+   * Enqueue task with credentials (stub for security integration)
+   */
+  async enqueueWithCredentials(task: Task, credentials: any): Promise<void> {
+    this.enqueue(task);
+  }
+
+  /**
+   * Initialize the task queue
+   */
+  async initialize(): Promise<void> {
+    this.emit("initialized");
+  }
+
+  /**
+   * Shutdown the task queue
+   */
+  async shutdown(): Promise<void> {
+    this.queue = [];
+    this.processing.clear();
+    this.timestamps.clear();
+    this.emit("shutdown");
+  }
+
+  /**
+   * Get task state by ID
+   */
+  getTaskState(taskId: string): { task: Task; status: string } | undefined {
+    const queuedTask = this.queue.find((t) => t.id === taskId);
+    if (queuedTask) {
+      return { task: queuedTask, status: "queued" };
+    }
+
+    const processingTask = this.processing.get(taskId);
+    if (processingTask) {
+      return { task: processingTask, status: "processing" };
+    }
+
+    return undefined;
+  }
 }
+
+// TODO: SecureTaskQueue removed pending SecurityManager implementation
+// Re-implement when security infrastructure is available

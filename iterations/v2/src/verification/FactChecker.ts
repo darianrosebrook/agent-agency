@@ -27,7 +27,7 @@ import { SnopesFactCheckProvider } from "./providers/SnopesFactCheckProvider";
 export class FactChecker {
   private methodConfigs: VerificationMethodConfig[];
   private googleProvider?: GoogleFactCheckProvider;
-  private snopesProvider: SnopesFactCheckProvider;
+  private snopesProvider?: SnopesFactCheckProvider;
 
   constructor(methodConfigs: VerificationMethodConfig[]) {
     this.methodConfigs = methodConfigs;
@@ -205,7 +205,10 @@ export class FactChecker {
 
     // Try Snopes
     try {
-      const snopesResult = await this.snopesProvider.checkClaim(claim);
+      const snopesResult = await this.snopesProvider?.checkClaim(claim);
+      if (!snopesResult) {
+        return this.createFallbackResult(claim);
+      }
       if (
         snopesResult.verdict !== VerificationVerdict.ERROR &&
         snopesResult.verdict !== VerificationVerdict.UNVERIFIED
@@ -245,11 +248,12 @@ export class FactChecker {
     const allSources = results.flatMap((result) => result.sources || []);
 
     return {
-      claimId: claim.id,
+      claim,
       verdict: bestResult.verdict,
       confidence: Math.min(bestResult.confidence * 1.1, 0.95), // Slight boost for consensus
       explanation: bestResult.explanation,
       sources: allSources,
+      relatedClaims: bestResult.relatedClaims || [],
       processingTimeMs: results.reduce(
         (sum, result) => sum + (result.processingTimeMs || 0),
         0
@@ -376,6 +380,20 @@ export class FactChecker {
       confidence: Math.min(1.0, adjustedConfidence),
       explanations,
       evidenceCount: totalEvidence,
+    };
+  }
+
+  /**
+   * Create a fallback result when no provider is available
+   */
+  private createFallbackResult(claim: FactCheckClaim): FactCheckResult {
+    return {
+      claim,
+      verdict: VerificationVerdict.UNVERIFIED,
+      confidence: 0,
+      sources: [],
+      explanation: "No fact-checking providers available",
+      relatedClaims: [],
     };
   }
 
