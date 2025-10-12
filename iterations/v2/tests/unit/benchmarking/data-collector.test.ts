@@ -7,6 +7,7 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { DataCollector } from "../../../src/benchmarking/DataCollector";
 import {
+  VerificationPriority,
   DataCollectionConfig,
   PerformanceEventType,
 } from "../../../src/types/performance-tracking";
@@ -94,7 +95,7 @@ describe("DataCollector", () => {
 
     it("should record task start", () => {
       const executionId = collector.recordTaskStart("task-123", "agent-1", {
-        priority: "high",
+        priority: VerificationPriority.HIGH,
       });
 
       expect(executionId).toBeTruthy();

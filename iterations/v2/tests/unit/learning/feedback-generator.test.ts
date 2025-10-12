@@ -7,11 +7,14 @@
  * @author @darianrosebrook
  */
 
-import { FeedbackGenerator, type FeedbackContext } from "../../../src/learning/FeedbackGenerator.js";
+import {
+  FeedbackGenerator,
+  type FeedbackContext,
+} from "../../../src/learning/FeedbackGenerator.js";
 import {
   FeedbackType,
-  RecommendationPriority,
   LearningCoordinatorEvent,
+  RecommendationPriority,
   type LearningIteration,
 } from "../../../src/types/learning-coordination.js";
 
@@ -26,7 +29,9 @@ describe("FeedbackGenerator", () => {
     jest.clearAllMocks();
   });
 
-  const createIteration = (overrides?: Partial<LearningIteration>): LearningIteration => ({
+  const createIteration = (
+    overrides?: Partial<LearningIteration>
+  ): LearningIteration => ({
     iterationId: "iter-1",
     sessionId: "session-1",
     iterationNumber: 1,
@@ -386,7 +391,9 @@ describe("FeedbackGenerator", () => {
       const stats = generator.getStatistics(sessionId);
 
       expect(stats.totalRecommendations).toBeGreaterThan(0);
-      expect(Object.keys(stats.recommendationsByPriority).length).toBeGreaterThan(0);
+      expect(
+        Object.keys(stats.recommendationsByPriority).length
+      ).toBeGreaterThan(0);
     });
   });
 
@@ -509,4 +516,3 @@ describe("FeedbackGenerator", () => {
     });
   });
 });
-

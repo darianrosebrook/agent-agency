@@ -6,7 +6,9 @@
  * @author @darianrosebrook
  */
 
+import { ConnectionPoolManager } from "@/database/ConnectionPoolManager";
 import { jest } from "@jest/globals";
+import type { Pool, PoolClient } from "pg";
 
 // Database test utilities
 export class DatabaseTestUtils {
@@ -96,6 +98,208 @@ export class DatabaseTestUtils {
     // Implementation disabled - use manual mocks in tests
     console.warn("mockQueryFailure is not implemented - use manual mocks");
   }
+
+  /**
+   * Get centralized database pool for tests
+   * Ensures pool is initialized before use
+   */
+  static getPool(): Pool {
+    const manager = ConnectionPoolManager.getInstance();
+    if (!manager.isInitialized()) {
+      throw new Error(
+        "Database pool not initialized. Ensure tests/setup.ts has run or call setupTestDatabase()"
+      );
+    }
+    return manager.getPool();
+  }
+
+  /**
+   * Setup test database with centralized pool
+   * Call this in beforeAll/beforeEach if tests/setup.ts hasn't run
+   */
+  static async setupTestDatabase(): Promise<void> {
+    const manager = ConnectionPoolManager.getInstance();
+
+    if (!manager.isInitialized()) {
+      manager.initialize({
+        host: process.env.DB_HOST || "localhost",
+        port: parseInt(process.env.DB_PORT || "5432", 10),
+        database: process.env.DB_NAME || "agent_agency_v2_test",
+        user: process.env.DB_USER || "postgres",
+        password: process.env.DB_PASSWORD || "",
+        min: 2,
+        max: 10,
+        idleTimeoutMs: 10000,
+        connectionTimeoutMs: 5000,
+        statementTimeoutMs: 30000,
+        applicationName: "v2-arbiter-test",
+      });
+    }
+
+    // Verify database is accessible
+    const isHealthy = await manager.healthCheck();
+    if (!isHealthy) {
+      throw new Error(
+        "Database health check failed. Ensure PostgreSQL is running and accessible."
+      );
+    }
+  }
+
+  /**
+   * Cleanup test database
+   * Call this in afterAll to gracefully close connections
+   */
+  static async cleanupTestDatabase(): Promise<void> {
+    const manager = ConnectionPoolManager.getInstance();
+    if (manager.isInitialized()) {
+      await manager.shutdown();
+    }
+  }
+
+  /**
+   * Execute query with automatic tenant context (for RLS testing)
+   */
+  static async queryWithTenantContext<T = any>(
+    tenantId: string,
+    sql: string,
+    params: any[] = []
+  ): Promise<{ rows: T[]; rowCount: number }> {
+    const manager = ConnectionPoolManager.getInstance();
+    return manager.queryWithTenantContext<T>(tenantId, sql, params);
+  }
+
+  /**
+   * Get client with tenant context for multi-query operations
+   * IMPORTANT: Must call client.release() in finally block
+   */
+  static async getClientWithTenantContext(
+    tenantId: string,
+    context?: { userId?: string; sessionId?: string }
+  ): Promise<PoolClient> {
+    const manager = ConnectionPoolManager.getInstance();
+    return manager.getClientWithTenantContext(tenantId, context);
+  }
+
+  /**
+   * Begin transaction for test isolation
+   * Returns client that must be released after test
+   */
+  static async beginTestTransaction(): Promise<PoolClient> {
+    const pool = this.getPool();
+    const client = await pool.connect();
+    await client.query("BEGIN");
+    return client;
+  }
+
+  /**
+   * Rollback and release client (for test cleanup)
+   */
+  static async rollbackTestTransaction(client: PoolClient): Promise<void> {
+    try {
+      await client.query("ROLLBACK");
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Seed test data into database
+   * Useful for integration tests
+   */
+  static async seedTestData(data: {
+    agents?: any[];
+    tasks?: any[];
+    tenants?: any[];
+  }): Promise<void> {
+    const pool = this.getPool();
+
+    // Seed tenants
+    if (data.tenants) {
+      for (const tenant of data.tenants) {
+        await pool.query(
+          `INSERT INTO tenants (id, name, isolation_level, created_at)
+           VALUES ($1, $2, $3, NOW())
+           ON CONFLICT (id) DO NOTHING`,
+          [tenant.id, tenant.name, tenant.isolationLevel || "project"]
+        );
+      }
+    }
+
+    // Seed agents
+    if (data.agents) {
+      for (const agent of data.agents) {
+        await pool.query(
+          `INSERT INTO agent_profiles (
+            agent_id, name, model_family, capabilities, config,
+            active_tasks, queued_tasks, utilization_percent,
+            created_at, updated_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+          ON CONFLICT (agent_id) DO UPDATE SET
+            name = EXCLUDED.name,
+            updated_at = NOW()`,
+          [
+            agent.id,
+            agent.name,
+            agent.modelFamily,
+            JSON.stringify(agent.capabilities || []),
+            JSON.stringify(agent.config || {}),
+            agent.activeTasks || 0,
+            agent.queuedTasks || 0,
+            agent.utilizationPercent || 0,
+          ]
+        );
+      }
+    }
+
+    // Seed tasks
+    if (data.tasks) {
+      for (const task of data.tasks) {
+        await pool.query(
+          `INSERT INTO tasks (
+            id, description, status, priority, assigned_agent_id,
+            created_at, updated_at
+          )
+          VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+          ON CONFLICT (id) DO NOTHING`,
+          [
+            task.id,
+            task.description,
+            task.status || "pending",
+            task.priority || 5,
+            task.assignedAgentId,
+          ]
+        );
+      }
+    }
+  }
+
+  /**
+   * Clear test data from database
+   * Be careful - this deletes data!
+   */
+  static async clearTestData(options: {
+    agents?: boolean;
+    tasks?: boolean;
+    tenants?: boolean;
+    all?: boolean;
+  }): Promise<void> {
+    const pool = this.getPool();
+
+    if (options.all || options.tasks) {
+      await pool.query("DELETE FROM tasks WHERE id LIKE 'test-%'");
+    }
+
+    if (options.all || options.agents) {
+      await pool.query(
+        "DELETE FROM agent_profiles WHERE agent_id LIKE 'test-%'"
+      );
+    }
+
+    if (options.all || options.tenants) {
+      await pool.query("DELETE FROM tenants WHERE id LIKE 'test-%'");
+    }
+  }
 }
 
 // Redis test utilities
@@ -121,7 +325,7 @@ export class RedisTestUtils {
 
 // General test environment utilities
 export class TestEnvironment {
-  private static originalEnv: NodeJS.ProcessEnv;
+  private static originalEnv: Record<string, string | undefined>;
 
   /**
    * Setup test environment

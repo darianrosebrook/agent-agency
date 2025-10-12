@@ -264,13 +264,29 @@ export class ResearchProvenance {
 
       const stats = statsResult.rows[0] || {};
 
+      // Extract top query types from queries JSON
+      const queryTypesResult = await this.dbClient.query(`
+        SELECT 
+          jsonb_array_elements(queries)->>'type' as query_type,
+          COUNT(*) as count
+        FROM arbiter_research_provenance
+        WHERE queries IS NOT NULL
+        GROUP BY query_type
+        ORDER BY count DESC
+        LIMIT 5
+      `);
+
+      const topQueryTypes = queryTypesResult.rows.map(
+        (row: any) => row.query_type || "unknown"
+      );
+
       return {
         totalResearch: parseInt(stats.total) || 0,
         successfulResearch: parseInt(stats.successful) || 0,
         failedResearch: parseInt(stats.failed) || 0,
         averageConfidence: parseFloat(stats.avg_confidence) || 0,
         averageDurationMs: parseFloat(stats.avg_duration) || 0,
-        topQueryTypes: [], // TODO: Extract query types from queries JSON
+        topQueryTypes,
       };
     } catch (error) {
       console.error("Failed to get research statistics:", error);

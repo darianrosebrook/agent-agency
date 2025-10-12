@@ -6,12 +6,14 @@
 
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import {
+  VerificationPriority,
   ConstitutionalRuntime,
   ConstitutionalPolicyEngine,
   ViolationHandler,
   WaiverManager,
 } from "../../../src/caws-runtime";
 import {
+  VerificationPriority,
   ConstitutionalPrinciple,
   ViolationSeverity,
   WaiverStatus,

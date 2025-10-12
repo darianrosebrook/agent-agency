@@ -21,6 +21,7 @@ import { AgentRegistryDbClient } from "../../../src/database/AgentRegistryDbClie
 import { AgentRegistryManager } from "../../../src/orchestrator/AgentRegistryManager.js";
 import { AgentRegistrySecurity } from "../../../src/security/AgentRegistrySecurity.js";
 import {
+  VerificationPriority,
   ModelFamily,
   PerformanceMetrics,
 } from "../../../src/types/agent-registry.js";

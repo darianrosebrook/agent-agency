@@ -7,6 +7,7 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { MetricAggregator } from "../../../src/benchmarking/MetricAggregator";
 import {
+  VerificationPriority,
   AgentPerformanceProfile,
   AggregationConfig,
   PerformanceEvent,

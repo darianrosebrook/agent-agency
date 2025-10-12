@@ -4,10 +4,12 @@
  * Provides persistent storage for agent profiles, capabilities, and performance history.
  * Implements ACID transactions and connection pooling for production reliability.
  *
+ * Uses centralized ConnectionPoolManager for connection sharing and multi-tenant support.
+ *
  * @author @darianrosebrook
  */
 
-import { Pool, PoolClient } from "pg";
+import { PoolClient } from "pg";
 import {
   AgentId,
   AgentProfile,
@@ -15,27 +17,13 @@ import {
   PerformanceMetrics,
   RegistryStats,
 } from "../types/agent-registry";
+import { ConnectionPoolManager } from "./ConnectionPoolManager";
 
 /**
  * Database Configuration
+ * (Note: Connection pool settings moved to ConnectionPoolManager)
  */
 export interface DatabaseConfig {
-  /** PostgreSQL connection string or config */
-  host: string;
-  port: number;
-  database: string;
-  user: string;
-  password: string;
-
-  /** Connection pool settings */
-  poolMin: number;
-  poolMax: number;
-  poolIdleTimeoutMs: number;
-  poolConnectionTimeoutMs: number;
-
-  /** Query timeouts */
-  queryTimeoutMs: number;
-
   /** Enable query logging */
   enableQueryLogging: boolean;
 
@@ -49,23 +37,14 @@ export interface DatabaseConfig {
  * Database Client for Agent Registry
  *
  * Provides ACID-compliant persistent storage for agent registry data.
+ * Uses centralized ConnectionPoolManager for connection sharing.
  */
 export class AgentRegistryDatabaseClient {
-  private pool: Pool;
+  private poolManager: ConnectionPoolManager;
   private config: DatabaseConfig;
 
   constructor(config: Partial<DatabaseConfig> = {}) {
     this.config = {
-      host: process.env.DB_HOST || "localhost",
-      port: parseInt(process.env.DB_PORT || "5432"),
-      database: process.env.DB_NAME || "agent_agency_v2",
-      user: process.env.DB_USER || "postgres",
-      password: process.env.DB_PASSWORD || "",
-      poolMin: 2,
-      poolMax: 10,
-      poolIdleTimeoutMs: 30000,
-      poolConnectionTimeoutMs: 10000,
-      queryTimeoutMs: 5000,
       enableQueryLogging: false,
       enableRetries: true,
       maxRetries: 3,
@@ -73,22 +52,8 @@ export class AgentRegistryDatabaseClient {
       ...config,
     };
 
-    this.pool = new Pool({
-      host: this.config.host,
-      port: this.config.port,
-      database: this.config.database,
-      user: this.config.user,
-      password: this.config.password,
-      min: this.config.poolMin,
-      max: this.config.poolMax,
-      idleTimeoutMillis: this.config.poolIdleTimeoutMs,
-      connectionTimeoutMillis: this.config.poolConnectionTimeoutMs,
-      statement_timeout: this.config.queryTimeoutMs,
-    });
-
-    this.pool.on("error", (err) => {
-      console.error("Unexpected database pool error:", err);
-    });
+    // Use centralized pool manager
+    this.poolManager = ConnectionPoolManager.getInstance();
   }
 
   /**
@@ -96,7 +61,7 @@ export class AgentRegistryDatabaseClient {
    */
   async initialize(): Promise<void> {
     try {
-      const client = await this.pool.connect();
+      const client = await this.poolManager.getPool().connect();
       try {
         // Verify connection
         await client.query("SELECT 1");
@@ -129,8 +94,10 @@ export class AgentRegistryDatabaseClient {
   /**
    * Register a new agent (INSERT)
    */
-  async registerAgent(agent: AgentProfile): Promise<void> {
-    const client = await this.pool.connect();
+  async registerAgent(agent: AgentProfile, tenantId?: string): Promise<void> {
+    const client = tenantId
+      ? await this.poolManager.getClientWithTenantContext(tenantId)
+      : await this.poolManager.getPool().connect();
 
     try {
       await client.query("BEGIN");
@@ -229,8 +196,13 @@ export class AgentRegistryDatabaseClient {
   /**
    * Get agent profile by ID (SELECT)
    */
-  async getAgent(agentId: AgentId): Promise<AgentProfile | null> {
-    const client = await this.pool.connect();
+  async getAgent(
+    agentId: AgentId,
+    tenantId?: string
+  ): Promise<AgentProfile | null> {
+    const client = tenantId
+      ? await this.poolManager.getClientWithTenantContext(tenantId)
+      : await this.poolManager.getPool().connect();
 
     try {
       // Use the view that joins all data
@@ -255,8 +227,10 @@ export class AgentRegistryDatabaseClient {
   /**
    * Get all agents (SELECT)
    */
-  async getAllAgents(): Promise<AgentProfile[]> {
-    const client = await this.pool.connect();
+  async getAllAgents(tenantId?: string): Promise<AgentProfile[]> {
+    const client = tenantId
+      ? await this.poolManager.getClientWithTenantContext(tenantId)
+      : await this.poolManager.getPool().connect();
 
     try {
       const result = await client.query(`
@@ -273,8 +247,13 @@ export class AgentRegistryDatabaseClient {
   /**
    * Query agents by capability
    */
-  async queryAgentsByCapability(query: AgentQuery): Promise<AgentProfile[]> {
-    const client = await this.pool.connect();
+  async queryAgentsByCapability(
+    query: AgentQuery,
+    tenantId?: string
+  ): Promise<AgentProfile[]> {
+    const client = tenantId
+      ? await this.poolManager.getClientWithTenantContext(tenantId)
+      : await this.poolManager.getPool().connect();
 
     try {
       let sql = `
@@ -329,9 +308,12 @@ export class AgentRegistryDatabaseClient {
    */
   async updatePerformance(
     agentId: AgentId,
-    metrics: PerformanceMetrics
+    metrics: PerformanceMetrics,
+    tenantId?: string
   ): Promise<void> {
-    const client = await this.pool.connect();
+    const client = tenantId
+      ? await this.poolManager.getClientWithTenantContext(tenantId)
+      : await this.poolManager.getPool().connect();
 
     try {
       await client.query("BEGIN");
@@ -417,9 +399,12 @@ export class AgentRegistryDatabaseClient {
   async updateLoad(
     agentId: AgentId,
     activeTasksDelta: number,
-    queuedTasksDelta: number
+    queuedTasksDelta: number,
+    tenantId?: string
   ): Promise<void> {
-    const client = await this.pool.connect();
+    const client = tenantId
+      ? await this.poolManager.getClientWithTenantContext(tenantId)
+      : await this.poolManager.getPool().connect();
 
     try {
       // Update with atomic increment/decrement
@@ -442,8 +427,10 @@ export class AgentRegistryDatabaseClient {
   /**
    * Unregister agent (DELETE)
    */
-  async unregisterAgent(agentId: AgentId): Promise<boolean> {
-    const client = await this.pool.connect();
+  async unregisterAgent(agentId: AgentId, tenantId?: string): Promise<boolean> {
+    const client = tenantId
+      ? await this.poolManager.getClientWithTenantContext(tenantId)
+      : await this.poolManager.getPool().connect();
 
     try {
       await client.query("BEGIN");
@@ -472,8 +459,10 @@ export class AgentRegistryDatabaseClient {
   /**
    * Get registry statistics
    */
-  async getStats(): Promise<RegistryStats> {
-    const client = await this.pool.connect();
+  async getStats(tenantId?: string): Promise<RegistryStats> {
+    const client = tenantId
+      ? await this.poolManager.getClientWithTenantContext(tenantId)
+      : await this.poolManager.getPool().connect();
 
     try {
       const result = await client.query(`
@@ -506,8 +495,13 @@ export class AgentRegistryDatabaseClient {
   /**
    * Clean up stale agents
    */
-  async cleanupStaleAgents(staleThresholdMs: number): Promise<number> {
-    const client = await this.pool.connect();
+  async cleanupStaleAgents(
+    staleThresholdMs: number,
+    tenantId?: string
+  ): Promise<number> {
+    const client = tenantId
+      ? await this.poolManager.getClientWithTenantContext(tenantId)
+      : await this.poolManager.getPool().connect();
 
     try {
       const staleTimestamp = new Date(
@@ -544,41 +538,36 @@ export class AgentRegistryDatabaseClient {
     const startTime = Date.now();
 
     try {
-      const client = await this.pool.connect();
+      const client = await this.poolManager.getPool().connect();
       try {
         await client.query("SELECT 1");
         const latencyMs = Date.now() - startTime;
 
+        const stats = this.poolManager.getStats();
         return {
           healthy: true,
           latencyMs,
           poolStats: {
-            total: this.pool.totalCount,
-            idle: this.pool.idleCount,
-            waiting: this.pool.waitingCount,
+            total: stats.totalCount,
+            idle: stats.idleCount,
+            waiting: stats.waitingCount,
           },
         };
       } finally {
         client.release();
       }
     } catch (error) {
+      const stats = this.poolManager.getStats();
       return {
         healthy: false,
         latencyMs: Date.now() - startTime,
         poolStats: {
-          total: this.pool.totalCount,
-          idle: this.pool.idleCount,
-          waiting: this.pool.waitingCount,
+          total: stats.totalCount,
+          idle: stats.idleCount,
+          waiting: stats.waitingCount,
         },
       };
     }
-  }
-
-  /**
-   * Close database connection pool
-   */
-  async close(): Promise<void> {
-    await this.pool.end();
   }
 
   /**
@@ -620,7 +609,7 @@ export class AgentRegistryDatabaseClient {
 
     for (let attempt = 0; attempt < this.config.maxRetries; attempt++) {
       try {
-        const client = await this.pool.connect();
+        const client = await this.poolManager.getPool().connect();
         try {
           return await operation(client);
         } finally {

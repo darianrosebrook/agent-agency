@@ -10,6 +10,7 @@
 
 import { KnowledgeDatabaseClient } from "../../../src/database/KnowledgeDatabaseClient";
 import {
+  VerificationPriority,
   mockKnowledgeQuery,
   mockKnowledgeResponse,
   mockSearchResult,

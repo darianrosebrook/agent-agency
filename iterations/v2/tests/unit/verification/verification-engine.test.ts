@@ -5,6 +5,7 @@
  */
 
 import {
+  VerificationPriority,
   VerificationEngineConfig,
   VerificationPriority,
   VerificationRequest,

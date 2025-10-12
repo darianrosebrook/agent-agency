@@ -6,6 +6,7 @@
 
 import { beforeEach, describe, expect, it } from "@jest/globals";
 import {
+  VerificationPriority,
   TaskStateMachine,
   TaskStateMachineError,
 } from "../../../src/orchestrator/TaskStateMachine";
@@ -409,7 +410,7 @@ describe("TaskStateMachine", () => {
 
       try {
         machine.transition("task-1", TaskState.RUNNING);
-        fail("Should have thrown TaskStateMachineError");
+        throw new Error("Should have thrown TaskStateMachineError");
       } catch (error) {
         expect(error).toBeInstanceOf(TaskStateMachineError);
         expect((error as TaskStateMachineError).taskId).toBe("task-1");

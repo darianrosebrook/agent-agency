@@ -20,6 +20,7 @@ import type {
   PerformanceMetrics,
 } from "../../../src/types/agent-registry";
 import {
+  VerificationPriority,
   RegistryError,
   RegistryErrorType,
 } from "../../../src/types/agent-registry";

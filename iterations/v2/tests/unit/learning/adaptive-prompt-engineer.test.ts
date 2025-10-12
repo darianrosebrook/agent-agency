@@ -9,8 +9,8 @@
 
 import { AdaptivePromptEngineer } from "../../../src/learning/AdaptivePromptEngineer.js";
 import {
-  PromptModificationType,
   LearningCoordinatorEvent,
+  PromptModificationType,
   type LearningIteration,
 } from "../../../src/types/learning-coordination.js";
 
@@ -31,11 +31,7 @@ describe("AdaptivePromptEngineer", () => {
       engineer.initializeSession(sessionId);
 
       // Should not throw when modifying prompt for new session
-      const result = engineer.modifyPrompt(
-        sessionId,
-        "Test prompt",
-        1
-      );
+      const result = engineer.modifyPrompt(sessionId, "Test prompt", 1);
 
       expect(result).toBeDefined();
       expect(result.modifiedPrompt).toBe("Test prompt"); // No modifications on empty history
@@ -165,7 +161,9 @@ describe("AdaptivePromptEngineer", () => {
       const result = engineer.modifyPrompt(sessionId, originalPrompt, 3);
 
       expect(result.modifiedPrompt).not.toBe(originalPrompt);
-      expect(result.modifiedPrompt.length).toBeGreaterThan(originalPrompt.length);
+      expect(result.modifiedPrompt.length).toBeGreaterThan(
+        originalPrompt.length
+      );
     });
   });
 
@@ -228,7 +226,9 @@ describe("AdaptivePromptEngineer", () => {
       const result = engineer.modifyPrompt(sessionId, originalPrompt, 4);
 
       expect(result.modifiedPrompt).not.toBe(originalPrompt);
-      expect(result.modifiedPrompt.length).toBeGreaterThan(originalPrompt.length);
+      expect(result.modifiedPrompt.length).toBeGreaterThan(
+        originalPrompt.length
+      );
     });
   });
 
@@ -260,8 +260,7 @@ describe("AdaptivePromptEngineer", () => {
       expect(result.modifications.length).toBeGreaterThan(0);
       expect(
         result.modifications.some(
-          (m) =>
-            m.modificationType === PromptModificationType.EMPHASIZE_PATTERN
+          (m) => m.modificationType === PromptModificationType.EMPHASIZE_PATTERN
         )
       ).toBe(true);
     });
@@ -291,8 +290,7 @@ describe("AdaptivePromptEngineer", () => {
       const result = engineer.modifyPrompt(sessionId, "Complete the task", 4);
 
       const hasReinforcement = result.modifications.some(
-        (m) =>
-          m.modificationType === PromptModificationType.EMPHASIZE_PATTERN
+        (m) => m.modificationType === PromptModificationType.EMPHASIZE_PATTERN
       );
       expect(hasReinforcement).toBe(false);
     });
@@ -547,4 +545,3 @@ describe("AdaptivePromptEngineer", () => {
     });
   });
 });
-

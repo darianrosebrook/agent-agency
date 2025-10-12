@@ -5,11 +5,13 @@
  */
 
 import {
+  VerificationPriority,
   EventEmitter,
   events,
   EventSeverity,
 } from "../../../src/orchestrator/EventEmitter";
 import {
+  VerificationPriority,
   EventTypes,
   TaskDequeuedEvent,
   TaskEnqueuedEvent,

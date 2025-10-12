@@ -281,7 +281,7 @@ describe("IterationManager", () => {
     it("should detect progress when improvement is significant", () => {
       const sessionId = "session-progress-2";
       manager.initializeSession(sessionId);
-      
+
       // First iteration
       manager.startIteration(sessionId);
       manager.completeIteration(sessionId, {
@@ -325,7 +325,7 @@ describe("IterationManager", () => {
     it("should detect lack of progress when improvement is minimal", () => {
       const sessionId = "session-progress-3";
       manager.initializeSession(sessionId);
-      
+
       // First iteration
       manager.startIteration(sessionId);
       manager.completeIteration(sessionId, {
@@ -447,7 +447,7 @@ describe("IterationManager", () => {
     it("should return iteration count in degradation response", () => {
       const sessionId = "session-13";
       manager.initializeSession(sessionId);
-      
+
       // Complete a few iterations
       for (let i = 0; i < 3; i++) {
         manager.startIteration(sessionId);
@@ -467,10 +467,7 @@ describe("IterationManager", () => {
         });
       }
 
-      const degradation = manager.gracefulDegradation(
-        sessionId,
-        "Manual stop"
-      );
+      const degradation = manager.gracefulDegradation(sessionId, "Manual stop");
 
       expect(degradation.iterationsCompleted).toBe(3);
     });
@@ -674,4 +671,3 @@ describe("IterationManager", () => {
     });
   });
 });
-

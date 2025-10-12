@@ -9,11 +9,13 @@
  */
 
 import {
+  VerificationPriority,
   ArbiterOrchestrator,
   defaultArbiterOrchestratorConfig,
 } from "../../../src/orchestrator/ArbiterOrchestrator";
 import { AgentProfile } from "../../../src/types/agent-registry";
 import {
+  VerificationPriority,
   Task,
   TaskStatus,
   TaskType,

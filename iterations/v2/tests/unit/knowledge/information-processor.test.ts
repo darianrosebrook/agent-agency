@@ -7,6 +7,7 @@
 import { InformationProcessor } from "../../../src/knowledge/InformationProcessor";
 import { events } from "../../../src/orchestrator/EventEmitter";
 import {
+  VerificationPriority,
   InformationProcessorConfig,
   KnowledgeQuery,
   QueryType,

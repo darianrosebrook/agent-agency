@@ -25,6 +25,11 @@ import {
 } from "../types/verification";
 import { CredibilityScorer } from "./CredibilityScorer";
 import { FactChecker } from "./FactChecker";
+import { VerificationDatabaseClient } from "./VerificationDatabaseClient";
+import { ConsistencyValidator } from "./validators/ConsistencyValidator";
+import { CrossReferenceValidator } from "./validators/CrossReferenceValidator";
+import { LogicalValidator } from "./validators/LogicalValidator";
+import { StatisticalValidator } from "./validators/StatisticalValidator";
 
 /**
  * Main Verification Engine Implementation
@@ -33,13 +38,50 @@ export class VerificationEngineImpl implements VerificationEngine {
   private config: VerificationEngineConfig;
   private factChecker: FactChecker;
   private credibilityScorer: CredibilityScorer;
+  private crossReferenceValidator: CrossReferenceValidator;
+  private consistencyValidator: ConsistencyValidator;
+  private logicalValidator: LogicalValidator;
+  private statisticalValidator: StatisticalValidator;
+  private dbClient?: VerificationDatabaseClient;
   private activeRequests: Map<string, Promise<VerificationResult>> = new Map();
   private resultCache: Map<string, VerificationResult> = new Map();
 
-  constructor(config: VerificationEngineConfig) {
+  constructor(
+    config: VerificationEngineConfig,
+    dbClient?: VerificationDatabaseClient
+  ) {
     this.config = config;
     this.factChecker = new FactChecker(config.methods);
     this.credibilityScorer = new CredibilityScorer(config.methods);
+
+    // Initialize validators
+    const crossRefConfig = config.methods.find(
+      (m) => m.type === VerificationType.CROSS_REFERENCE
+    );
+    this.crossReferenceValidator = new CrossReferenceValidator(
+      crossRefConfig?.config ?? {}
+    );
+
+    const consistencyConfig = config.methods.find(
+      (m) => m.type === VerificationType.CONSISTENCY_CHECK
+    );
+    this.consistencyValidator = new ConsistencyValidator(
+      consistencyConfig?.config ?? {}
+    );
+
+    const logicalConfig = config.methods.find(
+      (m) => m.type === VerificationType.LOGICAL_VALIDATION
+    );
+    this.logicalValidator = new LogicalValidator(logicalConfig?.config ?? {});
+
+    const statisticalConfig = config.methods.find(
+      (m) => m.type === VerificationType.STATISTICAL_VALIDATION
+    );
+    this.statisticalValidator = new StatisticalValidator(
+      statisticalConfig?.config ?? {}
+    );
+
+    this.dbClient = dbClient;
   }
 
   /**
@@ -51,7 +93,40 @@ export class VerificationEngineImpl implements VerificationEngine {
     // Validate request
     this.validateRequest(request);
 
-    // Check cache first
+    // Save request to database if available
+    if (this.dbClient) {
+      try {
+        await this.dbClient.saveRequest(request);
+      } catch (error) {
+        console.warn("Failed to save verification request to database:", error);
+      }
+    }
+
+    // Check database cache first if available
+    if (this.config.cacheEnabled && this.dbClient) {
+      try {
+        const cacheKey = this.generateCacheKey(request);
+        const cached = await this.dbClient.getCachedResult(cacheKey);
+        if (cached) {
+          events.emit({
+            id: `event-${Date.now()}-${Math.random()
+              .toString(36)
+              .substr(2, 9)}`,
+            type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
+            timestamp: new Date(),
+            severity: "info" as any,
+            source: "VerificationEngine",
+            taskId: request.id,
+            metadata: { cacheHit: true, source: "database" },
+          });
+          return cached;
+        }
+      } catch (error) {
+        console.warn("Failed to check database cache:", error);
+      }
+    }
+
+    // Check in-memory cache
     if (this.config.cacheEnabled) {
       const cached = this.checkCache(request);
       if (cached) {
@@ -62,7 +137,7 @@ export class VerificationEngineImpl implements VerificationEngine {
           severity: "info" as any,
           source: "VerificationEngine",
           taskId: request.id,
-          metadata: { cacheHit: true },
+          metadata: { cacheHit: true, source: "memory" },
         });
         return cached;
       }
@@ -79,6 +154,28 @@ export class VerificationEngineImpl implements VerificationEngine {
 
     try {
       const result = await processingPromise;
+
+      // Save result to database if available
+      if (this.dbClient) {
+        try {
+          await this.dbClient.saveResult(result);
+
+          // Cache result in database
+          if (this.config.cacheEnabled) {
+            await this.dbClient.cacheResult(
+              request,
+              result,
+              this.config.cacheTtlMs
+            );
+          }
+        } catch (error) {
+          console.warn(
+            "Failed to save verification result to database:",
+            error
+          );
+        }
+      }
+
       return result;
     } finally {
       this.activeRequests.delete(request.id);
@@ -361,19 +458,19 @@ export class VerificationEngineImpl implements VerificationEngine {
           break;
 
         case VerificationType.CROSS_REFERENCE:
-          result = await this.executeCrossReference();
+          result = await this.crossReferenceValidator.verify(request);
           break;
 
         case VerificationType.CONSISTENCY_CHECK:
-          result = await this.executeConsistencyCheck();
+          result = await this.consistencyValidator.verify(request);
           break;
 
         case VerificationType.LOGICAL_VALIDATION:
-          result = await this.executeLogicalValidation();
+          result = await this.logicalValidator.verify(request);
           break;
 
         case VerificationType.STATISTICAL_VALIDATION:
-          result = await this.executeStatisticalValidation();
+          result = await this.statisticalValidator.verify(request);
           break;
 
         default:
@@ -507,55 +604,6 @@ export class VerificationEngineImpl implements VerificationEngine {
     };
   }
 
-  private async executeCrossReference(): Promise<VerificationMethodResult> {
-    // Simplified cross-reference implementation
-    // In production, this would search multiple sources and check for consistency
-    return {
-      method: VerificationType.CROSS_REFERENCE,
-      verdict: VerificationVerdict.UNVERIFIED, // Placeholder
-      confidence: 0.5,
-      reasoning: ["Cross-reference verification not fully implemented"],
-      processingTimeMs: 100,
-      evidenceCount: 0,
-    };
-  }
-
-  private async executeConsistencyCheck(): Promise<VerificationMethodResult> {
-    // Simplified consistency check
-    return {
-      method: VerificationType.CONSISTENCY_CHECK,
-      verdict: VerificationVerdict.UNVERIFIED,
-      confidence: 0.5,
-      reasoning: ["Consistency check not fully implemented"],
-      processingTimeMs: 50,
-      evidenceCount: 0,
-    };
-  }
-
-  private async executeLogicalValidation(): Promise<VerificationMethodResult> {
-    // Simplified logical validation
-    return {
-      method: VerificationType.LOGICAL_VALIDATION,
-      verdict: VerificationVerdict.UNVERIFIED,
-      confidence: 0.5,
-      reasoning: ["Logical validation not fully implemented"],
-      processingTimeMs: 75,
-      evidenceCount: 0,
-    };
-  }
-
-  private async executeStatisticalValidation(): Promise<VerificationMethodResult> {
-    // Simplified statistical validation
-    return {
-      method: VerificationType.STATISTICAL_VALIDATION,
-      verdict: VerificationVerdict.UNVERIFIED,
-      confidence: 0.5,
-      reasoning: ["Statistical validation not fully implemented"],
-      processingTimeMs: 60,
-      evidenceCount: 0,
-    };
-  }
-
   /**
    * Check cache for existing result
    */
@@ -633,5 +681,40 @@ export class VerificationEngineImpl implements VerificationEngine {
       batches.push(items.slice(i, i + batchSize));
     }
     return batches;
+  }
+
+  /**
+   * Get method performance statistics from database
+   */
+  async getMethodPerformance() {
+    if (!this.dbClient) {
+      return [];
+    }
+
+    try {
+      return await this.dbClient.getMethodPerformance();
+    } catch (error) {
+      console.warn("Failed to get method performance from database:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Get evidence quality statistics from database
+   */
+  async getEvidenceQualityStats() {
+    if (!this.dbClient) {
+      return [];
+    }
+
+    try {
+      return await this.dbClient.getEvidenceQualityStats();
+    } catch (error) {
+      console.warn(
+        "Failed to get evidence quality stats from database:",
+        error
+      );
+      return [];
+    }
   }
 }

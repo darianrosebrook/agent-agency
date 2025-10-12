@@ -7,6 +7,7 @@
 
 import { PromptingEngine } from "../../../src/orchestrator/prompting/PromptingEngine";
 import {
+  VerificationPriority,
   AgentControlConfig,
   Task,
   TaskContext,

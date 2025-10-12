@@ -122,7 +122,7 @@ describe("Arbiter MCP Server Integration Tests", () => {
         spec: validSpec,
         availableAgents: ["agent-1", "agent-2"],
         strategy: "capability",
-        priority: "high",
+        priority: VerificationPriority.HIGH,
       });
 
       expect(result).toBeDefined();

@@ -14,6 +14,7 @@
 
 import { ResearchProvenance } from "../../../../src/orchestrator/research/ResearchProvenance";
 import {
+  VerificationPriority,
   MockDatabaseClient,
   mockResearchContext,
 } from "../../../mocks/knowledge-mocks";

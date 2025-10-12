@@ -7,6 +7,7 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { MultiArmedBandit } from "../../../src/rl/MultiArmedBandit";
 import {
+  VerificationPriority,
   AgentProfile,
   AgentQueryResult,
   TaskType,

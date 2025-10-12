@@ -48,7 +48,12 @@ export class ResilientDatabaseClient {
   private retryPolicy = RetryPolicies.database();
   private fallbackRegistry?: AgentRegistryManager;
   private usingFallback = false;
-  private pendingWrites: Array<{ operation: string; agentId: string; data: any; timestamp: Date }> = [];
+  private pendingWrites: Array<{
+    operation: string;
+    agentId: string;
+    data: any;
+    timestamp: Date;
+  }> = [];
 
   constructor(
     private databaseClient: AgentRegistryDatabaseClient,
@@ -316,10 +321,10 @@ export class ResilientDatabaseClient {
         console.log(
           "[ResilientDatabaseClient] Database recovered, switching back from fallback"
         );
-        
+
         // Sync pending writes to database
         await this.syncPendingWrites();
-        
+
         this.usingFallback = false;
         this.circuitBreaker.reset();
       }
@@ -362,12 +367,16 @@ export class ResilientDatabaseClient {
             break;
           case "update":
             // TODO: Implement updateAgent when method is available
-            console.log(`[ResilientDatabaseClient] Skipping update sync for ${write.agentId} - method not yet implemented`);
+            console.log(
+              `[ResilientDatabaseClient] Skipping update sync for ${write.agentId} - method not yet implemented`
+            );
             synced.push(write.agentId); // Mark as synced to prevent retry
             break;
           case "delete":
             // TODO: Implement deleteAgent when method is available
-            console.log(`[ResilientDatabaseClient] Skipping delete sync for ${write.agentId} - method not yet implemented`);
+            console.log(
+              `[ResilientDatabaseClient] Skipping delete sync for ${write.agentId} - method not yet implemented`
+            );
             synced.push(write.agentId); // Mark as synced to prevent retry
             break;
           default:
@@ -393,10 +402,7 @@ export class ResilientDatabaseClient {
     );
 
     if (failed.length > 0) {
-      console.warn(
-        `[ResilientDatabaseClient] Failed syncs:`,
-        failed
-      );
+      console.warn(`[ResilientDatabaseClient] Failed syncs:`, failed);
     }
   }
 

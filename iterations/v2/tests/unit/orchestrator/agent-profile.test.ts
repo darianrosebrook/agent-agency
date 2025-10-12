@@ -9,6 +9,7 @@
 
 import { AgentProfileHelper } from "../../../src/orchestrator/AgentProfile";
 import {
+  VerificationPriority,
   AgentProfile,
   PerformanceHistory,
 } from "../../../src/types/agent-registry";

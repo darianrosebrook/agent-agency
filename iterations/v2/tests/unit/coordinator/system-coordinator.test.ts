@@ -6,6 +6,7 @@
 
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import {
+  VerificationPriority,
   ComponentHealthMonitor,
   SystemCoordinator,
 } from "../../../src/coordinator";

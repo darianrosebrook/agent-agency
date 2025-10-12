@@ -7,6 +7,7 @@
  */
 
 import {
+  VerificationPriority,
   CircuitBreaker,
   CircuitBreakerOpenError,
   CircuitState,
@@ -225,7 +226,7 @@ describe("CircuitBreaker", () => {
 
       try {
         await circuitBreaker.execute(mockFn);
-        fail("Should have thrown CircuitBreakerOpenError");
+        throw new Error("Should have thrown CircuitBreakerOpenError");
       } catch (error) {
         expect(error).toBeInstanceOf(CircuitBreakerOpenError);
         expect((error as CircuitBreakerOpenError).circuitName).toBe(

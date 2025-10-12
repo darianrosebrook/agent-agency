@@ -34,14 +34,17 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
   private queryCache: Map<string, KnowledgeResponse> = new Map();
   private resultCache: Map<string, any[]> = new Map();
   private dbClient: KnowledgeDatabaseClient | null = null;
+  private verificationEngine: any = null; // VerificationEngineImpl
 
   constructor(
     config: KnowledgeSeekerConfig,
-    dbClient?: KnowledgeDatabaseClient
+    dbClient?: KnowledgeDatabaseClient,
+    verificationEngine?: any // VerificationEngineImpl - using any to avoid circular dependency
   ) {
     this.config = config;
     this.processor = new InformationProcessor(config.processor);
     this.dbClient = dbClient || null;
+    this.verificationEngine = verificationEngine || null;
     this.initializeProviders();
   }
 
@@ -229,19 +232,61 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
         await this.dbClient.storeResults(processedResults);
       }
 
+      // Verify results if verification is enabled
+      let verificationResults: any[] = [];
+      let verifiedResults = processedResults;
+
+      if (this.config.verification?.enabled && this.verificationEngine) {
+        try {
+          // Auto-verify if enabled and query meets criteria
+          const shouldVerify =
+            this.config.verification.autoVerify &&
+            (query.metadata.priority >= 5 ||
+              query.queryType === QueryType.FACTUAL);
+
+          if (shouldVerify) {
+            verificationResults = await this.verifyResults(
+              query,
+              processedResults
+            );
+
+            // Filter results based on verification confidence if threshold is set
+            if (this.config.verification.minConfidenceThreshold) {
+              verifiedResults = this.filterByVerificationConfidence(
+                processedResults,
+                verificationResults,
+                this.config.verification.minConfidenceThreshold
+              );
+            }
+          }
+        } catch (error) {
+          console.warn(
+            "Verification failed, continuing with unverified results:",
+            error
+          );
+        }
+      }
+
       // Generate response
       const response: KnowledgeResponse = {
         query,
-        results: processedResults,
-        summary: this.processor.generateSummary(query, processedResults),
-        confidence: this.calculateResponseConfidence(processedResults),
-        sourcesUsed: Array.from(new Set(processedResults.map((r) => r.domain))),
+        results: verifiedResults,
+        summary: this.processor.generateSummary(query, verifiedResults),
+        confidence: this.calculateResponseConfidence(verifiedResults),
+        sourcesUsed: Array.from(new Set(verifiedResults.map((r) => r.domain))),
+        verificationResults:
+          verificationResults.length > 0 ? verificationResults : undefined,
         metadata: {
           totalResultsFound: allResults.length,
-          resultsFiltered: processedResults.length,
+          resultsFiltered: verifiedResults.length,
           processingTimeMs: Date.now() - startTime,
           cacheUsed: false,
           providersQueried,
+          verifiedCount: verificationResults.filter(
+            (v) =>
+              v.confidence >=
+              (this.config.verification?.minConfidenceThreshold ?? 0.5)
+          ).length,
         },
         respondedAt: new Date(),
       };
@@ -561,5 +606,90 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
         this.queryCache.delete(key);
       }
     }
+  }
+
+  /**
+   * Verify search results using verification engine
+   */
+  private async verifyResults(
+    query: KnowledgeQuery,
+    results: any[]
+  ): Promise<any[]> {
+    if (!this.verificationEngine || !this.config.verification) {
+      return [];
+    }
+
+    const verificationRequests = results.map((result, idx) => ({
+      id: `${query.id}-verify-${idx}`,
+      content: result.content || result.snippet || result.title,
+      source: result.url,
+      context: query.query,
+      priority: this.mapQueryPriorityToVerificationPriority(
+        query.metadata.priority
+      ),
+      verificationTypes: this.config.verification?.verificationTypes || [],
+      metadata: {
+        resultId: result.id,
+        provider: result.provider,
+      },
+    }));
+
+    // Verify results in parallel
+    const verificationResults = await Promise.allSettled(
+      verificationRequests.map((req) => this.verificationEngine.verify(req))
+    );
+
+    // Extract successful verification results
+    return verificationResults
+      .filter((r) => r.status === "fulfilled")
+      .map((r: any) => r.value);
+  }
+
+  /**
+   * Map query priority to verification priority
+   */
+  private mapQueryPriorityToVerificationPriority(
+    queryPriority: number
+  ): string {
+    if (queryPriority >= 8) return "critical";
+    if (queryPriority >= 6) return "high";
+    if (queryPriority >= 4) return "medium";
+    return "low";
+  }
+
+  /**
+   * Filter results by verification confidence
+   */
+  private filterByVerificationConfidence(
+    results: any[],
+    verificationResults: any[],
+    minConfidence: number
+  ): any[] {
+    if (verificationResults.length === 0) {
+      return results;
+    }
+
+    // Create map of result IDs to verification results
+    const verificationMap = new Map();
+    for (const verification of verificationResults) {
+      const resultId = verification.requestId?.split("-verify-")[0];
+      if (resultId) {
+        verificationMap.set(verification.requestId, verification);
+      }
+    }
+
+    // Filter results based on verification confidence
+    return results.filter((result, idx) => {
+      const verificationKey = `${result.queryId}-verify-${idx}`;
+      const verification = verificationMap.get(verificationKey);
+
+      if (!verification) {
+        // If no verification available, keep result by default
+        return true;
+      }
+
+      // Keep results with sufficient verification confidence
+      return verification.confidence >= minConfidence;
+    });
   }
 }

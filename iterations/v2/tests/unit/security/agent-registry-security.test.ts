@@ -8,6 +8,7 @@
 
 import * as jwt from "jsonwebtoken";
 import {
+  VerificationPriority,
   AgentRegistrySecurity,
   AuditEventType,
   SecurityContext,

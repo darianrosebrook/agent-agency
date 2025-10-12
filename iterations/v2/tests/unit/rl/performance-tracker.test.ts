@@ -492,13 +492,13 @@ describe("PerformanceTracker", () => {
 
       // Test task execution integration
       const executionId = tracker.startTaskExecution("task-123", "agent-1", {
-        priority: "high",
+        priority: VerificationPriority.HIGH,
       });
 
       expect(mockDataCollector.recordTaskStart).toHaveBeenCalledWith(
         "task-123",
         "agent-1",
-        expect.objectContaining({ priority: "high" })
+        expect.objectContaining({ priority: VerificationPriority.HIGH })
       );
 
       // Test routing decision integration

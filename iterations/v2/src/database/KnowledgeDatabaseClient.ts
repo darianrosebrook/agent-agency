@@ -4,64 +4,42 @@
  * Handles database persistence for knowledge queries, search results,
  * responses, and provider health tracking.
  *
+ * Uses centralized ConnectionPoolManager for connection sharing and multi-tenant support.
+ *
  * @author @darianrosebrook
  */
 
-import { Pool } from "pg";
 import {
   KnowledgeQuery,
   KnowledgeResponse,
   ProviderHealthStatus,
   SearchResult,
 } from "../types/knowledge";
-
-/**
- * Database client configuration
- */
-export interface KnowledgeDatabaseConfig {
-  host: string;
-  port: number;
-  database: string;
-  user: string;
-  password: string;
-  maxConnections?: number;
-  idleTimeoutMs?: number;
-  connectionTimeoutMs?: number;
-}
+import { ConnectionPoolManager } from "./ConnectionPoolManager";
 
 /**
  * Knowledge Database Client
  *
  * Provides database persistence for knowledge queries, results, and provider health.
  * Implements graceful degradation - operations continue if database is unavailable.
+ * Uses centralized ConnectionPoolManager for connection sharing.
  */
 export class KnowledgeDatabaseClient {
-  private pool: Pool | null = null;
-  private config: KnowledgeDatabaseConfig;
+  private poolManager: ConnectionPoolManager;
   private available = false;
 
-  constructor(config: KnowledgeDatabaseConfig) {
-    this.config = config;
+  constructor() {
+    // Use centralized pool manager
+    this.poolManager = ConnectionPoolManager.getInstance();
   }
 
   /**
-   * Initialize database connection pool
+   * Initialize database connection (verify pool is available)
    */
   async initialize(): Promise<void> {
     try {
-      this.pool = new Pool({
-        host: this.config.host,
-        port: this.config.port,
-        database: this.config.database,
-        user: this.config.user,
-        password: this.config.password,
-        max: this.config.maxConnections || 10,
-        idleTimeoutMillis: this.config.idleTimeoutMs || 30000,
-        connectionTimeoutMillis: this.config.connectionTimeoutMs || 2000,
-      });
-
-      // Test connection
-      const client = await this.pool.connect();
+      // Verify pool is initialized and accessible
+      const client = await this.poolManager.getPool().connect();
       await client.query("SELECT 1");
       client.release();
 
@@ -75,33 +53,26 @@ export class KnowledgeDatabaseClient {
   }
 
   /**
-   * Shutdown database connection pool
-   */
-  async shutdown(): Promise<void> {
-    if (this.pool) {
-      await this.pool.end();
-      this.pool = null;
-      this.available = false;
-    }
-  }
-
-  /**
    * Check if database is available
    */
   isAvailable(): boolean {
-    return this.available && this.pool !== null;
+    return this.available && this.poolManager.isInitialized();
   }
 
   /**
    * Store a knowledge query
    */
-  async storeQuery(query: KnowledgeQuery): Promise<string | null> {
+  async storeQuery(
+    query: KnowledgeQuery,
+    _tenantId?: string
+  ): Promise<string | null> {
     if (!this.isAvailable()) {
       return null;
     }
 
     try {
-      const result = await this.pool!.query(
+      const pool = this.poolManager.getPool();
+      const result = await pool.query(
         `INSERT INTO knowledge_queries (
           id, query_text, query_type, requester_id, priority,
           max_results, relevance_threshold, timeout_ms,
@@ -137,14 +108,15 @@ export class KnowledgeDatabaseClient {
   async updateQueryStatus(
     queryId: string,
     status: "pending" | "processing" | "completed" | "failed",
-    errorMessage?: string
+    errorMessage?: string,
+    _tenantId?: string
   ): Promise<void> {
     if (!this.isAvailable()) {
       return;
     }
 
     try {
-      await this.pool!.query(
+      await this.poolManager.getPool().query(
         `UPDATE knowledge_queries 
          SET status = $1, processed_at = $2, error_message = $3
          WHERE id = $4`,
@@ -158,13 +130,16 @@ export class KnowledgeDatabaseClient {
   /**
    * Store search results
    */
-  async storeResults(results: SearchResult[]): Promise<number> {
+  async storeResults(
+    results: SearchResult[],
+    _tenantId?: string
+  ): Promise<number> {
     if (!this.isAvailable() || results.length === 0) {
       return 0;
     }
 
     let stored = 0;
-    const client = await this.pool!.connect();
+    const client = await this.poolManager.getPool().connect();
 
     try {
       await client.query("BEGIN");
@@ -212,13 +187,16 @@ export class KnowledgeDatabaseClient {
   /**
    * Store knowledge response
    */
-  async storeResponse(response: KnowledgeResponse): Promise<string | null> {
+  async storeResponse(
+    response: KnowledgeResponse,
+    _tenantId?: string
+  ): Promise<string | null> {
     if (!this.isAvailable()) {
       return null;
     }
 
     try {
-      const result = await this.pool!.query(
+      const result = await this.poolManager.getPool().query(
         `INSERT INTO knowledge_responses (
           query_id, summary, confidence, sources_used,
           total_results_found, results_filtered, processing_time_ms,
@@ -267,7 +245,7 @@ export class KnowledgeDatabaseClient {
     }
 
     try {
-      await this.pool!.query(
+      await this.poolManager.getPool().query(
         `INSERT INTO search_provider_health (
           provider_name, available, last_health_check, consecutive_failures,
           avg_response_time_ms, error_rate, requests_this_minute, requests_this_hour,
@@ -302,13 +280,16 @@ export class KnowledgeDatabaseClient {
   /**
    * Get cached response by cache key
    */
-  async getCachedResponse(cacheKey: string): Promise<any | null> {
+  async getCachedResponse(
+    cacheKey: string,
+    _tenantId?: string
+  ): Promise<any | null> {
     if (!this.isAvailable()) {
       return null;
     }
 
     try {
-      const result = await this.pool!.query(
+      const result = await this.poolManager.getPool().query(
         `SELECT content, expires_at, access_count
          FROM knowledge_cache
          WHERE cache_key = $1 AND expires_at > NOW()`,
@@ -320,7 +301,7 @@ export class KnowledgeDatabaseClient {
       }
 
       // Update access statistics
-      await this.pool!.query(
+      await this.poolManager.getPool().query(
         `UPDATE knowledge_cache
          SET access_count = access_count + 1, last_accessed_at = NOW()
          WHERE cache_key = $1`,
@@ -340,7 +321,8 @@ export class KnowledgeDatabaseClient {
   async storeCachedResponse(
     cacheKey: string,
     content: any,
-    cacheTtlMs: number
+    cacheTtlMs: number,
+    _tenantId?: string
   ): Promise<void> {
     if (!this.isAvailable()) {
       return;
@@ -351,7 +333,7 @@ export class KnowledgeDatabaseClient {
       const contentStr = JSON.stringify(content);
       const sizeBytes = Buffer.byteLength(contentStr, "utf8");
 
-      await this.pool!.query(
+      await this.poolManager.getPool().query(
         `INSERT INTO knowledge_cache (
           cache_key, cache_type, content, metadata,
           created_at, expires_at, size_bytes, last_accessed_at
@@ -380,15 +362,15 @@ export class KnowledgeDatabaseClient {
   /**
    * Clean expired cache entries
    */
-  async cleanExpiredCache(): Promise<number> {
+  async cleanExpiredCache(_tenantId?: string): Promise<number> {
     if (!this.isAvailable()) {
       return 0;
     }
 
     try {
-      const result = await this.pool!.query(
-        `DELETE FROM knowledge_cache WHERE expires_at < NOW()`
-      );
+      const result = await this.poolManager
+        .getPool()
+        .query(`DELETE FROM knowledge_cache WHERE expires_at < NOW()`);
 
       return result.rowCount || 0;
     } catch (error) {
@@ -408,7 +390,7 @@ export class KnowledgeDatabaseClient {
     }
 
     try {
-      const result = await this.pool!.query(
+      const result = await this.poolManager.getPool().query(
         `SELECT available, avg_response_time_ms, error_rate,
                 requests_this_minute, requests_this_hour
          FROM search_provider_health
@@ -437,7 +419,7 @@ export class KnowledgeDatabaseClient {
   /**
    * Get cache statistics
    */
-  async getCacheStats(): Promise<{
+  async getCacheStats(_tenantId?: string): Promise<{
     totalEntries: number;
     totalSizeBytes: number;
     hitRate: number;
@@ -447,7 +429,7 @@ export class KnowledgeDatabaseClient {
     }
 
     try {
-      const result = await this.pool!.query(
+      const result = await this.poolManager.getPool().query(
         `SELECT 
           COUNT(*) as total_entries,
           SUM(size_bytes) as total_size,

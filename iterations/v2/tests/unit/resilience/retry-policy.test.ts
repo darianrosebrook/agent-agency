@@ -7,6 +7,7 @@
  */
 
 import {
+  VerificationPriority,
   RetryExhaustedError,
   RetryPolicies,
   RetryPolicy,
@@ -81,7 +82,7 @@ describe("RetryPolicy", () => {
 
       try {
         await policy.execute(mockFn);
-        fail("Should have thrown RetryExhaustedError");
+        throw new Error("Should have thrown RetryExhaustedError");
       } catch (error) {
         expect(error).toBeInstanceOf(RetryExhaustedError);
         const retryError = error as RetryExhaustedError;

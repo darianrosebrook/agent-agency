@@ -9,6 +9,7 @@
 
 import { AgentRegistryDatabaseClient } from "../../../src/database/AgentRegistryDatabaseClient";
 import {
+  VerificationPriority,
   AgentProfile,
   PerformanceMetrics,
 } from "../../../src/types/agent-registry";

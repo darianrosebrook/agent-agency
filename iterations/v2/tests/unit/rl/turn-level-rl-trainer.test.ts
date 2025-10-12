@@ -7,6 +7,7 @@
 import { beforeEach, describe, expect, it } from "@jest/globals";
 import { TurnLevelRLTrainer } from "../../../src/rl/TurnLevelRLTrainer";
 import {
+  VerificationPriority,
   ConversationTrajectory,
   TaskOutcome,
   TurnLevelReward,

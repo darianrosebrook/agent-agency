@@ -5,6 +5,7 @@
  */
 
 import {
+  VerificationPriority,
   ValidationUtils,
   validateTask,
 } from "../../../src/orchestrator/Validation";

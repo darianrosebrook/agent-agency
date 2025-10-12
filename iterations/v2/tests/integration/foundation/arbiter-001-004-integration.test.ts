@@ -23,6 +23,7 @@ import { TaskRoutingManager } from "../../../src/orchestrator/TaskRoutingManager
 import { PerformanceTracker } from "../../../src/rl/PerformanceTracker";
 import { AgentQuery } from "../../../src/types/agent-registry";
 import {
+  VerificationPriority,
   createAgentWithCapabilities,
   createInvalidSpec,
   createMinimalTask,

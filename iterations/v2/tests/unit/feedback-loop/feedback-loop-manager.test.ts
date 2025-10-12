@@ -6,6 +6,7 @@ import { FeedbackLoopManager } from "../../../src/feedback-loop/FeedbackLoopMana
 import { FeedbackPipeline } from "../../../src/feedback-loop/FeedbackPipeline";
 import { ImprovementEngine } from "../../../src/feedback-loop/ImprovementEngine";
 import {
+  VerificationPriority,
   FeedbackRecommendation,
   FeedbackSource,
   FeedbackType,
@@ -318,7 +319,7 @@ describe("FeedbackLoopManager", () => {
       const recommendation: FeedbackRecommendation = {
         id: "rec-1",
         type: "agent_update",
-        priority: "high",
+        priority: VerificationPriority.HIGH,
         description: "Update agent performance profile",
         action: {
           targetEntity: "agent-1",
@@ -351,7 +352,7 @@ describe("FeedbackLoopManager", () => {
         {
           id: "rec-1",
           type: "routing_adjustment",
-          priority: "medium",
+          priority: VerificationPriority.MEDIUM,
           description: "Adjust routing weights",
           action: {
             targetEntity: "router-1",

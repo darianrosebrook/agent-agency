@@ -10,6 +10,7 @@
 import { beforeEach, describe, expect, it } from "@jest/globals";
 import { AgentRegistryManager } from "../../../src/orchestrator/AgentRegistryManager";
 import {
+  VerificationPriority,
   RoutingOutcome,
   TaskRoutingConfig,
   TaskRoutingManager,

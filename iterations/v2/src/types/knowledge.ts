@@ -159,6 +159,9 @@ export interface KnowledgeResponse {
   /** Sources used */
   sourcesUsed: string[];
 
+  /** Verification results (ARBITER-007 Integration) */
+  verificationResults?: any[]; // Array of VerificationResult
+
   /** Processing metadata */
   metadata: {
     totalResultsFound: number;
@@ -166,6 +169,7 @@ export interface KnowledgeResponse {
     processingTimeMs: number;
     cacheUsed: boolean;
     providersQueried: string[];
+    verifiedCount?: number;
   };
 
   /** Response timestamp */
@@ -319,6 +323,14 @@ export interface KnowledgeSeekerConfig {
     enableQueryCaching: boolean;
     enableResultCaching: boolean;
     cacheTtlMs: number;
+  };
+
+  /** Verification (ARBITER-007 Integration) */
+  verification?: {
+    enabled: boolean;
+    autoVerify: boolean; // Auto-verify high-priority queries
+    minConfidenceThreshold: number;
+    verificationTypes: string[]; // Array of VerificationType values
   };
 
   /** Observability */

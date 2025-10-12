@@ -248,7 +248,7 @@ risk_tiers:
         spec: testSpec,
         availableAgents: ["cursor-composer-agent", "copilot-agent"],
         strategy: "capability" as const,
-        priority: "high" as const,
+        priority: VerificationPriority.HIGH as const,
       };
 
       const selectedAgent = assignArgs.availableAgents[0]; // Simulate agent selection

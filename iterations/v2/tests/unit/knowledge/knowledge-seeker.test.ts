@@ -8,6 +8,7 @@ import { KnowledgeSeeker } from "../../../src/knowledge/KnowledgeSeeker";
 import { SearchProviderFactory } from "../../../src/knowledge/SearchProvider";
 import { events } from "../../../src/orchestrator/EventEmitter";
 import {
+  VerificationPriority,
   KnowledgeQuery,
   QueryType,
   SearchProviderConfig,

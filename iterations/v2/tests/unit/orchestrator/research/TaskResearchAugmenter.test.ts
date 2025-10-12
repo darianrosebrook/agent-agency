@@ -16,6 +16,7 @@ import { ResearchDetector } from "../../../../src/orchestrator/research/Research
 import { TaskResearchAugmenter } from "../../../../src/orchestrator/research/TaskResearchAugmenter";
 import { QueryType } from "../../../../src/types/knowledge";
 import {
+  VerificationPriority,
   MockKnowledgeSeeker,
   mockKnowledgeResponse,
   mockTask,

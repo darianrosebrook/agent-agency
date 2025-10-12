@@ -4,10 +4,12 @@
  * Handles database persistence for web content, traversal sessions,
  * cache management, and rate limit tracking.
  *
+ * Uses centralized ConnectionPoolManager for connection sharing and multi-tenant support.
+ *
  * @author @darianrosebrook
  */
 
-import { Pool } from "pg";
+import { ConnectionPoolManager } from "./ConnectionPoolManager";
 import {
   DomainRateLimit,
   RateLimitStatus,
@@ -17,52 +19,28 @@ import {
 } from "../types/web";
 
 /**
- * Database client configuration
- */
-export interface WebNavigatorDatabaseConfig {
-  host: string;
-  port: number;
-  database: string;
-  user: string;
-  password: string;
-  maxConnections?: number;
-  idleTimeoutMs?: number;
-  connectionTimeoutMs?: number;
-}
-
-/**
  * Web Navigator Database Client
  *
  * Provides database persistence for web content, traversals, and cache.
  * Implements graceful degradation - operations continue if database is unavailable.
+ * Uses centralized ConnectionPoolManager for connection sharing.
  */
 export class WebNavigatorDatabaseClient {
-  private pool: Pool | null = null;
-  private config: WebNavigatorDatabaseConfig;
+  private poolManager: ConnectionPoolManager;
   private available = false;
 
-  constructor(config: WebNavigatorDatabaseConfig) {
-    this.config = config;
+  constructor() {
+    // Use centralized pool manager
+    this.poolManager = ConnectionPoolManager.getInstance();
   }
 
   /**
-   * Initialize database connection pool
+   * Initialize database connection (verify pool is available)
    */
   async initialize(): Promise<void> {
     try {
-      this.pool = new Pool({
-        host: this.config.host,
-        port: this.config.port,
-        database: this.config.database,
-        user: this.config.user,
-        password: this.config.password,
-        max: this.config.maxConnections || 10,
-        idleTimeoutMillis: this.config.idleTimeoutMs || 30000,
-        connectionTimeoutMillis: this.config.connectionTimeoutMs || 2000,
-      });
-
-      // Test connection
-      const client = await this.pool.connect();
+      // Verify pool is initialized and accessible
+      const client = await this.poolManager.getPool().connect();
       await client.query("SELECT 1");
       client.release();
 
@@ -76,33 +54,25 @@ export class WebNavigatorDatabaseClient {
   }
 
   /**
-   * Shutdown database connection pool
-   */
-  async shutdown(): Promise<void> {
-    if (this.pool) {
-      await this.pool.end();
-      this.pool = null;
-      this.available = false;
-    }
-  }
-
-  /**
    * Check if database is available
    */
   isAvailable(): boolean {
-    return this.available && this.pool !== null;
+    return this.available && this.poolManager.isInitialized();
   }
 
   /**
    * Store extracted web content
    */
-  async storeContent(content: WebContent): Promise<string | null> {
+  async storeContent(
+    content: WebContent,
+    _tenantId?: string
+  ): Promise<string | null> {
     if (!this.isAvailable()) {
       return null;
     }
 
     try {
-      const result = await this.pool!.query(
+      const result = await this.poolManager.getPool().query(
         `INSERT INTO web_content (
           id, url, title, content, html, content_hash, quality, metadata,
           extraction_type, extracted_at, cached_until, extraction_time_ms, content_size_bytes
@@ -138,13 +108,16 @@ export class WebNavigatorDatabaseClient {
   /**
    * Retrieve content by URL from cache
    */
-  async getContentByUrl(url: string): Promise<WebContent | null> {
+  async getContentByUrl(
+    url: string,
+    _tenantId?: string
+  ): Promise<WebContent | null> {
     if (!this.isAvailable()) {
       return null;
     }
 
     try {
-      const result = await this.pool!.query(
+      const result = await this.poolManager.getPool().query(
         `SELECT wc.* 
          FROM web_content wc
          INNER JOIN web_cache cache ON wc.id = cache.content_id
@@ -159,7 +132,7 @@ export class WebNavigatorDatabaseClient {
       }
 
       // Update cache hit count
-      await this.pool!.query(
+      await this.poolManager.getPool().query(
         `UPDATE web_cache 
          SET hit_count = hit_count + 1, last_accessed = NOW()
          WHERE url = $1`,
@@ -179,7 +152,8 @@ export class WebNavigatorDatabaseClient {
   async cacheContent(
     url: string,
     contentId: string,
-    ttlHours: number = 24
+    ttlHours: number = 24,
+    _tenantId?: string
   ): Promise<void> {
     if (!this.isAvailable()) {
       return;
@@ -189,14 +163,14 @@ export class WebNavigatorDatabaseClient {
       const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
 
       // Get content size for cache entry
-      const sizeResult = await this.pool!.query(
+      const sizeResult = await this.poolManager.getPool().query(
         `SELECT content_size_bytes FROM web_content WHERE id = $1`,
         [contentId]
       );
 
       const cacheSize = sizeResult.rows[0]?.content_size_bytes || 0;
 
-      await this.pool!.query(
+      await this.poolManager.getPool().query(
         `INSERT INTO web_cache (url, content_id, cached_at, expires_at, cache_size_bytes)
          VALUES ($1, $2, NOW(), $3, $4)
          ON CONFLICT (url) DO UPDATE SET
@@ -215,13 +189,13 @@ export class WebNavigatorDatabaseClient {
   /**
    * Clean up expired cache entries
    */
-  async cleanupExpiredCache(): Promise<number> {
+  async cleanupExpiredCache(_tenantId?: string): Promise<number> {
     if (!this.isAvailable()) {
       return 0;
     }
 
     try {
-      const result = await this.pool!.query(
+      const result = await this.poolManager.getPool().query(
         `SELECT cleanup_expired_web_cache() as deleted_count`
       );
       return result.rows[0]?.deleted_count || 0;
@@ -234,13 +208,16 @@ export class WebNavigatorDatabaseClient {
   /**
    * Get rate limit status for domain
    */
-  async getRateLimit(domain: string): Promise<DomainRateLimit | null> {
+  async getRateLimit(
+    domain: string,
+    _tenantId?: string
+  ): Promise<DomainRateLimit | null> {
     if (!this.isAvailable()) {
       return null;
     }
 
     try {
-      const result = await this.pool!.query(
+      const result = await this.poolManager.getPool().query(
         `SELECT * FROM web_rate_limits WHERE domain = $1`,
         [domain]
       );
@@ -267,13 +244,16 @@ export class WebNavigatorDatabaseClient {
   /**
    * Update rate limit for domain
    */
-  async updateRateLimit(rateLimit: DomainRateLimit): Promise<void> {
+  async updateRateLimit(
+    rateLimit: DomainRateLimit,
+    _tenantId?: string
+  ): Promise<void> {
     if (!this.isAvailable()) {
       return;
     }
 
     try {
-      await this.pool!.query(
+      await this.poolManager.getPool().query(
         `INSERT INTO web_rate_limits (
           domain, status, requests_in_window, window_start, window_end,
           backoff_until, last_request
@@ -302,14 +282,17 @@ export class WebNavigatorDatabaseClient {
   /**
    * Increment rate limit counter for domain
    */
-  async incrementRateLimitCounter(domain: string): Promise<number> {
+  async incrementRateLimitCounter(
+    domain: string,
+    _tenantId?: string
+  ): Promise<number> {
     if (!this.isAvailable()) {
       return 0;
     }
 
     try {
       // Initialize if not exists
-      await this.pool!.query(
+      await this.poolManager.getPool().query(
         `INSERT INTO web_rate_limits (domain, requests_in_window, window_start, window_end)
          VALUES ($1, 0, NOW(), NOW() + INTERVAL '1 minute')
          ON CONFLICT (domain) DO NOTHING`,
@@ -317,7 +300,7 @@ export class WebNavigatorDatabaseClient {
       );
 
       // Reset window if expired
-      await this.pool!.query(
+      await this.poolManager.getPool().query(
         `UPDATE web_rate_limits
          SET requests_in_window = 0,
              window_start = NOW(),
@@ -327,7 +310,7 @@ export class WebNavigatorDatabaseClient {
       );
 
       // Increment counter
-      const result = await this.pool!.query(
+      const result = await this.poolManager.getPool().query(
         `UPDATE web_rate_limits
          SET requests_in_window = requests_in_window + 1,
              last_request = NOW(),
@@ -352,14 +335,15 @@ export class WebNavigatorDatabaseClient {
     startUrl: string,
     maxDepth: number,
     maxPages: number,
-    strategy: TraversalStrategy
+    strategy: TraversalStrategy,
+    _tenantId?: string
   ): Promise<string | null> {
     if (!this.isAvailable()) {
       return null;
     }
 
     try {
-      const result = await this.pool!.query(
+      const result = await this.poolManager.getPool().query(
         `INSERT INTO web_traversals (
           session_id, start_url, max_depth, max_pages, strategy, status, started_at
         ) VALUES ($1, $2, $3, $4, $5, 'running', NOW())
@@ -380,14 +364,15 @@ export class WebNavigatorDatabaseClient {
   async updateTraversalStatus(
     sessionId: string,
     status: "pending" | "running" | "completed" | "failed",
-    errorMessage?: string
+    errorMessage?: string,
+    _tenantId?: string
   ): Promise<void> {
     if (!this.isAvailable()) {
       return;
     }
 
     try {
-      await this.pool!.query(
+      await this.poolManager.getPool().query(
         `UPDATE web_traversals
          SET status = $1, completed_at = NOW(), error_message = $2
          WHERE session_id = $3`,
@@ -406,14 +391,15 @@ export class WebNavigatorDatabaseClient {
     url: string,
     depth: number,
     parentId?: string,
-    linkText?: string
+    linkText?: string,
+    _tenantId?: string
   ): Promise<string | null> {
     if (!this.isAvailable()) {
       return null;
     }
 
     try {
-      const result = await this.pool!.query(
+      const result = await this.poolManager.getPool().query(
         `INSERT INTO web_traversal_nodes (
           traversal_id, url, depth, status, parent_id, link_text
         ) VALUES ($1, $2, $3, 'pending', $4, $5)
@@ -435,14 +421,15 @@ export class WebNavigatorDatabaseClient {
     nodeId: string,
     status: "pending" | "visited" | "skipped" | "error",
     contentId?: string,
-    errorMessage?: string
+    errorMessage?: string,
+    _tenantId?: string
   ): Promise<void> {
     if (!this.isAvailable()) {
       return;
     }
 
     try {
-      await this.pool!.query(
+      await this.poolManager.getPool().query(
         `UPDATE web_traversal_nodes
          SET status = $1, visited_at = NOW(), content_id = $2, error_message = $3
          WHERE id = $4`,
@@ -456,7 +443,7 @@ export class WebNavigatorDatabaseClient {
   /**
    * Get cache statistics
    */
-  async getCacheStats(): Promise<{
+  async getCacheStats(_tenantId?: string): Promise<{
     totalPages: number;
     cacheSizeBytes: number;
     hitRate: number;
@@ -482,7 +469,7 @@ export class WebNavigatorDatabaseClient {
     }
 
     try {
-      const result = await this.pool!.query(
+      const result = await this.poolManager.getPool().query(
         `SELECT * FROM web_cache_performance`
       );
       const row = result.rows[0] || {};
@@ -531,14 +518,15 @@ export class WebNavigatorDatabaseClient {
       sslVerified: boolean;
       maliciousDetected: boolean;
       sanitizationApplied: boolean;
-    }
+    },
+    _tenantId?: string
   ): Promise<void> {
     if (!this.isAvailable()) {
       return;
     }
 
     try {
-      await this.pool!.query(
+      await this.poolManager.getPool().query(
         `INSERT INTO web_extraction_metrics (
           content_id, total_time_ms, fetch_time_ms, parse_time_ms, sanitize_time_ms,
           status_code, content_type, content_length, redirect_count,

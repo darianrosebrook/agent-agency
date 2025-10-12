@@ -23,6 +23,13 @@ import { KnowledgeQuery, KnowledgeResponse } from "../types/knowledge";
 import { PromptingEngine } from "./prompting/PromptingEngine";
 
 import { KnowledgeSeeker } from "../knowledge/KnowledgeSeeker";
+import {
+  VerificationRequest,
+  VerificationResult,
+  VerificationType,
+} from "../types/verification";
+import { VerificationDatabaseClient } from "../verification/VerificationDatabaseClient";
+import { VerificationEngineImpl } from "../verification/VerificationEngine";
 import { AgentRegistryManager } from "./AgentRegistryManager";
 import { IDatabaseClient } from "./DatabaseClient";
 import { EventEmitter, events } from "./EventEmitter";
@@ -89,6 +96,24 @@ export interface ArbiterOrchestratorConfig {
     provenance?: {
       enabled: boolean;
     };
+  };
+
+  /** Verification engine configuration (ARBITER-007) */
+  verification?: {
+    enabled: boolean;
+    defaultTimeoutMs?: number;
+    minConfidenceThreshold?: number;
+    methods?: Array<{
+      type: string;
+      enabled: boolean;
+      priority: number;
+      timeoutMs: number;
+      config: Record<string, any>;
+    }>;
+    cacheEnabled?: boolean;
+    cacheTtlMs?: number;
+    retryAttempts?: number;
+    retryDelayMs?: number;
   };
 
   /** General orchestrator settings */
@@ -160,6 +185,8 @@ export class ArbiterOrchestrator {
     researchDetector?: ResearchDetector;
     researchAugmenter?: TaskResearchAugmenter;
     researchProvenance?: ResearchProvenance;
+    verificationEngine?: VerificationEngineImpl;
+    verificationDbClient?: VerificationDatabaseClient;
   };
   private databaseClient?: any;
   private eventEmitter: EventEmitter;
@@ -200,10 +227,57 @@ export class ArbiterOrchestrator {
         }
       }
 
-      // Initialize knowledge seeker first (needed by research system)
+      // Initialize verification engine first (needed by knowledge seeker)
+      let verificationEngine: VerificationEngineImpl | undefined;
+      let verificationDbClient: VerificationDatabaseClient | undefined;
+
+      if (this.config.verification?.enabled) {
+        console.log("Initializing verification engine (ARBITER-007)...");
+
+        // Initialize verification database client if database config exists
+        if (this.config.database) {
+          verificationDbClient = new VerificationDatabaseClient({
+            host: this.config.database.host,
+            port: this.config.database.port,
+            database: this.config.database.database,
+            user: this.config.database.user,
+            password: this.config.database.password,
+            max: this.config.database.maxConnections ?? 10,
+          });
+
+          await verificationDbClient.initialize();
+        }
+
+        // Create verification engine config
+        const verificationConfig = {
+          defaultTimeoutMs: this.config.verification.defaultTimeoutMs ?? 30000,
+          maxConcurrentVerifications: 5,
+          minConfidenceThreshold:
+            this.config.verification.minConfidenceThreshold ?? 0.5,
+          maxEvidencePerMethod: 10,
+          methods: (this.config.verification.methods ?? []).map((m) => ({
+            ...m,
+            type: m.type as VerificationType,
+          })),
+          cacheEnabled: this.config.verification.cacheEnabled ?? true,
+          cacheTtlMs: this.config.verification.cacheTtlMs ?? 300000,
+          retryAttempts: this.config.verification.retryAttempts ?? 2,
+          retryDelayMs: this.config.verification.retryDelayMs ?? 1000,
+        };
+
+        verificationEngine = new VerificationEngineImpl(
+          verificationConfig,
+          verificationDbClient
+        );
+
+        console.log("Verification engine initialized successfully");
+      }
+
+      // Initialize knowledge seeker with verification engine
       const knowledgeSeeker = new KnowledgeSeeker(
         this.config.knowledgeSeeker,
-        knowledgeDbClient
+        knowledgeDbClient,
+        verificationEngine
       );
 
       // Initialize research components if enabled (ARBITER-006 Phase 4)
@@ -263,6 +337,8 @@ export class ArbiterOrchestrator {
         researchDetector,
         researchAugmenter,
         researchProvenance,
+        verificationEngine,
+        verificationDbClient,
       };
 
       // Initialize all components
@@ -992,6 +1068,43 @@ export class ArbiterOrchestrator {
       };
     }
   }
+
+  /**
+   * Verify information using the verification engine
+   */
+  async verifyInformation(
+    request: VerificationRequest
+  ): Promise<VerificationResult> {
+    if (!this.components.verificationEngine) {
+      throw new Error(
+        "Verification engine not enabled. Set verification.enabled=true in config."
+      );
+    }
+
+    return this.components.verificationEngine.verify(request);
+  }
+
+  /**
+   * Get verification method performance statistics
+   */
+  async getVerificationMethodStats() {
+    if (!this.components.verificationEngine) {
+      return [];
+    }
+
+    return this.components.verificationEngine.getMethodPerformance();
+  }
+
+  /**
+   * Get evidence quality statistics
+   */
+  async getVerificationEvidenceStats() {
+    if (!this.components.verificationEngine) {
+      return [];
+    }
+
+    return this.components.verificationEngine.getEvidenceQualityStats();
+  }
 }
 
 /**
@@ -1171,6 +1284,77 @@ export const defaultArbiterOrchestratorConfig: ArbiterOrchestratorConfig = {
       },
     },
   } as any, // Type cast - AgentControlConfig & { enabled: boolean }
+
+  verification: {
+    enabled: true,
+    defaultTimeoutMs: 30000,
+    minConfidenceThreshold: 0.5,
+    cacheEnabled: true,
+    cacheTtlMs: 300000, // 5 minutes
+    retryAttempts: 2,
+    retryDelayMs: 1000,
+    methods: [
+      {
+        type: VerificationType.FACT_CHECKING,
+        enabled: true,
+        priority: 1,
+        timeoutMs: 10000,
+        config: {
+          providers: ["google_fact_check", "snopes"],
+        },
+      },
+      {
+        type: VerificationType.SOURCE_CREDIBILITY,
+        enabled: true,
+        priority: 2,
+        timeoutMs: 5000,
+        config: {
+          credibilityDatabase: "media_bias_fact_check",
+        },
+      },
+      {
+        type: VerificationType.CROSS_REFERENCE,
+        enabled: true,
+        priority: 3,
+        timeoutMs: 15000,
+        config: {
+          maxSources: 5,
+          minConsensus: 0.7,
+          searchProviders: ["mock"],
+        },
+      },
+      {
+        type: VerificationType.CONSISTENCY_CHECK,
+        enabled: true,
+        priority: 4,
+        timeoutMs: 8000,
+        config: {
+          logicEngine: "default",
+          strictMode: false,
+        },
+      },
+      {
+        type: VerificationType.LOGICAL_VALIDATION,
+        enabled: true,
+        priority: 5,
+        timeoutMs: 12000,
+        config: {
+          reasoningEngine: "symbolic",
+          detectFallacies: true,
+        },
+      },
+      {
+        type: VerificationType.STATISTICAL_VALIDATION,
+        enabled: true,
+        priority: 6,
+        timeoutMs: 10000,
+        config: {
+          statisticalTests: ["chi_square", "correlation", "significance"],
+          minSampleSize: 30,
+        },
+      },
+    ],
+  },
 
   orchestrator: {
     enableMetrics: true,

@@ -25,6 +25,7 @@ import { TaskAssignmentManager } from "../../../src/orchestrator/TaskAssignment"
 import { TaskQueue } from "../../../src/orchestrator/TaskQueue";
 /*
 import {
+  VerificationPriority,
   AgentProfile,
   RoutingDecision,
   Task,

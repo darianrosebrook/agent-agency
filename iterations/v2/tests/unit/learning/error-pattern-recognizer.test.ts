@@ -87,7 +87,8 @@ describe("ErrorPatternRecognizer", () => {
         promptModifications: [],
       };
 
-      const errorMessage = "TypeError: Cannot read property 'name' of undefined";
+      const errorMessage =
+        "TypeError: Cannot read property 'name' of undefined";
 
       const result = await recognizer.analyzeError(iteration, errorMessage);
 
@@ -156,7 +157,8 @@ describe("ErrorPatternRecognizer", () => {
         promptModifications: [],
       };
 
-      const errorMessage = "Something weird happened that doesn't match patterns";
+      const errorMessage =
+        "Something weird happened that doesn't match patterns";
 
       const result = await recognizer.analyzeError(iteration, errorMessage);
 
@@ -197,7 +199,8 @@ describe("ErrorPatternRecognizer", () => {
         promptModifications: [],
       };
 
-      const errorMessage = "TypeError: Cannot read property 'name' of undefined";
+      const errorMessage =
+        "TypeError: Cannot read property 'name' of undefined";
 
       const result = await recognizer.analyzeError(iteration, errorMessage);
 
@@ -492,10 +495,10 @@ describe("ErrorPatternRecognizer", () => {
       ];
 
       mockDbClient.getErrorPatterns.mockResolvedValue(patterns);
-      
+
       // Need to reinitialize to load patterns
       const newRecognizer = new ErrorPatternRecognizer(mockDbClient);
-      
+
       const common = newRecognizer.getMostCommonPatterns(1);
 
       expect(common).toHaveLength(1);
@@ -636,4 +639,3 @@ describe("ErrorPatternRecognizer", () => {
     });
   });
 });
-
