@@ -3,8 +3,43 @@
 **Component**: CAWS Validator  
 **Spec ID**: ARBITER-003  
 **Risk Tier**: T1 (Critical - Constitutional Authority)  
-**Estimated Effort**: 2-3 weeks (with CAWS CLI reference)  
-**Status**: 🔄 Ready to Implement
+**Estimated Effort**: ~~2-3 weeks (with CAWS CLI reference)~~ **4 weeks (Integration Strategy)**  
+**Status**: ⚠️ **STRATEGIC PIVOT - SEE INTEGRATION ASSESSMENT**
+
+---
+
+## 🔄 IMPORTANT: STRATEGIC PIVOT (October 11, 2025)
+
+**This plan is being superseded by an integration-first approach.**
+
+After comprehensive analysis of the actual CAWS architecture, we've identified critical gaps in the original reimplementation plan:
+
+- No policy-first architecture (constitutional governance)
+- No MCP integration (agent communication)
+- No real-time monitoring (proactive alerts)
+- No iterative guidance system (step-by-step help)
+- Simplified provenance (missing AI attribution)
+
+**New Strategy**: **Option B - Import CAWS modules, extend with arbiter logic**
+
+**Phase 1 Work Status**:
+
+- ✅ Type definitions → **KEEP & EXTEND**
+- ✅ SpecValidator (405 lines) → **DEPRECATED** (use CAWS CLI)
+- ✅ BudgetValidator (249 lines) → **DEPRECATED** (use CAWS CLI)
+- ✅ PolicyLoader (103 lines) → **DEPRECATED** (use CAWS CLI)
+- ✅ WaiverManager (141 lines) → **DEPRECATED** (use CAWS CLI)
+- ✅ Tests (45+ cases) → **ADAPT** (reuse patterns for integration tests)
+
+**Read**: `ARBITER-003-INTEGRATION-ASSESSMENT.md` for full rationale and revised roadmap.
+
+**New TODO List**: 24 integration-focused tasks (vs 18 reimplementation tasks)
+
+---
+
+## ORIGINAL PLAN (ARCHIVED FOR REFERENCE)
+
+_The content below represents the original reimplementation plan. It is preserved for historical reference but will not be executed as written._
 
 ---
 

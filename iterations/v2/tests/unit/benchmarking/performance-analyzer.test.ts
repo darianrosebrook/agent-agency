@@ -9,8 +9,7 @@ import { PerformanceAnalyzer } from "../../../src/benchmarking/PerformanceAnalyz
 import {
   AgentPerformanceProfile,
   AnalysisConfig,
-  PerformanceAnomaly,
-  TrendAnalysisResult,
+  MetricCategory,
 } from "../../../src/types/performance-tracking";
 
 describe("PerformanceAnalyzer", () => {
@@ -24,12 +23,41 @@ describe("PerformanceAnalyzer", () => {
         agentId: "agent-1",
         taskType: "coding",
         metrics: {
-          latency: { averageMs: 1000, p95Ms: 1200, p99Ms: 1500, minMs: 800, maxMs: 2000 },
-          accuracy: { successRate: 0.9, qualityScore: 0.85, violationRate: 0.1, evaluationScore: 0.8 },
-          resources: { cpuUtilizationPercent: 70, memoryUtilizationPercent: 60, networkIoKbps: 100, diskIoKbps: 50 },
-          compliance: { validationPassRate: 0.95, violationSeverityScore: 0.05, clauseCitationRate: 0.9 },
-          cost: { costPerTask: 0.5, efficiencyScore: 0.85, resourceWastePercent: 15 },
-          reliability: { mtbfHours: 168, availabilityPercent: 99.5, errorRatePercent: 0.5, recoveryTimeMinutes: 5 },
+          latency: {
+            averageMs: 1000,
+            p95Ms: 1200,
+            p99Ms: 1500,
+            minMs: 800,
+            maxMs: 2000,
+          },
+          accuracy: {
+            successRate: 0.9,
+            qualityScore: 0.85,
+            violationRate: 0.1,
+            evaluationScore: 0.8,
+          },
+          resources: {
+            cpuUtilizationPercent: 70,
+            memoryUtilizationPercent: 60,
+            networkIoKbps: 100,
+            diskIoKbps: 50,
+          },
+          compliance: {
+            validationPassRate: 0.95,
+            violationSeverityScore: 0.05,
+            clauseCitationRate: 0.9,
+          },
+          cost: {
+            costPerTask: 0.5,
+            efficiencyScore: 0.85,
+            resourceWastePercent: 15,
+          },
+          reliability: {
+            mtbfHours: 168,
+            availabilityPercent: 99.5,
+            errorRatePercent: 0.5,
+            recoveryTimeMinutes: 5,
+          },
         },
         sampleSize: 10,
         confidence: 0.8,
@@ -45,12 +73,41 @@ describe("PerformanceAnalyzer", () => {
         agentId: "agent-2",
         taskType: "analysis",
         metrics: {
-          latency: { averageMs: 800, p95Ms: 1000, p99Ms: 1200, minMs: 600, maxMs: 1500 },
-          accuracy: { successRate: 0.95, qualityScore: 0.9, violationRate: 0.05, evaluationScore: 0.85 },
-          resources: { cpuUtilizationPercent: 65, memoryUtilizationPercent: 55, networkIoKbps: 90, diskIoKbps: 45 },
-          compliance: { validationPassRate: 0.98, violationSeverityScore: 0.02, clauseCitationRate: 0.95 },
-          cost: { costPerTask: 0.4, efficiencyScore: 0.9, resourceWastePercent: 10 },
-          reliability: { mtbfHours: 200, availabilityPercent: 99.8, errorRatePercent: 0.2, recoveryTimeMinutes: 3 },
+          latency: {
+            averageMs: 800,
+            p95Ms: 1000,
+            p99Ms: 1200,
+            minMs: 600,
+            maxMs: 1500,
+          },
+          accuracy: {
+            successRate: 0.95,
+            qualityScore: 0.9,
+            violationRate: 0.05,
+            evaluationScore: 0.85,
+          },
+          resources: {
+            cpuUtilizationPercent: 65,
+            memoryUtilizationPercent: 55,
+            networkIoKbps: 90,
+            diskIoKbps: 45,
+          },
+          compliance: {
+            validationPassRate: 0.98,
+            violationSeverityScore: 0.02,
+            clauseCitationRate: 0.95,
+          },
+          cost: {
+            costPerTask: 0.4,
+            efficiencyScore: 0.9,
+            resourceWastePercent: 10,
+          },
+          reliability: {
+            mtbfHours: 200,
+            availabilityPercent: 99.8,
+            errorRatePercent: 0.2,
+            recoveryTimeMinutes: 3,
+          },
         },
         sampleSize: 15,
         confidence: 0.85,
@@ -122,7 +179,13 @@ describe("PerformanceAnalyzer", () => {
         ...mockProfiles[0],
         metrics: {
           ...mockProfiles[0].metrics,
-          latency: { averageMs: 5000, p95Ms: 6000, p99Ms: 7000, minMs: 4000, maxMs: 8000 }, // Very high latency
+          latency: {
+            averageMs: 5000,
+            p95Ms: 6000,
+            p99Ms: 7000,
+            minMs: 4000,
+            maxMs: 8000,
+          }, // Very high latency
         },
       };
 
@@ -161,7 +224,13 @@ describe("PerformanceAnalyzer", () => {
           ...mockProfiles[0],
           metrics: {
             ...mockProfiles[0].metrics,
-            latency: { averageMs: 6000, p95Ms: 7000, p99Ms: 8000, minMs: 5000, maxMs: 9000 },
+            latency: {
+              averageMs: 6000,
+              p95Ms: 7000,
+              p99Ms: 8000,
+              minMs: 5000,
+              maxMs: 9000,
+            },
           },
         };
 
@@ -181,7 +250,9 @@ describe("PerformanceAnalyzer", () => {
       it("should not detect anomalies within normal range", async () => {
         const result = await analyzer.analyzePerformance(mockProfiles);
 
-        const latencyAnomalies = result.newAnomalies.filter(a => a.type === "latency_spike");
+        const latencyAnomalies = result.newAnomalies.filter(
+          (a) => a.type === "latency_spike"
+        );
         expect(latencyAnomalies).toHaveLength(0);
       });
     });
@@ -192,7 +263,12 @@ describe("PerformanceAnalyzer", () => {
           ...mockProfiles[0],
           metrics: {
             ...mockProfiles[0].metrics,
-            accuracy: { successRate: 0.7, qualityScore: 0.65, violationRate: 0.3, evaluationScore: 0.6 }, // 20% drop
+            accuracy: {
+              successRate: 0.7,
+              qualityScore: 0.65,
+              violationRate: 0.3,
+              evaluationScore: 0.6,
+            }, // 20% drop
           },
         };
 
@@ -201,7 +277,9 @@ describe("PerformanceAnalyzer", () => {
         // Detect anomaly
         const result = await analyzer.analyzePerformance([profileWithDrop]);
 
-        expect(result.newAnomalies.some(a => a.type === "accuracy_drop")).toBe(true);
+        expect(
+          result.newAnomalies.some((a) => a.type === "accuracy_drop")
+        ).toBe(true);
       });
     });
 
@@ -211,7 +289,12 @@ describe("PerformanceAnalyzer", () => {
           ...mockProfiles[0],
           metrics: {
             ...mockProfiles[0].metrics,
-            reliability: { mtbfHours: 150, availabilityPercent: 95, errorRatePercent: 5, recoveryTimeMinutes: 10 },
+            reliability: {
+              mtbfHours: 150,
+              availabilityPercent: 95,
+              errorRatePercent: 5,
+              recoveryTimeMinutes: 10,
+            },
           },
         };
 
@@ -220,7 +303,9 @@ describe("PerformanceAnalyzer", () => {
         // Detect anomaly
         const result = await analyzer.analyzePerformance([profileWithErrors]);
 
-        expect(result.newAnomalies.some(a => a.type === "error_rate_increase")).toBe(true);
+        expect(
+          result.newAnomalies.some((a) => a.type === "error_rate_increase")
+        ).toBe(true);
       });
     });
 
@@ -230,13 +315,22 @@ describe("PerformanceAnalyzer", () => {
           ...mockProfiles[0],
           metrics: {
             ...mockProfiles[0].metrics,
-            resources: { cpuUtilizationPercent: 96, memoryUtilizationPercent: 94, networkIoKbps: 100, diskIoKbps: 50 },
+            resources: {
+              cpuUtilizationPercent: 96,
+              memoryUtilizationPercent: 94,
+              networkIoKbps: 100,
+              diskIoKbps: 50,
+            },
           },
         };
 
-        const result = await analyzer.analyzePerformance([profileWithSaturation]);
+        const result = await analyzer.analyzePerformance([
+          profileWithSaturation,
+        ]);
 
-        expect(result.newAnomalies.some(a => a.type === "resource_saturation")).toBe(true);
+        expect(
+          result.newAnomalies.some((a) => a.type === "resource_saturation")
+        ).toBe(true);
       });
     });
 
@@ -247,7 +341,13 @@ describe("PerformanceAnalyzer", () => {
           ...mockProfiles[0],
           metrics: {
             ...mockProfiles[0].metrics,
-            latency: { averageMs: 5000, p95Ms: 6000, p99Ms: 7000, minMs: 4000, maxMs: 8000 },
+            latency: {
+              averageMs: 5000,
+              p95Ms: 6000,
+              p99Ms: 7000,
+              minMs: 4000,
+              maxMs: 8000,
+            },
           },
         };
 
@@ -258,7 +358,9 @@ describe("PerformanceAnalyzer", () => {
         const normalProfile = mockProfiles[0];
         const result = await analyzer.analyzePerformance([normalProfile]);
 
-        expect(result.resolvedAnomalies.some(a => a.type === "latency_spike")).toBe(true);
+        expect(
+          result.resolvedAnomalies.some((a) => a.type === "latency_spike")
+        ).toBe(true);
       });
     });
   });
@@ -294,33 +396,101 @@ describe("PerformanceAnalyzer", () => {
           agentId: "agent-1",
           taskType: "coding",
           metrics: {
-            latency: { averageMs: 1000, p95Ms: 1200, p99Ms: 1500, minMs: 800, maxMs: 2000 },
-            accuracy: { successRate: 0.8, qualityScore: 0.75, violationRate: 0.2, evaluationScore: 0.7 },
-            resources: { cpuUtilizationPercent: 70, memoryUtilizationPercent: 60, networkIoKbps: 100, diskIoKbps: 50 },
-            compliance: { validationPassRate: 0.9, violationSeverityScore: 0.1, clauseCitationRate: 0.8 },
-            cost: { costPerTask: 0.5, efficiencyScore: 0.8, resourceWastePercent: 20 },
-            reliability: { mtbfHours: 150, availabilityPercent: 98, errorRatePercent: 2, recoveryTimeMinutes: 10 },
+            latency: {
+              averageMs: 1000,
+              p95Ms: 1200,
+              p99Ms: 1500,
+              minMs: 800,
+              maxMs: 2000,
+            },
+            accuracy: {
+              successRate: 0.8,
+              qualityScore: 0.75,
+              violationRate: 0.2,
+              evaluationScore: 0.7,
+            },
+            resources: {
+              cpuUtilizationPercent: 70,
+              memoryUtilizationPercent: 60,
+              networkIoKbps: 100,
+              diskIoKbps: 50,
+            },
+            compliance: {
+              validationPassRate: 0.9,
+              violationSeverityScore: 0.1,
+              clauseCitationRate: 0.8,
+            },
+            cost: {
+              costPerTask: 0.5,
+              efficiencyScore: 0.8,
+              resourceWastePercent: 20,
+            },
+            reliability: {
+              mtbfHours: 150,
+              availabilityPercent: 98,
+              errorRatePercent: 2,
+              recoveryTimeMinutes: 10,
+            },
           },
           sampleSize: 10,
           confidence: 0.8,
           lastUpdated: new Date(Date.now() - 3600000).toISOString(),
-          trend: { direction: "stable", magnitude: 0, confidence: 0.5, timeWindowHours: 1 },
+          trend: {
+            direction: "stable",
+            magnitude: 0,
+            confidence: 0.5,
+            timeWindowHours: 1,
+          },
         },
         {
           agentId: "agent-1",
           taskType: "coding",
           metrics: {
-            latency: { averageMs: 950, p95Ms: 1150, p99Ms: 1450, minMs: 750, maxMs: 1900 },
-            accuracy: { successRate: 0.85, qualityScore: 0.8, violationRate: 0.15, evaluationScore: 0.75 },
-            resources: { cpuUtilizationPercent: 68, memoryUtilizationPercent: 58, networkIoKbps: 95, diskIoKbps: 48 },
-            compliance: { validationPassRate: 0.92, violationSeverityScore: 0.08, clauseCitationRate: 0.82 },
-            cost: { costPerTask: 0.48, efficiencyScore: 0.82, resourceWastePercent: 18 },
-            reliability: { mtbfHours: 160, availabilityPercent: 98.5, errorRatePercent: 1.5, recoveryTimeMinutes: 8 },
+            latency: {
+              averageMs: 950,
+              p95Ms: 1150,
+              p99Ms: 1450,
+              minMs: 750,
+              maxMs: 1900,
+            },
+            accuracy: {
+              successRate: 0.85,
+              qualityScore: 0.8,
+              violationRate: 0.15,
+              evaluationScore: 0.75,
+            },
+            resources: {
+              cpuUtilizationPercent: 68,
+              memoryUtilizationPercent: 58,
+              networkIoKbps: 95,
+              diskIoKbps: 48,
+            },
+            compliance: {
+              validationPassRate: 0.92,
+              violationSeverityScore: 0.08,
+              clauseCitationRate: 0.82,
+            },
+            cost: {
+              costPerTask: 0.48,
+              efficiencyScore: 0.82,
+              resourceWastePercent: 18,
+            },
+            reliability: {
+              mtbfHours: 160,
+              availabilityPercent: 98.5,
+              errorRatePercent: 1.5,
+              recoveryTimeMinutes: 8,
+            },
           },
           sampleSize: 10,
           confidence: 0.8,
           lastUpdated: new Date().toISOString(),
-          trend: { direction: "improving", magnitude: 0.05, confidence: 0.7, timeWindowHours: 1 },
+          trend: {
+            direction: "improving",
+            magnitude: 0.05,
+            confidence: 0.7,
+            timeWindowHours: 1,
+          },
         },
       ];
 
@@ -342,7 +512,13 @@ describe("PerformanceAnalyzer", () => {
         ...mockProfiles[0],
         metrics: {
           ...mockProfiles[0].metrics,
-          latency: { averageMs: 5000, p95Ms: 6000, p99Ms: 7000, minMs: 4000, maxMs: 8000 },
+          latency: {
+            averageMs: 5000,
+            p95Ms: 6000,
+            p99Ms: 7000,
+            minMs: 4000,
+            maxMs: 8000,
+          },
         },
       };
 
@@ -366,7 +542,10 @@ describe("PerformanceAnalyzer", () => {
     });
 
     it("should filter anomalies by severity", () => {
-      const criticalAnomalies = analyzer.getActiveAnomalies(undefined, "critical");
+      const criticalAnomalies = analyzer.getActiveAnomalies(
+        undefined,
+        "critical"
+      );
       const lowAnomalies = analyzer.getActiveAnomalies(undefined, "low");
 
       expect(criticalAnomalies).toHaveLength(1);
@@ -379,7 +558,12 @@ describe("PerformanceAnalyzer", () => {
         ...mockProfiles[1],
         metrics: {
           ...mockProfiles[1].metrics,
-          resources: { cpuUtilizationPercent: 96, memoryUtilizationPercent: 94, networkIoKbps: 100, diskIoKbps: 50 },
+          resources: {
+            cpuUtilizationPercent: 96,
+            memoryUtilizationPercent: 94,
+            networkIoKbps: 100,
+            diskIoKbps: 50,
+          },
         },
       };
 
@@ -389,7 +573,7 @@ describe("PerformanceAnalyzer", () => {
       expect(anomalies).toHaveLength(2);
 
       // Should be sorted by detection time (newest first)
-      const timestamps = anomalies.map(a => new Date(a.detectedAt).getTime());
+      const timestamps = anomalies.map((a) => new Date(a.detectedAt).getTime());
       expect(timestamps[0]).toBeGreaterThanOrEqual(timestamps[1]);
     });
   });
@@ -417,12 +601,48 @@ describe("PerformanceAnalyzer", () => {
   describe("statistical calculations", () => {
     it("should calculate confidence scores", () => {
       const confidence = analyzer["calculateTrendConfidence"]({
-        latency: { direction: "improving", magnitude: 0.1, confidence: 0.8, timeWindowHours: 1 },
-        accuracy: { direction: "stable", magnitude: 0.05, confidence: 0.9, timeWindowHours: 1 },
-        resources: { direction: "declining", magnitude: 0.08, confidence: 0.7, timeWindowHours: 1 },
-        compliance: { direction: "improving", magnitude: 0.03, confidence: 0.85, timeWindowHours: 1 },
-        cost: { direction: "stable", magnitude: 0.02, confidence: 0.75, timeWindowHours: 1 },
-        reliability: { direction: "improving", magnitude: 0.06, confidence: 0.8, timeWindowHours: 1 },
+        [MetricCategory.LATENCY]: {
+          direction: "improving",
+          magnitude: 0.1,
+          confidence: 0.8,
+          timeWindowHours: 1,
+        },
+        [MetricCategory.THROUGHPUT]: {
+          direction: "stable",
+          magnitude: 0.02,
+          confidence: 0.9,
+          timeWindowHours: 1,
+        },
+        [MetricCategory.ACCURACY]: {
+          direction: "stable",
+          magnitude: 0.05,
+          confidence: 0.9,
+          timeWindowHours: 1,
+        },
+        [MetricCategory.RESOURCE_UTILIZATION]: {
+          direction: "declining",
+          magnitude: 0.08,
+          confidence: 0.7,
+          timeWindowHours: 1,
+        },
+        [MetricCategory.CONSTITUTIONAL_COMPLIANCE]: {
+          direction: "improving",
+          magnitude: 0.03,
+          confidence: 0.85,
+          timeWindowHours: 1,
+        },
+        [MetricCategory.COST_EFFICIENCY]: {
+          direction: "stable",
+          magnitude: 0.02,
+          confidence: 0.75,
+          timeWindowHours: 1,
+        },
+        [MetricCategory.RELIABILITY]: {
+          direction: "improving",
+          magnitude: 0.06,
+          confidence: 0.8,
+          timeWindowHours: 1,
+        },
       });
 
       expect(confidence).toBeGreaterThan(0);
@@ -444,7 +664,9 @@ describe("PerformanceAnalyzer", () => {
     });
 
     it("should handle insufficient data for trend calculation", () => {
-      const trend = analyzer["calculateLinearTrend"]([{ score: 0.8, timestamp: Date.now() }]);
+      const trend = analyzer["calculateLinearTrend"]([
+        { score: 0.8, timestamp: Date.now() },
+      ]);
 
       expect(trend.direction).toBe("stable");
       expect(trend.magnitude).toBe(0);
@@ -485,7 +707,9 @@ describe("PerformanceAnalyzer", () => {
       const mockEmitter = jest.fn();
       analyzer.on("config_updated", mockEmitter);
 
-      analyzer.updateConfig({ trendAnalysis: { minDataPoints: 30 } });
+      analyzer.updateConfig({
+        trendAnalysis: { minDataPoints: 30, confidenceThreshold: 0.8 },
+      });
 
       expect(mockEmitter).toHaveBeenCalled();
     });

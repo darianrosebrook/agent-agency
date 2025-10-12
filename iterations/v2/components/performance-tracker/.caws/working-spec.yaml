@@ -91,10 +91,14 @@ acceptance:
 
 non_functional:
   performance:
-    metric_collection_latency_ms: 1
-    data_aggregation_p95_ms: 100
-    rl_data_delivery_p95_ms: 5000
-    memory_usage_mb: 200
+    metric_collection_latency_p95_ms: 5      # Realistic: 5ms collection overhead
+    data_aggregation_p95_ms: 50              # Data processing within 50ms
+    rl_data_delivery_p95_ms: 200             # Training data ready within 200ms
+    analysis_response_p95_ms: 100            # Performance analysis within 100ms
+    memory_usage_mb: 50                      # Memory overhead under 50MB
+    throughput_tasks_per_sec: 500           # Handle 500 concurrent tasks/sec
+    data_retention_days: 90                  # Keep data for 90 days
+    compression_ratio: 0.7                  # 70% size reduction with compression
 
   reliability:
     availability_percent: 99.9

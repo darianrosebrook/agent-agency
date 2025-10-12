@@ -7,12 +7,9 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { MetricAggregator } from "../../../src/benchmarking/MetricAggregator";
 import {
-  PerformanceEvent,
   AgentPerformanceProfile,
   AggregationConfig,
-  PerformanceMetrics,
-  PerformanceTrend,
-  MetricCategory,
+  PerformanceEvent,
   PerformanceEventType,
 } from "../../../src/types/performance-tracking";
 
@@ -31,12 +28,41 @@ describe("MetricAggregator", () => {
         agentId: "agent-1",
         taskId: "task-1",
         metrics: {
-          latency: { averageMs: 1000, p95Ms: 1200, p99Ms: 1500, minMs: 800, maxMs: 2000 },
-          accuracy: { successRate: 0.9, qualityScore: 0.85, violationRate: 0.1, evaluationScore: 0.8 },
-          resources: { cpuUtilizationPercent: 70, memoryUtilizationPercent: 60, networkIoKbps: 100, diskIoKbps: 50 },
-          compliance: { validationPassRate: 0.95, violationSeverityScore: 0.05, clauseCitationRate: 0.9 },
-          cost: { costPerTask: 0.5, efficiencyScore: 0.85, resourceWastePercent: 15 },
-          reliability: { mtbfHours: 168, availabilityPercent: 99.5, errorRatePercent: 0.5, recoveryTimeMinutes: 5 },
+          latency: {
+            averageMs: 1000,
+            p95Ms: 1200,
+            p99Ms: 1500,
+            minMs: 800,
+            maxMs: 2000,
+          },
+          accuracy: {
+            successRate: 0.9,
+            qualityScore: 0.85,
+            violationRate: 0.1,
+            evaluationScore: 0.8,
+          },
+          resources: {
+            cpuUtilizationPercent: 70,
+            memoryUtilizationPercent: 60,
+            networkIoKbps: 100,
+            diskIoKbps: 50,
+          },
+          compliance: {
+            validationPassRate: 0.95,
+            violationSeverityScore: 0.05,
+            clauseCitationRate: 0.9,
+          },
+          cost: {
+            costPerTask: 0.5,
+            efficiencyScore: 0.85,
+            resourceWastePercent: 15,
+          },
+          reliability: {
+            mtbfHours: 168,
+            availabilityPercent: 99.5,
+            errorRatePercent: 0.5,
+            recoveryTimeMinutes: 5,
+          },
         },
         integrityHash: "hash1",
       },
@@ -47,12 +73,41 @@ describe("MetricAggregator", () => {
         agentId: "agent-1",
         taskId: "task-2",
         metrics: {
-          latency: { averageMs: 1200, p95Ms: 1400, p99Ms: 1700, minMs: 900, maxMs: 2200 },
-          accuracy: { successRate: 0.8, qualityScore: 0.75, violationRate: 0.2, evaluationScore: 0.7 },
-          resources: { cpuUtilizationPercent: 75, memoryUtilizationPercent: 65, networkIoKbps: 120, diskIoKbps: 60 },
-          compliance: { validationPassRate: 0.9, violationSeverityScore: 0.1, clauseCitationRate: 0.8 },
-          cost: { costPerTask: 0.6, efficiencyScore: 0.8, resourceWastePercent: 20 },
-          reliability: { mtbfHours: 140, availabilityPercent: 98.5, errorRatePercent: 1.5, recoveryTimeMinutes: 10 },
+          latency: {
+            averageMs: 1200,
+            p95Ms: 1400,
+            p99Ms: 1700,
+            minMs: 900,
+            maxMs: 2200,
+          },
+          accuracy: {
+            successRate: 0.8,
+            qualityScore: 0.75,
+            violationRate: 0.2,
+            evaluationScore: 0.7,
+          },
+          resources: {
+            cpuUtilizationPercent: 75,
+            memoryUtilizationPercent: 65,
+            networkIoKbps: 120,
+            diskIoKbps: 60,
+          },
+          compliance: {
+            validationPassRate: 0.9,
+            violationSeverityScore: 0.1,
+            clauseCitationRate: 0.8,
+          },
+          cost: {
+            costPerTask: 0.6,
+            efficiencyScore: 0.8,
+            resourceWastePercent: 20,
+          },
+          reliability: {
+            mtbfHours: 140,
+            availabilityPercent: 98.5,
+            errorRatePercent: 1.5,
+            recoveryTimeMinutes: 10,
+          },
         },
         integrityHash: "hash2",
       },
@@ -63,12 +118,41 @@ describe("MetricAggregator", () => {
         agentId: "agent-1",
         taskType: "coding",
         metrics: {
-          latency: { averageMs: 1100, p95Ms: 1300, p99Ms: 1600, minMs: 850, maxMs: 2100 },
-          accuracy: { successRate: 0.85, qualityScore: 0.8, violationRate: 0.15, evaluationScore: 0.75 },
-          resources: { cpuUtilizationPercent: 72.5, memoryUtilizationPercent: 62.5, networkIoKbps: 110, diskIoKbps: 55 },
-          compliance: { validationPassRate: 0.925, violationSeverityScore: 0.075, clauseCitationRate: 0.85 },
-          cost: { costPerTask: 0.55, efficiencyScore: 0.825, resourceWastePercent: 17.5 },
-          reliability: { mtbfHours: 154, availabilityPercent: 99, errorRatePercent: 1, recoveryTimeMinutes: 7.5 },
+          latency: {
+            averageMs: 1100,
+            p95Ms: 1300,
+            p99Ms: 1600,
+            minMs: 850,
+            maxMs: 2100,
+          },
+          accuracy: {
+            successRate: 0.85,
+            qualityScore: 0.8,
+            violationRate: 0.15,
+            evaluationScore: 0.75,
+          },
+          resources: {
+            cpuUtilizationPercent: 72.5,
+            memoryUtilizationPercent: 62.5,
+            networkIoKbps: 110,
+            diskIoKbps: 55,
+          },
+          compliance: {
+            validationPassRate: 0.925,
+            violationSeverityScore: 0.075,
+            clauseCitationRate: 0.85,
+          },
+          cost: {
+            costPerTask: 0.55,
+            efficiencyScore: 0.825,
+            resourceWastePercent: 17.5,
+          },
+          reliability: {
+            mtbfHours: 154,
+            availabilityPercent: 99,
+            errorRatePercent: 1,
+            recoveryTimeMinutes: 7.5,
+          },
         },
         sampleSize: 2,
         confidence: 0.8,
@@ -101,8 +185,16 @@ describe("MetricAggregator", () => {
         windows: {
           realtime: { durationMs: 300000, slideMs: 30000, minSampleSize: 5 },
           short: { durationMs: 3600000, slideMs: 900000, minSampleSize: 25 },
-          medium: { durationMs: 86400000, slideMs: 14400000, minSampleSize: 50 },
-          long: { durationMs: 604800000, slideMs: 86400000, minSampleSize: 250 },
+          medium: {
+            durationMs: 86400000,
+            slideMs: 14400000,
+            minSampleSize: 50,
+          },
+          long: {
+            durationMs: 604800000,
+            slideMs: 86400000,
+            minSampleSize: 250,
+          },
         },
       };
 
@@ -154,7 +246,12 @@ describe("MetricAggregator", () => {
         id: "outlier",
         metrics: {
           ...mockEvents[0].metrics,
-          accuracy: { successRate: -1, qualityScore: 0, violationRate: 0, evaluationScore: 0 }, // Invalid
+          accuracy: {
+            successRate: -1,
+            qualityScore: 0,
+            violationRate: 0,
+            evaluationScore: 0,
+          }, // Invalid
         },
       };
 
@@ -193,8 +290,14 @@ describe("MetricAggregator", () => {
       aggregator.addEvents([codingEvent, analysisEvent]);
       aggregator.performAggregation();
 
-      const codingProfiles = aggregator.getPerformanceProfiles("agent-1", "coding");
-      const analysisProfiles = aggregator.getPerformanceProfiles("agent-1", "analysis");
+      const codingProfiles = aggregator.getPerformanceProfiles(
+        "agent-1",
+        "coding"
+      );
+      const analysisProfiles = aggregator.getPerformanceProfiles(
+        "agent-1",
+        "analysis"
+      );
 
       expect(codingProfiles.length).toBeGreaterThan(0);
       expect(analysisProfiles.length).toBeGreaterThan(0);
@@ -221,8 +324,12 @@ describe("MetricAggregator", () => {
 
       expect(benchmarkData.length).toBeGreaterThan(0);
       benchmarkData.forEach((data) => {
-        expect(new Date(data.startTime).getTime()).toBeGreaterThanOrEqual(new Date(startTime).getTime());
-        expect(new Date(data.endTime).getTime()).toBeLessThanOrEqual(new Date(endTime).getTime());
+        expect(new Date(data.startTime).getTime()).toBeGreaterThanOrEqual(
+          new Date(startTime).getTime()
+        );
+        expect(new Date(data.endTime).getTime()).toBeLessThanOrEqual(
+          new Date(endTime).getTime()
+        );
       });
     });
 
@@ -231,7 +338,11 @@ describe("MetricAggregator", () => {
       const endTime = new Date().toISOString();
 
       const allData = aggregator.getBenchmarkData(startTime, endTime);
-      const agentData = aggregator.getBenchmarkData(startTime, endTime, "agent-1");
+      const agentData = aggregator.getBenchmarkData(
+        startTime,
+        endTime,
+        "agent-1"
+      );
 
       expect(agentData.length).toBeLessThanOrEqual(allData.length);
       agentData.forEach((data) => {
@@ -244,7 +355,12 @@ describe("MetricAggregator", () => {
       const endTime = new Date().toISOString();
 
       const allData = aggregator.getBenchmarkData(startTime, endTime);
-      const filteredData = aggregator.getBenchmarkData(startTime, endTime, undefined, "coding");
+      const filteredData = aggregator.getBenchmarkData(
+        startTime,
+        endTime,
+        undefined,
+        "coding"
+      );
 
       expect(filteredData.length).toBeLessThanOrEqual(allData.length);
     });
@@ -256,9 +372,15 @@ describe("MetricAggregator", () => {
 
       expect(metrics.latency.averageMs).toBeGreaterThan(0);
       expect(metrics.latency.p95Ms).toBeGreaterThan(metrics.latency.averageMs);
-      expect(metrics.latency.p99Ms).toBeGreaterThanOrEqual(metrics.latency.p95Ms);
-      expect(metrics.latency.minMs).toBeLessThanOrEqual(metrics.latency.averageMs);
-      expect(metrics.latency.maxMs).toBeGreaterThanOrEqual(metrics.latency.averageMs);
+      expect(metrics.latency.p99Ms).toBeGreaterThanOrEqual(
+        metrics.latency.p95Ms
+      );
+      expect(metrics.latency.minMs).toBeLessThanOrEqual(
+        metrics.latency.averageMs
+      );
+      expect(metrics.latency.maxMs).toBeGreaterThanOrEqual(
+        metrics.latency.averageMs
+      );
     });
 
     it("should aggregate accuracy metrics correctly", () => {
@@ -277,8 +399,12 @@ describe("MetricAggregator", () => {
 
       expect(metrics.resources.cpuUtilizationPercent).toBeGreaterThanOrEqual(0);
       expect(metrics.resources.cpuUtilizationPercent).toBeLessThanOrEqual(100);
-      expect(metrics.resources.memoryUtilizationPercent).toBeGreaterThanOrEqual(0);
-      expect(metrics.resources.memoryUtilizationPercent).toBeLessThanOrEqual(100);
+      expect(metrics.resources.memoryUtilizationPercent).toBeGreaterThanOrEqual(
+        0
+      );
+      expect(metrics.resources.memoryUtilizationPercent).toBeLessThanOrEqual(
+        100
+      );
     });
 
     it("should aggregate compliance metrics correctly", () => {
@@ -286,7 +412,9 @@ describe("MetricAggregator", () => {
 
       expect(metrics.compliance.validationPassRate).toBeGreaterThanOrEqual(0);
       expect(metrics.compliance.validationPassRate).toBeLessThanOrEqual(1);
-      expect(metrics.compliance.violationSeverityScore).toBeGreaterThanOrEqual(0);
+      expect(metrics.compliance.violationSeverityScore).toBeGreaterThanOrEqual(
+        0
+      );
       expect(metrics.compliance.clauseCitationRate).toBeGreaterThanOrEqual(0);
     });
 
@@ -315,33 +443,101 @@ describe("MetricAggregator", () => {
           agentId: "agent-1",
           taskType: "coding",
           metrics: {
-            latency: { averageMs: 1000, p95Ms: 1200, p99Ms: 1500, minMs: 800, maxMs: 2000 },
-            accuracy: { successRate: 0.8, qualityScore: 0.75, violationRate: 0.2, evaluationScore: 0.7 },
-            resources: { cpuUtilizationPercent: 70, memoryUtilizationPercent: 60, networkIoKbps: 100, diskIoKbps: 50 },
-            compliance: { validationPassRate: 0.9, violationSeverityScore: 0.1, clauseCitationRate: 0.8 },
-            cost: { costPerTask: 0.5, efficiencyScore: 0.8, resourceWastePercent: 20 },
-            reliability: { mtbfHours: 150, availabilityPercent: 98, errorRatePercent: 2, recoveryTimeMinutes: 10 },
+            latency: {
+              averageMs: 1000,
+              p95Ms: 1200,
+              p99Ms: 1500,
+              minMs: 800,
+              maxMs: 2000,
+            },
+            accuracy: {
+              successRate: 0.8,
+              qualityScore: 0.75,
+              violationRate: 0.2,
+              evaluationScore: 0.7,
+            },
+            resources: {
+              cpuUtilizationPercent: 70,
+              memoryUtilizationPercent: 60,
+              networkIoKbps: 100,
+              diskIoKbps: 50,
+            },
+            compliance: {
+              validationPassRate: 0.9,
+              violationSeverityScore: 0.1,
+              clauseCitationRate: 0.8,
+            },
+            cost: {
+              costPerTask: 0.5,
+              efficiencyScore: 0.8,
+              resourceWastePercent: 20,
+            },
+            reliability: {
+              mtbfHours: 150,
+              availabilityPercent: 98,
+              errorRatePercent: 2,
+              recoveryTimeMinutes: 10,
+            },
           },
           sampleSize: 10,
           confidence: 0.8,
           lastUpdated: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-          trend: { direction: "stable", magnitude: 0, confidence: 0.5, timeWindowHours: 1 },
+          trend: {
+            direction: "stable",
+            magnitude: 0,
+            confidence: 0.5,
+            timeWindowHours: 1,
+          },
         },
         {
           agentId: "agent-1",
           taskType: "coding",
           metrics: {
-            latency: { averageMs: 950, p95Ms: 1150, p99Ms: 1450, minMs: 750, maxMs: 1900 },
-            accuracy: { successRate: 0.85, qualityScore: 0.8, violationRate: 0.15, evaluationScore: 0.75 },
-            resources: { cpuUtilizationPercent: 68, memoryUtilizationPercent: 58, networkIoKbps: 95, diskIoKbps: 48 },
-            compliance: { validationPassRate: 0.92, violationSeverityScore: 0.08, clauseCitationRate: 0.82 },
-            cost: { costPerTask: 0.48, efficiencyScore: 0.82, resourceWastePercent: 18 },
-            reliability: { mtbfHours: 160, availabilityPercent: 98.5, errorRatePercent: 1.5, recoveryTimeMinutes: 8 },
+            latency: {
+              averageMs: 950,
+              p95Ms: 1150,
+              p99Ms: 1450,
+              minMs: 750,
+              maxMs: 1900,
+            },
+            accuracy: {
+              successRate: 0.85,
+              qualityScore: 0.8,
+              violationRate: 0.15,
+              evaluationScore: 0.75,
+            },
+            resources: {
+              cpuUtilizationPercent: 68,
+              memoryUtilizationPercent: 58,
+              networkIoKbps: 95,
+              diskIoKbps: 48,
+            },
+            compliance: {
+              validationPassRate: 0.92,
+              violationSeverityScore: 0.08,
+              clauseCitationRate: 0.82,
+            },
+            cost: {
+              costPerTask: 0.48,
+              efficiencyScore: 0.82,
+              resourceWastePercent: 18,
+            },
+            reliability: {
+              mtbfHours: 160,
+              availabilityPercent: 98.5,
+              errorRatePercent: 1.5,
+              recoveryTimeMinutes: 8,
+            },
           },
           sampleSize: 10,
           confidence: 0.8,
           lastUpdated: new Date().toISOString(),
-          trend: { direction: "improving", magnitude: 0.05, confidence: 0.7, timeWindowHours: 1 },
+          trend: {
+            direction: "improving",
+            magnitude: 0.05,
+            confidence: 0.7,
+            timeWindowHours: 1,
+          },
         },
       ];
 
@@ -363,7 +559,12 @@ describe("MetricAggregator", () => {
           sampleSize: 1,
           confidence: 0.5,
           lastUpdated: new Date().toISOString(),
-          trend: { direction: "stable", magnitude: 0, confidence: 0.5, timeWindowHours: 1 },
+          trend: {
+            direction: "stable",
+            magnitude: 0,
+            confidence: 0.5,
+            timeWindowHours: 1,
+          },
         },
       ];
 
@@ -383,11 +584,21 @@ describe("MetricAggregator", () => {
         id: "outlier",
         metrics: {
           ...mockEvents[0].metrics,
-          latency: { averageMs: 10000, p95Ms: 15000, p99Ms: 20000, minMs: 5000, maxMs: 30000 }, // Very high latency
+          latency: {
+            averageMs: 10000,
+            p95Ms: 15000,
+            p99Ms: 20000,
+            minMs: 5000,
+            maxMs: 30000,
+          }, // Very high latency
         },
       };
 
-      const outliers = aggregator["detectOutliers"]([normalEvent, normalEvent, outlierEvent]);
+      const outliers = aggregator["detectOutliers"]([
+        normalEvent,
+        normalEvent,
+        outlierEvent,
+      ]);
 
       expect(outliers).toHaveLength(1);
       expect(outliers[0].id).toBe("outlier");
@@ -404,7 +615,12 @@ describe("MetricAggregator", () => {
         ...mockEvents[0],
         metrics: {
           ...mockEvents[0].metrics,
-          accuracy: { successRate: -1, qualityScore: 0, violationRate: 0, evaluationScore: 0 }, // Invalid
+          accuracy: {
+            successRate: -1,
+            qualityScore: 0,
+            violationRate: 0,
+            evaluationScore: 0,
+          }, // Invalid
         },
       };
 
@@ -425,7 +641,8 @@ describe("MetricAggregator", () => {
       });
 
       const value = 100;
-      const anonymizedValue = aggregatorWithAnonymization["applyAnonymizationNoise"](value);
+      const anonymizedValue =
+        aggregatorWithAnonymization["applyAnonymizationNoise"](value);
 
       // Should be close to original value but with some noise
       expect(anonymizedValue).toBeGreaterThan(value * 0.9);
@@ -443,7 +660,8 @@ describe("MetricAggregator", () => {
       });
 
       const value = 100;
-      const result = aggregatorWithoutAnonymization["applyAnonymizationNoise"](value);
+      const result =
+        aggregatorWithoutAnonymization["applyAnonymizationNoise"](value);
 
       expect(result).toBe(value);
     });
@@ -498,7 +716,13 @@ describe("MetricAggregator", () => {
       const mockEmitter = jest.fn();
       aggregator.on("config_updated", mockEmitter);
 
-      aggregator.updateConfig({ anonymization: { enabled: false, noiseLevel: 0, preserveAgentIds: true } });
+      aggregator.updateConfig({
+        anonymization: {
+          enabled: false,
+          noiseLevel: 0,
+          preserveAgentIds: true,
+        },
+      });
 
       expect(mockEmitter).toHaveBeenCalled();
     });

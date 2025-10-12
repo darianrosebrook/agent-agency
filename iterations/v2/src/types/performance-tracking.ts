@@ -18,6 +18,8 @@ export enum PerformanceEventType {
   TASK_EXECUTION_COMPLETE = "task_execution_complete",
   ROUTING_DECISION = "routing_decision",
   AGENT_SELECTION = "agent_selection",
+  AGENT_REGISTRATION = "agent_registration",
+  AGENT_STATUS_CHANGE = "agent_status_change",
   CONSTITUTIONAL_VALIDATION = "constitutional_validation",
   EVALUATION_OUTCOME = "evaluation_outcome",
   ANOMALY_DETECTED = "anomaly_detected",
@@ -110,6 +112,18 @@ export interface PerformanceMetrics {
    * Reliability metrics.
    */
   reliability: ReliabilityMetrics;
+
+  /**
+   * Agent-specific metrics (optional, used for agent registration/status events).
+   */
+  baselineLatencyMs?: number;
+  baselineAccuracy?: number;
+  baselineCostPerTask?: number;
+  baselineReliability?: number;
+  status?: string;
+  previousStatus?: string;
+  reason?: string;
+  capabilities?: string[];
 }
 
 /**
@@ -205,6 +219,11 @@ export interface ComplianceMetrics {
    * Average severity score of violations detected.
    */
   violationSeverityScore: number;
+
+  /**
+   * Overall compliance score (0-1).
+   */
+  complianceScore?: number;
 
   /**
    * Rate of CAWS clause citations in responses (0-1).

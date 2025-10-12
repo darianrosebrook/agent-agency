@@ -7,11 +7,11 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { RLDataPipeline } from "../../../src/benchmarking/RLDataPipeline";
 import {
-  PerformanceEvent,
-  RLTrainingSample,
-  RLTrainingBatch,
   AgentPerformanceProfile,
+  PerformanceEvent,
+  PerformanceEventType,
   RLDataPipelineConfig,
+  RLTrainingSample,
 } from "../../../src/types/performance-tracking";
 
 describe("RLDataPipeline", () => {
@@ -24,33 +24,91 @@ describe("RLDataPipeline", () => {
     mockEvents = [
       {
         id: "event-1",
-        type: "task_execution_complete",
+        type: PerformanceEventType.TASK_EXECUTION_COMPLETE,
         timestamp: new Date().toISOString(),
         agentId: "agent-1",
         taskId: "task-1",
         metrics: {
-          latency: { averageMs: 1000, p95Ms: 1200, p99Ms: 1500, minMs: 800, maxMs: 2000 },
-          accuracy: { successRate: 0.9, qualityScore: 0.85, violationRate: 0.1, evaluationScore: 0.8 },
-          resources: { cpuUtilizationPercent: 70, memoryUtilizationPercent: 60, networkIoKbps: 100, diskIoKbps: 50 },
-          compliance: { validationPassRate: 0.95, violationSeverityScore: 0.05, clauseCitationRate: 0.9 },
-          cost: { costPerTask: 0.5, efficiencyScore: 0.85, resourceWastePercent: 15 },
-          reliability: { mtbfHours: 168, availabilityPercent: 99.5, errorRatePercent: 0.5, recoveryTimeMinutes: 5 },
+          latency: {
+            averageMs: 1000,
+            p95Ms: 1200,
+            p99Ms: 1500,
+            minMs: 800,
+            maxMs: 2000,
+          },
+          accuracy: {
+            successRate: 0.9,
+            qualityScore: 0.85,
+            violationRate: 0.1,
+            evaluationScore: 0.8,
+          },
+          resources: {
+            cpuUtilizationPercent: 70,
+            memoryUtilizationPercent: 60,
+            networkIoKbps: 100,
+            diskIoKbps: 50,
+          },
+          compliance: {
+            validationPassRate: 0.95,
+            violationSeverityScore: 0.05,
+            clauseCitationRate: 0.9,
+          },
+          cost: {
+            costPerTask: 0.5,
+            efficiencyScore: 0.85,
+            resourceWastePercent: 15,
+          },
+          reliability: {
+            mtbfHours: 168,
+            availabilityPercent: 99.5,
+            errorRatePercent: 0.5,
+            recoveryTimeMinutes: 5,
+          },
         },
         integrityHash: "hash1",
       },
       {
         id: "event-2",
-        type: "task_execution_complete",
+        type: PerformanceEventType.TASK_EXECUTION_COMPLETE,
         timestamp: new Date(Date.now() - 60000).toISOString(),
         agentId: "agent-1",
         taskId: "task-2",
         metrics: {
-          latency: { averageMs: 1200, p95Ms: 1400, p99Ms: 1700, minMs: 900, maxMs: 2200 },
-          accuracy: { successRate: 0.8, qualityScore: 0.75, violationRate: 0.2, evaluationScore: 0.7 },
-          resources: { cpuUtilizationPercent: 75, memoryUtilizationPercent: 65, networkIoKbps: 120, diskIoKbps: 60 },
-          compliance: { validationPassRate: 0.9, violationSeverityScore: 0.1, clauseCitationRate: 0.8 },
-          cost: { costPerTask: 0.6, efficiencyScore: 0.8, resourceWastePercent: 20 },
-          reliability: { mtbfHours: 140, availabilityPercent: 98.5, errorRatePercent: 1.5, recoveryTimeMinutes: 10 },
+          latency: {
+            averageMs: 1200,
+            p95Ms: 1400,
+            p99Ms: 1700,
+            minMs: 900,
+            maxMs: 2200,
+          },
+          accuracy: {
+            successRate: 0.8,
+            qualityScore: 0.75,
+            violationRate: 0.2,
+            evaluationScore: 0.7,
+          },
+          resources: {
+            cpuUtilizationPercent: 75,
+            memoryUtilizationPercent: 65,
+            networkIoKbps: 120,
+            diskIoKbps: 60,
+          },
+          compliance: {
+            validationPassRate: 0.9,
+            violationSeverityScore: 0.1,
+            clauseCitationRate: 0.8,
+          },
+          cost: {
+            costPerTask: 0.6,
+            efficiencyScore: 0.8,
+            resourceWastePercent: 20,
+          },
+          reliability: {
+            mtbfHours: 140,
+            availabilityPercent: 98.5,
+            errorRatePercent: 1.5,
+            recoveryTimeMinutes: 10,
+          },
         },
         integrityHash: "hash2",
       },
@@ -61,12 +119,41 @@ describe("RLDataPipeline", () => {
         agentId: "agent-1",
         taskType: "coding",
         metrics: {
-          latency: { averageMs: 1100, p95Ms: 1300, p99Ms: 1600, minMs: 850, maxMs: 2100 },
-          accuracy: { successRate: 0.85, qualityScore: 0.8, violationRate: 0.15, evaluationScore: 0.75 },
-          resources: { cpuUtilizationPercent: 72.5, memoryUtilizationPercent: 62.5, networkIoKbps: 110, diskIoKbps: 55 },
-          compliance: { validationPassRate: 0.925, violationSeverityScore: 0.075, clauseCitationRate: 0.85 },
-          cost: { costPerTask: 0.55, efficiencyScore: 0.825, resourceWastePercent: 17.5 },
-          reliability: { mtbfHours: 154, availabilityPercent: 99, errorRatePercent: 1, recoveryTimeMinutes: 7.5 },
+          latency: {
+            averageMs: 1100,
+            p95Ms: 1300,
+            p99Ms: 1600,
+            minMs: 850,
+            maxMs: 2100,
+          },
+          accuracy: {
+            successRate: 0.85,
+            qualityScore: 0.8,
+            violationRate: 0.15,
+            evaluationScore: 0.75,
+          },
+          resources: {
+            cpuUtilizationPercent: 72.5,
+            memoryUtilizationPercent: 62.5,
+            networkIoKbps: 110,
+            diskIoKbps: 55,
+          },
+          compliance: {
+            validationPassRate: 0.925,
+            violationSeverityScore: 0.075,
+            clauseCitationRate: 0.85,
+          },
+          cost: {
+            costPerTask: 0.55,
+            efficiencyScore: 0.825,
+            resourceWastePercent: 17.5,
+          },
+          reliability: {
+            mtbfHours: 154,
+            availabilityPercent: 99,
+            errorRatePercent: 1,
+            recoveryTimeMinutes: 7.5,
+          },
         },
         sampleSize: 2,
         confidence: 0.8,
@@ -160,7 +247,10 @@ describe("RLDataPipeline", () => {
         },
       ];
 
-      const result = await pipeline.processEvents(eventsWithoutProfiles, mockProfiles);
+      const result = await pipeline.processEvents(
+        eventsWithoutProfiles,
+        mockProfiles
+      );
 
       expect(result.samplesGenerated).toBe(0);
       expect(result.batchesCompleted).toBe(0);
@@ -172,11 +262,14 @@ describe("RLDataPipeline", () => {
         {
           ...mockEvents[0],
           id: "routing-event",
-          type: "routing_decision",
+          type: PerformanceEventType.ROUTING_DECISION,
         },
       ];
 
-      const result = await pipeline.processEvents(mixedEvents, mockProfiles);
+      const result = await pipeline.processEvents(
+        mixedEvents as PerformanceEvent[],
+        mockProfiles
+      );
 
       expect(result.samplesGenerated).toBe(1); // Only the completion event
     });
@@ -243,7 +336,7 @@ describe("RLDataPipeline", () => {
     it("should create valid training samples", async () => {
       pipeline.startProcessing();
 
-      const sample = pipeline["createTrainingSample"](
+      const sample = await pipeline["createTrainingSample"](
         mockEvents[0],
         {
           agentId: "agent-1",
@@ -275,10 +368,10 @@ describe("RLDataPipeline", () => {
 
       const routingEvent = {
         ...mockEvents[0],
-        type: "routing_decision",
+        type: PerformanceEventType.ROUTING_DECISION,
       };
 
-      const sample = pipeline["createTrainingSample"](
+      const sample = await pipeline["createTrainingSample"](
         routingEvent,
         {
           agentId: "agent-1",
@@ -297,7 +390,10 @@ describe("RLDataPipeline", () => {
 
   describe("reward calculation", () => {
     it("should calculate rewards based on performance metrics", () => {
-      const reward = pipeline["calculateReward"](mockEvents[0], mockProfiles[0]);
+      const reward = pipeline["calculateReward"](
+        mockEvents[0],
+        mockProfiles[0]
+      );
 
       expect(typeof reward).toBe("number");
       expect(reward).toBeGreaterThanOrEqual(0);
@@ -315,7 +411,10 @@ describe("RLDataPipeline", () => {
         timestamp: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
       };
 
-      const recentReward = pipeline["calculateReward"](recentEvent, mockProfiles[0]);
+      const recentReward = pipeline["calculateReward"](
+        recentEvent,
+        mockProfiles[0]
+      );
       const oldReward = pipeline["calculateReward"](oldEvent, mockProfiles[0]);
 
       expect(recentReward).toBeGreaterThan(oldReward);
@@ -323,7 +422,7 @@ describe("RLDataPipeline", () => {
   });
 
   describe("batch creation", () => {
-    it("should create training batches with quality scores", () => {
+    it("should create training batches with quality scores", async () => {
       const mockSamples: RLTrainingSample[] = [
         {
           id: "sample-1",
@@ -360,7 +459,7 @@ describe("RLDataPipeline", () => {
         performanceHistory: mockProfiles,
       };
 
-      const batch = pipeline["createTrainingBatch"](state);
+      const batch = await pipeline["createTrainingBatch"](state);
 
       expect(batch.id).toMatch(/^batch_agent-1_\d+$/);
       expect(batch.agentId).toBe("agent-1");
@@ -384,18 +483,21 @@ describe("RLDataPipeline", () => {
       expect(pipeline["shouldCompleteBatch"](state)).toBe(false);
 
       // Add samples to reach minimum size
-      state.pendingBatch = Array.from({ length: 100 }, (_, i) => ({
-        id: `sample-${i}`,
-        agentId: "agent-1",
-        taskType: "coding",
-        state: {},
-        action: {},
-        reward: 0.5,
-        nextState: {},
-        done: true,
-        timestamp: new Date().toISOString(),
-        integrityHash: `hash${i}`,
-      }));
+      state.pendingBatch = Array.from(
+        { length: 100 },
+        (_, i): RLTrainingSample => ({
+          id: `sample-${i}`,
+          agentId: "agent-1",
+          taskType: "coding",
+          state: {},
+          action: {},
+          reward: 0.5,
+          nextState: {},
+          done: true,
+          timestamp: new Date().toISOString(),
+          integrityHash: `hash${i}`,
+        })
+      );
 
       expect(pipeline["shouldCompleteBatch"](state)).toBe(true);
 
@@ -412,9 +514,11 @@ describe("RLDataPipeline", () => {
           done: true,
           timestamp: new Date().toISOString(),
           integrityHash: "hash1",
-        },
+        } as RLTrainingSample,
       ];
-      state.batchStartTime = new Date(Date.now() - 20 * 60 * 1000).toISOString(); // 20 minutes ago
+      state.batchStartTime = new Date(
+        Date.now() - 20 * 60 * 1000
+      ).toISOString(); // 20 minutes ago
 
       expect(pipeline["shouldCompleteBatch"](state)).toBe(true);
     });
@@ -511,7 +615,11 @@ describe("RLDataPipeline", () => {
         performanceHistory: mockProfiles,
       };
 
-      const stateRep = pipeline["createStateRepresentation"](event, state, mockProfiles[0]);
+      const stateRep = pipeline["createStateRepresentation"](
+        event,
+        state,
+        mockProfiles[0]
+      );
 
       expect(stateRep.taskId).toBe("task-1");
       expect(stateRep.agentId).toBe("agent-1");
@@ -541,7 +649,11 @@ describe("RLDataPipeline", () => {
         performanceHistory: mockProfiles,
       };
 
-      const stateRep = pipelineWithHistory["createStateRepresentation"](event, state, mockProfiles[0]);
+      const stateRep = pipelineWithHistory["createStateRepresentation"](
+        event,
+        state,
+        mockProfiles[0]
+      );
 
       expect(stateRep.historicalPerformance).toBeDefined();
       expect(stateRep.agentLoad).toBeUndefined();
@@ -556,8 +668,18 @@ describe("RLDataPipeline", () => {
       const action = { decision: "accept" };
       const reward = 0.8;
 
-      const hash1 = pipeline["calculateSampleHash"](event, state, action, reward);
-      const hash2 = pipeline["calculateSampleHash"](event, state, action, reward);
+      const hash1 = pipeline["calculateSampleHash"](
+        event,
+        state,
+        action,
+        reward
+      );
+      const hash2 = pipeline["calculateSampleHash"](
+        event,
+        state,
+        action,
+        reward
+      );
 
       expect(hash1).toBe(hash2);
       expect(hash1).toMatch(/^[a-f0-9]{64}$/); // SHA-256 hash
@@ -570,8 +692,18 @@ describe("RLDataPipeline", () => {
       const action2 = { decision: "reject" };
       const reward = 0.8;
 
-      const hash1 = pipeline["calculateSampleHash"](event, state, action1, reward);
-      const hash2 = pipeline["calculateSampleHash"](event, state, action2, reward);
+      const hash1 = pipeline["calculateSampleHash"](
+        event,
+        state,
+        action1,
+        reward
+      );
+      const hash2 = pipeline["calculateSampleHash"](
+        event,
+        state,
+        action2,
+        reward
+      );
 
       expect(hash1).not.toBe(hash2);
     });
@@ -615,7 +747,14 @@ describe("RLDataPipeline", () => {
       const mockEmitter = jest.fn();
       pipeline.on("config_updated", mockEmitter);
 
-      pipeline.updateConfig({ qualityThresholds: { minSampleDiversity: 0.9 } });
+      pipeline.updateConfig({
+        qualityThresholds: {
+          minSampleDiversity: 0.9,
+          maxTemporalGapMinutes: 15,
+          minRewardVariance: 0.1,
+          maxDuplicateRatio: 0.1,
+        },
+      });
 
       expect(mockEmitter).toHaveBeenCalled();
     });

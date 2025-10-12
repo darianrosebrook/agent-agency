@@ -205,7 +205,7 @@ export class RLDataPipeline extends EventEmitter {
       // Group events by agent
       const eventsByAgent = this.groupEventsByAgent(events);
 
-      for (const [agentId, agentEvents] of eventsByAgent) {
+      for (const [agentId, agentEvents] of Array.from(eventsByAgent)) {
         const agentProfile = agentProfiles.find((p) => p.agentId === agentId);
         if (!agentProfile) continue;
 
@@ -726,7 +726,7 @@ export class RLDataPipeline extends EventEmitter {
    * Updates global quality metrics.
    */
   private updateQualityMetrics(): void {
-    for (const [agentId, state] of this.pipelineStates) {
+    for (const [agentId, state] of Array.from(this.pipelineStates)) {
       const samples = [...state.recentSamples, ...state.pendingBatch];
       if (samples.length === 0) continue;
 
@@ -807,7 +807,7 @@ export class RLDataPipeline extends EventEmitter {
 
     // Enforce memory limits
     let totalSamples = 0;
-    for (const state of this.pipelineStates.values()) {
+    for (const state of Array.from(this.pipelineStates.values())) {
       totalSamples += state.recentSamples.length + state.pendingBatch.length;
     }
 
@@ -844,7 +844,7 @@ export class RLDataPipeline extends EventEmitter {
     }> = [];
 
     // Collect all samples with metadata
-    for (const [agentId, state] of this.pipelineStates) {
+    for (const [agentId, state] of Array.from(this.pipelineStates)) {
       for (const sample of state.recentSamples) {
         allSamples.push({
           agentId,
@@ -864,7 +864,7 @@ export class RLDataPipeline extends EventEmitter {
     );
 
     // Update pipeline states
-    for (const [agentId, state] of this.pipelineStates) {
+    for (const [agentId, state] of Array.from(this.pipelineStates)) {
       const agentSamples = samplesToKeep
         .filter((s) => s.agentId === agentId)
         .map((s) => s.sample);

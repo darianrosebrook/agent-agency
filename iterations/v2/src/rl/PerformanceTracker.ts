@@ -173,9 +173,14 @@ export class PerformanceTracker {
    * Creates a new performance tracker instance.
    *
    * @param config - Configuration for the tracker. Uses defaults if not provided.
+   * @param dataCollector - Optional external data collector (for testing).
    */
-  constructor(config: Partial<PerformanceTrackerConfig> = {}) {
+  constructor(
+    config: Partial<PerformanceTrackerConfig> = {},
+    dataCollector?: DataCollector
+  ) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.dataCollector = dataCollector; // Use provided collector if available
     this.initializeBenchmarkingIntegration();
   }
 
@@ -183,6 +188,11 @@ export class PerformanceTracker {
    * Initializes integration with ARBITER-004 benchmarking system.
    */
   private initializeBenchmarkingIntegration(): void {
+    // Only create DataCollector if one wasn't provided externally (e.g., for testing)
+    if (this.dataCollector) {
+      return;
+    }
+
     try {
       // Convert legacy config to new format
       const dataCollectorConfig: Partial<DataCollectionConfig> = {
@@ -232,6 +242,110 @@ export class PerformanceTracker {
     // Also stop the benchmarking data collector
     if (this.dataCollector) {
       this.dataCollector.stopCollection();
+    }
+  }
+
+  /**
+   * Records agent registration for performance baseline tracking.
+   *
+   * @param agentId - Agent identifier.
+   * @param agentData - Agent registration data including capabilities and baseline metrics.
+   */
+  async recordAgentRegistration(
+    agentId: string,
+    agentData: {
+      capabilities: string[];
+      baselineMetrics: {
+        latencyMs: number;
+        accuracy: number;
+        costPerTask: number;
+        reliability: number;
+      };
+      registrationTimestamp: string;
+    }
+  ): Promise<void> {
+    if (!this.isCollecting || !this.config.enabled) {
+      return;
+    }
+
+    // Create agent registration event
+    const event: PerformanceEvent = {
+      type: "agent-registration",
+      timestamp: agentData.registrationTimestamp,
+      data: {
+        agentId,
+        capabilities: agentData.capabilities,
+        baselineMetrics: agentData.baselineMetrics,
+        eventType: "agent_registration",
+      },
+    };
+
+    this.addEvent(event);
+
+    // Forward to data collector if available
+    if (this.dataCollector) {
+      try {
+        await this.dataCollector.recordAgentRegistration(agentId, {
+          capabilities: agentData.capabilities,
+          baselineMetrics: agentData.baselineMetrics,
+          registrationTimestamp: agentData.registrationTimestamp,
+        });
+      } catch (error) {
+        // Graceful degradation - log but don't fail
+        console.warn(
+          "Failed to record agent registration in benchmarking system:",
+          error
+        );
+      }
+    }
+  }
+
+  /**
+   * Records agent status changes for availability tracking.
+   *
+   * @param agentId - Agent identifier.
+   * @param status - New availability status.
+   * @param context - Additional context about the status change.
+   */
+  async recordAgentStatusChange(
+    agentId: string,
+    status: "available" | "busy" | "offline" | "maintenance",
+    context: { previousStatus?: string; reason?: string }
+  ): Promise<void> {
+    if (!this.isCollecting || !this.config.enabled) {
+      return;
+    }
+
+    // Create agent status change event
+    const event: PerformanceEvent = {
+      type: "agent-status-change",
+      timestamp: new Date().toISOString(),
+      data: {
+        agentId,
+        status,
+        previousStatus: context.previousStatus,
+        reason: context.reason,
+        eventType: "agent_status_change",
+      },
+    };
+
+    this.addEvent(event);
+
+    // Forward to data collector if available
+    if (this.dataCollector) {
+      try {
+        await this.dataCollector.recordAgentStatusChange(
+          agentId,
+          status,
+          context
+        );
+      } catch (error) {
+        // Graceful degradation - log but don't fail
+        console.warn(
+          "Failed to record agent status change in benchmarking system:",
+          error
+        );
+      }
     }
   }
 
@@ -438,6 +552,58 @@ export class PerformanceTracker {
     };
 
     this.addEvent(event);
+  }
+
+  /**
+   * Records constitutional validation results for compliance tracking.
+   *
+   * @param validationData - CAWS validation result data
+   */
+  async recordConstitutionalValidation(validationData: {
+    taskId: string;
+    agentId: string;
+    validationResult: {
+      valid: boolean;
+      violations: Array<{
+        severity: "low" | "medium" | "high" | "critical";
+        message: string;
+        rule?: string;
+      }>;
+      complianceScore: number;
+      processingTimeMs: number;
+      ruleCount: number;
+    };
+  }): Promise<void> {
+    if (!this.isCollecting || !this.config.enabled) {
+      return;
+    }
+
+    // Create constitutional validation event
+    const event: PerformanceEvent = {
+      type: "constitutional-validation",
+      timestamp: new Date().toISOString(),
+      data: this.anonymizeDataIfNeeded({
+        taskId: validationData.taskId,
+        agentId: validationData.agentId,
+        validationResult: validationData.validationResult,
+        eventType: "constitutional_validation",
+      }) as Record<string, unknown>,
+    };
+
+    this.addEvent(event);
+
+    // Forward to data collector if available
+    if (this.dataCollector) {
+      try {
+        await this.dataCollector.recordConstitutionalValidation(validationData);
+      } catch (error) {
+        // Graceful degradation - log but don't fail
+        console.warn(
+          "Failed to record constitutional validation in benchmarking system:",
+          error
+        );
+      }
+    }
   }
 
   /**

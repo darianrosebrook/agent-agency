@@ -12,6 +12,7 @@ import {
   AgentRegistryDatabaseConfig,
   AgentRegistryDbClient,
 } from "../database/AgentRegistryDbClient.js";
+import { PerformanceTracker } from "../rl/PerformanceTracker";
 import {
   AgentRegistrySecurity,
   SecurityContext,
@@ -61,10 +62,15 @@ export class AgentRegistryManager {
   private readonly maxConcurrentTasksPerAgent: number = 10;
   private dbClient?: AgentRegistryDbClient;
   private securityManager?: AgentRegistrySecurity;
+  private performanceTracker?: PerformanceTracker;
 
-  constructor(config: Partial<AgentRegistryConfig> = {}) {
+  constructor(
+    config: Partial<AgentRegistryConfig> = {},
+    performanceTracker?: PerformanceTracker
+  ) {
     this.agents = new Map();
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.performanceTracker = performanceTracker;
 
     // Initialize database client if persistence is enabled
     if (this.config.enablePersistence && this.config.database) {
@@ -93,6 +99,15 @@ export class AgentRegistryManager {
     if (this.config.enableAutoCleanup) {
       this.startAutoCleanup();
     }
+  }
+
+  /**
+   * Set the performance tracker for agent lifecycle tracking.
+   *
+   * @param tracker - Performance tracker instance
+   */
+  setPerformanceTracker(tracker: PerformanceTracker): void {
+    this.performanceTracker = tracker;
   }
 
   /**
@@ -296,7 +311,169 @@ export class AgentRegistryManager {
       });
     }
 
+    // Record performance baseline for new agent
+    if (this.performanceTracker) {
+      try {
+        await this.performanceTracker.recordAgentRegistration(profile.id, {
+          capabilities: profile.capabilities.taskTypes,
+          baselineMetrics: this.calculateBaselineMetrics(profile),
+          registrationTimestamp: profile.registeredAt,
+        });
+      } catch (error) {
+        // Log but don't fail registration due to performance tracking issues
+        console.warn(
+          `Failed to record agent registration performance baseline for ${profile.id}:`,
+          error
+        );
+      }
+    }
+
     return AgentProfileHelper.cloneProfile(profile);
+  }
+
+  /**
+   * Update agent availability status.
+   *
+   * @param agentId - ID of the agent to update
+   * @param status - New availability status
+   * @param reason - Optional reason for status change
+   * @param securityContext - Security context for authorization
+   * @throws RegistryError if agent not found or unauthorized
+   */
+  async updateAgentStatus(
+    agentId: AgentId,
+    status: "available" | "busy" | "offline" | "maintenance",
+    reason?: string,
+    securityContext?: SecurityContext
+  ): Promise<void> {
+    // Security check: authenticate and authorize
+    if (this.config.enableSecurity && this.securityManager) {
+      if (!securityContext) {
+        throw new RegistryError(
+          RegistryErrorType.INVALID_AGENT_DATA,
+          "Security context required when security is enabled"
+        );
+      }
+
+      const authorized = await this.securityManager.authorize(
+        securityContext,
+        "update" as any,
+        "agent",
+        agentId
+      );
+
+      if (!authorized) {
+        await this.securityManager.logAuditEvent({
+          id: this.generateId(),
+          timestamp: new Date(),
+          eventType: "agent_status_update" as any,
+          actor: {
+            tenantId: securityContext.tenantId,
+            userId: securityContext.userId,
+            sessionId: securityContext.sessionId,
+          },
+          resource: { type: "agent", id: agentId },
+          action: "update" as any,
+          details: { status, reason },
+          result: "failure",
+          errorMessage: "Authorization failed",
+          ipAddress: securityContext.ipAddress,
+          userAgent: securityContext.userAgent,
+        });
+
+        throw new RegistryError(
+          RegistryErrorType.INVALID_AGENT_DATA,
+          "Not authorized to update agent status"
+        );
+      }
+    }
+
+    // Get current agent profile
+    const profile = this.agents.get(agentId);
+    if (!profile) {
+      throw new RegistryError(
+        RegistryErrorType.AGENT_NOT_FOUND,
+        `Agent with ID ${agentId} not found`,
+        { agentId }
+      );
+    }
+
+    // Get previous status for tracking
+    const previousStatus = this.getAgentAvailabilityStatus(profile);
+
+    // Update agent load status based on new availability
+    const updatedProfile = AgentProfileHelper.cloneProfile(profile);
+    updatedProfile.lastActiveAt = new Date().toISOString();
+
+    // Update load based on status
+    switch (status) {
+      case "available":
+        updatedProfile.currentLoad = {
+          ...updatedProfile.currentLoad,
+          activeTasks: 0,
+          utilizationPercent: 0,
+        };
+        break;
+      case "busy":
+        updatedProfile.currentLoad = {
+          ...updatedProfile.currentLoad,
+          activeTasks: Math.max(updatedProfile.currentLoad.activeTasks, 1),
+          utilizationPercent: Math.max(
+            updatedProfile.currentLoad.utilizationPercent,
+            50
+          ),
+        };
+        break;
+      case "offline":
+      case "maintenance":
+        updatedProfile.currentLoad = {
+          ...updatedProfile.currentLoad,
+          activeTasks: this.maxConcurrentTasksPerAgent, // Fully utilized = unavailable
+          utilizationPercent: 100,
+        };
+        break;
+    }
+
+    // Store updated profile
+    this.agents.set(agentId, updatedProfile);
+
+    // Persist to database if enabled (TODO: implement updateAgentStatus in database client)
+
+    // Audit log successful status update
+    if (this.config.enableSecurity && this.securityManager && securityContext) {
+      await this.securityManager.logAuditEvent({
+        id: this.generateId(),
+        timestamp: new Date(),
+        eventType: "agent_status_update" as any,
+        actor: {
+          tenantId: securityContext.tenantId,
+          userId: securityContext.userId,
+          sessionId: securityContext.sessionId,
+        },
+        resource: { type: "agent", id: agentId },
+        action: "update" as any,
+        details: { previousStatus, newStatus: status, reason },
+        result: "success",
+        ipAddress: securityContext.ipAddress,
+        userAgent: securityContext.userAgent,
+      });
+    }
+
+    // Record status change in performance tracker
+    if (this.performanceTracker) {
+      try {
+        await this.performanceTracker.recordAgentStatusChange(agentId, status, {
+          previousStatus,
+          reason,
+        });
+      } catch (error) {
+        // Log but don't fail status update due to performance tracking issues
+        console.warn(
+          `Failed to record agent status change performance event for ${agentId}:`,
+          error
+        );
+      }
+    }
   }
 
   /**
@@ -772,6 +949,92 @@ export class AgentRegistryManager {
     if (this.cleanupTimer) {
       clearInterval(this.cleanupTimer);
     }
+  }
+
+  /**
+   * Get the current availability status of an agent.
+   *
+   * @param profile - Agent profile
+   * @returns Availability status string
+   */
+  private getAgentAvailabilityStatus(profile: AgentProfile): string {
+    // Determine status based on load and activity
+    const utilization = profile.currentLoad.utilizationPercent;
+    const activeTasks = profile.currentLoad.activeTasks;
+
+    if (utilization >= 100 || activeTasks >= this.maxConcurrentTasksPerAgent) {
+      return "offline";
+    } else if (utilization >= 50 || activeTasks > 0) {
+      return "busy";
+    } else {
+      return "available";
+    }
+  }
+
+  /**
+   * Calculate baseline performance metrics for a new agent.
+   *
+   * @param profile - Agent profile
+   * @returns Baseline metrics for performance tracking
+   */
+  private calculateBaselineMetrics(profile: AgentProfile): {
+    latencyMs: number;
+    accuracy: number;
+    costPerTask: number;
+    reliability: number;
+  } {
+    // Use model family to estimate baseline performance
+    // These are conservative estimates based on typical performance
+    const modelFamily = profile.modelFamily.toLowerCase();
+
+    let baselineLatency: number;
+    let baselineAccuracy: number;
+    let baselineCost: number;
+    let baselineReliability: number;
+
+    // Estimate based on model capabilities
+    if (modelFamily.includes("gpt-4") || modelFamily.includes("claude-3")) {
+      baselineLatency = 1500; // 1.5s average response time
+      baselineAccuracy = 0.92; // 92% accuracy
+      baselineCost = 0.015; // $0.015 per task
+      baselineReliability = 0.98; // 98% reliability
+    } else if (
+      modelFamily.includes("gpt-3.5") ||
+      modelFamily.includes("claude-2")
+    ) {
+      baselineLatency = 1200; // 1.2s average response time
+      baselineAccuracy = 0.88; // 88% accuracy
+      baselineCost = 0.008; // $0.008 per task
+      baselineReliability = 0.95; // 95% reliability
+    } else {
+      // Conservative defaults for unknown models
+      baselineLatency = 2000; // 2s average response time
+      baselineAccuracy = 0.8; // 80% accuracy
+      baselineCost = 0.01; // $0.010 per task
+      baselineReliability = 0.9; // 90% reliability
+    }
+
+    // Adjust based on agent capabilities (more specialized = better performance)
+    const capabilityBonus = Math.min(
+      profile.capabilities.specializations.length * 0.02,
+      0.1
+    );
+    baselineAccuracy = Math.min(baselineAccuracy + capabilityBonus, 0.95);
+
+    // Language support bonus (more languages = slightly higher cost but better accuracy)
+    const languageBonus = Math.min(
+      profile.capabilities.languages.length * 0.01,
+      0.05
+    );
+    baselineAccuracy = Math.min(baselineAccuracy + languageBonus, 0.95);
+    baselineCost += languageBonus * 0.002;
+
+    return {
+      latencyMs: baselineLatency,
+      accuracy: baselineAccuracy,
+      costPerTask: baselineCost,
+      reliability: baselineReliability,
+    };
   }
 
   /**

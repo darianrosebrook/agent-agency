@@ -8,6 +8,7 @@
  */
 
 import { MultiArmedBandit } from "../rl/MultiArmedBandit";
+import { PerformanceTracker } from "../rl/PerformanceTracker";
 import {
   AgentQuery,
   AgentQueryResult,
@@ -78,15 +79,18 @@ export interface RoutingOutcome {
 export class TaskRoutingManager {
   private config: TaskRoutingConfig;
   private agentRegistry: AgentRegistryManager;
+  private performanceTracker?: PerformanceTracker;
   private multiArmedBandit: MultiArmedBandit | null = null;
   private metrics: RoutingMetrics;
   private routingHistory: Map<string, RoutingDecision> = new Map();
 
   constructor(
     agentRegistry: AgentRegistryManager,
-    config?: Partial<TaskRoutingConfig>
+    config?: Partial<TaskRoutingConfig>,
+    performanceTracker?: PerformanceTracker
   ) {
     this.agentRegistry = agentRegistry;
+    this.performanceTracker = performanceTracker;
     this.config = {
       enableBandit: true,
       minAgentsRequired: 1,
@@ -122,6 +126,15 @@ export class TaskRoutingManager {
   }
 
   /**
+   * Set the performance tracker for performance-aware routing.
+   *
+   * @param tracker - Performance tracker instance
+   */
+  setPerformanceTracker(tracker: PerformanceTracker): void {
+    this.performanceTracker = tracker;
+  }
+
+  /**
    * Route a task to the optimal agent
    *
    * @param task - Task to route
@@ -148,16 +161,22 @@ export class TaskRoutingManager {
         );
       }
 
-      // Step 2: Apply routing strategy
+      // Step 2: Get performance context for routing decision
+      const performanceContext = this.performanceTracker
+        ? await this.getPerformanceContext(task, candidateAgents)
+        : null;
+
+      // Step 3: Apply routing strategy with performance context
       const routingDecision = await this.applyRoutingStrategy(
         task,
-        candidateAgents
+        candidateAgents,
+        performanceContext
       );
 
-      // Step 3: Record routing decision
+      // Step 4: Record routing decision
       this.recordRoutingDecision(routingDecision);
 
-      // Step 4: Update metrics
+      // Step 5: Update metrics
       const routingTimeMs = Date.now() - startTime;
       this.updateMetrics(routingTimeMs, routingDecision);
 
@@ -215,7 +234,8 @@ export class TaskRoutingManager {
    */
   private async applyRoutingStrategy(
     task: Task,
-    candidates: AgentQueryResult[]
+    candidates: AgentQueryResult[],
+    performanceContext?: any
   ): Promise<RoutingDecision> {
     // Use multi-armed bandit strategy if enabled
     if (
@@ -223,11 +243,11 @@ export class TaskRoutingManager {
       this.multiArmedBandit &&
       this.config.defaultStrategy === "multi-armed-bandit"
     ) {
-      return await this.routeWithBandit(task, candidates);
+      return await this.routeWithBandit(task, candidates, performanceContext);
     }
 
     // Fallback to capability-match strategy
-    return this.routeByCapability(task, candidates);
+    return this.routeByCapability(task, candidates, performanceContext);
   }
 
   /**
@@ -235,7 +255,8 @@ export class TaskRoutingManager {
    */
   private async routeWithBandit(
     task: Task,
-    candidates: AgentQueryResult[]
+    candidates: AgentQueryResult[],
+    performanceContext?: any
   ): Promise<RoutingDecision> {
     if (!this.multiArmedBandit) {
       throw new Error("Multi-armed bandit not initialized");
@@ -272,29 +293,123 @@ export class TaskRoutingManager {
   }
 
   /**
+   * Get performance context for routing decision.
+   *
+   * @param task - Task being routed
+   * @param candidates - Candidate agents
+   * @returns Performance context with agent metrics
+   */
+  private async getPerformanceContext(
+    task: Task,
+    candidates: AgentQueryResult[]
+  ): Promise<any> {
+    if (!this.performanceTracker) {
+      return null;
+    }
+
+    try {
+      // Get performance stats to understand overall system performance
+      const stats = this.performanceTracker.getStats();
+
+      // Create basic performance context for each candidate
+      const agentMetrics: Record<string, any> = {};
+      for (const candidate of candidates) {
+        // For now, use basic heuristics based on agent capabilities and system stats
+        // In a full implementation, this would query historical performance data
+        const capabilityScore = candidate.matchScore || 0.5;
+        const systemSuccessRate = 0.8; // Default success rate assumption
+
+        // Combine capability match with system performance
+        const performanceScore =
+          capabilityScore * 0.7 + systemSuccessRate * 0.3;
+
+        agentMetrics[candidate.agent.id] = {
+          overallScore: performanceScore,
+          confidence: 0.5, // Low confidence for now
+          recentMetrics: [], // Would be populated with actual historical data
+        };
+      }
+
+      return {
+        taskId: task.id,
+        taskType: task.type,
+        agentMetrics,
+        systemStats: stats,
+      };
+    } catch (error) {
+      console.warn("Failed to get performance context for routing:", error);
+      return null;
+    }
+  }
+
+  /**
    * Route by capability matching (fallback strategy)
    */
   private routeByCapability(
     task: Task,
-    candidates: AgentQueryResult[]
+    candidates: AgentQueryResult[],
+    performanceContext?: any
   ): RoutingDecision {
-    // Sort by match score (already sorted by registry)
-    const bestMatch = candidates[0];
+    let selectedCandidate: AgentQueryResult;
+    let strategy: RoutingStrategy = "capability-match";
 
-    return {
-      id: `routing-${task.id}-${Date.now()}`,
-      taskId: task.id,
-      selectedAgent: bestMatch.agent,
-      confidence: bestMatch.matchScore,
-      reason: `Best capability match: ${bestMatch.matchReason}`,
-      strategy: "capability-match" as const,
-      alternatives: candidates.slice(1, 3).map((alt) => ({
-        agent: alt.agent,
-        score: alt.matchScore,
-        reason: alt.matchReason,
-      })),
-      timestamp: new Date(),
-    };
+    if (performanceContext?.agentMetrics) {
+      // Use performance-weighted scoring (still using capability-match strategy)
+      strategy = "capability-match";
+
+      const scoredCandidates = candidates.map((candidate) => {
+        const capabilityScore = candidate.matchScore;
+        const performanceScore =
+          performanceContext.agentMetrics[candidate.agent.id]?.overallScore ||
+          0.5;
+        const confidence =
+          performanceContext.agentMetrics[candidate.agent.id]?.confidence ||
+          0.5;
+
+        // Weight: 70% capability, 30% performance history
+        const weightedScore = capabilityScore * 0.7 + performanceScore * 0.3;
+
+        return {
+          ...candidate,
+          weightedScore,
+          performanceScore,
+          confidence,
+        };
+      });
+
+      // Sort by weighted score
+      scoredCandidates.sort((a, b) => b.weightedScore - a.weightedScore);
+      selectedCandidate = scoredCandidates[0];
+
+      return {
+        id: `routing-${task.id}-${Date.now()}`,
+        taskId: task.id,
+        selectedAgent: selectedCandidate.agent,
+        confidence: selectedCandidate.matchScore,
+        reason: `Performance-weighted selection: capability ${selectedCandidate.matchScore.toFixed(2)}`,
+        strategy,
+        alternatives: [],
+        timestamp: new Date(),
+      };
+    } else {
+      // Fallback to pure capability matching
+      selectedCandidate = candidates[0];
+
+      return {
+        id: `routing-${task.id}-${Date.now()}`,
+        taskId: task.id,
+        selectedAgent: selectedCandidate.agent,
+        confidence: selectedCandidate.matchScore,
+        reason: `Best capability match: ${selectedCandidate.matchReason}`,
+        strategy,
+        alternatives: candidates.slice(1, 3).map((alt) => ({
+          agent: alt.agent,
+          score: alt.matchScore,
+          reason: alt.matchReason,
+        })),
+        timestamp: new Date(),
+      };
+    }
   }
 
   /**

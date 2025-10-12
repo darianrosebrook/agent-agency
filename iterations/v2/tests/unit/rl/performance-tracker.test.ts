@@ -429,7 +429,8 @@ describe("PerformanceTracker", () => {
         completionTimeMs: 2500,
       };
 
-      const conversionMethod = (tracker as any).convertOutcomeToPerformanceMetrics;
+      const conversionMethod = (tracker as any)
+        .convertOutcomeToPerformanceMetrics;
       const metrics = conversionMethod(legacyOutcome, 2500);
 
       expect(metrics.latency.averageMs).toBe(2500);
@@ -449,7 +450,8 @@ describe("PerformanceTracker", () => {
         completionTimeMs: 1500,
       };
 
-      const conversionMethod = (tracker as any).convertOutcomeToPerformanceMetrics;
+      const conversionMethod = (tracker as any)
+        .convertOutcomeToPerformanceMetrics;
       const metrics = conversionMethod(failedOutcome, 1500);
 
       expect(metrics.accuracy.successRate).toBe(0);

@@ -183,6 +183,103 @@ export class DataCollector extends EventEmitter {
   }
 
   /**
+   * Records an agent registration event for baseline performance tracking.
+   *
+   * @param agentId - Agent identifier
+   * @param agentData - Agent registration data
+   */
+  recordAgentRegistration(
+    agentId: string,
+    agentData: {
+      capabilities: string[];
+      baselineMetrics: {
+        latencyMs: number;
+        accuracy: number;
+        costPerTask: number;
+        reliability: number;
+      };
+      registrationTimestamp: string;
+    }
+  ): void {
+    const startTime = performance.now();
+
+    if (!this.shouldCollect()) {
+      return;
+    }
+
+    const event: PerformanceEvent = {
+      id: this.generateEventId(),
+      type: PerformanceEventType.AGENT_REGISTRATION,
+      timestamp: agentData.registrationTimestamp,
+      agentId,
+      metrics: {
+        capabilities: agentData.capabilities,
+        baselineLatencyMs: agentData.baselineMetrics.latencyMs,
+        baselineAccuracy: agentData.baselineMetrics.accuracy,
+        baselineCostPerTask: agentData.baselineMetrics.costPerTask,
+        baselineReliability: agentData.baselineMetrics.reliability,
+      },
+      context: this.anonymizeContext({
+        eventType: "agent_registration",
+        capabilities: agentData.capabilities,
+      }),
+      integrityHash: "",
+    };
+
+    event.integrityHash = this.calculateIntegrityHash(event);
+
+    this.addToBuffer(event, "normal");
+
+    this.collectionStats.lastCollectionTime = performance.now() - startTime;
+    this.updateAverageCollectionTime();
+  }
+
+  /**
+   * Records an agent status change event for availability tracking.
+   *
+   * @param agentId - Agent identifier
+   * @param status - New availability status
+   * @param context - Status change context
+   */
+  recordAgentStatusChange(
+    agentId: string,
+    status: "available" | "busy" | "offline" | "maintenance",
+    context: { previousStatus?: string; reason?: string }
+  ): void {
+    const startTime = performance.now();
+
+    if (!this.shouldCollect()) {
+      return;
+    }
+
+    const event: PerformanceEvent = {
+      id: this.generateEventId(),
+      type: PerformanceEventType.AGENT_STATUS_CHANGE,
+      timestamp: new Date().toISOString(),
+      agentId,
+      metrics: {
+        status,
+        previousStatus: context.previousStatus,
+        reason: context.reason,
+      },
+      context: this.anonymizeContext({
+        eventType: "agent_status_change",
+        status,
+        previousStatus: context.previousStatus,
+        reason: context.reason,
+      }),
+      integrityHash: "",
+    };
+
+    event.integrityHash = this.calculateIntegrityHash(event);
+
+    this.addToBuffer(event, "normal");
+
+    this.collectionStats.lastCollectionTime = performance.now() - startTime;
+    this.updateAverageCollectionTime();
+  }
+
+  /**
    * Records a routing decision event.
    *
    * @param taskId - Task identifier
@@ -273,19 +370,23 @@ export class DataCollector extends EventEmitter {
   /**
    * Records a constitutional validation event.
    *
-   * @param taskId - Task identifier
-   * @param agentId - Agent identifier
-   * @param passed - Whether validation passed
-   * @param violationSeverity - Severity score if validation failed
-   * @param validationContext - Additional validation context
+   * @param validationData - Complete CAWS validation result data
    */
-  recordConstitutionalValidation(
-    taskId: string,
-    agentId: string,
-    passed: boolean,
-    violationSeverity?: number,
-    validationContext?: Record<string, unknown>
-  ): void {
+  recordConstitutionalValidation(validationData: {
+    taskId: string;
+    agentId: string;
+    validationResult: {
+      valid: boolean;
+      violations: Array<{
+        severity: "low" | "medium" | "high" | "critical";
+        message: string;
+        rule?: string;
+      }>;
+      complianceScore: number;
+      processingTimeMs: number;
+      ruleCount: number;
+    };
+  }): void {
     const startTime = performance.now();
 
     if (!this.shouldCollect()) {
@@ -293,20 +394,36 @@ export class DataCollector extends EventEmitter {
     }
 
     const complianceMetrics: Partial<ComplianceMetrics> = {
-      validationPassRate: passed ? 1 : 0,
-      violationSeverityScore: violationSeverity || 0,
+      validationPassRate: validationData.validationResult.valid ? 1 : 0,
+      violationSeverityScore: validationData.validationResult.violations.reduce(
+        (score, violation) => {
+          const severityScore =
+            { low: 1, medium: 2, high: 3, critical: 4 }[violation.severity] ||
+            0;
+          return score + severityScore;
+        },
+        0
+      ),
+      complianceScore: validationData.validationResult.complianceScore,
     };
 
     const event: PerformanceEvent = {
       id: this.generateEventId(),
       type: PerformanceEventType.CONSTITUTIONAL_VALIDATION,
       timestamp: new Date().toISOString(),
-      agentId,
-      taskId,
+      agentId: validationData.agentId,
+      taskId: validationData.taskId,
       metrics: {
         compliance: complianceMetrics as ComplianceMetrics,
+        latency: {
+          totalTimeMs: validationData.validationResult.processingTimeMs,
+        } as any,
       },
-      context: this.anonymizeContext(validationContext),
+      context: this.anonymizeContext({
+        violations: validationData.validationResult.violations,
+        ruleCount: validationData.validationResult.ruleCount,
+        eventType: "constitutional_validation",
+      }),
       integrityHash: "",
     };
 

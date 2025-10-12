@@ -650,7 +650,9 @@ export class MetricAggregator extends EventEmitter {
   /**
    * Calculates overall performance trend across all metrics.
    */
-  private calculateOverallTrend(metrics: AgentPerformanceProfile[]): PerformanceTrend {
+  private calculateOverallTrend(
+    metrics: AgentPerformanceProfile[]
+  ): PerformanceTrend {
     // Simplified: weight different aspects of performance
     const weights = {
       accuracy: 0.4,
@@ -659,7 +661,7 @@ export class MetricAggregator extends EventEmitter {
       cost: 0.1,
     };
 
-    const scores = metrics.map(m => ({
+    const scores = metrics.map((m) => ({
       accuracy: m.metrics.accuracy.successRate,
       latency: 1 / (1 + m.metrics.latency.averageMs / 1000), // Normalize latency
       compliance: m.metrics.compliance.validationPassRate,
@@ -668,13 +670,12 @@ export class MetricAggregator extends EventEmitter {
     }));
 
     // Calculate weighted score for each data point
-    const weightedScores = scores.map(s => ({
-      score: (
+    const weightedScores = scores.map((s) => ({
+      score:
         weights.accuracy * s.accuracy +
         weights.latency * s.latency +
         weights.compliance * s.compliance +
-        weights.cost * s.cost
-      ),
+        weights.cost * s.cost,
       timestamp: s.timestamp,
     }));
 
@@ -684,7 +685,9 @@ export class MetricAggregator extends EventEmitter {
   /**
    * Calculates linear trend from time series data.
    */
-  private calculateLinearTrend(data: Array<{ score: number; timestamp: number }>): PerformanceTrend {
+  private calculateLinearTrend(
+    data: Array<{ score: number; timestamp: number }>
+  ): PerformanceTrend {
     if (data.length < 2) {
       return {
         direction: "stable",
@@ -695,12 +698,12 @@ export class MetricAggregator extends EventEmitter {
     }
 
     const n = data.length;
-    const timestamps = data.map(d => d.timestamp);
-    const scores = data.map(d => d.score);
+    const timestamps = data.map((d) => d.timestamp);
+    const scores = data.map((d) => d.score);
 
     // Normalize timestamps to hours from start
     const startTime = Math.min(...timestamps);
-    const hours = timestamps.map(t => (t - startTime) / (1000 * 60 * 60));
+    const hours = timestamps.map((t) => (t - startTime) / (1000 * 60 * 60));
 
     // Calculate linear regression
     const sumX = hours.reduce((sum, x) => sum + x, 0);
@@ -717,13 +720,18 @@ export class MetricAggregator extends EventEmitter {
       const predicted = slope * hours[i] + intercept;
       return sum + Math.pow(score - predicted, 2);
     }, 0);
-    const ssTot = scores.reduce((sum, score) => sum + Math.pow(score - yMean, 2), 0);
-    const rSquared = ssTot > 0 ? 1 - (ssRes / ssTot) : 0;
+    const ssTot = scores.reduce(
+      (sum, score) => sum + Math.pow(score - yMean, 2),
+      0
+    );
+    const rSquared = ssTot > 0 ? 1 - ssRes / ssTot : 0;
 
-    const direction = slope > 0.001 ? "improving" : slope < -0.001 ? "declining" : "stable";
+    const direction =
+      slope > 0.001 ? "improving" : slope < -0.001 ? "declining" : "stable";
     const magnitude = Math.abs(slope);
     const confidence = Math.sqrt(Math.max(0, rSquared));
-    const timeWindowHours = (Math.max(...timestamps) - startTime) / (1000 * 60 * 60);
+    const timeWindowHours =
+      (Math.max(...timestamps) - startTime) / (1000 * 60 * 60);
 
     return {
       direction: direction as "improving" | "declining" | "stable",
