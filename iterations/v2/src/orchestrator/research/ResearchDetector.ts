@@ -117,8 +117,8 @@ export class ResearchDetector {
     // Generate suggested queries
     const suggestedQueries = this.generateQueries(task, queryType, indicators);
 
-    // Generate reason
-    const reason = this.generateReason(indicators);
+    // Generate reason with confidence
+    const reason = this.generateReason(indicators, confidence);
 
     return {
       required: true,
@@ -155,9 +155,11 @@ export class ResearchDetector {
       "unclear",
       "unknown",
       "uncertain",
+      "unsure",
       "don't know",
       "need to find",
       "need to research",
+      "research",
       "need to investigate",
       "need information",
       "looking for",
@@ -219,6 +221,8 @@ export class ResearchDetector {
       "implementation",
       "algorithm",
       "documentation",
+      "architecture",
+      "integration",
       "best practices",
       "code example",
       "tutorial",
@@ -398,13 +402,16 @@ export class ResearchDetector {
   /**
    * Generate reason for research requirement
    */
-  private generateReason(indicators: {
-    hasQuestions: boolean;
-    hasUncertainty: boolean;
-    requiresFactChecking: boolean;
-    needsComparison: boolean;
-    requiresTechnicalInfo: boolean;
-  }): string {
+  private generateReason(
+    indicators: {
+      hasQuestions: boolean;
+      hasUncertainty: boolean;
+      requiresFactChecking: boolean;
+      needsComparison: boolean;
+      requiresTechnicalInfo: boolean;
+    },
+    confidence?: number
+  ): string {
     const reasons: string[] = [];
 
     if (indicators.hasQuestions) {
@@ -423,8 +430,16 @@ export class ResearchDetector {
       reasons.push("requires fact-checking");
     }
 
-    return reasons.length > 0
-      ? `Task ${reasons.join(", ")}`
-      : "Task may benefit from research";
+    const baseReason =
+      reasons.length > 0
+        ? `Task ${reasons.join(", ")}`
+        : "Task may benefit from research";
+
+    // Include confidence if provided
+    if (confidence !== undefined) {
+      return `${baseReason} (confidence: ${(confidence * 100).toFixed(0)}%)`;
+    }
+
+    return baseReason;
   }
 }
