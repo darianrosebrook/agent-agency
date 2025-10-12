@@ -250,4 +250,3 @@ export interface BudgetRecommendation {
     loc?: number;
   };
 }
-

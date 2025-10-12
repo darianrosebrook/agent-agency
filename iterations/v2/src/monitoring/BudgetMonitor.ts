@@ -62,7 +62,9 @@ export class BudgetMonitor extends EventEmitter {
   };
 
   /** Default watch patterns */
-  private static readonly DEFAULT_WATCH_PATTERNS = ["**/*.{ts,tsx,js,jsx,mjs,cjs}"];
+  private static readonly DEFAULT_WATCH_PATTERNS = [
+    "**/*.{ts,tsx,js,jsx,mjs,cjs}",
+  ];
 
   /** Default ignore patterns */
   private static readonly DEFAULT_IGNORE_PATTERNS = [
@@ -84,8 +86,10 @@ export class BudgetMonitor extends EventEmitter {
       thresholds: { ...BudgetMonitor.DEFAULT_THRESHOLDS, ...config.thresholds },
       pollingInterval: config.pollingInterval ?? 1000,
       useFileWatching: config.useFileWatching ?? true,
-      watchPatterns: config.watchPatterns ?? BudgetMonitor.DEFAULT_WATCH_PATTERNS,
-      ignorePatterns: config.ignorePatterns ?? BudgetMonitor.DEFAULT_IGNORE_PATTERNS,
+      watchPatterns:
+        config.watchPatterns ?? BudgetMonitor.DEFAULT_WATCH_PATTERNS,
+      ignorePatterns:
+        config.ignorePatterns ?? BudgetMonitor.DEFAULT_IGNORE_PATTERNS,
     };
 
     this.policyAdapter = new CAWSPolicyAdapter({
@@ -205,7 +209,9 @@ export class BudgetMonitor extends EventEmitter {
     if (filesPercentage > 80) {
       recommendations.push({
         type: "warning",
-        message: `Files budget at ${filesPercentage.toFixed(1)}% - consider splitting work into smaller tasks`,
+        message: `Files budget at ${filesPercentage.toFixed(
+          1
+        )}% - consider splitting work into smaller tasks`,
         affectedAreas: ["budget:files"],
         priority: "high",
       });
@@ -214,7 +220,9 @@ export class BudgetMonitor extends EventEmitter {
     if (locPercentage > 80) {
       recommendations.push({
         type: "warning",
-        message: `LOC budget at ${locPercentage.toFixed(1)}% - consider refactoring or splitting changes`,
+        message: `LOC budget at ${locPercentage.toFixed(
+          1
+        )}% - consider refactoring or splitting changes`,
         affectedAreas: ["budget:loc"],
         priority: "high",
       });
@@ -222,7 +230,9 @@ export class BudgetMonitor extends EventEmitter {
 
     // Check for frequently changed files
     const stats = this.getStatistics();
-    const hotFiles = stats.frequentlyChangedFiles.filter((f) => f.changeCount > 5);
+    const hotFiles = stats.frequentlyChangedFiles.filter(
+      (f) => f.changeCount > 5
+    );
 
     if (hotFiles.length > 0) {
       recommendations.push({
@@ -240,7 +250,8 @@ export class BudgetMonitor extends EventEmitter {
     if (filesPercentage > 100 || locPercentage > 100) {
       recommendations.push({
         type: "split",
-        message: "Budget exceeded - split work into multiple tasks with separate specs",
+        message:
+          "Budget exceeded - split work into multiple tasks with separate specs",
         affectedAreas: ["budget:overall"],
         priority: "high",
       });
@@ -412,7 +423,9 @@ export class BudgetMonitor extends EventEmitter {
         ? (totalFiles / this.currentUsage.maxFiles) * 100
         : 0;
     const locPercentage =
-      this.currentUsage.maxLoc > 0 ? (totalLoc / this.currentUsage.maxLoc) * 100 : 0;
+      this.currentUsage.maxLoc > 0
+        ? (totalLoc / this.currentUsage.maxLoc) * 100
+        : 0;
 
     this.currentUsage = {
       filesChanged: totalFiles,
@@ -421,7 +434,9 @@ export class BudgetMonitor extends EventEmitter {
       linesChanged: totalLoc,
       maxLoc: this.currentUsage.maxLoc,
       locPercentage,
-      changedFiles: changedFiles.map((f) => path.relative(this.config.projectRoot, f)),
+      changedFiles: changedFiles.map((f) =>
+        path.relative(this.config.projectRoot, f)
+      ),
       lastUpdated: new Date().toISOString(),
     };
 
@@ -543,8 +558,12 @@ export class BudgetMonitor extends EventEmitter {
           currentPercentage: percentage,
           message:
             type === "files"
-              ? `Files budget at ${percentage.toFixed(1)}% (${this.currentUsage.filesChanged}/${this.currentUsage.maxFiles})`
-              : `LOC budget at ${percentage.toFixed(1)}% (${this.currentUsage.linesChanged}/${this.currentUsage.maxLoc})`,
+              ? `Files budget at ${percentage.toFixed(1)}% (${
+                  this.currentUsage.filesChanged
+                }/${this.currentUsage.maxFiles})`
+              : `LOC budget at ${percentage.toFixed(1)}% (${
+                  this.currentUsage.linesChanged
+                }/${this.currentUsage.maxLoc})`,
           timestamp: new Date().toISOString(),
         };
 
@@ -584,4 +603,3 @@ export class BudgetMonitor extends EventEmitter {
     return super.emit(event, ...args);
   }
 }
-

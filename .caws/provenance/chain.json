@@ -1528,5 +1528,39 @@
     },
     "previous_hash": "e7129528624ca5e52c47243ba93ac4052549f50ef378f10f6e4cfff6a7498be7",
     "hash": "f575cd8bb66c2b21c4472cfbf17c00a736db4de856e88ad484576d1e0e02c5b6"
+  },
+  {
+    "id": "prov-1760227626264",
+    "timestamp": "2025-10-12T00:07:06.264Z",
+    "commit": {
+      "hash": "289b645c0bd5fc3b147494d5a96e4bcf2e899dc4",
+      "message": "Phase 0.1 Complete: Integration tests 100% passing",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0001",
+      "title": "agent-agency",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T00:07:06.265Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "f575cd8bb66c2b21c4472cfbf17c00a736db4de856e88ad484576d1e0e02c5b6",
+    "hash": "7db930b75365b8265f4b0e59251d704b587ad9cbaacfd90c4bbbeb75253742b9"
   }
 ]

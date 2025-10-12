@@ -79,7 +79,8 @@ export class SpecValidator {
     if (!spec.acceptance || spec.acceptance.length === 0) {
       errors.push({
         field: "acceptance",
-        message: "Acceptance criteria are required - at least one acceptance criterion in Given-When-Then format must be provided",
+        message:
+          "Acceptance criteria are required - at least one acceptance criterion in Given-When-Then format must be provided",
       });
     }
 

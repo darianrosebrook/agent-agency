@@ -179,7 +179,9 @@ describe("ARBITER Foundation Integration Tests (001-004)", () => {
       // Full-stack agent should rank higher due to more capabilities
       if (results.length > 1) {
         expect(results[0].agent.id).toBe("full-stack-agent");
-        expect(results[0].matchScore).toBeGreaterThanOrEqual(results[1].matchScore);
+        expect(results[0].matchScore).toBeGreaterThanOrEqual(
+          results[1].matchScore
+        );
       }
     });
   });

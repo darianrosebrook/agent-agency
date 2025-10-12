@@ -137,8 +137,14 @@ risk_tiers:
   describe("Budget Calculation", () => {
     it("should calculate initial budget usage", async () => {
       // Create some initial files
-      await fs.writeFile(path.join(projectRoot, "src", "file1.ts"), "// File 1\n");
-      await fs.writeFile(path.join(projectRoot, "src", "file2.ts"), "// File 2\n");
+      await fs.writeFile(
+        path.join(projectRoot, "src", "file1.ts"),
+        "// File 1\n"
+      );
+      await fs.writeFile(
+        path.join(projectRoot, "src", "file2.ts"),
+        "// File 2\n"
+      );
 
       monitor = new BudgetMonitor({
         projectRoot,
@@ -172,7 +178,10 @@ risk_tiers:
 
     it("should respect scope.in patterns", async () => {
       // Create file inside scope
-      await fs.writeFile(path.join(projectRoot, "src", "in-scope.ts"), "// In scope\n");
+      await fs.writeFile(
+        path.join(projectRoot, "src", "in-scope.ts"),
+        "// In scope\n"
+      );
 
       // Create file outside scope
       await fs.mkdir(path.join(projectRoot, "lib"), { recursive: true });
@@ -223,9 +232,18 @@ risk_tiers:
       });
 
       // Create 3 files (60% of 5 files budget)
-      await fs.writeFile(path.join(projectRoot, "src", "file1.ts"), "// File 1\n");
-      await fs.writeFile(path.join(projectRoot, "src", "file2.ts"), "// File 2\n");
-      await fs.writeFile(path.join(projectRoot, "src", "file3.ts"), "// File 3\n");
+      await fs.writeFile(
+        path.join(projectRoot, "src", "file1.ts"),
+        "// File 1\n"
+      );
+      await fs.writeFile(
+        path.join(projectRoot, "src", "file2.ts"),
+        "// File 2\n"
+      );
+      await fs.writeFile(
+        path.join(projectRoot, "src", "file3.ts"),
+        "// File 3\n"
+      );
 
       await monitor.start();
 
@@ -283,9 +301,18 @@ risk_tiers:
       });
 
       // Create files to trigger threshold
-      await fs.writeFile(path.join(projectRoot, "src", "file1.ts"), "// File 1\n");
-      await fs.writeFile(path.join(projectRoot, "src", "file2.ts"), "// File 2\n");
-      await fs.writeFile(path.join(projectRoot, "src", "file3.ts"), "// File 3\n");
+      await fs.writeFile(
+        path.join(projectRoot, "src", "file1.ts"),
+        "// File 1\n"
+      );
+      await fs.writeFile(
+        path.join(projectRoot, "src", "file2.ts"),
+        "// File 2\n"
+      );
+      await fs.writeFile(
+        path.join(projectRoot, "src", "file3.ts"),
+        "// File 3\n"
+      );
 
       await monitor.start();
 
@@ -397,7 +424,10 @@ risk_tiers:
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Create a new file
-      await fs.writeFile(path.join(projectRoot, "src", "new-file.ts"), "// New file\n");
+      await fs.writeFile(
+        path.join(projectRoot, "src", "new-file.ts"),
+        "// New file\n"
+      );
 
       // Wait for file change to be detected
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -445,8 +475,14 @@ risk_tiers:
         useFileWatching: false,
       });
 
-      await fs.writeFile(path.join(projectRoot, "src", "file1.ts"), "// File 1\n");
-      await fs.writeFile(path.join(projectRoot, "src", "file2.ts"), "// File 2\n");
+      await fs.writeFile(
+        path.join(projectRoot, "src", "file1.ts"),
+        "// File 1\n"
+      );
+      await fs.writeFile(
+        path.join(projectRoot, "src", "file2.ts"),
+        "// File 2\n"
+      );
 
       await monitor.start();
       const stats = monitor.getStatistics();
@@ -602,7 +638,9 @@ risk_tiers:
 
     it("should handle missing policy file", async () => {
       // Remove policy file
-      await fs.rm(path.join(projectRoot, ".caws", "policy.yaml"), { force: true });
+      await fs.rm(path.join(projectRoot, ".caws", "policy.yaml"), {
+        force: true,
+      });
 
       monitor = new BudgetMonitor({
         projectRoot,
@@ -656,4 +694,3 @@ risk_tiers:
     });
   });
 });
-
