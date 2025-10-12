@@ -13,13 +13,7 @@ import {
   KnowledgeDatabaseConfig,
 } from "../database/KnowledgeDatabaseClient";
 import { AgentControlConfig } from "../types/agent-prompting";
-import {
-  AgentProfile,
-  Task,
-  TaskAssignment,
-  TaskStatus,
-} from "../types/arbiter-orchestration";
-import { KnowledgeQuery, KnowledgeResponse } from "../types/knowledge";
+import { TaskStatus } from "../types/arbiter-orchestration";
 import { PromptingEngine } from "./prompting/PromptingEngine";
 
 import { KnowledgeSeeker } from "../knowledge/KnowledgeSeeker";
@@ -32,6 +26,9 @@ import { RecoveryManager } from "./RecoveryManager";
 import { SecurityManager } from "./SecurityManager";
 import { TaskAssignmentManager } from "./TaskAssignment";
 import { TaskQueue } from "./TaskQueue";
+import { ResearchDetector } from "./research/ResearchDetector";
+import { TaskResearchAugmenter } from "./research/TaskResearchAugmenter";
+import { ResearchProvenance } from "./research/ResearchProvenance";
 
 /**
  * Arbiter Orchestrator Configuration
@@ -64,6 +61,28 @@ export interface ArbiterOrchestratorConfig {
   /** GPT-5 prompting engine configuration */
   prompting: AgentControlConfig & {
     enabled: boolean;
+  };
+
+  /** Task research system configuration (ARBITER-006 Phase 4) */
+  research?: {
+    enabled: boolean;
+    detector?: {
+      minConfidence?: number;
+      maxQueries?: number;
+      enableQuestionDetection?: boolean;
+      enableUncertaintyDetection?: boolean;
+      enableTechnicalDetection?: boolean;
+    };
+    augmenter?: {
+      maxResultsPerQuery?: number;
+      relevanceThreshold?: number;
+      timeoutMs?: number;
+      maxQueries?: number;
+      enableCaching?: boolean;
+    };
+    provenance?: {
+      enabled: boolean;
+    };
   };
 
   /** General orchestrator settings */
@@ -120,19 +139,21 @@ export interface ArbiterOrchestratorStatus {
  */
 export class ArbiterOrchestrator {
   private config: ArbiterOrchestratorConfig;
-  private components:
-    | {
-        taskQueue: TaskQueue;
-        taskAssignment: TaskAssignmentManager;
-        agentRegistry: AgentRegistryManager;
-        security: SecurityManager;
-        healthMonitor: HealthMonitor;
-        recoveryManager: RecoveryManager;
-        knowledgeSeeker: KnowledgeSeeker;
-        promptingEngine: PromptingEngine;
-        knowledgeDbClient?: KnowledgeDatabaseClient;
-      }
-    | undefined;
+  private components: {
+    taskQueue: TaskQueue;
+    taskAssignment: TaskAssignmentManager;
+    agentRegistry: AgentRegistryManager;
+    security: SecurityManager;
+    healthMonitor: HealthMonitor;
+    recoveryManager: RecoveryManager;
+    knowledgeSeeker: KnowledgeSeeker;
+    promptingEngine: PromptingEngine;
+    knowledgeDbClient?: KnowledgeDatabaseClient;
+    researchDetector?: ResearchDetector;
+    researchAugmenter?: TaskResearchAugmenter;
+    researchProvenance?: ResearchProvenance;
+  };
+  private databaseClient?: any;
   private eventEmitter: EventEmitter;
   private initialized = false;
 
@@ -170,6 +191,38 @@ export class ArbiterOrchestrator {
         }
       }
 
+      // Initialize knowledge seeker first (needed by research system)
+      const knowledgeSeeker = new KnowledgeSeeker(
+        this.config.knowledgeSeeker,
+        knowledgeDbClient
+      );
+
+      // Initialize research components if enabled (ARBITER-006 Phase 4)
+      let researchDetector: ResearchDetector | undefined;
+      let researchAugmenter: TaskResearchAugmenter | undefined;
+      let researchProvenance: ResearchProvenance | undefined;
+
+      if (this.config.research?.enabled) {
+        console.log("Initializing task research system (ARBITER-006 Phase 4)...");
+
+        // Initialize research detector
+        researchDetector = new ResearchDetector(this.config.research.detector);
+
+        // Initialize research augmenter
+        researchAugmenter = new TaskResearchAugmenter(
+          knowledgeSeeker,
+          researchDetector,
+          this.config.research.augmenter
+        );
+
+        // Initialize research provenance if enabled
+        if (this.config.research.provenance?.enabled) {
+          researchProvenance = new ResearchProvenance(this.databaseClient);
+        }
+
+        console.log("Task research system initialized successfully");
+      }
+
       // Initialize components in dependency order
       this.components = {
         taskQueue: new TaskQueue(this.config.taskQueue),
@@ -178,17 +231,17 @@ export class ArbiterOrchestrator {
         security: new SecurityManager(this.config.security),
         healthMonitor: new HealthMonitor(this.config.healthMonitor),
         recoveryManager: new RecoveryManager(this.config.recoveryManager),
-        knowledgeSeeker: new KnowledgeSeeker(
-          this.config.knowledgeSeeker,
-          knowledgeDbClient
-        ),
+        knowledgeSeeker,
         knowledgeDbClient,
         promptingEngine: new PromptingEngine({
           enabled: this.config.prompting.enabled,
           reasoningEffort: this.config.prompting.reasoningEffort,
           eagerness: this.config.prompting.eagerness,
           toolBudget: this.config.prompting.toolBudget,
-          contextGathering: this.config.prompting.contextGathering,
+          contextGathering: {
+            ...this.config.prompting.contextGathering,
+            knowledgeSeeker,
+          },
           selfReflection: this.config.prompting.selfReflection,
           monitoring: {
             enableMetrics: this.config.orchestrator.enableMetrics,
@@ -196,6 +249,9 @@ export class ArbiterOrchestrator {
             metricsPrefix: "arbiter-orchestrator",
           },
         }),
+        researchDetector,
+        researchAugmenter,
+        researchProvenance,
       };
 
       // Initialize all components
@@ -339,6 +395,61 @@ export class ArbiterOrchestrator {
       }
     }
 
+    // Augment task with research if enabled (ARBITER-006 Phase 4)
+    let augmentedTask = task;
+    let researchContext = null;
+    if (
+      this.config.research?.enabled &&
+      this.components.researchAugmenter
+    ) {
+      const researchStartTime = Date.now();
+      try {
+        augmentedTask = await this.components.researchAugmenter.augmentTask(task);
+
+        if (augmentedTask.researchProvided && augmentedTask.researchContext) {
+          researchContext = augmentedTask.researchContext;
+          const researchDuration = Date.now() - researchStartTime;
+
+          // Log research augmentation
+          console.log(
+            `Research augmentation completed for task ${task.id}:`,
+            {
+              findingsCount: researchContext.findings.length,
+              confidence: researchContext.confidence.toFixed(2),
+              durationMs: researchDuration,
+            }
+          );
+
+          // Record provenance if enabled
+          if (this.components.researchProvenance) {
+            await this.components.researchProvenance.recordResearch(
+              task.id,
+              researchContext,
+              researchDuration
+            );
+          }
+        }
+      } catch (error) {
+        console.warn(
+          `Research augmentation failed for task ${task.id}:`,
+          error
+        );
+
+        // Record failure in provenance
+        if (this.components.researchProvenance) {
+          await this.components.researchProvenance.recordFailure(
+            task.id,
+            [],
+            error instanceof Error ? error : new Error(String(error)),
+            Date.now() - researchStartTime
+          );
+        }
+
+        // Continue with original task if research fails
+        augmentedTask = task;
+      }
+    }
+
     // Apply GPT-5 prompting optimizations if enabled
     let promptingResult = null;
     if (this.config.prompting.enabled && this.components) {
@@ -368,19 +479,20 @@ export class ArbiterOrchestrator {
       }
     }
 
-    // Enqueue the task with prompting metadata
-    await this.components.taskQueue.enqueueWithCredentials(task, credentials, {
+    // Enqueue the augmented task with prompting metadata and research context
+    await this.components.taskQueue.enqueueWithCredentials(augmentedTask, credentials, {
       promptingResult,
+      researchContext,
     });
 
     // Attempt immediate assignment if agents are available
     const assignment = await this.attemptImmediateAssignment(
-      task,
+      augmentedTask,
       promptingResult
     );
 
     return {
-      taskId: task.id,
+      taskId: augmentedTask.id,
       assignmentId: assignment?.id,
     };
   }
@@ -535,6 +647,26 @@ export class ArbiterOrchestrator {
    * Setup component integrations
    */
   private async setupComponentIntegrations(): Promise<void> {
+    // Connect to database if configured
+    if (
+      this.components.databaseClient &&
+      !this.components.databaseClient.isConnected()
+    ) {
+      try {
+        await this.components.databaseClient.connect();
+        console.log("✅ Database client connected");
+
+        // Initialize database schema
+        await this.initializeDatabaseSchema();
+        console.log("✅ Database schema initialized");
+      } catch (error) {
+        console.error("❌ Failed to connect to database:", error);
+        console.warn(
+          "⚠️ Continuing without database persistence - using in-memory storage"
+        );
+      }
+    }
+
     // Setup task queue with security
     // TODO: Implement SecureTaskQueue integration
     // const secureQueue = new (await import("./TaskQueue")).SecureTaskQueue(
@@ -544,6 +676,90 @@ export class ArbiterOrchestrator {
 
     // Setup event forwarding between components
     this.setupEventForwarding();
+  }
+
+  /**
+   * Initialize database schema for Arbiter operations
+   */
+  private async initializeDatabaseSchema(): Promise<void> {
+    if (!this.components.databaseClient) return;
+
+    // Initialize schema using the database client
+    await this.components.databaseClient.transaction(async (tx) => {
+      // Task assignments table (already defined in DatabaseClient.ts)
+      await tx.query(`
+        CREATE TABLE IF NOT EXISTS task_assignments (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          task_id VARCHAR(255) NOT NULL,
+          agent_id VARCHAR(255) NOT NULL,
+          agent_name VARCHAR(255),
+          agent_model_family VARCHAR(100),
+          assigned_at TIMESTAMP NOT NULL,
+          deadline TIMESTAMP,
+          assignment_timeout_ms INTEGER,
+          routing_confidence DECIMAL(3,2),
+          routing_strategy VARCHAR(50),
+          routing_reason TEXT,
+          status VARCHAR(50) NOT NULL DEFAULT 'pending',
+          acknowledged_at TIMESTAMP,
+          started_at TIMESTAMP,
+          completed_at TIMESTAMP,
+          progress DECIMAL(5,2) DEFAULT 0,
+          last_progress_update TIMESTAMP,
+          error_message TEXT,
+          error_code VARCHAR(100),
+          assignment_metadata JSONB,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_task_assignments_task_id ON task_assignments(task_id);
+        CREATE INDEX IF NOT EXISTS idx_task_assignments_agent_id ON task_assignments(agent_id);
+        CREATE INDEX IF NOT EXISTS idx_task_assignments_status ON task_assignments(status);
+        CREATE INDEX IF NOT EXISTS idx_task_assignments_created_at ON task_assignments(created_at);
+      `);
+
+      // Agent performance history table
+      await tx.query(`
+        CREATE TABLE IF NOT EXISTS agent_performance_history (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          agent_id VARCHAR(255) NOT NULL,
+          task_id VARCHAR(255),
+          timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          success BOOLEAN NOT NULL,
+          quality_score DECIMAL(3,2),
+          latency_ms INTEGER,
+          error_code VARCHAR(100),
+          performance_metadata JSONB,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_agent_performance_agent_id ON agent_performance_history(agent_id);
+        CREATE INDEX IF NOT EXISTS idx_agent_performance_timestamp ON agent_performance_history(timestamp);
+      `);
+
+      // Provenance tracking table
+      await tx.query(`
+        CREATE TABLE IF NOT EXISTS provenance_entries (
+          id VARCHAR(255) PRIMARY KEY,
+          project_id VARCHAR(255) NOT NULL,
+          timestamp TIMESTAMP NOT NULL,
+          actor VARCHAR(50) NOT NULL,
+          action_type VARCHAR(100) NOT NULL,
+          action_description TEXT NOT NULL,
+          affected_files JSONB,
+          ai_attribution JSONB,
+          human_intervention JSONB,
+          related_task_ids JSONB,
+          metadata JSONB,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_provenance_project_id ON provenance_entries(project_id);
+        CREATE INDEX IF NOT EXISTS idx_provenance_timestamp ON provenance_entries(timestamp);
+        CREATE INDEX IF NOT EXISTS idx_provenance_actor ON provenance_entries(actor);
+      `);
+    });
   }
 
   /**
@@ -845,6 +1061,43 @@ export const defaultArbiterOrchestratorConfig: ArbiterOrchestratorConfig = {
   knowledgeSeeker: {
     enabled: true,
     providers: [
+      {
+        name: "google",
+        type: "web_search" as any,
+        endpoint: "https://www.googleapis.com/customsearch/v1",
+        apiKey: process.env.GOOGLE_SEARCH_API_KEY,
+        searchEngineId: process.env.GOOGLE_SEARCH_ENGINE_ID,
+        rateLimit: {
+          requestsPerMinute: 100,
+          requestsPerHour: 1000,
+        },
+        limits: {
+          maxResultsPerQuery: 10,
+          maxConcurrentQueries: 5,
+        },
+        options: {
+          safeSearch: "moderate",
+          language: "en",
+        },
+      },
+      {
+        name: "bing",
+        type: "web_search" as any,
+        endpoint: "https://api.bing.microsoft.com/v7.0/search",
+        apiKey: process.env.BING_SEARCH_API_KEY,
+        rateLimit: {
+          requestsPerMinute: 50,
+          requestsPerHour: 500,
+        },
+        limits: {
+          maxResultsPerQuery: 10,
+          maxConcurrentQueries: 3,
+        },
+        options: {
+          safeSearch: "Moderate",
+          market: "en-US",
+        },
+      },
       {
         name: "mock",
         type: "web_search" as any,
