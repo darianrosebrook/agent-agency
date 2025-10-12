@@ -1,30 +1,30 @@
 /**
  * Foundation Components Performance Benchmarks
- * 
+ *
  * Measures actual performance characteristics of ARBITER-001 through 004
  * to validate performance claims and establish baseline metrics.
- * 
+ *
  * Test Categories:
  * - ARBITER-001: Agent Registry operations
  * - ARBITER-002: Task routing decisions
  * - ARBITER-003: CAWS spec validation
  * - ARBITER-004: Performance tracking overhead
  * - System-wide: End-to-end workflows
- * 
+ *
  * @author @darianrosebrook
  */
 
-import { describe, it, expect, beforeEach } from "@jest/globals";
+import { beforeEach, describe, expect, it } from "@jest/globals";
+import { SpecValidator } from "../../src/caws-validator/validation/SpecValidator";
 import { AgentRegistryManager } from "../../src/orchestrator/AgentRegistryManager";
 import { TaskRoutingManager } from "../../src/orchestrator/TaskRoutingManager";
-import { SpecValidator } from "../../src/caws-validator/validation/SpecValidator";
 import { PerformanceTracker } from "../../src/rl/PerformanceTracker";
 import {
-  createTestAgent,
   createMinimalTask,
   createMinimalWorkingSpec,
   createMultipleAgents,
   createTaskBatch,
+  createTestAgent,
 } from "../helpers/test-fixtures";
 
 interface BenchmarkResult {
@@ -248,12 +248,14 @@ describe("Foundation Performance Benchmarks", () => {
       const totalLatencyMs = Number(end - start) / 1_000_000;
       const avgLatencyPerTask = totalLatencyMs / 10;
 
-      console.log(`
+      console.log(
+        `
 📊 Concurrent Routing (10 tasks)
    Total Time: ${totalLatencyMs.toFixed(3)}ms
    Avg per Task: ${avgLatencyPerTask.toFixed(3)}ms
    Throughput: ${(10 / (totalLatencyMs / 1000)).toFixed(0)} tasks/sec
-      `.trim());
+      `.trim()
+      );
 
       // Should handle concurrency efficiently
       expect(totalLatencyMs).toBeLessThan(500); // < 500ms for 10 concurrent
@@ -288,10 +290,7 @@ describe("Foundation Performance Benchmarks", () => {
           when: `Action ${i + 1}`,
           then: `Result ${i + 1}`,
         })),
-        invariants: Array.from(
-          { length: 5 },
-          (_, i) => `Invariant ${i + 1}`
-        ),
+        invariants: Array.from({ length: 5 }, (_, i) => `Invariant ${i + 1}`),
       });
 
       const result = await benchmark(
@@ -314,8 +313,10 @@ describe("Foundation Performance Benchmarks", () => {
     it("benchmarks performance tracking data storage", async () => {
       // Note: Performance tracking is primarily in-memory and very fast
       // This test verifies minimal overhead
-      const agent = await registry.registerAgent(createTestAgent({ id: "tracking-agent" }));
-      
+      const agent = await registry.registerAgent(
+        createTestAgent({ id: "tracking-agent" })
+      );
+
       const result = await benchmark(
         "Performance Update Recording",
         async () => {
@@ -386,13 +387,15 @@ describe("Foundation Performance Benchmarks", () => {
       const duration = Date.now() - startTime;
       const throughput = (results.length / duration) * 1000;
 
-      console.log(`
+      console.log(
+        `
 📊 High-Throughput Test
    Tasks: ${results.length}
    Duration: ${duration}ms
    Throughput: ${throughput.toFixed(0)} tasks/sec
    Avg Latency: ${(duration / results.length).toFixed(2)}ms per task
-      `.trim());
+      `.trim()
+      );
 
       // Should handle high throughput
       expect(duration).toBeLessThan(5000); // < 5 seconds for 100 tasks
@@ -416,19 +419,22 @@ describe("Foundation Performance Benchmarks", () => {
 
       const finalMemory = process.memoryUsage();
 
-      const heapUsedMB = (finalMemory.heapUsed - initialMemory.heapUsed) / 1024 / 1024;
-      const heapTotalMB = (finalMemory.heapTotal - initialMemory.heapTotal) / 1024 / 1024;
+      const heapUsedMB =
+        (finalMemory.heapUsed - initialMemory.heapUsed) / 1024 / 1024;
+      const heapTotalMB =
+        (finalMemory.heapTotal - initialMemory.heapTotal) / 1024 / 1024;
 
-      console.log(`
+      console.log(
+        `
 📊 Memory Usage (1000 agents, 1000 tasks)
    Heap Used: ${heapUsedMB.toFixed(2)}MB
    Heap Total: ${heapTotalMB.toFixed(2)}MB
    RSS: ${((finalMemory.rss - initialMemory.rss) / 1024 / 1024).toFixed(2)}MB
-      `.trim());
+      `.trim()
+      );
 
       // Memory should be reasonable (adjust based on actual usage)
       expect(heapUsedMB).toBeLessThan(600); // < 600MB heap growth for 1000 agents + 1000 tasks
     });
   });
 });
-
