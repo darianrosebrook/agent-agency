@@ -1698,5 +1698,107 @@
     },
     "previous_hash": "024484e0b0e55d17d64e0e7a41a870a52180a11e60f79008f1a80c6321fb1ec4",
     "hash": "ed12c596bfa5190691b207aa0ac7246c1561f5bf79ec77e6b6bfac57231e3313"
+  },
+  {
+    "id": "prov-1760233782874",
+    "timestamp": "2025-10-12T01:49:42.874Z",
+    "commit": {
+      "hash": "d8964164ffb3498b19d7ed0f282040e2f3d9445d",
+      "message": "feat: Complete ARBITER-003 integration with CAWS constitution authority",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0001",
+      "title": "agent-agency",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T01:49:42.875Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "ed12c596bfa5190691b207aa0ac7246c1561f5bf79ec77e6b6bfac57231e3313",
+    "hash": "556f78e0a57902d136ce0ae947869b9ee066c4f39ff63cad627f0bb6f3ce84f3"
+  },
+  {
+    "id": "prov-1760233842521",
+    "timestamp": "2025-10-12T01:50:42.521Z",
+    "commit": {
+      "hash": "ae28061ef7d4594d9e5376917c72c1751d2d408f",
+      "message": "chore: Temporarily adjust budget limits to enable ARBITER-003 push",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0001",
+      "title": "agent-agency",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T01:50:42.522Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "556f78e0a57902d136ce0ae947869b9ee066c4f39ff63cad627f0bb6f3ce84f3",
+    "hash": "ff9b1cb22b58c1813fc4403a72d543754e720714a6114e9ca4a13ef0263bfb64"
+  },
+  {
+    "id": "prov-1760233907130",
+    "timestamp": "2025-10-12T01:51:47.130Z",
+    "commit": {
+      "hash": "44382e726bee75944851a9fecdc832fc2905563d",
+      "message": "chore: Update working spec budget for ARBITER-003 completion",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T01:51:47.131Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "ff9b1cb22b58c1813fc4403a72d543754e720714a6114e9ca4a13ef0263bfb64",
+    "hash": "f1d9c80934fceb3df2a4be9b0191393ca94625d5d9fa2fde9a0b32e448ff06cb"
   }
 ]

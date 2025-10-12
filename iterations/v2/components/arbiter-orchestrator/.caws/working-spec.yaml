@@ -134,6 +134,30 @@ contracts:
     path: "docs/api/arbiter-orchestrator.api.yaml"
     description: "Orchestration management and system coordination API"
 
+quality_gates:
+  - name: "prompting-optimization"
+    description: "GPT-5 prompting techniques properly optimize agent behavior"
+    criteria:
+      - "Reasoning effort selection reduces processing time by 20% for simple tasks"
+      - "Agent eagerness prevents over-exploration (>50% tool call reduction)"
+      - "Tool budget enforcement maintains cost efficiency"
+      - "Context gathering parallelization improves information discovery speed"
+      - "Self-reflection generates actionable improvement suggestions"
+    validation:
+      type: "integration-test"
+      path: "tests/integration/orchestrator/prompting-engine.integration.test.ts"
+
+  - name: "prompting-fallback"
+    description: "System gracefully degrades when prompting optimizations fail"
+    criteria:
+      - "Conservative defaults applied when prompting engine fails"
+      - "Task processing continues without prompting metadata"
+      - "System health remains stable during prompting failures"
+      - "Error logging provides actionable debugging information"
+    validation:
+      type: "resilience-test"
+      path: "tests/integration/orchestrator/error-handling.test.ts"
+
 observability:
   metrics:
     - "orchestration_end_to_end_latency"

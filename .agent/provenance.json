@@ -17,9 +17,9 @@
     ".caws/working-spec.yaml"
   ],
   "results": {
-    "project_id": "AGENT-0001",
+    "project_id": "PROJ-785",
     "project_title": "agent-agency",
-    "risk_tier": 1,
+    "risk_tier": 2,
     "mode": "feature",
     "change_budget": {
       "max_files": 25,
@@ -35,7 +35,7 @@
     "operational_rollback_slo": "5m"
   },
   "approvals": [],
-  "timestamp": "2025-10-08T09:36:44.051Z",
+  "timestamp": "2025-10-12T01:51:07.287Z",
   "version": "1.0.0",
-  "hash": "6827ead92b7cc8101d478a94bec1d318064b53d59bc9d6e59697a049571ebe7d"
+  "hash": "025c22bc83847d932fc3d8e0d7a27e471baec1d8e37b6004caac30f5b905dad7"
 }

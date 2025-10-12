@@ -1,29 +1,16 @@
-# Cursor Rules
+# Cursor Rules for CAWS Projects
 
-This directory contains modular rule files in MDC (Markdown Configuration) format that Cursor uses to guide agent behavior.
+This directory contains modular rule files that Cursor uses to guide development in CAWS projects.
 
 ## Rule Files
 
 ### Always Applied (Core Governance)
 
-- `00-claims-verification.mdc` - Production readiness claims require verification
-- `01-working-style.mdc` - Working style, risk limits, and when to ask first
-- `02-quality-gates.mdc` - Tests, linting, commit discipline, and TODOs
-- `03-naming-and-refactor.mdc` - Canonical naming and anti-duplication enforcement
-- `04-logging-language-style.mdc` - Logging clarity, emoji policy, commit tone
-- `07-process-ops.mdc` - Server management and hung command handling
-- `08-solid-and-architecture.mdc` - SOLID principles and change isolation
-- `11-testing-standards.mdc` - Comprehensive testing standards and verification
-- `12-infrastructure-standards.mdc` - Infrastructure, deployment, and operational standards
-- `13-documentation-integrity.mdc` - Documentation must match implementation reality
-- `14-production-readiness-checklist.mdc` - Quick reference checklist for production readiness
-
-### Context-Specific (Auto-Attached or Agent-Requested)
-
-- `05-safe-defaults-guards.mdc` - Defensive coding patterns (agent-requested)
-- `06-typescript-conventions.mdc` - TS/JS specific rules (auto-attached to `*.ts`, `*.tsx`)
-- `09-docstrings.mdc` - Cross-language documentation reference (agent-requested)
-- `10-authorship-and-attribution.mdc` - File header attribution (agent-requested)
+- `01-claims-verification.mdc` - Production readiness claims require verification
+- `02-testing-standards.mdc` - Comprehensive testing standards and verification
+- `03-infrastructure-standards.mdc` - Infrastructure, deployment, and operational standards
+- `04-documentation-integrity.mdc` - Documentation must match implementation reality
+- `05-production-readiness-checklist.mdc` - Quick reference checklist for production readiness
 
 ## How MDC Works
 
@@ -33,23 +20,22 @@ Each `.mdc` file has frontmatter that controls when it applies:
 ---
 description: Brief description of the rule
 globs:
-  - "**/*.ts" # Auto-attach to matching files
-alwaysApply: true # Or false for opt-in rules
+alwaysApply: true
 ---
 ```
 
 - **alwaysApply: true** - Rule is always active
 - **globs: [...]** - Rule auto-attaches when editing matching files
-- **alwaysApply: false, no globs** - Rule is agent-requested or manual
 
-## Migration from Legacy Rules
+## CAWS Quality Standards
 
-These rules replace the monolithic `.cursorrules` file with:
+These rules enforce CAWS quality tiers:
 
-- Focused, single-responsibility rule files
-- Better composability and maintenance
-- Language-agnostic core with language-specific extensions
-- Clear governance model (always/auto/manual)
+| Tier      | Coverage | Mutation | Use Case                    |
+| --------- | -------- | -------- | --------------------------- |
+| 🔴 **T1** | 90%+     | 70%+     | Auth, billing, migrations   |
+| 🟡 **T2** | 80%+     | 50%+     | Features, APIs, data writes |
+| 🟢 **T3** | 70%+     | 30%+     | UI, internal tools          |
 
 ## Usage
 
@@ -57,10 +43,22 @@ Cursor automatically loads these rules from `.cursor/rules/`. View active rules 
 
 To disable a rule temporarily: Cursor Settings → Rules → Toggle specific rule
 
-## Extending
+## Integration with CAWS Workflow
 
-To add language-specific conventions (e.g., Python, Go, Rust):
+These rules complement CAWS tools:
 
-1. Create a new file like `06-python-conventions.mdc`
-2. Set appropriate globs: `["**/*.py"]`
-3. Mirror the structure of `06-typescript-conventions.mdc`
+- **Validation**: `caws validate` checks rule compliance
+- **Testing**: Rules guide comprehensive testing requirements
+- **Quality Gates**: Automated enforcement of standards
+- **Documentation**: Ensures docs match implementation reality
+
+## Continuous Improvement
+
+Rules are regularly updated based on:
+
+- Industry best practices
+- CAWS user feedback
+- Production incident analysis
+- Security research and compliance updates
+
+For questions about these rules, see the main CAWS documentation or contact the CAWS team.

@@ -8,6 +8,7 @@
  * @author @darianrosebrook
  */
 
+import { AgentControlConfig } from "../types/agent-prompting";
 import {
   AgentProfile,
   Task,
@@ -15,6 +16,7 @@ import {
   TaskStatus,
 } from "../types/arbiter-orchestration";
 import { KnowledgeQuery, KnowledgeResponse } from "../types/knowledge";
+import { PromptingEngine } from "./prompting/PromptingEngine";
 
 import { KnowledgeSeeker } from "../knowledge/KnowledgeSeeker";
 import { AgentRegistryManager } from "./AgentRegistryManager";
@@ -51,6 +53,11 @@ export interface ArbiterOrchestratorConfig {
   /** Knowledge seeker configuration */
   knowledgeSeeker: any; // Using any for now, should be KnowledgeSeekerConfig
 
+  /** GPT-5 prompting engine configuration */
+  prompting: AgentControlConfig & {
+    enabled: boolean;
+  };
+
   /** General orchestrator settings */
   orchestrator: {
     enableMetrics: boolean;
@@ -76,6 +83,7 @@ export interface ArbiterOrchestratorStatus {
     healthMonitor: boolean;
     recoveryManager: boolean;
     knowledgeSeeker: boolean;
+    promptingEngine: boolean;
   };
 
   /** System metrics */
@@ -113,6 +121,7 @@ export class ArbiterOrchestrator {
         healthMonitor: HealthMonitor;
         recoveryManager: RecoveryManager;
         knowledgeSeeker: KnowledgeSeeker;
+        promptingEngine: PromptingEngine;
       }
     | undefined;
   private eventEmitter: EventEmitter;
@@ -145,6 +154,19 @@ export class ArbiterOrchestrator {
         healthMonitor: new HealthMonitor(this.config.healthMonitor),
         recoveryManager: new RecoveryManager(this.config.recoveryManager),
         knowledgeSeeker: new KnowledgeSeeker(this.config.knowledgeSeeker),
+        promptingEngine: new PromptingEngine({
+          enabled: this.config.prompting.enabled,
+          reasoningEffort: this.config.prompting.reasoningEffort,
+          eagerness: this.config.prompting.eagerness,
+          toolBudget: this.config.prompting.toolBudget,
+          contextGathering: this.config.prompting.contextGathering,
+          selfReflection: this.config.prompting.selfReflection,
+          monitoring: {
+            enableMetrics: this.config.orchestrator.enableMetrics,
+            enableTracing: this.config.orchestrator.enableTracing,
+            metricsPrefix: "arbiter-orchestrator",
+          },
+        }),
       };
 
       // Initialize all components
@@ -234,6 +256,7 @@ export class ArbiterOrchestrator {
       this.checkComponentHealth("healthMonitor"),
       this.checkComponentHealth("recoveryManager"),
       this.checkComponentHealth("knowledgeSeeker"),
+      this.checkComponentHealth("promptingEngine"),
     ]);
 
     const healthy = componentStatuses.every((status) => status);
@@ -251,6 +274,7 @@ export class ArbiterOrchestrator {
         healthMonitor: componentStatuses[4],
         recoveryManager: componentStatuses[5],
         knowledgeSeeker: componentStatuses[6],
+        promptingEngine: componentStatuses[7],
       },
       metrics,
       knowledgeCapabilities,
@@ -281,11 +305,45 @@ export class ArbiterOrchestrator {
       }
     }
 
-    // Enqueue the task
-    await this.components.taskQueue.enqueueWithCredentials(task, credentials);
+    // Apply GPT-5 prompting optimizations if enabled
+    let promptingResult = null;
+    if (this.config.prompting.enabled && this.components) {
+      try {
+        promptingResult = await this.components.promptingEngine.processTask(
+          task,
+          {
+            complexity: task.complexity,
+            type: task.type,
+            accuracyRequirement: "standard", // Default, could be made configurable
+          }
+        );
+
+        // Log prompting insights
+        console.log(`PromptingEngine: Task ${task.id} optimized`, {
+          effort: promptingResult.reasoningEffort,
+          eagerness: promptingResult.eagerness,
+          budget: promptingResult.toolBudget.maxCalls,
+          processingTime: promptingResult.metadata.processingTimeMs,
+        });
+      } catch (error) {
+        console.warn(
+          `PromptingEngine: Failed to optimize task ${task.id}:`,
+          error
+        );
+        // Continue with default behavior if prompting fails
+      }
+    }
+
+    // Enqueue the task with prompting metadata
+    await this.components.taskQueue.enqueueWithCredentials(task, credentials, {
+      promptingResult,
+    });
 
     // Attempt immediate assignment if agents are available
-    const assignment = await this.attemptImmediateAssignment(task);
+    const assignment = await this.attemptImmediateAssignment(
+      task,
+      promptingResult
+    );
 
     return {
       taskId: task.id,
@@ -521,7 +579,8 @@ export class ArbiterOrchestrator {
    * Attempt immediate task assignment
    */
   private async attemptImmediateAssignment(
-    task: Task
+    task: Task,
+    _promptingResult?: any
   ): Promise<TaskAssignment | null> {
     try {
       // Simplified assignment - in production this would use proper agent selection
@@ -580,6 +639,13 @@ export class ArbiterOrchestrator {
           const knowledgeStatus =
             await this.components.knowledgeSeeker.getStatus();
           return knowledgeStatus.enabled;
+        }
+
+        case "promptingEngine": {
+          if (this.config.prompting.enabled) {
+            return await this.components.promptingEngine.isHealthy();
+          }
+          return true; // Disabled is considered healthy
         }
 
         default: {
