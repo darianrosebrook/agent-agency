@@ -126,6 +126,10 @@ contracts:
     path: "src/types/arbiter-orchestration.ts"
     description: "Main orchestration interfaces and component contracts"
 
+  - type: "typescript"
+    path: "src/types/agent-prompting.ts"
+    description: "GPT-5-like prompting control interfaces and reasoning effort contracts"
+
   - type: "openapi"
     path: "docs/api/arbiter-orchestrator.api.yaml"
     description: "Orchestration management and system coordination API"

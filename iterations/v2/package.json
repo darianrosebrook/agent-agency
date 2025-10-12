@@ -138,8 +138,12 @@
   },
   "dependencies": {
     "@caws/mcp-server": "file:../../../caws/packages/caws-mcp-server",
-    "@paths.design/caws-cli": "file:../../../caws/packages/caws-cli",
     "@modelcontextprotocol/sdk": "^0.6.0",
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/resources": "^2.1.0",
+    "@opentelemetry/sdk-trace-node": "^2.1.0",
+    "@opentelemetry/semantic-conventions": "^1.37.0",
+    "@paths.design/caws-cli": "file:../../../caws/packages/caws-cli",
     "@types/pg": "^8.15.5",
     "@typescript/vfs": "^1.5.0",
     "ajv": "^8.12.0",
@@ -158,7 +162,7 @@
     "tree-sitter": "^0.20.4",
     "tree-sitter-typescript": "^0.20.3",
     "winston": "^3.11.0",
-    "zod": "^3.22.4"
+    "zod": "^3.25.76"
   },
   "bin": {
     "mcp-server": "./bin/mcp-server.js",
