@@ -26,13 +26,13 @@
 
 ### Coverage Targets by Component
 
-| Component | Lines | Branches | Priority |
-|-----------|-------|----------|----------|
-| ResearchDetector | 90%+ | 95%+ | Critical |
-| TaskResearchAugmenter | 85%+ | 90%+ | Critical |
-| ResearchProvenance | 85%+ | 90%+ | High |
-| KnowledgeDatabaseClient | 85%+ | 90%+ | High |
-| Search Providers | 80%+ | 85%+ | Medium |
+| Component               | Lines | Branches | Priority |
+| ----------------------- | ----- | -------- | -------- |
+| ResearchDetector        | 90%+  | 95%+     | Critical |
+| TaskResearchAugmenter   | 85%+  | 90%+     | Critical |
+| ResearchProvenance      | 85%+  | 90%+     | High     |
+| KnowledgeDatabaseClient | 85%+  | 90%+     | High     |
+| Search Providers        | 80%+  | 85%+     | Medium   |
 
 ---
 
@@ -47,6 +47,7 @@
 #### Test Suites
 
 ##### Question Detection
+
 ```typescript
 describe("ResearchDetector - Question Detection", () => {
   test("should detect explicit questions", () => {
@@ -68,6 +69,7 @@ describe("ResearchDetector - Question Detection", () => {
 ```
 
 ##### Uncertainty Detection
+
 ```typescript
 describe("ResearchDetector - Uncertainty Detection", () => {
   test("should detect uncertainty keywords", () => {
@@ -85,6 +87,7 @@ describe("ResearchDetector - Uncertainty Detection", () => {
 ```
 
 ##### Technical Detection
+
 ```typescript
 describe("ResearchDetector - Technical Detection", () => {
   test("should detect technical keywords", () => {
@@ -100,6 +103,7 @@ describe("ResearchDetector - Technical Detection", () => {
 ```
 
 ##### Query Generation
+
 ```typescript
 describe("ResearchDetector - Query Generation", () => {
   test("should generate relevant queries", () => {
@@ -119,6 +123,7 @@ describe("ResearchDetector - Query Generation", () => {
 ```
 
 ##### Edge Cases
+
 ```typescript
 describe("ResearchDetector - Edge Cases", () => {
   test("should handle empty task description", () => {});
@@ -142,6 +147,7 @@ describe("ResearchDetector - Edge Cases", () => {
 #### Test Suites
 
 ##### Task Augmentation Flow
+
 ```typescript
 describe("TaskResearchAugmenter - Augmentation Flow", () => {
   test("should augment task when research required", async () => {
@@ -161,6 +167,7 @@ describe("TaskResearchAugmenter - Augmentation Flow", () => {
 ```
 
 ##### Query Execution
+
 ```typescript
 describe("TaskResearchAugmenter - Query Execution", () => {
   test("should execute queries in parallel", async () => {
@@ -182,6 +189,7 @@ describe("TaskResearchAugmenter - Query Execution", () => {
 ```
 
 ##### Findings Transformation
+
 ```typescript
 describe("TaskResearchAugmenter - Findings", () => {
   test("should transform results to findings", async () => {
@@ -203,6 +211,7 @@ describe("TaskResearchAugmenter - Findings", () => {
 ```
 
 ##### Helper Methods
+
 ```typescript
 describe("TaskResearchAugmenter - Helpers", () => {
   test("getResearchSummary should format findings", () => {});
@@ -212,6 +221,7 @@ describe("TaskResearchAugmenter - Helpers", () => {
 ```
 
 ##### Error Handling
+
 ```typescript
 describe("TaskResearchAugmenter - Error Handling", () => {
   test("should handle KnowledgeSeeker errors", async () => {});
@@ -234,6 +244,7 @@ describe("TaskResearchAugmenter - Error Handling", () => {
 #### Test Suites
 
 ##### Recording Operations
+
 ```typescript
 describe("ResearchProvenance - Recording", () => {
   test("should record successful research", async () => {
@@ -253,6 +264,7 @@ describe("ResearchProvenance - Recording", () => {
 ```
 
 ##### Retrieval Operations
+
 ```typescript
 describe("ResearchProvenance - Retrieval", () => {
   test("getTaskResearch should return all records", async () => {});
@@ -265,6 +277,7 @@ describe("ResearchProvenance - Retrieval", () => {
 ```
 
 ##### Data Validation
+
 ```typescript
 describe("ResearchProvenance - Validation", () => {
   test("should validate ResearchContext structure", async () => {});
@@ -286,6 +299,7 @@ describe("ResearchProvenance - Validation", () => {
 #### Test Suites
 
 ##### Cache Operations
+
 ```typescript
 describe("KnowledgeDatabaseClient - Cache", () => {
   test("checkQueryCache should return cached results", async () => {});
@@ -299,6 +313,7 @@ describe("KnowledgeDatabaseClient - Cache", () => {
 ```
 
 ##### Query Operations
+
 ```typescript
 describe("KnowledgeDatabaseClient - Queries", () => {
   test("storeQuery should insert query", async () => {});
@@ -309,6 +324,7 @@ describe("KnowledgeDatabaseClient - Queries", () => {
 ```
 
 ##### Result Operations
+
 ```typescript
 describe("KnowledgeDatabaseClient - Results", () => {
   test("storeResult should insert result", async () => {});
@@ -320,6 +336,7 @@ describe("KnowledgeDatabaseClient - Results", () => {
 ```
 
 ##### Response Operations
+
 ```typescript
 describe("KnowledgeDatabaseClient - Responses", () => {
   test("storeResponse should insert response", async () => {});
@@ -329,6 +346,7 @@ describe("KnowledgeDatabaseClient - Responses", () => {
 ```
 
 ##### Provider Health
+
 ```typescript
 describe("KnowledgeDatabaseClient - Provider Health", () => {
   test("recordProviderHealth should store metrics", async () => {});
@@ -350,6 +368,7 @@ describe("KnowledgeDatabaseClient - Provider Health", () => {
 #### Test Suites per Provider
 
 ##### GoogleSearchProvider
+
 ```typescript
 describe("GoogleSearchProvider", () => {
   test("should execute search with API", async () => {});
@@ -363,6 +382,7 @@ describe("GoogleSearchProvider", () => {
 ```
 
 ##### BingSearchProvider
+
 ```typescript
 describe("BingSearchProvider", () => {
   test("should execute search with API", async () => {});
@@ -373,6 +393,7 @@ describe("BingSearchProvider", () => {
 ```
 
 ##### DuckDuckGoSearchProvider
+
 ```typescript
 describe("DuckDuckGoSearchProvider", () => {
   test("should execute search without API key", async () => {});
@@ -383,6 +404,7 @@ describe("DuckDuckGoSearchProvider", () => {
 ```
 
 ##### Base Provider
+
 ```typescript
 describe("BaseSearchProvider", () => {
   test("extractDomain should parse URLs correctly", () => {});
@@ -657,12 +679,14 @@ export async function seedTestData(client) {
 ### Order of Implementation
 
 1. **Week 1**: Unit Tests
+
    - Day 1-2: ResearchDetector tests
    - Day 3: TaskResearchAugmenter tests
    - Day 4: ResearchProvenance tests
    - Day 5: KnowledgeDatabaseClient tests
 
 2. **Week 2**: Integration Tests
+
    - Day 1: Database integration tests
    - Day 2: Research flow integration tests
    - Day 3: MCP tool integration tests
@@ -738,20 +762,24 @@ TOTAL                        |  85%+ |   90%+   | 🎯 Target
 ## Success Criteria
 
 ✅ **Code Coverage**:
+
 - Overall: 85%+ lines, 90%+ branches
 - Critical components: 90%+ lines, 95%+ branches
 
 ✅ **Test Quality**:
+
 - All tests pass consistently
 - No flaky tests
 - Fast execution (<30s for unit, <2min for integration)
 
 ✅ **Documentation**:
+
 - All test files have descriptive headers
 - Complex tests have inline comments
 - Test utilities documented
 
 ✅ **Maintainability**:
+
 - Clear test names
 - Isolated test cases
 - Reusable mocks and utilities
@@ -800,4 +828,3 @@ tests/
 **Estimated Time**: 3 weeks  
 **Target Completion**: November 2, 2025  
 **Risk**: Low - Clear plan, existing code works
-

@@ -12,15 +12,14 @@
  * - Performance benchmarks
  */
 
-import { TaskResearchAugmenter } from "../../../../src/orchestrator/research/TaskResearchAugmenter";
 import { ResearchDetector } from "../../../../src/orchestrator/research/ResearchDetector";
+import { TaskResearchAugmenter } from "../../../../src/orchestrator/research/TaskResearchAugmenter";
+import { QueryType } from "../../../../src/types/knowledge";
 import {
   MockKnowledgeSeeker,
-  mockTask,
   mockKnowledgeResponse,
-  mockResearchRequirement,
+  mockTask,
 } from "../../../mocks/knowledge-mocks";
-import { QueryType } from "../../../../src/types/knowledge";
 
 describe("TaskResearchAugmenter", () => {
   let augmenter: TaskResearchAugmenter;
@@ -87,8 +86,9 @@ describe("TaskResearchAugmenter", () => {
         description: "How do I implement OAuth2?",
       });
 
-      const augmentedWithResearch =
-        await augmenter.augmentTask(taskWithResearch);
+      const augmentedWithResearch = await augmenter.augmentTask(
+        taskWithResearch
+      );
       expect(augmentedWithResearch.researchProvided).toBe(true);
 
       const taskWithoutResearch = mockTask({
@@ -149,9 +149,9 @@ describe("TaskResearchAugmenter", () => {
       const augmentedTask = await limitedAugmenter.augmentTask(task);
 
       if (augmentedTask.researchContext) {
-        expect(augmentedTask.researchContext.queries.length).toBeLessThanOrEqual(
-          2
-        );
+        expect(
+          augmentedTask.researchContext.queries.length
+        ).toBeLessThanOrEqual(2);
       }
     });
 
@@ -198,7 +198,9 @@ describe("TaskResearchAugmenter", () => {
 
       // Should still provide research from successful queries
       if (augmentedTask.researchProvided && augmentedTask.researchContext) {
-        expect(augmentedTask.researchContext.findings.length).toBeGreaterThan(0);
+        expect(augmentedTask.researchContext.findings.length).toBeGreaterThan(
+          0
+        );
       }
     });
 
@@ -282,7 +284,8 @@ describe("TaskResearchAugmenter", () => {
 
         if (findings.length > 0) {
           const avgConfidence =
-            findings.reduce((sum, f) => sum + f.confidence, 0) / findings.length;
+            findings.reduce((sum, f) => sum + f.confidence, 0) /
+            findings.length;
           expect(Math.abs(confidence - avgConfidence)).toBeLessThan(0.01);
         }
       }
@@ -403,7 +406,10 @@ describe("TaskResearchAugmenter", () => {
         description: "Simple task",
       });
 
-      const summary = augmenter.getResearchSummary({ ...task, researchProvided: false });
+      const summary = augmenter.getResearchSummary({
+        ...task,
+        researchProvided: false,
+      });
 
       expect(summary).toBe("");
     });
@@ -460,7 +466,10 @@ describe("TaskResearchAugmenter", () => {
         description: "Simple task",
       });
 
-      const sources = augmenter.getResearchSources({ ...task, researchProvided: false });
+      const sources = augmenter.getResearchSources({
+        ...task,
+        researchProvided: false,
+      });
 
       expect(sources).toEqual([]);
     });
@@ -619,7 +628,9 @@ describe("TaskResearchAugmenter", () => {
       expect(duration).toBeLessThan(2000);
 
       if (augmentedTask.researchContext) {
-        expect(augmentedTask.researchContext.findings.length).toBeGreaterThan(0);
+        expect(augmentedTask.researchContext.findings.length).toBeGreaterThan(
+          0
+        );
       }
     });
   });
@@ -677,9 +688,9 @@ describe("TaskResearchAugmenter", () => {
         expect(typeof augmentedTask.researchContext.metadata.durationMs).toBe(
           "number"
         );
-        expect(augmentedTask.researchContext.metadata.durationMs).toBeGreaterThan(
-          0
-        );
+        expect(
+          augmentedTask.researchContext.metadata.durationMs
+        ).toBeGreaterThan(0);
       }
     });
 
@@ -691,7 +702,9 @@ describe("TaskResearchAugmenter", () => {
       const augmentedTask = await augmenter.augmentTask(task);
 
       if (augmentedTask.researchContext) {
-        expect(augmentedTask.researchContext.metadata.detectorConfidence).toBeDefined();
+        expect(
+          augmentedTask.researchContext.metadata.detectorConfidence
+        ).toBeDefined();
         expect(
           augmentedTask.researchContext.metadata.detectorConfidence
         ).toBeGreaterThanOrEqual(0);
@@ -729,14 +742,13 @@ describe("TaskResearchAugmenter", () => {
 
       if (augmentedTask.researchContext) {
         expect(augmentedTask.researchContext.augmentedAt).toBeDefined();
-        expect(augmentedTask.researchContext.augmentedAt.getTime()).toBeGreaterThanOrEqual(
-          beforeTime.getTime()
-        );
-        expect(augmentedTask.researchContext.augmentedAt.getTime()).toBeLessThanOrEqual(
-          afterTime.getTime()
-        );
+        expect(
+          augmentedTask.researchContext.augmentedAt.getTime()
+        ).toBeGreaterThanOrEqual(beforeTime.getTime());
+        expect(
+          augmentedTask.researchContext.augmentedAt.getTime()
+        ).toBeLessThanOrEqual(afterTime.getTime());
       }
     });
   });
 });
-

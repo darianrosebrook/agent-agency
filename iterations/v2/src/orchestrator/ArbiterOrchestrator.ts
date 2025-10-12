@@ -24,7 +24,7 @@ import { PromptingEngine } from "./prompting/PromptingEngine";
 
 import { KnowledgeSeeker } from "../knowledge/KnowledgeSeeker";
 import { AgentRegistryManager } from "./AgentRegistryManager";
-import { DatabaseClientFactory, IDatabaseClient } from "./DatabaseClient";
+import { IDatabaseClient } from "./DatabaseClient";
 import { EventEmitter, events } from "./EventEmitter";
 import { HealthMonitor } from "./HealthMonitor";
 import { EventTypes } from "./OrchestratorEvents";

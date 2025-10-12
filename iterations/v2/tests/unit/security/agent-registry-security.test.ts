@@ -6,6 +6,7 @@
  * @author @darianrosebrook
  */
 
+import * as jwt from "jsonwebtoken";
 import {
   AgentRegistrySecurity,
   AuditEventType,
@@ -42,13 +43,13 @@ describe("AgentRegistrySecurity", () => {
   });
 
   describe("Authentication", () => {
-    it("should authenticate valid token", async () => {
+    it("should authenticate valid token (legacy fallback)", async () => {
+      // With JWT validation enabled, plain tokens won't work
+      // This tests the fallback behavior for invalid tokens
       const context = await security.authenticate("valid-token-1234567890");
 
-      expect(context).toBeTruthy();
-      expect(context?.tenantId).toBe("default-tenant");
-      expect(context?.userId).toBe("anonymous");
-      expect(context?.permissions).toContain("agent:read");
+      // Should return null since JWT validation expects proper JWT format
+      expect(context).toBeNull();
     });
 
     it("should reject invalid token", async () => {
@@ -61,6 +62,188 @@ describe("AgentRegistrySecurity", () => {
       const context = await security.authenticate("");
 
       expect(context).toBeNull();
+    });
+  });
+
+  describe("JWT Token Validation", () => {
+    const jwtSecret = "test-jwt-secret-key";
+    let securityWithJwt: AgentRegistrySecurity;
+
+    beforeEach(() => {
+      securityWithJwt = new AgentRegistrySecurity({
+        enableAuditLogging: true,
+        enableInputValidation: true,
+        enableAuthorization: true,
+        maxAuditEvents: 100,
+        auditRetentionDays: 30,
+        jwtSecret,
+        jwtIssuer: "agent-agency",
+        jwtAudience: ["agent-registry", "arbiter-orchestrator"],
+        enableJwtValidation: true,
+      });
+    });
+
+    it("should extract tenant ID from JWT token", async () => {
+      const token = jwt.sign(
+        {
+          sub: "user-123",
+          tenantId: "tenant-abc",
+          permissions: ["agent:read"],
+        },
+        jwtSecret,
+        {
+          issuer: "agent-agency",
+          audience: "agent-registry",
+          expiresIn: "1h",
+        }
+      );
+
+      const context = await securityWithJwt.authenticate(token);
+
+      expect(context).toBeTruthy();
+      expect(context?.tenantId).toBe("tenant-abc");
+    });
+
+    it("should extract user ID from JWT token", async () => {
+      const token = jwt.sign(
+        {
+          sub: "user-456",
+          tenantId: "tenant-xyz",
+          permissions: ["agent:read", "agent:create"],
+        },
+        jwtSecret,
+        {
+          issuer: "agent-agency",
+          audience: "agent-registry",
+          expiresIn: "1h",
+        }
+      );
+
+      const context = await securityWithJwt.authenticate(token);
+
+      expect(context).toBeTruthy();
+      expect(context?.userId).toBe("user-456");
+    });
+
+    it("should reject token with invalid issuer", async () => {
+      const token = jwt.sign(
+        {
+          sub: "user-123",
+          tenantId: "tenant-abc",
+        },
+        jwtSecret,
+        {
+          issuer: "wrong-issuer",
+          audience: "agent-registry",
+          expiresIn: "1h",
+        }
+      );
+
+      const context = await securityWithJwt.authenticate(token);
+
+      expect(context).toBeNull();
+    });
+
+    it("should reject token with invalid audience", async () => {
+      const token = jwt.sign(
+        {
+          sub: "user-123",
+          tenantId: "tenant-abc",
+        },
+        jwtSecret,
+        {
+          issuer: "agent-agency",
+          audience: "wrong-audience",
+          expiresIn: "1h",
+        }
+      );
+
+      const context = await securityWithJwt.authenticate(token);
+
+      expect(context).toBeNull();
+    });
+
+    it("should reject expired token", async () => {
+      const token = jwt.sign(
+        {
+          sub: "user-123",
+          tenantId: "tenant-abc",
+          permissions: ["agent:read"],
+        },
+        jwtSecret,
+        {
+          issuer: "agent-agency",
+          audience: "agent-registry",
+          expiresIn: "-1h", // Already expired
+        }
+      );
+
+      const context = await securityWithJwt.authenticate(token);
+
+      expect(context).toBeNull();
+    });
+
+    it("should reject token with invalid signature", async () => {
+      const token = jwt.sign(
+        {
+          sub: "user-123",
+          tenantId: "tenant-abc",
+        },
+        "wrong-secret",
+        {
+          issuer: "agent-agency",
+          audience: "agent-registry",
+          expiresIn: "1h",
+        }
+      );
+
+      const context = await securityWithJwt.authenticate(token);
+
+      expect(context).toBeNull();
+    });
+
+    it("should extract permissions from JWT token", async () => {
+      const token = jwt.sign(
+        {
+          sub: "user-123",
+          tenantId: "tenant-abc",
+          permissions: ["agent:read", "agent:create", "agent:update"],
+        },
+        jwtSecret,
+        {
+          issuer: "agent-agency",
+          audience: "agent-registry",
+          expiresIn: "1h",
+        }
+      );
+
+      const context = await securityWithJwt.authenticate(token);
+
+      expect(context).toBeTruthy();
+      expect(context?.permissions).toContain("agent:read");
+      expect(context?.permissions).toContain("agent:create");
+      expect(context?.permissions).toContain("agent:update");
+    });
+
+    it("should handle multiple valid audiences", async () => {
+      const token = jwt.sign(
+        {
+          sub: "user-123",
+          tenantId: "tenant-abc",
+          permissions: ["agent:read"],
+        },
+        jwtSecret,
+        {
+          issuer: "agent-agency",
+          audience: "arbiter-orchestrator", // Second valid audience
+          expiresIn: "1h",
+        }
+      );
+
+      const context = await securityWithJwt.authenticate(token);
+
+      expect(context).toBeTruthy();
+      expect(context?.userId).toBe("user-123");
     });
   });
 

@@ -13,7 +13,10 @@
  */
 
 import { ResearchProvenance } from "../../../../src/orchestrator/research/ResearchProvenance";
-import { MockDatabaseClient, mockResearchContext } from "../../../mocks/knowledge-mocks";
+import {
+  MockDatabaseClient,
+  mockResearchContext,
+} from "../../../mocks/knowledge-mocks";
 
 describe("ResearchProvenance", () => {
   let provenance: ResearchProvenance;
@@ -50,8 +53,18 @@ describe("ResearchProvenance", () => {
       const researchContext = mockResearchContext({
         queries: ["query 1", "query 2"],
         findings: [
-          { query: "query 1", summary: "Summary 1", confidence: 0.9, keyFindings: [] },
-          { query: "query 2", summary: "Summary 2", confidence: 0.85, keyFindings: [] },
+          {
+            query: "query 1",
+            summary: "Summary 1",
+            confidence: 0.9,
+            keyFindings: [],
+          },
+          {
+            query: "query 2",
+            summary: "Summary 2",
+            confidence: 0.85,
+            keyFindings: [],
+          },
         ],
         confidence: 0.875,
       });
@@ -64,7 +77,9 @@ describe("ResearchProvenance", () => {
       await provenance.recordResearch(taskId, researchContext, durationMs);
 
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining(`Research provenance recorded for task ${taskId}`)
+        expect.stringContaining(
+          `Research provenance recorded for task ${taskId}`
+        )
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining("2 findings")
@@ -208,8 +223,16 @@ describe("ResearchProvenance", () => {
 
     it("getStatistics should calculate correctly", async () => {
       // Seed more data
-      await provenance.recordResearch("task-stats-1", mockResearchContext(), 400);
-      await provenance.recordResearch("task-stats-2", mockResearchContext(), 450);
+      await provenance.recordResearch(
+        "task-stats-1",
+        mockResearchContext(),
+        400
+      );
+      await provenance.recordResearch(
+        "task-stats-2",
+        mockResearchContext(),
+        450
+      );
       await provenance.recordFailure(
         "task-stats-3",
         ["query"],
@@ -232,7 +255,9 @@ describe("ResearchProvenance", () => {
     });
 
     it("getStatistics should handle empty database", async () => {
-      const emptyProvenance = new ResearchProvenance(new MockDatabaseClient() as any);
+      const emptyProvenance = new ResearchProvenance(
+        new MockDatabaseClient() as any
+      );
 
       const stats = await emptyProvenance.getStatistics();
 
@@ -330,7 +355,12 @@ describe("ResearchProvenance", () => {
       // Mock database to capture the stored error message
       const insertSpy = jest.spyOn(mockDbClient, "query");
 
-      await provenance.recordFailure(taskId, queries, errorWithSensitiveData, 100);
+      await provenance.recordFailure(
+        taskId,
+        queries,
+        errorWithSensitiveData,
+        100
+      );
 
       expect(insertSpy).toHaveBeenCalled();
 
@@ -358,7 +388,11 @@ describe("ResearchProvenance", () => {
 
     it("cleanupOldRecords should preserve recent entries", async () => {
       // Seed recent data
-      await provenance.recordResearch("task-recent", mockResearchContext(), 500);
+      await provenance.recordResearch(
+        "task-recent",
+        mockResearchContext(),
+        500
+      );
 
       // Cleanup records older than 1 day (should not affect recent records)
       const beforeStats = await provenance.getStatistics();
@@ -423,7 +457,9 @@ describe("ResearchProvenance", () => {
 
       const startTime = Date.now();
       await Promise.all(
-        tasks.map((t) => provenance.recordResearch(t.taskId, t.context, t.duration))
+        tasks.map((t) =>
+          provenance.recordResearch(t.taskId, t.context, t.duration)
+        )
       );
       const duration = Date.now() - startTime;
 
@@ -434,7 +470,11 @@ describe("ResearchProvenance", () => {
     it("should retrieve statistics quickly", async () => {
       // Seed data
       for (let i = 0; i < 5; i++) {
-        await provenance.recordResearch(`task-stats-${i}`, mockResearchContext(), 500);
+        await provenance.recordResearch(
+          `task-stats-${i}`,
+          mockResearchContext(),
+          500
+        );
       }
 
       const startTime = Date.now();
@@ -450,7 +490,11 @@ describe("ResearchProvenance", () => {
       const writes = Array(5)
         .fill(null)
         .map((_, i) =>
-          provenance.recordResearch(`concurrent-${i}`, mockResearchContext(), 500)
+          provenance.recordResearch(
+            `concurrent-${i}`,
+            mockResearchContext(),
+            500
+          )
         );
 
       // Should not throw
@@ -462,7 +506,11 @@ describe("ResearchProvenance", () => {
 
     it("should handle concurrent reads", async () => {
       // Seed data
-      await provenance.recordResearch("task-concurrent", mockResearchContext(), 500);
+      await provenance.recordResearch(
+        "task-concurrent",
+        mockResearchContext(),
+        500
+      );
 
       const reads = Array(5)
         .fill(null)
@@ -518,7 +566,11 @@ describe("ResearchProvenance", () => {
       });
 
       // Should handle gracefully
-      await provenance.recordResearch("task-many-findings", researchContext, 5000);
+      await provenance.recordResearch(
+        "task-many-findings",
+        researchContext,
+        5000
+      );
     });
 
     it("should handle zero confidence", async () => {
@@ -538,7 +590,11 @@ describe("ResearchProvenance", () => {
       const researchContext = mockResearchContext();
 
       // Should handle gracefully
-      await provenance.recordResearch("task-negative-duration", researchContext, -1);
+      await provenance.recordResearch(
+        "task-negative-duration",
+        researchContext,
+        -1
+      );
     });
 
     it("should handle undefined duration", async () => {
@@ -553,4 +609,3 @@ describe("ResearchProvenance", () => {
     });
   });
 });
-

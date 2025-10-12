@@ -14,9 +14,8 @@
  */
 
 import { ResearchDetector } from "../../../../src/orchestrator/research/ResearchDetector";
-import { mockTask } from "../../../mocks/knowledge-mocks";
-import { Task } from "../../../../src/types/arbiter-orchestration";
 import { QueryType } from "../../../../src/types/knowledge";
+import { mockTask } from "../../../mocks/knowledge-mocks";
 
 describe("ResearchDetector", () => {
   let detector: ResearchDetector;
@@ -80,7 +79,8 @@ describe("ResearchDetector", () => {
 
     it("should detect explicit 'Where' questions", () => {
       const task = mockTask({
-        description: "Where should I place my API keys in a Node.js application?",
+        description:
+          "Where should I place my API keys in a Node.js application?",
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -138,7 +138,8 @@ describe("ResearchDetector", () => {
   describe("Uncertainty Detection", () => {
     it("should detect 'not sure' uncertainty", () => {
       const task = mockTask({
-        description: "I'm not sure how to configure the database connection pool.",
+        description:
+          "I'm not sure how to configure the database connection pool.",
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -149,7 +150,8 @@ describe("ResearchDetector", () => {
 
     it("should detect 'unclear' uncertainty", () => {
       const task = mockTask({
-        description: "It's unclear whether I should use async/await or promises.",
+        description:
+          "It's unclear whether I should use async/await or promises.",
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -467,7 +469,9 @@ describe("ResearchDetector", () => {
       const result = detector.detectResearchNeeds(task);
 
       expect(result).not.toBeNull();
-      expect(result?.suggestedQueries).toContain("How do I implement OAuth2 in Express.js?");
+      expect(result?.suggestedQueries).toContain(
+        "How do I implement OAuth2 in Express.js?"
+      );
     });
 
     it("should generate variations of the query", () => {
@@ -580,7 +584,8 @@ describe("ResearchDetector", () => {
 
     it("should mention detected indicators in reason", () => {
       const task = mockTask({
-        description: "How do I implement OAuth2? I'm not sure which library to use.",
+        description:
+          "How do I implement OAuth2? I'm not sure which library to use.",
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -684,7 +689,11 @@ describe("ResearchDetector", () => {
     it("should handle 100 detections efficiently", () => {
       const tasks = Array(100)
         .fill(null)
-        .map((_, i) => mockTask({ description: `Task ${i}: How do I implement feature ${i}?` }));
+        .map((_, i) =>
+          mockTask({
+            description: `Task ${i}: How do I implement feature ${i}?`,
+          })
+        );
 
       const startTime = Date.now();
       tasks.forEach((task) => detector.detectResearchNeeds(task));
@@ -695,4 +704,3 @@ describe("ResearchDetector", () => {
     });
   });
 });
-

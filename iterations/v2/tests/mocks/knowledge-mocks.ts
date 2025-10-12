@@ -10,20 +10,20 @@
  * - Search providers
  */
 
-import {
-  SearchResult,
-  KnowledgeQuery,
-  KnowledgeResponse,
-  QueryType,
-  IKnowledgeSeeker,
-  ResultQuality,
-} from "../../src/types/knowledge";
-import { Task } from "../../src/types/arbiter-orchestration";
 import { ResearchRequirement } from "../../src/orchestrator/research/ResearchDetector";
 import {
   AugmentedTask,
   ResearchFindings,
 } from "../../src/orchestrator/research/TaskResearchAugmenter";
+import { Task } from "../../src/types/arbiter-orchestration";
+import {
+  IKnowledgeSeeker,
+  KnowledgeQuery,
+  KnowledgeResponse,
+  QueryType,
+  ResultQuality,
+  SearchResult,
+} from "../../src/types/knowledge";
 
 /**
  * Creates a mock SearchResult with customizable fields
@@ -35,7 +35,8 @@ export const mockSearchResult = (
   queryId: overrides.queryId || `query-${Date.now()}`,
   title: "Test Search Result",
   url: "https://example.com/test-result",
-  content: "This is test content for a search result. It contains relevant information.",
+  content:
+    "This is test content for a search result. It contains relevant information.",
   domain: "example.com",
   sourceType: "documentation",
   relevanceScore: 0.9,
@@ -120,7 +121,8 @@ export const mockResearchFindings = (
   overrides: Partial<ResearchFindings> = {}
 ): ResearchFindings => ({
   query: "How do I implement OAuth2 in Express.js?",
-  summary: "OAuth2 can be implemented in Express.js using passport-oauth2 library.",
+  summary:
+    "OAuth2 can be implemented in Express.js using passport-oauth2 library.",
   confidence: 0.92,
   keyFindings: [
     {
@@ -144,7 +146,10 @@ export const mockResearchFindings = (
  */
 export const mockResearchContext = (overrides: any = {}) => ({
   queries: ["query 1", "query 2", "query 3"],
-  findings: [mockResearchFindings(), mockResearchFindings({ query: "query 2" })],
+  findings: [
+    mockResearchFindings(),
+    mockResearchFindings({ query: "query 2" }),
+  ],
   confidence: 0.9,
   augmentedAt: new Date(),
   metadata: {
@@ -299,4 +304,3 @@ export class MockDatabaseClient {
     return match ? match[1] : "default";
   }
 }
-

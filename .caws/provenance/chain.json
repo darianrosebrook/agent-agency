@@ -2442,5 +2442,437 @@
     },
     "previous_hash": "b1750c37077ccf33a9b598c65164a9357210a88cd78e211a1dec5b1e19e201c1",
     "hash": "3713425e676c018e0a0e67a0b0f405d6a8a8c575f4a571f60f4193d4a92e598c"
+  },
+  {
+    "id": "prov-1760246100577",
+    "timestamp": "2025-10-12T05:15:00.577Z",
+    "commit": {
+      "hash": "be513020630498a335e3b75f1a3c78920fd99b12",
+      "message": "Add comprehensive remaining tasks document for ARBITER integration completion",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T05:15:00.577Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "3713425e676c018e0a0e67a0b0f405d6a8a8c575f4a571f60f4193d4a92e598c",
+    "hash": "7c864dbb0b0ad97a1d3b8e9413cab2fa5ee6af6932f70b965ea923bba29460b8"
+  },
+  {
+    "id": "prov-1760246988821",
+    "timestamp": "2025-10-12T05:29:48.821Z",
+    "commit": {
+      "hash": "039383d5bccbd3d9c8089c93e78778c220b5f573",
+      "message": "docs(arbiter-006): Add comprehensive testing plan",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T05:29:48.821Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "7c864dbb0b0ad97a1d3b8e9413cab2fa5ee6af6932f70b965ea923bba29460b8",
+    "hash": "0da3618abae40a849a63a923256aaae21d781b83ed2705f401f8be1c44ab7c61"
+  },
+  {
+    "id": "prov-1760247160309",
+    "timestamp": "2025-10-12T05:32:40.309Z",
+    "commit": {
+      "hash": "78907e58e8a17a632c81bf9a7f353d616cce2d81",
+      "message": "test(arbiter-006): Add mocks and ResearchDetector unit tests",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T05:32:40.310Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "0da3618abae40a849a63a923256aaae21d781b83ed2705f401f8be1c44ab7c61",
+    "hash": "5fe3c5f62d356c70a4e8959492740080d4255db8d4fbb0cb254ae0d3e519c512"
+  },
+  {
+    "id": "prov-1760247265370",
+    "timestamp": "2025-10-12T05:34:25.370Z",
+    "commit": {
+      "hash": "50273bb650bed1883e37287e4008d7094db9ae4a",
+      "message": "test(arbiter-006): Add TaskResearchAugmenter unit tests",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T05:34:25.371Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "5fe3c5f62d356c70a4e8959492740080d4255db8d4fbb0cb254ae0d3e519c512",
+    "hash": "279439cd36fc1ab70ebbde0f703ea6cd92a705315c50d07e1d98a947f1a93ec3"
+  },
+  {
+    "id": "prov-1760247358256",
+    "timestamp": "2025-10-12T05:35:58.256Z",
+    "commit": {
+      "hash": "33735abc4a2f867ab672626d9089e270e20caf65",
+      "message": "test(arbiter-006): Add ResearchProvenance unit tests",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T05:35:58.257Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "279439cd36fc1ab70ebbde0f703ea6cd92a705315c50d07e1d98a947f1a93ec3",
+    "hash": "05ac859f25c7ca17f50f0480019f24e70d6226c1d349fb7a2c298597ee764bdd"
+  },
+  {
+    "id": "prov-1760247449465",
+    "timestamp": "2025-10-12T05:37:29.465Z",
+    "commit": {
+      "hash": "eb3ee4e6996e93d47a394f10066fcf6f5a02753f",
+      "message": "docs(arbiter-006): Add comprehensive testing summary",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T05:37:29.466Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "05ac859f25c7ca17f50f0480019f24e70d6226c1d349fb7a2c298597ee764bdd",
+    "hash": "97794c527e02351a5ed4b555d4193f25b1ea447b6dc2af32ad75cb133b549e4e"
+  },
+  {
+    "id": "prov-1760248035461",
+    "timestamp": "2025-10-12T05:47:15.461Z",
+    "commit": {
+      "hash": "9a0a26ea662a07a938d09ba3220159d672aee271",
+      "message": "fix(tests): Fix type mismatches in knowledge mocks and tests",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T05:47:15.461Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "97794c527e02351a5ed4b555d4193f25b1ea447b6dc2af32ad75cb133b549e4e",
+    "hash": "938e59253e4a1c9a8b918e54def3a820369e5c53de8199721a7d17eac3424a98"
+  },
+  {
+    "id": "prov-1760248282602",
+    "timestamp": "2025-10-12T05:51:22.602Z",
+    "commit": {
+      "hash": "a1bd033f6ba4fd8213445d3f6758cf21c1081e02",
+      "message": "fix(arbiter-006): Fix ResearchDetector heuristics and reason generation",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T05:51:22.602Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "938e59253e4a1c9a8b918e54def3a820369e5c53de8199721a7d17eac3424a98",
+    "hash": "8e71d5c33d448648fd6687f989f4b031d39ef5f6caf7f912e953d88bfdd23fbb"
+  },
+  {
+    "id": "prov-1760248418444",
+    "timestamp": "2025-10-12T05:53:38.444Z",
+    "commit": {
+      "hash": "dbe66c3b4f3a649f15614f3b62eb46084de51a97",
+      "message": "fix(arbiter-006): Fix confidence calculation logic",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T05:53:38.445Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "8e71d5c33d448648fd6687f989f4b031d39ef5f6caf7f912e953d88bfdd23fbb",
+    "hash": "a254eeca00adafed662f25863719f3e9c545b3c752c952cc6499ef72154a3471"
+  },
+  {
+    "id": "prov-1760248537886",
+    "timestamp": "2025-10-12T05:55:37.886Z",
+    "commit": {
+      "hash": "5ff314949998ac2251e9388dbb7c0494521cb75e",
+      "message": "fix(arbiter-006): Implement graduated confidence scoring",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T05:55:37.887Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "a254eeca00adafed662f25863719f3e9c545b3c752c952cc6499ef72154a3471",
+    "hash": "51a6ede20e4d6c873c61f10e9165c219547334967e81e128793bba1dcd39c769"
+  },
+  {
+    "id": "prov-1760248683600",
+    "timestamp": "2025-10-12T05:58:03.600Z",
+    "commit": {
+      "hash": "f5ad73967096a3869fc148c78b975c1bf9530577",
+      "message": "docs(arbiter-006): Complete comprehensive testing session summary",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T05:58:03.600Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "51a6ede20e4d6c873c61f10e9165c219547334967e81e128793bba1dcd39c769",
+    "hash": "2806f3868d3a342941aaa9efc6bb899b071e4c1edd1a689aa548864ffaadbea3"
+  },
+  {
+    "id": "prov-1760249499369",
+    "timestamp": "2025-10-12T06:11:39.369Z",
+    "commit": {
+      "hash": "d569390c5fce2a6376b3ff8068138a5a9be7fd91",
+      "message": "fix: resolve 76 TypeScript errors across src/ directory",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T06:11:39.370Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "2806f3868d3a342941aaa9efc6bb899b071e4c1edd1a689aa548864ffaadbea3",
+    "hash": "5804421db52bb12761173fac36135413ba92e23e26545d53f0ac3b20e713620d"
   }
 ]
