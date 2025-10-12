@@ -386,7 +386,9 @@ export class TaskRoutingManager {
         taskId: task.id,
         selectedAgent: selectedCandidate.agent,
         confidence: selectedCandidate.matchScore,
-        reason: `Performance-weighted selection: capability ${selectedCandidate.matchScore.toFixed(2)}`,
+        reason: `Performance-weighted selection: capability ${selectedCandidate.matchScore.toFixed(
+          2
+        )}`,
         strategy,
         alternatives: [],
         timestamp: new Date(),

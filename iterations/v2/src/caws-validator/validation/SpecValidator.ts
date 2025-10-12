@@ -75,12 +75,11 @@ export class SpecValidator {
       this.validateExperimentalMode(spec, errors);
     }
 
-    // Check acceptance criteria
+    // Check acceptance criteria (required - should be error not warning)
     if (!spec.acceptance || spec.acceptance.length === 0) {
-      warnings.push({
+      errors.push({
         field: "acceptance",
-        message: "No acceptance criteria defined",
-        suggestion: "Add acceptance criteria in Given-When-Then format",
+        message: "Acceptance criteria are required - at least one acceptance criterion in Given-When-Then format must be provided",
       });
     }
 

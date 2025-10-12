@@ -16,12 +16,14 @@ Successfully completed type system cleanup and created comprehensive test fixtur
 ### Deliverables Completed
 
 1. **✅ Type System Documentation** (`src/types/README.md`)
+
    - Comprehensive guide to all type files
    - Common patterns and anti-patterns documented
    - Type conflict resolutions documented
    - Migration guide provided
 
 2. **✅ Test Fixture Library** (`tests/helpers/test-fixtures.ts`)
+
    - `createMinimalTask()` - Easy task creation with all required fields
    - `createMinimalWorkingSpec()` - Easy spec creation
    - `createTestAgent()` - Agent profile creation
@@ -43,6 +45,7 @@ Successfully completed type system cleanup and created comprehensive test fixtur
 ### Key Fixes Applied
 
 1. **TaskRoutingManager.ts**:
+
    - Fixed `stats.successRate` reference (removed - property doesn't exist)
    - Fixed `routing strategy` type incompatibility
    - Fixed `RoutingDecision` structure to match type definition
@@ -75,25 +78,30 @@ Successfully completed type system cleanup and created comprehensive test fixtur
 10. ✅ Data consistency under concurrent operations
 11. ✅ Malformed working spec handling
 
-####  ❌ Failing Tests (6)
+#### ❌ Failing Tests (6)
 
 1. ❌ **Agent tracking**: `activeAgents` count is 0 (expected > 0)
+
    - **Issue**: Agents registered but not marked as "active"
    - **Fix Needed**: Check agent initialization logic
 
 2. ❌ **Agent ranking**: Only 1 result returned (expected 2)
+
    - **Issue**: Query filtering too strict
    - **Fix Needed**: Review `getAgentsByCapability` matching logic
 
 3. ❌ **CAWS validation**: Empty acceptance criteria should fail but passes
+
    - **Issue**: Validation not enforcing non-empty acceptance
    - **Fix Needed**: Add validation rule
 
 4. ❌ **CAWS tier 1 validation**: Valid tier 1 spec marked invalid
+
    - **Issue**: Tier 1 contract validation too strict
    - **Fix Needed**: Review contract requirements
 
 5. ❌ **Routing with no agents**: Throws error instead of graceful handling
+
    - **Issue**: No fallback behavior
    - **Fix Needed**: Add graceful degradation
 
@@ -104,14 +112,17 @@ Successfully completed type system cleanup and created comprehensive test fixtur
 ### Next Steps for Phase 0.1
 
 1. **Fix Agent Activity Tracking** (30 min)
+
    - Investigate why `activeAgents` count is 0
    - Ensure agents are marked active upon registration
 
 2. **Fix Agent Query Filtering** (30 min)
+
    - Review match score logic
    - Ensure all matching agents are returned
 
 3. **Fix CAWS Validation** (1 hour)
+
    - Add non-empty acceptance criteria validation
    - Review tier 1 contract validation logic
 
@@ -184,4 +195,3 @@ This aligns with our "Foundation First" strategy - ensuring solid integration be
 ---
 
 **Status**: On track for Phase 1 start in 1-2 days ✅
-

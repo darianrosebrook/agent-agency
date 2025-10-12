@@ -35,7 +35,13 @@ import type {
  * - Statistics and recommendations
  */
 export class BudgetMonitor extends EventEmitter {
-  private config: Required<BudgetMonitorConfig>;
+  private config: BudgetMonitorConfig & {
+    thresholds: Required<NonNullable<BudgetMonitorConfig["thresholds"]>>;
+    pollingInterval: number;
+    useFileWatching: boolean;
+    watchPatterns: string[];
+    ignorePatterns: string[];
+  };
   private watcher?: chokidar.FSWatcher;
   private policyAdapter: CAWSPolicyAdapter;
 
