@@ -250,40 +250,41 @@ export class ResearchDetector {
     requiresTechnicalInfo: boolean;
   }): number {
     let score = 0;
-    let maxScore = 0;
+    let activeWeightSum = 0;
 
     // Questions are a strong indicator (weight: 0.3)
-    maxScore += 0.3;
     if (indicators.hasQuestions) {
       score += 0.3;
+      activeWeightSum += 0.3;
     }
 
     // Uncertainty keywords are strong (weight: 0.3)
-    maxScore += 0.3;
     if (indicators.hasUncertainty) {
       score += 0.3;
+      activeWeightSum += 0.3;
     }
 
     // Comparison needs are moderate (weight: 0.2)
-    maxScore += 0.2;
     if (indicators.needsComparison) {
       score += 0.2;
+      activeWeightSum += 0.2;
     }
 
     // Technical info needs are moderate (weight: 0.15)
-    maxScore += 0.15;
     if (indicators.requiresTechnicalInfo) {
       score += 0.15;
+      activeWeightSum += 0.15;
     }
 
     // Fact-checking is weaker (weight: 0.05)
-    maxScore += 0.05;
     if (indicators.requiresFactChecking) {
       score += 0.05;
+      activeWeightSum += 0.05;
     }
 
-    // Normalize to 0-1 range
-    return maxScore > 0 ? score / maxScore : 0;
+    // If any indicators are active, return 1.0 (full confidence in triggered indicators)
+    // Otherwise return 0
+    return activeWeightSum > 0 ? 1.0 : 0;
   }
 
   /**
