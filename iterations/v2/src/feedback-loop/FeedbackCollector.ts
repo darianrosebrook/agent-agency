@@ -19,6 +19,8 @@ import {
   RoutingDecisionFeedback,
   AgentFeedback,
 } from "../types/feedback-loop";
+import { ComponentHealth, HealthStatus } from "../types/coordinator";
+import { ConstitutionalViolation } from "../types/caws-constitutional";
 import { ConfigManager } from "../config/ConfigManager";
 import { Logger } from "../observability/Logger";
 import { v4 as uuidv4 } from "uuid";
@@ -151,9 +153,13 @@ export class FeedbackCollector extends EventEmitter {
 
   public collectSystemEvent(
     eventType: string,
-    severity: SystemEventFeedback["severity"],
+    severity: "low" | "medium" | "high" | "critical",
     description: string,
-    impact: SystemEventFeedback["impact"],
+    impact: {
+      affectedComponents: string[];
+      estimatedDowntimeMinutes?: number;
+      userImpact: "none" | "minor" | "major" | "critical";
+    },
     context: Record<string, any> = {}
   ): void {
     this.collectEvent({
@@ -172,29 +178,33 @@ export class FeedbackCollector extends EventEmitter {
   }
 
   public collectConstitutionalViolation(
-    violation: ConstitutionalViolationFeedback["violation"],
-    policyImpact: ConstitutionalViolationFeedback["policyImpact"],
+    violation: ConstitutionalViolation,
+    policyImpact: {
+      affectedTasks: number;
+      complianceScoreDelta: number;
+      riskLevel: "low" | "medium" | "high";
+    },
     context: Record<string, any> = {}
   ): void {
     this.collectEvent({
       id: uuidv4(),
       source: FeedbackSource.CONSTITUTIONAL_VIOLATIONS,
       type: FeedbackType.CATEGORICAL_EVENT,
-      entityId: violation.taskId || "unknown",
+      entityId: (violation as any).taskId || "unknown",
       entityType: "task",
       timestamp: new Date().toISOString(),
       value: { violation, policyImpact },
       context: {
         ...context,
-        policyId: violation.policyId,
-        severity: violation.severity,
+        policyId: (violation as any).policyId,
+        severity: (violation as any).severity,
       },
     } as ConstitutionalViolationFeedback);
   }
 
   public collectComponentHealth(
-    health: ComponentHealthFeedback["health"],
-    previousStatus?: ComponentHealthFeedback["previousStatus"],
+    health: ComponentHealth,
+    previousStatus?: HealthStatus,
     statusChangeReason?: string,
     context: Record<string, any> = {}
   ): void {
@@ -215,8 +225,19 @@ export class FeedbackCollector extends EventEmitter {
   }
 
   public collectRoutingDecision(
-    decision: RoutingDecisionFeedback["decision"],
-    outcome?: RoutingDecisionFeedback["outcome"],
+    decision: {
+      taskId: string;
+      selectedAgentId: string;
+      routingStrategy: string;
+      confidence: number;
+      alternativesCount: number;
+      routingTimeMs: number;
+    },
+    outcome?: {
+      success: boolean;
+      executionTimeMs?: number;
+      qualityScore?: number;
+    },
     context: Record<string, any> = {}
   ): void {
     this.collectEvent({
@@ -238,9 +259,13 @@ export class FeedbackCollector extends EventEmitter {
 
   public collectAgentFeedback(
     agentId: string,
-    feedback: AgentFeedback["feedback"],
+    feedbackType: "performance" | "capability" | "reliability" | "communication",
+    rating: number,
+    details?: string,
+    suggestedImprovements?: string[],
     context: Record<string, any> = {}
   ): void {
+    const feedback = { agentId, feedbackType, rating, details, suggestedImprovements };
     this.collectEvent({
       id: uuidv4(),
       source: FeedbackSource.AGENT_FEEDBACK,
@@ -251,8 +276,8 @@ export class FeedbackCollector extends EventEmitter {
       value: feedback,
       context: {
         ...context,
-        feedbackType: feedback.feedbackType,
-        rating: feedback.rating,
+        feedbackType,
+        rating,
       },
     } as AgentFeedback);
   }

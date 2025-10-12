@@ -2406,5 +2406,41 @@
     },
     "previous_hash": "3d1b395fb657d51db089b1db63d247371c668cb4a0aba28c136bf189808900e4",
     "hash": "b1750c37077ccf33a9b598c65164a9357210a88cd78e211a1dec5b1e19e201c1"
+  },
+  {
+    "id": "prov-1760245986024",
+    "timestamp": "2025-10-12T05:13:06.024Z",
+    "commit": {
+      "hash": "76923e9a4e8e646fb52244ceda265b8cf7701ddb",
+      "message": "Phase 2.2 Complete: Feedback Loop Manager fully implemented",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T05:13:06.025Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "b1750c37077ccf33a9b598c65164a9357210a88cd78e211a1dec5b1e19e201c1",
+    "hash": "3713425e676c018e0a0e67a0b0f405d6a8a8c575f4a571f60f4193d4a92e598c"
   }
 ]

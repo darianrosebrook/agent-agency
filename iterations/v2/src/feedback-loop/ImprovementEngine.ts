@@ -1,24 +1,26 @@
 import { EventEmitter } from "events";
+import { ConfigManager } from "../config/ConfigManager";
+import { Logger } from "../observability/Logger";
 import {
   FeedbackRecommendation,
   ImprovementEngineConfig,
-  FeedbackAnalysis,
 } from "../types/feedback-loop";
-import { ConfigManager } from "../config/ConfigManager";
-import { Logger } from "../observability/Logger";
-import { v4 as uuidv4 } from "uuid";
 
 export class ImprovementEngine extends EventEmitter {
   private config: ImprovementEngineConfig;
   private logger: Logger;
 
   // Track active improvements and cooldowns
-  private activeImprovements: Map<string, { recommendation: FeedbackRecommendation; startTime: Date }> = new Map();
+  private activeImprovements: Map<
+    string,
+    { recommendation: FeedbackRecommendation; startTime: Date }
+  > = new Map();
   private cooldowns: Map<string, Date> = new Map(); // entityId -> cooldown end time
   private improvementHistory: FeedbackRecommendation[] = [];
 
   // Success tracking
-  private successRates: Map<string, { successes: number; attempts: number }> = new Map();
+  private successRates: Map<string, { successes: number; attempts: number }> =
+    new Map();
 
   constructor(configManager: ConfigManager) {
     super();
@@ -26,44 +28,65 @@ export class ImprovementEngine extends EventEmitter {
     this.logger = new Logger("ImprovementEngine");
   }
 
-  public async evaluateRecommendation(recommendation: FeedbackRecommendation): Promise<boolean> {
+  public async evaluateRecommendation(
+    recommendation: FeedbackRecommendation
+  ): Promise<boolean> {
     // Check if entity is in cooldown
     if (this.isInCooldown(recommendation.action.targetEntity)) {
-      this.logger.debug(`Entity ${recommendation.action.targetEntity} is in cooldown, skipping recommendation`);
+      this.logger.debug(
+        `Entity ${recommendation.action.targetEntity} is in cooldown, skipping recommendation`
+      );
       return false;
     }
 
     // Check confidence threshold
-    if (recommendation.expectedImpact.improvementPercent / 100 < this.config.autoApplyThreshold) {
-      this.logger.debug(`Recommendation confidence below threshold: ${recommendation.expectedImpact.improvementPercent}%`);
+    if (
+      recommendation.expectedImpact.improvementPercent / 100 <
+      this.config.autoApplyThreshold
+    ) {
+      this.logger.debug(
+        `Recommendation confidence below threshold: ${recommendation.expectedImpact.improvementPercent}%`
+      );
       return false;
     }
 
     // Check concurrent improvement limit
-    const activeForEntity = Array.from(this.activeImprovements.values())
-      .filter(imp => imp.recommendation.action.targetEntity === recommendation.action.targetEntity);
+    const activeForEntity = Array.from(this.activeImprovements.values()).filter(
+      (imp) =>
+        imp.recommendation.action.targetEntity ===
+        recommendation.action.targetEntity
+    );
 
     if (activeForEntity.length >= this.config.maxConcurrentImprovements) {
-      this.logger.debug(`Too many concurrent improvements for entity ${recommendation.action.targetEntity}`);
+      this.logger.debug(
+        `Too many concurrent improvements for entity ${recommendation.action.targetEntity}`
+      );
       return false;
     }
 
     // Check prerequisites
     if (!this.checkPrerequisites(recommendation)) {
-      this.logger.debug(`Prerequisites not met for recommendation ${recommendation.id}`);
+      this.logger.debug(
+        `Prerequisites not met for recommendation ${recommendation.id}`
+      );
       return false;
     }
 
     return true;
   }
 
-  public async applyRecommendation(recommendation: FeedbackRecommendation): Promise<boolean> {
-    if (!await this.evaluateRecommendation(recommendation)) {
+  public async applyRecommendation(
+    recommendation: FeedbackRecommendation
+  ): Promise<boolean> {
+    if (!(await this.evaluateRecommendation(recommendation))) {
       return false;
     }
 
     const startTime = new Date();
-    this.activeImprovements.set(recommendation.id, { recommendation, startTime });
+    this.activeImprovements.set(recommendation.id, {
+      recommendation,
+      startTime,
+    });
     recommendation.implementationStatus = "in_progress";
 
     this.logger.info(`Applying recommendation: ${recommendation.description}`, {
@@ -96,7 +119,9 @@ export class ImprovementEngine extends EventEmitter {
           expectedImpact: recommendation.expectedImpact,
         });
 
-        this.logger.info(`Successfully applied recommendation ${recommendation.id}`);
+        this.logger.info(
+          `Successfully applied recommendation ${recommendation.id}`
+        );
       } else {
         recommendation.implementationStatus = "failed";
         this.updateSuccessRate(recommendation.action.operation, false);
@@ -112,7 +137,9 @@ export class ImprovementEngine extends EventEmitter {
           error: "Improvement execution failed",
         });
 
-        this.logger.error(`Failed to apply recommendation ${recommendation.id}`);
+        this.logger.error(
+          `Failed to apply recommendation ${recommendation.id}`
+        );
       }
 
       this.improvementHistory.push({ ...recommendation });
@@ -131,12 +158,16 @@ export class ImprovementEngine extends EventEmitter {
         error: error.message,
       });
 
-      this.logger.error(`Error applying recommendation ${recommendation.id}: ${error.message}`);
+      this.logger.error(
+        `Error applying recommendation ${recommendation.id}: ${error.message}`
+      );
       return false;
     }
   }
 
-  public async applyRecommendations(recommendations: FeedbackRecommendation[]): Promise<{
+  public async applyRecommendations(
+    recommendations: FeedbackRecommendation[]
+  ): Promise<{
     applied: FeedbackRecommendation[];
     skipped: FeedbackRecommendation[];
     failed: FeedbackRecommendation[];
@@ -166,7 +197,9 @@ export class ImprovementEngine extends EventEmitter {
           results.skipped.push(recommendation);
         }
       } catch (error) {
-        this.logger.error(`Error processing recommendation ${recommendation.id}: ${error.message}`);
+        this.logger.error(
+          `Error processing recommendation ${recommendation.id}: ${error.message}`
+        );
         results.failed.push(recommendation);
       }
     }
@@ -175,17 +208,24 @@ export class ImprovementEngine extends EventEmitter {
   }
 
   public getActiveImprovements(): FeedbackRecommendation[] {
-    return Array.from(this.activeImprovements.values()).map(imp => imp.recommendation);
+    return Array.from(this.activeImprovements.values()).map(
+      (imp) => imp.recommendation
+    );
   }
 
   public getImprovementHistory(entityId?: string): FeedbackRecommendation[] {
     if (entityId) {
-      return this.improvementHistory.filter(imp => imp.action.targetEntity === entityId);
+      return this.improvementHistory.filter(
+        (imp) => imp.action.targetEntity === entityId
+      );
     }
     return [...this.improvementHistory];
   }
 
-  public getSuccessRates(): Record<string, { successRate: number; attempts: number }> {
+  public getSuccessRates(): Record<
+    string,
+    { successRate: number; attempts: number }
+  > {
     const rates: Record<string, { successRate: number; attempts: number }> = {};
 
     for (const [operation, stats] of this.successRates.entries()) {
@@ -198,7 +238,9 @@ export class ImprovementEngine extends EventEmitter {
     return rates;
   }
 
-  public async monitorImprovementEffects(recommendation: FeedbackRecommendation): Promise<{
+  public async monitorImprovementEffects(
+    recommendation: FeedbackRecommendation
+  ): Promise<{
     effective: boolean;
     actualImpact?: number;
     monitoringComplete: boolean;
@@ -208,15 +250,17 @@ export class ImprovementEngine extends EventEmitter {
     }
 
     const implementationTime = this.improvementHistory.find(
-      h => h.id === recommendation.id
+      (h) => h.id === recommendation.id
     )?.updatedAt;
 
     if (!implementationTime) {
       return { effective: false, monitoringComplete: false };
     }
 
-    const timeSinceImplementation = Date.now() - new Date(implementationTime).getTime();
-    const monitoringComplete = timeSinceImplementation >= this.config.monitoringPeriodMs;
+    const timeSinceImplementation =
+      Date.now() - new Date(implementationTime).getTime();
+    const monitoringComplete =
+      timeSinceImplementation >= this.config.monitoringPeriodMs;
 
     if (!monitoringComplete) {
       return { effective: false, monitoringComplete: false };
@@ -239,25 +283,42 @@ export class ImprovementEngine extends EventEmitter {
     return { effective, actualImpact, monitoringComplete: true };
   }
 
-  private async executeImprovement(recommendation: FeedbackRecommendation): Promise<boolean> {
+  private async executeImprovement(
+    recommendation: FeedbackRecommendation
+  ): Promise<boolean> {
     const { action } = recommendation;
 
     // Simulate improvement execution based on type
     switch (recommendation.type) {
       case "agent_update":
-        return await this.executeAgentUpdate(action.targetEntity, action.parameters);
+        return await this.executeAgentUpdate(
+          action.targetEntity,
+          action.parameters
+        );
 
       case "routing_adjustment":
-        return await this.executeRoutingAdjustment(action.targetEntity, action.parameters);
+        return await this.executeRoutingAdjustment(
+          action.targetEntity,
+          action.parameters
+        );
 
       case "resource_allocation":
-        return await this.executeResourceAllocation(action.targetEntity, action.parameters);
+        return await this.executeResourceAllocation(
+          action.targetEntity,
+          action.parameters
+        );
 
       case "policy_change":
-        return await this.executePolicyChange(action.targetEntity, action.parameters);
+        return await this.executePolicyChange(
+          action.targetEntity,
+          action.parameters
+        );
 
       case "system_configuration":
-        return await this.executeSystemConfiguration(action.targetEntity, action.parameters);
+        return await this.executeSystemConfiguration(
+          action.targetEntity,
+          action.parameters
+        );
 
       default:
         this.logger.warn(`Unknown recommendation type: ${recommendation.type}`);
@@ -265,42 +326,65 @@ export class ImprovementEngine extends EventEmitter {
     }
   }
 
-  private async executeAgentUpdate(entityId: string, params: Record<string, any>): Promise<boolean> {
+  private async executeAgentUpdate(
+    entityId: string,
+    params: Record<string, any>
+  ): Promise<boolean> {
     // In real implementation, would update agent registry
     this.logger.info(`Updating agent ${entityId} with params:`, params);
     await this.delay(100); // Simulate async operation
     return Math.random() > 0.1; // 90% success rate
   }
 
-  private async executeRoutingAdjustment(entityId: string, params: Record<string, any>): Promise<boolean> {
+  private async executeRoutingAdjustment(
+    entityId: string,
+    params: Record<string, any>
+  ): Promise<boolean> {
     // In real implementation, would update task router
     this.logger.info(`Adjusting routing for ${entityId} with params:`, params);
     await this.delay(50);
     return Math.random() > 0.05; // 95% success rate
   }
 
-  private async executeResourceAllocation(entityId: string, params: Record<string, any>): Promise<boolean> {
+  private async executeResourceAllocation(
+    entityId: string,
+    params: Record<string, any>
+  ): Promise<boolean> {
     // In real implementation, would update resource manager
-    this.logger.info(`Allocating resources for ${entityId} with params:`, params);
+    this.logger.info(
+      `Allocating resources for ${entityId} with params:`,
+      params
+    );
     await this.delay(200);
     return Math.random() > 0.15; // 85% success rate
   }
 
-  private async executePolicyChange(entityId: string, params: Record<string, any>): Promise<boolean> {
+  private async executePolicyChange(
+    entityId: string,
+    params: Record<string, any>
+  ): Promise<boolean> {
     // In real implementation, would update constitutional runtime
     this.logger.info(`Changing policy for ${entityId} with params:`, params);
     await this.delay(150);
     return Math.random() > 0.2; // 80% success rate
   }
 
-  private async executeSystemConfiguration(entityId: string, params: Record<string, any>): Promise<boolean> {
+  private async executeSystemConfiguration(
+    entityId: string,
+    params: Record<string, any>
+  ): Promise<boolean> {
     // In real implementation, would update system configuration
-    this.logger.info(`Updating system configuration for ${entityId} with params:`, params);
+    this.logger.info(
+      `Updating system configuration for ${entityId} with params:`,
+      params
+    );
     await this.delay(300);
     return Math.random() > 0.1; // 90% success rate
   }
 
-  private async rollbackImprovement(recommendation: FeedbackRecommendation): Promise<void> {
+  private async rollbackImprovement(
+    recommendation: FeedbackRecommendation
+  ): Promise<void> {
     // In real implementation, would undo the changes
     this.logger.info(`Rolling back improvement ${recommendation.id}`);
     await this.delay(100);
@@ -325,14 +409,17 @@ export class ImprovementEngine extends EventEmitter {
   }
 
   private updateSuccessRate(operation: string, success: boolean): void {
-    const stats = this.successRates.get(operation) || { successes: 0, attempts: 0 };
+    const stats = this.successRates.get(operation) || {
+      successes: 0,
+      attempts: 0,
+    };
     stats.attempts++;
     if (success) stats.successes++;
     this.successRates.set(operation, stats);
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   public clearHistory(): void {

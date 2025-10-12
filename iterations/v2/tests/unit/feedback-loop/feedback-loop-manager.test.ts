@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
-import { FeedbackLoopManager } from "../../../src/feedback-loop/FeedbackLoopManager";
-import { FeedbackCollector } from "../../../src/feedback-loop/FeedbackCollector";
-import { FeedbackAnalyzer } from "../../../src/feedback-loop/FeedbackAnalyzer";
-import { ImprovementEngine } from "../../../src/feedback-loop/ImprovementEngine";
-import { FeedbackPipeline } from "../../../src/feedback-loop/FeedbackPipeline";
 import { ConfigManager } from "../../../src/config/ConfigManager";
+import { FeedbackAnalyzer } from "../../../src/feedback-loop/FeedbackAnalyzer";
+import { FeedbackCollector } from "../../../src/feedback-loop/FeedbackCollector";
+import { FeedbackLoopManager } from "../../../src/feedback-loop/FeedbackLoopManager";
+import { FeedbackPipeline } from "../../../src/feedback-loop/FeedbackPipeline";
+import { ImprovementEngine } from "../../../src/feedback-loop/ImprovementEngine";
 import {
+  FeedbackRecommendation,
   FeedbackSource,
   FeedbackType,
-  FeedbackRecommendation,
 } from "../../../src/types/feedback-loop";
 
 // Mock dependencies
@@ -76,10 +76,14 @@ describe("FeedbackLoopManager", () => {
       validate: jest.fn().mockReturnValue({ valid: true, errors: [] }),
     } as any;
 
-    mockCollector = new (FeedbackCollector as any)() as jest.Mocked<FeedbackCollector>;
-    mockAnalyzer = new (FeedbackAnalyzer as any)() as jest.Mocked<FeedbackAnalyzer>;
-    mockImprovementEngine = new (ImprovementEngine as any)() as jest.Mocked<ImprovementEngine>;
-    mockPipeline = new (FeedbackPipeline as any)() as jest.Mocked<FeedbackPipeline>;
+    mockCollector =
+      new (FeedbackCollector as any)() as jest.Mocked<FeedbackCollector>;
+    mockAnalyzer =
+      new (FeedbackAnalyzer as any)() as jest.Mocked<FeedbackAnalyzer>;
+    mockImprovementEngine =
+      new (ImprovementEngine as any)() as jest.Mocked<ImprovementEngine>;
+    mockPipeline =
+      new (FeedbackPipeline as any)() as jest.Mocked<FeedbackPipeline>;
 
     // Setup mock returns
     mockCollector.getStats.mockReturnValue({
@@ -111,7 +115,7 @@ describe("FeedbackLoopManager", () => {
     mockImprovementEngine.getStats.mockReturnValue({
       activeImprovements: 2,
       totalImprovements: 15,
-      successRates: { "agent_update": { successRate: 0.8, attempts: 10 } },
+      successRates: { agent_update: { successRate: 0.8, attempts: 10 } },
       cooldownsActive: 1,
     });
 
@@ -139,7 +143,10 @@ describe("FeedbackLoopManager", () => {
       id: "analysis-1",
       entityId: "entity-1",
       entityType: "agent",
-      timeWindow: { start: "2025-01-01T00:00:00Z", end: "2025-01-02T00:00:00Z" },
+      timeWindow: {
+        start: "2025-01-01T00:00:00Z",
+        end: "2025-01-02T00:00:00Z",
+      },
       metrics: {
         totalFeedbackEvents: 10,
         performanceTrend: "stable",
@@ -288,7 +295,10 @@ describe("FeedbackLoopManager", () => {
     it("should analyze entity feedback", () => {
       const analysis = manager.analyzeEntity("agent-1", "agent");
 
-      expect(mockAnalyzer.analyzeEntityFeedback).toHaveBeenCalledWith("agent-1", "agent");
+      expect(mockAnalyzer.analyzeEntityFeedback).toHaveBeenCalledWith(
+        "agent-1",
+        "agent"
+      );
       expect(analysis).toBeDefined();
       expect(analysis.entityId).toBe("agent-1");
     });
@@ -330,7 +340,9 @@ describe("FeedbackLoopManager", () => {
 
       const result = await manager.applyRecommendation(recommendation);
 
-      expect(mockImprovementEngine.applyRecommendation).toHaveBeenCalledWith(recommendation);
+      expect(mockImprovementEngine.applyRecommendation).toHaveBeenCalledWith(
+        recommendation
+      );
       expect(result).toBe(true);
     });
 
@@ -362,7 +374,9 @@ describe("FeedbackLoopManager", () => {
 
       const results = await manager.applyRecommendations(recommendations);
 
-      expect(mockImprovementEngine.applyRecommendations).toHaveBeenCalledWith(recommendations);
+      expect(mockImprovementEngine.applyRecommendations).toHaveBeenCalledWith(
+        recommendations
+      );
       expect(results).toBeDefined();
     });
   });
@@ -427,7 +441,7 @@ describe("FeedbackLoopManager", () => {
       mockCollector.emit("feedback:batch-ready", mockBatch);
 
       // Wait for event processing
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(mockCollector.processBatch).toHaveBeenCalledWith(mockBatch);
     });

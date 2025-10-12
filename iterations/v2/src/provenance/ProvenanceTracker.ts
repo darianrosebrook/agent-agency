@@ -666,7 +666,8 @@ export class ProvenanceTracker extends EventEmitter {
     chain.integrity.hash = this.calculateChainHash(chain.entries);
     chain.integrity.lastVerified = new Date().toISOString();
 
-    // Note: In a real implementation, this would update the stored chain
+    // Store the updated chain
+    await this.storage.storeProvenanceChain(chain);
     this.emit("chain:updated", chain);
   }
 
@@ -977,6 +978,12 @@ class FileBasedStorage implements ProvenanceStorage {
     } catch {
       return null;
     }
+  }
+
+  async storeProvenanceChain(chain: ProvenanceChain): Promise<void> {
+    await this.ensureDirectory();
+    const chainPath = path.join(this.basePath, "chains", `${chain.id}.json`);
+    await fs.writeFile(chainPath, JSON.stringify(chain, null, 2));
   }
 
   async storeAttribution(attribution: AIAttribution): Promise<void> {

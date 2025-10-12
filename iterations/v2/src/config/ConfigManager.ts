@@ -22,16 +22,20 @@ const orchestratorConfigSchema = z.object({
 const feedbackLoopConfigSchema = z.object({
   enabled: z.boolean().default(true),
   collection: z.object({
-    enabledSources: z.array(z.string()).default(["performance_metrics", "task_outcomes"]),
+    enabledSources: z
+      .array(z.string())
+      .default(["performance_metrics", "task_outcomes"]),
     batchSize: z.number().min(1).default(10),
     flushIntervalMs: z.number().min(10).default(1000),
     retentionPeriodDays: z.number().min(1).default(30),
     samplingRate: z.number().min(0).max(1).default(1.0),
-    filters: z.object({
-      minSeverity: z.string().optional(),
-      excludeEntityTypes: z.array(z.string()).optional(),
-      includeOnlyRecent: z.boolean().default(false),
-    }).default({}),
+    filters: z
+      .object({
+        minSeverity: z.string().optional(),
+        excludeEntityTypes: z.array(z.string()).optional(),
+        includeOnlyRecent: z.boolean().default(false),
+      })
+      .default({}),
   }),
   analysis: z.object({
     enabledAnalyzers: z.array(z.string()).default(["trend", "anomaly"]),
@@ -55,11 +59,13 @@ const feedbackLoopConfigSchema = z.object({
     processingIntervalMs: z.number().min(10).default(10000),
     dataQualityThreshold: z.number().min(0).max(1).default(0.7),
     anonymizationLevel: z.enum(["none", "partial", "full"]).default("partial"),
-    featureEngineering: z.object({
-      timeWindowFeatures: z.boolean().default(true),
-      correlationFeatures: z.boolean().default(true),
-      trendFeatures: z.boolean().default(true),
-    }).default({}),
+    featureEngineering: z
+      .object({
+        timeWindowFeatures: z.boolean().default(true),
+        correlationFeatures: z.boolean().default(true),
+        trendFeatures: z.boolean().default(true),
+      })
+      .default({}),
     trainingDataFormat: z.enum(["json", "parquet", "csv"]).default("json"),
   }),
 });
@@ -157,7 +163,9 @@ export class ConfigManager {
       return { valid: true, errors: [] };
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const errors = error.errors.map(err => `${err.path.join(".")}: ${err.message}`);
+        const errors = error.errors.map(
+          (err) => `${err.path.join(".")}: ${err.message}`
+        );
         return { valid: false, errors };
       }
       return { valid: false, errors: [error.message] };
@@ -168,63 +176,143 @@ export class ConfigManager {
     // Load from environment variables with defaults
     this.config = {
       orchestrator: {
-        maxConcurrentTasks: parseInt(process.env.ORCHESTRATOR_MAX_CONCURRENT_TASKS || "10"),
-        processingLoopIntervalMs: parseInt(process.env.ORCHESTRATOR_PROCESSING_LOOP_INTERVAL_MS || "100"),
+        maxConcurrentTasks: parseInt(
+          process.env.ORCHESTRATOR_MAX_CONCURRENT_TASKS || "10"
+        ),
+        processingLoopIntervalMs: parseInt(
+          process.env.ORCHESTRATOR_PROCESSING_LOOP_INTERVAL_MS || "100"
+        ),
         circuitBreaker: {
-          failureThreshold: parseInt(process.env.ORCHESTRATOR_CIRCUIT_BREAKER_FAILURE_THRESHOLD || "5"),
-          resetTimeoutMs: parseInt(process.env.ORCHESTRATOR_CIRCUIT_BREAKER_RESET_TIMEOUT_MS || "30000"),
+          failureThreshold: parseInt(
+            process.env.ORCHESTRATOR_CIRCUIT_BREAKER_FAILURE_THRESHOLD || "5"
+          ),
+          resetTimeoutMs: parseInt(
+            process.env.ORCHESTRATOR_CIRCUIT_BREAKER_RESET_TIMEOUT_MS || "30000"
+          ),
         },
       },
       feedbackLoop: {
         enabled: process.env.FEEDBACK_LOOP_ENABLED !== "false",
         collection: {
-          enabledSources: (process.env.FEEDBACK_LOOP_COLLECTION_ENABLED_SOURCES || "performance_metrics,task_outcomes,user_ratings,system_events").split(","),
-          batchSize: parseInt(process.env.FEEDBACK_LOOP_COLLECTION_BATCH_SIZE || "10"),
-          flushIntervalMs: parseInt(process.env.FEEDBACK_LOOP_COLLECTION_FLUSH_INTERVAL_MS || "1000"),
-          retentionPeriodDays: parseInt(process.env.FEEDBACK_LOOP_COLLECTION_RETENTION_PERIOD_DAYS || "30"),
-          samplingRate: parseFloat(process.env.FEEDBACK_LOOP_COLLECTION_SAMPLING_RATE || "1.0"),
+          enabledSources: (
+            process.env.FEEDBACK_LOOP_COLLECTION_ENABLED_SOURCES ||
+            "performance_metrics,task_outcomes,user_ratings,system_events"
+          ).split(","),
+          batchSize: parseInt(
+            process.env.FEEDBACK_LOOP_COLLECTION_BATCH_SIZE || "10"
+          ),
+          flushIntervalMs: parseInt(
+            process.env.FEEDBACK_LOOP_COLLECTION_FLUSH_INTERVAL_MS || "1000"
+          ),
+          retentionPeriodDays: parseInt(
+            process.env.FEEDBACK_LOOP_COLLECTION_RETENTION_PERIOD_DAYS || "30"
+          ),
+          samplingRate: parseFloat(
+            process.env.FEEDBACK_LOOP_COLLECTION_SAMPLING_RATE || "1.0"
+          ),
           filters: {
-            minSeverity: process.env.FEEDBACK_LOOP_COLLECTION_FILTERS_MIN_SEVERITY,
-            excludeEntityTypes: process.env.FEEDBACK_LOOP_COLLECTION_FILTERS_EXCLUDE_ENTITY_TYPES?.split(","),
-            includeOnlyRecent: process.env.FEEDBACK_LOOP_COLLECTION_FILTERS_INCLUDE_ONLY_RECENT === "true",
+            minSeverity:
+              process.env.FEEDBACK_LOOP_COLLECTION_FILTERS_MIN_SEVERITY,
+            excludeEntityTypes:
+              process.env.FEEDBACK_LOOP_COLLECTION_FILTERS_EXCLUDE_ENTITY_TYPES?.split(
+                ","
+              ),
+            includeOnlyRecent:
+              process.env
+                .FEEDBACK_LOOP_COLLECTION_FILTERS_INCLUDE_ONLY_RECENT ===
+              "true",
           },
         },
         analysis: {
-          enabledAnalyzers: (process.env.FEEDBACK_LOOP_ANALYSIS_ENABLED_ANALYZERS || "trend,anomaly").split(","),
-          analysisIntervalMs: parseInt(process.env.FEEDBACK_LOOP_ANALYSIS_INTERVAL_MS || "5000"),
-          anomalyThreshold: parseFloat(process.env.FEEDBACK_LOOP_ANALYSIS_ANOMALY_THRESHOLD || "2.0"),
-          trendWindowHours: parseInt(process.env.FEEDBACK_LOOP_ANALYSIS_TREND_WINDOW_HOURS || "24"),
-          minDataPoints: parseInt(process.env.FEEDBACK_LOOP_ANALYSIS_MIN_DATA_POINTS || "5"),
-          correlationThreshold: parseFloat(process.env.FEEDBACK_LOOP_ANALYSIS_CORRELATION_THRESHOLD || "0.5"),
-          predictionHorizonHours: parseInt(process.env.FEEDBACK_LOOP_ANALYSIS_PREDICTION_HORIZON_HOURS || "24"),
+          enabledAnalyzers: (
+            process.env.FEEDBACK_LOOP_ANALYSIS_ENABLED_ANALYZERS ||
+            "trend,anomaly"
+          ).split(","),
+          analysisIntervalMs: parseInt(
+            process.env.FEEDBACK_LOOP_ANALYSIS_INTERVAL_MS || "5000"
+          ),
+          anomalyThreshold: parseFloat(
+            process.env.FEEDBACK_LOOP_ANALYSIS_ANOMALY_THRESHOLD || "2.0"
+          ),
+          trendWindowHours: parseInt(
+            process.env.FEEDBACK_LOOP_ANALYSIS_TREND_WINDOW_HOURS || "24"
+          ),
+          minDataPoints: parseInt(
+            process.env.FEEDBACK_LOOP_ANALYSIS_MIN_DATA_POINTS || "5"
+          ),
+          correlationThreshold: parseFloat(
+            process.env.FEEDBACK_LOOP_ANALYSIS_CORRELATION_THRESHOLD || "0.5"
+          ),
+          predictionHorizonHours: parseInt(
+            process.env.FEEDBACK_LOOP_ANALYSIS_PREDICTION_HORIZON_HOURS || "24"
+          ),
         },
         improvements: {
-          autoApplyThreshold: parseFloat(process.env.FEEDBACK_LOOP_IMPROVEMENTS_AUTO_APPLY_THRESHOLD || "0.8"),
-          maxConcurrentImprovements: parseInt(process.env.FEEDBACK_LOOP_IMPROVEMENTS_MAX_CONCURRENT || "5"),
-          cooldownPeriodMs: parseInt(process.env.FEEDBACK_LOOP_IMPROVEMENTS_COOLDOWN_PERIOD_MS || "300000"),
-          improvementTimeoutMs: parseInt(process.env.FEEDBACK_LOOP_IMPROVEMENTS_TIMEOUT_MS || "300000"),
-          rollbackOnFailure: process.env.FEEDBACK_LOOP_IMPROVEMENTS_ROLLBACK_ON_FAILURE !== "false",
-          monitoringPeriodMs: parseInt(process.env.FEEDBACK_LOOP_IMPROVEMENTS_MONITORING_PERIOD_MS || "600000"),
+          autoApplyThreshold: parseFloat(
+            process.env.FEEDBACK_LOOP_IMPROVEMENTS_AUTO_APPLY_THRESHOLD || "0.8"
+          ),
+          maxConcurrentImprovements: parseInt(
+            process.env.FEEDBACK_LOOP_IMPROVEMENTS_MAX_CONCURRENT || "5"
+          ),
+          cooldownPeriodMs: parseInt(
+            process.env.FEEDBACK_LOOP_IMPROVEMENTS_COOLDOWN_PERIOD_MS ||
+              "300000"
+          ),
+          improvementTimeoutMs: parseInt(
+            process.env.FEEDBACK_LOOP_IMPROVEMENTS_TIMEOUT_MS || "300000"
+          ),
+          rollbackOnFailure:
+            process.env.FEEDBACK_LOOP_IMPROVEMENTS_ROLLBACK_ON_FAILURE !==
+            "false",
+          monitoringPeriodMs: parseInt(
+            process.env.FEEDBACK_LOOP_IMPROVEMENTS_MONITORING_PERIOD_MS ||
+              "600000"
+          ),
         },
         pipeline: {
-          batchSize: parseInt(process.env.FEEDBACK_LOOP_PIPELINE_BATCH_SIZE || "50"),
-          processingIntervalMs: parseInt(process.env.FEEDBACK_LOOP_PIPELINE_PROCESSING_INTERVAL_MS || "10000"),
-          dataQualityThreshold: parseFloat(process.env.FEEDBACK_LOOP_PIPELINE_DATA_QUALITY_THRESHOLD || "0.7"),
-          anonymizationLevel: (process.env.FEEDBACK_LOOP_PIPELINE_ANONYMIZATION_LEVEL || "partial") as "none" | "partial" | "full",
+          batchSize: parseInt(
+            process.env.FEEDBACK_LOOP_PIPELINE_BATCH_SIZE || "50"
+          ),
+          processingIntervalMs: parseInt(
+            process.env.FEEDBACK_LOOP_PIPELINE_PROCESSING_INTERVAL_MS || "10000"
+          ),
+          dataQualityThreshold: parseFloat(
+            process.env.FEEDBACK_LOOP_PIPELINE_DATA_QUALITY_THRESHOLD || "0.7"
+          ),
+          anonymizationLevel: (process.env
+            .FEEDBACK_LOOP_PIPELINE_ANONYMIZATION_LEVEL || "partial") as
+            | "none"
+            | "partial"
+            | "full",
           featureEngineering: {
-            timeWindowFeatures: process.env.FEEDBACK_LOOP_PIPELINE_FEATURE_ENGINEERING_TIME_WINDOW !== "false",
-            correlationFeatures: process.env.FEEDBACK_LOOP_PIPELINE_FEATURE_ENGINEERING_CORRELATION !== "false",
-            trendFeatures: process.env.FEEDBACK_LOOP_PIPELINE_FEATURE_ENGINEERING_TREND !== "false",
+            timeWindowFeatures:
+              process.env
+                .FEEDBACK_LOOP_PIPELINE_FEATURE_ENGINEERING_TIME_WINDOW !==
+              "false",
+            correlationFeatures:
+              process.env
+                .FEEDBACK_LOOP_PIPELINE_FEATURE_ENGINEERING_CORRELATION !==
+              "false",
+            trendFeatures:
+              process.env.FEEDBACK_LOOP_PIPELINE_FEATURE_ENGINEERING_TREND !==
+              "false",
           },
-          trainingDataFormat: (process.env.FEEDBACK_LOOP_PIPELINE_TRAINING_DATA_FORMAT || "json") as "json" | "parquet" | "csv",
+          trainingDataFormat: (process.env
+            .FEEDBACK_LOOP_PIPELINE_TRAINING_DATA_FORMAT || "json") as
+            | "json"
+            | "parquet"
+            | "csv",
         },
       },
       violationHandler: {
-        escalationThreshold: process.env.VIOLATION_HANDLER_ESCALATION_THRESHOLD || "high",
+        escalationThreshold:
+          process.env.VIOLATION_HANDLER_ESCALATION_THRESHOLD || "high",
       },
       cawsRuntime: {
-        violationHandlingEnabled: process.env.CAWS_RUNTIME_VIOLATION_HANDLING_ENABLED !== "false",
-        waiverManagementEnabled: process.env.CAWS_RUNTIME_WAIVER_MANAGEMENT_ENABLED !== "false",
+        violationHandlingEnabled:
+          process.env.CAWS_RUNTIME_VIOLATION_HANDLING_ENABLED !== "false",
+        waiverManagementEnabled:
+          process.env.CAWS_RUNTIME_WAIVER_MANAGEMENT_ENABLED !== "false",
       },
     };
 

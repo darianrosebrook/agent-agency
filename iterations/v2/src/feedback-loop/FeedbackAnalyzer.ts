@@ -1,15 +1,14 @@
-import {
-  FeedbackEvent,
-  FeedbackAnalysis,
-  FeedbackInsight,
-  FeedbackRecommendation,
-  FeedbackAnalysisConfig,
-  FeedbackSource,
-  FeedbackType,
-} from "../types/feedback-loop";
+import { v4 as uuidv4 } from "uuid";
 import { ConfigManager } from "../config/ConfigManager";
 import { Logger } from "../observability/Logger";
-import { v4 as uuidv4 } from "uuid";
+import {
+  FeedbackAnalysis,
+  FeedbackAnalysisConfig,
+  FeedbackEvent,
+  FeedbackInsight,
+  FeedbackRecommendation,
+  FeedbackSource,
+} from "../types/feedback-loop";
 
 export class FeedbackAnalyzer {
   private config: FeedbackAnalysisConfig;
@@ -20,7 +19,8 @@ export class FeedbackAnalyzer {
   private analysisCache: Map<string, FeedbackAnalysis> = new Map(); // entityId -> latest analysis
 
   // Statistical accumulators
-  private timeSeriesData: Map<string, { timestamp: number; value: number }[]> = new Map();
+  private timeSeriesData: Map<string, { timestamp: number; value: number }[]> =
+    new Map();
 
   constructor(configManager: ConfigManager) {
     super();
@@ -34,20 +34,29 @@ export class FeedbackAnalyzer {
     timeWindowHours: number = this.config.trendWindowHours
   ): FeedbackAnalysis {
     const now = new Date();
-    const windowStart = new Date(now.getTime() - timeWindowHours * 60 * 60 * 1000);
+    const windowStart = new Date(
+      now.getTime() - timeWindowHours * 60 * 60 * 1000
+    );
 
     // Get feedback events for this entity
     const events = this.getEntityFeedback(entityId, windowStart, now);
 
     if (events.length < this.config.minDataPoints) {
-      this.logger.debug(`Insufficient data for ${entityType} ${entityId}: ${events.length} events`);
+      this.logger.debug(
+        `Insufficient data for ${entityType} ${entityId}: ${events.length} events`
+      );
       return this.createEmptyAnalysis(entityId, entityType, windowStart, now);
     }
 
     // Perform analysis
     const metrics = this.calculateMetrics(events);
     const insights = this.generateInsights(events, metrics);
-    const recommendations = this.generateRecommendations(entityId, entityType, insights, metrics);
+    const recommendations = this.generateRecommendations(
+      entityId,
+      entityType,
+      insights,
+      metrics
+    );
 
     const analysis: FeedbackAnalysis = {
       id: uuidv4(),
@@ -80,26 +89,37 @@ export class FeedbackAnalyzer {
   public analyzeAllEntities(entityType?: string): FeedbackAnalysis[] {
     const analyses: FeedbackAnalysis[] = [];
     const entities = entityType
-      ? Array.from(this.feedbackHistory.keys()).filter(id =>
-          this.getEntityType(id) === entityType
+      ? Array.from(this.feedbackHistory.keys()).filter(
+          (id) => this.getEntityType(id) === entityType
         )
       : Array.from(this.feedbackHistory.keys());
 
     for (const entityId of entities) {
       try {
-        const analysis = this.analyzeEntityFeedback(entityId, this.getEntityType(entityId));
+        const analysis = this.analyzeEntityFeedback(
+          entityId,
+          this.getEntityType(entityId)
+        );
         analyses.push(analysis);
       } catch (error) {
-        this.logger.error(`Failed to analyze ${entityId}`, { error: error.message });
+        this.logger.error(`Failed to analyze ${entityId}`, {
+          error: error.message,
+        });
       }
     }
 
     return analyses;
   }
 
-  public detectAnomalies(entityId: string, recentEvents: FeedbackEvent[]): FeedbackInsight[] {
+  public detectAnomalies(
+    entityId: string,
+    recentEvents: FeedbackEvent[]
+  ): FeedbackInsight[] {
     const anomalies: FeedbackInsight[] = [];
-    const baselineEvents = this.getEntityFeedback(entityId, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)); // Last 7 days
+    const baselineEvents = this.getEntityFeedback(
+      entityId,
+      new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    ); // Last 7 days
 
     if (baselineEvents.length < this.config.minDataPoints) {
       return anomalies;
@@ -130,10 +150,16 @@ export class FeedbackAnalyzer {
     // Analyze correlation between different metrics
     const metricCorrelations = this.analyzeMetricCorrelations(events);
     for (const correlation of metricCorrelations) {
-      if (Math.abs(correlation.coefficient) > this.config.correlationThreshold) {
+      if (
+        Math.abs(correlation.coefficient) > this.config.correlationThreshold
+      ) {
         correlations.push({
           type: "correlation",
-          description: `Strong ${correlation.coefficient > 0 ? 'positive' : 'negative'} correlation between ${correlation.metric1} and ${correlation.metric2}`,
+          description: `Strong ${
+            correlation.coefficient > 0 ? "positive" : "negative"
+          } correlation between ${correlation.metric1} and ${
+            correlation.metric2
+          }`,
           severity: Math.abs(correlation.coefficient) > 0.8 ? "high" : "medium",
           evidence: {
             metric: `${correlation.metric1}_vs_${correlation.metric2}`,
@@ -143,7 +169,8 @@ export class FeedbackAnalyzer {
           },
           impact: {
             affectedEntities: [entityId],
-            estimatedImpact: correlation.coefficient > 0 ? "positive" : "negative",
+            estimatedImpact:
+              correlation.coefficient > 0 ? "positive" : "negative",
             confidence: Math.abs(correlation.coefficient),
           },
         });
@@ -153,7 +180,10 @@ export class FeedbackAnalyzer {
     return correlations;
   }
 
-  public predictTrends(entityId: string, hoursAhead: number = this.config.predictionHorizonHours): FeedbackInsight[] {
+  public predictTrends(
+    entityId: string,
+    hoursAhead: number = this.config.predictionHorizonHours
+  ): FeedbackInsight[] {
     const predictions: FeedbackInsight[] = [];
     const events = this.feedbackHistory.get(entityId) || [];
 
@@ -165,8 +195,10 @@ export class FeedbackAnalyzer {
     const timeSeries = this.buildTimeSeries(events);
     const trend = this.calculateLinearTrend(timeSeries);
 
-    if (Math.abs(trend.slope) > 0.01) { // Significant trend
-      const futureValue = trend.intercept + trend.slope * (timeSeries.length + hoursAhead);
+    if (Math.abs(trend.slope) > 0.01) {
+      // Significant trend
+      const futureValue =
+        trend.intercept + trend.slope * (timeSeries.length + hoursAhead);
       const direction = trend.slope > 0 ? "increasing" : "decreasing";
 
       predictions.push({
@@ -198,7 +230,9 @@ export class FeedbackAnalyzer {
     // Keep only recent events based on retention policy
     const retentionMs = this.config.trendWindowHours * 60 * 60 * 1000;
     const cutoffTime = Date.now() - retentionMs;
-    const filteredEvents = entityEvents.filter(e => new Date(e.timestamp).getTime() > cutoffTime);
+    const filteredEvents = entityEvents.filter(
+      (e) => new Date(e.timestamp).getTime() > cutoffTime
+    );
 
     this.feedbackHistory.set(event.entityId, filteredEvents);
 
@@ -206,9 +240,13 @@ export class FeedbackAnalyzer {
     this.updateTimeSeries(event);
   }
 
-  public getEntityFeedback(entityId: string, startTime: Date, endTime: Date): FeedbackEvent[] {
+  public getEntityFeedback(
+    entityId: string,
+    startTime: Date,
+    endTime: Date
+  ): FeedbackEvent[] {
     const events = this.feedbackHistory.get(entityId) || [];
-    return events.filter(event => {
+    return events.filter((event) => {
       const eventTime = new Date(event.timestamp);
       return eventTime >= startTime && eventTime <= endTime;
     });
@@ -241,7 +279,9 @@ export class FeedbackAnalyzer {
     };
   }
 
-  private calculateMetrics(events: FeedbackEvent[]): FeedbackAnalysis["metrics"] {
+  private calculateMetrics(
+    events: FeedbackEvent[]
+  ): FeedbackAnalysis["metrics"] {
     const totalEvents = events.length;
     let averageRating = undefined;
     let performanceTrend: "improving" | "stable" | "declining" = "stable";
@@ -250,9 +290,9 @@ export class FeedbackAnalyzer {
 
     // Calculate average rating from user feedback
     const ratings = events
-      .filter(e => e.source === FeedbackSource.USER_RATINGS)
-      .map(e => (e.value as any).rating)
-      .filter(r => typeof r === "number");
+      .filter((e) => e.source === FeedbackSource.USER_RATINGS)
+      .map((e) => (e.value as any).rating)
+      .filter((r) => typeof r === "number");
 
     if (ratings.length > 0) {
       averageRating = ratings.reduce((sum, r) => sum + r, 0) / ratings.length;
@@ -264,8 +304,10 @@ export class FeedbackAnalyzer {
       const recent = timeSeries.slice(-3);
       const older = timeSeries.slice(0, -3);
       if (older.length > 0) {
-        const recentAvg = recent.reduce((sum, p) => sum + p.value, 0) / recent.length;
-        const olderAvg = older.reduce((sum, p) => sum + p.value, 0) / older.length;
+        const recentAvg =
+          recent.reduce((sum, p) => sum + p.value, 0) / recent.length;
+        const olderAvg =
+          older.reduce((sum, p) => sum + p.value, 0) / older.length;
         const change = (recentAvg - olderAvg) / olderAvg;
 
         if (change > 0.05) performanceTrend = "improving";
@@ -282,7 +324,10 @@ export class FeedbackAnalyzer {
     };
   }
 
-  private generateInsights(events: FeedbackEvent[], metrics: FeedbackAnalysis["metrics"]): FeedbackInsight[] {
+  private generateInsights(
+    events: FeedbackEvent[],
+    metrics: FeedbackAnalysis["metrics"]
+  ): FeedbackInsight[] {
     const insights: FeedbackInsight[] = [];
 
     // Trend insights
@@ -297,7 +342,8 @@ export class FeedbackAnalyzer {
         },
         impact: {
           affectedEntities: [],
-          estimatedImpact: metrics.performanceTrend === "improving" ? "positive" : "negative",
+          estimatedImpact:
+            metrics.performanceTrend === "improving" ? "positive" : "negative",
           confidence: 0.8,
         },
       });
@@ -325,12 +371,14 @@ export class FeedbackAnalyzer {
     }
 
     // Error rate insights
-    const errorEvents = events.filter(e =>
-      e.source === FeedbackSource.TASK_OUTCOMES &&
-      !(e.value as any).outcome?.success
+    const errorEvents = events.filter(
+      (e) =>
+        e.source === FeedbackSource.TASK_OUTCOMES &&
+        !(e.value as any).outcome?.success
     );
 
-    if (errorEvents.length > events.length * 0.1) { // >10% error rate
+    if (errorEvents.length > events.length * 0.1) {
+      // >10% error rate
       insights.push({
         type: "anomaly",
         description: "High error rate detected",
@@ -420,8 +468,14 @@ export class FeedbackAnalyzer {
     return recommendations;
   }
 
-  private calculateConfidence(events: FeedbackEvent[], insights: FeedbackInsight[]): number {
-    const baseConfidence = Math.min(events.length / this.config.minDataPoints, 1.0);
+  private calculateConfidence(
+    events: FeedbackEvent[],
+    insights: FeedbackInsight[]
+  ): number {
+    const baseConfidence = Math.min(
+      events.length / this.config.minDataPoints,
+      1.0
+    );
     const insightConfidence = insights.length > 0 ? 0.8 : 0.6;
     return Math.min(baseConfidence * insightConfidence, 1.0);
   }
@@ -437,17 +491,23 @@ export class FeedbackAnalyzer {
 
   private calculateBaselineStats(events: FeedbackEvent[]): any {
     // Calculate mean and standard deviation for anomaly detection
-    const values = events.map(e => this.extractNumericValue(e)).filter(v => v !== null) as number[];
+    const values = events
+      .map((e) => this.extractNumericValue(e))
+      .filter((v) => v !== null) as number[];
     if (values.length === 0) return { mean: 0, stdDev: 0 };
 
     const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
-    const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
+    const variance =
+      values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
     const stdDev = Math.sqrt(variance);
 
     return { mean, stdDev };
   }
 
-  private checkForAnomaly(event: FeedbackEvent, baseline: { mean: number; stdDev: number }): FeedbackInsight | null {
+  private checkForAnomaly(
+    event: FeedbackEvent,
+    baseline: { mean: number; stdDev: number }
+  ): FeedbackInsight | null {
     const value = this.extractNumericValue(event);
     if (value === null) return null;
 
@@ -473,17 +533,31 @@ export class FeedbackAnalyzer {
     return null;
   }
 
-  private analyzeMetricCorrelations(events: FeedbackEvent[]): Array<{ metric1: string; metric2: string; coefficient: number }> {
+  private analyzeMetricCorrelations(
+    events: FeedbackEvent[]
+  ): Array<{ metric1: string; metric2: string; coefficient: number }> {
     // Simplified correlation analysis
-    const correlations: Array<{ metric1: string; metric2: string; coefficient: number }> = [];
+    const correlations: Array<{
+      metric1: string;
+      metric2: string;
+      coefficient: number;
+    }> = [];
 
     // Example: correlate performance metrics with user ratings
-    const perfEvents = events.filter(e => e.source === FeedbackSource.PERFORMANCE_METRICS);
-    const ratingEvents = events.filter(e => e.source === FeedbackSource.USER_RATINGS);
+    const perfEvents = events.filter(
+      (e) => e.source === FeedbackSource.PERFORMANCE_METRICS
+    );
+    const ratingEvents = events.filter(
+      (e) => e.source === FeedbackSource.USER_RATINGS
+    );
 
     if (perfEvents.length >= 5 && ratingEvents.length >= 5) {
-      const perfValues = perfEvents.map(e => this.extractNumericValue(e)).filter(v => v !== null) as number[];
-      const ratingValues = ratingEvents.map(e => (e.value as any).rating).filter(v => typeof v === "number");
+      const perfValues = perfEvents
+        .map((e) => this.extractNumericValue(e))
+        .filter((v) => v !== null) as number[];
+      const ratingValues = ratingEvents
+        .map((e) => (e.value as any).rating)
+        .filter((v) => typeof v === "number");
 
       const minLength = Math.min(perfValues.length, ratingValues.length);
       if (minLength >= 5) {
@@ -512,21 +586,27 @@ export class FeedbackAnalyzer {
     const sumY2 = y.reduce((sum, val) => sum + val * val, 0);
 
     const numerator = n * sumXY - sumX * sumY;
-    const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+    const denominator = Math.sqrt(
+      (n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY)
+    );
 
     return denominator === 0 ? 0 : numerator / denominator;
   }
 
-  private buildTimeSeries(events: FeedbackEvent[]): Array<{ timestamp: number; value: number }> {
+  private buildTimeSeries(
+    events: FeedbackEvent[]
+  ): Array<{ timestamp: number; value: number }> {
     return events
-      .map(event => ({
+      .map((event) => ({
         timestamp: new Date(event.timestamp).getTime(),
         value: this.extractNumericValue(event) || 0,
       }))
       .sort((a, b) => a.timestamp - b.timestamp);
   }
 
-  private calculateLinearTrend(data: Array<{ timestamp: number; value: number }>): {
+  private calculateLinearTrend(
+    data: Array<{ timestamp: number; value: number }>
+  ): {
     slope: number;
     intercept: number;
     rSquared: number;
@@ -544,12 +624,16 @@ export class FeedbackAnalyzer {
 
     // Calculate R-squared
     const yMean = sumY / n;
-    const totalSumSquares = data.reduce((sum, p) => sum + Math.pow(p.value - yMean, 2), 0);
+    const totalSumSquares = data.reduce(
+      (sum, p) => sum + Math.pow(p.value - yMean, 2),
+      0
+    );
     const residualSumSquares = data.reduce((sum, p) => {
       const predicted = slope * p.timestamp + intercept;
       return sum + Math.pow(p.value - predicted, 2);
     }, 0);
-    const rSquared = totalSumSquares === 0 ? 1 : 1 - residualSumSquares / totalSumSquares;
+    const rSquared =
+      totalSumSquares === 0 ? 1 : 1 - residualSumSquares / totalSumSquares;
 
     return { slope, intercept, rSquared };
   }
@@ -557,7 +641,11 @@ export class FeedbackAnalyzer {
   private extractNumericValue(event: FeedbackEvent): number | null {
     switch (event.source) {
       case FeedbackSource.PERFORMANCE_METRICS:
-        return (event.value as any).latencyMs || (event.value as any).qualityScore || null;
+        return (
+          (event.value as any).latencyMs ||
+          (event.value as any).qualityScore ||
+          null
+        );
       case FeedbackSource.USER_RATINGS:
         return (event.value as any).rating || null;
       case FeedbackSource.TASK_OUTCOMES:
@@ -577,8 +665,9 @@ export class FeedbackAnalyzer {
       });
 
       // Keep only recent data
-      const cutoffTime = Date.now() - this.config.trendWindowHours * 60 * 60 * 1000;
-      const filteredSeries = series.filter(p => p.timestamp > cutoffTime);
+      const cutoffTime =
+        Date.now() - this.config.trendWindowHours * 60 * 60 * 1000;
+      const filteredSeries = series.filter((p) => p.timestamp > cutoffTime);
 
       this.timeSeriesData.set(event.entityId, filteredSeries);
     }

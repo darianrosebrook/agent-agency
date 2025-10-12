@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
-import { FeedbackLoopManager } from "../../../src/feedback-loop/FeedbackLoopManager";
+import { beforeEach, describe, expect, it } from "@jest/globals";
 import { ConfigManager } from "../../../src/config/ConfigManager";
-import { FeedbackSource, FeedbackType } from "../../../src/types/feedback-loop";
+import { FeedbackLoopManager } from "../../../src/feedback-loop/FeedbackLoopManager";
+import { FeedbackSource } from "../../../src/types/feedback-loop";
 
 // Create a test configuration
 const testConfig = {
@@ -92,7 +92,7 @@ describe("FeedbackLoopManager Integration", () => {
       });
 
       // Wait for batch processing
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       // Analyze the entity
       const analysis = manager.analyzeEntity("agent-1", "agent");
@@ -106,12 +106,24 @@ describe("FeedbackLoopManager Integration", () => {
     it("should handle task outcomes and generate insights", async () => {
       // Collect task outcomes
       manager.collectTaskOutcome("task-1", { success: true }, 5000, 0);
-      manager.collectTaskOutcome("task-2", { success: false }, 3000, 1, "Timeout error");
+      manager.collectTaskOutcome(
+        "task-2",
+        { success: false },
+        3000,
+        1,
+        "Timeout error"
+      );
       manager.collectTaskOutcome("task-3", { success: true }, 4000, 0);
-      manager.collectTaskOutcome("task-4", { success: false }, 6000, 2, "Network error");
+      manager.collectTaskOutcome(
+        "task-4",
+        { success: false },
+        6000,
+        2,
+        "Network error"
+      );
 
       // Wait for processing
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       // Analyze all entities
       const analyses = manager.analyzeAllEntities("task");
@@ -119,7 +131,7 @@ describe("FeedbackLoopManager Integration", () => {
       expect(analyses.length).toBeGreaterThan(0);
 
       // Find task analysis (though tasks may be grouped or analyzed differently)
-      const taskAnalysis = analyses.find(a => a.entityType === "task");
+      const taskAnalysis = analyses.find((a) => a.entityType === "task");
       if (taskAnalysis) {
         expect(taskAnalysis.metrics.totalFeedbackEvents).toBe(4);
         expect(taskAnalysis.insights.length).toBeGreaterThanOrEqual(0); // May have error rate insight
@@ -128,26 +140,44 @@ describe("FeedbackLoopManager Integration", () => {
 
     it("should process user ratings and correlate with performance", async () => {
       // Collect ratings for agents
-      manager.collectUserRating("agent-1", "agent", 4.5, {
-        accuracy: 5,
-        speed: 4,
-        reliability: 5,
-        communication: 4,
-      }, "Good performance");
+      manager.collectUserRating(
+        "agent-1",
+        "agent",
+        4.5,
+        {
+          accuracy: 5,
+          speed: 4,
+          reliability: 5,
+          communication: 4,
+        },
+        "Good performance"
+      );
 
-      manager.collectUserRating("agent-1", "agent", 3.0, {
-        accuracy: 3,
-        speed: 3,
-        reliability: 3,
-        communication: 3,
-      }, "Slower than expected");
+      manager.collectUserRating(
+        "agent-1",
+        "agent",
+        3.0,
+        {
+          accuracy: 3,
+          speed: 3,
+          reliability: 3,
+          communication: 3,
+        },
+        "Slower than expected"
+      );
 
-      manager.collectUserRating("agent-2", "agent", 5.0, {
-        accuracy: 5,
-        speed: 5,
-        reliability: 5,
-        communication: 5,
-      }, "Excellent work");
+      manager.collectUserRating(
+        "agent-2",
+        "agent",
+        5.0,
+        {
+          accuracy: 5,
+          speed: 5,
+          reliability: 5,
+          communication: 5,
+        },
+        "Excellent work"
+      );
 
       // Collect corresponding performance metrics
       manager.collectPerformanceMetrics("agent-1", "agent", {
@@ -161,7 +191,7 @@ describe("FeedbackLoopManager Integration", () => {
       });
 
       // Wait for processing
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       // Analyze agents
       const agent1Analysis = manager.analyzeEntity("agent-1", "agent");
@@ -173,16 +203,24 @@ describe("FeedbackLoopManager Integration", () => {
       expect(agent2Analysis.metrics.averageRating).toBeDefined();
 
       // Agent 2 should have higher rating
-      expect(agent2Analysis.metrics.averageRating! > agent1Analysis.metrics.averageRating!).toBe(true);
+      expect(
+        agent2Analysis.metrics.averageRating! >
+          agent1Analysis.metrics.averageRating!
+      ).toBe(true);
     });
 
     it("should handle system events and component health", async () => {
       // Collect system events
-      manager.collectSystemEvent("overload-1", "high", "High CPU usage detected", {
-        affectedComponents: ["scheduler", "router"],
-        estimatedDowntimeMinutes: 5,
-        userImpact: "minor",
-      });
+      manager.collectSystemEvent(
+        "overload-1",
+        "high",
+        "High CPU usage detected",
+        {
+          affectedComponents: ["scheduler", "router"],
+          estimatedDowntimeMinutes: 5,
+          userImpact: "minor",
+        }
+      );
 
       manager.collectSystemEvent("recovery-1", "low", "System recovered", {
         affectedComponents: ["scheduler"],
@@ -209,14 +247,16 @@ describe("FeedbackLoopManager Integration", () => {
       });
 
       // Wait for processing
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       // Analyze system components
       const analyses = manager.analyzeAllEntities("component");
 
       expect(analyses.length).toBeGreaterThan(0);
 
-      const schedulerAnalysis = analyses.find(a => a.entityId === "scheduler");
+      const schedulerAnalysis = analyses.find(
+        (a) => a.entityId === "scheduler"
+      );
       if (schedulerAnalysis) {
         expect(schedulerAnalysis.metrics.totalFeedbackEvents).toBe(2);
       }
@@ -231,28 +271,34 @@ describe("FeedbackLoopManager Integration", () => {
       });
 
       // Simulate time passing with degrading performance
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       manager.collectPerformanceMetrics("agent-slow", "agent", {
         latencyMs: 200,
         qualityScore: 0.7,
       });
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       manager.collectPerformanceMetrics("agent-slow", "agent", {
         latencyMs: 300,
         qualityScore: 0.5,
       });
 
       // Add user ratings showing dissatisfaction
-      manager.collectUserRating("agent-slow", "agent", 2.0, {
-        accuracy: 2,
-        speed: 1,
-        reliability: 2,
-        communication: 3,
-      }, "Very slow and unreliable");
+      manager.collectUserRating(
+        "agent-slow",
+        "agent",
+        2.0,
+        {
+          accuracy: 2,
+          speed: 1,
+          reliability: 2,
+          communication: 3,
+        },
+        "Very slow and unreliable"
+      );
 
       // Wait for batch processing and analysis
-      await new Promise(resolve => setTimeout(resolve, 250));
+      await new Promise((resolve) => setTimeout(resolve, 250));
 
       // Check if recommendations were generated and applied
       const stats = manager.getStats();
@@ -279,12 +325,14 @@ describe("FeedbackLoopManager Integration", () => {
       });
 
       // Wait for processing
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       const updatedStats = manager.getStats();
 
       // Events should have increased
-      expect(updatedStats.totalEvents).toBeGreaterThan(initialStats.totalEvents);
+      expect(updatedStats.totalEvents).toBeGreaterThan(
+        initialStats.totalEvents
+      );
 
       // Uptime should be positive
       expect(updatedStats.uptimeSeconds).toBeGreaterThan(0);
@@ -302,7 +350,7 @@ describe("FeedbackLoopManager Integration", () => {
       }
 
       // Wait for batch processing (multiple batches should be processed)
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
       const endTime = Date.now();
       const duration = endTime - startTime;
@@ -355,7 +403,7 @@ describe("FeedbackLoopManager Integration", () => {
       manager.collectPerformanceMetrics("agent-1", "agent", { latencyMs: 100 });
 
       // Wait for processing
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       // Should still be able to get stats
       const stats = manager.getStats();

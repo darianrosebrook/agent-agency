@@ -1,20 +1,19 @@
 import { EventEmitter } from "events";
-import {
-  FeedbackEvent,
-  FeedbackAnalysis,
-  FeedbackRecommendation,
-  FeedbackLoopConfig,
-  FeedbackStats,
-  FeedbackProcessingResult,
-  FeedbackSource,
-  FeedbackType,
-} from "../types/feedback-loop";
-import { FeedbackCollector } from "./FeedbackCollector";
-import { FeedbackAnalyzer } from "./FeedbackAnalyzer";
-import { ImprovementEngine } from "./ImprovementEngine";
-import { FeedbackPipeline } from "./FeedbackPipeline";
 import { ConfigManager } from "../config/ConfigManager";
 import { Logger } from "../observability/Logger";
+import {
+  FeedbackAnalysis,
+  FeedbackEvent,
+  FeedbackLoopConfig,
+  FeedbackRecommendation,
+  FeedbackSource,
+  FeedbackStats,
+  FeedbackType,
+} from "../types/feedback-loop";
+import { FeedbackAnalyzer } from "./FeedbackAnalyzer";
+import { FeedbackCollector } from "./FeedbackCollector";
+import { FeedbackPipeline } from "./FeedbackPipeline";
+import { ImprovementEngine } from "./ImprovementEngine";
 
 export class FeedbackLoopManager extends EventEmitter {
   private config: FeedbackLoopConfig;
@@ -111,28 +110,77 @@ export class FeedbackLoopManager extends EventEmitter {
   }
 
   // Public API for collecting feedback
-  public collectPerformanceMetrics(entityId: string, entityType: string, metrics: any): void {
+  public collectPerformanceMetrics(
+    entityId: string,
+    entityType: string,
+    metrics: any
+  ): void {
     this.collector.collectPerformanceMetrics(entityId, entityType, metrics);
   }
 
-  public collectTaskOutcome(taskId: string, outcome: any, executionTimeMs: number, retryCount: number, errorDetails?: string): void {
-    this.collector.collectTaskOutcome(taskId, outcome, executionTimeMs, retryCount, errorDetails);
+  public collectTaskOutcome(
+    taskId: string,
+    outcome: any,
+    executionTimeMs: number,
+    retryCount: number,
+    errorDetails?: string
+  ): void {
+    this.collector.collectTaskOutcome(
+      taskId,
+      outcome,
+      executionTimeMs,
+      retryCount,
+      errorDetails
+    );
   }
 
-  public collectUserRating(entityId: string, entityType: string, rating: number, criteria: any, comments?: string): void {
-    this.collector.collectUserRating(entityId, entityType, rating, criteria, comments);
+  public collectUserRating(
+    entityId: string,
+    entityType: string,
+    rating: number,
+    criteria: any,
+    comments?: string
+  ): void {
+    this.collector.collectUserRating(
+      entityId,
+      entityType,
+      rating,
+      criteria,
+      comments
+    );
   }
 
-  public collectSystemEvent(eventType: string, severity: string, description: string, impact: any): void {
-    this.collector.collectSystemEvent(eventType, severity as any, description, impact);
+  public collectSystemEvent(
+    eventType: string,
+    severity: string,
+    description: string,
+    impact: any
+  ): void {
+    this.collector.collectSystemEvent(
+      eventType,
+      severity as any,
+      description,
+      impact
+    );
   }
 
-  public collectConstitutionalViolation(violation: any, policyImpact: any): void {
+  public collectConstitutionalViolation(
+    violation: any,
+    policyImpact: any
+  ): void {
     this.collector.collectConstitutionalViolation(violation, policyImpact);
   }
 
-  public collectComponentHealth(health: any, previousStatus?: any, statusChangeReason?: string): void {
-    this.collector.collectComponentHealth(health, previousStatus, statusChangeReason);
+  public collectComponentHealth(
+    health: any,
+    previousStatus?: any,
+    statusChangeReason?: string
+  ): void {
+    this.collector.collectComponentHealth(
+      health,
+      previousStatus,
+      statusChangeReason
+    );
   }
 
   public collectRoutingDecision(decision: any, outcome?: any): void {
@@ -155,16 +203,24 @@ export class FeedbackLoopManager extends EventEmitter {
   }
 
   // Public API for improvements
-  public async applyRecommendation(recommendation: FeedbackRecommendation): Promise<boolean> {
-    const applied = await this.improvementEngine.applyRecommendation(recommendation);
+  public async applyRecommendation(
+    recommendation: FeedbackRecommendation
+  ): Promise<boolean> {
+    const applied = await this.improvementEngine.applyRecommendation(
+      recommendation
+    );
     if (applied) {
       this.stats.recommendationsApplied++;
     }
     return applied;
   }
 
-  public async applyRecommendations(recommendations: FeedbackRecommendation[]): Promise<any> {
-    const results = await this.improvementEngine.applyRecommendations(recommendations);
+  public async applyRecommendations(
+    recommendations: FeedbackRecommendation[]
+  ): Promise<any> {
+    const results = await this.improvementEngine.applyRecommendations(
+      recommendations
+    );
     this.stats.recommendationsApplied += results.applied.length;
     return results;
   }
@@ -193,9 +249,11 @@ export class FeedbackLoopManager extends EventEmitter {
       totalEvents: collectorStats.totalEvents,
       eventsBySource: collectorStats.eventsBySource,
       eventsByType: collectorStats.eventsByType,
-      averageProcessingTimeMs: this.processingTimes.length > 0
-        ? this.processingTimes.reduce((sum, time) => sum + time, 0) / this.processingTimes.length
-        : 0,
+      averageProcessingTimeMs:
+        this.processingTimes.length > 0
+          ? this.processingTimes.reduce((sum, time) => sum + time, 0) /
+            this.processingTimes.length
+          : 0,
       dataQualityScore: pipelineStats.averageQualityScore || 0,
       uptimeSeconds: Math.floor(uptime / 1000),
     };
@@ -208,9 +266,12 @@ export class FeedbackLoopManager extends EventEmitter {
       this.emit("feedback:collected", event);
     });
 
-    this.collector.on("feedback:batch-ready", async (batch: FeedbackEvent[]) => {
-      await this.processFeedbackBatch(batch);
-    });
+    this.collector.on(
+      "feedback:batch-ready",
+      async (batch: FeedbackEvent[]) => {
+        await this.processFeedbackBatch(batch);
+      }
+    );
 
     // Analyzer events (none currently defined)
 
@@ -251,7 +312,10 @@ export class FeedbackLoopManager extends EventEmitter {
       const processingResult = await this.collector.processBatch(batch);
 
       // Send high-quality data to pipeline
-      if (processingResult.qualityScore >= this.config.pipeline.dataQualityThreshold) {
+      if (
+        processingResult.qualityScore >=
+        this.config.pipeline.dataQualityThreshold
+      ) {
         await this.pipeline.processBatch(batch);
       }
 
@@ -267,7 +331,8 @@ export class FeedbackLoopManager extends EventEmitter {
 
       // Auto-apply recommendations if enabled
       if (this.config.improvements.autoApplyThreshold > 0) {
-        const applicationResults = await this.improvementEngine.applyRecommendations(allRecommendations);
+        const applicationResults =
+          await this.improvementEngine.applyRecommendations(allRecommendations);
         this.stats.recommendationsApplied += applicationResults.applied.length;
 
         this.emit("recommendations:processed", {
@@ -299,9 +364,9 @@ export class FeedbackLoopManager extends EventEmitter {
         recommendationsGenerated: allRecommendations.length,
         timestamp: new Date(),
       });
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(`Error processing feedback batch: ${errorMessage}`);
       this.emit("feedback:batch-error", {
         error: errorMessage,
@@ -322,7 +387,10 @@ export class FeedbackLoopManager extends EventEmitter {
       try {
         // Periodic analysis of all entities
         const analyses = this.analyzer.analyzeAllEntities();
-        const totalRecommendations = analyses.reduce((sum, analysis) => sum + analysis.recommendations.length, 0);
+        const totalRecommendations = analyses.reduce(
+          (sum, analysis) => sum + analysis.recommendations.length,
+          0
+        );
 
         this.stats.analysisCount += analyses.length;
         this.stats.recommendationsGenerated += totalRecommendations;
@@ -332,9 +400,9 @@ export class FeedbackLoopManager extends EventEmitter {
           recommendationsGenerated: totalRecommendations,
           timestamp: new Date(),
         });
-
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         this.logger.error(`Error in periodic analysis: ${errorMessage}`);
       }
     }, this.config.analysis.analysisIntervalMs);
@@ -355,9 +423,9 @@ export class FeedbackLoopManager extends EventEmitter {
         this.emit("processing:cycle-completed", {
           timestamp: new Date(),
         });
-
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         this.logger.error(`Error in processing cycle: ${errorMessage}`);
       }
     }, this.config.pipeline.processingIntervalMs);
@@ -405,12 +473,15 @@ export class FeedbackLoopManager extends EventEmitter {
     const stats = this.getStats();
     const collectorStats = this.collector.getStats();
 
-    const isHealthy = this.isRunning &&
-                     stats.averageProcessingTimeMs < 1000 && // < 1s average processing
-                     collectorStats.bufferSize < this.config.collection.batchSize * 2; // Not overflowing
+    const isHealthy =
+      this.isRunning &&
+      stats.averageProcessingTimeMs < 1000 && // < 1s average processing
+      collectorStats.bufferSize < this.config.collection.batchSize * 2; // Not overflowing
 
-    const isDegraded = this.isRunning &&
-                      (stats.averageProcessingTimeMs > 1000 || collectorStats.bufferSize > this.config.collection.batchSize);
+    const isDegraded =
+      this.isRunning &&
+      (stats.averageProcessingTimeMs > 1000 ||
+        collectorStats.bufferSize > this.config.collection.batchSize);
 
     return {
       status: isHealthy ? "healthy" : isDegraded ? "degraded" : "unhealthy",
@@ -419,7 +490,8 @@ export class FeedbackLoopManager extends EventEmitter {
         bufferSize: collectorStats.bufferSize,
         averageProcessingTimeMs: stats.averageProcessingTimeMs,
         totalEvents: stats.totalEvents,
-        activeImprovements: this.improvementEngine.getStats().activeImprovements,
+        activeImprovements:
+          this.improvementEngine.getStats().activeImprovements,
         lastAnalysisTime: stats.lastAnalysisTime,
       },
     };
