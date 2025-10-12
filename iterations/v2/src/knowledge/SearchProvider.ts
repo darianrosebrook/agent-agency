@@ -20,6 +20,11 @@ import {
   SourceType,
 } from "../types/knowledge";
 
+// Import real search providers
+import { GoogleSearchProvider } from "./providers/GoogleSearchProvider";
+import { BingSearchProvider } from "./providers/BingSearchProvider";
+import { DuckDuckGoSearchProvider } from "./providers/DuckDuckGoSearchProvider";
+
 // Use standard RequestInit from DOM lib
 type RequestInit = any; // Simplified for Node.js environment
 
@@ -594,6 +599,8 @@ export class SearchProviderFactory {
     switch (config.name.toLowerCase()) {
       case "google":
         return new GoogleSearchProvider(config);
+      case "bing":
+        return new BingSearchProvider(config);
       case "duckduckgo":
         return new DuckDuckGoSearchProvider(config);
       case "arxiv":
