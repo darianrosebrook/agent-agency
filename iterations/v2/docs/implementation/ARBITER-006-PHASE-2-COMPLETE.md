@@ -22,11 +22,13 @@ Successfully implemented production-ready search providers for Google Custom Sea
 
 **API**: Google Custom Search JSON API v1  
 **Endpoint**: `https://www.googleapis.com/customsearch/v1`  
-**Requirements**: 
+**Requirements**:
+
 - `GOOGLE_SEARCH_API_KEY` environment variable
 - `GOOGLE_SEARCH_CX` (Custom Search Engine ID) environment variable
 
 **Key Features**:
+
 - Full Google Custom Search API integration
 - Up to 10 results per query (API limit)
 - HTML tag stripping and text normalization
@@ -37,6 +39,7 @@ Successfully implemented production-ready search providers for Google Custom Sea
 - Rate limit detection (429 errors)
 
 **Response Format**:
+
 ```json
 {
   "items": [{
@@ -52,12 +55,14 @@ Successfully implemented production-ready search providers for Google Custom Sea
 ```
 
 **Credibility Scoring**:
+
 - High (0.9): wikipedia.org, github.com, stackoverflow.com, .edu, .gov
-- Medium (0.7): medium.com, dev.to, reddit.com, docs.*
+- Medium (0.7): medium.com, dev.to, reddit.com, docs.\*
 - Default (0.6): HTTPS sites
 - Minimum (0.5): HTTP sites
 
 **API Limits**:
+
 - Free tier: 100 queries/day
 - Paid tier: Up to 10,000 queries/day
 - Max results per query: 10
@@ -70,10 +75,12 @@ Successfully implemented production-ready search providers for Google Custom Sea
 
 **API**: Bing Web Search API v7  
 **Endpoint**: `https://api.bing.microsoft.com/v7.0/search`  
-**Requirements**: 
+**Requirements**:
+
 - `BING_SEARCH_API_KEY` environment variable
 
 **Key Features**:
+
 - Full Bing Web Search API v7 integration
 - Up to 50 results per query (API allows)
 - Market and safe search configuration
@@ -83,29 +90,34 @@ Successfully implemented production-ready search providers for Google Custom Sea
 - Enhanced error handling (401, 429 detection)
 
 **Response Format**:
+
 ```json
 {
   "webPages": {
-    "value": [{
-      "name": "Result Title",
-      "url": "https://example.com",
-      "snippet": "Result description...",
-      "displayUrl": "example.com/path",
-      "dateLastCrawled": "2025-10-12T00:00:00Z",
-      "language": "en",
-      "isNavigational": false
-    }]
+    "value": [
+      {
+        "name": "Result Title",
+        "url": "https://example.com",
+        "snippet": "Result description...",
+        "displayUrl": "example.com/path",
+        "dateLastCrawled": "2025-10-12T00:00:00Z",
+        "language": "en",
+        "isNavigational": false
+      }
+    ]
   }
 }
 ```
 
 **Credibility Scoring**:
+
 - High (0.9): wikipedia.org, github.com, stackoverflow.com, microsoft.com, .edu, .gov
-- Medium (0.7): medium.com, dev.to, linkedin.com, docs.*
+- Medium (0.7): medium.com, dev.to, linkedin.com, docs.\*
 - Low (0.3): Free TLDs (.tk, .ml, .ga, .cf, .gq)
 - Default (0.6): HTTPS sites, (0.5): HTTP sites
 
 **API Limits**:
+
 - Free tier: 1,000 queries/month
 - Paid tiers: Up to 10,000,000 queries/month
 - Max results per query: 50
@@ -121,6 +133,7 @@ Successfully implemented production-ready search providers for Google Custom Sea
 **Requirements**: None (no API key required)
 
 **Key Features**:
+
 - DuckDuckGo Instant Answer API integration
 - No API key required
 - Parses multiple result types: Abstracts, Definitions, Results, Related Topics
@@ -130,6 +143,7 @@ Successfully implemented production-ready search providers for Google Custom Sea
 - Warning when result count is low
 
 **Response Format**:
+
 ```json
 {
   "Abstract": "Main abstract text",
@@ -148,11 +162,13 @@ Successfully implemented production-ready search providers for Google Custom Sea
 ```
 
 **Credibility Scoring**:
+
 - High (0.9): wikipedia, britannica, github, stackoverflow, .edu, .gov
 - Medium (0.7): medium, dev.to, reddit, youtube, docs
 - Default (0.6): All other sources
 
 **Limitations**:
+
 - Typically 3-10 results (vs 10-50 for Google/Bing)
 - No pagination
 - Best for factual queries and instant answers
@@ -252,6 +268,7 @@ Return Error
 ```
 
 **Fallback Triggers**:
+
 - API errors (4xx, 5xx)
 - Network timeouts
 - Rate limit exceeded
@@ -259,6 +276,7 @@ Return Error
 - Zero results returned
 
 **Provider Health Tracking**:
+
 - Each failure updates provider health in database
 - Success resets health status
 - Health metrics used for routing decisions
@@ -270,6 +288,7 @@ Return Error
 ### Phase 1 Integration (Database Persistence)
 
 All three providers automatically benefit from Phase 1 features:
+
 - ✅ Query persistence in PostgreSQL
 - ✅ Result storage with deduplication
 - ✅ Response caching (memory + database)
@@ -277,6 +296,7 @@ All three providers automatically benefit from Phase 1 features:
 - ✅ Graceful degradation
 
 **Example Flow**:
+
 ```
 1. Worker invokes knowledge_search("TypeScript best practices")
 2. Google Search API queried
@@ -328,12 +348,12 @@ Workers can now invoke real searches through MCP:
 
 ### Response Times (P95)
 
-| Provider | API Latency | Total Time | Cache Hit | Cache Miss |
-|----------|-------------|------------|-----------|------------|
-| Google | ~300ms | ~350ms | ~5ms | ~350ms |
-| Bing | ~250ms | ~300ms | ~5ms | ~300ms |
-| DuckDuckGo | ~200ms | ~250ms | ~5ms | ~250ms |
-| Mock | ~1ms | ~10ms | ~2ms | ~10ms |
+| Provider   | API Latency | Total Time | Cache Hit | Cache Miss |
+| ---------- | ----------- | ---------- | --------- | ---------- |
+| Google     | ~300ms      | ~350ms     | ~5ms      | ~350ms     |
+| Bing       | ~250ms      | ~300ms     | ~5ms      | ~300ms     |
+| DuckDuckGo | ~200ms      | ~250ms     | ~5ms      | ~250ms     |
+| Mock       | ~1ms        | ~10ms      | ~2ms      | ~10ms      |
 
 **Note**: Total time includes API latency + parsing + database storage
 
@@ -410,6 +430,7 @@ describe("GoogleSearchProvider", () => {
 ### Major
 
 2. **DuckDuckGo Limited Results**
+
    - Typically 3-10 results vs 10-50 for Google/Bing
    - **Impact**: Less comprehensive research
    - **Mitigation**: Use as fallback only
@@ -424,6 +445,7 @@ describe("GoogleSearchProvider", () => {
 ### Minor
 
 4. **Rate Limits Not Enforced Client-Side**
+
    - Providers track limits but don't prevent calls
    - **Impact**: Possible API quota exhaustion
    - **Mitigation**: Rate limiter in KnowledgeSeeker exists
@@ -442,17 +464,20 @@ describe("GoogleSearchProvider", () => {
 ### Google Custom Search
 
 1. **Create Google Cloud Project**
+
    - Visit https://console.cloud.google.com/
    - Create new project
    - Enable "Custom Search API"
 
 2. **Get API Key**
+
    - Go to Credentials
    - Create API Key
    - Restrict to Custom Search API
    - Copy key → `GOOGLE_SEARCH_API_KEY`
 
 3. **Create Custom Search Engine**
+
    - Visit https://cse.google.com/cse/
    - Create new search engine
    - Choose "Search the entire web"
@@ -465,15 +490,18 @@ describe("GoogleSearchProvider", () => {
 ### Bing Web Search
 
 1. **Create Azure Account**
+
    - Visit https://portal.azure.com/
    - Sign up (free tier available)
 
 2. **Create Bing Search Resource**
+
    - Search for "Bing Search v7"
    - Create resource
    - Choose Free tier (F1) or paid tier
 
 3. **Get API Key**
+
    - Go to resource → Keys and Endpoint
    - Copy Key 1 → `BING_SEARCH_API_KEY`
 
@@ -515,12 +543,14 @@ No setup required! Just works.
 ## Next Steps
 
 ### Phase 4: Task-Driven Research
+
 - [ ] Automatic research detection in tasks
 - [ ] Task context augmentation
 - [ ] Research provenance tracking
 - [ ] Performance optimization (<2s overhead)
 
 ### Phase 5: Documentation & Production
+
 - [ ] Write comprehensive integration tests
 - [ ] Update README with API key setup
 - [ ] Performance benchmarks
@@ -531,11 +561,13 @@ No setup required! Just works.
 ## Files Modified
 
 ### New Files (3):
+
 - `src/knowledge/providers/GoogleSearchProvider.ts` (253 lines)
 - `src/knowledge/providers/BingSearchProvider.ts` (242 lines)
 - `src/knowledge/providers/DuckDuckGoSearchProvider.ts` (341 lines)
 
 ### Modified Files (1):
+
 - `src/knowledge/SearchProvider.ts` (+4 lines - imports and factory update)
 
 **Total Impact**: +840 lines of production code
@@ -545,12 +577,15 @@ No setup required! Just works.
 ## Theory Alignment
 
 ### Before Phase 2:
+
 **Theory Compliance**: 75% (Knowledge Seeker + Database + MCP, but MockProvider only)
 
 ### After Phase 2:
+
 **Theory Compliance**: 85% (Real search capabilities added)
 
 **Remaining for 100%**:
+
 - Task-driven research (Phase 4): +10%
 - Documentation & production (Phase 5): +5%
 
@@ -575,4 +610,3 @@ No setup required! Just works.
 **Ready for**: Phase 4 (Task-Driven Research) or Phase 5 (Documentation & Production)  
 **Theory Alignment**: 85% (up from 75%)  
 **Production Readiness**: 75% (up from 65%)
-

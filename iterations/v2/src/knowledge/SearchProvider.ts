@@ -21,9 +21,9 @@ import {
 } from "../types/knowledge";
 
 // Import real search providers
-import { GoogleSearchProvider } from "./providers/GoogleSearchProvider";
 import { BingSearchProvider } from "./providers/BingSearchProvider";
 import { DuckDuckGoSearchProvider } from "./providers/DuckDuckGoSearchProvider";
+import { GoogleSearchProvider } from "./providers/GoogleSearchProvider";
 
 // Use standard RequestInit from DOM lib
 type RequestInit = any; // Simplified for Node.js environment

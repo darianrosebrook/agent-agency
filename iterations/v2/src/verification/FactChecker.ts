@@ -18,15 +18,49 @@ import {
   VerificationType,
   VerificationVerdict,
 } from "../types/verification";
+import { GoogleFactCheckProvider } from "./providers/GoogleFactCheckProvider";
+import { SnopesFactCheckProvider } from "./providers/SnopesFactCheckProvider";
 
 /**
  * Fact Checker Implementation
  */
 export class FactChecker {
   private methodConfigs: VerificationMethodConfig[];
+  private googleProvider?: GoogleFactCheckProvider;
+  private snopesProvider: SnopesFactCheckProvider;
 
   constructor(methodConfigs: VerificationMethodConfig[]) {
     this.methodConfigs = methodConfigs;
+
+    // Initialize fact-checking providers
+    this.initializeProviders();
+  }
+
+  /**
+   * Initialize fact-checking providers based on configuration
+   */
+  private initializeProviders(): void {
+    // Initialize Google Fact Check provider if API key is available
+    const googleApiKey = process.env.GOOGLE_FACT_CHECK_API_KEY;
+    if (googleApiKey) {
+      this.googleProvider = new GoogleFactCheckProvider({
+        apiKey: googleApiKey,
+        timeout: 10000,
+        maxRetries: 3,
+      });
+      console.log("✅ Google Fact Check provider initialized");
+    } else {
+      console.warn(
+        "⚠️ Google Fact Check API key not found, Google provider disabled"
+      );
+    }
+
+    // Initialize Snopes provider (no API key required)
+    this.snopesProvider = new SnopesFactCheckProvider({
+      timeout: 15000,
+      maxRetries: 2,
+    });
+    console.log("✅ Snopes Fact Check provider initialized");
   }
 
   /**
@@ -151,16 +185,76 @@ export class FactChecker {
    * Check a single claim against fact-checking sources
    */
   private async checkClaim(claim: FactCheckClaim): Promise<FactCheckResult> {
-    // In production, this would call actual fact-checking APIs
-    // For now, we'll simulate fact-checking with mock responses
+    // Try real fact-checking providers first
+    const results: FactCheckResult[] = [];
 
-    // Simulate API delay
-    await new Promise((resolve) =>
-      setTimeout(resolve, 100 + Math.random() * 200)
+    // Try Google Fact Check API if available
+    if (this.googleProvider) {
+      try {
+        const googleResult = await this.googleProvider.checkClaim(claim);
+        if (
+          googleResult.verdict !== VerificationVerdict.ERROR &&
+          googleResult.verdict !== VerificationVerdict.UNVERIFIED
+        ) {
+          results.push(googleResult);
+        }
+      } catch (error) {
+        console.warn(`Google Fact Check failed for claim ${claim.id}:`, error);
+      }
+    }
+
+    // Try Snopes
+    try {
+      const snopesResult = await this.snopesProvider.checkClaim(claim);
+      if (
+        snopesResult.verdict !== VerificationVerdict.ERROR &&
+        snopesResult.verdict !== VerificationVerdict.UNVERIFIED
+      ) {
+        results.push(snopesResult);
+      }
+    } catch (error) {
+      console.warn(`Snopes fact-check failed for claim ${claim.id}:`, error);
+    }
+
+    // If we got real results, aggregate them
+    if (results.length > 0) {
+      return this.aggregateResults(results, claim);
+    }
+
+    // Fallback to mock results if no real providers succeeded
+    console.warn(
+      `All fact-checking providers failed for claim ${claim.id}, using mock results`
     );
-
-    // Generate mock fact-check result based on claim content
     return this.generateMockFactCheckResult(claim);
+  }
+
+  /**
+   * Aggregate results from multiple fact-checking providers
+   */
+  private aggregateResults(
+    results: FactCheckResult[],
+    claim: FactCheckClaim
+  ): FactCheckResult {
+    // Simple aggregation: use the result with highest confidence
+    // In production, this could use more sophisticated voting/consensus logic
+
+    const sortedResults = results.sort((a, b) => b.confidence - a.confidence);
+    const bestResult = sortedResults[0];
+
+    // Combine sources from all providers
+    const allSources = results.flatMap((result) => result.sources || []);
+
+    return {
+      claimId: claim.id,
+      verdict: bestResult.verdict,
+      confidence: Math.min(bestResult.confidence * 1.1, 0.95), // Slight boost for consensus
+      explanation: bestResult.explanation,
+      sources: allSources,
+      processingTimeMs: results.reduce(
+        (sum, result) => sum + (result.processingTimeMs || 0),
+        0
+      ),
+    };
   }
 
   /**

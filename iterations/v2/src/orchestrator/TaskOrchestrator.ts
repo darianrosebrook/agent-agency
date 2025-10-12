@@ -237,7 +237,11 @@ export class TaskOrchestrator extends EventEmitter {
     }
 
     // Validate budget constraints
-    if (!task.budget || typeof task.budget.maxFiles !== 'number' || typeof task.budget.maxLoc !== 'number') {
+    if (
+      !task.budget ||
+      typeof task.budget.maxFiles !== "number" ||
+      typeof task.budget.maxLoc !== "number"
+    ) {
       throw new Error(`Task ${task.id} has invalid budget constraints`);
     }
 
@@ -336,7 +340,10 @@ export class TaskOrchestrator extends EventEmitter {
         },
       };
 
-      await this.performanceTracker.completeTaskExecution(executionId, taskOutcome);
+      await this.performanceTracker.completeTaskExecution(
+        executionId,
+        taskOutcome
+      );
 
       span.setStatus({ code: 1, message: "Execution completed" });
 
@@ -394,7 +401,6 @@ export class TaskOrchestrator extends EventEmitter {
       throw new Error("Simulated task execution failure");
     }
   }
-
 
   /**
    * Private: Handle task errors

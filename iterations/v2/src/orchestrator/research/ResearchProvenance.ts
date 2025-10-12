@@ -84,9 +84,7 @@ export class ResearchProvenance {
     durationMs?: number
   ): Promise<void> {
     if (!this.dbClient || !this.dbClient.isConnected()) {
-      console.warn(
-        "Database not available, research provenance not recorded"
-      );
+      console.warn("Database not available, research provenance not recorded");
       return;
     }
 
@@ -318,4 +316,3 @@ export class ResearchProvenance {
     }
   }
 }
-

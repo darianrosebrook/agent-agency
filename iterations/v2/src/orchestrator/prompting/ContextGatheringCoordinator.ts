@@ -7,8 +7,8 @@
  * @author @darianrosebrook
  */
 
-import { ContextGatheringConfig } from "../../types/agent-prompting";
 import { KnowledgeSeeker } from "../../knowledge/KnowledgeSeeker";
+import { ContextGatheringConfig } from "../../types/agent-prompting";
 
 /**
  * Search query for context gathering
@@ -123,7 +123,9 @@ export class ContextGatheringCoordinator {
    */
   constructor(config: ContextGatheringConfig) {
     this.config = config;
-    this.knowledgeSeeker = config.knowledgeSeeker as KnowledgeSeeker | undefined;
+    this.knowledgeSeeker = config.knowledgeSeeker as
+      | KnowledgeSeeker
+      | undefined;
     this.activeQueries = new Map();
     this.resultCache = new Map();
   }
@@ -395,7 +397,7 @@ export class ContextGatheringCoordinator {
         const searchResults = await this.knowledgeSeeker.search(knowledgeQuery);
 
         // Convert KnowledgeResult[] to SearchResult[] format
-        return searchResults.map(result => ({
+        return searchResults.map((result) => ({
           id: result.id,
           content: result.snippet || result.content,
           relevanceScore: result.relevanceScore,
@@ -411,7 +413,10 @@ export class ContextGatheringCoordinator {
           },
         }));
       } catch (error) {
-        console.warn(`Real search failed for query ${query.id}, falling back to mock:`, error);
+        console.warn(
+          `Real search failed for query ${query.id}, falling back to mock:`,
+          error
+        );
         // Fall back to mock results if real search fails
       }
     }
@@ -452,7 +457,9 @@ export class ContextGatheringCoordinator {
   /**
    * Map expected result type to KnowledgeQueryType
    */
-  private mapQueryType(expectedType: string): "factual" | "code" | "explanatory" | "comparative" {
+  private mapQueryType(
+    expectedType: string
+  ): "factual" | "code" | "explanatory" | "comparative" {
     switch (expectedType) {
       case "code":
         return "code";
@@ -474,7 +481,8 @@ export class ContextGatheringCoordinator {
     try {
       const published = new Date(publishedDate);
       const now = new Date();
-      const ageInDays = (now.getTime() - published.getTime()) / (1000 * 60 * 60 * 24);
+      const ageInDays =
+        (now.getTime() - published.getTime()) / (1000 * 60 * 60 * 24);
 
       // Freshness decreases over time (max 1.0 for very recent, min 0.1 for very old)
       if (ageInDays < 1) return 1.0; // Less than 1 day

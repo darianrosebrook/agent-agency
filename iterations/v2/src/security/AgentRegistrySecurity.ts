@@ -7,6 +7,7 @@
  * @author @darianrosebrook
  */
 
+import jwt from "jsonwebtoken";
 import { AgentProfile } from "../types/agent-registry.js";
 import { Logger } from "../utils/Logger.js";
 
@@ -76,6 +77,13 @@ export interface SecurityConfig {
   blockedUserIds?: string[];
   rateLimitWindowMs: number;
   rateLimitMaxRequests: number;
+
+  // JWT Configuration
+  jwtSecret?: string;
+  jwtIssuer?: string;
+  jwtAudience?: string[];
+  jwtExpirationTime?: string;
+  enableJwtValidation: boolean;
 }
 
 /**
@@ -89,6 +97,14 @@ const DEFAULT_SECURITY_CONFIG: SecurityConfig = {
   auditRetentionDays: 90,
   rateLimitWindowMs: 60000, // 1 minute
   rateLimitMaxRequests: 100,
+
+  // JWT Configuration
+  jwtSecret:
+    process.env.JWT_SECRET || "default-jwt-secret-change-in-production",
+  jwtIssuer: "agent-agency",
+  jwtAudience: ["agent-registry", "arbiter-orchestrator"],
+  jwtExpirationTime: "24h",
+  enableJwtValidation: true,
 };
 
 /**
@@ -120,9 +136,8 @@ export class AgentRegistrySecurity {
    */
   async authenticate(token: string): Promise<SecurityContext | null> {
     try {
-      // TODO: Implement JWT or API key validation
-      // For now, accept any token and create basic context
-      if (!token || token.length < 10) {
+      // Validate token format
+      if (!token || token.trim().length === 0) {
         await this.logAuditEvent({
           id: this.generateId(),
           timestamp: new Date(),
@@ -134,26 +149,96 @@ export class AgentRegistrySecurity {
           },
           resource: { type: "agent", id: "unknown" },
           action: AuditAction.READ,
-          details: { reason: "Invalid token format" },
+          details: { reason: "Empty token" },
           result: "failure",
-          errorMessage: "Invalid token format",
+          errorMessage: "Empty token provided",
         });
         return null;
       }
 
-      // Mock authentication - in production, validate JWT/API key
+      // Check if JWT validation is enabled
+      if (!this.config.enableJwtValidation) {
+        // Fallback to mock authentication for development
+        console.warn("JWT validation disabled, using mock authentication");
+        return this.createMockSecurityContext(token);
+      }
+
+      // Validate JWT token
+      const decoded = await this.validateJwtToken(token);
+
+      // Create security context from JWT payload
       const context: SecurityContext = {
-        tenantId: this.extractTenantFromToken(token) || "default-tenant",
-        userId: this.extractUserFromToken(token) || "anonymous",
-        roles: ["agent-registry-user"],
-        permissions: ["agent:read", "agent:create", "agent:update"],
+        tenantId: decoded.tenantId || decoded.tid || "default-tenant",
+        userId: decoded.userId || decoded.sub || decoded.uid || "unknown-user",
+        roles: decoded.roles || ["agent-registry-user"],
+        permissions: decoded.permissions || [
+          "agent:read",
+          "agent:create",
+          "agent:update",
+        ],
         sessionId: this.generateId(),
         ipAddress: "unknown",
         userAgent: "unknown",
       };
 
+      // Validate roles and permissions
+      if (!this.validateSecurityContext(context)) {
+        await this.logAuditEvent({
+          id: this.generateId(),
+          timestamp: new Date(),
+          eventType: AuditEventType.AUTHENTICATION_FAILURE,
+          actor: {
+            tenantId: context.tenantId,
+            userId: context.userId,
+            sessionId: context.sessionId,
+          },
+          resource: { type: "agent", id: "unknown" },
+          action: AuditAction.READ,
+          details: { reason: "Invalid security context" },
+          result: "failure",
+          errorMessage: "Invalid roles or permissions in token",
+        });
+        return null;
+      }
+
+      // Log successful authentication
+      await this.logAuditEvent({
+        id: this.generateId(),
+        timestamp: new Date(),
+        eventType: AuditEventType.AUTHENTICATION_SUCCESS,
+        actor: {
+          tenantId: context.tenantId,
+          userId: context.userId,
+          sessionId: context.sessionId,
+        },
+        resource: { type: "agent", id: "unknown" },
+        action: AuditAction.READ,
+        details: { tokenType: "jwt" },
+        result: "success",
+      });
+
       return context;
     } catch (error) {
+      // Log authentication failure
+      await this.logAuditEvent({
+        id: this.generateId(),
+        timestamp: new Date(),
+        eventType: AuditEventType.AUTHENTICATION_FAILURE,
+        actor: {
+          tenantId: "unknown",
+          userId: "unknown",
+          sessionId: "unknown",
+        },
+        resource: { type: "agent", id: "unknown" },
+        action: AuditAction.READ,
+        details: { reason: "JWT validation failed" },
+        result: "failure",
+        errorMessage:
+          error instanceof Error
+            ? error.message
+            : "Unknown authentication error",
+      });
+
       this.logger.error("Authentication failed:", error);
       return null;
     }
@@ -607,5 +692,115 @@ export class AgentRegistrySecurity {
       authzFailures,
       rateLimitHits,
     };
+  }
+
+  /**
+   * Validate JWT token and return decoded payload
+   */
+  private async validateJwtToken(token: string): Promise<any> {
+    try {
+      // Verify JWT token
+      const decoded = jwt.verify(token, this.config.jwtSecret!, {
+        issuer: this.config.jwtIssuer,
+        audience: this.config.jwtAudience,
+        algorithms: ["HS256"], // Use HS256 for HMAC
+      });
+
+      return decoded;
+    } catch (error) {
+      if (error instanceof jwt.JsonWebTokenError) {
+        throw new Error(`Invalid JWT token: ${error.message}`);
+      } else if (error instanceof jwt.TokenExpiredError) {
+        throw new Error("JWT token has expired");
+      } else if (error instanceof jwt.NotBeforeError) {
+        throw new Error("JWT token not yet valid");
+      } else {
+        throw new Error(
+          `JWT validation failed: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
+      }
+    }
+  }
+
+  /**
+   * Create mock security context for development/testing
+   */
+  private createMockSecurityContext(token: string): SecurityContext {
+    return {
+      tenantId: this.extractTenantFromToken(token) || "default-tenant",
+      userId: this.extractUserFromToken(token) || "mock-user",
+      roles: ["agent-registry-user"],
+      permissions: ["agent:read", "agent:create", "agent:update"],
+      sessionId: this.generateId(),
+      ipAddress: "127.0.0.1",
+      userAgent: "MockAgent/1.0",
+    };
+  }
+
+  /**
+   * Validate security context has required fields
+   */
+  private validateSecurityContext(context: SecurityContext): boolean {
+    // Basic validation
+    if (!context.tenantId || !context.userId) {
+      return false;
+    }
+
+    // Validate roles array
+    if (!Array.isArray(context.roles) || context.roles.length === 0) {
+      return false;
+    }
+
+    // Validate permissions array
+    if (
+      !Array.isArray(context.permissions) ||
+      context.permissions.length === 0
+    ) {
+      return false;
+    }
+
+    // Check for blocked tenants/users
+    if (this.config.blockedUserIds?.includes(context.userId)) {
+      return false;
+    }
+
+    if (
+      this.config.allowedTenantIds &&
+      !this.config.allowedTenantIds.includes(context.tenantId)
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Extract tenant ID from token (legacy mock method for backward compatibility)
+   * TODO: Remove when JWT validation is fully adopted
+   */
+  private extractTenantFromToken(token: string): string | null {
+    // TODO: Decode JWT and extract tenant claim
+    // Mock implementation for backward compatibility
+    if (token.includes("tenant-")) {
+      const match = token.match(/tenant-(\w+)/);
+      return match ? match[1] : null;
+    }
+    return "default-tenant";
+  }
+
+  /**
+   * Extract user ID from token (legacy mock method for backward compatibility)
+   * TODO: Remove when JWT validation is fully adopted
+   */
+  private extractUserFromToken(token: string): string | null {
+    // TODO: Decode JWT and extract user claim
+    // Mock implementation for backward compatibility
+    if (token.includes("user-")) {
+      const match = token.match(/user-(\w+)/);
+      return match ? match[1] : null;
+    }
+    return "anonymous";
   }
 }

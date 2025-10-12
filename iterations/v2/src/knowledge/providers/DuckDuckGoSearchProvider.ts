@@ -11,12 +11,12 @@
  * @author @darianrosebrook
  */
 
-import { BaseSearchProvider } from "../SearchProvider";
 import {
   KnowledgeQuery,
   SearchProviderConfig,
   SearchResult,
 } from "../../types/knowledge";
+import { BaseSearchProvider } from "../SearchProvider";
 
 /**
  * DuckDuckGo Instant Answer API Response Types
@@ -33,20 +33,23 @@ interface DuckDuckGoResponse {
   Definition: string;
   DefinitionSource: string;
   DefinitionURL: string;
-  RelatedTopics: Array<{
-    FirstURL?: string;
-    Icon?: { URL: string; Height: string; Width: string };
-    Result: string;
-    Text: string;
-  } | {
-    Name: string;
-    Topics: Array<{
-      FirstURL: string;
-      Icon?: { URL: string; Height: string; Width: string };
-      Result: string;
-      Text: string;
-    }>;
-  }>;
+  RelatedTopics: Array<
+    | {
+        FirstURL?: string;
+        Icon?: { URL: string; Height: string; Width: string };
+        Result: string;
+        Text: string;
+      }
+    | {
+        Name: string;
+        Topics: Array<{
+          FirstURL: string;
+          Icon?: { URL: string; Height: string; Width: string };
+          Result: string;
+          Text: string;
+        }>;
+      }
+  >;
   Results: Array<{
     FirstURL: string;
     Icon: { URL: string; Height: string; Width: string };
@@ -94,7 +97,7 @@ export class DuckDuckGoSearchProvider extends BaseSearchProvider {
       // Execute API request
       const response = await fetch(url.toString(), {
         headers: {
-          "Accept": "application/json",
+          Accept: "application/json",
           "User-Agent": "ArbiterKnowledgeSeeker/1.0",
         },
         signal: AbortSignal.timeout(query.timeoutMs || 10000),
@@ -169,7 +172,7 @@ export class DuckDuckGoSearchProvider extends BaseSearchProvider {
 
     // 2. Add Definition if available
     if (data.Definition && data.DefinitionURL) {
-      const relevance = 0.90;
+      const relevance = 0.9;
       const credibility = this.calculateCredibilityScore(data.DefinitionSource);
 
       results.push(
@@ -195,7 +198,7 @@ export class DuckDuckGoSearchProvider extends BaseSearchProvider {
       for (const result of data.Results) {
         if (positionIndex >= query.maxResults) break;
 
-        const relevance = 0.85 - (positionIndex * 0.05);
+        const relevance = 0.85 - positionIndex * 0.05;
         const domain = super["extractDomain"](result.FirstURL);
         const credibility = this.calculateCredibilityScore(domain);
 
@@ -227,7 +230,7 @@ export class DuckDuckGoSearchProvider extends BaseSearchProvider {
           for (const subTopic of topic.Topics) {
             if (positionIndex >= query.maxResults) break;
 
-            const relevance = 0.70 - (positionIndex * 0.05);
+            const relevance = 0.7 - positionIndex * 0.05;
             const domain = super["extractDomain"](subTopic.FirstURL);
             const credibility = this.calculateCredibilityScore(domain);
 
@@ -251,7 +254,7 @@ export class DuckDuckGoSearchProvider extends BaseSearchProvider {
         }
         // Handle single topics
         else if ("FirstURL" in topic && topic.FirstURL) {
-          const relevance = 0.70 - (positionIndex * 0.05);
+          const relevance = 0.7 - positionIndex * 0.05;
           const domain = super["extractDomain"](topic.FirstURL);
           const credibility = this.calculateCredibilityScore(domain);
 
@@ -284,9 +287,10 @@ export class DuckDuckGoSearchProvider extends BaseSearchProvider {
   private extractTitle(text: string): string {
     // Extract first sentence or up to 100 chars
     const firstSentence = text.split(/[.!?]/)[0];
-    const title = firstSentence.length > 100
-      ? firstSentence.substring(0, 97) + "..."
-      : firstSentence;
+    const title =
+      firstSentence.length > 100
+        ? firstSentence.substring(0, 97) + "..."
+        : firstSentence;
 
     return title.trim();
   }
@@ -310,13 +314,7 @@ export class DuckDuckGoSearchProvider extends BaseSearchProvider {
     ];
 
     // Medium credibility sources
-    const mediumCredibility = [
-      "medium",
-      "dev.to",
-      "reddit",
-      "youtube",
-      "docs",
-    ];
+    const mediumCredibility = ["medium", "dev.to", "reddit", "youtube", "docs"];
 
     // Check high credibility
     if (highCredibility.some((trusted) => sourceLower.includes(trusted))) {
@@ -350,4 +348,3 @@ export class DuckDuckGoSearchProvider extends BaseSearchProvider {
     }
   }
 }
-

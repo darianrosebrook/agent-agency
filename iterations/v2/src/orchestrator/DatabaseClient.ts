@@ -7,6 +7,8 @@
  * @author @darianrosebrook
  */
 
+import { Pool } from "pg";
+
 export interface DatabaseConfig {
   host: string;
   port: number;
@@ -95,7 +97,7 @@ export class TransactionError extends DatabaseError {
  */
 export class PostgresDatabaseClient implements IDatabaseClient {
   private config: DatabaseConfig;
-  private connectionPool: any[] = [];
+  private pool?: Pool;
   private stats: DatabaseStats;
   private connected: boolean = false;
 
@@ -116,19 +118,44 @@ export class PostgresDatabaseClient implements IDatabaseClient {
 
   async connect(): Promise<void> {
     try {
-      // In a real implementation, this would initialize a PostgreSQL connection pool
-      // For now, we'll simulate the connection
-      console.log(
-        `Connecting to PostgreSQL: ${this.config.host}:${this.config.port}/${this.config.database}`
-      );
+      // Initialize PostgreSQL connection pool
+      this.pool = new Pool({
+        host: this.config.host,
+        port: this.config.port,
+        database: this.config.database,
+        user: this.config.user,
+        password: this.config.password,
+        ssl: this.config.ssl,
+        max: this.config.maxConnections || 10,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: this.config.connectionTimeoutMs || 10000,
+        statement_timeout: this.config.queryTimeoutMs || 30000,
+      });
 
-      // Simulate connection delay
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Set up pool event handlers
+      this.pool.on("connect", () => {
+        this.stats.totalConnections++;
+        this.stats.activeConnections++;
+      });
+
+      this.pool.on("error", (err) => {
+        console.error("Unexpected database pool error:", err);
+        this.connected = false;
+      });
+
+      // Test connection
+      const client = await this.pool.connect();
+      try {
+        await client.query("SELECT 1");
+        console.log(
+          `Connected to PostgreSQL: ${this.config.host}:${this.config.port}/${this.config.database}`
+        );
+      } finally {
+        client.release();
+      }
 
       this.connected = true;
-      this.stats.totalConnections = 1;
-      this.stats.idleConnections = 1;
-
+      this.stats.uptimeMs = Date.now();
       console.log("Database connection established");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -139,22 +166,63 @@ export class PostgresDatabaseClient implements IDatabaseClient {
     }
   }
 
+  async initializeSchema(): Promise<void> {
+    if (!this.connected || !this.pool) {
+      throw new ConnectionError("Database not connected");
+    }
+
+    // Create task_assignments table for TaskAssignment persistence
+    await this.query(`
+      CREATE TABLE IF NOT EXISTS task_assignments (
+        assignment_id VARCHAR(255) PRIMARY KEY,
+        task_id VARCHAR(255) NOT NULL,
+        agent_id VARCHAR(255) NOT NULL,
+        agent_name VARCHAR(255),
+        agent_model_family VARCHAR(100),
+        assigned_at TIMESTAMP NOT NULL,
+        deadline TIMESTAMP,
+        assignment_timeout_ms INTEGER,
+        routing_confidence DECIMAL(3,2),
+        routing_strategy VARCHAR(50),
+        routing_reason TEXT,
+        status VARCHAR(50) NOT NULL DEFAULT 'pending',
+        acknowledged_at TIMESTAMP,
+        started_at TIMESTAMP,
+        completed_at TIMESTAMP,
+        progress DECIMAL(5,2) DEFAULT 0,
+        last_progress_update TIMESTAMP,
+        error_message TEXT,
+        error_code VARCHAR(100),
+        assignment_metadata JSONB,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_task_assignments_task_id ON task_assignments(task_id);
+      CREATE INDEX IF NOT EXISTS idx_task_assignments_agent_id ON task_assignments(agent_id);
+      CREATE INDEX IF NOT EXISTS idx_task_assignments_status ON task_assignments(status);
+      CREATE INDEX IF NOT EXISTS idx_task_assignments_created_at ON task_assignments(created_at);
+    `);
+
+    console.log("Database schema initialized for task assignments");
+  }
+
   async disconnect(): Promise<void> {
     try {
-      // In a real implementation, this would close the connection pool
-      console.log("Disconnecting from database");
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
+      if (this.pool) {
+        console.log("Disconnecting from database");
+        await this.pool.end();
+        this.pool = undefined;
+      }
       this.connected = false;
-      this.connectionPool = [];
       this.stats.totalConnections = 0;
       this.stats.activeConnections = 0;
       this.stats.idleConnections = 0;
 
       console.log("Database disconnected");
     } catch (error) {
-      console.error("Error disconnecting from database:", error);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new ConnectionError(`Failed to disconnect: ${message}`, error);
     }
   }
 
@@ -166,14 +234,13 @@ export class PostgresDatabaseClient implements IDatabaseClient {
     sql: string,
     params: any[] = []
   ): Promise<QueryResult<T>> {
-    if (!this.connected) {
+    if (!this.connected || !this.pool) {
       throw new ConnectionError("Database not connected");
     }
 
     const startTime = Date.now();
 
     try {
-      // In a real implementation, this would execute the query using the connection pool
       console.log(
         `Executing query: ${sql.substring(0, 100)}${
           sql.length > 100 ? "..." : ""
@@ -181,14 +248,18 @@ export class PostgresDatabaseClient implements IDatabaseClient {
       );
       console.log(`Parameters: ${params.length} params`);
 
-      // Simulate query execution with mock results
-      const mockResult = await this.simulateQuery<T>(sql);
+      // Execute real PostgreSQL query
+      const result = await this.pool.query(sql, params);
 
       const executionTime = Date.now() - startTime;
       this.stats.totalQueries++;
       this.updateAverageQueryTime(executionTime);
 
-      return mockResult;
+      return {
+        rows: result.rows as T[],
+        rowCount: result.rowCount || 0,
+        command: result.command || sql.split(" ")[0].toUpperCase(),
+      };
     } catch (error) {
       const executionTime = Date.now() - startTime;
       const message = error instanceof Error ? error.message : String(error);
@@ -209,23 +280,30 @@ export class PostgresDatabaseClient implements IDatabaseClient {
 
     this.stats.totalTransactions++;
 
-    // In a real implementation, this would start a database transaction
+    // Start real PostgreSQL transaction
     console.log("Starting database transaction");
 
+    const client = await this.pool!.connect();
+
     try {
+      await client.query("BEGIN");
+
       const tx: Transaction = {
         query: async <T = any>(sql: string, params?: any[]) => {
-          return this.query<T>(sql, params);
+          const result = await client.query(sql, params || []);
+          return {
+            rows: result.rows as T[],
+            rowCount: result.rowCount || 0,
+            command: result.command || sql.split(" ")[0].toUpperCase(),
+          };
         },
         commit: async () => {
           console.log("Committing transaction");
-          // Simulate commit
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          await client.query("COMMIT");
         },
         rollback: async () => {
           console.log("Rolling back transaction");
-          // Simulate rollback
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          await client.query("ROLLBACK");
         },
       };
 
@@ -259,6 +337,15 @@ export class PostgresDatabaseClient implements IDatabaseClient {
   }
 
   getStats(): Promise<DatabaseStats> {
+    // Update stats with real pool information if available
+    if (this.pool) {
+      const poolStats = this.pool;
+      this.stats.totalConnections = poolStats.totalCount || 0;
+      this.stats.idleConnections = poolStats.idleCount || 0;
+      this.stats.waitingClients = poolStats.waitingCount || 0;
+    }
+
+    this.stats.uptimeMs = this.connected ? Date.now() - this.stats.uptimeMs : 0;
     return Promise.resolve({ ...this.stats });
   }
 

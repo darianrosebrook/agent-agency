@@ -27,8 +27,8 @@ import { SecurityManager } from "./SecurityManager";
 import { TaskAssignmentManager } from "./TaskAssignment";
 import { TaskQueue } from "./TaskQueue";
 import { ResearchDetector } from "./research/ResearchDetector";
-import { TaskResearchAugmenter } from "./research/TaskResearchAugmenter";
 import { ResearchProvenance } from "./research/ResearchProvenance";
+import { TaskResearchAugmenter } from "./research/TaskResearchAugmenter";
 
 /**
  * Arbiter Orchestrator Configuration
@@ -203,7 +203,9 @@ export class ArbiterOrchestrator {
       let researchProvenance: ResearchProvenance | undefined;
 
       if (this.config.research?.enabled) {
-        console.log("Initializing task research system (ARBITER-006 Phase 4)...");
+        console.log(
+          "Initializing task research system (ARBITER-006 Phase 4)..."
+        );
 
         // Initialize research detector
         researchDetector = new ResearchDetector(this.config.research.detector);
@@ -398,27 +400,23 @@ export class ArbiterOrchestrator {
     // Augment task with research if enabled (ARBITER-006 Phase 4)
     let augmentedTask = task;
     let researchContext = null;
-    if (
-      this.config.research?.enabled &&
-      this.components.researchAugmenter
-    ) {
+    if (this.config.research?.enabled && this.components.researchAugmenter) {
       const researchStartTime = Date.now();
       try {
-        augmentedTask = await this.components.researchAugmenter.augmentTask(task);
+        augmentedTask = await this.components.researchAugmenter.augmentTask(
+          task
+        );
 
         if (augmentedTask.researchProvided && augmentedTask.researchContext) {
           researchContext = augmentedTask.researchContext;
           const researchDuration = Date.now() - researchStartTime;
 
           // Log research augmentation
-          console.log(
-            `Research augmentation completed for task ${task.id}:`,
-            {
-              findingsCount: researchContext.findings.length,
-              confidence: researchContext.confidence.toFixed(2),
-              durationMs: researchDuration,
-            }
-          );
+          console.log(`Research augmentation completed for task ${task.id}:`, {
+            findingsCount: researchContext.findings.length,
+            confidence: researchContext.confidence.toFixed(2),
+            durationMs: researchDuration,
+          });
 
           // Record provenance if enabled
           if (this.components.researchProvenance) {
@@ -480,10 +478,14 @@ export class ArbiterOrchestrator {
     }
 
     // Enqueue the augmented task with prompting metadata and research context
-    await this.components.taskQueue.enqueueWithCredentials(augmentedTask, credentials, {
-      promptingResult,
-      researchContext,
-    });
+    await this.components.taskQueue.enqueueWithCredentials(
+      augmentedTask,
+      credentials,
+      {
+        promptingResult,
+        researchContext,
+      }
+    );
 
     // Attempt immediate assignment if agents are available
     const assignment = await this.attemptImmediateAssignment(

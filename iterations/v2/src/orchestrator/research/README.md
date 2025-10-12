@@ -13,6 +13,7 @@ The Task Research System automatically detects when tasks require research and a
 **Purpose**: Detect when tasks need research using multiple heuristics
 
 **Features**:
+
 - Question detection (e.g., "How do I...?", "What is...?")
 - Uncertainty keyword detection (e.g., "not sure", "unclear", "need to find")
 - Comparison detection (e.g., "compare", "versus", "difference between")
@@ -21,6 +22,7 @@ The Task Research System automatically detects when tasks require research and a
 - Configurable confidence thresholds
 
 **Usage**:
+
 ```typescript
 import { ResearchDetector } from "./research/ResearchDetector";
 
@@ -50,13 +52,13 @@ if (requirement && requirement.required) {
 
 **Detection Heuristics**:
 
-| Indicator | Weight | Examples |
-|-----------|--------|----------|
-| Questions | 0.3 | "How do I...?", "What is...?" |
-| Uncertainty | 0.3 | "not sure", "unclear", "need to find" |
-| Comparison | 0.2 | "compare", "versus", "pros and cons" |
-| Technical | 0.15 | "API", "implementation", "documentation" |
-| Fact-checking | 0.05 | Analysis/research task types |
+| Indicator     | Weight | Examples                                 |
+| ------------- | ------ | ---------------------------------------- |
+| Questions     | 0.3    | "How do I...?", "What is...?"            |
+| Uncertainty   | 0.3    | "not sure", "unclear", "need to find"    |
+| Comparison    | 0.2    | "compare", "versus", "pros and cons"     |
+| Technical     | 0.15   | "API", "implementation", "documentation" |
+| Fact-checking | 0.05   | Analysis/research task types             |
 
 **Confidence Threshold**: Default 0.7 (70%)
 
@@ -67,6 +69,7 @@ if (requirement && requirement.required) {
 **Purpose**: Augment tasks with research findings
 
 **Features**:
+
 - Automatic research execution
 - Parallel query processing
 - Research context creation
@@ -75,6 +78,7 @@ if (requirement && requirement.required) {
 - Performance optimization (<2s target)
 
 **Usage**:
+
 ```typescript
 import { TaskResearchAugmenter } from "./research/TaskResearchAugmenter";
 import { ResearchDetector } from "./research/ResearchDetector";
@@ -83,17 +87,13 @@ import { KnowledgeSeeker } from "../knowledge/KnowledgeSeeker";
 const detector = new ResearchDetector();
 const knowledgeSeeker = new KnowledgeSeeker(config);
 
-const augmenter = new TaskResearchAugmenter(
-  knowledgeSeeker,
-  detector,
-  {
-    maxResultsPerQuery: 3,
-    relevanceThreshold: 0.8,
-    timeoutMs: 5000,
-    maxQueries: 3,
-    enableCaching: true,
-  }
-);
+const augmenter = new TaskResearchAugmenter(knowledgeSeeker, detector, {
+  maxResultsPerQuery: 3,
+  relevanceThreshold: 0.8,
+  timeoutMs: 5000,
+  maxQueries: 3,
+  enableCaching: true,
+});
 
 // Augment a task
 const augmentedTask = await augmenter.augmentTask(task);
@@ -101,11 +101,11 @@ const augmentedTask = await augmenter.augmentTask(task);
 if (augmentedTask.researchProvided) {
   console.log("Research context added:");
   console.log(augmentedTask.researchContext);
-  
+
   // Get summary for display
   const summary = augmenter.getResearchSummary(augmentedTask);
   console.log(summary);
-  
+
   // Get sources for citations
   const sources = augmenter.getResearchSources(augmentedTask);
   console.log("Sources:", sources);
@@ -113,6 +113,7 @@ if (augmentedTask.researchProvided) {
 ```
 
 **Augmented Task Structure**:
+
 ```typescript
 interface AugmentedTask extends Task {
   researchProvided: boolean;
@@ -133,6 +134,7 @@ interface AugmentedTask extends Task {
 **Purpose**: Track research audit trail for compliance and analysis
 
 **Features**:
+
 - Research operation logging
 - Success/failure tracking
 - Duration measurement
@@ -140,25 +142,17 @@ interface AugmentedTask extends Task {
 - Cleanup utilities
 
 **Usage**:
+
 ```typescript
 import { ResearchProvenance } from "./research/ResearchProvenance";
 
 const provenance = new ResearchProvenance(databaseClient);
 
 // Record successful research
-await provenance.recordResearch(
-  task.id,
-  researchContext,
-  durationMs
-);
+await provenance.recordResearch(task.id, researchContext, durationMs);
 
 // Record failed research
-await provenance.recordFailure(
-  task.id,
-  queries,
-  error,
-  durationMs
-);
+await provenance.recordFailure(task.id, queries, error, durationMs);
 
 // Get research history for a task
 const history = await provenance.getTaskResearch(task.id);
@@ -166,8 +160,15 @@ const history = await provenance.getTaskResearch(task.id);
 // Get statistics
 const stats = await provenance.getStatistics();
 console.log(`Total research: ${stats.totalResearch}`);
-console.log(`Success rate: ${(stats.successfulResearch / stats.totalResearch * 100).toFixed(1)}%`);
-console.log(`Average confidence: ${(stats.averageConfidence * 100).toFixed(1)}%`);
+console.log(
+  `Success rate: ${(
+    (stats.successfulResearch / stats.totalResearch) *
+    100
+  ).toFixed(1)}%`
+);
+console.log(
+  `Average confidence: ${(stats.averageConfidence * 100).toFixed(1)}%`
+);
 console.log(`Average duration: ${stats.averageDurationMs}ms`);
 
 // Cleanup old records (90+ days)
@@ -175,6 +176,7 @@ await provenance.cleanupOldRecords(90);
 ```
 
 **Database Schema**:
+
 ```sql
 CREATE TABLE task_research_provenance (
   id SERIAL PRIMARY KEY,
@@ -218,7 +220,7 @@ const researchProvenance = new ResearchProvenance(databaseClient);
 async function routeTask(task: Task): Promise<RoutingDecision> {
   // 1. Augment with research if needed
   const augmentedTask = await researchAugmenter.augmentTask(task);
-  
+
   // 2. Record provenance if research was performed
   if (augmentedTask.researchProvided && augmentedTask.researchContext) {
     await researchProvenance.recordResearch(
@@ -226,7 +228,7 @@ async function routeTask(task: Task): Promise<RoutingDecision> {
       augmentedTask.researchContext
     );
   }
-  
+
   // 3. Route augmented task
   return await taskRouter.route(augmentedTask);
 }
@@ -266,45 +268,37 @@ async function routeTask(task: Task): Promise<RoutingDecision> {
 ```typescript
 const detector = new ResearchDetector({
   minConfidence: 0.85, // Higher threshold
-  maxQueries: 2,       // Fewer queries
+  maxQueries: 2, // Fewer queries
   enableQuestionDetection: true,
   enableUncertaintyDetection: true,
   enableTechnicalDetection: true,
 });
 
-const augmenter = new TaskResearchAugmenter(
-  knowledgeSeeker,
-  detector,
-  {
-    maxResultsPerQuery: 2,      // Fewer results
-    relevanceThreshold: 0.9,    // Higher relevance bar
-    timeoutMs: 3000,            // Shorter timeout
-    maxQueries: 2,
-  }
-);
+const augmenter = new TaskResearchAugmenter(knowledgeSeeker, detector, {
+  maxResultsPerQuery: 2, // Fewer results
+  relevanceThreshold: 0.9, // Higher relevance bar
+  timeoutMs: 3000, // Shorter timeout
+  maxQueries: 2,
+});
 ```
 
 ### Aggressive (High Recall)
 
 ```typescript
 const detector = new ResearchDetector({
-  minConfidence: 0.6,  // Lower threshold
-  maxQueries: 5,       // More queries
+  minConfidence: 0.6, // Lower threshold
+  maxQueries: 5, // More queries
   enableQuestionDetection: true,
   enableUncertaintyDetection: true,
   enableTechnicalDetection: true,
 });
 
-const augmenter = new TaskResearchAugmenter(
-  knowledgeSeeker,
-  detector,
-  {
-    maxResultsPerQuery: 5,      // More results
-    relevanceThreshold: 0.7,    // Lower relevance bar
-    timeoutMs: 10000,           // Longer timeout
-    maxQueries: 5,
-  }
-);
+const augmenter = new TaskResearchAugmenter(knowledgeSeeker, detector, {
+  maxResultsPerQuery: 5, // More results
+  relevanceThreshold: 0.7, // Lower relevance bar
+  timeoutMs: 10000, // Longer timeout
+  maxQueries: 5,
+});
 ```
 
 ### Balanced (Default)
@@ -318,16 +312,12 @@ const detector = new ResearchDetector({
   enableTechnicalDetection: true,
 });
 
-const augmenter = new TaskResearchAugmenter(
-  knowledgeSeeker,
-  detector,
-  {
-    maxResultsPerQuery: 3,
-    relevanceThreshold: 0.8,
-    timeoutMs: 5000,
-    maxQueries: 3,
-  }
-);
+const augmenter = new TaskResearchAugmenter(knowledgeSeeker, detector, {
+  maxResultsPerQuery: 3,
+  relevanceThreshold: 0.8,
+  timeoutMs: 5000,
+  maxQueries: 3,
+});
 ```
 
 ---
@@ -368,8 +358,9 @@ Key metrics to track:
 6. **Query Type Distribution**: Which query types are most common
 
 Query metrics dashboard:
+
 ```sql
-SELECT 
+SELECT
   DATE(performed_at) as date,
   COUNT(*) as total_research,
   COUNT(CASE WHEN successful THEN 1 END) as successful,
@@ -390,11 +381,13 @@ ORDER BY date DESC;
 **Symptom**: Tasks that should trigger research don't
 
 **Causes**:
+
 - Confidence threshold too high
 - Detection heuristics disabled
 - Task description too vague
 
 **Solutions**:
+
 - Lower `minConfidence` threshold
 - Enable all detection heuristics
 - Improve task descriptions with specific questions
@@ -404,11 +397,13 @@ ORDER BY date DESC;
 **Symptom**: Augmentation exceeds 2s target
 
 **Causes**:
+
 - Too many queries
 - High timeout values
 - Slow search providers
 
 **Solutions**:
+
 - Reduce `maxQueries`
 - Lower `timeoutMs`
 - Check search provider health
@@ -419,11 +414,13 @@ ORDER BY date DESC;
 **Symptom**: No records in database
 
 **Causes**:
+
 - Database client not connected
 - Migration not run
 - Permissions issue
 
 **Solutions**:
+
 - Check `dbClient.isConnected()`
 - Run migration `005_task_research_provenance.sql`
 - Verify database permissions
@@ -462,4 +459,3 @@ ORDER BY date DESC;
 
 - @darianrosebrook - Phase 4 implementation
 - Cursor AI Agent - Code generation and testing
-

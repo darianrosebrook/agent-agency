@@ -9,12 +9,14 @@
 ## Quick Decision Matrix
 
 **Choose Phase 2 if you need**:
+
 - Real web search capabilities
 - External API integration
 - Production-ready research
 - End-user value immediately
 
 **Choose Phase 4 if you need**:
+
 - Task automation features
 - Orchestration integration
 - Internal efficiency gains
@@ -33,6 +35,7 @@ Replace MockSearchProvider with real search providers (Google, Bing, DuckDuckGo)
 ### Prerequisites
 
 **API Keys Needed**:
+
 ```bash
 # Google Custom Search
 GOOGLE_SEARCH_API_KEY=your_key_here
@@ -48,6 +51,7 @@ BING_SEARCH_API_KEY=your_key_here
 **How to Get API Keys**:
 
 1. **Google Custom Search**:
+
    - Visit: https://developers.google.com/custom-search
    - Create a project in Google Cloud Console
    - Enable Custom Search API
@@ -57,6 +61,7 @@ BING_SEARCH_API_KEY=your_key_here
    - Free tier: 100 queries/day
 
 2. **Bing Search**:
+
    - Visit: https://www.microsoft.com/en-us/bing/apis/bing-web-search-api
    - Sign up for Azure account
    - Create Bing Search resource
@@ -94,7 +99,7 @@ export class GoogleSearchProvider extends BaseSearchProvider {
 
   constructor(config: SearchProviderConfig) {
     super(config);
-    
+
     this.apiKey = process.env.GOOGLE_SEARCH_API_KEY || "";
     this.customSearchEngineId = process.env.GOOGLE_SEARCH_CX || "";
 
@@ -108,7 +113,7 @@ export class GoogleSearchProvider extends BaseSearchProvider {
   async search(query: KnowledgeQuery): Promise<SearchResult[]> {
     // Implement using Google Custom Search JSON API
     // https://developers.google.com/custom-search/v1/using_rest
-    
+
     const url = new URL("https://www.googleapis.com/customsearch/v1");
     url.searchParams.set("key", this.apiKey);
     url.searchParams.set("cx", this.customSearchEngineId);
@@ -116,13 +121,13 @@ export class GoogleSearchProvider extends BaseSearchProvider {
     url.searchParams.set("num", query.maxResults.toString());
 
     const response = await fetch(url.toString());
-    
+
     if (!response.ok) {
       throw new Error(`Google Search failed: ${response.statusText}`);
     }
 
     const data = await response.json();
-    
+
     return this.parseGoogleResults(data, query.id);
   }
 
@@ -149,7 +154,7 @@ export class BingSearchProvider extends BaseSearchProvider {
 
   constructor(config: SearchProviderConfig) {
     super(config);
-    
+
     this.apiKey = process.env.BING_SEARCH_API_KEY || "";
 
     if (!this.apiKey) {
@@ -160,7 +165,7 @@ export class BingSearchProvider extends BaseSearchProvider {
   async search(query: KnowledgeQuery): Promise<SearchResult[]> {
     // Implement using Bing Web Search API v7
     // https://docs.microsoft.com/en-us/bing/search-apis/bing-web-search/
-    
+
     const url = new URL("https://api.bing.microsoft.com/v7.0/search");
     url.searchParams.set("q", query.query);
     url.searchParams.set("count", query.maxResults.toString());
@@ -176,7 +181,7 @@ export class BingSearchProvider extends BaseSearchProvider {
     }
 
     const data = await response.json();
-    
+
     return this.parseBingResults(data, query.id);
   }
 
@@ -206,7 +211,7 @@ export class DuckDuckGoSearchProvider extends BaseSearchProvider {
   async search(query: KnowledgeQuery): Promise<SearchResult[]> {
     // Use DuckDuckGo Instant Answer API
     // https://api.duckduckgo.com/api
-    
+
     const url = new URL("https://api.duckduckgo.com/");
     url.searchParams.set("q", query.query);
     url.searchParams.set("format", "json");
@@ -219,7 +224,7 @@ export class DuckDuckGoSearchProvider extends BaseSearchProvider {
     }
 
     const data = await response.json();
-    
+
     return this.parseDuckDuckGoResults(data, query.id);
   }
 
@@ -260,11 +265,11 @@ export class SearchProviderFactory {
           default:
             throw new Error(`Unknown web search provider: ${config.name}`);
         }
-      
+
       case SearchProviderType.ACADEMIC_SEARCH:
         // Future: arXiv, PubMed, etc.
         throw new Error("Academic search not yet implemented");
-      
+
       default:
         throw new Error(`Unknown search provider type: ${config.type}`);
     }
@@ -285,9 +290,9 @@ const config: ArbiterOrchestratorConfig = {
         name: "google",
         type: SearchProviderType.WEB_SEARCH,
         endpoint: "https://www.googleapis.com/customsearch/v1",
-        priority: 1,  // Primary provider
+        priority: 1, // Primary provider
         rateLimit: {
-          requestsPerMinute: 100,  // Adjust based on your quota
+          requestsPerMinute: 100, // Adjust based on your quota
           requestsPerHour: 6000,
         },
         timeout: 5000,
@@ -297,7 +302,7 @@ const config: ArbiterOrchestratorConfig = {
         name: "bing",
         type: SearchProviderType.WEB_SEARCH,
         endpoint: "https://api.bing.microsoft.com/v7.0/search",
-        priority: 2,  // Fallback provider
+        priority: 2, // Fallback provider
         rateLimit: {
           requestsPerMinute: 50,
           requestsPerHour: 1000,
@@ -309,9 +314,9 @@ const config: ArbiterOrchestratorConfig = {
         name: "duckduckgo",
         type: SearchProviderType.WEB_SEARCH,
         endpoint: "https://api.duckduckgo.com/",
-        priority: 3,  // Second fallback
+        priority: 3, // Second fallback
         rateLimit: {
-          requestsPerMinute: 30,  // Be conservative
+          requestsPerMinute: 30, // Be conservative
           requestsPerHour: 500,
         },
         timeout: 5000,
@@ -321,7 +326,7 @@ const config: ArbiterOrchestratorConfig = {
         name: "mock",
         type: SearchProviderType.WEB_SEARCH,
         endpoint: "mock://",
-        priority: 99,  // Development only
+        priority: 99, // Development only
         rateLimit: {
           requestsPerMinute: 1000,
           requestsPerHour: 10000,
@@ -344,14 +349,14 @@ private async searchWithFallback(
   query: KnowledgeQuery,
   providers: ISearchProvider[]
 ): Promise<SearchResult[]> {
-  const sortedProviders = providers.sort((a, b) => 
+  const sortedProviders = providers.sort((a, b) =>
     (a.priority || 999) - (b.priority || 999)
   );
 
   for (const provider of sortedProviders) {
     try {
       const results = await provider.search(query);
-      
+
       if (results.length > 0) {
         // Update provider health as successful
         await this.updateProviderHealth(provider.name, {
@@ -360,19 +365,19 @@ private async searchWithFallback(
           responseTimeMs: Date.now() - startTime,
           errorRate: 0,
         });
-        
+
         return results;
       }
     } catch (error) {
       console.warn(`Provider ${provider.name} failed:`, error);
-      
+
       // Update provider health as failed
       await this.updateProviderHealth(provider.name, {
         available: false,
         lastChecked: new Date(),
         errorMessage: error instanceof Error ? error.message : String(error),
       });
-      
+
       // Continue to next provider
       continue;
     }
@@ -385,6 +390,7 @@ private async searchWithFallback(
 ### Testing Strategy
 
 #### Unit Tests
+
 ```bash
 # Test each provider independently
 npm test src/knowledge/providers/GoogleSearchProvider.test.ts
@@ -393,12 +399,14 @@ npm test src/knowledge/providers/DuckDuckGoSearchProvider.test.ts
 ```
 
 #### Integration Tests
+
 ```bash
 # Test with real APIs (requires API keys)
 GOOGLE_SEARCH_API_KEY=xxx GOOGLE_SEARCH_CX=xxx npm run test:integration
 ```
 
 #### End-to-End Tests
+
 ```bash
 # Test full flow: Worker → MCP → Orchestrator → Real Search
 npm run test:e2e
@@ -469,12 +477,16 @@ export class ResearchDetector {
 
   private containsUncertaintyKeywords(text: string): boolean {
     const uncertaintyWords = [
-      "not sure", "unclear", "unknown", "uncertain",
-      "don't know", "need to find", "research", "investigate"
+      "not sure",
+      "unclear",
+      "unknown",
+      "uncertain",
+      "don't know",
+      "need to find",
+      "research",
+      "investigate",
     ];
-    return uncertaintyWords.some(word => 
-      text.toLowerCase().includes(word)
-    );
+    return uncertaintyWords.some((word) => text.toLowerCase().includes(word));
   }
 }
 ```
@@ -525,29 +537,29 @@ export class TaskResearchAugmenter {
     queryType: QueryType
   ): Promise<ResearchFindings[]> {
     const results = await Promise.all(
-      queries.map(query => 
+      queries.map((query) =>
         this.knowledgeSeeker.processQuery({
           id: `research-${Date.now()}-${Math.random()}`,
           query,
           queryType,
-          maxResults: 3,  // Limit for task augmentation
-          relevanceThreshold: 0.8,  // High bar for task context
-          timeoutMs: 5000,  // Fast timeout
+          maxResults: 3, // Limit for task augmentation
+          relevanceThreshold: 0.8, // High bar for task context
+          timeoutMs: 5000, // Fast timeout
           context: { purpose: "task-augmentation" },
           metadata: {
             requesterId: "task-research-augmenter",
-            priority: 7,  // Lower than direct requests
+            priority: 7, // Lower than direct requests
             createdAt: new Date(),
           },
         })
       )
     );
 
-    return results.map(r => ({
+    return results.map((r) => ({
       query: r.query.query,
       summary: r.summary,
       confidence: r.confidence,
-      keyFindings: r.results.slice(0, 3),  // Top 3 results only
+      keyFindings: r.results.slice(0, 3), // Top 3 results only
     }));
   }
 }
@@ -620,6 +632,7 @@ export class ResearchProvenance {
 **Target**: <2s overhead for research augmentation
 
 **Strategies**:
+
 1. Parallel query execution
 2. Aggressive caching (research by task type)
 3. Limit results per query (3 max)
@@ -646,8 +659,8 @@ export class ResearchProvenance {
 1. **Week 1**: Phase 2 (Real Search Providers)
    - Days 1-2: Implement providers
    - Day 3: Testing and integration
-   
 2. **Week 2**: Phase 4 (Task-Driven Research)
+
    - Days 1-2: Implement detection and augmentation
    - Day 3: Integration and optimization
 
@@ -660,18 +673,21 @@ export class ResearchProvenance {
 ## Success Metrics
 
 ### Phase 2 Success
+
 - ✅ 3 real search providers working
 - ✅ Fallback chain functional
 - ✅ Rate limiting enforced
 - ✅ >90% provider uptime
 
 ### Phase 4 Success
+
 - ✅ >80% research detection accuracy
 - ✅ <2s augmentation overhead
 - ✅ Provenance tracked
 - ✅ Routing integration works
 
 ### Overall Success (100% Theory Aligned)
+
 - ✅ All 5 phases complete
 - ✅ >85% test coverage
 - ✅ >85% production readiness
@@ -682,18 +698,21 @@ export class ResearchProvenance {
 ## Getting Help
 
 ### If Stuck on Phase 2
+
 - Check API documentation links in this guide
 - Test each provider independently
 - Use curl/Postman to verify API keys work
 - Check rate limits and quotas
 
 ### If Stuck on Phase 4
+
 - Review existing task routing logic
 - Start with simple heuristics
 - Profile performance early
 - Use feature flags for gradual rollout
 
 ### Resources
+
 - [Google Custom Search Docs](https://developers.google.com/custom-search)
 - [Bing Search API Docs](https://docs.microsoft.com/en-us/bing/search-apis/)
 - [DuckDuckGo API Docs](https://duckduckgo.com/api)
@@ -706,4 +725,3 @@ export class ResearchProvenance {
 **Last Updated**: October 12, 2025  
 **Status**: Ready to proceed with Phase 2 or Phase 4  
 **Estimated Total Time to 100%**: 5-7 days
-

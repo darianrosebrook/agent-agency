@@ -24,15 +24,16 @@ Successfully implemented automatic research detection and task augmentation syst
 
 **Detection Heuristics**:
 
-| Indicator | Weight | Examples |
-|-----------|--------|----------|
-| Questions | 0.3 | "How do I...?", "What is...?", "Why does...?" |
-| Uncertainty | 0.3 | "not sure", "unclear", "need to find" |
-| Comparison | 0.2 | "compare", "versus", "pros and cons" |
-| Technical | 0.15 | "API", "implementation", "documentation" |
-| Fact-checking | 0.05 | Analysis/research task types |
+| Indicator     | Weight | Examples                                      |
+| ------------- | ------ | --------------------------------------------- |
+| Questions     | 0.3    | "How do I...?", "What is...?", "Why does...?" |
+| Uncertainty   | 0.3    | "not sure", "unclear", "need to find"         |
+| Comparison    | 0.2    | "compare", "versus", "pros and cons"          |
+| Technical     | 0.15   | "API", "implementation", "documentation"      |
+| Fact-checking | 0.05   | Analysis/research task types                  |
 
 **Key Features**:
+
 - Multi-indicator confidence scoring (0-1 scale)
 - Query type inference (factual, technical, comparative, trend, explanatory)
 - Automatic query generation from task description
@@ -40,6 +41,7 @@ Successfully implemented automatic research detection and task augmentation syst
 - Explicit question extraction from text
 
 **Configuration**:
+
 ```typescript
 {
   minConfidence: 0.7,        // 70% confidence threshold
@@ -51,6 +53,7 @@ Successfully implemented automatic research detection and task augmentation syst
 ```
 
 **Detection Example**:
+
 ```typescript
 Task: "How do I implement connection pooling in Node.js?"
 
@@ -79,6 +82,7 @@ Detection Result:
 **Purpose**: Augment tasks with research findings
 
 **Key Features**:
+
 - Automatic detection + execution pipeline
 - Parallel query execution (3 queries in ~500ms)
 - Knowledge response transformation
@@ -87,6 +91,7 @@ Detection Result:
 - Graceful failure handling
 
 **Configuration**:
+
 ```typescript
 {
   maxResultsPerQuery: 3,      // Top 3 results per query
@@ -98,6 +103,7 @@ Detection Result:
 ```
 
 **Augmentation Example**:
+
 ```typescript
 // Input
 Task: {
@@ -139,6 +145,7 @@ AugmentedTask: {
 ```
 
 **Performance**:
+
 - Detection: ~5ms
 - Augmentation: ~300-500ms (3 queries, Google/Bing)
 - Total overhead: <600ms (well under 2s target ✅)
@@ -152,6 +159,7 @@ AugmentedTask: {
 **Purpose**: Track research audit trail for compliance
 
 **Key Features**:
+
 - Success/failure tracking
 - Duration measurement
 - Statistics aggregation
@@ -159,6 +167,7 @@ AugmentedTask: {
 - Cleanup utilities
 
 **Database Schema**:
+
 ```sql
 CREATE TABLE task_research_provenance (
   id SERIAL PRIMARY KEY,
@@ -175,6 +184,7 @@ CREATE TABLE task_research_provenance (
 ```
 
 **Provenance Example**:
+
 ```typescript
 // Successful research
 {
@@ -201,6 +211,7 @@ CREATE TABLE task_research_provenance (
 ```
 
 **Statistics**:
+
 ```typescript
 {
   totalResearch: 1000,
@@ -268,11 +279,13 @@ graph TD
 ### Integration Points
 
 1. **`submitTask()` Method** - Main integration point
+
    - After authentication
    - Before prompting engine
    - Graceful degradation on failure
 
 2. **`initialize()` Method** - Component setup
+
    - Initialize ResearchDetector
    - Initialize TaskResearchAugmenter
    - Initialize ResearchProvenance (if enabled)
@@ -295,15 +308,15 @@ graph TD
 
 ### Performance Breakdown
 
-| Operation | Time | Details |
-|-----------|------|---------|
-| Detection | 5ms | Heuristic analysis |
-| Query 1 (Google) | 150ms | Parallel execution |
-| Query 2 (Bing) | 120ms | Parallel execution |
-| Query 3 (DuckDuckGo) | 100ms | Parallel execution |
-| Transform | 5ms | Response mapping |
-| Provenance | 20ms | Database write |
-| **Total** | **400ms** | **Well under 2s target** |
+| Operation            | Time      | Details                  |
+| -------------------- | --------- | ------------------------ |
+| Detection            | 5ms       | Heuristic analysis       |
+| Query 1 (Google)     | 150ms     | Parallel execution       |
+| Query 2 (Bing)       | 120ms     | Parallel execution       |
+| Query 3 (DuckDuckGo) | 100ms     | Parallel execution       |
+| Transform            | 5ms       | Response mapping         |
+| Provenance           | 20ms      | Database write           |
+| **Total**            | **400ms** | **Well under 2s target** |
 
 ### Optimization Strategies
 
@@ -321,15 +334,18 @@ graph TD
 **File**: `migrations/005_task_research_provenance.sql`
 
 **Tables Created**:
+
 - `task_research_provenance` - Main provenance table
 
 **Indexes**:
+
 - `idx_task_research_provenance_task_id` - Fast lookup by task
 - `idx_task_research_provenance_performed_at` - Time-series queries
 - `idx_task_research_provenance_successful` - Filter by status
 - `idx_task_research_provenance_queries` (GIN) - JSONB query search
 
 **Run Migration**:
+
 ```bash
 psql -U your_user -d arbiter_db -f migrations/005_task_research_provenance.sql
 ```
@@ -423,7 +439,12 @@ const provenance = orchestrator.components.researchProvenance;
 const stats = await provenance.getStatistics();
 
 console.log(`Research Operations: ${stats.totalResearch}`);
-console.log(`Success Rate: ${(stats.successfulResearch / stats.totalResearch * 100).toFixed(1)}%`);
+console.log(
+  `Success Rate: ${(
+    (stats.successfulResearch / stats.totalResearch) *
+    100
+  ).toFixed(1)}%`
+);
 console.log(`Avg Confidence: ${(stats.averageConfidence * 100).toFixed(1)}%`);
 console.log(`Avg Duration: ${stats.averageDurationMs}ms`);
 ```
@@ -432,7 +453,7 @@ console.log(`Avg Duration: ${stats.averageDurationMs}ms`);
 
 ```sql
 -- Last 30 days of research activity
-SELECT 
+SELECT
   DATE(performed_at) as date,
   COUNT(*) as total_research,
   COUNT(CASE WHEN successful THEN 1 END) as successful,
@@ -447,6 +468,7 @@ ORDER BY date DESC;
 ### Alerts
 
 Recommended alert thresholds:
+
 - Success rate < 90% → Investigate provider issues
 - Avg confidence < 0.7 → Review detection heuristics
 - Avg duration > 1000ms → Check provider performance
@@ -508,6 +530,7 @@ None - all critical functionality implemented
 ### Minor
 
 2. **Simple Query Generation**
+
    - Current: Basic text extraction
    - Impact: Suboptimal queries occasionally
    - Mitigation: Multiple query fallbacks
@@ -528,6 +551,7 @@ None - all critical functionality implemented
 **Problem**: Tasks with obvious research needs aren't being augmented
 
 **Diagnosis**:
+
 ```typescript
 // Check detector configuration
 const requirement = researchDetector.detectResearchNeeds(task);
@@ -535,6 +559,7 @@ console.log("Detection result:", requirement);
 ```
 
 **Solutions**:
+
 - Lower `minConfidence` threshold (try 0.6 instead of 0.7)
 - Verify all detection heuristics are enabled
 - Add specific keywords to task description
@@ -544,6 +569,7 @@ console.log("Detection result:", requirement);
 **Problem**: Augmentation exceeds 2s target
 
 **Diagnosis**:
+
 ```typescript
 // Check individual query times
 const startTime = Date.now();
@@ -552,6 +578,7 @@ console.log(`Query took ${Date.now() - startTime}ms`);
 ```
 
 **Solutions**:
+
 - Reduce `maxQueries` from 3 to 2
 - Lower `timeoutMs` from 5000 to 3000
 - Check search provider health
@@ -562,6 +589,7 @@ console.log(`Query took ${Date.now() - startTime}ms`);
 **Problem**: No records in `task_research_provenance` table
 
 **Diagnosis**:
+
 ```sql
 -- Check table exists
 \dt task_research_provenance
@@ -571,6 +599,7 @@ SELECT COUNT(*) FROM task_research_provenance;
 ```
 
 **Solutions**:
+
 - Run migration: `005_task_research_provenance.sql`
 - Verify `provenance.enabled: true` in config
 - Check database connection in orchestrator
@@ -581,6 +610,7 @@ SELECT COUNT(*) FROM task_research_provenance;
 ## Files Modified
 
 ### New Files (4):
+
 - `src/orchestrator/research/ResearchDetector.ts` (415 lines)
 - `src/orchestrator/research/TaskResearchAugmenter.ts` (299 lines)
 - `src/orchestrator/research/ResearchProvenance.ts` (322 lines)
@@ -588,6 +618,7 @@ SELECT COUNT(*) FROM task_research_provenance;
 - `migrations/005_task_research_provenance.sql` (40 lines)
 
 ### Modified Files (1):
+
 - `src/orchestrator/ArbiterOrchestrator.ts` (+282 lines - research integration)
 
 **Total Impact**: +1,864 lines of production code + documentation
@@ -597,12 +628,15 @@ SELECT COUNT(*) FROM task_research_provenance;
 ## Theory Alignment
 
 ### Before Phase 4:
+
 **Theory Compliance**: 85% (Knowledge Seeker + Database + MCP + Real Search)
 
 ### After Phase 4:
+
 **Theory Compliance**: 95% (Task-driven research added)
 
 **Remaining for 100%**:
+
 - Phase 5 (Documentation & Production Verification): +5%
 
 ---
@@ -640,12 +674,14 @@ SELECT COUNT(*) FROM task_research_provenance;
 ### Phase 5: Documentation & Production (Final Phase)
 
 1. **Testing** (1-2 days)
+
    - [ ] Write comprehensive unit tests
    - [ ] Write integration tests
    - [ ] Write end-to-end tests
    - [ ] Achieve 80%+ coverage
 
 2. **Documentation** (1 day)
+
    - [ ] Update main README
    - [ ] API documentation
    - [ ] Configuration guide
@@ -700,4 +736,3 @@ Phase 4 successfully implements automatic task-driven research:
 ✅ **Documentation**: Comprehensive README and examples
 
 The Arbiter Stack is now 95% theory-aligned with only final verification remaining!
-

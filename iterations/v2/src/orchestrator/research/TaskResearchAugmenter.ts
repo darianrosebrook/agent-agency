@@ -8,7 +8,11 @@
  */
 
 import { Task } from "../../types/arbiter-orchestration";
-import { IKnowledgeSeeker, KnowledgeResponse, SearchResult } from "../../types/knowledge";
+import {
+  IKnowledgeSeeker,
+  KnowledgeResponse,
+  SearchResult,
+} from "../../types/knowledge";
 import { ResearchDetector, ResearchRequirement } from "./ResearchDetector";
 
 /**
@@ -126,7 +130,9 @@ export class TaskResearchAugmenter {
     }
 
     console.log(
-      `Research detected for task ${task.id}: ${researchReq.reason} (confidence: ${researchReq.confidence.toFixed(2)})`
+      `Research detected for task ${task.id}: ${
+        researchReq.reason
+      } (confidence: ${researchReq.confidence.toFixed(2)})`
     );
 
     try {
@@ -149,7 +155,9 @@ export class TaskResearchAugmenter {
       };
 
       console.log(
-        `Research completed for task ${task.id}: ${findings.length} findings (confidence: ${overallConfidence.toFixed(2)})`
+        `Research completed for task ${task.id}: ${
+          findings.length
+        } findings (confidence: ${overallConfidence.toFixed(2)})`
       );
 
       return {
@@ -219,7 +227,9 @@ export class TaskResearchAugmenter {
     queryType: string
   ): Promise<KnowledgeResponse> {
     return await this.knowledgeSeeker.processQuery({
-      id: `task-research-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `task-research-${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 9)}`,
       query,
       queryType: queryType as any,
       maxResults: this.config.maxResultsPerQuery,
@@ -283,7 +293,9 @@ export class TaskResearchAugmenter {
       return null;
     }
 
-    return `Research findings (confidence: ${(ctx.confidence * 100).toFixed(0)}%):\n${summaries.join("\n\n")}`;
+    return `Research findings (confidence: ${(ctx.confidence * 100).toFixed(
+      0
+    )}%):\n${summaries.join("\n\n")}`;
   }
 
   /**
@@ -317,4 +329,3 @@ export class TaskResearchAugmenter {
     return uniqueSources;
   }
 }
-

@@ -7,12 +7,12 @@
  * @author @darianrosebrook
  */
 
-import { BaseSearchProvider } from "../SearchProvider";
 import {
   KnowledgeQuery,
   SearchProviderConfig,
   SearchResult,
 } from "../../types/knowledge";
+import { BaseSearchProvider } from "../SearchProvider";
 
 /**
  * Bing Web Search API Response Types
@@ -98,7 +98,7 @@ export class BingSearchProvider extends BaseSearchProvider {
       const response = await fetch(url.toString(), {
         headers: {
           "Ocp-Apim-Subscription-Key": this.apiKey,
-          "Accept": "application/json",
+          Accept: "application/json",
           "User-Agent": "ArbiterKnowledgeSeeker/1.0",
         },
         signal: AbortSignal.timeout(query.timeoutMs || 10000),
@@ -147,13 +147,17 @@ export class BingSearchProvider extends BaseSearchProvider {
     data: BingSearchResponse,
     query: KnowledgeQuery
   ): SearchResult[] {
-    if (!data.webPages || !data.webPages.value || data.webPages.value.length === 0) {
+    if (
+      !data.webPages ||
+      !data.webPages.value ||
+      data.webPages.value.length === 0
+    ) {
       return [];
     }
 
     return data.webPages.value.map((item, index) => {
       // Calculate relevance score based on position and ranking
-      const positionScore = 1.0 - (index * 0.08); // Slightly less aggressive than Google
+      const positionScore = 1.0 - index * 0.08; // Slightly less aggressive than Google
 
       // Calculate credibility score based on domain
       const domain = super["extractDomain"](item.url);
@@ -236,7 +240,6 @@ export class BingSearchProvider extends BaseSearchProvider {
     return domainLower.startsWith("https://") ? 0.6 : 0.5;
   }
 
-
   /**
    * Get provider status and health metrics
    */
@@ -264,4 +267,3 @@ export class BingSearchProvider extends BaseSearchProvider {
     }
   }
 }
-

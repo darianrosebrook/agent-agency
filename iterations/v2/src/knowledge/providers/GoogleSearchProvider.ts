@@ -7,12 +7,12 @@
  * @author @darianrosebrook
  */
 
-import { BaseSearchProvider } from "../SearchProvider";
 import {
   KnowledgeQuery,
   SearchProviderConfig,
   SearchResult,
 } from "../../types/knowledge";
+import { BaseSearchProvider } from "../SearchProvider";
 
 /**
  * Google Custom Search API Response Types
@@ -91,14 +91,17 @@ export class GoogleSearchProvider extends BaseSearchProvider {
       // Add optional filters based on query type
       if (query.queryType === "technical") {
         // Prioritize technical documentation
-        url.searchParams.set("siteSearch", "github.com OR stackoverflow.com OR docs.*");
+        url.searchParams.set(
+          "siteSearch",
+          "github.com OR stackoverflow.com OR docs.*"
+        );
         url.searchParams.set("siteSearchFilter", "i"); // Include sites
       }
 
       // Execute API request
       const response = await fetch(url.toString(), {
         headers: {
-          "Accept": "application/json",
+          Accept: "application/json",
           "User-Agent": "ArbiterKnowledgeSeeker/1.0",
         },
         signal: AbortSignal.timeout(query.timeoutMs || 10000),
@@ -128,9 +131,7 @@ export class GoogleSearchProvider extends BaseSearchProvider {
 
       // Check for rate limiting
       if (error instanceof Error && error.message.includes("429")) {
-        throw new Error(
-          "Google Search rate limit exceeded. Check your quota."
-        );
+        throw new Error("Google Search rate limit exceeded. Check your quota.");
       }
 
       throw error;
@@ -150,7 +151,7 @@ export class GoogleSearchProvider extends BaseSearchProvider {
 
     return data.items.map((item) => {
       // Calculate relevance score based on position
-      const positionScore = 1.0 - (data.items!.indexOf(item) * 0.1);
+      const positionScore = 1.0 - data.items!.indexOf(item) * 0.1;
 
       // Calculate credibility score based on domain
       const credibilityScore = this.calculateCredibilityScore(item.displayLink);
@@ -233,7 +234,6 @@ export class GoogleSearchProvider extends BaseSearchProvider {
       .trim();
   }
 
-
   /**
    * Get provider status and health metrics
    */
@@ -261,4 +261,3 @@ export class GoogleSearchProvider extends BaseSearchProvider {
     }
   }
 }
-

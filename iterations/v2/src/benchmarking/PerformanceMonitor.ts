@@ -170,6 +170,7 @@ export class PerformanceMonitor extends EventEmitter {
       totalAggregations: 0,
       eventBufferSize: 0,
       memoryUsageMB: 0,
+      processingTimeMs: 0,
     };
 
     // RL metrics
@@ -183,6 +184,8 @@ export class PerformanceMonitor extends EventEmitter {
     const analysisStats = this.performanceAnalyzer?.getAnalysisStats() || {
       agentsTracked: 0,
       totalAnomalies: 0,
+      alertsTriggered: 0,
+      analysisTimeMs: 0,
     };
 
     const snapshot: PerformanceSnapshot = {
@@ -234,12 +237,12 @@ export class PerformanceMonitor extends EventEmitter {
    */
   async performHealthCheck(): Promise<HealthCheckResult> {
     const timestamp = new Date().toISOString();
-    const checks = {
-      collection: { status: "ok" as const },
-      aggregation: { status: "ok" as const },
-      rl: { status: "ok" as const },
-      analysis: { status: "ok" as const },
-      system: { status: "ok" as const },
+    const checks: HealthCheckResult["checks"] = {
+      collection: { status: "ok" },
+      aggregation: { status: "ok" },
+      rl: { status: "ok" },
+      analysis: { status: "ok" },
+      system: { status: "ok" },
     };
     const recommendations: string[] = [];
 

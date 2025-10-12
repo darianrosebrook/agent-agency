@@ -286,12 +286,17 @@ export class RLDataPipeline extends EventEmitter {
     }, 0);
 
     const totalBatches = this.completedBatches.length;
+    const pendingBatches = activeAgents
+      .map((agentId) => this.pipelineStates.get(agentId)?.pendingBatch || [])
+      .filter((batch) => batch.length > 0);
 
     return {
       isProcessing: this.isProcessing,
       activeAgents: activeAgents.length,
       totalSamples,
       totalBatches,
+      completedBatches: this.completedBatches,
+      pendingBatches,
       qualityMetrics: Object.fromEntries(this.qualityMetrics),
       config: this.config,
     };

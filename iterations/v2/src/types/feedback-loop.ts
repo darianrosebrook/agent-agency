@@ -1,155 +1,266 @@
+import { TaskOutcome } from "./agentic-rl";
+import { ConstitutionalViolation } from "./caws-constitutional";
+import { ComponentHealth, FailureEvent } from "./coordinator";
+
 export enum FeedbackSource {
-  PERFORMANCE_TRACKER = "performance_tracker",
-  TASK_OUTCOME = "task_outcome",
-  AGENT_BEHAVIOR = "agent_behavior",
-  SYSTEM_METRICS = "system_metrics",
+  PERFORMANCE_METRICS = "performance_metrics",
+  TASK_OUTCOMES = "task_outcomes",
+  USER_RATINGS = "user_ratings",
+  SYSTEM_EVENTS = "system_events",
   CONSTITUTIONAL_VIOLATIONS = "constitutional_violations",
-  USER_FEEDBACK = "user_feedback",
-  HEALTH_MONITORING = "health_monitoring",
+  COMPONENT_HEALTH = "component_health",
+  ROUTING_DECISIONS = "routing_decisions",
+  AGENT_FEEDBACK = "agent_feedback",
 }
 
 export enum FeedbackType {
-  METRIC = "metric",
-  EVENT = "event",
-  TREND = "trend",
-  ANOMALY = "anomaly",
-  RECOMMENDATION = "recommendation",
-  OPTIMIZATION = "optimization",
+  NUMERIC_METRIC = "numeric_metric",
+  CATEGORICAL_EVENT = "categorical_event",
+  TEXT_FEEDBACK = "text_feedback",
+  RATING_SCALE = "rating_scale",
+  BINARY_OUTCOME = "binary_outcome",
 }
 
-export interface FeedbackData {
+export interface FeedbackEvent {
   id: string;
   source: FeedbackSource;
   type: FeedbackType;
+  entityId: string; // Agent ID, Task ID, Component ID, etc.
+  entityType: string; // "agent", "task", "component", etc.
   timestamp: string;
-  data: Record<string, any>;
-  confidence?: number; // 0-1, how confident we are in this feedback
-  priority?: number; // 0-10, importance level
-  context?: Record<string, any>; // Additional context
+  value: any; // Flexible value based on type
+  context: Record<string, any>;
+  metadata?: Record<string, any>;
 }
 
-export interface TrendAnalysis {
-  metric: string;
-  trend: "increasing" | "decreasing" | "stable" | "volatile";
-  slope: number; // Rate of change
-  confidence: number; // 0-1
-  dataPoints: number;
-  timeWindow: string; // e.g., "1h", "24h", "7d"
-  anomalies: AnomalyDetection[];
-}
-
-export interface AnomalyDetection {
-  id: string;
-  metric: string;
-  value: number;
-  expectedValue: number;
-  deviation: number; // Standard deviations from mean
-  severity: "low" | "medium" | "high" | "critical";
-  timestamp: string;
-  context?: Record<string, any>;
-}
-
-export interface InsightGeneration {
-  id: string;
-  title: string;
-  description: string;
-  category: "performance" | "reliability" | "efficiency" | "scalability" | "security";
-  confidence: number; // 0-1
-  recommendations: Recommendation[];
-  supportingData: FeedbackData[];
-  timestamp: string;
-  priority: "low" | "medium" | "high" | "urgent";
-}
-
-export interface Recommendation {
-  id: string;
-  type: "parameter_tuning" | "scaling" | "routing_adjustment" | "health_check" | "alert";
-  target: string; // Component or parameter to adjust
-  action: string;
-  parameters?: Record<string, any>;
-  expectedImpact: "low" | "medium" | "high";
-  riskLevel: "low" | "medium" | "high";
-  justification: string;
-}
-
-export interface BayesianOptimization {
-  parameter: string;
-  currentValue: any;
-  suggestedValue: any;
-  confidence: number; // 0-1
-  expectedImprovement: number;
-  explorationVsExploitation: number; // 0 (pure exploitation) to 1 (pure exploration)
-  trials: number;
-  bestValue: any;
-  searchSpace: {
-    type: "continuous" | "discrete" | "categorical";
-    bounds?: [number, number];
-    values?: any[];
+export interface PerformanceFeedback extends FeedbackEvent {
+  source: FeedbackSource.PERFORMANCE_METRICS;
+  metrics: {
+    latencyMs?: number;
+    throughput?: number;
+    errorRate?: number;
+    resourceUsage?: {
+      cpuPercent?: number;
+      memoryMb?: number;
+      networkMbps?: number;
+    };
+    qualityScore?: number;
   };
 }
 
-export interface ContinuousImprovementSignal {
+export interface TaskOutcomeFeedback extends FeedbackEvent {
+  source: FeedbackSource.TASK_OUTCOMES;
+  outcome: TaskOutcome;
+  executionTimeMs: number;
+  retryCount: number;
+  errorDetails?: string;
+}
+
+export interface UserRatingFeedback extends FeedbackEvent {
+  source: FeedbackSource.USER_RATINGS;
+  rating: number; // 1-5 scale
+  comments?: string;
+  criteria: {
+    accuracy: number;
+    speed: number;
+    reliability: number;
+    communication: number;
+  };
+}
+
+export interface SystemEventFeedback extends FeedbackEvent {
+  source: FeedbackSource.SYSTEM_EVENTS;
+  eventType: string;
+  severity: "low" | "medium" | "high" | "critical";
+  description: string;
+  impact: {
+    affectedComponents: string[];
+    estimatedDowntimeMinutes?: number;
+    userImpact: "none" | "minor" | "major" | "critical";
+  };
+}
+
+export interface ConstitutionalViolationFeedback extends FeedbackEvent {
+  source: FeedbackSource.CONSTITUTIONAL_VIOLATIONS;
+  violation: ConstitutionalViolation;
+  policyImpact: {
+    affectedTasks: number;
+    complianceScoreDelta: number;
+    riskLevel: "low" | "medium" | "high";
+  };
+}
+
+export interface ComponentHealthFeedback extends FeedbackEvent {
+  source: FeedbackSource.COMPONENT_HEALTH;
+  health: ComponentHealth;
+  previousStatus?: ComponentHealth["status"];
+  statusChangeReason?: string;
+}
+
+export interface RoutingDecisionFeedback extends FeedbackEvent {
+  source: FeedbackSource.ROUTING_DECISIONS;
+  decision: {
+    taskId: string;
+    selectedAgentId: string;
+    routingStrategy: string;
+    confidence: number;
+    alternativesCount: number;
+    routingTimeMs: number;
+  };
+  outcome?: {
+    success: boolean;
+    executionTimeMs?: number;
+    qualityScore?: number;
+  };
+}
+
+export interface AgentFeedback extends FeedbackEvent {
+  source: FeedbackSource.AGENT_FEEDBACK;
+  feedback: {
+    agentId: string;
+    feedbackType: "performance" | "capability" | "reliability" | "communication";
+    rating: number;
+    details?: string;
+    suggestedImprovements?: string[];
+  };
+}
+
+export interface FeedbackAnalysis {
   id: string;
-  component: string;
-  signalType: "performance" | "reliability" | "efficiency" | "adaptation";
-  strength: number; // 0-1, strength of the signal
-  direction: "increase" | "decrease" | "maintain" | "adapt";
-  targetParameter: string;
-  currentValue: any;
-  recommendedValue: any;
-  reasoning: string;
+  entityId: string;
+  entityType: string;
+  timeWindow: {
+    start: string;
+    end: string;
+  };
+  metrics: {
+    totalFeedbackEvents: number;
+    averageRating?: number;
+    performanceTrend: "improving" | "stable" | "declining";
+    anomalyCount: number;
+    correlationStrength: number;
+  };
+  insights: FeedbackInsight[];
+  recommendations: FeedbackRecommendation[];
   confidence: number;
-  timestamp: string;
-  implemented: boolean;
-  implementationTimestamp?: string;
-  outcome?: "success" | "failure" | "pending";
+  generatedAt: string;
+}
+
+export interface FeedbackInsight {
+  type: "trend" | "anomaly" | "correlation" | "prediction";
+  description: string;
+  severity: "low" | "medium" | "high";
+  evidence: {
+    metric: string;
+    value: any;
+    baseline?: any;
+    changePercent?: number;
+  };
+  impact: {
+    affectedEntities: string[];
+    estimatedImpact: "positive" | "negative" | "neutral";
+    confidence: number;
+  };
+}
+
+export interface FeedbackRecommendation {
+  id: string;
+  type: "agent_update" | "routing_adjustment" | "resource_allocation" | "policy_change" | "system_configuration";
+  priority: "low" | "medium" | "high" | "critical";
+  description: string;
+  action: {
+    targetEntity: string;
+    operation: string;
+    parameters: Record<string, any>;
+  };
+  expectedImpact: {
+    metric: string;
+    improvementPercent: number;
+    timeToEffect: string;
+  };
+  riskAssessment: {
+    riskLevel: "low" | "medium" | "high";
+    rollbackPlan: string;
+    monitoringRequired: boolean;
+  };
+  prerequisites?: string[];
+  implementationStatus: "pending" | "in_progress" | "implemented" | "failed";
+}
+
+export interface FeedbackCollectionConfig {
+  enabledSources: FeedbackSource[];
+  batchSize: number;
+  flushIntervalMs: number;
+  retentionPeriodDays: number;
+  samplingRate: number; // 0.0-1.0, for high-volume sources
+  filters: {
+    minSeverity?: string;
+    excludeEntityTypes?: string[];
+    includeOnlyRecent?: boolean; // Last 24h only
+  };
+}
+
+export interface FeedbackAnalysisConfig {
+  enabledAnalyzers: string[];
+  analysisIntervalMs: number;
+  anomalyThreshold: number; // Z-score threshold
+  trendWindowHours: number;
+  minDataPoints: number; // Minimum feedback events for analysis
+  correlationThreshold: number; // Minimum correlation coefficient
+  predictionHorizonHours: number;
+}
+
+export interface ImprovementEngineConfig {
+  autoApplyThreshold: number; // Minimum recommendation confidence for auto-apply
+  maxConcurrentImprovements: number;
+  cooldownPeriodMs: number; // Minimum time between improvements to same entity
+  improvementTimeoutMs: number; // Max time to wait for improvement effect
+  rollbackOnFailure: boolean;
+  monitoringPeriodMs: number; // How long to monitor improvement effects
+}
+
+export interface FeedbackPipelineConfig {
+  batchSize: number;
+  processingIntervalMs: number;
+  dataQualityThreshold: number; // Minimum quality score for RL training
+  anonymizationLevel: "none" | "partial" | "full";
+  featureEngineering: {
+    enabled: boolean;
+    timeWindowFeatures: boolean;
+    correlationFeatures: boolean;
+    trendFeatures: boolean;
+  };
+  trainingDataFormat: "json" | "parquet" | "csv";
 }
 
 export interface FeedbackLoopConfig {
-  collection: {
-    enabledSources: FeedbackSource[];
-    samplingRate: number; // 0-1, what percentage of events to sample
-    maxBufferSize: number;
-    retentionPeriodMs: number;
-  };
-  analysis: {
-    trendWindowSizes: string[]; // e.g., ["1h", "24h", "7d"]
-    anomalyThreshold: number; // Standard deviations
-    minDataPoints: number;
-    analysisIntervalMs: number;
-  };
-  optimization: {
-    enabled: boolean;
-    parameters: Record<string, BayesianOptimization["searchSpace"]>;
-    explorationRate: number; // 0-1
-    maxTrials: number;
-    confidenceThreshold: number; // Minimum confidence to apply suggestion
-  };
-  improvement: {
-    signalThreshold: number; // Minimum strength to emit signal
-    maxConcurrentSignals: number;
-    implementationTimeoutMs: number;
-    evaluationPeriodMs: number;
-  };
+  collection: FeedbackCollectionConfig;
+  analysis: FeedbackAnalysisConfig;
+  improvements: ImprovementEngineConfig;
+  pipeline: FeedbackPipelineConfig;
+  enabled: boolean;
+  debugMode: boolean;
 }
 
-export interface FeedbackLoopStats {
-  totalFeedbackCollected: number;
-  feedbackBySource: Record<FeedbackSource, number>;
-  insightsGenerated: number;
+export interface FeedbackStats {
+  totalEvents: number;
+  eventsBySource: Record<FeedbackSource, number>;
+  eventsByType: Record<FeedbackType, number>;
+  analysisCount: number;
+  recommendationsGenerated: number;
   recommendationsApplied: number;
-  optimizationTrials: number;
-  activeSignals: number;
-  averageProcessingTime: number;
-  lastAnalysisTimestamp?: string;
-  bufferUtilization: number; // 0-1
-  errorRate: number;
+  averageProcessingTimeMs: number;
+  dataQualityScore: number;
+  lastAnalysisTime?: string;
+  uptimeSeconds: number;
 }
 
 export interface FeedbackProcessingResult {
-  processed: number;
-  insights: InsightGeneration[];
-  signals: ContinuousImprovementSignal[];
+  success: boolean;
+  processedEvents: number;
+  analysisPerformed: boolean;
+  recommendations: FeedbackRecommendation[];
   errors: string[];
   processingTimeMs: number;
+  qualityScore: number;
 }

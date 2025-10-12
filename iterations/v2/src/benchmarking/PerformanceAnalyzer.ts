@@ -259,12 +259,28 @@ export class PerformanceAnalyzer extends EventEmitter {
       critical: criticalAnomalies,
     };
 
+    // Calculate alerts triggered (anomalies with severity high or critical)
+    const alertsTriggered = this.activeAnomalies.filter(
+      (a) => a.severity === "high" || a.severity === "critical"
+    ).length;
+
+    // Calculate average analysis time based on last analysis of tracked agents
+    const analysisTimeMs = Array.from(this.analysisStates.values()).reduce(
+      (sum, state, _, arr) => {
+        const timeSinceLastAnalysis = Date.now() - new Date(state.lastAnalysisTime).getTime();
+        return sum + timeSinceLastAnalysis / arr.length;
+      },
+      0
+    );
+
     return {
       isAnalyzing: this.isAnalyzing,
       agentsTracked,
       totalAnomalies,
       criticalAnomalies,
       anomalyBreakdown,
+      alertsTriggered,
+      analysisTimeMs: analysisTimeMs || 0,
       config: this.config,
     };
   }

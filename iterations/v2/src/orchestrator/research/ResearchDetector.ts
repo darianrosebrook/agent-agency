@@ -377,9 +377,10 @@ export class ResearchDetector {
 
     // Take first sentence or up to 100 chars
     const firstSentence = query.split(/[.!?]/)[0];
-    query = firstSentence.length > 100
-      ? firstSentence.substring(0, 97) + "..."
-      : firstSentence;
+    query =
+      firstSentence.length > 100
+        ? firstSentence.substring(0, 97) + "..."
+        : firstSentence;
 
     return query.trim();
   }
@@ -427,4 +428,3 @@ export class ResearchDetector {
       : "Task may benefit from research";
   }
 }
-

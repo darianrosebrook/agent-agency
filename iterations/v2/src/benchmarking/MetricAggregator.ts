@@ -303,6 +303,7 @@ export class MetricAggregator extends EventEmitter {
     const totalAggregations = this.countTotalAggregations();
     const oldestData = this.getOldestDataTimestamp();
     const newestData = this.getNewestDataTimestamp();
+    const memUsage = process.memoryUsage();
 
     return {
       isAggregating: this.isAggregating,
@@ -313,6 +314,8 @@ export class MetricAggregator extends EventEmitter {
         newest: newestData,
       },
       lastAggregationTimeMs: this.lastAggregationTime,
+      memoryUsageMB: memUsage.heapUsed / 1024 / 1024,
+      processingTimeMs: this.lastAggregationTime,
       config: this.config,
     };
   }
