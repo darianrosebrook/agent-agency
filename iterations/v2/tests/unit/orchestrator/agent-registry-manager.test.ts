@@ -31,6 +31,8 @@ describe("AgentRegistryManager", () => {
     registry = new AgentRegistryManager({
       maxAgents: 10,
       enableAutoCleanup: false, // Disable for tests
+      enableSecurity: false, // Disable security for unit tests
+      enablePersistence: false, // Disable persistence for unit tests
     });
   });
 

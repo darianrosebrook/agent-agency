@@ -8,26 +8,24 @@
  */
 
 import { EventEmitter } from "events";
-import { Task } from "../types/arbiter-orchestration";
 import { RoutingDecision } from "../types/agentic-rl";
-import { SpecValidationResult } from "../caws-validator/types/validation-types";
-import { TaskState } from "../types/task-state";
+import { Task } from "../types/arbiter-orchestration";
 import {
-  TaskExecutionResult,
   OrchestratorConfig,
-  OrchestratorEvent,
+  TaskExecutionResult,
   TaskQueueStats,
 } from "../types/orchestrator-events";
+import { TaskState } from "../types/task-state";
 
-import { TaskStateMachine } from "./TaskStateMachine";
+import { SpecValidator } from "../caws-validator/validation/SpecValidator";
+import { HealthMonitor, HealthStatus } from "../health/HealthMonitor";
+import { TracingProvider } from "../observability/TracingProvider";
+import { PerformanceTracker } from "../rl/PerformanceTracker";
+import { AgentRegistryManager } from "./AgentRegistryManager";
 import { TaskQueue } from "./TaskQueue";
 import { TaskRetryHandler } from "./TaskRetryHandler";
-import { AgentRegistryManager } from "./AgentRegistryManager";
 import { TaskRoutingManager } from "./TaskRoutingManager";
-import { SpecValidator } from "../caws-validator/validation/SpecValidator";
-import { PerformanceTracker } from "../rl/PerformanceTracker";
-import { TracingProvider } from "../observability/TracingProvider";
-import { HealthMonitor, HealthStatus } from "../health/HealthMonitor";
+import { TaskStateMachine } from "./TaskStateMachine";
 
 export class ValidationError extends Error {
   constructor(
@@ -119,7 +117,11 @@ export class TaskOrchestrator extends EventEmitter {
    */
   async submitTask(task: Task): Promise<TaskExecutionResult> {
     return this.tracing.traceOperation("orchestrator:submitTask", async () => {
-      this.emit("task:submitted", { taskId: task.id, task, timestamp: new Date() });
+      this.emit("task:submitted", {
+        taskId: task.id,
+        task,
+        timestamp: new Date(),
+      });
 
       // 1. Initialize task state
       this.stateMachine.initializeTask(task.id);
@@ -150,7 +152,10 @@ export class TaskOrchestrator extends EventEmitter {
   /**
    * Cancel a task
    */
-  async cancelTask(taskId: string, reason: string = "cancelled by user"): Promise<void> {
+  async cancelTask(
+    taskId: string,
+    reason: string = "cancelled by user"
+  ): Promise<void> {
     return this.tracing.traceOperation("orchestrator:cancelTask", async () => {
       // Remove from queue if queued
       this.taskQueue.remove(taskId);
@@ -167,7 +172,10 @@ export class TaskOrchestrator extends EventEmitter {
   /**
    * Suspend a running task
    */
-  async suspendTask(taskId: string, reason: string = "suspended"): Promise<void> {
+  async suspendTask(
+    taskId: string,
+    reason: string = "suspended"
+  ): Promise<void> {
     return this.tracing.traceOperation("orchestrator:suspendTask", async () => {
       if (this.stateMachine.getState(taskId) === TaskState.RUNNING) {
         this.stateMachine.transition(taskId, TaskState.SUSPENDED, reason);
@@ -331,10 +339,15 @@ export class TaskOrchestrator extends EventEmitter {
   private async simulateTaskExecution(
     task: Task,
     routing: RoutingDecision
-  ): Promise<{ success: boolean; data?: any; qualityScore?: number; metadata?: any }> {
+  ): Promise<{
+    success: boolean;
+    data?: any;
+    qualityScore?: number;
+    metadata?: any;
+  }> {
     // Simulate processing time based on task complexity
     const processingTime = Math.random() * 2000 + 500; // 500-2500ms
-    await new Promise(resolve => setTimeout(resolve, processingTime));
+    await new Promise((resolve) => setTimeout(resolve, processingTime));
 
     // Simulate success/failure (90% success rate)
     const success = Math.random() > 0.1;
@@ -371,7 +384,11 @@ export class TaskOrchestrator extends EventEmitter {
 
     if (error instanceof ValidationError) {
       // Validation failed - cancel task
-      this.stateMachine.transition(taskId, TaskState.CANCELLED, "validation failed");
+      this.stateMachine.transition(
+        taskId,
+        TaskState.CANCELLED,
+        "validation failed"
+      );
     } else if (currentState === TaskState.RUNNING) {
       // Execution failed - mark as failed
       this.stateMachine.transition(taskId, TaskState.FAILED, error.message);
@@ -397,14 +414,15 @@ export class TaskOrchestrator extends EventEmitter {
 
       // Process queued tasks up to concurrency limit
       const queueStats = this.taskQueue.getStats();
-      const availableSlots = this.config.maxConcurrentTasks - queueStats.processing;
+      const availableSlots =
+        this.config.maxConcurrentTasks - queueStats.processing;
 
       for (let i = 0; i < availableSlots; i++) {
         const task = this.taskQueue.dequeue();
         if (!task) break;
 
         // Process task asynchronously
-        this.processTask(task).catch(error => {
+        this.processTask(task).catch((error) => {
           console.error(`Error processing task ${task.id}:`, error);
         });
       }
@@ -436,7 +454,11 @@ export class TaskOrchestrator extends EventEmitter {
 
       // Complete task
       this.taskQueue.complete(task.id);
-      this.stateMachine.transition(task.id, TaskState.COMPLETED, "execution successful");
+      this.stateMachine.transition(
+        task.id,
+        TaskState.COMPLETED,
+        "execution successful"
+      );
 
       this.emit("task:completed", {
         taskId: task.id,
@@ -510,7 +532,9 @@ export class TaskOrchestrator extends EventEmitter {
 
     this.healthMonitor.registerCheck("orchestrator", async () => {
       const stats = this.getStats();
-      const isHealthy = this.isRunning && stats.queue.total < this.config.maxConcurrentTasks * 2;
+      const isHealthy =
+        this.isRunning &&
+        stats.queue.total < this.config.maxConcurrentTasks * 2;
 
       return {
         name: "Task Orchestrator",
@@ -538,7 +562,7 @@ export class TaskOrchestrator extends EventEmitter {
         console.warn("Queue drain timeout exceeded");
         break;
       }
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
   }
 

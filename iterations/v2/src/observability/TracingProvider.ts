@@ -15,7 +15,6 @@ import {
   trace,
 } from "@opentelemetry/api";
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
-import { SemanticResourceAttributes } from "@opentelemetry/semantic-conventions";
 
 /**
  * Tracing provider for distributed tracing

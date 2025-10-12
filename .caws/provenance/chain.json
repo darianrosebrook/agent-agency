@@ -1834,5 +1834,39 @@
     },
     "previous_hash": "f1d9c80934fceb3df2a4be9b0191393ca94625d5d9fa2fde9a0b32e448ff06cb",
     "hash": "5f158dd0346b73b2df5ccb4c14eeea395f13001faf2df0373b75cc88f22d679a"
+  },
+  {
+    "id": "prov-1760234538948",
+    "timestamp": "2025-10-12T02:02:18.948Z",
+    "commit": {
+      "hash": "7abbc37a5344b98ecb809665ccf2fa4918f25b9b",
+      "message": "Phase 1.2 Complete: Core Task Orchestrator implemented",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T02:02:18.949Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "5f158dd0346b73b2df5ccb4c14eeea395f13001faf2df0373b75cc88f22d679a",
+    "hash": "b91e28f3300cf68856ab0155d3f92c04a62fdcc41bccbc481a6a226cc1ce4381"
   }
 ]

@@ -5,16 +5,16 @@
  */
 
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { SpecValidator } from "../../../src/caws-validator/validation/SpecValidator";
+import { HealthMonitor } from "../../../src/health/HealthMonitor";
+import { TracingProvider } from "../../../src/observability/TracingProvider";
+import { AgentRegistryManager } from "../../../src/orchestrator/AgentRegistryManager";
 import { TaskOrchestrator } from "../../../src/orchestrator/TaskOrchestrator";
-import { TaskStateMachine } from "../../../src/orchestrator/TaskStateMachine";
 import { TaskQueue } from "../../../src/orchestrator/TaskQueue";
 import { TaskRetryHandler } from "../../../src/orchestrator/TaskRetryHandler";
-import { AgentRegistryManager } from "../../../src/orchestrator/AgentRegistryManager";
 import { TaskRoutingManager } from "../../../src/orchestrator/TaskRoutingManager";
-import { SpecValidator } from "../../../src/caws-validator/validation/SpecValidator";
+import { TaskStateMachine } from "../../../src/orchestrator/TaskStateMachine";
 import { PerformanceTracker } from "../../../src/rl/PerformanceTracker";
-import { TracingProvider } from "../../../src/observability/TracingProvider";
-import { HealthMonitor } from "../../../src/health/HealthMonitor";
 
 import { TaskState } from "../../../src/types/task-state";
 import { createMinimalTask } from "../../helpers/test-fixtures";
@@ -155,7 +155,7 @@ describe("TaskOrchestrator", () => {
           return {
             valid: false,
             errors: [{ field: "type", message: "Invalid type" }],
-            warnings: []
+            warnings: [],
           };
         }
       });
@@ -359,7 +359,9 @@ describe("TaskOrchestrator", () => {
           warnings: [],
         });
 
-        await expect((orchestrator as any).validateTask(task)).rejects.toThrow();
+        await expect(
+          (orchestrator as any).validateTask(task)
+        ).rejects.toThrow();
       });
     });
 
@@ -380,4 +382,3 @@ describe("TaskOrchestrator", () => {
     });
   });
 });
-

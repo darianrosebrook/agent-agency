@@ -53,7 +53,7 @@ export class TaskQueue extends EventEmitter {
    */
   remove(taskId: string): boolean {
     // Check queue first
-    const queueIndex = this.queue.findIndex(t => t.id === taskId);
+    const queueIndex = this.queue.findIndex((t) => t.id === taskId);
     if (queueIndex >= 0) {
       this.queue.splice(queueIndex, 1);
       this.timestamps.delete(taskId);
@@ -83,7 +83,7 @@ export class TaskQueue extends EventEmitter {
    * Check if task is queued
    */
   isQueued(taskId: string): boolean {
-    return this.queue.some(t => t.id === taskId);
+    return this.queue.some((t) => t.id === taskId);
   }
 
   /**
@@ -111,12 +111,13 @@ export class TaskQueue extends EventEmitter {
    */
   getStats(): TaskQueueStats {
     const queuedTimestamps = this.queue
-      .map(task => this.timestamps.get(task.id))
+      .map((task) => this.timestamps.get(task.id))
       .filter(Boolean) as Date[];
 
-    const oldestQueued = queuedTimestamps.length > 0
-      ? new Date(Math.min(...queuedTimestamps.map(t => t.getTime())))
-      : undefined;
+    const oldestQueued =
+      queuedTimestamps.length > 0
+        ? new Date(Math.min(...queuedTimestamps.map((t) => t.getTime())))
+        : undefined;
 
     return {
       queued: this.queue.length,
@@ -144,8 +145,9 @@ export class TaskQueue extends EventEmitter {
    * Get task by ID
    */
   getTask(taskId: string): Task | undefined {
-    return this.queue.find(t => t.id === taskId) ||
-           this.processing.get(taskId);
+    return (
+      this.queue.find((t) => t.id === taskId) || this.processing.get(taskId)
+    );
   }
 
   /**
@@ -167,8 +169,8 @@ export class TaskQueue extends EventEmitter {
    */
   clear(): void {
     const taskIds = [
-      ...this.queue.map(t => t.id),
-      ...Array.from(this.processing.keys())
+      ...this.queue.map((t) => t.id),
+      ...Array.from(this.processing.keys()),
     ];
 
     this.queue = [];
@@ -188,7 +190,7 @@ export class TaskQueue extends EventEmitter {
     // Check queued tasks
     for (const task of Array.from(this.queue)) {
       const timestamp = this.timestamps.get(task.id);
-      if (timestamp && (now - timestamp.getTime()) > maxAgeMs) {
+      if (timestamp && now - timestamp.getTime() > maxAgeMs) {
         stale.push(task);
       }
     }
@@ -196,7 +198,7 @@ export class TaskQueue extends EventEmitter {
     // Check processing tasks
     for (const task of Array.from(this.processing.values())) {
       const timestamp = this.timestamps.get(task.id);
-      if (timestamp && (now - timestamp.getTime()) > maxAgeMs) {
+      if (timestamp && now - timestamp.getTime() > maxAgeMs) {
         stale.push(task);
       }
     }

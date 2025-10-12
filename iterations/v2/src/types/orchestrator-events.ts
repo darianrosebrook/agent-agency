@@ -6,8 +6,8 @@
  * @author @darianrosebrook
  */
 
-import { Task } from "./arbiter-orchestration";
 import { RoutingDecision } from "./agentic-rl";
+import { Task } from "./arbiter-orchestration";
 import { ValidationResult } from "./caws-types";
 
 export interface TaskSubmittedEvent {
@@ -131,4 +131,3 @@ export interface TaskQueueStats {
   total: number;
   oldestQueued?: Date;
 }
-

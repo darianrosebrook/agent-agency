@@ -39,13 +39,15 @@ export class TaskExecutionError extends Error {
 export class TaskRetryHandler extends EventEmitter {
   private attempts: Map<string, RetryAttempt[]> = new Map();
 
-  constructor(private config: RetryConfig = {
-    maxRetries: 3,
-    initialBackoffMs: 1000,
-    maxBackoffMs: 30000,
-    backoffMultiplier: 2,
-    jitter: true,
-  }) {
+  constructor(
+    private config: RetryConfig = {
+      maxRetries: 3,
+      initialBackoffMs: 1000,
+      maxBackoffMs: 30000,
+      backoffMultiplier: 2,
+      jitter: true,
+    }
+  ) {
     super();
   }
 
@@ -122,7 +124,9 @@ export class TaskRetryHandler extends EventEmitter {
    * Calculate exponential backoff delay
    */
   private calculateBackoff(attempt: number): number {
-    let delay = this.config.initialBackoffMs * Math.pow(this.config.backoffMultiplier, attempt - 1);
+    let delay =
+      this.config.initialBackoffMs *
+      Math.pow(this.config.backoffMultiplier, attempt - 1);
 
     // Cap at max backoff
     delay = Math.min(delay, this.config.maxBackoffMs);
@@ -152,7 +156,7 @@ export class TaskRetryHandler extends EventEmitter {
       timestamp: new Date(),
     };
 
-    let attempts = this.attempts.get(taskId) || [];
+    const attempts = this.attempts.get(taskId) || [];
     attempts.push(retryAttempt);
     this.attempts.set(taskId, attempts);
   }
@@ -187,12 +191,13 @@ export class TaskRetryHandler extends EventEmitter {
     totalAttempts: number;
     averageRetries: number;
   } {
-    const totalAttempts = Array.from(this.attempts.values())
-      .reduce((sum, attempts) => sum + attempts.length, 0);
+    const totalAttempts = Array.from(this.attempts.values()).reduce(
+      (sum, attempts) => sum + attempts.length,
+      0
+    );
 
-    const averageRetries = this.attempts.size > 0
-      ? totalAttempts / this.attempts.size
-      : 0;
+    const averageRetries =
+      this.attempts.size > 0 ? totalAttempts / this.attempts.size : 0;
 
     return {
       activeRetries: this.attempts.size,
@@ -205,7 +210,7 @@ export class TaskRetryHandler extends EventEmitter {
    * Delay helper
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -222,4 +227,3 @@ export class TaskRetryHandler extends EventEmitter {
     this.attempts.clear();
   }
 }
-

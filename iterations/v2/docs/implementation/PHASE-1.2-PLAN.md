@@ -62,7 +62,7 @@ orchestrator.submitTask({
   id: "task-123",
   type: "code-review",
   payload: { code: "...", requirements: "..." },
-  metadata: { priority: "high", timeout: 300000 }
+  metadata: { priority: "high", timeout: 300000 },
 });
 ```
 
@@ -88,10 +88,15 @@ stateMachine.transition(taskId, TaskState.QUEUED, "validation passed");
 ```typescript
 // 4. Route to agent
 const routing = await router.routeTask(task);
-stateMachine.transition(taskId, TaskState.ASSIGNED, `assigned to ${routing.selectedAgent.id}`, {
-  agentId: routing.selectedAgent.id,
-  confidence: routing.confidence
-});
+stateMachine.transition(
+  taskId,
+  TaskState.ASSIGNED,
+  `assigned to ${routing.selectedAgent.id}`,
+  {
+    agentId: routing.selectedAgent.id,
+    confidence: routing.confidence,
+  }
+);
 
 // 5. Record routing decision
 tracker.recordRoutingDecision(routing);
@@ -111,7 +116,7 @@ tracker.startTaskExecution(taskId, routing.selectedAgent.id, routing);
 tracker.completeTaskExecution(taskId, {
   success: true,
   qualityScore: 0.95,
-  latencyMs: 2500
+  latencyMs: 2500,
 });
 stateMachine.transition(taskId, TaskState.COMPLETED, "execution completed");
 ```
@@ -173,7 +178,10 @@ export class TaskOrchestrator {
     // Routing logic
   }
 
-  private async executeTask(task: Task, routing: RoutingDecision): Promise<TaskExecutionResult> {
+  private async executeTask(
+    task: Task,
+    routing: RoutingDecision
+  ): Promise<TaskExecutionResult> {
     // Execution logic
   }
 
@@ -209,7 +217,7 @@ export class TaskQueue {
   }
 
   remove(taskId: string): void {
-    this.queue = this.queue.filter(t => t.id !== taskId);
+    this.queue = this.queue.filter((t) => t.id !== taskId);
     this.processing.delete(taskId);
   }
 
@@ -221,7 +229,7 @@ export class TaskQueue {
     return {
       queued: this.queue.length,
       processing: this.processing.size,
-      total: this.queue.length + this.processing.size
+      total: this.queue.length + this.processing.size,
     };
   }
 }
@@ -262,7 +270,10 @@ export class TaskRetryHandler {
       }
     }
 
-    throw new TaskExecutionError(`Task ${taskId} failed after ${this.maxRetries} attempts`, lastError);
+    throw new TaskExecutionError(
+      `Task ${taskId} failed after ${this.maxRetries} attempts`,
+      lastError
+    );
   }
 
   private calculateBackoff(attempt: number): number {
@@ -270,7 +281,7 @@ export class TaskRetryHandler {
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 ```
@@ -338,7 +349,7 @@ export interface TaskRetryEvent {
 // When routing needs agent data
 const candidates = await agentRegistry.getAgentsByCapability({
   taskType: task.type,
-  languages: task.requirements.languages
+  languages: task.requirements.languages,
 });
 
 // Update agent performance after task completion
@@ -351,7 +362,7 @@ await agentRegistry.updatePerformance(agentId, taskResult);
 // Route task to best agent
 const routing = await taskRouter.routeTask(task, {
   agentMetrics: await this.getAgentMetrics(),
-  systemLoad: await this.getSystemLoad()
+  systemLoad: await this.getSystemLoad(),
 });
 ```
 
@@ -419,12 +430,13 @@ describe("TaskOrchestrator", () => {
       // Mock validation failure
       mockValidator.mockResolvedValue({
         valid: false,
-        errors: [{ field: "type", message: "Invalid task type" }]
+        errors: [{ field: "type", message: "Invalid task type" }],
       });
 
       // Should throw validation error
-      await expect(orchestrator.submitTask(invalidTask))
-        .rejects.toThrow(ValidationError);
+      await expect(orchestrator.submitTask(invalidTask)).rejects.toThrow(
+        ValidationError
+      );
 
       // Task should be cancelled
       expect(stateMachine.getState(invalidTask.id)).toBe(TaskState.CANCELLED);
@@ -436,8 +448,9 @@ describe("TaskOrchestrator", () => {
       mockValidator.mockResolvedValue({ valid: true });
       mockRouter.mockRejectedValue(new Error("No agents available"));
 
-      await expect(orchestrator.submitTask(task))
-        .rejects.toThrow("No agents available");
+      await expect(orchestrator.submitTask(task)).rejects.toThrow(
+        "No agents available"
+      );
 
       expect(stateMachine.getState(task.id)).toBe(TaskState.FAILED);
     });
