@@ -1,10 +1,10 @@
-id: AGENT-0001
+id: PROJ-785
 title: agent-agency
-risk_tier: 1
+risk_tier: 2
 mode: feature
 change_budget:
   max_files: 75
-  max_loc: 6000
+  max_loc: 7000
 blast_radius:
   modules:
     - src
@@ -14,129 +14,37 @@ operational_rollback_slo: 5m
 threats: []
 scope:
   in:
-    - iterations/poc/src/
-    - iterations/poc/tests/
+    - src/
+    - tests/
   out:
     - node_modules/
     - dist/
-    - iterations/poc/dist/
-    - iterations/poc/coverage/
+    - build/
 invariants:
   - System maintains data consistency
 acceptance:
   - id: A1
-    given: Multi-tenant memory system is initialized
-    when: Agent stores context data with tenant isolation
-    then: Data is securely stored with proper tenant boundaries and can be retrieved only by authorized tenants
-  - id: A2
-    given: Agent orchestrator receives a task request
-    when: Task routing decision is made with memory awareness
-    then: Task is routed to optimal agent based on memory state, capabilities, and performance metrics
-  - id: A3
-    given: MCP server is running with evaluation orchestrator
-    when: Agent submits work for quality evaluation
-    then: Code quality is assessed against defined criteria and results are provided with actionable feedback
-  - id: A4
-    given: Data layer is operational with vector operations
-    when: Similarity search is performed on stored embeddings
-    then: Relevant results are returned with proper performance (P95 < 250ms) and accuracy metrics
-  - id: A5
-    given: Quality gates are configured for CI/CD pipeline
-    when: Code changes are submitted through the pipeline
-    then: All quality checks pass (linting, testing, coverage, mutation testing) before deployment
+    given: current state,
+    when: action occurs,
+    then: expected result
 non_functional:
   a11y:
-    - keyboard-navigation
-    - screen-reader-labels
-    - focus-management
+    - keyboard
   perf:
     api_p95_ms: 250
-    vector_search_p95_ms: 100
-    memory_operation_p95_ms: 50
-    lcp_ms: 2500
-    bundle_kb: 500
   security:
-    - input-validation
-    - tenant-isolation
-    - data-encryption-at-rest
-    - access-control
-    - rate-limiting
-  reliability:
-    uptime_sla: 99.9
-    error_rate_max: 0.1
-  scalability:
-    concurrent_tenants: 1000
-    memory_capacity_gb: 64
+    - validation
 contracts:
-  - type: openapi
-    path: docs/api/agent-orchestrator.yaml
-    version: 1.0.0
-  - type: openapi
-    path: docs/api/memory-system.yaml
-    version: 1.0.0
-  - type: openapi
-    path: docs/api/mcp-server.yaml
-    version: 1.0.0
+  - type: ''
+    path: ''
 observability:
-  logs:
-    - agent_operations
-    - memory_usage
-    - performance_metrics
-    - security_events
-    - error_conditions
-  metrics:
-    - agent_task_completion_rate
-    - memory_utilization_percent
-    - api_response_time_p95
-    - tenant_isolation_violations
-    - quality_gate_pass_rate
-  traces:
-    - agent_orchestration_flow
-    - memory_operation_chain
-    - mcp_request_response
-    - data_layer_operations
-migrations:
-  - id: migration_001
-    description: Create core database schema with tenant isolation
-    type: schema
-    requires_downtime: true
-    rollback_available: true
-  - id: migration_002
-    description: Add vector operations and pgvector extension
-    type: schema
-    requires_downtime: false
-    rollback_available: true
-  - id: migration_003
-    description: Initialize multi-level caching infrastructure
-    type: data
-    requires_downtime: false
-    rollback_available: true
-rollback:
-  - strategy: blue_green
-    description: Deploy to separate environment, validate, then cut over
-    slo_minutes: 5
-    data_loss_risk: none
-  - strategy: database_rollback
-    description: Automated schema rollback with data preservation
-    slo_minutes: 10
-    data_loss_risk: low
-  - strategy: feature_flag_rollback
-    description: Disable new features via configuration flags
-    slo_minutes: 1
-    data_loss_risk: none
+  logs: []
+  metrics: []
+  traces: []
+migrations: []
+rollback: []
 ai_assessment:
   confidence_level: 0.8
   uncertainty_areas: []
   complexity_factors: []
   risk_factors: []
-current_features:
-  - ✅ Multi-tenant memory system with context offloading
-  - ✅ Federated learning engine with differential privacy
-  - ✅ Enhanced agent orchestrator with memory-aware routing
-  - ✅ PostgreSQL schema with pgvector and Row Level Security
-  - ✅ MCP server foundation with evaluation orchestrator
-  - ✅ Memory-aware MCP integration with intelligent task routing
-  - ✅ Quality gates and CI/CD enforcement (ESLint, tests, CAWS validation)
-  - ✅ Data Layer Phase 1: Database Infrastructure & Core Operations
-  - ✅ Data Layer Phase 2: Advanced Features & Optimization (Vector Operations, Multi-Level Caching, Performance Monitoring)
-next_feature: Data Layer Phase 3 - System Integration & Security
