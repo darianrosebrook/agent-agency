@@ -15,13 +15,15 @@ import {
   KnowledgeQuery,
   KnowledgeResponse,
   QueryType,
-  SourceType,
-  ResearchFindings,
   IKnowledgeSeeker,
+  ResultQuality,
 } from "../../src/types/knowledge";
-import { Task, TaskType } from "../../src/types/arbiter-orchestration";
+import { Task } from "../../src/types/arbiter-orchestration";
 import { ResearchRequirement } from "../../src/orchestrator/research/ResearchDetector";
-import { AugmentedTask } from "../../src/orchestrator/research/TaskResearchAugmenter";
+import {
+  AugmentedTask,
+  ResearchFindings,
+} from "../../src/orchestrator/research/TaskResearchAugmenter";
 
 /**
  * Creates a mock SearchResult with customizable fields
@@ -30,16 +32,20 @@ export const mockSearchResult = (
   overrides: Partial<SearchResult> = {}
 ): SearchResult => ({
   id: `result-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  queryId: overrides.queryId || `query-${Date.now()}`,
   title: "Test Search Result",
   url: "https://example.com/test-result",
   content: "This is test content for a search result. It contains relevant information.",
-  source: "mock-provider",
-  sourceType: SourceType.OFFICIAL_DOCS,
+  domain: "example.com",
+  sourceType: "documentation",
   relevanceScore: 0.9,
   credibilityScore: 0.85,
+  quality: ResultQuality.HIGH,
+  provider: "mock-provider",
+  providerMetadata: {},
+  processedAt: new Date(),
   retrievedAt: new Date(),
   contentHash: `hash-${Date.now()}`,
-  quality: "high",
   ...overrides,
 });
 
@@ -97,10 +103,12 @@ export const mockKnowledgeResponse = (
     sourcesUsed: ["mock-provider"],
     metadata: {
       totalResultsFound: results.length,
+      resultsFiltered: 0,
       processingTimeMs: 345,
       cacheUsed: false,
-      providersFailed: [],
+      providersQueried: ["mock-provider"],
     },
+    respondedAt: new Date(),
     ...overrides,
   };
 };
@@ -120,14 +128,12 @@ export const mockResearchFindings = (
       url: "https://oauth2.expressjs.com/guide",
       snippet: "Step-by-step guide to implementing OAuth2 in Express.js...",
       relevance: 0.96,
-      credibility: 0.94,
     },
     {
       title: "Passport OAuth2 Strategy",
       url: "https://passportjs.org/packages/passport-oauth2",
       snippet: "OAuth 2.0 authentication strategy for Passport and Node.js...",
       relevance: 0.93,
-      credibility: 0.91,
     },
   ],
   ...overrides,
@@ -154,14 +160,22 @@ export const mockResearchContext = (overrides: any = {}) => ({
  */
 export const mockTask = (overrides: Partial<Task> = {}): Task => ({
   id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-  type: TaskType.IMPLEMENTATION,
+  type: "code-editing",
   description: "Implement OAuth2 authentication in the Express.js API",
+  requiredCapabilities: {},
   priority: 1,
+  timeoutMs: 300000,
+  budget: {
+    maxFiles: 25,
+    maxLoc: 1000,
+  },
   createdAt: new Date(),
   metadata: {
     prompt: "How do I implement OAuth2 in Express.js?",
     requester: "test-user",
   },
+  attempts: 0,
+  maxAttempts: 3,
   ...overrides,
 });
 
@@ -185,12 +199,19 @@ export const mockResearchRequirement = (
 ): ResearchRequirement => ({
   required: true,
   confidence: 0.95,
-  queries: [
+  suggestedQueries: [
     "How do I implement OAuth2 in Express.js?",
     "OAuth2 Express.js implementation",
     "OAuth2 Express.js documentation",
   ],
   queryType: QueryType.TECHNICAL,
+  indicators: {
+    hasQuestions: true,
+    hasUncertainty: true,
+    requiresFactChecking: false,
+    needsComparison: false,
+    requiresTechnicalInfo: true,
+  },
   reason:
     "Task contains questions (0.3) + technical keywords (0.15) + uncertainty (0.3) + requires technical info (0.2) = 0.95 confidence",
   ...overrides,

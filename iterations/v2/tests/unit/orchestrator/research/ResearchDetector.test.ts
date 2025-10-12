@@ -15,7 +15,7 @@
 
 import { ResearchDetector } from "../../../../src/orchestrator/research/ResearchDetector";
 import { mockTask } from "../../../mocks/knowledge-mocks";
-import { Task, TaskType } from "../../../../src/types/arbiter-orchestration";
+import { Task } from "../../../../src/types/arbiter-orchestration";
 import { QueryType } from "../../../../src/types/knowledge";
 
 describe("ResearchDetector", () => {
@@ -93,7 +93,7 @@ describe("ResearchDetector", () => {
       const task = mockTask({
         description:
           "I know how to implement this feature. It's straightforward.",
-        type: TaskType.IMPLEMENTATION,
+        type: "code-editing",
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -219,7 +219,7 @@ describe("ResearchDetector", () => {
     it("should detect 'API' technical keyword", () => {
       const task = mockTask({
         description: "Integrate the Stripe API for payment processing.",
-        type: TaskType.IMPLEMENTATION,
+        type: "code-editing",
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -231,7 +231,7 @@ describe("ResearchDetector", () => {
     it("should detect 'implementation' technical keyword", () => {
       const task = mockTask({
         description: "Review the implementation of the caching layer.",
-        type: TaskType.REVIEW,
+        type: "code-review",
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -242,7 +242,7 @@ describe("ResearchDetector", () => {
     it("should detect 'documentation' technical keyword", () => {
       const task = mockTask({
         description: "Write documentation for the authentication module.",
-        type: TaskType.DOCUMENTATION,
+        type: "general",
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -273,7 +273,7 @@ describe("ResearchDetector", () => {
     it("should infer technical needs from task type", () => {
       const task = mockTask({
         description: "Build a new feature for user management.",
-        type: TaskType.IMPLEMENTATION,
+        type: "code-editing",
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -294,7 +294,7 @@ describe("ResearchDetector", () => {
 
       const task = mockTask({
         description: "Implement the API authentication system.",
-        type: TaskType.IMPLEMENTATION,
+        type: "code-editing",
       });
 
       const result = disabledDetector.detectResearchNeeds(task);
@@ -361,7 +361,7 @@ describe("ResearchDetector", () => {
     it("should detect analysis task types", () => {
       const task = mockTask({
         description: "Analyze the performance of the current system.",
-        type: TaskType.ANALYSIS,
+        type: "analysis",
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -375,7 +375,7 @@ describe("ResearchDetector", () => {
     it("should detect research task types", () => {
       const task = mockTask({
         description: "Research available OAuth2 libraries for Node.js.",
-        type: TaskType.RESEARCH,
+        type: "research",
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -390,7 +390,7 @@ describe("ResearchDetector", () => {
       const task = mockTask({
         description:
           "How do I implement OAuth2? I'm not sure which library to use. Compare passport-oauth2 vs simple-oauth2.",
-        type: TaskType.IMPLEMENTATION,
+        type: "code-editing",
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -409,7 +409,7 @@ describe("ResearchDetector", () => {
 
       const task = mockTask({
         description: "Implement basic user authentication.",
-        type: TaskType.IMPLEMENTATION,
+        type: "code-editing",
       });
 
       const result = strictDetector.detectResearchNeeds(task);
@@ -421,7 +421,7 @@ describe("ResearchDetector", () => {
     it("should return null for low confidence tasks", () => {
       const task = mockTask({
         description: "Update the README file with installation instructions.",
-        type: TaskType.DOCUMENTATION,
+        type: "general",
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -454,9 +454,9 @@ describe("ResearchDetector", () => {
       const result = detector.detectResearchNeeds(task);
 
       expect(result).not.toBeNull();
-      expect(result?.queries).toBeInstanceOf(Array);
-      expect(result?.queries.length).toBeGreaterThan(0);
-      expect(result?.queries.length).toBeLessThanOrEqual(3);
+      expect(result?.suggestedQueries).toBeInstanceOf(Array);
+      expect(result?.suggestedQueries.length).toBeGreaterThan(0);
+      expect(result?.suggestedQueries.length).toBeLessThanOrEqual(3);
     });
 
     it("should include task description as primary query", () => {
@@ -467,7 +467,7 @@ describe("ResearchDetector", () => {
       const result = detector.detectResearchNeeds(task);
 
       expect(result).not.toBeNull();
-      expect(result?.queries).toContain("How do I implement OAuth2 in Express.js?");
+      expect(result?.suggestedQueries).toContain("How do I implement OAuth2 in Express.js?");
     });
 
     it("should generate variations of the query", () => {
@@ -478,10 +478,10 @@ describe("ResearchDetector", () => {
       const result = detector.detectResearchNeeds(task);
 
       expect(result).not.toBeNull();
-      expect(result?.queries.length).toBeGreaterThan(1);
+      expect(result?.suggestedQueries.length).toBeGreaterThan(1);
 
       // Should have variations like "OAuth2 Express.js implementation"
-      const hasVariation = result?.queries.some(
+      const hasVariation = result?.suggestedQueries.some(
         (q) => q.includes("OAuth2") && q.includes("Express.js")
       );
       expect(hasVariation).toBe(true);
@@ -500,7 +500,7 @@ describe("ResearchDetector", () => {
       const result = limitedDetector.detectResearchNeeds(task);
 
       expect(result).not.toBeNull();
-      expect(result?.queries.length).toBeLessThanOrEqual(2);
+      expect(result?.suggestedQueries.length).toBeLessThanOrEqual(2);
     });
 
     it("should generate at least one query", () => {
@@ -511,7 +511,7 @@ describe("ResearchDetector", () => {
       const result = detector.detectResearchNeeds(task);
 
       expect(result).not.toBeNull();
-      expect(result?.queries.length).toBeGreaterThanOrEqual(1);
+      expect(result?.suggestedQueries.length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -552,7 +552,7 @@ describe("ResearchDetector", () => {
     it("should infer TECHNICAL for technical keywords", () => {
       const task = mockTask({
         description: "Implementation details for OAuth2 API.",
-        type: TaskType.IMPLEMENTATION,
+        type: "code-editing",
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -572,8 +572,10 @@ describe("ResearchDetector", () => {
 
       expect(result).not.toBeNull();
       expect(result?.reason).toBeDefined();
-      expect(result?.reason.length).toBeGreaterThan(10);
-      expect(result?.reason).toContain("confidence");
+      if (result?.reason) {
+        expect(result.reason.length).toBeGreaterThan(10);
+        expect(result.reason).toContain("confidence");
+      }
     });
 
     it("should mention detected indicators in reason", () => {
