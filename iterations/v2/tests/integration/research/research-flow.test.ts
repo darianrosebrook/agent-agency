@@ -8,12 +8,12 @@
  * @author @darianrosebrook
  */
 
-import { ResearchDetector } from "../../../src/orchestrator/research/ResearchDetector";
-import { TaskResearchAugmenter } from "../../../src/orchestrator/research/TaskResearchAugmenter";
-import { ResearchProvenance } from "../../../src/orchestrator/research/ResearchProvenance";
-import { KnowledgeSeeker } from "../../../src/knowledge/KnowledgeSeeker";
 import { KnowledgeDatabaseClient } from "../../../src/database/KnowledgeDatabaseClient";
-import { mockTask, MockDatabaseClient } from "../../mocks/knowledge-mocks";
+import { KnowledgeSeeker } from "../../../src/knowledge/KnowledgeSeeker";
+import { ResearchDetector } from "../../../src/orchestrator/research/ResearchDetector";
+import { ResearchProvenance } from "../../../src/orchestrator/research/ResearchProvenance";
+import { TaskResearchAugmenter } from "../../../src/orchestrator/research/TaskResearchAugmenter";
+import { MockDatabaseClient, mockTask } from "../../mocks/knowledge-mocks";
 
 describe("Research Flow Integration", () => {
   let detector: ResearchDetector;
@@ -362,10 +362,7 @@ describe("Research Flow Integration", () => {
       const augmentedTask = await augmenter.augmentTask(task);
 
       if (augmentedTask.researchContext) {
-        await provenance.recordResearch(
-          task.id,
-          augmentedTask.researchContext
-        );
+        await provenance.recordResearch(task.id, augmentedTask.researchContext);
       }
 
       const duration = Date.now() - startTime;
@@ -460,9 +457,9 @@ describe("Research Flow Integration", () => {
 
       if (augmentedTask.researchContext) {
         // Should respect maxQueries limit
-        expect(augmentedTask.researchContext.queries.length).toBeLessThanOrEqual(
-          1
-        );
+        expect(
+          augmentedTask.researchContext.queries.length
+        ).toBeLessThanOrEqual(1);
 
         // Each query should have limited results
         augmentedTask.researchContext.findings.forEach((finding) => {
@@ -531,10 +528,7 @@ describe("Research Flow Integration", () => {
         expect(confidence).toBeLessThanOrEqual(1);
 
         // Record provenance
-        await provenance.recordResearch(
-          task.id,
-          augmentedTask.researchContext
-        );
+        await provenance.recordResearch(task.id, augmentedTask.researchContext);
 
         // Retrieve and verify confidence was persisted
         const records = await provenance.getTaskResearch(task.id);
@@ -543,4 +537,3 @@ describe("Research Flow Integration", () => {
     });
   });
 });
-

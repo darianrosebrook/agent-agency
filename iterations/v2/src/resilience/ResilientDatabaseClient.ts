@@ -48,6 +48,7 @@ export class ResilientDatabaseClient {
   private retryPolicy = RetryPolicies.database();
   private fallbackRegistry?: AgentRegistryManager;
   private usingFallback = false;
+  private pendingWrites: Array<{ operation: string; agentId: string; data: any; timestamp: Date }> = [];
 
   constructor(
     private databaseClient: AgentRegistryDatabaseClient,
@@ -105,6 +106,8 @@ export class ResilientDatabaseClient {
    */
   async registerAgent(agent: AgentProfile): Promise<AgentProfile> {
     if (this.usingFallback && this.fallbackRegistry) {
+      // Track write for later sync
+      this.trackPendingWrite("register", agent.id, agent);
       return this.fallbackRegistry.registerAgent(agent);
     }
 
@@ -313,11 +316,12 @@ export class ResilientDatabaseClient {
         console.log(
           "[ResilientDatabaseClient] Database recovered, switching back from fallback"
         );
+        
+        // Sync pending writes to database
+        await this.syncPendingWrites();
+        
         this.usingFallback = false;
         this.circuitBreaker.reset();
-
-        // TODO: Sync fallback data to database if needed
-        // This would require tracking writes that happened during fallback
       }
     } catch (error) {
       console.warn(
@@ -332,5 +336,85 @@ export class ResilientDatabaseClient {
   resetCircuitBreaker(): void {
     this.circuitBreaker.reset();
     console.log("[ResilientDatabaseClient] Circuit breaker manually reset");
+  }
+
+  /**
+   * Sync pending writes from fallback to database after recovery
+   */
+  private async syncPendingWrites(): Promise<void> {
+    if (this.pendingWrites.length === 0) {
+      return;
+    }
+
+    console.log(
+      `[ResilientDatabaseClient] Syncing ${this.pendingWrites.length} pending writes to database`
+    );
+
+    const synced: string[] = [];
+    const failed: Array<{ agentId: string; error: string }> = [];
+
+    for (const write of this.pendingWrites) {
+      try {
+        switch (write.operation) {
+          case "register":
+            await this.databaseClient.registerAgent(write.data);
+            synced.push(write.agentId);
+            break;
+          case "update":
+            // TODO: Implement updateAgent when method is available
+            console.log(`[ResilientDatabaseClient] Skipping update sync for ${write.agentId} - method not yet implemented`);
+            synced.push(write.agentId); // Mark as synced to prevent retry
+            break;
+          case "delete":
+            // TODO: Implement deleteAgent when method is available
+            console.log(`[ResilientDatabaseClient] Skipping delete sync for ${write.agentId} - method not yet implemented`);
+            synced.push(write.agentId); // Mark as synced to prevent retry
+            break;
+          default:
+            console.warn(
+              `[ResilientDatabaseClient] Unknown operation: ${write.operation}`
+            );
+        }
+      } catch (error) {
+        failed.push({
+          agentId: write.agentId,
+          error: (error as Error).message,
+        });
+      }
+    }
+
+    // Clear successfully synced writes
+    this.pendingWrites = this.pendingWrites.filter(
+      (w) => !synced.includes(w.agentId)
+    );
+
+    console.log(
+      `[ResilientDatabaseClient] Sync complete: ${synced.length} succeeded, ${failed.length} failed`
+    );
+
+    if (failed.length > 0) {
+      console.warn(
+        `[ResilientDatabaseClient] Failed syncs:`,
+        failed
+      );
+    }
+  }
+
+  /**
+   * Track a write operation during fallback mode
+   */
+  private trackPendingWrite(
+    operation: string,
+    agentId: string,
+    data: any
+  ): void {
+    if (this.usingFallback) {
+      this.pendingWrites.push({
+        operation,
+        agentId,
+        data,
+        timestamp: new Date(),
+      });
+    }
   }
 }

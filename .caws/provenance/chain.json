@@ -2874,5 +2874,113 @@
     },
     "previous_hash": "2806f3868d3a342941aaa9efc6bb899b071e4c1edd1a689aa548864ffaadbea3",
     "hash": "5804421db52bb12761173fac36135413ba92e23e26545d53f0ac3b20e713620d"
+  },
+  {
+    "id": "prov-1760249596748",
+    "timestamp": "2025-10-12T06:13:16.748Z",
+    "commit": {
+      "hash": "66afdeecd94c3942e847e76a2860ff341fa2ceca",
+      "message": "test(arbiter-006): Add comprehensive integration tests",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T06:13:16.749Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "5804421db52bb12761173fac36135413ba92e23e26545d53f0ac3b20e713620d",
+    "hash": "8eb5509f932950667a5c8c0ff080cb21907c7622c198a726a63ec84fd8e99787"
+  },
+  {
+    "id": "prov-1760249702298",
+    "timestamp": "2025-10-12T06:15:02.298Z",
+    "commit": {
+      "hash": "f70935760e3d5e1aafec56445043e2e84cdf0317",
+      "message": "docs(arbiter-006): Complete integration testing summary",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T06:15:02.299Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "8eb5509f932950667a5c8c0ff080cb21907c7622c198a726a63ec84fd8e99787",
+    "hash": "b741c9e2e53d22b3c914520bea47f1fae7efeb283458fe8496ccf75bb460f1eb"
+  },
+  {
+    "id": "prov-1760249812461",
+    "timestamp": "2025-10-12T06:16:52.461Z",
+    "commit": {
+      "hash": "23ac930cea4e9fd2fb6d679243ed768448140af8",
+      "message": "docs(arbiter-006): Complete comprehensive testing summary",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-12T06:16:52.462Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "b741c9e2e53d22b3c914520bea47f1fae7efeb283458fe8496ccf75bb460f1eb",
+    "hash": "d1ab235474e50dc38871697dd6948a4ee54e0614e5b1d8d7c1fe7f16bf5066f2"
   }
 ]
