@@ -1,0 +1,15 @@
+id: WV-0001
+title: "ARBITER-003 Budget Extension"
+reason: "emergency_hotfix"
+status: active
+gates:
+  - budget_limit
+expires_at: "2025-10-31T23:59:59Z"
+approvers:
+  - "tech-lead@example.com"
+delta:
+  max_files: 25
+  max_loc: 4000
+risk_assessment:
+  impact_level: "medium"
+  mitigation_plan: "92% test coverage + incremental rollout"

@@ -1,6 +1,8 @@
 id: PROJ-785
 title: agent-agency
 risk_tier: 2
+waiver_ids:
+  - WV-0001
 mode: feature
 change_budget:
   max_files: 75
