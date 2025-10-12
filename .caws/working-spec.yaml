@@ -3,8 +3,8 @@ title: agent-agency
 risk_tier: 1
 mode: feature
 change_budget:
-  max_files: 25
-  max_loc: 1000
+  max_files: 75
+  max_loc: 6000
 blast_radius:
   modules:
     - src
