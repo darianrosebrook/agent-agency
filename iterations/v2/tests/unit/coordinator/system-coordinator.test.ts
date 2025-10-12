@@ -6,15 +6,10 @@
 
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import {
-  SystemCoordinator,
   ComponentHealthMonitor,
-  LoadBalancer,
-  FailureManager,
+  SystemCoordinator,
 } from "../../../src/coordinator";
-import {
-  ComponentType,
-  HealthStatus,
-} from "../../../src/types/coordinator";
+import { ComponentType, HealthStatus } from "../../../src/types/coordinator";
 
 describe("SystemCoordinator", () => {
   let coordinator: SystemCoordinator;
@@ -30,14 +25,17 @@ describe("SystemCoordinator", () => {
       on: jest.fn(),
     } as any;
 
-    coordinator = new SystemCoordinator({
-      healthCheckInterval: 30000,
-      failureThreshold: 3,
-      recoveryTimeout: 300000,
-      loadBalancingEnabled: true,
-      autoScalingEnabled: false,
-      maxComponentsPerType: 5,
-    }, healthMonitor);
+    coordinator = new SystemCoordinator(
+      {
+        healthCheckInterval: 30000,
+        failureThreshold: 3,
+        recoveryTimeout: 300000,
+        loadBalancingEnabled: true,
+        autoScalingEnabled: false,
+        maxComponentsPerType: 5,
+      },
+      healthMonitor
+    );
   });
 
   describe("initialization", () => {
@@ -75,7 +73,9 @@ describe("SystemCoordinator", () => {
 
       const component = coordinator.getComponent("test-component");
       expect(component).toEqual(validRegistration);
-      expect(healthMonitor.registerComponent).toHaveBeenCalledWith(validRegistration);
+      expect(healthMonitor.registerComponent).toHaveBeenCalledWith(
+        validRegistration
+      );
     });
 
     it("should validate dependencies", async () => {
@@ -84,8 +84,9 @@ describe("SystemCoordinator", () => {
         dependencies: ["non-existent"],
       };
 
-      await expect(coordinator.registerComponent(invalidRegistration))
-        .rejects.toThrow("Dependency non-existent not registered");
+      await expect(
+        coordinator.registerComponent(invalidRegistration)
+      ).rejects.toThrow("Dependency non-existent not registered");
     });
 
     it("should unregister component", async () => {
@@ -96,7 +97,9 @@ describe("SystemCoordinator", () => {
       await coordinator.unregisterComponent("test-component");
 
       expect(coordinator.getComponent("test-component")).toBeUndefined();
-      expect(healthMonitor.unregisterComponent).toHaveBeenCalledWith("test-component");
+      expect(healthMonitor.unregisterComponent).toHaveBeenCalledWith(
+        "test-component"
+      );
     });
   });
 
@@ -140,7 +143,9 @@ describe("SystemCoordinator", () => {
     });
 
     it("should get components by type", () => {
-      const agentRegistries = coordinator.getComponentsByType(ComponentType.AGENT_REGISTRY);
+      const agentRegistries = coordinator.getComponentsByType(
+        ComponentType.AGENT_REGISTRY
+      );
       expect(agentRegistries).toHaveLength(1);
       expect(agentRegistries[0].id).toBe("agent-reg-1");
     });
@@ -155,7 +160,9 @@ describe("SystemCoordinator", () => {
         errorCount: 0,
       });
 
-      const healthy = coordinator.getHealthyComponents(ComponentType.AGENT_REGISTRY);
+      const healthy = coordinator.getHealthyComponents(
+        ComponentType.AGENT_REGISTRY
+      );
       expect(healthy).toHaveLength(1);
       expect(healthy[0].id).toBe("agent-reg-1");
     });
@@ -183,8 +190,10 @@ describe("SystemCoordinator", () => {
 
   describe("request routing", () => {
     it("should throw error when no healthy components available", async () => {
-      await expect(coordinator.routeRequest("task_routing", {}))
-        .rejects.toThrow("No healthy components available");
+      await expect(
+        coordinator.routeRequest("task_routing", {})
+      ).rejects.toThrow("No healthy components available");
     });
   });
 });
+

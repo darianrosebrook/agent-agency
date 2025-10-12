@@ -127,9 +127,8 @@ export class TaskOrchestrator extends EventEmitter {
       this.stateMachine.initializeTask(task.id);
 
       try {
-        // 2. Validate task
-        // TODO: Fix Task vs WorkingSpec type mismatch
-        // await this.validateTask(task as any);
+        // 2. Validate task requirements
+        await this.validateTask(task);
 
         // 3. Queue task for processing
         this.taskQueue.enqueue(task);
@@ -229,12 +228,30 @@ export class TaskOrchestrator extends EventEmitter {
   }
 
   /**
-   * Private: Validate task specification
+   * Private: Validate task requirements
    */
   private async validateTask(task: Task): Promise<void> {
-    // TODO: Fix Task vs WorkingSpec type mismatch
-    // Temporarily disabled for implementation completion
-    console.log(`Validating task ${task.id}`);
+    // Validate required fields
+    if (!task.id || !task.description || !task.type) {
+      throw new Error(`Task missing required fields: ${task.id}`);
+    }
+
+    // Validate budget constraints
+    if (!task.budget || typeof task.budget.maxFiles !== 'number' || typeof task.budget.maxLoc !== 'number') {
+      throw new Error(`Task ${task.id} has invalid budget constraints`);
+    }
+
+    // Validate capabilities
+    if (!task.requiredCapabilities) {
+      throw new Error(`Task ${task.id} missing required capabilities`);
+    }
+
+    // Validate priority
+    if (task.priority < 1 || task.priority > 10) {
+      throw new Error(`Task ${task.id} priority must be between 1-10`);
+    }
+
+    console.log(`Task ${task.id} validation passed`);
   }
 
   /**
@@ -245,14 +262,8 @@ export class TaskOrchestrator extends EventEmitter {
     span.setAttribute("task.id", task.id);
 
     try {
-      // Get agent metrics for performance-weighted routing
-      const agentMetrics = await this.getAgentMetrics();
-
-      // TODO: Fix routing interface
-      // const routing = await this.taskRouter.routeTask(task, {
-      //   agentMetrics,
-      // });
-      const routing = { selectedAgent: { id: "mock-agent" } } as any;
+      // Route task using intelligent TaskRoutingManager
+      const routing = await this.taskRouter.routeTask(task);
 
       this.emit("task:routed", {
         taskId: task.id,
@@ -283,6 +294,13 @@ export class TaskOrchestrator extends EventEmitter {
 
     const startTime = Date.now();
 
+    // Start performance tracking
+    const executionId = this.performanceTracker.startTaskExecution(
+      task.id,
+      routing.selectedAgent.id,
+      routing
+    );
+
     try {
       this.emit("task:started", {
         taskId: task.id,
@@ -304,11 +322,21 @@ export class TaskOrchestrator extends EventEmitter {
 
       const latencyMs = Date.now() - startTime;
 
-      // TODO: Fix performance tracking interface
-      // this.performanceTracker.completeTaskExecution(task.id, {
-      //   success: result.success,
-      //   qualityScore: result.qualityScore,
-      // });
+      // Complete performance tracking
+      const taskOutcome = {
+        success: result.success,
+        qualityScore: result.qualityScore || 0.8,
+        efficiencyScore: result.success ? Math.min(1.0, 5000 / latencyMs) : 0.1,
+        latencyMs,
+        cost: result.cost || 0,
+        metadata: {
+          taskType: task.type,
+          agentId: routing.selectedAgent.id,
+          routingStrategy: routing.strategy,
+        },
+      };
+
+      await this.performanceTracker.completeTaskExecution(executionId, taskOutcome);
 
       span.setStatus({ code: 1, message: "Execution completed" });
 
@@ -367,14 +395,6 @@ export class TaskOrchestrator extends EventEmitter {
     }
   }
 
-  /**
-   * Private: Get agent performance metrics for routing
-   */
-  private async getAgentMetrics(): Promise<Record<string, any>> {
-    // In a real implementation, this would query the performance tracker
-    // for current agent metrics
-    return {};
-  }
 
   /**
    * Private: Handle task errors

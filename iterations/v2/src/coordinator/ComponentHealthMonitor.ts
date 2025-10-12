@@ -9,10 +9,10 @@
 
 import { EventEmitter } from "events";
 import {
-  ComponentRegistration,
   ComponentHealth,
-  HealthStatus,
+  ComponentRegistration,
   HealthCheckConfig,
+  HealthStatus,
 } from "../types/coordinator";
 
 export class ComponentHealthMonitor extends EventEmitter {
@@ -117,14 +117,22 @@ export class ComponentHealthMonitor extends EventEmitter {
       const responseTime = Date.now() - startTime;
 
       const currentHealth = this.componentHealth.get(componentId)!;
-      const newStatus = this.determineHealthStatus(response, currentHealth, responseTime);
+      const newStatus = this.determineHealthStatus(
+        response,
+        currentHealth,
+        responseTime
+      );
 
       const updatedHealth: ComponentHealth = {
         id: componentId,
         status: newStatus,
         lastCheck: new Date(),
         responseTime,
-        errorCount: newStatus === HealthStatus.HEALTHY ? 0 : currentHealth.errorCount + (newStatus === HealthStatus.UNHEALTHY ? 1 : 0),
+        errorCount:
+          newStatus === HealthStatus.HEALTHY
+            ? 0
+            : currentHealth.errorCount +
+              (newStatus === HealthStatus.UNHEALTHY ? 1 : 0),
         details: response,
       };
 
@@ -142,7 +150,6 @@ export class ComponentHealthMonitor extends EventEmitter {
 
       this.componentHealth.set(componentId, updatedHealth);
       return updatedHealth;
-
     } catch (error) {
       const responseTime = Date.now() - startTime;
       const currentHealth = this.componentHealth.get(componentId)!;
@@ -200,13 +207,21 @@ export class ComponentHealthMonitor extends EventEmitter {
   } {
     const allHealth = Array.from(this.componentHealth.values());
 
-    const healthy = allHealth.filter(h => h.status === HealthStatus.HEALTHY).length;
-    const degraded = allHealth.filter(h => h.status === HealthStatus.DEGRADED).length;
-    const unhealthy = allHealth.filter(h => h.status === HealthStatus.UNHEALTHY).length;
+    const healthy = allHealth.filter(
+      (h) => h.status === HealthStatus.HEALTHY
+    ).length;
+    const degraded = allHealth.filter(
+      (h) => h.status === HealthStatus.DEGRADED
+    ).length;
+    const unhealthy = allHealth.filter(
+      (h) => h.status === HealthStatus.UNHEALTHY
+    ).length;
 
-    const averageResponseTime = allHealth.length > 0
-      ? allHealth.reduce((sum, h) => sum + h.responseTime, 0) / allHealth.length
-      : 0;
+    const averageResponseTime =
+      allHealth.length > 0
+        ? allHealth.reduce((sum, h) => sum + h.responseTime, 0) /
+          allHealth.length
+        : 0;
 
     return {
       total: allHealth.length,
@@ -247,15 +262,17 @@ export class ComponentHealthMonitor extends EventEmitter {
         method: config.method,
         signal: controller.signal,
         headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'ARBITER-SystemCoordinator/1.0',
+          "Content-Type": "application/json",
+          "User-Agent": "ARBITER-SystemCoordinator/1.0",
         },
       });
 
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new Error(`Health check failed: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Health check failed: ${response.status} ${response.statusText}`
+        );
       }
 
       // Try to parse JSON response
@@ -264,7 +281,7 @@ export class ComponentHealthMonitor extends EventEmitter {
       } catch {
         // If not JSON, return basic success info
         return {
-          status: 'healthy',
+          status: "healthy",
           statusCode: response.status,
           responseTime: Date.now(),
         };
@@ -272,7 +289,7 @@ export class ComponentHealthMonitor extends EventEmitter {
     } catch (error) {
       clearTimeout(timeoutId);
 
-      if (error instanceof Error && error.name === 'AbortError') {
+      if (error instanceof Error && error.name === "AbortError") {
         throw new Error(`Health check timeout after ${config.timeout}ms`);
       }
 
@@ -304,11 +321,13 @@ export class ComponentHealthMonitor extends EventEmitter {
     // Check HTTP status codes
     if (response.statusCode >= 200 && response.statusCode < 300) {
       // Additional checks for degraded status
-      if (responseTime > 5000) { // Slow response
+      if (responseTime > 5000) {
+        // Slow response
         return HealthStatus.DEGRADED;
       }
 
-      if (currentHealth.errorCount > 3) { // Recent errors
+      if (currentHealth.errorCount > 3) {
+        // Recent errors
         return HealthStatus.DEGRADED;
       }
 
@@ -324,7 +343,7 @@ export class ComponentHealthMonitor extends EventEmitter {
     }
 
     // Default to healthy if we get here and have a valid response
-    if (response && typeof response === 'object') {
+    if (response && typeof response === "object") {
       return HealthStatus.HEALTHY;
     }
 
@@ -356,3 +375,4 @@ export class ComponentHealthMonitor extends EventEmitter {
     this.checkIntervals.set(componentId, interval);
   }
 }
+

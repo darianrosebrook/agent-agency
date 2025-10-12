@@ -12,16 +12,16 @@ import { EventEmitter } from "events";
 import {
   ComponentRegistration,
   ComponentType,
+  CoordinatorStats,
   HealthStatus,
-  SystemHealth,
   RoutingPreferences,
   SystemCoordinatorConfig,
-  CoordinatorStats,
+  SystemHealth,
 } from "../types/coordinator";
 
 import { ComponentHealthMonitor } from "./ComponentHealthMonitor";
-import { LoadBalancer } from "./LoadBalancer";
 import { FailureManager } from "./FailureManager";
+import { LoadBalancer } from "./LoadBalancer";
 
 export class SystemCoordinator extends EventEmitter {
   private components = new Map<string, ComponentRegistration>();
@@ -123,14 +123,14 @@ export class SystemCoordinator extends EventEmitter {
    * Get components by type
    */
   getComponentsByType(type: ComponentType): ComponentRegistration[] {
-    return Array.from(this.components.values()).filter(c => c.type === type);
+    return Array.from(this.components.values()).filter((c) => c.type === type);
   }
 
   /**
    * Get healthy components of a specific type
    */
   getHealthyComponents(type: ComponentType): ComponentRegistration[] {
-    return this.getComponentsByType(type).filter(component => {
+    return this.getComponentsByType(type).filter((component) => {
       const health = this.componentHealth.get(component.id);
       return health?.status === HealthStatus.HEALTHY;
     });
@@ -154,13 +154,19 @@ export class SystemCoordinator extends EventEmitter {
     const startTime = Date.now();
 
     try {
-      const candidates = this.getHealthyComponents(this.getComponentTypeForRequest(requestType));
+      const candidates = this.getHealthyComponents(
+        this.getComponentTypeForRequest(requestType)
+      );
 
       if (candidates.length === 0) {
         throw new Error(`No healthy components available for ${requestType}`);
       }
 
-      const selected = await this.loadBalancer.selectComponent(candidates, payload, preferences);
+      const selected = await this.loadBalancer.selectComponent(
+        candidates,
+        payload,
+        preferences
+      );
 
       // Track metrics
       this.stats.totalRequests++;
@@ -195,9 +201,15 @@ export class SystemCoordinator extends EventEmitter {
    */
   getSystemHealth(): SystemHealth {
     const componentHealth = Array.from(this.componentHealth.values());
-    const healthy = componentHealth.filter(h => h.status === HealthStatus.HEALTHY).length;
-    const degraded = componentHealth.filter(h => h.status === HealthStatus.DEGRADED).length;
-    const unhealthy = componentHealth.filter(h => h.status === HealthStatus.UNHEALTHY).length;
+    const healthy = componentHealth.filter(
+      (h) => h.status === HealthStatus.HEALTHY
+    ).length;
+    const degraded = componentHealth.filter(
+      (h) => h.status === HealthStatus.DEGRADED
+    ).length;
+    const unhealthy = componentHealth.filter(
+      (h) => h.status === HealthStatus.UNHEALTHY
+    ).length;
     const total = componentHealth.length;
 
     const overallStatus = this.calculateOverallStatus(componentHealth);
@@ -237,14 +249,22 @@ export class SystemCoordinator extends EventEmitter {
     }
 
     // Health counts
-    const healthy = componentHealth.filter(h => h.status === HealthStatus.HEALTHY).length;
-    const degraded = componentHealth.filter(h => h.status === HealthStatus.DEGRADED).length;
-    const unhealthy = componentHealth.filter(h => h.status === HealthStatus.UNHEALTHY).length;
+    const healthy = componentHealth.filter(
+      (h) => h.status === HealthStatus.HEALTHY
+    ).length;
+    const degraded = componentHealth.filter(
+      (h) => h.status === HealthStatus.DEGRADED
+    ).length;
+    const unhealthy = componentHealth.filter(
+      (h) => h.status === HealthStatus.UNHEALTHY
+    ).length;
 
     // Load metrics
-    const averageResponseTime = this.stats.responseTimes.length > 0
-      ? this.stats.responseTimes.reduce((sum, time) => sum + time, 0) / this.stats.responseTimes.length
-      : 0;
+    const averageResponseTime =
+      this.stats.responseTimes.length > 0
+        ? this.stats.responseTimes.reduce((sum, time) => sum + time, 0) /
+          this.stats.responseTimes.length
+        : 0;
 
     // Failure stats
     const failureStats = this.failureManager.getFailureStats();
@@ -337,8 +357,12 @@ export class SystemCoordinator extends EventEmitter {
   private calculateOverallStatus(componentHealth: any[]): HealthStatus {
     if (componentHealth.length === 0) return HealthStatus.UNKNOWN;
 
-    const unhealthy = componentHealth.filter(h => h.status === HealthStatus.UNHEALTHY).length;
-    const degraded = componentHealth.filter(h => h.status === HealthStatus.DEGRADED).length;
+    const unhealthy = componentHealth.filter(
+      (h) => h.status === HealthStatus.UNHEALTHY
+    ).length;
+    const degraded = componentHealth.filter(
+      (h) => h.status === HealthStatus.DEGRADED
+    ).length;
 
     if (unhealthy > 0) return HealthStatus.UNHEALTHY;
     if (degraded > componentHealth.length * 0.5) return HealthStatus.DEGRADED;
@@ -358,7 +382,8 @@ export class SystemCoordinator extends EventEmitter {
         issues.push({
           componentId,
           type: "health_check",
-          severity: health.status === HealthStatus.UNHEALTHY ? "high" : "medium",
+          severity:
+            health.status === HealthStatus.UNHEALTHY ? "high" : "medium",
           message: `Component ${componentId} is ${health.status}`,
           timestamp: health.lastCheck,
         });
@@ -371,10 +396,14 @@ export class SystemCoordinator extends EventEmitter {
   /**
    * Validate component dependencies
    */
-  private async validateDependencies(component: ComponentRegistration): Promise<void> {
+  private async validateDependencies(
+    component: ComponentRegistration
+  ): Promise<void> {
     for (const depId of component.dependencies) {
       if (!this.components.has(depId)) {
-        throw new Error(`Dependency ${depId} not registered for component ${component.id}`);
+        throw new Error(
+          `Dependency ${depId} not registered for component ${component.id}`
+        );
       }
     }
   }
@@ -382,7 +411,9 @@ export class SystemCoordinator extends EventEmitter {
   /**
    * Notify dependent components
    */
-  private async notifyDependents(component: ComponentRegistration): Promise<void> {
+  private async notifyDependents(
+    component: ComponentRegistration
+  ): Promise<void> {
     // Notify components that depend on this one
     for (const [id, otherComponent] of this.components) {
       if (otherComponent.dependencies.includes(component.id)) {
@@ -434,7 +465,9 @@ export class SystemCoordinator extends EventEmitter {
   private async performHealthChecks(): Promise<void> {
     for (const component of this.components.values()) {
       try {
-        const health = await this.healthMonitor.checkComponentHealth(component.id);
+        const health = await this.healthMonitor.checkComponentHealth(
+          component.id
+        );
         this.componentHealth.set(component.id, health);
 
         // Update load balancer with health info
@@ -445,3 +478,4 @@ export class SystemCoordinator extends EventEmitter {
     }
   }
 }
+

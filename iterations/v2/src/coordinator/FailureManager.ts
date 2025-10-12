@@ -10,9 +10,9 @@
 import { EventEmitter } from "events";
 import {
   FailureEvent,
+  FailureRecovery,
   FailureType,
   RecoveryAction,
-  FailureRecovery,
   RecoveryStatus,
 } from "../types/coordinator";
 
@@ -33,7 +33,11 @@ export class FailureManager extends EventEmitter {
   /**
    * Handle component failure
    */
-  async handleFailure(componentId: string, error: any, context?: Record<string, any>): Promise<void> {
+  async handleFailure(
+    componentId: string,
+    error: any,
+    context?: Record<string, any>
+  ): Promise<void> {
     const failure: FailureEvent = {
       componentId,
       failureType: this.classifyFailure(error),
@@ -64,7 +68,10 @@ export class FailureManager extends EventEmitter {
   /**
    * Initiate recovery process for failed component
    */
-  private async initiateRecovery(componentId: string, failure: FailureEvent): Promise<void> {
+  private async initiateRecovery(
+    componentId: string,
+    failure: FailureEvent
+  ): Promise<void> {
     if (this.activeRecoveries.has(componentId)) {
       return; // Recovery already in progress
     }
@@ -107,10 +114,9 @@ export class FailureManager extends EventEmitter {
       this.emit("component:recovered", {
         componentId,
         recoveryTime: recovery.endTime.getTime() - recovery.startTime.getTime(),
-        actionsExecuted: recovery.actions.filter(a => a.executed).length,
+        actionsExecuted: recovery.actions.filter((a) => a.executed).length,
         timestamp: new Date(),
       });
-
     } catch (recoveryError) {
       recovery.status = RecoveryStatus.FAILED;
       recovery.success = false;
@@ -121,7 +127,10 @@ export class FailureManager extends EventEmitter {
 
       this.emit("recovery:failed", {
         componentId,
-        error: recoveryError instanceof Error ? recoveryError.message : "Unknown recovery error",
+        error:
+          recoveryError instanceof Error
+            ? recoveryError.message
+            : "Unknown recovery error",
         recoveryTime: recovery.endTime.getTime() - recovery.startTime.getTime(),
         timestamp: new Date(),
       });
@@ -236,12 +245,15 @@ export class FailureManager extends EventEmitter {
         action.executionTime = Date.now();
 
         // Log but continue with other actions
-        console.error(`Recovery action failed: ${action.type} on ${action.target}`, error);
+        console.error(
+          `Recovery action failed: ${action.type} on ${action.target}`,
+          error
+        );
       }
     }
 
     // Check if any action succeeded
-    const anySucceeded = recovery.actions.some(a => a.executed && !a.error);
+    const anySucceeded = recovery.actions.some((a) => a.executed && !a.error);
     if (!anySucceeded) {
       throw new Error("All recovery actions failed");
     }
@@ -293,32 +305,45 @@ export class FailureManager extends EventEmitter {
       });
 
       // Escalate timeout as well
-      await this.escalateFailure(recovery.failure, new Error("Recovery timeout"));
+      await this.escalateFailure(
+        recovery.failure,
+        new Error("Recovery timeout")
+      );
     }
   }
 
   /**
    * Escalate failure to human intervention
    */
-  private async escalateFailure(failure: FailureEvent, recoveryError: any): Promise<void> {
+  private async escalateFailure(
+    failure: FailureEvent,
+    recoveryError: any
+  ): Promise<void> {
     // In a real implementation, this would:
     // 1. Create incident ticket
     // 2. Notify on-call engineer via PagerDuty/Slack
     // 3. Send detailed diagnostics to monitoring system
     // 4. Log to central incident management system
 
-    console.error(`CRITICAL: Component ${failure.componentId} failed and recovery unsuccessful`, {
-      failure,
-      recoveryError: recoveryError instanceof Error ? recoveryError.message : recoveryError,
-      recentFailures: this.getRecentFailures(failure.componentId, 3600000), // Last hour
-      activeRecoveries: Array.from(this.activeRecoveries.keys()),
-    });
+    console.error(
+      `CRITICAL: Component ${failure.componentId} failed and recovery unsuccessful`,
+      {
+        failure,
+        recoveryError:
+          recoveryError instanceof Error
+            ? recoveryError.message
+            : recoveryError,
+        recentFailures: this.getRecentFailures(failure.componentId, 3600000), // Last hour
+        activeRecoveries: Array.from(this.activeRecoveries.keys()),
+      }
+    );
 
     // Emit escalation event for external monitoring
     this.emit("failure:escalated", {
       componentId: failure.componentId,
       failureType: failure.failureType,
-      recoveryError: recoveryError instanceof Error ? recoveryError.message : "Unknown",
+      recoveryError:
+        recoveryError instanceof Error ? recoveryError.message : "Unknown",
       timestamp: new Date(),
     });
   }
@@ -326,10 +351,13 @@ export class FailureManager extends EventEmitter {
   /**
    * Get recent failures for component
    */
-  private getRecentFailures(componentId: string, timeWindowMs: number): FailureEvent[] {
+  private getRecentFailures(
+    componentId: string,
+    timeWindowMs: number
+  ): FailureEvent[] {
     const cutoff = new Date(Date.now() - timeWindowMs);
     return this.failureHistory.filter(
-      f => f.componentId === componentId && f.timestamp > cutoff
+      (f) => f.componentId === componentId && f.timestamp > cutoff
     );
   }
 
@@ -356,10 +384,13 @@ export class FailureManager extends EventEmitter {
 
     for (const failure of this.failureHistory) {
       byType[failure.failureType]++;
-      byComponent[failure.componentId] = (byComponent[failure.componentId] || 0) + 1;
+      byComponent[failure.componentId] =
+        (byComponent[failure.componentId] || 0) + 1;
     }
 
-    const recentFailures = this.failureHistory.filter(f => f.timestamp > recentCutoff).length;
+    const recentFailures = this.failureHistory.filter(
+      (f) => f.timestamp > recentCutoff
+    ).length;
 
     return {
       totalFailures: this.failureHistory.length,
@@ -378,25 +409,34 @@ export class FailureManager extends EventEmitter {
 
     const errorMessage = error.message || error.toString();
 
-    if (errorMessage.includes("health check") || errorMessage.includes("unhealthy")) {
+    if (
+      errorMessage.includes("health check") ||
+      errorMessage.includes("unhealthy")
+    ) {
       return FailureType.HEALTH_CHECK_FAILURE;
     }
 
-    if (error.code === 'ECONNREFUSED' ||
-        error.code === 'ENOTFOUND' ||
-        errorMessage.includes('connection') ||
-        errorMessage.includes('ECONNRESET')) {
+    if (
+      error.code === "ECONNREFUSED" ||
+      error.code === "ENOTFOUND" ||
+      errorMessage.includes("connection") ||
+      errorMessage.includes("ECONNRESET")
+    ) {
       return FailureType.CONNECTION_FAILURE;
     }
 
-    if (error.code === 'ETIMEDOUT' ||
-        errorMessage.includes('timeout') ||
-        errorMessage.includes('aborted')) {
+    if (
+      error.code === "ETIMEDOUT" ||
+      errorMessage.includes("timeout") ||
+      errorMessage.includes("aborted")
+    ) {
       return FailureType.TIMEOUT_FAILURE;
     }
 
-    if (errorMessage.includes('dependency') ||
-        errorMessage.includes('required component')) {
+    if (
+      errorMessage.includes("dependency") ||
+      errorMessage.includes("required component")
+    ) {
       return FailureType.DEPENDENCY_FAILURE;
     }
 
@@ -406,7 +446,10 @@ export class FailureManager extends EventEmitter {
   // Placeholder methods for recovery actions
   // In a real implementation, these would integrate with actual infrastructure
 
-  private async restartComponent(componentId: string, params?: any): Promise<void> {
+  private async restartComponent(
+    componentId: string,
+    params?: any
+  ): Promise<void> {
     console.log(`Restarting component ${componentId}`, params);
 
     // Implementation would:
@@ -415,10 +458,13 @@ export class FailureManager extends EventEmitter {
     // 3. Verify component is responding
 
     // Simulate restart delay
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    await new Promise((resolve) => setTimeout(resolve, 5000));
   }
 
-  private async switchoverComponent(componentId: string, params?: any): Promise<void> {
+  private async switchoverComponent(
+    componentId: string,
+    params?: any
+  ): Promise<void> {
     console.log(`Switching over component ${componentId}`, params);
 
     // Implementation would:
@@ -427,10 +473,13 @@ export class FailureManager extends EventEmitter {
     // 3. Verify backup is healthy
     // 4. Optionally decommission failed instance
 
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise((resolve) => setTimeout(resolve, 3000));
   }
 
-  private async scaleUpComponent(componentId: string, params?: any): Promise<void> {
+  private async scaleUpComponent(
+    componentId: string,
+    params?: any
+  ): Promise<void> {
     console.log(`Scaling up component ${componentId}`, params);
 
     // Implementation would:
@@ -438,7 +487,7 @@ export class FailureManager extends EventEmitter {
     // 2. Add to load balancer
     // 3. Verify new instances are healthy
 
-    await new Promise(resolve => setTimeout(resolve, 10000));
+    await new Promise((resolve) => setTimeout(resolve, 10000));
   }
 
   private async sendAlert(target: string, params?: any): Promise<void> {
@@ -449,10 +498,13 @@ export class FailureManager extends EventEmitter {
     // 2. Send to notification system (email, Slack, PagerDuty, etc.)
     // 3. Include relevant context and diagnostics
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 
-  private async isolateComponent(componentId: string, params?: any): Promise<void> {
+  private async isolateComponent(
+    componentId: string,
+    params?: any
+  ): Promise<void> {
     console.log(`Isolating component ${componentId}`, params);
 
     // Implementation would:
@@ -462,6 +514,9 @@ export class FailureManager extends EventEmitter {
     // 4. Set automatic reinstatement timer
 
     const duration = params?.duration || 300000;
-    await new Promise(resolve => setTimeout(resolve, Math.min(duration, 10000)));
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.min(duration, 10000))
+    );
   }
 }
+

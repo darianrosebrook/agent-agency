@@ -85,6 +85,9 @@ export interface StructuredPromptInstruction {
  * Context gathering configuration
  */
 export interface ContextGatheringConfig {
+  /** Knowledge seeker for real search operations */
+  knowledgeSeeker?: any; // KnowledgeSeeker instance
+
   /** Gathering strategy */
   strategy: ContextGatheringStrategy;
 

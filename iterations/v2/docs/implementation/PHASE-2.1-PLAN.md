@@ -188,14 +188,14 @@ export class SystemCoordinator extends EventEmitter {
    * Get all components of a specific type
    */
   getComponentsByType(type: ComponentType): ComponentRegistration[] {
-    return Array.from(this.components.values()).filter(c => c.type === type);
+    return Array.from(this.components.values()).filter((c) => c.type === type);
   }
 
   /**
    * Get healthy components of a specific type
    */
   getHealthyComponents(type: ComponentType): ComponentRegistration[] {
-    return this.getComponentsByType(type).filter(component => {
+    return this.getComponentsByType(type).filter((component) => {
       const health = this.componentHealth.get(component.id);
       return health?.status === HealthStatus.HEALTHY;
     });
@@ -209,7 +209,9 @@ export class SystemCoordinator extends EventEmitter {
     payload: any,
     preferences?: RoutingPreferences
   ): Promise<ComponentRegistration> {
-    const candidates = this.getHealthyComponents(this.getComponentTypeForRequest(requestType));
+    const candidates = this.getHealthyComponents(
+      this.getComponentTypeForRequest(requestType)
+    );
 
     if (candidates.length === 0) {
       throw new Error(`No healthy components available for ${requestType}`);
@@ -223,7 +225,9 @@ export class SystemCoordinator extends EventEmitter {
    */
   getSystemHealth(): SystemHealth {
     const componentHealth = Array.from(this.componentHealth.values());
-    const healthy = componentHealth.filter(h => h.status === HealthStatus.HEALTHY).length;
+    const healthy = componentHealth.filter(
+      (h) => h.status === HealthStatus.HEALTHY
+    ).length;
     const total = componentHealth.length;
 
     const overallStatus = this.calculateOverallStatus(componentHealth);
@@ -233,8 +237,12 @@ export class SystemCoordinator extends EventEmitter {
       components: {
         total,
         healthy,
-        degraded: componentHealth.filter(h => h.status === HealthStatus.DEGRADED).length,
-        unhealthy: componentHealth.filter(h => h.status === HealthStatus.UNHEALTHY).length,
+        degraded: componentHealth.filter(
+          (h) => h.status === HealthStatus.DEGRADED
+        ).length,
+        unhealthy: componentHealth.filter(
+          (h) => h.status === HealthStatus.UNHEALTHY
+        ).length,
       },
       lastUpdate: new Date(),
       issues: this.getCurrentIssues(),
@@ -274,11 +282,17 @@ export class SystemCoordinator extends EventEmitter {
     }
   }
 
-  private calculateOverallStatus(componentHealth: ComponentHealth[]): HealthStatus {
+  private calculateOverallStatus(
+    componentHealth: ComponentHealth[]
+  ): HealthStatus {
     if (componentHealth.length === 0) return HealthStatus.UNKNOWN;
 
-    const unhealthy = componentHealth.filter(h => h.status === HealthStatus.UNHEALTHY).length;
-    const degraded = componentHealth.filter(h => h.status === HealthStatus.DEGRADED).length;
+    const unhealthy = componentHealth.filter(
+      (h) => h.status === HealthStatus.UNHEALTHY
+    ).length;
+    const degraded = componentHealth.filter(
+      (h) => h.status === HealthStatus.DEGRADED
+    ).length;
 
     if (unhealthy > 0) return HealthStatus.UNHEALTHY;
     if (degraded > componentHealth.length * 0.5) return HealthStatus.DEGRADED;
@@ -295,7 +309,8 @@ export class SystemCoordinator extends EventEmitter {
         issues.push({
           componentId,
           type: "health_check",
-          severity: health.status === HealthStatus.UNHEALTHY ? "high" : "medium",
+          severity:
+            health.status === HealthStatus.UNHEALTHY ? "high" : "medium",
           message: `Component ${componentId} is ${health.status}`,
           timestamp: health.lastCheck,
         });
@@ -305,15 +320,21 @@ export class SystemCoordinator extends EventEmitter {
     return issues;
   }
 
-  private async validateDependencies(component: ComponentRegistration): Promise<void> {
+  private async validateDependencies(
+    component: ComponentRegistration
+  ): Promise<void> {
     for (const depId of component.dependencies) {
       if (!this.components.has(depId)) {
-        throw new Error(`Dependency ${depId} not registered for component ${component.id}`);
+        throw new Error(
+          `Dependency ${depId} not registered for component ${component.id}`
+        );
       }
     }
   }
 
-  private async notifyDependents(component: ComponentRegistration): Promise<void> {
+  private async notifyDependents(
+    component: ComponentRegistration
+  ): Promise<void> {
     // Notify components that depend on this one
     for (const [id, otherComponent] of this.components) {
       if (otherComponent.dependencies.includes(component.id)) {
@@ -352,7 +373,9 @@ export class SystemCoordinator extends EventEmitter {
   private async performHealthChecks(): Promise<void> {
     for (const component of this.components.values()) {
       try {
-        const health = await this.healthMonitor.checkComponentHealth(component.id);
+        const health = await this.healthMonitor.checkComponentHealth(
+          component.id
+        );
         this.componentHealth.set(component.id, health);
 
         // Update load balancer with health info
@@ -464,7 +487,11 @@ export class ComponentHealthMonitor extends EventEmitter {
         status: newStatus,
         lastCheck: new Date(),
         responseTime,
-        errorCount: newStatus === HealthStatus.HEALTHY ? 0 : currentHealth.errorCount + (newStatus === HealthStatus.UNHEALTHY ? 1 : 0),
+        errorCount:
+          newStatus === HealthStatus.HEALTHY
+            ? 0
+            : currentHealth.errorCount +
+              (newStatus === HealthStatus.UNHEALTHY ? 1 : 0),
         details: response,
       };
 
@@ -480,7 +507,6 @@ export class ComponentHealthMonitor extends EventEmitter {
 
       this.componentHealth.set(componentId, updatedHealth);
       return updatedHealth;
-
     } catch (error) {
       const responseTime = Date.now() - startTime;
       const currentHealth = this.componentHealth.get(componentId)!;
@@ -491,7 +517,9 @@ export class ComponentHealthMonitor extends EventEmitter {
         lastCheck: new Date(),
         responseTime,
         errorCount: currentHealth.errorCount + 1,
-        details: { error: error instanceof Error ? error.message : "Unknown error" },
+        details: {
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
       };
 
       this.emit("component:health-changed", {
@@ -543,7 +571,10 @@ export class ComponentHealthMonitor extends EventEmitter {
     }
   }
 
-  private determineHealthStatus(response: any, currentHealth: ComponentHealth): HealthStatus {
+  private determineHealthStatus(
+    response: any,
+    currentHealth: ComponentHealth
+  ): HealthStatus {
     // Simple health determination - can be extended with custom logic
     if (response.status === "healthy" || response.healthy === true) {
       return HealthStatus.HEALTHY;
@@ -632,7 +663,9 @@ export class LoadBalancer extends EventEmitter {
   /**
    * Handle component removal (redistribute load)
    */
-  async handleComponentRemoval(component: ComponentRegistration): Promise<void> {
+  async handleComponentRemoval(
+    component: ComponentRegistration
+  ): Promise<void> {
     this.loadDistribution.delete(component.id);
     this.componentLoads.delete(component.id);
 
@@ -650,7 +683,7 @@ export class LoadBalancer extends EventEmitter {
    */
   async redistributeLoad(): Promise<void> {
     const allComponents = this.coordinator.getAllComponents();
-    const healthyComponents = allComponents.filter(component => {
+    const healthyComponents = allComponents.filter((component) => {
       const health = this.coordinator.getComponentHealth(component.id);
       return health?.status === HealthStatus.HEALTHY;
     });
@@ -677,7 +710,10 @@ export class LoadBalancer extends EventEmitter {
   /**
    * Update component health for load balancing
    */
-  async updateComponentHealth(componentId: string, health: ComponentHealth): Promise<void> {
+  async updateComponentHealth(
+    componentId: string,
+    health: ComponentHealth
+  ): Promise<void> {
     if (health.status !== HealthStatus.HEALTHY) {
       // Reduce load on unhealthy components
       const distribution = this.loadDistribution.get(componentId);
@@ -704,18 +740,22 @@ export class LoadBalancer extends EventEmitter {
 
     // Preferred component
     if (preferences.preferredComponent) {
-      const preferred = filtered.find(c => c.id === preferences.preferredComponent);
+      const preferred = filtered.find(
+        (c) => c.id === preferences.preferredComponent
+      );
       if (preferred) return [preferred];
     }
 
     // Avoid components
     if (preferences.avoidComponents?.length) {
-      filtered = filtered.filter(c => !preferences.avoidComponents!.includes(c.id));
+      filtered = filtered.filter(
+        (c) => !preferences.avoidComponents!.includes(c.id)
+      );
     }
 
     // Max load filter
     if (preferences.maxLoad !== undefined) {
-      filtered = filtered.filter(c => {
+      filtered = filtered.filter((c) => {
         const load = this.componentLoads.get(c.id) || 0;
         return load < preferences!.maxLoad!;
       });
@@ -723,17 +763,18 @@ export class LoadBalancer extends EventEmitter {
 
     // Location filter
     if (preferences.location) {
-      filtered = filtered.filter(c =>
-        c.metadata?.location === preferences!.location
+      filtered = filtered.filter(
+        (c) => c.metadata?.location === preferences!.location
       );
     }
 
     // Capabilities filter
     if (preferences.capabilities?.length) {
-      filtered = filtered.filter(c =>
-        preferences!.capabilities!.every(cap =>
-          c.capabilities.supportedTaskTypes?.includes(cap) ||
-          c.capabilities[cap as keyof ComponentCapabilities]
+      filtered = filtered.filter((c) =>
+        preferences!.capabilities!.every(
+          (cap) =>
+            c.capabilities.supportedTaskTypes?.includes(cap) ||
+            c.capabilities[cap as keyof ComponentCapabilities]
         )
       );
     }
@@ -741,7 +782,10 @@ export class LoadBalancer extends EventEmitter {
     return filtered;
   }
 
-  private async calculateScore(component: ComponentRegistration, payload: any): Promise<number> {
+  private async calculateScore(
+    component: ComponentRegistration,
+    payload: any
+  ): Promise<number> {
     let score = 100;
 
     // Load factor (lower load = higher score)
@@ -764,12 +808,18 @@ export class LoadBalancer extends EventEmitter {
     }
 
     // Capability match bonus
-    if (payload?.taskType && component.capabilities.supportedTaskTypes?.includes(payload.taskType)) {
+    if (
+      payload?.taskType &&
+      component.capabilities.supportedTaskTypes?.includes(payload.taskType)
+    ) {
       score += 15;
     }
 
     // Location bonus
-    if (payload?.location && component.metadata?.location === payload.location) {
+    if (
+      payload?.location &&
+      component.metadata?.location === payload.location
+    ) {
       score += 10;
     }
 
@@ -848,7 +898,11 @@ export class FailureManager extends EventEmitter {
   /**
    * Handle component failure
    */
-  async handleFailure(componentId: string, error: any, context?: Record<string, any>): Promise<void> {
+  async handleFailure(
+    componentId: string,
+    error: any,
+    context?: Record<string, any>
+  ): Promise<void> {
     const failure: FailureEvent = {
       componentId,
       failureType: this.classifyFailure(error),
@@ -872,7 +926,10 @@ export class FailureManager extends EventEmitter {
   /**
    * Initiate recovery process
    */
-  private async initiateRecovery(componentId: string, failure: FailureEvent): Promise<void> {
+  private async initiateRecovery(
+    componentId: string,
+    failure: FailureEvent
+  ): Promise<void> {
     if (this.activeRecoveries.has(componentId)) {
       return; // Recovery already in progress
     }
@@ -900,7 +957,6 @@ export class FailureManager extends EventEmitter {
         actions: recovery.actions.length,
         timestamp: new Date(),
       });
-
     } catch (recoveryError) {
       recovery.status = RecoveryStatus.FAILED;
       recovery.success = false;
@@ -1029,26 +1085,35 @@ export class FailureManager extends EventEmitter {
   /**
    * Escalate failure to human intervention
    */
-  private async escalateFailure(failure: FailureEvent, recoveryError: any): Promise<void> {
+  private async escalateFailure(
+    failure: FailureEvent,
+    recoveryError: any
+  ): Promise<void> {
     // In a real implementation, this would:
     // 1. Create incident ticket
     // 2. Notify on-call engineer
     // 3. Send detailed diagnostics
 
-    console.error(`CRITICAL: Component ${failure.componentId} failed and recovery unsuccessful`, {
-      failure,
-      recoveryError,
-      recentFailures: this.getRecentFailures(failure.componentId, 3600000), // Last hour
-    });
+    console.error(
+      `CRITICAL: Component ${failure.componentId} failed and recovery unsuccessful`,
+      {
+        failure,
+        recoveryError,
+        recentFailures: this.getRecentFailures(failure.componentId, 3600000), // Last hour
+      }
+    );
   }
 
   /**
    * Get recent failures for component
    */
-  private getRecentFailures(componentId: string, timeWindowMs: number): FailureEvent[] {
+  private getRecentFailures(
+    componentId: string,
+    timeWindowMs: number
+  ): FailureEvent[] {
     const cutoff = new Date(Date.now() - timeWindowMs);
     return this.failureHistory.filter(
-      f => f.componentId === componentId && f.timestamp > cutoff
+      (f) => f.componentId === componentId && f.timestamp > cutoff
     );
   }
 
@@ -1065,10 +1130,13 @@ export class FailureManager extends EventEmitter {
     const recentCutoff = new Date(Date.now() - 3600000); // Last hour
 
     for (const failure of this.failureHistory) {
-      byComponent[failure.componentId] = (byComponent[failure.componentId] || 0) + 1;
+      byComponent[failure.componentId] =
+        (byComponent[failure.componentId] || 0) + 1;
     }
 
-    const recentFailures = this.failureHistory.filter(f => f.timestamp > recentCutoff).length;
+    const recentFailures = this.failureHistory.filter(
+      (f) => f.timestamp > recentCutoff
+    ).length;
 
     return {
       totalFailures: this.failureHistory.length,
@@ -1079,19 +1147,22 @@ export class FailureManager extends EventEmitter {
   }
 
   private classifyFailure(error: any): FailureType {
-    if (error.code === 'ECONNREFUSED' || error.message?.includes('connection')) {
+    if (
+      error.code === "ECONNREFUSED" ||
+      error.message?.includes("connection")
+    ) {
       return FailureType.CONNECTION_FAILURE;
     }
 
-    if (error.code === 'ETIMEDOUT' || error.message?.includes('timeout')) {
+    if (error.code === "ETIMEDOUT" || error.message?.includes("timeout")) {
       return FailureType.TIMEOUT_FAILURE;
     }
 
-    if (error.message?.includes('health check')) {
+    if (error.message?.includes("health check")) {
       return FailureType.HEALTH_CHECK_FAILURE;
     }
 
-    if (error.message?.includes('dependency')) {
+    if (error.message?.includes("dependency")) {
       return FailureType.DEPENDENCY_FAILURE;
     }
 
@@ -1099,17 +1170,26 @@ export class FailureManager extends EventEmitter {
   }
 
   // Placeholder methods for recovery actions
-  private async restartComponent(componentId: string, params?: any): Promise<void> {
+  private async restartComponent(
+    componentId: string,
+    params?: any
+  ): Promise<void> {
     console.log(`Restarting component ${componentId}`, params);
     // Implementation would restart the component
   }
 
-  private async switchoverComponent(componentId: string, params?: any): Promise<void> {
+  private async switchoverComponent(
+    componentId: string,
+    params?: any
+  ): Promise<void> {
     console.log(`Switching over component ${componentId}`, params);
     // Implementation would switch to backup
   }
 
-  private async scaleUpComponent(componentId: string, params?: any): Promise<void> {
+  private async scaleUpComponent(
+    componentId: string,
+    params?: any
+  ): Promise<void> {
     console.log(`Scaling up component ${componentId}`, params);
     // Implementation would scale up instances
   }
@@ -1119,7 +1199,10 @@ export class FailureManager extends EventEmitter {
     // Implementation would send alerts
   }
 
-  private async isolateComponent(componentId: string, params?: any): Promise<void> {
+  private async isolateComponent(
+    componentId: string,
+    params?: any
+  ): Promise<void> {
     console.log(`Isolating component ${componentId}`, params);
     // Implementation would isolate component
   }
@@ -1211,14 +1294,17 @@ describe("SystemCoordinator", () => {
 
   beforeEach(() => {
     healthMonitor = new ComponentHealthMonitor();
-    coordinator = new SystemCoordinator({
-      healthCheckInterval: 30000,
-      failureThreshold: 3,
-      recoveryTimeout: 300000,
-      loadBalancingEnabled: true,
-      autoScalingEnabled: false,
-      maxComponentsPerType: 5,
-    }, healthMonitor);
+    coordinator = new SystemCoordinator(
+      {
+        healthCheckInterval: 30000,
+        failureThreshold: 3,
+        recoveryTimeout: 300000,
+        loadBalancingEnabled: true,
+        autoScalingEnabled: false,
+        maxComponentsPerType: 5,
+      },
+      healthMonitor
+    );
   });
 
   describe("component registration", () => {
@@ -1264,8 +1350,9 @@ describe("SystemCoordinator", () => {
         metadata: {},
       };
 
-      await expect(coordinator.registerComponent(registration))
-        .rejects.toThrow("Dependency non-existent-dependency not registered");
+      await expect(coordinator.registerComponent(registration)).rejects.toThrow(
+        "Dependency non-existent-dependency not registered"
+      );
     });
   });
 
@@ -1284,8 +1371,9 @@ describe("SystemCoordinator", () => {
     });
 
     it("should throw error when no healthy components available", async () => {
-      await expect(coordinator.routeRequest("task_routing", {}))
-        .rejects.toThrow("No healthy components available");
+      await expect(
+        coordinator.routeRequest("task_routing", {})
+      ).rejects.toThrow("No healthy components available");
     });
   });
 
@@ -1346,3 +1434,4 @@ describe("SystemCoordinator", () => {
 ---
 
 **Status**: Ready to implement!
+

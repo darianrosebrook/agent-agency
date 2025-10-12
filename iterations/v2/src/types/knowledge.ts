@@ -132,6 +132,12 @@ export interface SearchResult {
 
   /** Processing timestamp */
   processedAt: Date;
+
+  /** Retrieved at timestamp (when result was fetched) */
+  retrievedAt: Date;
+
+  /** Content hash for duplicate detection */
+  contentHash: string;
 }
 
 /**

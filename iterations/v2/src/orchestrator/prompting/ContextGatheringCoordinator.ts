@@ -8,6 +8,7 @@
  */
 
 import { ContextGatheringConfig } from "../../types/agent-prompting";
+import { KnowledgeSeeker } from "../../knowledge/KnowledgeSeeker";
 
 /**
  * Search query for context gathering
@@ -113,6 +114,7 @@ export interface ParallelExecutionResult {
  */
 export class ContextGatheringCoordinator {
   private config: ContextGatheringConfig;
+  private knowledgeSeeker?: KnowledgeSeeker;
   private activeQueries: Map<string, Promise<QueryResult>>;
   private resultCache: Map<string, QueryResult>;
 
@@ -121,6 +123,7 @@ export class ContextGatheringCoordinator {
    */
   constructor(config: ContextGatheringConfig) {
     this.config = config;
+    this.knowledgeSeeker = config.knowledgeSeeker as KnowledgeSeeker | undefined;
     this.activeQueries = new Map();
     this.resultCache = new Map();
   }
@@ -375,9 +378,52 @@ export class ContextGatheringCoordinator {
    * Perform the actual search operation
    */
   private async performSearch(query: SearchQuery): Promise<SearchResult[]> {
-    // This would integrate with actual search systems
-    // For now, return mock results based on query characteristics
+    // Use real KnowledgeSeeker if available, otherwise fall back to mock
+    if (this.knowledgeSeeker) {
+      try {
+        // Convert SearchQuery to KnowledgeQuery format
+        const knowledgeQuery = {
+          id: query.id,
+          query: query.terms.join(" "),
+          queryType: this.mapQueryType(query.expectedType),
+          maxResults: Math.min(query.terms.length * 2, 10), // Scale with term count
+          relevanceThreshold: 0.3,
+          timeoutMs: 10000,
+          sources: ["web", "academic"], // Use web and academic sources
+        };
 
+        const searchResults = await this.knowledgeSeeker.search(knowledgeQuery);
+
+        // Convert KnowledgeResult[] to SearchResult[] format
+        return searchResults.map(result => ({
+          id: result.id,
+          content: result.snippet || result.content,
+          relevanceScore: result.relevanceScore,
+          source: {
+            type: result.source?.type === "web" ? "api" : "file",
+            location: result.url || result.source?.location || "unknown",
+            lineNumber: result.source?.lineNumber,
+          },
+          metadata: {
+            confidence: result.credibility || 0.8,
+            freshness: this.calculateFreshness(result.publishedDate),
+            authority: result.authority || 0.7,
+          },
+        }));
+      } catch (error) {
+        console.warn(`Real search failed for query ${query.id}, falling back to mock:`, error);
+        // Fall back to mock results if real search fails
+      }
+    }
+
+    // Fallback: mock results for development/testing
+    return this.generateMockResults(query);
+  }
+
+  /**
+   * Generate mock results for development/testing
+   */
+  private generateMockResults(query: SearchQuery): SearchResult[] {
     const mockResults: SearchResult[] = [];
 
     // Generate mock results based on query terms
@@ -401,6 +447,44 @@ export class ContextGatheringCoordinator {
 
     // Sort by relevance
     return mockResults.sort((a, b) => b.relevanceScore - a.relevanceScore);
+  }
+
+  /**
+   * Map expected result type to KnowledgeQueryType
+   */
+  private mapQueryType(expectedType: string): "factual" | "code" | "explanatory" | "comparative" {
+    switch (expectedType) {
+      case "code":
+        return "code";
+      case "data":
+        return "factual";
+      case "documentation":
+        return "explanatory";
+      default:
+        return "factual";
+    }
+  }
+
+  /**
+   * Calculate freshness score based on publication date
+   */
+  private calculateFreshness(publishedDate?: string): number {
+    if (!publishedDate) return 0.5;
+
+    try {
+      const published = new Date(publishedDate);
+      const now = new Date();
+      const ageInDays = (now.getTime() - published.getTime()) / (1000 * 60 * 60 * 24);
+
+      // Freshness decreases over time (max 1.0 for very recent, min 0.1 for very old)
+      if (ageInDays < 1) return 1.0; // Less than 1 day
+      if (ageInDays < 7) return 0.9; // Less than 1 week
+      if (ageInDays < 30) return 0.7; // Less than 1 month
+      if (ageInDays < 365) return 0.5; // Less than 1 year
+      return 0.2; // More than 1 year
+    } catch {
+      return 0.5; // Default if date parsing fails
+    }
   }
 
   /**

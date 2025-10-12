@@ -8,6 +8,10 @@
  * @author @darianrosebrook
  */
 
+import {
+  KnowledgeDatabaseClient,
+  KnowledgeDatabaseConfig,
+} from "../database/KnowledgeDatabaseClient";
 import { AgentControlConfig } from "../types/agent-prompting";
 import {
   AgentProfile,
@@ -20,6 +24,7 @@ import { PromptingEngine } from "./prompting/PromptingEngine";
 
 import { KnowledgeSeeker } from "../knowledge/KnowledgeSeeker";
 import { AgentRegistryManager } from "./AgentRegistryManager";
+import { DatabaseClientFactory } from "./DatabaseClient";
 import { EventEmitter, events } from "./EventEmitter";
 import { HealthMonitor } from "./HealthMonitor";
 import { EventTypes } from "./OrchestratorEvents";
@@ -52,6 +57,9 @@ export interface ArbiterOrchestratorConfig {
 
   /** Knowledge seeker configuration */
   knowledgeSeeker: any; // Using any for now, should be KnowledgeSeekerConfig
+
+  /** Database configuration (optional - graceful degradation if not provided) */
+  database?: KnowledgeDatabaseConfig;
 
   /** GPT-5 prompting engine configuration */
   prompting: AgentControlConfig & {
@@ -122,6 +130,7 @@ export class ArbiterOrchestrator {
         recoveryManager: RecoveryManager;
         knowledgeSeeker: KnowledgeSeeker;
         promptingEngine: PromptingEngine;
+        knowledgeDbClient?: KnowledgeDatabaseClient;
       }
     | undefined;
   private eventEmitter: EventEmitter;
@@ -145,6 +154,22 @@ export class ArbiterOrchestrator {
     }
 
     try {
+      // Initialize database client if configuration provided
+      let knowledgeDbClient: KnowledgeDatabaseClient | undefined;
+      if (this.config.database) {
+        knowledgeDbClient = new KnowledgeDatabaseClient(this.config.database);
+        try {
+          await knowledgeDbClient.initialize();
+          console.log("Knowledge database client initialized successfully");
+        } catch (error) {
+          console.warn(
+            "Failed to initialize knowledge database, continuing without persistence:",
+            error
+          );
+          knowledgeDbClient = undefined;
+        }
+      }
+
       // Initialize components in dependency order
       this.components = {
         taskQueue: new TaskQueue(this.config.taskQueue),
@@ -153,7 +178,11 @@ export class ArbiterOrchestrator {
         security: new SecurityManager(this.config.security),
         healthMonitor: new HealthMonitor(this.config.healthMonitor),
         recoveryManager: new RecoveryManager(this.config.recoveryManager),
-        knowledgeSeeker: new KnowledgeSeeker(this.config.knowledgeSeeker),
+        knowledgeSeeker: new KnowledgeSeeker(
+          this.config.knowledgeSeeker,
+          knowledgeDbClient
+        ),
+        knowledgeDbClient,
         promptingEngine: new PromptingEngine({
           enabled: this.config.prompting.enabled,
           reasoningEffort: this.config.prompting.reasoningEffort,
@@ -215,6 +244,11 @@ export class ArbiterOrchestrator {
           this.components.taskQueue.shutdown(),
           this.components.taskAssignment.shutdown(),
         ]);
+
+        // Shutdown database client if it exists
+        if (this.components.knowledgeDbClient) {
+          await this.components.knowledgeDbClient.shutdown();
+        }
 
         // Emit orchestrator shutdown event
         events.emit({
@@ -748,6 +782,19 @@ export const defaultArbiterOrchestratorConfig: ArbiterOrchestratorConfig = {
     maxReassignmentAttempts: 3,
     progressCheckIntervalMs: 30000,
     persistenceEnabled: true,
+    databaseClient: this.config.database
+      ? DatabaseClientFactory.createPostgresClient({
+          host: this.config.database.host,
+          port: this.config.database.port,
+          database: this.config.database.database,
+          user: this.config.database.user,
+          password: this.config.database.password,
+          maxConnections: this.config.database.maxConnections || 10,
+          connectionTimeoutMs:
+            this.config.database.connectionTimeoutMs || 10000,
+          queryTimeoutMs: 30000,
+        })
+      : undefined,
   },
 
   agentRegistry: {

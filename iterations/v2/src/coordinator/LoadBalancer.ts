@@ -9,11 +9,11 @@
 
 import { EventEmitter } from "events";
 import {
-  ComponentRegistration,
-  RoutingPreferences,
-  LoadDistribution,
   ComponentHealth,
+  ComponentRegistration,
   HealthStatus,
+  LoadDistribution,
+  RoutingPreferences,
 } from "../types/coordinator";
 
 import { SystemCoordinator } from "./SystemCoordinator";
@@ -78,7 +78,7 @@ export class LoadBalancer extends EventEmitter {
 
     this.emit("component:selected", {
       componentId: selected.id,
-      requestType: payload?.type || 'unknown',
+      requestType: payload?.type || "unknown",
       score: scoredCandidates[0].score,
       totalCandidates: candidates.length,
       filteredCandidates: filteredCandidates.length,
@@ -91,7 +91,9 @@ export class LoadBalancer extends EventEmitter {
   /**
    * Handle component removal (redistribute load)
    */
-  async handleComponentRemoval(component: ComponentRegistration): Promise<void> {
+  async handleComponentRemoval(
+    component: ComponentRegistration
+  ): Promise<void> {
     this.loadDistribution.delete(component.id);
     this.componentLoads.delete(component.id);
 
@@ -109,7 +111,7 @@ export class LoadBalancer extends EventEmitter {
    */
   async redistributeLoad(): Promise<void> {
     const allComponents = this.coordinator.getAllComponents();
-    const healthyComponents = allComponents.filter(component => {
+    const healthyComponents = allComponents.filter((component) => {
       const health = this.coordinator.getComponentHealth(component.id);
       return health?.status === HealthStatus.HEALTHY;
     });
@@ -148,7 +150,10 @@ export class LoadBalancer extends EventEmitter {
   /**
    * Update component health for load balancing decisions
    */
-  async updateComponentHealth(componentId: string, health: ComponentHealth): Promise<void> {
+  async updateComponentHealth(
+    componentId: string,
+    health: ComponentHealth
+  ): Promise<void> {
     if (health.status !== HealthStatus.HEALTHY) {
       // Reduce load on unhealthy components
       const distribution = this.loadDistribution.get(componentId);
@@ -160,7 +165,8 @@ export class LoadBalancer extends EventEmitter {
     this.emit("component:health-updated", {
       componentId,
       status: health.status,
-      loadPercentage: this.loadDistribution.get(componentId)?.loadPercentage || 0,
+      loadPercentage:
+        this.loadDistribution.get(componentId)?.loadPercentage || 0,
       timestamp: new Date(),
     });
   }
@@ -187,15 +193,20 @@ export class LoadBalancer extends EventEmitter {
     const fiveMinutesAgo = Date.now() - 300000;
     for (const request of this.requestHistory) {
       if (request.timestamp > fiveMinutesAgo) {
-        requestsPerComponent[request.componentId] = (requestsPerComponent[request.componentId] || 0) + 1;
+        requestsPerComponent[request.componentId] =
+          (requestsPerComponent[request.componentId] || 0) + 1;
       }
     }
 
     // Calculate average response time
-    const recentRequests = this.requestHistory.filter(r => r.timestamp > fiveMinutesAgo);
-    const averageResponseTime = recentRequests.length > 0
-      ? recentRequests.reduce((sum, r) => sum + r.responseTime, 0) / recentRequests.length
-      : 0;
+    const recentRequests = this.requestHistory.filter(
+      (r) => r.timestamp > fiveMinutesAgo
+    );
+    const averageResponseTime =
+      recentRequests.length > 0
+        ? recentRequests.reduce((sum, r) => sum + r.responseTime, 0) /
+          recentRequests.length
+        : 0;
 
     return {
       totalRequests: recentRequests.length,
@@ -218,18 +229,22 @@ export class LoadBalancer extends EventEmitter {
 
     // Preferred component
     if (preferences.preferredComponent) {
-      const preferred = filtered.find(c => c.id === preferences.preferredComponent);
+      const preferred = filtered.find(
+        (c) => c.id === preferences.preferredComponent
+      );
       if (preferred) return [preferred];
     }
 
     // Avoid components
     if (preferences.avoidComponents?.length) {
-      filtered = filtered.filter(c => !preferences.avoidComponents!.includes(c.id));
+      filtered = filtered.filter(
+        (c) => !preferences.avoidComponents!.includes(c.id)
+      );
     }
 
     // Max load filter
     if (preferences.maxLoad !== undefined) {
-      filtered = filtered.filter(c => {
+      filtered = filtered.filter((c) => {
         const currentLoad = this.componentLoads.get(c.id) || 0;
         return currentLoad < preferences!.maxLoad!;
       });
@@ -237,17 +252,18 @@ export class LoadBalancer extends EventEmitter {
 
     // Location filter
     if (preferences.location) {
-      filtered = filtered.filter(c =>
-        c.metadata?.location === preferences!.location
+      filtered = filtered.filter(
+        (c) => c.metadata?.location === preferences!.location
       );
     }
 
     // Capabilities filter
     if (preferences.capabilities?.length) {
-      filtered = filtered.filter(c =>
-        preferences!.capabilities!.every(cap =>
-          c.capabilities.supportedTaskTypes?.includes(cap) ||
-          (c.capabilities as any)[cap] === true
+      filtered = filtered.filter((c) =>
+        preferences!.capabilities!.every(
+          (cap) =>
+            c.capabilities.supportedTaskTypes?.includes(cap) ||
+            (c.capabilities as any)[cap] === true
         )
       );
     }
@@ -258,7 +274,10 @@ export class LoadBalancer extends EventEmitter {
   /**
    * Calculate scoring for component selection
    */
-  private async calculateScore(component: ComponentRegistration, payload: any): Promise<number> {
+  private async calculateScore(
+    component: ComponentRegistration,
+    payload: any
+  ): Promise<number> {
     let score = 100;
 
     // Load factor (lower load = higher score)
@@ -275,26 +294,37 @@ export class LoadBalancer extends EventEmitter {
     }
 
     // Response time factor (based on recent performance)
-    const recentResponseTime = this.getAverageResponseTime(component.id, 300000); // 5 minutes
+    const recentResponseTime = this.getAverageResponseTime(
+      component.id,
+      300000
+    ); // 5 minutes
     if (recentResponseTime > 0) {
       const responsePenalty = Math.min(recentResponseTime / 100, 15); // Max 15 point penalty
       score -= responsePenalty;
     }
 
     // Capability match bonus
-    if (payload?.taskType && component.capabilities.supportedTaskTypes?.includes(payload.taskType)) {
+    if (
+      payload?.taskType &&
+      component.capabilities.supportedTaskTypes?.includes(payload.taskType)
+    ) {
       score += 15;
     }
 
     // Location bonus
-    if (payload?.location && component.metadata?.location === payload.location) {
+    if (
+      payload?.location &&
+      component.metadata?.location === payload.location
+    ) {
       score += 10;
     }
 
     // Concurrent capacity bonus
     if (component.capabilities.maxConcurrentTasks) {
-      const utilization = currentLoad / component.capabilities.maxConcurrentTasks;
-      if (utilization < 0.8) { // Less than 80% utilized
+      const utilization =
+        currentLoad / component.capabilities.maxConcurrentTasks;
+      if (utilization < 0.8) {
+        // Less than 80% utilized
         score += 5;
       }
     }
@@ -348,14 +378,24 @@ export class LoadBalancer extends EventEmitter {
   /**
    * Get average response time for component over time window
    */
-  private getAverageResponseTime(componentId: string, timeWindowMs: number): number {
+  private getAverageResponseTime(
+    componentId: string,
+    timeWindowMs: number
+  ): number {
     const cutoff = Date.now() - timeWindowMs;
     const componentRequests = this.requestHistory.filter(
-      r => r.componentId === componentId && r.timestamp > cutoff && r.responseTime > 0
+      (r) =>
+        r.componentId === componentId &&
+        r.timestamp > cutoff &&
+        r.responseTime > 0
     );
 
     if (componentRequests.length === 0) return 0;
 
-    return componentRequests.reduce((sum, r) => sum + r.responseTime, 0) / componentRequests.length;
+    return (
+      componentRequests.reduce((sum, r) => sum + r.responseTime, 0) /
+      componentRequests.length
+    );
   }
 }
+

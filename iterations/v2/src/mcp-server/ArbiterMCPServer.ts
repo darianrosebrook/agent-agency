@@ -17,6 +17,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { CAWSPolicyAdapter } from "../caws-integration/adapters/CAWSPolicyAdapter.js";
 import { CAWSValidationAdapter } from "../caws-integration/adapters/CAWSValidationAdapter.js";
+import { ArbiterOrchestrator } from "../orchestrator/ArbiterOrchestrator";
 import type { WorkingSpec } from "../types/caws-types.js";
 import type {
   ArbiterToolName,
@@ -34,15 +35,21 @@ import type {
 export class ArbiterMCPServer extends Server {
   private validationAdapter: CAWSValidationAdapter;
   private policyAdapter: CAWSPolicyAdapter;
+  private orchestrator: ArbiterOrchestrator | null = null;
   private projectRoot: string;
   private version: string = "1.0.0";
+  private tools: Array<any> = [];
 
   /**
    * Create a new Arbiter MCP Server
    *
    * @param projectRoot Project root directory
+   * @param orchestrator Optional Arbiter Orchestrator instance for knowledge tools
    */
-  constructor(projectRoot: string = process.cwd()) {
+  constructor(
+    projectRoot: string = process.cwd(),
+    orchestrator?: ArbiterOrchestrator
+  ) {
     super(
       {
         name: "arbiter-mcp-server",
@@ -58,6 +65,7 @@ export class ArbiterMCPServer extends Server {
     );
 
     this.projectRoot = projectRoot;
+    this.orchestrator = orchestrator || null;
 
     // Initialize adapters
     this.validationAdapter = new CAWSValidationAdapter({
@@ -70,7 +78,109 @@ export class ArbiterMCPServer extends Server {
       cacheTTL: 300000, // 5 minutes
     });
 
+    // Initialize tools array with arbiter tools
+    this.tools = [...ARBITER_TOOLS];
+
     this.setupToolHandlers();
+
+    // Register knowledge tools if orchestrator provided
+    if (this.orchestrator) {
+      this.registerKnowledgeTools();
+    }
+  }
+
+  /**
+   * Set the orchestrator instance (can be called after construction)
+   */
+  setOrchestrator(orchestrator: ArbiterOrchestrator): void {
+    this.orchestrator = orchestrator;
+    this.registerKnowledgeTools();
+  }
+
+  /**
+   * Get the orchestrator instance
+   */
+  getOrchestrator(): ArbiterOrchestrator {
+    if (!this.orchestrator) {
+      throw new Error(
+        "Orchestrator not initialized. Call setOrchestrator() first."
+      );
+    }
+    return this.orchestrator;
+  }
+
+  /**
+   * Register knowledge tools with MCP server
+   */
+  private registerKnowledgeTools(): void {
+    if (!this.orchestrator) {
+      return;
+    }
+
+    try {
+      // Add knowledge tools to tools array
+      const knowledgeTools = [
+        {
+          name: "knowledge_search",
+          description:
+            "Search for information using intelligent research capabilities. " +
+            "Queries multiple search providers, processes results for relevance and credibility, " +
+            "and returns high-quality research findings.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              query: {
+                type: "string",
+                description: "The search query or question to research",
+              },
+              queryType: {
+                type: "string",
+                enum: [
+                  "factual",
+                  "explanatory",
+                  "comparative",
+                  "trend",
+                  "technical",
+                ],
+                default: "factual",
+              },
+              maxResults: {
+                type: "number",
+                minimum: 1,
+                maximum: 20,
+                default: 5,
+              },
+              relevanceThreshold: {
+                type: "number",
+                minimum: 0,
+                maximum: 1,
+                default: 0.7,
+              },
+            },
+            required: ["query"],
+          },
+        },
+        {
+          name: "knowledge_status",
+          description: "Get current status of the Knowledge Seeker system",
+          inputSchema: {
+            type: "object",
+            properties: {},
+          },
+        },
+      ];
+
+      // Add knowledge tools to the tools array (avoiding duplicates)
+      for (const tool of knowledgeTools) {
+        if (!this.tools.find((t) => t.name === tool.name)) {
+          this.tools.push(tool);
+        }
+      }
+
+      console.error("[Arbiter MCP] Knowledge tools registered successfully");
+    } catch (error) {
+      console.error("[Arbiter MCP] Failed to register knowledge tools:", error);
+    }
   }
 
   /**
@@ -111,7 +221,7 @@ export class ArbiterMCPServer extends Server {
     // List available tools
     this.setRequestHandler(ListToolsRequestSchema, () => {
       try {
-        return { tools: ARBITER_TOOLS };
+        return { tools: this.tools };
       } catch (error) {
         console.error("[Arbiter MCP] Error listing tools:", error);
         throw error;
@@ -125,7 +235,9 @@ export class ArbiterMCPServer extends Server {
       try {
         const toolArgs = (args || {}) as Record<string, any>;
 
-        switch (name as ArbiterToolName) {
+        switch (
+          name as ArbiterToolName | "knowledge_search" | "knowledge_status"
+        ) {
           case "arbiter_validate":
             return await this.handleValidate(toolArgs);
           case "arbiter_assign_task":
@@ -134,6 +246,10 @@ export class ArbiterMCPServer extends Server {
             return await this.handleMonitorProgress(toolArgs);
           case "arbiter_generate_verdict":
             return await this.handleGenerateVerdict(toolArgs);
+          case "knowledge_search":
+            return await this.handleKnowledgeSearch(toolArgs);
+          case "knowledge_status":
+            return await this.handleKnowledgeStatus();
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -665,6 +781,184 @@ export class ArbiterMCPServer extends Server {
               {
                 success: false,
                 error: error instanceof Error ? error.message : "Verdict error",
+              },
+              null,
+              2
+            ),
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+
+  /**
+   * Handle knowledge search tool invocation
+   */
+  private async handleKnowledgeSearch(args: Record<string, any>): Promise<{
+    content: Array<{ type: string; text: string }>;
+    isError?: boolean;
+  }> {
+    try {
+      if (!this.orchestrator) {
+        throw new Error(
+          "Knowledge search requires orchestrator integration. Call setOrchestrator() first."
+        );
+      }
+
+      const {
+        query,
+        queryType,
+        maxResults,
+        relevanceThreshold,
+        timeoutMs,
+        context,
+      } = args;
+
+      if (!query || typeof query !== "string") {
+        throw new Error("Query is required and must be a string");
+      }
+
+      // Build knowledge query
+      const knowledgeQuery = {
+        id: `mcp-query-${Date.now()}-${Math.random()
+          .toString(36)
+          .substr(2, 9)}`,
+        query,
+        queryType: queryType || "factual",
+        maxResults: maxResults || 5,
+        relevanceThreshold: relevanceThreshold || 0.7,
+        timeoutMs: timeoutMs || 10000,
+        context: context || {},
+        metadata: {
+          requesterId: "mcp-tool",
+          priority: 5,
+          createdAt: new Date(),
+          tags: ["mcp", "knowledge-search"],
+        },
+      };
+
+      // Execute query through orchestrator
+      const response = await this.orchestrator.processKnowledgeQuery(
+        knowledgeQuery
+      );
+
+      // Format response for MCP
+      const result = {
+        success: true,
+        query: response.query.query,
+        summary: response.summary,
+        confidence: response.confidence,
+        results: response.results.map((r) => ({
+          title: r.title,
+          url: r.url,
+          snippet: r.content.substring(0, 200) + "...",
+          relevance: r.relevanceScore,
+          credibility: r.credibilityScore,
+          quality: r.quality,
+          domain: r.domain,
+          publishedAt: r.publishedAt,
+        })),
+        sourcesUsed: response.sourcesUsed,
+        metadata: {
+          totalResults: response.metadata.totalResultsFound,
+          filtered: response.metadata.resultsFiltered,
+          processingTime: response.metadata.processingTimeMs,
+          cached: response.metadata.cacheUsed,
+          providers: response.metadata.providersQueried,
+        },
+      };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                success: false,
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : "Knowledge search error",
+              },
+              null,
+              2
+            ),
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+
+  /**
+   * Handle knowledge status tool invocation
+   */
+  private async handleKnowledgeStatus(): Promise<{
+    content: Array<{ type: string; text: string }>;
+    isError?: boolean;
+  }> {
+    try {
+      if (!this.orchestrator) {
+        throw new Error(
+          "Knowledge status requires orchestrator integration. Call setOrchestrator() first."
+        );
+      }
+
+      const status = await this.orchestrator.getKnowledgeStatus();
+
+      const result = {
+        success: true,
+        enabled: status.enabled,
+        providers: status.providers.map((p: any) => ({
+          name: p.name,
+          available: p.available,
+          health: {
+            responseTime: p.health.responseTimeMs,
+            errorRate: p.health.errorRate,
+            requestsThisMinute: p.health.requestsThisMinute,
+          },
+        })),
+        cache: {
+          queryCache: status.cacheStats.queryCacheSize,
+          resultCache: status.cacheStats.resultCacheSize,
+          hitRate: status.cacheStats.hitRate,
+        },
+        processing: {
+          activeQueries: status.processingStats.activeQueries,
+          queuedQueries: status.processingStats.queuedQueries,
+        },
+      };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                success: false,
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : "Knowledge status error",
               },
               null,
               2

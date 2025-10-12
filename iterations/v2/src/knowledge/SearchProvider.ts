@@ -194,19 +194,28 @@ export abstract class BaseSearchProvider implements ISearchProvider {
     relevanceScore: number = 0.5,
     credibilityScore: number = 0.5
   ): SearchResult {
+    const content =
+      providerData.snippet ||
+      providerData.description ||
+      providerData.content ||
+      "";
+    const url = providerData.url || providerData.link || "";
+    const title = providerData.title || "Untitled";
+
+    // Generate content hash for duplicate detection
+    const contentHash = this.generateContentHash(title, url, content);
+
+    const now = new Date();
+
     return {
       id: `${this.name}-${Date.now()}-${Math.random()
         .toString(36)
         .substr(2, 9)}`,
       queryId,
-      title: providerData.title || "Untitled",
-      content:
-        providerData.snippet ||
-        providerData.description ||
-        providerData.content ||
-        "",
-      url: providerData.url || providerData.link || "",
-      domain: this.extractDomain(providerData.url || providerData.link || ""),
+      title,
+      content,
+      url,
+      domain: this.extractDomain(url),
       sourceType: this.inferSourceType(providerData),
       relevanceScore,
       credibilityScore,
@@ -216,8 +225,29 @@ export abstract class BaseSearchProvider implements ISearchProvider {
         : undefined,
       provider: this.name,
       providerMetadata: providerData,
-      processedAt: new Date(),
+      processedAt: now,
+      retrievedAt: now,
+      contentHash,
     };
+  }
+
+  /**
+   * Generate content hash for duplicate detection
+   */
+  private generateContentHash(
+    title: string,
+    url: string,
+    content: string
+  ): string {
+    // Simple hash function - in production use a proper hashing library like crypto
+    const combined = `${title}|${url}|${content}`;
+    let hash = 0;
+    for (let i = 0; i < combined.length; i++) {
+      const char = combined.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(16);
   }
 
   /**

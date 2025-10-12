@@ -7,6 +7,7 @@
  * @author @darianrosebrook
  */
 
+import { KnowledgeDatabaseClient } from "../database/KnowledgeDatabaseClient";
 import { events } from "../orchestrator/EventEmitter";
 import { EventTypes } from "../orchestrator/OrchestratorEvents";
 import {
@@ -32,10 +33,15 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
   private activeQueries: Map<string, Promise<KnowledgeResponse>> = new Map();
   private queryCache: Map<string, KnowledgeResponse> = new Map();
   private resultCache: Map<string, any[]> = new Map();
+  private dbClient: KnowledgeDatabaseClient | null = null;
 
-  constructor(config: KnowledgeSeekerConfig) {
+  constructor(
+    config: KnowledgeSeekerConfig,
+    dbClient?: KnowledgeDatabaseClient
+  ) {
     this.config = config;
     this.processor = new InformationProcessor(config.processor);
+    this.dbClient = dbClient || null;
     this.initializeProviders();
   }
 
@@ -55,7 +61,7 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
 
     // Check cache first
     if (this.config.caching.enableQueryCaching) {
-      const cachedResponse = this.checkQueryCache(query);
+      const cachedResponse = await this.checkQueryCache(query);
       if (cachedResponse) {
         events.emit({
           id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -142,6 +148,11 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
     startTime: number
   ): Promise<KnowledgeResponse> {
     try {
+      // Store query in database if available
+      if (this.dbClient && this.dbClient.isAvailable()) {
+        await this.dbClient.storeQuery(query);
+      }
+
       // Emit query received event
       events.emit({
         id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -213,6 +224,11 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
         allResults
       );
 
+      // Store results in database if available
+      if (this.dbClient && this.dbClient.isAvailable()) {
+        await this.dbClient.storeResults(processedResults);
+      }
+
       // Generate response
       const response: KnowledgeResponse = {
         query,
@@ -230,9 +246,15 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
         respondedAt: new Date(),
       };
 
+      // Store response in database if available
+      if (this.dbClient && this.dbClient.isAvailable()) {
+        await this.dbClient.storeResponse(response);
+        await this.dbClient.updateQueryStatus(query.id, "completed");
+      }
+
       // Cache response if enabled
       if (this.config.caching.enableQueryCaching) {
-        this.cacheQueryResponse(query, response);
+        await this.cacheQueryResponse(query, response);
       }
 
       // Emit response generated event
@@ -253,6 +275,15 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
       return response;
     } catch (error) {
       const processingTimeMs = Date.now() - startTime;
+
+      // Update query status to failed in database
+      if (this.dbClient && this.dbClient.isAvailable()) {
+        await this.dbClient.updateQueryStatus(
+          query.id,
+          "failed",
+          error instanceof Error ? error.message : String(error)
+        );
+      }
 
       // Emit error event
       events.emit({
@@ -405,8 +436,24 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
   /**
    * Check query cache for existing response
    */
-  private checkQueryCache(query: KnowledgeQuery): KnowledgeResponse | null {
+  private async checkQueryCache(
+    query: KnowledgeQuery
+  ): Promise<KnowledgeResponse | null> {
     const cacheKey = this.generateCacheKey(query);
+
+    // Try database cache first if available
+    if (this.dbClient && this.dbClient.isAvailable()) {
+      try {
+        const cached = await this.dbClient.getCachedResponse(cacheKey);
+        if (cached) {
+          return cached;
+        }
+      } catch (error) {
+        console.warn("Database cache lookup failed:", error);
+      }
+    }
+
+    // Fall back to in-memory cache
     const cached = this.queryCache.get(cacheKey);
 
     if (cached && this.isCacheValid(cached)) {
@@ -421,19 +468,26 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
   /**
    * Cache query response
    */
-  private cacheQueryResponse(
+  private async cacheQueryResponse(
     query: KnowledgeQuery,
     response: KnowledgeResponse
-  ): void {
+  ): Promise<void> {
     const cacheKey = this.generateCacheKey(query);
 
-    // Set cache expiry
-    const expiresAt = new Date();
-    expiresAt.setMilliseconds(
-      expiresAt.getMilliseconds() + this.config.caching.cacheTtlMs
-    );
+    // Store in database cache if available
+    if (this.dbClient && this.dbClient.isAvailable()) {
+      try {
+        await this.dbClient.storeCachedResponse(
+          cacheKey,
+          response,
+          this.config.caching.cacheTtlMs
+        );
+      } catch (error) {
+        console.warn("Failed to cache in database:", error);
+      }
+    }
 
-    // Store with expiry (simplified - in production use proper cache)
+    // Also store in memory cache for fast access
     this.queryCache.set(cacheKey, response);
 
     // Clean up expired entries periodically
