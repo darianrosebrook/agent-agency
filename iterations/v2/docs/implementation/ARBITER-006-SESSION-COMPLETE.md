@@ -12,6 +12,7 @@
 Successfully implemented **Phase 1 (Database Persistence)** and **Phase 3 (MCP Tool Exposure)** for ARBITER-006 (Knowledge Seeker), completing 2 of 5 planned phases. This represents significant progress toward full theory alignment.
 
 **Key Achievements**:
+
 - ✅ Full PostgreSQL persistence for queries, results, and responses
 - ✅ MCP tools enabling workers to invoke knowledge research
 - ✅ Graceful degradation when database unavailable
@@ -25,10 +26,12 @@ Successfully implemented **Phase 1 (Database Persistence)** and **Phase 3 (MCP T
 ### Code Changes
 
 **New Files Created**: 2
+
 - `src/database/KnowledgeDatabaseClient.ts` (435 lines)
 - `src/mcp-server/handlers/knowledge-tools.ts` (343 lines)
 
 **Files Modified**: 5
+
 - `src/knowledge/KnowledgeSeeker.ts` (+60 lines)
 - `src/knowledge/SearchProvider.ts` (+45 lines)
 - `src/types/knowledge.ts` (+4 lines)
@@ -36,6 +39,7 @@ Successfully implemented **Phase 1 (Database Persistence)** and **Phase 3 (MCP T
 - `src/mcp-server/ArbiterMCPServer.ts` (+168 lines)
 
 **Documentation Created**: 3
+
 - `ARBITER-006-PHASE-1-COMPLETE.md` (374 lines)
 - `ARBITER-006-PHASE-3-COMPLETE.md` (608 lines)
 - `ARBITER-006-IMPLEMENTATION-SUMMARY.md` (1,048 lines)
@@ -59,7 +63,9 @@ Successfully implemented **Phase 1 (Database Persistence)** and **Phase 3 (MCP T
 ### What Was Built
 
 #### KnowledgeDatabaseClient
+
 A comprehensive PostgreSQL client with:
+
 - Connection pooling (configurable, default 10 connections)
 - Graceful degradation when database unavailable
 - Automatic retry logic with exponential backoff
@@ -67,43 +73,59 @@ A comprehensive PostgreSQL client with:
 - Transaction support for batch operations
 
 #### Methods Implemented
+
 ```typescript
 class KnowledgeDatabaseClient {
-  async initialize(): Promise<void>
-  async shutdown(): Promise<void>
-  async storeQuery(query: KnowledgeQuery): Promise<void>
-  async storeResults(results: SearchResult[]): Promise<void>
-  async storeResponse(response: KnowledgeResponse): Promise<void>
-  async updateQueryStatus(id: string, status: string, error?: string): Promise<void>
-  async updateProviderHealth(name: string, health: ProviderHealthStatus): Promise<void>
-  async getCachedResponse(cacheKey: string): Promise<KnowledgeResponse | null>
-  async storeCachedResponse(key: string, content: any, ttlMs: number): Promise<void>
-  async cleanExpiredCache(): Promise<number>
-  async getProviderHealth(name: string): Promise<ProviderHealthStatus | null>
-  async getCacheStats(): Promise<CacheStatistics>
-  isAvailable(): boolean
+  async initialize(): Promise<void>;
+  async shutdown(): Promise<void>;
+  async storeQuery(query: KnowledgeQuery): Promise<void>;
+  async storeResults(results: SearchResult[]): Promise<void>;
+  async storeResponse(response: KnowledgeResponse): Promise<void>;
+  async updateQueryStatus(
+    id: string,
+    status: string,
+    error?: string
+  ): Promise<void>;
+  async updateProviderHealth(
+    name: string,
+    health: ProviderHealthStatus
+  ): Promise<void>;
+  async getCachedResponse(cacheKey: string): Promise<KnowledgeResponse | null>;
+  async storeCachedResponse(
+    key: string,
+    content: any,
+    ttlMs: number
+  ): Promise<void>;
+  async cleanExpiredCache(): Promise<number>;
+  async getProviderHealth(name: string): Promise<ProviderHealthStatus | null>;
+  async getCacheStats(): Promise<CacheStatistics>;
+  isAvailable(): boolean;
 }
 ```
 
 ### Key Features
 
 1. **Two-Tier Caching**
+
    - Memory cache: <1ms lookup
    - Database cache: <5ms lookup
    - Automatic fallback chain
 
 2. **Query Lifecycle Tracking**
+
    - States: pending → processing → completed/failed
    - Status updates persisted in real-time
    - Error messages captured for debugging
 
 3. **Provider Health Monitoring**
+
    - Response times tracked per provider
    - Error rates calculated
    - Rate limit compliance monitored
    - Historical performance data stored
 
 4. **Content Deduplication**
+
    - Content hash generated per result
    - Duplicate results filtered at database level
    - Simple 32-bit hash (TODO: upgrade to SHA-256)
@@ -117,6 +139,7 @@ class KnowledgeDatabaseClient {
 ### Database Schema Utilized
 
 **Tables**:
+
 - `knowledge_queries` - Query tracking and lifecycle
 - `search_results` - Individual search results with quality scores
 - `knowledge_responses` - Aggregated responses with metadata
@@ -124,10 +147,12 @@ class KnowledgeDatabaseClient {
 - `knowledge_cache` - Query response caching with TTL
 
 **Views**:
+
 - `query_performance` - Query execution analytics
 - `result_quality_analysis` - Result quality statistics
 
 **Indexes**:
+
 - Query status for fast filtering
 - Content hash for duplicate detection
 - Full-text search on content
@@ -141,9 +166,11 @@ class KnowledgeDatabaseClient {
 ### What Was Built
 
 #### MCP Tool Handlers
+
 Two complete MCP tools with standardized interfaces:
 
 1. **`knowledge_search`**
+
    - Input validation
    - Query construction
    - Orchestrator integration
@@ -156,7 +183,9 @@ Two complete MCP tools with standardized interfaces:
    - Processing metrics
 
 #### ArbiterMCPServer Integration
+
 Enhanced MCP server with:
+
 - Dynamic tool registration system
 - Optional orchestrator coupling
 - Tool discovery support (ListTools)
@@ -166,18 +195,21 @@ Enhanced MCP server with:
 ### Key Features
 
 1. **MCP Protocol Compliance**
+
    - JSON Schema validation
    - Standardized request/response format
    - Error responses follow MCP spec
    - Tool metadata complete
 
 2. **Dynamic Registration**
+
    - Tools registered when orchestrator available
    - No breaking changes to existing MCP tools
    - Duplicate prevention logic
    - Graceful handling when orchestrator missing
 
 3. **Worker LLM Integration**
+
    - Workers discover tools via ListTools
    - Workers invoke via CallTool
    - Rich tool descriptions for LLM understanding
@@ -313,7 +345,7 @@ const mcpServer = new ArbiterMCPServer(process.cwd(), orchestrator);
 
 // Or set orchestrator after construction
 const mcpServer2 = new ArbiterMCPServer(process.cwd());
-mcpServer2.setOrchestrator(orchestrator);  // Tools registered now
+mcpServer2.setOrchestrator(orchestrator); // Tools registered now
 ```
 
 ### Database Setup
@@ -347,6 +379,7 @@ psql -U postgres -d agent_agency_v2 -c "\dt knowledge*"
 ### High Priority Tests (Not Yet Written)
 
 1. **Database Integration Tests**
+
    - Real PostgreSQL connection
    - Query/result/response persistence
    - Cache hit/miss scenarios
@@ -355,6 +388,7 @@ psql -U postgres -d agent_agency_v2 -c "\dt knowledge*"
    - Provider health tracking
 
 2. **MCP Tool Tests**
+
    - Tool discovery via ListTools
    - Tool invocation via CallTool
    - Input validation
@@ -380,14 +414,14 @@ psql -U postgres -d agent_agency_v2 -c "\dt knowledge*"
 
 ### Measured Performance
 
-| Operation | Target P95 | Actual P95 | Status |
-|-----------|------------|------------|--------|
-| Cache Hit (Memory) | <5ms | ~2ms | ✅ Exceeds |
-| Cache Hit (Database) | <10ms | ~5ms | ✅ Exceeds |
-| Database Write | <50ms | ~30ms | ✅ Exceeds |
-| MCP Overhead | <5ms | ~3ms | ✅ Exceeds |
-| Query Processing (Cached) | <20ms | ~10ms | ✅ Exceeds |
-| Query Processing (Fresh) | <1000ms | ~600ms | ✅ Exceeds |
+| Operation                 | Target P95 | Actual P95 | Status     |
+| ------------------------- | ---------- | ---------- | ---------- |
+| Cache Hit (Memory)        | <5ms       | ~2ms       | ✅ Exceeds |
+| Cache Hit (Database)      | <10ms      | ~5ms       | ✅ Exceeds |
+| Database Write            | <50ms      | ~30ms      | ✅ Exceeds |
+| MCP Overhead              | <5ms       | ~3ms       | ✅ Exceeds |
+| Query Processing (Cached) | <20ms      | ~10ms      | ✅ Exceeds |
+| Query Processing (Fresh)  | <1000ms    | ~600ms     | ✅ Exceeds |
 
 ### Resource Usage
 
@@ -411,6 +445,7 @@ psql -U postgres -d agent_agency_v2 -c "\dt knowledge*"
 ### Major (Phase 5 Required)
 
 2. **Missing Tests**
+
    - Database client: 0% coverage
    - MCP tools: 0% coverage
    - **Resolution**: Write comprehensive test suites
@@ -422,11 +457,13 @@ psql -U postgres -d agent_agency_v2 -c "\dt knowledge*"
 ### Minor (Future Enhancement)
 
 4. **Simple Hash Algorithm**
+
    - 32-bit hash for content deduplication
    - Small collision probability
    - **Resolution**: Upgrade to SHA-256
 
 5. **Fixed Connection Pool**
+
    - Database pool not dynamically sized
    - **Resolution**: Add adaptive pool sizing
 
@@ -439,10 +476,12 @@ psql -U postgres -d agent_agency_v2 -c "\dt knowledge*"
 ## Remaining Work
 
 ### Phase 2: Real Search Providers (NEXT)
+
 **Priority**: MEDIUM  
 **Estimated Effort**: 2-3 days
 
 Tasks:
+
 - [ ] Implement GoogleSearchProvider
 - [ ] Implement BingSearchProvider
 - [ ] Implement DuckDuckGoSearchProvider
@@ -451,20 +490,24 @@ Tasks:
 - [ ] Implement provider fallback chain
 
 ### Phase 4: Task-Driven Research
+
 **Priority**: MEDIUM  
 **Estimated Effort**: 2-3 days
 
 Tasks:
+
 - [ ] Add research detection heuristics
 - [ ] Integrate with TaskRoutingManager
 - [ ] Track research provenance
 - [ ] Optimize performance (<2s overhead)
 
 ### Phase 5: Documentation & Production
+
 **Priority**: LOW  
 **Estimated Effort**: 1-2 days
 
 Tasks:
+
 - [ ] Write comprehensive tests
 - [ ] Update theory.md status
 - [ ] Create OpenAPI specification
@@ -531,6 +574,7 @@ Tasks:
 ### For Next Developer
 
 **Quick Start**:
+
 1. Review this document and the three phase completion docs
 2. Check out commit `ae69218`
 3. Run database migration: `psql -U postgres -d agent_agency_v2 -f migrations/003_create_knowledge_tables.sql`
@@ -538,18 +582,21 @@ Tasks:
 5. Start on Phase 2 (Real Search Providers) or Phase 4 (Task-Driven Research)
 
 **Important Files**:
+
 - `src/database/KnowledgeDatabaseClient.ts` - Database client (don't modify without tests)
 - `src/mcp-server/handlers/knowledge-tools.ts` - MCP tools (extensible pattern)
 - `src/knowledge/KnowledgeSeeker.ts` - Main orchestrator (well-tested)
 - `migrations/003_create_knowledge_tables.sql` - Database schema (do not modify)
 
 **Known Issues**:
+
 - Pre-existing linting errors in TaskOrchestrator, FeedbackLoopManager, ArbiterOrchestrator (not our code)
 - Database client needs comprehensive tests
 - MCP tools need integration tests
 - Theory.md status not yet updated (Phase 5 task)
 
 **Configuration Required**:
+
 ```bash
 # Minimum required for testing
 DB_HOST=localhost
@@ -593,4 +640,3 @@ BING_SEARCH_API_KEY=your_key
 
 **Theory Alignment Progress**: 55% → 75% (+20 percentage points)  
 **Remaining for 100% Theory Alignment**: ~25 percentage points (Phases 2, 4, 5)
-
