@@ -135,7 +135,10 @@ export class ContextGatheringCoordinator {
     const prioritizedQueries = this.prioritizeQueries(queries);
 
     // Execute queries based on strategy
-    const results = await this.executeWithStrategy(prioritizedQueries, startTime);
+    const results = await this.executeWithStrategy(
+      prioritizedQueries,
+      startTime
+    );
 
     return results;
   }
@@ -143,7 +146,10 @@ export class ContextGatheringCoordinator {
   /**
    * Create context gathering configuration for task complexity
    */
-  createConfig(taskComplexity: string, reasoningEffort: string): ContextGatheringConfig {
+  createConfig(
+    taskComplexity: string,
+    reasoningEffort: string
+  ): ContextGatheringConfig {
     // Adjust configuration based on task characteristics
     const baseConfig = { ...this.config };
 
@@ -172,7 +178,9 @@ export class ContextGatheringCoordinator {
   /**
    * Update coordinator configuration
    */
-  async updateConfig(newConfig: Partial<ContextGatheringConfig>): Promise<void> {
+  async updateConfig(
+    newConfig: Partial<ContextGatheringConfig>
+  ): Promise<void> {
     this.config = { ...this.config, ...newConfig };
   }
 
@@ -182,7 +190,13 @@ export class ContextGatheringCoordinator {
   async isHealthy(): Promise<boolean> {
     try {
       // Basic health checks
-      return this.config && this.config.depthLimits && this.config.earlyStopCriteria;
+      return !!(
+        this.config &&
+        this.config.depthLimits &&
+        this.config.earlyStopCriteria &&
+        this.config.strategy &&
+        this.config.maxParallelQueries > 0
+      );
     } catch (error) {
       console.error("ContextGatheringCoordinator health check failed:", error);
       return false;
@@ -196,7 +210,8 @@ export class ContextGatheringCoordinator {
     return queries.sort((a, b) => {
       // Priority first
       const priorityOrder = { high: 3, medium: 2, low: 1 };
-      const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
+      const priorityDiff =
+        priorityOrder[b.priority] - priorityOrder[a.priority];
       if (priorityDiff !== 0) return priorityDiff;
 
       // Then by expected result type relevance
@@ -235,7 +250,9 @@ export class ContextGatheringCoordinator {
     queries: SearchQuery[],
     startTime: number
   ): Promise<QueryResult[]> {
-    const promises = queries.map(query => this.executeQuery(query, startTime));
+    const promises = queries.map((query) =>
+      this.executeQuery(query, startTime)
+    );
     const results = await Promise.allSettled(promises);
 
     return results.map((result, index) => {
@@ -280,7 +297,9 @@ export class ContextGatheringCoordinator {
 
     for (const batch of batches) {
       // Execute batch in parallel
-      const batchPromises = batch.map(query => this.executeQuery(query, startTime));
+      const batchPromises = batch.map((query) =>
+        this.executeQuery(query, startTime)
+      );
       const batchResults = await Promise.allSettled(batchPromises);
 
       // Convert results
@@ -297,7 +316,9 @@ export class ContextGatheringCoordinator {
       // Check for early stopping
       const shouldStop = this.shouldStopEarly(results, startTime);
       if (shouldStop.stop) {
-        console.log(`ContextGatheringCoordinator: Early stopping - ${shouldStop.reason}`);
+        console.log(
+          `ContextGatheringCoordinator: Early stopping - ${shouldStop.reason}`
+        );
         break;
       }
     }
@@ -308,7 +329,10 @@ export class ContextGatheringCoordinator {
   /**
    * Execute a single query
    */
-  private async executeQuery(query: SearchQuery, startTime: number): Promise<QueryResult> {
+  private async executeQuery(
+    query: SearchQuery,
+    startTime: number
+  ): Promise<QueryResult> {
     const queryStartTime = Date.now();
 
     try {
@@ -342,7 +366,6 @@ export class ContextGatheringCoordinator {
       }
 
       return result;
-
     } catch (error) {
       throw new Error(`Query execution failed: ${error}`);
     }
@@ -386,12 +409,17 @@ export class ContextGatheringCoordinator {
   private calculateQualityScore(results: SearchResult[]): number {
     if (results.length === 0) return 0;
 
-    const avgRelevance = results.reduce((sum, r) => sum + r.relevanceScore, 0) / results.length;
-    const avgConfidence = results.reduce((sum, r) => sum + r.metadata.confidence, 0) / results.length;
-    const avgAuthority = results.reduce((sum, r) => sum + r.metadata.authority, 0) / results.length;
+    const avgRelevance =
+      results.reduce((sum, r) => sum + r.relevanceScore, 0) / results.length;
+    const avgConfidence =
+      results.reduce((sum, r) => sum + r.metadata.confidence, 0) /
+      results.length;
+    const avgAuthority =
+      results.reduce((sum, r) => sum + r.metadata.authority, 0) /
+      results.length;
 
     // Weighted quality score
-    return (avgRelevance * 0.5) + (avgConfidence * 0.3) + (avgAuthority * 0.2);
+    return avgRelevance * 0.5 + avgConfidence * 0.3 + avgAuthority * 0.2;
   }
 
   /**
@@ -423,7 +451,9 @@ export class ContextGatheringCoordinator {
     }
 
     // Quality-based early stopping
-    const avgQuality = currentResults.reduce((sum, r) => sum + r.qualityScore, 0) / currentResults.length;
+    const avgQuality =
+      currentResults.reduce((sum, r) => sum + r.qualityScore, 0) /
+      currentResults.length;
 
     if (avgQuality >= this.config.earlyStopCriteria.convergenceThreshold) {
       return { stop: true, reason: "quality_threshold_met" };
@@ -433,7 +463,9 @@ export class ContextGatheringCoordinator {
     const recentResults = currentResults.slice(-3);
     if (recentResults.length >= 3) {
       const convergenceScore = this.calculateConvergenceScore(recentResults);
-      if (convergenceScore >= this.config.earlyStopCriteria.convergenceThreshold) {
+      if (
+        convergenceScore >= this.config.earlyStopCriteria.convergenceThreshold
+      ) {
         return { stop: true, reason: "results_converged" };
       }
     }
@@ -446,7 +478,10 @@ export class ContextGatheringCoordinator {
    */
   private calculateConvergenceScore(recentResults: QueryResult[]): number {
     // Simple convergence metric: average quality score of recent results
-    return recentResults.reduce((sum, r) => sum + r.qualityScore, 0) / recentResults.length;
+    return (
+      recentResults.reduce((sum, r) => sum + r.qualityScore, 0) /
+      recentResults.length
+    );
   }
 
   /**

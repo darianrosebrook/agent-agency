@@ -8,14 +8,13 @@
  */
 
 import {
-  trace,
-  context,
-  SpanStatusCode,
   Span,
   SpanOptions,
+  SpanStatusCode,
+  context,
+  trace,
 } from "@opentelemetry/api";
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
-import { Resource } from "@opentelemetry/resources";
 import { SemanticResourceAttributes } from "@opentelemetry/semantic-conventions";
 
 /**
@@ -130,4 +129,3 @@ export class TracingProvider {
     await this.provider.shutdown();
   }
 }
-

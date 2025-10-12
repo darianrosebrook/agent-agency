@@ -76,8 +76,7 @@ export class HealthMonitor {
           const failedCheck: ComponentHealth = {
             name,
             status: HealthStatus.UNHEALTHY,
-            message:
-              error instanceof Error ? error.message : "Check failed",
+            message: error instanceof Error ? error.message : "Check failed",
             lastCheck: new Date(),
           };
           this.lastResults.set(name, failedCheck);
@@ -89,16 +88,14 @@ export class HealthMonitor {
     results.push(...(await Promise.all(checkPromises)));
 
     // Determine overall system health
-    const unhealthy = results.some(
-      (r) => r.status === HealthStatus.UNHEALTHY
-    );
+    const unhealthy = results.some((r) => r.status === HealthStatus.UNHEALTHY);
     const degraded = results.some((r) => r.status === HealthStatus.DEGRADED);
 
     const status = unhealthy
       ? HealthStatus.UNHEALTHY
       : degraded
-        ? HealthStatus.DEGRADED
-        : HealthStatus.HEALTHY;
+      ? HealthStatus.DEGRADED
+      : HealthStatus.HEALTHY;
 
     return {
       status,
@@ -137,15 +134,13 @@ export class HealthMonitor {
     const unhealthy = components.some(
       (r) => r.status === HealthStatus.UNHEALTHY
     );
-    const degraded = components.some(
-      (r) => r.status === HealthStatus.DEGRADED
-    );
+    const degraded = components.some((r) => r.status === HealthStatus.DEGRADED);
 
     const status = unhealthy
       ? HealthStatus.UNHEALTHY
       : degraded
-        ? HealthStatus.DEGRADED
-        : HealthStatus.HEALTHY;
+      ? HealthStatus.DEGRADED
+      : HealthStatus.HEALTHY;
 
     return {
       status,
@@ -195,4 +190,3 @@ export class HealthMonitor {
     this.lastResults.clear();
   }
 }
-

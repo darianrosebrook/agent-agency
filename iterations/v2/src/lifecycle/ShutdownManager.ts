@@ -154,4 +154,3 @@ export class ShutdownManager {
     this.hooks = [];
   }
 }
-

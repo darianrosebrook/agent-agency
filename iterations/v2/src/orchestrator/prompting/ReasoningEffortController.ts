@@ -97,6 +97,7 @@ export class ReasoningEffortController {
     context: TaskContext,
     assessment?: any // TaskAssessment from PromptingEngine
   ): Promise<ReasoningEffort> {
+    // assessment parameter can be undefined, so we handle it safely
     // Build selection criteria
     const criteria = this.buildSelectionCriteria(task, context, assessment);
 
@@ -179,7 +180,7 @@ export class ReasoningEffortController {
           }
         : undefined,
       systemLoad: this.assessSystemLoad(),
-      urgency: this.assessUrgency(context.timeBudgetMs, task.complexity),
+      urgency: this.assessUrgency(task.complexity, context.timeBudgetMs),
     };
   }
 
@@ -380,8 +381,8 @@ export class ReasoningEffortController {
    * Assess task urgency based on time budget and complexity
    */
   private assessUrgency(
-    timeBudgetMs?: number,
-    complexity: TaskComplexity
+    complexity: TaskComplexity,
+    timeBudgetMs?: number
   ): "low" | "normal" | "high" | "critical" {
     if (!timeBudgetMs) return "normal";
 

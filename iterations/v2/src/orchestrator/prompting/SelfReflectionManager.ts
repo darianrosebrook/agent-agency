@@ -8,12 +8,11 @@
  */
 
 import {
-  SelfReflectionRubric,
+  AgentControlConfig,
   RubricCategory,
-  ScoringCriterion,
+  SelfReflectionRubric,
   Task,
   TaskContext,
-  AgentControlConfig,
 } from "../../types/agent-prompting";
 
 /**
@@ -84,7 +83,10 @@ export class SelfReflectionManager {
   /**
    * Create a self-reflection rubric for a task
    */
-  async createRubric(task: Task, context: TaskContext): Promise<SelfReflectionRubric> {
+  async createRubric(
+    task: Task,
+    context: TaskContext
+  ): Promise<SelfReflectionRubric> {
     const cacheKey = this.createCacheKey(task, context);
 
     // Check cache first
@@ -113,17 +115,23 @@ export class SelfReflectionManager {
     const startTime = Date.now();
 
     // Use provided rubric or default
-    const evaluationRubric = rubric || await this.createRubric(task, {
-      complexity: task.complexity,
-      type: task.type,
-    } as TaskContext);
+    const evaluationRubric =
+      rubric ||
+      (await this.createRubric(task, {
+        complexity: task.complexity,
+        type: task.type,
+      } as TaskContext));
 
     // Evaluate each category
     const categoryScores = new Map<string, number>();
     const criterionResults = new Map<string, CriterionResult>();
 
     for (const category of evaluationRubric.categories) {
-      const categoryResult = await this.evaluateCategory(category, task, approach);
+      const categoryResult = await this.evaluateCategory(
+        category,
+        task,
+        approach
+      );
       categoryScores.set(category.name, categoryResult.score);
 
       // Add criterion results
@@ -133,7 +141,10 @@ export class SelfReflectionManager {
     }
 
     // Calculate overall score
-    const overallScore = this.calculateOverallScore(categoryScores, evaluationRubric);
+    const overallScore = this.calculateOverallScore(
+      categoryScores,
+      evaluationRubric
+    );
 
     // Generate suggestions
     const suggestions = await this.generateImprovementSuggestions(
@@ -160,7 +171,9 @@ export class SelfReflectionManager {
   /**
    * Update manager configuration
    */
-  async updateConfig(newConfig: Partial<AgentControlConfig["selfReflection"]>): Promise<void> {
+  async updateConfig(
+    newConfig: Partial<AgentControlConfig["selfReflection"]>
+  ): Promise<void> {
     this.config = { ...this.config, ...newConfig };
   }
 
@@ -170,8 +183,17 @@ export class SelfReflectionManager {
   async isHealthy(): Promise<boolean> {
     try {
       // Test basic functionality
-      const testTask = { id: "test", complexity: "standard" as const, type: "analysis" as const, description: "test" };
-      const rubric = await this.createRubric(testTask, { complexity: "standard", type: "analysis" });
+      const testTask = {
+        id: "test",
+        complexity: "standard" as const,
+        type: "analysis" as const,
+        description: "test",
+      };
+      const rubric = await this.createRubric(testTask, {
+        complexity: "standard",
+        type: "analysis",
+        accuracyRequirement: "standard",
+      });
       return rubric.categories.length > 0;
     } catch (error) {
       console.error("SelfReflectionManager health check failed:", error);
@@ -182,7 +204,10 @@ export class SelfReflectionManager {
   /**
    * Generate a rubric based on task characteristics
    */
-  private async generateRubric(task: Task, context: TaskContext): Promise<SelfReflectionRubric> {
+  private async generateRubric(
+    task: Task,
+    context: TaskContext
+  ): Promise<SelfReflectionRubric> {
     const categories: RubricCategory[] = [];
 
     // Task Understanding category
@@ -206,6 +231,7 @@ export class SelfReflectionManager {
     return {
       categories,
       acceptanceThreshold: this.calculateAcceptanceThreshold(task),
+      maxIterations: 5, // Default maximum iterations for self-reflection
     };
   }
 
@@ -215,26 +241,32 @@ export class SelfReflectionManager {
   private createTaskUnderstandingCategory(task: Task): RubricCategory {
     return {
       name: "Task Understanding",
-      description: "How well the approach demonstrates understanding of the task requirements",
+      description:
+        "How well the approach demonstrates understanding of the task requirements",
       weight: 0.25,
       criteria: [
         {
-          description: "Clear identification of task objectives and success criteria",
+          description:
+            "Clear identification of task objectives and success criteria",
           points: 10,
           evaluate: async (task, context) => {
             // Mock evaluation - in reality would analyze the task description
             const hasClearObjectives = task.description.length > 20;
-            const hasSuccessCriteria = task.description.includes("should") || task.description.includes("must");
+            const hasSuccessCriteria =
+              task.description.includes("should") ||
+              task.description.includes("must");
             return hasClearObjectives && hasSuccessCriteria ? 10 : 5;
           },
         },
         {
-          description: "Proper identification of task constraints and limitations",
+          description:
+            "Proper identification of task constraints and limitations",
           points: 8,
           evaluate: async (task, context) => {
-            const hasConstraints = task.description.includes("without") ||
-                                 task.description.includes("cannot") ||
-                                 task.description.includes("must not");
+            const hasConstraints =
+              task.description.includes("without") ||
+              task.description.includes("cannot") ||
+              task.description.includes("must not");
             return hasConstraints ? 8 : 4;
           },
         },
@@ -254,11 +286,15 @@ export class SelfReflectionManager {
   /**
    * Create approach quality category
    */
-  private createApproachQualityCategory(task: Task, context: TaskContext): RubricCategory {
+  private createApproachQualityCategory(
+    task: Task,
+    context: TaskContext
+  ): RubricCategory {
     return {
       name: "Approach Quality",
-      description: "Quality and appropriateness of the proposed solution approach",
-      weight: 0.30,
+      description:
+        "Quality and appropriateness of the proposed solution approach",
+      weight: 0.3,
       criteria: [
         {
           description: "Solution approach is appropriate for task complexity",
@@ -266,27 +302,29 @@ export class SelfReflectionManager {
           evaluate: async (task, context) => {
             const complexityMatch = task.complexity === context.complexity;
             const approachAppropriate = task.type === context.type;
-            return (complexityMatch && approachAppropriate) ? 12 : 6;
+            return complexityMatch && approachAppropriate ? 12 : 6;
           },
         },
         {
           description: "Clear and logical step-by-step planning",
           points: 10,
           evaluate: async (task, context) => {
-            const hasSteps = task.description.includes("step") ||
-                           task.description.includes("first") ||
-                           task.description.includes("then");
+            const hasSteps =
+              task.description.includes("step") ||
+              task.description.includes("first") ||
+              task.description.includes("then");
             const logical = task.description.length > 50;
-            return (hasSteps && logical) ? 10 : 5;
+            return hasSteps && logical ? 10 : 5;
           },
         },
         {
           description: "Consideration of alternative approaches and trade-offs",
           points: 8,
           evaluate: async (task, context) => {
-            const hasAlternatives = task.description.includes("alternative") ||
-                                  task.description.includes("option") ||
-                                  task.description.includes("trade-off");
+            const hasAlternatives =
+              task.description.includes("alternative") ||
+              task.description.includes("option") ||
+              task.description.includes("trade-off");
             return hasAlternatives ? 8 : 4;
           },
         },
@@ -297,11 +335,14 @@ export class SelfReflectionManager {
   /**
    * Create resource efficiency category
    */
-  private createResourceEfficiencyCategory(context: TaskContext): RubricCategory {
+  private createResourceEfficiencyCategory(
+    context: TaskContext
+  ): RubricCategory {
     return {
       name: "Resource Efficiency",
-      description: "Efficient use of time, computational resources, and tool calls",
-      weight: 0.20,
+      description:
+        "Efficient use of time, computational resources, and tool calls",
+      weight: 0.2,
       criteria: [
         {
           description: "Appropriate resource allocation for task complexity",
@@ -332,10 +373,11 @@ export class SelfReflectionManager {
           description: "Efficient planning that minimizes wasted effort",
           points: 7,
           evaluate: async (task, context) => {
-            const hasPlanning = task.description.includes("plan") ||
-                              task.description.includes("strategy");
+            const hasPlanning =
+              task.description.includes("plan") ||
+              task.description.includes("strategy");
             const concise = task.description.length < 500;
-            return (hasPlanning && concise) ? 7 : 4;
+            return hasPlanning && concise ? 7 : 4;
           },
         },
       ],
@@ -348,16 +390,18 @@ export class SelfReflectionManager {
   private createRiskManagementCategory(): RubricCategory {
     return {
       name: "Risk Management",
-      description: "Identification and mitigation of potential risks and failure modes",
+      description:
+        "Identification and mitigation of potential risks and failure modes",
       weight: 0.15,
       criteria: [
         {
           description: "Identification of potential failure modes",
           points: 8,
           evaluate: async (task, context) => {
-            const hasErrorHandling = task.description.includes("error") ||
-                                   task.description.includes("fail") ||
-                                   task.description.includes("exception");
+            const hasErrorHandling =
+              task.description.includes("error") ||
+              task.description.includes("fail") ||
+              task.description.includes("exception");
             return hasErrorHandling ? 8 : 4;
           },
         },
@@ -365,9 +409,10 @@ export class SelfReflectionManager {
           description: "Appropriate fallback strategies and error recovery",
           points: 7,
           evaluate: async (task, context) => {
-            const hasFallback = task.description.includes("fallback") ||
-                              task.description.includes("retry") ||
-                              task.description.includes("alternative");
+            const hasFallback =
+              task.description.includes("fallback") ||
+              task.description.includes("retry") ||
+              task.description.includes("alternative");
             return hasFallback ? 7 : 3;
           },
         },
@@ -375,9 +420,10 @@ export class SelfReflectionManager {
           description: "Contingency planning for edge cases",
           points: 6,
           evaluate: async (task, context) => {
-            const hasEdgeCases = task.description.includes("edge") ||
-                               task.description.includes("boundary") ||
-                               task.description.includes("unusual");
+            const hasEdgeCases =
+              task.description.includes("edge") ||
+              task.description.includes("boundary") ||
+              task.description.includes("unusual");
             return hasEdgeCases ? 6 : 3;
           },
         },
@@ -416,7 +462,7 @@ export class SelfReflectionManager {
     return {
       name: "Research Quality",
       description: "Thoroughness and quality of information gathering",
-      weight: 0.10,
+      weight: 0.1,
       criteria: [
         {
           description: "Comprehensive coverage of relevant sources",
@@ -439,7 +485,7 @@ export class SelfReflectionManager {
     return {
       name: "Creation Quality",
       description: "Quality and completeness of created artifacts",
-      weight: 0.10,
+      weight: 0.1,
       criteria: [
         {
           description: "Artifact meets all specified requirements",
@@ -461,8 +507,9 @@ export class SelfReflectionManager {
   private createModificationQualityCategory(): RubricCategory {
     return {
       name: "Modification Quality",
-      description: "Quality of changes and preservation of existing functionality",
-      weight: 0.10,
+      description:
+        "Quality of changes and preservation of existing functionality",
+      weight: 0.1,
       criteria: [
         {
           description: "Changes preserve existing functionality",
@@ -485,7 +532,7 @@ export class SelfReflectionManager {
     return {
       name: "Analysis Quality",
       description: "Depth and accuracy of analytical insights",
-      weight: 0.10,
+      weight: 0.1,
       criteria: [
         {
           description: "Thorough analysis of all relevant aspects",
@@ -507,11 +554,16 @@ export class SelfReflectionManager {
   private calculateAcceptanceThreshold(task: Task): number {
     // Higher threshold for complex tasks
     switch (task.complexity) {
-      case "trivial": return 0.6;
-      case "standard": return 0.7;
-      case "complex": return 0.8;
-      case "expert": return 0.9;
-      default: return 0.7;
+      case "trivial":
+        return 0.6;
+      case "standard":
+        return 0.7;
+      case "complex":
+        return 0.8;
+      case "expert":
+        return 0.9;
+      default:
+        return 0.7;
     }
   }
 
@@ -528,19 +580,27 @@ export class SelfReflectionManager {
     let totalPossible = 0;
 
     for (const criterion of category.criteria) {
-      const score = await criterion.evaluate(task, { complexity: task.complexity, type: task.type } as TaskContext);
+      const score = await criterion.evaluate(task, {
+        complexity: task.complexity,
+        type: task.type,
+      } as TaskContext);
       const pointsEarned = (score / 10) * criterion.points; // Convert 0-10 scale to points
 
       totalEarned += pointsEarned;
       totalPossible += criterion.points;
 
       criterionResults.push({
-        criterionId: `${category.name}-${criterion.description.slice(0, 30).replace(/\s+/g, "-")}`,
+        criterionId: `${category.name}-${criterion.description
+          .slice(0, 30)
+          .replace(/\s+/g, "-")}`,
         score: score / 10, // Normalize to 0-1
         pointsEarned,
         pointsPossible: criterion.points,
         rationale: `Scored ${score}/10 based on task analysis`,
-        evidence: [`Task complexity: ${task.complexity}`, `Task type: ${task.type}`],
+        evidence: [
+          `Task complexity: ${task.complexity}`,
+          `Task type: ${task.type}`,
+        ],
       });
     }
 
@@ -585,19 +645,31 @@ export class SelfReflectionManager {
     for (const category of rubric.categories) {
       const score = categoryScores.get(category.name) || 0;
       if (score < 0.7) {
-        suggestions.push(`Improve ${category.name.toLowerCase()}: ${category.description}`);
+        suggestions.push(
+          `Improve ${category.name.toLowerCase()}: ${category.description}`
+        );
       }
     }
 
     // Overall score suggestions
     if (overallScore < rubric.acceptanceThreshold) {
-      suggestions.push(`Overall score (${(overallScore * 100).toFixed(1)}%) below acceptance threshold (${(rubric.acceptanceThreshold * 100).toFixed(1)}%)`);
-      suggestions.push("Consider revising approach with more detailed planning");
+      suggestions.push(
+        `Overall score (${(overallScore * 100).toFixed(
+          1
+        )}%) below acceptance threshold (${(
+          rubric.acceptanceThreshold * 100
+        ).toFixed(1)}%)`
+      );
+      suggestions.push(
+        "Consider revising approach with more detailed planning"
+      );
     }
 
     // Task-specific suggestions
     if (suggestions.length === 0) {
-      suggestions.push("Approach meets basic criteria - consider adding more sophisticated elements");
+      suggestions.push(
+        "Approach meets basic criteria - consider adding more sophisticated elements"
+      );
     }
 
     return suggestions;
@@ -615,7 +687,9 @@ export class SelfReflectionManager {
     const baseConfidence = Math.min(categoryCount / 5, 1.0); // Max confidence at 5 categories
 
     // Reduce confidence if many low scores (might indicate evaluation issues)
-    const lowScoreCount = Array.from(categoryScores.values()).filter(score => score < 0.5).length;
+    const lowScoreCount = Array.from(categoryScores.values()).filter(
+      (score) => score < 0.5
+    ).length;
     const lowScorePenalty = lowScoreCount * 0.1;
 
     return Math.max(0.1, baseConfidence - lowScorePenalty);
@@ -626,19 +700,23 @@ export class SelfReflectionManager {
    */
   private getEstimatedTaskTime(complexity: string): number {
     const estimates = {
-      trivial: 60000,    // 1 minute
-      standard: 300000,  // 5 minutes
-      complex: 900000,   // 15 minutes
-      expert: 2700000,   // 45 minutes
+      trivial: 60000, // 1 minute
+      standard: 300000, // 5 minutes
+      complex: 900000, // 15 minutes
+      expert: 2700000, // 45 minutes
     };
 
-    return estimates[complexity as keyof typeof estimates] || estimates.standard;
+    return (
+      estimates[complexity as keyof typeof estimates] || estimates.standard
+    );
   }
 
   /**
    * Create cache key for rubric
    */
   private createCacheKey(task: Task, context: TaskContext): string {
-    return `${task.id}-${task.complexity}-${task.type}-${context.accuracyRequirement || "standard"}`;
+    return `${task.id}-${task.complexity}-${task.type}-${
+      context.accuracyRequirement || "standard"
+    }`;
   }
 }

@@ -158,18 +158,18 @@ export class ToolBudgetManager {
     this.escalationHistory.set(task.id, [
       {
         taskId: task.id,
-        budgetId: budget.id || task.id,
+        budgetId: task.id,
         eventType: "allocated",
         toolCalls: 0,
         timestamp: new Date(),
-        context: { allocatedCalls: budget.maxCalls },
+        context: { allocatedCalls: budget.maxCalls, taskId: task.id },
       },
     ]);
 
     // Log allocation
     this.logBudgetEvent({
       taskId: task.id,
-      budgetId: budget.id || task.id,
+      budgetId: task.id,
       eventType: "allocated",
       toolCalls: budget.maxCalls,
       timestamp: new Date(),
@@ -209,7 +209,7 @@ export class ToolBudgetManager {
     // Log usage event
     this.logBudgetEvent({
       taskId,
-      budgetId: budget.id || taskId,
+      budgetId: taskId,
       eventType: "used",
       toolCalls: budget.usedCalls,
       timestamp: new Date(),
@@ -246,7 +246,7 @@ export class ToolBudgetManager {
     // Log escalation
     this.logBudgetEvent({
       taskId,
-      budgetId: budget.id || taskId,
+      budgetId: taskId,
       eventType: "escalated",
       toolCalls: budget.maxCalls,
       timestamp: new Date(),
@@ -283,7 +283,7 @@ export class ToolBudgetManager {
     // Log completion
     this.logBudgetEvent({
       taskId,
-      budgetId: budget.id || taskId,
+      budgetId: taskId,
       eventType: "completed",
       toolCalls: budget.usedCalls,
       timestamp: new Date(),
@@ -671,7 +671,7 @@ export class ToolBudgetManager {
     const history = this.escalationHistory.get(taskId) || [];
     history.push({
       taskId,
-      budgetId: budget.id || taskId,
+      budgetId: taskId,
       eventType: "used",
       toolCalls: budget.usedCalls,
       timestamp: new Date(),

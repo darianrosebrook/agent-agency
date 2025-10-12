@@ -6,7 +6,11 @@
  */
 
 import { PromptingEngine } from "../../../src/orchestrator/prompting/PromptingEngine";
-import { Task, TaskContext, AgentControlConfig } from "../../../src/types/agent-prompting";
+import {
+  AgentControlConfig,
+  Task,
+  TaskContext,
+} from "../../../src/types/agent-prompting";
 
 describe("GPT-5 Prompting Engine Integration", () => {
   let promptingEngine: PromptingEngine;
@@ -36,6 +40,7 @@ describe("GPT-5 Prompting Engine Integration", () => {
           execution: "minimal",
         },
         minimalMaxCalls: 5,
+        balancedMaxCalls: 10,
       },
       toolBudget: {
         enabled: true,
@@ -109,6 +114,7 @@ describe("GPT-5 Prompting Engine Integration", () => {
         defaultRubric: {
           categories: [],
           acceptanceThreshold: 0.8,
+          maxIterations: 3,
         },
       },
     };
@@ -150,7 +156,8 @@ describe("GPT-5 Prompting Engine Integration", () => {
         id: "test-expert",
         complexity: "expert",
         type: "research",
-        description: "Design a comprehensive machine learning architecture for real-time fraud detection",
+        description:
+          "Design a comprehensive machine learning architecture for real-time fraud detection",
       };
 
       const context: TaskContext = {
@@ -163,7 +170,9 @@ describe("GPT-5 Prompting Engine Integration", () => {
       const result = await promptingEngine.processTask(task, context);
 
       expect(result.reasoningEffort).toBe("high");
-      expect(result.metadata.appliedOptimizations).toContain("self-reflection-enabled");
+      expect(result.metadata.appliedOptimizations).toContain(
+        "self-reflection-enabled"
+      );
     });
 
     it("should adapt reasoning effort based on time pressure", async () => {
@@ -214,7 +223,8 @@ describe("GPT-5 Prompting Engine Integration", () => {
         id: "test-research",
         complexity: "complex",
         type: "research",
-        description: "Research and compare different authentication protocols for microservices",
+        description:
+          "Research and compare different authentication protocols for microservices",
       };
 
       const context: TaskContext = {
@@ -277,7 +287,8 @@ describe("GPT-5 Prompting Engine Integration", () => {
         id: "test-budget-research",
         complexity: "complex",
         type: "research",
-        description: "Investigate performance optimization techniques for React applications",
+        description:
+          "Investigate performance optimization techniques for React applications",
       };
 
       const context: TaskContext = {
@@ -296,7 +307,8 @@ describe("GPT-5 Prompting Engine Integration", () => {
         id: "test-escalation",
         complexity: "expert",
         type: "creation",
-        description: "Build a complete authentication system with multiple providers",
+        description:
+          "Build a complete authentication system with multiple providers",
       };
 
       const context: TaskContext = {
@@ -309,7 +321,9 @@ describe("GPT-5 Prompting Engine Integration", () => {
 
       expect(result.toolBudget.escalationRules).toHaveLength(1);
       expect(result.toolBudget.escalationRules[0]).toHaveProperty("trigger");
-      expect(result.toolBudget.escalationRules[0]).toHaveProperty("additionalCalls");
+      expect(result.toolBudget.escalationRules[0]).toHaveProperty(
+        "additionalCalls"
+      );
     });
   });
 
@@ -348,12 +362,18 @@ describe("GPT-5 Prompting Engine Integration", () => {
 </code_editing_rules>
       `;
 
-      const result = await promptingEngine.processTask(task, context, xmlInstructions);
+      const result = await promptingEngine.processTask(
+        task,
+        context,
+        xmlInstructions
+      );
 
       expect(result.structuredInstructions).toHaveLength(1);
       expect(result.structuredInstructions[0].tag).toBe("code_editing_rules");
       expect(result.structuredInstructions[0].children).toHaveLength(3);
-      expect(result.metadata.appliedOptimizations).toContain("xml-instructions-processed");
+      expect(result.metadata.appliedOptimizations).toContain(
+        "xml-instructions-processed"
+      );
     });
 
     it("should handle invalid XML gracefully", async () => {
@@ -371,7 +391,11 @@ describe("GPT-5 Prompting Engine Integration", () => {
       };
 
       const invalidXml = "<unclosed><nested>content";
-      const result = await promptingEngine.processTask(task, context, invalidXml);
+      const result = await promptingEngine.processTask(
+        task,
+        context,
+        invalidXml
+      );
 
       // Should still work with conservative defaults
       expect(result.reasoningEffort).toBeDefined();
@@ -386,7 +410,8 @@ describe("GPT-5 Prompting Engine Integration", () => {
         id: "test-reflection",
         complexity: "expert",
         type: "planning",
-        description: "Design a comprehensive architecture for a distributed task orchestration system",
+        description:
+          "Design a comprehensive architecture for a distributed task orchestration system",
       };
 
       const context: TaskContext = {
@@ -451,7 +476,10 @@ describe("GPT-5 Prompting Engine Integration", () => {
 
       // Process multiple tasks to generate stats
       await promptingEngine.processTask(task, context);
-      await promptingEngine.processTask({ ...task, id: "test-stats-2" }, context);
+      await promptingEngine.processTask(
+        { ...task, id: "test-stats-2" },
+        context
+      );
 
       const status = await promptingEngine.getStatus();
 
@@ -502,8 +530,12 @@ describe("GPT-5 Prompting Engine Integration", () => {
 
       const result = await promptingEngine.processTask(task, context);
 
-      expect(result.metadata.appliedOptimizations).toContain("low-reasoning-effort");
-      expect(result.metadata.appliedOptimizations).toContain("minimal-tool-budget");
+      expect(result.metadata.appliedOptimizations).toContain(
+        "low-reasoning-effort"
+      );
+      expect(result.metadata.appliedOptimizations).toContain(
+        "minimal-tool-budget"
+      );
     });
   });
 
@@ -545,7 +577,9 @@ describe("GPT-5 Prompting Engine Integration", () => {
       expect(result.reasoningEffort).toBe("medium");
       expect(result.eagerness).toBe("balanced");
       expect(result.toolBudget).toBeDefined();
-      expect(result.metadata.appliedOptimizations).toContain("conservative-fallback");
+      expect(result.metadata.appliedOptimizations).toContain(
+        "conservative-fallback"
+      );
     });
   });
 });

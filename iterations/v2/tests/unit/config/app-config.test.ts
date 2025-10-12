@@ -4,7 +4,7 @@
  * @author @darianrosebrook
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
 import { ConfigManager } from "../../../src/config/AppConfig";
 
 describe("ConfigManager", () => {
@@ -137,4 +137,3 @@ describe("ConfigManager", () => {
     });
   });
 });
-

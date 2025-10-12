@@ -29,12 +29,14 @@ Add production-grade infrastructure to ARBITER foundation components (001-004) t
 **Why First**: Foundation for all other infrastructure
 
 **Deliverables**:
+
 - `src/config/AppConfig.ts` - Centralized configuration management
 - Environment-aware settings
 - Type-safe configuration
 - Validation on load
 
 **Key Features**:
+
 - Environment variables with defaults
 - Type-safe access
 - Validation rules
@@ -47,18 +49,21 @@ Add production-grade infrastructure to ARBITER foundation components (001-004) t
 **Why Second**: Essential for debugging and performance analysis
 
 **Deliverables**:
+
 - `src/observability/TracingProvider.ts` - OpenTelemetry integration
 - Automatic span creation
 - Trace context propagation
 - Performance metrics collection
 
 **Key Features**:
+
 - OpenTelemetry SDK integration
 - Automatic instrumentation
 - Custom span creation
 - Trace correlation across components
 
 **Traces to Capture**:
+
 - Agent registration/query
 - Task routing decisions
 - CAWS validation
@@ -71,18 +76,21 @@ Add production-grade infrastructure to ARBITER foundation components (001-004) t
 **Why Third**: Enables production readiness checks
 
 **Deliverables**:
+
 - `src/health/HealthMonitor.ts` - Component health tracking
 - Health check endpoints
 - Dependency monitoring
 - Alerting integration
 
 **Key Features**:
+
 - Liveness checks (is service running?)
 - Readiness checks (can service handle traffic?)
 - Component-level health status
 - Dependency health tracking
 
 **Health Checks**:
+
 - Agent registry availability
 - Router responsiveness
 - Validator functionality
@@ -95,18 +103,21 @@ Add production-grade infrastructure to ARBITER foundation components (001-004) t
 **Why Fourth**: Resilience against cascading failures
 
 **Deliverables**:
+
 - `src/resilience/CircuitBreaker.ts` - Circuit breaker implementation
 - Automatic failure detection
 - Fallback strategies
 - Self-healing recovery
 
 **Key Features**:
+
 - Configurable failure thresholds
 - Timeout handling
 - Exponential backoff
 - State tracking (closed/open/half-open)
 
 **Protected Operations**:
+
 - Agent registry queries
 - Task routing (with fallback)
 - External validations
@@ -119,12 +130,14 @@ Add production-grade infrastructure to ARBITER foundation components (001-004) t
 **Why Last**: Ensures clean termination
 
 **Deliverables**:
+
 - `src/lifecycle/ShutdownManager.ts` - Coordinated shutdown
 - Signal handling
 - Resource cleanup
 - In-flight request completion
 
 **Key Features**:
+
 - SIGTERM/SIGINT handling
 - Drain active connections
 - Close database connections
@@ -147,39 +160,39 @@ import { z } from "zod";
 const configSchema = z.object({
   // Environment
   env: z.enum(["development", "staging", "production"]).default("development"),
-  
+
   // Server
   server: z.object({
     port: z.number().default(3000),
     host: z.string().default("localhost"),
   }),
-  
+
   // Agent Registry
   registry: z.object({
     maxAgents: z.number().default(1000),
     cacheEnabled: z.boolean().default(true),
     cacheTTL: z.number().default(300), // seconds
   }),
-  
+
   // Task Routing
   routing: z.object({
     maxRoutingTimeMs: z.number().default(100),
     explorationRate: z.number().min(0).max(1).default(0.1),
   }),
-  
+
   // Performance Tracking
   performance: z.object({
     bufferSize: z.number().default(1000),
     flushIntervalMs: z.number().default(5000),
   }),
-  
+
   // Observability
   observability: z.object({
     tracingEnabled: z.boolean().default(true),
     metricsEnabled: z.boolean().default(true),
     logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
   }),
-  
+
   // Resilience
   resilience: z.object({
     circuitBreakerEnabled: z.boolean().default(true),
@@ -193,18 +206,18 @@ export type AppConfig = z.infer<typeof configSchema>;
 export class ConfigManager {
   private static instance: ConfigManager;
   private config: AppConfig;
-  
+
   private constructor() {
     this.config = this.loadConfig();
   }
-  
+
   static getInstance(): ConfigManager {
     if (!ConfigManager.instance) {
       ConfigManager.instance = new ConfigManager();
     }
     return ConfigManager.instance;
   }
-  
+
   private loadConfig(): AppConfig {
     const raw = {
       env: process.env.NODE_ENV || "development",
@@ -236,14 +249,14 @@ export class ConfigManager {
         timeoutMs: Number(process.env.TIMEOUT_MS) || 5000,
       },
     };
-    
+
     return configSchema.parse(raw);
   }
-  
+
   get(): AppConfig {
     return this.config;
   }
-  
+
   reload(): void {
     this.config = this.loadConfig();
   }
@@ -264,18 +277,18 @@ import { SemanticResourceAttributes } from "@opentelemetry/semantic-conventions"
 export class TracingProvider {
   private provider: NodeTracerProvider;
   private tracer: any;
-  
+
   constructor(serviceName: string = "arbiter-orchestrator") {
     this.provider = new NodeTracerProvider({
       resource: new Resource({
         [SemanticResourceAttributes.SERVICE_NAME]: serviceName,
       }),
     });
-    
+
     this.provider.register();
     this.tracer = trace.getTracer(serviceName);
   }
-  
+
   /**
    * Create a span for an operation
    */
@@ -287,7 +300,7 @@ export class TracingProvider {
     const span = this.tracer.startSpan(name, {
       attributes,
     });
-    
+
     try {
       const result = await context.with(
         trace.setSpan(context.active(), span),
@@ -305,7 +318,7 @@ export class TracingProvider {
       span.end();
     }
   }
-  
+
   /**
    * Get current tracer
    */
@@ -346,14 +359,14 @@ export type HealthCheck = () => Promise<ComponentHealth>;
 export class HealthMonitor {
   private checks: Map<string, HealthCheck> = new Map();
   private lastResults: Map<string, ComponentHealth> = new Map();
-  
+
   registerCheck(name: string, check: HealthCheck): void {
     this.checks.set(name, check);
   }
-  
+
   async checkHealth(): Promise<SystemHealth> {
     const results: ComponentHealth[] = [];
-    
+
     for (const [name, check] of this.checks) {
       try {
         const result = await check();
@@ -370,29 +383,29 @@ export class HealthMonitor {
         results.push(failedCheck);
       }
     }
-    
+
     // Determine overall system health
     const unhealthy = results.some((r) => r.status === HealthStatus.UNHEALTHY);
     const degraded = results.some((r) => r.status === HealthStatus.DEGRADED);
-    
+
     const status = unhealthy
       ? HealthStatus.UNHEALTHY
       : degraded
       ? HealthStatus.DEGRADED
       : HealthStatus.HEALTHY;
-    
+
     return {
       status,
       components: results,
       timestamp: new Date(),
     };
   }
-  
+
   async isReady(): Promise<boolean> {
     const health = await this.checkHealth();
     return health.status !== HealthStatus.UNHEALTHY;
   }
-  
+
   async isLive(): Promise<boolean> {
     // Liveness is less strict - just check if service is responsive
     return true;
@@ -424,10 +437,13 @@ export class CircuitBreaker {
   private failureCount = 0;
   private successCount = 0;
   private nextAttempt = Date.now();
-  
+
   constructor(private config: CircuitBreakerConfig) {}
-  
-  async execute<T>(operation: () => Promise<T>, fallback?: () => T): Promise<T> {
+
+  async execute<T>(
+    operation: () => Promise<T>,
+    fallback?: () => T
+  ): Promise<T> {
     if (this.state === CircuitState.OPEN) {
       if (Date.now() < this.nextAttempt) {
         if (fallback) {
@@ -439,7 +455,7 @@ export class CircuitBreaker {
       this.state = CircuitState.HALF_OPEN;
       this.successCount = 0;
     }
-    
+
     try {
       const result = await this.executeWithTimeout(operation);
       this.onSuccess();
@@ -452,10 +468,8 @@ export class CircuitBreaker {
       throw error;
     }
   }
-  
-  private async executeWithTimeout<T>(
-    operation: () => Promise<T>
-  ): Promise<T> {
+
+  private async executeWithTimeout<T>(operation: () => Promise<T>): Promise<T> {
     return Promise.race([
       operation(),
       new Promise<T>((_, reject) =>
@@ -466,10 +480,10 @@ export class CircuitBreaker {
       ),
     ]);
   }
-  
+
   private onSuccess(): void {
     this.failureCount = 0;
-    
+
     if (this.state === CircuitState.HALF_OPEN) {
       this.successCount++;
       if (this.successCount >= this.config.successThreshold) {
@@ -478,20 +492,20 @@ export class CircuitBreaker {
       }
     }
   }
-  
+
   private onFailure(): void {
     this.failureCount++;
-    
+
     if (this.failureCount >= this.config.failureThreshold) {
       this.state = CircuitState.OPEN;
       this.nextAttempt = Date.now() + this.config.timeout;
     }
   }
-  
+
   getState(): CircuitState {
     return this.state;
   }
-  
+
   reset(): void {
     this.state = CircuitState.CLOSED;
     this.failureCount = 0;
@@ -511,28 +525,28 @@ export type ShutdownHook = () => Promise<void>;
 export class ShutdownManager {
   private hooks: ShutdownHook[] = [];
   private isShuttingDown = false;
-  
+
   constructor(private shutdownTimeout: number = 30000) {
     this.registerSignalHandlers();
   }
-  
+
   registerShutdownHook(hook: ShutdownHook): void {
     this.hooks.push(hook);
   }
-  
+
   private registerSignalHandlers(): void {
     process.on("SIGTERM", () => this.shutdown("SIGTERM"));
     process.on("SIGINT", () => this.shutdown("SIGINT"));
   }
-  
+
   private async shutdown(signal: string): Promise<void> {
     if (this.isShuttingDown) {
       return;
     }
-    
+
     this.isShuttingDown = true;
     console.log(`Received ${signal}, starting graceful shutdown...`);
-    
+
     const shutdownPromise = this.executeShutdownHooks();
     const timeoutPromise = new Promise<void>((resolve) =>
       setTimeout(() => {
@@ -540,13 +554,13 @@ export class ShutdownManager {
         resolve();
       }, this.shutdownTimeout)
     );
-    
+
     await Promise.race([shutdownPromise, timeoutPromise]);
-    
+
     console.log("Graceful shutdown complete");
     process.exit(0);
   }
-  
+
   private async executeShutdownHooks(): Promise<void> {
     for (const hook of this.hooks) {
       try {
@@ -564,12 +578,14 @@ export class ShutdownManager {
 ## Testing Strategy
 
 ### Unit Tests
+
 - Configuration loading and validation
 - Circuit breaker state transitions
 - Health check execution
 - Shutdown hook registration
 
 ### Integration Tests
+
 - Tracing across components
 - Circuit breaker with real operations
 - Health checks with actual components
@@ -604,4 +620,3 @@ export class ShutdownManager {
 ---
 
 **Status**: Ready to implement!
-

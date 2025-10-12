@@ -68,7 +68,9 @@ export class CircuitBreaker {
           return await fallback();
         }
         throw new Error(
-          `Circuit breaker is OPEN (next attempt in ${this.nextAttempt - Date.now()}ms)`
+          `Circuit breaker is OPEN (next attempt in ${
+            this.nextAttempt - Date.now()
+          }ms)`
         );
       }
       // Try transitioning to half-open
@@ -92,9 +94,7 @@ export class CircuitBreaker {
   /**
    * Execute operation with timeout
    */
-  private async executeWithTimeout<T>(
-    operation: () => Promise<T>
-  ): Promise<T> {
+  private async executeWithTimeout<T>(operation: () => Promise<T>): Promise<T> {
     return Promise.race([
       operation(),
       new Promise<T>((_, reject) =>

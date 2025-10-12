@@ -5,7 +5,6 @@
 export { HealthMonitor, HealthStatus } from "./HealthMonitor";
 export type {
   ComponentHealth,
-  SystemHealth,
   HealthCheck,
+  SystemHealth,
 } from "./HealthMonitor";
-

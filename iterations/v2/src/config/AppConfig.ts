@@ -50,9 +50,7 @@ const configSchema = z.object({
   observability: z.object({
     tracingEnabled: z.boolean().default(true),
     metricsEnabled: z.boolean().default(true),
-    logLevel: z
-      .enum(["debug", "info", "warn", "error"])
-      .default("info"),
+    logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
   }),
 
   // Resilience
@@ -148,14 +146,8 @@ export class ConfigManager {
           process.env.CIRCUIT_BREAKER_ENABLED,
           true
         ),
-        failureThreshold: this.parseNumber(
-          process.env.FAILURE_THRESHOLD,
-          5
-        ),
-        successThreshold: this.parseNumber(
-          process.env.SUCCESS_THRESHOLD,
-          2
-        ),
+        failureThreshold: this.parseNumber(process.env.FAILURE_THRESHOLD, 5),
+        successThreshold: this.parseNumber(process.env.SUCCESS_THRESHOLD, 2),
         timeoutMs: this.parseNumber(process.env.TIMEOUT_MS, 5000),
         retryBackoffMs: this.parseNumber(process.env.RETRY_BACKOFF_MS, 1000),
       },
@@ -173,7 +165,9 @@ export class ConfigManager {
     } catch (error) {
       console.error("Configuration validation failed:", error);
       throw new Error(
-        `Invalid configuration: ${error instanceof Error ? error.message : "Unknown error"}`
+        `Invalid configuration: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
       );
     }
   }
@@ -190,10 +184,7 @@ export class ConfigManager {
   /**
    * Parse boolean from string with fallback
    */
-  private parseBoolean(
-    value: string | undefined,
-    fallback: boolean
-  ): boolean {
+  private parseBoolean(value: string | undefined, fallback: boolean): boolean {
     if (!value) return fallback;
     return value.toLowerCase() === "true" || value === "1";
   }
@@ -224,4 +215,3 @@ export class ConfigManager {
  * Get global configuration instance
  */
 export const getConfig = (): AppConfig => ConfigManager.getInstance().get();
-

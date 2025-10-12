@@ -56,7 +56,9 @@ export class XMLPromptProcessor {
   /**
    * Parse XML instructions from string
    */
-  async parseInstructions(xmlString: string): Promise<StructuredPromptInstruction[]> {
+  async parseInstructions(
+    xmlString: string
+  ): Promise<StructuredPromptInstruction[]> {
     const startTime = Date.now();
 
     try {
@@ -70,7 +72,9 @@ export class XMLPromptProcessor {
       const validation = this.validateInstructions(instructions);
 
       if (!validation.isValid) {
-        throw new Error(`XML validation failed: ${validation.errors.join(", ")}`);
+        throw new Error(
+          `XML validation failed: ${validation.errors.join(", ")}`
+        );
       }
 
       // Log warnings
@@ -79,7 +83,6 @@ export class XMLPromptProcessor {
       }
 
       return instructions;
-
     } catch (error) {
       console.error("XML prompt processing failed:", error);
       throw error;
@@ -104,7 +107,9 @@ export class XMLPromptProcessor {
       // Check for basic XML structure
       if (!xmlString.includes("<") || !xmlString.includes(">")) {
         errors.push("No XML tags found");
-        suggestions.push("Wrap instructions in XML tags like <guidelines>...</guidelines>");
+        suggestions.push(
+          "Wrap instructions in XML tags like <guidelines>...</guidelines>"
+        );
       }
 
       // Check for balanced tags
@@ -132,7 +137,6 @@ export class XMLPromptProcessor {
         warnings,
         suggestions,
       };
-
     } catch (error) {
       errors.push(`Validation error: ${error}`);
       return { isValid: false, errors, warnings, suggestions };
@@ -205,7 +209,9 @@ export class XMLPromptProcessor {
 
       // Safety check
       if (instructions.length > this.MAX_INSTRUCTION_COUNT) {
-        throw new Error(`Too many instructions (max ${this.MAX_INSTRUCTION_COUNT})`);
+        throw new Error(
+          `Too many instructions (max ${this.MAX_INSTRUCTION_COUNT})`
+        );
       }
     }
 
@@ -225,7 +231,9 @@ export class XMLPromptProcessor {
   /**
    * Parse nested instructions from content
    */
-  private parseNestedInstructions(content: string): StructuredPromptInstruction[] {
+  private parseNestedInstructions(
+    content: string
+  ): StructuredPromptInstruction[] {
     // Recursively parse nested XML
     return this.parseXMLStructure(content);
   }
@@ -244,7 +252,9 @@ export class XMLPromptProcessor {
 
       // Safety check
       if (Object.keys(attributes).length > this.MAX_ATTRIBUTE_COUNT) {
-        throw new Error(`Too many attributes (max ${this.MAX_ATTRIBUTE_COUNT})`);
+        throw new Error(
+          `Too many attributes (max ${this.MAX_ATTRIBUTE_COUNT})`
+        );
       }
     }
 
@@ -254,7 +264,9 @@ export class XMLPromptProcessor {
   /**
    * Validate parsed instructions
    */
-  private validateInstructions(instructions: StructuredPromptInstruction[]): XMLValidationResult {
+  private validateInstructions(
+    instructions: StructuredPromptInstruction[]
+  ): XMLValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
     const suggestions: string[] = [];
@@ -266,7 +278,9 @@ export class XMLPromptProcessor {
     }
 
     if (instructions.length > this.MAX_INSTRUCTION_COUNT) {
-      errors.push(`Too many instructions (${instructions.length} > ${this.MAX_INSTRUCTION_COUNT})`);
+      errors.push(
+        `Too many instructions (${instructions.length} > ${this.MAX_INSTRUCTION_COUNT})`
+      );
     }
 
     // Validate each instruction
@@ -275,13 +289,17 @@ export class XMLPromptProcessor {
     }
 
     // Check for required top-level instructions
-    const hasTopLevelInstructions = instructions.some(inst =>
-      ["guidelines", "rules", "instructions", "behavior", "prompting"].includes(inst.tag)
+    const hasTopLevelInstructions = instructions.some((inst) =>
+      ["guidelines", "rules", "instructions", "behavior", "prompting"].includes(
+        inst.tag
+      )
     );
 
     if (!hasTopLevelInstructions && instructions.length > 0) {
       warnings.push("No standard top-level instruction tags found");
-      suggestions.push("Consider using tags like <guidelines>, <rules>, or <instructions>");
+      suggestions.push(
+        "Consider using tags like <guidelines>, <rules>, or <instructions>"
+      );
     }
 
     return {
@@ -309,13 +327,17 @@ export class XMLPromptProcessor {
 
     if (!/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(instruction.tag)) {
       errors.push(`Invalid tag name: ${instruction.tag}`);
-      suggestions.push("Use alphanumeric characters, underscores, and hyphens in tag names");
+      suggestions.push(
+        "Use alphanumeric characters, underscores, and hyphens in tag names"
+      );
     }
 
     // Check depth
     const depth = this.calculateDepth(instruction);
     if (depth > this.MAX_INSTRUCTION_DEPTH) {
-      errors.push(`Instruction depth too deep (${depth} > ${this.MAX_INSTRUCTION_DEPTH})`);
+      errors.push(
+        `Instruction depth too deep (${depth} > ${this.MAX_INSTRUCTION_DEPTH})`
+      );
       suggestions.push("Flatten nested instruction structure");
     }
 
@@ -350,7 +372,9 @@ export class XMLPromptProcessor {
       return 0;
     }
 
-    const childDepths = instruction.children.map(child => this.calculateDepth(child));
+    const childDepths = instruction.children.map((child) =>
+      this.calculateDepth(child)
+    );
     return 1 + Math.max(...childDepths);
   }
 
@@ -366,32 +390,45 @@ export class XMLPromptProcessor {
       case "guidelines":
       case "rules":
         if (!instruction.content && !instruction.children) {
-          warnings.push(`${instruction.tag} instruction has no content or children`);
-          suggestions.push(`Add content or nested instructions to <${instruction.tag}>`);
+          warnings.push(
+            `${instruction.tag} instruction has no content or children`
+          );
+          suggestions.push(
+            `Add content or nested instructions to <${instruction.tag}>`
+          );
         }
         break;
 
       case "code_editing_rules":
         if (!instruction.children) {
           warnings.push("code_editing_rules should have nested guidelines");
-          suggestions.push("Add <guiding_principles> and <defaults> as children");
+          suggestions.push(
+            "Add <guiding_principles> and <defaults> as children"
+          );
         }
         break;
 
       case "persistence":
-        if (instruction.attributes["level"] === "high" && !instruction.content?.includes("keep going")) {
+        if (
+          instruction.attributes["level"] === "high" &&
+          !instruction.content?.includes("keep going")
+        ) {
           warnings.push("High persistence should emphasize continuation");
-          suggestions.push('Add "keep going" or "continue until resolved" to content');
+          suggestions.push(
+            'Add "keep going" or "continue until resolved" to content'
+          );
         }
         break;
 
       case "context_gathering":
-        const hasDepth = Object.keys(instruction.attributes).some(key =>
-          key.includes("depth") || key.includes("limit")
+        const hasDepth = Object.keys(instruction.attributes).some(
+          (key) => key.includes("depth") || key.includes("limit")
         );
         if (!hasDepth) {
           warnings.push("context_gathering should specify depth limits");
-          suggestions.push('Add attributes like depth_limit="5" or max_queries="10"');
+          suggestions.push(
+            'Add attributes like depth_limit="5" or max_queries="10"'
+          );
         }
         break;
     }
@@ -400,7 +437,10 @@ export class XMLPromptProcessor {
   /**
    * Check XML tag balance
    */
-  private checkTagBalance(xmlString: string): { balanced: boolean; issues: string[] } {
+  private checkTagBalance(xmlString: string): {
+    balanced: boolean;
+    issues: string[];
+  } {
     const issues: string[] = [];
     const stack: string[] = [];
     const tagRegex = /<\/?([a-zA-Z_][a-zA-Z0-9_-]*)(?:\s[^>]*)?>/g;
@@ -414,7 +454,9 @@ export class XMLPromptProcessor {
         // Closing tag
         const expected = stack.pop();
         if (expected !== tagName) {
-          issues.push(`Mismatched closing tag: expected </${expected}>, got </${tagName}>`);
+          issues.push(
+            `Mismatched closing tag: expected </${expected}>, got </${tagName}>`
+          );
         }
       } else if (!fullTag.endsWith("/>")) {
         // Opening tag
@@ -471,7 +513,9 @@ export class XMLPromptProcessor {
 
       // Check for very long values
       if (value.length > 500) {
-        issues.push(`Attribute ${name} value is very long (${value.length} chars)`);
+        issues.push(
+          `Attribute ${name} value is very long (${value.length} chars)`
+        );
       }
     }
 
