@@ -190,6 +190,11 @@ export class PromptingEngine {
         context
       );
 
+      // Track XML processing optimization
+      if (xmlInstructions && structuredInstructions.length > 0) {
+        optimizations.push("xml-instructions-processed");
+      }
+
       // Calculate processing time
       const processingTime = Date.now() - startTime;
 
@@ -580,6 +585,16 @@ export class PromptingEngine {
     if (assessment.adjustedComplexity === "trivial") {
       optimizations.push("low-reasoning-effort");
       optimizations.push("minimal-tool-budget");
+    }
+
+    // Also check original complexity for fallback
+    if (context.complexity === "trivial") {
+      if (!optimizations.includes("low-reasoning-effort")) {
+        optimizations.push("low-reasoning-effort");
+      }
+      if (!optimizations.includes("minimal-tool-budget")) {
+        optimizations.push("minimal-tool-budget");
+      }
     }
 
     if (assessment.timePressure === "high") {

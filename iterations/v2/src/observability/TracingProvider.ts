@@ -27,10 +27,11 @@ export class TracingProvider {
 
   constructor(serviceName: string = "arbiter-orchestrator") {
     this.serviceName = serviceName;
+    // TODO: Re-enable resource configuration when dependency issues resolved
     this.provider = new NodeTracerProvider({
-      resource: new Resource({
-        [SemanticResourceAttributes.SERVICE_NAME]: serviceName,
-      }),
+      // resource: new Resource({
+      //   [SemanticResourceAttributes.SERVICE_NAME]: serviceName,
+      // }),
     });
 
     this.provider.register();

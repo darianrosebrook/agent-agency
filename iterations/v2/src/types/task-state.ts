@@ -39,4 +39,3 @@ export interface TaskStateValidationError {
   toState: TaskState;
   reason: string;
 }
-

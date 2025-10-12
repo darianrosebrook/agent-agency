@@ -33,26 +33,25 @@ export class TaskStateMachine extends EventEmitter {
   private states: Map<string, TaskStateHistory> = new Map();
 
   // Valid transitions matrix
-  private static readonly VALID_TRANSITIONS: Record<TaskState, TaskState[]> =
-    {
-      [TaskState.PENDING]: [TaskState.QUEUED, TaskState.CANCELLED],
-      [TaskState.QUEUED]: [TaskState.ASSIGNED, TaskState.CANCELLED],
-      [TaskState.ASSIGNED]: [
-        TaskState.RUNNING,
-        TaskState.QUEUED,
-        TaskState.CANCELLED,
-      ],
-      [TaskState.RUNNING]: [
-        TaskState.COMPLETED,
-        TaskState.FAILED,
-        TaskState.SUSPENDED,
-        TaskState.CANCELLED,
-      ],
-      [TaskState.SUSPENDED]: [TaskState.RUNNING, TaskState.CANCELLED],
-      [TaskState.COMPLETED]: [],
-      [TaskState.FAILED]: [TaskState.QUEUED], // Can retry
-      [TaskState.CANCELLED]: [],
-    };
+  private static readonly VALID_TRANSITIONS: Record<TaskState, TaskState[]> = {
+    [TaskState.PENDING]: [TaskState.QUEUED, TaskState.CANCELLED],
+    [TaskState.QUEUED]: [TaskState.ASSIGNED, TaskState.CANCELLED],
+    [TaskState.ASSIGNED]: [
+      TaskState.RUNNING,
+      TaskState.QUEUED,
+      TaskState.CANCELLED,
+    ],
+    [TaskState.RUNNING]: [
+      TaskState.COMPLETED,
+      TaskState.FAILED,
+      TaskState.SUSPENDED,
+      TaskState.CANCELLED,
+    ],
+    [TaskState.SUSPENDED]: [TaskState.RUNNING, TaskState.CANCELLED],
+    [TaskState.COMPLETED]: [],
+    [TaskState.FAILED]: [TaskState.QUEUED], // Can retry
+    [TaskState.CANCELLED]: [],
+  };
 
   /**
    * Initialize a new task
@@ -198,7 +197,7 @@ export class TaskStateMachine extends EventEmitter {
       stats[state] = 0;
     }
 
-    for (const history of this.states.values()) {
+    for (const history of Array.from(this.states.values())) {
       stats[history.currentState]++;
     }
 
@@ -235,4 +234,3 @@ export class TaskStateMachine extends EventEmitter {
     return this.states.size;
   }
 }
-

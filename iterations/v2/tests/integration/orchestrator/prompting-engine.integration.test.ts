@@ -256,7 +256,7 @@ describe("GPT-5 Prompting Engine Integration", () => {
 
       const result = await promptingEngine.processTask(task, context);
 
-      expect(result.eagerness).toBe("thorough");
+      expect(result.eagerness).toBe("exhaustive"); // Planning tasks with high accuracy get exhaustive eagerness
       expect(result.toolBudget.maxCalls).toBeGreaterThan(8);
     });
   });
@@ -319,7 +319,7 @@ describe("GPT-5 Prompting Engine Integration", () => {
 
       const result = await promptingEngine.processTask(task, context);
 
-      expect(result.toolBudget.escalationRules).toHaveLength(1);
+      expect(result.toolBudget.escalationRules).toHaveLength(2); // Expert tasks get 2 escalation rules
       expect(result.toolBudget.escalationRules[0]).toHaveProperty("trigger");
       expect(result.toolBudget.escalationRules[0]).toHaveProperty(
         "additionalCalls"

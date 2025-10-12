@@ -146,9 +146,9 @@ describe("TaskStateMachine", () => {
 
     it("should reject PENDING → COMPLETED", () => {
       machine.initializeTask("task-1");
-      expect(() =>
-        machine.transition("task-1", TaskState.COMPLETED)
-      ).toThrow(TaskStateMachineError);
+      expect(() => machine.transition("task-1", TaskState.COMPLETED)).toThrow(
+        TaskStateMachineError
+      );
     });
 
     it("should reject QUEUED → RUNNING", () => {
@@ -413,9 +413,7 @@ describe("TaskStateMachine", () => {
       } catch (error) {
         expect(error).toBeInstanceOf(TaskStateMachineError);
         expect((error as TaskStateMachineError).taskId).toBe("task-1");
-        expect((error as TaskStateMachineError).from).toBe(
-          TaskState.PENDING
-        );
+        expect((error as TaskStateMachineError).from).toBe(TaskState.PENDING);
         expect((error as TaskStateMachineError).to).toBe(TaskState.RUNNING);
       }
     });
@@ -439,4 +437,3 @@ describe("TaskStateMachine", () => {
     });
   });
 });
-

@@ -27,6 +27,18 @@ acceptance:
     given: current state,
     when: action occurs,
     then: expected result
+  - id: GPT5-P1
+    given: task submitted to ArbiterOrchestrator
+    when: prompting engine processes task
+    then: reasoning effort, agent eagerness, and tool budget are dynamically optimized
+  - id: GPT5-P2
+    given: complex task with XML instructions
+    when: XMLPromptProcessor parses instructions
+    then: agent adheres to structured prompting guidelines
+  - id: GPT5-P3
+    given: prompting engine encounters failure
+    when: error occurs during optimization
+    then: system gracefully degrades with conservative defaults
 non_functional:
   a11y:
     - keyboard
@@ -34,17 +46,65 @@ non_functional:
     api_p95_ms: 250
   security:
     - validation
+  prompting:
+    reasoning_effort_adaptation_ms: 50
+    eagerness_calibration_ms: 10
+    xml_parsing_ms: 25
+    tool_budget_allocation_ms: 5
 contracts:
-  - type: ''
-    path: ''
+  - type: typescript
+    path: src/types/agent-prompting.ts
+    description: GPT-5 prompting control interfaces and reasoning effort contracts
+  - type: typescript
+    path: src/types/arbiter-orchestration.ts
+    description: Arbiter orchestrator interfaces with prompting integration
 observability:
-  logs: []
-  metrics: []
-  traces: []
+  logs:
+    - level: info
+      events: ["prompting_engine_optimization", "task_processing_with_prompting"]
+    - level: warn
+      events: ["prompting_engine_fallback", "xml_parsing_warning"]
+    - level: error
+      events: ["prompting_engine_failure", "xml_parsing_error"]
+  metrics:
+    - "prompting_engine_processing_time"
+    - "task_optimization_success_rate"
+    - "tool_budget_efficiency"
+  traces:
+    - "task_submission_to_processing"
+    - "prompting_engine_optimization_flow"
 migrations: []
-rollback: []
+rollback:
+  - type: feature_flag
+    description: Disable prompting engine via config to revert to basic task processing
 ai_assessment:
-  confidence_level: 0.8
-  uncertainty_areas: []
-  complexity_factors: []
-  risk_factors: []
+  confidence_level: 0.9
+  uncertainty_areas:
+    - Long-term prompting optimization effectiveness across diverse task types
+    - XML instruction parsing complexity limits and edge cases
+    - Performance impact of dynamic prompting on high-throughput scenarios
+  complexity_factors:
+    - Dynamic prompting behavior prediction and adaptation
+    - Multi-agent orchestration coordination with prompting state
+    - Constitutional compliance maintenance with advanced prompting techniques
+    - Self-reflection rubric effectiveness across different domains
+  risk_factors:
+    - Over-optimization causing performance degradation for simple tasks
+    - Complex prompting leading to unpredictable agent behavior patterns
+    - XML parsing failures causing task processing interruptions
+    - Tool budget misallocation affecting resource utilization
+  completed_components:
+    - GPT-5 prompting engine integration into ArbiterOrchestrator
+    - Reasoning effort controller with dynamic adaptation
+    - Agent eagerness manager with calibration logic
+    - Tool budget manager with escalation policies
+    - XML structured prompt processor with validation
+    - Self-reflection rubric system for complex tasks
+    - Context gathering coordinator framework
+    - Comprehensive integration testing (18/18 tests passing)
+    - Quality gates and CAWS validation integration
+  next_priorities:
+    - Complete ARBITER-001 (Agent Registry Manager) production readiness
+    - Implement remaining ARBITER components in dependency order
+    - Validate end-to-end agent workflows with prompting optimization
+    - Performance benchmarking and optimization

@@ -107,7 +107,11 @@ export interface TaskStateValidationError {
 ```typescript
 // src/orchestrator/TaskStateMachine.ts
 
-import { TaskState, TaskStateTransition, TaskStateHistory } from "../types/task-state";
+import {
+  TaskState,
+  TaskStateTransition,
+  TaskStateHistory,
+} from "../types/task-state";
 import { EventEmitter } from "events";
 
 export class TaskStateMachineError extends Error {
@@ -514,4 +518,3 @@ describe("TaskStateMachine", () => {
 ---
 
 **Status**: Ready to implement!
-
