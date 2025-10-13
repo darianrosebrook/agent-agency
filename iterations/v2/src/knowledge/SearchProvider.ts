@@ -20,10 +20,6 @@ import {
   SourceType,
 } from "../types/knowledge";
 
-// Import real search providers
-import { BingSearchProvider } from "./providers/BingSearchProvider";
-// Note: GoogleSearchProvider and DuckDuckGoSearchProvider are defined below in this file
-
 // Use standard RequestInit from DOM lib
 type RequestInit = any; // Simplified for Node.js environment
 
@@ -589,6 +585,9 @@ export class MockSearchProvider extends BaseSearchProvider {
     return mockResults;
   }
 }
+
+// Import BingSearchProvider after BaseSearchProvider is defined (avoids circular dependency)
+import { BingSearchProvider } from "./providers/BingSearchProvider";
 
 /**
  * Search Provider Factory
