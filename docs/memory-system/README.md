@@ -1,3 +1,11 @@
+> **⚠️ NOTICE**: This document describes proposed architecture, not current implementation.  
+> **Implementation Status**: See [COMPONENT_STATUS_INDEX.md](../iterations/v2/COMPONENT_STATUS_INDEX.md) for actual status.  
+> **Last Verified**: 2025-10-13  
+> **Status**: Aspirational/Planning Document
+
+---
+
+
 # Agent Memory System
 
 The Agent Memory System provides persistent, intelligent memory capabilities for the Agent Agency platform, enabling agents to learn from experiences, build knowledge graphs, and make context-aware decisions through advanced vector embeddings and temporal reasoning.

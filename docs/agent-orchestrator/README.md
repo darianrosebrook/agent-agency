@@ -1,3 +1,11 @@
+> **⚠️ NOTICE**: This document describes proposed architecture, not current implementation.  
+> **Implementation Status**: See [COMPONENT_STATUS_INDEX.md](../iterations/v2/COMPONENT_STATUS_INDEX.md) for actual status.  
+> **Last Verified**: 2025-10-13  
+> **Status**: Aspirational/Planning Document
+
+---
+
+
 # Agent Orchestrator
 
 The Agent Orchestrator serves as the central hub of the Agent Agency platform, providing intelligent coordination, memory-aware task routing, and comprehensive system management for autonomous software agents.

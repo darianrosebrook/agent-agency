@@ -1,211 +1,126 @@
-id: ARBITER-005
-title: "Arbiter Orchestrator - Main Integration and Constitutional Authority Runtime"
-version: "2.0.0"
-mode: feature
+id: ARBITER-005-REFACTOR
+title: "Consolidate Three Orchestrator Implementations into Canonical ArbiterOrchestrator"
 risk_tier: 1
-status: spec_complete
-
-executive_summary:
-  purpose: |
-    The Arbiter Orchestrator serves as the central nervous system of Agent Agency V2, coordinating all agentic activities under CAWS constitutional authority. It integrates task routing, constitutional validation, performance tracking, and agent management into a cohesive, self-regulating system that maintains constitutional compliance while optimizing performance.
-  scope:
-    - End-to-end task orchestration from request to completion
-    - Constitutional authority runtime and decision enforcement
-    - Integration of all ARBITER components (001-004)
-    - Real-time system health monitoring and recovery
-    - Constitutional feedback loop management
-  success_criteria:
-    - Process 95% of tasks end-to-end within 500ms total latency
-    - Maintain 99.99% constitutional compliance across all operations
-    - Support 2000 concurrent agent tasks with full orchestration
-    - Achieve 99.9% uptime with automatic failure recovery
-
+mode: refactor
 change_budget:
-  max_files: 25
+  max_files: 30
   max_loc: 1500
-
 blast_radius:
-  modules: ["arbiter-core", "orchestration-engine", "constitutional-runtime"]
+  modules: ["orchestrator", "rl", "mcp-server"]
   data_migration: false
-  breaking_changes: false
-  external_impact: high
-operational_rollback_slo: "15m"
-
-threats:
-  - "Cascading failures from component integration issues"
-  - "Constitutional authority bypass through orchestration gaps"
-  - "Performance bottlenecks in central orchestration path"
-  - "State inconsistency across distributed components"
+operational_rollback_slo: "5m"
 
 scope:
   in:
     - "src/orchestrator/ArbiterOrchestrator.ts"
+    - "src/orchestrator/EnhancedArbiterOrchestrator.ts"
     - "src/orchestrator/TaskOrchestrator.ts"
-    - "src/orchestrator/ConstitutionalRuntime.ts"
-    - "src/orchestrator/SystemCoordinator.ts"
-    - "src/orchestrator/FeedbackLoopManager.ts"
-    - "tests/unit/orchestrator/arbiter-orchestrator.test.ts"
-    - "tests/integration/orchestrator/end-to-end.test.ts"
+    - "src/orchestrator/utils/"
+    - "src/orchestrator/capabilities/"
+    - "tests/unit/orchestrator/"
+    - "src/mcp-server/ArbiterMCPServer.ts"
+    - "src/mcp-server/handlers/knowledge-tools.ts"
   out:
-    - "src/database/*"  # Database handled by ARBITER-001
-    - "src/routing/*"   # Routing handled by ARBITER-002
-    - "src/caws/*"      # CAWS validation handled by ARBITER-003
-    - "src/benchmarking/*"  # Performance tracking handled by ARBITER-004
+    - "node_modules/"
+    - "dist/"
+    - "coverage/"
+    - "src/rl/"
+    - "src/health/"
+    - "src/observability/"
 
 invariants:
-  - "All tasks must pass constitutional validation before execution"
-  - "System state must remain consistent across all components"
-  - "Constitutional authority cannot be bypassed or delegated"
-  - "All orchestration decisions must be logged and auditable"
-  - "System health monitoring must be continuous and proactive"
+  - "All public APIs maintain backward compatibility"
+  - "No behavior changes - only structural refactoring"
+  - "Tests must pass before and after refactoring"
+  - "No 'enhanced' or 'new' file naming patterns introduced"
+  - "Existing integrations with MCP server remain functional"
 
 acceptance:
   - id: "A1"
-    given: "Task request arrives at orchestration system"
-    when: "Complete orchestration pipeline executes"
-    then: "Task completes successfully within 500ms total latency"
-
+    given: "Three separate orchestrator implementations exist"
+    when: "Refactoring is complete"
+    then: "Single canonical ArbiterOrchestrator with all capabilities exists"
+  
   - id: "A2"
-    given: "Constitutionally invalid task submitted"
-    when: "Orchestrator processes request"
-    then: "Task rejected with constitutional violation details"
-
+    given: "EnhancedArbiterOrchestrator adds RL capabilities"
+    when: "RL features are extracted to utils"
+    then: "RLCapability utility integrates with ArbiterOrchestrator via composition"
+  
   - id: "A3"
-    given: "Component failure occurs during task processing"
-    when: "System coordinator detects failure"
-    then: "Automatic recovery initiated within 5 seconds"
-
+    given: "TaskOrchestrator has event-based lifecycle management"
+    when: "Lifecycle features are extracted"
+    then: "TaskLifecycleManager utility integrates with ArbiterOrchestrator"
+  
   - id: "A4"
-    given: "High-load period with 2000 concurrent tasks"
-    when: "Orchestration runs for 1 hour"
-    then: "All tasks processed with <1% failure rate"
-
+    given: "Multiple test files exist for each orchestrator"
+    when: "Orchestrators are consolidated"
+    then: "Single comprehensive test suite covers all functionality"
+  
   - id: "A5"
-    given: "Constitutional rule update deployed"
-    when: "Runtime receives update signal"
-    then: "All subsequent decisions use updated rules within 10 seconds"
-
+    given: "MCP server and handlers use ArbiterOrchestrator"
+    when: "Refactoring is complete"
+    then: "All imports updated and functionality preserved"
+  
   - id: "A6"
-    given: "System operates continuously for 30 days"
-    when: "Uptime monitoring tracks availability"
-    then: "Maintains 99.9% uptime with automatic recovery from failures"
+    given: "EnhancedArbiterOrchestrator and TaskOrchestrator files exist"
+    when: "Consolidation is complete"
+    then: "Both files are deleted and removed from version control"
 
 non_functional:
+  maintainability: ["No duplicate/fork file patterns", "Clear separation of concerns", "Utility composition over inheritance"]
+  testability: ["≥90% branch coverage (Tier 1)", "≥70% mutation score (Tier 1)"]
   performance:
-    end_to_end_task_p95_ms: 500
-    concurrent_tasks_supported: 2000
-    orchestration_overhead_ms: 10
-    memory_usage_mb: 300
-
-  reliability:
-    availability_percent: 99.9
-    mean_time_between_failures_hours: 168  # 1 week
-    automatic_recovery_time_seconds: 30
-    data_consistency_percent: 99.999
-
-  scalability:
-    max_concurrent_orchestrations: 5000
-    max_integrated_components: 20
-    horizontal_scaling: true
-    orchestration_state_mb: 50
-
-  security:
-    input_validation: "strict"
-    constitutional_enforcement: "mandatory"
-    audit_logging: "all-orchestration-decisions"
-    component_isolation: "enforced"
-
-  usability:
-    api_design: "fluent-orchestration-builder"
-    error_messages: "constitutional-context-aware"
-    monitoring: "comprehensive-system-dashboard"
-    documentation: "orchestration-flow-diagrams"
+    orchestration_p95_ms: 50
+    memory_overhead_mb: 5
 
 contracts:
   - type: "typescript"
-    path: "src/types/arbiter-orchestration.ts"
-    description: "Main orchestration interfaces and component contracts"
+    description: "ArbiterOrchestrator public API must not change"
+    validation: "TypeScript compilation must succeed"
+  
+  - type: "test"
+    description: "All existing tests must pass"
+    validation: "npm test must succeed"
 
-  - type: "typescript"
-    path: "src/types/agent-prompting.ts"
-    description: "GPT-5-like prompting control interfaces and reasoning effort contracts"
+migration_plan:
+  steps:
+    - description: "Extract RL capabilities to src/orchestrator/capabilities/RLCapability.ts"
+      risk: "low"
+      rollback: "Revert file creation"
+    
+    - description: "Extract event-based lifecycle to src/orchestrator/utils/TaskLifecycleManager.ts"
+      risk: "low"
+      rollback: "Revert file creation"
+    
+    - description: "Extract statistics collection to src/orchestrator/utils/StatisticsCollector.ts"
+      risk: "low"
+      rollback: "Revert file creation"
+    
+    - description: "Integrate utilities into ArbiterOrchestrator via composition"
+      risk: "medium"
+      rollback: "Revert ArbiterOrchestrator.ts to previous version"
+    
+    - description: "Update all imports from Enhanced/TaskOrchestrator to ArbiterOrchestrator"
+      risk: "medium"
+      rollback: "Revert import changes"
+    
+    - description: "Consolidate test files into comprehensive suite"
+      risk: "low"
+      rollback: "Restore original test files"
+    
+    - description: "Delete EnhancedArbiterOrchestrator.ts and TaskOrchestrator.ts"
+      risk: "low"
+      rollback: "Restore from git"
 
-  - type: "openapi"
-    path: "docs/api/arbiter-orchestrator.api.yaml"
-    description: "Orchestration management and system coordination API"
+  verification:
+    - "npm run typecheck passes"
+    - "npm test passes (all tests)"
+    - "npm run lint passes"
+    - "MCP server integration tests pass"
+    - "No references to deleted files remain"
 
-quality_gates:
-  - name: "prompting-optimization"
-    description: "GPT-5 prompting techniques properly optimize agent behavior"
-    criteria:
-      - "Reasoning effort selection reduces processing time by 20% for simple tasks"
-      - "Agent eagerness prevents over-exploration (>50% tool call reduction)"
-      - "Tool budget enforcement maintains cost efficiency"
-      - "Context gathering parallelization improves information discovery speed"
-      - "Self-reflection generates actionable improvement suggestions"
-    validation:
-      type: "integration-test"
-      path: "tests/integration/orchestrator/prompting-engine.integration.test.ts"
-
-  - name: "prompting-fallback"
-    description: "System gracefully degrades when prompting optimizations fail"
-    criteria:
-      - "Conservative defaults applied when prompting engine fails"
-      - "Task processing continues without prompting metadata"
-      - "System health remains stable during prompting failures"
-      - "Error logging provides actionable debugging information"
-    validation:
-      type: "resilience-test"
-      path: "tests/integration/orchestrator/error-handling.test.ts"
-
-observability:
-  metrics:
-    - "orchestration_end_to_end_latency"
-    - "constitutional_compliance_rate"
-    - "component_health_status"
-    - "task_success_rate"
-    - "system_recovery_events"
-
-  logs:
-    - level: "info"
-      events: ["task_orchestrated", "constitutional_decision", "component_coordinated"]
-    - level: "warn"
-      events: ["orchestration_delay", "component_degradation", "recovery_initiated"]
-    - level: "error"
-      events: ["orchestration_failure", "constitutional_violation", "system_inconsistency"]
-
-  traces:
-    - "end_to_end_orchestration_span"
-    - "constitutional_validation_span"
-    - "component_coordination_span"
-
-migrations:
-  - type: "sql"
-    path: "migrations/005_create_orchestration_tables.sql"
-    description: "Tables for orchestration state, component coordination, and system health"
-
-rollback:
-  slo: "15m"
-  strategy: "orchestration-shutdown"
-  impact: "high"
-  monitoring: "system_coordination_disabled"
-
-ai_assessment:
-  reasoning: "Orchestration complexity requires careful integration of multiple components with strict ordering and failure handling. While AI can help implement individual coordination logic, the overall system integration and constitutional authority enforcement require human design to ensure correctness and prevent systemic failures."
-
-  risks:
-    - "Component integration complexity could introduce subtle race conditions"
-    - "Constitutional authority must be preserved across all orchestration paths"
-    - "System-level failures could cascade through poorly designed integration"
-
-  opportunities:
-    - "Well-established orchestration patterns exist (saga, circuit breaker)"
-    - "TypeScript's type safety helps prevent integration errors"
-    - "Comprehensive integration testing can validate system behavior"
-
-  recommendations:
-    - "Implement orchestration as a state machine with clear transitions"
-    - "Use circuit breakers and timeouts for all component interactions"
-    - "Include extensive integration testing with failure injection"
-    - "Design constitutional checks as mandatory pipeline steps"
-    - "Implement comprehensive health monitoring and alerting"
+provenance:
+  author: "@darianrosebrook"
+  created: "2025-10-13"
+  ticket: "ARBITER-005"
+  rationale: "Eliminate forbidden 'enhanced' naming pattern and consolidate duplicate orchestration logic into canonical implementation with proper utility composition"

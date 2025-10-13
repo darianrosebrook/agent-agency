@@ -8,6 +8,9 @@
  * conversations with intermediate rewards for tool usage and information gain.
  */
 
+import { MinimalDiffEvaluator } from "../evaluation/MinimalDiffEvaluator";
+import { ModelBasedJudge } from "../evaluation/ModelBasedJudge";
+import { ThinkingBudgetManager } from "../thinking/ThinkingBudgetManager";
 import {
   ConversationTrajectory,
   RLError,
@@ -18,6 +21,7 @@ import {
   TurnData,
   TurnLevelReward,
 } from "../types/agentic-rl";
+import type { JudgmentInput } from "../types/judge";
 
 /**
  * Turn-Level RL Trainer implementing GRPO algorithm.
@@ -29,6 +33,9 @@ import {
 export class TurnLevelRLTrainer {
   private config: RLTrainingConfig;
   private trainingStats: RLTrainingStats;
+  private budgetManager: ThinkingBudgetManager;
+  private diffEvaluator: MinimalDiffEvaluator;
+  private judge: ModelBasedJudge;
 
   /**
    * Creates a new turn-level RL trainer.
@@ -57,6 +64,11 @@ export class TurnLevelRLTrainer {
       trainingTimeMs: 0,
       timestamp: new Date().toISOString(),
     };
+
+    // Initialize RL components
+    this.budgetManager = new ThinkingBudgetManager();
+    this.diffEvaluator = new MinimalDiffEvaluator();
+    this.judge = new ModelBasedJudge();
   }
 
   /**
@@ -171,12 +183,18 @@ export class TurnLevelRLTrainer {
     // Safety score: Did this turn avoid harmful actions
     const safetyScore = this.evaluateSafety(turn);
 
-    // Combine rewards with weights
-    const totalReward =
+    // Minimality score: Evaluate code change quality (if applicable)
+    const minimalityFactor = await this.evaluateMinimality(turn);
+
+    // Combine rewards with weights and apply minimality factor
+    const baseReward =
       informationGain * 0.4 +
       formatCorrectness * 0.3 +
       taskProgress * 0.2 +
       safetyScore * 0.1;
+
+    // Apply minimality multiplier (0.1-1.0) to encourage concise changes
+    const totalReward = baseReward * minimalityFactor;
 
     return {
       ...turn,
@@ -189,25 +207,39 @@ export class TurnLevelRLTrainer {
   }
 
   /**
-   * Judges the information gain of a turn.
+   * Judges the information gain of a turn using ModelBasedJudge.
    *
    * @param turn - Turn to evaluate.
    * @returns Information gain score (0-1).
    */
   private async judgeInformationGain(turn: TurnLevelReward): Promise<number> {
-    // In a full implementation, this would use a model judge
-    // For now, use heuristic based on tool choice and context
+    try {
+      // Use ModelBasedJudge for subjective assessment
+      const judgmentInput: JudgmentInput = {
+        task: `Evaluate tool usage: ${turn.toolChoice.toolId}`,
+        output: JSON.stringify(turn.toolChoice.parameters),
+        context: {
+          toolId: turn.toolChoice.toolId,
+          turnNumber: turn.turnNumber,
+        },
+      };
 
-    // Reward tool usage that typically provides information
-    const informationTools = ["search", "read_file", "list_dir", "grep"];
-    const toolName = turn.toolChoice.toolId.toLowerCase();
+      const result = await this.judge.evaluate(judgmentInput);
 
-    if (informationTools.some((tool) => toolName.includes(tool))) {
-      return 0.8; // High information gain for information-seeking tools
+      // Use relevance score as information gain proxy
+      const relevanceAssessment = result.assessments.find(
+        (a) => a.criterion === "relevance"
+      );
+
+      return relevanceAssessment?.score ?? 0.5;
+    } catch (error) {
+      // Fallback to heuristic on error
+      const informationTools = ["search", "read_file", "list_dir", "grep"];
+      const toolName = turn.toolChoice.toolId.toLowerCase();
+      return informationTools.some((tool) => toolName.includes(tool))
+        ? 0.8
+        : 0.5;
     }
-
-    // Moderate reward for other tools
-    return 0.5;
   }
 
   /**
@@ -287,6 +319,87 @@ export class TurnLevelRLTrainer {
     }
 
     return 0.9; // High safety score for most actions
+  }
+
+  /**
+   * Evaluates minimality of code changes using MinimalDiffEvaluator.
+   *
+   * @param turn - Turn to evaluate.
+   * @returns Minimality factor (0.1-1.0) to apply to reward.
+   */
+  private async evaluateMinimality(turn: TurnLevelReward): Promise<number> {
+    try {
+      // Check if this turn involves code changes
+      const toolName = turn.toolChoice.toolId.toLowerCase();
+      const codeTools = ["write", "edit", "search_replace", "apply_diff"];
+
+      if (!codeTools.some((tool) => toolName.includes(tool))) {
+        return 1.0; // No penalty for non-code tools
+      }
+
+      // Extract code diff from turn (if available)
+      const params = turn.toolChoice.parameters as any;
+      const oldCode = params?.old_string || params?.content_before || "";
+      const newCode = params?.new_string || params?.content || "";
+
+      if (!oldCode && !newCode) {
+        return 1.0; // No diff to evaluate
+      }
+
+      // Evaluate minimality using MinimalDiffEvaluator
+      const evaluation = await this.diffEvaluator.evaluate({
+        before: oldCode,
+        after: newCode,
+        language: "typescript",
+      });
+
+      // Return minimality factor (0.1-1.0)
+      return evaluation.minimalityFactor;
+    } catch (error) {
+      // Return neutral factor on error
+      return 1.0;
+    }
+  }
+
+  /**
+   * Allocates thinking budget for a task based on complexity.
+   *
+   * @param taskId - Task identifier.
+   * @param characteristics - Task characteristics for budget allocation.
+   * @returns Allocated token budget.
+   */
+  allocateThinkingBudget(
+    taskId: string,
+    characteristics: {
+      toolCount: number;
+      contextSize: number;
+      stepCount: number;
+      multiTurn: boolean;
+      hasExternalCalls: boolean;
+    }
+  ): number {
+    const result = this.budgetManager.allocateBudget(characteristics);
+
+    return result.allocation.allocatedTokens;
+  }
+
+  /**
+   * Records thinking budget usage for a completed task.
+   *
+   * @param taskId - Task identifier (used as allocation ID).
+   * @param tokensUsed - Number of tokens actually used.
+   */
+  recordBudgetUsage(taskId: string, tokensUsed: number): void {
+    this.budgetManager.recordUsage(taskId, tokensUsed);
+  }
+
+  /**
+   * Gets thinking budget metrics.
+   *
+   * @returns Current budget metrics.
+   */
+  getBudgetMetrics() {
+    return this.budgetManager.getMetrics();
   }
 
   /**

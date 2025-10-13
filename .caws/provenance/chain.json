@@ -3234,5 +3234,41 @@
     },
     "previous_hash": "5b5baf8609d669baacd8ab98c6bb5ee8cb16d2daffd3004ddbf00588011f31e8",
     "hash": "ab130f8b6e7dd8c0f2d94b4bf48d5a999b46e0acb4e418533db3f51fdcf0ac0e"
+  },
+  {
+    "id": "prov-1760317551772",
+    "timestamp": "2025-10-13T01:05:51.772Z",
+    "commit": {
+      "hash": "ef627b74e846591cb9902db847cc158d3d8f2dfa",
+      "message": "docs(readme): Update V2 README with centralized database architecture",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-13T01:05:51.773Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "ab130f8b6e7dd8c0f2d94b4bf48d5a999b46e0acb4e418533db3f51fdcf0ac0e",
+    "hash": "db3fe1e8f99a49630e5cf6beffd52fca1b9c2a61b59fc6f72e94e0d5b0c27c14"
   }
 ]

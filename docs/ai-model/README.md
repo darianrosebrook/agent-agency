@@ -1,3 +1,11 @@
+> **⚠️ NOTICE**: This document describes proposed architecture, not current implementation.  
+> **Implementation Status**: See [COMPONENT_STATUS_INDEX.md](../iterations/v2/COMPONENT_STATUS_INDEX.md) for actual status.  
+> **Last Verified**: 2025-10-13  
+> **Status**: Aspirational/Planning Document
+
+---
+
+
 # Local AI Model
 
 The Local AI Model component provides local AI model management, evaluation capabilities, and satisficing logic for the Agent Agency platform, enabling efficient and autonomous AI operations without external dependencies.

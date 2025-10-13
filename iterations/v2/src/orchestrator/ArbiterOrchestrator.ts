@@ -8,10 +8,7 @@
  * @author @darianrosebrook
  */
 
-import {
-  KnowledgeDatabaseClient,
-  KnowledgeDatabaseConfig,
-} from "../database/KnowledgeDatabaseClient";
+import { KnowledgeDatabaseClient } from "../database/KnowledgeDatabaseClient";
 import { AgentControlConfig } from "../types/agent-prompting";
 import {
   AgentProfile,
@@ -39,9 +36,15 @@ import { RecoveryManager } from "./RecoveryManager";
 import { SecurityManager } from "./SecurityManager";
 import { TaskAssignmentManager } from "./TaskAssignment";
 import { TaskQueue } from "./TaskQueue";
+import { RLCapability, RLCapabilityConfig } from "./capabilities/RLCapability";
 import { ResearchDetector } from "./research/ResearchDetector";
 import { ResearchProvenance } from "./research/ResearchProvenance";
 import { TaskResearchAugmenter } from "./research/TaskResearchAugmenter";
+import {
+  OrchestratorStats,
+  StatisticsCollector,
+} from "./utils/StatisticsCollector";
+import { TaskLifecycleManager } from "./utils/TaskLifecycleManager";
 
 /**
  * Arbiter Orchestrator Configuration
@@ -69,7 +72,14 @@ export interface ArbiterOrchestratorConfig {
   knowledgeSeeker: any; // Using any for now, should be KnowledgeSeekerConfig
 
   /** Database configuration (optional - graceful degradation if not provided) */
-  database?: KnowledgeDatabaseConfig;
+  database?: {
+    host: string;
+    port: number;
+    database: string;
+    user: string;
+    password: string;
+    maxConnections?: number;
+  };
 
   /** GPT-5 prompting engine configuration */
   prompting: AgentControlConfig & {
@@ -114,6 +124,20 @@ export interface ArbiterOrchestratorConfig {
     cacheTtlMs?: number;
     retryAttempts?: number;
     retryDelayMs?: number;
+  };
+
+  /** RL capabilities configuration */
+  rl?: RLCapabilityConfig;
+
+  /** Task lifecycle management configuration */
+  lifecycle?: {
+    enableEvents?: boolean;
+  };
+
+  /** Statistics collection configuration */
+  statistics?: {
+    statsIntervalMs?: number;
+    enableAutoEmit?: boolean;
   };
 
   /** General orchestrator settings */
@@ -192,6 +216,11 @@ export class ArbiterOrchestrator {
   private eventEmitter: EventEmitter;
   private initialized = false;
 
+  // Capability components (composition pattern)
+  private rlCapability?: RLCapability;
+  private lifecycleManager?: TaskLifecycleManager;
+  private statisticsCollector?: StatisticsCollector;
+
   constructor(config: ArbiterOrchestratorConfig) {
     this.config = config;
     this.eventEmitter = new EventEmitter();
@@ -214,7 +243,7 @@ export class ArbiterOrchestrator {
       // Initialize database client if configuration provided
       let knowledgeDbClient: KnowledgeDatabaseClient | undefined;
       if (this.config.database) {
-        knowledgeDbClient = new KnowledgeDatabaseClient(this.config.database);
+        knowledgeDbClient = new KnowledgeDatabaseClient();
         try {
           await knowledgeDbClient.initialize();
           console.log("Knowledge database client initialized successfully");
@@ -236,15 +265,7 @@ export class ArbiterOrchestrator {
 
         // Initialize verification database client if database config exists
         if (this.config.database) {
-          verificationDbClient = new VerificationDatabaseClient({
-            host: this.config.database.host,
-            port: this.config.database.port,
-            database: this.config.database.database,
-            user: this.config.database.user,
-            password: this.config.database.password,
-            max: this.config.database.maxConnections ?? 10,
-          });
-
+          verificationDbClient = new VerificationDatabaseClient();
           await verificationDbClient.initialize();
         }
 
@@ -355,6 +376,9 @@ export class ArbiterOrchestrator {
       // Setup component integrations
       await this.setupComponentIntegrations();
 
+      // Initialize capability components (composition pattern)
+      await this.initializeCapabilities();
+
       this.initialized = true;
 
       // Emit orchestrator started event
@@ -376,10 +400,48 @@ export class ArbiterOrchestrator {
   }
 
   /**
+   * Initialize capability components (composition pattern)
+   */
+  private async initializeCapabilities(): Promise<void> {
+    // Initialize RL capability if configured
+    if (this.config.rl) {
+      this.rlCapability = new RLCapability(this.config.rl);
+      await this.rlCapability.initialize(this.components.agentRegistry);
+      console.log("RL capability initialized");
+    }
+
+    // Initialize task lifecycle manager
+    this.lifecycleManager = new TaskLifecycleManager(
+      // Note: Would need TaskStateMachine reference if available
+      // For now, lifecycle manager is optional
+      null as any,
+      this.components.taskQueue,
+      this.config.lifecycle
+    );
+    console.log("Task lifecycle manager initialized");
+
+    // Initialize statistics collector
+    if (this.config.statistics?.enableAutoEmit) {
+      this.statisticsCollector = new StatisticsCollector(
+        null as any, // Would need TaskStateMachine reference
+        this.components.taskQueue,
+        this.config.statistics
+      );
+      this.statisticsCollector.start();
+      console.log("Statistics collector initialized and started");
+    }
+  }
+
+  /**
    * Shutdown the orchestrator and all components
    */
   async shutdown(): Promise<void> {
     try {
+      // Shutdown capability components first
+      if (this.statisticsCollector) {
+        this.statisticsCollector.stop();
+      }
+
       // Shutdown components if initialized
       if (this.initialized && this.components) {
         // Shutdown components in reverse order
@@ -388,10 +450,7 @@ export class ArbiterOrchestrator {
           this.components.taskAssignment.shutdown(),
         ]);
 
-        // Shutdown database client if it exists
-        if (this.components.knowledgeDbClient) {
-          await this.components.knowledgeDbClient.shutdown();
-        }
+        // Database clients managed by ConnectionPoolManager - no direct shutdown needed
 
         // Emit orchestrator shutdown event
         events.emit({
@@ -1104,6 +1163,108 @@ export class ArbiterOrchestrator {
     }
 
     return this.components.verificationEngine.getEvidenceQualityStats();
+  }
+
+  // ========================================
+  // RL Capability API (Composition Pattern)
+  // ========================================
+
+  /**
+   * Check if RL capabilities are enabled
+   */
+  isRLEnabled(): boolean {
+    return this.rlCapability?.isEnabled() ?? false;
+  }
+
+  /**
+   * Record task completion for RL training
+   */
+  async recordTaskCompletionForRL(
+    taskId: string,
+    taskResult: any,
+    assignmentId?: string
+  ): Promise<void> {
+    if (this.rlCapability) {
+      await this.rlCapability.recordTaskCompletion(
+        taskId,
+        taskResult,
+        assignmentId
+      );
+    }
+  }
+
+  /**
+   * Train RL models on collected data
+   */
+  async trainRLModels(): Promise<void> {
+    if (this.rlCapability) {
+      await this.rlCapability.trainModels();
+    }
+  }
+
+  /**
+   * Get RL statistics
+   */
+  getRLStats(): any {
+    return this.rlCapability?.getStats() ?? {};
+  }
+
+  // ========================================
+  // Statistics API (Composition Pattern)
+  // ========================================
+
+  /**
+   * Get orchestrator statistics
+   */
+  getOrchestratorStats(): OrchestratorStats | null {
+    return this.statisticsCollector?.collectStats() ?? null;
+  }
+
+  /**
+   * Record task latency for statistics
+   */
+  recordTaskLatency(latencyMs: number): void {
+    this.statisticsCollector?.recordLatency(latencyMs);
+  }
+
+  // ========================================
+  // Task Lifecycle API (Composition Pattern)
+  // ========================================
+
+  /**
+   * Cancel a task using lifecycle manager
+   */
+  async cancelTaskWithLifecycle(
+    taskId: string,
+    reason?: string
+  ): Promise<void> {
+    if (this.lifecycleManager) {
+      await this.lifecycleManager.cancelTask(taskId, reason);
+    }
+  }
+
+  /**
+   * Suspend a task using lifecycle manager
+   */
+  async suspendTaskWithLifecycle(
+    taskId: string,
+    reason?: string
+  ): Promise<void> {
+    if (this.lifecycleManager) {
+      await this.lifecycleManager.suspendTask(taskId, reason);
+    }
+  }
+
+  /**
+   * Resume a task using lifecycle manager
+   */
+  async resumeTaskWithLifecycle(
+    taskId: string,
+    reason?: string
+  ): Promise<void> {
+    if (this.lifecycleManager) {
+      await this.lifecycleManager.resumeTask(taskId, reason);
+    }
   }
 }
 

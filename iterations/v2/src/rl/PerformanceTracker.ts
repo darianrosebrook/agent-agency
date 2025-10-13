@@ -620,6 +620,180 @@ export class PerformanceTracker {
   }
 
   /**
+   * Records thinking budget allocation for RL training.
+   *
+   * @param taskId - Task identifier.
+   * @param budget - Budget allocation data.
+   */
+  async recordThinkingBudget(
+    taskId: string,
+    budget: {
+      allocatedTokens: number;
+      complexityLevel: string;
+      confidence: number;
+    }
+  ): Promise<void> {
+    if (!this.isCollecting || !this.config.enabled) {
+      return;
+    }
+
+    const event: PerformanceEvent = {
+      type: "thinking-budget-allocation",
+      timestamp: new Date().toISOString(),
+      data: this.anonymizeDataIfNeeded({
+        taskId,
+        allocatedTokens: budget.allocatedTokens,
+        complexityLevel: budget.complexityLevel,
+        confidence: budget.confidence,
+        eventType: "thinking_budget",
+      }) as Record<string, unknown>,
+    };
+
+    this.addEvent(event);
+  }
+
+  /**
+   * Records thinking budget usage for completed task.
+   *
+   * @param taskId - Task identifier.
+   * @param usage - Budget usage data.
+   */
+  async recordBudgetUsage(
+    taskId: string,
+    usage: {
+      tokensUsed: number;
+      tokensAllocated: number;
+      utilizationRate: number;
+    }
+  ): Promise<void> {
+    if (!this.isCollecting || !this.config.enabled) {
+      return;
+    }
+
+    const event: PerformanceEvent = {
+      type: "thinking-budget-usage",
+      timestamp: new Date().toISOString(),
+      data: this.anonymizeDataIfNeeded({
+        taskId,
+        tokensUsed: usage.tokensUsed,
+        tokensAllocated: usage.tokensAllocated,
+        utilizationRate: usage.utilizationRate,
+        eventType: "budget_usage",
+      }) as Record<string, unknown>,
+    };
+
+    this.addEvent(event);
+  }
+
+  /**
+   * Records minimality evaluation for code changes.
+   *
+   * @param taskId - Task identifier.
+   * @param evaluation - Minimality evaluation data.
+   */
+  async recordMinimalityEvaluation(
+    taskId: string,
+    evaluation: {
+      minimalityFactor: number;
+      astSimilarity: number;
+      scaffoldingPenalty: number;
+      linesChanged: number;
+      qualityAssessment: string;
+    }
+  ): Promise<void> {
+    if (!this.isCollecting || !this.config.enabled) {
+      return;
+    }
+
+    const event: PerformanceEvent = {
+      type: "minimality-evaluation",
+      timestamp: new Date().toISOString(),
+      data: this.anonymizeDataIfNeeded({
+        taskId,
+        minimalityFactor: evaluation.minimalityFactor,
+        astSimilarity: evaluation.astSimilarity,
+        scaffoldingPenalty: evaluation.scaffoldingPenalty,
+        linesChanged: evaluation.linesChanged,
+        qualityAssessment: evaluation.qualityAssessment,
+        eventType: "minimality_eval",
+      }) as Record<string, unknown>,
+    };
+
+    this.addEvent(event);
+  }
+
+  /**
+   * Records LLM-based judgment for subjective evaluation.
+   *
+   * @param taskId - Task identifier.
+   * @param judgment - Judgment data.
+   */
+  async recordJudgment(
+    taskId: string,
+    judgment: {
+      overallScore: number;
+      overallConfidence: number;
+      allCriteriaPass: boolean;
+      criteriaScores: Record<string, number>;
+      evaluationTimeMs: number;
+    }
+  ): Promise<void> {
+    if (!this.isCollecting || !this.config.enabled) {
+      return;
+    }
+
+    const event: PerformanceEvent = {
+      type: "model-judgment",
+      timestamp: new Date().toISOString(),
+      data: this.anonymizeDataIfNeeded({
+        taskId,
+        overallScore: judgment.overallScore,
+        overallConfidence: judgment.overallConfidence,
+        allCriteriaPass: judgment.allCriteriaPass,
+        criteriaScores: judgment.criteriaScores,
+        evaluationTimeMs: judgment.evaluationTimeMs,
+        eventType: "model_judgment",
+      }) as Record<string, unknown>,
+    };
+
+    this.addEvent(event);
+  }
+
+  /**
+   * Records RL training metrics for monitoring.
+   *
+   * @param metrics - RL training metrics.
+   */
+  async recordRLTrainingMetrics(metrics: {
+    trajectoriesProcessed: number;
+    averageReward: number;
+    policyLoss: number;
+    valueLoss: number;
+    klDivergence: number;
+    trainingTimeMs: number;
+  }): Promise<void> {
+    if (!this.isCollecting || !this.config.enabled) {
+      return;
+    }
+
+    const event: PerformanceEvent = {
+      type: "rl-training-metrics",
+      timestamp: new Date().toISOString(),
+      data: {
+        trajectoriesProcessed: metrics.trajectoriesProcessed,
+        averageReward: metrics.averageReward,
+        policyLoss: metrics.policyLoss,
+        valueLoss: metrics.valueLoss,
+        klDivergence: metrics.klDivergence,
+        trainingTimeMs: metrics.trainingTimeMs,
+        eventType: "rl_training",
+      },
+    };
+
+    this.addEvent(event);
+  }
+
+  /**
    * Exports collected data for RL training.
    *
    * @param since - Optional timestamp to export data since.
