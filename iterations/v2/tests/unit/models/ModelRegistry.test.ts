@@ -12,7 +12,7 @@ import type {
   OllamaModelConfig,
   PerformanceProfile,
 } from "@/types/model-registry";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "@jest/globals";
 
 describe("ModelRegistry", () => {
   let registry: ModelRegistry;

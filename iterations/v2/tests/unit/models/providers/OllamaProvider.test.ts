@@ -11,7 +11,7 @@ import {
   OllamaProviderError,
 } from "@/models/providers/OllamaProvider";
 import type { OllamaModelConfig } from "@/types/model-registry";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "@jest/globals";
 
 describe("OllamaProvider", () => {
   let provider: OllamaProvider;

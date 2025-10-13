@@ -22,6 +22,17 @@ const SHELL_METACHARACTERS = [
   "&", // Background execution
   ">", // Redirection
   "<", // Redirection
+  "`", // Command substitution (backticks)
+  "$", // Variable expansion (when not properly escaped)
+  "(", // Command grouping
+  ")", // Command grouping
+  "{", // Brace expansion
+  "}", // Brace expansion
+  "[", // Character classes
+  "]", // Character classes
+  "?", // Wildcard
+  "*", // Wildcard (when not properly escaped)
+  "~", // Home directory expansion
   "\n", // Newline injection
   "\r", // Carriage return injection
   "\x00", // Null byte

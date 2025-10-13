@@ -58,14 +58,19 @@ class NodeTestAgent {
     }
 
     // Create terminal session for this task
-    const sessionResult = await this.mcpClient.callTool('terminal_create_session', {
-      taskId: task.id,
-      agentId: this.agentId,
-      workingDirectory: task.metadata?.workingDirectory || './'
-    });
+    const sessionResult = await this.mcpClient.callTool(
+      "terminal_create_session",
+      {
+        taskId: task.id,
+        agentId: this.agentId,
+        workingDirectory: task.metadata?.workingDirectory || "./",
+      }
+    );
 
     if (!sessionResult.success) {
-      throw new Error(`Failed to create terminal session: ${sessionResult.error}`);
+      throw new Error(
+        `Failed to create terminal session: ${sessionResult.error}`
+      );
     }
 
     const sessionId = sessionResult.sessionId;
@@ -77,61 +82,73 @@ class NodeTestAgent {
       return {
         success: results.allPassed,
         output: results.summary,
-        metadata: { testResults: results.details }
+        metadata: { testResults: results.details },
       };
-
     } catch (error) {
       // Log terminal execution errors
       console.error(`Terminal execution failed for task ${task.id}:`, error);
       throw error;
-
     } finally {
       // Always cleanup session
-      await this.mcpClient.callTool('terminal_close_session', {
-        sessionId
+      await this.mcpClient.callTool("terminal_close_session", {
+        sessionId,
       });
     }
   }
 
-  private async runTestSuite(sessionId: string, task: Task): Promise<TestResults> {
+  private async runTestSuite(
+    sessionId: string,
+    task: Task
+  ): Promise<TestResults> {
     const results: TestCommandResult[] = [];
 
     // Install dependencies if needed
     if (task.metadata?.installDeps) {
-      const installResult = await this.mcpClient.callTool('terminal_execute_command', {
-        sessionId,
-        command: 'npm',
-        args: ['ci']
-      });
-      results.push({ command: 'npm ci', ...installResult });
+      const installResult = await this.mcpClient.callTool(
+        "terminal_execute_command",
+        {
+          sessionId,
+          command: "npm",
+          args: ["ci"],
+        }
+      );
+      results.push({ command: "npm ci", ...installResult });
     }
 
     // Run linting
-    const lintResult = await this.mcpClient.callTool('terminal_execute_command', {
-      sessionId,
-      command: 'npm',
-      args: ['run', 'lint']
-    });
-    results.push({ command: 'npm run lint', ...lintResult });
+    const lintResult = await this.mcpClient.callTool(
+      "terminal_execute_command",
+      {
+        sessionId,
+        command: "npm",
+        args: ["run", "lint"],
+      }
+    );
+    results.push({ command: "npm run lint", ...lintResult });
 
     // Run tests with coverage
-    const testResult = await this.mcpClient.callTool('terminal_execute_command', {
-      sessionId,
-      command: 'npm',
-      args: ['test', '--coverage'],
-      timeout: 300000 // 5 minutes for tests
-    });
-    results.push({ command: 'npm test', ...testResult });
+    const testResult = await this.mcpClient.callTool(
+      "terminal_execute_command",
+      {
+        sessionId,
+        command: "npm",
+        args: ["test", "--coverage"],
+        timeout: 300000, // 5 minutes for tests
+      }
+    );
+    results.push({ command: "npm test", ...testResult });
 
     return this.analyzeResults(results);
   }
 
   private requiresTerminalAccess(task: Task): boolean {
     // Check task type or metadata for terminal requirements
-    return task.type === 'test_execution' ||
-           task.type === 'build' ||
-           task.type === 'deployment' ||
-           task.metadata?.requiresTerminal === true;
+    return (
+      task.type === "test_execution" ||
+      task.type === "build" ||
+      task.type === "deployment" ||
+      task.metadata?.requiresTerminal === true
+    );
   }
 }
 ```
@@ -141,41 +158,58 @@ class NodeTestAgent {
 ```typescript
 class PythonPackageAgent {
   async executeTask(task: Task): Promise<TaskResult> {
-    const session = await this.mcpClient.callTool('terminal_create_session', {
+    const session = await this.mcpClient.callTool("terminal_create_session", {
       taskId: task.id,
       agentId: this.agentId,
-      workingDirectory: task.metadata?.projectPath || './'
+      workingDirectory: task.metadata?.projectPath || "./",
     });
 
     try {
       // Install dependencies
-      await this.safeExecute(session.sessionId, 'pip', ['install', '-r', 'requirements.txt']);
+      await this.safeExecute(session.sessionId, "pip", [
+        "install",
+        "-r",
+        "requirements.txt",
+      ]);
 
       // Run tests
-      await this.safeExecute(session.sessionId, 'python', ['-m', 'pytest', '--cov=src']);
+      await this.safeExecute(session.sessionId, "python", [
+        "-m",
+        "pytest",
+        "--cov=src",
+      ]);
 
       // Build package
-      await this.safeExecute(session.sessionId, 'python', ['setup.py', 'sdist', 'bdist_wheel']);
+      await this.safeExecute(session.sessionId, "python", [
+        "setup.py",
+        "sdist",
+        "bdist_wheel",
+      ]);
 
-      return { success: true, message: 'Python package built successfully' };
-
+      return { success: true, message: "Python package built successfully" };
     } finally {
-      await this.mcpClient.callTool('terminal_close_session', {
-        sessionId: session.sessionId
+      await this.mcpClient.callTool("terminal_close_session", {
+        sessionId: session.sessionId,
       });
     }
   }
 
-  private async safeExecute(sessionId: string, command: string, args: string[]): Promise<any> {
-    const result = await this.mcpClient.callTool('terminal_execute_command', {
+  private async safeExecute(
+    sessionId: string,
+    command: string,
+    args: string[]
+  ): Promise<any> {
+    const result = await this.mcpClient.callTool("terminal_execute_command", {
       sessionId,
       command,
       args,
-      timeout: 120000 // 2 minutes
+      timeout: 120000, // 2 minutes
     });
 
     if (!result.success) {
-      throw new Error(`Command failed: ${command} ${args.join(' ')} - ${result.stderr}`);
+      throw new Error(
+        `Command failed: ${command} ${args.join(" ")} - ${result.stderr}`
+      );
     }
 
     return result;
@@ -188,22 +222,25 @@ class PythonPackageAgent {
 ```typescript
 class DockerBuildAgent {
   async executeTask(task: Task): Promise<TaskResult> {
-    const session = await this.mcpClient.callTool('terminal_create_session', {
+    const session = await this.mcpClient.callTool("terminal_create_session", {
       taskId: task.id,
       agentId: this.agentId,
-      workingDirectory: task.metadata?.buildContext || './'
+      workingDirectory: task.metadata?.buildContext || "./",
     });
 
     try {
-      const imageName = task.metadata?.imageName || 'myapp:latest';
+      const imageName = task.metadata?.imageName || "myapp:latest";
 
       // Build Docker image
-      const buildResult = await this.mcpClient.callTool('terminal_execute_command', {
-        sessionId: session.sessionId,
-        command: 'docker',
-        args: ['build', '-t', imageName, '.'],
-        timeout: 600000 // 10 minutes for builds
-      });
+      const buildResult = await this.mcpClient.callTool(
+        "terminal_execute_command",
+        {
+          sessionId: session.sessionId,
+          command: "docker",
+          args: ["build", "-t", imageName, "."],
+          timeout: 600000, // 10 minutes for builds
+        }
+      );
 
       if (!buildResult.success) {
         throw new Error(`Docker build failed: ${buildResult.stderr}`);
@@ -211,22 +248,21 @@ class DockerBuildAgent {
 
       // Run tests in container if specified
       if (task.metadata?.runTests) {
-        await this.mcpClient.callTool('terminal_execute_command', {
+        await this.mcpClient.callTool("terminal_execute_command", {
           sessionId: session.sessionId,
-          command: 'docker',
-          args: ['run', '--rm', imageName, 'npm', 'test']
+          command: "docker",
+          args: ["run", "--rm", imageName, "npm", "test"],
         });
       }
 
       return {
         success: true,
         message: `Docker image ${imageName} built successfully`,
-        metadata: { imageName, buildLog: buildResult.stdout }
+        metadata: { imageName, buildLog: buildResult.stdout },
       };
-
     } finally {
-      await this.mcpClient.callTool('terminal_close_session', {
-        sessionId: session.sessionId
+      await this.mcpClient.callTool("terminal_close_session", {
+        sessionId: session.sessionId,
       });
     }
   }
@@ -288,9 +324,9 @@ class TerminalSessionManager {
       return this.sessions.get(taskId)!;
     }
 
-    const session = await this.mcpClient.callTool('terminal_create_session', {
+    const session = await this.mcpClient.callTool("terminal_create_session", {
       taskId,
-      agentId: this.agentId
+      agentId: this.agentId,
     });
 
     this.sessions.set(taskId, session.sessionId);
@@ -300,7 +336,7 @@ class TerminalSessionManager {
   async cleanupTaskSession(taskId: string): Promise<void> {
     const sessionId = this.sessions.get(taskId);
     if (sessionId) {
-      await this.mcpClient.callTool('terminal_close_session', { sessionId });
+      await this.mcpClient.callTool("terminal_close_session", { sessionId });
       this.sessions.delete(taskId);
     }
   }
@@ -308,8 +344,11 @@ class TerminalSessionManager {
   async cleanupAllSessions(): Promise<void> {
     const cleanupPromises = Array.from(this.sessions.entries()).map(
       ([taskId, sessionId]) =>
-        this.mcpClient.callTool('terminal_close_session', { sessionId })
-          .catch(error => console.warn(`Failed to cleanup session ${sessionId}:`, error))
+        this.mcpClient
+          .callTool("terminal_close_session", { sessionId })
+          .catch((error) =>
+            console.warn(`Failed to cleanup session ${sessionId}:`, error)
+          )
     );
 
     await Promise.all(cleanupPromises);
@@ -327,16 +366,16 @@ class TerminalSessionManager {
 ```typescript
 enum TaskType {
   // Tasks requiring terminal access
-  TEST_EXECUTION = 'test_execution',
-  BUILD = 'build',
-  DEPLOYMENT = 'deployment',
-  PACKAGE_MANAGEMENT = 'package_management',
-  INFRASTRUCTURE = 'infrastructure',
+  TEST_EXECUTION = "test_execution",
+  BUILD = "build",
+  DEPLOYMENT = "deployment",
+  PACKAGE_MANAGEMENT = "package_management",
+  INFRASTRUCTURE = "infrastructure",
 
   // Tasks that may not need terminal access
-  ANALYSIS = 'analysis',
-  REVIEW = 'review',
-  PLANNING = 'planning'
+  ANALYSIS = "analysis",
+  REVIEW = "review",
+  PLANNING = "planning",
 }
 
 // Task metadata interface
@@ -356,13 +395,13 @@ const agentCapabilities = {
   supportedTaskTypes: [
     TaskType.TEST_EXECUTION,
     TaskType.BUILD,
-    TaskType.PACKAGE_MANAGEMENT
+    TaskType.PACKAGE_MANAGEMENT,
   ],
   terminalAccess: {
     enabled: true,
     maxConcurrentSessions: 3,
-    supportedCommands: ['npm', 'yarn', 'git', 'docker', 'python', 'pytest']
-  }
+    supportedCommands: ["npm", "yarn", "git", "docker", "python", "pytest"],
+  },
 };
 ```
 
@@ -379,7 +418,7 @@ class AgentTerminalMonitor {
     sessionsClosed: 0,
     commandsExecuted: 0,
     commandsFailed: 0,
-    averageExecutionTime: 0
+    averageExecutionTime: 0,
   };
 
   recordSessionCreated(taskId: string, agentId: string): void {
@@ -387,15 +426,23 @@ class AgentTerminalMonitor {
     console.log(`Terminal session created: task=${taskId}, agent=${agentId}`);
   }
 
-  recordCommandExecuted(command: string, duration: number, success: boolean): void {
+  recordCommandExecuted(
+    command: string,
+    duration: number,
+    success: boolean
+  ): void {
     this.metrics.commandsExecuted++;
     if (!success) this.metrics.commandsFailed++;
 
     // Update average execution time
-    const totalTime = this.metrics.averageExecutionTime * (this.metrics.commandsExecuted - 1);
-    this.metrics.averageExecutionTime = (totalTime + duration) / this.metrics.commandsExecuted;
+    const totalTime =
+      this.metrics.averageExecutionTime * (this.metrics.commandsExecuted - 1);
+    this.metrics.averageExecutionTime =
+      (totalTime + duration) / this.metrics.commandsExecuted;
 
-    console.log(`Command executed: ${command}, duration=${duration}ms, success=${success}`);
+    console.log(
+      `Command executed: ${command}, duration=${duration}ms, success=${success}`
+    );
   }
 
   getMetrics(): typeof this.metrics {
@@ -490,16 +537,16 @@ class NewAgent {
       return this.executeWithoutTerminal(task);
     }
 
-    const session = await this.mcpClient.callTool('terminal_create_session', {
+    const session = await this.mcpClient.callTool("terminal_create_session", {
       taskId: task.id,
-      agentId: this.agentId
+      agentId: this.agentId,
     });
 
     try {
       return await this.executeWithTerminal(task, session.sessionId);
     } finally {
-      await this.mcpClient.callTool('terminal_close_session', {
-        sessionId: session.sessionId
+      await this.mcpClient.callTool("terminal_close_session", {
+        sessionId: session.sessionId,
       });
     }
   }
@@ -513,18 +560,18 @@ class NewAgent {
 ### Unit Tests
 
 ```typescript
-describe('Agent Terminal Integration', () => {
+describe("Agent Terminal Integration", () => {
   let mockMcpClient: jest.Mocked<MCPClient>;
 
   beforeEach(() => {
     mockMcpClient = {
-      callTool: jest.fn()
+      callTool: jest.fn(),
     } as any;
   });
 
-  it('should create and cleanup terminal session', async () => {
+  it("should create and cleanup terminal session", async () => {
     mockMcpClient.callTool
-      .mockResolvedValueOnce({ sessionId: 'session-123' }) // create
+      .mockResolvedValueOnce({ sessionId: "session-123" }) // create
       .mockResolvedValueOnce({ success: true }) // execute
       .mockResolvedValueOnce({ success: true }); // close
 
@@ -532,8 +579,14 @@ describe('Agent Terminal Integration', () => {
     const result = await agent.executeTask(testTask);
 
     expect(result.success).toBe(true);
-    expect(mockMcpClient.callTool).toHaveBeenCalledWith('terminal_create_session', expect.any(Object));
-    expect(mockMcpClient.callTool).toHaveBeenCalledWith('terminal_close_session', { sessionId: 'session-123' });
+    expect(mockMcpClient.callTool).toHaveBeenCalledWith(
+      "terminal_create_session",
+      expect.any(Object)
+    );
+    expect(mockMcpClient.callTool).toHaveBeenCalledWith(
+      "terminal_close_session",
+      { sessionId: "session-123" }
+    );
   });
 });
 ```
@@ -541,14 +594,14 @@ describe('Agent Terminal Integration', () => {
 ### Integration Tests
 
 ```typescript
-describe('Terminal Integration E2E', () => {
-  it('should execute real commands in isolated sessions', async () => {
+describe("Terminal Integration E2E", () => {
+  it("should execute real commands in isolated sessions", async () => {
     // This would run against a real MCP server with terminal access
     const agent = new NodeTestAgent(realMcpClient);
     const result = await agent.executeTask({
-      id: 'test-task',
-      type: 'test_execution',
-      metadata: { workingDirectory: '/tmp/test-project' }
+      id: "test-task",
+      type: "test_execution",
+      metadata: { workingDirectory: "/tmp/test-project" },
     });
 
     expect(result.success).toBe(true);
@@ -571,16 +624,17 @@ describe('Terminal Integration E2E', () => {
 
 ```typescript
 const AGENT_LIMITS = {
-  maxConcurrentSessions: 5,    // Per agent
+  maxConcurrentSessions: 5, // Per agent
   maxSessionLifetime: 1800000, // 30 minutes
-  maxCommandsPerSession: 50,   // Commands per session
-  maxOutputSize: 1024 * 1024,  // 1MB per command
+  maxCommandsPerSession: 50, // Commands per session
+  maxOutputSize: 1024 * 1024, // 1MB per command
 };
 ```
 
 ### Monitoring Alerts
 
 Set up alerts for:
+
 - High session creation rate (>10/minute per agent)
 - Command failure rate (>20%)
 - Session cleanup failures
@@ -593,29 +647,37 @@ Set up alerts for:
 ### Common Issues
 
 #### Session Creation Fails
+
 **Problem**: `terminal_create_session` returns error
 **Solution**:
+
 - Check MCP server is running with terminal access enabled
 - Verify `ENABLE_TERMINAL_ACCESS=true` environment variable
 - Check agent permissions
 
 #### Command Not Allowed
+
 **Problem**: `COMMAND_NOT_ALLOWED` error
 **Solution**:
+
 - Check command is in `apps/tools/caws/tools-allow.json`
 - Use alternative allowlisted command
 - Request addition to allowlist if legitimate
 
 #### Session Not Found
+
 **Problem**: Commands fail with `SESSION_NOT_FOUND`
 **Solution**:
+
 - Ensure session is created before command execution
 - Check session ID is correct
 - Verify session wasn't prematurely closed
 
 #### Timeout Errors
+
 **Problem**: Commands timeout unexpectedly
 **Solution**:
+
 - Increase timeout parameter
 - Optimize command performance
 - Break long commands into smaller steps

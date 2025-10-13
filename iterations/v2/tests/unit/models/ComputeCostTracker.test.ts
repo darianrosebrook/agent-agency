@@ -5,7 +5,7 @@
  */
 
 import type { LocalComputeCost } from "@/types/model-registry";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "@jest/globals";
 import { ComputeCostTracker } from "../../../src/models/ComputeCostTracker";
 
 describe("ComputeCostTracker", () => {
