@@ -4,12 +4,10 @@
  * Tests deadlock detection, resolution strategies, and pattern tracking.
  */
 
-import {
-  DeadlockResolutionStrategy,
-  DeadlockResolver,
-} from "@/reasoning/DeadlockResolver";
+import { DeadlockResolver } from "@/reasoning/DeadlockResolver";
 import {
   AgentRole,
+  DeadlockResolutionStrategy,
   DebateParticipant,
   DebateSession,
   DebateState,
@@ -72,7 +70,6 @@ describe("DeadlockResolver", () => {
           agentId: "agent-1",
           position: "for",
           reasoning: "Support",
-          reasoning: "Support",
           confidence: 0.8,
           timestamp: new Date(),
         },
@@ -91,14 +88,12 @@ describe("DeadlockResolver", () => {
           agentId: "agent-1",
           position: "for",
           reasoning: "Support",
-          reasoning: "Support",
           confidence: 0.8,
           timestamp: new Date(),
         },
         {
           agentId: "agent-2",
           position: "for",
-          reasoning: "Support",
           reasoning: "Agree",
           confidence: 0.7,
           timestamp: new Date(),
@@ -331,7 +326,6 @@ describe("DeadlockResolver", () => {
             {
               agentId: "mediator",
               position: "for",
-              reasoning: "Support",
               reasoning: "Mediator approves",
               confidence: 0.9,
               timestamp: new Date(),
