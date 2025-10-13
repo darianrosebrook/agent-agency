@@ -27,7 +27,6 @@ import {
   ViolationSeverity,
   WaiverRequest,
   WaiverStatus,
-  VerdictOutcome,
 } from "@/types/arbitration";
 
 describe("ARBITER-015 Integration: End-to-End Arbitration Workflows", () => {
@@ -181,11 +180,7 @@ describe("ARBITER-015 Integration: End-to-End Arbitration Workflows", () => {
       const session = await orchestrator.startSession(
         violation,
         [rule],
-        [
-          "agent-security-lead",
-          "agent-architect",
-          "agent-compliance-officer",
-        ]
+        ["agent-security-lead", "agent-architect", "agent-compliance-officer"]
       );
 
       await orchestrator.evaluateRules(session.id);
@@ -540,12 +535,9 @@ describe("ARBITER-015 Integration: End-to-End Arbitration Workflows", () => {
       await customOrchestrator.completeSession(session.id);
 
       await expect(
-        customOrchestrator.submitAppeal(
-          session.id,
-          "agent-1",
-          "Appeal",
-          ["evidence"]
-        )
+        customOrchestrator.submitAppeal(session.id, "agent-1", "Appeal", [
+          "evidence",
+        ])
       ).rejects.toThrow("Appeal system is disabled");
 
       customOrchestrator.clear();
@@ -918,4 +910,3 @@ describe("ARBITER-015 Integration: End-to-End Arbitration Workflows", () => {
     });
   });
 });
-
