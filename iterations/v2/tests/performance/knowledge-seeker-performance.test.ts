@@ -82,7 +82,10 @@ describe("ARBITER-006 Knowledge Seeker - Performance Benchmarks", () => {
   });
 
   // Helper to calculate percentiles
-  const calculatePercentile = (values: number[], percentile: number): number => {
+  const calculatePercentile = (
+    values: number[],
+    percentile: number
+  ): number => {
     const sorted = [...values].sort((a, b) => a - b);
     const index = Math.ceil((percentile / 100) * sorted.length) - 1;
     return sorted[index];
@@ -249,7 +252,9 @@ describe("ARBITER-006 Knowledge Seeker - Performance Benchmarks", () => {
       console.log("\nBurst Traffic Performance:");
       console.log(`  Burst size: ${burstSize} concurrent queries`);
       console.log(`  Total duration: ${totalDuration}ms`);
-      console.log(`  Average per query: ${(totalDuration / burstSize).toFixed(2)}ms`);
+      console.log(
+        `  Average per query: ${(totalDuration / burstSize).toFixed(2)}ms`
+      );
 
       // All queries should succeed
       expect(responses.length).toBe(burstSize);
@@ -272,7 +277,8 @@ describe("ARBITER-006 Knowledge Seeker - Performance Benchmarks", () => {
       config.queryProcessing.maxConcurrentQueries = 50;
       const seeker = new KnowledgeSeeker(config);
 
-      const provider = SearchProviderFactory.createMockProvider("concurrent-50");
+      const provider =
+        SearchProviderFactory.createMockProvider("concurrent-50");
       (seeker as any).providers.clear();
       (seeker as any).providers.set("concurrent-50", provider);
 
@@ -293,7 +299,11 @@ describe("ARBITER-006 Knowledge Seeker - Performance Benchmarks", () => {
       console.log(
         `  Average per query: ${(totalDuration / concurrentCount).toFixed(2)}ms`
       );
-      console.log(`  Throughput: ${(concurrentCount / (totalDuration / 1000)).toFixed(2)} queries/sec`);
+      console.log(
+        `  Throughput: ${(concurrentCount / (totalDuration / 1000)).toFixed(
+          2
+        )} queries/sec`
+      );
 
       // All queries should succeed
       expect(responses.length).toBe(concurrentCount);
@@ -309,7 +319,8 @@ describe("ARBITER-006 Knowledge Seeker - Performance Benchmarks", () => {
       const config = createPerfConfig();
       const seeker = new KnowledgeSeeker(config);
 
-      const provider = SearchProviderFactory.createMockProvider("sustained-load");
+      const provider =
+        SearchProviderFactory.createMockProvider("sustained-load");
       (seeker as any).providers.clear();
       (seeker as any).providers.set("sustained-load", provider);
 
@@ -336,7 +347,8 @@ describe("ARBITER-006 Knowledge Seeker - Performance Benchmarks", () => {
       });
 
       // Performance should remain consistent across waves
-      const maxVariation = Math.max(...waveDurations) - Math.min(...waveDurations);
+      const maxVariation =
+        Math.max(...waveDurations) - Math.min(...waveDurations);
       console.log(`  Variation: ${maxVariation}ms`);
 
       // All waves should complete in reasonable time
@@ -408,7 +420,8 @@ describe("ARBITER-006 Knowledge Seeker - Performance Benchmarks", () => {
       const config = createPerfConfig();
       const seeker = new KnowledgeSeeker(config);
 
-      const provider = SearchProviderFactory.createMockProvider("complexity-test");
+      const provider =
+        SearchProviderFactory.createMockProvider("complexity-test");
       (seeker as any).providers.clear();
       (seeker as any).providers.set("complexity-test", provider);
 
@@ -441,7 +454,9 @@ describe("ARBITER-006 Knowledge Seeker - Performance Benchmarks", () => {
 
       console.log("\nQuery Complexity Performance:");
       Object.entries(results).forEach(([label, stats]) => {
-        console.log(`  ${label}: Mean=${stats.mean.toFixed(2)}ms, P95=${stats.p95}ms`);
+        console.log(
+          `  ${label}: Mean=${stats.mean.toFixed(2)}ms, P95=${stats.p95}ms`
+        );
       });
 
       // All complexity levels should meet SLA
@@ -535,4 +550,3 @@ describe("ARBITER-006 Knowledge Seeker - Performance Benchmarks", () => {
     });
   });
 });
-

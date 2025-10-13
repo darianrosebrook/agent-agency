@@ -14,14 +14,13 @@
 import { KnowledgeSeeker } from "../../../src/knowledge/KnowledgeSeeker";
 import { SearchProviderFactory } from "../../../src/knowledge/SearchProvider";
 import {
+  ISearchProvider,
   KnowledgeQuery,
   KnowledgeSeekerConfig,
   QueryType,
-  SearchProviderType,
-  ISearchProvider,
-  SearchResult,
-  ProviderHealthStatus,
   ResultQuality,
+  SearchProviderType,
+  SearchResult,
 } from "../../../src/types/knowledge";
 
 describe("ARBITER-006 Knowledge Seeker - Research Integration Tests", () => {
@@ -66,12 +65,20 @@ describe("ARBITER-006 Knowledge Seeker - Research Integration Tests", () => {
       enableResultCaching: true,
       cacheTtlMs: 300000,
     },
-    observability: { enableMetrics: true, enableTracing: true, logLevel: "info" },
+    observability: {
+      enableMetrics: true,
+      enableTracing: true,
+      logLevel: "info",
+    },
     ...overrides,
   });
 
-  const createTestQuery = (overrides?: Partial<KnowledgeQuery>): KnowledgeQuery => ({
-    id: `integration-query-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  const createTestQuery = (
+    overrides?: Partial<KnowledgeQuery>
+  ): KnowledgeQuery => ({
+    id: `integration-query-${Date.now()}-${Math.random()
+      .toString(36)
+      .substr(2, 9)}`,
     query: "What is machine learning?",
     queryType: QueryType.EXPLANATORY,
     maxResults: 10,
@@ -110,7 +117,9 @@ describe("ARBITER-006 Knowledge Seeker - Research Integration Tests", () => {
 
       // Should have results from all providers
       expect(response.results.length).toBeGreaterThan(0);
-      expect(response.metadata.providersQueried.length).toBeGreaterThanOrEqual(3);
+      expect(response.metadata.providersQueried.length).toBeGreaterThanOrEqual(
+        3
+      );
 
       // Check that multiple providers were queried (results may be filtered/deduplicated)
       const uniqueProviders = new Set(response.results.map((r) => r.provider));
@@ -212,7 +221,8 @@ describe("ARBITER-006 Knowledge Seeker - Research Integration Tests", () => {
       };
       const seeker = new KnowledgeSeeker(config);
 
-      const provider = SearchProviderFactory.createMockProvider("diversity-test");
+      const provider =
+        SearchProviderFactory.createMockProvider("diversity-test");
       (seeker as any).providers.clear();
       (seeker as any).providers.set("diversity-test", provider);
 
@@ -244,7 +254,8 @@ describe("ARBITER-006 Knowledge Seeker - Research Integration Tests", () => {
       const config = createIntegrationConfig();
       const seeker = new KnowledgeSeeker(config);
 
-      const workingProvider = SearchProviderFactory.createMockProvider("working");
+      const workingProvider =
+        SearchProviderFactory.createMockProvider("working");
       const failingProvider: ISearchProvider = {
         name: "failing",
         type: SearchProviderType.WEB_SEARCH,
@@ -274,7 +285,9 @@ describe("ARBITER-006 Knowledge Seeker - Research Integration Tests", () => {
 
       // Should still return results from working provider
       expect(response.results.length).toBeGreaterThan(0);
-      expect(response.results.every((r) => r.provider === "working")).toBe(true);
+      expect(response.results.every((r) => r.provider === "working")).toBe(
+        true
+      );
       expect(response.metadata.providersQueried).toContain("failing");
     });
 
@@ -524,7 +537,9 @@ describe("ARBITER-006 Knowledge Seeker - Research Integration Tests", () => {
         createTestQuery({ id: `load-test-${i}` })
       );
 
-      const responses = await Promise.all(queries.map((q) => seeker.processQuery(q)));
+      const responses = await Promise.all(
+        queries.map((q) => seeker.processQuery(q))
+      );
 
       // Should have results from both providers
       const allProviders = new Set(
@@ -575,7 +590,8 @@ describe("ARBITER-006 Knowledge Seeker - Research Integration Tests", () => {
       const config = createIntegrationConfig();
       const seeker = new KnowledgeSeeker(config);
 
-      const provider = SearchProviderFactory.createMockProvider("complex-research");
+      const provider =
+        SearchProviderFactory.createMockProvider("complex-research");
       (seeker as any).providers.clear();
       (seeker as any).providers.set("complex-research", provider);
 
@@ -595,7 +611,9 @@ describe("ARBITER-006 Knowledge Seeker - Research Integration Tests", () => {
         }),
       ];
 
-      const responses = await Promise.all(queries.map((q) => seeker.processQuery(q)));
+      const responses = await Promise.all(
+        queries.map((q) => seeker.processQuery(q))
+      );
 
       // All queries should succeed
       expect(responses.length).toBe(3);
@@ -628,7 +646,9 @@ describe("ARBITER-006 Knowledge Seeker - Research Integration Tests", () => {
       );
 
       const startTime = Date.now();
-      const responses = await Promise.all(queries.map((q) => seeker.processQuery(q)));
+      const responses = await Promise.all(
+        queries.map((q) => seeker.processQuery(q))
+      );
       const duration = Date.now() - startTime;
 
       // All queries should complete
@@ -643,4 +663,3 @@ describe("ARBITER-006 Knowledge Seeker - Research Integration Tests", () => {
     });
   });
 });
-

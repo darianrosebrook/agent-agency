@@ -237,7 +237,6 @@ describe("CrossReferenceValidator", () => {
       };
 
       const result = await validatorLimited.verify(request);
-
     });
 
     it("should handle missing search providers gracefully", async () => {
@@ -344,8 +343,7 @@ describe("CrossReferenceValidator", () => {
         const currentQuality =
           result.evidence[i].relevance * result.evidence[i].credibility;
         const nextQuality =
-          result.evidence[i + 1].relevance *
-          result.evidence[i + 1].credibility;
+          result.evidence[i + 1].relevance * result.evidence[i + 1].credibility;
         expect(currentQuality).toBeGreaterThanOrEqual(nextQuality);
       }
     });
