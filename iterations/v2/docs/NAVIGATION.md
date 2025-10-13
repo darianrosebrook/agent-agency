@@ -16,6 +16,12 @@ This document provides a quick navigation guide to all V2 documentation organize
 - **[HARDENING_INDEX.md](status/HARDENING_INDEX.md)** - Navigation hub for all hardening documentation
 - **[PROGRESS_SUMMARY.md](status/PROGRESS_SUMMARY.md)** - Overall project progress tracking
 
+### Documentation Accuracy Audit (NEW - October 13, 2025)
+
+- **[DOCUMENTATION_AUDIT_SUMMARY.md](status/DOCUMENTATION_AUDIT_SUMMARY.md)** - Quick overview and navigation for audit findings
+- **[DOCUMENTATION_ACCURACY_AUDIT.md](status/DOCUMENTATION_ACCURACY_AUDIT.md)** - Complete audit report with detailed findings and evidence
+- **[DOCUMENTATION_CORRECTIONS_NEEDED.md](status/DOCUMENTATION_CORRECTIONS_NEEDED.md)** - Actionable checklist for fixing documentation issues
+
 ---
 
 ## 🔨 Hardening Reports
@@ -107,6 +113,7 @@ Deployment guides and configuration.
 **Location**: `docs/implementation/`
 
 Detailed implementation documentation for core systems:
+
 - `1-core-orchestration/` - Arbiter orchestration
 - `2-benchmark-data/` - Benchmarking and data collection
 - `3-agent-rl-training/` - RL training pipeline
@@ -229,6 +236,11 @@ v2/
 ## 🔄 Recently Updated
 
 **October 13, 2025**:
+
+- **NEW**: Documentation Accuracy Audit complete
+  - Created DOCUMENTATION_AUDIT_SUMMARY.md
+  - Created DOCUMENTATION_ACCURACY_AUDIT.md (complete findings)
+  - Created DOCUMENTATION_CORRECTIONS_NEEDED.md (actionable checklist)
 - Reorganized all documentation into logical structure
 - Moved hardening reports to `docs/reports/hardening/`
 - Moved status files to `docs/status/`
@@ -238,4 +250,3 @@ v2/
 ---
 
 **Need help?** Check the [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md) for a more detailed index, or the [README.md](README.md) for comprehensive project documentation.
-
