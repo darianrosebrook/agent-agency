@@ -39,7 +39,7 @@ describe("CrossReferenceValidator", () => {
 
       const result = await validator.verify(request);
 
-      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE;
+      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE);
       expect(result.confidence).toBeGreaterThan(0.7);
       expect(result.method).toBe(VerificationType.CROSS_REFERENCE);
     });
@@ -317,7 +317,7 @@ describe("CrossReferenceValidator", () => {
 
       const result = await validator.verify(request);
 
-
+      result.evidence.forEach((evidence) => {
         expect(evidence.source).toBeDefined();
         expect(evidence.relevance).toBeGreaterThanOrEqual(0);
         expect(evidence.relevance).toBeLessThanOrEqual(1);
@@ -339,14 +339,14 @@ describe("CrossReferenceValidator", () => {
 
       const result = await validator.verify(request);
 
-        // Evidence should be sorted by quality (relevance * credibility)
-          const currentQuality =
-            result.evidence[i].relevance * result.evidence[i].credibility;
-          const nextQuality =
-            result.evidence[i + 1].relevance *
-            result.evidence[i + 1].credibility;
-          expect(currentQuality).toBeGreaterThanOrEqual(nextQuality);
-        }
+      // Evidence should be sorted by quality (relevance * credibility)
+      for (let i = 0; i < result.evidence.length - 1; i++) {
+        const currentQuality =
+          result.evidence[i].relevance * result.evidence[i].credibility;
+        const nextQuality =
+          result.evidence[i + 1].relevance *
+          result.evidence[i + 1].credibility;
+        expect(currentQuality).toBeGreaterThanOrEqual(nextQuality);
       }
     });
   });

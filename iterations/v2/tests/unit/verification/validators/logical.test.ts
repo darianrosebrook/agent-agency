@@ -39,7 +39,7 @@ describe("LogicalValidator", () => {
 
       const result = await validator.verify(request);
 
-      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE;
+      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE);
       expect(result.confidence).toBeGreaterThan(0.8);
     });
 
@@ -57,7 +57,7 @@ describe("LogicalValidator", () => {
 
       const result = await validator.verify(request);
 
-      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE;
+      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE);
       expect(result.confidence).toBeGreaterThan(0.7);
     });
 
@@ -75,7 +75,7 @@ describe("LogicalValidator", () => {
 
       const result = await validator.verify(request);
 
-      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE;
+      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE);
       expect(result.confidence).toBeGreaterThan(0.8);
     });
   });
@@ -260,7 +260,7 @@ describe("LogicalValidator", () => {
 
       const result = await validator.verify(request);
 
-      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE;
+      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE);
       expect(result.metadata?.connectives).toBeDefined();
     });
   });
@@ -313,7 +313,7 @@ describe("LogicalValidator", () => {
 
       const result = await validator.verify(request);
 
-      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE;
+      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE);
     });
   });
 

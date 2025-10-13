@@ -77,7 +77,7 @@ describe("Real LLM Inference Integration Tests", () => {
     if (!model || model.type !== "ollama") {
       throw new Error("Failed to register Ollama model");
     }
-    
+
     // Store model ID for use in tests
     registeredModelId = model.id;
     console.log(`✅ Registered model: ${registeredModelId}`);

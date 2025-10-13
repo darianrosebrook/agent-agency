@@ -104,13 +104,19 @@ describe("Arbiter Coordination Integration Tests", () => {
 
       console.log("\n✅ Registered models:");
       models.forEach((model) => {
-        console.log(`   - ${model.id} (${model.type}, category: ${model.category})`);
+        console.log(
+          `   - ${model.id} (${model.type}, category: ${model.category})`
+        );
       });
     });
 
     it("should get model by role", () => {
-      const primary = registry.getAllModels().find((m) => m.category === "primary");
-      const quality = registry.getAllModels().find((m) => m.category === "quality");
+      const primary = registry
+        .getAllModels()
+        .find((m) => m.category === "primary");
+      const quality = registry
+        .getAllModels()
+        .find((m) => m.category === "quality");
 
       expect(primary).toBeDefined();
       expect(quality).toBeDefined();
@@ -253,7 +259,9 @@ describe("Arbiter Coordination Integration Tests", () => {
 
   describe("Hot-Swapping Models", () => {
     it("should swap models mid-task", async () => {
-      const initialModel = registry.getAllModels().find((m) => m.category === "primary");
+      const initialModel = registry
+        .getAllModels()
+        .find((m) => m.category === "primary");
       expect(initialModel).toBeDefined();
 
       console.log(`\n📍 Initial model: ${initialModel?.id}`);
@@ -471,7 +479,9 @@ describe("Arbiter Coordination Integration Tests", () => {
       };
 
       // Try primary model (simulate failure)
-      const primaryModel = registry.getAllModels().find((m) => m.category === "primary");
+      const primaryModel = registry
+        .getAllModels()
+        .find((m) => m.category === "primary");
 
       console.log(`\n🔄 Attempting with primary: ${primaryModel?.id}`);
 
@@ -490,7 +500,9 @@ describe("Arbiter Coordination Integration Tests", () => {
       }
 
       // Fallback to secondary
-      const qualityModel = registry.getAllModels().find((m) => m.category === "quality");
+      const qualityModel = registry
+        .getAllModels()
+        .find((m) => m.category === "quality");
       console.log(
         `   ⚠️  Primary failed, falling back to: ${qualityModel?.id}`
       );

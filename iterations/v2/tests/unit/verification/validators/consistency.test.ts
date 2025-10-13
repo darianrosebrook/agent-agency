@@ -39,7 +39,7 @@ describe("ConsistencyValidator", () => {
 
       const result = await validator.verify(request);
 
-      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE;
+      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE);
       expect(result.confidence).toBeGreaterThan(0.7);
       expect(result.method).toBe(VerificationType.CONSISTENCY_CHECK);
     });
@@ -75,7 +75,7 @@ describe("ConsistencyValidator", () => {
 
       const result = await validator.verify(request);
 
-      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE;
+      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE);
       expect(result.confidence).toBeGreaterThan(0.5);
     });
   });
@@ -95,7 +95,7 @@ describe("ConsistencyValidator", () => {
 
       const result = await validator.verify(request);
 
-      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE;
+      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE);
       expect(result.confidence).toBeGreaterThan(0.7);
     });
 
@@ -130,7 +130,7 @@ describe("ConsistencyValidator", () => {
 
       const result = await validator.verify(request);
 
-      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE;
+      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE);
     });
   });
 
@@ -149,7 +149,7 @@ describe("ConsistencyValidator", () => {
 
       const result = await validator.verify(request);
 
-      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE;
+      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE);
     });
 
     it("should detect numerical contradictions", async () => {
@@ -221,7 +221,7 @@ describe("ConsistencyValidator", () => {
       const result = await validator.verify(request);
 
       // Single statement should be verified (no contradiction possible)
-      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE;
+      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE);
     });
   });
 

@@ -39,7 +39,7 @@ describe("StatisticalValidator", () => {
 
       const result = await validator.verify(request);
 
-      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE;
+      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE);
       expect(result.confidence).toBeGreaterThan(0.7);
     });
 
@@ -93,7 +93,7 @@ describe("StatisticalValidator", () => {
 
       const result = await validator.verify(request);
 
-      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE;
+      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE);
     });
 
     it("should flag claims with weak significance", async () => {
@@ -129,7 +129,7 @@ describe("StatisticalValidator", () => {
 
       const result = await validator.verify(request);
 
-      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE;
+      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE);
     });
 
     it("should detect correlation-causation confusion", async () => {
@@ -188,7 +188,7 @@ describe("StatisticalValidator", () => {
 
       const result = await validator.verify(request);
 
-      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE;
+      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE);
     });
 
     it("should flag missing confidence intervals for estimates", async () => {
@@ -223,7 +223,7 @@ describe("StatisticalValidator", () => {
 
       const result = await validator.verify(request);
 
-      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE;
+      expect(result.verdict).toBe(VerificationVerdict.VERIFIED_TRUE);
     });
 
     it("should detect incorrect percentage calculations", async () => {
