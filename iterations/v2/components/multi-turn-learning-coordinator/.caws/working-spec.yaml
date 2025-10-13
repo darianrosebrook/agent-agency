@@ -1,152 +1,156 @@
-id: ARBITER-009
-title: Multi-Turn Learning Coordinator - Iterative Agent Learning and Feedback Systems
-risk_tier: 1
-mode: feature
+id: ARBITER-009-HARDEN
+title: Multi-Turn Learning Coordinator - Production Hardening
+risk_tier: 2
+mode: fix
 change_budget:
-  max_files: 25
-  max_loc: 1000
+  max_files: 10
+  max_loc: 300
 blast_radius:
   modules:
     - src/orchestrator
-    - src/learning
-    - src/evaluation
-  data_migration: true
+    - tests/unit/orchestrator
+    - tests/integration/learning
+  data_migration: false
 operational_rollback_slo: 5m
 threats:
-  - threat: Infinite iteration loops consume resources without progress
+  - threat: Context loss between iterations breaks continuity
     likelihood: medium
     impact: high
-    mitigation: Hard iteration limits, progress detection, and resource timeouts
-  - threat: Context corruption across iterations breaks learning continuity
-    likelihood: medium
-    impact: high
-    mitigation: Immutable context snapshots and rollback capabilities
-  - threat: Feedback quality degradation leads to poor learning outcomes
-    likelihood: high
+    mitigation: Context preservation tests, state management validation, recovery tests
+  - threat: Iteration loops become infinite
+    likelihood: low
     impact: medium
-    mitigation: Feedback validation, confidence scoring, and automated feedback generation
+    mitigation: Loop detection tests, maximum iteration limits, circuit breakers
+  - threat: Feedback generation errors degrade learning
+    likelihood: medium
+    impact: medium
+    mitigation: Feedback quality tests, validation checks, human-in-loop options
 scope:
   in:
-    - src/learning/MultiTurnLearningCoordinator.ts
-    - src/learning/IterationManager.ts
-    - src/learning/ErrorPatternRecognizer.ts
-    - src/learning/AdaptivePromptEngineer.ts
-    - src/learning/ContextPreservationEngine.ts
-    - src/learning/FeedbackGenerator.ts
-    - src/types/learning-coordination.ts
-    - tests/unit/learning/multi-turn-learning-coordinator.test.ts
-    - tests/integration/learning/iteration-workflow.test.ts
-    - migrations/005_create_learning_tables.sql
+    - src/orchestrator/MultiTurnLearningCoordinator.ts
+    - src/types/multi-turn-learning.ts
+    - tests/unit/orchestrator/multi-turn-learning-coordinator.test.ts
+    - tests/integration/learning/
   out:
     - node_modules/
     - dist/
     - coverage/
     - iterations/poc/
 invariants:
-  - All iterations are bounded by hard limits or progress detection
-  - Context state is preserved immutably across iteration boundaries
-  - Feedback quality is validated before incorporation into learning
-  - Learning outcomes are auditable and reproducible
-  - Resource consumption is monitored and controlled
+  - Context is never lost between iterations
+  - Iteration count is always tracked and limited
+  - Feedback is always generated for completed iterations
+  - Learning progress is measurable and auditable
+  - Failed iterations do not corrupt state
 acceptance:
   - id: A1
-    given: Task requiring iterative improvement and agent with learning capabilities
-    when: Multi-turn learning coordinator is initialized with task and agent
-    then: Learning session is established with configurable iteration limits and context preservation enabled
+    given: Multi-turn learning coordinator with comprehensive test suite
+    when: All tests are executed
+    then: 80%+ branch coverage achieved, all integration tests passing
   - id: A2
-    given: Agent completes first iteration with detectable errors
-    when: Error pattern recognition analyzes failure modes
-    then: Specific error categories are identified and targeted remediation strategies are generated
+    given: Multi-turn learning coordinator managing conversation
+    when: Multiple iterations are executed
+    then: Context preserved across iterations, no information loss, continuity maintained
   - id: A3
-    given: Multiple iterations with feedback and error patterns
-    when: Adaptive prompt engineering modifies prompts based on learning history
-    then: Prompts incorporate successful patterns and avoid identified failure modes
+    given: Multi-turn learning coordinator with iteration limits
+    when: Maximum iterations reached
+    then: Iteration stopped, feedback generated, learning captured, no infinite loop
   - id: A4
-    given: Iteration reaches quality threshold or maximum iterations
-    when: Learning coordinator evaluates completion criteria
-    then: Session terminates with final result and learning summary documenting improvement trajectory
+    given: Multi-turn learning coordinator generating feedback
+    when: Iteration completes
+    then: High-quality feedback generated, actionable insights provided, learning captured
   - id: A5
-    given: Context preservation across iterations is required
-    when: Context preservation engine manages state transitions
-    then: Semantic compression maintains coherence while reducing memory footprint
+    given: Multi-turn learning coordinator with context preservation engine
+    when: Context management is performed
+    then: Efficient compression, relevant context retained, retrieval accurate
   - id: A6
-    given: Agent requires structured feedback for improvement
-    when: Feedback generator processes evaluation results
-    then: Actionable feedback is produced with specific improvement recommendations and confidence scores
+    given: Multi-turn learning coordinator integration with reasoning engine
+    when: End-to-end multi-turn workflow executed
+    then: Iterations coordinated, context managed, learning accumulated, results delivered
   - id: A7
-    given: Learning session encounters resource constraints
-    when: Iteration manager enforces limits and monitors progress
-    then: Graceful degradation occurs with partial results and resource usage reporting
+    given: Multi-turn learning coordinator error conditions
+    when: Iteration failures occur
+    then: Graceful recovery, state preserved, error logged, continuation possible
+  - id: A8
+    given: Multi-turn learning coordinator tracking progress
+    when: Learning metrics are queried
+    then: Progress measured, improvements quantified, audit trail complete
 non_functional:
   perf:
-    iteration_initialization_p95_ms: 100
-    error_pattern_analysis_p95_ms: 50
-    feedback_generation_p95_ms: 200
-    context_preservation_p95_ms: 30
-    learning_session_completion_p95_ms: 500
-  security:
-    - learning-data-privacy
-    - feedback-injection-prevention
-    - context-isolation
+    iteration_coordination_p95_ms: 100
+    context_retrieval_p95_ms: 50
+    feedback_generation_p95_ms: 500
   reliability:
-    learning_session_success_rate: 0.95
-    context_preservation_integrity: 1.0
-    error_pattern_accuracy: 0.90
+    context_preservation_rate: 99.9
+    iteration_success_rate: 95
   scalability:
-    concurrent_learning_sessions: 50
-    max_iterations_per_session: 10
-    context_compression_ratio: 0.7
+    max_concurrent_conversations: 100
+    max_iterations_per_conversation: 50
+    max_context_size_mb: 10
 contracts:
   - type: typescript-interface
-    path: src/types/learning-coordination.ts
+    path: src/types/multi-turn-learning.ts
     version: 1.0.0
 observability:
   logs:
-    - learning_session_events
-    - iteration_transitions
-    - error_pattern_detections
-    - feedback_generation_events
+    - iteration_start_end
     - context_preservation_operations
+    - feedback_generation
+    - learning_metrics_updates
   metrics:
-    - learning_session_duration
-    - iteration_count_distribution
-    - error_pattern_hit_rate
-    - feedback_quality_score
-    - context_compression_efficiency
-    - learning_outcome_improvement_rate
+    - active_conversations
+    - iterations_per_conversation_avg
+    - iteration_coordination_latency_p95
+    - context_preservation_success_rate
+    - feedback_quality_score_avg
   traces:
-    - learning_session_lifecycle
-    - iteration_execution_flow
-    - feedback_generation_chain
-    - context_preservation_operations
-migrations:
-  - id: migration_005
-    description: Create learning coordination tables for iteration tracking and context storage
-    type: schema
-    requires_downtime: false
-    rollback_available: true
+    - multi_turn_workflow
+    - context_management_chain
+    - feedback_generation_flow
 rollback:
-  - strategy: feature_flag_rollback
-    description: Disable multi-turn learning and fall back to single-iteration mode
-    slo_minutes: 1
-    data_loss_risk: medium
-  - strategy: database_rollback
-    description: Revert learning tables while preserving core orchestration data
+  - strategy: conversation_state_rollback
+    description: Revert to previous conversation state
     slo_minutes: 5
     data_loss_risk: low
 ai_assessment:
   confidence_level: 0.85
   uncertainty_areas:
-    - Optimal iteration limits for different task types
-    - Context compression strategies for memory efficiency
-    - Feedback quality threshold calibration
+    - Optimal iteration count limits
+    - Context compression strategies
   complexity_factors:
-    - State management across multiple iterations
-    - Error pattern recognition and classification
-    - Context preservation with semantic compression
-    - Feedback generation with confidence scoring
+    - Multi-iteration state management
+    - Context preservation across iterations
   risk_factors:
-    - Resource exhaustion from unbounded iterations
-    - Context corruption affecting learning quality
-    - Poor feedback leading to incorrect learning
-
+    - Context loss breaks conversation continuity
+    - Infinite loops degrade system performance
+testing_strategy:
+  unit_tests:
+    target_coverage: 80
+    target_mutation_score: 50
+    focus_areas:
+      - Iteration coordination logic
+      - Context preservation
+      - Feedback generation
+      - Loop detection
+  integration_tests:
+    scenarios:
+      - Multi-iteration workflows
+      - Context preservation across restarts
+      - Iteration limit enforcement
+      - Feedback quality validation
+  performance_tests:
+    load_testing:
+      - Normal load: 20 concurrent conversations
+      - Peak load: 50 concurrent conversations
+      - Stress test: 100 concurrent conversations
+hardening_checklist:
+  - [ ] Comprehensive unit tests (80%+ coverage)
+  - [ ] Mutation testing (50%+ score)
+  - [ ] Integration tests with context engine
+  - [ ] Iteration limit tests passing
+  - [ ] Context preservation validated
+  - [ ] Feedback quality tests
+  - [ ] Performance benchmarks met
+  - [ ] Error handling validated
+  - [ ] Documentation complete
+  - [ ] Learning runbook created

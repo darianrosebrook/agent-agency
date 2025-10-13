@@ -1,117 +1,157 @@
-id: ARBITER-008
-title: Web Navigator - Web Search and Traversal Engine
+id: ARBITER-008-HARDEN
+title: Web Navigator - Production Hardening
 risk_tier: 2
-mode: feature
+mode: fix
 change_budget:
-  max_files: 18
-  max_loc: 700
+  max_files: 8
+  max_loc: 250
 blast_radius:
   modules:
-    - src/web
-    - src/knowledge
+    - src/orchestrator
+    - tests/unit/orchestrator
+    - tests/integration/web
   data_migration: false
 operational_rollback_slo: 5m
 threats:
-  - threat: Web scraping blocks or rate limiting
+  - threat: Web scraping errors corrupt extracted content
+    likelihood: medium
+    impact: medium
+    mitigation: Content validation tests, error handling, retry logic
+  - threat: Search engine rate limits block navigation
     likelihood: high
-    impact: medium
-    mitigation: Implement respectful crawling with delays and user-agent rotation
-  - threat: Malicious content or security vulnerabilities
-    likelihood: medium
+    impact: low
+    mitigation: Rate limiting tests, backoff strategies, caching
+  - threat: Malicious content injection during extraction
+    likelihood: low
     impact: high
-    mitigation: Content sanitization and security scanning
-  - threat: Information overload from broad searches
-    likelihood: medium
-    impact: medium
-    mitigation: Intelligent result filtering and relevance scoring
+    mitigation: Content sanitization tests, security validation, XSS prevention
 scope:
   in:
-    - src/web/WebNavigator.ts
-    - src/web/SearchEngine.ts
-    - src/web/ContentExtractor.ts
-    - src/web/TraversalEngine.ts
-    - src/types/web.ts
-    - tests/unit/web/web-navigator.test.ts
-    - migrations/004_create_web_tables.sql
+    - src/orchestrator/WebNavigator.ts
+    - src/types/web-navigator.ts
+    - tests/unit/orchestrator/web-navigator.test.ts
+    - tests/integration/web/
   out:
     - node_modules/
     - dist/
     - coverage/
     - iterations/poc/
 invariants:
-  - All web requests include proper headers and rate limiting
-  - Content extraction is performed in isolated environments
-  - Search results are cached to reduce external API usage
-  - Web traversal respects robots.txt and site policies
+  - All extracted content is sanitized
+  - Search engine rate limits are respected
+  - Content extraction is reproducible
+  - Failed navigations do not crash system
+  - Navigation history is maintained
 acceptance:
   - id: A1
-    given: A search query requiring web information
-    when: Web Navigator receives the query
-    then: Search is executed and relevant results are returned within time limits
+    given: Web navigator with comprehensive test suite
+    when: All tests are executed
+    then: 80%+ branch coverage achieved, content extraction validated
   - id: A2
-    given: Web content needs to be extracted from a page
-    when: Web Navigator processes the URL
-    then: Content is safely extracted and sanitized
+    given: Web navigator extracting web content
+    when: Content extraction is performed
+    then: Content extracted accurately, sanitized, metadata preserved
   - id: A3
-    given: Search results need deeper exploration
-    when: Web Navigator traverses linked content
-    then: Relevant linked pages are explored and summarized
+    given: Web navigator with rate limiting
+    when: Rate limits are encountered
+    then: Backoff strategy engaged, requests queued, eventual success
   - id: A4
-    given: Web Navigator encounters rate limiting
-    when: Multiple requests are made to the same domain
-    then: System respects rate limits and retries appropriately
+    given: Web navigator with multiple search engines
+    when: Primary engine fails
+    then: Fallback to secondary engine, no service interruption
   - id: A5
-    given: Web services become temporarily unavailable
-    when: Web Navigator attempts access
-    then: System degrades gracefully with cached results or error indication
+    given: Web navigator with content validation
+    when: Malicious content encountered
+    then: Content sanitized, threats removed, security maintained
+  - id: A6
+    given: Web navigator integration with knowledge seeker
+    when: End-to-end web research performed
+    then: Content extracted, processed, results delivered
+  - id: A7
+    given: Web navigator error conditions
+    when: Navigation failures occur
+    then: Graceful error handling, partial results returned, errors logged
+  - id: A8
+    given: Web navigator performance testing
+    when: Concurrent navigations performed
+    then: Parallel processing active, no blocking, P95 <2000ms
 non_functional:
-  search_completion_time_ms: 2500  # P95 for search completion
-  content_extraction_time_ms: 1500  # P95 for content extraction
-  traversal_depth_limit: 3  # Maximum link traversal depth
-  concurrent_requests_limit: 20  # Maximum concurrent web requests
-  content_cache_ttl_hours: 24  # Content cache duration
+  perf:
+    navigation_p95_ms: 2000
+    content_extraction_p95_ms: 500
+    sanitization_p95_ms: 100
   security:
-    - content-sanitization
-    - ssl-verification
-    - malicious-content-detection
+    - content-sanitization-comprehensive
+    - xss-prevention
+    - injection-prevention
   reliability:
-    uptime_slo: 99.0%
-    degraded_mode_availability: 99.5%
-  performance:
-    memory_usage_mb: 192
-    cpu_usage_percent: 35
+    navigation_success_rate: 90
+    extraction_accuracy: 95
+  scalability:
+    max_concurrent_navigations: 20
+    max_page_size_mb: 10
 contracts:
-  - type: "typescript-interface"
-    path: "src/types/web.ts"
+  - type: typescript-interface
+    path: src/types/web-navigator.ts
+    version: 1.0.0
 observability:
   logs:
-    - search_initiated: "Search initiated for query {query}"
-    - request_executed: "HTTP request to {url} completed with status {status}"
-    - content_extracted: "Extracted {content_length} characters from {url}"
-    - traversal_started: "Link traversal started from {url} with depth {depth}"
-    - rate_limit_hit: "Rate limit encountered for domain {domain}, backing off"
-    - error_encountered: "Web operation error in {component}: {error}"
+    - navigation_requests
+    - extraction_operations
+    - rate_limit_events
+    - sanitization_actions
   metrics:
-    - web_requests_total
-    - search_completion_time_p95
-    - content_extraction_time_p95
-    - cache_hit_ratio
-    - rate_limit_encounters
+    - navigation_request_rate
+    - navigation_latency_p95
+    - extraction_success_rate
+    - rate_limit_trigger_rate
   traces:
-    - search_to_results: "Complete search pipeline from query to results"
-    - content_extraction_trace: "Content extraction and sanitization process"
-    - traversal_trace: "Link traversal and exploration process"
+    - navigation_flow
+    - extraction_pipeline
+    - sanitization_chain
+rollback:
+  - strategy: search_engine_configuration_rollback
+    description: Revert to previous search engine configuration
+    slo_minutes: 5
+    data_loss_risk: none
 ai_assessment:
-  confidence: 0.75
-  uncertainty: 0.25
-  complexity: medium
+  confidence_level: 0.85
+  uncertainty_areas:
+    - Optimal content extraction strategies
+    - Rate limit thresholds
+  complexity_factors:
+    - Multi-engine search integration
+    - Content sanitization and validation
   risk_factors:
-    - external_dependency_risk: high
-    - security_risk: high
-    - performance_risk: medium
-    - legal_risk: medium
-  mitigations:
-    - Comprehensive error handling and fallbacks
-    - Content sanitization and security scanning
-    - Respectful crawling practices
-    - Legal compliance monitoring
+    - Malicious content injection
+    - Rate limits block functionality
+testing_strategy:
+  unit_tests:
+    target_coverage: 80
+    target_mutation_score: 50
+    focus_areas:
+      - Navigation logic
+      - Content extraction
+      - Sanitization algorithms
+      - Error handling
+  integration_tests:
+    scenarios:
+      - Multi-engine navigation
+      - Content extraction and validation
+      - Rate limiting and backoff
+      - Security sanitization
+  security_tests:
+    content_validation:
+      - XSS injection attempts
+      - Malicious scripts
+      - Content injection
+hardening_checklist:
+  - [ ] Comprehensive unit tests (80%+ coverage)
+  - [ ] Mutation testing (50%+ score)
+  - [ ] Content extraction validated
+  - [ ] Sanitization tests comprehensive
+  - [ ] Rate limiting tested
+  - [ ] Security validation complete
+  - [ ] Performance benchmarks met
+  - [ ] Documentation complete
+  - [ ] Navigation runbook created

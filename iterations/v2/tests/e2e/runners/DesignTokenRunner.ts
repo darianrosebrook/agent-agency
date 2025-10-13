@@ -82,7 +82,9 @@ export class DesignTokenRunner extends V2EvaluationRunner<
     console.log("================================");
     console.log(`Component: ${spec.input.componentType}`);
     console.log(`Spec: "${spec.input.componentSpec.substring(0, 80)}..."`);
-    console.log(`Tokens available: ${Object.keys(spec.input.tokens).join(", ")}`);
+    console.log(
+      `Tokens available: ${Object.keys(spec.input.tokens).join(", ")}`
+    );
     console.log("================================");
 
     return this.iterativeLoop(
@@ -345,10 +347,7 @@ export default Badge;
   /**
    * Generate generic component
    */
-  private generateGenericComponent(
-    name: string,
-    tokens: DesignTokens
-  ): string {
+  private generateGenericComponent(name: string, tokens: DesignTokens): string {
     return `/**
  * ${name} component with design tokens
  */
@@ -616,4 +615,3 @@ export default ${name};
     }:\n${feedback}\n\nApply design system principles consistently.`;
   }
 }
-

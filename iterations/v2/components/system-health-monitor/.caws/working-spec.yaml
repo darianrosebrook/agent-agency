@@ -1,143 +1,156 @@
-id: ARBITER-011
-title: System Health Monitor - Circuit Breakers and Predictive Maintenance
+id: ARBITER-011-HARDEN
+title: System Health Monitor - Production Hardening
 risk_tier: 2
-mode: feature
+mode: fix
 change_budget:
-  max_files: 18
-  max_loc: 700
+  max_files: 10
+  max_loc: 300
 blast_radius:
   modules:
-    - src/health
-    - src/monitoring
-  data_migration: true
+    - src/orchestrator
+    - tests/unit/orchestrator
+    - tests/integration/monitoring
+  data_migration: false
 operational_rollback_slo: 5m
 threats:
+  - threat: Circuit breaker false positives block healthy services
+    likelihood: medium
+    impact: medium
+    mitigation: Threshold tuning tests, false positive metrics, override mechanisms
+  - threat: Predictive monitoring false alarms cause alert fatigue
+    likelihood: medium
+    impact: low
+    mitigation: Prediction accuracy tests, alert thresholds, noise reduction
   - threat: Health monitoring overhead impacts system performance
     likelihood: medium
     impact: medium
-    mitigation: Configurable monitoring levels and sampling rates
-  - threat: False positive alerts cause unnecessary system disruption
-    likelihood: medium
-    impact: medium
-    mitigation: Statistical thresholds and confidence intervals
-  - threat: Recovery actions fail and worsen system state
-    likelihood: low
-    impact: high
-    mitigation: Safe recovery procedures and rollback capabilities
+    mitigation: Async monitoring, sampling strategies, resource limits
 scope:
   in:
-    - src/health/SystemHealthMonitor.ts
-    - src/health/CircuitBreakerService.ts
-    - src/health/PredictiveMonitor.ts
-    - src/health/AutomatedRecoveryCoordinator.ts
-    - src/health/HealthMetricsCollector.ts
-    - src/types/system-health.ts
-    - tests/unit/health/system-health-monitor.test.ts
-    - tests/integration/health/circuit-breaker.test.ts
-    - migrations/007_create_health_tables.sql
+    - src/orchestrator/SystemHealthMonitor.ts
+    - src/types/system-health-monitor.ts
+    - tests/unit/orchestrator/system-health-monitor.test.ts
+    - tests/integration/monitoring/
   out:
     - node_modules/
     - dist/
     - coverage/
     - iterations/poc/
 invariants:
-  - Health monitoring does not significantly impact system performance
-  - Circuit breakers prevent cascading failures
-  - Recovery actions are safe and reversible
-  - Alert thresholds are statistically valid
-  - Health state is accurately reflected in monitoring data
+  - Health checks never block system operations
+  - Circuit breakers fail open if monitoring fails
+  - All health metrics are timestamped
+  - Predictive alerts include confidence levels
+  - Alert fatigue is minimized
 acceptance:
   - id: A1
-    given: System components with health monitoring requirements
-    when: System health monitor initializes with component configurations
-    then: Health checks are established, metrics collection begins, and baseline health state is established
+    given: System health monitor with comprehensive test suite
+    when: All tests are executed
+    then: 80%+ branch coverage achieved, circuit breaker logic validated
   - id: A2
-    given: Component experiencing failure patterns
-    when: Circuit breaker service detects threshold violations
-    then: Component is isolated to prevent cascading failures and recovery process is initiated
+    given: System health monitor detecting failures
+    when: Component failures occur
+    then: Failures detected promptly, circuit breakers activate, alerts triggered
   - id: A3
-    given: System metrics showing performance degradation trends
-    when: Predictive monitor analyzes historical data and patterns
-    then: Potential issues are identified before they impact availability and preventive actions recommended
+    given: System health monitor with circuit breakers
+    when: Failure thresholds exceeded
+    then: Circuit opens, traffic blocked, recovery attempted, automatic reset when healthy
   - id: A4
-    given: Component failure detected by health monitoring
-    when: Automated recovery coordinator executes remediation
-    then: Appropriate recovery strategy is selected and executed with success monitoring
+    given: System health monitor with predictive monitoring
+    when: Performance degradation trends detected
+    then: Predictive alerts triggered, remediation recommended, confidence scores provided
   - id: A5
-    given: Multiple components with correlated health metrics
-    when: Health metrics collector aggregates and analyzes data
-    then: System-wide health indicators are calculated and health dashboard is updated
+    given: System health monitor integration with all components
+    when: End-to-end health monitoring performed
+    then: All components monitored, dependencies tracked, system health score computed
   - id: A6
-    given: Recovery action completes with mixed results
-    when: Recovery coordinator validates outcome and adjusts strategy
-    then: Success is measured, metrics are updated, and future recovery strategies are refined
+    given: System health monitor under normal load
+    when: Health checks executed
+    then: Monitoring overhead <1%, no blocking, async execution
+  - id: A7
+    given: System health monitor error conditions
+    when: Monitoring itself fails
+    then: Fail-open behavior, system unblocked, monitoring recovery automatic
+  - id: A8
+    given: System health monitor dashboard
+    when: Health status requested
+    then: Real-time dashboard available, all metrics visible, trends displayed
 non_functional:
   perf:
-    health_check_p95_ms: 10
-    circuit_breaker_evaluation_p95_ms: 5
-    predictive_analysis_p95_ms: 100
-    recovery_execution_p95_ms: 200
-    metrics_collection_p95_ms: 20
-  security:
-    - health-data-privacy
-    - monitoring-access-control
+    health_check_p95_ms: 20
+    circuit_breaker_decision_p95_ms: 5
+    monitoring_overhead_max_percent: 1
   reliability:
-    health_monitor_availability: 0.99
-    circuit_breaker_accuracy: 0.95
-    predictive_alert_precision: 0.90
-    recovery_success_rate: 0.85
+    health_check_success_rate: 99.9
+    false_positive_rate: 0.01
+    false_negative_rate: 0.001
   scalability:
-    monitored_components: 100
-    concurrent_health_checks: 50
-    metrics_retention_days: 30
+    max_components_monitored: 100
+    max_health_checks_per_second: 1000
 contracts:
   - type: typescript-interface
-    path: src/types/system-health.ts
+    path: src/types/system-health-monitor.ts
     version: 1.0.0
 observability:
   logs:
-    - health_check_events
-    - circuit_breaker_actions
+    - health_check_executions
+    - circuit_breaker_state_changes
     - predictive_alerts
-    - recovery_operations
-    - metrics_collection_events
+    - component_failures
   metrics:
-    - system_health_score
-    - circuit_breaker_trip_rate
-    - predictive_alert_accuracy
-    - recovery_success_rate
-    - health_check_coverage
+    - health_check_rate
+    - health_check_latency_p95
+    - circuit_breaker_state_distribution
+    - component_health_scores
+    - alert_trigger_rate
   traces:
-    - health_monitoring_workflow
-    - circuit_breaker_evaluation
-    - predictive_analysis_chain
-    - recovery_execution_flow
-migrations:
-  - id: migration_007
-    description: Create health monitoring tables for metrics storage and alert history
-    type: schema
-    requires_downtime: false
-    rollback_available: true
+    - health_check_flow
+    - circuit_breaker_decision_chain
+    - predictive_monitoring_pipeline
 rollback:
-  - strategy: feature_flag_rollback
-    description: Disable health monitoring features and rely on basic error handling
-    slo_minutes: 1
-    data_loss_risk: none
-  - strategy: database_rollback
-    description: Revert health tables while preserving core system data
+  - strategy: circuit_breaker_override
+    description: Override circuit breakers if false positives detected
     slo_minutes: 5
-    data_loss_risk: low
+    data_loss_risk: none
 ai_assessment:
   confidence_level: 0.85
   uncertainty_areas:
-    - Optimal threshold calibration for different system types
-    - Predictive algorithm accuracy for various failure modes
+    - Optimal circuit breaker thresholds
+    - Predictive monitoring accuracy
   complexity_factors:
-    - Statistical analysis for predictive monitoring
-    - Safe recovery procedure design and validation
-    - Circuit breaker state management and coordination
+    - Multi-component health monitoring
+    - Predictive failure detection
   risk_factors:
-    - Monitoring overhead impact on performance
-    - False positive alerts causing unnecessary disruption
-    - Recovery actions potentially making problems worse
-
+    - False positives block healthy services
+    - False negatives miss actual failures
+testing_strategy:
+  unit_tests:
+    target_coverage: 80
+    target_mutation_score: 50
+    focus_areas:
+      - Health check logic
+      - Circuit breaker algorithms
+      - Predictive monitoring
+      - Error handling
+  integration_tests:
+    scenarios:
+      - Multi-component monitoring
+      - Circuit breaker activation
+      - Predictive alert generation
+      - Dashboard updates
+  validation_tests:
+    accuracy_testing:
+      - Known healthy services
+      - Known failing services
+      - Degrading services
+hardening_checklist:
+  - [ ] Comprehensive unit tests (80%+ coverage)
+  - [ ] Mutation testing (50%+ score)
+  - [ ] Circuit breaker tests passing
+  - [ ] Predictive monitoring validated
+  - [ ] False positive/negative metrics
+  - [ ] Integration with all components
+  - [ ] Performance overhead verified (<1%)
+  - [ ] Dashboard functional
+  - [ ] Documentation complete
+  - [ ] Health monitoring runbook created

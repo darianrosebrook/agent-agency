@@ -179,12 +179,14 @@ describe("Code Generation E2E Tests", () => {
       expect(code).toContain("LoginForm");
       expect(code).toContain("useState");
       expect(code).toContain("form");
-      
+
       // Form component is complex, accept reasonable attempts
       expect(result.report.overallScore).toBeGreaterThan(0.6); // At least 60%
 
       console.log("\n✅ Form component generated successfully");
-      console.log(`   Score: ${(result.report.overallScore * 100).toFixed(1)}%`);
+      console.log(
+        `   Score: ${(result.report.overallScore * 100).toFixed(1)}%`
+      );
     }, 60000);
   });
 

@@ -1,185 +1,165 @@
-id: ARBITER-004
-title: "Performance Tracker - Benchmark Data Collection for RL Training"
-version: "2.0.0"
-mode: feature
-risk_tier: 2
-status: spec_complete
-
-executive_summary:
-  purpose: |
-    The Performance Tracker collects comprehensive benchmark data from all agent interactions to fuel reinforcement learning training. It captures task performance metrics, routing decisions, constitutional validations, and outcome data to build rich training datasets for continuous agent improvement.
-  scope:
-    - Real-time performance metric collection from all agent interactions
-    - Benchmark data aggregation and anonymization
-    - RL training data pipeline management
-    - Performance trend analysis and alerting
-    - Constitutional compliance tracking in performance data
-  success_criteria:
-    - Capture 100% of agent task completions with full performance metadata
-    - Generate RL training data within 5 seconds of task completion
-    - Maintain 99.99% data integrity with zero data loss
-    - Support analysis of 10,000+ concurrent agent tasks
-
+id: ARBITER-004-HARDEN
+title: Performance Tracker - Production Hardening
+risk_tier: 1
+mode: fix
 change_budget:
-  max_files: 18
-  max_loc: 950
-
+  max_files: 12
+  max_loc: 400
 blast_radius:
-  modules: ["performance-tracking", "benchmark-data", "rl-training-data"]
+  modules:
+    - src/orchestrator
+    - tests/unit/orchestrator
+    - tests/integration/monitoring
   data_migration: false
-  breaking_changes: false
-  external_impact: low
-operational_rollback_slo: "15m"
-
+operational_rollback_slo: 2m
 threats:
-  - "Performance overhead impacting agent response times"
-  - "Data loss during high-throughput periods"
-  - "Privacy violations in performance data collection"
-  - "Training data poisoning from corrupted metrics"
-
+  - threat: Performance tracking data loss during system failures
+    likelihood: medium
+    impact: high
+    mitigation: Implement data persistence, backup, and recovery
+  - threat: Performance tracking becomes bottleneck
+    likelihood: medium
+    impact: medium
+    mitigation: Async processing, batching, caching strategies
+  - threat: Unbounded data growth exhausts storage
+    likelihood: high
+    impact: medium
+    mitigation: Retention policies, data aggregation, cleanup automation
 scope:
   in:
-    - "src/orchestrator/PerformanceTracker.ts"
-    - "src/benchmarking/DataCollector.ts"
-    - "src/benchmarking/MetricAggregator.ts"
-    - "src/benchmarking/RLDataPipeline.ts"
-    - "src/benchmarking/PerformanceAnalyzer.ts"
-    - "tests/unit/orchestrator/performance-tracker.test.ts"
-    - "tests/integration/benchmarking/data-collection.test.ts"
+    - src/orchestrator/PerformanceTracker.ts
+    - src/orchestrator/PerformanceMonitor.ts
+    - src/types/performance-tracker.ts
+    - tests/unit/orchestrator/performance-tracker.test.ts
+    - tests/integration/monitoring/
   out:
-    - "src/database/*"  # Database handled by ARBITER-001
-    - "src/routing/*"   # Routing handled by ARBITER-002
-    - "src/caws/*"      # Constitutional validation handled by ARBITER-003
-
+    - node_modules/
+    - dist/
+    - coverage/
+    - iterations/poc/
 invariants:
-  - "All agent task completions must be captured with performance metadata"
-  - "Performance data must be anonymized before RL training use"
-  - "Data integrity must be maintained through cryptographic hashing"
-  - "Performance tracking must not impact agent response times by >1ms"
-  - "RL training data must be available within 5 seconds of task completion"
-
+  - Performance metrics are never lost during collection
+  - Metric collection does not impact system performance by >2%
+  - All metrics are timestamped and ordered
+  - Aggregation preserves statistical accuracy
+  - Historical data is retained per retention policy
 acceptance:
-  - id: "A1"
-    given: "Agent completes task successfully"
-    when: "Performance tracker receives completion event"
-    then: "Complete performance metadata captured within 1 second"
-
-  - id: "A2"
-    given: "High-throughput period with 10,000 concurrent tasks"
-    when: "Performance data collection runs for 1 hour"
-    then: "Zero data loss with 99.99% capture rate maintained"
-
-  - id: "A3"
-    given: "RL training pipeline requests data batch"
-    when: "Performance data is aggregated and anonymized"
-    then: "Training-ready dataset delivered within 5 seconds"
-
-  - id: "A4"
-    given: "Agent performance shows concerning trend"
-    when: "Performance analyzer processes metrics"
-    then: "Alert generated with trend analysis within 30 seconds"
-
-  - id: "A5"
-    given: "Performance data contains sensitive information"
-    when: "Data anonymization pipeline processes data"
-    then: "All personally identifiable information removed or hashed"
-
-  - id: "A6"
-    given: "System under sustained load of 1000 tasks/minute"
-    when: "Performance tracking operates for 24 hours"
-    then: "Memory usage remains under 200MB with no memory leaks"
-
+  - id: A1
+    given: Performance tracker with comprehensive test suite
+    when: All unit tests are executed
+    then: 90%+ branch coverage achieved, all tests passing
+  - id: A2
+    given: Performance tracker collecting metrics from multiple components
+    when: Metrics are collected under normal load
+    then: All metrics captured accurately, <2% performance overhead, P95 latency <30ms
+  - id: A3
+    given: Performance tracker under high load
+    when: 1000+ concurrent metric collections occur
+    then: Async processing handles load, no blocking, batching active, backpressure managed
+  - id: A4
+    given: Performance tracker with historical data
+    when: Data retention policies are applied
+    then: Old data aggregated and archived, recent data preserved, storage within limits
+  - id: A5
+    given: Performance tracker integration with all components
+    when: End-to-end monitoring is performed
+    then: All component metrics collected, correlations detected, dashboards populated
+  - id: A6
+    given: Performance tracker data persistence
+    when: System restart occurs
+    then: All metrics preserved, no data loss, collection resumes automatically
+  - id: A7
+    given: Performance tracker monitoring system health
+    when: Performance degradation detected
+    then: Alerts triggered, root cause identified, remediation recommended
+  - id: A8
+    given: Performance tracker generating reports
+    when: Performance reports are requested
+    then: Accurate statistics computed, trends identified, anomalies highlighted
 non_functional:
-  performance:
-    metric_collection_latency_p95_ms: 5      # Realistic: 5ms collection overhead
-    data_aggregation_p95_ms: 50              # Data processing within 50ms
-    rl_data_delivery_p95_ms: 200             # Training data ready within 200ms
-    analysis_response_p95_ms: 100            # Performance analysis within 100ms
-    memory_usage_mb: 50                      # Memory overhead under 50MB
-    throughput_tasks_per_sec: 500           # Handle 500 concurrent tasks/sec
-    data_retention_days: 90                  # Keep data for 90 days
-    compression_ratio: 0.7                  # 70% size reduction with compression
-
+  perf:
+    metric_collection_p95_ms: 30
+    metric_query_p95_ms: 50
+    dashboard_render_p95_ms: 200
+    overhead_max_percent: 2
   reliability:
-    availability_percent: 99.9
-    mean_time_between_failures_hours: 720  # 30 days
-    error_rate_percent: 0.1
-    data_loss_rate_percent: 0.01
-
+    data_collection_sla: 99.9
+    data_durability: 99.999
   scalability:
-    max_concurrent_tasks: 10000
-    max_data_points_per_hour: 1000000
-    horizontal_scaling: true
-    data_retention_days: 90
-
-  security:
-    input_validation: "strict"
-    data_anonymization: "required"
-    audit_logging: "performance-data-access"
-    encryption: "data-at-rest"
-
-  usability:
-    api_design: "fluent-metric-collection"
-    error_messages: "performance-context-aware"
-    monitoring: "comprehensive-performance-dashboards"
-    documentation: "data-schema-and-metric-definitions"
-
+    max_metrics_per_second: 10000
+    max_components_tracked: 100
+    max_historical_days: 90
 contracts:
-  - type: "typescript"
-    path: "src/types/performance-tracking.ts"
-    description: "Performance metric and benchmark data interfaces"
-
-  - type: "openapi"
-    path: "docs/api/benchmark-data.api.yaml"
-    description: "Performance data collection and analysis API"
-
+  - type: typescript-interface
+    path: src/types/performance-tracker.ts
+    version: 1.0.0
 observability:
-  metrics:
-    - "performance_collection_rate"
-    - "data_aggregation_throughput"
-    - "rl_training_data_latency"
-    - "performance_anomaly_detection"
-    - "data_integrity_violations"
-
   logs:
-    - level: "info"
-      events: ["performance_data_captured", "rl_data_delivered", "anomaly_detected"]
-    - level: "warn"
-      events: ["data_collection_delay", "aggregation_backlog", "anomaly_threshold_exceeded"]
-    - level: "error"
-      events: ["data_loss_detected", "integrity_violation", "collection_failure"]
-
+    - metric_collection_events
+    - aggregation_operations
+    - retention_policy_execution
+    - performance_alerts
+  metrics:
+    - metric_collection_rate
+    - metric_collection_latency_p95
+    - storage_utilization
+    - aggregation_frequency
+    - alert_trigger_rate
   traces:
-    - "performance_collection_span"
-    - "data_aggregation_pipeline"
-    - "rl_data_delivery_pipeline"
-
-migrations:
-  - type: "sql"
-    path: "migrations/004_create_performance_tracking_tables.sql"
-    description: "Tables for performance metrics, benchmark data, and RL training datasets"
-
+    - metric_collection_flow
+    - aggregation_pipeline
+    - alert_generation_chain
 rollback:
-  slo: "15m"
-  strategy: "data-isolation"
-  impact: "low"
-  monitoring: "performance_data_collection_disabled"
-
+  - strategy: feature_flag_disable
+    description: Disable non-critical metric collection
+    slo_minutes: 2
+    data_loss_risk: low
 ai_assessment:
-  reasoning: "Performance tracking involves complex data aggregation and analysis requirements. While AI can help optimize data collection patterns and anomaly detection, the core data integrity and anonymization logic requires careful human design to ensure reliability and privacy compliance."
-
-  risks:
-    - "Performance overhead could impact system responsiveness"
-    - "Data integrity issues could corrupt RL training"
-    - "Privacy concerns with detailed performance data collection"
-
-  opportunities:
-    - "Well-established metrics collection patterns exist"
-    - "Data aggregation logic is highly testable"
-    - "TypeScript provides strong typing for complex data structures"
-
-  recommendations:
-    - "Implement comprehensive data validation and integrity checks"
-    - "Use efficient data structures to minimize performance impact"
-    - "Include thorough anonymization and privacy protection measures"
-    - "Build extensive monitoring and alerting for data quality issues"
+  confidence_level: 0.90
+  uncertainty_areas:
+    - Optimal batching and aggregation strategies
+    - Retention policy thresholds for different metric types
+  complexity_factors:
+    - High-frequency metric collection with low overhead
+    - Efficient data aggregation and storage management
+  risk_factors:
+    - Performance tracking could impact system performance
+    - Data growth could exhaust storage
+testing_strategy:
+  unit_tests:
+    target_coverage: 90
+    target_mutation_score: 70
+    focus_areas:
+      - Metric collection logic
+      - Aggregation algorithms
+      - Retention policy enforcement
+      - Data persistence
+  integration_tests:
+    scenarios:
+      - Multi-component metric collection
+      - High-frequency metric ingestion
+      - Retention policy execution
+      - Data recovery after restart
+  performance_tests:
+    load_testing:
+      - Normal load: 1000 metrics/s
+      - Peak load: 5000 metrics/s
+      - Stress test: 10000 metrics/s
+    overhead_testing:
+      - Baseline performance without tracking
+      - Performance with full tracking enabled
+      - Overhead measurement and validation
+hardening_checklist:
+  - [ ] Comprehensive unit tests (90%+ coverage)
+  - [ ] Mutation testing (70%+ score)
+  - [ ] Integration tests with all components
+  - [ ] Performance benchmarks validated
+  - [ ] Overhead testing completed (<2%)
+  - [ ] Load testing passed (10000 metrics/s)
+  - [ ] Data persistence verified
+  - [ ] Retention policies tested
+  - [ ] Aggregation accuracy validated
+  - [ ] Alert system functional
+  - [ ] Dashboard integration complete
+  - [ ] Documentation complete
+  - [ ] Monitoring runbook created

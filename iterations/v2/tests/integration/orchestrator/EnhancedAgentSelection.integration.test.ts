@@ -15,12 +15,12 @@ import { WorkspaceStateManager } from "../../../src/workspace/WorkspaceStateMana
 jest.mock("chokidar", () => ({
   watch: jest.fn(() => ({
     on: jest.fn(),
-    close: jest.fn().mockReturnValue(Promise.resolve())
-  }))
+    close: jest.fn().mockReturnValue(Promise.resolve()),
+  })),
 }));
 
 jest.mock("fs/promises", () => ({
-  stat: jest.fn()
+  stat: jest.fn(),
 }));
 
 jest.mock("path", () => ({
@@ -29,12 +29,13 @@ jest.mock("path", () => ({
   extname: jest.fn((path: string) => {
     const match = path.match(/\.[^.]+$/);
     return match ? match[0] : "";
-  })
+  }),
 }));
 
 describe("Enhanced Agent Selection with Workspace Integration", () => {
   let orchestrator: ArbiterOrchestrator;
   let workspaceManager: WorkspaceStateManager;
+  let systemHealthMonitor: any;
 
   // Mock agents with different capabilities and workspace familiarity
   const mockAgents = [
@@ -43,22 +44,22 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
       capabilities: ["typescript", "analysis", "testing"],
       currentLoad: 2,
       maxLoad: 5,
-      performance: { quality: 0.9, speed: 0.85, reliability: 0.95 }
+      performance: { quality: 0.9, speed: 0.85, reliability: 0.95 },
     },
     {
       id: "agent-generalist",
       capabilities: ["analysis", "writing", "communication"],
       currentLoad: 1,
       maxLoad: 4,
-      performance: { quality: 0.8, speed: 0.9, reliability: 0.85 }
+      performance: { quality: 0.8, speed: 0.9, reliability: 0.85 },
     },
     {
       id: "agent-workspace-newbie",
       capabilities: ["typescript", "analysis", "computation"],
       currentLoad: 0,
       maxLoad: 3,
-      performance: { quality: 0.75, speed: 0.95, reliability: 0.8 }
-    }
+      performance: { quality: 0.75, speed: 0.95, reliability: 0.8 },
+    },
   ];
 
   // Mock tasks with different requirements
@@ -68,15 +69,15 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
       type: "analysis",
       requiredCapabilities: ["typescript", "analysis"],
       description: "Analyze TypeScript codebase for performance improvements",
-      keywords: ["typescript", "performance", "analysis"]
+      keywords: ["typescript", "performance", "analysis"],
     },
     generalCommunication: {
       id: "task-communication",
       type: "communication",
       requiredCapabilities: ["writing", "communication"],
       description: "Write comprehensive documentation for the system",
-      keywords: ["documentation", "writing", "guide"]
-    }
+      keywords: ["documentation", "writing", "guide"],
+    },
   };
 
   beforeEach(async () => {
@@ -90,7 +91,7 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
         recursive: true,
         followSymlinks: false,
         maxFileSize: 1024 * 1024,
-        detectBinaryFiles: true
+        detectBinaryFiles: true,
       },
       defaultContextCriteria: {
         maxFiles: 10,
@@ -100,12 +101,18 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
         excludeDirectories: ["node_modules"],
         includeBinaryFiles: false,
         relevanceKeywords: [],
-        recencyWeight: 0.3
+        recencyWeight: 0.3,
       },
       snapshotRetentionDays: 30,
       enablePersistence: false,
-      compressionLevel: 6
+      compressionLevel: 6,
     });
+
+    // Create system health monitor
+    const { SystemHealthMonitor } = await import(
+      "../../../src/monitoring/SystemHealthMonitor.js"
+    );
+    systemHealthMonitor = new SystemHealthMonitor();
 
     // Mock workspace scanning
     const mockFiles = [
@@ -117,7 +124,7 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
         mode: 0o644,
         isBinary: false,
         extension: ".ts",
-        mimeType: "application/typescript"
+        mimeType: "application/typescript",
       },
       {
         path: "/workspace/src/utils.ts",
@@ -127,11 +134,13 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
         mode: 0o644,
         isBinary: false,
         extension: ".ts",
-        mimeType: "application/typescript"
-      }
+        mimeType: "application/typescript",
+      },
     ];
 
-    jest.spyOn(workspaceManager as any, "scanWorkspace").mockResolvedValue(mockFiles);
+    jest
+      .spyOn(workspaceManager as any, "scanWorkspace")
+      .mockResolvedValue(mockFiles);
 
     // Create orchestrator with workspace integration
     orchestrator = new ArbiterOrchestrator(
@@ -144,20 +153,25 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
           maxAuditEvents: 1000,
           inputSanitizationEnabled: true,
           secureErrorResponsesEnabled: true,
-          sessionTimeoutMinutes: 60
+          sessionTimeoutMinutes: 60,
         },
         healthMonitor: {},
         recoveryManager: {},
         knowledgeSeeker: {},
+        prompting: {} as any,
         database: {
           host: "localhost",
           port: 5432,
           database: "test",
-          user: "test"
-        }
+          user: "test",
+        },
       },
-      workspaceManager
+      workspaceManager,
+      systemHealthMonitor
     );
+
+    // Initialize workspace manager first
+    await workspaceManager.initialize();
 
     await orchestrator.initialize();
   });
@@ -172,7 +186,8 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
   describe("Workspace-Aware Agent Selection", () => {
     it("should prefer agents with workspace familiarity for relevant tasks", async () => {
       // Mock agent workspace activity - typescript expert has high activity
-      jest.spyOn(orchestrator as any, "getAgentWorkspaceActivity")
+      jest
+        .spyOn(orchestrator as any, "getAgentWorkspaceActivity")
         .mockImplementation((...args: any[]) => {
           const agentId = args[0] as string;
           if (agentId === "agent-typescript-expert") return Promise.resolve(40); // High activity
@@ -181,7 +196,8 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
         });
 
       // Mock agent familiarity - typescript expert is very familiar
-      jest.spyOn(orchestrator as any, "calculateAgentFamiliarity")
+      jest
+        .spyOn(orchestrator as any, "calculateAgentFamiliarity")
         .mockImplementation((...args: any[]) => {
           const agentId = args[0] as string;
           if (agentId === "agent-typescript-expert") return 0.8; // High familiarity
@@ -211,15 +227,15 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
             mode: 0o644,
             isBinary: false,
             extension: ".ts",
-            mimeType: "application/typescript"
-          }
+            mimeType: "application/typescript",
+          },
         ],
         totalSize: 2048,
         criteria: {} as any,
         relevanceScores: new Map([
-          ["/workspace/src/main.ts", 0.9] // High relevance for TS files
+          ["/workspace/src/main.ts", 0.9], // High relevance for TS files
         ]),
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       const assignment = await (orchestrator as any).selectBestAgent(
@@ -242,23 +258,23 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
           maxAuditEvents: 1000,
           inputSanitizationEnabled: true,
           secureErrorResponsesEnabled: true,
-          sessionTimeoutMinutes: 60
+          sessionTimeoutMinutes: 60,
         },
         healthMonitor: {},
         recoveryManager: {},
-        knowledgeSeeker: {}
+        knowledgeSeeker: {},
+        prompting: {} as any,
       });
 
       await orchestratorWithoutWorkspace.initialize();
 
-      const assignment = await (orchestratorWithoutWorkspace as any).selectBestAgent(
-        mockTasks.typescriptAnalysis,
-        mockAgents
-      );
+      const assignment = await (
+        orchestratorWithoutWorkspace as any
+      ).selectBestAgent(mockTasks.typescriptAnalysis, mockAgents);
 
       // Should still work with neutral workspace scores
       expect(assignment).toBeDefined();
-      expect(mockAgents.map(a => a.id)).toContain(assignment.id);
+      expect(mockAgents.map((a) => a.id)).toContain(assignment.id);
     });
   });
 
@@ -268,19 +284,24 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
       const agent = mockAgents[0]; // typescript expert
 
       // Mock the helper methods
-      jest.spyOn(orchestrator as any, "getAgentWorkspaceActivity")
+      jest
+        .spyOn(orchestrator as any, "getAgentWorkspaceActivity")
         .mockResolvedValue(30);
-      jest.spyOn(orchestrator as any, "calculateAgentFamiliarity")
+      jest
+        .spyOn(orchestrator as any, "calculateAgentFamiliarity")
         .mockReturnValue(0.7);
       jest.spyOn(workspaceManager, "generateContext").mockReturnValue({
         files: [],
         totalSize: 0,
         criteria: {} as any,
         relevanceScores: new Map(),
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
-      const factors = await (orchestrator as any).calculateEnhancedScore(task, agent);
+      const factors = await (orchestrator as any).calculateEnhancedScore(
+        task,
+        agent
+      );
 
       // Should return all scoring factors
       expect(factors).toHaveProperty("capability");
@@ -291,7 +312,7 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
       expect(factors).toHaveProperty("resources");
 
       // All factors should be numbers between 0 and 1
-      Object.values(factors).forEach(score => {
+      Object.values(factors).forEach((score) => {
         expect(typeof score).toBe("number");
         expect(score).toBeGreaterThanOrEqual(0);
         expect(score).toBeLessThanOrEqual(1);
@@ -302,33 +323,45 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
       const task = mockTasks.typescriptAnalysis;
 
       // Mock high workspace relevance for one agent
-      jest.spyOn(orchestrator as any, "getAgentWorkspaceActivity")
-        .mockImplementation((agentId: string) =>
-          agentId === "agent-typescript-expert" ? 50 : 5
+      jest
+        .spyOn(orchestrator as any, "getAgentWorkspaceActivity")
+        .mockImplementation((...args: any[]) =>
+          Promise.resolve(
+            (args[0] as string) === "agent-typescript-expert" ? 50 : 5
+          )
         );
-      jest.spyOn(orchestrator as any, "calculateAgentFamiliarity")
-        .mockImplementation((agentId: string) =>
-          agentId === "agent-typescript-expert" ? 0.9 : 0.3
+      jest
+        .spyOn(orchestrator as any, "calculateAgentFamiliarity")
+        .mockImplementation((...args: any[]) =>
+          (args[0] as string) === "agent-typescript-expert" ? 0.9 : 0.3
         );
 
       const expertFactors = await (orchestrator as any).calculateEnhancedScore(
         task,
         mockAgents[0] // typescript expert
       );
-      const generalistFactors = await (orchestrator as any).calculateEnhancedScore(
+      const generalistFactors = await (
+        orchestrator as any
+      ).calculateEnhancedScore(
         task,
         mockAgents[1] // generalist
       );
 
       // Expert should have higher workspace score
-      expect(expertFactors.workspace).toBeGreaterThan(generalistFactors.workspace);
+      expect(expertFactors.workspace).toBeGreaterThan(
+        generalistFactors.workspace
+      );
     });
   });
 
   describe("Task Keyword Extraction", () => {
     it("should extract relevant keywords from tasks", () => {
-      const keywords1 = (orchestrator as any).extractTaskKeywords(mockTasks.typescriptAnalysis);
-      const keywords2 = (orchestrator as any).extractTaskKeywords(mockTasks.generalCommunication);
+      const keywords1 = (orchestrator as any).extractTaskKeywords(
+        mockTasks.typescriptAnalysis
+      );
+      const keywords2 = (orchestrator as any).extractTaskKeywords(
+        mockTasks.generalCommunication
+      );
 
       expect(keywords1).toContain("analysis");
       expect(keywords1).toContain("typescript");
@@ -350,10 +383,12 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
         id: "test-task",
         type: "analysis",
         description: "analysis analysis analysis", // Repeated words
-        keywords: ["test", "test", "analysis"] // Duplicate keywords
+        keywords: ["test", "test", "analysis"], // Duplicate keywords
       };
 
-      const keywords = (orchestrator as any).extractTaskKeywords(taskWithDuplicates);
+      const keywords = (orchestrator as any).extractTaskKeywords(
+        taskWithDuplicates
+      );
 
       // Should not have duplicates
       const uniqueKeywords = [...new Set(keywords)];
@@ -364,26 +399,39 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
   describe("Integration with Task Assignment", () => {
     it("should use enhanced selection in task assignment workflow", async () => {
       // Mock the agent finding and assignment methods
-      jest.spyOn(orchestrator as any, "findAvailableAgents")
+      jest
+        .spyOn(orchestrator as any, "findAvailableAgents")
         .mockResolvedValue(mockAgents);
-      jest.spyOn(orchestrator as any, "createTaskAssignment")
-        .mockResolvedValue({ id: "assignment-123", taskId: "task-123", agentId: "selected-agent" });
-      jest.spyOn(orchestrator as any, "checkAssignmentCompliance")
+      jest
+        .spyOn(orchestrator as any, "createTaskAssignment")
+        .mockImplementation(async (task: any, agent: any) => ({
+          id: "assignment-123",
+          taskId: task.id,
+          agentId: agent.id,
+        }));
+      jest
+        .spyOn(orchestrator as any, "checkAssignmentCompliance")
         .mockResolvedValue({ compliant: true });
 
       // Mock workspace factors to favor the typescript expert
-      jest.spyOn(orchestrator as any, "getAgentWorkspaceActivity")
+      jest
+        .spyOn(orchestrator as any, "getAgentWorkspaceActivity")
         .mockImplementation((...args: any[]) => {
           const agentId = args[0] as string;
-          return agentId === "agent-typescript-expert" ? 50 : 5;
+          return Promise.resolve(
+            agentId === "agent-typescript-expert" ? 50 : 5
+          );
         });
-      jest.spyOn(orchestrator as any, "calculateAgentFamiliarity")
+      jest
+        .spyOn(orchestrator as any, "calculateAgentFamiliarity")
         .mockImplementation((...args: any[]) => {
           const agentId = args[0] as string;
           return agentId === "agent-typescript-expert" ? 0.9 : 0.3;
         });
 
-      const result = await orchestrator["assignTaskToAgent"](mockTasks.typescriptAnalysis);
+      const result = await orchestrator["assignTaskToAgent"](
+        mockTasks.typescriptAnalysis
+      );
 
       // Should have created an assignment
       expect(result).toBeDefined();
@@ -391,7 +439,9 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
     });
 
     it("should log agent selection details for debugging", async () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+      const consoleSpy = jest
+        .spyOn(console, "log")
+        .mockImplementation(() => {});
 
       await (orchestrator as any).selectBestAgent(
         mockTasks.typescriptAnalysis,

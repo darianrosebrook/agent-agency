@@ -1,214 +1,173 @@
-id: INFRA-002
-title: "MCP Server Integration - Model Context Protocol Tool Exposure and External Client Support"
-version: "2.0.0"
-mode: feature
-risk_tier: 2
-status: spec_complete
-
-executive_summary:
-  purpose: |
-    The MCP Server Integration component implements the Model Context Protocol (MCP) for exposing all arbiter
-    capabilities as tools to external clients. It provides request/response handling, error recovery, authentication,
-    authorization, and comprehensive tool management to enable seamless integration with MCP-compatible systems.
-  scope:
-    - Full MCP protocol implementation (tools, resources, prompts)
-    - Tool exposure for all ARBITER components
-    - Request/response handling with validation
-    - Error handling and graceful degradation
-    - Authentication and authorization
-    - Rate limiting and quota management
-    - Tool discovery and capability advertising
-  success_criteria:
-    - Support 50+ exposed tools with complete metadata
-    - Request handling within 50ms P95 overhead
-    - 99.9% uptime for MCP server
-    - Support 1000 concurrent MCP client connections
-    - Zero protocol violations
-
+id: INFRA-002-HARDEN
+title: MCP Server Integration - Production Hardening
+risk_tier: 1
+mode: fix
 change_budget:
-  max_files: 25
-  max_loc: 1200
-
+  max_files: 10
+  max_loc: 300
 blast_radius:
-  modules: ["mcp", "protocol", "tool-exposure"]
+  modules:
+    - src/mcp
+    - tests/unit/mcp
+    - tests/integration/mcp
   data_migration: false
-  breaking_changes: false
-  external_impact: high
-operational_rollback_slo: "5m"
-
+operational_rollback_slo: 2m
 threats:
-  - "Protocol violations breaking client compatibility"
-  - "Authentication bypass allowing unauthorized access"
-  - "Tool exposure leaking sensitive information"
-  - "Performance degradation under high client load"
-
+  - threat: MCP protocol violations break external integrations
+    likelihood: medium
+    impact: high
+    mitigation: Protocol compliance tests, validation suite, integration tests
+  - threat: Unauthorized access to arbiter tools via MCP
+    likelihood: medium
+    impact: critical
+    mitigation: Authentication tests, authorization validation, security audit
+  - threat: MCP server performance bottleneck
+    likelihood: medium
+    impact: medium
+    mitigation: Load testing, async processing, connection pooling
 scope:
   in:
-    - "src/mcp/MCPServerIntegration.ts"
-    - "src/mcp/ProtocolHandler.ts"
-    - "src/mcp/ToolRegistry.ts"
-    - "src/mcp/RequestValidator.ts"
-    - "src/mcp/ResponseBuilder.ts"
-    - "src/mcp/AuthenticationManager.ts"
-    - "src/mcp/RateLimiter.ts"
-    - "src/mcp/ErrorHandler.ts"
-    - "src/types/mcp.ts"
-    - "tests/unit/mcp/mcp-server-integration.test.ts"
-    - "tests/integration/mcp/protocol-compliance.test.ts"
+    - src/mcp/MCPServerIntegration.ts
+    - src/mcp/MCPProtocolHandler.ts
+    - src/mcp/MCPToolRegistry.ts
+    - src/types/mcp.ts
+    - tests/unit/mcp/
+    - tests/integration/mcp/
   out:
-    - "src/database/*"
-    - "src/routing/*"
-    - "src/security/*"
-
+    - node_modules/
+    - dist/
+    - coverage/
+    - iterations/poc/
 invariants:
-  - "All tool exposures must follow MCP protocol specification"
-  - "Authentication must be verified before tool execution"
-  - "Request validation must prevent injection attacks"
-  - "Error responses must not leak sensitive information"
-  - "Tool metadata must accurately reflect capabilities"
-
+  - MCP protocol compliance is maintained
+  - All arbiter tools are exposed correctly
+  - Authentication is required for all operations
+  - Tool invocations are idempotent where possible
+  - Error responses follow MCP spec
 acceptance:
-  - id: "INFRA-002-A1"
-    given: "MCP client connects to server"
-    when: "Client requests tool list"
-    then: "Complete tool catalog returned with metadata within 50ms"
-
-  - id: "INFRA-002-A2"
-    given: "MCP client invokes arbiter tool with parameters"
-    when: "Protocol handler processes request"
-    then: "Request validated, tool executed, and response returned within tool latency budget + 50ms overhead"
-
-  - id: "INFRA-002-A3"
-    given: "MCP client sends malformed request"
-    when: "Request validator processes input"
-    then: "Request rejected with protocol-compliant error response and security event logged"
-
-  - id: "INFRA-002-A4"
-    given: "Unauthenticated MCP client attempts tool access"
-    when: "Authentication manager validates credentials"
-    then: "Request denied with 401 authentication error and attempt logged"
-
-  - id: "INFRA-002-A5"
-    given: "MCP client exceeds rate limit threshold"
-    when: "Rate limiter evaluates request quota"
-    then: "Request throttled with 429 rate limit error and backoff guidance provided"
-
-  - id: "INFRA-002-A6"
-    given: "Tool execution encounters internal error"
-    when: "Error handler processes exception"
-    then: "Graceful error response returned without sensitive details and error logged for debugging"
-
-  - id: "INFRA-002-A7"
-    given: "1000 concurrent MCP client connections"
-    when: "Server processes simultaneous requests"
-    then: "All requests handled within performance budgets with proper connection pooling"
-
-  - id: "INFRA-002-A8"
-    given: "MCP protocol update releases new features"
-    when: "Protocol handler manages version compatibility"
-    then: "Backward compatibility maintained and new features exposed with version negotiation"
-
+  - id: A1
+    given: MCP server integration with comprehensive test suite
+    when: All tests are executed
+    then: 90%+ branch coverage achieved, protocol compliance validated
+  - id: A2
+    given: MCP server exposing all arbiter tools
+    when: Tool discovery is performed
+    then: All tools listed correctly, metadata accurate, capabilities documented
+  - id: A3
+    given: MCP client invoking tool operations
+    when: Tool calls are executed
+    then: Operations succeed, responses follow MCP spec, error handling correct
+  - id: A4
+    given: MCP server with authentication enabled
+    when: Unauthorized access attempted
+    then: Authentication required, unauthorized requests rejected, security events logged
+  - id: A5
+    given: MCP server under concurrent load
+    when: 100+ concurrent tool invocations occur
+    then: All requests handled, no blocking, connection pooling active, P95 <200ms
+  - id: A6
+    given: MCP server with error conditions
+    when: Tool invocations encounter errors
+    then: Errors handled gracefully, MCP error format followed, recovery possible
+  - id: A7
+    given: MCP protocol version changes
+    when: Protocol updates are released
+    then: Backward compatibility maintained, version negotiation works, clients unaffected
+  - id: A8
+    given: MCP server integration with external clients
+    when: Real MCP clients connect
+    then: Integration successful, all tools accessible, no protocol violations
 non_functional:
-  performance:
-    request_handling_overhead_p95_ms: 50
-    tool_discovery_p95_ms: 50
-    authentication_p95_ms: 20
-    rate_limit_check_p95_ms: 5
-    concurrent_connections_supported: 1000
-    memory_per_connection_kb: 100
-
-  reliability:
-    availability_percent: 99.9
-    mean_time_between_failures_hours: 720
-    error_rate_percent: 0.5
-    protocol_compliance_rate: 1.0
-
-  scalability:
-    max_concurrent_clients: 1000
-    max_exposed_tools: 100
-    max_requests_per_second: 2000
-    horizontal_scaling: true
-
+  perf:
+    tool_invocation_p95_ms: 200
+    discovery_p95_ms: 50
+    connection_setup_p95_ms: 100
   security:
-    authentication: "required"
-    authorization: "role-based"
-    input_validation: "strict"
-    rate_limiting: "per-client"
-    audit_logging: "all-tool-invocations"
-
-  usability:
-    api_design: "mcp-protocol-compliant"
-    error_messages: "protocol-standard-errors"
-    monitoring: "comprehensive-mcp-metrics"
-    documentation: "mcp-client-integration-guide"
-
+    - authentication-required
+    - authorization-per-tool
+    - input-validation-all-tools
+    - rate-limiting-per-client
+  reliability:
+    availability_sla: 99.9
+    protocol_compliance: 100
+  scalability:
+    max_concurrent_connections: 1000
+    max_tools_exposed: 50
 contracts:
-  - type: "typescript"
-    path: "src/types/mcp.ts"
-    version: "1.0.0"
-    description: "MCP protocol interfaces and tool types"
-
-  - type: "mcp-protocol"
-    path: "docs/mcp/protocol-specification.md"
-    version: "1.0.0"
-    description: "MCP protocol compliance specification"
-
-  - type: "openapi"
-    path: "docs/api/mcp-server.api.yaml"
-    version: "1.0.0"
-    description: "MCP server management and monitoring API"
-
+  - type: mcp-protocol
+    path: docs/mcp/protocol.md
+    version: 1.0.0
+  - type: typescript-interface
+    path: src/types/mcp.ts
+    version: 1.0.0
 observability:
-  metrics:
-    - "mcp_requests_total"
-    - "mcp_request_latency"
-    - "mcp_tool_invocation_rate"
-    - "mcp_authentication_failures"
-    - "mcp_rate_limit_hits"
-    - "mcp_concurrent_connections"
-
   logs:
-    - level: "info"
-      events: ["client_connected", "tool_invoked", "request_completed"]
-    - level: "warn"
-      events: ["authentication_failed", "rate_limit_exceeded", "protocol_warning"]
-    - level: "error"
-      events: ["protocol_violation", "tool_execution_failed", "connection_error"]
-
+    - mcp_server_startup
+    - tool_discovery_requests
+    - tool_invocations
+    - authentication_events
+    - protocol_violations
+  metrics:
+    - mcp_connections_active
+    - tool_invocation_rate
+    - tool_invocation_latency_p95
+    - authentication_failure_rate
+    - protocol_violation_rate
   traces:
-    - "mcp_request_span"
-    - "tool_execution_chain"
-    - "authentication_flow"
-    - "protocol_handling_pipeline"
-
-migrations: []
-
+    - tool_invocation_flow
+    - authentication_chain
+    - error_handling_path
 rollback:
-  slo: "5m"
-  strategy: "feature-flag"
-  impact: "medium"
-  monitoring: "mcp_server_disabled"
-
+  - strategy: feature_flag_disable
+    description: Disable MCP server if integration fails
+    slo_minutes: 2
+    data_loss_risk: none
 ai_assessment:
-  reasoning: "MCP server integration requires strict protocol compliance and robust error handling. The complexity lies in exposing diverse arbiter tools through a unified interface while maintaining security and performance. AI can implement protocol handling but human oversight needed for tool exposure design and security validation."
-
-  risks:
-    - "Protocol violations breaking client compatibility"
-    - "Tool exposure design leaking sensitive capabilities"
-    - "Authentication vulnerabilities allowing unauthorized access"
-    - "Performance bottlenecks under high client concurrency"
-
-  opportunities:
-    - "MCP protocol specification provides clear implementation guide"
-    - "Tool registry enables dynamic capability exposure"
-    - "Standard authentication patterns apply"
-    - "TypeScript type safety enforces protocol compliance"
-
-  recommendations:
-    - "Implement comprehensive protocol compliance testing"
-    - "Use established authentication libraries (JWT, OAuth)"
-    - "Add extensive input validation for all tool parameters"
-    - "Build load testing for concurrent client scenarios"
-    - "Implement circuit breakers for tool execution failures"
-    - "Add protocol version negotiation for backward compatibility"
-
+  confidence_level: 0.90
+  uncertainty_areas:
+    - MCP protocol edge cases and version compatibility
+    - Optimal connection pooling strategy
+  complexity_factors:
+    - Protocol compliance across all tool operations
+    - Authentication integration with existing security
+  risk_factors:
+    - Protocol violations break external integrations
+    - Security vulnerabilities expose all arbiter tools
+testing_strategy:
+  unit_tests:
+    target_coverage: 90
+    target_mutation_score: 70
+    focus_areas:
+      - Protocol handling logic
+      - Tool registration and discovery
+      - Authentication and authorization
+      - Error handling
+  integration_tests:
+    scenarios:
+      - Full tool discovery and invocation
+      - Authentication flows
+      - Concurrent tool invocations
+      - Error condition handling
+  protocol_tests:
+    compliance_testing:
+      - Protocol version negotiation
+      - Tool metadata format
+      - Request/response format
+      - Error response format
+  performance_tests:
+    load_testing:
+      - Normal load: 100 concurrent connections
+      - Peak load: 500 concurrent connections
+      - Stress test: 1000 concurrent connections
+hardening_checklist:
+  - [ ] Comprehensive unit tests (90%+ coverage)
+  - [ ] Mutation testing (70%+ score)
+  - [ ] Protocol compliance tests passing
+  - [ ] Integration tests with real MCP clients
+  - [ ] Authentication tests comprehensive
+  - [ ] Load testing passed (1000 connections)
+  - [ ] Error handling validated
+  - [ ] Performance benchmarks met
+  - [ ] Security audit complete
+  - [ ] Documentation complete
+  - [ ] MCP integration runbook created

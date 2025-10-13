@@ -12,7 +12,7 @@ The current `selectBestAgent` method considers:
 
 ```typescript
 // Current scoring algorithm (simplified)
-const scoredAgents = agents.map(agent => {
+const scoredAgents = agents.map((agent) => {
   let score = 0;
 
   // Capability matching (40% weight)
@@ -32,6 +32,7 @@ const scoredAgents = agents.map(agent => {
 ```
 
 **Limitations:**
+
 - No workspace context awareness
 - No system health consideration
 - No dynamic adaptation to changing conditions
@@ -86,6 +87,7 @@ interface WorkspaceContextFactors {
 ```
 
 **Scoring Logic:**
+
 - Agents with recent workspace activity get higher scores
 - Agents familiar with task-relevant files get priority
 - Context size and relevance influence assignment
@@ -106,11 +108,12 @@ interface SystemHealthFactors {
   // System-wide indicators
   errorRate: number; // Errors per minute
   queueDepth: number; // Pending tasks
-  circuitBreakerStatus: 'closed' | 'open' | 'half-open';
+  circuitBreakerStatus: "closed" | "open" | "half-open";
 }
 ```
 
 **Health-Based Decisions:**
+
 - High system load → Prefer agents with lower resource requirements
 - Memory pressure → Avoid memory-intensive tasks
 - Circuit breaker open → Skip problematic agents
@@ -155,10 +158,7 @@ export class ArbiterOrchestrator {
   ) {}
 
   // Enhanced agent selection with new factors
-  private async selectBestAgent(
-    task: any,
-    agents: any[]
-  ): Promise<any | null> {
+  private async selectBestAgent(task: any, agents: any[]): Promise<any | null> {
     const scoredAgents = await Promise.all(
       agents.map(async (agent) => {
         const score = await this.calculateEnhancedScore(task, agent);
@@ -180,8 +180,8 @@ export class ArbiterOrchestrator {
     score += this.calculatePerformanceScore(task, agent) * 0.15;
 
     // New factors (35% total)
-    score += await this.calculateWorkspaceContextScore(task, agent) * 0.15;
-    score += await this.calculateSystemHealthScore(agent) * 0.1;
+    score += (await this.calculateWorkspaceContextScore(task, agent)) * 0.15;
+    score += (await this.calculateSystemHealthScore(agent)) * 0.1;
     score += this.calculateResourceAvailabilityScore(task, agent) * 0.1;
 
     return score;
@@ -411,7 +411,7 @@ private handleWorkspaceChanges(changes: FileChange[]): void {
 ### Integration Tests
 
 ```typescript
-describe('Arbiter Orchestrator with Workspace & Health Integration', () => {
+describe("Arbiter Orchestrator with Workspace & Health Integration", () => {
   let orchestrator: ArbiterOrchestrator;
   let workspaceManager: WorkspaceStateManager;
   let healthMonitor: SystemHealthMonitor;
@@ -419,33 +419,37 @@ describe('Arbiter Orchestrator with Workspace & Health Integration', () => {
   beforeEach(async () => {
     workspaceManager = new WorkspaceStateManager(workspaceConfig);
     healthMonitor = new SystemHealthMonitor(healthConfig);
-    orchestrator = new ArbiterOrchestrator(config, workspaceManager, healthMonitor);
+    orchestrator = new ArbiterOrchestrator(
+      config,
+      workspaceManager,
+      healthMonitor
+    );
 
     await orchestrator.initialize();
   });
 
-  it('should prefer agents with workspace familiarity', async () => {
+  it("should prefer agents with workspace familiarity", async () => {
     // Setup workspace with agent activity
-    const task = createMockTask({ type: 'analysis', files: ['src/main.ts'] });
+    const task = createMockTask({ type: "analysis", files: ["src/main.ts"] });
 
     const assignment = await orchestrator.assignTask(task);
 
     // Verify agent selection considers workspace context
-    expect(assignment.agentId).toBe('agent-familiar-with-main-ts');
+    expect(assignment.agentId).toBe("agent-familiar-with-main-ts");
   });
 
-  it('should avoid agents when system health is poor', async () => {
+  it("should avoid agents when system health is poor", async () => {
     // Simulate poor health
     await healthMonitor.simulateHealthDegradation();
 
-    const task = createMockTask({ type: 'computation' });
+    const task = createMockTask({ type: "computation" });
     const assignment = await orchestrator.assignTask(task);
 
     // Should assign to healthy agent or reject task
     expect(assignment).toBeNull(); // Rejected due to poor health
   });
 
-  it('should adapt scoring weights under load', async () => {
+  it("should adapt scoring weights under load", async () => {
     // Simulate high system load
     await healthMonitor.simulateHighLoad();
 

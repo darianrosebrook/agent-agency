@@ -120,10 +120,14 @@ export class CodeGenerationRunner extends V2EvaluationRunner<
 
     // Simple pattern matching to generate basic code
     // Check more specific patterns first
-    const isForm = /LoginForm|form\s+component|email.*password/i.test(specification);
+    const isForm = /LoginForm|form\s+component|email.*password/i.test(
+      specification
+    );
     const isButton = /^.*Button\s+component/i.test(specification);
     const isCounter = /counter/i.test(specification);
-    const isFunction = /function.*calculate|fibonacci|process/i.test(specification);
+    const isFunction = /function.*calculate|fibonacci|process/i.test(
+      specification
+    );
 
     // Prioritize form over button (forms often mention buttons)
     if (language === "typescript" && isForm) {

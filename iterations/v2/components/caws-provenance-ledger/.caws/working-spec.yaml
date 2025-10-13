@@ -1,216 +1,154 @@
-id: INFRA-001
-title: "CAWS Provenance Ledger - Cryptographic Audit Trail and AI Attribution Tracking"
-version: "2.0.0"
-mode: feature
+id: INFRA-001-HARDEN
+title: CAWS Provenance Ledger - Production Hardening
 risk_tier: 2
-status: spec_complete
-
-executive_summary:
-  purpose: |
-    The CAWS Provenance Ledger provides comprehensive cryptographic audit trails for all agent actions,
-    constitutional decisions, and system events. It includes AI attribution detection, integrity verification,
-    Git integration for commit analysis, and file-based storage with intelligent cleanup policies to ensure
-    complete transparency and accountability.
-  scope:
-    - Cryptographic provenance tracking with hash chains
-    - AI attribution detection with pattern matching
-    - Audit trail integrity verification
-    - Git integration for commit analysis
-    - File-based storage with compression
-    - Intelligent cleanup policies and retention
-    - Query interface for audit trail analysis
-  success_criteria:
-    - 100% of constitutional decisions captured with provenance
-    - Integrity verification success rate 100%
-    - AI attribution accuracy ≥ 95%
-    - Storage overhead < 1MB per 1000 events
-    - Query response time < 100ms P95
-
+mode: fix
 change_budget:
-  max_files: 20
-  max_loc: 1200
-
+  max_files: 10
+  max_loc: 300
 blast_radius:
-  modules: ["provenance", "audit-trail", "git-integration"]
-  data_migration: true
-  breaking_changes: false
-  external_impact: low
-operational_rollback_slo: "5m"
-
+  modules:
+    - src/provenance
+    - tests/unit/provenance
+    - tests/integration/provenance
+  data_migration: false
+operational_rollback_slo: 5m
 threats:
-  - "Audit trail tampering compromising accountability"
-  - "AI attribution false positives/negatives"
-  - "Storage exhaustion from unbounded growth"
-  - "Performance degradation from comprehensive logging"
-
+  - threat: Provenance data corruption breaks audit trail
+    likelihood: low
+    impact: critical
+    mitigation: Cryptographic integrity tests, backup validation, recovery tests
+  - threat: AI attribution detection false positives/negatives
+    likelihood: medium
+    impact: medium
+    mitigation: Pattern validation tests, ground truth dataset, accuracy metrics
+  - threat: Unbounded provenance data growth exhausts storage
+    likelihood: high
+    impact: medium
+    mitigation: Retention policy tests, cleanup automation, compression tests
 scope:
   in:
-    - "src/provenance/CAWSProvenanceLedger.ts"
-    - "src/provenance/CryptographicHashChain.ts"
-    - "src/provenance/AIAttributionDetector.ts"
-    - "src/provenance/IntegrityVerifier.ts"
-    - "src/provenance/GitIntegration.ts"
-    - "src/provenance/FileStorageManager.ts"
-    - "src/provenance/CleanupPolicyEngine.ts"
-    - "src/provenance/QueryInterface.ts"
-    - "src/types/provenance.ts"
-    - "tests/unit/provenance/caws-provenance-ledger.test.ts"
-    - "tests/integration/provenance/audit-trail.test.ts"
-    - "migrations/013_create_provenance_tables.sql"
+    - src/provenance/CAWSProvenanceLedger.ts
+    - src/types/provenance.ts
+    - tests/unit/provenance/
+    - tests/integration/provenance/
   out:
-    - "src/database/*"
-    - "src/routing/*"
-    - "src/security/*"
-
+    - node_modules/
+    - dist/
+    - coverage/
+    - iterations/poc/
 invariants:
-  - "All audit events must be immutably recorded with cryptographic hashes"
-  - "Hash chains must be verifiable for complete audit trail integrity"
-  - "AI attribution must be deterministic for same input patterns"
-  - "Storage cleanup must never delete events within retention period"
-  - "Query interface must not allow audit trail modification"
-
+  - Provenance records are immutable once created
+  - Cryptographic integrity is maintained for all records
+  - AI attribution detection is reproducible
+  - Retention policies are enforced automatically
+  - Audit trail is complete and tamper-evident
 acceptance:
-  - id: "INFRA-001-A1"
-    given: "Constitutional decision made by CAWS validator"
-    when: "Provenance ledger records decision"
-    then: "Event recorded with cryptographic hash, timestamp, and complete context within 10ms"
-
-  - id: "INFRA-001-A2"
-    given: "Code change with AI-assisted patterns"
-    when: "AI attribution detector analyzes commit"
-    then: "AI contribution accurately identified with confidence score ≥ 95%"
-
-  - id: "INFRA-001-A3"
-    given: "Audit trail with 10,000 events"
-    when: "Integrity verifier validates hash chain"
-    then: "Complete chain verified within 500ms with any tampering detected"
-
-  - id: "INFRA-001-A4"
-    given: "Git commit requiring provenance analysis"
-    when: "Git integration processes commit"
-    then: "Commit metadata extracted, AI patterns detected, and provenance recorded"
-
-  - id: "INFRA-001-A5"
-    given: "Storage reaching 90% capacity threshold"
-    when: "Cleanup policy engine evaluates retention"
-    then: "Events older than retention period archived or deleted while preserving critical events"
-
-  - id: "INFRA-001-A6"
-    given: "Query for all constitutional decisions in date range"
-    when: "Query interface processes request"
-    then: "Results returned within 100ms P95 with complete event details"
-
-  - id: "INFRA-001-A7"
-    given: "High-throughput event recording (1000 events/sec)"
-    when: "System logs constitutional and agent events"
-    then: "All events recorded with < 1% overhead and storage compressed efficiently"
-
-  - id: "INFRA-001-A8"
-    given: "Audit trail integrity verification requested"
-    when: "Verifier checks hash chain consistency"
-    then: "Verification completes successfully or identifies specific tampered events"
-
+  - id: A1
+    given: CAWS provenance ledger with comprehensive test suite
+    when: All tests are executed
+    then: 80%+ branch coverage achieved, integrity verification passing
+  - id: A2
+    given: Provenance ledger recording constitutional decisions
+    when: Decisions are logged
+    then: Records created, cryptographic signatures applied, integrity verifiable
+  - id: A3
+    given: Provenance ledger detecting AI attribution
+    when: Code changes are analyzed
+    then: AI-assisted changes detected accurately, patterns identified, confidence scores provided
+  - id: A4
+    given: Provenance ledger with retention policies
+    when: Cleanup is executed
+    then: Old records archived, recent records preserved, storage within limits
+  - id: A5
+    given: Provenance ledger integration with Git
+    when: Commit analysis is performed
+    then: Commits analyzed, attribution detected, metadata extracted
+  - id: A6
+    given: Provenance ledger integrity verification
+    when: Audit is performed
+    then: All records validated, no tampering detected, chain of custody verified
+  - id: A7
+    given: Provenance ledger error conditions
+    when: Storage failures occur
+    then: Graceful degradation, backup available, recovery possible
+  - id: A8
+    given: Provenance ledger query operations
+    when: Historical records are queried
+    then: Efficient retrieval, filtering accurate, results complete
 non_functional:
-  performance:
-    event_recording_p95_ms: 10
-    integrity_verification_p95_ms: 500
-    ai_attribution_p95_ms: 100
-    query_response_p95_ms: 100
-    git_commit_analysis_p95_ms: 200
-    event_throughput_per_sec: 1000
-    storage_overhead_mb_per_1000_events: 1
-
+  perf:
+    record_creation_p95_ms: 50
+    integrity_verification_p95_ms: 100
+    query_p95_ms: 200
   reliability:
-    availability_percent: 99.9
-    mean_time_between_failures_hours: 2160
-    error_rate_percent: 0.1
-    ai_attribution_accuracy: 0.95
-    integrity_verification_success_rate: 1.0
-
+    data_integrity: 100
+    attribution_accuracy: 90
   scalability:
-    max_events_per_day: 100000
-    max_retention_days: 365
-    max_concurrent_queries: 100
-    horizontal_scaling: true
-    compression_ratio: 0.6
-
-  security:
-    cryptographic_hashing: "sha256"
-    tampering_detection: "enabled"
-    access_control: "read-only-query-interface"
-    audit_logging: "all-provenance-operations"
-
-  usability:
-    api_design: "fluent-query-builder"
-    error_messages: "provenance-context-aware"
-    monitoring: "comprehensive-audit-metrics"
-    documentation: "provenance-query-examples"
-
+    max_records: 1000000
+    max_daily_records: 10000
 contracts:
-  - type: "typescript"
-    path: "src/types/provenance.ts"
-    version: "1.0.0"
-    description: "Provenance ledger interfaces and audit types"
-
-  - type: "openapi"
-    path: "docs/api/provenance-ledger.api.yaml"
-    version: "1.0.0"
-    description: "Provenance recording and query API"
-
+  - type: typescript-interface
+    path: src/types/provenance.ts
+    version: 1.0.0
 observability:
-  metrics:
-    - "provenance_events_recorded"
-    - "ai_attribution_rate"
-    - "integrity_verification_frequency"
-    - "query_throughput"
-    - "storage_utilization"
-    - "cleanup_execution_rate"
-
   logs:
-    - level: "info"
-      events: ["event_recorded", "ai_attribution_detected", "integrity_verified", "cleanup_executed"]
-    - level: "warn"
-      events: ["storage_threshold_reached", "attribution_low_confidence", "verification_slow"]
-    - level: "error"
-      events: ["recording_failed", "integrity_violation", "cleanup_error"]
-
+    - provenance_record_creation
+    - attribution_detection
+    - retention_policy_execution
+    - integrity_violations
+  metrics:
+    - provenance_record_rate
+    - attribution_detection_rate
+    - storage_utilization
+    - integrity_verification_success_rate
   traces:
-    - "event_recording_span"
-    - "ai_attribution_pipeline"
-    - "integrity_verification_chain"
-    - "query_execution_flow"
-
-migrations:
-  - type: "sql"
-    path: "migrations/013_create_provenance_tables.sql"
-    description: "Tables for provenance events, hash chains, AI attributions"
-
+    - record_creation_flow
+    - attribution_detection_chain
+    - integrity_verification_path
 rollback:
-  slo: "5m"
-  strategy: "feature-flag"
-  impact: "low"
-  monitoring: "provenance_disabled_warning_only"
-
+  - strategy: backup_restore
+    description: Restore from backup if corruption detected
+    slo_minutes: 5
+    data_loss_risk: low
 ai_assessment:
-  reasoning: "Provenance tracking requires robust cryptographic implementations and careful storage management. The AI attribution detection involves pattern matching and heuristics requiring tuning. AI can implement the core logging and storage but human oversight needed for attribution algorithm design and cleanup policy tuning."
-
-  risks:
-    - "Hash chain implementation errors compromising integrity"
-    - "AI attribution false positives creating misleading audit trail"
-    - "Storage growth outpacing cleanup efficiency"
-    - "Performance overhead impacting system responsiveness"
-
-  opportunities:
-    - "Well-established cryptographic hashing libraries"
-    - "Git integration provides rich commit metadata"
-    - "File-based storage enables efficient compression"
-    - "Pattern matching enables AI attribution detection"
-
-  recommendations:
-    - "Use established cryptographic libraries (crypto.subtle, sodium)"
-    - "Implement append-only storage with hash chaining"
-    - "Add comprehensive testing for integrity verification"
-    - "Build AI attribution patterns from real examples"
-    - "Implement incremental cleanup with backpressure"
-    - "Add circuit breakers for provenance recording failures"
-
+  confidence_level: 0.90
+  uncertainty_areas:
+    - Optimal AI attribution detection patterns
+    - Retention policy thresholds
+  complexity_factors:
+    - Cryptographic integrity verification
+    - Git integration and commit analysis
+  risk_factors:
+    - Data corruption breaks audit trail
+    - Storage exhaustion impacts operations
+testing_strategy:
+  unit_tests:
+    target_coverage: 80
+    target_mutation_score: 50
+    focus_areas:
+      - Provenance record creation
+      - AI attribution detection
+      - Integrity verification
+      - Retention policy enforcement
+  integration_tests:
+    scenarios:
+      - Git commit analysis
+      - Retention policy execution
+      - Backup and recovery
+      - Audit trail validation
+  integrity_tests:
+    tampering_detection:
+      - Modified records
+      - Deleted records
+      - Forged signatures
+hardening_checklist:
+  - [ ] Comprehensive unit tests (80%+ coverage)
+  - [ ] Mutation testing (50%+ score)
+  - [ ] Cryptographic integrity tests
+  - [ ] AI attribution validation
+  - [ ] Git integration tests
+  - [ ] Retention policy tests
+  - [ ] Backup/recovery validated
+  - [ ] Performance benchmarks met
+  - [ ] Documentation complete
+  - [ ] Provenance runbook created

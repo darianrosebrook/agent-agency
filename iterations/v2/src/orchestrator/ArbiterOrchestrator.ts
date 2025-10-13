@@ -15,6 +15,7 @@ import { ArbitrationOrchestrator as ArbitrationProtocolEngine } from "../arbitra
 import { ArbiterReasoningEngine } from "../reasoning/ArbiterReasoningEngine";
 
 // Workspace and Health Integration imports
+import { SystemHealthMonitor } from "../monitoring/SystemHealthMonitor.js";
 import { WorkspaceStateManager } from "../workspace/WorkspaceStateManager.js";
 
 /**
@@ -193,8 +194,6 @@ export const defaultArbiterOrchestratorConfig: ArbiterOrchestratorConfig = {
 
   security: {
     // Default security configuration
-    enabled: true,
-    sessionTimeoutMs: 3600000, // 1 hour
     auditLoggingEnabled: true,
     maxAuditEvents: 10000,
     inputSanitizationEnabled: true,
@@ -352,6 +351,7 @@ export class ArbiterOrchestrator {
     recoveryManager: any; // RecoveryManager
     knowledgeSeeker: any; // KnowledgeSeeker
     workspaceManager?: WorkspaceStateManager; // WorkspaceStateManager
+    systemHealthMonitor?: SystemHealthMonitor; // SystemHealthMonitor
     promptingEngine?: any; // PromptingEngine
     // CAWS Integration components
     arbitrationProtocol?: ArbitrationProtocolEngine;
@@ -372,11 +372,13 @@ export class ArbiterOrchestrator {
 
   constructor(
     config: ArbiterOrchestratorConfig,
-    workspaceManager?: WorkspaceStateManager
+    workspaceManager?: WorkspaceStateManager,
+    systemHealthMonitor?: SystemHealthMonitor
   ) {
     this.config = config;
     this.components = {} as any;
     this.components.workspaceManager = workspaceManager;
+    this.components.systemHealthMonitor = systemHealthMonitor;
   }
 
   /**
@@ -1210,12 +1212,12 @@ export class ArbiterOrchestrator {
         const factors = await this.calculateEnhancedScore(task, agent);
 
         // Apply weights to different factors
-        score += factors.capability * 0.25;     // Reduced from 40% to make room for new factors
-        score += factors.loadBalancing * 0.15;  // Reduced from 30%
-        score += factors.performance * 0.15;    // Reduced from 30%
-        score += factors.workspace * 0.2;       // NEW: Workspace context awareness
-        score += factors.health * 0.15;         // NEW: System health awareness
-        score += factors.resources * 0.1;       // NEW: Resource availability
+        score += factors.capability * 0.25; // Reduced from 40% to make room for new factors
+        score += factors.loadBalancing * 0.15; // Reduced from 30%
+        score += factors.performance * 0.15; // Reduced from 30%
+        score += factors.workspace * 0.2; // NEW: Workspace context awareness
+        score += factors.health * 0.15; // NEW: System health awareness
+        score += factors.resources * 0.1; // NEW: Resource availability
 
         return { agent, score, factors }; // Include factors for debugging
       })
@@ -1226,7 +1228,15 @@ export class ArbiterOrchestrator {
 
     console.log(`Agent selection for task ${task.id}:`);
     scoredAgents.slice(0, 3).forEach((item, index) => {
-      console.log(`  ${index + 1}. ${item.agent.id}: ${item.score.toFixed(3)} (cap: ${item.factors.capability.toFixed(2)}, ws: ${item.factors.workspace.toFixed(2)}, health: ${item.factors.health.toFixed(2)})`);
+      console.log(
+        `  ${index + 1}. ${item.agent.id}: ${item.score.toFixed(
+          3
+        )} (cap: ${item.factors.capability.toFixed(
+          2
+        )}, ws: ${item.factors.workspace.toFixed(
+          2
+        )}, health: ${item.factors.health.toFixed(2)})`
+      );
     });
 
     return scoredAgents[0].agent;
@@ -1235,7 +1245,10 @@ export class ArbiterOrchestrator {
   /**
    * Calculate enhanced agent score with workspace and health awareness
    */
-  private async calculateEnhancedScore(task: any, agent: any): Promise<{
+  private async calculateEnhancedScore(
+    task: any,
+    agent: any
+  ): Promise<{
     capability: number;
     loadBalancing: number;
     performance: number;
@@ -1255,7 +1268,10 @@ export class ArbiterOrchestrator {
     const health = await this.calculateSystemHealthScore(agent);
 
     // New resource availability factor
-    const resources = this.calculateResourceAvailabilityScore(task, agent);
+    const resources = await this.calculateResourceAvailabilityScore(
+      task,
+      agent
+    );
 
     return {
       capability,
@@ -1263,14 +1279,17 @@ export class ArbiterOrchestrator {
       performance,
       workspace,
       health,
-      resources
+      resources,
     };
   }
 
   /**
    * Calculate workspace context relevance score
    */
-  private async calculateWorkspaceContextScore(task: any, agent: any): Promise<number> {
+  private async calculateWorkspaceContextScore(
+    task: any,
+    agent: any
+  ): Promise<number> {
     if (!this.components.workspaceManager) {
       return 0.5; // Neutral score if no workspace data available
     }
@@ -1287,22 +1306,33 @@ export class ArbiterOrchestrator {
       const context = workspaceManager.generateContext({
         relevanceKeywords: taskKeywords,
         maxFiles: 20,
-        recencyWeight: 0.4 // Favor recent changes for active tasks
+        recencyWeight: 0.4, // Favor recent changes for active tasks
       });
 
       // Calculate agent's familiarity with context files
-      const familiarityScore = this.calculateAgentFamiliarity(agent.id, context);
+      const familiarityScore = this.calculateAgentFamiliarity(
+        agent.id,
+        context
+      );
 
       // Context relevance score
-      const relevanceScore = context.relevanceScores.size > 0
-        ? Array.from(context.relevanceScores.values()).reduce((a, b) => a + b, 0) / context.relevanceScores.size
-        : 0;
+      const relevanceScore =
+        context.relevanceScores.size > 0
+          ? Array.from(context.relevanceScores.values()).reduce(
+              (a, b) => a + b,
+              0
+            ) / context.relevanceScores.size
+          : 0;
 
       // Combine factors: activity (30%), familiarity (40%), relevance (30%)
-      return (activityScore * 0.3) + (familiarityScore * 0.4) + (relevanceScore * 0.3);
-
+      return (
+        activityScore * 0.3 + familiarityScore * 0.4 + relevanceScore * 0.3
+      );
     } catch (error) {
-      console.warn(`Failed to calculate workspace context score for agent ${agent.id}:`, error);
+      console.warn(
+        `Failed to calculate workspace context score for agent ${agent.id}:`,
+        error
+      );
       return 0.5; // Neutral fallback
     }
   }
@@ -1311,16 +1341,52 @@ export class ArbiterOrchestrator {
    * Calculate system health awareness score
    */
   private async calculateSystemHealthScore(agent: any): Promise<number> {
-    // Placeholder for system health integration
-    // In production, this would query the System Health Monitor
-    // For now, return a neutral score
-    return 0.8;
+    if (!this.components.systemHealthMonitor) {
+      return 0.8; // Neutral score if no health monitor available
+    }
+
+    try {
+      const healthMetrics =
+        await this.components.systemHealthMonitor.getHealthMetrics();
+
+      // Get agent-specific health
+      const agentHealth = this.components.systemHealthMonitor.getAgentHealth(
+        agent.id
+      );
+
+      // System-wide health factors
+      const systemHealth = healthMetrics.overallHealth;
+      const errorRatePenalty = Math.min(0.3, healthMetrics.errorRate / 20); // Max 0.3 penalty
+      const loadPenalty = healthMetrics.queueDepth > 50 ? 0.2 : 0; // Penalty for high queue
+
+      // Agent-specific health bonus/penalty
+      const agentHealthBonus = agentHealth ? agentHealth.healthScore - 0.5 : 0; // 0 if healthy, negative if unhealthy
+
+      const healthScore = Math.max(
+        0.1,
+        Math.min(
+          1.0,
+          systemHealth - errorRatePenalty - loadPenalty + agentHealthBonus
+        )
+      );
+
+      return Math.round(healthScore * 100) / 100;
+    } catch (error) {
+      console.warn(
+        `Failed to calculate system health score for agent ${agent.id}:`,
+        error
+      );
+      return 0.8; // Neutral fallback
+    }
   }
 
   /**
    * Calculate resource availability score
    */
-  private calculateResourceAvailabilityScore(task: any, agent: any): Promise<number> {
+  private calculateResourceAvailabilityScore(
+    task: any,
+    agent: any
+  ): Promise<number> {
     // Placeholder for resource availability
     // In production, this would consider:
     // - Agent's available capacity
@@ -1328,7 +1394,7 @@ export class ArbiterOrchestrator {
     // - System-wide resource constraints
 
     // For now, base it on agent's load (inverse relationship)
-    const availableCapacity = 1 - (agent.currentLoad / agent.maxLoad);
+    const availableCapacity = 1 - agent.currentLoad / agent.maxLoad;
     return Promise.resolve(availableCapacity);
   }
 
@@ -1368,11 +1434,11 @@ export class ArbiterOrchestrator {
     // Extract from task description (simplified)
     if (task.description) {
       const words = task.description.toLowerCase().split(/\s+/);
-      keywords.push(...words.filter(word => word.length > 3));
+      keywords.push(...words.filter((word: string) => word.length > 3));
     }
 
     // Add common development keywords
-    keywords.push('src', 'lib', 'component', 'service', 'util', 'test');
+    keywords.push("src", "lib", "component", "service", "util", "test");
 
     return [...new Set(keywords)]; // Remove duplicates
   }

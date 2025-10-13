@@ -1,114 +1,157 @@
-id: ARBITER-007
-title: Verification Engine - Information Validation and Fact-Checking
+id: ARBITER-007-HARDEN
+title: Verification Engine - Production Hardening
 risk_tier: 2
-mode: feature
+mode: fix
 change_budget:
-  max_files: 12
-  max_loc: 500
+  max_files: 10
+  max_loc: 300
 blast_radius:
   modules:
-    - src/verification
-    - src/knowledge
+    - src/orchestrator
+    - tests/unit/orchestrator
+    - tests/integration/verification
   data_migration: false
 operational_rollback_slo: 5m
 threats:
-  - threat: False positive verification results
+  - threat: Fact-checking algorithms produce false negatives
     likelihood: medium
     impact: high
-    mitigation: Implement multi-source validation and confidence scoring
-  - threat: Verification service becomes bottleneck
+    mitigation: Comprehensive validation tests, ground truth datasets, accuracy metrics
+  - threat: Credibility scoring bias
     likelihood: low
     impact: medium
-    mitigation: Design for horizontal scaling and async processing
-  - threat: Verification algorithm bias or blind spots
+    mitigation: Diverse source validation, bias detection tests, scoring calibration
+  - threat: Verification delays block task completion
     likelihood: medium
-    impact: high
-    mitigation: Regular algorithm auditing and bias detection
+    impact: medium
+    mitigation: Async verification, timeout handling, partial result strategies
 scope:
   in:
-    - src/verification/VerificationEngine.ts
-    - src/verification/FactChecker.ts
-    - src/verification/CredibilityScorer.ts
-    - src/types/verification.ts
-    - tests/unit/verification/verification-engine.test.ts
-    - migrations/003_create_verification_tables.sql
+    - src/orchestrator/VerificationEngine.ts
+    - src/types/verification-engine.ts
+    - tests/unit/orchestrator/verification-engine.test.ts
+    - tests/integration/verification/
   out:
     - node_modules/
     - dist/
     - coverage/
     - iterations/poc/
 invariants:
-  - Verification requests are processed asynchronously to avoid blocking
-  - All verification results include confidence scores and reasoning
-  - Verification failures are logged but don't prevent information flow
-  - Multiple verification methods are used for critical information
+  - All facts are verified against multiple sources
+  - Credibility scores are reproducible
+  - Verification results include confidence levels
+  - Failed verifications do not block task completion
+  - Verification history is maintained for audit
 acceptance:
   - id: A1
-    given: Information requiring fact-checking
-    when: Verification Engine receives the information
-    then: Information is validated and confidence score is assigned
+    given: Verification engine with comprehensive test suite
+    when: All tests are executed
+    then: 80%+ branch coverage achieved, accuracy benchmarks met
   - id: A2
-    given: Multiple verification methods are available
-    when: Verification Engine processes information
-    then: Multiple verification approaches are applied and results aggregated
+    given: Verification engine with ground truth dataset
+    when: Fact-checking is performed
+    then: >95% accuracy achieved, false positive rate <5%, false negative rate <3%
   - id: A3
-    given: Information contains potentially false claims
-    when: Verification Engine analyzes the claims
-    then: False claims are identified with supporting evidence
+    given: Verification engine scoring source credibility
+    when: Multiple sources evaluated
+    then: Consistent scores, reproducible results, bias metrics within limits
   - id: A4
-    given: Verification Engine is under load
-    when: Multiple verification requests are processed
-    then: System maintains performance through queuing and prioritization
+    given: Verification engine under load
+    when: Concurrent verification requests occur
+    then: Async processing active, no blocking, timeouts handled gracefully
   - id: A5
-    given: External verification services are unavailable
-    when: Verification Engine attempts validation
-    then: System provides best-effort verification with reduced confidence
+    given: Verification engine with conflicting sources
+    when: Sources provide contradictory information
+    then: Conflicts identified, confidence adjusted, human review flagged if needed
+  - id: A6
+    given: Verification engine integration with knowledge seeker
+    when: End-to-end fact-checking workflow executed
+    then: Facts verified, sources scored, results returned with confidence
+  - id: A7
+    given: Verification engine error conditions
+    when: Source unavailability or errors occur
+    then: Graceful degradation, partial verification, errors logged
+  - id: A8
+    given: Verification engine audit trail
+    when: Verification history is queried
+    then: Complete audit trail available, all decisions traceable, metadata preserved
 non_functional:
-  verification_response_time_ms: 3000  # P95 for verification completion
-  accuracy_target: 0.85  # Minimum verification accuracy
-  false_positive_rate: 0.05  # Maximum false positive rate
-  concurrent_verifications: 30  # Maximum concurrent verifications
-  confidence_score_range: "0.0-1.0"  # Verification confidence scale
-  security:
-    - input-sanitization
-    - audit-trailing
-    - rate-limiting
+  perf:
+    fact_check_p95_ms: 1000
+    credibility_score_p95_ms: 200
+    concurrent_verifications: 20
   reliability:
-    uptime_slo: 99.5%
-    degraded_mode_availability: 99.9%
-  performance:
-    memory_usage_mb: 128
-    cpu_usage_percent: 25
+    verification_accuracy: 95
+    false_positive_rate: 0.05
+    false_negative_rate: 0.03
+  scalability:
+    max_concurrent_verifications: 50
+    max_sources_per_fact: 10
 contracts:
-  - type: "typescript-interface"
-    path: "src/types/verification.ts"
+  - type: typescript-interface
+    path: src/types/verification-engine.ts
+    version: 1.0.0
 observability:
   logs:
-    - verification_start: "Verification started for claim {claim_id}"
-    - method_execution: "Executed verification method {method} with result {result}"
-    - confidence_calculation: "Calculated confidence score {score} with reasoning {reasoning}"
-    - cross_validation: "Cross-validated {sources} sources, consensus: {consensus}"
-    - error_handling: "Verification error in {component}: {error}"
+    - verification_requests
+    - fact_check_results
+    - credibility_evaluations
+    - conflict_detections
   metrics:
-    - verification_requests_total
-    - verification_accuracy_rate
-    - verification_response_time_p95
+    - verification_request_rate
+    - verification_latency_p95
+    - accuracy_rate
     - false_positive_rate
-    - confidence_score_distribution
+    - false_negative_rate
   traces:
-    - claim_to_verdict: "Full verification pipeline from claim to final verdict"
-    - method_execution_trace: "Individual verification method execution"
-    - confidence_calculation_trace: "Confidence score calculation process"
+    - verification_flow
+    - credibility_scoring_chain
+    - conflict_resolution_path
+rollback:
+  - strategy: algorithm_version_rollback
+    description: Revert to previous verification algorithms
+    slo_minutes: 5
+    data_loss_risk: none
 ai_assessment:
-  confidence: 0.80
-  uncertainty: 0.20
-  complexity: medium
+  confidence_level: 0.85
+  uncertainty_areas:
+    - Optimal credibility scoring algorithms
+    - Source bias detection thresholds
+  complexity_factors:
+    - Multi-source fact verification
+    - Credibility scoring calibration
   risk_factors:
-    - accuracy_risk: high
-    - performance_risk: medium
-    - bias_risk: high
-  mitigations:
-    - Multi-method verification approach
-    - Confidence scoring with uncertainty bounds
-    - Regular accuracy testing against ground truth
-    - Algorithm explainability and auditability
+    - False negatives allow incorrect information
+    - False positives block valid information
+testing_strategy:
+  unit_tests:
+    target_coverage: 80
+    target_mutation_score: 50
+    focus_areas:
+      - Fact-checking algorithms
+      - Credibility scoring logic
+      - Conflict detection
+      - Error handling
+  integration_tests:
+    scenarios:
+      - Multi-source verification
+      - Conflict resolution
+      - Async verification
+      - Audit trail generation
+  accuracy_tests:
+    ground_truth_testing:
+      - Known true facts
+      - Known false facts
+      - Ambiguous facts
+      - Biased sources
+hardening_checklist:
+  - [ ] Comprehensive unit tests (80%+ coverage)
+  - [ ] Mutation testing (50%+ score)
+  - [ ] Accuracy tests with ground truth
+  - [ ] Credibility scoring validation
+  - [ ] Conflict detection tests
+  - [ ] Performance benchmarks met
+  - [ ] Error handling validated
+  - [ ] Audit trail verified
+  - [ ] Documentation complete
+  - [ ] Verification runbook created
