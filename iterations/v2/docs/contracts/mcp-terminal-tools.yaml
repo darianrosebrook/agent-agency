@@ -1,0 +1,380 @@
+# MCP Terminal Tools Contract
+# Defines the interface contract for terminal access tools
+#
+# @author @darianrosebrook
+
+openapi: 3.0.0
+info:
+  title: MCP Terminal Access Tools
+  version: 1.0.0
+  description: |
+    Model Context Protocol (MCP) tools for secure terminal access.
+    Enables task runner agents to execute commands in isolated sessions
+    with comprehensive security controls and audit logging.
+
+servers:
+  - url: mcp://arbiter-server/tools
+    description: Arbiter MCP Server
+
+paths:
+  /terminal_create_session:
+    post:
+      summary: Create a new terminal session
+      description: |
+        Creates an isolated terminal session for a task with specified
+        working directory and environment variables. Each session is
+        automatically cleaned up when the task completes.
+      operationId: terminalCreateSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - taskId
+                - agentId
+              properties:
+                taskId:
+                  type: string
+                  description: Task ID this session is associated with
+                  example: "TASK-001"
+                agentId:
+                  type: string
+                  description: Agent ID creating the session
+                  example: "agent-worker-1"
+                workingDirectory:
+                  type: string
+                  description: Working directory for command execution (optional)
+                  example: "/workspace/iterations/v2"
+                environment:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: Additional environment variables (optional)
+                  example:
+                    NODE_ENV: "test"
+                    CI: "true"
+      responses:
+        '200':
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - sessionId
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  sessionId:
+                    type: string
+                    description: Unique session identifier
+                    example: "term-TASK-001-1697123456789"
+                  workingDirectory:
+                    type: string
+                    example: "/workspace/iterations/v2"
+                  createdAt:
+                    type: string
+                    format: date-time
+                    example: "2025-10-13T12:34:56Z"
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /terminal_execute_command:
+    post:
+      summary: Execute a command in a terminal session
+      description: |
+        Executes a validated command in an existing terminal session.
+        Commands must be in the allowlist (tools-allow.json).
+        Enforces timeout limits and captures stdout/stderr.
+      operationId: terminalExecuteCommand
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sessionId
+                - command
+              properties:
+                sessionId:
+                  type: string
+                  description: Terminal session ID from create_session
+                  example: "term-TASK-001-1697123456789"
+                command:
+                  type: string
+                  description: Command to execute (must be allowlisted)
+                  example: "npm"
+                args:
+                  type: array
+                  items:
+                    type: string
+                  description: Command arguments (optional)
+                  example: ["test", "--coverage"]
+                timeout:
+                  type: integer
+                  description: Timeout in milliseconds (default 60000, max 300000)
+                  example: 120000
+                  minimum: 1000
+                  maximum: 300000
+      responses:
+        '200':
+          description: Command executed
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - exitCode
+                  - stdout
+                  - stderr
+                  - duration
+                properties:
+                  success:
+                    type: boolean
+                    description: True if exit code is 0
+                    example: true
+                  exitCode:
+                    type: integer
+                    description: Process exit code
+                    example: 0
+                  stdout:
+                    type: string
+                    description: Standard output (max 1MB, truncated if larger)
+                    example: "All tests passed\n"
+                  stderr:
+                    type: string
+                    description: Standard error output
+                    example: ""
+                  duration:
+                    type: integer
+                    description: Execution duration in milliseconds
+                    example: 5432
+                  truncated:
+                    type: boolean
+                    description: True if output was truncated due to size limit
+                    example: false
+        '400':
+          description: Invalid request or command not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                commandNotAllowed:
+                  value:
+                    success: false
+                    error: "COMMAND_NOT_ALLOWED"
+                    message: "Command 'rm' is not in the allowlist"
+                    details:
+                      command: "rm"
+                      allowedCommands: ["npm", "git", "node", "pnpm"]
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '408':
+          description: Command execution timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                success: false
+                error: "TIMEOUT_EXCEEDED"
+                message: "Command exceeded timeout of 60000ms"
+
+  /terminal_close_session:
+    post:
+      summary: Close a terminal session
+      description: |
+        Closes a terminal session and cleans up all resources.
+        Kills any running processes and removes session state.
+        Sessions are automatically closed when tasks complete.
+      operationId: terminalCloseSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sessionId
+              properties:
+                sessionId:
+                  type: string
+                  description: Session ID to close
+                  example: "term-TASK-001-1697123456789"
+      responses:
+        '200':
+          description: Session closed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Session closed and resources freed"
+                  sessionId:
+                    type: string
+                    example: "term-TASK-001-1697123456789"
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /terminal_get_status:
+    post:
+      summary: Get terminal session status
+      description: |
+        Returns current status and metadata for a terminal session.
+        Useful for monitoring long-running commands.
+      operationId: terminalGetStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sessionId
+              properties:
+                sessionId:
+                  type: string
+                  description: Session ID to query
+                  example: "term-TASK-001-1697123456789"
+      responses:
+        '200':
+          description: Session status retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - session
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  session:
+                    $ref: '#/components/schemas/TerminalSession'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    TerminalSession:
+      type: object
+      required:
+        - id
+        - taskId
+        - agentId
+        - workingDirectory
+        - state
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Unique session identifier
+          example: "term-TASK-001-1697123456789"
+        taskId:
+          type: string
+          description: Associated task ID
+          example: "TASK-001"
+        agentId:
+          type: string
+          description: Agent that created the session
+          example: "agent-worker-1"
+        workingDirectory:
+          type: string
+          description: Current working directory
+          example: "/workspace/iterations/v2"
+        state:
+          type: string
+          enum: [idle, running, completed, failed]
+          description: Current session state
+          example: "idle"
+        createdAt:
+          type: string
+          format: date-time
+          description: Session creation timestamp
+          example: "2025-10-13T12:34:56Z"
+        lastCommandAt:
+          type: string
+          format: date-time
+          description: Last command execution timestamp (optional)
+          example: "2025-10-13T12:35:23Z"
+        commandCount:
+          type: integer
+          description: Total commands executed in this session
+          example: 3
+
+    Error:
+      type: object
+      required:
+        - success
+        - error
+        - message
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error code
+          enum:
+            - COMMAND_NOT_ALLOWED
+            - TIMEOUT_EXCEEDED
+            - SESSION_NOT_FOUND
+            - INVALID_PARAMETERS
+            - EXECUTION_ERROR
+          example: "COMMAND_NOT_ALLOWED"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Command 'rm' is not in the allowlist"
+        details:
+          type: object
+          description: Additional error context (optional)
+          additionalProperties: true
+
+  securitySchemes:
+    AgentAuthentication:
+      type: apiKey
+      in: header
+      name: X-Agent-ID
+      description: Agent ID for authentication and audit logging
+
+security:
+  - AgentAuthentication: []
+
+tags:
+  - name: Terminal Sessions
+    description: Terminal session lifecycle management
+  - name: Command Execution
+    description: Command execution and output handling
+

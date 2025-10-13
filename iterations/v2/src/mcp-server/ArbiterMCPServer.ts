@@ -18,7 +18,18 @@ import {
 import { CAWSPolicyAdapter } from "../caws-integration/adapters/CAWSPolicyAdapter.js";
 import { CAWSValidationAdapter } from "../caws-integration/adapters/CAWSValidationAdapter.js";
 import { ArbiterOrchestrator } from "../orchestrator/ArbiterOrchestrator";
+import { TerminalSessionManager } from "../orchestrator/TerminalSessionManager";
 import type { WorkingSpec } from "../types/caws-types.js";
+import {
+  handleTerminalCloseSession,
+  handleTerminalCreateSession,
+  handleTerminalExecuteCommand,
+  handleTerminalGetStatus,
+} from "./handlers/terminal-handlers.js";
+import {
+  TERMINAL_TOOLS,
+  type TerminalToolName,
+} from "./tools/terminal-tools.js";
 import type {
   ArbiterToolName,
   ArbiterValidationResult,
@@ -36,6 +47,7 @@ export class ArbiterMCPServer extends Server {
   private validationAdapter: CAWSValidationAdapter;
   private policyAdapter: CAWSPolicyAdapter;
   private orchestrator: ArbiterOrchestrator | null = null;
+  private terminalManager: TerminalSessionManager;
   private projectRoot: string;
   private version: string = "1.0.0";
   private tools: Array<any> = [];
@@ -71,6 +83,15 @@ export class ArbiterMCPServer extends Server {
     this.validationAdapter = new CAWSValidationAdapter({
       projectRoot,
     });
+    this.policyAdapter = new CAWSPolicyAdapter({
+      projectRoot,
+    });
+
+    // Initialize terminal session manager
+    this.terminalManager = new TerminalSessionManager({
+      projectRoot,
+      allowedCommandsPath: `${projectRoot}/apps/tools/caws/tools-allow.json`,
+    });
 
     this.policyAdapter = new CAWSPolicyAdapter({
       projectRoot,
@@ -78,8 +99,8 @@ export class ArbiterMCPServer extends Server {
       cacheTTL: 300000, // 5 minutes
     });
 
-    // Initialize tools array with arbiter tools
-    this.tools = [...ARBITER_TOOLS];
+    // Initialize tools array with arbiter and terminal tools
+    this.tools = [...ARBITER_TOOLS, ...TERMINAL_TOOLS];
 
     this.setupToolHandlers();
 
@@ -236,7 +257,11 @@ export class ArbiterMCPServer extends Server {
         const toolArgs = (args || {}) as Record<string, any>;
 
         switch (
-          name as ArbiterToolName | "knowledge_search" | "knowledge_status"
+          name as
+            | ArbiterToolName
+            | "knowledge_search"
+            | "knowledge_status"
+            | TerminalToolName
         ) {
           case "arbiter_validate":
             return await this.handleValidate(toolArgs);
@@ -250,6 +275,29 @@ export class ArbiterMCPServer extends Server {
             return await this.handleKnowledgeSearch(toolArgs);
           case "knowledge_status":
             return await this.handleKnowledgeStatus();
+
+          // Terminal tools
+          case "terminal_create_session":
+            return await handleTerminalCreateSession(
+              this.terminalManager,
+              toolArgs
+            );
+          case "terminal_execute_command":
+            return await handleTerminalExecuteCommand(
+              this.terminalManager,
+              toolArgs
+            );
+          case "terminal_close_session":
+            return await handleTerminalCloseSession(
+              this.terminalManager,
+              toolArgs
+            );
+          case "terminal_get_status":
+            return await handleTerminalGetStatus(
+              this.terminalManager,
+              toolArgs
+            );
+
           default:
             throw new Error(`Unknown tool: ${name}`);
         }

@@ -70,6 +70,18 @@ export enum ArbitrationState {
 }
 
 /**
+ * Appeal status
+ */
+export enum AppealStatus {
+  SUBMITTED = "submitted",
+  UNDER_REVIEW = "under_review",
+  UPHELD = "upheld",
+  OVERTURNED = "overturned",
+  FINALIZED = "finalized",
+  WITHDRAWN = "withdrawn",
+}
+
+/**
  * Constitutional rule definition
  */
 export interface ConstitutionalRule {
@@ -280,6 +292,15 @@ export interface WaiverDecision {
 }
 
 /**
+ * Precedent applicability criteria
+ */
+export type PrecedentApplicability = {
+  category: RuleCategory;
+  severity: ViolationSeverity;
+  conditions: string[];
+};
+
+/**
  * Precedent record
  */
 export interface Precedent {
@@ -302,11 +323,7 @@ export interface Precedent {
   reasoningSummary: string;
 
   /** Applicability criteria */
-  applicability: {
-    category: RuleCategory;
-    severity: ViolationSeverity;
-    conditions: string[];
-  };
+  applicability: PrecedentApplicability;
 
   /** Times this precedent has been cited */
   citationCount: number;
@@ -366,6 +383,48 @@ export interface ArbitrationSession {
 }
 
 /**
+ * Appeal request for arbitration
+ */
+export interface Appeal {
+  /** Unique appeal ID */
+  id: string;
+
+  /** Arbitration session ID */
+  sessionId: string;
+
+  /** Original verdict ID being appealed */
+  originalVerdictId: string;
+
+  /** Appellant agent ID */
+  appellantId: string;
+
+  /** Grounds for appeal */
+  grounds: string;
+
+  /** New evidence provided */
+  newEvidence: string[];
+
+  /** Appeal status */
+  status: AppealStatus;
+
+  /** Appeal level (1, 2, 3, etc.) */
+  level: number;
+
+  /** Reviewers assigned */
+  reviewers?: string[];
+
+  /** When appeal was submitted */
+  submittedAt: Date;
+
+  /** When review completed */
+  reviewedAt?: Date;
+
+  /** Appeal metadata */
+  metadata: Record<string, any>;
+}
+
+/**
+ * @deprecated Use Appeal instead
  * Appeal request for arbitration
  */
 export interface ArbitrationAppeal {
