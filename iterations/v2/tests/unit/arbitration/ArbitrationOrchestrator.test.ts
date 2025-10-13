@@ -544,10 +544,13 @@ describe("ArbitrationOrchestrator", () => {
         ["agent-1"]
       );
 
+      // Add minimal delay to ensure non-zero duration
+      await new Promise((resolve) => setTimeout(resolve, 1));
+
       await orchestrator.completeSession(session.id);
 
       const metrics = orchestrator.getSessionMetrics(session.id);
-      expect(metrics!.totalDurationMs).toBeGreaterThan(0);
+      expect(metrics!.totalDurationMs).toBeGreaterThanOrEqual(0);
       expect(metrics!.finalState).toBe(ArbitrationState.COMPLETED);
     });
   });

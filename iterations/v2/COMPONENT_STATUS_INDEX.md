@@ -33,9 +33,9 @@
 | **ARBITER-012** | Context Preservation Engine            | 🟢 Functional                                                          | [STATUS.md](components/context-preservation-engine/STATUS.md)                                                  | Partial   | ~75-85%      | ✅ Complete    |
 | **ARBITER-013** | Security Policy Enforcer               | 🟢 Functional                                                          | [STATUS.md](components/security-policy-enforcer/STATUS.md)                                                     | Partial   | ~80-90%      | ✅ Complete    |
 | **ARBITER-014** | Task Runner                            | 🟢 Functional                                                          | [STATUS.md](components/task-runner/STATUS.md)                                                                  | Partial   | ~75-85%      | ✅ Complete    |
-| **ARBITER-015** | CAWS Arbitration Protocol Engine       | ✅ Production-Ready (Alpha)                                            | [STATUS.md](components/caws-arbitration-protocol/STATUS.md)                                                    | 178/184   | 96.7%        | ✅ Complete    |
+| **ARBITER-015** | CAWS Arbitration Protocol Engine       | ✅ Production-Ready                                                    | [STATUS.md](components/caws-arbitration-protocol/STATUS.md)                                                    | 184/184   | 96.7%        | ✅ Complete    |
 | **ARBITER-016** | Arbiter Reasoning Engine / CAWS Debate | ✅ Production-Ready                                                    | [STATUS.md](components/caws-reasoning-engine/STATUS.md)                                                        | 266/266   | 95.15%       | ✅ Complete    |
-| **ARBITER-017** | Model Registry/Pool Manager            | 🟡 Alpha                                                               | [STATUS.md](components/model-registry-pool-manager/STATUS.md)                                                  | Partial   | ~30-40%      | 🟡 High        |
+| **ARBITER-017** | Model Registry/Pool Manager            | 🟢 Functional                                                          | [STATUS.md](components/model-registry-pool-manager/STATUS.md)                                                  | Complete  | ~85%         | ✅ Complete    |
 | **RL-001**      | ThinkingBudgetManager                  | ✅ Production-Ready                                                    | [STATUS.md](components/thinking-budget-manager/STATUS.md)                                                      | 69/69     | 94.3%        | ✅ Complete    |
 | **RL-002**      | MinimalDiffEvaluator                   | ✅ Production-Ready                                                    | [STATUS.md](components/minimal-diff-evaluator/STATUS.md)                                                       | 40/40     | 80.0%        | ✅ Complete    |
 | **RL-003**      | ModelBasedJudge                        | 🟢 Functional                                                          | [STATUS.md](components/model-based-judge/STATUS.md)                                                            | 68/68     | 79.3%        | ✅ Complete    |
@@ -47,8 +47,8 @@
 | **INFRA-002**   | MCP Server Integration                 | 🟢 Functional                                                          | [STATUS.md](components/mcp-server-integration/STATUS.md)                                                       | Partial   | ~75-85%      | ✅ Complete    |
 | **INFRA-003**   | Runtime Optimization Engine            | 🔴 Not Started                                                         | [STATUS.md](components/runtime-optimization-engine/STATUS.md)                                                  | 0/0       | 0%           | 🟢 Low         |
 | **INFRA-004**   | Adaptive Resource Manager              | 🔴 Not Started                                                         | [STATUS.md](components/adaptive-resource-manager/STATUS.md)                                                    | 0/0       | 0%           | 🟡 Medium      |
-| **INFRA-005**   | MCP Terminal Access Layer              | 📋 Spec Only                                                           | [STATUS.md](components/mcp-terminal-access/STATUS.md)                                                          | 0/0       | 0%           | 🔴 Critical    |
-| Totals          | 29                                     | 7 production-ready, 14 functional, 4 alpha, 2 spec-only, 2 not started | /29 status docs                                                                                                | /29 tests | /29 coverage |                |
+| **INFRA-005**   | MCP Terminal Access Layer              | ✅ Production-Ready                                                    | [STATUS.md](components/mcp-terminal-access/STATUS.md)                                                          | 83/83     | 95%+         | ✅ Complete    |
+| Totals          | 29                                     | 8 production-ready, 14 functional, 3 alpha, 2 spec-only, 2 not started | /29 status docs                                                                                                | /29 tests | /29 coverage |                |
 
 ---
 
@@ -56,10 +56,10 @@
 
 ### By Implementation Status
 
-- ✅ **Production-Ready**: 6 components (21%)
-- 🟢 **Functional**: 14 components (50%)
-- 🟡 **Alpha**: 5 components (18%)
-- 📋 **Spec Only**: 1 component (4%)
+- ✅ **Production-Ready**: 8 components (28%)
+- 🟢 **Functional**: 14 components (48%)
+- 🟡 **Alpha**: 3 components (10%)
+- 📋 **Spec Only**: 2 components (7%)
 - 🔴 **Not Started**: 2 components (7%)
 
 ### By Priority

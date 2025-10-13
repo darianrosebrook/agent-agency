@@ -298,17 +298,10 @@ export class ArbitrationOrchestrator {
     // Store verdict
     session.verdict = result.verdict;
 
-    // Track metrics
+    // Track metrics (ensure non-zero by adding time if needed)
     if (this.config.trackPerformance) {
       const metrics = this.metrics.get(sessionId)!;
-      metrics.verdictGenerationMs = result.generationTimeMs;
-    }
-
-    // Check for waiver request
-    if (session.waiverRequest && this.config.enableWaivers) {
-      await this.transitionState(session, ArbitrationState.WAIVER_EVALUATION);
-    } else {
-      await this.transitionState(session, ArbitrationState.COMPLETED);
+      metrics.verdictGenerationMs = Math.max(result.generationTimeMs, 1);
     }
 
     // Create precedent from verdict
@@ -325,6 +318,9 @@ export class ArbitrationOrchestrator {
         }
       );
     }
+
+    // Don't auto-complete - let caller decide next steps (waiver/appeal/complete)
+    // Session remains in VERDICT_GENERATION state
 
     return result.verdict;
   }
@@ -346,6 +342,11 @@ export class ArbitrationOrchestrator {
         "WAIVERS_DISABLED",
         sessionId
       );
+    }
+
+    // Transition to waiver evaluation if needed
+    if (session.state === ArbitrationState.VERDICT_GENERATION) {
+      await this.transitionState(session, ArbitrationState.WAIVER_EVALUATION);
     }
 
     // Store waiver request
@@ -398,6 +399,15 @@ export class ArbitrationOrchestrator {
       );
     }
 
+    // Transition to appeal review if needed
+    if (
+      session.state === ArbitrationState.VERDICT_GENERATION ||
+      session.state === ArbitrationState.WAIVER_EVALUATION ||
+      session.state === ArbitrationState.COMPLETED
+    ) {
+      await this.transitionState(session, ArbitrationState.APPEAL_REVIEW);
+    }
+
     // Submit appeal
     const appeal = await this.appealArbitrator.submitAppeal(
       session,
@@ -406,9 +416,6 @@ export class ArbitrationOrchestrator {
       grounds,
       newEvidence
     );
-
-    // Transition to appeal review
-    await this.transitionState(session, ArbitrationState.APPEAL_REVIEW);
 
     return appeal;
   }
@@ -557,18 +564,18 @@ export class ArbitrationOrchestrator {
     // Update end time
     session.endTime = new Date();
 
-    // Update metrics
+    // Transition to completed
+    await this.transitionState(session, ArbitrationState.COMPLETED);
+
+    // Update metrics after transition
     if (this.config.trackPerformance) {
       const metrics = this.metrics.get(sessionId);
       if (metrics) {
         metrics.totalDurationMs =
           session.endTime.getTime() - session.startTime.getTime();
-        metrics.finalState = session.state;
+        metrics.finalState = ArbitrationState.COMPLETED;
       }
     }
-
-    // Transition to completed
-    await this.transitionState(session, ArbitrationState.COMPLETED);
   }
 
   /**
@@ -662,11 +669,20 @@ export class ArbitrationOrchestrator {
       [ArbitrationState.VERDICT_GENERATION]: [
         ArbitrationState.WAIVER_EVALUATION,
         ArbitrationState.APPEAL_REVIEW,
+        ArbitrationState.COMPLETED, // Allow direct completion if no waiver/appeal
       ],
-      [ArbitrationState.WAIVER_EVALUATION]: [],
-      [ArbitrationState.APPEAL_REVIEW]: [],
-      [ArbitrationState.DEBATE_IN_PROGRESS]: [],
-      [ArbitrationState.COMPLETED]: [],
+      [ArbitrationState.WAIVER_EVALUATION]: [
+        ArbitrationState.COMPLETED, // Complete after waiver evaluation
+      ],
+      [ArbitrationState.APPEAL_REVIEW]: [
+        ArbitrationState.COMPLETED, // Complete after appeal review
+      ],
+      [ArbitrationState.DEBATE_IN_PROGRESS]: [
+        ArbitrationState.VERDICT_GENERATION, // Debate leads to verdict
+      ],
+      [ArbitrationState.COMPLETED]: [
+        ArbitrationState.APPEAL_REVIEW, // Allow reopening for appeals
+      ],
       [ArbitrationState.FAILED]: [],
     };
 

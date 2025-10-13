@@ -19,37 +19,46 @@ Implemented a complete hot-swap mechanism that enables the arbiter to dynamicall
 **Purpose**: Store system knowledge independently of specific models
 
 **What It Tracks** (Model-Agnostic):
+
 - Task type → performance patterns
-- Task type → optimal model characteristics  
+- Task type → optimal model characteristics
 - Task type → complexity levels
 
 **Why This Matters**:
+
 - System learns about **TASKS**, not models
 - Models are interchangeable plugins
 - Learnings survive model swaps
 - No retraining needed
 
 **API**:
+
 ```typescript
 class LearningPreservationLayer {
   // Record task performance (no model reference)
-  recordTaskPerformance(taskType: string, metrics: {
-    latencyMs: number;
-    quality: number;
-    memoryMB: number;
-    success: boolean;
-  }): void;
+  recordTaskPerformance(
+    taskType: string,
+    metrics: {
+      latencyMs: number;
+      quality: number;
+      memoryMB: number;
+      success: boolean;
+    }
+  ): void;
 
   // Get task performance patterns
   getTaskPerformance(taskType: string): TaskPerformance | undefined;
 
   // Learn task characteristics
-  learnTaskCharacteristics(taskType: string, characteristics: {
-    preferFast?: boolean;
-    preferQuality?: boolean;
-    preferLowMemory?: boolean;
-    complexity?: "low" | "medium" | "high";
-  }): void;
+  learnTaskCharacteristics(
+    taskType: string,
+    characteristics: {
+      preferFast?: boolean;
+      preferQuality?: boolean;
+      preferLowMemory?: boolean;
+      complexity?: "low" | "medium" | "high";
+    }
+  ): void;
 
   // Transfer learnings to selection criteria
   enhanceCriteriaWithLearnings(
@@ -64,6 +73,7 @@ class LearningPreservationLayer {
 **Purpose**: Coordinate zero-downtime model swaps with learning preservation
 
 **Key Features**:
+
 - ✅ Zero-downtime swaps (warm up new model first)
 - ✅ Compatibility validation before swap
 - ✅ Learning transfer across swaps
@@ -72,6 +82,7 @@ class LearningPreservationLayer {
 - ✅ Comprehensive event tracking
 
 **API**:
+
 ```typescript
 class ModelHotSwapManager {
   // Manual hot-swap
@@ -115,6 +126,7 @@ class ModelHotSwapManager {
 **Purpose**: High-level interface for arbiter to use hot-swap seamlessly
 
 **What It Does**:
+
 - Executes tasks with automatic model selection
 - Tracks performance across all executions
 - Triggers auto-swaps when models underperform
@@ -122,6 +134,7 @@ class ModelHotSwapManager {
 - Manages model lifecycle per task type
 
 **API**:
+
 ```typescript
 class ArbiterModelManager {
   // Main entry point: execute with auto-selection
@@ -220,19 +233,20 @@ taskLearnings = {
 function shouldAutoSwap(taskType: string): boolean {
   // 1. Check cooldown (prevent thrashing)
   if (timeSinceLastSwap < cooldownMs) return false;
-  
+
   // 2. Check sample size (need data)
   if (samples < minSamplesBeforeSwap) return false;
-  
+
   // 3. Check performance
   if (successRate < performanceThreshold) return true;
   if (quality < qualityThreshold * 0.9) return true;
-  
+
   return false;
 }
 ```
 
 **Configurable Parameters**:
+
 - `enableAutoSwap`: true/false
 - `swapCooldownMs`: 300000 (5 minutes)
 - `minSamplesBeforeSwap`: 10
@@ -312,7 +326,11 @@ await arbiter.rollback("code-generation");
 // Get analytics
 const stats = arbiter.getStatistics();
 console.log(`Total swaps: ${stats.swapStats.totalSwaps}`);
-console.log(`Success rate: ${stats.swapStats.successfulSwaps / stats.swapStats.totalSwaps}`);
+console.log(
+  `Success rate: ${
+    stats.swapStats.successfulSwaps / stats.swapStats.totalSwaps
+  }`
+);
 ```
 
 ---
@@ -322,21 +340,25 @@ console.log(`Success rate: ${stats.swapStats.successfulSwaps / stats.swapStats.t
 ### For the Arbiter
 
 ✅ **Pick best performing models automatically**
+
 - Continuously monitors performance
 - Swaps to better models when found
 - No manual intervention needed
 
 ✅ **Zero retraining**
+
 - System knowledge preserved
 - Task learnings transferred
 - Models are hot-swappable plugins
 
 ✅ **Zero downtime**
+
 - New model warmed up first
 - Atomic swap operation
 - Fallback to old model if issues
 
 ✅ **Full observability**
+
 - Every swap tracked
 - Performance metrics logged
 - Analytics dashboard ready
@@ -344,16 +366,19 @@ console.log(`Success rate: ${stats.swapStats.successfulSwaps / stats.swapStats.t
 ### For the System
 
 ✅ **Continuous optimization**
+
 - Always uses best available model
 - Adapts to workload changes
 - Self-improving over time
 
 ✅ **Cost efficiency**
+
 - Uses smaller models for simple tasks
 - Uses larger models only when needed
 - Optimizes compute resources
 
 ✅ **Resilience**
+
 - Automatic rollback on failure
 - Compatibility checks prevent issues
 - Graceful degradation
@@ -425,12 +450,14 @@ console.log(`Success rate: ${stats.swapStats.successfulSwaps / stats.swapStats.t
 ### Auto-Swap Behavior
 
 **Conservative by default**:
+
 - 5-minute cooldown between swaps
 - Requires 10+ samples before considering swap
 - Only swaps if performance < 80%
 - Maintains old model for rollback
 
 **Configurable for aggressive optimization**:
+
 ```typescript
 {
   swapCooldownMs: 10000,      // 10 seconds
@@ -447,7 +474,7 @@ console.log(`Success rate: ${stats.swapStats.successfulSwaps / stats.swapStats.t
 
 ```typescript
 // Performance tracker receives metrics from hot-swap
-hotSwap.on('swap-complete', (event) => {
+hotSwap.on("swap-complete", (event) => {
   performanceTracker.recordSwapEvent({
     modelId: event.toModelId,
     taskType: event.taskType,
@@ -511,11 +538,13 @@ const result = await arbiter.executeTask(
 ### Short-term (1-2 weeks)
 
 1. **A/B Testing Mode**
+
    - Split traffic between old/new models
    - Compare performance side-by-side
    - Gradual rollout percentage
 
 2. **Swap Scheduling**
+
    - Schedule swaps during low-traffic periods
    - Batch multiple swaps
    - Maintenance windows
@@ -528,11 +557,13 @@ const result = await arbiter.executeTask(
 ### Medium-term (1-2 months)
 
 4. **Multi-Model Ensembles**
+
    - Route different subtasks to different models
    - Aggregate results
    - Confidence-based selection
 
 5. **Hardware-Aware Swapping**
+
    - Swap based on available hardware
    - GPU availability triggers quality model
    - CPU-only mode uses fast model
@@ -547,16 +578,19 @@ const result = await arbiter.executeTask(
 ## Known Limitations
 
 1. **Provider Registration Required**
+
    - Providers must be manually registered before swap
    - Cannot dynamically load new model types
    - **Solution**: Provider factory pattern (future)
 
 2. **No Gradual Rollout**
+
    - Swaps are immediate (all-or-nothing)
    - No percentage-based traffic split
    - **Solution**: A/B testing mode (future)
 
 3. **Simple Quality Estimation**
+
    - Uses heuristics for quality scoring
    - Not as accurate as human judgment
    - **Solution**: Integrate with RL-003 for better quality assessment
@@ -570,11 +604,11 @@ const result = await arbiter.executeTask(
 
 ## Files Created
 
-| File | Lines | Purpose |
-|------|-------|---------|
-| `ModelHotSwap.ts` | 650 | Learning layer + hot-swap manager |
-| `ArbiterModelManager.ts` | 400 | High-level arbiter interface |
-| `arbiter-model-hot-swap-example.ts` | 500 | Complete usage example |
+| File                                | Lines | Purpose                           |
+| ----------------------------------- | ----- | --------------------------------- |
+| `ModelHotSwap.ts`                   | 650   | Learning layer + hot-swap manager |
+| `ArbiterModelManager.ts`            | 400   | High-level arbiter interface      |
+| `arbiter-model-hot-swap-example.ts` | 500   | Complete usage example            |
 
 **Total**: ~1,550 lines of production code
 
@@ -586,7 +620,7 @@ const result = await arbiter.executeTask(
 ✅ **Zero retraining** - learnings preserved across swaps  
 ✅ **Zero downtime** - atomic swap operations  
 ✅ **Auto-optimization** - performance-based model selection  
-✅ **Production-ready** - error handling, rollback, analytics  
+✅ **Production-ready** - error handling, rollback, analytics
 
 **The arbiter can now pick and choose the best performing LLMs based on its internal benchmarking, with complete control and observability.**
 
@@ -610,4 +644,3 @@ const stats = arbiter.getStatistics();
 ```
 
 **See**: `examples/arbiter-model-hot-swap-example.ts` for complete working example.
-

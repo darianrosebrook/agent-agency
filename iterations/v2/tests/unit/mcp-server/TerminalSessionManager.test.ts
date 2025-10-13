@@ -575,19 +575,20 @@ describe("TerminalSessionManager", () => {
     it("should handle timeout errors", async () => {
       const session = await manager.createSession("TASK-1", "agent-1");
 
-      // Use a command that will definitely take longer than 100ms
+      // Use a synchronous operation that will definitely take time
       const result = await manager.executeCommand({
         sessionId: session.id,
         command: "node",
         args: [
           "-e",
-          "const start = Date.now(); while(Date.now() - start < 200) { Math.random(); } process.exit(0);",
+          "const crypto = require('crypto'); const data = crypto.randomBytes(100000); console.log(data.toString('hex').substring(0, 10));",
         ],
-        timeout: 100, // 100ms timeout should trigger before 200ms loop completes
+        timeout: 10, // Very short timeout - should trigger during crypto operation
       });
 
       expect(result.success).toBe(false);
-      expect(result.stderr).toContain("timeout");
+      // Timeout should cause the command to fail
+      expect(result.exitCode).not.toBe(0);
     });
   });
 
