@@ -9,7 +9,6 @@
  * @author @darianrosebrook
  */
 
-import { ConnectionPoolManager } from "./ConnectionPoolManager";
 import {
   DomainRateLimit,
   RateLimitStatus,
@@ -17,6 +16,7 @@ import {
   WebContent,
   WebContentRecord,
 } from "../types/web";
+import { ConnectionPoolManager } from "./ConnectionPoolManager";
 
 /**
  * Web Navigator Database Client
@@ -163,10 +163,11 @@ export class WebNavigatorDatabaseClient {
       const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
 
       // Get content size for cache entry
-      const sizeResult = await this.poolManager.getPool().query(
-        `SELECT content_size_bytes FROM web_content WHERE id = $1`,
-        [contentId]
-      );
+      const sizeResult = await this.poolManager
+        .getPool()
+        .query(`SELECT content_size_bytes FROM web_content WHERE id = $1`, [
+          contentId,
+        ]);
 
       const cacheSize = sizeResult.rows[0]?.content_size_bytes || 0;
 
@@ -195,9 +196,9 @@ export class WebNavigatorDatabaseClient {
     }
 
     try {
-      const result = await this.poolManager.getPool().query(
-        `SELECT cleanup_expired_web_cache() as deleted_count`
-      );
+      const result = await this.poolManager
+        .getPool()
+        .query(`SELECT cleanup_expired_web_cache() as deleted_count`);
       return result.rows[0]?.deleted_count || 0;
     } catch (error) {
       console.error("Failed to cleanup expired cache:", error);
@@ -217,10 +218,9 @@ export class WebNavigatorDatabaseClient {
     }
 
     try {
-      const result = await this.poolManager.getPool().query(
-        `SELECT * FROM web_rate_limits WHERE domain = $1`,
-        [domain]
-      );
+      const result = await this.poolManager
+        .getPool()
+        .query(`SELECT * FROM web_rate_limits WHERE domain = $1`, [domain]);
 
       if (result.rows.length === 0) {
         return null;
@@ -469,9 +469,9 @@ export class WebNavigatorDatabaseClient {
     }
 
     try {
-      const result = await this.poolManager.getPool().query(
-        `SELECT * FROM web_cache_performance`
-      );
+      const result = await this.poolManager
+        .getPool()
+        .query(`SELECT * FROM web_cache_performance`);
       const row = result.rows[0] || {};
 
       return {

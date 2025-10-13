@@ -5,30 +5,19 @@
  * request/result persistence, caching, method performance tracking,
  * and evidence storage.
  *
+ * Uses centralized ConnectionPoolManager for connection sharing and multi-tenant support.
+ *
  * @author @darianrosebrook
  */
 
-import { Pool, PoolClient } from "pg";
+import { PoolClient } from "pg";
+import { ConnectionPoolManager } from "../database/ConnectionPoolManager";
 import {
   VerificationRequest,
   VerificationResult,
   VerificationType,
   VerificationVerdict,
 } from "../types/verification";
-
-/**
- * Database configuration for verification engine
- */
-export interface VerificationDatabaseConfig {
-  host: string;
-  port: number;
-  database: string;
-  user: string;
-  password: string;
-  max?: number;
-  idleTimeoutMillis?: number;
-  connectionTimeoutMillis?: number;
-}
 
 /**
  * Method performance statistics
@@ -97,22 +86,15 @@ export interface MethodStats {
  *
  * Manages all database interactions for the verification engine
  * including persistence, caching, and analytics.
+ * Uses centralized ConnectionPoolManager for connection sharing.
  */
 export class VerificationDatabaseClient {
-  private pool: Pool;
+  private poolManager: ConnectionPoolManager;
   private initialized = false;
 
-  constructor(config: VerificationDatabaseConfig) {
-    this.pool = new Pool({
-      host: config.host,
-      port: config.port,
-      database: config.database,
-      user: config.user,
-      password: config.password,
-      max: config.max ?? 20,
-      idleTimeoutMillis: config.idleTimeoutMillis ?? 30000,
-      connectionTimeoutMillis: config.connectionTimeoutMillis ?? 2000,
-    });
+  constructor() {
+    // Use centralized pool manager
+    this.poolManager = ConnectionPoolManager.getInstance();
   }
 
   /**
@@ -124,7 +106,7 @@ export class VerificationDatabaseClient {
     }
 
     try {
-      const client = await this.pool.connect();
+      const client = await this.poolManager.getPool().connect();
       await client.query("SELECT 1");
       client.release();
       this.initialized = true;
@@ -140,7 +122,10 @@ export class VerificationDatabaseClient {
   /**
    * Save a verification request to the database
    */
-  async saveRequest(request: VerificationRequest): Promise<void> {
+  async saveRequest(
+    request: VerificationRequest,
+    _tenantId?: string
+  ): Promise<void> {
     const query = `
       INSERT INTO verification_requests (
         id, content, source, context, priority,
@@ -154,18 +139,20 @@ export class VerificationDatabaseClient {
 
     const cacheKey = this.generateCacheKey(request);
 
-    await this.pool.query(query, [
-      request.id,
-      request.content,
-      request.source ?? null,
-      request.context ?? null,
-      request.priority,
-      request.timeoutMs ?? 30000,
-      request.verificationTypes ?? [],
-      JSON.stringify(request.metadata ?? {}),
-      "pending",
-      cacheKey,
-    ]);
+    await this.poolManager
+      .getPool()
+      .query(query, [
+        request.id,
+        request.content,
+        request.source ?? null,
+        request.context ?? null,
+        request.priority,
+        request.timeoutMs ?? 30000,
+        request.verificationTypes ?? [],
+        JSON.stringify(request.metadata ?? {}),
+        "pending",
+        cacheKey,
+      ]);
   }
 
   /**
@@ -176,7 +163,8 @@ export class VerificationDatabaseClient {
     status: string,
     processingTimeMs?: number,
     errorMessage?: string,
-    errorCode?: string
+    errorCode?: string,
+    _tenantId?: string
   ): Promise<void> {
     const query = `
       UPDATE verification_requests
@@ -188,20 +176,25 @@ export class VerificationDatabaseClient {
       WHERE id = $1
     `;
 
-    await this.pool.query(query, [
-      requestId,
-      status,
-      processingTimeMs ?? null,
-      errorMessage ?? null,
-      errorCode ?? null,
-    ]);
+    await this.poolManager
+      .getPool()
+      .query(query, [
+        requestId,
+        status,
+        processingTimeMs ?? null,
+        errorMessage ?? null,
+        errorCode ?? null,
+      ]);
   }
 
   /**
    * Save a verification result to the database
    */
-  async saveResult(result: VerificationResult): Promise<void> {
-    const client = await this.pool.connect();
+  async saveResult(
+    result: VerificationResult,
+    _tenantId?: string
+  ): Promise<void> {
+    const client = await this.poolManager.getPool().connect();
 
     try {
       await client.query("BEGIN");
@@ -289,7 +282,10 @@ export class VerificationDatabaseClient {
   /**
    * Get a verification result by request ID
    */
-  async getResult(requestId: string): Promise<VerificationResult | null> {
+  async getResult(
+    requestId: string,
+    _tenantId?: string
+  ): Promise<VerificationResult | null> {
     const query = `
       SELECT
         vr.request_id,
@@ -307,7 +303,7 @@ export class VerificationDatabaseClient {
       LIMIT 1
     `;
 
-    const result = await this.pool.query(query, [requestId]);
+    const result = await this.poolManager.getPool().query(query, [requestId]);
 
     if (result.rows.length === 0) {
       return null;
@@ -331,7 +327,10 @@ export class VerificationDatabaseClient {
   /**
    * Get cached result by cache key
    */
-  async getCachedResult(cacheKey: string): Promise<VerificationResult | null> {
+  async getCachedResult(
+    cacheKey: string,
+    _tenantId?: string
+  ): Promise<VerificationResult | null> {
     const query = `
       SELECT
         result_data,
@@ -342,14 +341,14 @@ export class VerificationDatabaseClient {
       LIMIT 1
     `;
 
-    const result = await this.pool.query(query, [cacheKey]);
+    const result = await this.poolManager.getPool().query(query, [cacheKey]);
 
     if (result.rows.length === 0) {
       return null;
     }
 
     // Update access statistics
-    await this.pool.query(
+    await this.poolManager.getPool().query(
       `
       UPDATE verification_cache
       SET access_count = access_count + 1,
@@ -368,7 +367,8 @@ export class VerificationDatabaseClient {
   async cacheResult(
     request: VerificationRequest,
     result: VerificationResult,
-    ttlMs: number
+    ttlMs: number,
+    _tenantId?: string
   ): Promise<void> {
     const cacheKey = this.generateCacheKey(request);
     const requestHash = this.hashContent(JSON.stringify(request));
@@ -389,26 +389,28 @@ export class VerificationDatabaseClient {
         last_accessed_at = NOW()
     `;
 
-    await this.pool.query(query, [
-      cacheKey,
-      requestHash,
-      JSON.stringify(result),
-      resultHash,
-      expiresAt,
-      sizeBytes,
-    ]);
+    await this.poolManager
+      .getPool()
+      .query(query, [
+        cacheKey,
+        requestHash,
+        JSON.stringify(result),
+        resultHash,
+        expiresAt,
+        sizeBytes,
+      ]);
   }
 
   /**
    * Clean up expired cache entries
    */
-  async cleanupExpiredCache(): Promise<number> {
+  async cleanupExpiredCache(_tenantId?: string): Promise<number> {
     const query = `
       DELETE FROM verification_cache
       WHERE expires_at < NOW()
     `;
 
-    const result = await this.pool.query(query);
+    const result = await this.poolManager.getPool().query(query);
     return result.rowCount ?? 0;
   }
 
@@ -417,7 +419,8 @@ export class VerificationDatabaseClient {
    */
   async updateMethodStats(
     methodType: VerificationType,
-    stats: MethodStats
+    stats: MethodStats,
+    _tenantId?: string
   ): Promise<void> {
     const query = `
       UPDATE verification_methods
@@ -431,20 +434,24 @@ export class VerificationDatabaseClient {
       WHERE method_type = $1
     `;
 
-    await this.pool.query(query, [
-      methodType,
-      stats.totalRequests,
-      stats.successfulRequests,
-      stats.failedRequests,
-      stats.averageProcessingTimeMs,
-      stats.lastErrorMessage ?? null,
-    ]);
+    await this.poolManager
+      .getPool()
+      .query(query, [
+        methodType,
+        stats.totalRequests,
+        stats.successfulRequests,
+        stats.failedRequests,
+        stats.averageProcessingTimeMs,
+        stats.lastErrorMessage ?? null,
+      ]);
   }
 
   /**
    * Get method performance statistics
    */
-  async getMethodPerformance(): Promise<MethodPerformanceStats[]> {
+  async getMethodPerformance(
+    _tenantId?: string
+  ): Promise<MethodPerformanceStats[]> {
     const query = `
       SELECT
         method_type,
@@ -462,7 +469,7 @@ export class VerificationDatabaseClient {
       ORDER BY priority ASC
     `;
 
-    const result = await this.pool.query(query);
+    const result = await this.poolManager.getPool().query(query);
 
     return result.rows.map((row) => ({
       methodType: row.method_type as VerificationType,
@@ -524,8 +531,11 @@ export class VerificationDatabaseClient {
   /**
    * Save evidence (public)
    */
-  async saveEvidence(evidence: VerificationEvidence): Promise<void> {
-    const client = await this.pool.connect();
+  async saveEvidence(
+    evidence: VerificationEvidence,
+    _tenantId?: string
+  ): Promise<void> {
+    const client = await this.poolManager.getPool().connect();
     try {
       await this.saveEvidenceInternal(client, evidence);
     } finally {
@@ -536,7 +546,9 @@ export class VerificationDatabaseClient {
   /**
    * Get evidence quality statistics
    */
-  async getEvidenceQualityStats(): Promise<EvidenceQualityStats[]> {
+  async getEvidenceQualityStats(
+    _tenantId?: string
+  ): Promise<EvidenceQualityStats[]> {
     const query = `
       SELECT
         verification_method,
@@ -551,7 +563,7 @@ export class VerificationDatabaseClient {
       ORDER BY total_evidence DESC
     `;
 
-    const result = await this.pool.query(query);
+    const result = await this.poolManager.getPool().query(query);
 
     return result.rows.map((row) => ({
       verificationMethod: row.verification_method as VerificationType,
@@ -584,14 +596,6 @@ export class VerificationDatabaseClient {
   private hashContent(content: string): string {
     const crypto = require("crypto");
     return crypto.createHash("sha256").update(content).digest("hex");
-  }
-
-  /**
-   * Close database connection pool
-   */
-  async close(): Promise<void> {
-    await this.pool.end();
-    this.initialized = false;
   }
 
   /**

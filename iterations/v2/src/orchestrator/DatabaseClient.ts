@@ -4,22 +4,12 @@
  * Provides a clean abstraction over database operations with connection pooling,
  * transaction support, and error handling.
  *
+ * Uses centralized ConnectionPoolManager for connection sharing and multi-tenant support.
+ *
  * @author @darianrosebrook
  */
 
-import { Pool } from "pg";
-
-export interface DatabaseConfig {
-  host: string;
-  port: number;
-  database: string;
-  user: string;
-  password: string;
-  ssl?: boolean;
-  maxConnections?: number;
-  connectionTimeoutMs?: number;
-  queryTimeoutMs?: number;
-}
+import { ConnectionPoolManager } from "../database/ConnectionPoolManager";
 
 export interface QueryResult<T = any> {
   rows: T[];
@@ -42,7 +32,7 @@ export interface IDatabaseClient {
   isConnected(): boolean;
 
   query<T = any>(sql: string, params?: any[]): Promise<QueryResult<T>>; // eslint-disable-line no-unused-vars
-  transaction<T>(callback: (tx: Transaction) => Promise<T>): Promise<T>; // eslint-disable-line no-unused-vars
+  transaction<T>(callback: (_tx: Transaction) => Promise<T>): Promise<T>; // eslint-disable-line no-unused-vars
 
   healthCheck(): Promise<boolean>;
   getStats(): Promise<DatabaseStats>;
@@ -67,7 +57,7 @@ export interface DatabaseStats {
  * Database Error Types
  */
 export class DatabaseError extends Error {
-  constructor(message: string, public code: string, public details?: any) {
+  constructor(message: string, public _code: string, public _details?: any) {
     super(message);
     this.name = "DatabaseError";
   }
@@ -93,16 +83,16 @@ export class TransactionError extends DatabaseError {
 
 /**
  * Simple PostgreSQL Database Client
- * Uses a basic connection pool without external dependencies for now
+ * Uses centralized ConnectionPoolManager for connection sharing
  */
 export class PostgresDatabaseClient implements IDatabaseClient {
-  private config: DatabaseConfig;
-  private pool?: Pool;
+  private poolManager: ConnectionPoolManager;
   private stats: DatabaseStats;
   private connected: boolean = false;
 
-  constructor(config: DatabaseConfig) {
-    this.config = config;
+  constructor() {
+    // Use centralized pool manager
+    this.poolManager = ConnectionPoolManager.getInstance();
     this.stats = {
       totalConnections: 0,
       activeConnections: 0,
@@ -118,38 +108,11 @@ export class PostgresDatabaseClient implements IDatabaseClient {
 
   async connect(): Promise<void> {
     try {
-      // Initialize PostgreSQL connection pool
-      this.pool = new Pool({
-        host: this.config.host,
-        port: this.config.port,
-        database: this.config.database,
-        user: this.config.user,
-        password: this.config.password,
-        ssl: this.config.ssl,
-        max: this.config.maxConnections || 10,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: this.config.connectionTimeoutMs || 10000,
-        statement_timeout: this.config.queryTimeoutMs || 30000,
-      });
-
-      // Set up pool event handlers
-      this.pool.on("connect", () => {
-        this.stats.totalConnections++;
-        this.stats.activeConnections++;
-      });
-
-      this.pool.on("error", (err) => {
-        console.error("Unexpected database pool error:", err);
-        this.connected = false;
-      });
-
-      // Test connection
-      const client = await this.pool.connect();
+      // Verify centralized pool is initialized and accessible
+      const client = await this.poolManager.getPool().connect();
       try {
         await client.query("SELECT 1");
-        console.log(
-          `Connected to PostgreSQL: ${this.config.host}:${this.config.port}/${this.config.database}`
-        );
+        console.log("Connected to PostgreSQL via centralized pool");
       } finally {
         client.release();
       }
@@ -167,7 +130,7 @@ export class PostgresDatabaseClient implements IDatabaseClient {
   }
 
   async initializeSchema(): Promise<void> {
-    if (!this.connected || !this.pool) {
+    if (!this.connected) {
       throw new ConnectionError("Database not connected");
     }
 
@@ -209,17 +172,14 @@ export class PostgresDatabaseClient implements IDatabaseClient {
 
   async disconnect(): Promise<void> {
     try {
-      if (this.pool) {
-        console.log("Disconnecting from database");
-        await this.pool.end();
-        this.pool = undefined;
-      }
+      // Note: Pool lifecycle is managed by ConnectionPoolManager
+      // We just mark this client as disconnected
       this.connected = false;
       this.stats.totalConnections = 0;
       this.stats.activeConnections = 0;
       this.stats.idleConnections = 0;
 
-      console.log("Database disconnected");
+      console.log("Database client disconnected");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new ConnectionError(`Failed to disconnect: ${message}`, error);
@@ -234,7 +194,7 @@ export class PostgresDatabaseClient implements IDatabaseClient {
     sql: string,
     params: any[] = []
   ): Promise<QueryResult<T>> {
-    if (!this.connected || !this.pool) {
+    if (!this.connected) {
       throw new ConnectionError("Database not connected");
     }
 
@@ -248,8 +208,8 @@ export class PostgresDatabaseClient implements IDatabaseClient {
       );
       console.log(`Parameters: ${params.length} params`);
 
-      // Execute real PostgreSQL query
-      const result = await this.pool.query(sql, params);
+      // Execute real PostgreSQL query via centralized pool
+      const result = await this.poolManager.getPool().query(sql, params);
 
       const executionTime = Date.now() - startTime;
       this.stats.totalQueries++;
@@ -273,7 +233,7 @@ export class PostgresDatabaseClient implements IDatabaseClient {
     }
   }
 
-  async transaction<T>(callback: (tx: Transaction) => Promise<T>): Promise<T> {
+  async transaction<T>(callback: (_tx: Transaction) => Promise<T>): Promise<T> {
     if (!this.connected) {
       throw new ConnectionError("Database not connected");
     }
@@ -283,7 +243,7 @@ export class PostgresDatabaseClient implements IDatabaseClient {
     // Start real PostgreSQL transaction
     console.log("Starting database transaction");
 
-    const client = await this.pool!.connect();
+    const client = await this.poolManager.getPool().connect();
 
     try {
       await client.query("BEGIN");
@@ -337,9 +297,9 @@ export class PostgresDatabaseClient implements IDatabaseClient {
   }
 
   getStats(): Promise<DatabaseStats> {
-    // Update stats with real pool information if available
-    if (this.pool) {
-      const poolStats = this.pool;
+    // Update stats with real pool information from centralized manager
+    if (this.connected) {
+      const poolStats = this.poolManager.getStats();
       this.stats.totalConnections = poolStats.totalCount || 0;
       this.stats.idleConnections = poolStats.idleCount || 0;
       this.stats.waitingClients = poolStats.waitingCount || 0;
@@ -432,8 +392,8 @@ export class PostgresDatabaseClient implements IDatabaseClient {
  * Database Client Factory
  */
 export class DatabaseClientFactory {
-  static createPostgresClient(config: DatabaseConfig): IDatabaseClient {
-    return new PostgresDatabaseClient(config);
+  static createPostgresClient(): IDatabaseClient {
+    return new PostgresDatabaseClient();
   }
 
   static createMockClient(): IDatabaseClient {
@@ -475,7 +435,7 @@ export class MockDatabaseClient implements IDatabaseClient {
     };
   }
 
-  async transaction<T>(callback: (tx: Transaction) => Promise<T>): Promise<T> {
+  async transaction<T>(callback: (_tx: Transaction) => Promise<T>): Promise<T> {
     if (!this.connected) {
       throw new ConnectionError("Database not connected");
     }

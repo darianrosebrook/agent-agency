@@ -9,11 +9,9 @@
 
 import { AgentRegistryDatabaseClient } from "../../../src/database/AgentRegistryDatabaseClient";
 import {
-  VerificationPriority,
   AgentProfile,
   PerformanceMetrics,
 } from "../../../src/types/agent-registry";
-import { DatabaseTestUtils } from "../../test-utils";
 
 describe("AgentRegistryDatabaseClient", () => {
   let dbClient: AgentRegistryDatabaseClient;
@@ -21,15 +19,8 @@ describe("AgentRegistryDatabaseClient", () => {
   let dbAvailable = false;
 
   beforeAll(async () => {
-    // Skip database tests if Docker is not available
-    // In a real CI environment, Docker would be available
-    dbClient = new AgentRegistryDatabaseClient({
-      host: process.env.TEST_DB_HOST || "localhost",
-      port: parseInt(process.env.TEST_DB_PORT || "5432"),
-      database: process.env.TEST_DB_NAME || "agent_agency_test",
-      user: process.env.TEST_DB_USER || "postgres",
-      password: process.env.TEST_DB_PASSWORD || "",
-    });
+    // Uses centralized ConnectionPoolManager initialized in tests/setup.ts
+    dbClient = new AgentRegistryDatabaseClient();
 
     try {
       await dbClient.initialize();
@@ -51,7 +42,8 @@ describe("AgentRegistryDatabaseClient", () => {
       // Ignore cleanup errors
     }
 
-    await dbClient.close();
+    // Note: Pool lifecycle managed by ConnectionPoolManager
+    // No need to call close() - handled in tests/setup.ts afterAll
   });
 
   describe("Agent Registration", () => {

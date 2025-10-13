@@ -10,7 +10,6 @@
 
 import { KnowledgeDatabaseClient } from "../../../src/database/KnowledgeDatabaseClient";
 import {
-  VerificationPriority,
   mockKnowledgeQuery,
   mockKnowledgeResponse,
   mockSearchResult,
@@ -20,17 +19,13 @@ describe("Knowledge Database Integration", () => {
   let dbClient: KnowledgeDatabaseClient;
 
   beforeEach(() => {
-    dbClient = new KnowledgeDatabaseClient({
-      host: "localhost",
-      port: 5432,
-      database: "test_arbiter",
-      user: "test",
-      password: "test",
-    });
+    // Uses centralized ConnectionPoolManager initialized in tests/setup.ts
+    dbClient = new KnowledgeDatabaseClient();
   });
 
   afterEach(async () => {
-    await dbClient.shutdown();
+    // Note: Pool lifecycle managed by ConnectionPoolManager
+    // No need to call shutdown() - handled in tests/setup.ts afterAll
   });
 
   describe("Query Storage", () => {
