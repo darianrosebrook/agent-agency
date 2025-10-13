@@ -1,228 +1,194 @@
 # Database Setup Guide
 
-**Version**: 1.0.0  
-**Last Updated**: October 13, 2025  
+**Project**: Agent Agency V2  
 **Author**: @darianrosebrook  
-**Purpose**: Complete guide for setting up PostgreSQL database for Agent Agency V2
-
----
-
-## Table of Contents
-
-1. [Overview](#overview)
-2. [Prerequisites](#prerequisites)
-3. [Installation](#installation)
-4. [Database Setup](#database-setup)
-5. [Configuration](#configuration)
-6. [Running Migrations](#running-migrations)
-7. [Verification](#verification)
-8. [Troubleshooting](#troubleshooting)
-9. [Backup and Restore](#backup-and-restore)
-10. [Advanced Topics](#advanced-topics)
+**Date**: October 13, 2025  
+**Last Updated**: October 13, 2025
 
 ---
 
 ## Overview
 
 Agent Agency V2 uses **PostgreSQL** as its primary database for:
-- Agent registry and capabilities
-- Task queue and assignments
-- Knowledge graphs and queries
-- Performance tracking metrics
-- Verification and validation results
-- Provenance and audit trails
+- Agent registry and capability tracking
+- Task queue and assignment management
+- Knowledge graph and query storage
+- Performance metrics and tracking
+- Provenance and audit logging
+- Multi-tenant isolation
+- Hybrid search with pg_trgm and vector embeddings
 
-**Database Requirements**:
-- PostgreSQL 12.0 or higher
-- 500MB minimum disk space (1GB recommended)
-- UTF-8 encoding
-- C collation
+This guide covers:
+1. Prerequisites and installation
+2. Database creation and configuration
+3. Migration execution
+4. Verification and troubleshooting
+5. Development vs Production setup
+6. Common issues and solutions
+
+---
+
+## Quick Start (TL;DR)
+
+```bash
+# 1. Install PostgreSQL
+brew install postgresql@15  # macOS
+# sudo apt-get install postgresql-15  # Ubuntu/Debian
+
+# 2. Start PostgreSQL
+brew services start postgresql@15  # macOS
+# sudo systemctl start postgresql  # Linux
+
+# 3. Create role and database
+createuser -s postgres
+createdb agent_agency_v2_test -O postgres
+
+# 4. Configure environment
+cp .env.example .env.test
+# Edit .env.test with database credentials
+
+# 5. Run migrations
+psql -U postgres -d agent_agency_v2_test -f migrations/001_create_agent_registry_tables.sql
+psql -U postgres -d agent_agency_v2_test -f migrations/002_create_task_queue_tables.sql
+psql -U postgres -d agent_agency_v2_test -f migrations/003_create_knowledge_tables.sql
+# ... continue with remaining migrations
+
+# 6. Verify
+npm run test:integration
+```
 
 ---
 
 ## Prerequisites
 
-### System Requirements
+### 1. PostgreSQL Installation
 
-| Component | Minimum | Recommended |
-| --- | --- | --- |
-| **PostgreSQL Version** | 12.0 | 14.0+ |
-| **RAM** | 512MB | 2GB+ |
-| **Disk Space** | 500MB | 1GB+ |
-| **CPU** | 1 core | 2+ cores |
+**Minimum Version**: PostgreSQL 15.0+  
+**Recommended**: PostgreSQL 15.4 or 16.x
 
-### Required Tools
-
-- **psql**: PostgreSQL command-line client
-- **createuser**: PostgreSQL user creation utility
-- **createdb**: PostgreSQL database creation utility
-- **Node.js**: 16.0+ (for running migrations)
-- **npm**: 8.0+ (for dependency management)
-
----
-
-## Installation
-
-### macOS
-
-#### Option 1: Homebrew (Recommended)
-
+**macOS (Homebrew)**:
 ```bash
-# Install PostgreSQL
-brew install postgresql@14
+# Install PostgreSQL 15
+brew install postgresql@15
 
 # Start PostgreSQL service
-brew services start postgresql@14
+brew services start postgresql@15
 
-# Add to PATH (add to ~/.zshrc or ~/.bashrc)
-export PATH="/usr/local/opt/postgresql@14/bin:$PATH"
-
-# Reload shell configuration
-source ~/.zshrc
+# Verify installation
+psql --version
+# Expected: psql (PostgreSQL) 15.x
 ```
 
-#### Option 2: Postgres.app
-
-1. Download from [https://postgresapp.com/](https://postgresapp.com/)
-2. Drag to Applications folder
-3. Open Postgres.app
-4. Click "Initialize" to create a PostgreSQL cluster
-5. Add to PATH: `sudo mkdir -p /etc/paths.d && echo /Applications/Postgres.app/Contents/Versions/latest/bin | sudo tee /etc/paths.d/postgresapp`
-
-### Linux (Ubuntu/Debian)
-
+**Ubuntu/Debian**:
 ```bash
-# Update package list
-sudo apt update
+# Add PostgreSQL repository
+sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
 
 # Install PostgreSQL
-sudo apt install postgresql postgresql-contrib
+sudo apt-get update
+sudo apt-get install postgresql-15
 
 # Start PostgreSQL service
 sudo systemctl start postgresql
-sudo systemctl enable postgresql
+sudo systemctl enable postgresql  # Start on boot
 
-# Check status
-sudo systemctl status postgresql
+# Verify installation
+psql --version
 ```
 
-### Linux (CentOS/RHEL/Fedora)
+**Windows**:
+```powershell
+# Download installer from https://www.postgresql.org/download/windows/
+# Run installer and follow prompts
+# Add PostgreSQL bin to PATH
 
-```bash
-# Install PostgreSQL
-sudo dnf install postgresql-server postgresql-contrib
-
-# Initialize database cluster
-sudo postgresql-setup --initdb
-
-# Start and enable service
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
+# Verify installation
+psql --version
 ```
 
-### Windows
+### 2. Required PostgreSQL Extensions
 
-1. Download installer from [https://www.postgresql.org/download/windows/](https://www.postgresql.org/download/windows/)
-2. Run installer and follow setup wizard
-3. Note the password you set for the `postgres` user
-4. Add PostgreSQL bin directory to PATH: `C:\Program Files\PostgreSQL\14\bin`
+Agent Agency V2 requires these extensions:
+- `uuid-ossp` - UUID generation
+- `pg_trgm` - Trigram-based fuzzy text search
+- `btree_gin` - GIN indexes for B-tree data types
+- `hstore` (optional) - Key-value pairs
 
-### Docker (Cross-Platform)
-
-```bash
-# Pull PostgreSQL image
-docker pull postgres:14
-
-# Run PostgreSQL container
-docker run --name agent-agency-postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -p 5432:5432 \
-  -v agent-agency-data:/var/lib/postgresql/data \
-  -d postgres:14
-
-# Verify container is running
-docker ps | grep agent-agency-postgres
-```
+These are installed automatically by migration scripts.
 
 ---
 
 ## Database Setup
 
-### Step 1: Verify PostgreSQL Installation
+### Step 1: Create PostgreSQL Role
 
+The application expects a `postgres` superuser role.
+
+**Create role**:
 ```bash
-# Check PostgreSQL version
-psql --version
-# Expected output: psql (PostgreSQL) 14.x
-
-# Check if PostgreSQL is running
-pg_isready
-# Expected output: /tmp:5432 - accepting connections
-```
-
-### Step 2: Create PostgreSQL Superuser
-
-The application uses a `postgres` superuser role for test database operations.
-
-```bash
-# Check if postgres role exists
-psql -U $USER -d postgres -c "SELECT 1 FROM pg_roles WHERE rolname='postgres'" | grep -q "1 row"
+# Check if role exists
+psql -U $USER -d postgres -c "\du postgres"
 
 # If role doesn't exist, create it
 createuser -s postgres
+
+# Verify
+psql -U postgres -d postgres -c "SELECT current_user;"
+# Expected: postgres
 ```
 
-**What this does**:
-- Creates a superuser named `postgres`
-- `-s` flag grants superuser privileges
-- No password is set (localhost trust authentication)
+**Alternative: Use custom role**:
+```bash
+# Create custom role with permissions
+createuser -s agent_agency_admin
+createdb -O agent_agency_admin agent_agency_v2_test
 
-### Step 3: Create Test Database
+# Update .env.test with custom role
+PGUSER=agent_agency_admin
+```
+
+### Step 2: Create Test Database
 
 ```bash
-# Create the test database
+# Create test database
 createdb agent_agency_v2_test -O postgres
 
-# Verify database was created
-psql -U postgres -d postgres -c "\l" | grep agent_agency_v2_test
+# Verify database exists
+psql -U postgres -l | grep agent_agency_v2_test
+# Expected: agent_agency_v2_test | postgres | UTF8 | ...
+
+# Verify connection
+psql -U postgres -d agent_agency_v2_test -c "SELECT 1 AS health;"
+# Expected:
+#  health 
+# --------
+#       1
 ```
 
-**Expected output**:
-```
-agent_agency_v2_test | postgres | UTF8 | C | C |
+**For Production**:
+```bash
+# Create production database
+createdb agent_agency_v2_production -O postgres
+
+# Set stricter permissions
+psql -U postgres -d agent_agency_v2_production -c "
+  REVOKE ALL ON SCHEMA public FROM public;
+  GRANT ALL ON SCHEMA public TO postgres;
+"
 ```
 
-### Step 4: Verify Database Access
+### Step 3: Configure Environment
+
+Create `.env.test` configuration file:
 
 ```bash
-# Connect to test database
-psql -U postgres -d agent_agency_v2_test
+# Copy example if it exists
+cp .env.example .env.test
 
-# Inside psql, run:
-SELECT current_database();
-# Expected: agent_agency_v2_test
-
-# Check available extensions
-\dx
-
-# Exit psql
-\q
-```
-
----
-
-## Configuration
-
-### Environment Variables
-
-Create a `.env.test` file in the project root:
-
-```bash
-# Create .env.test
+# Or create manually
 cat > .env.test << 'EOF'
 # Test Environment Configuration
-
-# Database Configuration
 DATABASE_URL=postgresql://postgres@localhost:5432/agent_agency_v2_test
 PGHOST=localhost
 PGPORT=5432
@@ -246,181 +212,264 @@ ENABLE_TRACING=false
 EOF
 ```
 
-### Configuration Options
+**Security Note**: For production, use strong passwords and environment-specific credentials.
 
-| Variable                      | Default   | Description                       |
-| ----------------------------- | --------- | --------------------------------- |
-| `DATABASE_URL`                | (required) | Full PostgreSQL connection string |
-| `PGHOST`                      | localhost | Database server hostname          |
-| `PGPORT`                      | 5432      | Database server port              |
-| `PGDATABASE`                  | (required) | Database name                     |
-| `PGUSER`                      | postgres  | Database user                     |
-| `PGPASSWORD`                  | (empty)   | Database password (if required)   |
-| `DB_POOL_MIN`                 | 2         | Minimum connections in pool       |
-| `DB_POOL_MAX`                 | 10        | Maximum connections in pool       |
-| `DB_POOL_IDLE_TIMEOUT`        | 30000     | Idle connection timeout (ms)      |
-| `DB_POOL_CONNECTION_TIMEOUT`  | 5000      | Connection attempt timeout (ms)   |
+### Step 4: Run Migrations
 
-### Connection Pooling
+Execute migrations in order:
 
-The application uses `pg-pool` for connection pooling:
+```bash
+# Navigate to project root
+cd /path/to/agent-agency/iterations/v2
 
-```typescript
-// Connection pool is initialized in tests/setup.ts
-const pool = new Pool({
-  host: process.env.PGHOST,
-  port: parseInt(process.env.PGPORT || '5432'),
-  database: process.env.PGDATABASE,
-  user: process.env.PGUSER,
-  password: process.env.PGPASSWORD,
-  min: parseInt(process.env.DB_POOL_MIN || '2'),
-  max: parseInt(process.env.DB_POOL_MAX || '10'),
-  idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT || '30000'),
-  connectionTimeoutMillis: parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT || '5000'),
+# Run migrations sequentially
+psql -U postgres -d agent_agency_v2_test -f migrations/001_create_agent_registry_tables.sql
+psql -U postgres -d agent_agency_v2_test -f migrations/002_create_task_queue_tables.sql
+psql -U postgres -d agent_agency_v2_test -f migrations/003_create_knowledge_tables.sql
+psql -U postgres -d agent_agency_v2_test -f migrations/005_task_research_provenance.sql
+psql -U postgres -d agent_agency_v2_test -f migrations/006_create_knowledge_graph_schema.sql
+psql -U postgres -d agent_agency_v2_test -f migrations/007_add_multi_tenant_isolation.sql
+```
+
+**Note**: Some migrations (004_, 006_) have multiple files. They can be run in any order within their number group.
+
+**Automated Migration Script**:
+```bash
+# Create migration runner
+cat > scripts/run-migrations.sh << 'EOF'
+#!/bin/bash
+set -e
+
+DB_USER=${1:-postgres}
+DB_NAME=${2:-agent_agency_v2_test}
+
+echo "Running migrations for ${DB_NAME}..."
+
+# Core migrations
+for migration in migrations/00[1-3]*.sql migrations/005*.sql migrations/006_create_knowledge_graph_schema.sql migrations/007*.sql; do
+  if [ -f "$migration" ]; then
+    echo "Running: $migration"
+    psql -U "$DB_USER" -d "$DB_NAME" -f "$migration" -v ON_ERROR_STOP=1
+  fi
+done
+
+echo "Migrations complete!"
+EOF
+
+chmod +x scripts/run-migrations.sh
+
+# Run migrations
+./scripts/run-migrations.sh postgres agent_agency_v2_test
+```
+
+### Step 5: Verify Setup
+
+```bash
+# 1. Check tables were created
+psql -U postgres -d agent_agency_v2_test -c "\dt"
+
+# Expected output (6 core tables):
+#  Schema |           Name           | Type  |  Owner   
+# --------+--------------------------+-------+----------
+#  public | agent_capabilities       | table | postgres
+#  public | agent_profiles           | table | postgres
+#  public | knowledge_queries        | table | postgres
+#  public | task_assignments         | table | postgres
+#  public | task_queue               | table | postgres
+#  public | task_research_provenance | table | postgres
+
+# 2. Check extensions
+psql -U postgres -d agent_agency_v2_test -c "\dx"
+
+# Expected extensions:
+#  uuid-ossp | pg_trgm | btree_gin
+
+# 3. Test connection from application
+npm run test:integration -- --testPathPattern="health"
+
+# 4. Verify connection pooling
+node -e "
+const { ConnectionPoolManager } = require('./src/database/ConnectionPoolManager');
+const manager = new ConnectionPoolManager({
+  host: 'localhost',
+  port: 5432,
+  database: 'agent_agency_v2_test',
+  user: 'postgres',
+  password: ''
 });
+manager.initialize().then(() => {
+  manager.healthCheck().then(healthy => {
+    console.log('Health check:', healthy ? 'PASS' : 'FAIL');
+    process.exit(healthy ? 0 : 1);
+  });
+});
+"
 ```
 
 ---
 
-## Running Migrations
+## Migration Details
 
-### Migration Overview
+### Migration Order and Dependencies
 
-Migrations are SQL files in the `migrations/` directory that create and modify database schema.
-
-**Available Migrations** (as of October 2025):
-1. `001_create_agent_registry_tables.sql` (9.5KB) - Agent profiles and capabilities
-2. `002_create_task_queue_tables.sql` (12KB) - Task queue and assignments
-3. `003_create_knowledge_tables.sql` (14KB) - Knowledge queries and results
-4. `004_create_performance_tracking_tables.sql` (20KB) - Performance metrics
-5. `004_create_verification_tables.sql` (18KB) - Verification results
-6. `004_create_web_tables.sql` (18KB) - Web navigation data
-7. `005_task_research_provenance.sql` (2.2KB) - Research provenance tracking
-8. `006_create_knowledge_graph_schema.sql` (18KB) - Knowledge graph structures
-9. `006_create_learning_tables.sql` (9.3KB) - Learning and iteration data
-10. `007_add_multi_tenant_isolation.sql` (18KB) - Multi-tenant support
-11. `008_create_hybrid_search_views.sql` (20KB) - Hybrid search capabilities
-
-### Running All Migrations
-
-```bash
-# Navigate to project root
-cd /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2
-
-# Run migrations in order
-for migration in \
-  migrations/001_create_agent_registry_tables.sql \
-  migrations/002_create_task_queue_tables.sql \
-  migrations/003_create_knowledge_tables.sql \
-  migrations/005_task_research_provenance.sql \
-  migrations/006_create_knowledge_graph_schema.sql \
-  migrations/007_add_multi_tenant_isolation.sql; do
-  echo "Running $migration..."
-  psql -U postgres -d agent_agency_v2_test -f "$migration"
-done
 ```
+001_create_agent_registry_tables.sql
+  └─ Creates: agent_profiles, agent_capabilities
+  └─ Dependencies: None
+  └─ Extensions: uuid-ossp
 
-**Note**: Migration 008 has dependencies that may not be met. It's optional for basic functionality.
+002_create_task_queue_tables.sql
+  └─ Creates: task_queue, task_assignments
+  └─ Dependencies: 001 (references agent_profiles)
+  └─ Extensions: None
 
-### Running Individual Migrations
+003_create_knowledge_tables.sql
+  └─ Creates: knowledge_queries
+  └─ Dependencies: 001 (references agent_profiles)
+  └─ Extensions: pg_trgm
 
-```bash
-# Run a specific migration
-psql -U postgres -d agent_agency_v2_test -f migrations/001_create_agent_registry_tables.sql
+005_task_research_provenance.sql
+  └─ Creates: task_research_provenance
+  └─ Dependencies: 002 (references task_queue)
+  └─ Extensions: None
 
-# Check if successful
-psql -U postgres -d agent_agency_v2_test -c "\dt"
+006_create_knowledge_graph_schema.sql
+  └─ Creates: Knowledge graph tables
+  └─ Dependencies: 001, 003
+  └─ Extensions: uuid-ossp, pg_trgm, btree_gin
+
+007_add_multi_tenant_isolation.sql
+  └─ Creates: Multi-tenant enums and tables
+  └─ Dependencies: All previous
+  └─ Extensions: None
 ```
 
 ### Migration Rollback
 
-Most migrations don't include rollback scripts. To rollback:
-
+**Individual Migration Rollback**:
 ```bash
-# Drop the test database
-dropdb agent_agency_v2_test
+# Create rollback script
+cat > migrations/rollback_001.sql << 'EOF'
+-- Rollback 001_create_agent_registry_tables.sql
 
-# Recreate it
+BEGIN;
+
+DROP TABLE IF EXISTS agent_capabilities CASCADE;
+DROP TABLE IF EXISTS agent_profiles CASCADE;
+DROP EXTENSION IF EXISTS "uuid-ossp";
+
+COMMIT;
+EOF
+
+# Execute rollback
+psql -U postgres -d agent_agency_v2_test -f migrations/rollback_001.sql
+```
+
+**Full Database Reset**:
+```bash
+# Drop and recreate database
+dropdb agent_agency_v2_test
 createdb agent_agency_v2_test -O postgres
 
-# Re-run migrations up to the desired point
-psql -U postgres -d agent_agency_v2_test -f migrations/001_create_agent_registry_tables.sql
-# ... (run subsequent migrations as needed)
+# Re-run migrations
+./scripts/run-migrations.sh
 ```
 
 ---
 
-## Verification
+## Development vs Production Setup
 
-### Step 1: Check Database Health
+### Development Setup
 
+**Characteristics**:
+- Permissive permissions
+- No SSL required
+- Single database instance
+- Verbose logging
+- Connection pooling (min: 2, max: 10)
+
+**Configuration** (`.env.development`):
 ```bash
-# Test database connection
-psql -U postgres -d agent_agency_v2_test -c "SELECT 1 AS health"
-# Expected: health = 1
+DATABASE_URL=postgresql://postgres@localhost:5432/agent_agency_v2_dev
+DB_POOL_MIN=2
+DB_POOL_MAX=10
+LOG_LEVEL=debug
 ```
 
-### Step 2: Verify Tables
+### Test Setup
 
+**Characteristics**:
+- Isolated test database
+- Fast connection pooling
+- Transaction rollback after tests
+- Minimal logging
+- Connection pooling (min: 2, max: 10)
+
+**Configuration** (`.env.test`):
 ```bash
-# List all tables
-psql -U postgres -d agent_agency_v2_test -c "\dt"
-
-# Expected output (after running migrations):
-# agent_capabilities
-# agent_profiles
-# knowledge_queries
-# task_assignments
-# task_queue
-# task_research_provenance
-# ... (and others depending on migrations run)
+DATABASE_URL=postgresql://postgres@localhost:5432/agent_agency_v2_test
+DB_POOL_MIN=2
+DB_POOL_MAX=10
+LOG_LEVEL=error
+NODE_ENV=test
 ```
 
-### Step 3: Check Table Schemas
+**Test Database Best Practices**:
+```typescript
+// tests/setup.ts
+beforeEach(async () => {
+  // Start transaction
+  await db.query('BEGIN');
+});
 
-```bash
-# Describe a specific table
-psql -U postgres -d agent_agency_v2_test -c "\d agent_profiles"
-
-# Check table row counts
-psql -U postgres -d agent_agency_v2_test -c "
-  SELECT schemaname, tablename, n_tup_ins AS rows_inserted
-  FROM pg_stat_user_tables
-  ORDER BY tablename;
-"
+afterEach(async () => {
+  // Rollback transaction (clean slate for next test)
+  await db.query('ROLLBACK');
+});
 ```
 
-### Step 4: Test with Application
+### Production Setup
 
+**Characteristics**:
+- Strict permissions (least privilege)
+- SSL/TLS required
+- High-availability setup (primary + replicas)
+- Connection pooling (min: 10, max: 100)
+- Backup and recovery
+- Monitoring and alerts
+
+**Configuration** (`.env.production`):
 ```bash
-# Run unit tests (should connect to database)
-npm run test:unit -- --testPathPattern="agent-registry"
-
-# Run integration tests
-npm run test:integration
-
-# Expected: Tests connect to database successfully
+DATABASE_URL=postgresql://agent_app:STRONG_PASSWORD@db-primary.example.com:5432/agent_agency_v2_production?ssl=true&sslmode=require
+DB_POOL_MIN=10
+DB_POOL_MAX=100
+DB_POOL_IDLE_TIMEOUT=10000
+DB_POOL_CONNECTION_TIMEOUT=3000
+LOG_LEVEL=warn
+NODE_ENV=production
 ```
 
-### Step 5: Connection Pool Health Check
+**Production Security**:
+```sql
+-- Create application user with limited privileges
+CREATE USER agent_app WITH PASSWORD 'STRONG_PASSWORD';
 
-```bash
-# Check active connections
-psql -U postgres -d postgres -c "
-  SELECT 
-    datname, 
-    COUNT(*) as connections
-  FROM pg_stat_activity
-  WHERE datname = 'agent_agency_v2_test'
-  GROUP BY datname;
-"
+-- Grant only necessary permissions
+GRANT CONNECT ON DATABASE agent_agency_v2_production TO agent_app;
+GRANT USAGE ON SCHEMA public TO agent_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO agent_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO agent_app;
+
+-- Revoke dangerous permissions
+REVOKE CREATE ON SCHEMA public FROM agent_app;
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
 ```
 
 ---
 
 ## Troubleshooting
 
-### Issue 1: "role 'postgres' does not exist"
+### Issue 1: Role "postgres" does not exist
 
 **Error**:
 ```
@@ -429,16 +478,16 @@ error: role "postgres" does not exist
 
 **Solution**:
 ```bash
-# Create the postgres role
+# Create postgres superuser
 createuser -s postgres
 
-# Verify role was created
-psql -U $USER -d postgres -c "\du" | grep postgres
+# Or use your system user
+createuser -s $USER
 ```
 
 ---
 
-### Issue 2: "database 'agent_agency_v2_test' does not exist"
+### Issue 2: Database does not exist
 
 **Error**:
 ```
@@ -447,64 +496,41 @@ FATAL: database "agent_agency_v2_test" does not exist
 
 **Solution**:
 ```bash
-# Create the database
+# Create database
 createdb agent_agency_v2_test -O postgres
 
-# Verify creation
+# Verify
 psql -U postgres -l | grep agent_agency_v2_test
 ```
 
 ---
 
-### Issue 3: "connection refused" or "could not connect"
+### Issue 3: Connection refused
 
 **Error**:
 ```
-could not connect to server: Connection refused
-Is the server running on host "localhost" (::1) and accepting
-TCP/IP connections on port 5432?
+Error: connect ECONNREFUSED 127.0.0.1:5432
 ```
 
-**Solutions**:
-
-**Check if PostgreSQL is running**:
+**Solution**:
 ```bash
+# Check if PostgreSQL is running
 pg_isready
-# If not ready, start it:
 
-# macOS (Homebrew)
-brew services start postgresql@14
+# If not running, start it
+brew services start postgresql@15  # macOS
+sudo systemctl start postgresql    # Linux
 
-# Linux (systemd)
-sudo systemctl start postgresql
-
-# Docker
-docker start agent-agency-postgres
-```
-
-**Check PostgreSQL port**:
-```bash
-# Verify PostgreSQL is listening on port 5432
+# Check port
 lsof -i :5432
-# or
-netstat -an | grep 5432
-```
 
-**Check PostgreSQL logs**:
-```bash
-# macOS (Homebrew)
-tail -f /usr/local/var/log/postgresql@14.log
-
-# Linux
-sudo tail -f /var/log/postgresql/postgresql-14-main.log
-
-# Docker
-docker logs agent-agency-postgres
+# If port conflict, update .env.test
+PGPORT=5433
 ```
 
 ---
 
-### Issue 4: "permission denied" errors
+### Issue 4: Permission denied
 
 **Error**:
 ```
@@ -512,373 +538,250 @@ ERROR: permission denied for table agent_profiles
 ```
 
 **Solution**:
-```bash
-# Grant permissions to postgres user
-psql -U postgres -d agent_agency_v2_test -c "
-  GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO postgres;
-  GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres;
-"
+```sql
+-- Grant permissions
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO postgres;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres;
 ```
 
 ---
 
-### Issue 5: Migration fails with dependency errors
+### Issue 5: Extension not found
 
 **Error**:
 ```
-ERROR: relation "agent_capabilities_graph" does not exist
+ERROR: could not open extension control file
 ```
 
 **Solution**:
+```bash
+# Install PostgreSQL contrib package
+brew install postgresql@15  # Includes contrib
+sudo apt-get install postgresql-contrib-15
 
-This typically happens with migration 008 which has dependencies. Either:
-
-**Option A**: Skip migration 008 (not critical for basic functionality)
-
-**Option B**: Ensure prerequisite tables exist by running earlier migrations first
+# Verify extensions available
+psql -U postgres -d agent_agency_v2_test -c "SELECT * FROM pg_available_extensions WHERE name IN ('uuid-ossp', 'pg_trgm', 'btree_gin');"
+```
 
 ---
 
-### Issue 6: Too many open connections
+### Issue 6: Migration fails midway
 
 **Error**:
 ```
-FATAL: sorry, too many clients already
+ERROR: relation "agent_profiles" already exists
 ```
 
 **Solution**:
-
 ```bash
-# Check current connections
-psql -U postgres -d postgres -c "
-  SELECT COUNT(*) FROM pg_stat_activity;
-"
+# Check which tables exist
+psql -U postgres -d agent_agency_v2_test -c "\dt"
 
-# Check max connections setting
-psql -U postgres -d postgres -c "SHOW max_connections;"
+# Option 1: Continue from next migration
+# Skip migrations that created existing tables
 
-# Kill idle connections
-psql -U postgres -d postgres -c "
-  SELECT pg_terminate_backend(pid)
-  FROM pg_stat_activity
-  WHERE datname = 'agent_agency_v2_test'
-    AND state = 'idle'
-    AND state_change < NOW() - INTERVAL '5 minutes';
-"
-
-# Or restart PostgreSQL
-brew services restart postgresql@14  # macOS
-sudo systemctl restart postgresql    # Linux
-```
-
----
-
-## Backup and Restore
-
-### Creating Backups
-
-#### Full Database Backup
-
-```bash
-# Backup entire database to file
-pg_dump -U postgres agent_agency_v2_test > backup_$(date +%Y%m%d_%H%M%S).sql
-
-# Compressed backup
-pg_dump -U postgres agent_agency_v2_test | gzip > backup_$(date +%Y%m%d_%H%M%S).sql.gz
-```
-
-#### Schema-Only Backup
-
-```bash
-# Backup only schema (no data)
-pg_dump -U postgres --schema-only agent_agency_v2_test > schema_backup.sql
-```
-
-#### Data-Only Backup
-
-```bash
-# Backup only data (no schema)
-pg_dump -U postgres --data-only agent_agency_v2_test > data_backup.sql
-```
-
-#### Specific Table Backup
-
-```bash
-# Backup specific table
-pg_dump -U postgres -t agent_profiles agent_agency_v2_test > agent_profiles_backup.sql
-```
-
-### Restoring Backups
-
-#### Restore Full Database
-
-```bash
-# Drop and recreate database
+# Option 2: Full reset
 dropdb agent_agency_v2_test
 createdb agent_agency_v2_test -O postgres
+./scripts/run-migrations.sh
+```
+
+---
+
+### Issue 7: Connection pool exhausted
+
+**Error**:
+```
+Error: Connection pool exhausted
+```
+
+**Solution**:
+```bash
+# Increase pool size in .env
+DB_POOL_MAX=20  # Increase from 10
+
+# Check active connections
+psql -U postgres -d agent_agency_v2_test -c "
+  SELECT count(*) as active_connections 
+  FROM pg_stat_activity 
+  WHERE datname = 'agent_agency_v2_test';
+"
+
+# Kill idle connections
+psql -U postgres -d agent_agency_v2_test -c "
+  SELECT pg_terminate_backend(pid) 
+  FROM pg_stat_activity 
+  WHERE datname = 'agent_agency_v2_test' 
+    AND state = 'idle' 
+    AND state_change < current_timestamp - interval '5 minutes';
+"
+```
+
+---
+
+## Database Maintenance
+
+### Backup
+
+**Development Backup**:
+```bash
+# Backup database
+pg_dump -U postgres agent_agency_v2_test > backups/agent_agency_v2_test_$(date +%Y%m%d).sql
 
 # Restore from backup
-psql -U postgres agent_agency_v2_test < backup_20251013_150000.sql
-
-# Restore from compressed backup
-gunzip -c backup_20251013_150000.sql.gz | psql -U postgres agent_agency_v2_test
+psql -U postgres -d agent_agency_v2_test < backups/agent_agency_v2_test_20251013.sql
 ```
 
-#### Restore Specific Tables
-
+**Production Backup**:
 ```bash
-# Restore only specific table
-psql -U postgres agent_agency_v2_test < agent_profiles_backup.sql
-```
-
-### Automated Backup Script
-
-Create `scripts/backup_database.sh`:
-
-```bash
+# Automated daily backup
+cat > scripts/backup-database.sh << 'EOF'
 #!/bin/bash
-# Automated database backup script
+set -e
 
-BACKUP_DIR="./backups"
+BACKUP_DIR="/var/backups/postgresql"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-DATABASE="agent_agency_v2_test"
-USER="postgres"
-
-# Create backup directory if it doesn't exist
-mkdir -p "$BACKUP_DIR"
+DB_NAME="agent_agency_v2_production"
 
 # Create backup
-echo "Creating backup: ${BACKUP_DIR}/backup_${TIMESTAMP}.sql.gz"
-pg_dump -U "$USER" "$DATABASE" | gzip > "${BACKUP_DIR}/backup_${TIMESTAMP}.sql.gz"
+pg_dump -U postgres "$DB_NAME" | gzip > "$BACKUP_DIR/${DB_NAME}_${TIMESTAMP}.sql.gz"
 
-# Keep only last 7 days of backups
-find "$BACKUP_DIR" -name "backup_*.sql.gz" -mtime +7 -delete
+# Keep last 30 days
+find "$BACKUP_DIR" -name "${DB_NAME}_*.sql.gz" -mtime +30 -delete
 
-echo "Backup complete!"
+echo "Backup complete: ${DB_NAME}_${TIMESTAMP}.sql.gz"
+EOF
+
+chmod +x scripts/backup-database.sh
+
+# Add to crontab (daily at 2 AM)
+crontab -e
+# Add: 0 2 * * * /path/to/agent-agency/scripts/backup-database.sh
 ```
 
-Make executable and run:
-```bash
-chmod +x scripts/backup_database.sh
-./scripts/backup_database.sh
-```
-
----
-
-## Advanced Topics
-
-### Connection String Formats
-
-**Standard Format**:
-```
-postgresql://[user[:password]@][host][:port][/dbname][?param1=value1&...]
-```
-
-**Examples**:
-```bash
-# Local connection, no password
-postgresql://postgres@localhost:5432/agent_agency_v2_test
-
-# With password
-postgresql://postgres:mypassword@localhost:5432/agent_agency_v2_test
-
-# SSL connection
-postgresql://postgres@remote.host:5432/agent_agency_v2_test?sslmode=require
-
-# Unix socket connection
-postgresql:///agent_agency_v2_test?host=/var/run/postgresql
-```
-
-### Performance Tuning
-
-#### Increase Shared Buffers
+### Vacuum and Analyze
 
 ```bash
-# Edit postgresql.conf
-# Location varies by installation:
-# - macOS (Homebrew): /usr/local/var/postgresql@14/postgresql.conf
-# - Linux: /etc/postgresql/14/main/postgresql.conf
+# Analyze database (update statistics)
+psql -U postgres -d agent_agency_v2_test -c "ANALYZE;"
 
-# Add or modify:
-shared_buffers = 256MB  # Default is usually 128MB
-effective_cache_size = 1GB
-work_mem = 16MB
-maintenance_work_mem = 128MB
+# Vacuum (reclaim space)
+psql -U postgres -d agent_agency_v2_test -c "VACUUM;"
 
-# Restart PostgreSQL
-brew services restart postgresql@14  # macOS
-sudo systemctl restart postgresql    # Linux
+# Full vacuum (more thorough, locks tables)
+psql -U postgres -d agent_agency_v2_test -c "VACUUM FULL;"
 ```
 
-#### Enable Query Logging
+### Monitor Database Size
 
-```bash
-# Edit postgresql.conf
-log_statement = 'all'
-log_duration = on
-log_min_duration_statement = 100  # Log queries > 100ms
-
-# Or enable for current session:
-psql -U postgres -d agent_agency_v2_test -c "
-  SET log_statement = 'all';
-  SET log_duration = on;
-"
-```
-
-### Multi-Database Setup
-
-For running tests in parallel:
-
-```bash
-# Create additional test databases
-for i in {1..4}; do
-  createdb "agent_agency_v2_test_$i" -O postgres
-  # Run migrations for each
-  psql -U postgres -d "agent_agency_v2_test_$i" -f migrations/001_create_agent_registry_tables.sql
-  # ... (run other migrations)
-done
-
-# Update test configuration to use different databases per worker
-# In jest.config.js or test setup:
-const dbName = `agent_agency_v2_test_${process.env.JEST_WORKER_ID || '1'}`;
-```
-
-### SSL/TLS Configuration
-
-For production or remote connections:
-
-```bash
-# Edit postgresql.conf
-ssl = on
-ssl_cert_file = '/path/to/server.crt'
-ssl_key_file = '/path/to/server.key'
-
-# Update connection string
-DATABASE_URL=postgresql://postgres@localhost:5432/agent_agency_v2_test?sslmode=require
-```
-
-### Monitoring Queries
-
-```bash
-# View active queries
-psql -U postgres -d postgres -c "
-  SELECT
-    pid,
-    now() - pg_stat_activity.query_start AS duration,
-    query,
-    state
-  FROM pg_stat_activity
-  WHERE state != 'idle'
-  ORDER BY duration DESC;
-"
-
-# View slow queries (requires pg_stat_statements extension)
-psql -U postgres -d agent_agency_v2_test -c "
-  CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
-
-  SELECT
-    query,
-    calls,
-    total_exec_time,
-    mean_exec_time,
-    max_exec_time
-  FROM pg_stat_statements
-  ORDER BY mean_exec_time DESC
-  LIMIT 10;
-"
-```
-
----
-
-## Quick Reference
-
-### Common Commands
-
-```bash
-# List databases
-psql -U postgres -l
-
-# Connect to database
-psql -U postgres -d agent_agency_v2_test
-
-# List tables (inside psql)
-\dt
-
-# Describe table
-\d agent_profiles
-
-# List users/roles
-\du
-
-# Show current database
-SELECT current_database();
-
-# Show database size
+```sql
+-- Database size
 SELECT pg_size_pretty(pg_database_size('agent_agency_v2_test'));
 
-# Exit psql
-\q
+-- Table sizes
+SELECT 
+  table_name,
+  pg_size_pretty(pg_total_relation_size(quote_ident(table_name))) AS size
+FROM information_schema.tables
+WHERE table_schema = 'public'
+ORDER BY pg_total_relation_size(quote_ident(table_name)) DESC;
+
+-- Index sizes
+SELECT
+  indexname,
+  pg_size_pretty(pg_relation_size(quote_ident(indexname))) AS size
+FROM pg_indexes
+WHERE schemaname = 'public'
+ORDER BY pg_relation_size(quote_ident(indexname)) DESC;
 ```
 
-### Test Commands
+---
 
-```bash
-# Run all tests with database
-npm test
+## Connection Pooling
 
-# Run only unit tests
-npm run test:unit
+### Configuration
 
-# Run only integration tests
-npm run test:integration
+**Recommended Pool Sizes**:
+- Development: 2-10 connections
+- Test: 2-10 connections
+- Production: 10-100 connections
 
-# Run with coverage
-npm run test:coverage
+**Pool Configuration**:
+```typescript
+// src/database/ConnectionPoolManager.ts
+const poolConfig = {
+  host: process.env.PGHOST,
+  port: parseInt(process.env.PGPORT || '5432'),
+  database: process.env.PGDATABASE,
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  
+  // Pool settings
+  min: parseInt(process.env.DB_POOL_MIN || '2'),
+  max: parseInt(process.env.DB_POOL_MAX || '10'),
+  idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT || '30000'),
+  connectionTimeoutMillis: parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT || '5000'),
+};
 ```
 
-### Maintenance Commands
+### Health Check
 
-```bash
-# Vacuum database (cleanup)
-psql -U postgres -d agent_agency_v2_test -c "VACUUM ANALYZE;"
-
-# Reindex database
-psql -U postgres -d agent_agency_v2_test -c "REINDEX DATABASE agent_agency_v2_test;"
-
-# Check database statistics
-psql -U postgres -d agent_agency_v2_test -c "
-  SELECT schemaname, tablename, n_tup_ins, n_tup_upd, n_tup_del
-  FROM pg_stat_user_tables;
-"
+```typescript
+// Health check endpoint
+async function healthCheck(): Promise<boolean> {
+  try {
+    const result = await pool.query('SELECT 1 AS health');
+    return result.rows[0].health === 1;
+  } catch (error) {
+    console.error('[ConnectionPool] Health check failed:', error);
+    return false;
+  }
+}
 ```
 
 ---
 
 ## Additional Resources
 
-### Official Documentation
+### Documentation
 
-- **PostgreSQL Docs**: [https://www.postgresql.org/docs/](https://www.postgresql.org/docs/)
-- **pg-pool Docs**: [https://node-postgres.com/apis/pool](https://node-postgres.com/apis/pool)
-- **psql Commands**: [https://www.postgresql.org/docs/current/app-psql.html](https://www.postgresql.org/docs/current/app-psql.html)
+- **PostgreSQL Docs**: https://www.postgresql.org/docs/15/
+- **pg_trgm Extension**: https://www.postgresql.org/docs/15/pgtrgm.html
+- **Connection Pooling**: https://node-postgres.com/features/pooling
 
-### Internal Documentation
+### Tools
 
-- **Priority 2 Progress**: `docs/status/PRIORITY_2_PROGRESS.md`
-- **Coverage Investigation**: `docs/status/COVERAGE_INVESTIGATION.md`
-- **Component Status**: `COMPONENT_STATUS_INDEX.md`
+- **pgAdmin**: GUI for PostgreSQL management
+- **DBeaver**: Universal database tool
+- **psql**: Command-line interface (included with PostgreSQL)
 
-### Support
+### Monitoring
 
-For issues specific to Agent Agency V2:
-1. Check `docs/status/COVERAGE_INVESTIGATION.md` for database-related findings
-2. Review test setup in `tests/setup.ts`
-3. Check connection pool configuration in `src/database/ConnectionPoolManager.ts`
+- **pg_stat_activity**: View active connections
+- **pg_stat_database**: Database-wide statistics
+- **pg_stat_user_tables**: Table access statistics
+- **pg_stat_user_indexes**: Index usage statistics
 
 ---
 
-**Document Version**: 1.0.0  
-**Last Updated**: October 13, 2025  
-**Maintained by**: @darianrosebrook  
-**Questions?** Open an issue or check the troubleshooting section above.
+## Summary Checklist
+
+Setup complete when all checks pass:
+
+- [ ] PostgreSQL 15+ installed and running
+- [ ] `postgres` role created
+- [ ] `agent_agency_v2_test` database created
+- [ ] `.env.test` configured
+- [ ] All migrations executed successfully
+- [ ] 6 core tables exist
+- [ ] Extensions installed (uuid-ossp, pg_trgm, btree_gin)
+- [ ] Connection health check passes
+- [ ] Integration tests pass
+
+---
+
+**For questions or issues, see**: `docs/database/TROUBLESHOOTING.md` or file an issue in the project repository.
+
+**Author**: @darianrosebrook  
+**Last Updated**: October 13, 2025
 
