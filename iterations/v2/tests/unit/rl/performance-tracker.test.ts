@@ -419,7 +419,11 @@ describe("PerformanceTracker", () => {
     });
 
     it("should convert legacy TaskOutcome to comprehensive metrics", () => {
-      const executionId = tracker.startTaskExecution("task-123", "agent-1");
+      const executionId = tracker.startTaskExecution(
+        "task-123",
+        "agent-1",
+        mockRoutingDecision
+      );
 
       const legacyOutcome: TaskOutcome = {
         success: true,
@@ -440,7 +444,11 @@ describe("PerformanceTracker", () => {
     });
 
     it("should handle failed task outcomes", () => {
-      const executionId = tracker.startTaskExecution("task-123", "agent-1");
+      const executionId = tracker.startTaskExecution(
+        "task-123",
+        "agent-1",
+        mockRoutingDecision
+      );
 
       const failedOutcome: TaskOutcome = {
         success: false,
@@ -463,7 +471,11 @@ describe("PerformanceTracker", () => {
       // Remove data collector to test graceful degradation
       (tracker as any).dataCollector = null;
 
-      const executionId = tracker.startTaskExecution("task-123", "agent-1");
+      const executionId = tracker.startTaskExecution(
+        "task-123",
+        "agent-1",
+        mockRoutingDecision
+      );
 
       const outcome: TaskOutcome = {
         success: true,
@@ -491,14 +503,17 @@ describe("PerformanceTracker", () => {
       (tracker as any).dataCollector = mockDataCollector;
 
       // Test task execution integration
-      const executionId = tracker.startTaskExecution("task-123", "agent-1", {
-        priority: VerificationPriority.HIGH,
-      });
+      const executionId = tracker.startTaskExecution(
+        "task-123",
+        "agent-1",
+        mockRoutingDecision,
+        { priority: "high" }
+      );
 
       expect(mockDataCollector.recordTaskStart).toHaveBeenCalledWith(
         "task-123",
         "agent-1",
-        expect.objectContaining({ priority: VerificationPriority.HIGH })
+        expect.objectContaining({ priority: "high" })
       );
 
       // Test routing decision integration

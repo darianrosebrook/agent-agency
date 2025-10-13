@@ -1030,5 +1030,133 @@ describe("Security Policy Enforcer - Production Hardening (ARBITER-013)", () => 
         })
       ).not.toThrow();
     });
+
+    it("should handle unregistered agent with security disabled", () => {
+      const disabledManager = new SecurityManager({ enabled: false });
+
+      const credentials: AuthCredentials = {
+        agentId: "nonexistent-agent",
+        token: "any-token",
+      };
+
+      const context = disabledManager.authenticate(credentials);
+      expect(context).toBeNull();
+    });
+  });
+
+  describe("Additional Coverage Tests", () => {
+    it("should handle empty metadata in credentials", () => {
+      const credentials: AuthCredentials = {
+        agentId: "agent-1",
+        token: "valid-token-12345",
+        metadata: undefined,
+      };
+
+      const context = securityManager.authenticate(credentials);
+      expect(context).toBeTruthy();
+      expect(context!.metadata.source).toBe("api");
+    });
+
+    it("should return limited number of security events", () => {
+      const credentials: AuthCredentials = {
+        agentId: "agent-1",
+        token: "valid-token-12345",
+      };
+
+      for (let i = 0; i < 20; i++) {
+        securityManager.authenticate(credentials);
+      }
+
+      const events = securityManager.getSecurityEvents(5);
+      expect(events.length).toBeLessThanOrEqual(5);
+    });
+
+    it("should pass resource parameter in authorization", () => {
+      const credentials: AuthCredentials = {
+        agentId: "agent-1",
+        token: "valid-token-12345",
+      };
+
+      const context = securityManager.authenticate(credentials)!;
+      const result = securityManager.authorize(
+        context,
+        Permission.SUBMIT_TASK,
+        "specific-resource"
+      );
+
+      expect(result).toBe(true);
+    });
+
+    it("should cleanup expired sessions periodically", () => {
+      const shortTimeoutManager = new SecurityManager({
+        enabled: true,
+        sessionTimeoutMs: 100, // Very short for testing
+      });
+
+      shortTimeoutManager.registerAgent(createTestAgent("test-agent"));
+
+      const credentials: AuthCredentials = {
+        agentId: "test-agent",
+        token: "valid-token-12345",
+      };
+
+      // Create sessions
+      const ctx1 = shortTimeoutManager.authenticate(credentials)!;
+      const ctx2 = shortTimeoutManager.authenticate(credentials)!;
+
+      expect(ctx1).toBeTruthy();
+      expect(ctx2).toBeTruthy();
+
+      // Cleanup shouldn't affect valid sessions immediately
+      shortTimeoutManager.cleanupExpiredSessions();
+
+      // Should still work
+      expect(shortTimeoutManager.authorize(ctx1, Permission.SUBMIT_TASK)).toBe(
+        true
+      );
+    });
+
+    it("should allow system-level agents full access", () => {
+      const systemManager = new SecurityManager({ enabled: true });
+      systemManager.registerAgent(createTestAgent("system-agent"));
+
+      const credentials: AuthCredentials = {
+        agentId: "system-agent",
+        token: "valid-token-12345",
+      };
+
+      const context = systemManager.authenticate(credentials)!;
+
+      // Manually elevate to SYSTEM level
+      (context as any).securityLevel = SecurityLevel.SYSTEM;
+
+      // Should have access to any resource
+      expect(systemManager.canAccessResource(context, "agent-1")).toBe(true);
+      expect(systemManager.canAccessResource(context, "agent-2")).toBe(true);
+      expect(systemManager.canAccessResource(context, "any-resource")).toBe(
+        true
+      );
+    });
+
+    it("should track multiple authentication failures", () => {
+      const invalidCreds: AuthCredentials = {
+        agentId: "agent-1",
+        token: "bad",
+      };
+
+      const beforeEvents = securityManager.getSecurityEvents().length;
+
+      // Multiple failed attempts
+      for (let i = 0; i < 5; i++) {
+        securityManager.authenticate(invalidCreds);
+      }
+
+      const afterEvents = securityManager.getSecurityEvents();
+      const failures = afterEvents.filter(
+        (e) => e.type === SecurityEventType.AUTH_FAILURE
+      );
+
+      expect(failures.length).toBeGreaterThanOrEqual(5);
+    });
   });
 });

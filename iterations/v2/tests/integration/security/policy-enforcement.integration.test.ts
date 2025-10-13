@@ -7,11 +7,10 @@
  */
 
 import {
-  SecurityManager,
-  SecurityMiddleware,
   AuthCredentials,
   Permission,
-  SecurityLevel,
+  SecurityManager,
+  SecurityMiddleware,
 } from "../../../src/orchestrator/SecurityManager";
 import { AgentProfile } from "../../../src/types/arbiter-orchestration";
 
@@ -90,13 +89,9 @@ describe("Security Policy Enforcement - Integration Tests", () => {
           expect(canQuery).toBe(true);
 
           // Verify sanitization works
-          const safeData = securityManager.sanitizeInput(
-            context,
-            "operation",
-            {
-              task: "Safe task description",
-            }
-          );
+          const safeData = securityManager.sanitizeInput(context, "operation", {
+            task: "Safe task description",
+          });
           expect(safeData.task).toBe("Safe task description");
 
           return { success: true, data: "Task submitted" };
@@ -278,12 +273,12 @@ describe("Security Policy Enforcement - Integration Tests", () => {
       const context = securityManager.authenticate(credentials)!;
 
       const attacks = [
-        { data: '<script>alert(1)</script>', shouldBlock: true }, // <script pattern
-        { data: 'javascript:alert(1)', shouldBlock: true }, // javascript: pattern
+        { data: "<script>alert(1)</script>", shouldBlock: true }, // <script pattern
+        { data: "javascript:alert(1)", shouldBlock: true }, // javascript: pattern
         { data: '<iframe src="evil.com"></iframe>', shouldBlock: true }, // <iframe pattern
-        { data: '<img src=x onerror=alert(1)>', shouldBlock: true }, // onerror pattern
+        { data: "<img src=x onerror=alert(1)>", shouldBlock: true }, // onerror pattern
         { data: '<div onclick="bad()">X</div>', shouldBlock: true }, // onclick pattern
-        { data: 'data:text/html,<script>alert(1)</script>', shouldBlock: true }, // data:text/html pattern
+        { data: "data:text/html,<script>alert(1)</script>", shouldBlock: true }, // data:text/html pattern
       ];
 
       let blockedCount = 0;
@@ -539,4 +534,3 @@ describe("Security Policy Enforcement - Integration Tests", () => {
     });
   });
 });
-

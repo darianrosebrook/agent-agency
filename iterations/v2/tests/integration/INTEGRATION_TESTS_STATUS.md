@@ -244,7 +244,8 @@ npm test -- tests/integration/real-llm-inference.integration.test.ts
 ollama serve
 
 # Pull required model
-ollama pull gemma2:2b-instruct-q4_0
+ollama pull gemma3n:e2b  # 2B model - faster
+ollama pull gemma3n:e4b  # 4B model - higher quality
 
 # Run tests
 npm test -- tests/integration/ --testTimeout=120000

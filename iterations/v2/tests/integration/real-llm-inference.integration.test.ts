@@ -57,6 +57,7 @@ describe("Real LLM Inference Integration Tests", () => {
   let ollamaProvider: OllamaProvider;
   let performanceTracker: PerformanceTracker;
   let costTracker: ComputeCostTracker;
+  let registeredModelId: string;
 
   beforeAll(async () => {
     console.log("\n🚀 Initializing Real LLM Integration Tests...");
@@ -64,19 +65,22 @@ describe("Real LLM Inference Integration Tests", () => {
     // Initialize registry
     registry = new ModelRegistry();
 
-    // Register Ollama model
-    await registry.registerOllamaModel(
-      "gemma-2b-it",
-      "gemma2:2b-instruct-q4_0",
+    // Register Ollama model (using available gemma3n:e2b)
+    const model = await registry.registerOllamaModel(
+      "gemma3n-e2b",
+      "gemma3n:e2b",
       "1.0.0",
       "primary"
     );
 
-    // Create Ollama provider from model config
-    const model = registry.getModel("gemma-2b-it");
+    // Verify model was registered
     if (!model || model.type !== "ollama") {
-      throw new Error("Failed to get Ollama model");
+      throw new Error("Failed to register Ollama model");
     }
+    
+    // Store model ID for use in tests
+    registeredModelId = model.id;
+    console.log(`✅ Registered model: ${registeredModelId}`);
 
     // Create provider from model config
     ollamaProvider = new OllamaProvider({
@@ -163,7 +167,7 @@ describe("Real LLM Inference Integration Tests", () => {
 
       // Record compute cost
       costTracker.recordOperation({
-        modelId: "gemma-2b-it",
+        modelId: registeredModelId,
         operationId: `task-${Date.now()}`,
         timestamp: new Date(),
         wallClockMs: duration,
@@ -177,7 +181,7 @@ describe("Real LLM Inference Integration Tests", () => {
       });
 
       // Get cost profile
-      const profile = costTracker.getCostProfile("gemma-2b-it");
+      const profile = costTracker.getCostProfile(registeredModelId);
 
       expect(profile).toBeDefined();
       expect(profile!.avgWallClockMs).toBeGreaterThan(0);
@@ -252,7 +256,7 @@ Code:`;
 
       const llmConfig: ModelRegistryLLMConfig = {
         provider: "model-registry",
-        model: "gemma-2b-it",
+        model: registeredModelId,
         temperature: 0.3,
         maxTokens: 200,
       };
@@ -296,7 +300,7 @@ Code:`;
 
   describe("Performance Tracking with Real LLM", () => {
     it("should track LLM performance via ModelRegistry", async () => {
-      const modelId = "gemma-2b-it";
+      const modelId = registeredModelId;
 
       const startTime = Date.now();
 
@@ -344,7 +348,7 @@ Code:`;
     }, 30000);
 
     it("should track multiple inference calls", async () => {
-      const modelId = "gemma-2b-it";
+      const modelId = registeredModelId;
       const prompts = ["Say hello", "Count to 3", "Name a color"];
 
       const results = [];
@@ -353,7 +357,8 @@ Code:`;
       for (const prompt of prompts) {
         const startTime = Date.now();
 
-        const response = await ollamaProvider.generate(prompt, {
+        const response = await ollamaProvider.generate({
+          prompt,
           temperature: 0.7,
           maxTokens: 30,
         });
@@ -361,7 +366,7 @@ Code:`;
         const duration = Date.now() - startTime;
         totalDuration += duration;
 
-        results.push({ prompt, response, duration });
+        results.push({ prompt, response: response.text, duration });
       }
 
       // Update performance profile with aggregated data
@@ -396,30 +401,32 @@ Code:`;
     it("should refine output based on feedback", async () => {
       // Initial attempt
       let prompt = `Write a professional email greeting in one sentence.`;
-      const response1 = await ollamaProvider.generate(prompt, {
+      const response1 = await ollamaProvider.generate({
+        prompt,
         temperature: 0.7,
         maxTokens: 200,
       });
 
       // Refine with feedback
-      prompt = `Your previous response: "${response1}"
+      prompt = `Your previous response: "${response1.text}"
 
 Feedback: Make it more concise and formal.
 
 Improved version:`;
-      const response2 = await ollamaProvider.generate(prompt, {
+      const response2 = await ollamaProvider.generate({
+        prompt,
         temperature: 0.7,
         maxTokens: 200,
       });
 
       console.log("\n✅ Iterative refinement");
-      console.log(`   Iteration 1: "${response1.substring(0, 80)}..."`);
-      console.log(`   Iteration 2: "${response2.substring(0, 80)}..."`);
+      console.log(`   Iteration 1: "${response1.text.substring(0, 80)}..."`);
+      console.log(`   Iteration 2: "${response2.text.substring(0, 80)}..."`);
 
       expect(response1).toBeDefined();
       expect(response2).toBeDefined();
-      expect(response1.length).toBeGreaterThan(0);
-      expect(response2.length).toBeGreaterThan(0);
+      expect(response1.text.length).toBeGreaterThan(0);
+      expect(response2.text.length).toBeGreaterThan(0);
     }, 90000);
   });
 });
