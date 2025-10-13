@@ -4,8 +4,8 @@
  * @author @darianrosebrook
  */
 
-import { Argument, Evidence } from "@/types/reasoning";
 import { EvidenceAggregator } from "@/reasoning/EvidenceAggregator";
+import { Argument, Evidence } from "@/types/reasoning";
 
 describe("EvidenceAggregator", () => {
   describe("aggregateEvidence", () => {
@@ -172,10 +172,7 @@ describe("EvidenceAggregator", () => {
     });
 
     it("should include evidence at exact threshold", () => {
-      const evidence = [
-        createTestEvidence(0.7),
-        createTestEvidence(0.6),
-      ];
+      const evidence = [createTestEvidence(0.7), createTestEvidence(0.6)];
 
       const filtered = EvidenceAggregator.filterByCredibility(evidence, 0.6);
 
@@ -250,9 +247,9 @@ describe("EvidenceAggregator", () => {
     });
 
     it("should default to top 5", () => {
-      const evidence = Array(10).fill(null).map((_, i) =>
-        createTestEvidence(i / 10)
-      );
+      const evidence = Array(10)
+        .fill(null)
+        .map((_, i) => createTestEvidence(i / 10));
 
       const top = EvidenceAggregator.getMostCredibleEvidence(evidence);
 
@@ -291,7 +288,9 @@ describe("EvidenceAggregator", () => {
       const validation = EvidenceAggregator.validateEvidenceQuality(evidence);
 
       expect(validation.valid).toBe(false);
-      expect(validation.issues.some(i => i.includes("low credibility"))).toBe(true);
+      expect(validation.issues.some((i) => i.includes("low credibility"))).toBe(
+        true
+      );
     });
 
     it("should detect too much disputed evidence", () => {
@@ -304,7 +303,7 @@ describe("EvidenceAggregator", () => {
       const validation = EvidenceAggregator.validateEvidenceQuality(evidence);
 
       expect(validation.valid).toBe(false);
-      expect(validation.issues.some(i => i.includes("disputed"))).toBe(true);
+      expect(validation.issues.some((i) => i.includes("disputed"))).toBe(true);
     });
 
     it("should detect low source diversity", () => {
@@ -318,7 +317,7 @@ describe("EvidenceAggregator", () => {
       const validation = EvidenceAggregator.validateEvidenceQuality(evidence);
 
       expect(validation.valid).toBe(false);
-      expect(validation.issues.some(i => i.includes("diversity"))).toBe(true);
+      expect(validation.issues.some((i) => i.includes("diversity"))).toBe(true);
     });
   });
 });

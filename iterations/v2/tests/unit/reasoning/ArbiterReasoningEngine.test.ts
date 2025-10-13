@@ -8,11 +8,11 @@ import { ArbiterReasoningEngine } from "@/reasoning/ArbiterReasoningEngine";
 import {
   AgentRole,
   ConsensusAlgorithm,
-  DebateState,
-  ReasoningEngineError,
-  InvalidArgumentError,
   ConsensusImpossibleError,
+  DebateState,
   Evidence,
+  InvalidArgumentError,
+  ReasoningEngineError,
 } from "@/types/reasoning";
 
 describe("ArbiterReasoningEngine", () => {
@@ -48,12 +48,12 @@ describe("ArbiterReasoningEngine", () => {
     it("should throw error for too few participants", async () => {
       const participants = [{ agentId: "agent-1", role: AgentRole.PROPONENT }];
 
-      await expect(engine.initiateDebate("Test topic", participants)).rejects.toThrow(
-        ReasoningEngineError
-      );
-      await expect(engine.initiateDebate("Test topic", participants)).rejects.toThrow(
-        /minimum.*2/i
-      );
+      await expect(
+        engine.initiateDebate("Test topic", participants)
+      ).rejects.toThrow(ReasoningEngineError);
+      await expect(
+        engine.initiateDebate("Test topic", participants)
+      ).rejects.toThrow(/minimum.*2/i);
     });
 
     it("should throw error for too many participants", async () => {
@@ -61,12 +61,12 @@ describe("ArbiterReasoningEngine", () => {
         .fill(null)
         .map((_, i) => ({ agentId: `agent-${i}`, role: AgentRole.PROPONENT }));
 
-      await expect(engine.initiateDebate("Test topic", participants)).rejects.toThrow(
-        ReasoningEngineError
-      );
-      await expect(engine.initiateDebate("Test topic", participants)).rejects.toThrow(
-        /maximum.*10/i
-      );
+      await expect(
+        engine.initiateDebate("Test topic", participants)
+      ).rejects.toThrow(ReasoningEngineError);
+      await expect(
+        engine.initiateDebate("Test topic", participants)
+      ).rejects.toThrow(/maximum.*10/i);
     });
 
     it("should throw error for empty topic", async () => {
@@ -90,12 +90,12 @@ describe("ArbiterReasoningEngine", () => {
         { agentId: "agent-2", role: AgentRole.MEDIATOR },
       ];
 
-      await expect(engine.initiateDebate("Test topic", participants)).rejects.toThrow(
-        ReasoningEngineError
-      );
-      await expect(engine.initiateDebate("Test topic", participants)).rejects.toThrow(
-        /duplicate/i
-      );
+      await expect(
+        engine.initiateDebate("Test topic", participants)
+      ).rejects.toThrow(ReasoningEngineError);
+      await expect(
+        engine.initiateDebate("Test topic", participants)
+      ).rejects.toThrow(/duplicate/i);
     });
 
     it("should assign default weight if not specified", async () => {
@@ -164,7 +164,13 @@ describe("ArbiterReasoningEngine", () => {
 
     it("should reject empty reasoning", async () => {
       await expect(
-        engine.submitArgument(debateId, "agent-1", "Valid claim", [createEvidence()], "")
+        engine.submitArgument(
+          debateId,
+          "agent-1",
+          "Valid claim",
+          [createEvidence()],
+          ""
+        )
       ).rejects.toThrow(InvalidArgumentError);
     });
 
@@ -248,6 +254,9 @@ describe("ArbiterReasoningEngine", () => {
         [createEvidence()],
         "Second reasoning"
       );
+
+      // Aggregate evidence to transition to voting state
+      await engine.aggregateEvidence(debateId);
     });
 
     it("should accept valid vote", async () => {
@@ -259,7 +268,9 @@ describe("ArbiterReasoningEngine", () => {
         "I agree"
       );
 
-      const participant = session.participants.find((p) => p.agentId === "agent-1");
+      const participant = session.participants.find(
+        (p) => p.agentId === "agent-1"
+      );
       expect(participant?.votesCast).toHaveLength(1);
       expect(participant?.votesCast[0].position).toBe("for");
     });
@@ -288,7 +299,9 @@ describe("ArbiterReasoningEngine", () => {
         "Neutral"
       );
 
-      const participant = session.participants.find((p) => p.agentId === "agent-1");
+      const participant = session.participants.find(
+        (p) => p.agentId === "agent-1"
+      );
       expect(participant?.votesCast[0].position).toBe("abstain");
     });
 
@@ -325,10 +338,19 @@ describe("ArbiterReasoningEngine", () => {
         [createEvidence()],
         "Second reasoning"
       );
+
+      // Aggregate evidence to transition to voting state
+      await engine.aggregateEvidence(debateId);
     });
 
     it("should form consensus with majority votes", async () => {
-      await engine.submitVote(debateId, "agent-1", "for", 0.9, "Strong support");
+      await engine.submitVote(
+        debateId,
+        "agent-1",
+        "for",
+        0.9,
+        "Strong support"
+      );
       await engine.submitVote(debateId, "agent-2", "for", 0.8, "Support");
       await engine.submitVote(debateId, "agent-3", "against", 0.7, "Against");
 
@@ -340,6 +362,8 @@ describe("ArbiterReasoningEngine", () => {
     });
 
     it("should fail to form consensus without votes", async () => {
+      // beforeEach already called aggregateEvidence, so we're in voting state
+      // Now fail because no votes were cast
       await expect(engine.formConsensus(debateId)).rejects.toThrow(
         ConsensusImpossibleError
       );
@@ -348,6 +372,7 @@ describe("ArbiterReasoningEngine", () => {
     it("should fail to form consensus without majority", async () => {
       await engine.submitVote(debateId, "agent-1", "for", 0.9, "Support");
       await engine.submitVote(debateId, "agent-2", "against", 0.8, "Against");
+      await engine.submitVote(debateId, "agent-3", "abstain", 0.5, "Neutral");
 
       const session = await engine.formConsensus(debateId);
 
@@ -390,6 +415,9 @@ describe("ArbiterReasoningEngine", () => {
         "Second reasoning"
       );
 
+      // Aggregate evidence to transition to voting state
+      await engine.aggregateEvidence(debateId);
+
       await engine.submitVote(debateId, "agent-1", "for", 0.9, "Support");
       await engine.submitVote(debateId, "agent-2", "for", 0.8, "Support");
       await engine.submitVote(debateId, "agent-3", "against", 0.7, "Against");
@@ -429,6 +457,10 @@ describe("ArbiterReasoningEngine", () => {
         [createEvidence()],
         "Test reasoning"
       );
+
+      // Aggregate evidence to transition to voting state
+      await engine.aggregateEvidence(debateId);
+
       await engine.submitVote(debateId, "agent-1", "for", 0.9, "Support");
       await engine.submitVote(debateId, "agent-2", "for", 0.8, "Support");
       await engine.submitVote(debateId, "agent-3", "for", 0.7, "Support");
@@ -486,6 +518,10 @@ describe("ArbiterReasoningEngine", () => {
         [createEvidence()],
         "Test reasoning"
       );
+
+      // Aggregate evidence to transition to voting state
+      await engine.aggregateEvidence(debateId);
+
       await engine.submitVote(debateId, "agent-1", "for", 0.9, "Support");
       await engine.submitVote(debateId, "agent-2", "for", 0.8, "Support");
       await engine.submitVote(debateId, "agent-3", "for", 0.7, "Support");

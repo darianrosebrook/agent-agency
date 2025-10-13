@@ -50,9 +50,10 @@ export enum ConsensusAlgorithm {
  */
 export enum DeadlockResolutionStrategy {
   MEDIATOR_DECISION = "mediator_decision",
-  ESCALATION = "escalation",
   TIMEOUT_DEFAULT = "timeout_default",
-  WEIGHTED_VOTING = "weighted_voting",
+  WEIGHTED_COMPROMISE = "weighted_compromise",
+  ESCALATE_TO_ADMIN = "escalate_to_admin",
+  SPLIT_DECISION = "split_decision",
 }
 
 /**
@@ -86,7 +87,7 @@ export interface Evidence {
 export interface DebateParticipant {
   agentId: string;
   role: AgentRole;
-  weight: number;
+  weight?: number;
   argumentsPresented: string[];
   votesCast: DebateVote[];
 }

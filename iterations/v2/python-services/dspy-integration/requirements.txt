@@ -3,6 +3,7 @@
 
 # Core DSPy framework
 dspy-ai>=2.4.0
+requests>=2.31.0
 
 # API server for TypeScript integration
 fastapi>=0.104.0

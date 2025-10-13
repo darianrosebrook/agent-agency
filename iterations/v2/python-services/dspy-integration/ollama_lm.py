@@ -10,6 +10,7 @@ import requests
 from typing import List, Dict, Any, Optional
 import structlog
 from dataclasses import dataclass
+import dspy
 
 logger = structlog.get_logger()
 
@@ -26,7 +27,7 @@ class OllamaResponse:
     eval_duration: int
 
 
-class OllamaDSPyLM:
+class OllamaDSPyLM(dspy.LM):
     """
     Ollama Language Model for DSPy.
 
@@ -40,6 +41,7 @@ class OllamaDSPyLM:
         max_tokens: int = 2048,
         temperature: float = 0.7,
         timeout: int = 30,
+        **kwargs
     ):
         """
         Initialize Ollama LM.
@@ -50,12 +52,15 @@ class OllamaDSPyLM:
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature
             timeout: Request timeout in seconds
+            **kwargs: Additional arguments for DSPy compatibility
         """
-        self.model = model
+        super().__init__(model=model, **kwargs)
+
         self.host = host
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.timeout = timeout
+        self.kwargs = kwargs
 
         logger.info(
             "ollama_lm_initialized",
@@ -66,20 +71,75 @@ class OllamaDSPyLM:
 
     def __call__(
         self,
-        prompt: str,
+        prompt: str = None,
+        messages: List[Dict[str, str]] = None,
         **kwargs
-    ) -> str:
+    ) -> List[str]:
         """
-        Generate completion for prompt.
+        Generate completion for prompt (DSPy interface).
 
         Args:
             prompt: Input prompt
+            messages: Chat messages (for chat mode)
             **kwargs: Additional generation parameters
+
+        Returns:
+            List of generated completions
+        """
+        if messages:
+            # Chat mode
+            result = self.chat(messages, **kwargs)
+            return [result]
+        else:
+            # Completion mode
+            result = self.generate(prompt or "", **kwargs)
+            return [result]
+
+    def chat(
+        self,
+        messages: List[Dict[str, str]],
+        **kwargs
+    ) -> str:
+        """
+        Generate completion using chat format.
+
+        Args:
+            messages: List of message dicts with 'role' and 'content'
+            **kwargs: Additional parameters
 
         Returns:
             Generated text
         """
-        return self.generate(prompt, **kwargs)
+        url = f"{self.host}/api/chat"
+
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "stream": False,
+            "options": {
+                "num_predict": kwargs.get("max_tokens", self.max_tokens),
+                "temperature": kwargs.get("temperature", self.temperature),
+            }
+        }
+
+        try:
+            response = requests.post(
+                url,
+                json=payload,
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+
+            data = response.json()
+            return data.get("message", {}).get("content", "")
+
+        except Exception as error:
+            logger.error(
+                "ollama_chat_failed",
+                model=self.model,
+                error=str(error),
+            )
+            raise RuntimeError(f"Ollama chat failed: {error}")
 
     def generate(
         self,

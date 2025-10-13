@@ -70,6 +70,14 @@ export class ArbiterReasoningEngine {
     topic: string,
     participants: Array<{ agentId: string; role: AgentRole; weight?: number }>
   ): Promise<DebateSession> {
+    // Validate topic
+    if (!topic || topic.trim().length === 0) {
+      throw new ReasoningEngineError(
+        "Debate topic cannot be empty",
+        "EMPTY_TOPIC"
+      );
+    }
+
     // Validate participant count
     if (participants.length < this.config.minimumParticipants) {
       throw new ReasoningEngineError(
@@ -83,6 +91,18 @@ export class ArbiterReasoningEngine {
         `Too many participants: ${participants.length} (maximum: ${this.config.maximumParticipants})`,
         "TOO_MANY_PARTICIPANTS"
       );
+    }
+
+    // Validate no duplicate participant IDs
+    const participantIds = new Set<string>();
+    for (const participant of participants) {
+      if (participantIds.has(participant.agentId)) {
+        throw new ReasoningEngineError(
+          `Duplicate participant ID: ${participant.agentId}`,
+          "DUPLICATE_PARTICIPANT"
+        );
+      }
+      participantIds.add(participant.agentId);
     }
 
     // Create debate configuration
@@ -288,6 +308,15 @@ export class ArbiterReasoningEngine {
       );
     }
 
+    // Validate confidence range
+    if (confidence < 0 || confidence > 1) {
+      throw new ReasoningEngineError(
+        `Invalid confidence value: ${confidence} (must be between 0 and 1)`,
+        "INVALID_CONFIDENCE",
+        debateId
+      );
+    }
+
     // Create vote
     const vote: DebateVote = {
       agentId,
@@ -325,8 +354,11 @@ export class ArbiterReasoningEngine {
   public async formConsensus(debateId: string): Promise<DebateSession> {
     const session = this.getActiveSession(debateId);
 
-    // Validate state
-    if (session.state !== DebateState.CONSENSUS_FORMING) {
+    // Validate state (allow deliberation or consensus_forming)
+    if (
+      session.state !== DebateState.DELIBERATION &&
+      session.state !== DebateState.CONSENSUS_FORMING
+    ) {
       throw new ReasoningEngineError(
         `Cannot form consensus in state ${session.state}`,
         "INVALID_STATE",

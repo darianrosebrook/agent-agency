@@ -1,434 +1,409 @@
 """
-Evaluation-Driven Optimization Pipeline
+Optimization Pipeline
 
-Systematic optimization of DSPy signatures using evaluation data
-from the Agent Agency V2 system.
+MIPROv2-based optimization pipeline for self-improving prompts.
 
 @author @darianrosebrook
 """
 
+import uuid
+from typing import List, Callable, Optional, Dict, Any
 import dspy
-from typing import Any, Callable, Literal
+from dspy.teleprompt import MIPROv2
 import structlog
-from dataclasses import dataclass
-from pathlib import Path
-import json
 
-from signatures.rubric_optimization import RubricOptimizer, create_rubric_example
-from signatures.judge_optimization import SelfImprovingJudge, create_judge_example
+from signatures.rubric_optimization import RubricOptimizer
+from signatures.judge_optimization import SelfImprovingJudge
+from storage.model_registry import ModelRegistry
+from .metrics import rubric_metric, judge_metric
 
 logger = structlog.get_logger()
 
-OptimizerType = Literal["MIPROv2", "SIMBA", "BootstrapFewShot"]
 
-
-@dataclass
-class OptimizationConfig:
-    """Configuration for optimization pipeline."""
-
-    optimizer_type: OptimizerType
-    num_trials: int
-    num_candidates: int
-    init_temperature: float
-    metric_threshold: float
-    cache_dir: Path
-
-
-@dataclass
-class OptimizationResult:
-    """Results from optimization run."""
-
-    signature_id: str
-    optimizer_type: str
-    initial_score: float
-    final_score: float
-    improvement_pct: float
-    num_trials: int
-    best_trial: int
-    metadata: dict[str, Any]
-
-
-class EvaluationDrivenPipeline:
+class OptimizationPipeline:
     """
-    Evaluation-driven optimization pipeline for DSPy signatures.
+    DSPy optimization pipeline using MIPROv2.
 
-    Systematically improves prompts based on evaluation data collected
-    from the Agent Agency V2 system.
+    Orchestrates systematic prompt optimization for rubrics and judges.
     """
 
-    def __init__(self, config: OptimizationConfig):
+    def __init__(self, model_registry: Optional[ModelRegistry] = None):
         """
         Initialize optimization pipeline.
 
         Args:
-            config: Pipeline configuration
+            model_registry: ModelRegistry for storing optimized models
         """
-        self.config = config
-        self.cache_dir = config.cache_dir
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.registry = model_registry or ModelRegistry()
 
-        logger.info(
-            "optimization_pipeline_initialized",
-            optimizer=config.optimizer_type,
-            num_trials=config.num_trials
-        )
+        logger.info("optimization_pipeline_initialized")
 
     def optimize_rubric(
         self,
-        trainset: list[dspy.Example],
-        metric: Callable[[dspy.Example, dspy.Prediction], float] | None = None
-    ) -> OptimizationResult:
+        trainset: List[dspy.Example],
+        valset: Optional[List[dspy.Example]] = None,
+        metric: Optional[Callable] = None,
+        num_trials: int = 100,
+        num_candidates: int = 10,
+        init_temperature: float = 1.0
+    ) -> RubricOptimizer:
         """
-        Optimize rubric computation using evaluation data.
+        Optimize rubric module using MIPROv2.
 
         Args:
-            trainset: Training examples with ground truth evaluations
-            metric: Optional custom metric function
+            trainset: Training examples
+            valset: Validation examples (uses trainset if None)
+            metric: Evaluation metric (uses rubric_metric if None)
+            num_trials: Number of optimization trials
+            num_candidates: Number of candidate prompts per iteration
+            init_temperature: Initial temperature for exploration
 
         Returns:
-            Optimization results
+            Optimized RubricOptimizer module
         """
         logger.info(
-            "optimizing_rubric",
+            "rubric_optimization_starting",
             trainset_size=len(trainset),
-            optimizer=self.config.optimizer_type
+            valset_size=len(valset) if valset else len(trainset),
+            num_trials=num_trials
         )
 
-        # Initialize rubric optimizer
-        optimizer = RubricOptimizer()
+        # Use rubric_metric if not provided
+        metric = metric or rubric_metric
 
-        # Compute baseline score
-        initial_score = self._evaluate_module(optimizer, trainset, metric)
+        # Use trainset for validation if valset not provided
+        valset = valset or trainset
+
+        # Create baseline rubric optimizer
+        baseline_optimizer = RubricOptimizer()
+
+        # Baseline evaluation
+        baseline_scores = []
+        for example in valset:
+            try:
+                pred = baseline_optimizer.forward(
+                    task_context=example.task_context,
+                    agent_output=example.agent_output,
+                    evaluation_criteria=example.evaluation_criteria
+                )
+                score = metric(example, pred)
+                baseline_scores.append(score)
+            except Exception as error:
+                logger.warning(
+                    "baseline_evaluation_failed",
+                    error=str(error)
+                )
+
+        baseline_mean = sum(baseline_scores) / \
+            len(baseline_scores) if baseline_scores else 0.0
 
         logger.info(
-            "rubric_baseline_computed",
-            initial_score=initial_score
+            "baseline_rubric_performance",
+            mean_score=baseline_mean,
+            num_evaluated=len(baseline_scores)
         )
 
-        # Create optimizer
-        dspy_optimizer = self._create_optimizer(metric)
-
-        # Compile and optimize
-        optimized = dspy_optimizer.compile(
-            optimizer,
-            trainset=trainset,
-            num_trials=self.config.num_trials
+        # Configure MIPROv2 optimizer
+        optimizer = MIPROv2(
+            metric=metric,
+            num_candidates=num_candidates,
+            init_temperature=init_temperature,
+            verbose=True
         )
 
-        # Compute final score
-        final_score = self._evaluate_module(optimized, trainset, metric)
+        # Run optimization
+        try:
+            logger.info("running_miprov2_optimization")
 
-        improvement_pct = ((final_score - initial_score) / initial_score) * 100
+            optimized_module = optimizer.compile(
+                student=RubricOptimizer(),
+                trainset=trainset,
+                num_trials=num_trials,
+                max_bootstrapped_demos=4,
+                max_labeled_demos=4,
+                eval_kwargs={"num_threads": 1}  # Sequential for stability
+            )
+
+            logger.info("miprov2_optimization_complete")
+
+        except Exception as error:
+            logger.error(
+                "optimization_failed",
+                error=str(error)
+            )
+            raise
+
+        # Optimized evaluation
+        optimized_scores = []
+        for example in valset:
+            try:
+                pred = optimized_module.forward(
+                    task_context=example.task_context,
+                    agent_output=example.agent_output,
+                    evaluation_criteria=example.evaluation_criteria
+                )
+                score = metric(example, pred)
+                optimized_scores.append(score)
+            except Exception as error:
+                logger.warning(
+                    "optimized_evaluation_failed",
+                    error=str(error)
+                )
+
+        optimized_mean = sum(optimized_scores) / \
+            len(optimized_scores) if optimized_scores else 0.0
+        improvement = ((optimized_mean - baseline_mean) /
+                       baseline_mean * 100) if baseline_mean > 0 else 0.0
 
         logger.info(
-            "rubric_optimization_complete",
-            initial_score=initial_score,
-            final_score=final_score,
-            improvement_pct=improvement_pct
+            "optimized_rubric_performance",
+            baseline_mean=baseline_mean,
+            optimized_mean=optimized_mean,
+            improvement_percent=improvement,
+            num_evaluated=len(optimized_scores)
         )
 
-        # Save optimized module
-        signature_id = f"rubric_optimized_{self.config.optimizer_type}"
-        self._save_module(optimized, signature_id)
+        # Register optimized model
+        model_id = f"rubric_optimizer_{uuid.uuid4().hex[:8]}"
 
-        return OptimizationResult(
-            signature_id=signature_id,
-            optimizer_type=self.config.optimizer_type,
-            initial_score=initial_score,
-            final_score=final_score,
-            improvement_pct=improvement_pct,
-            num_trials=self.config.num_trials,
-            best_trial=-1,  # TODO: Extract from optimizer
-            metadata={
-                "trainset_size": len(trainset),
-                "metric_threshold": self.config.metric_threshold
-            }
+        self.registry.register_model(
+            model_id=model_id,
+            module_type="rubric_optimizer",
+            module=optimized_module,
+            metrics={
+                "baseline_score": baseline_mean,
+                "optimized_score": optimized_mean,
+                "improvement_percent": improvement
+            },
+            training_examples_count=len(trainset),
+            optimization_params={
+                "num_trials": num_trials,
+                "num_candidates": num_candidates,
+                "init_temperature": init_temperature
+            },
+            notes=f"MIPROv2 optimization with {num_trials} trials"
         )
+
+        # Set as active if it improved
+        if improvement > 5.0:  # At least 5% improvement
+            self.registry.set_active_model(model_id)
+            logger.info(
+                "new_active_rubric_model",
+                model_id=model_id,
+                improvement=improvement
+            )
+
+        return optimized_module
 
     def optimize_judge(
         self,
         judge_type: str,
-        trainset: list[dspy.Example],
-        metric: Callable[[dspy.Example, dspy.Prediction], float] | None = None
-    ) -> OptimizationResult:
+        trainset: List[dspy.Example],
+        valset: Optional[List[dspy.Example]] = None,
+        metric: Optional[Callable] = None,
+        num_trials: int = 150,
+        num_candidates: int = 15,
+        init_temperature: float = 1.2
+    ) -> SelfImprovingJudge:
         """
-        Optimize model judge using evaluation data.
+        Optimize judge module using MIPROv2.
 
         Args:
             judge_type: Type of judge to optimize
-            trainset: Training examples with ground truth judgments
-            metric: Optional custom metric function
+            trainset: Training examples
+            valset: Validation examples (uses trainset if None)
+            metric: Evaluation metric (uses judge_metric if None)
+            num_trials: Number of optimization trials
+            num_candidates: Number of candidate prompts per iteration
+            init_temperature: Initial temperature for exploration
 
         Returns:
-            Optimization results
+            Optimized SelfImprovingJudge module
         """
         logger.info(
-            "optimizing_judge",
+            "judge_optimization_starting",
             judge_type=judge_type,
             trainset_size=len(trainset),
-            optimizer=self.config.optimizer_type
+            valset_size=len(valset) if valset else len(trainset),
+            num_trials=num_trials
         )
 
-        # Initialize judge
-        judge = SelfImprovingJudge(judge_type)
+        # Use judge_metric if not provided
+        metric = metric or judge_metric
 
-        # Compute baseline score
-        initial_score = self._evaluate_module(judge, trainset, metric)
+        # Use trainset for validation if valset not provided
+        valset = valset or trainset
 
-        logger.info(
-            "judge_baseline_computed",
-            judge_type=judge_type,
-            initial_score=initial_score
-        )
+        # Create baseline judge
+        baseline_judge = SelfImprovingJudge(judge_type)
 
-        # Create optimizer
-        dspy_optimizer = self._create_optimizer(
-            metric or judge._default_metric)
-
-        # Compile and optimize
-        optimized = dspy_optimizer.compile(
-            judge,
-            trainset=trainset,
-            num_trials=self.config.num_trials
-        )
-
-        # Compute final score
-        final_score = self._evaluate_module(optimized, trainset, metric)
-
-        improvement_pct = ((final_score - initial_score) / initial_score) * 100
-
-        logger.info(
-            "judge_optimization_complete",
-            judge_type=judge_type,
-            initial_score=initial_score,
-            final_score=final_score,
-            improvement_pct=improvement_pct
-        )
-
-        # Save optimized module
-        signature_id = f"judge_{judge_type}_{self.config.optimizer_type}"
-        self._save_module(optimized, signature_id)
-
-        return OptimizationResult(
-            signature_id=signature_id,
-            optimizer_type=self.config.optimizer_type,
-            initial_score=initial_score,
-            final_score=final_score,
-            improvement_pct=improvement_pct,
-            num_trials=self.config.num_trials,
-            best_trial=-1,  # TODO: Extract from optimizer
-            metadata={
-                "judge_type": judge_type,
-                "trainset_size": len(trainset),
-                "metric_threshold": self.config.metric_threshold
-            }
-        )
-
-    def _create_optimizer(
-        self,
-        metric: Callable[[dspy.Example, dspy.Prediction], float] | None
-    ) -> Any:
-        """
-        Create DSPy optimizer based on configuration.
-
-        Args:
-            metric: Evaluation metric function
-
-        Returns:
-            DSPy optimizer instance
-        """
-        if self.config.optimizer_type == "MIPROv2":
-            return dspy.MIPROv2(
-                metric=metric,
-                num_candidates=self.config.num_candidates,
-                init_temperature=self.config.init_temperature
-            )
-        elif self.config.optimizer_type == "BootstrapFewShot":
-            return dspy.BootstrapFewShot(
-                metric=metric,
-                max_bootstrapped_demos=self.config.num_candidates
-            )
-        else:
-            raise ValueError(
-                f"Unknown optimizer type: {self.config.optimizer_type}")
-
-    def _evaluate_module(
-        self,
-        module: dspy.Module,
-        examples: list[dspy.Example],
-        metric: Callable[[dspy.Example, dspy.Prediction], float] | None
-    ) -> float:
-        """
-        Evaluate module on examples using metric.
-
-        Args:
-            module: DSPy module to evaluate
-            examples: Evaluation examples
-            metric: Metric function
-
-        Returns:
-            Average score across examples
-        """
-        if metric is None:
-            # Default metric: just return 1.0 for now
-            # TODO: Implement default metric
-            return 1.0
-
-        scores = []
-        for example in examples:
-            # Extract inputs
-            inputs = {
-                k: getattr(example, k)
-                for k in example._input_keys
-            }
-
-            # Get prediction
-            pred = module(**inputs)
-
-            # Compute score
-            score = metric(example, pred)
-            scores.append(score)
-
-        return sum(scores) / len(scores) if scores else 0.0
-
-    def _save_module(self, module: dspy.Module, signature_id: str) -> None:
-        """
-        Save optimized module to cache.
-
-        Args:
-            module: Optimized module
-            signature_id: Unique identifier for module
-        """
-        module_path = self.cache_dir / f"{signature_id}.json"
-
-        # Save module state
-        module.save(str(module_path))
-
-        logger.info(
-            "module_saved",
-            signature_id=signature_id,
-            path=str(module_path)
-        )
-
-    def load_module(self, signature_id: str) -> dspy.Module | None:
-        """
-        Load optimized module from cache.
-
-        Args:
-            signature_id: Module identifier
-
-        Returns:
-            Loaded module or None if not found
-        """
-        module_path = self.cache_dir / f"{signature_id}.json"
-
-        if not module_path.exists():
-            logger.warning(
-                "module_not_found",
-                signature_id=signature_id
-            )
-            return None
-
-        # TODO: Implement module loading
-        # This requires knowing the module class to instantiate
-
-        logger.info(
-            "module_loaded",
-            signature_id=signature_id
-        )
-
-        return None
-
-
-class ContinuousOptimizationScheduler:
-    """
-    Scheduler for continuous optimization of DSPy signatures.
-
-    Periodically re-optimizes signatures as new evaluation data
-    becomes available from the Agent Agency V2 system.
-    """
-
-    def __init__(
-        self,
-        pipeline: EvaluationDrivenPipeline,
-        data_source: Any,
-        optimization_interval: int = 3600
-    ):
-        """
-        Initialize continuous optimization scheduler.
-
-        Args:
-            pipeline: Optimization pipeline
-            data_source: Source of evaluation data
-            optimization_interval: Seconds between optimizations
-        """
-        self.pipeline = pipeline
-        self.data_source = data_source
-        self.optimization_interval = optimization_interval
-
-        logger.info(
-            "continuous_optimization_scheduler_initialized",
-            interval=optimization_interval
-        )
-
-    async def run(self) -> None:
-        """
-        Run continuous optimization loop.
-
-        Periodically fetches new evaluation data and re-optimizes signatures.
-        """
-        logger.info("continuous_optimization_started")
-
-        while True:
+        # Baseline evaluation
+        baseline_scores = []
+        for example in valset:
             try:
-                # Fetch new evaluation data
-                rubric_data = await self._fetch_rubric_data()
-                judge_data = await self._fetch_judge_data()
+                pred = baseline_judge.forward(
+                    artifact=example.artifact,
+                    ground_truth=example.ground_truth,
+                    context=example.context
+                )
+                score = metric(example, pred)
+                baseline_scores.append(score)
+            except Exception as error:
+                logger.warning(
+                    "baseline_judge_evaluation_failed",
+                    error=str(error)
+                )
 
-                # Optimize rubric if sufficient data
-                if len(rubric_data) >= 10:
-                    result = self.pipeline.optimize_rubric(rubric_data)
-                    logger.info(
-                        "rubric_reoptimized",
-                        improvement_pct=result.improvement_pct
-                    )
+        baseline_mean = sum(baseline_scores) / \
+            len(baseline_scores) if baseline_scores else 0.0
 
-                # Optimize judges if sufficient data
-                for judge_type, data in judge_data.items():
-                    if len(data) >= 10:
-                        result = self.pipeline.optimize_judge(judge_type, data)
-                        logger.info(
-                            "judge_reoptimized",
-                            judge_type=judge_type,
-                            improvement_pct=result.improvement_pct
-                        )
+        logger.info(
+            "baseline_judge_performance",
+            judge_type=judge_type,
+            mean_score=baseline_mean,
+            num_evaluated=len(baseline_scores)
+        )
 
-                # Wait for next optimization cycle
-                await asyncio.sleep(self.optimization_interval)
+        # Configure MIPROv2 optimizer
+        optimizer = MIPROv2(
+            metric=metric,
+            num_candidates=num_candidates,
+            init_temperature=init_temperature,
+            verbose=True
+        )
+
+        # Run optimization
+        try:
+            logger.info("running_miprov2_judge_optimization",
+                        judge_type=judge_type)
+
+            optimized_module = optimizer.compile(
+                student=SelfImprovingJudge(judge_type),
+                trainset=trainset,
+                num_trials=num_trials,
+                max_bootstrapped_demos=5,
+                max_labeled_demos=5,
+                eval_kwargs={"num_threads": 1}  # Sequential for stability
+            )
+
+            logger.info("miprov2_judge_optimization_complete",
+                        judge_type=judge_type)
+
+        except Exception as error:
+            logger.error(
+                "judge_optimization_failed",
+                judge_type=judge_type,
+                error=str(error)
+            )
+            raise
+
+        # Optimized evaluation
+        optimized_scores = []
+        for example in valset:
+            try:
+                pred = optimized_module.forward(
+                    artifact=example.artifact,
+                    ground_truth=example.ground_truth,
+                    context=example.context
+                )
+                score = metric(example, pred)
+                optimized_scores.append(score)
+            except Exception as error:
+                logger.warning(
+                    "optimized_judge_evaluation_failed",
+                    error=str(error)
+                )
+
+        optimized_mean = sum(optimized_scores) / \
+            len(optimized_scores) if optimized_scores else 0.0
+        improvement = ((optimized_mean - baseline_mean) /
+                       baseline_mean * 100) if baseline_mean > 0 else 0.0
+
+        logger.info(
+            "optimized_judge_performance",
+            judge_type=judge_type,
+            baseline_mean=baseline_mean,
+            optimized_mean=optimized_mean,
+            improvement_percent=improvement,
+            num_evaluated=len(optimized_scores)
+        )
+
+        # Register optimized model
+        model_id = f"judge_{judge_type}_{uuid.uuid4().hex[:8]}"
+
+        self.registry.register_model(
+            model_id=model_id,
+            module_type=f"judge_{judge_type}",
+            module=optimized_module,
+            metrics={
+                "baseline_score": baseline_mean,
+                "optimized_score": optimized_mean,
+                "improvement_percent": improvement
+            },
+            training_examples_count=len(trainset),
+            optimization_params={
+                "num_trials": num_trials,
+                "num_candidates": num_candidates,
+                "init_temperature": init_temperature
+            },
+            notes=f"MIPROv2 optimization for {judge_type} judge with {num_trials} trials"
+        )
+
+        # Set as active if it improved
+        if improvement > 5.0:  # At least 5% improvement
+            self.registry.set_active_model(model_id)
+            logger.info(
+                "new_active_judge_model",
+                model_id=model_id,
+                judge_type=judge_type,
+                improvement=improvement
+            )
+
+        return optimized_module
+
+    def optimize_all_judges(
+        self,
+        trainsets: Dict[str, List[dspy.Example]],
+        valsets: Optional[Dict[str, List[dspy.Example]]] = None,
+        **kwargs
+    ) -> Dict[str, SelfImprovingJudge]:
+        """
+        Optimize all judge types.
+
+        Args:
+            trainsets: Dict mapping judge type to training examples
+            valsets: Optional dict mapping judge type to validation examples
+            **kwargs: Additional arguments for optimize_judge
+
+        Returns:
+            Dict mapping judge type to optimized module
+        """
+        optimized_judges = {}
+
+        for judge_type, trainset in trainsets.items():
+            valset = valsets.get(judge_type) if valsets else None
+
+            try:
+                optimized_judge = self.optimize_judge(
+                    judge_type=judge_type,
+                    trainset=trainset,
+                    valset=valset,
+                    **kwargs
+                )
+                optimized_judges[judge_type] = optimized_judge
 
             except Exception as error:
                 logger.error(
-                    "continuous_optimization_error",
+                    "judge_optimization_failed_skipping",
+                    judge_type=judge_type,
                     error=str(error)
                 )
-                await asyncio.sleep(60)  # Wait 1 minute before retry
+                continue
 
-    async def _fetch_rubric_data(self) -> list[dspy.Example]:
-        """
-        Fetch new rubric evaluation data.
+        logger.info(
+            "all_judges_optimized",
+            count=len(optimized_judges),
+            types=list(optimized_judges.keys())
+        )
 
-        Returns:
-            List of evaluation examples
-        """
-        # TODO: Implement data fetching from Agent Agency V2
-        return []
-
-    async def _fetch_judge_data(self) -> dict[str, list[dspy.Example]]:
-        """
-        Fetch new judge evaluation data.
-
-        Returns:
-            Dictionary mapping judge type to examples
-        """
-        # TODO: Implement data fetching from Agent Agency V2
-        return {}
+        return optimized_judges

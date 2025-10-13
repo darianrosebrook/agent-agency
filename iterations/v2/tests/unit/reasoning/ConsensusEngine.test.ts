@@ -4,13 +4,13 @@
  * @author @darianrosebrook
  */
 
+import { ConsensusEngine } from "@/reasoning/ConsensusEngine";
 import {
   ConsensusAlgorithm,
+  ConsensusImpossibleError,
   DebateParticipant,
   DebateVote,
-  ConsensusImpossibleError,
 } from "@/types/reasoning";
-import { ConsensusEngine } from "@/reasoning/ConsensusEngine";
 
 describe("ConsensusEngine", () => {
   describe("formConsensus", () => {
@@ -118,13 +118,17 @@ describe("ConsensusEngine", () => {
     });
 
     it("should handle supermajority algorithm", () => {
-      const participants = Array(10).fill(null).map((_, i) =>
-        createParticipant(`agent-${i}`, 1)
-      );
+      const participants = Array(10)
+        .fill(null)
+        .map((_, i) => createParticipant(`agent-${i}`, 1));
 
       const votes = [
-        ...Array(7).fill(null).map((_, i) => createVote(`agent-${i}`, "for", 0.8)),
-        ...Array(3).fill(null).map((_, i) => createVote(`agent-${i + 7}`, "against", 0.7)),
+        ...Array(7)
+          .fill(null)
+          .map((_, i) => createVote(`agent-${i}`, "for", 0.8)),
+        ...Array(3)
+          .fill(null)
+          .map((_, i) => createVote(`agent-${i + 7}`, "against", 0.7)),
       ];
 
       const result = ConsensusEngine.formConsensus(votes, participants, {
@@ -136,13 +140,17 @@ describe("ConsensusEngine", () => {
     });
 
     it("should fail supermajority below threshold", () => {
-      const participants = Array(10).fill(null).map((_, i) =>
-        createParticipant(`agent-${i}`, 1)
-      );
+      const participants = Array(10)
+        .fill(null)
+        .map((_, i) => createParticipant(`agent-${i}`, 1));
 
       const votes = [
-        ...Array(6).fill(null).map((_, i) => createVote(`agent-${i}`, "for", 0.8)),
-        ...Array(4).fill(null).map((_, i) => createVote(`agent-${i + 6}`, "against", 0.7)),
+        ...Array(6)
+          .fill(null)
+          .map((_, i) => createVote(`agent-${i}`, "for", 0.8)),
+        ...Array(4)
+          .fill(null)
+          .map((_, i) => createVote(`agent-${i + 6}`, "against", 0.7)),
       ];
 
       const result = ConsensusEngine.formConsensus(votes, participants, {
@@ -160,9 +168,7 @@ describe("ConsensusEngine", () => {
         createParticipant("agent-3", 1),
       ];
 
-      const votes = [
-        createVote("agent-1", "for", 0.9),
-      ];
+      const votes = [createVote("agent-1", "for", 0.9)];
 
       expect(() =>
         ConsensusEngine.formConsensus(votes, participants, {
@@ -321,9 +327,7 @@ describe("ConsensusEngine", () => {
     });
 
     it("should predict uncertain with low participation", () => {
-      const votes = [
-        createVote("agent-1", "for", 0.9),
-      ];
+      const votes = [createVote("agent-1", "for", 0.9)];
 
       const prediction = ConsensusEngine.predictOutcome(
         votes,

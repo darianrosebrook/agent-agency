@@ -43,14 +43,14 @@ alternative_lm = None
 async def lifespan(app: FastAPI):
     """
     Application lifespan manager.
-    
+
     Handles startup and shutdown tasks for the DSPy service.
     """
     global ollama_clients, primary_lm, fast_lm, quality_lm, alternative_lm
-    
+
     # Startup
     logger.info("dspy_service_starting", version="0.1.0")
-    
+
     # Initialize DSPy with local-first configuration
     try:
         if DEFAULT_PROVIDER == "ollama":
@@ -59,16 +59,16 @@ async def lifespan(app: FastAPI):
                 host=OLLAMA_HOST,
                 primary_model=OLLAMA_PRIMARY_MODEL,
             )
-            
+
             # Create Ollama clients
             ollama_clients = create_ollama_clients(host=OLLAMA_HOST)
-            
+
             # Assign to global variables for easy access
             primary_lm = ollama_clients.get("primary")
             fast_lm = ollama_clients.get("fast")
             quality_lm = ollama_clients.get("quality")
             alternative_lm = ollama_clients.get("alternative")
-            
+
             # Configure DSPy to use primary model by default
             if primary_lm and primary_lm.is_available():
                 dspy.settings.configure(lm=primary_lm)
@@ -82,25 +82,25 @@ async def lifespan(app: FastAPI):
                     model=OLLAMA_PRIMARY_MODEL,
                     message="Make sure Ollama is running and model is pulled",
                 )
-            
+
         else:
             logger.warning(
                 "using_paid_provider",
                 provider=DEFAULT_PROVIDER,
                 local_first=DSPY_LOCAL_FIRST,
             )
-        
+
         # Log configuration status
         status = get_provider_status()
         logger.info("dspy_configuration_status", **status)
-        
+
     except Exception as error:
         logger.error("dspy_initialization_failed", error=str(error))
         # Don't raise - allow service to start even if Ollama isn't available
         logger.warning("service_starting_without_ollama")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("dspy_service_shutting_down")
 
@@ -220,11 +220,53 @@ async def optimize_rubric(request: RubricOptimizationRequest):
     logger.info("rubric_optimization_requested",
                 task_context=request.task_context[:100])
 
-    # TODO: Implement DSPy rubric optimization
-    raise HTTPException(
-        status_code=501,
-        detail="Rubric optimization not yet implemented"
-    )
+    try:
+        # Import here to avoid circular dependencies
+        from signatures.rubric_optimization import RubricOptimizer
+
+        # Use quality model for rubric optimization
+        if quality_lm and quality_lm.is_available():
+            dspy.settings.configure(lm=quality_lm)
+            logger.info("using_quality_model_for_rubric",
+                        model=quality_lm.model)
+        elif primary_lm and primary_lm.is_available():
+            dspy.settings.configure(lm=primary_lm)
+            logger.info("fallback_to_primary_model", model=primary_lm.model)
+        else:
+            raise HTTPException(
+                status_code=503,
+                detail="No Ollama models available. Make sure Ollama is running."
+            )
+
+        # Create optimizer and run
+        optimizer = RubricOptimizer()
+        result = optimizer.forward(
+            task_context=request.task_context,
+            agent_output=request.agent_output,
+            evaluation_criteria=request.evaluation_criteria
+        )
+
+        logger.info(
+            "rubric_optimization_completed",
+            reward_score=result.reward_score,
+        )
+
+        return RubricOptimizationResponse(
+            reward_score=result.reward_score,
+            reasoning=result.reasoning,
+            improvement_suggestions=result.improvement_suggestions,
+            metadata={
+                "model": quality_lm.model if quality_lm else primary_lm.model,
+                "provider": "ollama",
+            }
+        )
+
+    except Exception as error:
+        logger.error("rubric_optimization_failed", error=str(error))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Rubric optimization failed: {str(error)}"
+        )
 
 
 @app.post("/api/v1/judge/evaluate", response_model=JudgeEvaluationResponse)
@@ -244,11 +286,66 @@ async def evaluate_with_judge(request: JudgeEvaluationRequest):
     logger.info("judge_evaluation_requested",
                 judge_type=request.judge_type)
 
-    # TODO: Implement DSPy model judge
-    raise HTTPException(
-        status_code=501,
-        detail="Judge evaluation not yet implemented"
-    )
+    try:
+        # Import here to avoid circular dependencies
+        from signatures.judge_optimization import SelfImprovingJudge
+
+        # Validate judge type
+        valid_judge_types = ["relevance",
+                             "faithfulness", "minimality", "safety"]
+        if request.judge_type not in valid_judge_types:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid judge_type. Must be one of: {valid_judge_types}"
+            )
+
+        # Use primary model for judge evaluation (balanced speed/quality)
+        if primary_lm and primary_lm.is_available():
+            dspy.settings.configure(lm=primary_lm)
+            logger.info("using_primary_model_for_judge",
+                        model=primary_lm.model)
+        elif quality_lm and quality_lm.is_available():
+            dspy.settings.configure(lm=quality_lm)
+            logger.info("fallback_to_quality_model", model=quality_lm.model)
+        else:
+            raise HTTPException(
+                status_code=503,
+                detail="No Ollama models available. Make sure Ollama is running."
+            )
+
+        # Create judge and run evaluation
+        judge = SelfImprovingJudge(request.judge_type)
+        result = judge.forward(
+            artifact=request.artifact,
+            ground_truth=request.ground_truth,
+            context=request.context
+        )
+
+        logger.info(
+            "judge_evaluation_completed",
+            judge_type=request.judge_type,
+            confidence=result.confidence,
+        )
+
+        return JudgeEvaluationResponse(
+            judgment=result.judgment,
+            confidence=result.confidence,
+            reasoning=result.reasoning,
+            metadata={
+                "judge_type": request.judge_type,
+                "model": primary_lm.model if primary_lm else quality_lm.model,
+                "provider": "ollama",
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as error:
+        logger.error("judge_evaluation_failed", error=str(error))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Judge evaluation failed: {str(error)}"
+        )
 
 
 @app.post("/api/v1/optimize/signature", response_model=SignatureOptimizationResponse)
