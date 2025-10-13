@@ -145,13 +145,15 @@ const enhancedModel = await toolTrainer.rlFineTuning(warmedModel, examples);
 
 ## 📊 Performance Improvements
 
-| Metric              | V1 Baseline | V2 Target | Improvement             |
-| ------------------- | ----------- | --------- | ----------------------- |
-| Tool Adoption Rate  | 10%         | 40%       | +300%                   |
-| Thinking Efficiency | 100%        | 60%       | -40% token waste        |
-| Reward Hacking      | 100/week    | 30/week   | -70% incidents          |
-| Task Completion     | 70%         | 87.5%     | +25% complex tasks      |
-| Evaluation Accuracy | 85%         | 90%       | +5% subjective criteria |
+| Metric                  | V1 Baseline | V2 Target | Improvement             |
+| ----------------------- | ----------- | --------- | ----------------------- |
+| Tool Adoption Rate      | 10%         | 40%       | +300%                   |
+| Thinking Efficiency     | 100%        | 60%       | -40% token waste        |
+| Reward Hacking          | 100/week    | 30/week   | -70% incidents          |
+| Task Completion         | 70%         | 87.5%     | +25% complex tasks      |
+| Evaluation Accuracy     | 85%         | 90%       | +5% subjective criteria |
+| Database Connections    | 65          | 10-20     | -75% to -85%            |
+| Connection Pool Overhead| ~50-65 MB   | ~10 MB    | -80% to -85%            |
 
 ---
 
@@ -168,6 +170,7 @@ iterations/v2/
 │   └── ... (14 components total)
 ├── src/                    # Consolidated implementation
 │   ├── orchestrator/       # Agent registry, routing, orchestration
+│   ├── database/           # Centralized connection pool & clients
 │   ├── knowledge/          # Knowledge seeker implementation
 │   ├── rl/                 # Agentic RL training system
 │   ├── thinking/           # Budgeted thinking management
@@ -176,11 +179,48 @@ iterations/v2/
 ├── tests/                  # Comprehensive test suite
 ├── docs/                   # Technical documentation
 │   ├── status/             # Implementation status reports
+│   ├── database/           # Database architecture & patterns
 │   └── 1-core-orchestration/ # Architecture docs
+├── migrations/             # Database schema migrations
 ├── logs/                   # Output logs
 ├── test-results/           # Test artifacts and coverage
 └── scripts/                # Build and utility scripts
 ```
+
+### Database Architecture
+
+V2 features a **production-ready centralized database architecture** with enterprise-grade connection management:
+
+```
+┌─────────────────────────────────────────────────────┐
+│           ConnectionPoolManager (Singleton)          │
+│                        ↓                             │
+│              Single Shared Pool                      │
+│                  (10-20 conns)                       │
+│                        ↑                             │
+│    ┌───────┬───────┬───────┬───────┬───────┐       │
+│   Agent  Know   WebNav  Verify  Orch                │
+│   Registry                                           │
+└─────────────────────────────────────────────────────┘
+```
+
+**Key Features**:
+- ✅ **Centralized Pool Management**: Single shared connection pool across all clients
+- ✅ **Connection Efficiency**: 75-85% reduction in connections (65 → 10-20)
+- ✅ **Memory Optimization**: 80-85% reduction in pool overhead (~50-65 MB → ~10 MB)
+- ✅ **Health Monitoring**: Comprehensive connection health checks and statistics
+- ✅ **Graceful Shutdown**: Proper connection cleanup on application termination
+- ✅ **Tenant Context Support**: Row Level Security (RLS) ready for multi-tenancy
+- ✅ **Hybrid Vector-Graph**: pgvector for semantic search + knowledge graphs for relationships
+
+**Database Clients**:
+- `AgentRegistryDatabaseClient` - Agent profiles and performance tracking
+- `KnowledgeDatabaseClient` - Knowledge queries and search results
+- `WebNavigatorDatabaseClient` - Web content and traversal tracking
+- `VerificationDatabaseClient` - Verification requests and evidence
+- `DatabaseClient` (Orchestrator) - Task assignments and orchestration state
+
+See **[Database Documentation](./docs/database/README.md)** for complete architecture details, migration guides, and query patterns.
 
 ### Integration Points
 
@@ -270,8 +310,14 @@ const result = await agent.executeTask({
 ### Environment Variables
 
 ```bash
-# Database
-DATABASE_URL=postgresql://localhost:5432/agent_agency_v2
+# Database (Centralized Connection Pool)
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=agent_agency_v2
+DB_USER=postgres
+DB_PASSWORD=
+DB_POOL_MIN=2
+DB_POOL_MAX=20
 
 # Model Configuration
 OLLAMA_BASE_URL=http://localhost:11434
@@ -526,6 +572,15 @@ See **[Theory Implementation Delta](./docs/THEORY-IMPLEMENTATION-DELTA.md)** for
 - **[Implementation Roadmap](./docs/implementation-roadmap.md)** - 12-week development plan
 - **[API Reference](./docs/api/)** - Complete API documentation
 - **[Migration Guide](./docs/migration.md)** - Upgrading from V1
+- **[Database Architecture](./docs/database/README.md)** - Centralized connection pool & schema
+
+### Database Documentation
+
+- **[Database Architecture Overview](./docs/database/README.md)** - Complete database system guide
+- **[Pattern Comparison](./docs/database/DATABASE-PATTERN-COMPARISON.md)** - Cross-project pattern analysis
+- **[Query Patterns](./docs/database/QUERY-PATTERNS.md)** - Optimized query examples
+- **[Schema Documentation](./docs/database/SCHEMA-DOCUMENTATION.md)** - Complete schema reference
+- **[Migration Guide](./docs/database/MIGRATION-PLAN.md)** - Database migration procedures
 
 ### Developer Guides
 
