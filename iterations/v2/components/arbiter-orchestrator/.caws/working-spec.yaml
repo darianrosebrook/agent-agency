@@ -1,126 +1,81 @@
-id: ARBITER-005-REFACTOR
-title: "Consolidate Three Orchestrator Implementations into Canonical ArbiterOrchestrator"
+id: ARBITER-005
+title: "CAWS Arbiter Orchestrator"
 risk_tier: 1
-mode: refactor
+mode: feature
 change_budget:
-  max_files: 30
-  max_loc: 1500
+  max_files: 15
+  max_loc: 2000
 blast_radius:
-  modules: ["orchestrator", "rl", "mcp-server"]
+  modules: ["orchestrator", "arbitration", "reasoning"]
   data_migration: false
 operational_rollback_slo: "5m"
-
 scope:
   in:
-    - "src/orchestrator/ArbiterOrchestrator.ts"
-    - "src/orchestrator/EnhancedArbiterOrchestrator.ts"
-    - "src/orchestrator/TaskOrchestrator.ts"
-    - "src/orchestrator/utils/"
-    - "src/orchestrator/capabilities/"
+    - "src/orchestrator/"
+    - "src/arbitration/"
+    - "src/reasoning/"
+    - "tests/integration/orchestrator/"
     - "tests/unit/orchestrator/"
-    - "src/mcp-server/ArbiterMCPServer.ts"
-    - "src/mcp-server/handlers/knowledge-tools.ts"
   out:
-    - "node_modules/"
-    - "dist/"
-    - "coverage/"
+    - "src/models/"
     - "src/rl/"
-    - "src/health/"
-    - "src/observability/"
-
+    - "src/benchmarking/"
 invariants:
-  - "All public APIs maintain backward compatibility"
-  - "No behavior changes - only structural refactoring"
-  - "Tests must pass before and after refactoring"
-  - "No 'enhanced' or 'new' file naming patterns introduced"
-  - "Existing integrations with MCP server remain functional"
-
+  - "System maintains CAWS constitutional compliance in all orchestration decisions"
+  - "Multi-agent coordination never creates deadlock conditions"
+  - "Orchestration preserves task integrity and agent autonomy"
+  - "Override system requires explicit human approval for CAWS violations"
 acceptance:
   - id: "A1"
-    given: "Three separate orchestrator implementations exist"
-    when: "Refactoring is complete"
-    then: "Single canonical ArbiterOrchestrator with all capabilities exists"
-  
+    given: "Task submitted to orchestrator without CAWS violations"
+    when: "Orchestrator processes the task"
+    then: "Task is routed to appropriate agents without constitutional review"
   - id: "A2"
-    given: "EnhancedArbiterOrchestrator adds RL capabilities"
-    when: "RL features are extracted to utils"
-    then: "RLCapability utility integrates with ArbiterOrchestrator via composition"
-  
+    given: "Task submitted with potential CAWS violations"
+    when: "Orchestrator detects violation risk"
+    then: "Task is escalated to ARBITER-015 arbitration protocol for constitutional review"
   - id: "A3"
-    given: "TaskOrchestrator has event-based lifecycle management"
-    when: "Lifecycle features are extracted"
-    then: "TaskLifecycleManager utility integrates with ArbiterOrchestrator"
-  
+    given: "Multiple agents available for task execution"
+    when: "Orchestrator coordinates task assignment"
+    then: "Agents are assigned based on capability matching and load balancing"
   - id: "A4"
-    given: "Multiple test files exist for each orchestrator"
-    when: "Orchestrators are consolidated"
-    then: "Single comprehensive test suite covers all functionality"
-  
+    given: "Multi-agent task requires debate coordination"
+    when: "Orchestrator initiates debate workflow"
+    then: "ARBITER-016 reasoning engine coordinates structured argumentation and consensus formation"
   - id: "A5"
-    given: "MCP server and handlers use ArbiterOrchestrator"
-    when: "Refactoring is complete"
-    then: "All imports updated and functionality preserved"
-  
+    given: "Task execution encounters conflict between agents"
+    when: "Orchestrator detects agent disagreement"
+    then: "Conflict is escalated to constitutional arbitration with proper evidence collection"
   - id: "A6"
-    given: "EnhancedArbiterOrchestrator and TaskOrchestrator files exist"
-    when: "Consolidation is complete"
-    then: "Both files are deleted and removed from version control"
-
+    given: "System requires human intervention for CAWS violation"
+    when: "Orchestrator detects critical constitutional issue"
+    then: "Human override system is activated with clear justification and approval workflow"
+  - id: "A7"
+    given: "Orchestrator processes high-volume concurrent tasks"
+    when: "Load exceeds capacity thresholds"
+    then: "Tasks are prioritized and queued without CAWS compliance violations"
+  - id: "A8"
+    given: "Agent fails during task execution"
+    when: "Orchestrator detects agent failure"
+    then: "Task is reassigned with constitutional compliance verification"
 non_functional:
-  maintainability: ["No duplicate/fork file patterns", "Clear separation of concerns", "Utility composition over inheritance"]
-  testability: ["≥90% branch coverage (Tier 1)", "≥70% mutation score (Tier 1)"]
-  performance:
-    orchestration_p95_ms: 50
-    memory_overhead_mb: 5
-
+  a11y: []
+  perf:
+    api_p95_ms: 250
+    orchestration_p95_ms: 500
+    debate_coordination_p95_ms: 2000
+    concurrent_tasks_capacity: 100
+  security: ["input-validation", "authorization", "audit-logging", "caws-enforcement"]
 contracts:
-  - type: "typescript"
-    description: "ArbiterOrchestrator public API must not change"
-    validation: "TypeScript compilation must succeed"
-  
-  - type: "test"
-    description: "All existing tests must pass"
-    validation: "npm test must succeed"
-
-migration_plan:
-  steps:
-    - description: "Extract RL capabilities to src/orchestrator/capabilities/RLCapability.ts"
-      risk: "low"
-      rollback: "Revert file creation"
-    
-    - description: "Extract event-based lifecycle to src/orchestrator/utils/TaskLifecycleManager.ts"
-      risk: "low"
-      rollback: "Revert file creation"
-    
-    - description: "Extract statistics collection to src/orchestrator/utils/StatisticsCollector.ts"
-      risk: "low"
-      rollback: "Revert file creation"
-    
-    - description: "Integrate utilities into ArbiterOrchestrator via composition"
-      risk: "medium"
-      rollback: "Revert ArbiterOrchestrator.ts to previous version"
-    
-    - description: "Update all imports from Enhanced/TaskOrchestrator to ArbiterOrchestrator"
-      risk: "medium"
-      rollback: "Revert import changes"
-    
-    - description: "Consolidate test files into comprehensive suite"
-      risk: "low"
-      rollback: "Restore original test files"
-    
-    - description: "Delete EnhancedArbiterOrchestrator.ts and TaskOrchestrator.ts"
-      risk: "low"
-      rollback: "Restore from git"
-
-  verification:
-    - "npm run typecheck passes"
-    - "npm test passes (all tests)"
-    - "npm run lint passes"
-    - "MCP server integration tests pass"
-    - "No references to deleted files remain"
-
-provenance:
-  author: "@darianrosebrook"
-  created: "2025-10-13"
-  ticket: "ARBITER-005"
-  rationale: "Eliminate forbidden 'enhanced' naming pattern and consolidate duplicate orchestration logic into canonical implementation with proper utility composition"
+  - type: "openapi"
+    path: "docs/api/orchestrator-api.yaml"
+    endpoints:
+      - "POST /orchestrate/task"
+      - "GET /orchestrate/status/{taskId}"
+      - "POST /orchestrate/override/{taskId}"
+      - "GET /orchestrate/metrics"
+  - type: "internal"
+    interfaces:
+      - "ArbiterOrchestrator.evaluateTask(task: Task): OrchestrationResult"
+      - "ArbiterOrchestrator.coordinateDebate(agents: Agent[], context: DebateContext): DebateResult"
+      - "ArbiterOrchestrator.enforceConstitutionalCompliance(task: Task, agents: Agent[]): ComplianceResult"

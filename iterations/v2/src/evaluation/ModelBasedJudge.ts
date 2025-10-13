@@ -31,10 +31,11 @@ export class ModelBasedJudge {
    * Creates a new ModelBasedJudge
    *
    * @param config Optional configuration
+   * @param llmProvider Optional custom LLM provider (e.g., ModelRegistryLLMProvider)
    */
-  constructor(config?: Partial<JudgeConfig>) {
+  constructor(config?: Partial<JudgeConfig>, llmProvider?: LLMProvider) {
     this.config = { ...DEFAULT_JUDGE_CONFIG, ...config };
-    this.llmProvider = this.createLLMProvider();
+    this.llmProvider = llmProvider || this.createLLMProvider();
     this.confidenceScorer = new ConfidenceScorer();
     this.metrics = this.initializeMetrics();
   }

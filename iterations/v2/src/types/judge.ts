@@ -73,7 +73,7 @@ export interface JudgmentInput {
  */
 export interface LLMConfig {
   /** LLM provider name */
-  provider: "openai" | "anthropic" | "mock";
+  provider: "openai" | "anthropic" | "mock" | "model-registry";
   /** Model identifier */
   model: string;
   /** Temperature (0 for deterministic) */

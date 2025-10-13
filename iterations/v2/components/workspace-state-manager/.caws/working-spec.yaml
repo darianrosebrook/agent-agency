@@ -1,143 +1,64 @@
 id: ARBITER-010
-title: Workspace State Manager - File System Operations and Dependency Tracking
+title: "Workspace State Manager Implementation"
 risk_tier: 2
 mode: feature
 change_budget:
-  max_files: 20
-  max_loc: 800
+  max_files: 15
+  max_loc: 1500
 blast_radius:
-  modules:
-    - src/workspace
-    - src/file-system
-  data_migration: true
-operational_rollback_slo: 5m
-threats:
-  - threat: Path traversal attacks allow access outside workspace boundaries
-    likelihood: low
-    impact: critical
-    mitigation: Strict path normalization and boundary validation
-  - threat: File operation conflicts cause data corruption or loss
-    likelihood: medium
-    impact: high
-    mitigation: Atomic operations and conflict detection
-  - threat: Dependency graph corruption leads to incorrect change tracking
-    likelihood: medium
-    impact: medium
-    mitigation: Graph validation and consistency checks
+  modules: ["workspace", "agents"]
+  data_migration: false
+operational_rollback_slo: "30s"
 scope:
-  in:
-    - src/workspace/WorkspaceStateManager.ts
-    - src/workspace/FileOperationHandler.ts
-    - src/workspace/DependencyTracker.ts
-    - src/workspace/VersionControlIntegrator.ts
-    - src/workspace/ConflictDetector.ts
-    - src/types/workspace-state.ts
-    - tests/unit/workspace/workspace-state-manager.test.ts
-    - tests/integration/workspace/file-operations.test.ts
-    - migrations/006_create_workspace_tables.sql
-  out:
-    - node_modules/
-    - dist/
-    - coverage/
-    - iterations/poc/
+  in: ["src/workspace/", "tests/unit/workspace/", "tests/integration/workspace/", "components/workspace-state-manager/"]
+  out: ["node_modules/", "dist/", "src/agents/", "src/orchestrator/"]
 invariants:
-  - All file operations are sandboxed within workspace boundaries
-  - File modifications are atomic and recoverable
-  - Dependency relationships are consistently maintained
-  - Version control operations preserve git history integrity
-  - Conflict detection prevents destructive changes
+  - "Workspace state must be consistent across agent sessions"
+  - "File watching must not consume excessive CPU/memory resources"
+  - "State snapshots must be incremental and compressed"
+  - "Workspace context must be limited to relevant files only"
 acceptance:
-  - id: A1
-    given: Workspace with project structure and agent requiring file access
-    when: Workspace state manager initializes with project boundaries
-    then: File system is scanned, dependency graph is built, and workspace state is established
-  - id: A2
-    given: Agent requests secure file operation within workspace
-    when: File operation handler processes request with path validation
-    then: Operation completes successfully with proper encoding and security checks
-  - id: A3
-    given: Code changes introduce new dependencies or modify existing ones
-    when: Dependency tracker analyzes changes and updates graph
-    then: Dependency relationships are accurately maintained and conflicts are detected
-  - id: A4
-    given: Agent-generated changes need to be committed to version control
-    when: Version control integrator stages and commits changes
-    then: Changes are properly staged, committed with generated messages, and git history is preserved
-  - id: A5
-    given: Multiple agents attempt concurrent file modifications
-    when: Conflict detector identifies potential conflicts
-    then: Conflicts are prevented or resolved through merge strategies and notifications provided
-  - id: A6
-    given: Workspace integrity needs verification after operations
-    when: State manager validates workspace consistency
-    then: Integrity checks pass and any corruption is detected and reported
+  - id: "WS-001"
+    given: "A workspace with multiple files and directories"
+    when: "Workspace State Manager is initialized"
+    then: "It creates an initial snapshot of all relevant files"
+  - id: "WS-002"
+    given: "A file is modified in the workspace"
+    when: "The file watcher detects the change"
+    then: "Workspace state is updated with the modification"
+  - id: "WS-003"
+    given: "An agent requests workspace context"
+    when: "Context manager selects relevant files"
+    then: "Only files relevant to the agent's task are returned"
+  - id: "WS-004"
+    given: "Workspace state exists from previous session"
+    when: "System restarts"
+    then: "Workspace state is restored from persistent storage"
+  - id: "WS-005"
+    given: "Multiple agents modify different files"
+    when: "Changes are detected"
+    then: "State updates are handled without conflicts"
+  - id: "WS-006"
+    given: "Workspace contains large binary files"
+    when: "State snapshot is created"
+    then: "Binary files are excluded from content tracking"
 non_functional:
+  a11y: []
   perf:
-    file_operation_p95_ms: 50
-    dependency_analysis_p95_ms: 100
-    workspace_scan_p95_ms: 500
-    git_operation_p95_ms: 200
-    conflict_detection_p95_ms: 30
+    api_p95_ms: 50
+    state_snapshot_p95_ms: 200
+    memory_mb: 100
+    cpu_percent: 5
   security:
-    - path-traversal-prevention
-    - file-access-sandboxing
-    - operation-audit-logging
-  reliability:
-    file_operation_success_rate: 0.99
-    dependency_tracking_accuracy: 0.98
-    git_operation_success_rate: 0.95
-  scalability:
-    max_concurrent_file_operations: 20
-    max_files_in_workspace: 10000
-    max_dependency_depth: 10
+    - "Workspace state does not include sensitive files (.env, keys)"
+    - "File content is not stored in state (only metadata)"
+    - "Access controls prevent unauthorized state modification"
 contracts:
-  - type: typescript-interface
-    path: src/types/workspace-state.ts
-    version: 1.0.0
-observability:
-  logs:
-    - file_operation_events
-    - dependency_tracking_events
-    - version_control_operations
-    - conflict_detection_events
-    - workspace_integrity_checks
-  metrics:
-    - file_operation_throughput
-    - dependency_graph_size
-    - git_operation_latency
-    - conflict_detection_rate
-    - workspace_scan_duration
-  traces:
-    - file_operation_workflow
-    - dependency_analysis_chain
-    - version_control_integration
-    - conflict_resolution_flow
-migrations:
-  - id: migration_006
-    description: Create workspace state tables for file tracking and dependency graphs
-    type: schema
-    requires_downtime: false
-    rollback_available: true
-rollback:
-  - strategy: feature_flag_rollback
-    description: Disable advanced workspace features and use basic file operations
-    slo_minutes: 1
-    data_loss_risk: none
-  - strategy: database_rollback
-    description: Revert workspace tables while preserving core file data
-    slo_minutes: 5
-    data_loss_risk: low
-ai_assessment:
-  confidence_level: 0.90
-  uncertainty_areas:
-    - Complex dependency graph optimization strategies
-    - Git operation performance for large repositories
-  complexity_factors:
-    - Path normalization and security validation
-    - Dependency graph maintenance and conflict resolution
-    - Git integration with atomic operations
-  risk_factors:
-    - Path traversal vulnerabilities
-    - Dependency graph corruption
-    - Git operation failures
-
+  - type: "openapi"
+    path: "docs/api/workspace-state.yaml"
+  - type: "typescript"
+    interfaces:
+      - "WorkspaceStateManager"
+      - "FileWatcher"
+      - "StateSnapshot"
+      - "ContextManager"
