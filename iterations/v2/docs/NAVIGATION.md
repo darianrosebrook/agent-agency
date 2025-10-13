@@ -21,6 +21,22 @@ This document provides a quick navigation guide to all V2 documentation organize
 - **[DOCUMENTATION_AUDIT_SUMMARY.md](status/DOCUMENTATION_AUDIT_SUMMARY.md)** - Quick overview and navigation for audit findings
 - **[DOCUMENTATION_ACCURACY_AUDIT.md](status/DOCUMENTATION_ACCURACY_AUDIT.md)** - Complete audit report with detailed findings and evidence
 - **[DOCUMENTATION_CORRECTIONS_NEEDED.md](status/DOCUMENTATION_CORRECTIONS_NEEDED.md)** - Actionable checklist for fixing documentation issues
+- **[COMPONENT_STATUS_AUDIT.md](status/COMPONENT_STATUS_AUDIT.md)** - Comprehensive audit of 27 component STATUS files (52% accuracy)
+- **[VISION_REALIZATION_METHODOLOGY.md](status/VISION_REALIZATION_METHODOLOGY.md)** - How "82% vision realized" is calculated (with honest 59% assessment)
+
+---
+
+## 🗄️ Database
+
+**Location**: `docs/database/`
+
+- **[SETUP.md](database/SETUP.md)** - Comprehensive PostgreSQL setup guide (752 lines)
+  - Prerequisites and installation
+  - Database creation and configuration
+  - Migration execution and verification
+  - Dev vs Test vs Production setup
+  - Troubleshooting guide (7 common issues)
+  - Backup, monitoring, and maintenance
 
 ---
 
