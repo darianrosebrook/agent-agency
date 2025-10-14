@@ -4998,5 +4998,41 @@
     },
     "previous_hash": "7d78bdd95107ecd5b8d54f4c483dbc9a583b9fc46f2119db4f655a71ea519c6b",
     "hash": "ecd72890d5a15d1ce98bd0aa05cf31a7f8f842e4e3c2a347f7de086f83432da3"
+  },
+  {
+    "id": "prov-1760449266473",
+    "timestamp": "2025-10-14T13:41:06.473Z",
+    "commit": {
+      "hash": "5363461dea82c298dae06479e89ce0b380d44f2c",
+      "message": "feat: Complete INFRA-002 MCP Server Integration hardening",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-14T13:41:06.474Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "ecd72890d5a15d1ce98bd0aa05cf31a7f8f842e4e3c2a347f7de086f83432da3",
+    "hash": "212782c5ff9280232307a7559e1127a40ebabf9ed698088154d4b5966484387b"
   }
 ]

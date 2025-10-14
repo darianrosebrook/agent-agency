@@ -55,7 +55,7 @@ describe("ArbiterOrchestrator", () => {
         enabled: false, // Disable CAWS to avoid complex initialization
       },
     } as any);
-    
+
     // Initialize the orchestrator
     await orchestrator.initialize();
   });

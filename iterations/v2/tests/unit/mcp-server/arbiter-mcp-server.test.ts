@@ -51,11 +51,11 @@ describe("ArbiterMCPServer", () => {
       validateSpec: jest.fn().mockResolvedValue({
         valid: true,
         errors: [],
-        warnings: []
+        warnings: [],
       }),
       getValidationStatus: jest.fn().mockReturnValue({
         status: "ready",
-        lastValidated: new Date()
+        lastValidated: new Date(),
       }),
     } as any;
 
@@ -64,13 +64,13 @@ describe("ArbiterMCPServer", () => {
         budget: {
           thinkingTokens: 1000,
           toolCalls: 10,
-          totalCost: 0.1
+          totalCost: 0.1,
         },
-        reasoning: "Standard budget for task"
+        reasoning: "Standard budget for task",
       }),
       getPolicyStatus: jest.fn().mockReturnValue({
         status: "active",
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
       }),
     } as any;
 
@@ -78,17 +78,17 @@ describe("ArbiterMCPServer", () => {
       assignTask: jest.fn().mockResolvedValue({
         success: true,
         agentId: "agent-1",
-        reasoning: "Best fit for task"
+        reasoning: "Best fit for task",
       }),
       monitorProgress: jest.fn().mockResolvedValue({
         status: "in_progress",
         progress: 0.5,
-        currentStep: "Validating input"
+        currentStep: "Validating input",
       }),
       generateVerdict: jest.fn().mockResolvedValue({
         verdict: "approved",
         confidence: 0.95,
-        reasoning: "All criteria met"
+        reasoning: "All criteria met",
       }),
     } as any;
 
