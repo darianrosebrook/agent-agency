@@ -149,6 +149,18 @@ export class MultiTurnLearningCoordinator extends EventEmitter {
     session.status = LearningSessionStatus.ACTIVE;
     await this.dbClient.updateSession(sessionId, { status: session.status });
 
+    // Emit session started event
+    this.emit(LearningCoordinatorEvent.SESSION_STARTED, {
+      sessionId: session.sessionId,
+      timestamp: new Date(),
+      eventType: LearningCoordinatorEvent.SESSION_STARTED,
+      data: {
+        taskId: task.taskId,
+        agentId: task.agentId,
+        config: sessionConfig,
+      },
+    });
+
     try {
       // Execute learning loop
       const result = await this.executelearningLoop(
@@ -220,32 +232,24 @@ export class MultiTurnLearningCoordinator extends EventEmitter {
         // Evaluate quality
         currentQualityScore = await task.qualityEvaluator(iterationResult);
 
-        // Check for quality threshold
-        if (currentQualityScore >= session.config.qualityThreshold) {
-          this.emit(LearningCoordinatorEvent.QUALITY_THRESHOLD_MET, {
-            sessionId: session.sessionId,
-            timestamp: new Date(),
-            eventType: LearningCoordinatorEvent.QUALITY_THRESHOLD_MET,
-            data: {
-              qualityScore: currentQualityScore,
-              threshold: session.config.qualityThreshold,
-            },
-          });
-
-          return this.completeSession(
-            session,
-            iterationResult,
-            currentQualityScore,
-            "Quality threshold met"
-          );
-        }
-
         currentContext = iterationResult;
       } catch (error) {
         errorDetected = true;
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
         const stackTrace = error instanceof Error ? error.stack : undefined;
+
+        // Emit error detected event
+        this.emit(LearningCoordinatorEvent.ERROR_DETECTED, {
+          sessionId: session.sessionId,
+          timestamp: new Date(),
+          eventType: LearningCoordinatorEvent.ERROR_DETECTED,
+          data: {
+            iterationNumber,
+            errorMessage,
+            stackTrace,
+          },
+        });
 
         // Analyze error if recognition enabled
         if (session.config.enableErrorRecognition) {
@@ -321,6 +325,19 @@ export class MultiTurnLearningCoordinator extends EventEmitter {
       await this.dbClient.createIteration(iteration);
       this.iterationManager.completeIteration(session.sessionId, iteration);
 
+      // Emit iteration completed event
+      this.emit(LearningCoordinatorEvent.ITERATION_COMPLETED, {
+        sessionId: session.sessionId,
+        timestamp: new Date(),
+        eventType: LearningCoordinatorEvent.ITERATION_COMPLETED,
+        data: {
+          iterationNumber,
+          qualityScore: currentQualityScore,
+          improvementDelta: improvement,
+          errorDetected,
+        },
+      });
+
       // Update session trajectory
       session.improvementTrajectory.push(currentQualityScore);
       session.iterationCount = iterationNumber;
@@ -334,6 +351,26 @@ export class MultiTurnLearningCoordinator extends EventEmitter {
       });
 
       previousQualityScore = currentQualityScore;
+
+      // Check for quality threshold after iteration is recorded
+      if (currentQualityScore >= session.config.qualityThreshold) {
+        this.emit(LearningCoordinatorEvent.QUALITY_THRESHOLD_MET, {
+          sessionId: session.sessionId,
+          timestamp: new Date(),
+          eventType: LearningCoordinatorEvent.QUALITY_THRESHOLD_MET,
+          data: {
+            qualityScore: currentQualityScore,
+            threshold: session.config.qualityThreshold,
+          },
+        });
+
+        return this.completeSession(
+          session,
+          iterationResult,
+          currentQualityScore,
+          "Quality threshold met"
+        );
+      }
     }
   }
 
