@@ -174,6 +174,9 @@ describe("PerformanceAnalyzer", () => {
     });
 
     it("should analyze performance profiles and detect anomalies", async () => {
+      // First, establish a baseline with normal profile
+      await analyzer.analyzePerformance([mockProfiles[0]]);
+
       // Create a profile that should trigger latency anomaly
       const anomalousProfile = {
         ...mockProfiles[0],
@@ -191,7 +194,8 @@ describe("PerformanceAnalyzer", () => {
 
       const result = await analyzer.analyzePerformance([anomalousProfile]);
 
-      expect(result.trendResults).toHaveLength(1);
+      // Trend analysis requires minDataPoints (20), so with only 2 profiles, no trends yet
+      expect(result.trendResults).toHaveLength(0);
       expect(result.newAnomalies).toHaveLength(1);
       expect(result.newAnomalies[0].type).toBe("latency_spike");
       expect(result.newAnomalies[0].severity).toBe("critical");
@@ -292,7 +296,7 @@ describe("PerformanceAnalyzer", () => {
             reliability: {
               mtbfHours: 150,
               availabilityPercent: 95,
-              errorRatePercent: 5,
+              errorRatePercent: 11, // Baseline is 0.5%, so 11% is >10% increase
               recoveryTimeMinutes: 10,
             },
           },
@@ -336,6 +340,9 @@ describe("PerformanceAnalyzer", () => {
 
     describe("anomaly resolution", () => {
       it("should detect resolved anomalies", async () => {
+        // First, establish baseline with normal profile
+        await analyzer.analyzePerformance([mockProfiles[0]]);
+
         // Create anomaly
         const anomalousProfile = {
           ...mockProfiles[0],
@@ -351,10 +358,10 @@ describe("PerformanceAnalyzer", () => {
           },
         };
 
-        // Create anomaly
+        // Detect anomaly
         await analyzer.analyzePerformance([anomalousProfile]);
 
-        // Resolve anomaly
+        // Resolve anomaly by returning to normal
         const normalProfile = mockProfiles[0];
         const result = await analyzer.analyzePerformance([normalProfile]);
 
@@ -507,7 +514,10 @@ describe("PerformanceAnalyzer", () => {
     beforeEach(async () => {
       analyzer.startAnalysis();
 
-      // Create an anomaly
+      // First, establish a baseline with normal profile
+      await analyzer.analyzePerformance([mockProfiles[0]]);
+
+      // Then create and analyze an anomalous profile
       const anomalousProfile = {
         ...mockProfiles[0],
         metrics: {
@@ -552,8 +562,11 @@ describe("PerformanceAnalyzer", () => {
       expect(lowAnomalies).toHaveLength(0);
     });
 
-    it("should sort anomalies by detection time", () => {
-      // Add another anomaly
+    it("should sort anomalies by detection time", async () => {
+      // Establish baseline for agent-2
+      await analyzer.analyzePerformance([mockProfiles[1]]);
+
+      // Add another anomaly for agent-2
       const anotherAnomalousProfile = {
         ...mockProfiles[1],
         metrics: {
@@ -567,7 +580,7 @@ describe("PerformanceAnalyzer", () => {
         },
       };
 
-      analyzer.analyzePerformance([anotherAnomalousProfile]);
+      await analyzer.analyzePerformance([anotherAnomalousProfile]);
 
       const anomalies = analyzer.getActiveAnomalies();
       expect(anomalies).toHaveLength(2);
