@@ -39,7 +39,7 @@ export class WaiverManager {
 
       return waiver;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      if ((error as any).code === "ENOENT") {
         console.warn(`Waiver file not found: ${waiverId}`);
         return null;
       }
@@ -174,7 +174,7 @@ export class WaiverManager {
 
       return waivers;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      if ((error as any).code === "ENOENT") {
         return []; // No waivers directory yet
       }
       throw error;

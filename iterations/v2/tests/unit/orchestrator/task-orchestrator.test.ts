@@ -8,13 +8,11 @@
 
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { TaskOrchestrator } from "../../../src/orchestrator/TaskOrchestrator.js";
-import { TaskPriority } from "../../../src/types/task-runner.js";
 import type {
   Task,
   TaskOrchestratorConfig,
-  TaskResult,
-  PleadingWorkflow,
 } from "../../../src/types/task-runner.js";
+import { TaskPriority } from "../../../src/types/task-runner.js";
 
 describe("TaskOrchestrator Unit Tests", () => {
   let orchestrator: TaskOrchestrator;
@@ -33,7 +31,12 @@ describe("TaskOrchestrator Unit Tests", () => {
     },
     queue: {
       maxSize: 100,
-      priorityLevels: [TaskPriority.LOW, TaskPriority.MEDIUM, TaskPriority.HIGH, TaskPriority.CRITICAL],
+      priorityLevels: [
+        TaskPriority.LOW,
+        TaskPriority.MEDIUM,
+        TaskPriority.HIGH,
+        TaskPriority.CRITICAL,
+      ],
       persistenceEnabled: false,
     },
     retry: {
@@ -117,7 +120,12 @@ describe("TaskOrchestrator Unit Tests", () => {
 
       expect(capabilities.maxConcurrentTasks).toBe(5);
       expect(capabilities.supportedTaskTypes).toEqual(
-        expect.arrayContaining(["script", "api_call", "data_processing", "ai_inference"])
+        expect.arrayContaining([
+          "script",
+          "api_call",
+          "data_processing",
+          "ai_inference",
+        ])
       );
       expect(capabilities.pleadingSupport).toBe(true);
       expect(capabilities.retrySupport).toBe(true);

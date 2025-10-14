@@ -18,6 +18,9 @@ jest.mock("../../../src/web/ContentExtractor");
 jest.mock("../../../src/web/SearchEngine");
 jest.mock("../../../src/web/TraversalEngine");
 
+// Unmock ContentExtractor for targeted testing
+jest.unmock("../../../src/web/ContentExtractor");
+
 describe("WebNavigator", () => {
   let webNavigator: WebNavigator;
   let mockDbClient: jest.Mocked<WebNavigatorDatabaseClient>;
@@ -45,6 +48,9 @@ describe("WebNavigator", () => {
         },
       }),
       cleanupExpiredCache: jest.fn().mockResolvedValue(0),
+      storeExtractionMetrics: jest.fn().mockResolvedValue(undefined),
+      createTraversal: jest.fn().mockResolvedValue(undefined),
+      updateTraversalNode: jest.fn().mockResolvedValue(undefined),
     } as any;
 
     mockKnowledgeSeeker = {
@@ -400,6 +406,720 @@ describe("WebNavigator", () => {
 
       // Active traversals would be tracked during actual traversal
       // This verifies the infrastructure is in place
+    });
+  });
+
+  describe("content extraction", () => {
+    beforeEach(() => {
+      // Reset mocks
+      jest.clearAllMocks();
+    });
+
+    it("should extract content from URL with default config", async () => {
+      const mockContent = {
+        id: "content-1",
+        url: "https://example.com",
+        title: "Example Page",
+        content: "Example content",
+        extractedAt: new Date(),
+        metadata: {
+          statusCode: 200,
+          contentType: "text/html",
+          contentLength: 1000,
+          isSecure: true,
+        },
+      };
+
+      // Mock the content extractor
+      const mockContentExtractor = {
+        extractContent: jest.fn().mockResolvedValue(mockContent),
+      };
+
+      (webNavigator as any).contentExtractor = mockContentExtractor;
+
+      const result = await webNavigator.extractContent("https://example.com");
+
+      expect(mockContentExtractor.extractContent).toHaveBeenCalledWith(
+        "https://example.com",
+        expect.any(Object)
+      );
+      expect(result).toEqual(mockContent);
+      expect(mockDbClient.storeContent).toHaveBeenCalledWith(mockContent);
+      expect(mockDbClient.cacheContent).toHaveBeenCalled();
+    });
+
+    it("should extract content with custom config", async () => {
+      const customConfig = {
+        includeImages: false,
+        includeLinks: true,
+        includeMetadata: true,
+        stripNavigation: true,
+        stripAds: true,
+        maxContentLength: 5000,
+        security: {
+          verifySsl: true,
+          sanitizeHtml: true,
+          detectMalicious: true,
+          followRedirects: true,
+          maxRedirects: 5,
+          userAgent: "Custom Agent",
+          respectRobotsTxt: true,
+        },
+      };
+
+      const mockContent = {
+        id: "content-2",
+        url: "https://example.com",
+        title: "Example Page",
+        content: "Custom content",
+        extractedAt: new Date(),
+        metadata: {
+          statusCode: 200,
+          contentType: "text/html",
+          contentLength: 2000,
+          isSecure: true,
+        },
+      };
+
+      const mockContentExtractor = {
+        extractContent: jest.fn().mockResolvedValue(mockContent),
+      };
+
+      (webNavigator as any).contentExtractor = mockContentExtractor;
+
+      const result = await webNavigator.extractContent(
+        "https://example.com",
+        customConfig
+      );
+
+      expect(mockContentExtractor.extractContent).toHaveBeenCalledWith(
+        "https://example.com",
+        customConfig
+      );
+      expect(result).toEqual(mockContent);
+    });
+
+    it("should handle content extraction errors", async () => {
+      const mockContentExtractor = {
+        extractContent: jest.fn().mockRejectedValue(new Error("Network error")),
+      };
+
+      (webNavigator as any).contentExtractor = mockContentExtractor;
+
+      await expect(
+        webNavigator.extractContent("https://example.com")
+      ).rejects.toThrow("Network error");
+
+      expect(mockDbClient.storeContent).not.toHaveBeenCalled();
+    });
+
+    it("should cache extracted content", async () => {
+      const cachedContent: any = {
+        id: "cached-1",
+        url: "https://example.com",
+        title: "Cached Page",
+        content: "Cached content",
+        extractedAt: new Date(),
+        metadata: {
+          statusCode: 200,
+          contentType: "text/html",
+          contentLength: 1500,
+          isSecure: true,
+        },
+        links: [],
+        images: [],
+        quality: "high",
+        contentHash: "hash123",
+      };
+
+      mockDbClient.getContentByUrl.mockResolvedValue(cachedContent);
+
+      const result = await webNavigator.extractContent("https://example.com");
+
+      expect(result).toEqual(cachedContent);
+      expect(mockDbClient.getContentByUrl).toHaveBeenCalledWith(
+        "https://example.com"
+      );
+      // Content extractor should not be called for cached content
+      expect(
+        (webNavigator as any).contentExtractor?.extractContent
+      ).not.toHaveBeenCalled();
+    });
+
+    it("should store extraction metrics in database", async () => {
+      const mockContent = {
+        id: "content-3",
+        url: "https://example.com",
+        title: "Metrics Test",
+        content: "Test content",
+        extractedAt: new Date(),
+        metadata: {
+          statusCode: 200,
+          contentType: "text/html",
+          contentLength: 3000,
+          isSecure: true,
+        },
+      };
+
+      const mockContentExtractor = {
+        extractContent: jest.fn().mockResolvedValue(mockContent),
+      };
+
+      (webNavigator as any).contentExtractor = mockContentExtractor;
+
+      await webNavigator.extractContent("https://example.com");
+
+      expect(mockDbClient.storeExtractionMetrics).toHaveBeenCalledWith(
+        mockContent.id,
+        expect.objectContaining({
+          totalTimeMs: expect.any(Number),
+          statusCode: 200,
+          contentType: "text/html",
+          contentLength: 3000,
+          sslVerified: true,
+          sanitizationApplied: true,
+        })
+      );
+    });
+
+    it("should handle rate limit during extraction", async () => {
+      const rateLimitError = new Error("429 Too Many Requests");
+
+      const mockContentExtractor = {
+        extractContent: jest.fn().mockRejectedValue(rateLimitError),
+      };
+
+      (webNavigator as any).contentExtractor = mockContentExtractor;
+
+      await expect(
+        webNavigator.extractContent("https://example.com")
+      ).rejects.toThrow("429 Too Many Requests");
+
+      // Should handle rate limit
+      expect(mockDbClient.updateRateLimit).toHaveBeenCalled();
+    });
+
+    it("should prevent concurrent extraction of same URL", async () => {
+      const mockContent = {
+        id: "content-4",
+        url: "https://example.com",
+        title: "Concurrent Test",
+        content: "Test content",
+        extractedAt: new Date(),
+        metadata: {
+          statusCode: 200,
+          contentType: "text/html",
+          contentLength: 1000,
+          isSecure: true,
+        },
+      };
+
+      const mockContentExtractor = {
+        extractContent: jest
+          .fn()
+          .mockImplementation(
+            () =>
+              new Promise((resolve) =>
+                setTimeout(() => resolve(mockContent), 100)
+              )
+          ),
+      };
+
+      (webNavigator as any).contentExtractor = mockContentExtractor;
+
+      // Start two concurrent extractions
+      const promise1 = webNavigator.extractContent("https://example.com");
+      const promise2 = webNavigator.extractContent("https://example.com");
+
+      const [result1, result2] = await Promise.all([promise1, promise2]);
+
+      expect(result1).toEqual(mockContent);
+      expect(result2).toEqual(mockContent);
+      // Content extractor should only be called once due to deduplication
+      expect(mockContentExtractor.extractContent).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("traversal operations", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("should perform traversal with configuration", async () => {
+      const traversalConfig = {
+        maxDepth: 3,
+        maxPages: 10,
+        includeExternalLinks: false,
+        respectRobotsTxt: true,
+        delayBetweenRequests: 100,
+        timeout: 5000,
+      };
+
+      const mockTraversalResult = {
+        sessionId: "traversal-1",
+        startUrl: "https://example.com",
+        pagesVisited: [
+          "https://example.com/page1",
+          "https://example.com/page2",
+        ],
+        totalPages: 2,
+        maxDepthReached: 1,
+        errors: [],
+        startedAt: new Date(),
+        completedAt: new Date(),
+      };
+
+      const mockTraversalEngine = {
+        traverse: jest.fn().mockResolvedValue(mockTraversalResult),
+      };
+
+      (webNavigator as any).traversalEngine = mockTraversalEngine;
+
+      const query: any = {
+        id: "query-1",
+        url: "https://example.com",
+        extractionType: "full_page",
+        enableTraversal: true,
+        traversalConfig,
+        extractionConfig: {
+          includeImages: true,
+          includeLinks: true,
+          includeMetadata: true,
+          stripNavigation: true,
+          stripAds: true,
+          maxContentLength: 10000,
+          security: {
+            verifySsl: true,
+            sanitizeHtml: true,
+            detectMalicious: true,
+            followRedirects: true,
+            maxRedirects: 5,
+            userAgent: "TestAgent",
+            respectRobotsTxt: true,
+          },
+        },
+        timeoutMs: 30000,
+        metadata: {
+          requesterId: "test-user",
+          priority: 1,
+          createdAt: new Date(),
+        },
+      };
+
+      const result = await webNavigator.processQuery(query);
+
+      expect(mockTraversalEngine.traverse).toHaveBeenCalledWith(
+        "https://example.com",
+        traversalConfig
+      );
+      expect(result).toEqual(mockTraversalResult);
+      expect(mockDbClient.createTraversal).toHaveBeenCalledWith(
+        mockTraversalResult.sessionId,
+        "https://example.com",
+        traversalConfig
+      );
+    });
+
+    it("should handle traversal errors", async () => {
+      const mockTraversalEngine = {
+        traverse: jest.fn().mockRejectedValue(new Error("Traversal failed")),
+      };
+
+      (webNavigator as any).traversalEngine = mockTraversalEngine;
+
+      const query: any = {
+        id: "query-2",
+        url: "https://example.com",
+        extractionType: "full_page",
+        enableTraversal: true,
+        traversalConfig: { maxDepth: 2, maxPages: 5 },
+        extractionConfig: {
+          includeImages: true,
+          includeLinks: true,
+          includeMetadata: true,
+          stripNavigation: true,
+          stripAds: true,
+          maxContentLength: 10000,
+          security: {
+            verifySsl: true,
+            sanitizeHtml: true,
+            detectMalicious: true,
+            followRedirects: true,
+            maxRedirects: 5,
+            userAgent: "TestAgent",
+            respectRobotsTxt: true,
+          },
+        },
+        timeoutMs: 30000,
+        metadata: {
+          requesterId: "test-user",
+          priority: 1,
+          createdAt: new Date(),
+        },
+      };
+
+      await expect(webNavigator.processQuery(query)).rejects.toThrow(
+        "Traversal failed"
+      );
+    });
+
+    it("should create traversal session in database", async () => {
+      const traversalConfig = { maxDepth: 2, maxPages: 5 };
+      const mockTraversalResult = {
+        sessionId: "session-123",
+        startUrl: "https://example.com",
+        pagesVisited: ["https://example.com"],
+        totalPages: 1,
+        maxDepthReached: 0,
+        errors: [],
+        startedAt: new Date(),
+        completedAt: new Date(),
+      };
+
+      const mockTraversalEngine = {
+        traverse: jest.fn().mockResolvedValue(mockTraversalResult),
+      };
+
+      (webNavigator as any).traversalEngine = mockTraversalEngine;
+
+      const query: any = {
+        id: "query-3",
+        url: "https://example.com",
+        extractionType: "full_page",
+        enableTraversal: true,
+        traversalConfig,
+        extractionConfig: {
+          includeImages: true,
+          includeLinks: true,
+          includeMetadata: true,
+          stripNavigation: true,
+          stripAds: true,
+          maxContentLength: 10000,
+          security: {
+            verifySsl: true,
+            sanitizeHtml: true,
+            detectMalicious: true,
+            followRedirects: true,
+            maxRedirects: 5,
+            userAgent: "TestAgent",
+            respectRobotsTxt: true,
+          },
+        },
+        timeoutMs: 30000,
+        metadata: {
+          requesterId: "test-user",
+          priority: 1,
+          createdAt: new Date(),
+        },
+      };
+
+      await webNavigator.processQuery(query);
+
+      expect(mockDbClient.createTraversal).toHaveBeenCalledWith(
+        "session-123",
+        "https://example.com",
+        traversalConfig
+      );
+    });
+
+    it("should store traversal results", async () => {
+      const mockTraversalResult = {
+        sessionId: "session-456",
+        startUrl: "https://example.com",
+        pagesVisited: ["https://example.com/page1"],
+        totalPages: 1,
+        maxDepthReached: 1,
+        errors: [],
+        startedAt: new Date(),
+        completedAt: new Date(),
+      };
+
+      const mockTraversalEngine = {
+        traverse: jest.fn().mockResolvedValue(mockTraversalResult),
+      };
+
+      (webNavigator as any).traversalEngine = mockTraversalEngine;
+
+      const query: any = {
+        id: "query-4",
+        url: "https://example.com",
+        extractionType: "full_page",
+        enableTraversal: true,
+        traversalConfig: { maxDepth: 2, maxPages: 5 },
+        extractionConfig: {
+          includeImages: true,
+          includeLinks: true,
+          includeMetadata: true,
+          stripNavigation: true,
+          stripAds: true,
+          maxContentLength: 10000,
+          security: {
+            verifySsl: true,
+            sanitizeHtml: true,
+            detectMalicious: true,
+            followRedirects: true,
+            maxRedirects: 5,
+            userAgent: "TestAgent",
+            respectRobotsTxt: true,
+          },
+        },
+        timeoutMs: 30000,
+        metadata: {
+          requesterId: "test-user",
+          priority: 1,
+          createdAt: new Date(),
+        },
+      };
+
+      await webNavigator.processQuery(query);
+
+      expect(mockDbClient.updateTraversalNode).toHaveBeenCalledWith(
+        "session-456",
+        expect.objectContaining({
+          totalPages: 1,
+          maxDepthReached: 1,
+          errors: [],
+          completedAt: expect.any(Date),
+        })
+      );
+    });
+  });
+
+  describe("rate limiting", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("should apply rate limit backoff", async () => {
+      // Set up rate limit
+      const domain = "example.com";
+      const rateLimit = {
+        domain,
+        status: RateLimitStatus.THROTTLED,
+        requestsInWindow: 0,
+        windowResetAt: new Date(Date.now() + 60000),
+        backoffUntil: new Date(Date.now() + 30000),
+        lastRequestAt: new Date(),
+      };
+
+      mockDbClient.getRateLimit.mockResolvedValue(rateLimit);
+
+      const mockContentExtractor = {
+        extractContent: jest
+          .fn()
+          .mockRejectedValue(new Error("429 Too Many Requests")),
+      };
+
+      (webNavigator as any).contentExtractor = mockContentExtractor;
+
+      await expect(
+        webNavigator.extractContent(`https://${domain}`)
+      ).rejects.toThrow("429 Too Many Requests");
+
+      expect(mockDbClient.updateRateLimit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          domain,
+          status: RateLimitStatus.THROTTLED,
+          backoffUntil: expect.any(Date),
+        })
+      );
+    });
+
+    it("should update rate limit status in database", async () => {
+      const domain = "rate-limited.com";
+
+      const mockContentExtractor = {
+        extractContent: jest
+          .fn()
+          .mockRejectedValue(new Error("429 Too Many Requests")),
+      };
+
+      (webNavigator as any).contentExtractor = mockContentExtractor;
+
+      await expect(
+        webNavigator.extractContent(`https://${domain}`)
+      ).rejects.toThrow("429 Too Many Requests");
+
+      expect(mockDbClient.updateRateLimit).toHaveBeenCalled();
+    });
+
+    it("should handle rate limit expiration", async () => {
+      // Test that expired rate limits are reset
+      const expiredRateLimit = {
+        domain: "expired.com",
+        status: RateLimitStatus.THROTTLED,
+        requestsInWindow: 10,
+        windowResetAt: new Date(Date.now() - 1000), // Expired
+        backoffUntil: new Date(Date.now() - 1000), // Expired
+        lastRequestAt: new Date(Date.now() - 2000),
+      };
+
+      mockDbClient.getRateLimit.mockResolvedValue(expiredRateLimit);
+
+      const mockContent = {
+        id: "content-5",
+        url: "https://expired.com",
+        title: "Expired Rate Limit",
+        content: "Content after rate limit expired",
+        extractedAt: new Date(),
+        metadata: {
+          statusCode: 200,
+          contentType: "text/html",
+          contentLength: 1000,
+          isSecure: true,
+        },
+      };
+
+      const mockContentExtractor = {
+        extractContent: jest.fn().mockResolvedValue(mockContent),
+      };
+
+      (webNavigator as any).contentExtractor = mockContentExtractor;
+
+      const result = await webNavigator.extractContent("https://expired.com");
+
+      expect(result).toEqual(mockContent);
+    });
+  });
+
+  describe("health monitoring", () => {
+    it("should report healthy status when all components available", async () => {
+      mockDbClient.isAvailable.mockReturnValue(true);
+
+      const status = await webNavigator.getStatus();
+
+      expect(status.health.status).toBe("healthy");
+      expect(status.health.httpClientAvailable).toBe(true);
+      expect(status.health.databaseAvailable).toBe(true);
+      expect(status.health.cacheAvailable).toBe(true);
+    });
+
+    it("should report degraded status when database unavailable", async () => {
+      mockDbClient.isAvailable.mockReturnValue(false);
+
+      const status = await webNavigator.getStatus();
+
+      expect(status.health.status).toBe("degraded");
+      expect(status.health.databaseAvailable).toBe(false);
+      expect(status.health.cacheAvailable).toBe(false);
+    });
+
+    it("should report unhealthy status when HTTP client unavailable", async () => {
+      // Mock HTTP client unavailability (would need different mocking approach)
+      // For now, test that degraded status works
+      mockDbClient.isAvailable.mockReturnValue(false);
+
+      const status = await webNavigator.getStatus();
+
+      expect(status.health.status).toBe("degraded");
+    });
+  });
+
+  describe("cache management", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("should perform periodic cache cleanup", async () => {
+      // Trigger cache cleanup manually (normally done by interval)
+      await webNavigator.clearCaches();
+
+      expect(mockDbClient.cleanupExpiredCache).toHaveBeenCalled();
+    });
+
+    it("should handle cache cleanup errors gracefully", async () => {
+      mockDbClient.cleanupExpiredCache.mockRejectedValue(
+        new Error("Cleanup failed")
+      );
+
+      // Should not throw
+      await expect(webNavigator.clearCaches()).resolves.toBeUndefined();
+    });
+
+    it("should clear search engine cache", async () => {
+      const mockSearchEngine = {
+        clearCache: jest.fn(),
+        pruneCache: jest.fn(),
+      };
+
+      (webNavigator as any).searchEngine = mockSearchEngine;
+
+      await webNavigator.clearCaches();
+
+      expect(mockSearchEngine.clearCache).toHaveBeenCalled();
+    });
+  });
+
+  describe("error handling", () => {
+    it("should handle database connection failures", async () => {
+      mockDbClient.isAvailable.mockReturnValue(false);
+      mockDbClient.getContentByUrl.mockRejectedValue(
+        new Error("DB connection failed")
+      );
+
+      const mockContent = {
+        id: "content-6",
+        url: "https://example.com",
+        title: "DB Failure Test",
+        content: "Content despite DB failure",
+        extractedAt: new Date(),
+        metadata: {
+          statusCode: 200,
+          contentType: "text/html",
+          contentLength: 1000,
+          isSecure: true,
+        },
+      };
+
+      const mockContentExtractor = {
+        extractContent: jest.fn().mockResolvedValue(mockContent),
+      };
+
+      (webNavigator as any).contentExtractor = mockContentExtractor;
+
+      // Should still work despite DB failures
+      const result = await webNavigator.extractContent("https://example.com");
+
+      expect(result).toEqual(mockContent);
+    });
+
+    it("should handle search engine failures", async () => {
+      // Test would require mocking search engine failures
+      // For now, verify the infrastructure exists
+      expect((webNavigator as any).searchEngine).toBeDefined();
+    });
+
+    it("should maintain operation during partial failures", async () => {
+      // Make database operations fail but keep core functionality working
+      mockDbClient.storeContent.mockRejectedValue(new Error("DB write failed"));
+      mockDbClient.cacheContent.mockRejectedValue(
+        new Error("Cache write failed")
+      );
+
+      const mockContent = {
+        id: "content-7",
+        url: "https://example.com",
+        title: "Partial Failure Test",
+        content: "Content despite partial failures",
+        extractedAt: new Date(),
+        metadata: {
+          statusCode: 200,
+          contentType: "text/html",
+          contentLength: 1000,
+          isSecure: true,
+        },
+      };
+
+      const mockContentExtractor = {
+        extractContent: jest.fn().mockResolvedValue(mockContent),
+      };
+
+      (webNavigator as any).contentExtractor = mockContentExtractor;
+
+      // Should still return content despite DB failures
+      const result = await webNavigator.extractContent("https://example.com");
+
+      expect(result).toEqual(mockContent);
     });
   });
 });

@@ -18,7 +18,7 @@ import {
 export class ComponentHealthMonitor extends EventEmitter {
   private componentHealth = new Map<string, ComponentHealth>();
   private healthChecks = new Map<string, HealthCheckConfig>();
-  private checkIntervals = new Map<string, NodeJS.Timeout>();
+  private checkIntervals = new Map<string, ReturnType<typeof setInterval>>();
   private isRunning = false;
 
   /**
@@ -375,4 +375,3 @@ export class ComponentHealthMonitor extends EventEmitter {
     this.checkIntervals.set(componentId, interval);
   }
 }
-

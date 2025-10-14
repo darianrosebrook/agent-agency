@@ -11,7 +11,7 @@ import {
   OllamaProviderError,
 } from "@/models/providers/OllamaProvider";
 import type { OllamaModelConfig } from "@/types/model-registry";
-import { beforeEach, describe, expect, it, vi } from "@jest/globals";
+import { beforeEach, describe, expect, it } from "@jest/globals";
 
 describe("OllamaProvider", () => {
   let provider: OllamaProvider;
@@ -41,7 +41,7 @@ describe("OllamaProvider", () => {
     provider = new OllamaProvider(mockConfig);
 
     // Mock fetch globally
-    global.fetch = vi.fn();
+    global.fetch = jest.fn();
   });
 
   describe("Configuration", () => {
@@ -76,7 +76,7 @@ describe("OllamaProvider", () => {
         eval_duration: 300000000,
       };
 
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof jest.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -105,7 +105,7 @@ describe("OllamaProvider", () => {
         done: true,
       };
 
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof jest.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -130,7 +130,7 @@ describe("OllamaProvider", () => {
         eval_duration: 100000000,
       };
 
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof jest.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -151,7 +151,7 @@ describe("OllamaProvider", () => {
         done: true,
       };
 
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof jest.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -195,7 +195,7 @@ describe("OllamaProvider", () => {
     });
 
     it("should throw error when Ollama API fails", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof jest.fn>).mockResolvedValueOnce({
         ok: false,
         statusText: "Internal Server Error",
       });
@@ -208,7 +208,7 @@ describe("OllamaProvider", () => {
     });
 
     it("should throw error when fetch fails", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      (global.fetch as ReturnType<typeof jest.fn>).mockRejectedValueOnce(
         new Error("Network error")
       );
 
@@ -229,7 +229,7 @@ describe("OllamaProvider", () => {
         eval_duration: 1000000000, // 1 second
       };
 
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof jest.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -244,7 +244,7 @@ describe("OllamaProvider", () => {
 
   describe("Health Checking", () => {
     it("should return healthy when Ollama is running and model exists", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof jest.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           models: [{ name: "gemma3:1b" }],
@@ -260,7 +260,7 @@ describe("OllamaProvider", () => {
     });
 
     it("should return unhealthy when Ollama is not responding", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof jest.fn>).mockResolvedValueOnce({
         ok: false,
         statusText: "Service Unavailable",
       });
@@ -272,7 +272,7 @@ describe("OllamaProvider", () => {
     });
 
     it("should return unhealthy when model not found", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof jest.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           models: [{ name: "other-model:1b" }],
@@ -286,7 +286,7 @@ describe("OllamaProvider", () => {
     });
 
     it("should return unhealthy when fetch fails", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      (global.fetch as ReturnType<typeof jest.fn>).mockRejectedValueOnce(
         new Error("Network error")
       );
 
@@ -308,7 +308,7 @@ describe("OllamaProvider", () => {
         eval_duration: 10000000,
       };
 
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof jest.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -323,7 +323,7 @@ describe("OllamaProvider", () => {
     });
 
     it("should throw error when warmup fails", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      (global.fetch as ReturnType<typeof jest.fn>).mockRejectedValueOnce(
         new Error("Load failed")
       );
 
@@ -342,7 +342,7 @@ describe("OllamaProvider", () => {
         done: true,
       };
 
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof jest.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });

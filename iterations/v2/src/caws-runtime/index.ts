@@ -2,17 +2,17 @@
  * CAWS Constitutional Runtime Exports
  */
 
-export { ConstitutionalRuntime } from "./ConstitutionalRuntime";
 export { ConstitutionalPolicyEngine } from "./ConstitutionalPolicyEngine";
-export { ViolationHandler } from "./ViolationHandler";
-export { WaiverManager } from "./WaiverManager";
+export { ConstitutionalRuntime } from "./ConstitutionalRuntime";
 export {
   defaultCawsPolicies,
-  loadDefaultPolicies,
   getPoliciesByPrinciple,
   getPoliciesBySeverity,
+  loadDefaultPolicies,
 } from "./DefaultPolicies";
-export type {
-  AlertManager,
-  AuditLogger,
-} from "./ViolationHandler";
+export { ViolationHandler } from "./ViolationHandler";
+export type { AlertManager, AuditLogger } from "./ViolationHandler";
+export { WaiverManager } from "./WaiverManager";
+
+// Re-export commonly used types
+export { VerificationPriority } from "../types/verification";

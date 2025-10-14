@@ -12,6 +12,19 @@
  * @author @darianrosebrook
  */
 
+// Re-export commonly used types
+export { VerificationPriority } from "../types/verification";
+
+/**
+ * Error thrown when circuit breaker is open
+ */
+export class CircuitBreakerOpenError extends Error {
+  constructor(message: string = "Circuit breaker is open") {
+    super(message);
+    this.name = "CircuitBreakerOpenError";
+  }
+}
+
 export enum CircuitState {
   CLOSED = "closed", // Normal operation
   OPEN = "open", // Failing, reject requests

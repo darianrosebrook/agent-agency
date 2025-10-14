@@ -7,6 +7,9 @@
  * @author @darianrosebrook
  */
 
+// Re-export commonly used types
+export { VerificationPriority } from "../types/verification";
+
 /**
  * Event severity levels
  */

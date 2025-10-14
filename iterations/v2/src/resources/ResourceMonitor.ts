@@ -73,7 +73,7 @@ export class ResourceMonitor implements IResourceMonitor {
   private config: ResourceMonitorConfig;
   private agentProfiles: Map<string, AgentResourceProfile> = new Map();
   private isRunning = false;
-  private monitoringTimer?: NodeJS.Timeout;
+  private monitoringTimer?: ReturnType<typeof setInterval>;
 
   constructor(config: Partial<ResourceMonitorConfig> = {}) {
     this.logger = new Logger("ResourceMonitor");

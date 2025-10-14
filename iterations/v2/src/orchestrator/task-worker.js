@@ -54,7 +54,10 @@ async function executeScriptTask(task) {
     `;
 
     // Use Function constructor for isolated execution
-    const executeFn = new Function("context", "require", `
+    const executeFn = new Function(
+      "context",
+      "require",
+      `
       const { console, args, result } = context;
       const module = { exports: {} };
 
@@ -68,7 +71,8 @@ async function executeScriptTask(task) {
       };
 
       ${script}
-    `);
+    `
+    );
 
     const result = await Promise.race([
       executeFn(context, safeRequire),
@@ -89,7 +93,6 @@ async function executeScriptTask(task) {
         memoryUsage: process.memoryUsage().heapUsed,
       },
     };
-
   } catch (error) {
     return {
       success: false,
@@ -112,16 +115,18 @@ async function executeApiCallTask(task) {
     const startTime = performance.now();
 
     // Basic HTTP client (in real implementation, use axios or fetch)
-    const http = require(method.toLowerCase().startsWith('http') ? 'http' : 'https');
+    const http = require(method.toLowerCase().startsWith("http")
+      ? "http"
+      : "https");
     const urlObj = new URL(url);
 
     const options = {
       hostname: urlObj.hostname,
-      port: urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),
+      port: urlObj.port || (urlObj.protocol === "https:" ? 443 : 80),
       path: urlObj.pathname + urlObj.search,
       method: method.toUpperCase(),
       headers: {
-        'User-Agent': 'TaskWorker/1.0',
+        "User-Agent": "TaskWorker/1.0",
         ...headers,
       },
       timeout,
@@ -129,13 +134,13 @@ async function executeApiCallTask(task) {
 
     const result = await new Promise((resolve, reject) => {
       const req = http.request(options, (res) => {
-        let data = '';
+        let data = "";
 
-        res.on('data', (chunk) => {
+        res.on("data", (chunk) => {
           data += chunk;
         });
 
-        res.on('end', () => {
+        res.on("end", () => {
           try {
             const parsed = JSON.parse(data);
             resolve({
@@ -153,14 +158,14 @@ async function executeApiCallTask(task) {
         });
       });
 
-      req.on('error', reject);
-      req.on('timeout', () => {
+      req.on("error", reject);
+      req.on("timeout", () => {
         req.destroy();
-        reject(new Error('Request timeout'));
+        reject(new Error("Request timeout"));
       });
 
       if (body) {
-        req.write(typeof body === 'string' ? body : JSON.stringify(body));
+        req.write(typeof body === "string" ? body : JSON.stringify(body));
       }
 
       req.end();
@@ -178,7 +183,6 @@ async function executeApiCallTask(task) {
         memoryUsage: process.memoryUsage().heapUsed,
       },
     };
-
   } catch (error) {
     return {
       success: false,
@@ -203,10 +207,10 @@ async function executeDataProcessingTask(task) {
     let result;
 
     switch (operation) {
-      case 'filter':
-        result = data.filter(item => {
+      case "filter":
+        result = data.filter((item) => {
           try {
-            return new Function('item', `return ${config.filter}`)(item);
+            return new Function("item", `return ${config.filter}`)(item);
           } catch (error) {
             logs.push(`Filter error for item: ${error.message}`);
             return false;
@@ -214,10 +218,10 @@ async function executeDataProcessingTask(task) {
         });
         break;
 
-      case 'map':
-        result = data.map(item => {
+      case "map":
+        result = data.map((item) => {
           try {
-            return new Function('item', `return ${config.map}`)(item);
+            return new Function("item", `return ${config.map}`)(item);
           } catch (error) {
             logs.push(`Map error for item: ${error.message}`);
             return item;
@@ -225,10 +229,13 @@ async function executeDataProcessingTask(task) {
         });
         break;
 
-      case 'reduce':
+      case "reduce":
         result = data.reduce((acc, item) => {
           try {
-            return new Function('acc', 'item', `return ${config.reduce}`)(acc, item);
+            return new Function("acc", "item", `return ${config.reduce}`)(
+              acc,
+              item
+            );
           } catch (error) {
             logs.push(`Reduce error for item: ${error.message}`);
             return acc;
@@ -236,10 +243,10 @@ async function executeDataProcessingTask(task) {
         }, config.initialValue);
         break;
 
-      case 'sort':
+      case "sort":
         result = [...data].sort((a, b) => {
           try {
-            return new Function('a', 'b', `return ${config.sort}`)(a, b);
+            return new Function("a", "b", `return ${config.sort}`)(a, b);
           } catch (error) {
             logs.push(`Sort error: ${error.message}`);
             return 0;
@@ -264,7 +271,6 @@ async function executeDataProcessingTask(task) {
         outputSize: JSON.stringify(result).length,
       },
     };
-
   } catch (error) {
     return {
       success: false,
@@ -291,14 +297,14 @@ async function executeAIInferenceTask(task) {
     logs.push(`AI inference requested for model: ${model}`);
 
     // Simulate AI processing time
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const mockResponse = {
       model,
       prompt,
       response: `Mock AI response for prompt: ${prompt.substring(0, 50)}...`,
       confidence: 0.85,
-      tokens: prompt.split(' ').length + 50,
+      tokens: prompt.split(" ").length + 50,
     };
 
     const executionTime = performance.now() - startTime;
@@ -313,7 +319,6 @@ async function executeAIInferenceTask(task) {
         memoryUsage: process.memoryUsage().heapUsed,
       },
     };
-
   } catch (error) {
     return {
       success: false,

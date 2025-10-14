@@ -34,6 +34,7 @@ export interface ResearchFindings {
     url: string;
     snippet: string;
     relevance: number;
+    credibility?: number;
   }>;
 }
 
@@ -55,6 +56,9 @@ export interface ResearchContext {
 
   /** Research requirement that triggered this */
   requirement: ResearchRequirement;
+
+  /** Additional metadata about research process */
+  metadata?: Record<string, any>;
 }
 
 /**
@@ -327,5 +331,12 @@ export class TaskResearchAugmenter {
     );
 
     return uniqueSources;
+  }
+
+  /**
+   * Check if a task has research context
+   */
+  hasResearch(task: Task | AugmentedTask): boolean {
+    return "researchProvided" in task && task.researchProvided === true;
   }
 }

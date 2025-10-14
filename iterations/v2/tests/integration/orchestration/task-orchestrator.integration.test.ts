@@ -13,9 +13,8 @@ import { TaskOrchestrator } from "../../../src/orchestrator/TaskOrchestrator.js"
 import type {
   Task,
   TaskOrchestratorConfig,
-  TaskResult,
-  PleadingWorkflow,
 } from "../../../src/types/task-runner.js";
+import { TaskPriority } from "../../../src/types/task-runner.js";
 
 describe("TaskOrchestrator Integration Tests", () => {
   const tempDir = path.join(__dirname, "../../temp/orchestrator-tests");
@@ -30,7 +29,12 @@ describe("TaskOrchestrator Integration Tests", () => {
     },
     queue: {
       maxSize: 50,
-      priorityLevels: ["low", "medium", "high", "critical"],
+      priorityLevels: [
+        TaskPriority.LOW,
+        TaskPriority.MEDIUM,
+        TaskPriority.HIGH,
+        TaskPriority.CRITICAL,
+      ],
       persistenceEnabled: false,
     },
     retry: {
@@ -59,7 +63,7 @@ describe("TaskOrchestrator Integration Tests", () => {
     orchestrator = new TaskOrchestrator(config);
 
     // Wait for workers to initialize
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
   });
 
   afterEach(async () => {
@@ -79,7 +83,7 @@ describe("TaskOrchestrator Integration Tests", () => {
       const task: Task = {
         id: "script-task-1",
         type: "script",
-        priority: "medium",
+        priority: TaskPriority.MEDIUM,
         payload: {
           code: `
             const result = args[0] + args[1];
@@ -95,7 +99,7 @@ describe("TaskOrchestrator Integration Tests", () => {
       expect(taskId).toBe(task.id);
 
       // Wait for execution to complete
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const status = await orchestrator.getTaskStatus(taskId);
       expect(["completed", "running"]).toContain(status);
@@ -105,11 +109,11 @@ describe("TaskOrchestrator Integration Tests", () => {
       const task: Task = {
         id: "api-task-1",
         type: "api_call",
-        priority: "medium",
+        priority: TaskPriority.MEDIUM,
         payload: {
           method: "GET",
           url: "https://httpbin.org/get",
-          headers: { "Accept": "application/json" },
+          headers: { Accept: "application/json" },
           timeout: 5000,
         },
         createdAt: new Date(),
@@ -120,7 +124,7 @@ describe("TaskOrchestrator Integration Tests", () => {
       expect(taskId).toBe(task.id);
 
       // Wait for execution
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
 
       const status = await orchestrator.getTaskStatus(taskId);
       expect(["completed", "running"]).toContain(status);
@@ -130,7 +134,7 @@ describe("TaskOrchestrator Integration Tests", () => {
       const task: Task = {
         id: "data-task-1",
         type: "data_processing",
-        priority: "medium",
+        priority: TaskPriority.MEDIUM,
         payload: {
           operation: "filter",
           data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -146,7 +150,7 @@ describe("TaskOrchestrator Integration Tests", () => {
       expect(taskId).toBe(task.id);
 
       // Wait for execution
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const status = await orchestrator.getTaskStatus(taskId);
       expect(["completed", "running"]).toContain(status);
@@ -156,7 +160,7 @@ describe("TaskOrchestrator Integration Tests", () => {
       const task: Task = {
         id: "error-task-1",
         type: "script",
-        priority: "medium",
+        priority: TaskPriority.MEDIUM,
         payload: {
           code: `
             throw new Error("Test execution error");
@@ -170,7 +174,7 @@ describe("TaskOrchestrator Integration Tests", () => {
       expect(taskId).toBe(task.id);
 
       // Wait for execution and failure
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const status = await orchestrator.getTaskStatus(taskId);
       expect(status).toBe("failed");
@@ -191,7 +195,7 @@ describe("TaskOrchestrator Integration Tests", () => {
         .map((_, i) => ({
           id: `concurrent-task-${i}`,
           type: "script" as const,
-          priority: "medium" as const,
+          priority: TaskPriority.MEDIUM as const,
           payload: {
             code: `
               // Simulate some work
@@ -207,13 +211,13 @@ describe("TaskOrchestrator Integration Tests", () => {
 
       // Submit all tasks
       const taskIds = await Promise.all(
-        tasks.map(task => orchestrator.submitTask(task))
+        tasks.map((task) => orchestrator.submitTask(task))
       );
 
       expect(taskIds).toHaveLength(3);
 
       // Wait for execution
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
 
       // Check metrics
       const metrics = orchestrator.getMetrics();
@@ -227,7 +231,7 @@ describe("TaskOrchestrator Integration Tests", () => {
       const task: Task = {
         id: "pleading-task-1",
         type: "script",
-        priority: "high", // High priority to trigger pleading
+        priority: TaskPriority.HIGH, // High priority to trigger pleading
         payload: {
           code: `
             throw new Error("Persistent failure for pleading test");
@@ -240,7 +244,7 @@ describe("TaskOrchestrator Integration Tests", () => {
       const taskId = await orchestrator.submitTask(task);
 
       // Wait for multiple execution attempts and pleading initiation
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
 
       // Check if pleading workflow was initiated
       const workflow = orchestrator.getPleadingWorkflow(taskId);
@@ -268,7 +272,7 @@ describe("TaskOrchestrator Integration Tests", () => {
       const task: Task = {
         id: "metrics-task-1",
         type: "script",
-        priority: "medium",
+        priority: TaskPriority.MEDIUM,
         payload: {
           code: `
             context.result = "Metrics test completed";
@@ -280,7 +284,7 @@ describe("TaskOrchestrator Integration Tests", () => {
       await orchestrator.submitTask(task);
 
       // Wait for execution
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const metrics = orchestrator.getMetrics();
 
@@ -299,7 +303,7 @@ describe("TaskOrchestrator Integration Tests", () => {
       const task: Task = {
         id: "state-task-1",
         type: "script",
-        priority: "medium",
+        priority: TaskPriority.MEDIUM,
         payload: {
           code: `
             context.result = "State test";
@@ -314,7 +318,7 @@ describe("TaskOrchestrator Integration Tests", () => {
       expect(["queued", "running", "completed"]).toContain(status);
 
       // Wait for completion
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       status = await orchestrator.getTaskStatus(task.id);
       expect(["completed", "failed", "running"]).toContain(status);
@@ -329,7 +333,7 @@ describe("TaskOrchestrator Integration Tests", () => {
         .map((_, i) => ({
           id: `recovery-task-${i}`,
           type: "script" as const,
-          priority: "medium" as const,
+          priority: TaskPriority.MEDIUM as const,
           payload: {
             code: `
               if (Math.random() < 0.3) {
@@ -342,13 +346,13 @@ describe("TaskOrchestrator Integration Tests", () => {
         }));
 
       const taskIds = await Promise.all(
-        tasks.map(task => orchestrator.submitTask(task))
+        tasks.map((task) => orchestrator.submitTask(task))
       );
 
       expect(taskIds).toHaveLength(5);
 
       // Wait for all executions to complete
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
 
       // System should still be functional
       const metrics = orchestrator.getMetrics();
@@ -362,7 +366,7 @@ describe("TaskOrchestrator Integration Tests", () => {
         .map((_, i) => ({
           id: `integrity-task-${i}`,
           type: "script" as const,
-          priority: "medium" as const,
+          priority: TaskPriority.MEDIUM as const,
           payload: {
             code: `
               const shouldFail = ${i} % 3 === 0; // Every 3rd task fails
@@ -375,10 +379,10 @@ describe("TaskOrchestrator Integration Tests", () => {
           createdAt: new Date(),
         }));
 
-      await Promise.all(tasks.map(task => orchestrator.submitTask(task)));
+      await Promise.all(tasks.map((task) => orchestrator.submitTask(task)));
 
       // Wait for processing
-      await new Promise(resolve => setTimeout(resolve, 8000));
+      await new Promise((resolve) => setTimeout(resolve, 8000));
 
       // Check that system remained stable
       const metrics = orchestrator.getMetrics();
@@ -392,7 +396,7 @@ describe("TaskOrchestrator Integration Tests", () => {
       const task: Task = {
         id: "shutdown-task-1",
         type: "script",
-        priority: "medium",
+        priority: TaskPriority.MEDIUM,
         payload: {
           code: `
             // Simulate longer running task

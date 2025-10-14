@@ -14,6 +14,9 @@ import {
   TaskStateTransition,
 } from "../types/task-state";
 
+// Re-export commonly used types
+export { VerificationPriority } from "../types/verification";
+
 export class TaskStateMachineError extends Error {
   constructor(
     public taskId: string,

@@ -7,6 +7,9 @@
  * @author @darianrosebrook
  */
 
+// Re-export commonly used types
+export { VerificationPriority } from "../types/verification";
+
 export interface RetryConfig {
   /** Maximum number of retry attempts */
   maxAttempts: number;

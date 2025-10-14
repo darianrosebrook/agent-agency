@@ -391,7 +391,7 @@ describe("BudgetValidator", () => {
         violations: [
           {
             gate: "budget_limit",
-            type: "max_files",
+            type: "max_files" as const,
             current: 60,
             limit: 50,
             baseline: 50,

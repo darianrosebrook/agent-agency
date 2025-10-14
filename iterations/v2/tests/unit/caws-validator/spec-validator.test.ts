@@ -11,7 +11,7 @@ import type { WorkingSpec } from "../../../src/types/caws-types";
 describe("SpecValidator", () => {
   let validator: SpecValidator;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     validator = new SpecValidator();
   });
 
@@ -76,12 +76,12 @@ describe("SpecValidator", () => {
       expect(result.errors.some((e) => e.field === "risk_tier")).toBe(true);
     });
 
-    it("should provide suggestions for missing fields", () => {
+    it("should provide suggestions for missing fields", async () => {
       const spec = {
         title: "Test",
       } as WorkingSpec;
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       const idError = result.errors.find((e) => e.field === "id");
       expect(idError).toBeDefined();
@@ -89,43 +89,43 @@ describe("SpecValidator", () => {
       expect(idError?.suggestion).toContain("PROJ-001");
     });
 
-    it("should fail with invalid ID format", () => {
+    it("should fail with invalid ID format", async () => {
       const spec = createValidSpec();
       spec.id = "invalid";
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === "id")).toBe(true);
     });
 
-    it("should accept valid ID formats", () => {
+    it("should accept valid ID formats", async () => {
       const validIds = ["FEAT-001", "FIX-123", "REFACTOR-999", "DOC-042"];
 
       for (const id of validIds) {
         const spec = createValidSpec();
         spec.id = id;
-        const result = validator.validateWorkingSpec(spec);
+        const result = await validator.validateWorkingSpec(spec);
 
         expect(result.valid).toBe(true);
       }
     });
 
-    it("should fail with invalid risk tier", () => {
+    it("should fail with invalid risk tier", async () => {
       const spec = createValidSpec();
       spec.risk_tier = 5;
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === "risk_tier")).toBe(true);
     });
 
-    it("should suggest auto-fix for invalid risk tier", () => {
+    it("should suggest auto-fix for invalid risk tier", async () => {
       const spec = createValidSpec();
       spec.risk_tier = 5;
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.fixes).toBeDefined();
       expect(result.fixes?.length).toBeGreaterThan(0);
@@ -134,29 +134,43 @@ describe("SpecValidator", () => {
       expect(fix?.value).toBe(3);
     });
 
-    it("should accept valid risk tiers", () => {
-      const tiers = [1, 2, 3];
+    it("should accept valid risk tiers", async () => {
+      // Test tier 2 (default) and tier 3 (doesn't require additional fields)
+      const tiers = [2, 3];
 
       for (const tier of tiers) {
         const spec = createValidSpec();
         spec.risk_tier = tier;
-        const result = validator.validateWorkingSpec(spec);
+        const result = await validator.validateWorkingSpec(spec);
 
         expect(result.valid).toBe(true);
       }
+
+      // Test tier 1 with required fields
+      const spec = createValidSpec();
+      spec.risk_tier = 1;
+      spec.observability = {
+        logs: ["Security events"],
+        metrics: ["Error rates"],
+        traces: ["Request tracing"],
+      };
+      spec.rollback = ["Revert database changes", "Restore backups"];
+
+      const result = await validator.validateWorkingSpec(spec);
+      expect(result.valid).toBe(true);
     });
 
-    it("should fail with invalid mode", () => {
+    it("should fail with invalid mode", async () => {
       const spec = createValidSpec();
       spec.mode = "invalid" as any;
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === "mode")).toBe(true);
     });
 
-    it("should accept valid modes", () => {
+    it("should accept valid modes", async () => {
       const modes: Array<"feature" | "refactor" | "fix" | "doc" | "chore"> = [
         "feature",
         "refactor",
@@ -168,92 +182,92 @@ describe("SpecValidator", () => {
       for (const mode of modes) {
         const spec = createValidSpec();
         spec.mode = mode;
-        const result = validator.validateWorkingSpec(spec);
+        const result = await validator.validateWorkingSpec(spec);
 
         expect(result.valid).toBe(true);
       }
     });
 
-    it("should fail with empty scope.in", () => {
+    it("should fail with empty scope.in", async () => {
       const spec = createValidSpec();
       spec.scope.in = [];
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === "scope.in")).toBe(true);
     });
 
-    it("should fail with missing scope", () => {
+    it("should fail with missing scope", async () => {
       const spec = createValidSpec();
       delete (spec as any).scope;
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === "scope")).toBe(true);
     });
 
-    it("should require contracts for Tier 1", () => {
+    it("should require contracts for Tier 1", async () => {
       const spec = createValidSpec();
       spec.risk_tier = 1;
       spec.contracts = [];
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === "contracts")).toBe(true);
     });
 
-    it("should require contracts for Tier 2", () => {
+    it("should require contracts for Tier 2", async () => {
       const spec = createValidSpec();
       spec.risk_tier = 2;
       spec.contracts = [];
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === "contracts")).toBe(true);
     });
 
-    it("should not require contracts for Tier 3", () => {
+    it("should not require contracts for Tier 3", async () => {
       const spec = createValidSpec();
       spec.risk_tier = 3;
       spec.contracts = [];
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.valid).toBe(true);
     });
 
-    it("should require observability for Tier 1", () => {
+    it("should require observability for Tier 1", async () => {
       const spec = createValidSpec();
       spec.risk_tier = 1;
       delete spec.observability;
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === "observability")).toBe(true);
     });
 
-    it("should require rollback procedures for Tier 1", () => {
+    it("should require rollback procedures for Tier 1", async () => {
       const spec = createValidSpec();
       spec.risk_tier = 1;
       spec.rollback = [];
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === "rollback")).toBe(true);
     });
 
-    it("should require security requirements for Tier 1", () => {
+    it("should require security requirements for Tier 1", async () => {
       const spec = createValidSpec();
       spec.risk_tier = 1;
       spec.non_functional.security = [];
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.valid).toBe(false);
       expect(
@@ -261,38 +275,40 @@ describe("SpecValidator", () => {
       ).toBe(true);
     });
 
-    it("should warn about missing invariants", () => {
+    it("should warn about missing invariants", async () => {
       const spec = createValidSpec();
       spec.invariants = [];
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.warnings.length).toBeGreaterThan(0);
       expect(result.warnings.some((w) => w.field === "invariants")).toBe(true);
     });
 
-    it("should warn about missing acceptance criteria", () => {
+    it("should error about missing acceptance criteria", async () => {
       const spec = createValidSpec();
       spec.acceptance = [];
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
-      expect(result.warnings.length).toBeGreaterThan(0);
-      expect(result.warnings.some((w) => w.field === "acceptance")).toBe(true);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === "acceptance")).toBe(true);
     });
   });
 
   describe("validateWithSuggestions", () => {
-    it("should apply auto-fixes when enabled", () => {
+    it("should apply auto-fixes when enabled", async () => {
       const spec = createValidSpec();
       spec.risk_tier = 5;
 
-      const result = validator.validateWithSuggestions(spec, { autoFix: true });
+      const result = await validator.validateWithSuggestions(spec, {
+        autoFix: true,
+      });
 
       expect(spec.risk_tier).toBe(3);
     });
 
-    it("should not apply auto-fixes when disabled", () => {
+    it("should not apply auto-fixes when disabled", async () => {
       const spec = createValidSpec();
       const originalTier = spec.risk_tier;
       spec.risk_tier = 5;
@@ -304,13 +320,13 @@ describe("SpecValidator", () => {
   });
 
   describe("experimental mode validation", () => {
-    it("should require all experimental mode fields", () => {
+    it("should require all experimental mode fields", async () => {
       const spec = createValidSpec();
       spec.experimental_mode = {
         enabled: true,
       } as any;
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.valid).toBe(false);
       expect(
@@ -318,7 +334,7 @@ describe("SpecValidator", () => {
       ).toBe(true);
     });
 
-    it("should only allow experimental mode for Tier 3", () => {
+    it("should only allow experimental mode for Tier 3", async () => {
       const spec = createValidSpec();
       spec.risk_tier = 2;
       spec.experimental_mode = {
@@ -327,7 +343,7 @@ describe("SpecValidator", () => {
         expires_at: "2025-12-31",
       };
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === "experimental_mode")).toBe(
@@ -335,7 +351,7 @@ describe("SpecValidator", () => {
       );
     });
 
-    it("should allow experimental mode for Tier 3", () => {
+    it("should allow experimental mode for Tier 3", async () => {
       const spec = createValidSpec();
       spec.risk_tier = 3;
       spec.experimental_mode = {
@@ -344,12 +360,12 @@ describe("SpecValidator", () => {
         expires_at: "2025-12-31",
       };
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.valid).toBe(true);
     });
 
-    it("should fail with expired experimental mode", () => {
+    it("should fail with expired experimental mode", async () => {
       const spec = createValidSpec();
       spec.risk_tier = 3;
       spec.experimental_mode = {
@@ -358,7 +374,7 @@ describe("SpecValidator", () => {
         expires_at: "2020-01-01",
       };
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.valid).toBe(false);
       expect(

@@ -5,7 +5,6 @@
  */
 
 import {
-  VerificationPriority,
   AuthCredentials,
   Permission,
   SecurityEventType,

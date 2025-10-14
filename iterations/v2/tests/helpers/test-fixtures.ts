@@ -14,6 +14,9 @@ import {
 import { Task, TaskType } from "../../src/types/arbiter-orchestration";
 import { WorkingSpec } from "../../src/types/caws-types";
 
+// Re-export commonly used types
+export { VerificationPriority } from "../../src/types/verification";
+
 /**
  * Creates a minimal valid Task with all required fields populated.
  *

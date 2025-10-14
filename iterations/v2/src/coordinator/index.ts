@@ -7,3 +7,5 @@ export { FailureManager } from "./FailureManager";
 export { LoadBalancer } from "./LoadBalancer";
 export { SystemCoordinator } from "./SystemCoordinator";
 
+// Re-export commonly used types
+export { VerificationPriority } from "../types/verification";

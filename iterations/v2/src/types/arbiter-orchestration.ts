@@ -16,6 +16,9 @@ import {
 // Re-export for convenience
 export type { AgentProfile } from "./agent-registry";
 
+// Re-export commonly used types
+export { VerificationPriority } from "./verification";
+
 /**
  * Task type enumeration
  */

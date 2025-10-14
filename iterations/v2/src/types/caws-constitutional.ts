@@ -7,6 +7,9 @@
  * @author @darianrosebrook
  */
 
+// Re-export commonly used types
+export { VerificationPriority } from "./verification";
+
 export enum ConstitutionalPrinciple {
   TRANSPARENCY = "transparency",
   ACCOUNTABILITY = "accountability",
@@ -180,4 +183,3 @@ export interface ConstitutionalConfig {
   cacheEnabled: boolean;
   cacheTTL: number; // milliseconds
 }
-

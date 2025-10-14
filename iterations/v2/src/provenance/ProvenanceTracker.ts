@@ -41,7 +41,7 @@ export class ProvenanceTracker extends EventEmitter {
   private gitIntegration?: GitIntegration;
   private cawsIntegration: CAWSProvenanceIntegration;
   private aiDetectionPatterns: AIToolDetectionPatterns;
-  private integrityCheckInterval?: NodeJS.Timeout;
+  private integrityCheckInterval?: ReturnType<typeof setInterval>;
 
   /** Default AI tool detection patterns */
   private static readonly DEFAULT_AI_PATTERNS: AIToolDetectionPatterns = {

@@ -18,6 +18,9 @@ import { RoutingStrategy } from "../types/agentic-rl";
 import { RoutingDecision, Task } from "../types/arbiter-orchestration";
 import { AgentRegistryManager } from "./AgentRegistryManager";
 
+// Re-export commonly used types
+export { VerificationPriority } from "../types/verification";
+
 /**
  * Task Routing Manager Configuration
  */

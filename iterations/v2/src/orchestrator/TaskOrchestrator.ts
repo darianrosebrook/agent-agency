@@ -7,33 +7,31 @@
  * @author @darianrosebrook
  */
 
-import { EventEmitter } from "events";
 import * as crypto from "crypto";
-import { Worker } from "worker_threads";
+import { EventEmitter } from "events";
 import * as path from "path";
-import * as fs from "fs/promises";
+import { Worker } from "worker_threads";
+import { PerformanceTracker } from "../rl/PerformanceTracker";
 import {
+  PleadingDecision,
+  PleadingWorkflow,
   Task,
-  TaskResult,
   TaskExecution,
-  TaskStatus,
-  TaskPriority,
+  TaskMetrics,
+  TaskOrchestratorCapabilities,
   TaskOrchestratorConfig,
   TaskOrchestratorEvents,
-  TaskOrchestratorCapabilities,
-  WorkerPoolConfig,
+  TaskStatus,
   WorkerExecutionResult,
-  PleadingWorkflow,
-  PleadingDecision,
-  TaskMetrics,
+  WorkerPoolConfig,
 } from "../types/task-runner";
+import { TaskState } from "../types/task-state";
+import { EventSeverity, events } from "./EventEmitter";
+import { EventTypes } from "./OrchestratorEvents";
 import { TaskQueue } from "./TaskQueue";
-import { TaskStateMachine } from "./TaskStateMachine";
 import { TaskRetryHandler } from "./TaskRetryHandler";
 import { TaskRoutingManager } from "./TaskRoutingManager";
-import { PerformanceTracker } from "../rl/PerformanceTracker";
-import { events } from "./EventEmitter";
-import { EventTypes } from "./OrchestratorEvents";
+import { TaskStateMachine } from "./TaskStateMachine";
 
 /**
  * Worker Pool Manager
@@ -139,7 +137,10 @@ class WorkerPoolManager extends EventEmitter {
     }
   }
 
-  private handleTaskCompletion(workerId: string, result: WorkerExecutionResult): void {
+  private handleTaskCompletion(
+    workerId: string,
+    result: WorkerExecutionResult
+  ): void {
     const taskId = this.activeTasks.get(workerId);
     if (taskId) {
       this.activeTasks.delete(workerId);
@@ -163,7 +164,10 @@ class WorkerPoolManager extends EventEmitter {
     }
   }
 
-  private updateWorkerMetrics(workerId: string, metrics: Partial<TaskMetrics>): void {
+  private updateWorkerMetrics(
+    workerId: string,
+    metrics: Partial<TaskMetrics>
+  ): void {
     const existing = this.workerMetrics.get(workerId);
     if (existing) {
       this.workerMetrics.set(workerId, { ...existing, ...metrics });
@@ -206,7 +210,11 @@ class WorkerPoolManager extends EventEmitter {
     return null;
   }
 
-  getMetrics(): { activeWorkers: number; totalWorkers: number; activeTasks: number } {
+  getMetrics(): {
+    activeWorkers: number;
+    totalWorkers: number;
+    activeTasks: number;
+  } {
     return {
       activeWorkers: this.workers.size,
       totalWorkers: this.workers.size,
@@ -239,7 +247,10 @@ class PleadingWorkflowManager extends EventEmitter {
   private activeWorkflows: Map<string, PleadingWorkflow> = new Map();
   private workflowHistory: Map<string, PleadingDecision[]> = new Map();
 
-  async initiatePleading(taskId: string, context: any): Promise<PleadingWorkflow> {
+  async initiatePleading(
+    taskId: string,
+    context: any
+  ): Promise<PleadingWorkflow> {
     const workflow: PleadingWorkflow = {
       workflowId: crypto.randomUUID(),
       taskId,
@@ -292,7 +303,8 @@ class PleadingWorkflowManager extends EventEmitter {
       workflow.status = "approved";
       workflow.completedAt = new Date();
       this.emit("pleading_approved", workflow);
-    } else if (workflow.decisions.length >= 10) { // Max decisions
+    } else if (workflow.decisions.length >= 10) {
+      // Max decisions
       workflow.status = "denied";
       workflow.completedAt = new Date();
       this.emit("pleading_denied", workflow);
@@ -358,7 +370,7 @@ export class TaskOrchestrator extends EventEmitter {
         id: `event-${Date.now()}-${crypto.randomUUID()}`,
         type: EventTypes.TASK_PLEADING_INITIATED,
         timestamp: new Date(),
-        severity: "info",
+        severity: EventSeverity.INFO,
         source: "TaskOrchestrator",
         taskId: workflow.taskId,
         metadata: { workflowId: workflow.workflowId },
@@ -391,7 +403,11 @@ export class TaskOrchestrator extends EventEmitter {
     await this.taskQueue.enqueue(task);
 
     // Initialize task state
-    await this.stateMachine.transition(task.id, "queued", "Task submitted");
+    await this.stateMachine.transition(
+      task.id,
+      TaskState.QUEUED,
+      "Task submitted"
+    );
 
     // Track performance
     await this.performanceTracker.recordTaskSubmission(task);
@@ -436,7 +452,11 @@ export class TaskOrchestrator extends EventEmitter {
   private async executeTask(task: Task): Promise<void> {
     try {
       // Transition to running
-      await this.stateMachine.transition(task.id, "running", "Task execution started");
+      await this.stateMachine.transition(
+        task.id,
+        TaskState.RUNNING,
+        "Task execution started"
+      );
 
       // Create execution record
       const execution: TaskExecution = {
@@ -454,7 +474,6 @@ export class TaskOrchestrator extends EventEmitter {
       await this.workerPool.executeTask(task);
 
       this.emit(TaskOrchestratorEvents.TASK_STARTED, execution);
-
     } catch (error) {
       console.error(`Task execution failed for ${task.id}:`, error);
       await this.handleTaskFailure(task.id, error as Error);
@@ -464,7 +483,10 @@ export class TaskOrchestrator extends EventEmitter {
   /**
    * Handle task completion
    */
-  private async handleTaskCompletion(taskId: string, result: WorkerExecutionResult): Promise<void> {
+  private async handleTaskCompletion(
+    taskId: string,
+    result: WorkerExecutionResult
+  ): Promise<void> {
     const execution = this.activeExecutions.get(taskId);
     if (!execution) return;
 
@@ -473,7 +495,11 @@ export class TaskOrchestrator extends EventEmitter {
     execution.result = result;
 
     // Transition to completed
-    await this.stateMachine.transition(taskId, "completed", "Task completed successfully");
+    await this.stateMachine.transition(
+      taskId,
+      TaskState.COMPLETED,
+      "Task completed successfully"
+    );
 
     // Track performance
     await this.performanceTracker.recordTaskCompletion(execution, result);
@@ -482,7 +508,8 @@ export class TaskOrchestrator extends EventEmitter {
     this.updateTaskMetrics(taskId, {
       status: "completed",
       endTime: Date.now(),
-      executionTime: execution.completedAt.getTime() - execution.startedAt.getTime(),
+      executionTime:
+        execution.completedAt.getTime() - execution.startedAt.getTime(),
     });
 
     this.activeExecutions.delete(taskId);
@@ -520,7 +547,11 @@ export class TaskOrchestrator extends EventEmitter {
     }
 
     // Transition to failed
-    await this.stateMachine.transition(taskId, "failed", `Task failed: ${error.message}`);
+    await this.stateMachine.transition(
+      taskId,
+      TaskState.FAILED,
+      `Task failed: ${error.message}`
+    );
 
     // Check if pleading is needed
     if (this.shouldInitiatePleading(execution, error)) {
@@ -540,7 +571,10 @@ export class TaskOrchestrator extends EventEmitter {
    */
   private async initiatePleading(taskId: string, context: any): Promise<void> {
     try {
-      const workflow = await this.pleadingManager.initiatePleading(taskId, context);
+      const workflow = await this.pleadingManager.initiatePleading(
+        taskId,
+        context
+      );
       // Pleading events are handled by event listeners
     } catch (error) {
       console.error(`Failed to initiate pleading for ${taskId}:`, error);
@@ -550,7 +584,9 @@ export class TaskOrchestrator extends EventEmitter {
   /**
    * Handle pleading approval
    */
-  private async handlePleadingApproval(workflow: PleadingWorkflow): Promise<void> {
+  private async handlePleadingApproval(
+    workflow: PleadingWorkflow
+  ): Promise<void> {
     const execution = this.activeExecutions.get(workflow.taskId);
     if (execution) {
       // Retry the task
@@ -563,7 +599,9 @@ export class TaskOrchestrator extends EventEmitter {
   /**
    * Handle pleading denial
    */
-  private async handlePleadingDenial(workflow: PleadingWorkflow): Promise<void> {
+  private async handlePleadingDenial(
+    workflow: PleadingWorkflow
+  ): Promise<void> {
     const execution = this.activeExecutions.get(workflow.taskId);
     if (execution) {
       // Final failure
@@ -581,7 +619,12 @@ export class TaskOrchestrator extends EventEmitter {
     decision: "approve" | "deny" | "escalate",
     reasoning: string
   ): Promise<void> {
-    await this.pleadingManager.submitDecision(taskId, approverId, decision, reasoning);
+    await this.pleadingManager.submitDecision(
+      taskId,
+      approverId,
+      decision,
+      reasoning
+    );
   }
 
   /**
@@ -604,7 +647,12 @@ export class TaskOrchestrator extends EventEmitter {
   getCapabilities(): TaskOrchestratorCapabilities {
     return {
       maxConcurrentTasks: this.config.workerPool.maxPoolSize,
-      supportedTaskTypes: ["script", "api_call", "data_processing", "ai_inference"],
+      supportedTaskTypes: [
+        "script",
+        "api_call",
+        "data_processing",
+        "ai_inference",
+      ],
       pleadingSupport: true,
       retrySupport: true,
       isolationLevel: "worker_thread",
@@ -627,7 +675,9 @@ export class TaskOrchestrator extends EventEmitter {
       activeTasks: this.activeExecutions.size,
       queuedTasks: this.taskQueue.size(),
       completedTasks: this.metrics.size, // Simplified
-      failedTasks: Array.from(this.metrics.values()).filter(m => m.status === "failed").length,
+      failedTasks: Array.from(this.metrics.values()).filter(
+        (m) => m.status === "failed"
+      ).length,
       workerPool: this.workerPool.getMetrics(),
     };
   }
@@ -637,17 +687,27 @@ export class TaskOrchestrator extends EventEmitter {
       throw new Error("Invalid task: missing required fields");
     }
 
-    if (!["script", "api_call", "data_processing", "ai_inference"].includes(task.type)) {
+    if (
+      !["script", "api_call", "data_processing", "ai_inference"].includes(
+        task.type
+      )
+    ) {
       throw new Error(`Unsupported task type: ${task.type}`);
     }
   }
 
-  private shouldInitiatePleading(execution: TaskExecution, error: Error): boolean {
+  private shouldInitiatePleading(
+    execution: TaskExecution,
+    error: Error
+  ): boolean {
     // Simple logic: initiate pleading for high-priority tasks that failed
     return execution.attempts >= 2; // After at least 2 attempts
   }
 
-  private updateTaskMetrics(taskId: string, updates: Partial<TaskMetrics>): void {
+  private updateTaskMetrics(
+    taskId: string,
+    updates: Partial<TaskMetrics>
+  ): void {
     const existing = this.metrics.get(taskId);
     if (existing) {
       this.metrics.set(taskId, { ...existing, ...updates });
@@ -660,6 +720,7 @@ export class TaskOrchestrator extends EventEmitter {
         cpuUsage: 0,
         memoryUsage: 0,
         executionTime: 0,
+        status: "idle",
         ...updates,
       });
     }
@@ -670,7 +731,7 @@ export class TaskOrchestrator extends EventEmitter {
    */
   async shutdown(): Promise<void> {
     await this.workerPool.shutdown();
-    await this.taskQueue.close();
+    await this.taskQueue.shutdown();
     this.activeExecutions.clear();
     this.metrics.clear();
   }
@@ -678,17 +739,17 @@ export class TaskOrchestrator extends EventEmitter {
 
 // Export types for external use
 export type {
+  PleadingDecision,
+  PleadingWorkflow,
   Task,
-  TaskResult,
   TaskExecution,
-  TaskStatus,
-  TaskPriority,
+  TaskMetrics,
+  TaskOrchestratorCapabilities,
   TaskOrchestratorConfig,
   TaskOrchestratorEvents,
-  TaskOrchestratorCapabilities,
-  WorkerPoolConfig,
+  TaskPriority,
+  TaskResult,
+  TaskStatus,
   WorkerExecutionResult,
-  PleadingWorkflow,
-  PleadingDecision,
-  TaskMetrics,
+  WorkerPoolConfig,
 } from "../types/task-runner";

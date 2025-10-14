@@ -98,7 +98,7 @@ export class CAWSPolicyAdapter {
           durationMs: Date.now() - startTime,
         };
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        if ((error as any).code === "ENOENT") {
           // Policy file doesn't exist - use default
           const defaultPolicy = this.getDefaultPolicy();
 

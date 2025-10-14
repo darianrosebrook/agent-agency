@@ -8,6 +8,9 @@
  * Provides capability tracking, performance history, and agent profile management.
  */
 
+// Re-export commonly used types from verification
+export { VerificationPriority } from "./verification";
+
 /**
  * Unique identifier for an agent in the registry.
  */

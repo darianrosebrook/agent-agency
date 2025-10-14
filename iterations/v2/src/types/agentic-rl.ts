@@ -8,6 +8,9 @@
  * Includes multi-armed bandit, turn-level RL, tool adoption, and performance tracking.
  */
 
+// Re-export commonly used types from verification
+export { VerificationPriority } from "./verification";
+
 /**
  * Unique identifier for RL-related entities.
  */

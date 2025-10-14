@@ -29,7 +29,7 @@ export class FeedbackCollector extends EventEmitter {
   private logger: Logger;
 
   private eventBuffer: FeedbackEvent[] = [];
-  private flushTimer: NodeJS.Timeout | null = null;
+  private flushTimer: ReturnType<typeof setInterval> | null = null;
   private isRunning: boolean = false;
 
   // Statistics

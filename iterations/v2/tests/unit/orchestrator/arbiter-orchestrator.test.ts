@@ -49,8 +49,15 @@ describe("ArbiterOrchestrator", () => {
   };
 
   beforeEach(async () => {
-    // Create orchestrator - this would use default config
-    orchestrator = new ArbiterOrchestrator({} as any);
+    // Create orchestrator with minimal config
+    orchestrator = new ArbiterOrchestrator({
+      caws: {
+        enabled: false, // Disable CAWS to avoid complex initialization
+      },
+    } as any);
+    
+    // Initialize the orchestrator
+    await orchestrator.initialize();
   });
 
   afterEach(async () => {

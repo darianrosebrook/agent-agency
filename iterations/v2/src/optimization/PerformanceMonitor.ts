@@ -54,7 +54,7 @@ export class PerformanceMonitor implements IPerformanceMonitor {
   private logger: Logger;
   private config: PerformanceMonitorConfig;
   private metrics: PerformanceMetric[] = [];
-  private cleanupTimer?: NodeJS.Timeout;
+  private cleanupTimer?: ReturnType<typeof setInterval>;
   private metricsLock = false;
 
   constructor(config: Partial<PerformanceMonitorConfig> = {}) {

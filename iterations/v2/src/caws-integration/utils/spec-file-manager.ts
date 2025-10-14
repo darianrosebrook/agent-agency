@@ -130,7 +130,7 @@ export class SpecFileManager {
       const content = await fs.readFile(specPath, "utf-8");
       return this.yamlToSpec(content);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      if ((error as any).code === "ENOENT") {
         throw new Error(
           `Working spec not found: ${specPath}\nRun 'caws init' to create it`
         );

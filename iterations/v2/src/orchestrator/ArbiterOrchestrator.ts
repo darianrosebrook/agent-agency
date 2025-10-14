@@ -18,6 +18,9 @@ import { ArbiterReasoningEngine } from "../reasoning/ArbiterReasoningEngine";
 import { SystemHealthMonitor } from "../monitoring/SystemHealthMonitor.js";
 import { WorkspaceStateManager } from "../workspace/WorkspaceStateManager.js";
 
+// Re-export commonly used types
+export { VerificationPriority } from "../types/verification";
+
 /**
  * Security audit levels
  */
@@ -599,7 +602,7 @@ export class ArbiterOrchestrator {
           ? "warn"
           : "info";
 
-      this.securityLogger[logLevel as keyof Console](
+      this.securityLogger[logLevel as keyof typeof console](
         `[SECURITY-${level.toUpperCase()}] ${type}: ${action} on ${resource}`,
         {
           eventId: event.id,
@@ -2178,7 +2181,7 @@ export class ArbiterOrchestrator {
   /**
    * Set secure logger for production use
    */
-  setSecureLogger(logger: Console): void {
+  setSecureLogger(logger: typeof console): void {
     this.securityLogger = logger;
     this.logSecurityEvent(
       SecurityEventType.CONFIGURATION,
@@ -2248,6 +2251,200 @@ export class ArbiterOrchestrator {
         this.securityAuditEvents.length > 0
           ? totalRiskScore / this.securityAuditEvents.length
           : 0,
+    };
+  }
+
+  /**
+   * Get task status by ID
+   */
+  async getTaskStatus(taskId: string): Promise<any> {
+    if (!this.initialized) {
+      throw new Error("Orchestrator not initialized");
+    }
+    // Delegate to getStatus for now, can be extended for specific task queries
+    return this.getStatus();
+  }
+
+  /**
+   * Register a new agent with the orchestrator
+   */
+  async registerAgent(agent: any): Promise<void> {
+    if (!this.initialized) {
+      throw new Error("Orchestrator not initialized");
+    }
+    // Placeholder implementation - would integrate with agent registry
+    console.log(`Registering agent: ${agent.id || agent.name}`);
+  }
+
+  /**
+   * Get agent profile by ID
+   */
+  async getAgentProfile(agentId: string): Promise<any> {
+    if (!this.initialized) {
+      throw new Error("Orchestrator not initialized");
+    }
+    // Placeholder implementation
+    return { id: agentId, name: "Agent", capabilities: [] };
+  }
+
+  /**
+   * Cancel a task
+   */
+  async cancelTask(taskId: string): Promise<boolean | null> {
+    if (!this.initialized) {
+      throw new Error("Orchestrator not initialized");
+    }
+    console.log(`Cancelling task: ${taskId}`);
+    // Placeholder implementation - would interact with task queue
+    return true;
+  }
+
+  /**
+   * Authenticate user credentials
+   */
+  async authenticate(credentials: any): Promise<boolean> {
+    if (!this.initialized) {
+      throw new Error("Orchestrator not initialized");
+    }
+
+    this.logSecurityEvent(
+      SecurityEventType.AUTHENTICATION,
+      SecurityAuditLevel.INFO,
+      "authentication",
+      "login_attempt",
+      true,
+      { username: credentials.username },
+      10
+    );
+
+    // Placeholder implementation - would integrate with auth system
+    return true;
+  }
+
+  /**
+   * Authorize user action
+   */
+  authorize(context: any, action: string): boolean | null {
+    if (!this.initialized) {
+      throw new Error("Orchestrator not initialized");
+    }
+
+    const userId = context?.userId || context?.user?.id || "unknown";
+
+    this.logSecurityEvent(
+      SecurityEventType.AUTHORIZATION,
+      SecurityAuditLevel.INFO,
+      "authorization",
+      action,
+      true,
+      { userId, action },
+      15
+    );
+
+    // Placeholder implementation - would check permissions
+    return true;
+  }
+
+  /**
+   * Update agent performance metrics
+   */
+  async updateAgentPerformance(agentId: string, metrics: any): Promise<void> {
+    if (!this.initialized) {
+      throw new Error("Orchestrator not initialized");
+    }
+    console.log(`Updating agent ${agentId} performance:`, metrics);
+    // Placeholder implementation
+  }
+
+  /**
+   * Process a knowledge query
+   */
+  async processKnowledgeQuery(query: string | any): Promise<any> {
+    if (!this.initialized) {
+      throw new Error("Orchestrator not initialized");
+    }
+    // Handle both string and KnowledgeQuery object
+    const queryStr = typeof query === "string" ? query : query.query;
+
+    // Placeholder implementation - would delegate to knowledge seeker
+    return {
+      query: queryStr,
+      results: [],
+      confidence: 0.0,
+      processingTimeMs: 0,
+    };
+  }
+
+  /**
+   * Get knowledge system status
+   */
+  async getKnowledgeStatus(): Promise<any> {
+    if (!this.initialized) {
+      throw new Error("Orchestrator not initialized");
+    }
+    return {
+      healthy: true,
+      cacheSize: 0,
+      queriesProcessed: 0,
+    };
+  }
+
+  /**
+   * Clear knowledge caches
+   */
+  async clearKnowledgeCaches(): Promise<void> {
+    if (!this.initialized) {
+      throw new Error("Orchestrator not initialized");
+    }
+    console.log("Clearing knowledge caches");
+    // Placeholder implementation
+  }
+
+  /**
+   * Verify information using verification engine
+   */
+  async verifyInformation(request: any): Promise<any> {
+    if (!this.initialized) {
+      throw new Error("Orchestrator not initialized");
+    }
+    // Placeholder implementation - would delegate to verification engine
+    return {
+      requestId: request.id,
+      verdict: "unverified",
+      confidence: 0.0,
+      reasoning: ["Verification not yet implemented"],
+      supportingEvidence: [],
+      contradictoryEvidence: [],
+      verificationMethods: [],
+      processingTimeMs: 0,
+    };
+  }
+
+  /**
+   * Get verification method statistics
+   */
+  async getVerificationMethodStats(): Promise<any> {
+    if (!this.initialized) {
+      throw new Error("Orchestrator not initialized");
+    }
+    return {
+      methodsAvailable: 0,
+      totalVerifications: 0,
+      averageConfidence: 0.0,
+    };
+  }
+
+  /**
+   * Get verification evidence statistics
+   */
+  async getVerificationEvidenceStats(): Promise<any> {
+    if (!this.initialized) {
+      throw new Error("Orchestrator not initialized");
+    }
+    return {
+      totalEvidence: 0,
+      averageCredibility: 0.0,
+      sourceCount: 0,
     };
   }
 

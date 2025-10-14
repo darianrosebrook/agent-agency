@@ -28,8 +28,8 @@ export class SystemHealthMonitor extends EventEmitter {
   private circuitBreakerState: "closed" | "open" | "half-open" = "closed";
 
   // Timers
-  private metricsCollectionTimer?: NodeJS.Timeout;
-  private healthCheckTimer?: NodeJS.Timeout;
+  private metricsCollectionTimer?: ReturnType<typeof setInterval>;
+  private healthCheckTimer?: ReturnType<typeof setInterval>;
 
   constructor(config: Partial<SystemHealthMonitorConfig> = {}) {
     super();

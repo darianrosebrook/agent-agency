@@ -8,6 +8,9 @@
  * @author @darianrosebrook
  */
 
+// Re-export commonly used types
+export { VerificationPriority } from "./verification";
+
 /**
  * Reasoning effort levels for GPT-5 API calls
  */

@@ -151,11 +151,10 @@ describe("CommandValidator", () => {
     });
 
     it("should reject wildcard expansion attempts", () => {
-      // These are actually safe if properly escaped, but we're being defensive
+      // These are potentially dangerous and should be blocked for security
       const result = validator.validateArguments(["*.js", "test.*"]);
-      // This might be allowed depending on security policy
-      // For now, let's allow it since it's common for tools like git
-      expect(result.valid).toBe(true);
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain("Dangerous shell metacharacter");
     });
 
     it("should handle empty array", () => {

@@ -24,6 +24,10 @@ import {
   ResultQuality,
   SearchResult,
 } from "../../src/types/knowledge";
+import { VerificationPriority } from "../../src/types/verification";
+
+// Re-export for convenience
+export { VerificationPriority };
 
 /**
  * Creates a mock SearchResult with customizable fields

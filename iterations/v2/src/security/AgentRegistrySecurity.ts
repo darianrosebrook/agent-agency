@@ -11,6 +11,9 @@ import jwt from "jsonwebtoken";
 import { AgentProfile } from "../types/agent-registry.js";
 import { Logger } from "../utils/Logger.js";
 
+// Re-export commonly used types
+export { VerificationPriority } from "../types/verification";
+
 export interface SecurityContext {
   tenantId: string;
   userId: string;

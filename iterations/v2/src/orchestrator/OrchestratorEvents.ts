@@ -12,6 +12,9 @@ import { BaseEvent, EventSeverity } from "./EventEmitter";
 // Re-export EventSeverity for convenience
 export { EventSeverity } from "./EventEmitter";
 
+// Re-export commonly used types
+export { VerificationPriority } from "../types/verification";
+
 /**
  * Task Queue Events
  */
@@ -390,6 +393,8 @@ export const EventTypes = {
   TASK_FAILED: "task.failed" as const,
   TASK_TIMEOUT: "task.timeout" as const,
   TASK_REASSIGNED: "task.reassigned" as const,
+  TASK_PLEADING_INITIATED: "task.pleading_initiated" as const,
+  TASK_SUBMITTED: "task.submitted" as const,
 
   // Security events
   AGENT_AUTHENTICATED: "security.authenticated" as const,

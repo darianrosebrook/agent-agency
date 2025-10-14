@@ -14,6 +14,9 @@ import {
   TaskType,
 } from "../types/arbiter-orchestration";
 
+// Re-export commonly used types
+export { VerificationPriority } from "../types/verification";
+
 /**
  * Validation result
  */

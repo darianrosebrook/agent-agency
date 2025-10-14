@@ -7,7 +7,6 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { DataCollector } from "../../../src/benchmarking/DataCollector";
 import {
-  VerificationPriority,
   DataCollectionConfig,
   PerformanceEventType,
 } from "../../../src/types/performance-tracking";
@@ -95,7 +94,7 @@ describe("DataCollector", () => {
 
     it("should record task start", () => {
       const executionId = collector.recordTaskStart("task-123", "agent-1", {
-        priority: VerificationPriority.HIGH,
+        priority: "high",
       });
 
       expect(executionId).toBeTruthy();
@@ -250,16 +249,17 @@ describe("DataCollector", () => {
     });
 
     it("should record constitutional validations", async () => {
-      await collector.recordConstitutionalValidation(
-        "task-123",
-        "agent-1",
-        true,
-        0.1,
-        {
-          clausesChecked: ["C1", "C2"],
-          violationsFound: [],
-        }
-      );
+      await collector.recordConstitutionalValidation({
+        taskId: "task-123",
+        agentId: "agent-1",
+        validationResult: {
+          valid: true,
+          violations: [],
+          complianceScore: 0.9,
+          processingTimeMs: 100,
+          ruleCount: 5,
+        },
+      });
 
       const events = collector.getPendingEvents(10);
       expect(events).toHaveLength(1);

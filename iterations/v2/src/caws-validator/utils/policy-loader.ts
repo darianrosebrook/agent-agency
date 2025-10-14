@@ -28,7 +28,7 @@ export class PolicyLoader {
 
       return policy;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      if ((error as any).code === "ENOENT") {
         throw new Error(
           `Policy file not found: ${policyPath}\nRun 'caws init' to create default policy`
         );

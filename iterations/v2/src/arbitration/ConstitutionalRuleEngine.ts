@@ -366,7 +366,7 @@ export class ConstitutionalRuleEngine {
    */
   private findApplicablePrecedents(
     rule: ConstitutionalRule,
-    context: EvaluationContext
+    _context: EvaluationContext
   ): Precedent[] {
     if (!this.config.usePrecedents) {
       return [];

@@ -23,6 +23,7 @@ import { ArbiterMCPServer } from "../../src/mcp-server/ArbiterMCPServer.js";
 import { BudgetMonitor } from "../../src/monitoring/BudgetMonitor.js";
 import { ProvenanceTracker } from "../../src/provenance/ProvenanceTracker.js";
 import type { WorkingSpec } from "../../src/types/caws-types.js";
+import { VerificationPriority } from "../../src/types/verification.js";
 
 describe("ARBITER Orchestrator End-to-End Integration Tests", () => {
   const tempDir = path.join(__dirname, "../temp/e2e-tests");

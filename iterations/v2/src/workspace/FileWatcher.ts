@@ -24,7 +24,7 @@ export class FileWatcher extends EventEmitter {
   private watcher: FSWatcher | null = null;
   private config: FileWatcherConfig;
   private workspaceRoot: string;
-  private debounceTimer: NodeJS.Timeout | null = null;
+  private debounceTimer: ReturnType<typeof setInterval> | null = null;
   private pendingChanges = new Map<string, Partial<FileChange>>();
   private metrics: WorkspaceMetrics["watcher"] = {
     filesWatched: 0,

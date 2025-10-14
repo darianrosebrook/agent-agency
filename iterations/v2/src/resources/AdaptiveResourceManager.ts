@@ -60,7 +60,7 @@ export class AdaptiveResourceManager implements IAdaptiveResourceManager {
   private loadBalancer: LoadBalancer;
   private resourceAllocator: ResourceAllocator;
   private isRunning = false;
-  private capacityAnalysisTimer?: NodeJS.Timeout;
+  private capacityAnalysisTimer?: ReturnType<typeof setInterval>;
   private lastCapacityAnalysis?: CapacityAnalysis;
   private failoverEvents: FailoverEvent[] = [];
 

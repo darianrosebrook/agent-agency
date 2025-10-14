@@ -1,406 +1,470 @@
 /**
  * @fileoverview Unit tests for SearchEngine
  *
- * Tests search delegation to Knowledge Seeker and content enrichment.
+ * Tests search query execution, result processing, and ranking.
  *
  * @author @darianrosebrook
  */
 
-import { KnowledgeSeeker } from "../../../src/knowledge/KnowledgeSeeker";
-import { QueryType, ResultQuality } from "../../../src/types/knowledge";
-import { ContentExtractionConfig } from "../../../src/types/web";
-import { ContentExtractor } from "../../../src/web/ContentExtractor";
+import axios from "axios";
+import { SearchEngineConfig, SearchQuery } from "../../../src/types/web";
 import { SearchEngine } from "../../../src/web/SearchEngine";
 
-// Mock dependencies
-jest.mock("../../../src/knowledge/KnowledgeSeeker");
-jest.mock("../../../src/web/ContentExtractor");
+// Mock axios
+jest.mock("axios");
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe("SearchEngine", () => {
   let searchEngine: SearchEngine;
-  let mockKnowledgeSeeker: jest.Mocked<KnowledgeSeeker>;
-  let mockContentExtractor: jest.Mocked<ContentExtractor>;
-  let defaultExtractionConfig: ContentExtractionConfig;
+  let mockConfig: SearchEngineConfig;
 
   beforeEach(() => {
-    // Create mocks
-    mockKnowledgeSeeker = {
-      processQuery: jest.fn(),
-    } as any;
-
-    mockContentExtractor = {
-      extractContent: jest.fn(),
-    } as any;
-
-    defaultExtractionConfig = {
-      includeImages: true,
-      includeLinks: true,
-      includeMetadata: true,
-      stripNavigation: true,
-      stripAds: true,
-      maxContentLength: 10000,
-      security: {
-        verifySsl: true,
-        sanitizeHtml: true,
-        detectMalicious: false,
-        followRedirects: true,
-        maxRedirects: 5,
-        userAgent: "Test-Agent/1.0",
-        respectRobotsTxt: false,
-      },
+    mockConfig = {
+      apiKey: "test-api-key",
+      searchEngineUrl: "https://api.searchengine.com/search",
+      maxResults: 10,
+      timeoutMs: 5000,
+      retries: 3,
+      userAgent: "TestSearchAgent/1.0",
     };
 
-    searchEngine = new SearchEngine(mockKnowledgeSeeker, mockContentExtractor, {
-      autoExtractContent: false,
-      autoExtractCount: 3,
-      extractionConfig: defaultExtractionConfig,
-    });
+    searchEngine = new SearchEngine(mockConfig);
 
+    // Reset all mocks
     jest.clearAllMocks();
   });
 
-  describe("search", () => {
-    it("should delegate search to Knowledge Seeker", async () => {
-      const mockResults = [
-        {
-          id: "result-1",
-          queryId: "query-1",
-          title: "Test Result",
-          content: "Test content",
-          url: "https://example.com/page1",
-          domain: "example.com",
-          sourceType: "web" as const,
-          relevanceScore: 0.9,
-          credibilityScore: 0.8,
-          quality: ResultQuality.HIGH,
-          provider: "google",
-          providerMetadata: {},
-          processedAt: new Date(),
-          retrievedAt: new Date(),
-          contentHash: "hash1",
-        },
-      ];
+  describe("initialization", () => {
+    it("should initialize with valid configuration", () => {
+      expect(searchEngine).toBeDefined();
+      expect(searchEngine).toBeInstanceOf(SearchEngine);
+    });
 
-      mockKnowledgeSeeker.processQuery.mockResolvedValue({
-        query: {
-          id: "query-1",
-          query: "test query",
-          queryType: QueryType.FACTUAL,
-          preferredSources: ["web"],
-          maxResults: 10,
-          relevanceThreshold: 0.5,
-          timeoutMs: 30000,
-          metadata: {
-            requesterId: "web-navigator",
-            priority: 5,
-            createdAt: new Date(),
-            tags: ["web-search"],
+    it("should throw error with missing API key", () => {
+      const invalidConfig = { ...mockConfig, apiKey: "" };
+      expect(() => new SearchEngine(invalidConfig)).toThrow(/API key required/);
+    });
+
+    it("should configure axios client properly", () => {
+      expect(mockedAxios.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          timeout: mockConfig.timeoutMs,
+          headers: expect.objectContaining({
+            "User-Agent": mockConfig.userAgent,
+          }),
+        })
+      );
+    });
+  });
+
+  describe("search execution", () => {
+    const mockQuery: SearchQuery = {
+      query: "test search query",
+      maxResults: 5,
+      language: "en",
+      region: "us",
+      safeSearch: true,
+      excludeDomains: ["spam.com"],
+    };
+
+    const mockApiResponse = {
+      items: [
+        {
+          title: "Test Result 1",
+          link: "https://example.com/result1",
+          snippet: "This is the first test result snippet.",
+          displayLink: "example.com",
+          formattedUrl: "https://example.com/result1",
+          htmlTitle: "<b>Test</b> Result 1",
+          htmlSnippet: "This is the <b>first</b> test result snippet.",
+          cacheId: "cache1",
+          pagemap: {
+            metatags: [{ "og:title": "Test Result 1" }],
           },
         },
-        results: mockResults,
-        summary: "Test summary",
-        confidence: 0.85,
-        sourcesUsed: ["example.com"],
-        metadata: {
-          totalResultsFound: 1,
-          resultsFiltered: 0,
-          processingTimeMs: 500,
-          cacheUsed: false,
-          providersQueried: ["google"],
+        {
+          title: "Test Result 2",
+          link: "https://example.com/result2",
+          snippet: "This is the second test result snippet.",
+          displayLink: "example.com",
+          formattedUrl: "https://example.com/result2",
+          htmlTitle: "Test Result 2",
+          htmlSnippet: "This is the second test result snippet.",
+          cacheId: "cache2",
         },
-        respondedAt: new Date(),
-      });
+      ],
+      searchInformation: {
+        searchTime: 0.5,
+        formattedSearchTime: "0.50",
+        totalResults: "2",
+        formattedTotalResults: "2",
+      },
+      queries: {
+        request: [
+          {
+            title: "Google Custom Search - test search query",
+            searchTerms: "test search query",
+            count: 5,
+            startIndex: 1,
+            inputEncoding: "utf8",
+            outputEncoding: "utf8",
+            safe: "active",
+            cx: "test-cx",
+          },
+        ],
+      },
+    };
 
-      const result = await searchEngine.search("test query");
+    beforeEach(() => {
+      mockedAxios.get.mockResolvedValue({
+        data: mockApiResponse,
+        status: 200,
+        statusText: "OK",
+        headers: {},
+        config: {},
+      } as any);
+    });
 
-      expect(mockKnowledgeSeeker.processQuery).toHaveBeenCalledWith(
+    it("should execute search successfully", async () => {
+      const results = await searchEngine.search(mockQuery);
+
+      expect(results).toBeDefined();
+      expect(results.query).toBe(mockQuery.query);
+      expect(results.totalResults).toBe(2);
+      expect(results.results.length).toBe(2);
+      expect(results.executionTimeMs).toBeGreaterThan(0);
+    });
+
+    it("should return properly formatted search results", async () => {
+      const results = await searchEngine.search(mockQuery);
+
+      expect(results.results[0]).toEqual(
         expect.objectContaining({
-          query: "test query",
-          queryType: QueryType.FACTUAL,
+          title: "Test Result 1",
+          url: "https://example.com/result1",
+          snippet: "This is the first test result snippet.",
+          displayUrl: "example.com",
+          rank: 1,
         })
       );
-      expect(result.query).toBe("test query");
-      expect(result.results).toHaveLength(1);
-      expect(result.totalFound).toBe(1);
     });
 
-    it("should enrich results with full content when requested", async () => {
-      const mockResults = [
-        {
-          id: "result-1",
-          queryId: "query-1",
-          title: "Test Result",
-          content: "Test content",
-          url: "https://example.com/page1",
-          domain: "example.com",
-          sourceType: "web" as const,
-          relevanceScore: 0.9,
-          credibilityScore: 0.8,
-          quality: ResultQuality.HIGH,
-          provider: "google",
-          providerMetadata: {},
-          processedAt: new Date(),
-          retrievedAt: new Date(),
-          contentHash: "hash1",
-        },
-      ];
+    it("should respect maxResults parameter", async () => {
+      const limitedQuery = { ...mockQuery, maxResults: 1 };
+      const results = await searchEngine.search(limitedQuery);
 
-      mockKnowledgeSeeker.processQuery.mockResolvedValue({
-        query: {} as any,
-        results: mockResults,
-        summary: "Test summary",
-        confidence: 0.85,
-        sourcesUsed: ["example.com"],
-        metadata: {
-          totalResultsFound: 1,
-          resultsFiltered: 0,
-          processingTimeMs: 500,
-          cacheUsed: false,
-          providersQueried: ["google"],
-        },
-        respondedAt: new Date(),
-      });
-
-      mockContentExtractor.extractContent.mockResolvedValue({
-        id: "content-1",
-        url: "https://example.com/page1",
-        title: "Full Page Title",
-        content: "Full page content extracted",
-        links: [],
-        images: [],
-        metadata: {} as any,
-        quality: "high" as any,
-        contentHash: "hash1",
-        extractedAt: new Date(),
-      });
-
-      const result = await searchEngine.search("test query", {
-        enrichContent: true,
-      });
-
-      expect(mockContentExtractor.extractContent).toHaveBeenCalled();
-      expect(result.results[0].fullContent).toBeDefined();
-      expect(result.results[0].fullContent?.content).toBe(
-        "Full page content extracted"
-      );
+      expect(results.results.length).toBe(1);
     });
 
-    it("should handle content extraction errors gracefully", async () => {
-      const mockResults = [
-        {
-          id: "result-1",
-          queryId: "query-1",
-          title: "Test Result",
-          content: "Test content",
-          url: "https://example.com/page1",
-          domain: "example.com",
-          sourceType: "web" as const,
-          relevanceScore: 0.9,
-          credibilityScore: 0.8,
-          quality: ResultQuality.HIGH,
-          provider: "google",
-          providerMetadata: {},
-          processedAt: new Date(),
-          retrievedAt: new Date(),
-          contentHash: "hash1",
-        },
-      ];
+    it("should handle empty search results", async () => {
+      mockedAxios.get.mockResolvedValue({
+        data: { items: [] },
+        status: 200,
+        headers: {},
+        config: {},
+      } as any);
 
-      mockKnowledgeSeeker.processQuery.mockResolvedValue({
-        query: {} as any,
-        results: mockResults,
-        summary: "Test summary",
-        confidence: 0.85,
-        sourcesUsed: ["example.com"],
-        metadata: {
-          totalResultsFound: 1,
-          resultsFiltered: 0,
-          processingTimeMs: 500,
-          cacheUsed: false,
-          providersQueried: ["google"],
-        },
-        respondedAt: new Date(),
-      });
+      const results = await searchEngine.search(mockQuery);
 
-      mockContentExtractor.extractContent.mockRejectedValue(
-        new Error("Extraction failed")
+      expect(results.totalResults).toBe(0);
+      expect(results.results.length).toBe(0);
+    });
+
+    it("should handle API errors gracefully", async () => {
+      mockedAxios.get.mockRejectedValue(new Error("API Error"));
+
+      await expect(searchEngine.search(mockQuery)).rejects.toThrow();
+    });
+
+    it("should respect timeout configuration", async () => {
+      mockedAxios.get.mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  data: mockApiResponse,
+                  status: 200,
+                  headers: {},
+                  config: {},
+                }),
+              10000
+            )
+          )
       );
 
-      const result = await searchEngine.search("test query", {
-        enrichContent: true,
-      });
+      const timeoutConfig = { ...mockConfig, timeoutMs: 100 };
+      const timeoutSearchEngine = new SearchEngine(timeoutConfig);
 
-      expect(result.results[0].extractionError).toBe("Extraction failed");
-      expect(result.results[0].fullContent).toBeUndefined();
+      await expect(timeoutSearchEngine.search(mockQuery)).rejects.toThrow();
     });
 
-    it("should use cache for repeated searches", async () => {
-      const mockResults = [
-        {
-          id: "result-1",
-          queryId: "query-1",
-          title: "Test Result",
-          content: "Test content",
-          url: "https://example.com/page1",
-          domain: "example.com",
-          sourceType: "web" as const,
-          relevanceScore: 0.9,
-          credibilityScore: 0.8,
-          quality: ResultQuality.HIGH,
-          provider: "google",
-          providerMetadata: {},
-          processedAt: new Date(),
-          retrievedAt: new Date(),
-          contentHash: "hash1",
-        },
-      ];
-
-      mockKnowledgeSeeker.processQuery.mockResolvedValue({
-        query: {} as any,
-        results: mockResults,
-        summary: "Test summary",
-        confidence: 0.85,
-        sourcesUsed: ["example.com"],
-        metadata: {
-          totalResultsFound: 1,
-          resultsFiltered: 0,
-          processingTimeMs: 500,
-          cacheUsed: false,
-          providersQueried: ["google"],
-        },
-        respondedAt: new Date(),
+    it("should implement retry logic", async () => {
+      let callCount = 0;
+      mockedAxios.get.mockImplementation(() => {
+        callCount++;
+        if (callCount < 3) {
+          return Promise.reject(new Error("Temporary failure"));
+        }
+        return Promise.resolve({
+          data: mockApiResponse,
+          status: 200,
+          headers: {},
+          config: {},
+        } as any);
       });
 
-      // First search
-      await searchEngine.search("test query");
-      expect(mockKnowledgeSeeker.processQuery).toHaveBeenCalledTimes(1);
+      const results = await searchEngine.search(mockQuery);
 
-      // Second search - should use cache
-      await searchEngine.search("test query");
-      expect(mockKnowledgeSeeker.processQuery).toHaveBeenCalledTimes(1);
+      expect(mockedAxios.get).toHaveBeenCalledTimes(3);
+      expect(results).toBeDefined();
     });
 
-    it("should support different query types", async () => {
-      mockKnowledgeSeeker.processQuery.mockResolvedValue({
-        query: {} as any,
-        results: [],
-        summary: "Test summary",
-        confidence: 0.85,
-        sourcesUsed: [],
-        metadata: {
-          totalResultsFound: 0,
-          resultsFiltered: 0,
-          processingTimeMs: 500,
-          cacheUsed: false,
-          providersQueried: ["google"],
-        },
-        respondedAt: new Date(),
-      });
+    it("should filter excluded domains", async () => {
+      const responseWithExcluded = {
+        ...mockApiResponse,
+        items: [
+          ...mockApiResponse.items,
+          {
+            title: "Spam Result",
+            link: "https://spam.com/result",
+            snippet: "This should be filtered out.",
+            displayLink: "spam.com",
+            formattedUrl: "https://spam.com/result",
+          },
+        ],
+      };
 
-      await searchEngine.search("test query", {
-        queryType: QueryType.TECHNICAL,
-      });
+      mockedAxios.get.mockResolvedValue({
+        data: responseWithExcluded,
+        status: 200,
+        headers: {},
+        config: {},
+      } as any);
 
-      expect(mockKnowledgeSeeker.processQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          queryType: QueryType.TECHNICAL,
-        })
+      const results = await searchEngine.search(mockQuery);
+
+      // Should not include the spam.com result
+      expect(results.results.some((r) => r.url.includes("spam.com"))).toBe(
+        false
       );
     });
   });
 
-  describe("enrichResults", () => {
-    it("should enrich specified number of results", async () => {
-      const mockResults = [
-        {
-          id: "result-1",
-          queryId: "query-1",
-          title: "Result 1",
-          content: "Content 1",
-          url: "https://example.com/page1",
-          domain: "example.com",
-          sourceType: "web" as const,
-          relevanceScore: 0.9,
-          credibilityScore: 0.8,
-          quality: ResultQuality.HIGH,
-          provider: "google",
-          providerMetadata: {},
-          processedAt: new Date(),
-          retrievedAt: new Date(),
-          contentHash: "hash1",
-        },
-        {
-          id: "result-2",
-          queryId: "query-1",
-          title: "Result 2",
-          content: "Content 2",
-          url: "https://example.com/page2",
-          domain: "example.com",
-          sourceType: "web" as const,
-          relevanceScore: 0.8,
-          credibilityScore: 0.7,
-          quality: ResultQuality.MEDIUM,
-          provider: "google",
-          providerMetadata: {},
-          processedAt: new Date(),
-          retrievedAt: new Date(),
-          contentHash: "hash2",
-        },
-      ];
+  describe("result ranking", () => {
+    it("should rank results by relevance", async () => {
+      const mockResponse = {
+        items: [
+          {
+            title: "Perfect Match",
+            link: "https://example.com/perfect",
+            snippet: "This result perfectly matches the search query.",
+          },
+          {
+            title: "Partial Match",
+            link: "https://example.com/partial",
+            snippet: "This result partially matches some terms.",
+          },
+          {
+            title: "Poor Match",
+            link: "https://example.com/poor",
+            snippet: "This result barely matches anything.",
+          },
+        ],
+      };
 
-      mockContentExtractor.extractContent.mockResolvedValue({
-        id: "content-1",
-        url: "https://example.com/page1",
-        title: "Full Page Title",
-        content: "Full page content",
-        links: [],
-        images: [],
-        metadata: {} as any,
-        quality: "high" as any,
-        contentHash: "hash1",
-        extractedAt: new Date(),
+      mockedAxios.get.mockResolvedValue({
+        data: mockResponse,
+        status: 200,
+        headers: {},
+        config: {},
+      } as any);
+
+      const results = await searchEngine.search({
+        query: "perfect match",
+        maxResults: 10,
       });
 
-      const enriched = await searchEngine.enrichResults(mockResults, 1);
+      expect(results.results[0].title).toBe("Perfect Match");
+      expect(results.results[0].rank).toBe(1);
+      expect(results.results[1].rank).toBe(2);
+      expect(results.results[2].rank).toBe(3);
+    });
 
-      expect(mockContentExtractor.extractContent).toHaveBeenCalledTimes(1);
-      expect(enriched[0].fullContent).toBeDefined();
-      expect(enriched[1].fullContent).toBeUndefined();
+    it("should assign relevance scores", async () => {
+      const mockResponse = {
+        items: [
+          {
+            title: "Highly Relevant",
+            link: "https://example.com/high",
+            snippet: "This contains all the search terms in order.",
+          },
+        ],
+      };
+
+      mockedAxios.get.mockResolvedValue({
+        data: mockResponse,
+        status: 200,
+        headers: {},
+        config: {},
+      } as any);
+
+      const results = await searchEngine.search({
+        query: "highly relevant",
+        maxResults: 10,
+      });
+
+      expect(results.results[0]).toHaveProperty("relevanceScore");
+      expect(results.results[0].relevanceScore).toBeGreaterThan(0);
+      expect(results.results[0].relevanceScore).toBeLessThanOrEqual(1);
     });
   });
 
-  describe("cache management", () => {
-    it("should clear cache", async () => {
-      mockKnowledgeSeeker.processQuery.mockResolvedValue({
-        query: {} as any,
-        results: [],
-        summary: "Test",
-        confidence: 0.8,
-        sourcesUsed: [],
-        metadata: {
-          totalResultsFound: 0,
-          resultsFiltered: 0,
-          processingTimeMs: 500,
-          cacheUsed: false,
-          providersQueried: [],
-        },
-        respondedAt: new Date(),
-      });
-
-      // Populate cache
-      await searchEngine.search("test query");
-
-      // Clear cache
-      searchEngine.clearCache();
-
-      // Should make new request
-      await searchEngine.search("test query");
-      expect(mockKnowledgeSeeker.processQuery).toHaveBeenCalledTimes(2);
+  describe("search query validation", () => {
+    it("should validate search queries", () => {
+      expect(() => searchEngine.search({ query: "" })).rejects.toThrow(
+        /Query required/
+      );
+      expect(() => searchEngine.search({ query: "   " })).rejects.toThrow(
+        /Query required/
+      );
     });
 
-    it("should prune expired cache entries", () => {
-      // This is a simple test - actual pruning logic would need time manipulation
-      expect(() => searchEngine.pruneCache()).not.toThrow();
+    it("should sanitize search queries", async () => {
+      const maliciousQuery = {
+        query: '<script>alert("xss")</script> test query',
+        maxResults: 5,
+      };
+
+      mockedAxios.get.mockResolvedValue({
+        data: { items: [] },
+        status: 200,
+        headers: {},
+        config: {},
+      } as any);
+
+      const results = await searchEngine.search(maliciousQuery);
+
+      // Verify the query was sanitized before sending to API
+      expect(mockedAxios.get).toHaveBeenCalledWith(
+        expect.stringContaining("test%20query"),
+        expect.any(Object)
+      );
+      expect(mockedAxios.get).not.toHaveBeenCalledWith(
+        expect.stringContaining("<script>"),
+        expect.any(Object)
+      );
+    });
+
+    it("should handle special characters in queries", async () => {
+      const specialQuery = {
+        query: "C++ programming & web development",
+        maxResults: 5,
+      };
+
+      mockedAxios.get.mockResolvedValue({
+        data: { items: [] },
+        status: 200,
+        headers: {},
+        config: {},
+      } as any);
+
+      const results = await searchEngine.search(specialQuery);
+
+      expect(results).toBeDefined();
+      expect(mockedAxios.get).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "C%2B%2B%20programming%20%26%20web%20development"
+        ),
+        expect.any(Object)
+      );
+    });
+  });
+
+  describe("performance monitoring", () => {
+    it("should track search execution time", async () => {
+      const startTime = Date.now();
+      const results = await searchEngine.search({
+        query: "test query",
+        maxResults: 5,
+      });
+      const endTime = Date.now();
+
+      expect(results.executionTimeMs).toBeGreaterThanOrEqual(0);
+      expect(results.executionTimeMs).toBeLessThanOrEqual(
+        endTime - startTime + 100
+      ); // Allow some tolerance
+    });
+
+    it("should include performance metadata", async () => {
+      const results = await searchEngine.search({
+        query: "performance test",
+        maxResults: 5,
+      });
+
+      expect(results).toHaveProperty("executionTimeMs");
+      expect(results).toHaveProperty("timestamp");
+      expect(results.timestamp).toBeInstanceOf(Date);
+    });
+  });
+
+  describe("error handling", () => {
+    it("should handle network errors", async () => {
+      mockedAxios.get.mockRejectedValue(new Error("Network timeout"));
+
+      await expect(searchEngine.search({ query: "test" })).rejects.toThrow(
+        /Network timeout/
+      );
+    });
+
+    it("should handle API rate limiting", async () => {
+      mockedAxios.get.mockResolvedValue({
+        data: {},
+        status: 429,
+        statusText: "Too Many Requests",
+        headers: {},
+        config: {},
+      } as any);
+
+      await expect(searchEngine.search({ query: "test" })).rejects.toThrow(
+        /rate limit/i
+      );
+    });
+
+    it("should handle malformed API responses", async () => {
+      mockedAxios.get.mockResolvedValue({
+        data: { invalid: "response" },
+        status: 200,
+        headers: {},
+        config: {},
+      } as any);
+
+      const results = await searchEngine.search({ query: "test" });
+
+      expect(results.totalResults).toBe(0);
+      expect(results.results.length).toBe(0);
+    });
+
+    it("should handle partial API failures", async () => {
+      const partialResponse = {
+        items: [
+          { title: "Valid Result", link: "https://example.com" },
+          { invalid: "result" }, // Missing required fields
+        ],
+      };
+
+      mockedAxios.get.mockResolvedValue({
+        data: partialResponse,
+        status: 200,
+        headers: {},
+        config: {},
+      } as any);
+
+      const results = await searchEngine.search({ query: "test" });
+
+      // Should include valid results and skip invalid ones
+      expect(results.results.length).toBe(1);
+      expect(results.results[0].title).toBe("Valid Result");
     });
   });
 });

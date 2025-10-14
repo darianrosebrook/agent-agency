@@ -250,7 +250,7 @@ export class ArbiterMCPServer extends Server {
     });
 
     // Handle tool calls
-    this.setRequestHandler(CallToolRequestSchema, async (request) => {
+    this.setRequestHandler(CallToolRequestSchema, async (request: any) => {
       const { name, arguments: args } = request.params;
 
       try {
@@ -280,22 +280,22 @@ export class ArbiterMCPServer extends Server {
           case "terminal_create_session":
             return await handleTerminalCreateSession(
               this.terminalManager,
-              toolArgs
+              toolArgs as any // MCPCreateSessionArgs
             );
           case "terminal_execute_command":
             return await handleTerminalExecuteCommand(
               this.terminalManager,
-              toolArgs
+              toolArgs as any // MCPExecuteCommandArgs
             );
           case "terminal_close_session":
             return await handleTerminalCloseSession(
               this.terminalManager,
-              toolArgs
+              toolArgs as any // MCPCloseSessionArgs
             );
           case "terminal_get_status":
             return await handleTerminalGetStatus(
               this.terminalManager,
-              toolArgs
+              toolArgs as any // MCPGetStatusArgs
             );
 
           default:
@@ -320,7 +320,7 @@ export class ArbiterMCPServer extends Server {
             },
           ],
           isError: true,
-        };
+        } as any;
       }
     });
   }
@@ -897,7 +897,7 @@ export class ArbiterMCPServer extends Server {
         query: response.query.query,
         summary: response.summary,
         confidence: response.confidence,
-        results: response.results.map((r) => ({
+        results: response.results.map((r: any) => ({
           title: r.title,
           url: r.url,
           snippet: r.content.substring(0, 200) + "...",

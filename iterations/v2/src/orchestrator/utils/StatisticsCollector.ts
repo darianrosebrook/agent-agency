@@ -45,7 +45,7 @@ export interface OrchestratorStats {
  * monitoring and observability.
  */
 export class StatisticsCollector extends EventEmitter {
-  private statsInterval?: NodeJS.Timeout;
+  private statsInterval?: ReturnType<typeof setInterval>;
   private startTime: number;
   private latencySum = 0;
   private latencyCount = 0;

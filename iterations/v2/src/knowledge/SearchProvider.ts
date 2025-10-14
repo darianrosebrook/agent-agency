@@ -20,6 +20,9 @@ import {
   SourceType,
 } from "../types/knowledge";
 
+// Re-export commonly used types
+export { VerificationPriority } from "../types/verification";
+
 // Use standard RequestInit from DOM lib
 type RequestInit = any; // Simplified for Node.js environment
 

@@ -57,7 +57,7 @@ interface BenchmarkResult {
 
 class PerformanceBenchmarker {
   private results: BenchmarkResult[] = [];
-  private memoryStart!: NodeJS.MemoryUsage;
+  private memoryStart!: ReturnType<typeof process.memoryUsage>;
   private gcStart: number = 0;
 
   startMeasurement(): void {

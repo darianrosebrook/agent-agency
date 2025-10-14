@@ -30,7 +30,7 @@ export class SystemCoordinator extends EventEmitter {
   private loadBalancer: LoadBalancer;
   private failureManager: FailureManager;
   private healthMonitor: ComponentHealthMonitor;
-  private healthCheckInterval?: NodeJS.Timeout;
+  private healthCheckInterval?: ReturnType<typeof setInterval>;
   private stats = {
     totalRequests: 0,
     responseTimes: [] as number[],

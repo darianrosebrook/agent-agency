@@ -278,7 +278,7 @@ export class ArbitrationOrchestrator {
     issuedBy: string
   ): Promise<Verdict> {
     const session = this.getSession(sessionId);
-    const startTime = Date.now();
+    const _startTime = Date.now();
 
     // Ensure correct state
     if (session.state !== ArbitrationState.VERDICT_GENERATION) {

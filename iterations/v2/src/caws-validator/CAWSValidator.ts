@@ -242,7 +242,7 @@ export class CAWSValidator {
     policy: any // CAWSPolicy
   ): Promise<any[]> {
     // QualityGateResult[]
-    const results = [];
+    const results: any[] = [];
 
     // TODO: Implement quality gate execution
     // This would run coverage checks, mutation testing, etc.

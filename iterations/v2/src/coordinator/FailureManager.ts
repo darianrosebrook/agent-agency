@@ -21,7 +21,7 @@ import { SystemCoordinator } from "./SystemCoordinator";
 export class FailureManager extends EventEmitter {
   private activeRecoveries = new Map<string, FailureRecovery>();
   private failureHistory: FailureEvent[] = [];
-  private recoveryTimeouts = new Map<string, NodeJS.Timeout>();
+  private recoveryTimeouts = new Map<string, ReturnType<typeof setInterval>>();
 
   constructor(
     private coordinator: SystemCoordinator,
@@ -519,4 +519,3 @@ export class FailureManager extends EventEmitter {
     );
   }
 }
-

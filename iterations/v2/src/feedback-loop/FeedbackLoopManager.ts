@@ -25,8 +25,8 @@ export class FeedbackLoopManager extends EventEmitter {
   private pipeline: FeedbackPipeline;
 
   private isRunning: boolean = false;
-  private analysisTimer: NodeJS.Timeout | null = null;
-  private processingTimer: NodeJS.Timeout | null = null;
+  private analysisTimer: ReturnType<typeof setInterval> | null = null;
+  private processingTimer: ReturnType<typeof setInterval> | null = null;
 
   // Statistics
   private stats: FeedbackStats = {

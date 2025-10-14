@@ -7,6 +7,25 @@
  * @author @darianrosebrook
  */
 
+// Re-export SearchEngine types for convenience
+export type {
+  EnrichedSearchResult,
+  SearchEngineConfig,
+  SearchResults,
+} from "../web/SearchEngine";
+
+/**
+ * Search query parameters
+ */
+export interface SearchQuery {
+  query: string;
+  maxResults?: number;
+  language?: string;
+  region?: string;
+  safeSearch?: boolean;
+  excludeDomains?: string[];
+}
+
 /**
  * Web content extraction types
  */

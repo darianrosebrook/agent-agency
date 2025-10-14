@@ -2,6 +2,9 @@ import { TaskOutcome } from "./agentic-rl";
 import { ConstitutionalViolation } from "./caws-constitutional";
 import { ComponentHealth } from "./coordinator";
 
+// Re-export commonly used types
+export { VerificationPriority } from "./verification";
+
 export enum FeedbackSource {
   PERFORMANCE_METRICS = "performance_metrics",
   TASK_OUTCOMES = "task_outcomes",

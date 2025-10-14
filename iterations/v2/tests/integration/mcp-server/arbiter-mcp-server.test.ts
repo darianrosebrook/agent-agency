@@ -12,6 +12,7 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import { ArbiterMCPServer } from "../../../src/mcp-server/ArbiterMCPServer";
 import type { WorkingSpec } from "../../../src/types/caws-types";
+import { TaskPriority } from "../../../src/types/task-runner";
 
 describe("Arbiter MCP Server Integration Tests", () => {
   const tempDir = path.join(__dirname, "../../temp/mcp-server-tests");
@@ -122,7 +123,7 @@ describe("Arbiter MCP Server Integration Tests", () => {
         spec: validSpec,
         availableAgents: ["agent-1", "agent-2"],
         strategy: "capability",
-        priority: VerificationPriority.HIGH,
+        priority: TaskPriority.HIGH,
       });
 
       expect(result).toBeDefined();

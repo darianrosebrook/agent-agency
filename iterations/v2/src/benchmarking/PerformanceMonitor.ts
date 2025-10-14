@@ -66,8 +66,8 @@ export interface HealthCheckResult {
 
 export class PerformanceMonitor extends EventEmitter {
   private isMonitoring: boolean = false;
-  private monitoringInterval?: NodeJS.Timeout;
-  private healthCheckInterval?: NodeJS.Timeout;
+  private monitoringInterval?: ReturnType<typeof setInterval>;
+  private healthCheckInterval?: ReturnType<typeof setInterval>;
   private performanceObserver?: PerformanceObserver;
   private lastSnapshot?: PerformanceSnapshot;
   private healthHistory: HealthCheckResult[] = [];
@@ -427,7 +427,9 @@ export class PerformanceMonitor extends EventEmitter {
   /**
    * Calculate CPU usage percentage
    */
-  private calculateCpuUsagePercent(cpuUsage: NodeJS.CpuUsage): number {
+  private calculateCpuUsagePercent(
+    cpuUsage: ReturnType<typeof process.cpuUsage>
+  ): number {
     const total = cpuUsage.user + cpuUsage.system;
     // Rough approximation - would need time-based measurement for accuracy
     return Math.min((total / 1000000) * 100, 100);

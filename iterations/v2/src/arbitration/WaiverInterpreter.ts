@@ -96,7 +96,7 @@ export class WaiverInterpreter {
   public async evaluateWaiver(
     request: WaiverRequest,
     rule: ConstitutionalRule,
-    decidedBy: string
+    _decidedBy: string
   ): Promise<WaiverEvaluationResult> {
     // Check if rule is waivable
     if (!rule.waivable) {

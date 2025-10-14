@@ -50,13 +50,13 @@ describe("RuleEngine", () => {
     risk_tier: 2,
     mode: "feature",
     blast_radius: {
-      modules: ["src/features"],
+      modules: ["ui", "api"],
       data_migration: false,
     },
     operational_rollback_slo: "5m",
     scope: {
       in: ["src/features/", "tests/"],
-      out: ["node_modules/", "dist/"],
+      out: ["src/legacy/", "docs/"],
     },
     invariants: ["System remains stable", "Data consistency maintained"],
     acceptance: [
@@ -185,14 +185,23 @@ describe("RuleEngine", () => {
       const spec = createValidSpec({
         blast_radius: {
           modules: ["auth"],
-          // data_migration: undefined
-        } as any,
+          data_migration: false,
+        },
       });
+      // Remove the data_migration property to test undefined check
+      const specWithoutMigration = {
+        ...spec,
+        blast_radius: {
+          ...spec.blast_radius,
+          data_migration: undefined as any,
+        },
+      };
 
-      const result = ruleEngine.evaluateRules(spec);
+      const result = ruleEngine.evaluateRules(specWithoutMigration);
 
       const violation = result.violations.find(
-        (v) => v.ruleId === "BLAST-001" && v.message.includes("data migration")
+        (v) =>
+          v.ruleId === "BLAST-001" && v.message.includes("explicitly stated")
       );
       expect(violation).toBeDefined();
       expect(violation?.severity).toBe("medium");
@@ -211,7 +220,8 @@ describe("RuleEngine", () => {
 
       const violation = result.violations.find(
         (v) =>
-          v.ruleId === "BLAST-001" && v.message.includes("high-risk module")
+          v.ruleId === "BLAST-001" &&
+          v.message.includes("requires explicit justification")
       );
       expect(violation).toBeDefined();
       expect(violation?.severity).toBe("medium");
@@ -230,7 +240,8 @@ describe("RuleEngine", () => {
 
       const violation = result.violations.find(
         (v) =>
-          v.ruleId === "BLAST-001" && v.message.includes("high-risk module")
+          v.ruleId === "BLAST-001" &&
+          v.message.includes("requires explicit justification")
       );
       expect(violation).toBeUndefined();
     });
@@ -436,7 +447,7 @@ describe("RuleEngine", () => {
 
     it("should warn about unknown contract types", () => {
       const spec = createValidSpec({
-        contracts: [{ type: "openapi", path: "docs/api.yaml" }],
+        contracts: [{ type: "invalidtype" as any, path: "docs/api.yaml" }],
       });
 
       const result = ruleEngine.evaluateRules(spec);

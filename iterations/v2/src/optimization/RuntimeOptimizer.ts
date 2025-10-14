@@ -58,7 +58,7 @@ export class RuntimeOptimizer implements IRuntimeOptimizer {
   private performanceMonitor: PerformanceMonitor;
   private bottleneckDetector: BottleneckDetector;
   private isRunning = false;
-  private analysisTimer?: NodeJS.Timeout;
+  private analysisTimer?: ReturnType<typeof setInterval>;
   private lastAnalysisTime?: Date;
   private analysisHistory: OptimizationAnalysis[] = [];
 

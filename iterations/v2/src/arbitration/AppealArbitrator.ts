@@ -395,7 +395,7 @@ export class AppealArbitrator {
   /**
    * Assess grounds for appeal
    */
-  private assessGrounds(grounds: string, originalVerdict: Verdict): number {
+  private assessGrounds(grounds: string, _originalVerdict: Verdict): number {
     const groundsLower = grounds.toLowerCase();
 
     // Check for substantive grounds

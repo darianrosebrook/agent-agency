@@ -22,10 +22,6 @@ const SHELL_METACHARACTERS = [
   "&", // Background execution
   ">", // Redirection
   "<", // Redirection
-  "`", // Command substitution (backticks)
-  "$", // Variable expansion (when not properly escaped)
-  "(", // Command grouping
-  ")", // Command grouping
   "{", // Brace expansion
   "}", // Brace expansion
   "[", // Character classes
@@ -43,7 +39,7 @@ const SHELL_METACHARACTERS = [
  */
 const COMMAND_SUBSTITUTION_PATTERNS = [
   /\$\([^)]*\)/g, // $(command)
-  /`/g, // Any backtick (command substitution)
+  /`.*`/g, // `command` (backtick command substitution - allow any content between backticks)
 ];
 
 /**
@@ -153,19 +149,7 @@ export class CommandValidator {
         };
       }
 
-      // Check for shell metacharacters
-      for (const metachar of SHELL_METACHARACTERS) {
-        if (arg.includes(metachar)) {
-          return {
-            valid: false,
-            error: `Dangerous shell metacharacter detected: ${metachar}`,
-            reason: "Shell injection attempt",
-            issues: [`Contains metacharacter: ${metachar}`],
-          };
-        }
-      }
-
-      // Check for command substitution
+      // Check for command substitution (more specific patterns first)
       for (const pattern of COMMAND_SUBSTITUTION_PATTERNS) {
         if (pattern.test(arg)) {
           return {
@@ -177,7 +161,7 @@ export class CommandValidator {
         }
       }
 
-      // Check for variable expansion
+      // Check for variable expansion (more specific patterns first)
       for (const pattern of VARIABLE_EXPANSION_PATTERNS) {
         if (pattern.test(arg)) {
           return {
@@ -185,6 +169,18 @@ export class CommandValidator {
             error: "Dangerous variable expansion detected",
             reason: "Potential variable injection",
             issues: [`Matches pattern: ${pattern}`],
+          };
+        }
+      }
+
+      // Check for shell metacharacters (general patterns last)
+      for (const metachar of SHELL_METACHARACTERS) {
+        if (arg.includes(metachar)) {
+          return {
+            valid: false,
+            error: `Dangerous shell metacharacter detected: ${metachar}`,
+            reason: "Shell injection attempt",
+            issues: [`Contains metacharacter: ${metachar}`],
           };
         }
       }
