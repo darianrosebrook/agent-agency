@@ -7,7 +7,6 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { PerformanceAnalyzer } from "../../../src/benchmarking/PerformanceAnalyzer";
 import {
-  VerificationPriority,
   AgentPerformanceProfile,
   AnalysisConfig,
   MetricCategory,
