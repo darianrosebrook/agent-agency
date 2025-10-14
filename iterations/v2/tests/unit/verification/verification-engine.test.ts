@@ -5,7 +5,6 @@
  */
 
 import {
-  VerificationPriority,
   VerificationEngineConfig,
   VerificationPriority,
   VerificationRequest,
@@ -93,6 +92,7 @@ describe("VerificationEngine", () => {
       const request: VerificationRequest = {
         id: "test-timeout",
         content: "Test content for timeout",
+        verificationTypes: [VerificationType.FACT_CHECKING],
         priority: VerificationPriority.MEDIUM,
         timeoutMs: 1, // Very short timeout
         metadata: {},
@@ -132,6 +132,7 @@ describe("VerificationEngine", () => {
       const request: VerificationRequest = {
         id: "test-all-methods",
         content: "Test content for all methods",
+        verificationTypes: [VerificationType.FACT_CHECKING, VerificationType.SOURCE_CREDIBILITY],
         priority: VerificationPriority.MEDIUM,
         metadata: {},
       };
@@ -173,6 +174,7 @@ describe("VerificationEngine", () => {
       const request: VerificationRequest = {
         id: "test-aggregation",
         content: "The Earth orbits the Sun. This is a scientific fact.",
+        verificationTypes: [VerificationType.FACT_CHECKING],
         priority: VerificationPriority.MEDIUM,
         metadata: {},
       };
@@ -190,6 +192,7 @@ describe("VerificationEngine", () => {
       const request: VerificationRequest = {
         id: "test-confidence",
         content: "This is a test statement.",
+        verificationTypes: [VerificationType.FACT_CHECKING],
         priority: VerificationPriority.MEDIUM,
         metadata: {},
       };
@@ -205,6 +208,7 @@ describe("VerificationEngine", () => {
       const request: VerificationRequest = {
         id: "test-timing",
         content: "Test content for timing",
+        verificationTypes: [VerificationType.FACT_CHECKING],
         priority: VerificationPriority.MEDIUM,
         metadata: {},
       };

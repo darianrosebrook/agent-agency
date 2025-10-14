@@ -395,6 +395,14 @@ export class VerificationEngineImpl implements VerificationEngine {
       );
     }
 
+    if (!request.verificationTypes || request.verificationTypes.length === 0) {
+      throw new VerificationError(
+        "At least one verification type is required",
+        VerificationErrorCode.INVALID_REQUEST,
+        request.id
+      );
+    }
+
     if (
       request.timeoutMs &&
       (request.timeoutMs <= 0 || request.timeoutMs > 300000)

@@ -167,6 +167,13 @@ export class ProvenanceTracker extends EventEmitter {
     // Auto-detect AI attributions if enabled
     if (this.config.enableAIAttribution && !options.aiAttributions) {
       entry.aiAttributions = await this.detectAIAttributions(entry);
+      
+      // Store detected attributions separately for statistics
+      if (entry.aiAttributions) {
+        for (const attribution of entry.aiAttributions) {
+          await this.storage.storeAttribution(attribution);
+        }
+      }
     }
 
     await this.storage.storeEntry(entry);
@@ -450,8 +457,18 @@ export class ProvenanceTracker extends EventEmitter {
     };
   }> {
     const chain = await this.getProvenanceChain(specId);
-    if (!chain) {
-      throw new Error(`No provenance chain found for spec ${specId}`);
+    if (!chain || chain.entries.length === 0) {
+      // Return empty analysis for empty or non-existent chains
+      return {
+        aiVsHumanBalance: 0,
+        productivityTrends: [],
+        collaborationPatterns: {},
+        qualityCorrelation: {
+          aiUsage: 0,
+          qualityScore: 0,
+          correlation: 0,
+        },
+      };
     }
 
     const aiEntries = chain.entries.filter(
@@ -586,7 +603,11 @@ export class ProvenanceTracker extends EventEmitter {
     const attributions: AIAttribution[] = [];
 
     try {
-      const content = await fs.readFile(filePath, "utf-8");
+      // Resolve relative paths against project root
+      const fullPath = path.isAbsolute(filePath) 
+        ? filePath 
+        : path.join(this.config.projectRoot, filePath);
+      const content = await fs.readFile(fullPath, "utf-8");
 
       for (const pattern of this.aiDetectionPatterns.contentPatterns) {
         for (const regex of pattern.patterns) {

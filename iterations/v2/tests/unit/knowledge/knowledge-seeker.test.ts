@@ -8,7 +8,6 @@ import { KnowledgeSeeker } from "../../../src/knowledge/KnowledgeSeeker";
 import { SearchProviderFactory } from "../../../src/knowledge/SearchProvider";
 import { events } from "../../../src/orchestrator/EventEmitter";
 import {
-  VerificationPriority,
   KnowledgeQuery,
   QueryType,
   SearchProviderConfig,
@@ -352,6 +351,72 @@ describe("KnowledgeSeeker", () => {
 
       const seekerNoCache = new KnowledgeSeeker(noCacheConfig);
       expect(seekerNoCache).toBeDefined();
+    });
+
+    it("should handle empty provider list", async () => {
+      const emptyProvidersConfig = {
+        ...defaultConfig,
+        providers: [],
+      };
+
+      const seekerNoProviders = new KnowledgeSeeker(emptyProvidersConfig);
+      const query = {
+        ...validQuery,
+        id: "empty-providers-test",
+      };
+
+      // Should handle gracefully with no providers available
+      await expect(seekerNoProviders.processQuery(query)).rejects.toThrow(
+        /No providers available/
+      );
+    });
+
+    it("should handle provider with invalid configuration", async () => {
+      const invalidProviderConfig = {
+        ...defaultConfig,
+        providers: [
+          {
+            ...mockProviderConfig,
+            endpoint: "", // Invalid empty endpoint
+          },
+        ],
+      };
+
+      const seekerInvalid = new KnowledgeSeeker(invalidProviderConfig);
+      const query = {
+        ...validQuery,
+        id: "invalid-provider-test",
+      };
+
+      // Should handle provider initialization issues
+      const response = await seekerInvalid.processQuery(query);
+      expect(response).toBeDefined();
+      // May return empty results due to provider failure
+    });
+
+    it("should handle very low relevance threshold", async () => {
+      const lowThresholdQuery = {
+        ...validQuery,
+        relevanceThreshold: 0.0, // Accept all results
+        id: "low-threshold-test",
+      };
+
+      const response = await knowledgeSeeker.processQuery(lowThresholdQuery);
+      expect(response).toBeDefined();
+      expect(Array.isArray(response.results)).toBe(true);
+    });
+
+    it("should handle very high relevance threshold", async () => {
+      const highThresholdQuery = {
+        ...validQuery,
+        relevanceThreshold: 0.99, // Very strict filtering
+        id: "high-threshold-test",
+      };
+
+      const response = await knowledgeSeeker.processQuery(highThresholdQuery);
+      expect(response).toBeDefined();
+      expect(Array.isArray(response.results)).toBe(true);
+      // May return fewer or no results due to strict filtering
     });
   });
 

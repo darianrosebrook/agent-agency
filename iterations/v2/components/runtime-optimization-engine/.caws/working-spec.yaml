@@ -1,202 +1,171 @@
 id: INFRA-003
-title: "Runtime Optimization Engine - Performance Analysis and Bottleneck Remediation"
-version: "2.0.0"
+title: "Runtime Optimization Engine - Performance Monitoring and Optimization"
+risk_tier: 3
 mode: feature
-risk_tier: 2
-status: spec_complete
-
-executive_summary:
-  purpose: |
-    The Runtime Optimization Engine provides continuous performance analysis, query optimization, intelligent caching,
-    resource allocation optimization, and automated bottleneck detection and remediation to maintain peak system
-    performance across all Agent Agency V2 components.
-  scope:
-    - Query optimization with execution plan analysis
-    - Intelligent cache management with eviction strategies
-    - Resource allocation optimization
-    - Performance profiling and analysis
-    - Bottleneck detection and automated remediation
-    - Performance recommendations and tuning
-  success_criteria:
-    - Reduce query latency by 30% through optimization
-    - Achieve 70%+ cache hit rate for common queries
-    - Detect performance bottlenecks within 1 minute
-    - Provide actionable optimization recommendations
-    - Zero optimization-induced regressions
-
 change_budget:
   max_files: 20
-  max_loc: 900
-
+  max_loc: 800
 blast_radius:
-  modules: ["optimization", "performance", "profiling"]
+  modules: ["optimization", "monitoring", "orchestrator"]
   data_migration: false
-  breaking_changes: false
-  external_impact: low
-operational_rollback_slo: "5m"
-
-threats:
-  - "Optimization introducing performance regressions"
-  - "Aggressive caching causing stale data issues"
-  - "Resource allocation conflicts"
-  - "Profiling overhead impacting production performance"
+operational_rollback_slo: "10m"
 
 scope:
   in:
-    - "src/optimization/RuntimeOptimizationEngine.ts"
-    - "src/optimization/QueryOptimizer.ts"
-    - "src/optimization/CacheManager.ts"
-    - "src/optimization/ResourceAllocator.ts"
-    - "src/optimization/PerformanceProfiler.ts"
-    - "src/optimization/BottleneckDetector.ts"
-    - "src/optimization/RemediationEngine.ts"
-    - "src/types/optimization.ts"
-    - "tests/unit/optimization/runtime-optimization-engine.test.ts"
-    - "tests/integration/optimization/performance-improvement.test.ts"
+    - "src/optimization/"
+    - "tests/unit/optimization/"
+    - "tests/integration/optimization/"
+    - "src/orchestrator/ArbiterOrchestrator.ts"
+    - "src/types/optimization-types.ts"
   out:
-    - "src/database/*"
-    - "src/routing/*"
-    - "src/security/*"
+    - "src/database/"
+    - "src/security/"
+    - "src/mcp-server/"
+    - "node_modules/"
+    - "dist/"
 
 invariants:
-  - "All optimizations must preserve functional correctness"
-  - "Cache invalidation must maintain data consistency"
-  - "Resource allocations must respect system limits"
-  - "Profiling must not exceed 5% overhead"
-  - "Remediation must include rollback capabilities"
+  - "Optimization monitoring must not impact system performance by >5%"
+  - "Performance data collection is async and non-blocking"
+  - "Optimization recommendations are advisory, not enforced"
+  - "System remains functional if optimization engine is disabled"
 
 acceptance:
-  - id: "INFRA-003-A1"
-    given: "Slow database query with suboptimal execution plan"
-    when: "Query optimizer analyzes query"
-    then: "Optimized query plan generated with 30%+ latency reduction and correctness preserved"
+  - id: "A1"
+    given: "System is running with normal load"
+    when: "Performance metrics are collected"
+    then: "Metrics are captured with <10ms overhead per operation"
+    status: "pending"
+    tests_written: 0
+    tests_passing: 0
+    coverage: 0
 
-  - id: "INFRA-003-A2"
-    given: "Frequently accessed data with cache misses"
-    when: "Cache manager evaluates access patterns"
-    then: "Data cached with LRU eviction and 70%+ hit rate achieved"
+  - id: "A2"
+    given: "Performance bottleneck is detected"
+    when: "System analyzes metrics over time window"
+    then: "Bottleneck is identified with specific component and severity"
+    status: "pending"
+    tests_written: 0
+    tests_passing: 0
+    coverage: 0
 
-  - id: "INFRA-003-A3"
-    given: "Component experiencing performance degradation"
-    when: "Bottleneck detector profiles execution"
-    then: "Bottleneck identified within 1 minute with specific metrics and root cause"
+  - id: "A3"
+    given: "Bottleneck is identified"
+    when: "Optimization recommendations are generated"
+    then: "Actionable recommendations are provided with expected impact"
+    status: "pending"
+    tests_written: 0
+    tests_passing: 0
+    coverage: 0
 
-  - id: "INFRA-003-A4"
-    given: "Bottleneck requiring remediation"
-    when: "Remediation engine applies fix"
-    then: "Performance improved with rollback available and validation metrics collected"
+  - id: "A4"
+    given: "Cache hit/miss patterns are monitored"
+    when: "Cache performance is analyzed"
+    then: "Cache optimization suggestions are generated (warmup, eviction)"
+    status: "pending"
+    tests_written: 0
+    tests_passing: 0
+    coverage: 0
 
-  - id: "INFRA-003-A5"
-    given: "System under variable load patterns"
-    when: "Resource allocator optimizes allocation"
-    then: "Resources dynamically allocated based on demand with <10% waste"
+  - id: "A5"
+    given: "System is under varying load"
+    when: "Resource utilization patterns are analyzed"
+    then: "Resource allocation recommendations are provided"
+    status: "pending"
+    tests_written: 0
+    tests_passing: 0
+    coverage: 0
 
-  - id: "INFRA-003-A6"
-    given: "Component with complex performance characteristics"
-    when: "Performance profiler analyzes execution"
-    then: "Detailed profile generated with hotspots identified and recommendations provided"
+  - id: "A6"
+    given: "Historical performance data exists"
+    when: "Trend analysis is performed"
+    then: "Performance trends and predictions are generated"
+    status: "pending"
+    tests_written: 0
+    tests_passing: 0
+    coverage: 0
 
-  - id: "INFRA-003-A7"
-    given: "Optimization producing unexpected regression"
-    when: "Validation detects performance degradation"
-    then: "Optimization automatically rolled back and incident logged"
+  - id: "A7"
+    given: "Optimization engine fails"
+    when: "System continues operating"
+    then: "System functions normally without optimization features"
+    status: "pending"
+    tests_written: 0
+    tests_passing: 0
+    coverage: 0
 
 non_functional:
-  performance:
-    query_optimization_p95_ms: 100
-    cache_lookup_p95_ms: 5
-    bottleneck_detection_p95_ms: 60000
-    remediation_execution_p95_ms: 1000
-    profiling_overhead_percent: 5
-    memory_usage_mb: 150
-
-  reliability:
-    availability_percent: 99.5
-    mean_time_between_failures_hours: 720
-    error_rate_percent: 1.0
-    optimization_correctness_rate: 1.0
-    rollback_success_rate: 0.99
-
-  scalability:
-    max_optimized_queries: 1000
-    max_cache_entries: 10000
-    max_concurrent_profilings: 10
-    horizontal_scaling: true
-
+  a11y: []
+  perf:
+    api_p95_ms: 100
+    collection_overhead_ms: 10
+    analysis_p95_ms: 500
   security:
-    query_injection_prevention: "enabled"
-    cache_poisoning_prevention: "enabled"
-    resource_limit_enforcement: "required"
-    audit_logging: "all-optimizations"
-
-  usability:
-    api_design: "fluent-optimization-builder"
-    error_messages: "optimization-context-aware"
-    monitoring: "comprehensive-performance-metrics"
-    documentation: "optimization-examples"
+    - "no-sensitive-data-exposure"
+    - "safe-concurrent-access"
+  observability:
+    - "structured-logging"
+    - "metric-export"
+    - "health-checks"
 
 contracts:
-  - type: "typescript"
-    path: "src/types/optimization.ts"
-    version: "1.0.0"
-    description: "Optimization engine interfaces and performance types"
+  - type: "typescript-interface"
+    path: "src/types/optimization-types.ts"
+    required: true
+  - type: "internal-api"
+    path: "src/optimization/RuntimeOptimizer.ts"
+    required: true
 
-  - type: "openapi"
-    path: "docs/api/optimization-engine.api.yaml"
-    version: "1.0.0"
-    description: "Performance optimization and profiling API"
+dependencies:
+  required:
+    - "@/monitoring/SystemHealthMonitor"
+    - "@/observability/Logger"
+  optional:
+    - "@/models/PerformanceTrackerBridge"
 
-observability:
-  metrics:
-    - "query_optimization_rate"
-    - "cache_hit_ratio"
-    - "bottleneck_detection_frequency"
-    - "remediation_success_rate"
-    - "performance_improvement_percent"
-    - "optimization_overhead"
+test_strategy:
+  unit:
+    - "Metric collection with mock data"
+    - "Bottleneck detection algorithms"
+    - "Recommendation generation logic"
+    - "Cache analysis algorithms"
+    - "Trend calculation"
+    - "Error handling and graceful degradation"
+  integration:
+    - "Integration with SystemHealthMonitor"
+    - "Integration with ArbiterOrchestrator"
+    - "Performance data flow end-to-end"
+    - "Concurrent metric collection"
+  e2e:
+    - "Full optimization cycle with real workload"
+    - "System remains stable under optimization"
 
-  logs:
-    - level: "info"
-      events: ["query_optimized", "cache_updated", "bottleneck_detected", "remediation_applied"]
-    - level: "warn"
-      events: ["optimization_marginal_gain", "cache_eviction_high", "profiling_overhead_high"]
-    - level: "error"
-      events: ["optimization_failed", "remediation_rolled_back", "cache_corruption"]
+rollback_plan: |
+  1. Disable optimization engine via feature flag
+  2. Stop metric collection
+  3. Remove optimization hooks from orchestrator
+  4. System continues normal operation
+  5. No data loss - optimization data is advisory only
 
-  traces:
-    - "query_optimization_span"
-    - "cache_management_flow"
-    - "bottleneck_detection_chain"
-    - "remediation_execution_pipeline"
+estimated_effort:
+  planning: "1 day"
+  implementation: "5-8 days"
+  testing: "3-5 days"
+  total: "9-14 days"
 
-migrations: []
-
-rollback:
-  slo: "5m"
-  strategy: "feature-flag-with-auto-rollback"
-  impact: "low"
-  monitoring: "optimization_disabled"
-
-ai_assessment:
-  reasoning: "Runtime optimization requires careful performance analysis and risk mitigation to avoid regressions. The complexity lies in balancing optimization aggressiveness with safety. AI can implement optimization algorithms but human oversight needed for validation criteria and rollback thresholds."
-
-  risks:
-    - "Optimization introducing performance regressions"
-    - "Cache management causing data inconsistency"
-    - "Resource allocation conflicts"
-    - "Profiling overhead degrading production performance"
-
-  opportunities:
-    - "Query optimization patterns well-established"
-    - "Cache eviction algorithms proven (LRU, LFU)"
-    - "Profiling tools provide rich performance data"
-    - "Statistical analysis enables bottleneck detection"
-
-  recommendations:
-    - "Implement canary deployments for optimizations"
-    - "Use established cache eviction strategies (LRU)"
-    - "Add comprehensive validation before applying optimizations"
-    - "Build extensive testing with performance regression detection"
-    - "Implement automatic rollback on performance degradation"
-    - "Add profiling sampling to reduce overhead"
-
+notes: |
+  This is a Tier 3 (low risk) component that provides observability and
+  optimization recommendations. It is not required for core system functionality.
+  
+  The engine focuses on:
+  - Non-intrusive performance monitoring
+  - Advisory recommendations (not enforced)
+  - Graceful degradation if disabled
+  - Minimal performance overhead
+  
+  Implementation follows incremental approach:
+  1. Basic metric collection
+  2. Simple bottleneck detection
+  3. Recommendation engine
+  4. Cache optimization analysis
+  5. Trend analysis and predictions

@@ -55,20 +55,20 @@ describe("SpecValidator", () => {
   });
 
   describe("validateWorkingSpec", () => {
-    it("should pass with valid spec", () => {
+    it("should pass with valid spec", async () => {
       const spec = createValidSpec();
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
-    it("should fail with missing required fields", () => {
+    it("should fail with missing required fields", async () => {
       const spec = {
         title: "Test",
       } as WorkingSpec;
 
-      const result = validator.validateWorkingSpec(spec);
+      const result = await validator.validateWorkingSpec(spec);
 
       expect(result.valid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);

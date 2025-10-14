@@ -19,7 +19,7 @@ export interface CAWSValidationResult {
   timestamp: string;
 
   /** Budget compliance check results */
-  budgetCompliance: BudgetCompliance;
+  budgetCompliance?: BudgetCompliance;
 
   /** Quality gate execution results */
   qualityGates: QualityGateResult[];
@@ -365,6 +365,9 @@ export interface ValidationOptions {
 
   /** Quiet mode (minimal output) */
   quiet?: boolean;
+
+  /** Current change statistics for budget validation */
+  currentStats?: ChangeStats;
 }
 
 /**
@@ -469,6 +472,63 @@ export interface MutationReport {
   timeout: number;
   noCoverage: number;
   runtimeErrors: number;
+}
+
+/**
+ * Rule evaluation result
+ */
+export interface RuleEvaluation {
+  /** Rule identifier */
+  ruleId: string;
+
+  /** Human-readable description */
+  description: string;
+
+  /** Whether rule passed */
+  passed: boolean;
+
+  /** Additional context or evidence */
+  context?: unknown;
+}
+
+/**
+ * Rule violation details
+ */
+export interface RuleViolation {
+  /** Rule identifier that was violated */
+  ruleId: string;
+
+  /** Severity level */
+  severity: "low" | "medium" | "high" | "critical";
+
+  /** Human-readable violation message */
+  message: string;
+
+  /** Field path that caused violation */
+  field: string;
+
+  /** Suggestion for fixing violation */
+  suggestion?: string;
+
+  /** Additional context or evidence */
+  context?: unknown;
+}
+
+/**
+ * Complete rule evaluation result
+ */
+export interface RuleResult {
+  /** Whether all rules passed */
+  passed: boolean;
+
+  /** List of rule violations */
+  violations: RuleViolation[];
+
+  /** List of rule evaluations */
+  evaluations: RuleEvaluation[];
+
+  /** ISO timestamp when evaluation completed */
+  evaluatedAt: string;
 }
 
 /**

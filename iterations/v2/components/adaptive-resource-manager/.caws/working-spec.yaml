@@ -1,213 +1,191 @@
 id: INFRA-004
-title: "Adaptive Resource Manager - Dynamic Scaling and Resource Optimization"
-version: "2.0.0"
+title: "Adaptive Resource Manager - Dynamic Resource Allocation and Load Balancing"
+risk_tier: 3
 mode: feature
-risk_tier: 2
-status: spec_complete
-
-executive_summary:
-  purpose: |
-    The Adaptive Resource Manager provides intelligent resource allocation, auto-scaling triggers, resource pool
-    management, cost optimization, and utilization monitoring to ensure efficient resource usage across all Agent
-    Agency V2 components while maintaining performance and controlling costs.
-  scope:
-    - Dynamic resource allocation algorithms
-    - Auto-scaling triggers based on metrics
-    - Resource pool management (CPU, memory, connections)
-    - Cost optimization with budget constraints
-    - Utilization monitoring and forecasting
-    - Resource request queuing and prioritization
-  success_criteria:
-    - Maintain resource utilization between 60-80% optimal range
-    - Reduce resource waste by 25% through optimization
-    - Auto-scale within 30 seconds of threshold breach
-    - Stay within cost budget 99% of the time
-    - Zero resource exhaustion incidents
-
 change_budget:
   max_files: 25
-  max_loc: 1100
-
+  max_loc: 1000
 blast_radius:
-  modules: ["resource-management", "auto-scaling", "cost-optimization"]
-  data_migration: true
-  breaking_changes: false
-  external_impact: medium
+  modules: ["resources", "orchestrator", "agents"]
+  data_migration: false
 operational_rollback_slo: "10m"
-
-threats:
-  - "Auto-scaling thrashing causing instability"
-  - "Resource allocation conflicts causing deadlocks"
-  - "Cost budget overruns from uncontrolled scaling"
-  - "Resource exhaustion during demand spikes"
 
 scope:
   in:
-    - "src/resource/AdaptiveResourceManager.ts"
-    - "src/resource/ResourceAllocator.ts"
-    - "src/resource/AutoScaler.ts"
-    - "src/resource/ResourcePool.ts"
-    - "src/resource/CostOptimizer.ts"
-    - "src/resource/UtilizationMonitor.ts"
-    - "src/resource/DemandForecaster.ts"
-    - "src/resource/RequestQueue.ts"
-    - "src/types/resource-management.ts"
-    - "tests/unit/resource/adaptive-resource-manager.test.ts"
-    - "tests/integration/resource/auto-scaling.test.ts"
-    - "migrations/014_create_resource_management_tables.sql"
+    - "src/resources/"
+    - "tests/unit/resources/"
+    - "tests/integration/resources/"
+    - "src/orchestrator/ArbiterOrchestrator.ts"
+    - "src/types/resource-types.ts"
   out:
-    - "src/database/*"
-    - "src/routing/*"
-    - "src/security/*"
+    - "src/database/"
+    - "src/security/"
+    - "src/mcp-server/"
+    - "node_modules/"
+    - "dist/"
 
 invariants:
-  - "Resource allocations must never exceed system capacity"
-  - "Auto-scaling must include cooldown periods to prevent thrashing"
-  - "Cost budgets must be enforced before resource allocation"
-  - "Resource pools must maintain minimum viable capacity"
-  - "All resource operations must be atomic and transactional"
+  - "Resource allocation decisions must complete within 50ms P95"
+  - "Load balancing must not cause request failures"
+  - "Resource monitoring overhead <5% of total system resources"
+  - "System remains functional with static resource allocation if manager fails"
 
 acceptance:
-  - id: "INFRA-004-A1"
-    given: "Component requests resource allocation"
-    when: "Resource allocator evaluates request"
-    then: "Resources allocated within 50ms with optimal placement and utilization tracked"
+  - id: "A1"
+    given: "System is monitoring resource usage"
+    when: "CPU, memory, and network metrics are collected"
+    then: "Resource usage is tracked accurately with <5% overhead"
+    status: "pending"
+    tests_written: 0
+    tests_passing: 0
+    coverage: 0
 
-  - id: "INFRA-004-A2"
-    given: "System utilization exceeds 80% threshold"
-    when: "Auto-scaler detects breach"
-    then: "Scale-up initiated within 30 seconds with new resources added"
+  - id: "A2"
+    given: "Multiple agents are available"
+    when: "Task requires agent assignment"
+    then: "Agent is selected based on current load and capabilities within 50ms"
+    status: "pending"
+    tests_written: 0
+    tests_passing: 0
+    coverage: 0
 
-  - id: "INFRA-004-A3"
-    given: "System utilization drops below 50% for sustained period"
-    when: "Auto-scaler evaluates scale-down"
-    then: "Resources released with cooldown period respected and workload migration safe"
+  - id: "A3"
+    given: "Agent pool has varying load levels"
+    when: "New tasks arrive"
+    then: "Tasks are distributed to maintain balanced load across agents"
+    status: "pending"
+    tests_written: 0
+    tests_passing: 0
+    coverage: 0
 
-  - id: "INFRA-004-A4"
-    given: "Cost budget approaching limit (90% utilized)"
-    when: "Cost optimizer evaluates allocations"
-    then: "Resource usage optimized or low-priority requests deferred to stay within budget"
+  - id: "A4"
+    given: "System load exceeds thresholds"
+    when: "Resource pressure is detected"
+    then: "Rate limiting is dynamically adjusted to protect system"
+    status: "pending"
+    tests_written: 0
+    tests_passing: 0
+    coverage: 0
 
-  - id: "INFRA-004-A5"
-    given: "Multiple components competing for limited resources"
-    when: "Request queue prioritizes allocations"
-    then: "Resources allocated by priority with fair scheduling and starvation prevention"
+  - id: "A5"
+    given: "Tasks have different priority levels"
+    when: "Resources are constrained"
+    then: "Higher priority tasks receive resources first"
+    status: "pending"
+    tests_written: 0
+    tests_passing: 0
+    coverage: 0
 
-  - id: "INFRA-004-A6"
-    given: "Demand forecaster analyzes historical patterns"
-    when: "Upcoming demand spike predicted"
-    then: "Proactive scaling initiated before demand surge with confidence intervals"
+  - id: "A6"
+    given: "Agent fails or becomes unavailable"
+    when: "Failover is triggered"
+    then: "Tasks are automatically reassigned to healthy agents"
+    status: "pending"
+    tests_written: 0
+    tests_passing: 0
+    coverage: 0
 
-  - id: "INFRA-004-A7"
-    given: "Resource pool requires rebalancing"
-    when: "Utilization monitor detects imbalance"
-    then: "Resources redistributed across pools with minimal disruption"
+  - id: "A7"
+    given: "Resource manager encounters errors"
+    when: "Manager fails or is disabled"
+    then: "System falls back to static resource allocation"
+    status: "pending"
+    tests_written: 0
+    tests_passing: 0
+    coverage: 0
 
-  - id: "INFRA-004-A8"
-    given: "High-concurrency resource requests (500/sec)"
-    when: "System processes concurrent allocations"
-    then: "All requests handled within 50ms P95 with correct accounting"
+  - id: "A8"
+    given: "Resource usage patterns over time"
+    when: "Capacity analysis is performed"
+    then: "Capacity recommendations are generated based on trends"
+    status: "pending"
+    tests_written: 0
+    tests_passing: 0
+    coverage: 0
 
 non_functional:
-  performance:
-    resource_allocation_p95_ms: 50
-    auto_scaling_trigger_latency_s: 30
-    utilization_monitoring_interval_s: 10
-    cost_calculation_p95_ms: 20
-    demand_forecasting_p95_ms: 100
-    concurrent_allocations_per_sec: 500
-    memory_usage_mb: 200
-
-  reliability:
-    availability_percent: 99.9
-    mean_time_between_failures_hours: 720
-    error_rate_percent: 0.5
-    auto_scaling_success_rate: 0.98
-    resource_exhaustion_prevention_rate: 1.0
-
-  scalability:
-    max_managed_resources: 1000
-    max_resource_pools: 50
-    max_concurrent_requests: 1000
-    horizontal_scaling: true
-
+  a11y: []
+  perf:
+    api_p95_ms: 50
+    allocation_decision_ms: 50
+    monitoring_overhead_pct: 5
   security:
-    resource_quota_enforcement: "required"
-    allocation_audit_logging: "enabled"
-    cost_budget_enforcement: "strict"
-    priority_verification: "required"
-
-  usability:
-    api_design: "fluent-resource-request"
-    error_messages: "resource-context-aware"
-    monitoring: "comprehensive-resource-metrics"
-    documentation: "resource-management-examples"
+    - "resource-isolation"
+    - "no-resource-exhaustion"
+    - "safe-concurrent-allocation"
+  observability:
+    - "structured-logging"
+    - "resource-metrics-export"
+    - "health-checks"
 
 contracts:
-  - type: "typescript"
-    path: "src/types/resource-management.ts"
-    version: "1.0.0"
-    description: "Resource management interfaces and allocation types"
+  - type: "typescript-interface"
+    path: "src/types/resource-types.ts"
+    required: true
+  - type: "internal-api"
+    path: "src/resources/AdaptiveResourceManager.ts"
+    required: true
 
-  - type: "openapi"
-    path: "docs/api/resource-management.api.yaml"
-    version: "1.0.0"
-    description: "Resource allocation and auto-scaling API"
+dependencies:
+  required:
+    - "@/monitoring/SystemHealthMonitor"
+    - "@/observability/Logger"
+  optional:
+    - "@/agents/AgentRegistryManager"
+    - "@/tasks/TaskRouter"
 
-observability:
-  metrics:
-    - "resource_utilization_percent"
-    - "auto_scaling_frequency"
-    - "cost_per_resource_type"
-    - "allocation_latency"
-    - "resource_waste_percent"
-    - "demand_forecast_accuracy"
+test_strategy:
+  unit:
+    - "Resource monitoring with mock metrics"
+    - "Load balancing algorithms"
+    - "Priority-based allocation"
+    - "Failover logic"
+    - "Rate limiting adjustments"
+    - "Error handling and fallback"
+  integration:
+    - "Integration with SystemHealthMonitor"
+    - "Integration with ArbiterOrchestrator"
+    - "Multi-agent load balancing"
+    - "Concurrent resource allocation"
+    - "Failover scenarios"
+  e2e:
+    - "Full resource lifecycle under varying load"
+    - "System stability with resource manager active"
 
-  logs:
-    - level: "info"
-      events: ["resource_allocated", "auto_scale_triggered", "pool_rebalanced", "cost_optimized"]
-    - level: "warn"
-      events: ["utilization_high", "cost_budget_threshold", "scaling_cooldown_active"]
-    - level: "error"
-      events: ["allocation_failed", "scaling_error", "budget_exceeded"]
+rollback_plan: |
+  1. Disable adaptive resource manager via feature flag
+  2. Fall back to static resource allocation
+  3. Stop dynamic load balancing
+  4. System continues with default resource policies
+  5. No data loss - resource allocation is stateless
 
-  traces:
-    - "resource_allocation_span"
-    - "auto_scaling_pipeline"
-    - "cost_optimization_flow"
-    - "demand_forecasting_chain"
+estimated_effort:
+  planning: "1 day"
+  implementation: "8-12 days"
+  testing: "5-8 days"
+  total: "14-21 days"
 
-migrations:
-  - type: "sql"
-    path: "migrations/014_create_resource_management_tables.sql"
-    description: "Tables for resource pools, allocations, scaling events, cost tracking"
-
-rollback:
-  slo: "10m"
-  strategy: "feature-flag-with-manual-control"
-  impact: "medium"
-  monitoring: "adaptive_management_disabled_static_allocation"
-
-ai_assessment:
-  reasoning: "Adaptive resource management requires sophisticated algorithms for scaling decisions and cost optimization. The complexity lies in balancing performance, cost, and reliability while preventing thrashing and resource exhaustion. AI can implement allocation logic but human oversight needed for scaling threshold tuning and cost budget policies."
-
-  risks:
-    - "Auto-scaling thrashing causing system instability"
-    - "Resource allocation deadlocks under high contention"
-    - "Cost budget overruns from aggressive scaling"
-    - "Demand forecasting errors leading to resource shortages"
-
-  opportunities:
-    - "Established auto-scaling algorithms (Kubernetes, AWS)"
-    - "Statistical forecasting techniques for demand prediction"
-    - "Resource pool patterns proven in database systems"
-    - "Cost optimization algorithms well-studied"
-
-  recommendations:
-    - "Implement hysteresis in auto-scaling to prevent thrashing"
-    - "Use exponential moving averages for utilization metrics"
-    - "Add comprehensive testing with simulated load patterns"
-    - "Build cost budget circuit breakers"
-    - "Implement priority-based resource allocation with fairness"
-    - "Add demand forecasting with confidence intervals"
-
+notes: |
+  This is a Tier 3 (low risk) component that enhances resource utilization
+  and load distribution. It is not required for core system functionality.
+  
+  The manager focuses on:
+  - Dynamic load balancing across agents
+  - Resource-aware task allocation
+  - Priority-based resource allocation
+  - Automatic failover handling
+  - Graceful degradation to static allocation
+  
+  Implementation follows incremental approach:
+  1. Basic resource monitoring
+  2. Simple load balancing
+  3. Priority-based allocation
+  4. Dynamic rate limiting
+  5. Failover management
+  6. Capacity planning analysis
+  
+  Integration points:
+  - SystemHealthMonitor for resource metrics
+  - AgentRegistryManager for agent pool
+  - TaskRouter for task distribution
+  - ArbiterOrchestrator for system coordination
