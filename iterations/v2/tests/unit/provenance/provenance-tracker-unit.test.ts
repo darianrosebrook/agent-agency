@@ -10,7 +10,6 @@ import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { ProvenanceTracker } from "../../../src/provenance/ProvenanceTracker.js";
 import type {
   AIAttribution,
-  ProvenanceEntry,
   ProvenanceTrackerConfig,
 } from "../../../src/provenance/types/provenance-types.js";
 import type { WorkingSpec } from "../../../src/types/caws-types.js";
@@ -58,17 +57,30 @@ describe("ProvenanceTracker Unit Tests", () => {
   beforeEach(() => {
     // Create mock storage
     mockStorage = {
-      storeEntry: jest.fn<() => Promise<void>>().mockResolvedValue(undefined as any),
-      storeAttribution: jest.fn<() => Promise<void>>().mockResolvedValue(undefined as any),
+      storeEntry: jest
+        .fn<() => Promise<void>>()
+        .mockResolvedValue(undefined as any),
+      storeAttribution: jest
+        .fn<() => Promise<void>>()
+        .mockResolvedValue(undefined as any),
       getProvenanceChain: jest.fn<() => Promise<any>>().mockResolvedValue({
         spec: validSpec,
         entries: [],
         currentHash: "test-hash",
         metadata: {},
       } as any),
-      storeProvenanceChain: jest.fn<() => Promise<void>>().mockResolvedValue(undefined as any),
-      getAttributions: jest.fn<() => Promise<any[]>>().mockResolvedValue([] as any),
-      cleanup: jest.fn<() => Promise<any>>().mockResolvedValue({ entriesRemoved: 0, attributionsRemoved: 0 } as any),
+      storeProvenanceChain: jest
+        .fn<() => Promise<void>>()
+        .mockResolvedValue(undefined as any),
+      getAttributions: jest
+        .fn<() => Promise<any[]>>()
+        .mockResolvedValue([] as any),
+      cleanup: jest
+        .fn<() => Promise<any>>()
+        .mockResolvedValue({
+          entriesRemoved: 0,
+          attributionsRemoved: 0,
+        } as any),
     };
 
     tracker = new ProvenanceTracker(config);
@@ -168,7 +180,11 @@ describe("ProvenanceTracker Unit Tests", () => {
 
     it("should accept optional affected files", async () => {
       const affectedFiles = [
-        { path: "src/test.ts", changeType: "modified" as const, linesChanged: 10 },
+        {
+          path: "src/test.ts",
+          changeType: "modified" as const,
+          linesChanged: 10,
+        },
       ];
 
       const entry = await tracker.recordEntry(
@@ -367,7 +383,11 @@ describe("ProvenanceTracker Unit Tests", () => {
         end: "2025-12-31T23:59:59Z",
       };
 
-      const report = await tracker.generateReport(validSpec.id, "summary", period);
+      const report = await tracker.generateReport(
+        validSpec.id,
+        "summary",
+        period
+      );
 
       expect(report.period).toEqual(period);
     });
@@ -541,7 +561,9 @@ describe("ProvenanceTracker Unit Tests", () => {
     });
 
     it("should handle attribution storage errors", async () => {
-      mockStorage.storeAttribution.mockRejectedValue(new Error("Attribution error"));
+      mockStorage.storeAttribution.mockRejectedValue(
+        new Error("Attribution error")
+      );
 
       await expect(
         tracker.recordAIAttribution("cursor-composer")
@@ -560,4 +582,3 @@ describe("ProvenanceTracker Unit Tests", () => {
     });
   });
 });
-

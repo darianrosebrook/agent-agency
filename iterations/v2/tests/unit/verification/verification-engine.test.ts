@@ -132,7 +132,10 @@ describe("VerificationEngine", () => {
       const request: VerificationRequest = {
         id: "test-all-methods",
         content: "Test content for all methods",
-        verificationTypes: [VerificationType.FACT_CHECKING, VerificationType.SOURCE_CREDIBILITY],
+        verificationTypes: [
+          VerificationType.FACT_CHECKING,
+          VerificationType.SOURCE_CREDIBILITY,
+        ],
         priority: VerificationPriority.MEDIUM,
         metadata: {},
       };

@@ -281,7 +281,15 @@ describe("ProvenanceTracker Integration Tests", () => {
         validSpec.id,
         { type: "human", identifier: "dev1" },
         { type: "committed", description: "Added cursor file" },
-        { affectedFiles: [{ path: "src/cursor-file.ts", changeType: "added", linesChanged: 2 }] }
+        {
+          affectedFiles: [
+            {
+              path: "src/cursor-file.ts",
+              changeType: "added",
+              linesChanged: 2,
+            },
+          ],
+        }
       );
 
       await tracker.recordEntry(
@@ -289,7 +297,15 @@ describe("ProvenanceTracker Integration Tests", () => {
         validSpec.id,
         { type: "human", identifier: "dev2" },
         { type: "committed", description: "Added copilot file" },
-        { affectedFiles: [{ path: "src/copilot-file.ts", changeType: "added", linesChanged: 2 }] }
+        {
+          affectedFiles: [
+            {
+              path: "src/copilot-file.ts",
+              changeType: "added",
+              linesChanged: 2,
+            },
+          ],
+        }
       );
 
       const stats = await tracker.getAIAttributionStats();
@@ -802,8 +818,8 @@ describe("ProvenanceTracker Integration Tests", () => {
     });
 
     it("should handle multiple concurrent operations", async () => {
-      // Note: Due to file-based storage race conditions, not all concurrent writes 
-      // may be preserved. This is acceptable for file-based storage and would be 
+      // Note: Due to file-based storage race conditions, not all concurrent writes
+      // may be preserved. This is acceptable for file-based storage and would be
       // resolved with database-backed storage or proper locking.
       const operations = Array(10)
         .fill(null)

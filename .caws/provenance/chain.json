@@ -4926,5 +4926,41 @@
     },
     "previous_hash": "9d98cb68a728e0e4c2b85e5cdbfac2ee31047570b8919ae41c1a71ff2b9b410a",
     "hash": "a11790f79a69dfcb6bb96e029ac11fc70dd547d3a25679ea6e6448d43c6078c3"
+  },
+  {
+    "id": "prov-1760405940042",
+    "timestamp": "2025-10-14T01:39:00.042Z",
+    "commit": {
+      "hash": "df1af245a1e8727eb572c895905242f7cc9a7206",
+      "message": "feat(provenance): Fix integration tests and add unit tests for INFRA-001",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-14T01:39:00.043Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "a11790f79a69dfcb6bb96e029ac11fc70dd547d3a25679ea6e6448d43c6078c3",
+    "hash": "7d78bdd95107ecd5b8d54f4c483dbc9a583b9fc46f2119db4f655a71ea519c6b"
   }
 ]

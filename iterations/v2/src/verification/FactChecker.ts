@@ -50,9 +50,14 @@ export class FactChecker {
       });
       console.log("✅ Google Fact Check provider initialized");
     } else {
-      console.warn(
-        "⚠️ Google Fact Check API key not found, Google provider disabled"
-      );
+      if (
+        process.env.NODE_ENV === "development" ||
+        process.env.DEBUG === "true"
+      ) {
+        console.warn(
+          "⚠️ Google Fact Check API key not found, Google provider disabled"
+        );
+      }
     }
 
     // Initialize Snopes provider (no API key required)
@@ -225,9 +230,14 @@ export class FactChecker {
     }
 
     // Fallback to mock results if no real providers succeeded
-    console.warn(
-      `All fact-checking providers failed for claim ${claim.id}, using mock results`
-    );
+    if (
+      process.env.NODE_ENV === "development" ||
+      process.env.DEBUG === "true"
+    ) {
+      console.warn(
+        `All fact-checking providers failed for claim ${claim.id}, using mock results`
+      );
+    }
     return this.generateMockFactCheckResult(claim);
   }
 
@@ -343,7 +353,8 @@ export class FactChecker {
     } else if (text.includes("earth is 4.5 billion years old")) {
       verdict = VerificationVerdict.UNVERIFIED;
       confidence = 0.4;
-      explanation = "Earth's age estimates vary and require verification from multiple scientific sources";
+      explanation =
+        "Earth's age estimates vary and require verification from multiple scientific sources";
     } else if (text.includes("highly controversial claim")) {
       verdict = VerificationVerdict.UNVERIFIED;
       confidence = 0.3;

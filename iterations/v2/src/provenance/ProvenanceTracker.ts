@@ -167,7 +167,7 @@ export class ProvenanceTracker extends EventEmitter {
     // Auto-detect AI attributions if enabled
     if (this.config.enableAIAttribution && !options.aiAttributions) {
       entry.aiAttributions = await this.detectAIAttributions(entry);
-      
+
       // Store detected attributions separately for statistics
       if (entry.aiAttributions) {
         for (const attribution of entry.aiAttributions) {
@@ -604,8 +604,8 @@ export class ProvenanceTracker extends EventEmitter {
 
     try {
       // Resolve relative paths against project root
-      const fullPath = path.isAbsolute(filePath) 
-        ? filePath 
+      const fullPath = path.isAbsolute(filePath)
+        ? filePath
         : path.join(this.config.projectRoot, filePath);
       const content = await fs.readFile(fullPath, "utf-8");
 
