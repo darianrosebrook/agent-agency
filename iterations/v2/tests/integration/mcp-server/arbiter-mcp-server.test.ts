@@ -56,6 +56,22 @@ describe("Arbiter MCP Server Integration Tests", () => {
 
   beforeEach(async () => {
     await fs.mkdir(tempDir, { recursive: true });
+
+    // Create the CAWS tools directory structure
+    const cawsToolsDir = path.join(tempDir, "apps", "tools", "caws");
+    await fs.mkdir(cawsToolsDir, { recursive: true });
+
+    // Copy the allowlist file to the test directory
+    const allowlistSource = path.join(
+      __dirname,
+      "..",
+      "..",
+      "fixtures",
+      "test-allowlist.json"
+    );
+    const allowlistDest = path.join(cawsToolsDir, "tools-allow.json");
+    await fs.copyFile(allowlistSource, allowlistDest);
+
     server = new ArbiterMCPServer(tempDir);
   });
 
@@ -74,8 +90,27 @@ describe("Arbiter MCP Server Integration Tests", () => {
       expect(defaultServer).toBeInstanceOf(ArbiterMCPServer);
     });
 
-    it("should create server with custom project root", () => {
-      const customServer = new ArbiterMCPServer("/custom/path");
+    it("should create server with custom project root", async () => {
+      // Create a custom test directory with proper structure
+      const customTestDir = path.join(tempDir, "custom-test");
+      await fs.mkdir(customTestDir, { recursive: true });
+
+      // Create the CAWS tools directory structure
+      const cawsToolsDir = path.join(customTestDir, "apps", "tools", "caws");
+      await fs.mkdir(cawsToolsDir, { recursive: true });
+
+      // Copy the allowlist file to the custom test directory
+      const allowlistSource = path.join(
+        __dirname,
+        "..",
+        "..",
+        "fixtures",
+        "test-allowlist.json"
+      );
+      const allowlistDest = path.join(cawsToolsDir, "tools-allow.json");
+      await fs.copyFile(allowlistSource, allowlistDest);
+
+      const customServer = new ArbiterMCPServer(customTestDir);
       expect(customServer).toBeDefined();
       expect(customServer).toBeInstanceOf(ArbiterMCPServer);
     });

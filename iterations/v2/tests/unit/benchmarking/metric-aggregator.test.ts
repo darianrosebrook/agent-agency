@@ -19,7 +19,32 @@ describe("MetricAggregator", () => {
   let mockProfiles: AgentPerformanceProfile[];
 
   beforeEach(() => {
-    aggregator = new MetricAggregator();
+    // Use test-friendly configuration with lower sample size requirements
+    const testConfig = {
+      windows: {
+        realtime: {
+          durationMs: 5 * 60 * 1000, // 5 minutes
+          slideMs: 60 * 1000, // 1 minute
+          minSampleSize: 1, // Allow single events for testing
+        },
+        short: {
+          durationMs: 60 * 60 * 1000, // 1 hour
+          slideMs: 15 * 60 * 1000, // 15 minutes
+          minSampleSize: 1, // Allow single events for testing
+        },
+        medium: {
+          durationMs: 6 * 60 * 60 * 1000, // 6 hours
+          slideMs: 60 * 60 * 1000, // 1 hour
+          minSampleSize: 1, // Allow single events for testing
+        },
+        long: {
+          durationMs: 24 * 60 * 60 * 1000, // 24 hours
+          slideMs: 4 * 60 * 60 * 1000, // 4 hours
+          minSampleSize: 1, // Allow single events for testing
+        },
+      },
+    };
+    aggregator = new MetricAggregator(testConfig);
     mockEvents = [
       {
         id: "event-1",
@@ -282,13 +307,13 @@ describe("MetricAggregator", () => {
       });
     });
 
-    it("should filter profiles by task type", () => {
+    it("should filter profiles by task type", async () => {
       // Add events with different task types
       const codingEvent = { ...mockEvents[0], taskId: "coding-1" };
       const analysisEvent = { ...mockEvents[1], taskId: "analysis-1" };
 
       aggregator.addEvents([codingEvent, analysisEvent]);
-      aggregator.performAggregation();
+      await aggregator.performAggregation();
 
       const codingProfiles = aggregator.getPerformanceProfiles(
         "agent-1",
@@ -317,8 +342,11 @@ describe("MetricAggregator", () => {
     });
 
     it("should retrieve benchmark data within time range", () => {
-      const startTime = new Date(Date.now() - 3600000).toISOString(); // 1 hour ago
-      const endTime = new Date().toISOString();
+      // Use a wider time range to capture the aggregated data
+      const startTime = new Date(
+        Date.now() - 24 * 60 * 60 * 1000
+      ).toISOString(); // 24 hours ago
+      const endTime = new Date(Date.now() + 60 * 1000).toISOString(); // 1 minute in future
 
       const benchmarkData = aggregator.getBenchmarkData(startTime, endTime);
 
@@ -594,11 +622,10 @@ describe("MetricAggregator", () => {
         },
       };
 
-      const outliers = aggregator["detectOutliers"]([
-        normalEvent,
-        normalEvent,
-        outlierEvent,
-      ]);
+      // Create enough events to meet the minimum sample size requirement (10)
+      const events = [...Array(9).fill(normalEvent), outlierEvent];
+
+      const outliers = aggregator["detectOutliers"](events);
 
       expect(outliers).toHaveLength(1);
       expect(outliers[0].id).toBe("outlier");
@@ -739,8 +766,8 @@ describe("MetricAggregator", () => {
 
       expect(mockEmitter).toHaveBeenCalledWith(
         expect.objectContaining({
-          eventCount: 2,
-          processingTimeMs: expect.any(Number),
+          eventsProcessed: 2,
+          durationMs: expect.any(Number),
         })
       );
     });
@@ -749,13 +776,20 @@ describe("MetricAggregator", () => {
       const mockEmitter = jest.fn();
       aggregator.on("aggregation_error", mockEmitter);
 
-      // Force an error by passing invalid data
-      aggregator["aggregatedData"].set("invalid", null as any);
+      // Force an error by mocking a method to throw
+      const originalMethod = aggregator["aggregateMetrics"];
+      aggregator["aggregateMetrics"] = jest.fn().mockImplementation(() => {
+        throw new Error("Test error");
+      }) as any;
 
       aggregator.startAggregation();
+      aggregator.addEvents(mockEvents);
       await aggregator.performAggregation();
 
       expect(mockEmitter).toHaveBeenCalled();
+
+      // Restore original method
+      aggregator["aggregateMetrics"] = originalMethod;
     });
   });
 

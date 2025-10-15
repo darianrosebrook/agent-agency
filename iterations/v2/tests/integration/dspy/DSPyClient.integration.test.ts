@@ -9,8 +9,8 @@
 import type {
   JudgeEvaluationRequest,
   RubricOptimizationRequest,
-} from "@/dspy-integration/DSPyClient.js";
-import { DSPyClient } from "@/dspy-integration/DSPyClient.js";
+} from "@/dspy-integration/DSPyClient";
+import { DSPyClient } from "@/dspy-integration/DSPyClient";
 
 describe("DSPyClient Integration Tests", () => {
   let client: DSPyClient;
@@ -23,6 +23,12 @@ describe("DSPyClient Integration Tests", () => {
       timeout: 30000,
       maxRetries: 3,
     });
+  });
+
+  afterAll(async () => {
+    // Clean up client resources
+    // Note: DSPyClient may not have close method
+    jest.clearAllMocks();
   });
 
   describe("health check", () => {

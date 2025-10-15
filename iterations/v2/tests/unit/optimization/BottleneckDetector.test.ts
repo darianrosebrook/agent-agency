@@ -19,6 +19,10 @@ describe("BottleneckDetector", () => {
     detector = new BottleneckDetector();
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe("Bottleneck Detection", () => {
     it("should detect CPU bottleneck", async () => {
       const metric: PerformanceMetric = {

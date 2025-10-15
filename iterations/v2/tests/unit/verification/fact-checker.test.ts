@@ -6,7 +6,6 @@
 
 import {
   VerificationPriority,
-  VerificationPriority,
   VerificationRequest,
   VerificationType,
   VerificationVerdict,

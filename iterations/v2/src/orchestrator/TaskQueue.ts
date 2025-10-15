@@ -246,6 +246,12 @@ export class TaskQueue extends EventEmitter {
 
     return undefined;
   }
+
+  /** Get queue length (alias for size)
+   */
+  getQueueLength(): number {
+    return this.queue.length;
+  }
 }
 
 // TODO: SecureTaskQueue removed pending SecurityManager implementation

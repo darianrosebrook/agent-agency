@@ -35,6 +35,10 @@ describe("FederatedLearningEngine", () => {
     );
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe("participant registration", () => {
     it("should register tenant with federated isolation level", async () => {
       mockTenantIsolator.validateTenantAccess.mockResolvedValue({

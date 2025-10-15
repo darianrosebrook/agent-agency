@@ -6,10 +6,10 @@
  * @author @darianrosebrook
  */
 
-import type {
-  PerformanceEvent,
-  TaskExecutionData,
-} from "@/rl/PerformanceTracker";
+import type { TaskExecutionData } from "@/rl/PerformanceTracker";
+import type { TaskOutcome } from "@/types/agentic-rl";
+import type { PerformanceEvent } from "../types/performance-tracking";
+import { PerformanceEventType } from "../types/performance-tracking";
 import type { ComputeCostTracker } from "./ComputeCostTracker";
 import type { LocalModelSelector } from "./LocalModelSelector";
 import type { ModelRegistry } from "./ModelRegistry";
@@ -92,25 +92,24 @@ export class PerformanceTrackerBridge {
     // Update model performance history
     this.selector.updatePerformanceHistory(modelId, taskType, {
       quality,
-      latencyMs:
-        event.metadata?.latencyMs || event.metadata?.responseTimeMs || 0,
+      latencyMs: event.metrics.latency?.averageMs || 0,
       memoryMB: this.estimateMemoryUsage(event),
-      success: event.success,
+      success: Boolean(event.metrics.accuracy?.successRate),
     });
 
     // Record compute cost if detailed metrics available
-    if (event.metadata?.latencyMs) {
+    if (event.metrics.latency?.averageMs) {
       this.costTracker.recordOperation({
         modelId,
-        operationId: event.eventId,
-        timestamp: event.timestamp,
-        wallClockMs: event.metadata.latencyMs,
-        cpuTimeMs: event.metadata.latencyMs * 0.8, // Estimate
+        operationId: event.id,
+        timestamp: new Date(event.timestamp),
+        wallClockMs: event.metrics.latency.averageMs,
+        cpuTimeMs: event.metrics.latency.averageMs * 0.8, // Estimate
         peakMemoryMB: this.estimateMemoryUsage(event),
         avgMemoryMB: this.estimateMemoryUsage(event) * 0.8,
-        cpuUtilization: event.metadata.cpuUsage || 50,
-        inputTokens: event.metadata.inputTokens || 0,
-        outputTokens: event.metadata.outputTokens || 0,
+        cpuUtilization: event.metrics.resources?.cpuUtilizationPercent || 50,
+        inputTokens: 0, // Not available in current metrics
+        outputTokens: 0, // Not available in current metrics
         tokensPerSecond: this.calculateTokensPerSecond(event),
       });
     }
@@ -123,32 +122,40 @@ export class PerformanceTrackerBridge {
    * @param modelId Model that executed the task
    */
   recordFromTaskExecution(execution: TaskExecutionData, modelId: string): void {
-    const taskType = execution.metadata?.taskType || "unknown";
+    const taskType =
+      typeof execution.context?.taskType === "string"
+        ? execution.context.taskType
+        : "unknown";
 
-    // Calculate quality from reward/outcome
-    const quality = this.calculateQualityFromReward(execution.reward);
+    // Calculate quality from outcome
+    const quality = this.calculateQualityFromOutcome(execution.outcome);
+
+    // Calculate execution time from timestamps (timestamps are strings)
+    const executionTimeMs =
+      new Date(execution.completedAt).getTime() -
+      new Date(execution.startedAt).getTime();
 
     // Update performance history
     this.selector.updatePerformanceHistory(modelId, taskType, {
       quality,
-      latencyMs: execution.executionTimeMs,
+      latencyMs: executionTimeMs,
       memoryMB: this.estimateMemoryFromExecution(execution),
-      success: execution.success,
+      success: execution.outcome.success,
     });
 
     // Record compute cost
     this.costTracker.recordOperation({
       modelId,
       operationId: execution.executionId,
-      timestamp: execution.startedAt,
-      wallClockMs: execution.executionTimeMs,
-      cpuTimeMs: execution.executionTimeMs * 0.8,
+      timestamp: new Date(execution.startedAt),
+      wallClockMs: executionTimeMs,
+      cpuTimeMs: executionTimeMs * 0.8,
       peakMemoryMB: this.estimateMemoryFromExecution(execution),
       avgMemoryMB: this.estimateMemoryFromExecution(execution) * 0.8,
       cpuUtilization: 60, // Default estimate
       inputTokens: 100, // Would need to be extracted from execution
       outputTokens: 50, // Would need to be extracted from execution
-      tokensPerSecond: 50 / (execution.executionTimeMs / 1000),
+      tokensPerSecond: 50 / (executionTimeMs / 1000),
     });
   }
 
@@ -205,14 +212,27 @@ export class PerformanceTrackerBridge {
     // Convert to TaskExecutionData format
     const executionData: TaskExecutionData = {
       executionId: `model-${modelId}-${taskType}`,
-      taskName: taskType,
-      success: history.successRate > 0.5,
-      executionTimeMs: history.avgLatencyMs,
-      startedAt: history.lastUpdated,
-      completedAt: history.lastUpdated,
+      taskId: taskType,
       agentId: modelId,
-      reward: history.avgQuality,
-      metadata: {
+      routingDecision: {
+        taskId: taskType,
+        selectedAgent: modelId,
+        routingStrategy: "capability-match",
+        confidence: history.successRate,
+        alternativesConsidered: [],
+        rationale: `Model selection for ${taskType}`,
+        timestamp: new Date().toISOString(),
+      },
+      outcome: {
+        success: history.successRate > 0.5,
+        qualityScore: history.avgQuality,
+        efficiencyScore: 0.8, // Default efficiency
+        tokensConsumed: 100, // Default token usage
+        completionTimeMs: history.avgLatencyMs,
+      },
+      startedAt: new Date(history.lastUpdated).toISOString(),
+      completedAt: new Date(history.lastUpdated).toISOString(),
+      context: {
         modelId,
         taskType,
         avgQuality: history.avgQuality,
@@ -232,23 +252,24 @@ export class PerformanceTrackerBridge {
    * @returns Task type
    */
   private extractTaskType(event: PerformanceEvent): string {
-    // Try to extract from metadata
-    if (event.metadata?.taskType) {
-      return event.metadata.taskType;
+    // Try to extract from context
+    if (event.context?.taskType) {
+      return event.context.taskType as string;
     }
 
     // Infer from event type
-    switch (event.eventType) {
-      case "routing_decision":
+    switch (event.type) {
+      case PerformanceEventType.ROUTING_DECISION:
         return "routing";
-      case "task_execution":
+      case PerformanceEventType.TASK_EXECUTION_START:
+      case PerformanceEventType.TASK_EXECUTION_COMPLETE:
         return "execution";
-      case "thinking_budget":
-        return "thinking";
-      case "judgment":
+      case PerformanceEventType.AGENT_SELECTION:
+        return "selection";
+      case PerformanceEventType.EVALUATION_OUTCOME:
         return "judgment";
-      case "minimality_eval":
-        return "minimality";
+      case PerformanceEventType.CONSTITUTIONAL_VALIDATION:
+        return "validation";
       default:
         return "unknown";
     }
@@ -262,22 +283,29 @@ export class PerformanceTrackerBridge {
    */
   private calculateQualityFromEvent(event: PerformanceEvent): number {
     // If event has explicit quality/score
-    if (event.metadata?.quality !== undefined) {
-      return event.metadata.quality;
+    if (
+      event.context?.quality !== undefined &&
+      typeof event.context.quality === "number"
+    ) {
+      return event.context.quality;
     }
 
-    if (event.metadata?.score !== undefined) {
-      return event.metadata.score;
+    if (
+      event.context?.score !== undefined &&
+      typeof event.context.score === "number"
+    ) {
+      return event.context.score;
     }
 
     // Calculate based on success and other metrics
-    if (!event.success) {
+    if (event.metrics.accuracy?.successRate === 0) {
       return 0.3; // Low quality for failures
     }
 
     // Use latency as proxy (faster = better, within reason)
-    const latency = event.metadata?.latencyMs || event.metadata?.responseTimeMs;
-    if (latency) {
+    const latency =
+      event.metrics.latency?.averageMs || event.metrics.latency?.p95Ms;
+    if (latency && typeof latency === "number") {
       // Good quality for fast responses (< 1s)
       if (latency < 1000) {
         return 0.9;
@@ -310,24 +338,38 @@ export class PerformanceTrackerBridge {
   }
 
   /**
+   * Calculates quality from task outcome
+   *
+   * @param outcome Task outcome
+   * @returns Quality score (0-1)
+   */
+  private calculateQualityFromOutcome(outcome: TaskOutcome): number {
+    if (outcome.success) {
+      return outcome.qualityScore || 0.8; // High quality for successful tasks
+    }
+    return 0.3; // Low quality for failed tasks
+  }
+
+  /**
    * Estimates memory usage from performance event
    *
    * @param event Performance event
    * @returns Memory usage in MB
    */
   private estimateMemoryUsage(event: PerformanceEvent): number {
-    if (event.metadata?.memoryMB) {
-      return event.metadata.memoryMB;
+    if (event.context?.memoryMB && typeof event.context.memoryMB === "number") {
+      return event.context.memoryMB;
     }
 
     // Estimate based on event type
-    switch (event.eventType) {
-      case "judgment":
+    switch (event.type) {
+      case PerformanceEventType.EVALUATION_OUTCOME:
         return 256; // LLM judgments typically use moderate memory
-      case "task_execution":
+      case PerformanceEventType.TASK_EXECUTION_START:
+      case PerformanceEventType.TASK_EXECUTION_COMPLETE:
         return 512; // Task executions may use more
-      case "thinking_budget":
-        return 128; // Thinking is lightweight
+      case PerformanceEventType.AGENT_SELECTION:
+        return 128; // Selection is lightweight
       default:
         return 200; // Default estimate
     }
@@ -340,15 +382,22 @@ export class PerformanceTrackerBridge {
    * @returns Memory usage in MB
    */
   private estimateMemoryFromExecution(execution: TaskExecutionData): number {
-    if (execution.metadata?.memoryMB) {
-      return execution.metadata.memoryMB;
+    if (
+      execution.context?.memoryMB !== undefined &&
+      execution.context?.memoryMB !== null &&
+      typeof execution.context.memoryMB === "number"
+    ) {
+      return execution.context.memoryMB;
     }
 
     // Estimate based on execution time (longer tasks may use more memory)
-    if (execution.executionTimeMs > 5000) {
+    const executionTimeMs =
+      new Date(execution.completedAt).getTime() -
+      new Date(execution.startedAt).getTime();
+    if (executionTimeMs > 5000) {
       return 512;
     }
-    if (execution.executionTimeMs > 1000) {
+    if (executionTimeMs > 1000) {
       return 256;
     }
     return 128;
@@ -361,9 +410,13 @@ export class PerformanceTrackerBridge {
    * @returns Tokens per second
    */
   private calculateTokensPerSecond(event: PerformanceEvent): number {
-    const outputTokens = event.metadata?.outputTokens || 50;
+    const outputTokens =
+      event.context?.outputTokens &&
+      typeof event.context.outputTokens === "number"
+        ? event.context.outputTokens
+        : 50;
     const latencyMs =
-      event.metadata?.latencyMs || event.metadata?.responseTimeMs || 1000;
+      event.metrics.latency?.averageMs || event.metrics.latency?.p95Ms || 1000;
     return outputTokens / (latencyMs / 1000);
   }
 }

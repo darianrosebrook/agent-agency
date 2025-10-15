@@ -68,6 +68,15 @@ describe("ArbiterOrchestrator", () => {
     }
   });
 
+  afterAll(async () => {
+    // Ensure EventEmitter is properly shut down
+    try {
+      events.shutdown();
+    } catch (error) {
+      // Ignore shutdown errors
+    }
+  });
+
   describe("Basic Functionality", () => {
     it("should initialize without throwing", async () => {
       // Just test that initialization doesn't throw
@@ -277,7 +286,4 @@ describe("ArbiterOrchestrator", () => {
     });
   });
 
-  afterAll(() => {
-    events.shutdown();
-  });
 });

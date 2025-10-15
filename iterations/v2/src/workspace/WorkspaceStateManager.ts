@@ -30,6 +30,7 @@ export class WorkspaceStateManager extends EventEmitter {
   private persistence?: StatePersistence;
   private isInitialized = false;
   private metrics: WorkspaceMetrics;
+  private metricsTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(config: WorkspaceStateConfig, persistence?: StatePersistence) {
     super();
@@ -127,6 +128,12 @@ export class WorkspaceStateManager extends EventEmitter {
     }
 
     try {
+      // Clear metrics timer
+      if (this.metricsTimer) {
+        clearInterval(this.metricsTimer);
+        this.metricsTimer = null;
+      }
+
       // Persist current state if enabled
       if (this.persistence && this.config.enablePersistence) {
         await this.persistCurrentState();
@@ -457,7 +464,13 @@ export class WorkspaceStateManager extends EventEmitter {
    * Setup periodic metrics updates
    */
   private setupMetricsTimer(): void {
-    setInterval(() => {
+    // Clear any existing timer first to prevent multiple timers
+    if (this.metricsTimer) {
+      clearInterval(this.metricsTimer);
+      this.metricsTimer = null;
+    }
+
+    this.metricsTimer = setInterval(() => {
       // Update memory metrics
       const memUsage = process.memoryUsage();
       this.metrics.memory = {

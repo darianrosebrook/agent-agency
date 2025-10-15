@@ -449,7 +449,7 @@ export class PerformanceAnalyzer extends EventEmitter {
   private calculateMetricTrend(
     metrics: AgentPerformanceProfile[],
     category: keyof PerformanceMetrics,
-    extractor: (m: PerformanceMetrics) => number
+    extractor: (_m: PerformanceMetrics) => number
   ): PerformanceTrend {
     const values = metrics.map((m) => ({
       value: extractor(m.metrics[category] as any),
@@ -760,7 +760,7 @@ export class PerformanceAnalyzer extends EventEmitter {
    */
   private checkResourceSaturation(
     profile: AgentPerformanceProfile,
-    state: AgentAnalysisState
+    _state: AgentAnalysisState
   ): PerformanceAnomaly | null {
     const resources = profile.metrics.resources;
     const saturationPercent = Math.max(
@@ -1051,7 +1051,7 @@ export class PerformanceAnalyzer extends EventEmitter {
    * Sets up event handlers for internal events.
    */
   private setupEventHandlers(): void {
-    this.on("analysis_completed", (stats) => {
+    this.on("analysis_completed", (_stats) => {
       // Could trigger dashboard updates or notifications
     });
 

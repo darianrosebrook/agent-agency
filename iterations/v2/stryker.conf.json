@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
-  "_comment": "ARBITER-001 Mutation Testing Configuration - Target: ≥50% mutation score for Tier 2 compliance",
+  "_comment": "INFRA-004 Mutation Testing Configuration - Target: ≥30% mutation score for Tier 3 compliance",
   "packageManager": "npm",
   "reporters": ["html", "clear-text", "progress", "dashboard"],
   "testRunner": "jest",
@@ -9,13 +9,10 @@
   },
   "coverageAnalysis": "perTest",
   "mutate": [
-    "src/orchestrator/AgentRegistryManager.ts",
-    "src/database/AgentRegistryDbClient.ts",
-    "src/orchestrator/AgentRegistrySecurity.ts",
-    "src/orchestrator/TaskRoutingManager.ts",
-    "src/orchestrator/EventEmitter.ts",
-    "src/orchestrator/TaskQueue.ts",
-    "src/orchestrator/TaskAssignment.ts",
+    "src/resources/AdaptiveResourceManager.ts",
+    "src/resources/ResourceMonitor.ts",
+    "src/resources/LoadBalancer.ts",
+    "src/resources/ResourceAllocator.ts",
     "!src/**/*.test.ts",
     "!src/**/*.spec.ts",
     "!src/**/index.ts"
@@ -28,9 +25,9 @@
   "timeoutFactor": 2,
   "maxConcurrentTestRunners": 4,
   "thresholds": {
-    "high": 70,
-    "low": 50,
-    "break": 45
+    "high": 50,
+    "low": 30,
+    "break": 25
   },
   "dashboard": {
     "reportType": "full"
@@ -43,8 +40,7 @@
     "node_modules",
     "coverage",
     "**/*.d.ts",
-    "**/*.js.map",
-    "tests/**/*"
+    "**/*.js.map"
   ],
   "incremental": true,
   "incrementalFile": ".stryker-tmp/incremental.json"

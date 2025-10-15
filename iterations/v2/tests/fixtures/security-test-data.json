@@ -1,0 +1,58 @@
+{
+  "testPolicies": [
+    {
+      "id": "test-policy-1",
+      "name": "Test Security Policy",
+      "description": "Test policy for unit tests",
+      "rules": [
+        {
+          "id": "rule-1",
+          "condition": "user.role == 'admin'",
+          "action": "allow",
+          "priority": 1
+        }
+      ],
+      "defaultAction": "deny",
+      "severity": "medium",
+      "enabled": true,
+      "version": "1.0.0",
+      "createdAt": "2024-01-01T00:00:00Z",
+      "updatedAt": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "testSecurityContexts": [
+    {
+      "agentId": "test-agent-1",
+      "userId": "test-user-1",
+      "tenantId": "test-tenant-1",
+      "permissions": ["read", "write"],
+      "securityLevel": "internal",
+      "authenticatedAt": "2024-01-01T00:00:00Z",
+      "expiresAt": "2024-01-01T01:00:00Z",
+      "metadata": {
+        "ipAddress": "127.0.0.1",
+        "userAgent": "TestAgent/1.0",
+        "source": "test"
+      }
+    }
+  ],
+  "testThreatPatterns": [
+    {
+      "id": "pattern-1",
+      "name": "SQL Injection",
+      "pattern": "(?i)(union|select|insert|update|delete|drop|create|alter)\\s+",
+      "type": "sql_injection",
+      "severity": "high",
+      "enabled": true
+    },
+    {
+      "id": "pattern-2",
+      "name": "XSS Attack",
+      "pattern": "(?i)<script[^>]*>.*?</script>",
+      "type": "xss",
+      "severity": "high",
+      "enabled": true
+    }
+  ]
+}
+

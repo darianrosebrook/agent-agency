@@ -32,19 +32,12 @@ export class ContentExtractor {
   private httpClient: AxiosInstance;
   private robotsTxtCache: Map<string, { allowed: boolean; expiresAt: Date }>;
 
-  constructor(
-    private readonly config: {
-      userAgent: string;
-      timeoutMs: number;
-      maxRedirects: number;
-      verifySsl: boolean;
-    }
-  ) {
+  constructor(private readonly config: ContentExtractionConfig) {
     this.httpClient = axios.create({
-      timeout: config.timeoutMs,
-      maxRedirects: config.maxRedirects,
+      timeout: config.timeoutMs || 30000,
+      maxRedirects: config.maxRedirects || 5,
       headers: {
-        "User-Agent": config.userAgent,
+        "User-Agent": config.userAgent || "ContentExtractor/1.0",
       },
       validateStatus: (status) => status < 600, // Accept all status codes
     });
@@ -63,7 +56,7 @@ export class ContentExtractor {
     this.validateUrl(url);
 
     // Check robots.txt if required
-    if (config.security.respectRobotsTxt) {
+    if (config.security?.respectRobotsTxt) {
       const allowed = await this.checkRobotsTxt(url, config.security.userAgent);
       if (!allowed) {
         throw new Error(`robots.txt disallows crawling ${url}`);
@@ -71,7 +64,16 @@ export class ContentExtractor {
     }
 
     // Fetch content
-    const response = await this.fetchUrl(url, config.security);
+    const securityContext = config.security || {
+      verifySsl: true,
+      sanitizeHtml: true,
+      detectMalicious: false,
+      followRedirects: true,
+      maxRedirects: 3,
+      userAgent: "ContentExtractor/1.0",
+      respectRobotsTxt: true,
+    };
+    const response = await this.fetchUrl(url, securityContext);
 
     // Parse HTML
     const $ = cheerio.load(response.data);
@@ -85,12 +87,15 @@ export class ContentExtractor {
     }
 
     // Sanitize content if required
-    if (config.security.sanitizeHtml) {
+    if (config.security?.sanitizeHtml) {
       extractedContent = this.sanitizeHtml(extractedContent);
     }
 
     // Enforce max length
-    if (extractedContent.length > config.maxContentLength) {
+    if (
+      config.maxContentLength &&
+      extractedContent.length > config.maxContentLength
+    ) {
       extractedContent = extractedContent.substring(0, config.maxContentLength);
     }
 
@@ -108,7 +113,7 @@ export class ContentExtractor {
     const metadata = this.extractMetadata($, url, response);
 
     // Detect malicious content if required
-    if (config.security.detectMalicious) {
+    if (config.security?.detectMalicious) {
       const isMalicious = this.detectMaliciousContent(extractedContent, $);
       if (isMalicious) {
         throw new Error(`Malicious content detected at ${url}`);

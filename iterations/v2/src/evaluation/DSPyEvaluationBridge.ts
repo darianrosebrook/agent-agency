@@ -11,9 +11,9 @@ import {
   DSPyClient,
   JudgeEvaluationRequest,
   RubricOptimizationRequest,
-} from "@/dspy-integration/index.js";
-import { Logger } from "@/observability/Logger.js";
-import { ModelBasedJudge } from "./ModelBasedJudge.js";
+} from "@/dspy-integration";
+import { Logger } from "@/observability/Logger";
+import { ModelBasedJudge } from "./ModelBasedJudge";
 
 /**
  * Configuration for DSPy evaluation bridge
@@ -76,7 +76,7 @@ export class DSPyEvaluationBridge {
       maxRetries: 3,
     });
 
-    this.logger = new Logger({ context: "DSPyEvaluationBridge" });
+    this.logger = new Logger("DSPyEvaluationBridge");
   }
 
   /**
@@ -259,18 +259,22 @@ export class DSPyEvaluationBridge {
   }> {
     // Use existing ModelBasedJudge
     const result = await this.existingJudge.evaluate({
-      type: judgeType as "relevance" | "faithfulness" | "minimality" | "safety",
-      artifact,
-      reference: groundTruth,
-      context,
+      task: judgeType,
+      output: artifact,
+      expectedOutput: groundTruth,
+      context: { text: context },
     });
 
     return {
-      judgment: result.verdict,
-      confidence: result.confidence,
-      reasoning: result.reasoning,
+      judgment: result.allCriteriaPass ? "PASS" : "FAIL",
+      confidence: result.overallConfidence,
+      reasoning: result.assessments
+        .map((a) => `${a.criterion}: ${a.reasoning}`)
+        .join("; "),
       metadata: {
         dspyEnhanced: false,
+        overallScore: result.overallScore,
+        assessments: result.assessments,
       },
     };
   }

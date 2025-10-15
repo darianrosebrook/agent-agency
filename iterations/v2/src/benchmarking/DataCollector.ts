@@ -586,7 +586,7 @@ export class DataCollector extends EventEmitter {
     }
 
     // Emit buffer full warning if approaching capacity
-    if (this.buffer.length > this.config.maxBufferSize * 0.9) {
+    if (this.buffer.length >= this.config.maxBufferSize * 0.9) {
       this.emit("buffer_high_water_mark", this.buffer.length);
     }
   }

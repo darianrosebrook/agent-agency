@@ -221,6 +221,15 @@ describe("RLDataPipeline", () => {
     });
 
     it("should process events and generate samples", async () => {
+      // Use smaller batch configuration for testing
+      pipeline.updateConfig({
+        batching: {
+          maxBatchSize: 2, // Small enough to trigger batch completion
+          maxBatchAgeMinutes: 1,
+          minBatchSize: 1,
+        },
+      });
+
       const result = await pipeline.processEvents(mockEvents, mockProfiles);
 
       expect(result.samplesGenerated).toBeGreaterThan(0);
@@ -472,8 +481,8 @@ describe("RLDataPipeline", () => {
     it("should determine batch completion timing", () => {
       const state = {
         agentId: "agent-1",
-        recentSamples: [],
-        pendingBatch: [],
+        recentSamples: [] as RLTrainingSample[],
+        pendingBatch: [] as RLTrainingSample[],
         batchStartTime: new Date().toISOString(),
         lastProcessedEvent: new Date().toISOString(),
         performanceHistory: mockProfiles,

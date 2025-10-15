@@ -78,13 +78,13 @@ export { EvidenceAggregator } from "../reasoning/EvidenceAggregator";
  * Multi-Agent Coordination Components
  */
 export { AgentCoordinator } from "../reasoning/AgentCoordinator";
-export type { AssignmentStrategy } from "../reasoning/AgentCoordinator";
+export type {
+  AgentCapability,
+  AgentCoordinatorConfig,
+  LoadBalancingStrategy,
+} from "../reasoning/AgentCoordinator";
 
 export { TurnManager } from "../reasoning/TurnManager";
-export type {
-  FairnessPolicy,
-  TurnSchedulingAlgorithm,
-} from "../reasoning/TurnManager";
 
 export { AppealHandler } from "../reasoning/AppealHandler";
 export { DeadlockResolver } from "../reasoning/DeadlockResolver";
@@ -93,27 +93,15 @@ export { DeadlockResolver } from "../reasoning/DeadlockResolver";
 // Shared Types
 // ============================================================================
 
+// Arbitration types
 export type {
-  AgentCapability,
-  AgentRole,
   Appeal,
   AppealStatus,
   ArbitrationProtocolConfig,
-  // Arbitration Types
   ArbitrationSession,
   ArbitrationState,
-  ConsensusAlgorithm,
-  ConsensusResult,
   ConstitutionalRule,
   ConstitutionalViolation,
-  DebateArgument,
-  DebateConfig,
-  DebateEvidence,
-  DebateParticipant,
-  // Reasoning Types
-  DebateSession,
-  DebateState,
-  DebateVote,
   Precedent,
   PrecedentApplicability,
   ReasoningStep,
@@ -127,18 +115,18 @@ export type {
   WaiverStatus,
 } from "@/types/arbitration";
 
+// Reasoning/Debate types
 export type {
-  AgentCapability as ReasoningAgentCapability,
-  AgentRole as ReasoningAgentRole,
-  ConsensusAlgorithm as ReasoningConsensusAlgorithm,
-  ConsensusResult as ReasoningConsensusResult,
-  DebateArgument as ReasoningDebateArgument,
-  DebateConfig as ReasoningDebateConfig,
-  DebateEvidence as ReasoningDebateEvidence,
-  DebateParticipant as ReasoningDebateParticipant,
-  DebateSession as ReasoningDebateSession,
-  DebateState as ReasoningDebateState,
-  DebateVote as ReasoningDebateVote,
+  AgentRole,
+  ConsensusAlgorithm,
+  ConsensusResult,
+  Argument as DebateArgument,
+  DebateConfig,
+  Evidence as DebateEvidence,
+  DebateParticipant,
+  DebateSession,
+  DebateState,
+  DebateVote,
 } from "@/types/reasoning";
 
 // Error classes

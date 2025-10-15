@@ -95,6 +95,8 @@ export class AdaptiveResourceManager implements IAdaptiveResourceManager {
    * Initialize the resource manager
    */
   async initialize(): Promise<void> {
+    // Stop monitor first to prevent multiple timers
+    await this.resourceMonitor.stop();
     await this.resourceMonitor.start();
 
     this.logger.info("Adaptive resource manager initialized", {

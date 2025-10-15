@@ -459,6 +459,12 @@ export class SystemCoordinator extends EventEmitter {
    * Start health monitoring
    */
   private startHealthMonitoring(): void {
+    // Clear any existing timer first to prevent multiple timers
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = undefined;
+    }
+
     this.healthCheckInterval = setInterval(async () => {
       await this.performHealthChecks();
     }, this.config.healthCheckInterval);

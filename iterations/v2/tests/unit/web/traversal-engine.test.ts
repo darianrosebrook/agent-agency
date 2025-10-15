@@ -7,12 +7,23 @@
  */
 
 import axios from "axios";
-import { TraversalConfig } from "../../../src/types/web";
+import { TraversalConfig, TraversalStrategy } from "../../../src/types/web";
 import { TraversalEngine } from "../../../src/web/TraversalEngine";
 
 // Mock axios
 jest.mock("axios");
 const mockedAxios = axios as jest.Mocked<typeof axios>;
+
+// Mock HTML content for testing
+const mockHtml = `
+  <html>
+    <body>
+      <a href="/page1">Internal Link 1</a>
+      <a href="https://example.com/page2">Internal Link 2</a>
+      <a href="https://external.com/page3">External Link</a>
+    </body>
+  </html>
+`;
 
 describe("TraversalEngine", () => {
   let traversalEngine: TraversalEngine;
@@ -22,6 +33,8 @@ describe("TraversalEngine", () => {
     mockConfig = {
       maxDepth: 3,
       maxPages: 10,
+      strategy: TraversalStrategy.BREADTH_FIRST,
+      sameDomainOnly: true,
       maxConcurrentRequests: 2,
       delayMs: 100,
       timeoutMs: 5000,
@@ -38,6 +51,10 @@ describe("TraversalEngine", () => {
     traversalEngine = new TraversalEngine(mockConfig);
 
     // Reset all mocks
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
     jest.clearAllMocks();
   });
 
@@ -63,19 +80,6 @@ describe("TraversalEngine", () => {
   });
 
   describe("link traversal", () => {
-    const mockHtml = `
-      <html>
-        <body>
-          <a href="/page1">Internal Link 1</a>
-          <a href="https://example.com/page2">Internal Link 2</a>
-          <a href="https://external.com/page3">External Link</a>
-          <a href="https://spam.com/page4">Blocked Link</a>
-          <a href="#anchor">Anchor Link</a>
-          <a href="mailto:test@example.com">Email Link</a>
-        </body>
-      </html>
-    `;
-
     beforeEach(() => {
       mockedAxios.get.mockResolvedValue({
         data: mockHtml,
@@ -358,7 +362,7 @@ describe("TraversalEngine", () => {
       const result = await traversalEngine.traverse("https://slow-site.com");
 
       expect(result.nodes[0].error).toBeDefined();
-      expect(result.nodes[0].error.message).toContain("timeout");
+      expect((result.nodes[0].error as Error).message).toContain("timeout");
     });
 
     it("should continue traversal after individual failures", async () => {
@@ -405,7 +409,7 @@ describe("TraversalEngine", () => {
       );
 
       expect(result.nodes[0]).toBeDefined();
-      expect(result.nodes[0].content.title).toBe("Test");
+      expect(result.nodes[0].title).toBe("Test");
     });
   });
 

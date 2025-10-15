@@ -6,27 +6,24 @@
  * @author @darianrosebrook
  */
 
-import { DSPyEvaluationBridge } from "@/evaluation/DSPyEvaluationBridge.js";
-import { LLMProvider } from "@/evaluation/LLMProvider.js";
-import { ModelBasedJudge } from "@/evaluation/ModelBasedJudge.js";
+import { DSPyEvaluationBridge } from "@/evaluation/DSPyEvaluationBridge";
+import { ModelBasedJudge } from "@/evaluation/ModelBasedJudge";
 
 describe("DSPyEvaluationBridge Integration Tests", () => {
   let bridge: DSPyEvaluationBridge;
   let mockJudge: ModelBasedJudge;
 
   beforeAll(() => {
-    // Create mock existing judge
-    const llmProvider = new LLMProvider({
-      provider: "openai",
-      model: "gpt-4-turbo-preview",
-      apiKey: process.env.OPENAI_API_KEY ?? "test",
-    });
+    // Create mock existing judge with mock LLM provider
+    const mockLLMProvider = {
+      generate: jest.fn().mockResolvedValue({ text: "Mock response" }),
+    } as any;
 
     mockJudge = new ModelBasedJudge({
-      llmProvider,
+      llmProvider: mockLLMProvider,
       judgeType: "relevance",
       confidenceThreshold: 0.7,
-    });
+    } as any);
 
     // Create bridge
     bridge = new DSPyEvaluationBridge(
@@ -37,6 +34,14 @@ describe("DSPyEvaluationBridge Integration Tests", () => {
       },
       mockJudge
     );
+  });
+
+  afterAll(async () => {
+    // Clean up any resources
+    if (bridge) {
+      // Add cleanup logic if the bridge has cleanup methods
+    }
+    jest.clearAllMocks();
   });
 
   describe("rubric evaluation", () => {
@@ -142,10 +147,10 @@ describe("DSPyEvaluationBridge Integration Tests", () => {
       ];
 
       const results = await Promise.all(
-        evaluations.map((eval) =>
+        evaluations.map((evaluation) =>
           bridge.evaluateWithJudge(
-            eval.type,
-            eval.artifact,
+            evaluation.type,
+            evaluation.artifact,
             "Ground truth",
             "Context"
           )

@@ -9,20 +9,18 @@
 
 import jwt from "jsonwebtoken";
 import { AgentProfile } from "../types/agent-registry.js";
+import {
+  SecurityContext,
+  SecurityLevel,
+  ViolationSeverity,
+} from "../types/security-policy";
 import { Logger } from "../utils/Logger.js";
 
 // Re-export commonly used types
 export { VerificationPriority } from "../types/verification";
 
-export interface SecurityContext {
-  tenantId: string;
-  userId: string;
-  roles: string[];
-  permissions: string[];
-  sessionId: string;
-  ipAddress?: string;
-  userAgent?: string;
-}
+// Re-export for backward compatibility
+export { SecurityContext, SecurityLevel, ViolationSeverity };
 
 export interface ValidationResult {
   valid: boolean;
@@ -172,6 +170,7 @@ export class AgentRegistrySecurity {
 
       // Create security context from JWT payload
       const context: SecurityContext = {
+        agentId: decoded.agentId || decoded.sub || "unknown-agent",
         tenantId: decoded.tenantId || decoded.tid || "default-tenant",
         userId: decoded.userId || decoded.sub || decoded.uid || "unknown-user",
         roles: decoded.roles || ["agent-registry-user"],
@@ -181,6 +180,14 @@ export class AgentRegistrySecurity {
           "agent:update",
         ],
         sessionId: this.generateId(),
+        securityLevel: SecurityLevel.INTERNAL,
+        authenticatedAt: new Date(),
+        expiresAt: new Date(Date.now() + 3600000), // 1 hour
+        metadata: {
+          ipAddress: "unknown",
+          userAgent: "unknown",
+          source: "jwt",
+        },
         ipAddress: "unknown",
         userAgent: "unknown",
       };
@@ -773,11 +780,20 @@ export class AgentRegistrySecurity {
    */
   private createMockSecurityContext(token: string): SecurityContext {
     return {
-      tenantId: this.extractTenantFromToken(token) || "default-tenant",
+      agentId: "mock-agent",
       userId: this.extractUserFromToken(token) || "mock-user",
-      roles: ["agent-registry-user"],
-      permissions: ["agent:read", "agent:create", "agent:update"],
+      tenantId: this.extractTenantFromToken(token) || "default-tenant",
       sessionId: this.generateId(),
+      permissions: ["agent:read", "agent:create", "agent:update"],
+      roles: ["mock-role"],
+      securityLevel: SecurityLevel.INTERNAL,
+      authenticatedAt: new Date(),
+      expiresAt: new Date(Date.now() + 3600000), // 1 hour
+      metadata: {
+        ipAddress: "127.0.0.1",
+        userAgent: "MockAgent/1.0",
+        source: "test",
+      },
       ipAddress: "127.0.0.1",
       userAgent: "MockAgent/1.0",
     };
@@ -788,12 +804,7 @@ export class AgentRegistrySecurity {
    */
   private validateSecurityContext(context: SecurityContext): boolean {
     // Basic validation
-    if (!context.tenantId || !context.userId) {
-      return false;
-    }
-
-    // Validate roles array
-    if (!Array.isArray(context.roles) || context.roles.length === 0) {
+    if (!context.tenantId || !context.userId || !context.agentId) {
       return false;
     }
 
@@ -814,6 +825,11 @@ export class AgentRegistrySecurity {
       this.config.allowedTenantIds &&
       !this.config.allowedTenantIds.includes(context.tenantId)
     ) {
+      return false;
+    }
+
+    // Check session expiry
+    if (context.expiresAt && Date.now() > context.expiresAt.getTime()) {
       return false;
     }
 

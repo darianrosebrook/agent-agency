@@ -12,6 +12,14 @@ import {
 } from "@/types/reasoning";
 
 describe("DebateStateMachine", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  afterAll(() => {
+    // Final cleanup
+    jest.clearAllMocks();
+  });
   describe("canTransition", () => {
     it("should allow valid state transitions", () => {
       const session = createTestSession(DebateState.INITIALIZED);

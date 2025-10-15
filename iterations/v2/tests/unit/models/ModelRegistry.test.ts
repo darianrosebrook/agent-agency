@@ -21,6 +21,10 @@ describe("ModelRegistry", () => {
     registry = new ModelRegistry();
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe("Model Registration", () => {
     it("should register a new Ollama model", async () => {
       const request: ModelRegistrationRequest = {
@@ -35,7 +39,7 @@ describe("ModelRegistry", () => {
           supportsStreaming: true,
           supportsBatching: false,
           quantization: "4bit",
-        },
+        } as unknown as OllamaModelConfig,
         validate: true,
         profile: false,
       };
@@ -64,7 +68,7 @@ describe("ModelRegistry", () => {
           supportsStreaming: true,
           supportsBatching: false,
           quantization: "4bit",
-        },
+        } as unknown as OllamaModelConfig,
         validate: false,
       };
 
@@ -93,7 +97,7 @@ describe("ModelRegistry", () => {
           supportsStreaming: true,
           supportsBatching: false,
           quantization: "4bit",
-        },
+        } as unknown as OllamaModelConfig,
         validate: true,
       };
 
@@ -118,7 +122,7 @@ describe("ModelRegistry", () => {
           supportsStreaming: true,
           supportsBatching: false,
           quantization: "4bit",
-        },
+        } as unknown as OllamaModelConfig,
         validate: true,
       };
 
@@ -140,7 +144,7 @@ describe("ModelRegistry", () => {
           supportsStreaming: true,
           supportsBatching: false,
           quantization: "4bit",
-        },
+        } as unknown as OllamaModelConfig,
         validate: true,
       };
 
@@ -162,7 +166,7 @@ describe("ModelRegistry", () => {
           supportsStreaming: true,
           supportsBatching: false,
           quantization: "4bit",
-        },
+        } as unknown as OllamaModelConfig,
         validate: true,
       };
 
@@ -184,7 +188,7 @@ describe("ModelRegistry", () => {
           supportsStreaming: true,
           supportsBatching: false,
           quantization: "4bit",
-        },
+        } as unknown as OllamaModelConfig,
         validate: true,
       };
 
@@ -206,7 +210,7 @@ describe("ModelRegistry", () => {
           supportsStreaming: true,
           supportsBatching: false,
           quantization: "4bit",
-        },
+        } as unknown as OllamaModelConfig,
         validate: false,
       };
 

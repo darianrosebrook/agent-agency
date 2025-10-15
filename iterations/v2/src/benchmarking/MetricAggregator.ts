@@ -336,6 +336,7 @@ export class MetricAggregator extends EventEmitter {
   clearData(): void {
     this.aggregatedData.clear();
     this.eventBuffer = [];
+    this.isAggregating = false;
     this.emit("data_cleared");
   }
 
@@ -492,13 +493,24 @@ export class MetricAggregator extends EventEmitter {
     const sorted = latencyValues.sort((a, b) => a - b);
     const average =
       latencyValues.reduce((sum, val) => sum + val, 0) / latencyValues.length;
-    const p95Index = Math.floor(sorted.length * 0.95);
-    const p99Index = Math.floor(sorted.length * 0.99);
+
+    // Calculate percentiles with proper bounds checking
+    const p95Index = Math.max(
+      0,
+      Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))
+    );
+    const p99Index = Math.max(
+      0,
+      Math.min(sorted.length - 1, Math.floor(sorted.length * 0.99))
+    );
+
+    const p95Ms = sorted[p95Index];
+    const p99Ms = Math.max(p95Ms, sorted[p99Index]); // Ensure p99 >= p95
 
     return {
       averageMs: this.applyAnonymizationNoise(average),
-      p95Ms: this.applyAnonymizationNoise(sorted[p95Index] || average),
-      p99Ms: this.applyAnonymizationNoise(sorted[p99Index] || average),
+      p95Ms: this.applyAnonymizationNoise(p95Ms),
+      p99Ms: this.applyAnonymizationNoise(p99Ms),
       minMs: this.applyAnonymizationNoise(sorted[0]),
       maxMs: this.applyAnonymizationNoise(sorted[sorted.length - 1]),
     };
@@ -584,14 +596,20 @@ export class MetricAggregator extends EventEmitter {
     const severityScores = validEvents.map((c) => c.violationSeverityScore);
     const citationRates = validEvents.map((c) => c.clauseCitationRate);
 
+    const avgPassRate = Math.min(1, Math.max(0, this.average(passRates)));
+    const avgSeverityScore = Math.min(
+      1,
+      Math.max(0, this.average(severityScores))
+    );
+    const avgCitationRate = Math.min(
+      1,
+      Math.max(0, this.average(citationRates))
+    );
+
     return {
-      validationPassRate: this.applyAnonymizationNoise(this.average(passRates)),
-      violationSeverityScore: this.applyAnonymizationNoise(
-        this.average(severityScores)
-      ),
-      clauseCitationRate: this.applyAnonymizationNoise(
-        this.average(citationRates)
-      ),
+      validationPassRate: this.applyAnonymizationNoise(avgPassRate),
+      violationSeverityScore: this.applyAnonymizationNoise(avgSeverityScore),
+      clauseCitationRate: this.applyAnonymizationNoise(avgCitationRate),
     };
   }
 
@@ -640,8 +658,15 @@ export class MetricAggregator extends EventEmitter {
       taskEvents.length > 0 ? successfulTasks.length / taskEvents.length : 0;
     const availabilityPercent = successRate * 100;
 
+    // Calculate MTBF more realistically
+    // If no tasks, assume baseline reliability
+    const mtbfHours =
+      taskEvents.length > 0
+        ? Math.max(1, 24 * successRate) // Minimum 1 hour MTBF
+        : 24; // Default 24 hours when no data
+
     return {
-      mtbfHours: 24 * successRate, // Simplified: higher success rate = higher MTBF
+      mtbfHours: this.applyAnonymizationNoise(mtbfHours),
       availabilityPercent: this.applyAnonymizationNoise(availabilityPercent),
       errorRatePercent: this.applyAnonymizationNoise((1 - successRate) * 100),
       recoveryTimeMinutes: this.applyAnonymizationNoise(

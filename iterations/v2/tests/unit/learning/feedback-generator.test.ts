@@ -19,6 +19,10 @@ describe("FeedbackGenerator", () => {
     generator = new FeedbackGenerator();
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe("initialization", () => {
     it("should initialize with empty state", () => {
       expect(generator).toBeDefined();

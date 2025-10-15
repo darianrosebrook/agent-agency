@@ -8,16 +8,27 @@
  */
 
 import { TerminalSessionManager } from "../../orchestrator/TerminalSessionManager";
+import type { MCPToolResponse } from "../types/mcp-types";
 import type {
   MCPCloseSessionArgs,
-  MCPCloseSessionResponse,
   MCPCreateSessionArgs,
-  MCPCreateSessionResponse,
   MCPExecuteCommandArgs,
-  MCPExecuteCommandResponse,
   MCPGetStatusArgs,
-  MCPGetStatusResponse,
 } from "../types/terminal-types";
+
+/**
+ * Helper function to wrap response data in MCP format
+ */
+function createMCPResponse(data: any): MCPToolResponse {
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(data),
+      },
+    ],
+  };
+}
 
 /**
  * Handle terminal_create_session tool call
@@ -27,15 +38,15 @@ import type {
 export async function handleTerminalCreateSession(
   sessionManager: TerminalSessionManager,
   args: MCPCreateSessionArgs
-): Promise<MCPCreateSessionResponse> {
+): Promise<MCPToolResponse> {
   try {
     // Validate required parameters
     if (!args.taskId || !args.agentId) {
-      return {
+      return createMCPResponse({
         success: false,
         error: "INVALID_PARAMETERS",
         message: "taskId and agentId are required",
-      };
+      });
     }
 
     // Create the session
@@ -48,21 +59,21 @@ export async function handleTerminalCreateSession(
       }
     );
 
-    return {
+    return createMCPResponse({
       success: true,
       sessionId: session.id,
       workingDirectory: session.workingDirectory,
       createdAt: session.createdAt.toISOString(),
-    };
+    });
   } catch (error) {
     console.error("[Terminal MCP] Create session error:", error);
 
-    return {
+    return createMCPResponse({
       success: false,
       error: "EXECUTION_ERROR",
       message:
         error instanceof Error ? error.message : "Unknown error occurred",
-    };
+    });
   }
 }
 
@@ -74,15 +85,15 @@ export async function handleTerminalCreateSession(
 export async function handleTerminalExecuteCommand(
   sessionManager: TerminalSessionManager,
   args: MCPExecuteCommandArgs
-): Promise<MCPExecuteCommandResponse> {
+): Promise<MCPToolResponse> {
   try {
     // Validate required parameters
     if (!args.sessionId || !args.command) {
-      return {
+      return createMCPResponse({
         success: false,
         error: "INVALID_PARAMETERS",
         message: "sessionId and command are required",
-      };
+      });
     }
 
     // Execute the command
@@ -93,23 +104,24 @@ export async function handleTerminalExecuteCommand(
       timeout: args.timeout,
     });
 
-    return {
+    return createMCPResponse({
       success: result.success,
       exitCode: result.exitCode,
       stdout: result.stdout,
       stderr: result.stderr,
       duration: result.duration,
       truncated: result.truncated,
-    };
+      error: result.error,
+    });
   } catch (error) {
     console.error("[Terminal MCP] Execute command error:", error);
 
-    return {
+    return createMCPResponse({
       success: false,
       error: "EXECUTION_ERROR",
       message:
         error instanceof Error ? error.message : "Unknown error occurred",
-    };
+    });
   }
 }
 
@@ -121,34 +133,34 @@ export async function handleTerminalExecuteCommand(
 export async function handleTerminalCloseSession(
   sessionManager: TerminalSessionManager,
   args: MCPCloseSessionArgs
-): Promise<MCPCloseSessionResponse> {
+): Promise<MCPToolResponse> {
   try {
     // Validate required parameters
     if (!args.sessionId) {
-      return {
+      return createMCPResponse({
         success: false,
         error: "INVALID_PARAMETERS",
         message: "sessionId is required",
-      };
+      });
     }
 
     // Close the session
     await sessionManager.closeSession(args.sessionId);
 
-    return {
+    return createMCPResponse({
       success: true,
       message: "Session closed and resources freed",
       sessionId: args.sessionId,
-    };
+    });
   } catch (error) {
     console.error("[Terminal MCP] Close session error:", error);
 
-    return {
+    return createMCPResponse({
       success: false,
       error: "EXECUTION_ERROR",
       message:
         error instanceof Error ? error.message : "Unknown error occurred",
-    };
+    });
   }
 }
 
@@ -160,29 +172,29 @@ export async function handleTerminalCloseSession(
 export async function handleTerminalGetStatus(
   sessionManager: TerminalSessionManager,
   args: MCPGetStatusArgs
-): Promise<MCPGetStatusResponse> {
+): Promise<MCPToolResponse> {
   try {
     // Validate required parameters
     if (!args.sessionId) {
-      return {
+      return createMCPResponse({
         success: false,
         error: "INVALID_PARAMETERS",
         message: "sessionId is required",
-      };
+      });
     }
 
     // Get the session
     const session = sessionManager.getSession(args.sessionId);
 
     if (!session) {
-      return {
+      return createMCPResponse({
         success: false,
         error: "SESSION_NOT_FOUND",
         message: `Session ${args.sessionId} not found`,
-      };
+      });
     }
 
-    return {
+    return createMCPResponse({
       success: true,
       session: {
         id: session.id,
@@ -194,16 +206,16 @@ export async function handleTerminalGetStatus(
         lastCommandAt: session.lastCommandAt?.toISOString(),
         commandCount: session.commandCount,
       },
-    };
+    });
   } catch (error) {
     console.error("[Terminal MCP] Get status error:", error);
 
-    return {
+    return createMCPResponse({
       success: false,
       error: "EXECUTION_ERROR",
       message:
         error instanceof Error ? error.message : "Unknown error occurred",
-    };
+    });
   }
 }
 

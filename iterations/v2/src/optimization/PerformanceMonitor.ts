@@ -66,6 +66,12 @@ export class PerformanceMonitor implements IPerformanceMonitor {
    * Start the performance monitor
    */
   async start(): Promise<void> {
+    // Clear any existing timer first to prevent multiple timers
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = undefined;
+    }
+
     if (this.config.enableAutoCleanup) {
       this.startAutoCleanup();
     }
@@ -210,6 +216,12 @@ export class PerformanceMonitor implements IPerformanceMonitor {
    * Start automatic cleanup
    */
   private startAutoCleanup(): void {
+    // Clear any existing timer first
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = undefined;
+    }
+
     this.cleanupTimer = setInterval(async () => {
       const cutoffTime = new Date(
         Date.now() - this.config.autoCleanOlderThanMs

@@ -10,10 +10,9 @@ import type {
   GenerationRequest,
   GenerationResponse,
   HardwareOptimizedModelConfig,
-  ModelHealth,
   PerformanceCharacteristics,
 } from "@/types/model-registry";
-import { LocalModelProvider } from "./LocalModelProvider";
+import { LocalModelProvider, ModelHealthStatus } from "./LocalModelProvider";
 
 /**
  * GPU provider error
@@ -48,10 +47,12 @@ export class GPUOptimizedProvider extends LocalModelProvider {
   private gpuMemoryAllocated: number = 0;
 
   constructor(config: HardwareOptimizedModelConfig, backend?: GPUBackend) {
-    super();
+    super(config);
 
     // Validate GPU configuration
-    if (!config.hardwareRequirements.preferredHardware.includes("gpu")) {
+    if (config.hardwareRequirements?.preferredHardware?.includes("gpu")) {
+      // Valid GPU configuration
+    } else {
       throw new GPUProviderError(
         "GPUOptimizedProvider requires GPU in preferred hardware",
         "INVALID_HARDWARE_CONFIG"
@@ -119,22 +120,12 @@ export class GPUOptimizedProvider extends LocalModelProvider {
 
       return {
         text,
-        modelId: this.config.id ?? "gpu-model",
-        modelName: this.config.name ?? "GPU Optimized Model",
-        finishReason: "stop",
-        usage: {
-          promptTokens: inputTokens,
-          completionTokens: outputTokens,
-          totalTokens,
-        },
-        cost,
-        metadata: {
-          hardware: "gpu",
-          backend: this.backend,
-          tensorCoresUsed: this.backend === "cuda",
-          mixedPrecision: true,
-          gpuMemoryMB: gpuMemoryUsage,
-        },
+        inputTokens,
+        outputTokens,
+        generationTimeMs: wallClockMs,
+        tokensPerSecond: (totalTokens / wallClockMs) * 1000,
+        computeCost: cost,
+        cost: cost.peakMemoryMB, // Simplified cost for external use
       };
     } catch (error) {
       throw new GPUProviderError(
@@ -147,90 +138,61 @@ export class GPUOptimizedProvider extends LocalModelProvider {
   }
 
   /**
-   * Get provider health status
-   *
-   * Checks:
-   * - GPU availability
-   * - Driver version
-   * - VRAM available
-   * - Temperature
-   *
-   * @returns Health status
+   * Check health (required by LocalModelProvider)
    */
-  async getHealth(): Promise<ModelHealth> {
+  async checkHealth(): Promise<ModelHealthStatus> {
     try {
       const gpuInfo = await this.getGPUInfo();
 
-      if (!gpuInfo.available) {
-        return {
-          status: "unhealthy",
-          message: "GPU not available",
-          lastCheck: new Date(),
-        };
-      }
-
-      if (gpuInfo.temperature && gpuInfo.temperature > 85) {
-        return {
-          status: "degraded",
-          message: `GPU temperature high: ${gpuInfo.temperature}°C`,
-          lastCheck: new Date(),
-          details: gpuInfo,
-        };
-      }
-
-      if (gpuInfo.vramUsedPercent && gpuInfo.vramUsedPercent > 90) {
-        return {
-          status: "degraded",
-          message: `VRAM usage high: ${gpuInfo.vramUsedPercent}%`,
-          lastCheck: new Date(),
-          details: gpuInfo,
-        };
-      }
-
       return {
-        status: "healthy",
-        message: "GPU provider operational",
-        lastCheck: new Date(),
-        details: gpuInfo,
+        modelId: this.config.id ?? "gpu-model",
+        healthy: gpuInfo.available,
+        checkedAt: new Date(),
+        error: gpuInfo.available ? undefined : "GPU not available",
       };
     } catch (error) {
       return {
-        status: "unhealthy",
-        message: `Health check failed: ${
-          error instanceof Error ? error.message : "Unknown"
-        }`,
-        lastCheck: new Date(),
+        modelId: this.config.id ?? "gpu-model",
+        healthy: false,
+        checkedAt: new Date(),
+        error: error instanceof Error ? error.message : "Health check failed",
       };
     }
   }
 
   /**
-   * Warm up model (load to GPU memory)
-   *
-   * @returns Promise that resolves when model is loaded
+   * Load model (required by LocalModelProvider)
    */
-  async warmUp(): Promise<void> {
+  async load(): Promise<PerformanceCharacteristics> {
     if (this.modelLoaded) {
-      return;
+      return this.getPerformanceCharacteristics();
     }
 
     try {
-      // In production: Load model to GPU
-      // await this.loadModelToGPU();
-
       // Simulate GPU loading
-      this.gpuMemoryAllocated = this.config.hardwareRequirements.minMemoryMB;
+      const memoryMB =
+        this.config.hardwareRequirements?.minMemoryMB ??
+        (this.config.hardwareRequirements?.minRamGB ?? 8) * 1024;
+      this.gpuMemoryAllocated = memoryMB;
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       this.modelLoaded = true;
+      return this.getPerformanceCharacteristics();
     } catch (error) {
       throw new GPUProviderError(
-        `Model warm-up failed: ${
+        `Model loading failed: ${
           error instanceof Error ? error.message : "Unknown"
         }`,
-        "WARMUP_FAILED"
+        "MODEL_LOAD_FAILED"
       );
     }
+  }
+
+  /**
+   * Get performance (required by LocalModelProvider)
+   */
+  async getPerformance(): Promise<PerformanceCharacteristics> {
+    return this.getPerformanceCharacteristics();
   }
 
   /**
@@ -378,4 +340,5 @@ export class GPUOptimizedProvider extends LocalModelProvider {
   getBackend(): GPUBackend {
     return this.backend;
   }
+
 }

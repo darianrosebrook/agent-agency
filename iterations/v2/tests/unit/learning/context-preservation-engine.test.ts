@@ -16,6 +16,10 @@ describe("ContextPreservationEngine", () => {
     engine = new ContextPreservationEngine();
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe("Snapshot Creation", () => {
     it("should create a new context snapshot", async () => {
       const sessionId = "session-1";

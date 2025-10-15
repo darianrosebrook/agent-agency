@@ -113,6 +113,9 @@ describe("VerificationDatabaseClient Integration", () => {
         requestId: request.id,
         verdict: VerificationVerdict.VERIFIED_TRUE,
         confidence: 0.75,
+        reasoning: [
+          "Content verified through fact checking and source credibility",
+        ],
         supportingEvidence: [],
         contradictoryEvidence: [
           {
@@ -122,6 +125,7 @@ describe("VerificationDatabaseClient Integration", () => {
             credibility: 0.8,
             supporting: true,
             metadata: { type: "primary" },
+            verificationDate: new Date(),
           },
           {
             source: "https://source2.com",
@@ -130,6 +134,7 @@ describe("VerificationDatabaseClient Integration", () => {
             credibility: 0.75,
             supporting: true,
             metadata: { type: "secondary" },
+            verificationDate: new Date(),
           },
           {
             source: "https://source3.com",
@@ -138,6 +143,7 @@ describe("VerificationDatabaseClient Integration", () => {
             credibility: 0.6,
             supporting: false,
             metadata: { type: "contradicting" },
+            verificationDate: new Date(),
           },
         ],
         verificationMethods: [
@@ -146,16 +152,19 @@ describe("VerificationDatabaseClient Integration", () => {
             reasoning: ["Method verification reasoning"],
             verdict: VerificationVerdict.VERIFIED_TRUE,
             confidence: 0.8,
-            supportingEvidence: [],
+            processingTimeMs: 50,
+            evidenceCount: 0,
           },
           {
             method: VerificationType.SOURCE_CREDIBILITY,
             reasoning: ["Method verification reasoning"],
             verdict: VerificationVerdict.VERIFIED_TRUE,
             confidence: 0.7,
-            supportingEvidence: [],
+            processingTimeMs: 40,
+            evidenceCount: 0,
           },
         ],
+        processingTimeMs: 200,
       };
 
       await dbClient.saveRequest(request);
@@ -182,8 +191,11 @@ describe("VerificationDatabaseClient Integration", () => {
         requestId: request.id,
         verdict: VerificationVerdict.VERIFIED_TRUE,
         confidence: 0.9,
+        reasoning: ["Content verified as accurate"],
         supportingEvidence: [],
+        contradictoryEvidence: [],
         verificationMethods: [],
+        processingTimeMs: 150,
       };
 
       await dbClient.cacheResult(request, result, 300000); // 5 min TTL
@@ -206,8 +218,11 @@ describe("VerificationDatabaseClient Integration", () => {
         requestId: request.id,
         verdict: VerificationVerdict.VERIFIED_TRUE,
         confidence: 0.8,
+        reasoning: ["TTL test content verified"],
         supportingEvidence: [],
+        contradictoryEvidence: [],
         verificationMethods: [],
+        processingTimeMs: 100,
       };
 
       // Cache with very short TTL
@@ -238,8 +253,11 @@ describe("VerificationDatabaseClient Integration", () => {
         requestId: req.id,
         verdict: VerificationVerdict.VERIFIED_TRUE,
         confidence: 0.8,
+        reasoning: ["Batch verification result"],
         supportingEvidence: [],
+        contradictoryEvidence: [],
         verificationMethods: [],
+        processingTimeMs: 100,
       }));
 
       // Cache all with short TTL
@@ -283,18 +301,20 @@ describe("VerificationDatabaseClient Integration", () => {
             ? VerificationVerdict.VERIFIED_TRUE
             : VerificationVerdict.VERIFIED_FALSE,
         confidence: 0.8 + i * 0.02,
+        reasoning: ["Performance test verification"],
         supportingEvidence: [],
+        contradictoryEvidence: [],
         verificationMethods: [
           {
             method: VerificationType.FACT_CHECKING,
             reasoning: ["Method verification reasoning"],
             verdict:
               i < 4
-                ? VerificationVerdict.VERIFIED
+                ? VerificationVerdict.VERIFIED_TRUE
                 : VerificationVerdict.VERIFIED_FALSE,
             confidence: 0.8 + i * 0.02,
-            supportingEvidence: [],
             processingTimeMs: 100 + i * 10,
+            evidenceCount: 0,
           },
         ],
         processingTimeMs: 150 + i * 10,
@@ -337,6 +357,7 @@ describe("VerificationDatabaseClient Integration", () => {
         requestId: request.id,
         verdict: VerificationVerdict.VERIFIED_TRUE,
         confidence: 0.85,
+        reasoning: ["Content verified with evidence quality analysis"],
         supportingEvidence: [],
         contradictoryEvidence: [
           {
@@ -346,6 +367,7 @@ describe("VerificationDatabaseClient Integration", () => {
             credibility: 0.9,
             supporting: true,
             metadata: { publisher: "reputable-source" },
+            verificationDate: new Date(),
           },
           {
             source: "https://medium-quality.com",
@@ -354,6 +376,7 @@ describe("VerificationDatabaseClient Integration", () => {
             credibility: 0.65,
             supporting: true,
             metadata: { publisher: "average-source" },
+            verificationDate: new Date(),
           },
           {
             source: "https://low-quality.com",
@@ -362,9 +385,11 @@ describe("VerificationDatabaseClient Integration", () => {
             credibility: 0.4,
             supporting: false,
             metadata: { publisher: "questionable-source" },
+            verificationDate: new Date(),
           },
         ],
         verificationMethods: [],
+        processingTimeMs: 300,
       };
 
       await dbClient.saveRequest(request);
@@ -434,8 +459,11 @@ describe("VerificationDatabaseClient Integration", () => {
         requestId: req.id,
         verdict: VerificationVerdict.VERIFIED_TRUE,
         confidence: 0.8,
+        reasoning: ["Concurrent verification result"],
         supportingEvidence: [],
+        contradictoryEvidence: [],
         verificationMethods: [],
+        processingTimeMs: 120,
       }));
 
       await Promise.all(requests.map((req) => dbClient.saveRequest(req)));

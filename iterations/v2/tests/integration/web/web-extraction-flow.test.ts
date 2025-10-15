@@ -71,7 +71,7 @@ describe("Web Navigator Integration - Extraction Flow", () => {
       password: process.env.DB_PASSWORD || "postgres",
     });
 
-    dbClient = new WebNavigatorDatabaseClient(pool);
+    dbClient = new WebNavigatorDatabaseClient();
     await dbClient.initialize();
 
     // Initialize Knowledge Seeker (mocked or minimal for integration)
@@ -82,7 +82,7 @@ describe("Web Navigator Integration - Extraction Flow", () => {
   });
 
   afterAll(async () => {
-    await dbClient.shutdown();
+    // Note: WebNavigatorDatabaseClient doesn't have shutdown method
     await pool.end();
   });
 

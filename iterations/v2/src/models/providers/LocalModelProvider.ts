@@ -62,6 +62,9 @@ export interface ModelGenerationResponse {
 
   /** Compute cost details */
   computeCost?: LocalComputeCost;
+
+  /** Cost of generation (simplified for external use) */
+  cost?: number;
 }
 
 /**
@@ -199,5 +202,25 @@ export abstract class LocalModelProvider {
    */
   getModelName(): string {
     return this.modelConfig.name;
+  }
+
+  /**
+   * Warm up model (alias for load)
+   * @returns Performance characteristics after warm-up
+   */
+  async warmUp(): Promise<PerformanceCharacteristics> {
+    return this.load();
+  }
+
+  /**
+   * Get health status (wrapper for checkHealth)
+   * @returns Health status with standardized format
+   */
+  async getHealth(): Promise<{ status: string; message?: string }> {
+    const health = await this.checkHealth();
+    return {
+      status: health.healthy ? "healthy" : "unhealthy",
+      message: health.error,
+    };
   }
 }

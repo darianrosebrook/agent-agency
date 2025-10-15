@@ -25,10 +25,20 @@ const createMockPool = (): jest.Mocked<Pool> =>
 
 describe("LearningDatabaseClient", () => {
   let mockPool: jest.Mocked<Pool>;
+  let mockClient: { query: jest.Mock; release: jest.Mock };
   let dbClient: LearningDatabaseClient;
 
   beforeEach(() => {
     mockPool = createMockPool();
+
+    // Set up default mock client for all tests
+    mockClient = {
+      query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+      release: jest.fn(),
+    };
+
+    (mockPool.connect as jest.Mock).mockResolvedValue(mockClient);
+
     dbClient = new LearningDatabaseClient(mockPool);
   });
 
@@ -77,7 +87,7 @@ describe("LearningDatabaseClient", () => {
 
   describe("Session Methods", () => {
     it("createSession should call pool.query", async () => {
-      (mockPool.query as jest.Mock).mockResolvedValue({
+      (mockClient.query as jest.Mock).mockResolvedValue({
         rows: [],
         rowCount: 1,
       });
@@ -97,43 +107,43 @@ describe("LearningDatabaseClient", () => {
 
       await dbClient.createSession(session);
 
-      expect(mockPool.query).toHaveBeenCalled();
+      expect(mockClient.query).toHaveBeenCalled();
     });
 
     it("getSession should call pool.query with sessionId", async () => {
-      (mockPool.query as jest.Mock).mockResolvedValue({
+      (mockClient.query as jest.Mock).mockResolvedValue({
         rows: [],
         rowCount: 0,
       } as any);
 
       const result = await dbClient.getSession("test-id");
 
-      expect(mockPool.query).toHaveBeenCalledWith(expect.any(String), [
+      expect(mockClient.query).toHaveBeenCalledWith(expect.any(String), [
         "test-id",
       ]);
       expect(result).toBeNull();
     });
 
     it("updateSession should call pool.query with updates", async () => {
-      (mockPool.query as jest.Mock).mockResolvedValue({
+      (mockClient.query as jest.Mock).mockResolvedValue({
         rows: [],
         rowCount: 1,
       } as any);
 
       await dbClient.updateSession("test-id", { qualityScore: 0.9 });
 
-      expect(mockPool.query).toHaveBeenCalled();
+      expect(mockClient.query).toHaveBeenCalled();
     });
 
     it("getSessionsByTask should call pool.query with taskId", async () => {
-      (mockPool.query as jest.Mock).mockResolvedValue({
+      (mockClient.query as jest.Mock).mockResolvedValue({
         rows: [],
         rowCount: 0,
       } as any);
 
       const result = await dbClient.getSessionsByTask("task-id");
 
-      expect(mockPool.query).toHaveBeenCalledWith(expect.any(String), [
+      expect(mockClient.query).toHaveBeenCalledWith(expect.any(String), [
         "task-id",
       ]);
       expect(result).toEqual([]);
@@ -142,7 +152,7 @@ describe("LearningDatabaseClient", () => {
 
   describe("Iteration Methods", () => {
     it("createIteration should call pool.query", async () => {
-      (mockPool.query as jest.Mock).mockResolvedValue({
+      (mockClient.query as jest.Mock).mockResolvedValue({
         rows: [],
         rowCount: 1,
       } as any);
@@ -164,18 +174,18 @@ describe("LearningDatabaseClient", () => {
 
       await dbClient.createIteration(iteration);
 
-      expect(mockPool.query).toHaveBeenCalled();
+      expect(mockClient.query).toHaveBeenCalled();
     });
 
     it("getIterations should call pool.query with sessionId", async () => {
-      (mockPool.query as jest.Mock).mockResolvedValue({
+      (mockClient.query as jest.Mock).mockResolvedValue({
         rows: [],
         rowCount: 0,
       } as any);
 
       const result = await dbClient.getIterations("sess-id");
 
-      expect(mockPool.query).toHaveBeenCalledWith(expect.any(String), [
+      expect(mockClient.query).toHaveBeenCalledWith(expect.any(String), [
         "sess-id",
       ]);
       expect(result).toEqual([]);
@@ -184,7 +194,7 @@ describe("LearningDatabaseClient", () => {
 
   describe("Error Pattern Methods", () => {
     it("upsertErrorPattern should call pool.query", async () => {
-      (mockPool.query as jest.Mock).mockResolvedValue({
+      (mockClient.query as jest.Mock).mockResolvedValue({
         rows: [],
         rowCount: 1,
       } as any);
@@ -203,30 +213,30 @@ describe("LearningDatabaseClient", () => {
 
       await dbClient.upsertErrorPattern(pattern);
 
-      expect(mockPool.query).toHaveBeenCalled();
+      expect(mockClient.query).toHaveBeenCalled();
     });
 
     it("getErrorPatterns should call pool.query", async () => {
-      (mockPool.query as jest.Mock).mockResolvedValue({
+      (mockClient.query as jest.Mock).mockResolvedValue({
         rows: [],
         rowCount: 0,
       } as any);
 
       const result = await dbClient.getErrorPatterns();
 
-      expect(mockPool.query).toHaveBeenCalled();
+      expect(mockClient.query).toHaveBeenCalled();
       expect(result).toEqual([]);
     });
 
     it("getErrorPatterns should filter by category when provided", async () => {
-      (mockPool.query as jest.Mock).mockResolvedValue({
+      (mockClient.query as jest.Mock).mockResolvedValue({
         rows: [],
         rowCount: 0,
       } as any);
 
       const result = await dbClient.getErrorPatterns("type_error" as any);
 
-      expect(mockPool.query).toHaveBeenCalledWith(
+      expect(mockClient.query).toHaveBeenCalledWith(
         expect.stringContaining("WHERE"),
         expect.arrayContaining(["type_error"])
       );
@@ -236,7 +246,7 @@ describe("LearningDatabaseClient", () => {
 
   describe("Snapshot Methods", () => {
     it("saveSnapshot should call pool.query", async () => {
-      (mockPool.query as jest.Mock).mockResolvedValue({
+      (mockClient.query as jest.Mock).mockResolvedValue({
         rows: [],
         rowCount: 1,
       } as any);
@@ -255,18 +265,18 @@ describe("LearningDatabaseClient", () => {
 
       await dbClient.saveSnapshot(snapshot);
 
-      expect(mockPool.query).toHaveBeenCalled();
+      expect(mockClient.query).toHaveBeenCalled();
     });
 
     it("getSnapshot should call pool.query with snapshotId", async () => {
-      (mockPool.query as jest.Mock).mockResolvedValue({
+      (mockClient.query as jest.Mock).mockResolvedValue({
         rows: [],
         rowCount: 0,
       } as any);
 
       const result = await dbClient.getSnapshot("snap-id");
 
-      expect(mockPool.query).toHaveBeenCalledWith(expect.any(String), [
+      expect(mockClient.query).toHaveBeenCalledWith(expect.any(String), [
         "snap-id",
       ]);
       expect(result).toBeNull();
@@ -347,7 +357,7 @@ describe("LearningDatabaseClient", () => {
     });
 
     it("should propagate database errors", async () => {
-      (mockPool.query as jest.Mock).mockRejectedValue(
+      (mockClient.query as jest.Mock).mockRejectedValue(
         new Error("Database error")
       );
 
@@ -388,7 +398,7 @@ describe("LearningDatabaseClient", () => {
         learning_summary: null,
       };
 
-      (mockPool.query as jest.Mock).mockResolvedValue({
+      (mockClient.query as jest.Mock).mockResolvedValue({
         rows: [mockRow],
         rowCount: 1,
       });
@@ -418,7 +428,7 @@ describe("LearningDatabaseClient", () => {
         learning_summary: null,
       };
 
-      (mockPool.query as jest.Mock).mockResolvedValue({
+      (mockClient.query as jest.Mock).mockResolvedValue({
         rows: [mockRow],
         rowCount: 1,
       });

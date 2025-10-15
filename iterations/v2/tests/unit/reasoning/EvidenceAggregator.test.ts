@@ -8,6 +8,14 @@ import { EvidenceAggregator } from "@/reasoning/EvidenceAggregator";
 import { Argument, Evidence } from "@/types/reasoning";
 
 describe("EvidenceAggregator", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  afterAll(() => {
+    // Final cleanup
+    jest.clearAllMocks();
+  });
   describe("aggregateEvidence", () => {
     it("should aggregate evidence from multiple arguments", () => {
       const args = [

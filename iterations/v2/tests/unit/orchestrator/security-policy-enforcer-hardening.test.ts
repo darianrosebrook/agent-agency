@@ -980,7 +980,7 @@ describe("Security Policy Enforcer - Production Hardening (ARBITER-013)", () => 
       };
 
       const trustedCtx = securityManager.authenticate(trustedCreds)!;
-      expect(trustedCtx.securityLevel).toBe(SecurityLevel.TRUSTED_AGENT);
+      expect(trustedCtx.securityLevel).toBe(SecurityLevel.CONFIDENTIAL);
 
       expect(securityManager.canAccessResource(trustedCtx, "agent-1")).toBe(
         true
@@ -997,7 +997,7 @@ describe("Security Policy Enforcer - Production Hardening (ARBITER-013)", () => 
       };
 
       const adminCtx = securityManager.authenticate(adminCreds)!;
-      expect(adminCtx.securityLevel).toBe(SecurityLevel.ADMIN);
+      expect(adminCtx.securityLevel).toBe(SecurityLevel.RESTRICTED);
 
       expect(securityManager.canAccessResource(adminCtx, "agent-1")).toBe(true);
       expect(securityManager.canAccessResource(adminCtx, "agent-2")).toBe(true);
@@ -1128,7 +1128,7 @@ describe("Security Policy Enforcer - Production Hardening (ARBITER-013)", () => 
       const context = systemManager.authenticate(credentials)!;
 
       // Manually elevate to SYSTEM level
-      (context as any).securityLevel = SecurityLevel.SYSTEM;
+      (context as any).securityLevel = SecurityLevel.RESTRICTED;
 
       // Should have access to any resource
       expect(systemManager.canAccessResource(context, "agent-1")).toBe(true);

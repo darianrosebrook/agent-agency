@@ -15,6 +15,10 @@ describe("SpecValidator", () => {
     validator = new SpecValidator();
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   // Helper to create valid spec
   const createValidSpec = (): WorkingSpec => ({
     id: "FEAT-001",

@@ -10,10 +10,9 @@ import type {
   GenerationRequest,
   GenerationResponse,
   HardwareOptimizedModelConfig,
-  ModelHealth,
   PerformanceCharacteristics,
 } from "@/types/model-registry";
-import { LocalModelProvider } from "./LocalModelProvider";
+import { LocalModelProvider, ModelHealthStatus } from "./LocalModelProvider";
 
 /**
  * Apple Silicon provider error
@@ -41,10 +40,12 @@ export class AppleSiliconProvider extends LocalModelProvider {
   private lastGenerationTime: number = 0;
 
   constructor(config: HardwareOptimizedModelConfig) {
-    super();
+    super(config);
 
     // Validate Apple Silicon configuration
-    if (!config.hardwareRequirements.preferredHardware.includes("ane")) {
+    if (config.hardwareRequirements?.preferredHardware?.includes("ane")) {
+      // Valid ANE configuration
+    } else {
       throw new AppleSiliconProviderError(
         "AppleSiliconProvider requires ANE in preferred hardware",
         "INVALID_HARDWARE_CONFIG"
@@ -108,21 +109,11 @@ export class AppleSiliconProvider extends LocalModelProvider {
 
       return {
         text,
-        modelId: this.config.id ?? "apple-silicon-model",
-        modelName: this.config.name ?? "Apple Silicon Model",
-        finishReason: "stop",
-        usage: {
-          promptTokens: inputTokens,
-          completionTokens: outputTokens,
-          totalTokens,
-        },
-        cost,
-        metadata: {
-          hardware: "apple-silicon",
-          aneUsed: true,
-          metalUsed: true,
-          coreMLVersion: this.getCoreMLVersion(),
-        },
+        inputTokens,
+        outputTokens,
+        generationTimeMs: wallClockMs,
+        tokensPerSecond: (totalTokens / wallClockMs) * 1000,
+        computeCost: cost,
       };
     } catch (error) {
       throw new AppleSiliconProviderError(
@@ -135,97 +126,58 @@ export class AppleSiliconProvider extends LocalModelProvider {
   }
 
   /**
-   * Get provider health status
-   *
-   * Checks:
-   * - Core ML availability
-   * - Metal availability
-   * - ANE availability
-   * - Memory pressure
-   *
-   * @returns Health status
+   * Check health (required by LocalModelProvider)
    */
-  async getHealth(): Promise<ModelHealth> {
+  async checkHealth(): Promise<ModelHealthStatus> {
     try {
-      // Check Apple Silicon capabilities
       const hasANE = await this.checkANEAvailability();
       const hasMetal = await this.checkMetalAvailability();
-      const memoryPressure = await this.checkMemoryPressure();
-
-      if (!hasANE || !hasMetal) {
-        return {
-          status: "degraded",
-          message: `Apple Silicon features limited - ANE: ${hasANE}, Metal: ${hasMetal}`,
-          lastCheck: new Date(),
-          details: {
-            aneAvailable: hasANE,
-            metalAvailable: hasMetal,
-            memoryPressure,
-          },
-        };
-      }
-
-      if (memoryPressure > 0.8) {
-        return {
-          status: "degraded",
-          message: "High memory pressure detected",
-          lastCheck: new Date(),
-          details: {
-            aneAvailable: hasANE,
-            metalAvailable: hasMetal,
-            memoryPressure,
-          },
-        };
-      }
 
       return {
-        status: "healthy",
-        message: "Apple Silicon provider operational",
-        lastCheck: new Date(),
-        details: {
-          aneAvailable: hasANE,
-          metalAvailable: hasMetal,
-          memoryPressure,
-          coreMLVersion: this.getCoreMLVersion(),
-        },
+        modelId: this.config.id ?? "apple-silicon-model",
+        healthy: hasANE && hasMetal,
+        checkedAt: new Date(),
+        error:
+          hasANE && hasMetal ? undefined : "Apple Silicon features limited",
       };
     } catch (error) {
       return {
-        status: "unhealthy",
-        message: `Health check failed: ${
-          error instanceof Error ? error.message : "Unknown"
-        }`,
-        lastCheck: new Date(),
+        modelId: this.config.id ?? "apple-silicon-model",
+        healthy: false,
+        checkedAt: new Date(),
+        error: error instanceof Error ? error.message : "Health check failed",
       };
     }
   }
 
   /**
-   * Warm up model (load into ANE)
-   *
-   * @returns Promise that resolves when model is loaded
+   * Load model (required by LocalModelProvider)
    */
-  async warmUp(): Promise<void> {
+  async load(): Promise<PerformanceCharacteristics> {
     if (this.modelLoaded) {
-      return;
+      return this.getPerformanceCharacteristics();
     }
 
     try {
-      // In production: Load Core ML model
-      // await this.loadCoreMLModel();
-
       // Simulate model loading
       await new Promise((resolve) => setTimeout(resolve, 200));
-
       this.modelLoaded = true;
+      return this.getPerformanceCharacteristics();
     } catch (error) {
       throw new AppleSiliconProviderError(
-        `Model warm-up failed: ${
+        `Model loading failed: ${
           error instanceof Error ? error.message : "Unknown"
         }`,
-        "WARMUP_FAILED"
+        "MODEL_LOAD_FAILED"
       );
     }
+  }
+
+  /**
+   * Get performance (required by LocalModelProvider)
+   */
+  async getPerformance(): Promise<PerformanceCharacteristics> {
+    return this.getPerformanceCharacteristics();
   }
 
   /**
@@ -240,11 +192,15 @@ export class AppleSiliconProvider extends LocalModelProvider {
    * @returns Performance characteristics
    */
   async getPerformanceCharacteristics(): Promise<PerformanceCharacteristics> {
+    const memoryUsageMB =
+      this.config.hardwareRequirements?.minMemoryMB ??
+      (this.config.hardwareRequirements?.minRamGB ?? 4) * 1024;
+
     return {
       avgLatencyMs: 150, // Fast due to ANE
       p95LatencyMs: 250,
       tokensPerSec: 60, // High throughput
-      memoryUsageMB: this.config.hardwareRequirements.minMemoryMB,
+      memoryUsageMB,
       cpuUtilization: 30, // Low CPU (ANE handles workload)
       aneUtilization: 85, // High ANE usage
     };

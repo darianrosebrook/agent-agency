@@ -194,7 +194,9 @@ describe("TerminalSessionManager", () => {
       expect(result.success).toBe(false);
       expect(result.exitCode).toBe(1);
       expect(result.stdout).toBe("");
-      expect(result.stderr).toBe("Command 'rm' is not allowed");
+      expect(result.stderr).toBe(
+        "Dangerous argument detected: root directory deletion"
+      );
       expect(result.error).toBe("UNSAFE_ARGUMENTS");
     });
 

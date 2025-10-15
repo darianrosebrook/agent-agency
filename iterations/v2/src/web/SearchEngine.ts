@@ -13,11 +13,24 @@ import { ContentExtractionConfig, WebContent } from "../types/web";
 import { ContentExtractor } from "./ContentExtractor";
 
 /**
+ * Search query parameters
+ */
+export interface SearchQuery {
+  query: string;
+  maxResults?: number;
+  language?: string;
+  region?: string;
+  safeSearch?: boolean;
+  excludeDomains?: string[];
+}
+
+/**
  * Search result with enriched content
  */
 export interface EnrichedSearchResult extends SearchResult {
   fullContent?: WebContent;
   extractionError?: string;
+  rank?: number;
 }
 
 /**
@@ -27,14 +40,32 @@ export interface SearchResults {
   query: string;
   results: EnrichedSearchResult[];
   totalFound: number;
+  totalResults?: number; // Alias for totalFound
   processingTimeMs: number;
+  executionTimeMs?: number; // Alias for processingTimeMs
   cacheUsed: boolean;
+  timestamp?: Date;
 }
 
 /**
  * Search Engine configuration
  */
 export interface SearchEngineConfig {
+  /**
+   * API key for search services
+   */
+  apiKey?: string;
+
+  /**
+   * Request timeout in milliseconds
+   */
+  timeoutMs?: number;
+
+  /**
+   * User agent string for requests
+   */
+  userAgent?: string;
+
   /**
    * Whether to automatically extract full content for top results
    */
@@ -72,7 +103,15 @@ export class SearchEngine {
    * Execute search query
    */
   async search(
-    query: string,
+    query: string | SearchQuery,
+    options?: {
+      maxResults?: number;
+      queryType?: QueryType;
+      enrichContent?: boolean;
+    }
+  ): Promise<SearchResults>;
+  async search(
+    query: string | SearchQuery,
     options: {
       maxResults?: number;
       queryType?: QueryType;
@@ -81,20 +120,27 @@ export class SearchEngine {
   ): Promise<SearchResults> {
     const startTime = Date.now();
 
+    // Extract query string and options from SearchQuery if provided
+    const queryString = typeof query === "string" ? query : query.query;
+
     // Check cache
-    const cacheKey = this.generateCacheKey(query, options);
+    const cacheKey = this.generateCacheKey(queryString, options);
     const cached = this.cache.get(cacheKey);
     if (cached && cached.expiresAt > new Date()) {
       return cached.results;
     }
+    const queryOptions = typeof query === "object" ? query : options || {};
+
+    // Merge options
+    const mergedOptions = { ...options, ...queryOptions };
 
     // Delegate to Knowledge Seeker
     const knowledgeQuery: KnowledgeQuery = {
       id: `search-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      query,
-      queryType: options.queryType || QueryType.FACTUAL,
+      query: queryString,
+      queryType: mergedOptions.queryType || QueryType.FACTUAL,
       preferredSources: ["web"],
-      maxResults: options.maxResults || 10,
+      maxResults: mergedOptions.maxResults || 10,
       relevanceThreshold: 0.5,
       timeoutMs: 30000,
       metadata: {
@@ -139,11 +185,14 @@ export class SearchEngine {
     const processingTimeMs = Date.now() - startTime;
 
     const searchResults: SearchResults = {
-      query,
+      query: queryString,
       results: enrichedResults,
       totalFound: knowledgeResponse.metadata.totalResultsFound,
+      totalResults: knowledgeResponse.metadata.totalResultsFound, // Alias
       processingTimeMs,
+      executionTimeMs: processingTimeMs, // Alias
       cacheUsed: knowledgeResponse.metadata.cacheUsed,
+      timestamp: new Date(),
     };
 
     // Cache results for 1 hour

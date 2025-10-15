@@ -8,11 +8,11 @@
 
 import * as jwt from "jsonwebtoken";
 import {
-  VerificationPriority,
   AgentRegistrySecurity,
   AuditEventType,
   SecurityContext,
 } from "../../../src/security/AgentRegistrySecurity.js";
+import { SecurityLevel } from "../../../src/types/security-policy.js";
 
 describe("AgentRegistrySecurity", () => {
   let security: AgentRegistrySecurity;
@@ -28,6 +28,7 @@ describe("AgentRegistrySecurity", () => {
     });
 
     mockContext = {
+      agentId: "test-agent",
       tenantId: "test-tenant",
       userId: "test-user",
       roles: ["agent-registry-user"],
@@ -38,9 +39,21 @@ describe("AgentRegistrySecurity", () => {
         "agent:delete",
       ],
       sessionId: "test-session",
+      securityLevel: SecurityLevel.INTERNAL,
+      authenticatedAt: new Date(),
+      expiresAt: new Date(Date.now() + 3600000),
+      metadata: {
+        ipAddress: "127.0.0.1",
+        userAgent: "test-agent",
+        source: "test",
+      },
       ipAddress: "127.0.0.1",
       userAgent: "test-agent",
     };
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   describe("Authentication", () => {

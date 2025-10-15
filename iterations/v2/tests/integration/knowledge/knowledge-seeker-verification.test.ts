@@ -20,16 +20,66 @@ describe("KnowledgeSeeker Verification Integration", () => {
   let knowledgeSeekerWithVerification: KnowledgeSeeker;
   let verificationEngine: VerificationEngineImpl;
 
+  afterEach(async () => {
+    // Clean up knowledge seekers
+    // Note: KnowledgeSeeker may not have shutdown method
+    jest.clearAllMocks();
+  });
+
+  afterAll(async () => {
+    // Final cleanup
+    jest.clearAllMocks();
+  });
+
+  // Helper to create metadata with required properties
+  const createQueryMetadata = (
+    priority: number,
+    tags: string[],
+    requesterId: string = "test-requester"
+  ) => ({
+    requesterId,
+    priority,
+    createdAt: new Date(),
+    tags,
+  });
+
   const baseConfig: KnowledgeSeekerConfig = {
+    enabled: true,
     providers: [],
     processor: {
-      relevanceThreshold: 0.5,
-      credibilityThreshold: 0.6,
+      minRelevanceScore: 0.5,
+      minCredibilityScore: 0.6,
+      maxResultsToProcess: 10,
+      diversity: {
+        minSources: 2,
+        minSourceTypes: 1,
+        maxResultsPerDomain: 3,
+      },
+      quality: {
+        enableCredibilityScoring: true,
+        enableRelevanceFiltering: true,
+        enableDuplicateDetection: true,
+      },
+      caching: {
+        enableResultCaching: false,
+        cacheTtlMs: 300000,
+        maxCacheSize: 100,
+      },
+    },
+    queryProcessing: {
+      maxConcurrentQueries: 5,
+      defaultTimeoutMs: 30000,
+      retryAttempts: 3,
     },
     caching: {
       enableQueryCaching: false,
       enableResultCaching: false,
       cacheTtlMs: 300000,
+    },
+    observability: {
+      enableMetrics: false,
+      enableTracing: false,
+      logLevel: "error",
     },
   };
 
@@ -94,10 +144,8 @@ describe("KnowledgeSeeker Verification Integration", () => {
         queryType: QueryType.FACTUAL,
         maxResults: 5,
         relevanceThreshold: 0.5,
-        metadata: {
-          priority: 8, // High priority
-          tags: ["geography", "factual"],
-        },
+        timeoutMs: 30000,
+        metadata: createQueryMetadata(8, ["geography", "factual"]), // High priority
       };
 
       const response = await knowledgeSeekerWithVerification.processQuery(
@@ -119,10 +167,8 @@ describe("KnowledgeSeeker Verification Integration", () => {
         queryType: QueryType.EXPLANATORY,
         maxResults: 5,
         relevanceThreshold: 0.5,
-        metadata: {
-          priority: 3, // Low priority
-          tags: ["philosophy"],
-        },
+        timeoutMs: 30000,
+        metadata: createQueryMetadata(3, ["philosophy"]), // Low priority
       };
 
       const response = await knowledgeSeekerWithVerification.processQuery(
@@ -144,10 +190,8 @@ describe("KnowledgeSeeker Verification Integration", () => {
         queryType: QueryType.FACTUAL,
         maxResults: 10,
         relevanceThreshold: 0.5,
-        metadata: {
-          priority: 7,
-          tags: ["history"],
-        },
+        timeoutMs: 30000,
+        metadata: createQueryMetadata(7, ["history"]),
       };
 
       const response = await knowledgeSeekerWithVerification.processQuery(
@@ -173,10 +217,8 @@ describe("KnowledgeSeeker Verification Integration", () => {
         queryType: QueryType.FACTUAL,
         maxResults: 10,
         relevanceThreshold: 0.5,
-        metadata: {
-          priority: 8,
-          tags: ["science"],
-        },
+        timeoutMs: 30000,
+        metadata: createQueryMetadata(8, ["science"]),
       };
 
       const responseNoVerification = await knowledgeSeeker.processQuery(query);
@@ -205,10 +247,8 @@ describe("KnowledgeSeeker Verification Integration", () => {
         queryType: QueryType.FACTUAL,
         maxResults: 5,
         relevanceThreshold: 0.5,
-        metadata: {
-          priority: 7,
-          tags: ["test"],
-        },
+        timeoutMs: 30000,
+        metadata: createQueryMetadata(7, ["test"]),
       };
 
       // Should not throw, even if verification has issues
@@ -245,10 +285,8 @@ describe("KnowledgeSeeker Verification Integration", () => {
         queryType: QueryType.FACTUAL,
         maxResults: 5,
         relevanceThreshold: 0.5,
-        metadata: {
-          priority: 8,
-          tags: ["test"],
-        },
+        timeoutMs: 30000,
+        metadata: createQueryMetadata(8, ["test"]),
       };
 
       const response = await ksDisabled.processQuery(query);
@@ -284,10 +322,8 @@ describe("KnowledgeSeeker Verification Integration", () => {
         queryType: QueryType.FACTUAL,
         maxResults: 5,
         relevanceThreshold: 0.5,
-        metadata: {
-          priority: 8,
-          tags: ["test"],
-        },
+        timeoutMs: 30000,
+        metadata: createQueryMetadata(8, ["test"]),
       };
 
       const response = await ksManual.processQuery(query);
@@ -323,10 +359,8 @@ describe("KnowledgeSeeker Verification Integration", () => {
         queryType: QueryType.FACTUAL,
         maxResults: 10,
         relevanceThreshold: 0.5,
-        metadata: {
-          priority: 8,
-          tags: ["test"],
-        },
+        timeoutMs: 30000,
+        metadata: createQueryMetadata(8, ["test"]),
       };
 
       const response = await ksHighThreshold.processQuery(query);
@@ -365,10 +399,8 @@ describe("KnowledgeSeeker Verification Integration", () => {
         queryType: QueryType.FACTUAL,
         maxResults: 5,
         relevanceThreshold: 0.5,
-        metadata: {
-          priority: 8,
-          tags: ["test"],
-        },
+        timeoutMs: 30000,
+        metadata: createQueryMetadata(8, ["test"]),
       };
 
       const response = await ksMultipleTypes.processQuery(query);
@@ -380,7 +412,7 @@ describe("KnowledgeSeeker Verification Integration", () => {
       ) {
         // Should use multiple verification methods
         response.verificationResults.forEach((vr) => {
-          expect(vr.methodResults).toBeDefined();
+          expect(vr.verificationMethods).toBeDefined();
         });
       }
     });
@@ -394,10 +426,8 @@ describe("KnowledgeSeeker Verification Integration", () => {
         queryType: QueryType.FACTUAL,
         maxResults: 5,
         relevanceThreshold: 0.5,
-        metadata: {
-          priority: 7,
-          tags: ["performance"],
-        },
+        timeoutMs: 30000,
+        metadata: createQueryMetadata(7, ["performance"]),
       };
 
       const startTime = Date.now();
@@ -417,10 +447,8 @@ describe("KnowledgeSeeker Verification Integration", () => {
         queryType: QueryType.EXPLANATORY,
         maxResults: 5,
         relevanceThreshold: 0.5,
-        metadata: {
-          priority: 2,
-          tags: ["test"],
-        },
+        timeoutMs: 30000,
+        metadata: createQueryMetadata(2, ["test"]),
       };
 
       const startTime = Date.now();
@@ -442,10 +470,8 @@ describe("KnowledgeSeeker Verification Integration", () => {
         queryType: QueryType.FACTUAL,
         maxResults: 5,
         relevanceThreshold: 0.5,
-        metadata: {
-          priority: 7,
-          tags: ["concurrent"],
-        },
+        timeoutMs: 30000,
+        metadata: createQueryMetadata(7, ["concurrent"]),
       }));
 
       const responses = await Promise.all(

@@ -102,12 +102,19 @@ export class ArbiterMCPServer extends Server {
     // Initialize tools array with arbiter and terminal tools
     this.tools = [...ARBITER_TOOLS, ...TERMINAL_TOOLS];
 
-    this.setupToolHandlers();
+    // Setup will be called after construction
 
     // Register knowledge tools if orchestrator provided
     if (this.orchestrator) {
       this.registerKnowledgeTools();
     }
+  }
+
+  /**
+   * Initialize the server (call after construction)
+   */
+  initialize(): void {
+    this.setupToolHandlers();
   }
 
   /**
@@ -207,7 +214,7 @@ export class ArbiterMCPServer extends Server {
   /**
    * Setup MCP request handlers
    */
-  private setupToolHandlers(): void {
+  public setupToolHandlers(): void {
     // Handle MCP initialization
     this.setRequestHandler(InitializeRequestSchema, async (request) => {
       const { protocolVersion, clientInfo } = request.params;
@@ -250,79 +257,86 @@ export class ArbiterMCPServer extends Server {
     });
 
     // Handle tool calls
-    this.setRequestHandler(CallToolRequestSchema, async (request: any) => {
-      const { name, arguments: args } = request.params;
+    this.setRequestHandler(
+      CallToolRequestSchema,
+      this.handleCallTool.bind(this)
+    );
+  }
 
-      try {
-        const toolArgs = (args || {}) as Record<string, any>;
+  /**
+   * Handle tool calls (internal method)
+   */
+  async handleCallTool(request: any) {
+    const { name, arguments: args } = request.params;
 
-        switch (
-          name as
-            | ArbiterToolName
-            | "knowledge_search"
-            | "knowledge_status"
-            | TerminalToolName
-        ) {
-          case "arbiter_validate":
-            return await this.handleValidate(toolArgs);
-          case "arbiter_assign_task":
-            return await this.handleAssignTask(toolArgs);
-          case "arbiter_monitor_progress":
-            return await this.handleMonitorProgress(toolArgs);
-          case "arbiter_generate_verdict":
-            return await this.handleGenerateVerdict(toolArgs);
-          case "knowledge_search":
-            return await this.handleKnowledgeSearch(toolArgs);
-          case "knowledge_status":
-            return await this.handleKnowledgeStatus();
+    try {
+      const toolArgs = (args || {}) as Record<string, any>;
 
-          // Terminal tools
-          case "terminal_create_session":
-            return await handleTerminalCreateSession(
-              this.terminalManager,
-              toolArgs as any // MCPCreateSessionArgs
-            );
-          case "terminal_execute_command":
-            return await handleTerminalExecuteCommand(
-              this.terminalManager,
-              toolArgs as any // MCPExecuteCommandArgs
-            );
-          case "terminal_close_session":
-            return await handleTerminalCloseSession(
-              this.terminalManager,
-              toolArgs as any // MCPCloseSessionArgs
-            );
-          case "terminal_get_status":
-            return await handleTerminalGetStatus(
-              this.terminalManager,
-              toolArgs as any // MCPGetStatusArgs
-            );
+      switch (
+        name as
+          | ArbiterToolName
+          | "knowledge_search"
+          | "knowledge_status"
+          | TerminalToolName
+      ) {
+        case "arbiter_validate":
+          return await this.handleValidate(toolArgs);
+        case "arbiter_assign_task":
+          return await this.handleAssignTask(toolArgs);
+        case "arbiter_monitor_progress":
+          return await this.handleMonitorProgress(toolArgs);
+        case "arbiter_generate_verdict":
+          return await this.handleGenerateVerdict(toolArgs);
+        case "knowledge_search":
+          return await this.handleKnowledgeSearch(toolArgs);
+        case "knowledge_status":
+          return await this.handleKnowledgeStatus();
 
-          default:
-            throw new Error(`Unknown tool: ${name}`);
-        }
-      } catch (error) {
-        console.error(`[Arbiter MCP] Tool error (${name}):`, error);
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(
-                {
-                  success: false,
-                  error:
-                    error instanceof Error ? error.message : "Unknown error",
-                  tool: name,
-                },
-                null,
-                2
-              ),
-            },
-          ],
-          isError: true,
-        } as any;
+        // Terminal tools
+        case "terminal_create_session":
+          return await handleTerminalCreateSession(
+            this.terminalManager,
+            toolArgs as any // MCPCreateSessionArgs
+          );
+        case "terminal_execute_command":
+          return await handleTerminalExecuteCommand(
+            this.terminalManager,
+            toolArgs as any // MCPExecuteCommandArgs
+          );
+        case "terminal_close_session":
+          return await handleTerminalCloseSession(
+            this.terminalManager,
+            toolArgs as any // MCPCloseSessionArgs
+          );
+        case "terminal_get_status":
+          return await handleTerminalGetStatus(
+            this.terminalManager,
+            toolArgs as any // MCPGetStatusArgs
+          );
+
+        default:
+          throw new Error(`Unknown tool: ${name}`);
       }
-    });
+    } catch (error) {
+      console.error(`[Arbiter MCP] Tool error (${name}):`, error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                success: false,
+                error: error instanceof Error ? error.message : "Unknown error",
+                tool: name,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+        isError: true,
+      } as any;
+    }
   }
 
   /**
@@ -1213,6 +1227,41 @@ const ARBITER_TOOLS = [
     },
   },
 ];
+
+/**
+ * Call a tool directly (for testing purposes)
+ *
+ * @param request Tool call request
+ * @returns Tool call response
+ */
+export async function callTool(
+  server: ArbiterMCPServer,
+  request: { name: string; arguments?: Record<string, any> }
+) {
+  try {
+    const response = await server.handleCallTool({
+      params: {
+        name: request.name,
+        arguments: request.arguments || {},
+      },
+    } as any);
+    return response;
+  } catch (error) {
+    console.error("[Arbiter MCP] Tool call error:", error);
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            success: false,
+            error: "TOOL_CALL_ERROR",
+            message: error instanceof Error ? error.message : "Unknown error",
+          }),
+        },
+      ],
+    };
+  }
+}
 
 /**
  * Main execution function

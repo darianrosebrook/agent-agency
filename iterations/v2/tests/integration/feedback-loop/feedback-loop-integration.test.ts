@@ -57,8 +57,8 @@ describe("FeedbackLoopManager Integration", () => {
   let configManager: ConfigManager;
 
   beforeEach(async () => {
-    // Create config manager with test config
-    configManager = new ConfigManager();
+    // Get config manager singleton instance with test config
+    configManager = ConfigManager.getInstance();
     // Override config for testing
     (configManager as any).config = testConfig;
 
@@ -363,7 +363,8 @@ describe("FeedbackLoopManager Integration", () => {
       // Processing should be reasonably fast (< 500ms total for this test)
       expect(duration).toBeLessThan(500);
 
-      this.logger?.info(`Processed 20 events in ${duration}ms`);
+      // Debug: Processed 20 events in Xms
+      console.log(`Processed 20 events in ${duration}ms`);
     });
 
     it("should provide health status information", () => {

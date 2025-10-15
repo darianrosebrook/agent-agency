@@ -156,8 +156,20 @@ export class ComputeCostTracker {
     );
 
     // Lower latency and energy is better, higher throughput is better
+    // Calculate scores where lower is better for latency/energy, higher is better for throughput
+    const model1LatencyScore = profile1.avgWallClockMs;
+    const model2LatencyScore = profile2.avgWallClockMs;
+    const model1EnergyScore = profile1.avgEnergyMWh ?? 0;
+    const model2EnergyScore = profile2.avgEnergyMWh ?? 0;
+    const model1ThroughputScore = profile1.avgTokensPerSec;
+    const model2ThroughputScore = profile2.avgTokensPerSec;
+
+    // Normalize scores (lower latency/energy is better, higher throughput is better)
     const model1Score =
-      -latencyDiff / 100 - energyDiff / 100 + throughputDiff / 100;
+      (model2LatencyScore - model1LatencyScore) / model2LatencyScore + // Latency advantage
+      (model2EnergyScore - model1EnergyScore) / (model2EnergyScore || 1) + // Energy advantage
+      (model1ThroughputScore - model2ThroughputScore) /
+        (model2ThroughputScore || 1); // Throughput advantage
 
     return {
       latencyDiff,
@@ -227,7 +239,7 @@ export class ComputeCostTracker {
 
     if (peakMemory > avgMemory * 2) {
       recommendations.push(
-        "High memory variance - consider memory pooling or preallocation"
+        "Memory spikes detected - consider memory pooling or preallocation"
       );
     }
 

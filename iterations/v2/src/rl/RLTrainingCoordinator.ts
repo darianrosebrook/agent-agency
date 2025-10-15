@@ -405,8 +405,8 @@ export class RLTrainingCoordinator extends EventEmitter {
    * @returns Pipeline statistics
    */
   getStats(): {
-    debateStats: ReturnType<typeof this.debateTracker.getStats>;
-    performanceStats: ReturnType<typeof this.performanceTracker.getStats>;
+    debateStats: any;
+    performanceStats: any;
     trainingStats: RLTrainingStats;
     pipelineStatus: TrainingPipelineStatus;
   } {
@@ -563,9 +563,11 @@ export class RLTrainingCoordinator extends EventEmitter {
         finalOutcome: {
           success: outcome.verdict?.outcome === "approved",
           qualityScore: outcome.qualityScore,
-          latencyMs: outcome.metrics.resolutionTimeMs,
-          tokensUsed: 0, // Would be tracked separately
+          efficiencyScore: 0.8, // Default efficiency score
+          tokensConsumed: 0, // Would be tracked separately
+          completionTimeMs: outcome.metrics.resolutionTimeMs || 0,
         },
+        totalReward: outcome.turns.reduce((sum, turn) => sum + turn.reward, 0),
       };
 
       trajectories.push(trajectory);

@@ -23,18 +23,23 @@ describe("Research Flow Integration", () => {
   let mockDbClient: MockDatabaseClient;
   let knowledgeDbClient: KnowledgeDatabaseClient;
 
+  afterEach(async () => {
+    // Clean up components
+    // Note: Some components may not have shutdown methods
+    jest.clearAllMocks();
+  });
+
+  afterAll(async () => {
+    // Final cleanup
+    jest.clearAllMocks();
+  });
+
   beforeEach(() => {
     // Initialize mock database
     mockDbClient = new MockDatabaseClient() as any;
 
     // Initialize knowledge database client
-    knowledgeDbClient = new KnowledgeDatabaseClient({
-      host: "localhost",
-      port: 5432,
-      database: "test_arbiter",
-      user: "test",
-      password: "test",
-    });
+    knowledgeDbClient = new KnowledgeDatabaseClient();
 
     // Initialize detector
     detector = new ResearchDetector({

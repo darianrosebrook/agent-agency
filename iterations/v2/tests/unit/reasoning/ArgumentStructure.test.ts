@@ -8,6 +8,15 @@ import { ArgumentStructure } from "@/reasoning/ArgumentStructure";
 import { Argument, Evidence, InvalidArgumentError } from "@/types/reasoning";
 
 describe("ArgumentStructure", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  afterAll(() => {
+    // Final cleanup
+    jest.clearAllMocks();
+  });
+
   describe("createArgument", () => {
     it("should create valid argument with all fields", () => {
       const evidence = [createTestEvidence()];

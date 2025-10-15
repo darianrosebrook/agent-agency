@@ -394,6 +394,9 @@ export class RLDataPipeline extends EventEmitter {
             this.completedBatches.push(batch);
             batchesCompleted++;
 
+            // Add samples to recent samples for tracking
+            state.recentSamples.push(...state.pendingBatch);
+
             // Reset batch state
             state.pendingBatch = [];
             state.batchStartTime = new Date().toISOString();

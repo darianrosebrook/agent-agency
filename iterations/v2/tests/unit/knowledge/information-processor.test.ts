@@ -7,7 +7,6 @@
 import { InformationProcessor } from "../../../src/knowledge/InformationProcessor";
 import { events } from "../../../src/orchestrator/EventEmitter";
 import {
-  VerificationPriority,
   InformationProcessorConfig,
   KnowledgeQuery,
   QueryType,
@@ -75,6 +74,8 @@ describe("InformationProcessor", () => {
         provider: "mock",
         providerMetadata: {},
         processedAt: new Date(),
+        retrievedAt: new Date(),
+        contentHash: "hash1",
       },
       {
         id: "result-2",
@@ -91,6 +92,8 @@ describe("InformationProcessor", () => {
         provider: "mock",
         providerMetadata: {},
         processedAt: new Date(),
+        retrievedAt: new Date(),
+        contentHash: "hash2",
       },
       {
         id: "result-3",
@@ -106,6 +109,8 @@ describe("InformationProcessor", () => {
         provider: "mock",
         providerMetadata: {},
         processedAt: new Date(),
+        retrievedAt: new Date(),
+        contentHash: "hash3",
       },
       {
         id: "result-4",
@@ -122,6 +127,8 @@ describe("InformationProcessor", () => {
         provider: "mock",
         providerMetadata: {},
         processedAt: new Date(),
+        retrievedAt: new Date(),
+        contentHash: "hash4",
       },
       // Duplicate result
       {
@@ -139,6 +146,8 @@ describe("InformationProcessor", () => {
         provider: "mock",
         providerMetadata: {},
         processedAt: new Date(),
+        retrievedAt: new Date(),
+        contentHash: "hash5",
       },
     ];
   });

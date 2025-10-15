@@ -1,0 +1,156 @@
+id: ARBITER-009-HARDEN
+title: Multi-Turn Learning Coordinator - Production Hardening
+risk_tier: 2
+mode: fix
+change_budget:
+  max_files: 10
+  max_loc: 300
+blast_radius:
+  modules:
+    - src/orchestrator
+    - tests/unit/orchestrator
+    - tests/integration/learning
+  data_migration: false
+operational_rollback_slo: 5m
+threats:
+  - threat: Context loss between iterations breaks continuity
+    likelihood: medium
+    impact: high
+    mitigation: Context preservation tests, state management validation, recovery tests
+  - threat: Iteration loops become infinite
+    likelihood: low
+    impact: medium
+    mitigation: Loop detection tests, maximum iteration limits, circuit breakers
+  - threat: Feedback generation errors degrade learning
+    likelihood: medium
+    impact: medium
+    mitigation: Feedback quality tests, validation checks, human-in-loop options
+scope:
+  in:
+    - src/orchestrator/MultiTurnLearningCoordinator.ts
+    - src/types/multi-turn-learning.ts
+    - tests/unit/orchestrator/multi-turn-learning-coordinator.test.ts
+    - tests/integration/learning/
+  out:
+    - node_modules/
+    - dist/
+    - coverage/
+    - iterations/poc/
+invariants:
+  - Context is never lost between iterations
+  - Iteration count is always tracked and limited
+  - Feedback is always generated for completed iterations
+  - Learning progress is measurable and auditable
+  - Failed iterations do not corrupt state
+acceptance:
+  - id: A1
+    given: Multi-turn learning coordinator with comprehensive test suite
+    when: All tests are executed
+    then: 80%+ branch coverage achieved, all integration tests passing
+  - id: A2
+    given: Multi-turn learning coordinator managing conversation
+    when: Multiple iterations are executed
+    then: Context preserved across iterations, no information loss, continuity maintained
+  - id: A3
+    given: Multi-turn learning coordinator with iteration limits
+    when: Maximum iterations reached
+    then: Iteration stopped, feedback generated, learning captured, no infinite loop
+  - id: A4
+    given: Multi-turn learning coordinator generating feedback
+    when: Iteration completes
+    then: High-quality feedback generated, actionable insights provided, learning captured
+  - id: A5
+    given: Multi-turn learning coordinator with context preservation engine
+    when: Context management is performed
+    then: Efficient compression, relevant context retained, retrieval accurate
+  - id: A6
+    given: Multi-turn learning coordinator integration with reasoning engine
+    when: End-to-end multi-turn workflow executed
+    then: Iterations coordinated, context managed, learning accumulated, results delivered
+  - id: A7
+    given: Multi-turn learning coordinator error conditions
+    when: Iteration failures occur
+    then: Graceful recovery, state preserved, error logged, continuation possible
+  - id: A8
+    given: Multi-turn learning coordinator tracking progress
+    when: Learning metrics are queried
+    then: Progress measured, improvements quantified, audit trail complete
+non_functional:
+  perf:
+    iteration_coordination_p95_ms: 100
+    context_retrieval_p95_ms: 50
+    feedback_generation_p95_ms: 500
+  reliability:
+    context_preservation_rate: 99.9
+    iteration_success_rate: 95
+  scalability:
+    max_concurrent_conversations: 100
+    max_iterations_per_conversation: 50
+    max_context_size_mb: 10
+contracts:
+  - type: typescript-interface
+    path: src/types/multi-turn-learning.ts
+    version: 1.0.0
+observability:
+  logs:
+    - iteration_start_end
+    - context_preservation_operations
+    - feedback_generation
+    - learning_metrics_updates
+  metrics:
+    - active_conversations
+    - iterations_per_conversation_avg
+    - iteration_coordination_latency_p95
+    - context_preservation_success_rate
+    - feedback_quality_score_avg
+  traces:
+    - multi_turn_workflow
+    - context_management_chain
+    - feedback_generation_flow
+rollback:
+  - strategy: conversation_state_rollback
+    description: Revert to previous conversation state
+    slo_minutes: 5
+    data_loss_risk: low
+ai_assessment:
+  confidence_level: 0.85
+  uncertainty_areas:
+    - Optimal iteration count limits
+    - Context compression strategies
+  complexity_factors:
+    - Multi-iteration state management
+    - Context preservation across iterations
+  risk_factors:
+    - Context loss breaks conversation continuity
+    - Infinite loops degrade system performance
+testing_strategy:
+  unit_tests:
+    target_coverage: 80
+    target_mutation_score: 50
+    focus_areas:
+      - Iteration coordination logic
+      - Context preservation
+      - Feedback generation
+      - Loop detection
+  integration_tests:
+    scenarios:
+      - Multi-iteration workflows
+      - Context preservation across restarts
+      - Iteration limit enforcement
+      - Feedback quality validation
+  performance_tests:
+    load_testing:
+      - Normal load: 20 concurrent conversations
+      - Peak load: 50 concurrent conversations
+      - Stress test: 100 concurrent conversations
+hardening_checklist:
+  - [ ] Comprehensive unit tests (80%+ coverage)
+  - [ ] Mutation testing (50%+ score)
+  - [ ] Integration tests with context engine
+  - [ ] Iteration limit tests passing
+  - [ ] Context preservation validated
+  - [ ] Feedback quality tests
+  - [ ] Performance benchmarks met
+  - [ ] Error handling validated
+  - [ ] Documentation complete
+  - [ ] Learning runbook created

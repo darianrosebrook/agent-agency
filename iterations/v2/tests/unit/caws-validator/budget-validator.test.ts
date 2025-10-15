@@ -98,6 +98,10 @@ describe("BudgetValidator", () => {
     validator = new BudgetValidator(mockPolicyLoader, mockWaiverManager);
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe("deriveBudget", () => {
     it("should derive budget from policy for Tier 1", async () => {
       const spec = createValidSpec(1);

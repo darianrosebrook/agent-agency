@@ -74,4 +74,7 @@ afterAll(async () => {
       error instanceof Error ? error.message : error
     );
   }
+
+  // Give a moment for any remaining async operations to complete
+  await new Promise((resolve) => setTimeout(resolve, 100));
 });

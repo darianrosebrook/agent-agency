@@ -112,6 +112,10 @@ describe("CAWSValidator", () => {
     });
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe("validateWorkingSpec", () => {
     it("should validate successfully with valid spec", async () => {
       const spec = createValidSpec();

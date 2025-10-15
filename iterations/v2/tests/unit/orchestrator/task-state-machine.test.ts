@@ -6,7 +6,6 @@
 
 import { beforeEach, describe, expect, it } from "@jest/globals";
 import {
-  VerificationPriority,
   TaskStateMachine,
   TaskStateMachineError,
 } from "../../../src/orchestrator/TaskStateMachine";
@@ -232,19 +231,19 @@ describe("TaskStateMachine", () => {
       });
     });
 
-    it("should update updatedAt timestamp on transition", () => {
+    it("should update updatedAt timestamp on transition", async () => {
       machine.initializeTask("task-1");
       const history1 = machine.getHistory("task-1");
       const timestamp1 = history1.updatedAt;
 
       // Small delay to ensure timestamp difference
-      setTimeout(() => {
-        machine.transition("task-1", TaskState.QUEUED);
-        const history2 = machine.getHistory("task-1");
-        expect(history2.updatedAt.getTime()).toBeGreaterThan(
-          timestamp1.getTime()
-        );
-      }, 10);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      machine.transition("task-1", TaskState.QUEUED);
+      const history2 = machine.getHistory("task-1");
+      expect(history2.updatedAt.getTime()).toBeGreaterThan(
+        timestamp1.getTime()
+      );
     });
   });
 

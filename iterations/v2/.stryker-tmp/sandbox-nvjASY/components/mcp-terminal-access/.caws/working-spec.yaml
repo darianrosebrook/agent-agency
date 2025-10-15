@@ -1,0 +1,359 @@
+# CAWS Working Specification
+# Terminal Access Layer for MCP Integration
+#
+# @author @darianrosebrook
+
+id: INFRA-005
+title: "MCP Terminal Access Layer for Task Runner Agents"
+risk_tier: 1
+mode: feature
+change_budget:
+  max_files: 18
+  max_loc: 1200
+blast_radius:
+  modules:
+    - "mcp-server"
+    - "orchestrator"
+    - "security"
+  data_migration: false
+  breaking_change: false
+operational_rollback_slo: "5m"
+
+# --- Scope Definition ---
+scope:
+  in:
+    - "iterations/v2/src/mcp-server/tools/terminal-tools.ts"
+    - "iterations/v2/src/mcp-server/handlers/terminal-handlers.ts"
+    - "iterations/v2/src/mcp-server/ArbiterMCPServer.ts"
+    - "iterations/v2/src/mcp-server/types/terminal-types.ts"
+    - "iterations/v2/src/orchestrator/TerminalSessionManager.ts"
+    - "iterations/v2/src/security/CommandValidator.ts"
+    - "iterations/v2/tests/unit/mcp-server/terminal-tools.test.ts"
+    - "iterations/v2/tests/unit/security/CommandValidator.test.ts"
+    - "iterations/v2/tests/integration/terminal-execution.test.ts"
+    - "iterations/v2/tests/e2e/mcp-terminal-workflow.test.ts"
+    - "apps/tools/caws/tools-allow.json"
+    - "iterations/v2/docs/mcp-integration/terminal-access.md"
+    - "iterations/v2/package.json"
+  out:
+    - "node_modules/"
+    - "dist/"
+    - "coverage/"
+    - "iterations/v2/src/database/"
+    - "iterations/v2/src/knowledge/"
+    - "iterations/v2/src/rl/"
+
+# --- Invariants ---
+invariants:
+  - "All commands must be validated against tools-allow.json allowlist"
+  - "Terminal sessions must be automatically cleaned up on task completion or failure"
+  - "Command execution must enforce timeout limits (max 5 minutes)"
+  - "All terminal operations must be logged for provenance tracking"
+  - "Session state must never persist beyond task lifecycle"
+  - "No environment variables containing secrets can be passed to sessions"
+  - "Command output must be captured and size-limited (max 1MB per command)"
+
+# --- Acceptance Criteria ---
+acceptance:
+  - id: "A1"
+    given: "Agent is assigned a task requiring npm test execution"
+    when: "Agent calls terminal_create_session then terminal_execute_command"
+    then: "Session is created, command executes, and stdout/stderr are returned with exit code"
+    
+  - id: "A2"
+    given: "Agent attempts to execute a command not in tools-allow.json"
+    when: "CommandValidator checks the command"
+    then: "Command is rejected with error code COMMAND_NOT_ALLOWED and detailed error message"
+    
+  - id: "A3"
+    given: "Task completes successfully"
+    when: "Task runner cleanup executes"
+    then: "Terminal session is closed, process is killed if running, and resources are freed"
+    
+  - id: "A4"
+    given: "Command execution exceeds timeout (default 60s)"
+    when: "Timeout handler triggers"
+    then: "Process is killed with SIGTERM, error returned with code TIMEOUT_EXCEEDED"
+    
+  - id: "A5"
+    given: "Agent needs to execute multiple sequential commands"
+    when: "Agent calls terminal_execute_command multiple times on same session"
+    then: "Each command executes in the same working directory with persistent environment"
+    
+  - id: "A6"
+    given: "Command produces large output (>1MB)"
+    when: "Output stream handler monitors size"
+    then: "Output is truncated at 1MB with warning, command continues to completion"
+    
+  - id: "A7"
+    given: "Multiple agents have concurrent terminal sessions"
+    when: "TerminalSessionManager tracks all active sessions"
+    then: "Each session is isolated, no cross-contamination of environment or state"
+    
+  - id: "A8"
+    given: "Agent requests terminal session status"
+    when: "Agent calls terminal_get_status with sessionId"
+    then: "Session state (idle/running/completed/failed) and metadata are returned"
+
+# --- Non-Functional Requirements ---
+non_functional:
+  security:
+    - "command-allowlist-validation"
+    - "timeout-enforcement"
+    - "audit-logging"
+    - "environment-variable-sanitization"
+    - "output-size-limits"
+    - "session-isolation"
+    - "automatic-cleanup"
+  
+  perf:
+    api_p95_ms: 500  # Terminal command execution overhead
+    max_concurrent_sessions: 50
+    session_startup_ms: 100
+    command_timeout_default_ms: 60000
+    command_timeout_max_ms: 300000
+  
+  reliability:
+    - "Graceful degradation if terminal tools unavailable"
+    - "Retry logic for transient spawn errors"
+    - "Circuit breaker for repeated command failures"
+    - "Health check endpoint for terminal service status"
+  
+  observability:
+    - "Emit events for session lifecycle (created, command_executed, closed)"
+    - "Track command execution metrics (duration, exit code, output size)"
+    - "Log all security violations for audit"
+    - "Expose session metrics via health endpoint"
+
+# --- Contracts ---
+contracts:
+  - type: "mcp-tools"
+    path: "iterations/v2/docs/contracts/mcp-terminal-tools.yaml"
+    description: "MCP tool definitions for terminal operations"
+    
+  - type: "typescript-interface"
+    path: "iterations/v2/src/mcp-server/types/terminal-types.ts"
+    description: "TypeScript type definitions for terminal session and command execution"
+
+# --- Dependencies ---
+dependencies:
+  external:
+    - name: "@modelcontextprotocol/sdk"
+      version: "^0.6.0"
+      reason: "MCP server framework"
+    - name: "child_process"
+      version: "builtin"
+      reason: "Process spawning for command execution"
+  
+  internal:
+    - module: "ArbiterMCPServer"
+      reason: "Terminal tools registration and request routing"
+    - module: "SecurityManager"
+      reason: "Command validation and audit logging"
+    - module: "EventBus"
+      reason: "Terminal lifecycle event emission"
+
+# --- Metrics ---
+metrics:
+  coverage:
+    target: 90
+    critical_paths:
+      - "Command validation logic"
+      - "Session lifecycle management"
+      - "Timeout enforcement"
+      - "Output size limiting"
+  
+  mutation:
+    target: 75
+    critical_paths:
+      - "Security validations"
+      - "Cleanup logic"
+  
+  performance:
+    - metric: "session_creation_latency"
+      target: "<100ms"
+      p95: true
+    - metric: "command_execution_overhead"
+      target: "<500ms"
+      p95: true
+    - metric: "session_cleanup_time"
+      target: "<50ms"
+      p95: true
+
+# --- Rollback Plan ---
+rollback:
+  strategy: "feature-flag"
+  steps:
+    - "Set ENABLE_TERMINAL_ACCESS=false in environment"
+    - "MCP server will not register terminal tools"
+    - "Task runners fall back to previous execution method"
+    - "No data migration required"
+  
+  validation:
+    - "Verify MCP server starts without terminal tools"
+    - "Confirm task execution still works via alternative paths"
+    - "Check no orphaned terminal sessions remain"
+
+# --- Migration Notes ---
+migration:
+  pre_deployment:
+    - "Ensure tools-allow.json exists and is populated"
+    - "Verify child_process permissions in deployment environment"
+    - "Configure environment variable sanitization rules"
+  
+  post_deployment:
+    - "Monitor terminal session creation rate"
+    - "Track command validation failure rate"
+    - "Alert on session cleanup failures"
+    - "Verify no security violations logged"
+
+# --- Testing Strategy ---
+testing:
+  unit:
+    - "CommandValidator rejects disallowed commands"
+    - "CommandValidator allows all tools-allow.json commands"
+    - "TerminalSessionManager creates sessions with correct state"
+    - "TerminalSessionManager enforces timeout limits"
+    - "TerminalSessionManager truncates large output"
+    - "Session cleanup kills running processes"
+  
+  integration:
+    - "MCP tools route to terminal handlers correctly"
+    - "End-to-end command execution with real process spawn"
+    - "Multiple sequential commands in same session maintain state"
+    - "Concurrent sessions remain isolated"
+    - "Session cleanup on task failure"
+  
+  e2e:
+    - "Agent workflow: create session → execute npm test → close session"
+    - "Agent workflow: security violation handling"
+    - "Agent workflow: timeout handling"
+    - "Agent workflow: concurrent multi-agent terminal access"
+  
+  security:
+    - "Attempt to execute rm -rf / (should be blocked)"
+    - "Attempt to read sensitive environment variables"
+    - "Attempt to spawn shell escapes (command injection)"
+    - "Verify audit logs capture all attempts"
+
+# --- Documentation Requirements ---
+documentation:
+  user_facing:
+    - path: "iterations/v2/docs/mcp-integration/terminal-access.md"
+      sections:
+        - "Overview and architecture"
+        - "MCP tool usage examples"
+        - "Security model and allowlist"
+        - "Session lifecycle management"
+        - "Error handling and troubleshooting"
+  
+  developer:
+    - path: "iterations/v2/src/mcp-server/tools/terminal-tools.ts"
+      content: "TSDoc for all public APIs"
+    - path: "iterations/v2/src/security/CommandValidator.ts"
+      content: "Security validation logic documentation"
+  
+  operations:
+    - "tools-allow.json management and updates"
+    - "Monitoring and alerting setup"
+    - "Incident response for security violations"
+
+# --- Success Criteria ---
+success_criteria:
+  - "All acceptance criteria pass"
+  - "Unit test coverage ≥90%"
+  - "Mutation score ≥75%"
+  - "Zero security violations in security testing"
+  - "P95 command execution overhead <500ms"
+  - "No memory leaks in 24h soak test (100 tasks/hour)"
+  - "Security review approval obtained"
+  - "Documentation complete and reviewed"
+
+# --- Timeline ---
+timeline:
+  estimated_effort: "3-4 days"
+  phases:
+    - phase: "Plan & Design"
+      duration: "4 hours"
+      deliverables:
+        - "Architecture diagram"
+        - "Contract definitions"
+        - "Test plan"
+    
+    - phase: "Implementation - Core"
+      duration: "12 hours"
+      deliverables:
+        - "TerminalSessionManager"
+        - "CommandValidator"
+        - "MCP tool handlers"
+    
+    - phase: "Implementation - Integration"
+      duration: "8 hours"
+      deliverables:
+        - "MCP server registration"
+        - "Event emission"
+        - "Health checks"
+    
+    - phase: "Testing"
+      duration: "12 hours"
+      deliverables:
+        - "Unit tests (90%+ coverage)"
+        - "Integration tests"
+        - "E2E tests"
+        - "Security tests"
+    
+    - phase: "Documentation & Review"
+      duration: "4 hours"
+      deliverables:
+        - "User documentation"
+        - "API documentation"
+        - "Security review"
+
+# --- Risk Assessment ---
+risks:
+  - risk: "Command injection vulnerabilities"
+    severity: "critical"
+    mitigation: "Strict allowlist validation, no shell interpretation for args"
+    likelihood: "low"
+  
+  - risk: "Resource exhaustion from too many concurrent sessions"
+    severity: "high"
+    mitigation: "Rate limiting, max concurrent session cap (50)"
+    likelihood: "medium"
+  
+  - risk: "Process zombies from failed cleanup"
+    severity: "medium"
+    mitigation: "Automatic cleanup on process exit, health check monitoring"
+    likelihood: "low"
+  
+  - risk: "Timeout too short for legitimate long-running tasks"
+    severity: "low"
+    mitigation: "Configurable timeout per command, reasonable defaults"
+    likelihood: "medium"
+
+# --- Compliance ---
+compliance:
+  - standard: "CAWS Risk Tier 1"
+    requirements:
+      - "Manual security review"
+      - "90%+ test coverage"
+      - "75%+ mutation score"
+      - "Comprehensive audit logging"
+    status: "pending"
+
+# --- Approvals ---
+approvals:
+  required:
+    - role: "Security Lead"
+      reason: "Command execution security review"
+    - role: "Architecture Lead"
+      reason: "MCP integration pattern approval"
+  
+  obtained: []
+
+# --- Version History ---
+version: "1.0.0"
+created: "2025-10-13"
+last_updated: "2025-10-13"
+status: "draft"
+

@@ -434,6 +434,9 @@ describe("IterationManager", () => {
       const sessionId = "session-12";
       manager.initializeSession(sessionId);
 
+      // Start an iteration to have partial results
+      manager.startIteration(sessionId);
+
       const degradation = manager.gracefulDegradation(
         sessionId,
         "Resource limit exceeded"
@@ -516,7 +519,7 @@ describe("IterationManager", () => {
       const sessionId = "session-18";
       manager.initializeSession(sessionId);
 
-      // Exhaust iterations
+      // Exhaust iterations with some progress to avoid no-progress limit
       for (let i = 0; i < 10; i++) {
         manager.startIteration(sessionId);
         manager.completeIteration(sessionId, {
@@ -528,16 +531,17 @@ describe("IterationManager", () => {
           durationMs: 1000,
           contextSnapshotId: `snap-${i + 1}`,
           errorDetected: false,
-          qualityScore: 0.5,
-          improvementDelta: 0,
+          qualityScore: 0.5 + i * 0.02, // Improvement to avoid no-progress limit
+          improvementDelta: 0.02,
           resourceUsageMB: 100,
           promptModifications: [],
         });
       }
 
-      const canStart = manager.canStartIteration(sessionId);
-      expect(canStart.allowed).toBe(false);
-      expect(canStart.reason).toContain("Maximum iterations");
+      // Try to start one more iteration - should throw error
+      expect(() => manager.startIteration(sessionId)).toThrow(
+        "Cannot start iteration: Maximum iterations reached"
+      );
     });
 
     it("should stop on excessive no-progress iterations", () => {
@@ -598,7 +602,7 @@ describe("IterationManager", () => {
 
       const canStart = manager.canStartIteration(sessionId);
       expect(canStart.allowed).toBe(false);
-      expect(canStart.reason).toContain("resource limit");
+      expect(canStart.reason).toContain("Resource budget exceeded");
     });
   });
 
@@ -623,7 +627,7 @@ describe("IterationManager", () => {
 
       manager.on(LearningCoordinatorEvent.ITERATION_COMPLETED, (event) => {
         expect(event.sessionId).toBe(sessionId);
-        expect(event.data.iteration.iterationNumber).toBe(1);
+        expect(event.data.iterationNumber).toBe(1);
         done();
       });
 
@@ -650,7 +654,7 @@ describe("IterationManager", () => {
 
       manager.on(LearningCoordinatorEvent.RESOURCE_WARNING, (event) => {
         expect(event.sessionId).toBe(sessionId);
-        expect(event.data.currentUsageMB).toBe(470);
+        expect(event.data.usageMB).toBe(470);
         done();
       });
 

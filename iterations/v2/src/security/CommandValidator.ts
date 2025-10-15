@@ -38,8 +38,8 @@ const SHELL_METACHARACTERS = [
  * Patterns for command substitution
  */
 const COMMAND_SUBSTITUTION_PATTERNS = [
-  /\$\([^)]*\)/g, // $(command)
-  /`.*`/g, // `command` (backtick command substitution - allow any content between backticks)
+  /\$\(.*?\)/g, // $(command) - match any content between $( and )
+  /`.*?`/g, // `command` (backtick command substitution - match any content between backticks)
 ];
 
 /**
@@ -171,6 +171,16 @@ export class CommandValidator {
             issues: [`Matches pattern: ${pattern}`],
           };
         }
+      }
+
+      // Check for dangerous arguments
+      if (arg === "/" || arg === "/*" || arg === "/**") {
+        return {
+          valid: false,
+          error: "Dangerous argument detected: root directory deletion",
+          reason: "Unsafe file system operation",
+          issues: ["Attempting to delete root directory"],
+        };
       }
 
       // Check for shell metacharacters (general patterns last)

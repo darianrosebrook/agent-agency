@@ -321,6 +321,16 @@ export interface PerformanceEvent {
   timestamp: Timestamp;
 
   /**
+   * Whether the operation was successful.
+   */
+  success?: boolean;
+
+  /**
+   * Additional metadata for the event.
+   */
+  metadata?: Record<string, unknown>;
+
+  /**
    * Agent identifier (if applicable).
    */
   agentId?: string;

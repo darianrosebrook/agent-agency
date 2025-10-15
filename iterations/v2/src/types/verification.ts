@@ -70,6 +70,7 @@ export interface VerificationMethodResult {
   reasoning: string | string[];
   processingTimeMs: number;
   evidenceCount: number;
+  evidence?: any[]; // Supporting evidence for the verification result
   metadata?: Record<string, any>;
 }
 

@@ -91,6 +91,12 @@ export class ResourceMonitor implements IResourceMonitor {
 
     this.isRunning = true;
 
+    // Clear any existing timer first to prevent multiple timers
+    if (this.monitoringTimer) {
+      clearInterval(this.monitoringTimer);
+      this.monitoringTimer = undefined;
+    }
+
     // Start periodic health updates
     if (this.config.enableHealthTracking) {
       this.monitoringTimer = setInterval(async () => {

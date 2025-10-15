@@ -51,6 +51,10 @@ describe("LoadBalancer", () => {
     await monitor.updateTaskCount("agent-2", 5);
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe("Agent Selection", () => {
     it("should select agent using least loaded strategy", async () => {
       const request: ResourceAllocationRequest = {
@@ -70,6 +74,112 @@ describe("LoadBalancer", () => {
       expect(decision.selectedAgentId).toBeTruthy();
       expect(decision.strategy).toBe(LoadBalancingStrategy.LEAST_LOADED);
       expect(decision.decisionDurationMs).toBeGreaterThanOrEqual(0); // Can be 0 for very fast decisions
+    });
+
+    it("should select agent using round robin strategy", async () => {
+      balancer.setStrategy(LoadBalancingStrategy.ROUND_ROBIN);
+
+      const request: ResourceAllocationRequest = {
+        requestId: "req-1",
+        taskId: "task-1",
+        priority: TaskPriority.MEDIUM,
+        requiredResources: {},
+        requestedAt: new Date(),
+        timeoutMs: 5000,
+      };
+
+      const decision = await balancer.selectAgent(request, [
+        "agent-1",
+        "agent-2",
+      ]);
+
+      expect(decision.selectedAgentId).toBeTruthy();
+      expect(decision.strategy).toBe(LoadBalancingStrategy.ROUND_ROBIN);
+      expect(decision.decisionDurationMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it("should select agent using weighted strategy", async () => {
+      balancer.setStrategy(LoadBalancingStrategy.WEIGHTED);
+
+      const request: ResourceAllocationRequest = {
+        requestId: "req-1",
+        taskId: "task-1",
+        priority: TaskPriority.MEDIUM,
+        requiredResources: {},
+        requestedAt: new Date(),
+        timeoutMs: 5000,
+      };
+
+      const decision = await balancer.selectAgent(request, [
+        "agent-1",
+        "agent-2",
+      ]);
+
+      expect(decision.selectedAgentId).toBeTruthy();
+      expect(decision.strategy).toBe(LoadBalancingStrategy.WEIGHTED);
+      expect(decision.decisionDurationMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it("should select agent using priority based strategy", async () => {
+      balancer.setStrategy(LoadBalancingStrategy.PRIORITY_BASED);
+
+      const request: ResourceAllocationRequest = {
+        requestId: "req-1",
+        taskId: "task-1",
+        priority: TaskPriority.HIGH,
+        requiredResources: {},
+        requestedAt: new Date(),
+        timeoutMs: 5000,
+      };
+
+      const decision = await balancer.selectAgent(request, [
+        "agent-1",
+        "agent-2",
+      ]);
+
+      expect(decision.selectedAgentId).toBeTruthy();
+      expect(decision.strategy).toBe(LoadBalancingStrategy.PRIORITY_BASED);
+      expect(decision.decisionDurationMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it("should select agent using random strategy", async () => {
+      balancer.setStrategy(LoadBalancingStrategy.RANDOM);
+
+      const request: ResourceAllocationRequest = {
+        requestId: "req-1",
+        taskId: "task-1",
+        priority: TaskPriority.MEDIUM,
+        requiredResources: {},
+        requestedAt: new Date(),
+        timeoutMs: 5000,
+      };
+
+      const decision = await balancer.selectAgent(request, [
+        "agent-1",
+        "agent-2",
+      ]);
+
+      expect(decision.selectedAgentId).toBeTruthy();
+      expect(decision.strategy).toBe(LoadBalancingStrategy.RANDOM);
+      expect(decision.decisionDurationMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it("should throw error for unknown strategy", async () => {
+      // @ts-expect-error Testing invalid strategy
+      balancer.setStrategy("INVALID_STRATEGY");
+
+      const request: ResourceAllocationRequest = {
+        requestId: "req-1",
+        taskId: "task-1",
+        priority: TaskPriority.MEDIUM,
+        requiredResources: {},
+        requestedAt: new Date(),
+        timeoutMs: 5000,
+      };
+
+      await expect(balancer.selectAgent(request, ["agent-1"])).rejects.toThrow(
+        "Unknown load balancing strategy"
+      );
     });
 
     it("should throw error for empty agent list", async () => {

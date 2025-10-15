@@ -8,7 +8,7 @@
  */
 
 import { ArbiterOrchestrator } from "../../orchestrator/ArbiterOrchestrator";
-import { KnowledgeQuery, QueryType } from "../../types/knowledge";
+import { KnowledgeQuery, QueryType, SearchResult } from "../../types/knowledge";
 
 /**
  * MCP Tool Definition for knowledge-search
@@ -163,7 +163,7 @@ export async function handleKnowledgeSearch(
         query: response.query.query,
         summary: response.summary,
         confidence: response.confidence,
-        results: response.results.map((r) => ({
+        results: response.results.map((r: SearchResult) => ({
           title: r.title,
           url: r.url,
           snippet: r.content.substring(0, 200) + "...",

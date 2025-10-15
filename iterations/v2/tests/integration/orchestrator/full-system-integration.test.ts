@@ -9,13 +9,11 @@
  */
 
 import {
-  VerificationPriority,
   ArbiterOrchestrator,
   defaultArbiterOrchestratorConfig,
 } from "../../../src/orchestrator/ArbiterOrchestrator";
 import { AgentProfile } from "../../../src/types/agent-registry";
 import {
-  VerificationPriority,
   Task,
   TaskStatus,
   TaskType,
@@ -110,8 +108,7 @@ describe("Full System Integration", () => {
       expect(status.components.agentRegistry).toBe(true);
       expect(status.components.security).toBe(true);
       expect(status.components.healthMonitor).toBe(true);
-      expect(status.components.recoveryManager).toBe(true);
-      expect(status.components.knowledgeSeeker).toBe(true);
+      // Note: recoveryManager and knowledgeSeeker are not part of the components interface
     });
 
     it("should provide comprehensive system metrics", async () => {
@@ -121,13 +118,11 @@ describe("Full System Integration", () => {
       expect(typeof status.metrics.activeTasks).toBe("number");
       expect(typeof status.metrics.queuedTasks).toBe("number");
       expect(typeof status.metrics.registeredAgents).toBe("number");
-      expect(typeof status.metrics.completedTasks).toBe("number");
-      expect(typeof status.metrics.failedTasks).toBe("number");
+      expect(typeof status.metrics.uptimeSeconds).toBe("number");
+      // Note: completedTasks and failedTasks are not part of the metrics interface
 
-      expect(status.knowledgeCapabilities).toBeDefined();
-      expect(typeof status.knowledgeCapabilities.available).toBe("boolean");
-      expect(Array.isArray(status.knowledgeCapabilities.providers)).toBe(true);
-      expect(typeof status.knowledgeCapabilities.cacheSize).toBe("number");
+      // Note: knowledgeCapabilities is not part of the ArbiterOrchestratorStatus interface
+      // This would need to be accessed through a separate method if available
     });
   });
 

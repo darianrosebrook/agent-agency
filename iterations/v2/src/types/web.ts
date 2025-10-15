@@ -56,6 +56,25 @@ export enum ContentQuality {
 }
 
 /**
+ * Content quality assessment result
+ */
+export interface ContentQualityAssessment {
+  /** Overall quality score (0-1) */
+  score: number;
+
+  /** Quality factors */
+  factors: {
+    contentLength: number;
+    readability: number;
+    uniqueness: number;
+    freshness: number;
+  };
+
+  /** Assessment summary */
+  summary: string;
+}
+
+/**
  * Rate limit status
  */
 export enum RateLimitStatus {
@@ -102,29 +121,41 @@ export interface WebNavigationQuery {
  * Content extraction configuration
  */
 export interface ContentExtractionConfig {
+  /** User agent string for requests */
+  userAgent?: string;
+
+  /** Request timeout in milliseconds */
+  timeoutMs?: number;
+
+  /** Maximum number of redirects to follow */
+  maxRedirects?: number;
+
+  /** Whether to verify SSL certificates */
+  verifySsl?: boolean;
+
   /** Include images */
-  includeImages: boolean;
+  includeImages?: boolean;
 
   /** Include links */
-  includeLinks: boolean;
+  includeLinks?: boolean;
 
   /** Include metadata */
-  includeMetadata: boolean;
+  includeMetadata?: boolean;
 
   /** Strip navigation elements */
-  stripNavigation: boolean;
+  stripNavigation?: boolean;
 
   /** Strip ads and promotional content */
-  stripAds: boolean;
+  stripAds?: boolean;
 
   /** Maximum content length in characters */
-  maxContentLength: number;
+  maxContentLength?: number;
 
   /** CSS selector for specific element extraction */
   selector?: string;
 
   /** Security context */
-  security: WebSecurityContext;
+  security?: WebSecurityContext;
 }
 
 /**
@@ -151,12 +182,24 @@ export interface WebSecurityContext {
 
   /** Respect robots.txt */
   respectRobotsTxt: boolean;
+
+  /** Whether the connection is secure */
+  isSecureConnection?: boolean;
 }
 
 /**
  * Link traversal configuration
  */
 export interface TraversalConfig {
+  /** User agent string */
+  userAgent?: string;
+
+  /** Maximum concurrent requests */
+  maxConcurrentRequests?: number;
+
+  /** Request timeout in milliseconds */
+  timeoutMs?: number;
+
   /** Maximum depth to traverse */
   maxDepth: number;
 
@@ -180,6 +223,24 @@ export interface TraversalConfig {
 
   /** Excluded URL patterns (regex) */
   excludePatterns?: string[];
+
+  /** Allowed domains for traversal */
+  allowedDomains?: string[];
+
+  /** Blocked domains for traversal */
+  blockedDomains?: string[];
+
+  /** Allowed content types */
+  allowedContentTypes?: string[];
+
+  /** Follow external links */
+  followExternalLinks?: boolean;
+
+  /** Extract images */
+  extractImages?: boolean;
+
+  /** Extract scripts */
+  extractScripts?: boolean;
 }
 
 /**
@@ -198,8 +259,17 @@ export interface WebContent {
   /** Main content text */
   content: string;
 
+  /** Plain text content (alternative to content) */
+  textContent?: string;
+
   /** HTML content (if requested) */
   html?: string;
+
+  /** HTTP status code */
+  statusCode?: number;
+
+  /** Content type */
+  contentType?: string;
 
   /** Extracted links */
   links: ExtractedLink[];
@@ -211,13 +281,16 @@ export interface WebContent {
   metadata: WebContentMetadata;
 
   /** Content quality assessment */
-  quality: ContentQuality;
+  quality: ContentQuality | ContentQualityAssessment;
 
   /** Content hash for duplicate detection */
   contentHash: string;
 
   /** Extraction timestamp */
   extractedAt: Date;
+
+  /** Error if extraction failed */
+  error?: Error;
 }
 
 /**
@@ -258,6 +331,12 @@ export interface ExtractedImage {
  * Web content metadata
  */
 export interface WebContentMetadata {
+  /** Page title */
+  title?: string;
+
+  /** Page description */
+  description?: string;
+
   /** HTTP status code */
   statusCode: number;
 
@@ -308,6 +387,9 @@ export interface TraversalResult {
   /** All visited pages */
   pages: WebContent[];
 
+  /** All visited nodes (alias for pages) */
+  nodes: WebContent[];
+
   /** Traversal statistics */
   statistics: TraversalStatistics;
 
@@ -316,6 +398,21 @@ export interface TraversalResult {
 
   /** Completed timestamp */
   completedAt: Date;
+
+  /** Whether max depth was reached */
+  maxDepthReached?: boolean;
+
+  /** Whether page limit was reached */
+  pageLimitReached?: boolean;
+
+  /** Total pages visited (alias for pages.length) */
+  totalPagesVisited?: number;
+
+  /** Traversal time in milliseconds */
+  traversalTimeMs?: number;
+
+  /** Distribution of pages by depth */
+  depthDistribution: Record<number, number>;
 }
 
 /**

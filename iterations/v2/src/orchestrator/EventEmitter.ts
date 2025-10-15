@@ -118,6 +118,9 @@ export interface EventEmitterConfig {
 
   /** Maximum handler execution time (ms) */
   handlerTimeoutMs: number;
+
+  /** Cleanup interval in milliseconds (0 to disable) */
+  cleanupIntervalMs?: number;
 }
 
 /**
@@ -417,9 +420,18 @@ export class EventEmitter {
    * Start periodic cleanup of old events
    */
   private startCleanupTimer(): void {
-    this.cleanupTimer = setInterval(() => {
-      this.cleanupOldEvents();
-    }, 60000); // Clean up every minute
+    // Clear any existing timer first to prevent multiple timers
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = undefined;
+    }
+
+    const intervalMs = this.config.cleanupIntervalMs || 60000;
+    if (intervalMs > 0) {
+      this.cleanupTimer = setInterval(() => {
+        this.cleanupOldEvents();
+      }, intervalMs);
+    }
   }
 
   /**
@@ -458,6 +470,8 @@ export const globalEventEmitter = new EventEmitter({
   },
   asyncHandlers: true,
   handlerTimeoutMs: 5000,
+  // Disable cleanup timer in test environment
+  cleanupIntervalMs: process.env.NODE_ENV === "test" ? 0 : 60000,
 });
 
 /**

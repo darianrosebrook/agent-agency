@@ -4,9 +4,15 @@
  * @author @darianrosebrook
  */
 
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import {
-  VerificationPriority,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from "@jest/globals";
+import {
   ComponentHealthMonitor,
   SystemCoordinator,
 } from "../../../src/coordinator";
@@ -39,6 +45,19 @@ describe("SystemCoordinator", () => {
     );
   });
 
+  afterEach(async () => {
+    try {
+      // Clean up coordinator resources
+      if (coordinator && typeof (coordinator as any).shutdown === "function") {
+        await (coordinator as any).shutdown();
+      }
+    } catch (error) {
+      // Ignore cleanup errors in tests
+    }
+    // Clear all mocks
+    jest.clearAllMocks();
+  });
+
   describe("initialization", () => {
     it("should initialize with config", () => {
       expect(coordinator).toBeDefined();
@@ -57,7 +76,7 @@ describe("SystemCoordinator", () => {
       endpoint: "http://localhost:3001",
       healthCheck: {
         endpoint: "http://localhost:3001/health",
-        method: "GET",
+        method: "GET" as const,
         timeout: 5000,
         interval: 30000,
         retries: 3,
@@ -115,7 +134,7 @@ describe("SystemCoordinator", () => {
         endpoint: "http://localhost:3001",
         healthCheck: {
           endpoint: "http://localhost:3001/health",
-          method: "GET",
+          method: "GET" as const,
           timeout: 5000,
           interval: 30000,
           retries: 3,
@@ -132,7 +151,7 @@ describe("SystemCoordinator", () => {
         endpoint: "http://localhost:3002",
         healthCheck: {
           endpoint: "http://localhost:3002/health",
-          method: "GET",
+          method: "GET" as const,
           timeout: 5000,
           interval: 30000,
           retries: 3,
@@ -197,4 +216,3 @@ describe("SystemCoordinator", () => {
     });
   });
 });
-

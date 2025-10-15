@@ -286,16 +286,23 @@ describe("SpecFileManager Integration Tests", () => {
         tempDir,
       });
 
-      // Create some temporary files
-      const result1 = await tempManager.writeSpecFile(sampleSpec);
-      const result2 = await tempManager.writeSpecFile({
-        ...sampleSpec,
-        id: "TEST-003",
-      });
+      // Create some temporary files manually with old timestamps
+      const oldTimestamp = Date.now() - 10000; // 10 seconds ago
+      const tempPath1 = path.join(
+        tempDir,
+        `caws-spec-TEST-001-${oldTimestamp}.yaml`
+      );
+      const tempPath2 = path.join(
+        tempDir,
+        `caws-spec-TEST-002-${oldTimestamp}.yaml`
+      );
 
-      // Don't cleanup yet
-      const tempPath1 = result1.filePath;
-      const tempPath2 = result2.filePath;
+      await fs.writeFile(tempPath1, manager.specToYaml(sampleSpec), "utf-8");
+      await fs.writeFile(
+        tempPath2,
+        manager.specToYaml({ ...sampleSpec, id: "TEST-003" }),
+        "utf-8"
+      );
 
       // Verify they exist
       await expect(fs.stat(tempPath1)).resolves.toBeDefined();

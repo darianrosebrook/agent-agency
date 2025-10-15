@@ -285,16 +285,16 @@ export class TaskResearchAugmenter {
   /**
    * Get research summary for a task (for display)
    */
-  getResearchSummary(augmentedTask: AugmentedTask): string | null {
+  getResearchSummary(augmentedTask: AugmentedTask): string {
     if (!augmentedTask.researchProvided || !augmentedTask.researchContext) {
-      return null;
+      return "";
     }
 
     const ctx = augmentedTask.researchContext;
     const summaries = ctx.findings.map((f) => f.summary).filter((s) => s);
 
     if (summaries.length === 0) {
-      return null;
+      return "";
     }
 
     return `Research findings (confidence: ${(ctx.confidence * 100).toFixed(
@@ -305,29 +305,22 @@ export class TaskResearchAugmenter {
   /**
    * Get research sources for a task (for citations)
    */
-  getResearchSources(augmentedTask: AugmentedTask): Array<{
-    title: string;
-    url: string;
-  }> {
+  getResearchSources(augmentedTask: AugmentedTask): string[] {
     if (!augmentedTask.researchProvided || !augmentedTask.researchContext) {
       return [];
     }
 
-    const sources: Array<{ title: string; url: string }> = [];
+    const sources: string[] = [];
 
     for (const finding of augmentedTask.researchContext.findings) {
       for (const keyFinding of finding.keyFindings) {
-        sources.push({
-          title: keyFinding.title,
-          url: keyFinding.url,
-        });
+        sources.push(keyFinding.url);
       }
     }
 
     // Deduplicate by URL
     const uniqueSources = sources.filter(
-      (source, index, self) =>
-        index === self.findIndex((s) => s.url === source.url)
+      (url, index, self) => index === self.findIndex((u) => u === url)
     );
 
     return uniqueSources;

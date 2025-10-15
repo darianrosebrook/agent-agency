@@ -1,0 +1,157 @@
+id: ARBITER-008-HARDEN
+title: Web Navigator - Production Hardening
+risk_tier: 2
+mode: fix
+change_budget:
+  max_files: 8
+  max_loc: 250
+blast_radius:
+  modules:
+    - src/orchestrator
+    - tests/unit/orchestrator
+    - tests/integration/web
+  data_migration: false
+operational_rollback_slo: 5m
+threats:
+  - threat: Web scraping errors corrupt extracted content
+    likelihood: medium
+    impact: medium
+    mitigation: Content validation tests, error handling, retry logic
+  - threat: Search engine rate limits block navigation
+    likelihood: high
+    impact: low
+    mitigation: Rate limiting tests, backoff strategies, caching
+  - threat: Malicious content injection during extraction
+    likelihood: low
+    impact: high
+    mitigation: Content sanitization tests, security validation, XSS prevention
+scope:
+  in:
+    - src/orchestrator/WebNavigator.ts
+    - src/types/web-navigator.ts
+    - tests/unit/orchestrator/web-navigator.test.ts
+    - tests/integration/web/
+  out:
+    - node_modules/
+    - dist/
+    - coverage/
+    - iterations/poc/
+invariants:
+  - All extracted content is sanitized
+  - Search engine rate limits are respected
+  - Content extraction is reproducible
+  - Failed navigations do not crash system
+  - Navigation history is maintained
+acceptance:
+  - id: A1
+    given: Web navigator with comprehensive test suite
+    when: All tests are executed
+    then: 80%+ branch coverage achieved, content extraction validated
+  - id: A2
+    given: Web navigator extracting web content
+    when: Content extraction is performed
+    then: Content extracted accurately, sanitized, metadata preserved
+  - id: A3
+    given: Web navigator with rate limiting
+    when: Rate limits are encountered
+    then: Backoff strategy engaged, requests queued, eventual success
+  - id: A4
+    given: Web navigator with multiple search engines
+    when: Primary engine fails
+    then: Fallback to secondary engine, no service interruption
+  - id: A5
+    given: Web navigator with content validation
+    when: Malicious content encountered
+    then: Content sanitized, threats removed, security maintained
+  - id: A6
+    given: Web navigator integration with knowledge seeker
+    when: End-to-end web research performed
+    then: Content extracted, processed, results delivered
+  - id: A7
+    given: Web navigator error conditions
+    when: Navigation failures occur
+    then: Graceful error handling, partial results returned, errors logged
+  - id: A8
+    given: Web navigator performance testing
+    when: Concurrent navigations performed
+    then: Parallel processing active, no blocking, P95 <2000ms
+non_functional:
+  perf:
+    navigation_p95_ms: 2000
+    content_extraction_p95_ms: 500
+    sanitization_p95_ms: 100
+  security:
+    - content-sanitization-comprehensive
+    - xss-prevention
+    - injection-prevention
+  reliability:
+    navigation_success_rate: 90
+    extraction_accuracy: 95
+  scalability:
+    max_concurrent_navigations: 20
+    max_page_size_mb: 10
+contracts:
+  - type: typescript-interface
+    path: src/types/web-navigator.ts
+    version: 1.0.0
+observability:
+  logs:
+    - navigation_requests
+    - extraction_operations
+    - rate_limit_events
+    - sanitization_actions
+  metrics:
+    - navigation_request_rate
+    - navigation_latency_p95
+    - extraction_success_rate
+    - rate_limit_trigger_rate
+  traces:
+    - navigation_flow
+    - extraction_pipeline
+    - sanitization_chain
+rollback:
+  - strategy: search_engine_configuration_rollback
+    description: Revert to previous search engine configuration
+    slo_minutes: 5
+    data_loss_risk: none
+ai_assessment:
+  confidence_level: 0.85
+  uncertainty_areas:
+    - Optimal content extraction strategies
+    - Rate limit thresholds
+  complexity_factors:
+    - Multi-engine search integration
+    - Content sanitization and validation
+  risk_factors:
+    - Malicious content injection
+    - Rate limits block functionality
+testing_strategy:
+  unit_tests:
+    target_coverage: 80
+    target_mutation_score: 50
+    focus_areas:
+      - Navigation logic
+      - Content extraction
+      - Sanitization algorithms
+      - Error handling
+  integration_tests:
+    scenarios:
+      - Multi-engine navigation
+      - Content extraction and validation
+      - Rate limiting and backoff
+      - Security sanitization
+  security_tests:
+    content_validation:
+      - XSS injection attempts
+      - Malicious scripts
+      - Content injection
+hardening_checklist:
+  - [ ] Comprehensive unit tests (80%+ coverage)
+  - [ ] Mutation testing (50%+ score)
+  - [ ] Content extraction validated
+  - [ ] Sanitization tests comprehensive
+  - [ ] Rate limiting tested
+  - [ ] Security validation complete
+  - [ ] Performance benchmarks met
+  - [ ] Documentation complete
+  - [ ] Navigation runbook created

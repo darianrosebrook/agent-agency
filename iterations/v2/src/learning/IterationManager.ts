@@ -378,6 +378,10 @@ export class IterationManager extends EventEmitter {
    */
   cleanup(sessionId: string): void {
     this.contexts.delete(sessionId);
+    this.emit(LearningCoordinatorEvent.SESSION_COMPLETED, {
+      sessionId,
+      timestamp: new Date().toISOString(),
+    });
   }
 
   /**

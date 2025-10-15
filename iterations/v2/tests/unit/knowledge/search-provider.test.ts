@@ -5,14 +5,12 @@
  */
 
 import {
-  VerificationPriority,
   DuckDuckGoSearchProvider,
   MockSearchProvider,
   SearchProviderFactory,
 } from "../../../src/knowledge/SearchProvider";
 import { events } from "../../../src/orchestrator/EventEmitter";
 import {
-  VerificationPriority,
   KnowledgeQuery,
   QueryType,
   SearchProviderConfig,

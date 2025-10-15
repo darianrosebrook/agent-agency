@@ -10,7 +10,9 @@
 import * as fs from "fs";
 import * as path from "path";
 import { ArbiterOrchestrator } from "../../src/orchestrator/ArbiterOrchestrator";
-import { Task } from "../../src/types/task-types";
+
+// TODO: Import proper Task type when task-types module is created
+type Task = any;
 
 // Mock MCP client for testing
 class MockMCPClient {
@@ -34,6 +36,29 @@ describe("Terminal Agent E2E Workflow", () => {
   let orchestrator: ArbiterOrchestrator;
   let mockMcpClient: MockMCPClient;
   const testProjectRoot = path.join(__dirname, "../test-project-root");
+
+  afterEach(async () => {
+    // Clean up orchestrator
+    if (orchestrator) {
+      try {
+        await orchestrator.shutdown();
+      } catch (error) {
+        // Ignore shutdown errors
+      }
+    }
+    jest.clearAllMocks();
+  });
+
+  afterAll(async () => {
+    // Clean up test directory
+    if (fs.existsSync(testProjectRoot)) {
+      try {
+        fs.rmSync(testProjectRoot, { recursive: true, force: true });
+      } catch (error) {
+        // Ignore cleanup errors
+      }
+    }
+  });
 
   beforeEach(async () => {
     // Ensure test directory exists
@@ -59,27 +84,27 @@ describe("Terminal Agent E2E Workflow", () => {
 
     // Initialize orchestrator with test configuration
     orchestrator = new ArbiterOrchestrator({
+      taskQueue: {},
+      taskAssignment: {},
+      agentRegistry: {},
+      healthMonitor: {},
+      recoveryManager: {},
+      knowledgeSeeker: {},
       database: {
-        connectionString: "postgresql://test:test@localhost:5432/test",
-        poolSize: 2,
+        host: "localhost",
+        port: 5432,
+        database: "test",
+        user: "test",
+        maxConnections: 2,
       },
       security: {
-        enabled: true,
-        rateLimiting: { enabled: false }, // Disable for testing
+        auditLoggingEnabled: true,
+        maxAuditEvents: 1000,
+        inputSanitizationEnabled: true,
+        secureErrorResponsesEnabled: true,
+        sessionTimeoutMinutes: 30,
       },
-      mcp: {
-        enabled: true,
-        terminalAccess: {
-          enabled: true,
-          allowlistPath: path.join(
-            __dirname,
-            "../../fixtures/test-allowlist.json"
-          ),
-        },
-      },
-      research: { enabled: false },
-      learning: { enabled: false },
-    });
+    } as any);
 
     await orchestrator.initialize();
   });

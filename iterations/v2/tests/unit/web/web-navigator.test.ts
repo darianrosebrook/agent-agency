@@ -10,6 +10,9 @@ import { WebNavigatorDatabaseClient } from "../../../src/database/WebNavigatorDa
 import { KnowledgeSeeker } from "../../../src/knowledge/KnowledgeSeeker";
 import { RateLimitStatus, WebNavigatorConfig } from "../../../src/types/web";
 import { WebNavigator } from "../../../src/web/WebNavigator";
+import { ContentExtractor } from "../../../src/web/ContentExtractor";
+import { SearchEngine } from "../../../src/web/SearchEngine";
+import { TraversalEngine } from "../../../src/web/TraversalEngine";
 
 // Mock dependencies
 jest.mock("../../../src/database/WebNavigatorDatabaseClient");
@@ -18,13 +21,13 @@ jest.mock("../../../src/web/ContentExtractor");
 jest.mock("../../../src/web/SearchEngine");
 jest.mock("../../../src/web/TraversalEngine");
 
-// Unmock ContentExtractor for targeted testing
-jest.unmock("../../../src/web/ContentExtractor");
-
 describe("WebNavigator", () => {
   let webNavigator: WebNavigator;
   let mockDbClient: jest.Mocked<WebNavigatorDatabaseClient>;
   let mockKnowledgeSeeker: jest.Mocked<KnowledgeSeeker>;
+  let mockContentExtractor: jest.Mocked<ContentExtractor>;
+  let mockSearchEngine: jest.Mocked<SearchEngine>;
+  let mockTraversalEngine: jest.Mocked<TraversalEngine>;
   let defaultConfig: WebNavigatorConfig;
 
   beforeEach(() => {
@@ -51,11 +54,55 @@ describe("WebNavigator", () => {
       storeExtractionMetrics: jest.fn().mockResolvedValue(undefined),
       createTraversal: jest.fn().mockResolvedValue(undefined),
       updateTraversalNode: jest.fn().mockResolvedValue(undefined),
+      updateTraversalStatus: jest.fn().mockResolvedValue(undefined),
     } as any;
 
     mockKnowledgeSeeker = {
       processQuery: jest.fn(),
     } as any;
+
+    // Set up module mocks
+    mockContentExtractor = {
+      extractContent: jest.fn(),
+    } as any;
+    (ContentExtractor as jest.MockedClass<typeof ContentExtractor>).mockImplementation(() => mockContentExtractor);
+
+    mockSearchEngine = {
+      search: jest.fn(),
+      pruneCache: jest.fn(),
+      clearCache: jest.fn(),
+    } as any;
+    (SearchEngine as jest.MockedClass<typeof SearchEngine>).mockImplementation(() => mockSearchEngine);
+
+    mockTraversalEngine = {
+      traverse: jest.fn().mockResolvedValue({
+        sessionId: "traversal-123",
+        startUrl: "https://example.com",
+        pages: [],
+        nodes: [],
+        statistics: {
+          pagesVisited: 1,
+          pagesSkipped: 0,
+          errorsEncountered: 0,
+          maxDepthReached: 1,
+          processingTimeMs: 100,
+          totalContentBytes: 1024,
+          avgPageLoadTimeMs: 50,
+          rateLimitEncounters: 0,
+        },
+        graph: {
+          nodes: [],
+          edges: [],
+        },
+        completedAt: new Date(),
+        maxDepthReached: true,
+        pageLimitReached: false,
+        totalPagesVisited: 1,
+        traversalTimeMs: 100,
+        depthDistribution: { 0: 1 },
+      }),
+    } as any;
+    (TraversalEngine as jest.MockedClass<typeof TraversalEngine>).mockImplementation(() => mockTraversalEngine);
 
     defaultConfig = {
       enabled: true,
@@ -105,6 +152,37 @@ describe("WebNavigator", () => {
     );
 
     jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+    // Reset traversal engine mock to default behavior
+    mockTraversalEngine.traverse.mockResolvedValue({
+      sessionId: "traversal-123",
+      startUrl: "https://example.com",
+      pages: [],
+      nodes: [],
+      statistics: {
+        pagesVisited: 1,
+        pagesSkipped: 0,
+        errorsEncountered: 0,
+        maxDepthReached: 1,
+        processingTimeMs: 100,
+        totalContentBytes: 1024,
+        avgPageLoadTimeMs: 50,
+        rateLimitEncounters: 0,
+      },
+      graph: {
+        nodes: [],
+        edges: [],
+      },
+      completedAt: new Date(),
+      maxDepthReached: true,
+      pageLimitReached: false,
+      totalPagesVisited: 1,
+      traversalTimeMs: 100,
+      depthDistribution: { 0: 1 },
+    });
   });
 
   describe("initialization", () => {
@@ -649,7 +727,8 @@ describe("WebNavigator", () => {
       const traversalConfig = {
         maxDepth: 3,
         maxPages: 10,
-        includeExternalLinks: false,
+        strategy: "breadth_first" as any,
+        sameDomainOnly: true,
         respectRobotsTxt: true,
         delayBetweenRequests: 100,
         timeout: 5000,
@@ -669,11 +748,7 @@ describe("WebNavigator", () => {
         completedAt: new Date(),
       };
 
-      const mockTraversalEngine = {
-        traverse: jest.fn().mockResolvedValue(mockTraversalResult),
-      };
-
-      (webNavigator as any).traversalEngine = mockTraversalEngine;
+      // TraversalEngine is now mocked at the module level
 
       const query: any = {
         id: "query-1",
@@ -710,22 +785,46 @@ describe("WebNavigator", () => {
 
       expect(mockTraversalEngine.traverse).toHaveBeenCalledWith(
         "https://example.com",
-        traversalConfig
+        expect.any(Object) // getDefaultExtractionConfig() result
       );
-      expect(result).toEqual(mockTraversalResult);
+      expect(result).toEqual({
+        sessionId: "traversal-123",
+        startUrl: "https://example.com",
+        pages: [],
+        nodes: [],
+        statistics: {
+          pagesVisited: 1,
+          pagesSkipped: 0,
+          errorsEncountered: 0,
+          maxDepthReached: 1,
+          processingTimeMs: 100,
+          totalContentBytes: 1024,
+          avgPageLoadTimeMs: 50,
+          rateLimitEncounters: 0,
+        },
+        graph: {
+          nodes: [],
+          edges: [],
+        },
+        completedAt: expect.any(Date),
+        maxDepthReached: true,
+        pageLimitReached: false,
+        totalPagesVisited: 1,
+        traversalTimeMs: 100,
+        depthDistribution: { 0: 1 },
+      });
       expect(mockDbClient.createTraversal).toHaveBeenCalledWith(
-        mockTraversalResult.sessionId,
+        expect.stringMatching(/^traversal-\d+-[a-z0-9]+$/),
         "https://example.com",
-        traversalConfig
+        traversalConfig.maxDepth,
+        traversalConfig.maxPages,
+        traversalConfig.strategy
       );
     });
 
     it("should handle traversal errors", async () => {
-      const mockTraversalEngine = {
-        traverse: jest.fn().mockRejectedValue(new Error("Traversal failed")),
-      };
-
-      (webNavigator as any).traversalEngine = mockTraversalEngine;
+      // Configure the module-level mock to throw an error
+      mockTraversalEngine.traverse.mockRejectedValue(new Error("Traversal failed"));
 
       const query: any = {
         id: "query-2",
@@ -764,7 +863,13 @@ describe("WebNavigator", () => {
     });
 
     it("should create traversal session in database", async () => {
-      const traversalConfig = { maxDepth: 2, maxPages: 5 };
+      const traversalConfig = {
+        maxDepth: 2,
+        maxPages: 5,
+        strategy: "breadth_first" as any,
+        sameDomainOnly: true,
+        respectRobotsTxt: true,
+      };
       const mockTraversalResult = {
         sessionId: "session-123",
         startUrl: "https://example.com",
@@ -776,11 +881,7 @@ describe("WebNavigator", () => {
         completedAt: new Date(),
       };
 
-      const mockTraversalEngine = {
-        traverse: jest.fn().mockResolvedValue(mockTraversalResult),
-      };
-
-      (webNavigator as any).traversalEngine = mockTraversalEngine;
+      // TraversalEngine is now mocked at the module level
 
       const query: any = {
         id: "query-3",
@@ -816,9 +917,11 @@ describe("WebNavigator", () => {
       await webNavigator.processQuery(query);
 
       expect(mockDbClient.createTraversal).toHaveBeenCalledWith(
-        "session-123",
+        expect.stringMatching(/^traversal-\d+-[a-z0-9]+$/),
         "https://example.com",
-        traversalConfig
+        traversalConfig.maxDepth,
+        traversalConfig.maxPages,
+        traversalConfig.strategy
       );
     });
 
@@ -838,7 +941,7 @@ describe("WebNavigator", () => {
         traverse: jest.fn().mockResolvedValue(mockTraversalResult),
       };
 
-      (webNavigator as any).traversalEngine = mockTraversalEngine;
+      // TraversalEngine is now mocked at the module level
 
       const query: any = {
         id: "query-4",

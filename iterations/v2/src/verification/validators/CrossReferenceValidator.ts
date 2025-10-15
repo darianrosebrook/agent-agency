@@ -22,6 +22,7 @@ export interface CrossReferenceConfig {
   minConsensus: number;
   searchProviders?: string[];
   minSourceQuality?: number;
+  timeout?: number; // Timeout for cross-reference operations (ms)
 }
 
 /**

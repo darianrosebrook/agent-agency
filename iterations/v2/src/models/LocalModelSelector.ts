@@ -132,7 +132,7 @@ export class LocalModelSelector {
     const history = this.getPerformanceHistory(model.id, criteria.taskType);
 
     // If no history, use conservative score
-    if (!history || history.samples < 10) {
+    if (!history || history.samples < 1) {
       return this.scoreNewModel(model, criteria);
     }
 
@@ -319,15 +319,25 @@ export class LocalModelSelector {
 
     // Boost for preferred categories
     if (criteria.preferences?.preferFast && model.category === "fast") {
-      score += 0.1;
+      score += 0.2;
     }
     if (criteria.preferences?.preferQuality && model.category === "quality") {
-      score += 0.1;
+      score += 0.2;
     }
 
     // Boost for local models if preferred
     if (criteria.preferLocal) {
       score += 0.1;
+    }
+
+    // Consider quality threshold - quality models should score higher when quality is important
+    if (criteria.qualityThreshold > 0.8 && model.category === "quality") {
+      score += 0.3;
+    }
+
+    // Consider latency requirements - fast models should score higher when latency is critical
+    if (criteria.maxLatencyMs < 1000 && model.category === "fast") {
+      score += 0.2;
     }
 
     // Check cost profile if available
@@ -359,8 +369,8 @@ export class LocalModelSelector {
     recency: number;
   } {
     const weights = {
-      quality: 0.4,
-      latency: 0.3,
+      quality: 0.5,
+      latency: 0.2,
       memory: 0.1,
       reliability: 0.1,
       recency: 0.1,
@@ -447,13 +457,13 @@ export class LocalModelSelector {
    * @param model Selected model
    * @param score Model score
    * @param criteria Selection criteria
-   * @returns Reasoning text
+   * @returns Reasoning array
    */
   private buildReasoning(
     model: LocalModelConfig,
     score: number,
     criteria: ModelSelectionCriteria
-  ): string {
+  ): string[] {
     const reasons: string[] = [];
 
     reasons.push(`Selected ${model.name} (${model.type})`);
@@ -474,7 +484,17 @@ export class LocalModelSelector {
       );
     }
 
-    return reasons.join(". ");
+    // Add hardware compatibility reasoning
+    if (criteria.availableHardware) {
+      const hardwareTypes = [];
+      if (criteria.availableHardware.cpu) hardwareTypes.push("CPU");
+      if (criteria.availableHardware.gpu) hardwareTypes.push("GPU");
+      if (hardwareTypes.length > 0) {
+        reasons.push(`Hardware: ${hardwareTypes.join(", ")} compatible`);
+      }
+    }
+
+    return reasons;
   }
 
   /**

@@ -25,6 +25,7 @@ export class FileWatcher extends EventEmitter {
   private config: FileWatcherConfig;
   private workspaceRoot: string;
   private debounceTimer: ReturnType<typeof setInterval> | null = null;
+  private metricsTimer: ReturnType<typeof setInterval> | null = null;
   private pendingChanges = new Map<string, Partial<FileChange>>();
   private metrics: WorkspaceMetrics["watcher"] = {
     filesWatched: 0,
@@ -89,6 +90,11 @@ export class FileWatcher extends EventEmitter {
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer);
       this.debounceTimer = null;
+    }
+
+    if (this.metricsTimer) {
+      clearInterval(this.metricsTimer);
+      this.metricsTimer = null;
     }
 
     if (this.watcher) {
@@ -410,7 +416,13 @@ export class FileWatcher extends EventEmitter {
    * Setup periodic metrics calculation
    */
   private setupMetricsTimer(): void {
-    setInterval(() => {
+    // Clear any existing timer first to prevent multiple timers
+    if (this.metricsTimer) {
+      clearInterval(this.metricsTimer);
+      this.metricsTimer = null;
+    }
+
+    this.metricsTimer = setInterval(() => {
       const now = Date.now();
       const timeDiff = (now - this.lastMetricsTime) / 1000; // seconds
 

@@ -303,8 +303,8 @@ export class ModelHotSwapManager {
 
       // 2. Check compatibility
       const compatibility = await this.checkCompatibility(
-        currentModel.config,
-        newModel.config
+        currentModel as LocalModelConfig,
+        newModel as LocalModelConfig
       );
 
       if (!compatibility.canReplace) {
@@ -504,8 +504,10 @@ export class ModelHotSwapManager {
 
     // 2. Check hardware requirements
     if (
+      newModel.hardwareRequirements?.minMemoryMB &&
+      currentModel.hardwareRequirements?.minMemoryMB &&
       newModel.hardwareRequirements.minMemoryMB >
-      currentModel.hardwareRequirements.minMemoryMB * 1.5
+        currentModel.hardwareRequirements.minMemoryMB * 1.5
     ) {
       warnings.push(
         `New model requires ${newModel.hardwareRequirements.minMemoryMB}MB vs ${currentModel.hardwareRequirements.minMemoryMB}MB (50% increase)`

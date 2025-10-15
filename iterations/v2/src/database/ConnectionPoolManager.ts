@@ -135,23 +135,29 @@ export class ConnectionPoolManager {
 
     // Set up event handlers for monitoring
     this.pool.on("connect", (_client) => {
-      console.log(
-        `[ConnectionPool] New connection established (total: ${this.pool?.totalCount})`
-      );
+      if (!this.isShuttingDown) {
+        console.log(
+          `[ConnectionPool] New connection established (total: ${this.pool?.totalCount})`
+        );
+      }
     });
 
     this.pool.on("acquire", (_client) => {
-      console.log(
-        `[ConnectionPool] Connection acquired (active: ${
-          this.pool!.totalCount - this.pool!.idleCount
-        }, idle: ${this.pool?.idleCount})`
-      );
+      if (!this.isShuttingDown) {
+        console.log(
+          `[ConnectionPool] Connection acquired (active: ${
+            this.pool!.totalCount - this.pool!.idleCount
+          }, idle: ${this.pool?.idleCount})`
+        );
+      }
     });
 
     this.pool.on("remove", (_client) => {
-      console.log(
-        `[ConnectionPool] Connection removed (total: ${this.pool?.totalCount})`
-      );
+      if (!this.isShuttingDown && this.pool) {
+        console.log(
+          `[ConnectionPool] Connection removed (total: ${this.pool.totalCount})`
+        );
+      }
     });
 
     this.pool.on("error", (err, _client) => {
@@ -351,6 +357,9 @@ export class ConnectionPoolManager {
     console.log("[ConnectionPool] Shutting down...");
 
     try {
+      // Remove all event listeners to prevent async logging after shutdown
+      this.pool.removeAllListeners();
+
       await this.pool.end();
       console.log("[ConnectionPool] All connections closed");
     } catch (error) {

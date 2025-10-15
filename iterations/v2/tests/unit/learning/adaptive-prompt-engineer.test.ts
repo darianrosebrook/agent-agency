@@ -16,6 +16,10 @@ describe("AdaptivePromptEngineer", () => {
     engineer = new AdaptivePromptEngineer();
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe("initialization", () => {
     it("should initialize with empty state", () => {
       expect(engineer).toBeDefined();

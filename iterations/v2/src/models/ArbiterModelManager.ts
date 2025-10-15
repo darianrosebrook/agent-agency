@@ -118,10 +118,12 @@ export class ArbiterModelManager {
     // 4. Track performance
     const latencyMs = Date.now() - startTime;
     const quality = this.estimateQuality(response);
-    const memoryMB = response.cost.peakMemoryMB;
+    const memoryMB = response.computeCost?.peakMemoryMB || 0;
 
     // Record in cost tracker
-    this.costTracker.recordOperation(response.cost);
+    if (response.computeCost) {
+      this.costTracker.recordOperation(response.computeCost);
+    }
 
     // Record in learning layer (model-agnostic)
     this.hotSwap.recordTaskCompletion(criteria.taskType, {
@@ -348,13 +350,8 @@ export class ArbiterModelManager {
       quality += 0.1; // Detailed response
     }
 
-    // Check if response seems complete
-    if (response.finishReason === "length") {
-      quality -= 0.2; // Truncated
-    }
-
     // Check tokens/second (efficiency indicator)
-    if (response.cost.tokensPerSecond > 50) {
+    if (response.tokensPerSecond > 50) {
       quality += 0.1; // Fast generation
     }
 

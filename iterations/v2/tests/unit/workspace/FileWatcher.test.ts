@@ -281,13 +281,16 @@ describe("FileWatcher", () => {
       await watcherWithIgnores.stop();
     });
 
-    it("should detect binary files", () => {
+    it("should detect binary files", async () => {
       // Test binary file detection logic
-      const watcher = new FileWatcher("/workspace", mockConfig);
+      const testWatcher = new FileWatcher("/workspace", mockConfig);
 
       // This is testing internal logic, so we'd need to expose it or test through public interface
       // For now, just ensure the watcher is created properly
-      expect(watcher).toBeDefined();
+      expect(testWatcher).toBeDefined();
+
+      // Clean up the test watcher
+      await testWatcher.stop();
     });
   });
 

@@ -396,7 +396,7 @@ export class LearningDatabaseClient {
       status: row.status as LearningSessionStatus,
       config,
       startTime: row.start_time as Date,
-      endTime: row.end_time as Date | undefined,
+      endTime: row.end_time ? (row.end_time as Date) : undefined,
       iterationCount: row.iteration_count as number,
       qualityScore: row.quality_score as number,
       improvementTrajectory: row.improvement_trajectory

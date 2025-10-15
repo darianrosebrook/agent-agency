@@ -44,10 +44,30 @@ export class TraversalEngine {
   private rateLimitDelays: Map<string, number>;
   private statistics: TraversalStatistics;
 
-  constructor(
-    private readonly contentExtractor: ContentExtractor,
-    private readonly config: TraversalConfig
-  ) {
+  private readonly contentExtractor: ContentExtractor;
+
+  constructor(private readonly config: TraversalConfig) {
+    // Create content extractor with default config
+    const extractionConfig: ContentExtractionConfig = {
+      includeImages: false,
+      includeLinks: true,
+      includeMetadata: true,
+      stripNavigation: true,
+      stripAds: true,
+      maxContentLength: 100000,
+      security: {
+        verifySsl: true,
+        sanitizeHtml: true,
+        detectMalicious: true,
+        followRedirects: true,
+        maxRedirects: 5,
+        userAgent: (config as any).userAgent || "TraversalEngine/1.0",
+        respectRobotsTxt: config.respectRobotsTxt,
+      },
+    };
+
+    this.contentExtractor = new ContentExtractor(extractionConfig);
+
     this.nodes = new Map();
     this.visitQueue = [];
     this.visiting = new Set();
@@ -69,10 +89,29 @@ export class TraversalEngine {
    */
   async traverse(
     startUrl: string,
-    extractionConfig: ContentExtractionConfig
+    extractionConfig?: ContentExtractionConfig
   ): Promise<TraversalResult> {
     const startTime = Date.now();
     const sessionId = crypto.randomUUID();
+
+    // Use provided extraction config or default
+    const config = extractionConfig || {
+      includeImages: false,
+      includeLinks: true,
+      includeMetadata: true,
+      stripNavigation: true,
+      stripAds: true,
+      maxContentLength: 100000,
+      security: {
+        verifySsl: true,
+        sanitizeHtml: true,
+        detectMalicious: true,
+        followRedirects: true,
+        maxRedirects: 5,
+        userAgent: this.config.userAgent || "TraversalEngine/1.0",
+        respectRobotsTxt: this.config.respectRobotsTxt,
+      },
+    };
 
     // Initialize root node
     this.addNode(startUrl, 0);
@@ -84,7 +123,7 @@ export class TraversalEngine {
         break;
       }
 
-      await this.visitNode(url, extractionConfig);
+      await this.visitNode(url, config);
 
       // Apply delay for rate limiting
       await this.applyRateLimit(url);
@@ -98,13 +137,16 @@ export class TraversalEngine {
         : 0;
 
     // Build result
+    const pages = this.getVisitedPages();
     const result: TraversalResult = {
       sessionId,
       startUrl,
-      pages: this.getVisitedPages(),
+      pages,
+      nodes: pages, // Alias for pages
       statistics: this.statistics,
       graph: this.buildTraversalGraph(),
       completedAt: new Date(),
+      depthDistribution: this.calculateDepthDistribution(),
     };
 
     return result;
@@ -415,5 +457,64 @@ export class TraversalEngine {
       }));
 
     return { nodes, edges };
+  }
+
+  /**
+   * Check if URL is valid for traversal
+   */
+  isValidUrl(url: string): boolean {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.protocol === "http:" || urlObj.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Check if domain is allowed for traversal
+   */
+  isDomainAllowed(url: string): boolean {
+    if (!this.config.sameDomainOnly) {
+      return true;
+    }
+
+    try {
+      const urlObj = new URL(url);
+      const startUrlObj = new URL(
+        this.nodes.get(this.visitQueue[0])?.url || ""
+      );
+      return urlObj.hostname === startUrlObj.hostname;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Normalize URL for consistent storage and comparison
+   */
+  normalizeUrl(url: string): string {
+    try {
+      const urlObj = new URL(url);
+      // Remove fragment and normalize
+      urlObj.hash = "";
+      return urlObj.toString();
+    } catch {
+      return url;
+    }
+  }
+
+  /**
+   * Calculate distribution of pages by depth
+   */
+  private calculateDepthDistribution(): Record<number, number> {
+    const distribution: Record<number, number> = {};
+
+    for (const node of this.nodes.values()) {
+      const depth = node.depth;
+      distribution[depth] = (distribution[depth] || 0) + 1;
+    }
+
+    return distribution;
   }
 }

@@ -100,6 +100,12 @@ export class RuntimeOptimizer implements IRuntimeOptimizer {
 
     this.isRunning = true;
 
+    // Clear any existing timer first
+    if (this.analysisTimer) {
+      clearInterval(this.analysisTimer);
+      this.analysisTimer = undefined;
+    }
+
     // Start periodic analysis
     this.analysisTimer = setInterval(async () => {
       try {
@@ -496,11 +502,11 @@ export class RuntimeOptimizer implements IRuntimeOptimizer {
   }
 
   /**
-   * Calculate overall system health score
+   * Calculate overall system health score (0-100 percentage)
    */
   private calculateHealthScore(bottlenecks: any[]): number {
     if (bottlenecks.length === 0) {
-      return 100;
+      return 100; // Perfect health
     }
 
     let score = 100;
@@ -522,6 +528,7 @@ export class RuntimeOptimizer implements IRuntimeOptimizer {
       }
     }
 
+    // Return percentage (0-100)
     return Math.max(0, score);
   }
 

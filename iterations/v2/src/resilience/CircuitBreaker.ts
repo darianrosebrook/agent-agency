@@ -19,9 +19,18 @@ export { VerificationPriority } from "../types/verification";
  * Error thrown when circuit breaker is open
  */
 export class CircuitBreakerOpenError extends Error {
-  constructor(message: string = "Circuit breaker is open") {
+  circuitName?: string;
+  stats?: CircuitBreakerStats;
+
+  constructor(
+    message: string = "Circuit breaker is open",
+    circuitName?: string,
+    stats?: CircuitBreakerStats
+  ) {
     super(message);
     this.name = "CircuitBreakerOpenError";
+    this.circuitName = circuitName;
+    this.stats = stats;
   }
 }
 
@@ -32,16 +41,22 @@ export enum CircuitState {
 }
 
 export interface CircuitBreakerConfig {
+  name?: string; // Optional circuit breaker name
   failureThreshold: number; // Failures before opening
   successThreshold: number; // Successes before closing from half-open
-  timeout: number; // Time to wait before half-open (ms)
-  timeoutMs: number; // Operation timeout (ms)
+  timeout?: number; // Time to wait before half-open (ms) - deprecated, use resetTimeoutMs
+  timeoutMs?: number; // Operation timeout (ms)
+  failureWindowMs?: number; // Time window for failure counting (ms)
+  resetTimeoutMs?: number; // Time to wait before half-open (ms)
 }
 
 export interface CircuitBreakerStats {
   state: CircuitState;
   failureCount: number;
   successCount: number;
+  failures: number; // Alias for failureCount
+  successes: number; // Alias for successCount
+  totalRequests: number; // Total requests processed
   lastFailure: Date | null;
   lastSuccess: Date | null;
 }
@@ -56,6 +71,7 @@ export class CircuitBreaker {
   private state: CircuitState = CircuitState.CLOSED;
   private failureCount = 0;
   private successCount = 0;
+  private totalRequests = 0;
   private nextAttempt = Date.now();
   private lastFailure: Date | null = null;
   private lastSuccess: Date | null = null;
@@ -73,6 +89,8 @@ export class CircuitBreaker {
     operation: () => Promise<T>,
     fallback?: () => T | Promise<T>
   ): Promise<T> {
+    this.totalRequests++; // Count total requests
+
     // Check if circuit is open
     if (this.state === CircuitState.OPEN) {
       if (Date.now() < this.nextAttempt) {
@@ -80,10 +98,12 @@ export class CircuitBreaker {
         if (fallback) {
           return await fallback();
         }
-        throw new Error(
+        throw new CircuitBreakerOpenError(
           `Circuit breaker is OPEN (next attempt in ${
             this.nextAttempt - Date.now()
-          }ms)`
+          }ms)`,
+          this.config.name,
+          this.getStats()
         );
       }
       // Try transitioning to half-open
@@ -149,7 +169,9 @@ export class CircuitBreaker {
     ) {
       // Open circuit
       this.state = CircuitState.OPEN;
-      this.nextAttempt = Date.now() + this.config.timeout;
+      this.nextAttempt =
+        Date.now() +
+        (this.config.timeout || this.config.resetTimeoutMs || 60000);
       this.successCount = 0;
     }
   }
@@ -169,6 +191,9 @@ export class CircuitBreaker {
       state: this.state,
       failureCount: this.failureCount,
       successCount: this.successCount,
+      failures: this.failureCount, // Alias for failureCount
+      successes: this.successCount, // Alias for successCount
+      totalRequests: this.totalRequests,
       lastFailure: this.lastFailure,
       lastSuccess: this.lastSuccess,
     };
@@ -190,7 +215,9 @@ export class CircuitBreaker {
    */
   forceOpen(timeoutMs?: number): void {
     this.state = CircuitState.OPEN;
-    this.nextAttempt = Date.now() + (timeoutMs || this.config.timeout);
+    this.nextAttempt =
+      Date.now() +
+      (timeoutMs || this.config.timeout || this.config.resetTimeoutMs || 60000);
   }
 
   /**

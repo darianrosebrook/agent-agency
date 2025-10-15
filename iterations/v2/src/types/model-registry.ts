@@ -100,6 +100,12 @@ export interface LocalModelMetadata {
 
   /** Optional tags for categorization */
   tags?: string[];
+
+  /** Hardware requirements (optional for Ollama models) */
+  hardwareRequirements?: HardwareSpec;
+
+  /** Performance profile (optional, populated after measurement) */
+  performanceProfile?: PerformanceCharacteristics;
 }
 
 /**
@@ -186,11 +192,17 @@ export interface HardwareSpec {
   /** Minimum RAM in GB */
   minRamGB?: number;
 
+  /** Minimum memory in MB (alternative to minRamGB) */
+  minMemoryMB?: number;
+
   /** GPU required */
   requiresGpu?: boolean;
 
   /** Minimum VRAM in GB */
   minVramGB?: number;
+
+  /** Preferred hardware type */
+  preferredHardware?: HardwareType;
 
   /** Specific hardware type */
   hardwareType?: HardwareType;
@@ -404,7 +416,7 @@ export interface SelectedModel {
   fallback?: LocalModelConfig;
 
   /** Selection reasoning */
-  reasoning: string;
+  reasoning: string[];
 
   /** Confidence score (0-1) */
   confidence: number;
@@ -684,3 +696,10 @@ export interface PoolConfig {
   /** Health check interval (milliseconds) */
   healthCheckIntervalMs: number;
 }
+
+// Re-export generation types from LocalModelProvider for convenience
+export type {
+  ModelGenerationRequest as GenerationRequest,
+  ModelGenerationResponse as GenerationResponse,
+  ModelHealthStatus as ModelHealth,
+} from "../models/providers/LocalModelProvider";

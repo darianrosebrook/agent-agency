@@ -6,9 +6,8 @@
  * @author @darianrosebrook
  */
 
-const { parentPort, workerData } = require("worker_threads");
-const { performance } = require("perf_hooks");
-const os = require("os");
+import { performance } from "perf_hooks";
+import { parentPort, workerData } from "worker_threads";
 
 const { workerId, capabilities } = workerData;
 
@@ -115,9 +114,9 @@ async function executeApiCallTask(task) {
     const startTime = performance.now();
 
     // Basic HTTP client (in real implementation, use axios or fetch)
-    const http = require(method.toLowerCase().startsWith("http")
-      ? "http"
-      : "https");
+    const http = await import(
+      method.toLowerCase().startsWith("http") ? "http" : "https"
+    );
     const urlObj = new URL(url);
 
     const options = {
@@ -133,7 +132,7 @@ async function executeApiCallTask(task) {
     };
 
     const result = await new Promise((resolve, reject) => {
-      const req = http.request(options, (res) => {
+      const req = http.default.request(options, (res) => {
         let data = "";
 
         res.on("data", (chunk) => {

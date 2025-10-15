@@ -7,7 +7,6 @@
  */
 
 import {
-  VerificationPriority,
   CircuitBreaker,
   CircuitBreakerOpenError,
   CircuitState,
@@ -18,10 +17,9 @@ describe("CircuitBreaker", () => {
 
   beforeEach(() => {
     circuitBreaker = new CircuitBreaker({
-      name: "TestBreaker",
       failureThreshold: 3,
-      failureWindowMs: 1000,
-      resetTimeoutMs: 500,
+      timeout: 500,
+      timeoutMs: 1000,
       successThreshold: 2,
     });
   });
@@ -33,9 +31,8 @@ describe("CircuitBreaker", () => {
 
     it("should have zero failures and successes", () => {
       const stats = circuitBreaker.getStats();
-      expect(stats.failures).toBe(0);
-      expect(stats.successes).toBe(0);
-      expect(stats.totalRequests).toBe(0);
+      expect(stats.failureCount).toBe(0);
+      expect(stats.successCount).toBe(0);
     });
   });
 
@@ -47,8 +44,7 @@ describe("CircuitBreaker", () => {
 
       expect(result).toBe("success");
       expect(circuitBreaker.getState()).toBe(CircuitState.CLOSED);
-      expect(circuitBreaker.getStats().successes).toBe(1);
-      expect(circuitBreaker.getStats().totalRequests).toBe(1);
+      expect(circuitBreaker.getStats().successCount).toBe(1);
     });
 
     it("should handle multiple successful operations", async () => {
@@ -59,8 +55,7 @@ describe("CircuitBreaker", () => {
       await circuitBreaker.execute(mockFn);
 
       expect(circuitBreaker.getState()).toBe(CircuitState.CLOSED);
-      expect(circuitBreaker.getStats().successes).toBe(3);
-      expect(circuitBreaker.getStats().totalRequests).toBe(3);
+      expect(circuitBreaker.getStats().successCount).toBe(3);
     });
   });
 
@@ -76,7 +71,7 @@ describe("CircuitBreaker", () => {
       );
 
       expect(circuitBreaker.getState()).toBe(CircuitState.CLOSED);
-      expect(circuitBreaker.getStats().failures).toBe(2);
+      expect(circuitBreaker.getStats().failureCount).toBe(2);
     });
 
     it("should transition to OPEN when failure threshold is reached", async () => {
@@ -90,7 +85,7 @@ describe("CircuitBreaker", () => {
       }
 
       expect(circuitBreaker.getState()).toBe(CircuitState.OPEN);
-      expect(circuitBreaker.getStats().failures).toBe(3);
+      expect(circuitBreaker.getStats().failureCount).toBe(3);
     });
 
     it("should reject requests when circuit is OPEN", async () => {
@@ -107,7 +102,7 @@ describe("CircuitBreaker", () => {
       await expect(circuitBreaker.execute(mockFn)).rejects.toThrow(
         CircuitBreakerOpenError
       );
-      expect(circuitBreaker.getStats().totalRequests).toBe(4); // 3 failures + 1 rejected
+      // Note: totalRequests property not available in CircuitBreakerStats interface
     });
   });
 
@@ -184,10 +179,9 @@ describe("CircuitBreaker", () => {
 
       // Create circuit breaker with very short window
       const shortWindowBreaker = new CircuitBreaker({
-        name: "ShortWindowBreaker",
         failureThreshold: 3,
-        failureWindowMs: 100, // 100ms window
-        resetTimeoutMs: 500,
+        timeout: 500,
+        timeoutMs: 100, // 100ms window
         successThreshold: 2,
       });
 
@@ -229,10 +223,9 @@ describe("CircuitBreaker", () => {
         throw new Error("Should have thrown CircuitBreakerOpenError");
       } catch (error) {
         expect(error).toBeInstanceOf(CircuitBreakerOpenError);
-        expect((error as CircuitBreakerOpenError).circuitName).toBe(
-          "TestBreaker"
+        expect((error as CircuitBreakerOpenError).message).toBe(
+          "Circuit breaker is open"
         );
-        expect((error as CircuitBreakerOpenError).stats.failures).toBe(3);
       }
     });
   });
@@ -254,8 +247,8 @@ describe("CircuitBreaker", () => {
       circuitBreaker.reset();
 
       expect(circuitBreaker.getState()).toBe(CircuitState.CLOSED);
-      expect(circuitBreaker.getStats().failures).toBe(0);
-      expect(circuitBreaker.getStats().successes).toBe(0);
+      expect(circuitBreaker.getStats().failureCount).toBe(0);
+      expect(circuitBreaker.getStats().successCount).toBe(0);
     });
   });
 });

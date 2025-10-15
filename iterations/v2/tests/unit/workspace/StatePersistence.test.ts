@@ -59,6 +59,10 @@ describe("FileStatePersistence", () => {
     jest.clearAllMocks();
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe("initialization", () => {
     it("should create persistence instance", () => {
       expect(persistence).toBeDefined();

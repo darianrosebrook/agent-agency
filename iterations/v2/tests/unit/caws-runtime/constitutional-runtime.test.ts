@@ -6,20 +6,17 @@
 
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import {
-  VerificationPriority,
-  ConstitutionalRuntime,
   ConstitutionalPolicyEngine,
+  ConstitutionalRuntime,
   ViolationHandler,
   WaiverManager,
 } from "../../../src/caws-runtime";
+import { TracingProvider } from "../../../src/observability/TracingProvider";
 import {
-  VerificationPriority,
   ConstitutionalPrinciple,
   ViolationSeverity,
   WaiverStatus,
-  RuleOperator,
 } from "../../../src/types/caws-constitutional";
-import { TracingProvider } from "../../../src/observability/TracingProvider";
 
 describe("ConstitutionalRuntime", () => {
   let runtime: ConstitutionalRuntime;
@@ -63,6 +60,10 @@ describe("ConstitutionalRuntime", () => {
       waiverManager,
       tracing
     );
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   describe("initialization", () => {
@@ -111,7 +112,10 @@ describe("ConstitutionalRuntime", () => {
       policyEngine.evaluateCompliance.mockResolvedValue(complianceResult);
       waiverManager.checkWaiver.mockResolvedValue({ hasActiveWaiver: false });
 
-      const result = await runtime.validateOperation(validOperation, evaluationContext);
+      const result = await runtime.validateOperation(
+        validOperation,
+        evaluationContext
+      );
 
       expect(result.compliant).toBe(true);
       expect(result.violations).toHaveLength(0);
@@ -125,6 +129,7 @@ describe("ConstitutionalRuntime", () => {
       const violation = {
         id: "v-1",
         policyId: "p-1",
+        ruleId: "r-1",
         principle: ConstitutionalPrinciple.SAFETY,
         severity: ViolationSeverity.HIGH,
         message: "Safety violation",
@@ -153,7 +158,10 @@ describe("ConstitutionalRuntime", () => {
       waiverManager.checkWaiver.mockResolvedValue({ hasActiveWaiver: false });
       violationHandler.handleViolations.mockResolvedValue([]);
 
-      const result = await runtime.validateOperation(validOperation, evaluationContext);
+      const result = await runtime.validateOperation(
+        validOperation,
+        evaluationContext
+      );
 
       expect(result.compliant).toBe(false);
       expect(result.violations).toHaveLength(1);
@@ -185,7 +193,10 @@ describe("ConstitutionalRuntime", () => {
         expiresAt: waiver.expiresAt,
       });
 
-      const result = await runtime.validateOperation(validOperation, evaluationContext);
+      const result = await runtime.validateOperation(
+        validOperation,
+        evaluationContext
+      );
 
       expect(result.compliant).toBe(true);
       expect(result.waiverApplied).toBe(true);
@@ -217,7 +228,10 @@ describe("ConstitutionalRuntime", () => {
     it("should be disabled when configured", async () => {
       runtime.updateConfig({ enabled: false });
 
-      const result = await runtime.validateOperation(validOperation, evaluationContext);
+      const result = await runtime.validateOperation(
+        validOperation,
+        evaluationContext
+      );
 
       expect(result.compliant).toBe(true);
       expect(result.duration).toBe(0);
@@ -258,7 +272,9 @@ describe("ConstitutionalRuntime", () => {
       expect(audit.compliant).toBe(true);
       expect(audit.score).toBe(100);
       expect(audit.violations).toHaveLength(0);
-      expect(audit.recommendations).toEqual(["Operation is fully compliant with CAWS principles."]);
+      expect(audit.recommendations).toEqual([
+        "Operation is fully compliant with CAWS principles.",
+      ]);
     });
 
     it("should calculate compliance scores", async () => {
@@ -266,6 +282,7 @@ describe("ConstitutionalRuntime", () => {
         {
           id: "v-1",
           policyId: "p-1",
+          ruleId: "r-1",
           principle: ConstitutionalPrinciple.SAFETY,
           severity: ViolationSeverity.HIGH,
           message: "Safety violation",
@@ -284,16 +301,25 @@ describe("ConstitutionalRuntime", () => {
         evaluations: [],
         timestamp: new Date(),
         duration: 5,
+        score: 75,
+        recommendations: [
+          "Consider requesting a waiver for exceptional circumstances.",
+        ],
+        context: { operationType: "task_complete" },
       };
 
-      policyEngine.evaluateCompliance.mockResolvedValue(complianceResult);
+      policyEngine.evaluateCompliance.mockResolvedValue(
+        complianceResult as any
+      );
 
       const audit = await runtime.auditOperation(operation, result, context);
 
       expect(audit.compliant).toBe(false);
       expect(audit.score).toBeLessThan(100);
       expect(audit.violations).toHaveLength(1);
-      expect(audit.recommendations).toContain("Consider requesting a waiver for exceptional circumstances.");
+      expect(audit.recommendations).toContain(
+        "Consider requesting a waiver for exceptional circumstances."
+      );
     });
 
     it("should skip auditing when disabled", async () => {
@@ -346,7 +372,11 @@ describe("ConstitutionalRuntime", () => {
 
       await runtime.rejectWaiver("w-1", "admin", "Not justified");
 
-      expect(waiverManager.rejectWaiver).toHaveBeenCalledWith("w-1", "admin", "Not justified");
+      expect(waiverManager.rejectWaiver).toHaveBeenCalledWith(
+        "w-1",
+        "admin",
+        "Not justified"
+      );
     });
   });
 
@@ -359,6 +389,7 @@ describe("ConstitutionalRuntime", () => {
 
       expect(stats).toEqual({
         policies: 0,
+        recentViolations: 0,
         waivers: {},
       });
 
@@ -383,4 +414,3 @@ describe("ConstitutionalRuntime", () => {
     });
   });
 });
-

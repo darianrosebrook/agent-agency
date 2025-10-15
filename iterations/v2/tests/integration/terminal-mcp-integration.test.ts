@@ -7,7 +7,7 @@
  * @author @darianrosebrook
  */
 
-import { ArbiterMCPServer } from "@/mcp-server/ArbiterMCPServer";
+import { ArbiterMCPServer, callTool } from "@/mcp-server/ArbiterMCPServer";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -44,7 +44,8 @@ describe("Terminal MCP Integration", () => {
 
   describe("Tool Registration", () => {
     it("should register all terminal tools", async () => {
-      const tools = await mcpServer.listTools();
+      // Mock the listTools method since it's not directly available on ArbiterMCPServer
+      const tools = { tools: mcpServer["tools"] };
 
       const terminalToolNames = [
         "terminal_create_session",
@@ -61,7 +62,8 @@ describe("Terminal MCP Integration", () => {
     });
 
     it("should have correct tool schemas", async () => {
-      const tools = await mcpServer.listTools();
+      // Mock the listTools method since it's not directly available on ArbiterMCPServer
+      const tools = { tools: mcpServer["tools"] };
 
       const createSessionTool = tools.tools.find(
         (t: any) => t.name === "terminal_create_session"
@@ -84,7 +86,7 @@ describe("Terminal MCP Integration", () => {
   describe("End-to-End Terminal Workflow", () => {
     it("should create session, execute command, and close session", async () => {
       // Create session
-      const createResponse = await mcpServer.callTool({
+      const createResponse = await callTool(mcpServer, {
         name: "terminal_create_session",
         arguments: {
           taskId: "MCP-INT-001",
@@ -99,7 +101,7 @@ describe("Terminal MCP Integration", () => {
       const sessionId = createResult.sessionId;
 
       // Execute command
-      const execResponse = await mcpServer.callTool({
+      const execResponse = await callTool(mcpServer, {
         name: "terminal_execute_command",
         arguments: {
           sessionId,
@@ -115,7 +117,7 @@ describe("Terminal MCP Integration", () => {
       expect(execResult.stderr).toBe("");
 
       // Get status
-      const statusResponse = await mcpServer.callTool({
+      const statusResponse = await callTool(mcpServer, {
         name: "terminal_get_status",
         arguments: {
           sessionId,
@@ -130,7 +132,7 @@ describe("Terminal MCP Integration", () => {
       expect(statusResult.session.commandCount).toBe(1);
 
       // Close session
-      const closeResponse = await mcpServer.callTool({
+      const closeResponse = await callTool(mcpServer, {
         name: "terminal_close_session",
         arguments: {
           sessionId,
@@ -141,7 +143,7 @@ describe("Terminal MCP Integration", () => {
       expect(closeResult.success).toBe(true);
 
       // Verify session is gone
-      const finalStatusResponse = await mcpServer.callTool({
+      const finalStatusResponse = await callTool(mcpServer, {
         name: "terminal_get_status",
         arguments: {
           sessionId,
@@ -155,7 +157,7 @@ describe("Terminal MCP Integration", () => {
 
     it("should reject disallowed commands", async () => {
       // Create session
-      const createResponse = await mcpServer.callTool({
+      const createResponse = await callTool(mcpServer, {
         name: "terminal_create_session",
         arguments: {
           taskId: "MCP-INT-002",
@@ -167,7 +169,7 @@ describe("Terminal MCP Integration", () => {
       const sessionId = createResult.sessionId;
 
       // Try to execute disallowed command
-      const execResponse = await mcpServer.callTool({
+      const execResponse = await callTool(mcpServer, {
         name: "terminal_execute_command",
         arguments: {
           sessionId,
@@ -182,7 +184,7 @@ describe("Terminal MCP Integration", () => {
     });
 
     it("should handle session not found errors", async () => {
-      const response = await mcpServer.callTool({
+      const response = await callTool(mcpServer, {
         name: "terminal_execute_command",
         arguments: {
           sessionId: "non-existent-session",
@@ -198,7 +200,7 @@ describe("Terminal MCP Integration", () => {
 
     it("should handle invalid parameters", async () => {
       // Missing taskId
-      const response = await mcpServer.callTool({
+      const response = await callTool(mcpServer, {
         name: "terminal_create_session",
         arguments: {
           agentId: "test-agent",
@@ -216,7 +218,7 @@ describe("Terminal MCP Integration", () => {
       // Create multiple sessions
       const sessions = [];
       for (let i = 0; i < 3; i++) {
-        const response = await mcpServer.callTool({
+        const response = await callTool(mcpServer, {
           name: "terminal_create_session",
           arguments: {
             taskId: `MCP-CONC-${i}`,
@@ -236,7 +238,7 @@ describe("Terminal MCP Integration", () => {
       // Execute commands in different sessions
       const results = await Promise.all(
         sessions.map((sessionId, i) =>
-          mcpServer.callTool({
+          callTool(mcpServer, {
             name: "terminal_execute_command",
             arguments: {
               sessionId,
@@ -247,7 +249,7 @@ describe("Terminal MCP Integration", () => {
         )
       );
 
-      results.forEach((response, i) => {
+      results.forEach((response: any, i: number) => {
         const result = JSON.parse(response.content[0].text);
         expect(result.success).toBe(true);
         expect(result.stdout).toContain(`session-${i}`);
@@ -256,7 +258,7 @@ describe("Terminal MCP Integration", () => {
       // Cleanup all sessions
       await Promise.all(
         sessions.map((sessionId) =>
-          mcpServer.callTool({
+          callTool(mcpServer, {
             name: "terminal_close_session",
             arguments: { sessionId },
           })
@@ -268,7 +270,7 @@ describe("Terminal MCP Integration", () => {
   describe("Error Handling", () => {
     it("should handle MCP server errors gracefully", async () => {
       // Try to execute without creating session first
-      const response = await mcpServer.callTool({
+      const response = await callTool(mcpServer, {
         name: "terminal_execute_command",
         arguments: {
           sessionId: "invalid-session",
@@ -283,7 +285,7 @@ describe("Terminal MCP Integration", () => {
     });
 
     it("should validate tool arguments", async () => {
-      const response = await mcpServer.callTool({
+      const response = await callTool(mcpServer, {
         name: "terminal_create_session",
         arguments: {
           // Missing required fields

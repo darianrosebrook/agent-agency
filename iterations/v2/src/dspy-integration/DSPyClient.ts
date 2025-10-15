@@ -7,7 +7,7 @@
  * @author @darianrosebrook
  */
 
-import { Logger } from "@/observability/Logger.js";
+import { Logger } from "@/observability/Logger";
 import axios, { AxiosError, AxiosInstance } from "axios";
 
 /**
@@ -115,7 +115,7 @@ export class DSPyClient {
 
     this.maxRetries = config.maxRetries ?? 3;
     this.retryDelay = config.retryDelay ?? 1000;
-    this.logger = new Logger({ context: "DSPyClient" });
+    this.logger = new Logger("DSPyClient");
   }
 
   /**

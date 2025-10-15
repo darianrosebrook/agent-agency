@@ -1,0 +1,173 @@
+id: RL-002
+title: "MinimalDiffEvaluator - AST-Based Diff Analysis for Reward Calculation"
+version: "1.0.0"
+mode: feature
+risk_tier: 2
+status: spec_complete
+
+executive_summary:
+  purpose: |
+    The MinimalDiffEvaluator implements AST-based code diff analysis to calculate minimality factors for RL reward shaping.
+    It prevents reward hacking by penalizing excessive scaffolding and rewarding minimal, targeted changes.
+  scope:
+    - AST parsing and diff analysis for code changes
+    - Similarity scoring between code versions (0.1-1.0 scale)
+    - Scaffolding detection and penalty calculation
+    - Integration with reward calculation pipeline
+  success_criteria:
+    - Calculate accurate minimality factors for code diffs
+    - Detect scaffolding patterns reliably
+    - AST analysis completes within 200ms P95
+    - Reward multiplication produces meaningful training signals
+
+change_budget:
+  max_files: 15
+  max_loc: 700
+
+blast_radius:
+  modules: ["src/evaluation", "src/rl"]
+  data_migration: false
+  breaking_changes: false
+  external_impact: medium
+
+operational_rollback_slo: "5m"
+
+threats:
+  - "AST parsing failures on malformed code"
+  - "Performance bottlenecks with large diffs"
+  - "False positives in scaffolding detection"
+  - "Inconsistent similarity scoring across languages"
+
+scope:
+  in:
+    - "iterations/v2/src/evaluation/"
+    - "iterations/v2/src/types/evaluation.ts"
+    - "iterations/v2/tests/unit/evaluation/"
+  out:
+    - "node_modules/"
+    - "dist/"
+    - "iterations/poc/"
+
+invariants:
+  - "Minimality factor always between 0.1 and 1.0 inclusive"
+  - "AST analysis is deterministic for identical inputs"
+  - "Scaffolding detection has < 5% false positive rate"
+  - "Performance budgets met for diffs up to 10,000 LOC"
+
+acceptance:
+  - id: "RL-002-A1"
+    given: "Code diff with minimal targeted changes (< 10 lines)"
+    when: "MinimalDiffEvaluator analyzes the diff"
+    then: "Minimality factor ≥ 0.9 indicating high quality"
+
+  - id: "RL-002-A2"
+    given: "Code diff with excessive scaffolding (> 100 lines boilerplate)"
+    when: "Evaluator detects scaffolding patterns"
+    then: "Minimality factor ≤ 0.3 with scaffolding penalty applied"
+
+  - id: "RL-002-A3"
+    given: "Two code versions with high AST similarity (> 90%)"
+    when: "AST diff analyzer computes similarity"
+    then: "Similarity score ≥ 0.9 reflecting small changes"
+
+  - id: "RL-002-A4"
+    given: "Large code diff (5000+ lines changed)"
+    when: "Performance analysis measures processing time"
+    then: "Analysis completes within 200ms P95 budget"
+
+  - id: "RL-002-A5"
+    given: "Minimality factor applied to base reward"
+    when: "Reward multiplication occurs"
+    then: "Final reward scales appropriately (reward × minimality)"
+
+non_functional:
+  performance:
+    ast_diff_analysis_p95_ms: 200
+    similarity_calculation_p95_ms: 50
+    scaffolding_detection_p95_ms: 100
+    max_diff_size_loc: 10000
+    memory_usage_mb: 100
+
+  reliability:
+    availability_percent: 99.9
+    error_rate_percent: 0.5
+    graceful_degradation: true
+
+  scalability:
+    max_concurrent_evaluations: 100
+    diff_processing_throughput: 50
+    horizontal_scaling: true
+
+  security:
+    input_validation: "strict"
+    code_injection_prevention: "enabled"
+    resource_limits: "enforced"
+
+  usability:
+    api_design: "functional-pipeline"
+    error_messages: "detailed-with-examples"
+    documentation: "algorithm-explanation"
+
+contracts:
+  - type: "typescript"
+    path: "src/types/evaluation.ts"
+    version: "1.0.0"
+    description: "Evaluation interfaces and diff types"
+
+  - type: "typescript"
+    path: "src/evaluation/MinimalDiffEvaluator.ts"
+    version: "1.0.0"
+    description: "Main evaluator implementation"
+
+  - type: "typescript"
+    path: "src/evaluation/ASTDiffAnalyzer.ts"
+    version: "1.0.0"
+    description: "AST parsing and diff logic"
+
+observability:
+  metrics:
+    - "minimality_factor_distribution"
+    - "scaffolding_detection_rate"
+    - "ast_analysis_latency_p95"
+    - "evaluation_error_rate"
+
+  logs:
+    - level: "info"
+      events: ["diff_analyzed", "minimality_calculated", "scaffolding_detected"]
+    - level: "warn"
+      events: ["large_diff_warning", "parse_error_fallback"]
+    - level: "error"
+      events: ["ast_parse_failed", "evaluation_timeout"]
+
+  traces:
+    - "diff_evaluation_span"
+    - "ast_parsing_span"
+    - "similarity_calculation_span"
+
+migrations: []
+
+rollback:
+  slo: "5m"
+  strategy: "feature-flag"
+  impact: "medium"
+  monitoring: "evaluation_disabled"
+
+ai_assessment:
+  reasoning: "AST-based diff analysis requires careful handling of syntax trees and complexity metrics. The core algorithms are well-established but language-specific details require attention. AI can implement standard AST analysis but human oversight needed for scaffolding heuristics."
+
+  risks:
+    - "Language-specific AST parsing complexities"
+    - "Performance with very large diffs"
+    - "False positives in scaffolding detection"
+
+  opportunities:
+    - "Existing AST parsing libraries (TypeScript, Babel)"
+    - "Well-defined similarity metrics"
+    - "Clear mathematical formulation"
+
+  recommendations:
+    - "Start with TypeScript/JavaScript support only"
+    - "Use established AST libraries (typescript, @babel/parser)"
+    - "Profile with large diffs early"
+    - "Build comprehensive test corpus with real diffs"
+

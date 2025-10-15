@@ -2458,16 +2458,32 @@ export class ArbiterOrchestrator {
 
     console.log("Shutting down Arbiter Orchestrator...");
 
-    // Shutdown CAWS components
-    if (this.components.arbitrationProtocol) {
-      // Arbitration protocol doesn't have explicit shutdown
-    }
+    try {
+      // Shutdown CAWS components
+      if (this.components.arbitrationProtocol) {
+        // Arbitration protocol doesn't have explicit shutdown
+        this.components.arbitrationProtocol = undefined;
+      }
 
-    if (this.components.reasoningEngine) {
-      // Reasoning engine doesn't have explicit shutdown
-    }
+      if (this.components.reasoningEngine) {
+        // Reasoning engine doesn't have explicit shutdown
+        this.components.reasoningEngine = undefined;
+      }
 
-    this.initialized = false;
-    console.log("✅ Arbiter Orchestrator shutdown complete");
+      // Clear all component references
+      this.components.taskQueue = undefined;
+      this.components.taskAssignment = undefined;
+      this.components.agentRegistry = undefined;
+      this.components.security = undefined;
+      this.components.healthMonitor = undefined;
+      this.components.recoveryManager = undefined;
+      this.components.knowledgeSeeker = undefined;
+
+      this.initialized = false;
+      console.log("✅ Arbiter Orchestrator shutdown complete");
+    } catch (error) {
+      console.error("Error during orchestrator shutdown:", error);
+      this.initialized = false;
+    }
   }
 }

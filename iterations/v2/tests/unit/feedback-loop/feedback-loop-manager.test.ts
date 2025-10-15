@@ -1,4 +1,11 @@
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from "@jest/globals";
 import { ConfigManager } from "../../../src/config/ConfigManager";
 import { FeedbackAnalyzer } from "../../../src/feedback-loop/FeedbackAnalyzer";
 import { FeedbackCollector } from "../../../src/feedback-loop/FeedbackCollector";
@@ -6,10 +13,10 @@ import { FeedbackLoopManager } from "../../../src/feedback-loop/FeedbackLoopMana
 import { FeedbackPipeline } from "../../../src/feedback-loop/FeedbackPipeline";
 import { ImprovementEngine } from "../../../src/feedback-loop/ImprovementEngine";
 import {
-  VerificationPriority,
   FeedbackRecommendation,
   FeedbackSource,
   FeedbackType,
+  VerificationPriority,
 } from "../../../src/types/feedback-loop";
 
 // Mock dependencies
@@ -168,6 +175,12 @@ describe("FeedbackLoopManager", () => {
     });
 
     manager = new FeedbackLoopManager(mockConfigManager);
+  });
+
+  afterEach(async () => {
+    if (manager) {
+      await manager.shutdown();
+    }
   });
 
   describe("initialization", () => {

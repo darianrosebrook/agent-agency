@@ -153,7 +153,6 @@ export class ResourceAllocator implements IResourceAllocator {
         waitTimeMs: Date.now() - request.requestedAt.getTime(),
       };
     } catch (error) {
-      this.allocationStats.failedAllocations++;
       this.logger.error("Resource allocation failed", {
         requestId: request.requestId,
         error,
@@ -301,6 +300,7 @@ export class ResourceAllocator implements IResourceAllocator {
     reason: string,
     startTime: number
   ): ResourceAllocationResult {
+    this.allocationStats.failedAllocations++;
     return {
       requestId: request.requestId,
       success: false,

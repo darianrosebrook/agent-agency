@@ -86,6 +86,10 @@ describe("RuleEngine", () => {
     ruleEngine = new RuleEngine(mockPolicy);
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe("evaluateRules", () => {
     it("should pass with valid spec", () => {
       const spec = createValidSpec();
