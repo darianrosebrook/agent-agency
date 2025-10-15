@@ -247,24 +247,18 @@ export class ConnectionPoolManager {
     const client = await this.getPool().connect();
 
     try {
-      // Set tenant context for RLS policies
-      await client.query("SET LOCAL app.current_tenant = $1", [tenantId]);
-
-      // Optionally set additional context
-      if (context?.userId) {
-        await client.query("SET LOCAL app.current_user = $1", [context.userId]);
-      }
-      if (context?.sessionId) {
-        await client.query("SET LOCAL app.current_session = $1", [
-          context.sessionId,
-        ]);
-      }
+      // Set tenant context for RLS policies using the app schema function
+      await client.query("SELECT app.set_tenant_context($1, $2, $3)", [
+        tenantId,
+        context?.userId || null,
+        context?.sessionId || null
+      ]);
 
       return client;
     } catch (error) {
       // Release client if context setup fails
       client.release();
-      throw error;
+      throw new Error(`Failed to set context: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

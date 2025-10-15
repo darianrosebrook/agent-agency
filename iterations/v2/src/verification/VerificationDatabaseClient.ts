@@ -316,9 +316,18 @@ export class VerificationDatabaseClient {
       verdict: row.verdict as VerificationVerdict,
       confidence: parseFloat(row.confidence),
       reasoning: row.reasoning,
-      supportingEvidence: row.supporting_evidence,
-      contradictoryEvidence: row.contradictory_evidence,
-      verificationMethods: row.verification_methods,
+      supportingEvidence:
+        typeof row.supporting_evidence === "string"
+          ? JSON.parse(row.supporting_evidence)
+          : row.supporting_evidence,
+      contradictoryEvidence:
+        typeof row.contradictory_evidence === "string"
+          ? JSON.parse(row.contradictory_evidence)
+          : row.contradictory_evidence,
+      verificationMethods:
+        typeof row.verification_methods === "string"
+          ? JSON.parse(row.verification_methods)
+          : row.verification_methods,
       processingTimeMs: parseInt(row.processing_time_ms, 10),
       error: row.error_message ?? undefined,
     };
@@ -371,7 +380,9 @@ export class VerificationDatabaseClient {
     _tenantId?: string
   ): Promise<void> {
     const cacheKey = this.generateCacheKey(request);
-    const requestHash = this.hashContent(JSON.stringify(request));
+    const requestHash = this.hashContent(
+      `${request.id}:${JSON.stringify(request)}`
+    );
     const resultHash = this.hashContent(JSON.stringify(result));
     const expiresAt = new Date(Date.now() + ttlMs);
     const sizeBytes = JSON.stringify(result).length;
@@ -578,16 +589,12 @@ export class VerificationDatabaseClient {
 
   /**
    * Generate cache key for request
+   * Uses request ID to ensure uniqueness per request
    */
   private generateCacheKey(request: VerificationRequest): string {
-    const keyData = {
-      content: request.content,
-      source: request.source,
-      verificationTypes: request.verificationTypes?.sort(),
-    };
-    return Buffer.from(JSON.stringify(keyData))
-      .toString("base64")
-      .substring(0, 128);
+    // Use request ID as the primary cache key to ensure uniqueness
+    // This prevents duplicate key violations while still allowing caching
+    return `req_${request.id}`;
   }
 
   /**

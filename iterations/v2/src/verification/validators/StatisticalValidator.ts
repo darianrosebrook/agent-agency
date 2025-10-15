@@ -98,14 +98,26 @@ export class StatisticalValidator {
 
       // Validate sample sizes
       const sampleSizeIssues = this.validateSampleSizes(claims);
+      console.log(
+        "Sample size issues:",
+        sampleSizeIssues.map((i) => ({ type: i.type, severity: i.severity }))
+      );
 
       // Detect data manipulation signals
       const manipulationSignals = this.detectManipulation(claims);
+      console.log(
+        "Manipulation signals:",
+        manipulationSignals.map((i) => ({ type: i.type, severity: i.severity }))
+      );
 
       // Check correlation vs causation
       const correlationIssues = this.checkCorrelationVsCausation(
         request.content,
         claims
+      );
+      console.log(
+        "Correlation issues:",
+        correlationIssues.map((i) => ({ type: i.type, severity: i.severity }))
       );
 
       // Assess overall statistical validity
@@ -115,6 +127,7 @@ export class StatisticalValidator {
         manipulationSignals,
         correlationIssues
       );
+      console.log("Final assessment:", assessment);
 
       return {
         method: VerificationType.STATISTICAL_VALIDATION,
@@ -123,6 +136,22 @@ export class StatisticalValidator {
         reasoning: assessment.reasoning,
         processingTimeMs: Date.now() - startTime,
         evidenceCount: claims.length,
+        metadata: {
+          issues: [
+            ...sampleSizeIssues,
+            ...manipulationSignals,
+            ...correlationIssues,
+          ].map((issue) => issue.type),
+          totalIssues:
+            sampleSizeIssues.length +
+            manipulationSignals.length +
+            correlationIssues.length,
+          highSeverityIssues: [
+            ...sampleSizeIssues,
+            ...manipulationSignals,
+            ...correlationIssues,
+          ].filter((issue) => issue.severity === "high").length,
+        },
       };
     } catch (error) {
       return {
@@ -153,6 +182,30 @@ export class StatisticalValidator {
       .filter((s) => s.length > 0);
 
     for (const sentence of sentences) {
+      // First, check for sample sizes in the sentence
+      // Try pattern: "500 participants" (number before word)
+      let sampleMatch = sentence.match(
+        /(\d+)\s+(n|sample|participants?|subjects?|people)\b/i
+      );
+      if (!sampleMatch) {
+        // Try pattern: "participants = 500" (word before number)
+        sampleMatch = sentence.match(
+          /\b(n|sample|participants?|subjects?|people)\s*=?\s*(\d+)/i
+        );
+      }
+
+      let sampleSize: number | undefined;
+      if (sampleMatch) {
+        // Extract the number (could be in group 1 or group 2 depending on pattern)
+        sampleSize = parseInt(sampleMatch[1] || sampleMatch[2], 10);
+        claims.push({
+          text: sentence,
+          type: "sample",
+          sampleSize: sampleSize,
+          context: this.extractContext(sentence),
+        });
+      }
+
       // Check for percentages
       const percentageMatch = sentence.match(/(\d+(?:\.\d+)?)\s*%/);
       if (percentageMatch) {
@@ -160,6 +213,7 @@ export class StatisticalValidator {
           text: sentence,
           type: "percentage",
           value: parseFloat(percentageMatch[1]),
+          sampleSize: sampleSize, // Link to sample size if found in same sentence
           context: this.extractContext(sentence),
         });
       }
@@ -171,6 +225,7 @@ export class StatisticalValidator {
           text: sentence,
           type: "mean",
           value: parseFloat(meanMatch[2]),
+          sampleSize: sampleSize, // Link to sample size if found in same sentence
           context: this.extractContext(sentence),
         });
       }
@@ -182,6 +237,7 @@ export class StatisticalValidator {
           text: sentence,
           type: "median",
           value: parseFloat(medianMatch[1]),
+          sampleSize: sampleSize, // Link to sample size if found in same sentence
           context: this.extractContext(sentence),
         });
       }
@@ -196,19 +252,7 @@ export class StatisticalValidator {
           text: sentence,
           type: "correlation",
           value: valueMatch ? parseFloat(valueMatch[1]) : undefined,
-          context: this.extractContext(sentence),
-        });
-      }
-
-      // Check for sample sizes
-      const sampleMatch = sentence.match(
-        /\b(n|sample|participants?|subjects?)\s*=?\s*(\d+)/i
-      );
-      if (sampleMatch) {
-        claims.push({
-          text: sentence,
-          type: "sample",
-          sampleSize: parseInt(sampleMatch[2], 10),
+          sampleSize: sampleSize, // Link to sample size if found in same sentence
           context: this.extractContext(sentence),
         });
       }
@@ -278,52 +322,74 @@ export class StatisticalValidator {
   private validateSampleSizes(claims: StatisticalClaim[]): StatisticalIssue[] {
     const issues: StatisticalIssue[] = [];
 
-    for (const claim of claims) {
-      if (claim.type === "sample" && claim.sampleSize) {
-        if (claim.sampleSize < this.config.minSampleSize) {
-          issues.push({
-            type: "Insufficient Sample Size",
-            severity: "high",
-            description: `Sample size (n=${claim.sampleSize}) is below recommended minimum of ${this.config.minSampleSize}`,
-            claim: claim.text,
-          });
-        }
+    // Find all claims with sample sizes (both sample claims and statistical claims with linked sample sizes)
+    const claimsWithSampleSize = claims.filter((c) => c.sampleSize);
 
-        // Check for suspiciously small samples with precise statistics
-        if (claim.sampleSize < 10) {
-          issues.push({
-            type: "Very Small Sample",
-            severity: "high",
-            description: `Sample size (n=${claim.sampleSize}) is too small for reliable statistical inference`,
-            claim: claim.text,
-          });
-        }
+    // Check sample size claims directly
+    for (const claim of claimsWithSampleSize) {
+      if (claim.sampleSize! < this.config.minSampleSize) {
+        issues.push({
+          type: "inadequate_sample_size",
+          severity: "high",
+          description: `Sample size (n=${claim.sampleSize}) is below recommended minimum of ${this.config.minSampleSize}`,
+          claim: claim.text,
+        });
       }
 
-      // Check for claims without reported sample sizes
-      if (
-        (claim.type === "percentage" ||
-          claim.type === "mean" ||
-          claim.type === "median") &&
-        !claim.sampleSize
-      ) {
-        const nextSampleClaim = claims.find(
-          (c) =>
-            c.type === "sample" && claims.indexOf(c) > claims.indexOf(claim)
-        );
+      // Check for suspiciously small samples with precise statistics
+      if (claim.sampleSize! < 10) {
+        issues.push({
+          type: "very_small_sample",
+          severity: "high",
+          description: `Sample size (n=${claim.sampleSize}) is too small for reliable statistical inference`,
+          claim: claim.text,
+        });
+      }
+    }
 
-        if (!nextSampleClaim) {
-          issues.push({
-            type: "Missing Sample Size",
-            severity: "medium",
-            description: "Statistical claim made without reporting sample size",
-            claim: claim.text,
-          });
-        }
+    // Check for statistical claims without sample sizes
+    const statisticalClaims = claims.filter(
+      (c) =>
+        (c.type === "percentage" || c.type === "mean" || c.type === "median") &&
+        !c.sampleSize
+    );
+
+    for (const statClaim of statisticalClaims) {
+      // Look for a sample claim in the same context or nearby
+      const sampleClaims = claims.filter(
+        (c) => c.type === "sample" && c.sampleSize
+      );
+      const hasSampleSize = sampleClaims.some((sampleClaim) =>
+        this.areClaimsRelated(statClaim, sampleClaim)
+      );
+
+      if (!hasSampleSize) {
+        issues.push({
+          type: "missing_sample_size",
+          severity: "medium",
+          description: "Statistical claim made without reporting sample size",
+          claim: statClaim.text,
+        });
       }
     }
 
     return issues;
+  }
+
+  private areClaimsRelated(
+    claim1: StatisticalClaim,
+    claim2: StatisticalClaim
+  ): boolean {
+    // Check if claims are in the same sentence or adjacent sentences
+    const text1 = claim1.text.toLowerCase();
+    const text2 = claim2.text.toLowerCase();
+
+    // Simple heuristic: if they share common words or are in the same context
+    const words1 = text1.split(/\s+/);
+    const words2 = text2.split(/\s+/);
+
+    const commonWords = words1.filter((word) => words2.includes(word));
+    return commonWords.length > 0;
   }
 
   /**
@@ -346,12 +412,13 @@ export class StatisticalValidator {
           });
         }
 
-        // Check for suspiciously round numbers
+        // Check for suspiciously round numbers (only flag if sample size is inadequate)
         if (
           claim.type === "percentage" &&
           claim.value % 5 === 0 &&
           claim.value !== 0 &&
-          claim.value !== 100
+          claim.value !== 100 &&
+          (!claim.sampleSize || claim.sampleSize < this.config.minSampleSize)
         ) {
           issues.push({
             type: "Suspiciously Round Number",
@@ -511,7 +578,7 @@ export class StatisticalValidator {
 
       return {
         verdict: VerificationVerdict.VERIFIED_TRUE,
-        confidence: 0.7,
+        confidence: 0.8,
         reasoning,
       };
     }

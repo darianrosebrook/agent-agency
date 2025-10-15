@@ -75,12 +75,10 @@ describe("ProvenanceTracker Unit Tests", () => {
       getAttributions: jest
         .fn<() => Promise<any[]>>()
         .mockResolvedValue([] as any),
-      cleanup: jest
-        .fn<() => Promise<any>>()
-        .mockResolvedValue({
-          entriesRemoved: 0,
-          attributionsRemoved: 0,
-        } as any),
+      cleanup: jest.fn<() => Promise<any>>().mockResolvedValue({
+        entriesRemoved: 0,
+        attributionsRemoved: 0,
+      } as any),
     };
 
     tracker = new ProvenanceTracker(config);
@@ -530,7 +528,7 @@ describe("ProvenanceTracker Unit Tests", () => {
       tracker.on("report:generated", listener);
 
       mockStorage.getProvenanceChain.mockResolvedValue({
-        specId: validSpec.id,
+        id: validSpec.id,
         entries: [],
         currentHash: "test-hash",
         metadata: {},

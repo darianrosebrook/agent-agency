@@ -426,6 +426,11 @@ export class EventEmitter {
       this.cleanupTimer = undefined;
     }
 
+    // Don't start cleanup timer in test environment
+    if (process.env.NODE_ENV === "test" || typeof jest !== "undefined") {
+      return;
+    }
+
     const intervalMs = this.config.cleanupIntervalMs || 60000;
     if (intervalMs > 0) {
       this.cleanupTimer = setInterval(() => {
@@ -471,7 +476,8 @@ export const globalEventEmitter = new EventEmitter({
   asyncHandlers: true,
   handlerTimeoutMs: 5000,
   // Disable cleanup timer in test environment
-  cleanupIntervalMs: process.env.NODE_ENV === "test" ? 0 : 60000,
+  cleanupIntervalMs:
+    process.env.NODE_ENV === "test" || typeof jest !== "undefined" ? 0 : 60000,
 });
 
 /**

@@ -144,7 +144,7 @@ WHERE
 CREATE TABLE IF NOT EXISTS verification_methods (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     method_type VARCHAR(30) NOT NULL UNIQUE CHECK (
-        method_type IN ('fact_checking', 'source_credibility', 'cross_reference', 'consistency_check', 'logical_validation', 'statistical_validation')
+        method_type IN ('fact_checking', 'source_credibility', 'cross_reference', 'consistency_check', 'logical_validation', 'statistical_validation', 'insufficient_data')
     ),
 
 -- Configuration
@@ -238,7 +238,8 @@ verification_method VARCHAR(30) CHECK (
         'cross_reference',
         'consistency_check',
         'logical_validation',
-        'statistical_validation'
+        'statistical_validation',
+        'insufficient_data'
     )
 ),
 

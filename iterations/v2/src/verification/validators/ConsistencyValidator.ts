@@ -77,6 +77,23 @@ export class ConsistencyValidator {
     const startTime = Date.now();
 
     try {
+      // Handle empty content
+      if (!request.content || request.content.trim().length === 0) {
+        return {
+          method: VerificationType.CONSISTENCY_CHECK,
+          verdict: VerificationVerdict.UNVERIFIED,
+          confidence: 0,
+          reasoning: ["Empty content cannot be verified for consistency"],
+          processingTimeMs: Date.now() - startTime,
+          evidenceCount: 0,
+          metadata: {
+            contradictions: [],
+            circularReasoning: false,
+            temporalIssues: [],
+          },
+        };
+      }
+
       // Parse content into statements
       const statements = this.parseStatements(request.content);
 
@@ -88,6 +105,11 @@ export class ConsistencyValidator {
           reasoning: ["No verifiable statements found in content"],
           processingTimeMs: Date.now() - startTime,
           evidenceCount: 0,
+          metadata: {
+            contradictions: [],
+            circularReasoning: false,
+            temporalIssues: [],
+          },
         };
       }
 
@@ -97,11 +119,21 @@ export class ConsistencyValidator {
       // Check temporal consistency
       const temporalIssues = this.checkTemporalConsistency(statements);
 
+      // Check for circular reasoning
+      const circularReasoning = this.detectCircularReasoning(statements);
+
+      // Check for numerical contradictions
+      const numericalContradictions = this.detectNumericalContradictions(statements);
+
+      // Combine all contradictions
+      const allContradictions = [...contradictions, ...numericalContradictions];
+
       // Assess overall consistency
       const assessment = this.assessConsistency(
         statements,
-        contradictions,
-        temporalIssues
+        allContradictions,
+        temporalIssues,
+        circularReasoning
       );
 
       return {
@@ -111,6 +143,15 @@ export class ConsistencyValidator {
         reasoning: assessment.reasoning,
         processingTimeMs: Date.now() - startTime,
         evidenceCount: statements.length,
+        metadata: {
+          contradictions: allContradictions.map(c => ({
+            type: c.type,
+            severity: c.severity,
+            explanation: c.explanation,
+          })),
+          circularReasoning,
+          temporalIssues,
+        },
       };
     } catch (error) {
       return {
@@ -124,6 +165,11 @@ export class ConsistencyValidator {
         ],
         processingTimeMs: Date.now() - startTime,
         evidenceCount: 0,
+        metadata: {
+          contradictions: [],
+          circularReasoning: false,
+          temporalIssues: [],
+        },
       };
     }
   }
@@ -404,12 +450,154 @@ export class ConsistencyValidator {
   }
 
   /**
+   * Detect circular reasoning patterns
+   */
+  private detectCircularReasoning(statements: Statement[]): boolean {
+    if (statements.length < 2) {
+      return false;
+    }
+
+    // Check for A is true because B is true, B is true because A is true
+    for (let i = 0; i < statements.length; i++) {
+      for (let j = i + 1; j < statements.length; j++) {
+        const s1 = statements[i];
+        const s2 = statements[j];
+
+        // Look for circular dependency patterns
+        if (this.hasCircularDependency(s1.text, s2.text)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if two statements have circular dependency
+   */
+  private hasCircularDependency(text1: string, text2: string): boolean {
+    const lower1 = text1.toLowerCase();
+    const lower2 = text2.toLowerCase();
+
+    // Pattern: "A is true because B is true" and "B is true because A is true"
+    const becausePattern = /\b(\w+)\s+is\s+true\s+because\s+(\w+)\s+is\s+true\b/i;
+    const match1 = lower1.match(becausePattern);
+    const match2 = lower2.match(becausePattern);
+
+    if (match1 && match2) {
+      const [, a1, b1] = match1;
+      const [, a2, b2] = match2;
+
+      // Check if A1 == B2 and B1 == A2 (circular)
+      if (a1 === b2 && b1 === a2) {
+        return true;
+      }
+    }
+
+    // Pattern: "A because B" and "B because A"
+    const simpleBecausePattern = /\b(\w+)\s+because\s+(\w+)\b/i;
+    const simpleMatch1 = lower1.match(simpleBecausePattern);
+    const simpleMatch2 = lower2.match(simpleBecausePattern);
+
+    if (simpleMatch1 && simpleMatch2) {
+      const [, a1, b1] = simpleMatch1;
+      const [, a2, b2] = simpleMatch2;
+
+      // Check if A1 == B2 and B1 == A2 (circular)
+      if (a1 === b2 && b1 === a2) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Detect numerical contradictions
+   */
+  private detectNumericalContradictions(statements: Statement[]): Contradiction[] {
+    const contradictions: Contradiction[] = [];
+
+    for (let i = 0; i < statements.length; i++) {
+      for (let j = i + 1; j < statements.length; j++) {
+        const s1 = statements[i];
+        const s2 = statements[j];
+
+        const numericalContradiction = this.checkNumericalContradiction(s1, s2);
+        if (numericalContradiction) {
+          contradictions.push(numericalContradiction);
+        }
+      }
+    }
+
+    return contradictions;
+  }
+
+  /**
+   * Check for numerical contradictions
+   */
+  private checkNumericalContradiction(
+    s1: Statement,
+    s2: Statement
+  ): Contradiction | null {
+    // Extract numbers from statements
+    const numbers1 = this.extractNumbers(s1.text);
+    const numbers2 = this.extractNumbers(s2.text);
+
+    if (numbers1.length === 0 || numbers2.length === 0) {
+      return null;
+    }
+
+    // Check for total vs parts contradiction
+    // Pattern: "The total is X. A is Y, B is Z." where Y + Z > X
+    const totalPattern = /\b(total|sum|combined|together)\s+(is|equals?)\s+(\d+)\b/i;
+    const partsPattern = /\b(\w+)\s+(is|equals?)\s+(\d+)\b/g;
+
+    const totalMatch1 = s1.text.match(totalPattern);
+    const totalMatch2 = s2.text.match(totalPattern);
+
+    if (totalMatch1 || totalMatch2) {
+      const totalStatement = totalMatch1 ? s1 : s2;
+      const partsStatement = totalMatch1 ? s2 : s1;
+
+      const totalValue = parseInt(totalMatch1 ? totalMatch1[3] : totalMatch2![3]);
+      const partsMatches = Array.from(partsStatement.text.matchAll(partsPattern));
+      
+      if (partsMatches.length >= 2) {
+        const partsSum = partsMatches.reduce((sum, match) => sum + parseInt(match[3]), 0);
+        
+        if (partsSum > totalValue) {
+          return {
+            statement1: totalStatement,
+            statement2: partsStatement,
+            type: "logical",
+            severity: "high",
+            explanation: `Numerical contradiction: parts sum to ${partsSum} but total is ${totalValue}`,
+          };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Extract numbers from text
+   */
+  private extractNumbers(text: string): number[] {
+    const numberMatches = text.match(/\b\d+\b/g);
+    return numberMatches ? numberMatches.map(n => parseInt(n)) : [];
+  }
+
+  /**
    * Assess overall consistency
    */
   private assessConsistency(
     statements: Statement[],
     contradictions: Contradiction[],
-    temporalIssues: string[]
+    temporalIssues: string[],
+    circularReasoning: boolean
   ): {
     verdict: VerificationVerdict;
     confidence: number;
@@ -418,6 +606,16 @@ export class ConsistencyValidator {
     const reasoning: string[] = [];
 
     reasoning.push(`Analyzed ${statements.length} statements`);
+
+    // Check for circular reasoning first (highest priority)
+    if (circularReasoning) {
+      reasoning.push("Circular reasoning detected");
+      return {
+        verdict: VerificationVerdict.VERIFIED_FALSE,
+        confidence: 0.9,
+        reasoning,
+      };
+    }
 
     // No contradictions found
     if (contradictions.length === 0 && temporalIssues.length === 0) {
@@ -465,7 +663,7 @@ export class ConsistencyValidator {
 
       if (highSeverityCount > 0) {
         return {
-          verdict: VerificationVerdict.CONTRADICTORY,
+          verdict: VerificationVerdict.VERIFIED_FALSE,
           confidence: 0.8,
           reasoning,
         };

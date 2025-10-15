@@ -430,10 +430,15 @@ export class AdaptivePromptEngineer extends EventEmitter {
   } {
     const successCount = this.successPatterns.size;
     const failureCount = this.failurePatterns.size;
-    const totalObservations = Array.from(this.successPatterns.values()).reduce(
-      (sum, p) => sum + p.successCount + p.failureCount,
-      0
-    );
+    const totalObservations =
+      Array.from(this.successPatterns.values()).reduce(
+        (sum, p) => sum + p.successCount + p.failureCount,
+        0
+      ) +
+      Array.from(this.failurePatterns.values()).reduce(
+        (sum, p) => sum + p.successCount + p.failureCount,
+        0
+      );
 
     const topSuccess = Array.from(this.successPatterns.values())
       .filter((p) => p.successCount > 0)

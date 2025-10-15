@@ -98,9 +98,6 @@ export class WebNavigator {
     url: string,
     config?: ContentExtractionConfig
   ): Promise<WebContent> {
-    // Check rate limit
-    await this.checkRateLimit(url);
-
     // Check cache
     if (this.config.cache.enabled) {
       const cached = await this.getCachedContent(url);
@@ -120,22 +117,36 @@ export class WebNavigator {
     this.activeExtractions.set(url, extractionPromise);
 
     try {
+      // Check rate limit
+      await this.checkRateLimit(url);
+
       const content = await extractionPromise;
 
-      // Store in database
+      // Store in database (non-critical operations)
       if (this.dbClient.isAvailable()) {
-        await this.dbClient.storeContent(content);
-        await this.dbClient.cacheContent(
-          url,
-          content.id,
-          this.config.cache.ttlHours
-        );
+        try {
+          await this.dbClient.storeContent(content);
+          await this.dbClient.cacheContent(
+            url,
+            content.id,
+            this.config.cache.ttlHours
+          );
+        } catch (error) {
+          // Log database errors but don't fail extraction
+          console.warn("Database storage failed:", error);
+        }
       }
 
       // Update rate limit
       await this.updateRateLimit(url);
 
       return content;
+    } catch (error: any) {
+      // Handle rate limit errors
+      if (error.message && error.message.includes("429")) {
+        await this.handleRateLimit(url);
+      }
+      throw error;
     } finally {
       this.activeExtractions.delete(url);
     }
@@ -214,7 +225,12 @@ export class WebNavigator {
     this.searchEngine.clearCache();
 
     if (this.dbClient.isAvailable()) {
-      await this.dbClient.cleanupExpiredCache();
+      try {
+        await this.dbClient.cleanupExpiredCache();
+      } catch (error) {
+        // Log error but don't throw - cache cleanup is not critical
+        console.warn("Cache cleanup failed:", error);
+      }
     }
   }
 

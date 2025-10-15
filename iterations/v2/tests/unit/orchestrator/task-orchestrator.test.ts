@@ -6,7 +6,14 @@
  * @author @darianrosebrook
  */
 
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from "@jest/globals";
 import { TaskOrchestrator } from "../../../src/orchestrator/TaskOrchestrator.js";
 import type {
   Task,
@@ -24,7 +31,7 @@ describe("TaskOrchestrator Unit Tests", () => {
 
   const validConfig: TaskOrchestratorConfig = {
     workerPool: {
-      minPoolSize: 1,
+      minPoolSize: 0, // Disable worker creation for tests
       maxPoolSize: 5,
       workerCapabilities: ["script", "api_call"],
       workerTimeout: 30000,
@@ -132,6 +139,12 @@ describe("TaskOrchestrator Unit Tests", () => {
     (orchestrator as any).retryHandler = mockRetryHandler;
     (orchestrator as any).routingManager = mockRoutingManager;
     (orchestrator as any).performanceTracker = mockPerformanceTracker;
+  });
+
+  afterEach(async () => {
+    if (orchestrator) {
+      await orchestrator.shutdown();
+    }
   });
 
   describe("Initialization", () => {

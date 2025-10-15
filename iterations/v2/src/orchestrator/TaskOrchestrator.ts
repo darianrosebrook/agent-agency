@@ -226,9 +226,12 @@ class WorkerPoolManager extends EventEmitter {
     const shutdownPromises = Array.from(this.workers.entries()).map(
       ([workerId, worker]) => {
         return new Promise<void>((resolve) => {
-          worker.once("exit", () => resolve());
+          const timeoutId = setTimeout(() => worker.terminate(), 5000); // Force terminate after 5s
+          worker.once("exit", () => {
+            clearTimeout(timeoutId);
+            resolve();
+          });
           worker.postMessage({ type: "shutdown" });
-          setTimeout(() => worker.terminate(), 5000); // Force terminate after 5s
         });
       }
     );
@@ -346,10 +349,10 @@ export class TaskOrchestrator extends EventEmitter {
 
     // Initialize components
     this.workerPool = new WorkerPoolManager({
-      minPoolSize: 1,
+      minPoolSize: config.workerPool.minPoolSize,
       maxPoolSize: config.workerPool.maxPoolSize,
-      workerCapabilities: ["general"],
-      workerTimeout: 30000,
+      workerCapabilities: config.workerPool.workerCapabilities,
+      workerTimeout: config.workerPool.workerTimeout,
     });
     this.pleadingManager = new PleadingWorkflowManager();
     this.taskQueue = new TaskQueue();
@@ -438,7 +441,10 @@ export class TaskOrchestrator extends EventEmitter {
     // Add to queue
     this.taskQueue.enqueue(task);
 
-    // Initialize task state
+    // Initialize task state first
+    this.stateMachine.initializeTask(task.id);
+
+    // Then transition to queued state
     await this.stateMachine.transition(
       task.id,
       TaskState.QUEUED,
@@ -506,7 +512,14 @@ export class TaskOrchestrator extends EventEmitter {
    */
   private async executeTask(task: any): Promise<void> {
     try {
-      // Transition to running
+      // First transition to assigned
+      await this.stateMachine.transition(
+        task.id,
+        TaskState.ASSIGNED,
+        "Task assigned to agent"
+      );
+
+      // Then transition to running
       await this.stateMachine.transition(
         task.id,
         TaskState.RUNNING,
@@ -686,7 +699,8 @@ export class TaskOrchestrator extends EventEmitter {
    * Get task status
    */
   async getTaskStatus(taskId: string): Promise<TaskStatus | null> {
-    return (this.stateMachine as any).getCurrentState(taskId);
+    const state = this.stateMachine.getState(taskId);
+    return state as unknown as TaskStatus;
   }
 
   /**

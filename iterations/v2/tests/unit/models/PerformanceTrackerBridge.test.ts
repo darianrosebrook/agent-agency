@@ -206,7 +206,7 @@ describe("PerformanceTrackerBridge", () => {
 
       bridge.recordFromPerformanceEvent(event, modelId);
 
-      const history = selector.getPerformanceHistory(modelId, "thinking");
+      const history = selector.getPerformanceHistory(modelId, "validation");
       expect(history).toBeDefined();
     });
 

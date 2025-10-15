@@ -4,6 +4,9 @@
  * @author @darianrosebrook
  */
 
+// Set NODE_ENV to test before importing EventEmitter to disable cleanup timer
+process.env.NODE_ENV = 'test';
+
 import { ArbiterOrchestrator } from "../../../src/orchestrator/ArbiterOrchestrator";
 import { events } from "../../../src/orchestrator/EventEmitter";
 import { Task, TaskType } from "../../../src/types/arbiter-orchestration";
@@ -75,6 +78,12 @@ describe("ArbiterOrchestrator", () => {
     } catch (error) {
       // Ignore shutdown errors
     }
+    
+    // Force clear any remaining timers
+    jest.clearAllTimers();
+    
+    // Wait a bit to ensure cleanup completes
+    await new Promise(resolve => setTimeout(resolve, 100));
   });
 
   describe("Basic Functionality", () => {

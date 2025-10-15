@@ -363,6 +363,7 @@ export class ArbiterOrchestrator {
   private initialized = false;
   private overrideRequests: Map<string, OverrideRequest> = new Map();
   private approvedOverrides: Map<string, OverrideRequest> = new Map();
+  private deniedRequests: Map<string, OverrideRequest> = new Map();
   private overrideUsage: { count: number; windowStart: number } = {
     count: 0,
     windowStart: Date.now(),
@@ -1793,6 +1794,9 @@ export class ArbiterOrchestrator {
           `Override request ${request.id} denied ${request.denialCount} times, consider escalation`
         );
       }
+
+      // Add to denied requests map
+      this.deniedRequests.set(request.id, request);
     }
 
     // Remove from pending requests
@@ -1934,9 +1938,7 @@ export class ArbiterOrchestrator {
         (r) => r.status === "pending"
       ).length,
       approvedOverrides: this.approvedOverrides.size,
-      deniedRequests: Array.from(this.overrideRequests.values()).filter(
-        (r) => r.status === "denied"
-      ).length,
+      deniedRequests: this.deniedRequests.size,
       expiredOverrides: expiredCount,
       usageThisHour: this.overrideUsage.count,
     };

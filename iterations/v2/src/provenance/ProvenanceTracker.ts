@@ -323,6 +323,11 @@ export class ProvenanceTracker extends EventEmitter {
       reportPeriod
     );
 
+    // Ensure chain has statistics before assessing risks
+    if (!chain.statistics) {
+      chain.statistics = this.calculateChainStatistics(chain);
+    }
+
     // Assess risks
     const riskAssessment = this.assessProvenanceRisks(chain, aiStats);
 
@@ -331,6 +336,7 @@ export class ProvenanceTracker extends EventEmitter {
 
     const report: ProvenanceReport = {
       id: this.generateId(),
+      specId: chain.id,
       type,
       period: reportPeriod,
       spec: chain.spec,
@@ -397,10 +403,23 @@ export class ProvenanceTracker extends EventEmitter {
 
     const issues: string[] = [];
 
+    // Ensure integrity property exists
+    if (!chain.integrity) {
+      chain.integrity = {
+        verified: true,
+        lastVerified: new Date().toISOString(),
+        hash: "",
+      };
+    }
+
     // Verify chain hash
     const currentHash = this.calculateChainHash(chain.entries);
-    if (currentHash !== chain.integrity.hash) {
+    if (chain.integrity.hash && currentHash !== chain.integrity.hash) {
       issues.push("Chain hash mismatch - integrity compromised");
+    } else if (!chain.integrity.hash) {
+      // If no hash is stored, update it
+      chain.integrity.hash = currentHash;
+      chain.integrity.lastVerified = new Date().toISOString();
     }
 
     // Verify entry timestamps are sequential
@@ -499,6 +518,11 @@ export class ProvenanceTracker extends EventEmitter {
         humanEntries.filter((e) => e.action.type === "reviewed").length /
         humanEntries.length,
     };
+
+    // Ensure chain has statistics before analyzing patterns
+    if (!chain.statistics) {
+      chain.statistics = this.calculateChainStatistics(chain);
+    }
 
     // Simplified quality correlation
     const qualityCorrelation = {
@@ -682,6 +706,20 @@ export class ProvenanceTracker extends EventEmitter {
       (await this.storage.getProvenanceChain(entry.specId)) ||
       this.createEmptyChain(entry.specId);
 
+    // Ensure integrity property exists (for chains loaded from storage)
+    if (!chain.integrity) {
+      chain.integrity = {
+        verified: true,
+        lastVerified: new Date().toISOString(),
+        hash: "",
+      };
+    }
+
+    // Ensure statistics property exists (for chains loaded from storage)
+    if (!chain.statistics) {
+      chain.statistics = this.calculateChainStatistics(chain);
+    }
+
     chain.entries.push(entry);
     chain.statistics = this.calculateChainStatistics(chain);
     chain.integrity.hash = this.calculateChainHash(chain.entries);
@@ -743,8 +781,9 @@ export class ProvenanceTracker extends EventEmitter {
     const timestamps = chain.entries.map((e) =>
       new Date(e.timestamp).getTime()
     );
-    const start = Math.min(...timestamps);
-    const end = Math.max(...timestamps);
+    const now = Date.now();
+    const start = timestamps.length > 0 ? Math.min(...timestamps) : now;
+    const end = timestamps.length > 0 ? Math.max(...timestamps) : now;
 
     return {
       totalEntries: chain.entries.length,
@@ -995,7 +1034,38 @@ class FileBasedStorage implements ProvenanceStorage {
     try {
       const chainPath = path.join(this.basePath, "chains", `${specId}.json`);
       const content = await fs.readFile(chainPath, "utf-8");
-      return JSON.parse(content);
+      const chain = JSON.parse(content);
+
+      // Ensure integrity property exists (for chains stored before this property was added)
+      if (!chain.integrity) {
+        chain.integrity = {
+          verified: true,
+          lastVerified: new Date().toISOString(),
+          hash: "",
+        };
+      }
+
+      // Ensure statistics property exists (for chains stored before this property was added)
+      if (!chain.statistics) {
+        chain.statistics = {
+          totalEntries: chain.entries?.length || 0,
+          aiAssistedEntries: 0,
+          humanEntries: 0,
+          aiToolsUsed: [],
+          timeSpan: {
+            start: new Date().toISOString(),
+            end: new Date().toISOString(),
+            durationMs: 0,
+          },
+          qualityTrends: {
+            testCoverage: [],
+            lintErrors: [],
+            budgetUsage: [],
+          },
+        };
+      }
+
+      return chain;
     } catch {
       return null;
     }

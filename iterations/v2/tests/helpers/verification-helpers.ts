@@ -15,6 +15,7 @@ import {
   VerificationType,
   VerificationVerdict,
 } from "@/types/verification";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Create a test verification request with defaults
@@ -23,7 +24,7 @@ export function createTestRequest(
   overrides: Partial<VerificationRequest> = {}
 ): VerificationRequest {
   return {
-    id: `test-request-${Date.now()}`,
+    id: uuidv4(),
     content: "Test content for verification",
     source: "https://example.com",
     context: "Test context",
@@ -42,7 +43,7 @@ export function createTestResult(
   overrides: Partial<VerificationResult> = {}
 ): VerificationResult {
   return {
-    requestId: `test-request-${Date.now()}`,
+    requestId: uuidv4(),
     verdict: VerificationVerdict.VERIFIED_TRUE,
     confidence: 0.8,
     reasoning: ["Test verification passed through automated checks"],
@@ -67,7 +68,10 @@ export function createTestEvidence(
     credibility: 0.7,
     supporting: true,
     verificationDate: new Date(),
-    metadata: {},
+    metadata: {
+      type: "factual", // Set default evidence type
+      ...overrides.metadata,
+    },
     ...overrides,
   };
 }
@@ -156,7 +160,7 @@ export function createTestRequests(
 
   return Array.from({ length: count }, (_, i) =>
     createTestRequest({
-      id: `${baseId}-${i}`,
+      id: uuidv4(), // Use UUID instead of baseId pattern
       content: `Test content ${i}`,
       source: `https://example${i}.com`,
       priority: priorities[i % priorities.length],

@@ -88,17 +88,20 @@ export class FeedbackAnalyzer {
   public analyzeAllEntities(entityType?: string): FeedbackAnalysis[] {
     const analyses: FeedbackAnalysis[] = [];
     const entities = entityType
-      ? Array.from(this.feedbackHistory.keys()).filter(
-          (id) => this.getEntityType(id) === entityType
-        )
+      ? Array.from(this.feedbackHistory.keys()).filter((id) => {
+          const events = this.feedbackHistory.get(id) || [];
+          return events.length > 0 && events[0].entityType === entityType;
+        })
       : Array.from(this.feedbackHistory.keys());
 
     for (const entityId of entities) {
       try {
-        const analysis = this.analyzeEntityFeedback(
-          entityId,
-          this.getEntityType(entityId)
-        );
+        const events = this.feedbackHistory.get(entityId) || [];
+        const actualEntityType =
+          events.length > 0
+            ? events[0].entityType
+            : this.getEntityType(entityId);
+        const analysis = this.analyzeEntityFeedback(entityId, actualEntityType);
         analyses.push(analysis);
       } catch (error) {
         const errorMessage =

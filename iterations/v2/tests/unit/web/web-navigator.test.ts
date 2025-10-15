@@ -984,14 +984,9 @@ describe("WebNavigator", () => {
 
       await webNavigator.processQuery(query);
 
-      expect(mockDbClient.updateTraversalNode).toHaveBeenCalledWith(
-        "session-456",
-        expect.objectContaining({
-          totalPages: 1,
-          maxDepthReached: 1,
-          errors: [],
-          completedAt: expect.any(Date),
-        })
+      expect(mockDbClient.updateTraversalStatus).toHaveBeenCalledWith(
+        expect.stringMatching(/^traversal-\d+-[a-z0-9]+$/),
+        "completed"
       );
     });
   });
@@ -1013,19 +1008,32 @@ describe("WebNavigator", () => {
         lastRequestAt: new Date(),
       };
 
+      mockDbClient.isAvailable.mockReturnValue(true);
       mockDbClient.getRateLimit.mockResolvedValue(rateLimit);
 
+      // Mock content extractor (won't be called due to rate limit)
       const mockContentExtractor = {
-        extractContent: jest
-          .fn()
-          .mockRejectedValue(new Error("429 Too Many Requests")),
+        extractContent: jest.fn().mockResolvedValue({
+          id: "test-content-id",
+          url: `https://${domain}`,
+          title: "Test Content",
+          content: "Test content body",
+          extractedAt: new Date(),
+          metadata: {
+            statusCode: 200,
+            contentType: "text/html",
+            contentLength: 1000,
+            responseTime: 100,
+          },
+        }),
       };
-
       (webNavigator as any).contentExtractor = mockContentExtractor;
 
       await expect(
         webNavigator.extractContent(`https://${domain}`)
-      ).rejects.toThrow("429 Too Many Requests");
+      ).rejects.toThrow(
+        "429 Too Many Requests: Domain example.com is throttled, wait"
+      );
 
       expect(mockDbClient.updateRateLimit).toHaveBeenCalledWith(
         expect.objectContaining({

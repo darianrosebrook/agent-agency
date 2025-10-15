@@ -7,10 +7,9 @@
  * @author @darianrosebrook
  */
 
-import { beforeEach, describe, expect, it } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
 import { AgentRegistryManager } from "../../../src/orchestrator/AgentRegistryManager";
 import {
-  VerificationPriority,
   RoutingOutcome,
   TaskRoutingConfig,
   TaskRoutingManager,
@@ -87,6 +86,12 @@ describe("Task Routing Manager (ARBITER-002)", () => {
       enableSecurity: false, // Disable security for tests
     });
     routingManager = new TaskRoutingManager(agentRegistry);
+  });
+
+  afterEach(async () => {
+    if (agentRegistry) {
+      await agentRegistry.shutdown();
+    }
   });
 
   describe("A1: Route to highest-scoring agent within 50ms", () => {

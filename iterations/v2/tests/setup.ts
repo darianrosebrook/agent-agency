@@ -6,6 +6,9 @@
  * Global test configuration and setup for Jest tests.
  */
 
+// Set NODE_ENV for tests
+process.env.NODE_ENV = "test";
+
 import { ConnectionPoolManager } from "@/database/ConnectionPoolManager";
 
 // Set test timeout

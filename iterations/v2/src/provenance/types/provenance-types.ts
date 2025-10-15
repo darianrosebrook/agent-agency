@@ -338,6 +338,9 @@ export interface ProvenanceReport {
   /** Report ID */
   id: string;
 
+  /** Spec ID */
+  specId: string;
+
   /** Report type */
   type: "summary" | "detailed" | "compliance" | "audit";
 

@@ -151,6 +151,8 @@ export class CommandValidator {
 
       // Check for command substitution (more specific patterns first)
       for (const pattern of COMMAND_SUBSTITUTION_PATTERNS) {
+        // Reset regex lastIndex to avoid global flag issues
+        pattern.lastIndex = 0;
         if (pattern.test(arg)) {
           return {
             valid: false,
@@ -163,6 +165,8 @@ export class CommandValidator {
 
       // Check for variable expansion (more specific patterns first)
       for (const pattern of VARIABLE_EXPANSION_PATTERNS) {
+        // Reset regex lastIndex to avoid global flag issues
+        pattern.lastIndex = 0;
         if (pattern.test(arg)) {
           return {
             valid: false,

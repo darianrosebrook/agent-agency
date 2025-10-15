@@ -497,7 +497,7 @@ export class SecurityManager {
 
     if (this.config.adminAgents.includes(agent.id)) {
       permissions = Object.values(Permission).map((p) => p.toString());
-      securityLevel = SecurityLevel.RESTRICTED;
+      securityLevel = SecurityLevel.ADMIN;
     } else if (this.config.trustedAgents.includes(agent.id)) {
       permissions = [
         Permission.SUBMIT_TASK.toString(),
@@ -505,14 +505,14 @@ export class SecurityManager {
         Permission.QUERY_SYSTEM_STATUS.toString(),
         Permission.UPDATE_OWN_PROGRESS.toString(),
       ];
-      securityLevel = SecurityLevel.CONFIDENTIAL;
+      securityLevel = SecurityLevel.TRUSTED_AGENT;
     } else {
       permissions = [
         Permission.SUBMIT_TASK.toString(),
         Permission.QUERY_OWN_TASKS.toString(),
         Permission.UPDATE_OWN_PROGRESS.toString(),
       ];
-      securityLevel = SecurityLevel.INTERNAL;
+      securityLevel = SecurityLevel.AGENT;
     }
 
     return {

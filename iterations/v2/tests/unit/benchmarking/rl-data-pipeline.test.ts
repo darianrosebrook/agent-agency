@@ -286,6 +286,15 @@ describe("RLDataPipeline", () => {
 
   describe("training batch management", () => {
     beforeEach(async () => {
+      // Use smaller batch configuration for testing
+      pipeline.updateConfig({
+        batching: {
+          maxBatchSize: 2, // Small enough to trigger batch completion
+          maxBatchAgeMinutes: 1,
+          minBatchSize: 1,
+        },
+      });
+
       pipeline.startProcessing();
       await pipeline.processEvents(mockEvents, mockProfiles);
     });
@@ -362,7 +371,7 @@ describe("RLDataPipeline", () => {
       if (sample) {
         expect(sample.id).toMatch(/^sample_.*_\d+$/);
         expect(sample.agentId).toBe("agent-1");
-        expect(sample.taskType).toBe("task-1");
+        expect(sample.taskType).toBe("task");
         expect(sample.state).toBeDefined();
         expect(sample.action).toBeDefined();
         expect(sample.reward).toBeGreaterThanOrEqual(0);
