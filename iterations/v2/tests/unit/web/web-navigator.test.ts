@@ -9,10 +9,10 @@
 import { WebNavigatorDatabaseClient } from "../../../src/database/WebNavigatorDatabaseClient";
 import { KnowledgeSeeker } from "../../../src/knowledge/KnowledgeSeeker";
 import { RateLimitStatus, WebNavigatorConfig } from "../../../src/types/web";
-import { WebNavigator } from "../../../src/web/WebNavigator";
 import { ContentExtractor } from "../../../src/web/ContentExtractor";
 import { SearchEngine } from "../../../src/web/SearchEngine";
 import { TraversalEngine } from "../../../src/web/TraversalEngine";
+import { WebNavigator } from "../../../src/web/WebNavigator";
 
 // Mock dependencies
 jest.mock("../../../src/database/WebNavigatorDatabaseClient");
@@ -65,14 +65,18 @@ describe("WebNavigator", () => {
     mockContentExtractor = {
       extractContent: jest.fn(),
     } as any;
-    (ContentExtractor as jest.MockedClass<typeof ContentExtractor>).mockImplementation(() => mockContentExtractor);
+    (
+      ContentExtractor as jest.MockedClass<typeof ContentExtractor>
+    ).mockImplementation(() => mockContentExtractor);
 
     mockSearchEngine = {
       search: jest.fn(),
       pruneCache: jest.fn(),
       clearCache: jest.fn(),
     } as any;
-    (SearchEngine as jest.MockedClass<typeof SearchEngine>).mockImplementation(() => mockSearchEngine);
+    (SearchEngine as jest.MockedClass<typeof SearchEngine>).mockImplementation(
+      () => mockSearchEngine
+    );
 
     mockTraversalEngine = {
       traverse: jest.fn().mockResolvedValue({
@@ -102,7 +106,9 @@ describe("WebNavigator", () => {
         depthDistribution: { 0: 1 },
       }),
     } as any;
-    (TraversalEngine as jest.MockedClass<typeof TraversalEngine>).mockImplementation(() => mockTraversalEngine);
+    (
+      TraversalEngine as jest.MockedClass<typeof TraversalEngine>
+    ).mockImplementation(() => mockTraversalEngine);
 
     defaultConfig = {
       enabled: true,
@@ -824,7 +830,9 @@ describe("WebNavigator", () => {
 
     it("should handle traversal errors", async () => {
       // Configure the module-level mock to throw an error
-      mockTraversalEngine.traverse.mockRejectedValue(new Error("Traversal failed"));
+      mockTraversalEngine.traverse.mockRejectedValue(
+        new Error("Traversal failed")
+      );
 
       const query: any = {
         id: "query-2",

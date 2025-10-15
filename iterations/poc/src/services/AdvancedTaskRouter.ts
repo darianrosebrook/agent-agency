@@ -121,7 +121,7 @@ export class AdvancedTaskRouter extends EventEmitter {
 
     // Add to appropriate priority queue
     const priority = task.priority || "medium";
-    this.taskQueue[priority].push(task);
+    this.taskQueue[priority as keyof TaskQueue].push(task);
 
     this.logger.info(`Queued task ${task.id} with priority ${priority}`);
 
@@ -607,21 +607,33 @@ export class AdvancedTaskRouter extends EventEmitter {
     return [
       {
         id: "agent-1",
+        name: "Agent 1",
         type: "worker",
         capabilities: [taskType],
         status: "idle",
+        metadata: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
       {
         id: "agent-2",
+        name: "Agent 2",
         type: "worker",
         capabilities: [taskType],
         status: "idle",
+        metadata: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
       {
         id: "agent-3",
-        type: "specialist",
+        name: "Agent 3",
+        type: "worker",
         capabilities: [taskType, "advanced"],
         status: "idle",
+        metadata: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
     ];
   }

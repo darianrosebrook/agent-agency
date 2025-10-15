@@ -114,7 +114,7 @@ export class EncryptionManager {
       encrypted += cipher.final("hex");
 
       // Get authentication tag
-      const authTag = cipher.getAuthTag();
+      const authTag = (cipher as any).getAuthTag();
 
       const result: EncryptedData = {
         encrypted,
@@ -165,7 +165,7 @@ export class EncryptionManager {
 
       // Create decipher with GCM mode
       const decipher = createDecipheriv(this.config.algorithm, key, iv);
-      decipher.setAuthTag(authTag);
+      (decipher as any).setAuthTag(authTag);
 
       // Decrypt data
       let decrypted = decipher.update(encrypted, undefined, "utf8");

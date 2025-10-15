@@ -499,7 +499,7 @@ export class EvaluationTools {
       if (analysis.patterns.length === 0) {
         response += "\n- No patterns identified (insufficient historical data)";
       } else {
-        analysis.patterns.forEach((pattern, i) => {
+        analysis.patterns.forEach((pattern: any, i: number) => {
           response += `\n${i + 1}. **${pattern.pattern}** (${pattern.category})
    - Frequency: ${pattern.frequency}
    - Confidence: ${(pattern.confidence * 100).toFixed(1)}%
@@ -510,7 +510,7 @@ export class EvaluationTools {
       response += `
 
 **Recommendations:**
-${analysis.recommendations.map((r) => `- ${r}`).join("\n")}
+${analysis.recommendations.map((r: any) => `- ${r}`).join("\n")}
 
 **Adaptive Prompt Suggestion:**
 ${analysis.adaptivePrompt || "No specific prompt adaptations recommended"}`;
@@ -574,7 +574,7 @@ ${analysis.adaptivePrompt || "No specific prompt adaptations recommended"}`;
 ${analytics.topPatterns
   .slice(0, 5)
   .map(
-    (p, i) =>
+    (p: any, i: number) =>
       `${i + 1}. ${p.pattern} (${p.category}) - ${p.frequency} occurrences`
   )
   .join("\n")}
@@ -595,7 +595,7 @@ ${Object.entries(analytics.severityDistribution)
 **Detailed Pattern Analysis:**
 ${analytics.topPatterns
   .map(
-    (p) =>
+    (p: any) =>
       `\n**${p.pattern}** (${p.category})
 - Frequency: ${p.frequency}
 - Category: ${p.category}

@@ -118,7 +118,18 @@ describe("DataLayer", () => {
         hit: false,
         duration: 5,
       }),
+      initialize: jest.fn().mockResolvedValue(undefined),
+      healthCheck: jest.fn().mockResolvedValue({
+        status: "healthy",
+        connected: true,
+        latency: 5,
+      }),
       close: jest.fn().mockResolvedValue(undefined),
+      // EventEmitter methods
+      on: jest.fn(),
+      emit: jest.fn(),
+      off: jest.fn(),
+      removeListener: jest.fn(),
     };
 
     // Create DataLayer instance
@@ -143,15 +154,6 @@ describe("DataLayer", () => {
     });
 
     it("should initialize successfully", async () => {
-      // Mock the cache initialize method
-      (mockCache as any).initialize = jest.fn().mockResolvedValue(undefined);
-      // Also mock the healthCheck method that might be called during initialization
-      (mockCache as any).healthCheck = jest.fn().mockResolvedValue({
-        status: "healthy",
-        connected: true,
-        latency: 5,
-      });
-
       await expect(dataLayer.initialize()).resolves.not.toThrow();
 
       expect(mockLogger.info).toHaveBeenCalledWith(
@@ -164,9 +166,6 @@ describe("DataLayer", () => {
     });
 
     it("should not initialize twice", async () => {
-      // Mock the cache initialize method
-      (mockCache as any).initialize = jest.fn().mockResolvedValue(undefined);
-
       await dataLayer.initialize();
       await dataLayer.initialize(); // Second call
 

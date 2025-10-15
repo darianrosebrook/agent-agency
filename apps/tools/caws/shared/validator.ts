@@ -5,23 +5,22 @@
  * @author @darianrosebrook
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import Ajv from 'ajv';
-import yaml from 'js-yaml';
-import { ValidationResult, ContractValidationResult } from './types.js';
-import { CawsBaseTool } from './base-tool.js';
+import Ajv, { type Ajv as AjvType, type Options } from "ajv";
+import * as fs from "fs";
+import * as yaml from "js-yaml";
+import * as path from "path";
+import { CawsBaseTool } from "./base-tool.js";
+import { ValidationResult } from "./types.js";
 
 export class CawsValidator extends CawsBaseTool {
-  private ajv: Ajv;
+  private ajv: AjvType;
 
   constructor() {
     super();
     this.ajv = new Ajv({
       allErrors: true,
-      strict: false,
       allowUnionTypes: true,
-    });
+    } as Options);
   }
 
   /**
@@ -30,7 +29,7 @@ export class CawsValidator extends CawsBaseTool {
   validateWorkingSpec(specPath: string): ValidationResult {
     try {
       // Read the working spec file
-      const specContent = fs.readFileSync(specPath, 'utf-8');
+      const specContent = fs.readFileSync(specPath, "utf-8");
       let spec: any;
 
       // Try to parse as YAML first, then JSON
@@ -44,16 +43,19 @@ export class CawsValidator extends CawsBaseTool {
             passed: false,
             score: 0,
             details: {},
-            errors: ['Invalid JSON/YAML format in working spec'],
+            errors: ["Invalid JSON/YAML format in working spec"],
           };
         }
       }
 
       // Load schema if available
-      const schemaPath = path.join(this.getCawsDirectory(), 'schemas/working-spec.schema.json');
+      const schemaPath = path.join(
+        this.getCawsDirectory(),
+        "schemas/working-spec.schema.json"
+      );
 
       if (fs.existsSync(schemaPath)) {
-        const schemaContent = fs.readFileSync(schemaPath, 'utf-8');
+        const schemaContent = fs.readFileSync(schemaPath, "utf-8");
         const schema = JSON.parse(schemaContent);
 
         // Validate against schema
@@ -63,7 +65,10 @@ export class CawsValidator extends CawsBaseTool {
         if (!valid) {
           return {
             passed: false,
-            errors: validate.errors?.map((err) => `${err.instancePath}: ${err.message}`) || [],
+            errors:
+              validate.errors?.map(
+                (err: any) => `${err.instancePath}: ${err.message}`
+              ) ?? [],
             score: 0,
             details: {},
           };
@@ -75,21 +80,27 @@ export class CawsValidator extends CawsBaseTool {
 
       // Check risk tier thresholds
       if (spec.risk_tier === 1 && spec.acceptance?.length < 5) {
-        warnings.push('Tier 1 specs should have at least 5 acceptance criteria');
+        warnings.push(
+          "Tier 1 specs should have at least 5 acceptance criteria"
+        );
       }
 
       if (spec.risk_tier === 2 && spec.contracts?.length === 0) {
-        warnings.push('Tier 2 specs should have contract definitions');
+        warnings.push("Tier 2 specs should have contract definitions");
       }
 
       // Check for required non-functional requirements
-      const requiredNonFunctional = ['perf'];
+      const requiredNonFunctional = ["perf"];
       const missingNonFunctional = requiredNonFunctional.filter(
         (req) => !spec.non_functional?.[req]
       );
 
       if (missingNonFunctional.length > 0) {
-        warnings.push(`Missing non-functional requirements: ${missingNonFunctional.join(', ')}`);
+        warnings.push(
+          `Missing non-functional requirements: ${missingNonFunctional.join(
+            ", "
+          )}`
+        );
       }
 
       return {
@@ -113,26 +124,39 @@ export class CawsValidator extends CawsBaseTool {
    */
   validateProvenance(provenancePath: string): ValidationResult {
     try {
-      const provenanceContent = fs.readFileSync(provenancePath, 'utf-8');
+      const provenanceContent = fs.readFileSync(provenancePath, "utf-8");
       const provenance = JSON.parse(provenanceContent);
 
       // Basic structure validation
-      const requiredFields = ['agent', 'model', 'commit', 'artifacts', 'results', 'approvals'];
-      const missingFields = requiredFields.filter((field) => !provenance[field]);
+      const requiredFields = [
+        "agent",
+        "model",
+        "commit",
+        "artifacts",
+        "results",
+        "approvals",
+      ];
+      const missingFields = requiredFields.filter(
+        (field) => !provenance[field]
+      );
 
       if (missingFields.length > 0) {
         return {
           passed: false,
           score: 0,
           details: {},
-          errors: [`Missing required fields: ${missingFields.join(', ')}`],
+          errors: [`Missing required fields: ${missingFields.join(", ")}`],
         };
       }
 
       // Validate results structure
-      const requiredResults = ['coverage_branch', 'mutation_score', 'tests_passed'];
+      const requiredResults = [
+        "coverage_branch",
+        "mutation_score",
+        "tests_passed",
+      ];
       const missingResults = requiredResults.filter(
-        (field) => typeof provenance.results[field] !== 'number'
+        (field) => typeof provenance.results[field] !== "number"
       );
 
       if (missingResults.length > 0) {
@@ -140,7 +164,7 @@ export class CawsValidator extends CawsBaseTool {
           passed: false,
           score: 0,
           details: {},
-          errors: [`Missing numeric results: ${missingResults.join(', ')}`],
+          errors: [`Missing numeric results: ${missingResults.join(", ")}`],
         };
       }
 
@@ -162,14 +186,17 @@ export class CawsValidator extends CawsBaseTool {
   /**
    * Validate a JSON file against a schema
    */
-  validateJsonAgainstSchema(jsonPath: string, schemaPath: string): ValidationResult {
+  validateJsonAgainstSchema(
+    jsonPath: string,
+    schemaPath: string
+  ): ValidationResult {
     try {
       // Read JSON file
-      const jsonContent = fs.readFileSync(jsonPath, 'utf-8');
+      const jsonContent = fs.readFileSync(jsonPath, "utf-8");
       const jsonData = JSON.parse(jsonContent);
 
       // Read schema file
-      const schemaContent = fs.readFileSync(schemaPath, 'utf-8');
+      const schemaContent = fs.readFileSync(schemaPath, "utf-8");
       const schema = JSON.parse(schemaContent);
 
       // Validate
@@ -181,7 +208,10 @@ export class CawsValidator extends CawsBaseTool {
           passed: false,
           score: 0,
           details: {},
-          errors: validate.errors?.map((err) => `${err.instancePath}: ${err.message}`) || [],
+          errors:
+            validate.errors?.map(
+              (err: any) => `${err.instancePath}: ${err.message}`
+            ) ?? [],
         };
       }
 
@@ -203,14 +233,17 @@ export class CawsValidator extends CawsBaseTool {
   /**
    * Validate a YAML file against a schema
    */
-  validateYamlAgainstSchema(yamlPath: string, schemaPath: string): ValidationResult {
+  validateYamlAgainstSchema(
+    yamlPath: string,
+    schemaPath: string
+  ): ValidationResult {
     try {
       // Read YAML file
-      const yamlContent = fs.readFileSync(yamlPath, 'utf-8');
+      const yamlContent = fs.readFileSync(yamlPath, "utf-8");
       const yamlData = yaml.load(yamlContent);
 
       // Read schema file
-      const schemaContent = fs.readFileSync(schemaPath, 'utf-8');
+      const schemaContent = fs.readFileSync(schemaPath, "utf-8");
       const schema = JSON.parse(schemaContent);
 
       // Validate
@@ -222,7 +255,10 @@ export class CawsValidator extends CawsBaseTool {
           passed: false,
           score: 0,
           details: {},
-          errors: validate.errors?.map((err) => `${err.instancePath}: ${err.message}`) || [],
+          errors:
+            validate.errors?.map(
+              (err: any) => `${err.instancePath}: ${err.message}`
+            ) ?? [],
         };
       }
 

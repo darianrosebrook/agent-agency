@@ -5,10 +5,10 @@
  * @author @darianrosebrook
  */
 
-import * as path from 'path';
-import yaml from 'js-yaml';
-import { CawsConfig } from './types.js';
-import { CawsBaseTool, ToolResult } from './base-tool.js';
+import * as yaml from "js-yaml";
+import * as path from "path";
+import { CawsBaseTool, ToolResult } from "./base-tool.js";
+import { CawsConfig } from "./types.js";
 
 export class CawsConfigManager extends CawsBaseTool {
   private config: CawsConfig | null = null;
@@ -16,7 +16,7 @@ export class CawsConfigManager extends CawsBaseTool {
 
   constructor() {
     super();
-    this.configPath = path.join(this.getCawsDirectory(), 'config.json');
+    this.configPath = path.join(this.getCawsDirectory(), "config.json");
     this.loadConfig();
   }
 
@@ -31,7 +31,7 @@ export class CawsConfigManager extends CawsBaseTool {
         this.validateConfig();
       }
     } catch {
-      this.logWarning('Failed to load CAWS configuration, using defaults');
+      this.logWarning("Failed to load CAWS configuration, using defaults");
       this.config = this.getDefaultConfig();
     }
   }
@@ -53,8 +53,8 @@ export class CawsConfigManager extends CawsBaseTool {
    */
   private getDefaultConfig(): CawsConfig {
     return {
-      version: '1.0.0',
-      environment: 'development',
+      version: "1.0.0",
+      environment: "development",
       gates: {
         coverage: {
           enabled: true,
@@ -83,36 +83,36 @@ export class CawsConfigManager extends CawsBaseTool {
       },
       tools: {
         coverage: {
-          command: 'nyc',
-          args: ['--reporter=json', '--reporter=text'],
+          command: "nyc",
+          args: ["--reporter=json", "--reporter=text"],
         },
         mutation: {
-          command: 'stryker',
-          args: ['run'],
+          command: "stryker",
+          args: ["run"],
         },
         contracts: {
-          command: 'pact',
-          args: ['verify'],
+          command: "pact",
+          args: ["verify"],
         },
         linting: {
-          command: 'eslint',
-          args: ['.'],
+          command: "eslint",
+          args: ["."],
         },
         testing: {
-          command: 'jest',
-          args: ['--coverage'],
+          command: "jest",
+          args: ["--coverage"],
         },
       },
       paths: {
         working_directory: this.getWorkingDirectory(),
-        reports: path.join(this.getWorkingDirectory(), 'reports'),
-        coverage: path.join(this.getWorkingDirectory(), 'coverage'),
-        artifacts: path.join(this.getWorkingDirectory(), 'artifacts'),
+        reports: path.join(this.getWorkingDirectory(), "reports"),
+        coverage: path.join(this.getWorkingDirectory(), "coverage"),
+        artifacts: path.join(this.getWorkingDirectory(), "artifacts"),
       },
       logging: {
-        level: 'info',
-        file: path.join(this.getCawsDirectory(), 'logs', 'caws.log'),
-        format: 'json',
+        level: "info",
+        file: path.join(this.getCawsDirectory(), "logs", "caws.log"),
+        format: "json",
       },
       features: {
         multi_modal: true,
@@ -139,15 +139,15 @@ export class CawsConfigManager extends CawsBaseTool {
           requires_contracts: false,
         },
       },
-      defaultTier: '2',
-      workingSpecPath: path.join(this.getCawsDirectory(), 'working-spec.yaml'),
-      provenancePath: path.join(this.getCawsDirectory(), 'provenance.json'),
-      waiversPath: path.join(this.getCawsDirectory(), 'waivers.yml'),
+      defaultTier: "2",
+      workingSpecPath: path.join(this.getCawsDirectory(), "working-spec.yaml"),
+      provenancePath: path.join(this.getCawsDirectory(), "provenance.json"),
+      waiversPath: path.join(this.getCawsDirectory(), "waivers.yml"),
       cawsDirectory: this.getCawsDirectory(),
       experiment_defaults: {
         enabled: false,
         timeboxed_hours: 24,
-        success_criteria: ['Basic functionality works'],
+        success_criteria: ["Basic functionality works"],
       },
     };
   }
@@ -160,13 +160,15 @@ export class CawsConfigManager extends CawsBaseTool {
 
     // Basic validation
     if (!this.config.version) {
-      this.logWarning('Configuration missing version, setting to default');
-      this.config.version = '1.0.0';
+      this.logWarning("Configuration missing version, setting to default");
+      this.config.version = "1.0.0";
     }
 
     if (!this.config.environment) {
-      this.logWarning('Configuration missing environment, setting to development');
-      this.config.environment = 'development';
+      this.logWarning(
+        "Configuration missing environment, setting to development"
+      );
+      this.config.environment = "development";
     }
 
     // Validate paths
@@ -188,7 +190,7 @@ export class CawsConfigManager extends CawsBaseTool {
       this.config.paths.reports,
       this.config.paths.coverage,
       this.config.paths.artifacts,
-      path.dirname(this.config.logging?.file || ''),
+      path.dirname(this.config.logging?.file ?? ""),
     ];
 
     for (const dir of requiredDirs) {
@@ -202,7 +204,7 @@ export class CawsConfigManager extends CawsBaseTool {
    * Get current configuration
    */
   getConfig(): CawsConfig {
-    return this.config || this.getDefaultConfig();
+    return this.config ?? this.getDefaultConfig();
   }
 
   /**
@@ -218,23 +220,31 @@ export class CawsConfigManager extends CawsBaseTool {
       this.config = {
         ...this.config,
         ...updates,
-        gates: { ...this.config.gates, ...updates.gates },
-        tools: { ...this.config.tools, ...updates.tools },
-        paths: { ...this.config.paths, ...updates.paths },
-        logging: { ...this.config.logging, ...updates.logging },
-        features: { ...this.config.features, ...updates.features },
+        gates: { ...this.config?.gates, ...updates.gates },
+        tools: { ...this.config?.tools, ...updates.tools },
+        paths: { ...this.config?.paths, ...updates.paths },
+        logging: {
+          ...this.config?.logging,
+          ...updates.logging,
+          level:
+            updates.logging?.level ?? this.config?.logging?.level ?? "info",
+        },
+        features: { ...this.config?.features, ...updates.features },
       };
 
       // Validate and save
       this.validateConfig();
 
       if (this.saveConfig()) {
-        return this.createResult(true, 'Configuration updated successfully');
+        return this.createResult(true, "Configuration updated successfully");
       } else {
-        return this.createResult(false, 'Failed to save configuration');
+        return this.createResult(false, "Failed to save configuration");
       }
     } catch (error) {
-      return this.createResult(false, `Failed to update configuration: ${error}`);
+      return this.createResult(
+        false,
+        `Failed to update configuration: ${error}`
+      );
     }
   }
 
@@ -250,40 +260,42 @@ export class CawsConfigManager extends CawsBaseTool {
    * Get gate configuration
    */
   getGateConfig(gateName: string): any {
-    const gates = this.getSection('gates');
-    return gates?.[gateName] || null;
+    const gates = this.getSection("gates");
+    return gates?.[gateName] ?? null;
   }
 
   /**
    * Get tool configuration
    */
   getToolConfig(toolName: string): any {
-    const tools = this.getSection('tools');
-    return tools?.[toolName] || null;
+    const tools = this.getSection("tools");
+    return tools?.[toolName] ?? null;
   }
 
   /**
    * Get path configuration
    */
   getPathConfig(pathName: string): string | null {
-    const paths = this.getSection('paths');
-    return paths?.[pathName] || null;
+    const paths = this.getSection("paths");
+    return paths?.[pathName] ?? null;
   }
 
   /**
    * Check if a feature is enabled
    */
   isFeatureEnabled(feature: string): boolean {
-    const features = this.getSection('features');
+    const features = this.getSection("features");
     const featureValue = features?.[feature];
-    return typeof featureValue === 'boolean' ? featureValue : featureValue?.enabled === true;
+    return typeof featureValue === "boolean"
+      ? featureValue
+      : featureValue?.enabled === true;
   }
 
   /**
    * Get logging configuration
    */
   getLoggingConfig() {
-    return this.getSection('logging');
+    return this.getSection("logging");
   }
 
   /**
@@ -293,13 +305,16 @@ export class CawsConfigManager extends CawsBaseTool {
     try {
       const configData = this.readJsonFile(filePath);
       if (!configData) {
-        return this.createResult(false, `Failed to read configuration from ${filePath}`);
+        return this.createResult(
+          false,
+          `Failed to read configuration from ${filePath}`
+        );
       }
 
       this.config = configData as CawsConfig;
       this.validateConfig();
 
-      return this.createResult(true, 'Configuration loaded from file');
+      return this.createResult(true, "Configuration loaded from file");
     } catch (error) {
       return this.createResult(false, `Failed to load configuration: ${error}`);
     }
@@ -314,7 +329,10 @@ export class CawsConfigManager extends CawsBaseTool {
       if (saved) {
         return this.createResult(true, `Configuration saved to ${filePath}`);
       } else {
-        return this.createResult(false, `Failed to save configuration to ${filePath}`);
+        return this.createResult(
+          false,
+          `Failed to save configuration to ${filePath}`
+        );
       }
     } catch (error) {
       return this.createResult(false, `Failed to save configuration: ${error}`);
@@ -355,12 +373,21 @@ export class CawsConfigManager extends CawsBaseTool {
       this.validateConfig();
 
       if (this.saveConfig()) {
-        return this.createResult(true, 'Configuration imported from YAML successfully');
+        return this.createResult(
+          true,
+          "Configuration imported from YAML successfully"
+        );
       } else {
-        return this.createResult(false, 'Failed to save imported configuration');
+        return this.createResult(
+          false,
+          "Failed to save imported configuration"
+        );
       }
     } catch (error) {
-      return this.createResult(false, `Failed to import configuration from YAML: ${error}`);
+      return this.createResult(
+        false,
+        `Failed to import configuration from YAML: ${error}`
+      );
     }
   }
 }

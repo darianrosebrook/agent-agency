@@ -7,6 +7,33 @@
 
 import { AgentOrchestrator } from "../../src/services/AgentOrchestrator";
 
+// Mock CAWS Constitutional Enforcer to allow tasks in tests
+jest.mock("../../src/services/CawsConstitutionalEnforcer", () => ({
+  CawsConstitutionalEnforcer: jest.fn().mockImplementation(() => ({
+    enforceConstitution: jest.fn().mockResolvedValue({
+      allowed: true,
+      violations: [],
+      waivers: [],
+      recommendations: [],
+      budgetStatus: {
+        currentFiles: 0,
+        currentLoc: 0,
+        remainingTimeMs: 0,
+      },
+      gateStatus: {
+        coverageMet: true,
+        mutationMet: true,
+        contractsMet: true,
+        trustScoreMet: true,
+      },
+    }),
+    startBudgetTracking: jest.fn(),
+    stopBudgetTracking: jest.fn(),
+    on: jest.fn(),
+    emit: jest.fn(),
+  })),
+}));
+
 describe("AgentOrchestrator", () => {
   let orchestrator: AgentOrchestrator;
 

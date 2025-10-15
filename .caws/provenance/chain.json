@@ -5034,5 +5034,77 @@
     },
     "previous_hash": "ecd72890d5a15d1ce98bd0aa05cf31a7f8f842e4e3c2a347f7de086f83432da3",
     "hash": "212782c5ff9280232307a7559e1127a40ebabf9ed698088154d4b5966484387b"
+  },
+  {
+    "id": "prov-1760449873177",
+    "timestamp": "2025-10-14T13:51:13.177Z",
+    "commit": {
+      "hash": "f32c7a3b4bab7d1e462bf55ad9e78724a7356f78",
+      "message": "docs: Update component status and vision assessment with INFRA-002 hardening progress",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-14T13:51:13.177Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "212782c5ff9280232307a7559e1127a40ebabf9ed698088154d4b5966484387b",
+    "hash": "c42fdf360f4e3bebffe0529a34dccf89bf8c366d0f47c1cf205e94eca5527b1f"
+  },
+  {
+    "id": "prov-1760516339747",
+    "timestamp": "2025-10-15T08:18:59.747Z",
+    "commit": {
+      "hash": "168bd3d2e02440710c79973d4e8825be53c63397",
+      "message": "feat: Complete Adaptive Resource Manager production readiness",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-15T08:18:59.747Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "c42fdf360f4e3bebffe0529a34dccf89bf8c366d0f47c1cf205e94eca5527b1f",
+    "hash": "f57965302d497152f284cb1c9985c2af88f08b62717491f99a0c10db1124db4e"
   }
 ]

@@ -961,7 +961,7 @@ ${Object.entries(analytics.agentLoads)
         response += `
 
 **Violations:**
-${result.violations.map((v) => `- ${v}`).join("\n")}`;
+${result.violations.map((v: any) => `- ${v}`).join("\n")}`;
       }
 
       if (result.waivers.length > 0) {
@@ -970,7 +970,8 @@ ${result.violations.map((v) => `- ${v}`).join("\n")}`;
 **Active Waivers:**
 ${result.waivers
   .map(
-    (w) => `- ${w.title} (expires: ${w.expiresAt.toISOString().split("T")[0]})`
+    (w: any) =>
+      `- ${w.title} (expires: ${w.expiresAt.toISOString().split("T")[0]})`
   )
   .join("\n")}`;
       }
@@ -979,7 +980,7 @@ ${result.waivers
         response += `
 
 **Recommendations:**
-${result.recommendations.map((r) => `- ${r}`).join("\n")}`;
+${result.recommendations.map((r: any) => `- ${r}`).join("\n")}`;
       }
 
       this.context.logger.info(
@@ -1132,7 +1133,7 @@ ${args.mitigationPlan}
 **Recent Budget Violations:**
 ${analytics.recentViolations
   .slice(0, 5)
-  .map((v) => `- ${v.taskId}: ${v.violations.join(", ")}`)
+  .map((v: any) => `- ${v.taskId}: ${v.violations.join(", ")}`)
   .join("\n")}`;
       }
 
@@ -1143,7 +1144,7 @@ ${analytics.recentViolations
 ${analytics.waiverRequests
   .slice(0, 5)
   .map(
-    (w) =>
+    (w: any) =>
       `- ${w.title} (${w.status}) - ${
         w.requestedAt.toISOString().split("T")[0]
       }`

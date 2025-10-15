@@ -1,0 +1,46 @@
+{
+  "name": "agent-agency-bot-poc",
+  "version": "1.0.0",
+  "description": "Autonomous POC recreation by v2 arbiter from specifications",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:e2e": "jest tests/e2e/",
+    "test:unit": "jest tests/unit/",
+    "test:integration": "jest tests/integration/",
+    "lint": "eslint src tests --ext .ts,.tsx",
+    "lint:fix": "eslint src tests --ext .ts,.tsx --fix",
+    "typecheck": "tsc --noEmit",
+    "validate:caws": "caws validate .caws/working-spec-system.yaml",
+    "validate:all": "caws validate .caws/working-spec-system.yaml && caws validate .caws/working-spec-e2e-text.yaml && caws validate .caws/working-spec-e2e-code.yaml && caws validate .caws/working-spec-e2e-tokens.yaml && caws validate .caws/working-spec-integration.yaml && caws validate .caws/working-spec-documentation.yaml",
+    "verify": "npm run lint && npm run typecheck && npm test",
+    "provenance:init": "caws provenance init --author v2-arbiter --mode automated",
+    "provenance:show": "caws provenance show --format=dashboard",
+    "status": "caws status"
+  },
+  "keywords": [
+    "agent-agency",
+    "poc",
+    "autonomous",
+    "caws",
+    "arbiter",
+    "multi-agent"
+  ],
+  "author": "v2-arbiter",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.50.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.2.0"
+  },
+  "dependencies": {
+    "ollama": "^0.5.0"
+  }
+}

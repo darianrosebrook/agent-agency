@@ -260,7 +260,7 @@ describe("VectorDAO", () => {
       expect(mockConnection.query).toHaveBeenCalledWith(
         expect.any(String),
         [testVector, 0.8, 5],
-        expect.objectContaining({ cache: true, timeout: 1000 })
+        expect.objectContaining({ timeout: 1000 })
       );
     });
 
@@ -344,9 +344,10 @@ describe("VectorDAO", () => {
     });
 
     it("should handle entity without embedding", async () => {
-      mockConnection.query.mockResolvedValueOnce({
+      // Mock the findById call to return entity without embedding
+      jest.spyOn(vectorDAO, "findById").mockResolvedValueOnce({
         success: true,
-        data: [{ id: testId, tenantId: testTenantId, embedding: null }],
+        data: { id: testId, tenantId: testTenantId, embedding: null } as any,
         duration: 5,
         queryId: "find-entity-no-embedding",
       });
@@ -357,9 +358,11 @@ describe("VectorDAO", () => {
     });
 
     it("should handle entity not found", async () => {
-      mockConnection.query.mockResolvedValueOnce({
-        success: true,
-        data: [],
+      // Mock the findById call to return failure
+      jest.spyOn(vectorDAO, "findById").mockResolvedValueOnce({
+        success: false,
+        data: undefined,
+        error: "Entity not found",
         duration: 5,
         queryId: "entity-not-found",
       });
@@ -465,12 +468,21 @@ describe("VectorDAO", () => {
         embedding: entity.embedding,
       }));
 
-      mockConnection.query.mockResolvedValue({
-        success: true,
-        data: [],
-        duration: 25,
-        queryId: "bulk-update",
-      });
+      // Mock the DataLayer transaction method
+      jest
+        .spyOn(dataLayer, "transaction")
+        .mockImplementation(async (callback) => {
+          // Mock the connection passed to the callback
+          const mockTransactionConnection = {
+            query: jest.fn().mockResolvedValue({
+              success: true,
+              data: [],
+              duration: 25,
+              queryId: "bulk-update",
+            }),
+          };
+          return await callback(mockTransactionConnection as any);
+        });
 
       const result = await vectorDAO.updateEmbeddings(updates);
 

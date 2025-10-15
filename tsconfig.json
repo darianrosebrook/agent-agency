@@ -8,7 +8,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -19,16 +19,16 @@
     "emitDecoratorMetadata": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@types/*": ["src/types/*"],
-      "@utils/*": ["src/utils/*"],
-      "@services/*": ["src/services/*"],
-      "@data/*": ["src/data/*"],
-      "@memory/*": ["src/memory/*"],
-      "@mcp/*": ["src/mcp/*"]
+      "@/*": ["apps/*"],
+      "@types/*": ["apps/types/*"],
+      "@utils/*": ["apps/utils/*"],
+      "@services/*": ["apps/services/*"],
+      "@data/*": ["apps/data/*"],
+      "@memory/*": ["apps/memory/*"],
+      "@mcp/*": ["apps/mcp/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["apps/**/*", "scripts/**/*", "codemod/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"],
   "ts-node": {
     "esm": true,

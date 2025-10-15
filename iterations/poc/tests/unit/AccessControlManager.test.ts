@@ -21,6 +21,19 @@ describe("AccessControlManager", () => {
       policyEvaluationMode: "first-match",
       auditLogging: false, // Disable logging for tests
     });
+
+    // Add a policy for documents access
+    accessControl.addPolicy({
+      id: "documents-access",
+      name: "User Access",
+      description: "Allow users to access their own documents",
+      effect: "allow",
+      principals: ["*"],
+      resources: ["documents:user:*"],
+      actions: ["read", "write", "update"],
+      priority: 60,
+      enabled: true,
+    });
   });
 
   describe("Policy Management", () => {
@@ -129,7 +142,7 @@ describe("AccessControlManager", () => {
             type: "time",
             operator: "between",
             attribute: "timestamp",
-            value: ["09:00", "17:00"],
+            value: [9, 17], // Use numeric hours instead of time strings
           },
         ],
       });
@@ -350,8 +363,8 @@ describe("AccessControlManager", () => {
       const decision3 = await accessControl.evaluateAccess(request);
       expect(decision3.allowed).toBe(false);
 
-      // Wait for window to reset
-      await new Promise((resolve) => setTimeout(resolve, 1100));
+      // Wait for window to reset using fake timers
+      jest.advanceTimersByTime(1100);
 
       // Should allow again
       const decision4 = await accessControl.evaluateAccess(request);

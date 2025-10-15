@@ -26,7 +26,7 @@ export interface Task {
   type: TaskType;
   status: TaskStatus;
   description: string;
-  priority: "low" | "normal" | "high";
+  priority: "low" | "medium" | "high" | "critical";
   requirements?: string[];
   maxRetries?: number;
   timeout?: number;

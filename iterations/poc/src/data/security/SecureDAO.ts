@@ -7,7 +7,9 @@
  */
 
 import { Logger } from "../../utils/Logger";
+import { DataLayer } from "../DataLayer";
 import { BaseDAO } from "../dao/BaseDAO";
+import { QueryOptions } from "../types";
 import {
   AccessControlManager,
   AccessDecision,
@@ -33,7 +35,7 @@ export interface SecureOperationResult<T = any> {
 }
 
 export abstract class SecureDAO<
-  T extends Record<string, any>
+  T extends { id: string; tenantId: string; createdAt: Date; updatedAt: Date }
 > extends BaseDAO<T> {
   protected encryptionManager?: EncryptionManager;
   protected accessControlManager?: AccessControlManager;
@@ -41,13 +43,15 @@ export abstract class SecureDAO<
   protected logger: Logger;
 
   constructor(
+    dataLayer: DataLayer,
     tableName: string,
+    entityName: string,
     securityConfig: SecurityConfig,
     encryptionManager?: EncryptionManager,
     accessControlManager?: AccessControlManager,
     logger?: Logger
   ) {
-    super(tableName, logger);
+    super(dataLayer, tableName, entityName, logger);
     this.securityConfig = securityConfig;
     this.encryptionManager = encryptionManager;
     this.accessControlManager = accessControlManager;
@@ -101,7 +105,9 @@ export abstract class SecureDAO<
       }
 
       // Perform the actual create operation
-      const result = await this.create(processedData);
+      const result = await this.create(
+        processedData as Omit<T, "id" | "createdAt" | "updatedAt">
+      );
 
       return {
         success: result.success,
@@ -153,7 +159,7 @@ export abstract class SecureDAO<
       }
 
       // Perform the actual read operation
-      const result = await this.read(id);
+      const result = await this.findById(id, tenantId);
 
       if (!result.success || !result.data) {
         return {
@@ -236,7 +242,7 @@ export abstract class SecureDAO<
       }
 
       // Perform the actual update operation
-      const result = await this.update(id, processedData);
+      const result = await this.update(id, tenantId, processedData);
 
       return {
         success: result.success,
@@ -288,7 +294,7 @@ export abstract class SecureDAO<
       }
 
       // Perform the actual delete operation
-      const result = await this.delete(id);
+      const result = await this.delete(id, tenantId);
 
       return {
         success: result.success,
@@ -347,7 +353,14 @@ export abstract class SecureDAO<
       }
 
       // Perform the actual query operation
-      const result = await this.query(queryConditions, options);
+      const queryOptions: QueryOptions = {
+        timeout: options?.limit ? options.limit * 1000 : undefined,
+        cache: false,
+      };
+      const result = await this.findMany(
+        queryConditions as Partial<T>,
+        queryOptions
+      );
 
       if (!result.success || !result.data) {
         return {
@@ -365,7 +378,7 @@ export abstract class SecureDAO<
       if (this.securityConfig.encryptionEnabled && this.encryptionManager) {
         processedData = (await Promise.all(
           result.data.map(
-            async (record) =>
+            async (record: T) =>
               await this.encryptionManager!.decryptFields(
                 record as Record<string, any>,
                 this.securityConfig.sensitiveFields

@@ -1,0 +1,71 @@
+id: TEST-001
+title: "Text Transformation E2E Test"
+risk_tier: 2
+mode: feature
+change_budget:
+  max_files: 10
+  max_loc: 1000
+blast_radius:
+  modules: ["tests/e2e", "src/evaluation"]
+  data_migration: false
+operational_rollback_slo: "5m"
+rollback_procedures:
+  - "Revert test files to previous state"
+  - "Remove any generated test artifacts"
+  - "Restore test database if modified"
+scope:
+  in:
+    - "tests/e2e/text-transformation.e2e.test.ts"
+    - "src/evaluation/text-evaluator.ts"
+    - "src/runners/TextTransformationRunner.ts"
+  out:
+    - "src/models/"
+    - "src/orchestrator/"
+invariants:
+  - "Agent must receive feedback after each iteration"
+  - "Satisficing logic must prevent infinite iteration"
+  - "Banned phrases must be detected programmatically"
+  - "Professional tone must be evaluated by LLM"
+acceptance:
+  - id: A1
+    given: "Casual text with banned phrases and informal language"
+    when: "Agent transforms text with evaluation feedback loop"
+    then: "Output is professional, contains no banned phrases, meets length constraints within 3 iterations"
+  - id: A2
+    given: "Agent output on iteration 1"
+    when: "Evaluator detects banned phrases"
+    then: "Feedback provided and agent generates improved iteration 2"
+  - id: A3
+    given: "Output quality reaches satisficing threshold (0.85)"
+    when: "Evaluator scores output"
+    then: "Iteration stops with 'satisficed' reason, preventing over-optimization"
+  - id: A4
+    given: "Agent output already meets all criteria on first iteration"
+    when: "Evaluator scores perfect output"
+    then: "Iteration stops immediately without unnecessary refinement"
+  - id: A5
+    given: "Maximum iterations reached without satisficing"
+    when: "Agent completes iteration 3"
+    then: "Test stops with 'max-iterations' reason and reports best attempt"
+non_functional:
+  perf:
+    max_iterations: 3
+    iteration_timeout_ms: 10000
+    e2e_completion_p95_ms: 30000
+  reliability:
+    satisficing_threshold: 0.85
+    min_quality_threshold: 0.70
+contracts:
+  - type: typescript-interface
+    path: tests/e2e/types/text-transformation.ts
+    version: 1.0.0
+observability:
+  logs:
+    - iteration_feedback
+    - banned_phrases_detected
+    - quality_scores
+  metrics:
+    - iterations_to_success
+    - satisficing_rate
+    - feedback_quality
+

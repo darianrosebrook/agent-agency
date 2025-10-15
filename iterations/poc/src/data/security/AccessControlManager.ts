@@ -392,6 +392,27 @@ export class AccessControlManager {
         condition.attribute
       );
 
+      // Special handling for time conditions
+      if (condition.type === "time" && attributeValue instanceof Date) {
+        const hour = attributeValue.getUTCHours();
+
+        switch (condition.operator) {
+          case "equals":
+            return hour === Number(condition.value);
+          case "greater":
+            return hour > Number(condition.value);
+          case "less":
+            return hour < Number(condition.value);
+          case "between": {
+            const [min, max] = condition.value;
+            return hour >= min && hour <= max;
+          }
+          default:
+            return false;
+        }
+      }
+
+      // General condition handling
       switch (condition.operator) {
         case "equals":
           return attributeValue === condition.value;

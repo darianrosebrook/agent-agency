@@ -1,0 +1,71 @@
+id: TEST-002
+title: "Code Generation E2E Test"
+risk_tier: 2
+mode: feature
+change_budget:
+  max_files: 10
+  max_loc: 1000
+blast_radius:
+  modules: ["tests/e2e", "src/evaluation"]
+  data_migration: false
+operational_rollback_slo: "5m"
+rollback_procedures:
+  - "Revert test files to previous state"
+  - "Remove any generated test artifacts"
+  - "Restore test database if modified"
+scope:
+  in:
+    - "tests/e2e/code-generation.e2e.test.ts"
+    - "src/evaluation/code-evaluator.ts"
+    - "src/runners/CodeGenerationRunner.ts"
+  out:
+    - "src/models/"
+    - "src/orchestrator/"
+invariants:
+  - "Generated code must compile without errors"
+  - "Generated code must pass linting"
+  - "Generated code must include tests"
+  - "Quality gates must prevent low-quality code"
+acceptance:
+  - id: A1
+    given: "Code generation specification for React component"
+    when: "Agent generates code with quality gates"
+    then: "Generated code compiles, lints clean, and includes passing tests within 3 iterations"
+  - id: A2
+    given: "Agent generates code with TypeScript errors"
+    when: "Type checker evaluates output"
+    then: "Feedback provided with specific errors and agent fixes in next iteration"
+  - id: A3
+    given: "Agent generates code with linting violations"
+    when: "Linter evaluates output"
+    then: "Feedback provided with violations and agent corrects in next iteration"
+  - id: A4
+    given: "Generated code passes all quality gates"
+    when: "Evaluator runs compile, lint, and test checks"
+    then: "Iteration stops with 'satisficed' reason and code is production-ready"
+  - id: A5
+    given: "Agent generates code without tests"
+    when: "Test coverage evaluator checks output"
+    then: "Feedback requests tests and agent adds them in next iteration"
+non_functional:
+  perf:
+    max_iterations: 3
+    iteration_timeout_ms: 15000
+    e2e_completion_p95_ms: 45000
+  reliability:
+    satisficing_threshold: 1.0
+    required_quality_gates: ["compile", "lint", "test"]
+contracts:
+  - type: typescript-interface
+    path: tests/e2e/types/code-generation.ts
+    version: 1.0.0
+observability:
+  logs:
+    - compilation_errors
+    - lint_violations
+    - test_results
+  metrics:
+    - iterations_to_clean_code
+    - quality_gate_failures
+    - test_coverage
+

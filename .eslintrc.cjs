@@ -1,10 +1,11 @@
 module.exports = {
-  root: false,
+  root: true,
   extends: ["eslint:recommended"],
   parser: "@typescript-eslint/parser",
   parserOptions: {
     ecmaVersion: 2022,
     sourceType: "module",
+    project: "./tsconfig.json",
   },
   plugins: ["@typescript-eslint"],
   env: {
@@ -17,7 +18,9 @@ module.exports = {
     "prefer-const": "error",
     "no-var": "error",
     "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
-    "@typescript-eslint/no-explicit-any": "off", // Allow any for rapid prototyping
+    "@typescript-eslint/no-explicit-any": "warn", // Warn about any usage
+    "@typescript-eslint/prefer-nullish-coalescing": "error",
+    "@typescript-eslint/prefer-optional-chain": "error",
   },
-  ignorePatterns: ["node_modules/", "apps/", "scripts/", "codemod/"],
+  ignorePatterns: ["node_modules/", "dist/", "coverage/", "**/*.d.ts"],
 };

@@ -1,0 +1,87 @@
+id: INTG-001
+title: "POC Component Integration Architecture"
+risk_tier: 1
+mode: feature
+change_budget:
+  max_files: 20
+  max_loc: 2000
+blast_radius:
+  modules: ["src/integration", "src/orchestrator", "src/evaluation"]
+  data_migration: false
+operational_rollback_slo: "10m"
+rollback:
+  procedures:
+    - Revert integration changes to previous working state
+    - Restore component interfaces to previous versions
+    - Rollback any configuration changes
+    - Validate component isolation after rollback
+security:
+  - System-wide authentication and authorization
+  - Data encryption at rest and in transit
+  - Input validation and sanitization
+  - Audit logging for all operations
+observability:
+  logs:
+    - integration_events
+    - component_communication
+    - performance_metrics
+  metrics:
+    - integration_latency
+    - component_health
+    - error_rates
+  traces:
+    - request_flow
+    - component_interactions
+scope:
+  in:
+    - "src/integration/"
+    - "src/orchestrator/"
+    - "src/evaluation/"
+  out:
+    - "tests/"
+    - "node_modules/"
+    - "dist/"
+invariants:
+  - "Component interfaces remain stable during integration"
+  - "Integration preserves component autonomy and isolation"
+  - "System maintains constitutional compliance during integration"
+acceptance:
+  - id: "A1"
+    given: "ARBITER-016 reasoning engine and ARBITER-015 arbitration protocol"
+    when: "Integration orchestrator wires debate coordination"
+    then: "Multi-agent debates execute with constitutional compliance"
+  - id: "A2"
+    given: "Model registry (ARBITER-017) and thinking budget manager (RL-001)"
+    when: "Multi-model orchestrator selects optimal model"
+    then: "Task-specific model selection with cost tracking and performance metrics"
+  - id: "A3"
+    given: "Context preservation engine and multi-turn coordinator"
+    when: "Long-running evaluation loops execute"
+    then: "Context maintained across iterations without degradation"
+  - id: "A4"
+    given: "All v2 components available"
+    when: "Integration orchestrator assembles POC system"
+    then: "All components communicate through defined interfaces"
+  - id: "A5"
+    given: "E2E test scenarios defined"
+    when: "Integration orchestrator runs test scenarios"
+    then: "All E2E tests pass with satisficing logic"
+  - id: "A6"
+    given: "Performance monitoring enabled"
+    when: "Integration orchestrator measures system performance"
+    then: "Performance metrics meet or exceed POC requirements"
+non_functional:
+  perf:
+    integration_timeout_ms: 30000
+    component_communication_latency_ms: 100
+  reliability:
+    uptime_percentage: 99.9
+    error_recovery_time_ms: 5000
+  security:
+    authentication_required: true
+    authorization_granularity: component_level
+    audit_logging: comprehensive
+contracts:
+  - type: typescript-interface
+    path: src/types/integration.ts
+    version: 1.0.0

@@ -5,18 +5,19 @@
  * @author @darianrosebrook
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import yaml from 'js-yaml';
-import { WaiverConfig } from './types.js';
-import { CawsBaseTool } from './base-tool.js';
+import * as fs from "fs";
+import * as yaml from "js-yaml";
+import * as path from "path";
+import { CawsBaseTool } from "./base-tool.js";
+import { WaiverConfig } from "./types.js";
 
 export class WaiversManager extends CawsBaseTool {
   private readonly waiversPath: string;
 
   constructor(waiversPath?: string) {
     super();
-    this.waiversPath = waiversPath || path.join(this.getCawsDirectory(), 'waivers.yml');
+    this.waiversPath =
+      waiversPath || path.join(this.getCawsDirectory(), "waivers.yml");
   }
 
   /**
@@ -28,7 +29,7 @@ export class WaiversManager extends CawsBaseTool {
         return { waivers: [] };
       }
 
-      const content = fs.readFileSync(this.waiversPath, 'utf8');
+      const content = fs.readFileSync(this.waiversPath, "utf8");
       return yaml.load(content) as { waivers: WaiverConfig[] };
     } catch (error) {
       this.logError(`Error loading waivers config: ${error}`);
@@ -69,7 +70,7 @@ export class WaiversManager extends CawsBaseTool {
         return false;
       }
 
-      return waiver.status === 'active';
+      return waiver.status === "active";
     });
   }
 
@@ -87,16 +88,20 @@ export class WaiversManager extends CawsBaseTool {
     const waiver = config.waivers.find((w) => w.created_at === waiverId);
 
     if (!waiver) {
-      return { active: false, reason: 'Waiver not found' };
+      return { active: false, reason: "Waiver not found" };
     }
 
     const expiresAt = new Date(waiver.expiry);
     if (now > expiresAt) {
-      return { active: false, waiver, reason: 'Waiver expired' };
+      return { active: false, waiver, reason: "Waiver expired" };
     }
 
-    if (waiver.status !== 'active') {
-      return { active: false, waiver, reason: `Waiver status: ${waiver.status}` };
+    if (waiver.status !== "active") {
+      return {
+        active: false,
+        waiver,
+        reason: `Waiver status: ${waiver.status}`,
+      };
     }
 
     return { active: true, waiver };
@@ -105,7 +110,7 @@ export class WaiversManager extends CawsBaseTool {
   /**
    * Create a new waiver
    */
-  async createWaiver(waiver: Omit<WaiverConfig, 'created_at'>): Promise<void> {
+  async createWaiver(waiver: Omit<WaiverConfig, "created_at">): Promise<void> {
     const config = this.loadWaiversConfig();
 
     const newWaiver: WaiverConfig = {
@@ -124,11 +129,11 @@ export class WaiversManager extends CawsBaseTool {
     const config = this.loadWaiversConfig();
 
     const waiver = config.waivers.find(
-      (w) => w.gate === gate && w.owner === owner && w.status === 'active'
+      (w) => w.gate === gate && w.owner === owner && w.status === "active"
     );
 
     if (waiver) {
-      waiver.status = 'revoked';
+      waiver.status = "revoked";
       this.saveWaiversConfig(config);
       this.logSuccess(`Revoked waiver for gate: ${gate}`);
     } else {
@@ -168,7 +173,7 @@ export class WaiversManager extends CawsBaseTool {
 
     return config.waivers.filter((waiver) => {
       const expiresAt = new Date(waiver.expiry);
-      return now <= expiresAt && waiver.status === 'active';
+      return now <= expiresAt && waiver.status === "active";
     });
   }
 }

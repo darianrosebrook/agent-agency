@@ -184,7 +184,11 @@ export class TaskManagementTools {
         agentId: args.agentId,
         type: args.type,
         description: `Task of type ${args.type}`,
-        priority: (args.priority || "normal") as "low" | "normal" | "high",
+        priority: (args.priority || "medium") as
+          | "low"
+          | "medium"
+          | "high"
+          | "critical",
         payload: taskPayload,
       });
 
@@ -342,8 +346,9 @@ export class TaskManagementTools {
         description: `Retry of task ${args.taskId}: ${originalTask.description}`,
         priority: (args.priority || originalTask.priority) as
           | "low"
-          | "normal"
-          | "high",
+          | "medium"
+          | "high"
+          | "critical",
         payload: retryPayload,
       });
 

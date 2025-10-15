@@ -194,7 +194,8 @@ describe("MultiTenantMemoryManager", () => {
 
       const result = await memoryManager.storeExperience(
         "storage-test-tenant",
-        experience
+        experience,
+        { offloadContext: false }
       );
 
       expect(result.success).toBe(true);

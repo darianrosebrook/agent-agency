@@ -240,7 +240,9 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
    */
   startBudgetTracking(taskId: string, tenantId: string, tier: number): void {
     const limits =
-      this.CONSTITUTIONAL_LIMITS[tier] || this.CONSTITUTIONAL_LIMITS[2];
+      this.CONSTITUTIONAL_LIMITS[
+        tier as keyof typeof this.CONSTITUTIONAL_LIMITS
+      ] || this.CONSTITUTIONAL_LIMITS[2];
 
     const budget: TaskBudget = {
       taskId,
@@ -328,7 +330,7 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
 
       this.logger.info(`Stopped budget tracking for task ${taskId}`);
     }
-    return budget;
+    return budget || null;
   }
 
   /**
@@ -470,7 +472,9 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
     budgetStatus: EnforcementResult["budgetStatus"];
   }> {
     const limits =
-      this.CONSTITUTIONAL_LIMITS[tier] || this.CONSTITUTIONAL_LIMITS[2];
+      this.CONSTITUTIONAL_LIMITS[
+        tier as keyof typeof this.CONSTITUTIONAL_LIMITS
+      ] || this.CONSTITUTIONAL_LIMITS[2];
 
     // Check concurrent tasks
     const tenantTasks = Array.from(this.activeBudgets.values()).filter(
@@ -524,7 +528,9 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
     recommendations: string[];
     gateStatus: EnforcementResult["gateStatus"];
   }> {
-    const gates = this.QUALITY_GATES[tier] || this.QUALITY_GATES[2];
+    const gates =
+      this.QUALITY_GATES[tier as keyof typeof this.QUALITY_GATES] ||
+      this.QUALITY_GATES[2];
 
     const violations: string[] = [];
     const recommendations: string[] = [];
