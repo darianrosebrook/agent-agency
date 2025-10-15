@@ -428,7 +428,7 @@ describe("ArgumentStructure", () => {
 
 function createTestArgument(): Argument {
   return {
-    id: `arg-${Math.random().toString(36).substr(2, 9)}`,
+    id: `arg-${Math.random().toString(36).substring(2, 9)}`,
     agentId: "agent-1",
     claim: "This is a test claim that is of appropriate length for validation",
     evidence: [createTestEvidence()],
@@ -444,7 +444,7 @@ function createTestEvidence(
   verificationStatus: "verified" | "unverified" | "disputed" = "verified"
 ): Evidence {
   return {
-    id: `ev-${Math.random().toString(36).substr(2, 9)}`,
+    id: `ev-${Math.random().toString(36).substring(2, 9)}`,
     source: "https://example.com/source",
     content: "This is test evidence content that supports the claim.",
     credibilityScore,

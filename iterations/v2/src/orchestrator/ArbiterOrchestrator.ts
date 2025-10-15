@@ -573,7 +573,7 @@ export class ArbiterOrchestrator {
     riskScore: number = 0
   ): void {
     const event: SecurityAuditEvent = {
-      id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       timestamp: new Date(),
       level,
       type,
@@ -1672,7 +1672,7 @@ export class ArbiterOrchestrator {
 
     const requestId = `override-${task.id}-${Date.now()}-${Math.random()
       .toString(36)
-      .substr(2, 9)}`;
+      .substring(2, 9)}`;
 
     const overrideRequest: OverrideRequest = {
       id: requestId,

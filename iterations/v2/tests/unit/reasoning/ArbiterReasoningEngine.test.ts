@@ -591,8 +591,8 @@ function createEvidence(
   verificationStatus: "verified" | "unverified" | "disputed" = "verified"
 ): Evidence {
   return {
-    id: `evidence-${Math.random().toString(36).substr(2, 9)}`,
-    source: `Source ${Math.random().toString(36).substr(2, 5)}`,
+    id: `evidence-${Math.random().toString(36).substring(2, 9)}`,
+    source: `Source ${Math.random().toString(36).substring(2, 5)}`,
     content: "Test evidence content",
     credibilityScore,
     verificationStatus,

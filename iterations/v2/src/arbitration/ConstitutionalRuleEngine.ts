@@ -459,7 +459,9 @@ export class ConstitutionalRuleEngine {
     context: EvaluationContext
   ): ConstitutionalViolation {
     return {
-      id: `violation-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `violation-${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 9)}`,
       ruleId: rule.id,
       severity: rule.severity,
       description: `Violation of rule "${rule.title}": ${rule.description}`,

@@ -341,7 +341,7 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
   ): Promise<string> {
     const waiverId = `waiver-${Date.now()}-${Math.random()
       .toString(36)
-      .substr(2, 9)}`;
+      .substring(2, 9)}`;
 
     const waiver: WaiverRequest = {
       ...request,

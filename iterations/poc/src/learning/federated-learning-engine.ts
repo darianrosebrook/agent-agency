@@ -95,7 +95,7 @@ export class FederatedLearningEngine extends EventEmitter {
   ): Promise<FederatedLearningTask> {
     const taskId = `fed-task-${Date.now()}-${Math.random()
       .toString(36)
-      .substr(2, 9)}`;
+      .substring(2, 9)}`;
     const federatedTask: FederatedLearningTask = {
       ...task,
       id: taskId,
@@ -326,7 +326,9 @@ export class FederatedLearningEngine extends EventEmitter {
 
     for (const pattern of patterns) {
       const learningPattern: LearningPattern = {
-        id: `pattern-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `pattern-${Date.now()}-${Math.random()
+          .toString(36)
+          .substring(2, 9)}`,
         pattern: pattern.pattern,
         confidence: pattern.confidence,
         support: globalModel.participantCount,

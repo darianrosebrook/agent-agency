@@ -378,7 +378,7 @@ function createTestConfig(): DebateSession["config"] {
 
 function createTestParticipant(): any {
   return {
-    agentId: `agent-${Math.random().toString(36).substr(2, 9)}`,
+    agentId: `agent-${Math.random().toString(36).substring(2, 9)}`,
     role: "proponent" as any,
     weight: 1,
     argumentsPresented: [],
@@ -388,7 +388,7 @@ function createTestParticipant(): any {
 
 function createTestArgument(): any {
   return {
-    id: `arg-${Math.random().toString(36).substr(2, 9)}`,
+    id: `arg-${Math.random().toString(36).substring(2, 9)}`,
     agentId: "agent-1",
     claim: "Test claim",
     evidence: [],

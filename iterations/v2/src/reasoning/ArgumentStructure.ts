@@ -266,6 +266,6 @@ export class ArgumentStructure {
    * Generates unique argument ID
    */
   private static generateArgumentId(): string {
-    return `arg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `arg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   }
 }

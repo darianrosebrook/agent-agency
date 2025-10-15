@@ -1020,7 +1020,7 @@ export class MultiTenantMemoryManager {
   private generateOperationId(operation: string, tenantId: string): string {
     return `${operation}_${tenantId}_${Date.now()}_${Math.random()
       .toString(36)
-      .substr(2, 9)}`;
+      .substring(2, 9)}`;
   }
 
   private generateCacheKey(

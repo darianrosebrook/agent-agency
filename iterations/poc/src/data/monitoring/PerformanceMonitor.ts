@@ -82,7 +82,7 @@ export class PerformanceMonitor extends EventEmitter {
       maxMetricsHistory: 10000,
       alertCheckInterval: 30000, // 30 seconds
       enableDetailedLogging: false,
-      ...config
+      ...config,
     };
 
     this.initializeDefaultAlertRules();
@@ -134,7 +134,7 @@ export class PerformanceMonitor extends EventEmitter {
    * Remove an alert rule
    */
   removeAlertRule(ruleId: string): boolean {
-    const index = this.alertRules.findIndex(rule => rule.id === ruleId);
+    const index = this.alertRules.findIndex((rule) => rule.id === ruleId);
     if (index >= 0) {
       this.alertRules.splice(index, 1);
       this.logger.info("Removed alert rule", { ruleId });
@@ -146,7 +146,8 @@ export class PerformanceMonitor extends EventEmitter {
   /**
    * Get current performance statistics
    */
-  getPerformanceStats(timeRangeMs: number = 300000): { // 5 minutes default
+  getPerformanceStats(timeRangeMs: number = 300000): {
+    // 5 minutes default
     summary: {
       totalOperations: number;
       successRate: number;
@@ -161,23 +162,36 @@ export class PerformanceMonitor extends EventEmitter {
     activeAlerts: Alert[];
   } {
     const cutoff = Date.now() - timeRangeMs;
-    const recentMetrics = this.metrics.filter(m => m.timestamp > cutoff);
+    const recentMetrics = this.metrics.filter((m) => m.timestamp > cutoff);
 
     const totalOperations = recentMetrics.length;
-    const successfulOperations = recentMetrics.filter(m => m.success).length;
-    const successRate = totalOperations > 0 ? (successfulOperations / totalOperations) * 100 : 100;
+    const successfulOperations = recentMetrics.filter((m) => m.success).length;
+    const successRate =
+      totalOperations > 0
+        ? (successfulOperations / totalOperations) * 100
+        : 100;
 
-    const responseTimes = recentMetrics.map(m => m.duration).sort((a, b) => a - b);
-    const avgResponseTime = responseTimes.length > 0 ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length : 0;
+    const responseTimes = recentMetrics
+      .map((m) => m.duration)
+      .sort((a, b) => a - b);
+    const avgResponseTime =
+      responseTimes.length > 0
+        ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
+        : 0;
 
     const p95Index = Math.floor(responseTimes.length * 0.95);
     const p99Index = Math.floor(responseTimes.length * 0.99);
     const p95ResponseTime = responseTimes[p95Index] || 0;
     const p99ResponseTime = responseTimes[p99Index] || 0;
 
-    const cacheableOperations = recentMetrics.filter(m => m.cacheHit !== undefined);
-    const cacheHits = cacheableOperations.filter(m => m.cacheHit).length;
-    const cacheHitRate = cacheableOperations.length > 0 ? (cacheHits / cacheableOperations.length) * 100 : 0;
+    const cacheableOperations = recentMetrics.filter(
+      (m) => m.cacheHit !== undefined
+    );
+    const cacheHits = cacheableOperations.filter((m) => m.cacheHit).length;
+    const cacheHitRate =
+      cacheableOperations.length > 0
+        ? (cacheHits / cacheableOperations.length) * 100
+        : 0;
 
     const operationsByType = recentMetrics.reduce((acc, m) => {
       acc[m.operation] = (acc[m.operation] || 0) + 1;
@@ -185,7 +199,7 @@ export class PerformanceMonitor extends EventEmitter {
     }, {} as Record<string, number>);
 
     const errorsByType = recentMetrics
-      .filter(m => !m.success)
+      .filter((m) => !m.success)
       .reduce((acc, m) => {
         const errorType = m.errorType || "unknown";
         acc[errorType] = (acc[errorType] || 0) + 1;
@@ -193,7 +207,9 @@ export class PerformanceMonitor extends EventEmitter {
       }, {} as Record<string, number>);
 
     // Get active alerts (last 5 minutes)
-    const activeAlerts = this.alerts.filter(a => Date.now() - a.timestamp < 300000);
+    const activeAlerts = this.alerts.filter(
+      (a) => Date.now() - a.timestamp < 300000
+    );
 
     return {
       summary: {
@@ -204,10 +220,10 @@ export class PerformanceMonitor extends EventEmitter {
         p99ResponseTime,
         cacheHitRate,
         operationsByType,
-        errorsByType
+        errorsByType,
       },
       recentMetrics: recentMetrics.slice(-100), // Last 100 metrics
-      activeAlerts
+      activeAlerts,
     };
   }
 
@@ -224,23 +240,30 @@ export class PerformanceMonitor extends EventEmitter {
     };
   } {
     const cutoff = Date.now() - timeRangeMs;
-    const recentMetrics = this.cacheMetrics.filter(m => m.timestamp > cutoff);
+    const recentMetrics = this.cacheMetrics.filter((m) => m.timestamp > cutoff);
 
-    const l1Stats = recentMetrics.find(m => m.level === "l1") || null;
-    const l2Stats = recentMetrics.find(m => m.level === "l2") || null;
-    const overallStats = recentMetrics.find(m => m.level === "overall") || null;
+    const l1Stats = recentMetrics.find((m) => m.level === "l1") || null;
+    const l2Stats = recentMetrics.find((m) => m.level === "l2") || null;
+    const overallStats =
+      recentMetrics.find((m) => m.level === "overall") || null;
 
     // Calculate trends (simplified - compare first half vs second half)
-    const midpoint = cutoff + (timeRangeMs / 2);
-    const firstHalf = recentMetrics.filter(m => m.timestamp < midpoint && m.level === "overall");
-    const secondHalf = recentMetrics.filter(m => m.timestamp >= midpoint && m.level === "overall");
+    const midpoint = cutoff + timeRangeMs / 2;
+    const firstHalf = recentMetrics.filter(
+      (m) => m.timestamp < midpoint && m.level === "overall"
+    );
+    const secondHalf = recentMetrics.filter(
+      (m) => m.timestamp >= midpoint && m.level === "overall"
+    );
 
-    const firstHalfAvgHitRate = firstHalf.length > 0
-      ? firstHalf.reduce((sum, m) => sum + m.hitRate, 0) / firstHalf.length
-      : 0;
-    const secondHalfAvgHitRate = secondHalf.length > 0
-      ? secondHalf.reduce((sum, m) => sum + m.hitRate, 0) / secondHalf.length
-      : 0;
+    const firstHalfAvgHitRate =
+      firstHalf.length > 0
+        ? firstHalf.reduce((sum, m) => sum + m.hitRate, 0) / firstHalf.length
+        : 0;
+    const secondHalfAvgHitRate =
+      secondHalf.length > 0
+        ? secondHalf.reduce((sum, m) => sum + m.hitRate, 0) / secondHalf.length
+        : 0;
 
     const hitRateTrend = secondHalfAvgHitRate - firstHalfAvgHitRate;
 
@@ -253,8 +276,8 @@ export class PerformanceMonitor extends EventEmitter {
       overallStats,
       trends: {
         hitRateTrend,
-        latencyTrend
-      }
+        latencyTrend,
+      },
     };
   }
 
@@ -263,20 +286,21 @@ export class PerformanceMonitor extends EventEmitter {
    */
   getActiveAlerts(): Alert[] {
     const fiveMinutesAgo = Date.now() - 300000;
-    return this.alerts.filter(alert => alert.timestamp > fiveMinutesAgo);
+    return this.alerts.filter((alert) => alert.timestamp > fiveMinutesAgo);
   }
 
   /**
    * Clear old metrics and alerts
    */
-  cleanup(maxAgeMs: number = 3600000): void { // 1 hour default
+  cleanup(maxAgeMs: number = 3600000): void {
+    // 1 hour default
     const cutoff = Date.now() - maxAgeMs;
 
     const initialMetricsCount = this.metrics.length;
-    this.metrics = this.metrics.filter(m => m.timestamp > cutoff);
+    this.metrics = this.metrics.filter((m) => m.timestamp > cutoff);
 
     const initialAlertsCount = this.alerts.length;
-    this.alerts = this.alerts.filter(a => a.timestamp > cutoff);
+    this.alerts = this.alerts.filter((a) => a.timestamp > cutoff);
 
     const cleanedMetrics = initialMetricsCount - this.metrics.length;
     const cleanedAlerts = initialAlertsCount - this.alerts.length;
@@ -286,7 +310,7 @@ export class PerformanceMonitor extends EventEmitter {
         cleanedMetrics,
         cleanedAlerts,
         remainingMetrics: this.metrics.length,
-        remainingAlerts: this.alerts.length
+        remainingAlerts: this.alerts.length,
       });
     }
   }
@@ -299,13 +323,13 @@ export class PerformanceMonitor extends EventEmitter {
       id: "high_error_rate",
       name: "High Error Rate",
       condition: (metrics) => {
-        const recent = metrics.filter(m => Date.now() - m.timestamp < 300000); // Last 5 minutes
-        const errors = recent.filter(m => !m.success).length;
-        return recent.length > 10 && (errors / recent.length) > 0.1; // >10% error rate
+        const recent = metrics.filter((m) => Date.now() - m.timestamp < 300000); // Last 5 minutes
+        const errors = recent.filter((m) => !m.success).length;
+        return recent.length > 10 && errors / recent.length > 0.1; // >10% error rate
       },
       severity: "high",
       message: "Error rate exceeded 10% in the last 5 minutes",
-      cooldownMs: 300000 // 5 minutes
+      cooldownMs: 300000, // 5 minutes
     });
 
     // Slow response time alert
@@ -313,16 +337,18 @@ export class PerformanceMonitor extends EventEmitter {
       id: "slow_response_time",
       name: "Slow Response Time",
       condition: (metrics) => {
-        const recent = metrics.filter(m => Date.now() - m.timestamp < 300000);
+        const recent = metrics.filter((m) => Date.now() - m.timestamp < 300000);
         if (recent.length < 10) return false;
 
-        const responseTimes = recent.map(m => m.duration).sort((a, b) => b - a);
+        const responseTimes = recent
+          .map((m) => m.duration)
+          .sort((a, b) => b - a);
         const p95 = responseTimes[Math.floor(responseTimes.length * 0.95)];
         return p95 > 5000; // 5 seconds P95 response time
       },
       severity: "medium",
       message: "P95 response time exceeded 5 seconds",
-      cooldownMs: 600000 // 10 minutes
+      cooldownMs: 600000, // 10 minutes
     });
 
     // Low cache hit rate alert
@@ -330,19 +356,23 @@ export class PerformanceMonitor extends EventEmitter {
       id: "low_cache_hit_rate",
       name: "Low Cache Hit Rate",
       condition: (metrics) => {
-        const recent = metrics.filter(m => Date.now() - m.timestamp < 600000 && m.cacheHit !== undefined); // Last 10 minutes
+        const recent = metrics.filter(
+          (m) => Date.now() - m.timestamp < 600000 && m.cacheHit !== undefined
+        ); // Last 10 minutes
         if (recent.length < 50) return false;
 
-        const hits = recent.filter(m => m.cacheHit).length;
+        const hits = recent.filter((m) => m.cacheHit).length;
         const hitRate = hits / recent.length;
         return hitRate < 0.8; // <80% hit rate
       },
       severity: "low",
       message: "Cache hit rate dropped below 80%",
-      cooldownMs: 900000 // 15 minutes
+      cooldownMs: 900000, // 15 minutes
     });
 
-    this.logger.info("Initialized default alert rules", { count: this.alertRules.length });
+    this.logger.info("Initialized default alert rules", {
+      count: this.alertRules.length,
+    });
   }
 
   private startAlertChecking(): void {
@@ -363,12 +393,14 @@ export class PerformanceMonitor extends EventEmitter {
         // Check condition
         if (rule.condition(this.metrics)) {
           const alert: Alert = {
-            id: `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            id: `alert_${Date.now()}_${Math.random()
+              .toString(36)
+              .substring(2, 9)}`,
             ruleId: rule.id,
             timestamp: Date.now(),
             severity: rule.severity,
             message: rule.message,
-            metrics: this.getPerformanceStats(300000).summary // Last 5 minutes stats
+            metrics: this.getPerformanceStats(300000).summary, // Last 5 minutes stats
           };
 
           this.alerts.push(alert);
@@ -386,11 +418,14 @@ export class PerformanceMonitor extends EventEmitter {
             alertId: alert.id,
             ruleId: rule.id,
             severity: rule.severity,
-            message: rule.message
+            message: rule.message,
           });
         }
       } catch (error) {
-        this.logger.error("Error checking alert rule", { ruleId: rule.id, error });
+        this.logger.error("Error checking alert rule", {
+          ruleId: rule.id,
+          error,
+        });
       }
     }
   }

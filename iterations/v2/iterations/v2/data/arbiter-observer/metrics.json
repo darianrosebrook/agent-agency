@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-10-15T21:26:34.921Z",
+  "reasoningDepthAvg": 4,
+  "reasoningDepthP95": 4,
+  "debateBreadthAvg": 1,
+  "taskSuccessRate": 0,
+  "toolBudgetUtilization": 0,
+  "activeTasks": 1,
+  "queuedTasks": 0,
+  "policyViolations": 0,
+  "observerDegraded": false,
+  "queueDepth": 0
+}

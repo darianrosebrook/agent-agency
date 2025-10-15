@@ -73,7 +73,7 @@ describe("ARBITER-007 Verification Engine - Hardening Tests", () => {
   ): VerificationRequest => ({
     id: `test-verification-${Date.now()}-${Math.random()
       .toString(36)
-      .substr(2, 9)}`,
+      .substring(2, 9)}`,
     content: "The Earth orbits the Sun",
     source: "test",
     context: "astronomy",

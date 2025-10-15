@@ -7,6 +7,9 @@
  * @author @darianrosebrook
  */
 
+// Import artifact types
+import type { ArtifactManifest } from "../orchestrator/workers/ArtifactSandbox.js";
+
 export enum TaskStatus {
   PENDING = "pending",
   QUEUED = "queued",
@@ -71,6 +74,10 @@ export interface TaskExecution {
   result?: WorkerExecutionResult;
   error?: string;
   retryScheduled?: Date;
+  artifacts?: {
+    manifest: ArtifactManifest;
+    rootPath: string;
+  };
 }
 
 export interface TaskMetrics {
@@ -95,6 +102,10 @@ export interface WorkerExecutionResult {
     outputSize?: number;
   };
   logs?: string[];
+  artifacts?: {
+    manifest: ArtifactManifest;
+    rootPath: string;
+  };
 }
 
 export interface WorkerPoolConfig {
@@ -103,6 +114,12 @@ export interface WorkerPoolConfig {
   workerCapabilities: string[];
   workerTimeout: number;
   workerMemoryLimit?: number;
+  artifactConfig?: {
+    rootPath: string;
+    maxFileSizeBytes: number;
+    maxTotalFiles: number;
+    maxPathLength: number;
+  };
   workerCpuLimit?: number;
 }
 

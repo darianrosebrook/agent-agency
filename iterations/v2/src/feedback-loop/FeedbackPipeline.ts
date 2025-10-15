@@ -67,7 +67,7 @@ export class FeedbackPipeline extends EventEmitter {
 
       // Create training data batch
       const batch: TrainingDataBatch = {
-        id: `batch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `batch-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         timestamp: startTime.toISOString(),
         events:
           this.config.anonymizationLevel === "full"

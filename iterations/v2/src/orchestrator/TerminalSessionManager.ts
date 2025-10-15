@@ -98,7 +98,7 @@ export class TerminalSessionManager extends EventEmitter {
     // Generate unique session ID
     const sessionId = `term-${taskId}-${Date.now()}-${Math.random()
       .toString(36)
-      .substr(2, 9)}`;
+      .substring(2, 9)}`;
 
     // Merge environment variables
     const environment = {

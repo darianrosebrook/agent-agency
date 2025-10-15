@@ -48,7 +48,7 @@ describe("ConsistencyValidator", () => {
       const request: VerificationRequest = {
         id: "consistency-2",
         content:
-          "The company was founded in 2010. The CEO started the company in 2015.",
+          "The company was founded in 2010. The CEO started the company in 2005.",
         source: "https://example.com",
         context: "Contradictory dates",
         priority: VerificationPriority.HIGH,

@@ -555,7 +555,7 @@ export class SystemHealthMonitor extends EventEmitter {
     }
 
     const alert: HealthAlert = {
-      id: `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `alert-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       level,
       component,
       componentId,

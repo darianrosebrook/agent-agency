@@ -92,6 +92,16 @@ export interface TaskCompletedEvent extends BaseEvent {
   qualityScore?: number;
 }
 
+export interface TaskArtifactCreatedEvent extends BaseEvent {
+  type: "task.artifact_created";
+  taskId: string;
+  artifactPath: string;
+  fileCount: number;
+  totalSize: number;
+  manifestPath: string;
+  artifactMetadata?: Record<string, any>;
+}
+
 export interface TaskFailedEvent extends BaseEvent {
   type: "task.failed";
   taskId: string;
@@ -395,6 +405,7 @@ export const EventTypes = {
   TASK_REASSIGNED: "task.reassigned" as const,
   TASK_PLEADING_INITIATED: "task.pleading_initiated" as const,
   TASK_SUBMITTED: "task.submitted" as const,
+  TASK_ARTIFACT_CREATED: "task.artifact_created" as const,
 
   // Security events
   AGENT_AUTHENTICATED: "security.authenticated" as const,

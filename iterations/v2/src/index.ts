@@ -7,11 +7,16 @@
  * @author @darianrosebrook
  */
 
+import * as path from "path";
 import { ConnectionPoolManager } from "@/database/ConnectionPoolManager";
 import { Logger } from "@/observability/Logger";
+import { ObserverBridge, setObserverBridge } from "@/observer";
+import { ArbiterRuntime } from "@/orchestrator/runtime/ArbiterRuntime";
 
 // Initialize logger
 const logger = new Logger("V2-Arbiter");
+let arbiterRuntime: ArbiterRuntime | null = null;
+let observerBridge: ObserverBridge | null = null;
 
 /**
  * Initialize application services
@@ -48,6 +53,20 @@ async function initialize(): Promise<void> {
   // - Health Monitor
   // - Performance Tracking
 
+  // Initialize observer bridge
+  try {
+    arbiterRuntime = new ArbiterRuntime({
+      outputDir: path.resolve(process.cwd(), "iterations/v2/runtime-output"),
+    });
+
+    observerBridge = new ObserverBridge(arbiterRuntime);
+    setObserverBridge(observerBridge);
+    await observerBridge.start();
+    logger.info("Observer bridge started");
+  } catch (error) {
+    logger.error("Failed to start observer bridge", { error });
+  }
+
   logger.info("V2 Arbiter initialized successfully");
 }
 
@@ -61,6 +80,18 @@ async function shutdown(signal: string): Promise<void> {
     // Shutdown database connection pool
     await ConnectionPoolManager.getInstance().shutdown();
     logger.info("Database connection pool closed");
+
+    if (observerBridge) {
+      await observerBridge.stop();
+      setObserverBridge(null);
+      observerBridge = null;
+      logger.info("Observer bridge stopped");
+    }
+
+    if (arbiterRuntime) {
+      await arbiterRuntime.stop();
+      arbiterRuntime = null;
+    }
 
     // TODO: Shutdown other services
     // - MCP Server
@@ -117,4 +148,3 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
 // Export for testing
 export { initialize, shutdown };
-

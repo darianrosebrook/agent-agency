@@ -27,7 +27,7 @@ function createSearchResult(
   overrides: Partial<SearchResult> = {}
 ): SearchResult {
   return {
-    id: `result-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    id: `result-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
     queryId: "test-query-id",
     title: "Test Result",
     content: "Test content",

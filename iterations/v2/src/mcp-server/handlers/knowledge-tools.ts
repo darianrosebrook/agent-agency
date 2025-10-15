@@ -138,7 +138,9 @@ export async function handleKnowledgeSearch(
 
     // Build knowledge query
     const query: KnowledgeQuery = {
-      id: `mcp-query-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `mcp-query-${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 9)}`,
       query: args.query,
       queryType: (args.queryType as QueryType) || QueryType.FACTUAL,
       maxResults: args.maxResults || 5,

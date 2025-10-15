@@ -9,6 +9,7 @@
 
 import { MultiArmedBandit } from "../rl/MultiArmedBandit";
 import { PerformanceTracker } from "../rl/PerformanceTracker";
+import type { AgentRegistry } from "../types/agent-registry";
 import {
   AgentQuery,
   AgentQueryResult,
@@ -16,7 +17,6 @@ import {
 } from "../types/agent-registry";
 import { RoutingStrategy } from "../types/agentic-rl";
 import { RoutingDecision, Task } from "../types/arbiter-orchestration";
-import { AgentRegistryManager } from "./AgentRegistryManager";
 
 // Re-export commonly used types
 export { VerificationPriority } from "../types/verification";
@@ -81,14 +81,14 @@ export interface RoutingOutcome {
  */
 export class TaskRoutingManager {
   private config: TaskRoutingConfig;
-  private agentRegistry: AgentRegistryManager;
+  private agentRegistry: AgentRegistry;
   private performanceTracker?: PerformanceTracker;
   private multiArmedBandit: MultiArmedBandit | null = null;
   private metrics: RoutingMetrics;
   private routingHistory: Map<string, RoutingDecision> = new Map();
 
   constructor(
-    agentRegistry: AgentRegistryManager,
+    agentRegistry: AgentRegistry,
     config?: Partial<TaskRoutingConfig>,
     performanceTracker?: PerformanceTracker
   ) {

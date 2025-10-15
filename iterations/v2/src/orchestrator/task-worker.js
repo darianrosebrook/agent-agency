@@ -8,11 +8,22 @@
 
 import { performance } from "perf_hooks";
 import { parentPort, workerData } from "worker_threads";
+import { ArtifactSandbox } from "./workers/ArtifactSandbox.js";
 
-const { workerId, capabilities } = workerData;
+const {
+  workerId,
+  capabilities,
+  artifactConfig = {
+    rootPath: "./output/artifacts",
+    maxFileSizeBytes: 10 * 1024 * 1024, // 10MB
+    maxTotalFiles: 100,
+    maxPathLength: 255,
+  },
+} = workerData;
 
 let isRunning = true;
 let currentTask = null;
+let currentSandbox = null;
 
 // Task execution functions
 const taskExecutors = {
@@ -25,6 +36,18 @@ const taskExecutors = {
 async function executeScriptTask(task) {
   const { code, args = [], timeout = 30000 } = task.payload;
 
+  // Initialize artifact sandbox for this task
+  if (!currentSandbox) {
+    currentSandbox = new ArtifactSandbox({
+      rootPath: artifactConfig.rootPath,
+      taskId: task.id,
+      maxFileSizeBytes: artifactConfig.maxFileSizeBytes,
+      maxTotalFiles: artifactConfig.maxTotalFiles,
+      maxPathLength: artifactConfig.maxPathLength,
+    });
+    await currentSandbox.initialize();
+  }
+
   // Create isolated context
   const context = {
     console: {
@@ -34,53 +57,41 @@ async function executeScriptTask(task) {
     },
     args,
     result: null,
+    artifacts: {
+      writeFile: (path, content) => currentSandbox.writeFile(path, content),
+      mkdir: (path) => currentSandbox.mkdir(path),
+      readdir: (path) => currentSandbox.readdir(path),
+      stat: (path) => currentSandbox.stat(path),
+      rename: (oldPath, newPath) => currentSandbox.rename(oldPath, newPath),
+    },
   };
 
   const logs = [];
+  const startTime = performance.now();
 
   try {
     // Execute code with timeout
-    const startTime = performance.now();
-
-    const script = `
-      (async () => {
-        try {
-          ${code}
-        } catch (error) {
-          throw new Error(\`Script execution failed: \${error.message}\`);
-        }
-      })()
-    `;
 
     // Use Function constructor for isolated execution
     const executeFn = new Function(
       "context",
-      "require",
       `
       const { console, args, result } = context;
-      const module = { exports: {} };
-
-      // Limited require function
-      const safeRequire = (moduleName) => {
-        const allowedModules = ['crypto', 'util', 'path', 'url'];
-        if (!allowedModules.includes(moduleName)) {
-          throw new Error(\`Module \${moduleName} not allowed in task execution\`);
-        }
-        return require(moduleName);
-      };
-
-      ${script}
+      
+      // Execute the user code directly
+      ${code}
     `
     );
 
     const result = await Promise.race([
-      executeFn(context, safeRequire),
+      executeFn(context),
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error("Script execution timeout")), timeout)
       ),
     ]);
 
     const executionTime = performance.now() - startTime;
+    const manifest = currentSandbox ? currentSandbox.generateManifest() : null;
 
     return {
       success: true,
@@ -90,18 +101,35 @@ async function executeScriptTask(task) {
         executionTime,
         cpuUsage: process.cpuUsage().user / 1000, // microseconds to milliseconds
         memoryUsage: process.memoryUsage().heapUsed,
+        outputSize: manifest ? manifest.totalSize : 0,
       },
+      artifacts: manifest
+        ? {
+            manifest,
+            rootPath: currentSandbox.getRootPath(),
+          }
+        : undefined,
     };
   } catch (error) {
+    const executionTime = performance.now() - startTime;
+    const manifest = currentSandbox ? currentSandbox.generateManifest() : null;
+
     return {
       success: false,
       error: error.message,
       logs,
       metrics: {
-        executionTime: performance.now() - startTime,
+        executionTime,
         cpuUsage: process.cpuUsage().user / 1000,
         memoryUsage: process.memoryUsage().heapUsed,
+        outputSize: manifest ? manifest.totalSize : 0,
       },
+      artifacts: manifest
+        ? {
+            manifest,
+            rootPath: currentSandbox.getRootPath(),
+          }
+        : undefined,
     };
   }
 }
@@ -109,10 +137,9 @@ async function executeScriptTask(task) {
 async function executeApiCallTask(task) {
   const { method, url, headers = {}, body, timeout = 30000 } = task.payload;
   const logs = [];
+  const startTime = performance.now();
 
   try {
-    const startTime = performance.now();
-
     // Basic HTTP client (in real implementation, use axios or fetch)
     const http = await import(
       method.toLowerCase().startsWith("http") ? "http" : "https"
@@ -199,10 +226,9 @@ async function executeApiCallTask(task) {
 async function executeDataProcessingTask(task) {
   const { operation, data, config = {} } = task.payload;
   const logs = [];
+  const startTime = performance.now();
 
   try {
-    const startTime = performance.now();
-
     let result;
 
     switch (operation) {
@@ -287,10 +313,9 @@ async function executeDataProcessingTask(task) {
 async function executeAIInferenceTask(task) {
   const { model, prompt, parameters = {} } = task.payload;
   const logs = [];
+  const startTime = performance.now();
 
   try {
-    const startTime = performance.now();
-
     // Placeholder for AI inference - in real implementation,
     // this would integrate with actual AI services
     logs.push(`AI inference requested for model: ${model}`);
@@ -356,6 +381,7 @@ parentPort.on("message", async (message) => {
             error: `Unsupported task type: ${message.task.type}`,
           });
           currentTask = null;
+          currentSandbox = null; // Reset sandbox on error
           return;
         }
 
@@ -368,6 +394,7 @@ parentPort.on("message", async (message) => {
         });
 
         currentTask = null;
+        currentSandbox = null; // Reset sandbox for next task
         break;
 
       case "shutdown":
@@ -389,6 +416,7 @@ parentPort.on("message", async (message) => {
       error: error.message,
     });
     currentTask = null;
+    currentSandbox = null; // Reset sandbox on error
   }
 });
 

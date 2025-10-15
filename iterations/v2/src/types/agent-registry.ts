@@ -410,3 +410,65 @@ export class RegistryError extends Error {
     this.name = "RegistryError";
   }
 }
+
+/**
+ * Core interface for agent registry operations.
+ * Allows dependency inversion and easier testing/mocking.
+ */
+export interface AgentRegistry {
+  /**
+   * Initialize the registry with optional seeding data.
+   * @param options - Initialization options including seeds and mode
+   */
+  initialize(options?: RegistryInitOptions): Promise<void>;
+
+  /**
+   * Query agents by capability requirements.
+   * @param query - Capability query parameters
+   * @returns Array of matching agents with scores
+   */
+  getAgentsByCapability(query: AgentQuery): Promise<AgentQueryResult[]>;
+
+  /**
+   * Update performance metrics for an agent after task completion.
+   * @param agentId - ID of the agent to update
+   * @param metrics - Performance metrics from completed task
+   */
+  updatePerformance(
+    agentId: AgentId,
+    metrics: PerformanceMetrics
+  ): Promise<AgentProfile>;
+
+  /**
+   * Get current registry statistics.
+   * @returns Registry statistics including counts and averages
+   */
+  getStats(): Promise<RegistryStats>;
+
+  /**
+   * Get agent profile by ID.
+   * @param agentId - ID of the agent to retrieve
+   * @returns Agent profile
+   */
+  getProfile(agentId: AgentId): Promise<AgentProfile>;
+}
+
+/**
+ * Options for registry initialization.
+ */
+export interface RegistryInitOptions {
+  /**
+   * Seed data for initializing the registry.
+   */
+  seeds?: Partial<AgentProfile>[];
+
+  /**
+   * Initialization mode - idempotent allows re-initialization without errors.
+   */
+  mode?: "idempotent" | "strict";
+
+  /**
+   * Whether to emit registry.ready event on completion.
+   */
+  emitReady?: boolean;
+}

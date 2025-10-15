@@ -11,6 +11,6 @@
       "@/evaluation/*": ["src/evaluation/*"]
     }
   },
-  "include": ["src/**/*", "apps/**/*", "tests/**/*", "scripts/**/*"],
+  "include": ["src/**/*", "apps/**/*", "tests/**/*", "scripts/**/*", "src/mcp"],
   "exclude": ["node_modules", "dist", "coverage"]
 }

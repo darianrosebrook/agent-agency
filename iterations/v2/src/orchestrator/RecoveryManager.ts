@@ -194,7 +194,7 @@ export class RecoveryManager implements IRecoveryManager {
     const action: RecoveryAction = {
       id: `recovery-${component}-${Date.now()}-${Math.random()
         .toString(36)
-        .substr(2, 9)}`,
+        .substring(2, 9)}`,
       component,
       strategy: strategy.name as any,
       priority: strategy.priority,

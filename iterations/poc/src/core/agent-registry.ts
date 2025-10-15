@@ -189,7 +189,7 @@ export class AgentRegistry extends EventEmitter {
 
     const patternId = `pattern-${Date.now()}-${Math.random()
       .toString(36)
-      .substr(2, 9)}`;
+      .substring(2, 9)}`;
     const knowledgePattern: KnowledgePattern = {
       ...pattern,
       id: patternId,

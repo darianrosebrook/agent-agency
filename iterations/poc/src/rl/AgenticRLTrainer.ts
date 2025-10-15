@@ -66,7 +66,7 @@ export class AgenticRLTrainer {
   ): Promise<TrainingEpisode> {
     const episodeId = `episode_${Date.now()}_${Math.random()
       .toString(36)
-      .substr(2, 9)}`;
+      .substring(2, 9)}`;
     const steps: TrainingStep[] = [];
     let totalReward = 0;
     const startTime = Date.now();

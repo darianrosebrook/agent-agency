@@ -478,6 +478,6 @@ export abstract class BaseDAO<
    * Generate a unique ID for new entities
    */
   protected generateId(): string {
-    return `id_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `id_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   }
 }

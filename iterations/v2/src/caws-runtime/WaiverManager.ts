@@ -9,11 +9,11 @@
 
 import { EventEmitter } from "events";
 import {
+  EvaluationContext,
+  OperationContext,
+  WaiverCheckResult,
   WaiverRequest,
   WaiverStatus,
-  WaiverCheckResult,
-  OperationContext,
-  EvaluationContext,
 } from "../types/caws-constitutional";
 
 export class WaiverManager extends EventEmitter {
@@ -32,7 +32,7 @@ export class WaiverManager extends EventEmitter {
     metadata?: Record<string, any>;
   }): Promise<string> {
     const waiver: WaiverRequest = {
-      id: `waiver-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `waiver-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       policyId: request.policyId,
       operationPattern: request.operationPattern,
       reason: request.reason,
@@ -121,7 +121,11 @@ export class WaiverManager extends EventEmitter {
   /**
    * Revoke an approved waiver
    */
-  async revokeWaiver(waiverId: string, revokedBy: string, reason: string): Promise<void> {
+  async revokeWaiver(
+    waiverId: string,
+    revokedBy: string,
+    reason: string
+  ): Promise<void> {
     const waiver = this.waivers.get(waiverId);
     if (!waiver) {
       throw new Error(`Waiver ${waiverId} not found`);
@@ -152,10 +156,11 @@ export class WaiverManager extends EventEmitter {
     this.expireWaivers();
 
     const activeWaivers = Array.from(this.waivers.values())
-      .filter((waiver) =>
-        waiver.status === WaiverStatus.APPROVED &&
-        new Date() < waiver.expiresAt &&
-        this.matchesOperation(waiver.operationPattern, operation)
+      .filter(
+        (waiver) =>
+          waiver.status === WaiverStatus.APPROVED &&
+          new Date() < waiver.expiresAt &&
+          this.matchesOperation(waiver.operationPattern, operation)
       )
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()); // Oldest first
 
@@ -211,10 +216,7 @@ export class WaiverManager extends EventEmitter {
     let expiredCount = 0;
 
     for (const waiver of this.waivers.values()) {
-      if (
-        waiver.status === WaiverStatus.APPROVED &&
-        now > waiver.expiresAt
-      ) {
+      if (waiver.status === WaiverStatus.APPROVED && now > waiver.expiresAt) {
         waiver.status = WaiverStatus.EXPIRED;
         waiver.updatedAt = now;
         expiredCount++;
@@ -303,7 +305,10 @@ export class WaiverManager extends EventEmitter {
   /**
    * Check if operation matches waiver pattern
    */
-  private matchesOperation(pattern: string, operation: OperationContext): boolean {
+  private matchesOperation(
+    pattern: string,
+    operation: OperationContext
+  ): boolean {
     // Simple pattern matching - in production, use regex or more sophisticated matching
     const operationString = [
       operation.type,
@@ -325,7 +330,9 @@ export class WaiverManager extends EventEmitter {
   private async notifyApprovers(waiver: WaiverRequest): Promise<void> {
     // In a real implementation, this would send notifications
     // via email, Slack, or other communication channels
-    console.log(`Waiver ${waiver.id} requires approval for policy ${waiver.policyId}`);
+    console.log(
+      `Waiver ${waiver.id} requires approval for policy ${waiver.policyId}`
+    );
     console.log(`Reason: ${waiver.reason}`);
     console.log(`Requested by: ${waiver.requestedBy}`);
   }
@@ -349,7 +356,11 @@ export class WaiverManager extends EventEmitter {
       timestamp: new Date(),
     };
 
-    console.log(`Waiver ${waiver.id} ${action} by ${actor}${details ? `: ${details}` : ""}`);
+    console.log(
+      `Waiver ${waiver.id} ${action} by ${actor}${
+        details ? `: ${details}` : ""
+      }`
+    );
   }
 
   /**

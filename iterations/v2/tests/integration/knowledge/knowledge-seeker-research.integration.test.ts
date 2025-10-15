@@ -78,7 +78,7 @@ describe("ARBITER-006 Knowledge Seeker - Research Integration Tests", () => {
   ): KnowledgeQuery => ({
     id: `integration-query-${Date.now()}-${Math.random()
       .toString(36)
-      .substr(2, 9)}`,
+      .substring(2, 9)}`,
     query: "What is machine learning?",
     queryType: QueryType.EXPLANATORY,
     maxResults: 10,

@@ -25,6 +25,57 @@ Agent Agency V2 represents a **78-82% vision realization** - significantly excee
 
 ---
 
+## 🔧 Getting Started
+
+Spin up the arbiter orchestrator together with the new observer bridge to inspect tasks in real time.
+
+```bash
+# 1. Install dependencies (from repository root)
+npm install
+
+# 2. Generate a local bearer token for the observer bridge (optional but recommended)
+export OBSERVER_AUTH_TOKEN="$(openssl rand -hex 16)"
+export OBSERVER_ALLOWED_ORIGINS="null,file://"
+
+# 3. Start the Arbiter in watch mode (spawns the observer bridge on http://127.0.0.1:4387)
+cd iterations/v2
+npm run dev
+```
+
+When the process starts you should see:
+
+- `Observer bridge started` from `src/index.ts`
+- The bridge listening on `127.0.0.1:4387` (or the socket path you configure)
+- Task artifacts materializing under `iterations/v2/runtime-output/<taskId>/summary.md`
+
+### Verify the Observer Bridge
+
+```bash
+# Check overall status
+curl -H "Authorization: Bearer $OBSERVER_AUTH_TOKEN" \
+  http://127.0.0.1:4387/observer/status | jq
+
+# Stream live events (press Ctrl+C to exit)
+curl -H "Authorization: Bearer $OBSERVER_AUTH_TOKEN" \
+  -H "Accept: text/event-stream" \
+  http://127.0.0.1:4387/observer/events/stream
+```
+
+### Connect via MCP (optional)
+
+Point the MCP observer client at the running bridge:
+
+```bash
+cd apps/mcp-arbiter-observer
+OBSERVER_URL=http://127.0.0.1:4387 \
+OBSERVER_AUTH_TOKEN=$OBSERVER_AUTH_TOKEN \
+node dist/index.js
+```
+
+Your IDE or MCP host can now call tools such as `arbiter_status`, `arbiter_logs`, and `arbiter_cot` without touching the Arbiter’s internal toolchain directly.
+
+---
+
 ## 📋 Component Specifications
 
 V2 includes comprehensive CAWS working specifications for all core arbiter components:

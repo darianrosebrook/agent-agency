@@ -334,7 +334,7 @@ describe("EvidenceAggregator", () => {
 
 function createTestArgument(evidence: Evidence[] = []): Argument {
   return {
-    id: `arg-${Math.random().toString(36).substr(2, 9)}`,
+    id: `arg-${Math.random().toString(36).substring(2, 9)}`,
     agentId: "agent-1",
     claim: "Test claim",
     evidence,
@@ -349,7 +349,7 @@ function createTestEvidence(
   verificationStatus: "verified" | "unverified" | "disputed" = "verified"
 ): Evidence {
   return {
-    id: `ev-${Math.random().toString(36).substr(2, 9)}`,
+    id: `ev-${Math.random().toString(36).substring(2, 9)}`,
     source: "https://example.com/source",
     content: "Test evidence content",
     credibilityScore,

@@ -67,7 +67,9 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
       const cachedResponse = await this.checkQueryCache(query);
       if (cachedResponse) {
         events.emit({
-          id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: `event-${Date.now()}-${Math.random()
+            .toString(36)
+            .substring(2, 9)}`,
           type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
           timestamp: new Date(),
           severity: "info" as any,
@@ -134,7 +136,7 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
     this.resultCache.clear();
 
     events.emit({
-      id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `event-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
       timestamp: new Date(),
       severity: "info" as any,
@@ -158,7 +160,7 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
 
       // Emit query received event
       events.emit({
-        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `event-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
         timestamp: new Date(),
         severity: "info" as any,
@@ -204,7 +206,7 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
           events.emit({
             id: `event-${Date.now()}-${Math.random()
               .toString(36)
-              .substr(2, 9)}`,
+              .substring(2, 9)}`,
             type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
             timestamp: new Date(),
             severity: "warn" as any,
@@ -304,7 +306,7 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
 
       // Emit response generated event
       events.emit({
-        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `event-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
         timestamp: new Date(),
         severity: "info" as any,
@@ -332,7 +334,7 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
 
       // Emit error event
       events.emit({
-        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `event-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
         timestamp: new Date(),
         severity: "error" as any,

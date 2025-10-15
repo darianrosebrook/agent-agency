@@ -35,7 +35,7 @@ export { VerificationPriority };
 export const mockSearchResult = (
   overrides: Partial<SearchResult> = {}
 ): SearchResult => ({
-  id: `result-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  id: `result-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
   queryId: overrides.queryId || `query-${Date.now()}`,
   title: "Test Search Result",
   url: "https://example.com/test-result",
@@ -60,7 +60,7 @@ export const mockSearchResult = (
 export const mockKnowledgeQuery = (
   overrides: Partial<KnowledgeQuery> = {}
 ): KnowledgeQuery => ({
-  id: `query-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  id: `query-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
   query: "How do I implement OAuth2 in Express.js?",
   queryType: QueryType.TECHNICAL,
   maxResults: 3,
@@ -168,7 +168,7 @@ export const mockResearchContext = (overrides: any = {}) => ({
  * Creates a mock Task with customizable fields
  */
 export const mockTask = (overrides: Partial<Task> = {}): Task => ({
-  id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  id: `task-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
   type: "code-editing",
   description: "Implement OAuth2 authentication in the Express.js API",
   requiredCapabilities: {},

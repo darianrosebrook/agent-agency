@@ -489,7 +489,7 @@ export class SecurityManager {
   ): SecurityContext {
     const sessionId = `session-${agent.id}-${Date.now()}-${Math.random()
       .toString(36)
-      .substr(2, 9)}`;
+      .substring(2, 9)}`;
 
     // Determine permissions and security level
     let permissions: string[];
@@ -572,7 +572,7 @@ export class SecurityManager {
 
     const securityEvent: SecurityEvent = {
       ...event,
-      id: `sec-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `sec-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       timestamp: new Date(),
     };
 

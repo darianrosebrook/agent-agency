@@ -563,7 +563,7 @@ export class FederatedLearningEngine {
     return {
       memoryId: `cluster_${Date.now()}_${Math.random()
         .toString(36)
-        .substr(2, 9)}`,
+        .substring(2, 9)}`,
       relevanceScore: avgRelevance,
       contextMatch: {
         similarityScore: avgRelevance,
@@ -620,7 +620,7 @@ export class FederatedLearningEngine {
         relevanceScore: avgRelevance,
         memoryId: `aggregated_${Date.now()}_${Math.random()
           .toString(36)
-          .substr(2, 9)}`,
+          .substring(2, 9)}`,
       };
     });
   }
@@ -718,6 +718,8 @@ export class FederatedLearningEngine {
   }
 
   private generateSessionId(): string {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `session_${Date.now()}_${Math.random()
+      .toString(36)
+      .substring(2, 9)}`;
   }
 }

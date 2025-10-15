@@ -89,7 +89,7 @@ export class InformationProcessor implements IInformationProcessor {
 
       // Emit processing completion event
       events.emit({
-        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `event-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
         timestamp: new Date(),
         severity: "info" as any,
@@ -113,7 +113,7 @@ export class InformationProcessor implements IInformationProcessor {
 
       // Emit error event
       events.emit({
-        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `event-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
         timestamp: new Date(),
         severity: "error" as any,

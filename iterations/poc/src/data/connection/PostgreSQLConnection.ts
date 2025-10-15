@@ -302,6 +302,6 @@ export class PostgreSQLConnection implements ConnectionPool {
    * Generate a unique query ID for tracking
    */
   private generateQueryId(): string {
-    return `query_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `query_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   }
 }

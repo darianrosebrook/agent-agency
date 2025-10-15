@@ -41,10 +41,12 @@ class WorkerPoolManager extends EventEmitter {
   private activeTasks: Map<string, string> = new Map(); // taskId -> workerId
   private workerMetrics: Map<string, TaskMetrics> = new Map();
   private config: WorkerPoolConfig;
+  private artifactConfig: WorkerPoolConfig["artifactConfig"];
 
   constructor(config: WorkerPoolConfig) {
     super();
     this.config = config;
+    this.artifactConfig = config.artifactConfig;
     this.initializePool();
   }
 
@@ -61,6 +63,7 @@ class WorkerPoolManager extends EventEmitter {
       workerData: {
         workerId,
         capabilities: this.config.workerCapabilities,
+        artifactConfig: this.artifactConfig,
       },
     });
 
@@ -177,7 +180,15 @@ class WorkerPoolManager extends EventEmitter {
   async executeTask(task: Task): Promise<void> {
     const availableWorker = this.findAvailableWorker();
     if (!availableWorker) {
-      throw new Error("No available workers");
+      const workerCount = this.workers.size;
+      const workerStatuses = Array.from(this.workerMetrics.values()).map(
+        (m) => `${m.workerId}:${m.status}`
+      );
+      throw new Error(
+        `No available workers. Total workers: ${workerCount}, Statuses: ${workerStatuses.join(
+          ", "
+        )}`
+      );
     }
 
     this.activeTasks.set(task.id, availableWorker);
@@ -561,6 +572,11 @@ export class TaskOrchestrator extends EventEmitter {
     execution.completedAt = new Date();
     execution.status = "completed";
     execution.result = result;
+
+    // Handle artifact metadata if present
+    if (result.artifacts) {
+      execution.artifacts = result.artifacts;
+    }
 
     // Transition to completed
     await this.stateMachine.transition(

@@ -885,7 +885,7 @@ export class ArbiterMCPServer extends Server {
       const knowledgeQuery = {
         id: `mcp-query-${Date.now()}-${Math.random()
           .toString(36)
-          .substr(2, 9)}`,
+          .substring(2, 9)}`,
         query,
         queryType: queryType || "factual",
         maxResults: maxResults || 5,

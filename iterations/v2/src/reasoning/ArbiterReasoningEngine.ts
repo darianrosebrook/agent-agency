@@ -526,7 +526,7 @@ export class ArbiterReasoningEngine {
    * Generates unique debate ID
    */
   private generateDebateId(): string {
-    return `debate-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `debate-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   }
 
   /**

@@ -827,6 +827,6 @@ export class AgentOrchestrator {
    * Generate a unique ID
    */
   private generateId(): string {
-    return `id_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `id_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   }
 }

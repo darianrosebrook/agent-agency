@@ -785,7 +785,7 @@ System Uptime: ${Math.round(metrics.systemUptime)} seconds`,
                 {
                   memoryId: `mem_${Date.now()}_${Math.random()
                     .toString(36)
-                    .substr(2, 9)}`,
+                    .substring(2, 9)}`,
                   relevanceScore: 0.8,
                   contextMatch: {
                     similarityScore: 0.8,

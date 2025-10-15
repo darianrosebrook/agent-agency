@@ -108,7 +108,7 @@ export class CollaborativeSolver extends EventEmitter {
   ): Promise<CollaborationSession> {
     const sessionId = `collab-${Date.now()}-${Math.random()
       .toString(36)
-      .substr(2, 9)}`;
+      .substring(2, 9)}`;
 
     const collaborationTask: CollaborationTask = {
       ...task,

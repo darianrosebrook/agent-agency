@@ -563,7 +563,7 @@ export class FederatedLearningEngine {
     return {
       memoryId: `cluster_${Date.now()}_${Math.random()
         .toString(36)
-        .substr(2, 9)}`,
+        .substring(2, 9)}`,
       relevanceScore: avgRelevance,
       contextMatch: {
         similarityScore: avgRelevance,
@@ -608,7 +608,10 @@ export class FederatedLearningEngine {
     const groups = this.groupSimilarInsights(weighted);
 
     return groups.map((group) => {
-      const totalWeight = group.reduce((sum, i) => sum + ((i as any).weight ?? 1.0), 0);
+      const totalWeight = group.reduce(
+        (sum, i) => sum + ((i as any).weight ?? 1.0),
+        0
+      );
       const avgRelevance =
         group.reduce(
           (sum, i) => sum + i.relevanceScore * ((i as any).weight ?? 1.0),
@@ -620,7 +623,7 @@ export class FederatedLearningEngine {
         relevanceScore: avgRelevance,
         memoryId: `aggregated_${Date.now()}_${Math.random()
           .toString(36)
-          .substr(2, 9)}`,
+          .substring(2, 9)}`,
       };
     });
   }
@@ -718,6 +721,8 @@ export class FederatedLearningEngine {
   }
 
   private generateSessionId(): string {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `session_${Date.now()}_${Math.random()
+      .toString(36)
+      .substring(2, 9)}`;
   }
 }

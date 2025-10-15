@@ -8,16 +8,16 @@
  */
 
 import {
+  ComplianceResult,
   ConstitutionalPolicy,
+  ConstitutionalPrinciple,
+  ConstitutionalViolation,
+  EvaluationContext,
+  OperationContext,
+  PolicyEvaluation,
   PolicyRule,
   RuleOperator,
-  ConstitutionalPrinciple,
   ViolationSeverity,
-  OperationContext,
-  EvaluationContext,
-  ConstitutionalViolation,
-  PolicyEvaluation,
-  ComplianceResult,
 } from "../types/caws-constitutional";
 
 export class ConstitutionalPolicyEngine {
@@ -143,7 +143,9 @@ export class ConstitutionalPolicyEngine {
 
       if (!compliant) {
         return {
-          id: `violation-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: `violation-${Date.now()}-${Math.random()
+            .toString(36)
+            .substring(2, 9)}`,
           policyId: policy.id,
           ruleId: rule.id,
           principle: policy.principle,
@@ -169,12 +171,16 @@ export class ConstitutionalPolicyEngine {
     } catch (error) {
       // If rule evaluation fails, treat as violation
       return {
-        id: `violation-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `violation-${Date.now()}-${Math.random()
+          .toString(36)
+          .substring(2, 9)}`,
         policyId: policy.id,
         ruleId: rule.id,
         principle: policy.principle,
         severity: ViolationSeverity.MEDIUM,
-        message: `Rule evaluation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        message: `Rule evaluation failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
         actualValue: null,
         expectedValue: rule.value,
         operationId: operation.id,
@@ -197,11 +203,11 @@ export class ConstitutionalPolicyEngine {
   private extractValue(path: string, root: any): any {
     if (!path) return root;
 
-    const parts = path.split('.');
+    const parts = path.split(".");
     let current = root;
 
     for (const part of parts) {
-      if (current && typeof current === 'object') {
+      if (current && typeof current === "object") {
         // Handle array access like "items[0]"
         const arrayMatch = part.match(/^([^[\]]+)\[(\d+)\]$/);
         if (arrayMatch) {
@@ -242,7 +248,7 @@ export class ConstitutionalPolicyEngine {
         if (Array.isArray(actualValue)) {
           return actualValue.includes(expectedValue);
         }
-        if (typeof actualValue === 'string') {
+        if (typeof actualValue === "string") {
           return actualValue.includes(String(expectedValue));
         }
         return false;
@@ -251,7 +257,7 @@ export class ConstitutionalPolicyEngine {
         if (Array.isArray(actualValue)) {
           return !actualValue.includes(expectedValue);
         }
-        if (typeof actualValue === 'string') {
+        if (typeof actualValue === "string") {
           return !actualValue.includes(String(expectedValue));
         }
         return true;
@@ -287,7 +293,10 @@ export class ConstitutionalPolicyEngine {
         return true;
 
       case RuleOperator.REGEX_MATCH:
-        if (typeof actualValue === 'string' && typeof expectedValue === 'string') {
+        if (
+          typeof actualValue === "string" &&
+          typeof expectedValue === "string"
+        ) {
           return new RegExp(expectedValue).test(actualValue);
         }
         return false;
@@ -319,7 +328,9 @@ export class ConstitutionalPolicyEngine {
   /**
    * Get policies by principle
    */
-  getPoliciesByPrinciple(principle: ConstitutionalPrinciple): ConstitutionalPolicy[] {
+  getPoliciesByPrinciple(
+    principle: ConstitutionalPrinciple
+  ): ConstitutionalPolicy[] {
     return Array.from(this.policies.values()).filter(
       (policy) => policy.principle === principle
     );

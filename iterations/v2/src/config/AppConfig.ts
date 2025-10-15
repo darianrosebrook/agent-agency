@@ -62,6 +62,16 @@ const configSchema = z.object({
     retryBackoffMs: z.number().min(10).default(1000),
   }),
 
+  // Artifact Management
+  artifacts: z.object({
+    enabled: z.boolean().default(true),
+    rootPath: z.string().default("./output/artifacts"),
+    quotaMb: z.number().min(1).default(100),
+    maxFiles: z.number().min(1).default(50),
+    maxPathLength: z.number().min(10).default(255),
+    manifestGeneration: z.boolean().default(true),
+  }),
+
   // Health Monitoring
   health: z.object({
     checkIntervalMs: z.number().min(1000).default(30000),
@@ -150,6 +160,20 @@ export class ConfigManager {
         successThreshold: this.parseNumber(process.env.SUCCESS_THRESHOLD, 2),
         timeoutMs: this.parseNumber(process.env.TIMEOUT_MS, 5000),
         retryBackoffMs: this.parseNumber(process.env.RETRY_BACKOFF_MS, 1000),
+      },
+      artifacts: {
+        enabled: this.parseBoolean(process.env.ARTIFACTS_ENABLED, true),
+        rootPath: process.env.ARTIFACT_ROOT || "./output/artifacts",
+        quotaMb: this.parseNumber(process.env.ARTIFACT_QUOTA_MB, 100),
+        maxFiles: this.parseNumber(process.env.ARTIFACT_MAX_FILES, 50),
+        maxPathLength: this.parseNumber(
+          process.env.ARTIFACT_MAX_PATH_LENGTH,
+          255
+        ),
+        manifestGeneration: this.parseBoolean(
+          process.env.ARTIFACT_MANIFEST_GENERATION,
+          true
+        ),
       },
       health: {
         checkIntervalMs: this.parseNumber(

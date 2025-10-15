@@ -111,7 +111,7 @@ export class VerificationEngineImpl implements VerificationEngine {
           events.emit({
             id: `event-${Date.now()}-${Math.random()
               .toString(36)
-              .substr(2, 9)}`,
+              .substring(2, 9)}`,
             type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
             timestamp: new Date(),
             severity: "info" as any,
@@ -131,7 +131,9 @@ export class VerificationEngineImpl implements VerificationEngine {
       const cached = this.checkCache(request);
       if (cached) {
         events.emit({
-          id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: `event-${Date.now()}-${Math.random()
+            .toString(36)
+            .substring(2, 9)}`,
           type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
           timestamp: new Date(),
           severity: "info" as any,
@@ -290,7 +292,7 @@ export class VerificationEngineImpl implements VerificationEngine {
     try {
       // Emit verification started event
       events.emit({
-        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `event-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
         timestamp: new Date(),
         severity: "info" as any,
@@ -331,7 +333,7 @@ export class VerificationEngineImpl implements VerificationEngine {
 
       // Emit verification completed event
       events.emit({
-        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `event-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
         timestamp: new Date(),
         severity: "info" as any,
@@ -351,7 +353,7 @@ export class VerificationEngineImpl implements VerificationEngine {
 
       // Emit verification error event
       events.emit({
-        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `event-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
         timestamp: new Date(),
         severity: "error" as any,

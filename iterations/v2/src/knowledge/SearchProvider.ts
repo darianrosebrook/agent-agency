@@ -213,7 +213,7 @@ export abstract class BaseSearchProvider implements ISearchProvider {
     return {
       id: `${this.name}-${Date.now()}-${Math.random()
         .toString(36)
-        .substr(2, 9)}`,
+        .substring(2, 9)}`,
       queryId,
       title,
       content,
@@ -356,7 +356,7 @@ export class GoogleSearchProvider extends BaseSearchProvider {
 
       // Emit search execution event
       events.emit({
-        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `event-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED, // Using existing event type for now
         timestamp: new Date(),
         severity: "info" as any,
@@ -449,7 +449,7 @@ export class DuckDuckGoSearchProvider extends BaseSearchProvider {
 
       // Emit search execution event
       events.emit({
-        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `event-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
         timestamp: new Date(),
         severity: "info" as any,
@@ -496,7 +496,7 @@ export class ArXivSearchProvider extends BaseSearchProvider {
 
       // Emit search execution event
       events.emit({
-        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `event-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED,
         timestamp: new Date(),
         severity: "info" as any,

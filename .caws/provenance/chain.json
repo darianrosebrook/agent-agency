@@ -5142,5 +5142,41 @@
     },
     "previous_hash": "f57965302d497152f284cb1c9985c2af88f08b62717491f99a0c10db1124db4e",
     "hash": "60669d2e7f801a991a7005a169aaa106676e45f58873a36c97d9308b64ffd8d9"
+  },
+  {
+    "id": "prov-1760542727898",
+    "timestamp": "2025-10-15T15:38:47.898Z",
+    "commit": {
+      "hash": "918e085fb5959ae3f2e6564d4b6d9f076d7f3df3",
+      "message": "feat: Update documentation to reflect V2 Arbiter production-ready status",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-15T15:38:47.899Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "60669d2e7f801a991a7005a169aaa106676e45f58873a36c97d9308b64ffd8d9",
+    "hash": "26ba9b3cab6ce6dabd886c263d4e93814d40297ff03004006cab3fb425f74d0a"
   }
 ]

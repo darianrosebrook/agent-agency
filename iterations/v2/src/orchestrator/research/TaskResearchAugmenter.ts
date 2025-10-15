@@ -233,7 +233,7 @@ export class TaskResearchAugmenter {
     return await this.knowledgeSeeker.processQuery({
       id: `task-research-${Date.now()}-${Math.random()
         .toString(36)
-        .substr(2, 9)}`,
+        .substring(2, 9)}`,
       query,
       queryType: queryType as any,
       maxResults: this.config.maxResultsPerQuery,

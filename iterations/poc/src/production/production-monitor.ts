@@ -202,7 +202,7 @@ export class ProductionMonitor {
     const alert: SystemAlert = {
       id: `${component}_${Date.now()}_${Math.random()
         .toString(36)
-        .substr(2, 9)}`,
+        .substring(2, 9)}`,
       level,
       title,
       message,
