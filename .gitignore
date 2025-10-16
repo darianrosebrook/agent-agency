@@ -51,6 +51,9 @@ iterations/v2/runtime-output/
 coverage/
 .nyc_output/
 
+# Mutation testing temporary files
+.stryker-tmp/
+
 # Test results
 test-results/
 playwright-report/
