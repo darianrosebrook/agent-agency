@@ -10,7 +10,6 @@
 import * as crypto from "crypto";
 import { EventEmitter } from "events";
 import * as path from "path";
-import { fileURLToPath } from "url";
 import { Worker } from "worker_threads";
 import { PerformanceTracker } from "../rl/PerformanceTracker";
 import {
@@ -34,12 +33,20 @@ import { TaskRetryHandler } from "./TaskRetryHandler";
 import { TaskRoutingManager } from "./TaskRoutingManager";
 import { TaskStateMachine } from "./TaskStateMachine";
 import {
+  TaskIntakeEnvelope,
+  TaskIntakeProcessor,
+  TaskIntakeResult,
+} from "./intake/TaskIntakeProcessor";
+import {
   BackpressureState,
   FailurePlan,
   SupervisorMetrics,
   WorkerPoolSupervisor,
   WorkerPriority,
 } from "./worker/WorkerPoolSupervisor";
+
+// Define orchestratorDir for ES modules (Jest-compatible)
+const orchestratorDir = path.join(process.cwd(), "src", "orchestrator");
 
 /**
  * Worker Pool Manager
@@ -69,11 +76,9 @@ class WorkerPoolManager extends EventEmitter {
   private createWorker(): string {
     const workerId = crypto.randomUUID();
 
-    // ES module equivalent of __dirname
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
-
-    const worker = new Worker(path.join(__dirname, "task-worker.js"), {
+    // Use absolute path to task-worker.js in the same directory
+    const workerPath = path.join(orchestratorDir, "task-worker.js");
+    const worker = new Worker(workerPath, {
       workerData: {
         workerId,
         capabilities: this.config.workerCapabilities,
@@ -380,6 +385,7 @@ export class TaskOrchestrator extends EventEmitter {
   private retryHandler: TaskRetryHandler;
   private routingManager: TaskRoutingManager;
   private performanceTracker: PerformanceTracker;
+  private intakeProcessor: TaskIntakeProcessor;
   private activeExecutions: Map<string, TaskExecution> = new Map();
   private metrics: Map<string, TaskMetrics> = new Map();
   private retryPlans: Map<string, FailurePlan> = new Map();
@@ -387,7 +393,8 @@ export class TaskOrchestrator extends EventEmitter {
   constructor(
     config: TaskOrchestratorConfig,
     agentRegistry?: any, // Optional dependency injection
-    performanceTracker?: PerformanceTracker
+    performanceTracker?: PerformanceTracker,
+    intakeProcessor?: TaskIntakeProcessor
   ) {
     super();
     this.config = config;
@@ -396,8 +403,7 @@ export class TaskOrchestrator extends EventEmitter {
     this.workerSupervisor = new WorkerPoolSupervisor({
       maxWorkers: config.workerPool.maxPoolSize,
       backpressure: {
-        saturationRatio:
-          supervisorOptions.backpressure?.saturationRatio ?? 0.8,
+        saturationRatio: supervisorOptions.backpressure?.saturationRatio ?? 0.8,
         queueDepth:
           supervisorOptions.backpressure?.queueDepth ??
           Math.max(1, Math.floor(config.queue.maxSize * 0.8)),
@@ -405,8 +411,7 @@ export class TaskOrchestrator extends EventEmitter {
       },
       retry: {
         baseDelayMs:
-          supervisorOptions.retry?.baseDelayMs ??
-          config.retry.initialDelay,
+          supervisorOptions.retry?.baseDelayMs ?? config.retry.initialDelay,
         maxDelayMs:
           supervisorOptions.retry?.maxDelayMs ?? config.retry.maxDelay,
         maxAttempts:
@@ -464,6 +469,8 @@ export class TaskOrchestrator extends EventEmitter {
         anonymizeData: true,
       });
 
+    this.intakeProcessor = intakeProcessor ?? new TaskIntakeProcessor();
+
     this.routingManager.setPerformanceTracker(this.performanceTracker);
 
     this.setupEventHandlers();
@@ -512,32 +519,78 @@ export class TaskOrchestrator extends EventEmitter {
   }
 
   /**
+   * Map task priority to intake priority hint
+   */
+  private mapPriorityToHint(priority?: string): "low" | "normal" | "high" {
+    switch (priority?.toLowerCase()) {
+      case "high":
+      case "urgent":
+      case "critical":
+        return "high";
+      case "low":
+      case "background":
+        return "low";
+      default:
+        return "normal";
+    }
+  }
+
+  /**
    * Submit a task for execution
    */
   async submitTask(task: any): Promise<string> {
-    // Validate task
-    this.validateTask(task);
+    // Process task through intake processor first
+    const envelope: TaskIntakeEnvelope = {
+      payload: task,
+      metadata: {
+        contentType: "application/json",
+        encoding: "utf8",
+        priorityHint: this.mapPriorityToHint(task.priority),
+        surface: task.metadata?.surface ?? "unknown",
+      },
+    };
+
+    const intakeResult: TaskIntakeResult = await this.intakeProcessor.process(
+      envelope
+    );
+
+    if (intakeResult.status === "rejected") {
+      // Convert intake issues to orchestrator errors
+      const errorMessages = intakeResult.errors.map(
+        (error) =>
+          `${error.code}: ${error.message}${
+            error.field ? ` (field: ${error.field})` : ""
+          }`
+      );
+      throw new Error(`Task intake failed: ${errorMessages.join(", ")}`);
+    }
+
+    // Use sanitized task from intake processor
+    const sanitizedTask = intakeResult.sanitizedTask!;
+
+    // Validate task (additional validation beyond intake)
+    this.validateTask(sanitizedTask);
 
     // Route task to appropriate agent
-    const routingDecision = await this.routingManager.routeTask(task);
-    task.assignedAgent = routingDecision.selectedAgent.id;
+    const routingDecision = await this.routingManager.routeTask(sanitizedTask);
+    (sanitizedTask as any).assignedAgent = routingDecision.selectedAgent.id;
 
     // Add to queue
-    this.taskQueue.enqueue(task);
+    this.taskQueue.enqueue(sanitizedTask);
 
     // Initialize task state first
-    this.stateMachine.initializeTask(task.id);
+    this.stateMachine.initializeTask(sanitizedTask.id);
 
     // Then transition to queued state
     await this.stateMachine.transition(
-      task.id,
+      sanitizedTask.id,
       TaskState.QUEUED,
       "Task submitted"
     );
 
     // Track performance
     const performanceRoutingDecision = {
-      taskId: task.id,
+      taskId: sanitizedTask.id,
       selectedAgent: routingDecision.selectedAgent.id,
       routingStrategy: routingDecision.strategy as any,
       confidence: routingDecision.confidence,
@@ -551,18 +604,18 @@ export class TaskOrchestrator extends EventEmitter {
     };
 
     const executionId = this.performanceTracker.startTaskExecution(
-      task.id,
+      sanitizedTask.id,
       routingDecision.selectedAgent.id,
       performanceRoutingDecision,
       {
-        taskType: task.type,
-        priority: task.priority,
-        timeoutMs: task.timeout,
-        budget: task.budget,
+        taskType: sanitizedTask.type,
+        priority: sanitizedTask.priority,
+        timeoutMs: sanitizedTask.timeoutMs,
+        budget: sanitizedTask.budget,
       }
     );
 
-    this.emit(TaskOrchestratorEvents.TASK_SUBMITTED, task);
+    this.emit(TaskOrchestratorEvents.TASK_SUBMITTED, sanitizedTask);
 
     events.emit({
       id: `event-${Date.now()}-${crypto.randomUUID()}`,
@@ -570,14 +623,21 @@ export class TaskOrchestrator extends EventEmitter {
       timestamp: new Date(),
       severity: EventSeverity.INFO,
       source: "TaskOrchestrator",
-      taskId: task.id,
-      metadata: { agentId: task.assignedAgent },
+      taskId: sanitizedTask.id,
+      metadata: {
+        agentId: (sanitizedTask as any).assignedAgent,
+        intakeWarnings:
+          intakeResult.warnings.length > 0
+            ? intakeResult.warnings.map((w) => w.message)
+            : undefined,
+        chunkCount: intakeResult.metadata.chunkCount,
+      },
     });
 
     // Start processing if queue allows
     this.processQueue();
 
-    return task.id;
+    return sanitizedTask.id;
   }
 
   /**
@@ -990,11 +1050,14 @@ export class TaskOrchestrator extends EventEmitter {
   }
 
   private logBackpressure(metrics: SupervisorMetrics): void {
-    const state: BackpressureState = this.workerSupervisor.getBackpressureState();
+    const state: BackpressureState =
+      this.workerSupervisor.getBackpressureState();
     console.warn(
-      `[WorkerPoolSupervisor] backpressure active (reason=${state.reason ?? "unknown"}) saturation=${metrics.saturationRatio.toFixed(
-        2
-      )} queueDepth=${metrics.queueDepth}`
+      `[WorkerPoolSupervisor] backpressure active (reason=${
+        state.reason ?? "unknown"
+      }) saturation=${metrics.saturationRatio.toFixed(2)} queueDepth=${
+        metrics.queueDepth
+      }`
     );
   }
 

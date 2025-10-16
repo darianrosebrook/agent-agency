@@ -6,11 +6,8 @@ import {
   AuditEventType,
   AuditSeverity,
 } from "../../observability/AuditLogger.js";
-import {
-  TaskIntakeIssue,
-  TaskIntakeProcessor,
-} from "./TaskIntakeProcessor.js";
 import { SubmitTaskOptions } from "../runtime/ArbiterRuntime.js";
+import { TaskIntakeIssue, TaskIntakeProcessor } from "./TaskIntakeProcessor.js";
 
 export interface TaskSubmissionResult {
   taskId: string;
@@ -49,9 +46,7 @@ function formatIntakeErrors(issues: TaskIntakeIssue[]): string {
     return "Task payload rejected by intake guardrails";
   }
 
-  return issues
-    .map((issue) => `${issue.code}: ${issue.message}`)
-    .join("; ");
+  return issues.map((issue) => `${issue.code}: ${issue.message}`).join("; ");
 }
 
 export async function processTaskSubmission(
@@ -60,7 +55,7 @@ export async function processTaskSubmission(
 ): Promise<TaskSubmissionResult> {
   const { intakeProcessor, auditLogger, runtime, generateTaskId } = deps;
 
-  const intakeResult = intakeProcessor.process({
+  const intakeResult = await intakeProcessor.process({
     payload: rawTask,
     metadata: {
       contentType: "application/json",

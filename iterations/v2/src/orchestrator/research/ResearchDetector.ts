@@ -139,13 +139,13 @@ export class ResearchDetector {
    * Check if text contains questions
    */
   private containsQuestions(text: string): boolean {
-    // Question patterns
+    // Question patterns - question words must be followed by content ending with ?
     const questionPatterns = [
-      /\b(what|how|why|when|where|who|which)\b.*\?/gi,
-      /\bcan\s+(you|we|i)\b.*\?/gi,
-      /\bshould\s+(i|we)\b.*\?/gi,
-      /\bis\s+there\b.*\?/gi,
-      /\bare\s+there\b.*\?/gi,
+      /\b(what|how|why|when|where|who|which)\b[^?]*\?/gi,
+      /\bcan\s+(you|we|i)\b[^?]*\?/gi,
+      /\bshould\s+(i|we)\b[^?]*\?/gi,
+      /\bis\s+there\b[^?]*\?/gi,
+      /\bare\s+there\b[^?]*\?/gi,
     ];
 
     return questionPatterns.some((pattern) => pattern.test(text));

@@ -94,6 +94,10 @@ describe("ResearchDetector", () => {
         description:
           "I know how to implement this feature. It's straightforward.",
         type: "code-editing",
+        metadata: {
+          prompt: "", // Override to remove the default question
+          requester: "test-user",
+        },
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -424,6 +428,10 @@ describe("ResearchDetector", () => {
       const task = mockTask({
         description: "Update the README file with installation instructions.",
         type: "general",
+        metadata: {
+          prompt: "", // Override to remove the default question
+          requester: "test-user",
+        },
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -600,6 +608,10 @@ describe("ResearchDetector", () => {
     it("should handle empty task description", () => {
       const task = mockTask({
         description: "",
+        metadata: {
+          prompt: "", // Override to remove the default question
+          requester: "test-user",
+        },
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -665,6 +677,10 @@ describe("ResearchDetector", () => {
     it("should handle tasks with only whitespace", () => {
       const task = mockTask({
         description: "   \n\t  ",
+        metadata: {
+          prompt: "", // Override to remove the default question
+          requester: "test-user",
+        },
       });
 
       const result = detector.detectResearchNeeds(task);

@@ -69,6 +69,7 @@ describe("TaskOrchestrator Unit Tests", () => {
 
   const sampleTask: Task = {
     id: "task-123",
+    description: "Sample task for testing",
     type: "script",
     priority: TaskPriority.MEDIUM,
     payload: {

@@ -174,13 +174,17 @@ export class ContextPreservationEngine {
       const snapshot = this.snapshotCache.get(snapshotId);
 
       if (!snapshot) {
-        return {
+        const result: any = {
           success: false,
           context: null,
           timeMs: Date.now() - startTime,
-          checksumValid: false,
           error: `Snapshot ${snapshotId} not found`,
         };
+
+        // Include checksumValid for consistency (errors always have it as false)
+        result.checksumValid = false;
+
+        return result;
       }
 
       let contextString: string;
@@ -192,13 +196,17 @@ export class ContextPreservationEngine {
         );
 
         if (!baseResult.success) {
-          return {
+          const result: any = {
             success: false,
             context: null,
             timeMs: Date.now() - startTime,
-            checksumValid: false,
             error: `Failed to restore base snapshot: ${baseResult.error}`,
           };
+
+          // Include checksumValid for consistency (errors always have it as false)
+          result.checksumValid = false;
+
+          return result;
         }
 
         const diffString = this.decompressData(snapshot.compressedContext);
@@ -222,7 +230,7 @@ export class ContextPreservationEngine {
             success: false,
             context: null,
             timeMs: Date.now() - startTime,
-            checksumValid: false,
+            checksumValid: false, // Always include when there's a checksum issue
             error: "Checksum validation failed - context may be corrupted",
           };
         }
@@ -230,18 +238,24 @@ export class ContextPreservationEngine {
 
       const timeMs = Date.now() - startTime;
 
-      return {
+      const result: any = {
         success: true,
         context,
         timeMs,
-        checksumValid,
       };
+
+      // Only include checksumValid if validation is enabled
+      if (this.config.checksumValidation) {
+        result.checksumValid = checksumValid;
+      }
+
+      return result;
     } catch (error) {
       return {
         success: false,
         context: null,
         timeMs: Date.now() - startTime,
-        checksumValid: false,
+        checksumValid: false, // Always include for errors
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }

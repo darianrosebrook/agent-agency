@@ -171,7 +171,9 @@ export class WaiverInterpreter {
     // Approve with conditions based on rule severity
     const conditions: string[] = [];
     let duration =
-      request.requestedDuration || this.config.defaultWaiverDuration;
+      request.requestedDuration !== undefined
+        ? request.requestedDuration
+        : this.config.defaultWaiverDuration;
 
     if (rule.severity === "critical" || rule.severity === "major") {
       conditions.push("Must provide weekly progress reports");
@@ -213,9 +215,10 @@ export class WaiverInterpreter {
     // Add approval details
     if (evaluation.shouldApprove) {
       const duration =
-        evaluation.recommendedDuration ||
-        request.requestedDuration ||
-        this.config.defaultWaiverDuration;
+        evaluation.recommendedDuration ??
+        (request.requestedDuration !== undefined
+          ? request.requestedDuration
+          : this.config.defaultWaiverDuration);
 
       decision.approvedDuration = duration;
       decision.expiresAt = new Date(Date.now() + duration);

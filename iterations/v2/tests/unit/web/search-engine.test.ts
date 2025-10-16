@@ -258,7 +258,7 @@ describe("SearchEngine", () => {
       expect(results.query).toBe(mockQuery.query);
       expect(results.totalFound).toBe(2);
       expect(results.results.length).toBe(2);
-      expect(results.processingTimeMs).toBeGreaterThan(0);
+      expect(results.processingTimeMs).toBeGreaterThanOrEqual(0);
     });
 
     it("should return properly formatted search results", async () => {

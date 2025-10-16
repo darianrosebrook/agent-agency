@@ -10,9 +10,35 @@
 import * as fs from "fs";
 import * as path from "path";
 import { ArbiterOrchestrator } from "../../src/orchestrator/ArbiterOrchestrator";
+import { TaskType } from "../../src/types/arbiter-orchestration";
 
-// TODO: Import proper Task type when task-types module is created
-type Task = any;
+/**
+ * Helper function to create valid Task objects for testing
+ */
+function createTestTask(
+  id: string,
+  type: TaskType,
+  description: string,
+  overrides: Partial<any> = {}
+): any {
+  return {
+    id,
+    type,
+    description,
+    requiredCapabilities: [], // Array of strings as expected by validation
+    priority: "normal", // String priority as expected by validation
+    timeoutMs: 30000,
+    budget: {
+      maxFiles: 10,
+      maxLoc: 100,
+    },
+    createdAt: new Date(),
+    attempts: 0,
+    maxAttempts: 3,
+    metadata: {},
+    ...overrides,
+  };
+}
 
 // Mock MCP client for testing
 class MockMCPClient {
@@ -124,19 +150,27 @@ describe("Terminal Agent E2E Workflow", () => {
   describe("Node.js Test Execution Workflow", () => {
     it("should complete full test execution workflow", async () => {
       // Create a test execution task
-      const task: Task = {
-        id: "e2e-test-001",
-        type: "test_execution",
-        description: "Run comprehensive test suite for Node.js project",
-        metadata: {
-          workingDirectory: testProjectRoot,
-          installDeps: true,
-          runLint: true,
-          coverage: true,
-          testArgs: ["test"],
-          timeout: 30000,
-        },
-      };
+      const task = createTestTask(
+        "e2e-test-001",
+        "script-execution",
+        "Run comprehensive test suite for Node.js project",
+        {
+          priority: 5,
+          timeoutMs: 30000,
+          budget: {
+            maxFiles: 20,
+            maxLoc: 500,
+          },
+          metadata: {
+            workingDirectory: testProjectRoot,
+            installDeps: true,
+            runLint: true,
+            coverage: true,
+            testArgs: ["test"],
+            timeout: 30000,
+          },
+        }
+      );
 
       // Submit task to orchestrator
       const result = await orchestrator.submitTask(task);
@@ -162,16 +196,18 @@ describe("Terminal Agent E2E Workflow", () => {
     });
 
     it("should handle build workflow end-to-end", async () => {
-      const buildTask: Task = {
-        id: "e2e-build-001",
-        type: "build",
-        description: "Build production artifacts",
-        metadata: {
-          workingDirectory: testProjectRoot,
-          buildArgs: ["run", "build"],
-          buildTimeout: 30000,
-        },
-      };
+      const buildTask = createTestTask(
+        "e2e-build-001",
+        "script-execution",
+        "Build production artifacts",
+        {
+          metadata: {
+            workingDirectory: testProjectRoot,
+            buildArgs: ["run", "build"],
+            buildTimeout: 30000,
+          },
+        }
+      );
 
       const result = await orchestrator.submitTask(buildTask);
 
@@ -183,18 +219,20 @@ describe("Terminal Agent E2E Workflow", () => {
     });
 
     it("should handle deployment workflow", async () => {
-      const deployTask: Task = {
-        id: "e2e-deploy-001",
-        type: "deployment",
-        description: "Deploy application to staging",
-        metadata: {
-          workingDirectory: testProjectRoot,
-          buildBeforeDeploy: true,
-          deployCommand: ["run", "deploy:staging"],
-          healthCheck: true,
-          postDeployCheck: true,
-        },
-      };
+      const deployTask = createTestTask(
+        "e2e-deploy-001",
+        "script-execution",
+        "Deploy application to staging",
+        {
+          metadata: {
+            workingDirectory: testProjectRoot,
+            buildBeforeDeploy: true,
+            deployCommand: ["run", "deploy:staging"],
+            healthCheck: true,
+            postDeployCheck: true,
+          },
+        }
+      );
 
       const result = await orchestrator.submitTask(deployTask);
 
@@ -207,17 +245,19 @@ describe("Terminal Agent E2E Workflow", () => {
 
   describe("Package Management Workflow", () => {
     it("should handle npm package installation", async () => {
-      const packageTask: Task = {
-        id: "e2e-package-001",
-        type: "package_management",
-        description: "Install project dependencies",
-        metadata: {
-          workingDirectory: testProjectRoot,
-          packageManager: "npm",
-          packageCommand: "install",
-          packages: ["express", "lodash"],
-        },
-      };
+      const packageTask = createTestTask(
+        "e2e-package-001",
+        "script-execution",
+        "Install project dependencies",
+        {
+          metadata: {
+            workingDirectory: testProjectRoot,
+            packageManager: "npm",
+            packageCommand: "install",
+            packages: ["express", "lodash"],
+          },
+        }
+      );
 
       const result = await orchestrator.submitTask(packageTask);
 
@@ -234,17 +274,19 @@ describe("Terminal Agent E2E Workflow", () => {
         "express==4.18.0\nlodash==4.17.21\n"
       );
 
-      const pythonTask: Task = {
-        id: "e2e-python-001",
-        type: "package_management",
-        description: "Install Python dependencies",
-        metadata: {
-          workingDirectory: testProjectRoot,
-          packageManager: "pip",
-          packageCommand: "install",
-          packages: ["-r", "requirements.txt"],
-        },
-      };
+      const pythonTask = createTestTask(
+        "e2e-python-001",
+        "script-execution",
+        "Install Python dependencies",
+        {
+          metadata: {
+            workingDirectory: testProjectRoot,
+            packageManager: "pip",
+            packageCommand: "install",
+            packages: ["-r", "requirements.txt"],
+          },
+        }
+      );
 
       const result = await orchestrator.submitTask(pythonTask);
 
@@ -257,15 +299,17 @@ describe("Terminal Agent E2E Workflow", () => {
 
   describe("Error Handling and Recovery", () => {
     it("should handle invalid working directory gracefully", async () => {
-      const invalidTask: Task = {
-        id: "e2e-invalid-dir-001",
-        type: "test_execution",
-        description: "Test with invalid directory",
-        metadata: {
-          workingDirectory: "/nonexistent/directory/that/does/not/exist",
-          testArgs: ["test"],
-        },
-      };
+      const invalidTask = createTestTask(
+        "e2e-invalid-dir-001",
+        "script-execution",
+        "Test with invalid directory",
+        {
+          metadata: {
+            workingDirectory: "/nonexistent/directory/that/does/not/exist",
+            testArgs: ["test"],
+          },
+        }
+      );
 
       const result = await orchestrator.submitTask(invalidTask);
 
@@ -277,16 +321,18 @@ describe("Terminal Agent E2E Workflow", () => {
     });
 
     it("should handle command timeout gracefully", async () => {
-      const timeoutTask: Task = {
-        id: "e2e-timeout-001",
-        type: "test_execution",
-        description: "Test command timeout handling",
-        metadata: {
-          workingDirectory: testProjectRoot,
-          testArgs: ["test"],
-          timeout: 1, // Very short timeout to trigger timeout
-        },
-      };
+      const timeoutTask = createTestTask(
+        "e2e-timeout-001",
+        "script-execution",
+        "Test command timeout handling",
+        {
+          metadata: {
+            workingDirectory: testProjectRoot,
+            testArgs: ["test"],
+            timeout: 1, // Very short timeout to trigger timeout
+          },
+        }
+      );
 
       const result = await orchestrator.submitTask(timeoutTask);
 
@@ -297,21 +343,23 @@ describe("Terminal Agent E2E Workflow", () => {
     });
 
     it("should handle disallowed commands gracefully", async () => {
-      const dangerousTask: Task = {
-        id: "e2e-dangerous-001",
-        type: "infrastructure",
-        description: "Attempt dangerous command execution",
-        metadata: {
-          workingDirectory: testProjectRoot,
-          commands: [
-            {
-              command: "rm",
-              args: ["-rf", "/tmp/safe-directory"],
-              timeout: 5000,
-            },
-          ],
-        },
-      };
+      const dangerousTask = createTestTask(
+        "e2e-dangerous-001",
+        "general",
+        "Attempt dangerous command execution",
+        {
+          metadata: {
+            workingDirectory: testProjectRoot,
+            commands: [
+              {
+                command: "rm",
+                args: ["-rf", "/tmp/safe-directory"],
+                timeout: 5000,
+              },
+            ],
+          },
+        }
+      );
 
       const result = await orchestrator.submitTask(dangerousTask);
 
@@ -358,21 +406,25 @@ describe("Terminal Agent E2E Workflow", () => {
 
     it("should respect session limits", async () => {
       // Create tasks that would exceed session limits if not managed properly
-      const manyTasks = Array.from({ length: 10 }, (_, i) => ({
-        id: `e2e-limit-${i + 1}`,
-        type: "infrastructure" as const,
-        description: `Resource intensive task ${i + 1}`,
-        metadata: {
-          workingDirectory: testProjectRoot,
-          commands: [
-            {
-              command: "sleep",
-              args: ["1"], // Simple sleep command
-              timeout: 5000,
+      const manyTasks = Array.from({ length: 10 }, (_, i) =>
+        createTestTask(
+          `e2e-limit-${i + 1}`,
+          "general",
+          `Resource intensive task ${i + 1}`,
+          {
+            metadata: {
+              workingDirectory: testProjectRoot,
+              commands: [
+                {
+                  command: "sleep",
+                  args: ["1"], // Simple sleep command
+                  timeout: 5000,
+                },
+              ],
             },
-          ],
-        },
-      }));
+          }
+        )
+      );
 
       // Submit tasks - should be queued appropriately
       const submitPromises = manyTasks.map((task) =>
@@ -388,16 +440,18 @@ describe("Terminal Agent E2E Workflow", () => {
 
   describe("Resource Cleanup", () => {
     it("should cleanup resources after task completion", async () => {
-      const cleanupTask: Task = {
-        id: "e2e-cleanup-001",
-        type: "test_execution",
-        description: "Test resource cleanup",
-        metadata: {
-          workingDirectory: testProjectRoot,
-          testArgs: ["test"],
-          timeout: 5000,
-        },
-      };
+      const cleanupTask = createTestTask(
+        "e2e-cleanup-001",
+        "script-execution",
+        "Test resource cleanup",
+        {
+          metadata: {
+            workingDirectory: testProjectRoot,
+            testArgs: ["test"],
+            timeout: 5000,
+          },
+        }
+      );
 
       await orchestrator.submitTask(cleanupTask);
 
@@ -405,15 +459,17 @@ describe("Terminal Agent E2E Workflow", () => {
       await new Promise((resolve) => setTimeout(resolve, 200));
 
       // Check that orchestrator can still accept new tasks (resources cleaned up)
-      const followUpTask: Task = {
-        id: "e2e-cleanup-followup-001",
-        type: "test_execution",
-        description: "Follow-up task after cleanup",
-        metadata: {
-          workingDirectory: testProjectRoot,
-          testArgs: ["test"],
-        },
-      };
+      const followUpTask = createTestTask(
+        "e2e-cleanup-followup-001",
+        "script-execution",
+        "Follow-up task after cleanup",
+        {
+          metadata: {
+            workingDirectory: testProjectRoot,
+            testArgs: ["test"],
+          },
+        }
+      );
 
       const result = await orchestrator.submitTask(followUpTask);
       expect(result.taskId).toBe(followUpTask.id);
@@ -421,15 +477,23 @@ describe("Terminal Agent E2E Workflow", () => {
 
     it("should handle orchestrator shutdown gracefully", async () => {
       // Submit a task
-      const shutdownTask: Task = {
-        id: "e2e-shutdown-001",
-        type: "test_execution",
-        description: "Test shutdown handling",
-        metadata: {
-          workingDirectory: testProjectRoot,
-          testArgs: ["test"],
-        },
-      };
+      const shutdownTask = createTestTask(
+        "e2e-shutdown-001",
+        "script-execution",
+        "Test shutdown handling",
+        {
+          priority: 3,
+          timeoutMs: 15000,
+          budget: {
+            maxFiles: 5,
+            maxLoc: 50,
+          },
+          metadata: {
+            workingDirectory: testProjectRoot,
+            testArgs: ["test"],
+          },
+        }
+      );
 
       await orchestrator.submitTask(shutdownTask);
 
@@ -446,22 +510,24 @@ describe("Terminal Agent E2E Workflow", () => {
     it("should route terminal tasks to appropriate agents", async () => {
       // This test would verify that tasks requiring terminal access
       // are routed to agents that have terminal capabilities
-      const terminalTask: Task = {
-        id: "e2e-routing-001",
-        type: "infrastructure",
-        description: "Task requiring terminal access",
-        metadata: {
-          requiresTerminal: true,
-          workingDirectory: testProjectRoot,
-          commands: [
-            {
-              command: "echo",
-              args: ["routing test"],
-              timeout: 5000,
-            },
-          ],
-        },
-      };
+      const terminalTask = createTestTask(
+        "e2e-routing-001",
+        "script-execution",
+        "Task requiring terminal access for routing test",
+        {
+          metadata: {
+            requiresTerminal: true,
+            workingDirectory: testProjectRoot,
+            commands: [
+              {
+                command: "echo",
+                args: ["routing test"],
+                timeout: 5000,
+              },
+            ],
+          },
+        }
+      );
 
       const result = await orchestrator.submitTask(terminalTask);
 

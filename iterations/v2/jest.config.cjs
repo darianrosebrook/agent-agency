@@ -30,7 +30,11 @@ module.exports = {
     "^.+\\.ts$": [
       "ts-jest",
       {
-        tsconfig: "tsconfig.json",
+        tsconfig: {
+          ...require("./tsconfig.json").compilerOptions,
+          module: "ES2022",
+          target: "ES2022",
+        },
         useESM: true,
       },
     ],

@@ -4,11 +4,9 @@
  * Validates streaming validation, chunking, and guard rails for Arbiter task intake.
  */
 
+// Note: BufferEncoding is not exported from buffer in some Node.js versions
 import fc from "fast-check";
-import {
-  TaskIntakeIssue,
-  TaskIntakeProcessor,
-} from "../../../../src/orchestrator/intake/TaskIntakeProcessor";
+import { TaskIntakeProcessor } from "../../../../src/orchestrator/intake/TaskIntakeProcessor";
 
 const BASE_TASK = {
   id: "task-edge-001",
@@ -49,29 +47,33 @@ function makeEnvelope(overrides: Partial<typeof BASE_TASK> = {}) {
 }
 
 describe("TaskIntakeProcessor", () => {
-  it("rejects empty payloads with actionable error", () => {
+  it("rejects empty payloads with actionable error", async () => {
     const processor = new TaskIntakeProcessor();
-    const result = processor.process({ payload: "" });
+    const result = await processor.process({ payload: "" });
 
     expect(result.status).toBe("rejected");
-    expect(result.errors.map((e) => e.code)).toContain("EMPTY_PAYLOAD");
-    expect(result.metadata.rawSizeBytes).toBe(0);
+    expect((result as any).errors.map((e: any) => e.code)).toContain(
+      "EMPTY_PAYLOAD"
+    );
+    expect((result as any).metadata.rawSizeBytes).toBe(0);
   });
 
-  it("rejects malformed JSON inputs", () => {
+  it("rejects malformed JSON inputs", async () => {
     const processor = new TaskIntakeProcessor();
-    const result = processor.process({
+    const result = await processor.process({
       payload: "{ this is not valid json",
       metadata: { contentType: "application/json" },
     });
 
     expect(result.status).toBe("rejected");
-    expect(result.errors.map((e) => e.code)).toContain("MALFORMED_JSON");
+    expect((result as any).errors.map((e: any) => e.code)).toContain(
+      "MALFORMED_JSON"
+    );
   });
 
-  it("rejects tasks missing required fields", () => {
+  it("rejects tasks missing required fields", async () => {
     const processor = new TaskIntakeProcessor();
-    const result = processor.process(
+    const result = await processor.process(
       makeEnvelope({
         id: "",
         surface: "",
@@ -79,12 +81,14 @@ describe("TaskIntakeProcessor", () => {
     );
 
     expect(result.status).toBe("rejected");
-    expect(result.errors.some((e) => e.code === "MISSING_REQUIRED_FIELD")).toBe(
-      true
-    );
+    expect(
+      (result as any).errors.some(
+        (e: any) => e.code === "MISSING_REQUIRED_FIELD"
+      )
+    ).toBe(true);
   });
 
-  it("chunks oversized descriptions while preserving original text", () => {
+  it("chunks oversized descriptions while preserving original text", async () => {
     const processor = new TaskIntakeProcessor({
       chunkSizeBytes: 1024,
       maxDescriptionBytes: 4096,
@@ -92,22 +96,22 @@ describe("TaskIntakeProcessor", () => {
 
     const longDescription = "Chunk me!".repeat(800); // > 1024 bytes
     const envelope = makeEnvelope({ description: longDescription });
-    const result = processor.process(envelope);
+    const result = await processor.process(envelope);
 
     expect(result.status).toBe("accepted");
     expect(result.chunks.length).toBeGreaterThan(1);
     expect(
-      result.chunks.every(
-        (chunk) => Buffer.byteLength(chunk, "utf8") <= 1024
-      )
+      result.chunks.every((chunk) => Buffer.byteLength(chunk, "utf8") <= 1024)
     ).toBe(true);
     expect(result.chunks.join("")).toBe(longDescription);
     expect(
-      result.warnings.some((warning) => warning.code === "DESCRIPTION_CHUNKED")
+      (result as any).warnings.some(
+        (warning: any) => warning.code === "DESCRIPTION_CHUNKED"
+      )
     ).toBe(true);
   });
 
-  it("preserves multibyte characters across chunk boundaries", () => {
+  it("preserves multibyte characters across chunk boundaries", async () => {
     const processor = new TaskIntakeProcessor({
       chunkSizeBytes: 512,
       maxDescriptionBytes: 2048,
@@ -115,44 +119,46 @@ describe("TaskIntakeProcessor", () => {
 
     const unicodeDescription = "🤖 CAWS テスト ".repeat(200); // force multiple chunks with multibyte chars
     const envelope = makeEnvelope({ description: unicodeDescription });
-    const result = processor.process(envelope);
+    const result = await processor.process(envelope);
 
     expect(result.status).toBe("accepted");
     expect(result.chunks.length).toBeGreaterThan(1);
     expect(result.chunks.join("")).toBe(unicodeDescription);
   });
 
-  it("rejects binary payloads to protect ingestion pipeline", () => {
+  it("rejects binary payloads to protect ingestion pipeline", async () => {
     const processor = new TaskIntakeProcessor();
     const binaryBuffer = Buffer.from([0x00, 0x01, 0x02, 0x03, 0xff, 0x10]);
 
-    const result = processor.process({
+    const result = await processor.process({
       payload: binaryBuffer,
       metadata: { contentType: "application/octet-stream" },
     });
 
     expect(result.status).toBe("rejected");
-    expect(result.errors.map((e) => e.code)).toContain("BINARY_PAYLOAD");
+    expect((result as any).errors.map((e: any) => e.code)).toContain(
+      "BINARY_PAYLOAD"
+    );
   });
 
-  it("preserves arbitrary unicode content under property-based fuzzing", () => {
+  it("preserves arbitrary unicode content under property-based fuzzing", async () => {
     const processor = new TaskIntakeProcessor({
       chunkSizeBytes: 256,
       maxDescriptionBytes: 8192,
     });
 
-    fc.assert(
-      fc.property(
+    await fc.assert(
+      fc.asyncProperty(
         fc.unicodeString({ minLength: 1, maxLength: 1024 }),
-        (unicodeDescription) => {
+        async (unicodeDescription) => {
           const envelope = makeEnvelope({ description: unicodeDescription });
-          const result = processor.process(envelope);
+          const result = await processor.process(envelope);
 
           expect(result.status).toBe("accepted");
           expect(result.chunks.join("")).toBe(unicodeDescription);
           expect(
-            result.chunks.every(
-              (chunk) => Buffer.byteLength(chunk, "utf8") <= 256
+            (result as any).chunks.every(
+              (chunk: any) => Buffer.byteLength(chunk, "utf8") <= 256
             )
           ).toBe(true);
         }
@@ -161,26 +167,31 @@ describe("TaskIntakeProcessor", () => {
     );
   });
 
-  it("detects binary payloads via fuzzed corpora", () => {
+  it("detects binary payloads via fuzzed corpora", async () => {
     const processor = new TaskIntakeProcessor();
 
-    fc.assert(
-      fc.property(
+    await fc.assert(
+      fc.asyncProperty(
         fc
-          .array(fc.integer({ min: 0, max: 255 }), { minLength: 32, maxLength: 2048 })
-          .map((bytes) => {
+          .array(fc.integer({ min: 0, max: 255 }), {
+            minLength: 32,
+            maxLength: 2048,
+          })
+          .map((bytes: number[]) => {
             bytes[0] = 0x00;
             return Buffer.from(bytes);
           }),
-        (buffer) => {
-          const result = processor.process({
+        async (buffer: any) => {
+          const result = await processor.process({
             payload: buffer,
             metadata: { contentType: "application/octet-stream" },
           });
 
-          expect(result.status).toBe("rejected");
+          expect((result as any).status).toBe("rejected");
           expect(
-            result.errors.some((issue) => issue.code === "BINARY_PAYLOAD")
+            (result as any).errors.some(
+              (issue: any) => issue.code === "BINARY_PAYLOAD"
+            )
           ).toBe(true);
         }
       ),

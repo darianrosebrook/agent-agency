@@ -1,0 +1,243 @@
+# Adaptive Policy Configuration - ARBITER-031
+# YAML configuration for dynamic weight/timeout adjustments based on worker performance
+# Author: @darianrosebrook
+
+# Task assignment weight adjustments by performance tier
+taskAssignment:
+  enabled: true
+  weightAdjustments:
+    excellent: 1.5    # 50% increase in task assignment probability
+    good: 1.2         # 20% increase
+    average: 1.0      # Baseline weight
+    poor: 0.7         # 30% decrease
+    critical: 0.3     # 70% decrease
+  minWeight: 0.1      # Minimum assignment weight
+  maxWeight: 2.0      # Maximum assignment weight
+
+# Timeout budget multipliers by performance tier
+timeoutBudgets:
+  enabled: true
+  multipliers:
+    excellent: 1.3    # 30% more time for reliable completion
+    good: 1.1         # 10% more time
+    average: 1.0      # Baseline timeout
+    poor: 0.8         # 20% less time (encourage efficiency)
+    critical: 0.5     # 50% less time (urgent completion needed)
+  minMultiplier: 0.3  # Minimum timeout multiplier
+  maxMultiplier: 2.0  # Maximum timeout multiplier
+
+# Retry cap adjustments by performance tier
+retryCaps:
+  enabled: true
+  adjustments:
+    excellent: 5      # More retries for reliable workers
+    good: 4           # Standard retries with bonus
+    average: 3        # Baseline retry cap
+    poor: 2           # Fewer retries
+    critical: 1       # Minimal retries
+  minRetries: 1       # Absolute minimum retries
+  maxRetries: 7       # Maximum retries allowed
+
+# Resource allocation multipliers by performance tier
+resourceAllocation:
+  enabled: true
+  memoryMultipliers:
+    excellent: 1.2    # 20% more memory for optimal performance
+    good: 1.1         # 10% more memory
+    average: 1.0      # Baseline memory allocation
+    poor: 0.9         # 10% less memory
+    critical: 0.7     # 30% less memory
+  cpuMultipliers:
+    excellent: 1.2    # 20% more CPU for optimal performance
+    good: 1.1         # 10% more CPU
+    average: 1.0      # Baseline CPU allocation
+    poor: 0.9         # 10% less CPU
+    critical: 0.7     # 30% less CPU
+
+# Policy evaluation and update intervals
+thresholds:
+  performanceEvaluationInterval: 300000    # 5 minutes in milliseconds
+  policyUpdateInterval: 600000             # 10 minutes in milliseconds
+  emergencyThreshold: -100                 # Balance threshold for emergency policies
+
+# Task type specific overrides
+taskTypeOverrides:
+  refactor:
+    taskAssignment:
+      excellent: 1.3
+      good: 1.1
+      average: 1.0
+      poor: 0.6
+      critical: 0.2
+    timeoutBudgets:
+      excellent: 1.2
+      good: 1.0
+      average: 0.9
+      poor: 0.7
+      critical: 0.5
+    retryCaps:
+      excellent: 4
+      good: 3
+      average: 2
+      poor: 1
+      critical: 1
+  
+  fix:
+    taskAssignment:
+      excellent: 1.4
+      good: 1.2
+      average: 1.0
+      poor: 0.8
+      critical: 0.4
+    timeoutBudgets:
+      excellent: 1.1
+      good: 1.0
+      average: 0.8
+      poor: 0.6
+      critical: 0.4
+    retryCaps:
+      excellent: 3
+      good: 2
+      average: 2
+      poor: 1
+      critical: 1
+  
+  feature:
+    taskAssignment:
+      excellent: 1.6
+      good: 1.3
+      average: 1.0
+      poor: 0.7
+      critical: 0.3
+    timeoutBudgets:
+      excellent: 1.4
+      good: 1.2
+      average: 1.0
+      poor: 0.8
+      critical: 0.6
+    retryCaps:
+      excellent: 5
+      good: 4
+      average: 3
+      poor: 2
+      critical: 1
+
+# Emergency policies for critical situations
+emergency:
+  enabled: true
+  conditions:
+    - balance: -200          # Critical negative balance
+      action: "suspend"      # Suspend task assignment
+    - balance: -100          # High negative balance
+      action: "restrict"     # Restrict to low-risk tasks
+    - violations: 5          # 5+ CAWS violations in 24h
+      action: "mandatory_training"
+    - successRate: 0.3       # Success rate below 30%
+      action: "performance_review"
+  
+  actions:
+    suspend:
+      taskAssignmentWeight: 0.0
+      timeoutMultiplier: 0.5
+      retryCap: 0
+      memoryMultiplier: 0.5
+      cpuMultiplier: 0.5
+    
+    restrict:
+      taskAssignmentWeight: 0.2
+      timeoutMultiplier: 0.7
+      retryCap: 1
+      memoryMultiplier: 0.7
+      cpuMultiplier: 0.7
+    
+    mandatory_training:
+      taskAssignmentWeight: 0.5
+      timeoutMultiplier: 0.8
+      retryCap: 2
+      memoryMultiplier: 0.8
+      cpuMultiplier: 0.8
+
+# Performance tier thresholds
+performanceTiers:
+  excellent:
+    minBalance: 100
+    minSuccessRate: 0.9
+    minCAWSCompliance: 0.95
+    maxViolations: 0
+  
+  good:
+    minBalance: 50
+    minSuccessRate: 0.8
+    minCAWSCompliance: 0.9
+    maxViolations: 1
+  
+  average:
+    minBalance: 0
+    minSuccessRate: 0.6
+    minCAWSCompliance: 0.8
+    maxViolations: 3
+  
+  poor:
+    minBalance: -50
+    minSuccessRate: 0.4
+    minCAWSCompliance: 0.6
+    maxViolations: 5
+  
+  critical:
+    minBalance: -100
+    minSuccessRate: 0.2
+    minCAWSCompliance: 0.4
+    maxViolations: 10
+
+# Monitoring and alerting
+monitoring:
+  enabled: true
+  alertThresholds:
+    policyUpdateFailures: 3      # Alert after 3 failed policy updates
+    emergencyPoliciesActivated: 1 # Alert on any emergency policy activation
+    performanceDecline: 0.2      # Alert if performance drops by 20%
+  
+  reporting:
+    dailyReports: true
+    weeklyTrends: true
+    monthlyAnalysis: true
+    
+  notifications:
+    channels: ["log", "email", "webhook"]
+    recipients: ["admin@example.com", "ops@example.com"]
+
+# Learning and adaptation
+learning:
+  enabled: true
+  adaptationRate: 0.1           # How quickly to adapt to new patterns
+  historyWindow: 30             # Days of history to consider
+  predictionHorizon: 7          # Days ahead to predict performance
+  
+  features:
+    - "task_complexity"
+    - "time_of_day"
+    - "day_of_week"
+    - "agent_fatigue"
+    - "resource_availability"
+  
+  models:
+    performance_prediction: "linear_regression"
+    anomaly_detection: "isolation_forest"
+    clustering: "kmeans"
+
+# Compliance and governance
+compliance:
+  auditFrequency: "weekly"
+  retentionPeriod: 365          # Days to retain policy decisions
+  
+  requirements:
+    - "document_all_policy_changes"
+    - "maintain_decision_audit_trail"
+    - "regular_performance_reviews"
+    - "emergency_policy_approval"
+  
+  approvals:
+    policyChanges: ["admin", "ops_lead"]
+    emergencyActions: ["admin", "security_lead"]
+    thresholdAdjustments: ["admin", "data_scientist"]
+

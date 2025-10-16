@@ -523,9 +523,15 @@ export class MLPrecedentMatcher {
   ): MLPrecedentMatch {
     // Simple rule-based fallback
     const categoryMatch =
-      context.category === precedent.applicability.category ? 1.0 : 0.0;
+      precedent.applicability?.category &&
+      context.category === precedent.applicability.category
+        ? 1.0
+        : 0.0;
     const severityMatch =
-      context.severity === precedent.applicability.severity ? 1.0 : 0.8;
+      precedent.applicability?.severity &&
+      context.severity === precedent.applicability.severity
+        ? 1.0
+        : 0.8;
 
     // Simple text similarity
     const contextText = this.extractContextText(context);
@@ -578,14 +584,14 @@ export class MLPrecedentMatcher {
    * Extract text from precedent
    */
   private extractPrecedentText(precedent: Precedent): string {
-    const reasoningText = Array.isArray(precedent.verdict.reasoning)
+    const reasoningText = Array.isArray(precedent.verdict?.reasoning)
       ? precedent.verdict.reasoning.map((r) => r.description).join(" ")
-      : precedent.verdict.reasoning;
+      : precedent.verdict?.reasoning || "";
 
     return [
-      ...precedent.keyFacts,
+      ...(precedent.keyFacts || []),
       reasoningText,
-      ...precedent.applicability.conditions,
+      ...(precedent.applicability?.conditions || []),
     ].join(" ");
   }
 

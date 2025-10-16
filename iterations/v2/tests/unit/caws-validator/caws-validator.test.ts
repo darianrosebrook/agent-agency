@@ -200,8 +200,9 @@ describe("CAWSValidator", () => {
         executeGates: true,
       });
 
-      // Quality gates execution is currently stubbed, so should be empty array
-      expect(result.qualityGates).toEqual([]);
+      // Quality gates should be executed and return results
+      expect(Array.isArray(result.qualityGates)).toBe(true);
+      expect(result.qualityGates.length).toBeGreaterThan(0);
     });
 
     it("should skip spec validation when requested", async () => {

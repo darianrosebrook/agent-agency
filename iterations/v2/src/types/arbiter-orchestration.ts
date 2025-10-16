@@ -85,6 +85,19 @@ export interface TaskRequest extends Omit<Task, "id" | "createdAt"> {
   requestedId?: string;
 }
 
+/**
+ * Input format for task submission
+ */
+export interface TaskInput {
+  payload: Record<string, any>;
+  metadata: {
+    contentType: string;
+    encoding: string;
+    priorityHint: string;
+    surface: string;
+  };
+}
+
 export enum TaskStatus {
   QUEUED = "queued",
   ROUTING = "routing",

@@ -287,19 +287,31 @@ describe("WaiverInterpreter", () => {
     it("should auto-revoke expired waiver when configured", async () => {
       const customInterpreter = new WaiverInterpreter({
         autoRevokeOnExpiration: true,
+        minEvidenceForApproval: 1, // Ensure approval with requested duration
       });
 
       const rule = createRule();
       const request = createRequest({
-        requestedDuration: 1, // Expires immediately
+        requestedDuration: -1000, // Already expired 1 second ago
+        evidence: ["single-evidence"], // Ensure we have evidence
       });
 
-      await customInterpreter.processWaiver(request, rule, "arbiter-1");
+      const decision = await customInterpreter.processWaiver(
+        request,
+        rule,
+        "arbiter-1"
+      );
 
-      // Wait for expiration
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      // Verify the waiver was created with correct duration
+      expect(decision.approvedDuration).toBe(-1000);
+      expect(decision.expiresAt).toBeDefined();
 
+      // First call should trigger auto-revoke and return false
       expect(customInterpreter.isWaiverActive("RULE-001")).toBe(false);
+
+      // Second call should still return false (waiver should be removed)
+      expect(customInterpreter.isWaiverActive("RULE-001")).toBe(false);
+      expect(customInterpreter.getActiveWaiver("RULE-001")).toBeUndefined();
     });
   });
 
@@ -476,19 +488,26 @@ describe("WaiverInterpreter", () => {
 
   describe("cleanupExpiredWaivers", () => {
     it("should remove expired waivers", async () => {
-      const rule = createRule();
-      const request = createRequest({
-        requestedDuration: 1, // Expires immediately
+      const customInterpreter = new WaiverInterpreter({
+        minEvidenceForApproval: 1, // Ensure approval with provided evidence
+        autoRevokeOnExpiration: false, // Don't auto-revoke so waiver stays in map
       });
 
-      await interpreter.processWaiver(request, rule, "arbiter-1");
+      const rule = createRule();
+      const request = createRequest({
+        requestedDuration: -1000, // Already expired 1 second ago
+        evidence: ["evidence"], // Ensure approval
+      });
 
-      // Wait for expiration
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await customInterpreter.processWaiver(request, rule, "arbiter-1");
 
-      const cleaned = interpreter.cleanupExpiredWaivers();
+      // The waiver should be expired, so getActiveWaiver returns undefined
+      expect(customInterpreter.getActiveWaiver("RULE-001")).toBeUndefined();
+
+      // But cleanupExpiredWaivers should still find and remove it
+      const cleaned = customInterpreter.cleanupExpiredWaivers();
       expect(cleaned).toBe(1);
-      expect(interpreter.isWaiverActive("RULE-001")).toBe(false);
+      expect(customInterpreter.isWaiverActive("RULE-001")).toBe(false);
     });
 
     it("should return 0 when no waivers to clean", () => {

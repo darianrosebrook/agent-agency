@@ -112,6 +112,7 @@
     "fast-check": "^3.0.0",
     "js-yaml": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
+    "mathjs": "^15.0.0",
     "ollama": "^0.3.0",
     "openai": "^4.24.7",
     "pg": "^8.16.3",

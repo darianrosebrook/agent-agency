@@ -319,7 +319,8 @@ describe("ErrorPatternRecognizer", () => {
         promptModifications: [],
       };
 
-      const errorMessage = "TypeError: Expected number but got string";
+      const errorMessage =
+        "TypeError: Cannot read property 'length' of undefined";
 
       const result = await recognizer.analyzeError(iteration, errorMessage);
 
@@ -438,7 +439,7 @@ describe("ErrorPatternRecognizer", () => {
       expect(stats).toHaveProperty("totalPatterns");
       expect(stats).toHaveProperty("averageConfidence");
       expect(stats).toHaveProperty("averageSuccessRate");
-      expect(stats).toHaveProperty("categoryCounts");
+      expect(stats).toHaveProperty("byCategory");
       expect(stats.totalPatterns).toBe(2);
     });
 
@@ -467,7 +468,7 @@ describe("ErrorPatternRecognizer", () => {
       expect(result[0].category).toBe(ErrorCategory.TIMEOUT_ERROR);
     });
 
-    it("should get most common patterns", () => {
+    it("should get most common patterns", async () => {
       const patterns = [
         {
           patternId: "p4",
@@ -497,6 +498,7 @@ describe("ErrorPatternRecognizer", () => {
 
       // Need to reinitialize to load patterns
       const newRecognizer = new ErrorPatternRecognizer(mockDbClient);
+      await newRecognizer.initialize();
 
       const common = newRecognizer.getMostCommonPatterns(1);
 

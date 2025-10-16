@@ -5,8 +5,12 @@
  * and normalization before tasks enter the orchestration pipeline.
  */
 
-import { ValidationUtils } from "../Validation";
 import { Task, TaskType } from "../../types/arbiter-orchestration";
+import { ValidationUtils } from "../Validation";
+import {
+  StreamingJSONParser,
+  shouldUseStreamingParsing,
+} from "./StreamingJSONParser";
 
 export interface TaskIntakeIssue {
   code: string;
@@ -34,7 +38,7 @@ export interface TaskIntakeEnvelope {
   payload: string | Buffer | Record<string, any>;
   metadata?: {
     contentType?: string;
-    encoding?: BufferEncoding;
+    encoding?: string;
     priorityHint?: "low" | "normal" | "high" | "urgent";
     surface?: string;
   };
@@ -45,6 +49,7 @@ export interface TaskIntakeConfig {
   maxDescriptionBytes?: number;
   chunkOverlapBytes?: number;
   requiredFields?: string[];
+  streamingParseThresholdBytes?: number; // Default: 5120 (5KB)
   defaults?: {
     priority?: number;
     timeoutMs?: number;
@@ -84,6 +89,7 @@ type ResolvedTaskIntakeConfig = {
   maxDescriptionBytes: number;
   chunkOverlapBytes: number;
   requiredFields: string[];
+  streamingParseThresholdBytes: number;
   defaults: ResolvedDefaults;
   binaryDetection: ResolvedBinaryDetection;
 };
@@ -93,6 +99,7 @@ const DEFAULT_CONFIG: ResolvedTaskIntakeConfig = {
   maxDescriptionBytes: 20 * 1024, // 20 KiB guard rail
   chunkOverlapBytes: 0,
   requiredFields: ["id", "type", "description"],
+  streamingParseThresholdBytes: 5120, // 5KB
   defaults: {
     priority: 5,
     timeoutMs: 5 * 60 * 1000,
@@ -118,6 +125,9 @@ function resolveConfig(config?: TaskIntakeConfig): ResolvedTaskIntakeConfig {
     chunkOverlapBytes:
       config?.chunkOverlapBytes ?? DEFAULT_CONFIG.chunkOverlapBytes,
     requiredFields: config?.requiredFields ?? DEFAULT_CONFIG.requiredFields,
+    streamingParseThresholdBytes:
+      config?.streamingParseThresholdBytes ??
+      DEFAULT_CONFIG.streamingParseThresholdBytes,
     defaults: {
       priority: config?.defaults?.priority ?? DEFAULT_CONFIG.defaults.priority,
       timeoutMs:
@@ -158,11 +168,15 @@ export class TaskIntakeProcessor {
   /**
    * Process a raw task payload and return normalization details.
    */
-  process(envelope: TaskIntakeEnvelope): TaskIntakeResult {
+  async process(envelope: TaskIntakeEnvelope): Promise<TaskIntakeResult> {
     const errors: TaskIntakeIssue[] = [];
     const warnings: TaskIntakeIssue[] = [];
 
-    if (!envelope || envelope.payload === undefined || envelope.payload === null) {
+    if (
+      !envelope ||
+      envelope.payload === undefined ||
+      envelope.payload === null
+    ) {
       return this.rejectResult(errors, warnings, {
         code: "EMPTY_PAYLOAD",
         message: "Task payload is required",
@@ -177,9 +191,12 @@ export class TaskIntakeProcessor {
     if (Buffer.isBuffer(envelope.payload)) {
       rawBuffer = envelope.payload;
     } else if (typeof envelope.payload === "string") {
-      rawBuffer = Buffer.from(envelope.payload, encoding);
+      rawBuffer = Buffer.from(envelope.payload, encoding as any);
     } else if (typeof envelope.payload === "object") {
-      rawBuffer = Buffer.from(JSON.stringify(envelope.payload), encoding);
+      rawBuffer = Buffer.from(
+        JSON.stringify(envelope.payload),
+        encoding as any
+      );
     } else {
       return this.rejectResult(
         errors,
@@ -221,8 +238,11 @@ export class TaskIntakeProcessor {
     }
 
     let rawText: string | undefined;
-    if (Buffer.isBuffer(envelope.payload) || typeof envelope.payload === "string") {
-      rawText = rawBuffer.toString(encoding);
+    if (
+      Buffer.isBuffer(envelope.payload) ||
+      typeof envelope.payload === "string"
+    ) {
+      rawText = rawBuffer.toString(encoding as any);
     } else {
       rawText = JSON.stringify(envelope.payload);
     }
@@ -241,11 +261,55 @@ export class TaskIntakeProcessor {
 
     let parsedTask: Record<string, any> | null = null;
 
-    if (typeof envelope.payload === "object" && !Buffer.isBuffer(envelope.payload)) {
+    if (
+      typeof envelope.payload === "object" &&
+      !Buffer.isBuffer(envelope.payload)
+    ) {
       parsedTask = envelope.payload as Record<string, any>;
     } else {
       try {
-        parsedTask = rawText ? JSON.parse(rawText) : null;
+        if (
+          rawText &&
+          shouldUseStreamingParsing(
+            rawText,
+            this.config.streamingParseThresholdBytes
+          )
+        ) {
+          // Use streaming parser for large payloads
+          const streamingParser = new StreamingJSONParser({
+            maxChunkSize: this.config.chunkSizeBytes,
+            maxTotalSize: this.config.maxDescriptionBytes,
+            timeoutMs: 30000, // 30 second timeout
+          });
+
+          const result = await streamingParser.parseLargeString(rawText);
+
+          if (!result.success) {
+            return this.rejectResult(
+              errors,
+              warnings,
+              {
+                code: "STREAMING_PARSE_FAILED",
+                message: `Streaming JSON parse failed: ${result.error}`,
+                value: result.error,
+              },
+              { rawSizeBytes, contentType, encoding }
+            );
+          }
+
+          parsedTask = result.data;
+
+          // Add streaming parse metadata to warnings
+          warnings.push({
+            code: "STREAMING_PARSE_USED",
+            message: `Used streaming parser for large payload (${result.bytesProcessed} bytes, ${result.chunksProcessed} chunks, ${result.parseTimeMs}ms)`,
+          });
+
+          streamingParser.destroy();
+        } else {
+          // Use standard JSON.parse for small payloads
+          parsedTask = rawText ? JSON.parse(rawText) : null;
+        }
       } catch (error) {
         return this.rejectResult(
           errors,
@@ -289,12 +353,11 @@ export class TaskIntakeProcessor {
     }
 
     if (errors.length > 0) {
-      return this.rejectResult(
-        errors,
-        warnings,
-        undefined,
-        { rawSizeBytes, contentType, encoding }
-      );
+      return this.rejectResult(errors, warnings, undefined, {
+        rawSizeBytes,
+        contentType,
+        encoding,
+      });
     }
 
     if (typeof parsedTask.description !== "string") {
@@ -303,12 +366,11 @@ export class TaskIntakeProcessor {
         message: "Task description must be a string",
         field: "description",
       });
-      return this.rejectResult(
-        errors,
-        warnings,
-        undefined,
-        { rawSizeBytes, contentType, encoding }
-      );
+      return this.rejectResult(errors, warnings, undefined, {
+        rawSizeBytes,
+        contentType,
+        encoding,
+      });
     }
 
     const sanitizedTask = this.normalizeTask(
@@ -339,12 +401,11 @@ export class TaskIntakeProcessor {
     }
 
     if (errors.length > 0) {
-      return this.rejectResult(
-        errors,
-        warnings,
-        undefined,
-        { rawSizeBytes, contentType, encoding }
-      );
+      return this.rejectResult(errors, warnings, undefined, {
+        rawSizeBytes,
+        contentType,
+        encoding,
+      });
     }
 
     const descriptionBytes = Buffer.byteLength(
@@ -423,7 +484,9 @@ export class TaskIntakeProcessor {
     warnings: TaskIntakeIssue[]
   ): Task {
     const description =
-      typeof raw.description === "string" ? raw.description : String(raw.description ?? "");
+      typeof raw.description === "string"
+        ? raw.description
+        : String(raw.description ?? "");
 
     const normalizedMetadata =
       raw.metadata && typeof raw.metadata === "object"
@@ -455,8 +518,8 @@ export class TaskIntakeProcessor {
       type: this.normalizeTaskType(raw.type),
       requiredCapabilities:
         (raw.requiredCapabilities &&
-          typeof raw.requiredCapabilities === "object" &&
-          !Array.isArray(raw.requiredCapabilities)
+        typeof raw.requiredCapabilities === "object" &&
+        !Array.isArray(raw.requiredCapabilities)
           ? raw.requiredCapabilities
           : {}) ?? {},
       priority: this.normalizePriority(raw.priority),
@@ -521,30 +584,21 @@ export class TaskIntakeProcessor {
     return this.config.defaults.priority;
   }
 
-  private normalizePositiveNumber(
-    value: unknown,
-    fallback: number
-  ): number {
+  private normalizePositiveNumber(value: unknown, fallback: number): number {
     if (typeof value === "number" && value > 0) {
       return value;
     }
     return fallback;
   }
 
-  private normalizeNonNegativeNumber(
-    value: unknown,
-    fallback: number
-  ): number {
+  private normalizeNonNegativeNumber(value: unknown, fallback: number): number {
     if (typeof value === "number" && value >= 0) {
       return value;
     }
     return fallback;
   }
 
-  private normalizeDate(
-    value: unknown,
-    warnings: TaskIntakeIssue[]
-  ): Date {
+  private normalizeDate(value: unknown, warnings: TaskIntakeIssue[]): Date {
     if (value instanceof Date && !isNaN(value.getTime())) {
       return value;
     }
@@ -658,6 +712,8 @@ export class TaskIntakeProcessor {
       }
     }
 
-    return nonTextCount / sampleSize > this.config.binaryDetection.nonTextThreshold;
+    return (
+      nonTextCount / sampleSize > this.config.binaryDetection.nonTextThreshold
+    );
   }
 }
