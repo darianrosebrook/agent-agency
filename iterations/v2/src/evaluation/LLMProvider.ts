@@ -315,7 +315,7 @@ export class OllamaProvider extends LLMProvider {
     criterion: EvaluationCriterion
   ): string {
     const criterionDescription = this.getCriterionDescription(criterion);
-    
+
     return `You are an expert evaluator. Please evaluate the following output based on the criterion: ${criterionDescription}
 
 Task: ${input.task}
@@ -343,7 +343,7 @@ Focus specifically on ${criterionDescription.toLowerCase()}.`;
       }
 
       const parsed = JSON.parse(jsonMatch[0]);
-      
+
       return {
         criterion: criterion,
         score: Math.max(0, Math.min(1, parsed.score || 0.5)),
@@ -357,7 +357,10 @@ Focus specifically on ${criterionDescription.toLowerCase()}.`;
         criterion: criterion,
         score: 0.5,
         confidence: 0.3,
-        reasoning: `Failed to parse Ollama response for ${criterion}. Raw response: ${content.substring(0, 200)}...`,
+        reasoning: `Failed to parse Ollama response for ${criterion}. Raw response: ${content.substring(
+          0,
+          200
+        )}...`,
       };
     }
   }

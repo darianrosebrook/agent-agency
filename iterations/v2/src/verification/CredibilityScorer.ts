@@ -23,6 +23,25 @@ import {
 export class CredibilityScorer {
   private methodConfigs: VerificationMethodConfig[];
   private credibilityCache: Map<string, SourceAnalysis> = new Map();
+  private healthMetrics: {
+    totalRequests: number;
+    successfulRequests: number;
+    failedRequests: number;
+    responseTimes: number[];
+    lastHealthCheck: Date;
+    consecutiveFailures: number;
+    lastResponseTime: number;
+    errorRate: number;
+  } = {
+    totalRequests: 0,
+    successfulRequests: 0,
+    failedRequests: 0,
+    responseTimes: [],
+    lastHealthCheck: new Date(),
+    consecutiveFailures: 0,
+    lastResponseTime: 0,
+    errorRate: 0,
+  };
 
   constructor(methodConfigs: VerificationMethodConfig[]) {
     this.methodConfigs = methodConfigs;
@@ -58,16 +77,25 @@ export class CredibilityScorer {
 
       // Aggregate results
       const aggregatedResult = this.aggregateCredibilityResults(sourceAnalyses);
+      const processingTime = Math.max(1, Date.now() - startTime);
+
+      // Record successful verification
+      this.recordSuccess(processingTime);
 
       return {
         method: VerificationType.SOURCE_CREDIBILITY,
         verdict: aggregatedResult.verdict,
         confidence: aggregatedResult.confidence,
         reasoning: aggregatedResult.explanations,
-        processingTimeMs: Math.max(1, Date.now() - startTime),
+        processingTimeMs: processingTime,
         evidenceCount: sourceAnalyses.length,
       };
     } catch (error) {
+      const processingTime = Math.max(1, Date.now() - startTime);
+
+      // Record failed verification
+      this.recordFailure();
+
       return {
         method: VerificationType.SOURCE_CREDIBILITY,
         verdict: VerificationVerdict.UNVERIFIED,
@@ -77,7 +105,7 @@ export class CredibilityScorer {
             error instanceof Error ? error.message : String(error)
           }`,
         ],
-        processingTimeMs: Math.max(1, Date.now() - startTime),
+        processingTimeMs: processingTime,
         evidenceCount: 0,
       };
     }
@@ -1038,10 +1066,71 @@ export class CredibilityScorer {
    * Get method health status
    */
   getHealth(): { available: boolean; responseTime: number; errorRate: number } {
+    // Update error rate based on recent metrics
+    this.updateErrorRate();
+
+    // Check availability based on consecutive failures and cache health
+    const now = new Date();
+    const timeSinceLastCheck =
+      now.getTime() - this.healthMetrics.lastHealthCheck.getTime();
+    const available =
+      this.healthMetrics.consecutiveFailures < 3 && timeSinceLastCheck < 300000; // 5 minutes
+
+    // Calculate average response time
+    const avgResponseTime =
+      this.healthMetrics.responseTimes.length > 0
+        ? this.healthMetrics.responseTimes.reduce(
+            (sum, time) => sum + time,
+            0
+          ) / this.healthMetrics.responseTimes.length
+        : this.healthMetrics.lastResponseTime || 0;
+
     return {
-      available: true,
-      responseTime: 100,
-      errorRate: 0.01,
+      available,
+      responseTime: Math.round(avgResponseTime),
+      errorRate: Math.round(this.healthMetrics.errorRate * 100) / 100,
     };
+  }
+
+  /**
+   * Record a successful verification request
+   */
+  private recordSuccess(responseTime: number): void {
+    this.healthMetrics.totalRequests++;
+    this.healthMetrics.successfulRequests++;
+    this.healthMetrics.responseTimes.push(responseTime);
+    this.healthMetrics.lastResponseTime = responseTime;
+    this.healthMetrics.consecutiveFailures = 0;
+
+    // Keep only last 100 response times
+    if (this.healthMetrics.responseTimes.length > 100) {
+      this.healthMetrics.responseTimes =
+        this.healthMetrics.responseTimes.slice(-100);
+    }
+  }
+
+  /**
+   * Record a failed verification request
+   */
+  private recordFailure(): void {
+    this.healthMetrics.totalRequests++;
+    this.healthMetrics.failedRequests++;
+    this.healthMetrics.consecutiveFailures++;
+  }
+
+  /**
+   * Update error rate calculation
+   */
+  private updateErrorRate(): void {
+    if (this.healthMetrics.totalRequests === 0) {
+      this.healthMetrics.errorRate = 0;
+    } else {
+      // Use exponential moving average for error rate
+      const currentErrorRate =
+        this.healthMetrics.failedRequests / this.healthMetrics.totalRequests;
+      const alpha = 0.1; // Smoothing factor
+      this.healthMetrics.errorRate =
+        this.healthMetrics.errorRate * (1 - alpha) + currentErrorRate * alpha;
+    }
   }
 }

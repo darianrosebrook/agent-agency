@@ -22,7 +22,11 @@ import type {
 import { VerificationEngineImpl } from "../verification/VerificationEngine";
 
 // Audit Logging imports
-import { AuditLogger, AuditEventType, AuditSeverity } from "../observability/AuditLogger";
+import {
+  AuditEventType,
+  AuditLogger,
+  AuditSeverity,
+} from "../observability/AuditLogger";
 
 // Workspace and Health Integration imports
 import { SystemHealthMonitor } from "../monitoring/SystemHealthMonitor.js";
@@ -685,13 +689,16 @@ export class ArbiterOrchestrator {
           this.sanitizeAuditDetails(details),
           {
             riskScore,
-            complianceFlags: level === SecurityAuditLevel.CRITICAL ? ["security"] : [],
+            complianceFlags:
+              level === SecurityAuditLevel.CRITICAL ? ["security"] : [],
           }
         );
       } else {
         // Fallback to legacy audit logging
         const event: SecurityAuditEvent = {
-          id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          id: `audit-${Date.now()}-${Math.random()
+            .toString(36)
+            .substring(2, 9)}`,
           timestamp: new Date(),
           level,
           type,
@@ -710,11 +717,14 @@ export class ArbiterOrchestrator {
         }
 
         // Log to console as fallback
-        console.log(`[SECURITY-${level.toUpperCase()}] ${type}: ${action} on ${resource}`, {
-          eventId: event.id,
-          riskScore: event.riskScore,
-          success: event.success,
-        });
+        console.log(
+          `[SECURITY-${level.toUpperCase()}] ${type}: ${action} on ${resource}`,
+          {
+            eventId: event.id,
+            riskScore: event.riskScore,
+            success: event.success,
+          }
+        );
       }
     } catch (error) {
       console.error("Failed to log security event:", error);
@@ -768,7 +778,7 @@ export class ArbiterOrchestrator {
       false,
       { errorType: error?.constructor?.name || "Unknown", operation },
       30
-    ).catch(err => console.error("Failed to log security event:", err));
+    ).catch((err) => console.error("Failed to log security event:", err));
 
     // Return sanitized error message
     const errorMessage =
@@ -875,6 +885,25 @@ export class ArbiterOrchestrator {
     const assignment = await this.assignTaskToAgent(task);
     if (assignment) {
       console.log(`Task ${task.id} assigned to agent ${assignment.agentId}`);
+
+      // Audit log successful task assignment
+      await this.components.auditLogger
+        ?.logAuditEvent(
+          AuditEventType.TASK_EXECUTION,
+          AuditSeverity.LOW,
+          "system",
+          "task",
+          "assign",
+          "success",
+          {
+            taskId: task.id,
+            assignmentId: assignment.id,
+            agentId: assignment.agentId,
+            taskType: task.type,
+          }
+        )
+        .catch((err) => console.error("Failed to log task assignment:", err));
+
       return {
         taskId: task.id,
         assignmentId: assignment.id,
@@ -886,6 +915,23 @@ export class ArbiterOrchestrator {
     console.log(
       `Task ${task.id} enqueued for processing (no immediate assignment)`
     );
+
+    // Audit log task enqueued
+    await this.components.auditLogger
+      ?.logAuditEvent(
+        AuditEventType.TASK_SUBMISSION,
+        AuditSeverity.LOW,
+        "system",
+        "task",
+        "enqueue",
+        "success",
+        {
+          taskId: task.id,
+          taskType: task.type,
+          reason: "no_immediate_assignment",
+        }
+      )
+      .catch((err) => console.error("Failed to log task enqueue:", err));
 
     return {
       taskId: task.id,
@@ -2301,7 +2347,14 @@ export class ArbiterOrchestrator {
       true,
       { loggerType: "external" },
       0
-    ).catch(err => console.error("Failed to log security event:", err));
+    ).catch((err) => console.error("Failed to log security event:", err));
+  }
+
+  /**
+   * Get the audit logger for external use
+   */
+  getAuditLogger(): AuditLogger | null {
+    return this.components.auditLogger || null;
   }
 
   /**
@@ -2449,7 +2502,7 @@ export class ArbiterOrchestrator {
       true,
       { userId, action },
       15
-    ).catch(err => console.error("Failed to log security event:", err));
+    ).catch((err) => console.error("Failed to log security event:", err));
 
     // Placeholder implementation - would check permissions
     return true;
@@ -2518,11 +2571,49 @@ export class ArbiterOrchestrator {
       throw new Error("Orchestrator not initialized");
     }
 
+    // Audit log verification request
+    await this.components.auditLogger
+      ?.logAuditEvent(
+        AuditEventType.VERIFICATION_REQUEST,
+        AuditSeverity.LOW,
+        "system",
+        "verification",
+        "verify_request",
+        "success",
+        {
+          requestId: request.id,
+          contentType: request.type || "unknown",
+          hasExpectedOutput: !!request.expectedOutput,
+        }
+      )
+      .catch((err) =>
+        console.error("Failed to log verification request:", err)
+      );
+
     // Check if verification engine is available
     if (!this.components.verificationEngine) {
       console.warn(
         "Verification engine not available, returning unverified result"
       );
+
+      // Audit log verification failure
+      await this.components.auditLogger
+        ?.logAuditEvent(
+          AuditEventType.VERIFICATION_FAILURE,
+          AuditSeverity.MEDIUM,
+          "system",
+          "verification",
+          "verify_request",
+          "failure",
+          {
+            requestId: request.id,
+            reason: "verification_engine_unavailable",
+          }
+        )
+        .catch((err) =>
+          console.error("Failed to log verification failure:", err)
+        );
+
       return {
         requestId: request.id,
         verdict: "unverified",
@@ -2555,6 +2646,31 @@ export class ArbiterOrchestrator {
 
       const processingTimeMs = Date.now() - startTime;
 
+      // Audit log successful verification
+      await this.components.auditLogger
+        ?.logAuditEvent(
+          AuditEventType.VERIFICATION_SUCCESS,
+          result.confidence > 0.8
+            ? AuditSeverity.LOW
+            : result.confidence > 0.5
+            ? AuditSeverity.MEDIUM
+            : AuditSeverity.HIGH,
+          "system",
+          "verification",
+          "verify_complete",
+          "success",
+          {
+            requestId: result.requestId,
+            verdict: result.verdict,
+            confidence: result.confidence,
+            processingTimeMs,
+            methodCount: result.methodResults?.length || 0,
+          }
+        )
+        .catch((err) =>
+          console.error("Failed to log verification success:", err)
+        );
+
       // Convert result to expected format
       return {
         requestId: result.requestId,
@@ -2568,6 +2684,27 @@ export class ArbiterOrchestrator {
       };
     } catch (error) {
       console.error("Verification failed:", error);
+
+      // Audit log verification error
+      await this.components.auditLogger
+        ?.logAuditEvent(
+          AuditEventType.VERIFICATION_FAILURE,
+          AuditSeverity.HIGH,
+          "system",
+          "verification",
+          "verify_error",
+          "failure",
+          {
+            requestId: request.id,
+            error: error instanceof Error ? error.message : "Unknown error",
+            errorType:
+              error instanceof Error ? error.constructor.name : "Unknown",
+          }
+        )
+        .catch((err) =>
+          console.error("Failed to log verification error:", err)
+        );
+
       return {
         requestId: request.id,
         verdict: "error",

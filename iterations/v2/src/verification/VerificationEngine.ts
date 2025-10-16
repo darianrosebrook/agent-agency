@@ -251,14 +251,64 @@ export class VerificationEngineImpl implements VerificationEngine {
       };
     }
 
-    // In a real implementation, this would check actual method health
+    // Get real health data from the specific method
+    let healthData: {
+      available: boolean;
+      responseTime: number;
+      errorRate: number;
+    };
+    let successRate: number;
+    let averageProcessingTime: number;
+
+    switch (method) {
+      case VerificationType.FACT_CHECKING:
+        healthData = this.factChecker.getHealth();
+        successRate = 1 - healthData.errorRate;
+        averageProcessingTime = healthData.responseTime;
+        break;
+      case VerificationType.CREDIBILITY_SCORING:
+        healthData = this.credibilityScorer.getHealth();
+        successRate = 1 - healthData.errorRate;
+        averageProcessingTime = healthData.responseTime;
+        break;
+      case VerificationType.LOGICAL_VALIDATION:
+        // Logical validator doesn't have health tracking yet, use defaults
+        healthData = { available: true, responseTime: 50, errorRate: 0.01 };
+        successRate = 0.99;
+        averageProcessingTime = 50;
+        break;
+      case VerificationType.CROSS_REFERENCE:
+        // Cross-reference validator doesn't have health tracking yet, use defaults
+        healthData = { available: true, responseTime: 75, errorRate: 0.02 };
+        successRate = 0.98;
+        averageProcessingTime = 75;
+        break;
+      case VerificationType.STATISTICAL_VALIDATION:
+        // Statistical validator doesn't have health tracking yet, use defaults
+        healthData = { available: true, responseTime: 100, errorRate: 0.03 };
+        successRate = 0.97;
+        averageProcessingTime = 100;
+        break;
+      case VerificationType.CONSISTENCY_VALIDATION:
+        // Consistency validator doesn't have health tracking yet, use defaults
+        healthData = { available: true, responseTime: 60, errorRate: 0.015 };
+        successRate = 0.985;
+        averageProcessingTime = 60;
+        break;
+      default:
+        healthData = { available: false, responseTime: 0, errorRate: 1 };
+        successRate = 0;
+        averageProcessingTime = 0;
+    }
+
     return {
       type: method,
       enabled: methodConfig.enabled,
-      healthy: true, // Simplified - would check actual health
-      lastUsed: new Date(),
-      successRate: 0.95, // Mock values
-      averageProcessingTime: methodConfig.timeoutMs * 0.8,
+      healthy: methodConfig.enabled && healthData.available,
+      lastUsed: new Date(), // Would track actual last usage
+      successRate: Math.max(0, Math.min(1, successRate)),
+      averageProcessingTime:
+        averageProcessingTime || methodConfig.timeoutMs * 0.8,
     };
   }
 

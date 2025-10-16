@@ -7,9 +7,9 @@
  * @author @darianrosebrook
  */
 
-import { Logger, LogLevel } from "./Logger";
 import { EventEmitter } from "../orchestrator/EventEmitter";
 import { EventTypes } from "../orchestrator/OrchestratorEvents";
+import { Logger, LogLevel } from "./Logger";
 
 export enum AuditEventType {
   // Security Events
@@ -128,25 +128,27 @@ export class MemoryAuditLogSink implements AuditLogSink {
     let filtered = [...this.events];
 
     if (query.startDate) {
-      filtered = filtered.filter(e => e.timestamp >= query.startDate!);
+      filtered = filtered.filter((e) => e.timestamp >= query.startDate!);
     }
     if (query.endDate) {
-      filtered = filtered.filter(e => e.timestamp <= query.endDate!);
+      filtered = filtered.filter((e) => e.timestamp <= query.endDate!);
     }
     if (query.eventTypes?.length) {
-      filtered = filtered.filter(e => query.eventTypes!.includes(e.eventType));
+      filtered = filtered.filter((e) =>
+        query.eventTypes!.includes(e.eventType)
+      );
     }
     if (query.severity?.length) {
-      filtered = filtered.filter(e => query.severity!.includes(e.severity));
+      filtered = filtered.filter((e) => query.severity!.includes(e.severity));
     }
     if (query.actor) {
-      filtered = filtered.filter(e => e.actor === query.actor);
+      filtered = filtered.filter((e) => e.actor === query.actor);
     }
     if (query.resource) {
-      filtered = filtered.filter(e => e.resource === query.resource);
+      filtered = filtered.filter((e) => e.resource === query.resource);
     }
     if (query.outcome) {
-      filtered = filtered.filter(e => e.outcome === query.outcome);
+      filtered = filtered.filter((e) => e.outcome === query.outcome);
     }
 
     // Sort by timestamp descending (newest first)
@@ -187,7 +189,7 @@ export class MemoryAuditLogSink implements AuditLogSink {
     cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
 
     const beforeCount = this.events.length;
-    this.events = this.events.filter(event => event.timestamp >= cutoffDate);
+    this.events = this.events.filter((event) => event.timestamp >= cutoffDate);
     return beforeCount - this.events.length;
   }
 }
@@ -247,12 +249,13 @@ export class AuditLogger extends Logger {
       },
       retention: {
         category: this.getRetentionCategory(eventType),
-        retentionDays: this.defaultRetention[this.getRetentionCategory(eventType)],
+        retentionDays:
+          this.defaultRetention[this.getRetentionCategory(eventType)],
       },
     };
 
     // Write to all sinks
-    await Promise.all(this.sinks.map(sink => sink.write(event)));
+    await Promise.all(this.sinks.map((sink) => sink.write(event)));
 
     // Emit event for real-time processing
     this.eventEmitter.emit(EventTypes.AUDIT_EVENT, event);
@@ -287,13 +290,13 @@ export class AuditLogger extends Logger {
   async queryAuditEvents(query: AuditLogQuery): Promise<AuditEvent[]> {
     // Query all sinks and merge results
     const allResults = await Promise.all(
-      this.sinks.map(sink => sink.query(query))
+      this.sinks.map((sink) => sink.query(query))
     );
 
     // Merge and deduplicate by event ID
     const merged = allResults.flat();
     const unique = merged.filter(
-      (event, index, self) => self.findIndex(e => e.id === event.id) === index
+      (event, index, self) => self.findIndex((e) => e.id === event.id) === index
     );
 
     // Sort by timestamp descending
@@ -307,15 +310,24 @@ export class AuditLogger extends Logger {
    */
   async getAuditStats() {
     const allStats = await Promise.all(
-      this.sinks.map(sink => sink.getStats())
+      this.sinks.map((sink) => sink.getStats())
     );
 
     return allStats.reduce(
       (combined, stats) => ({
         totalEvents: combined.totalEvents + stats.totalEvents,
-        eventsByType: this.mergeCounts(combined.eventsByType, stats.eventsByType),
-        eventsBySeverity: this.mergeCounts(combined.eventsBySeverity, stats.eventsBySeverity),
-        retentionStats: this.mergeCounts(combined.retentionStats, stats.retentionStats),
+        eventsByType: this.mergeCounts(
+          combined.eventsByType,
+          stats.eventsByType
+        ),
+        eventsBySeverity: this.mergeCounts(
+          combined.eventsBySeverity,
+          stats.eventsBySeverity
+        ),
+        retentionStats: this.mergeCounts(
+          combined.retentionStats,
+          stats.retentionStats
+        ),
       }),
       {
         totalEvents: 0,
@@ -331,7 +343,7 @@ export class AuditLogger extends Logger {
    */
   async cleanupAuditLogs(olderThanDays: number = 90): Promise<number> {
     const results = await Promise.all(
-      this.sinks.map(sink => sink.cleanup(olderThanDays))
+      this.sinks.map((sink) => sink.cleanup(olderThanDays))
     );
     return results.reduce((sum, count) => sum + count, 0);
   }
@@ -347,7 +359,7 @@ export class AuditLogger extends Logger {
    * Remove a sink
    */
   removeSink(sink: AuditLogSink): void {
-    this.sinks = this.sinks.filter(s => s !== sink);
+    this.sinks = this.sinks.filter((s) => s !== sink);
   }
 
   /**
@@ -362,20 +374,29 @@ export class AuditLogger extends Logger {
 
     // Remove sensitive fields
     const sensitiveFields = [
-      'password', 'token', 'secret', 'key', 'api_key', 'apikey',
-      'session_token', 'auth_token', 'bearer_token'
+      "password",
+      "token",
+      "secret",
+      "key",
+      "api_key",
+      "apikey",
+      "session_token",
+      "auth_token",
+      "bearer_token",
     ];
 
     for (const field of sensitiveFields) {
       if (sanitized[field]) {
-        sanitized[field] = '[REDACTED]';
+        sanitized[field] = "[REDACTED]";
       }
     }
 
     return sanitized;
   }
 
-  private getRetentionCategory(eventType: AuditEventType): "security" | "operational" | "compliance" {
+  private getRetentionCategory(
+    eventType: AuditEventType
+  ): "security" | "operational" | "compliance" {
     const securityEvents = [
       AuditEventType.AUTHENTICATION,
       AuditEventType.AUTHORIZATION,

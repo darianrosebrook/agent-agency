@@ -8,7 +8,7 @@
  */
 
 import { Logger } from "@/observability/Logger";
-import { FailureEvent } from "@/types/coordinator";
+import { FailureEvent, FailureType } from "@/types/coordinator";
 
 export interface IncidentTicket {
   id: string;
@@ -273,13 +273,13 @@ export class IncidentNotifier {
   private determineSeverity(failure: FailureEvent): IncidentTicket["severity"] {
     // Map failure types to severity levels
     switch (failure.failureType) {
-      case "HEALTH_CHECK_FAILURE":
-      case "CONNECTION_FAILURE":
+      case FailureType.HEALTH_CHECK_FAILURE:
+      case FailureType.CONNECTION_FAILURE:
         return "high";
-      case "TIMEOUT_FAILURE":
+      case FailureType.TIMEOUT_FAILURE:
         return "medium";
-      case "INTERNAL_ERROR":
-      case "DEPENDENCY_FAILURE":
+      case FailureType.INTERNAL_ERROR:
+      case FailureType.DEPENDENCY_FAILURE:
         return "critical";
       default:
         return "high";
