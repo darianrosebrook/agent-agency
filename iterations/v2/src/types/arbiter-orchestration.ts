@@ -99,15 +99,15 @@ export interface TaskInput {
 }
 
 export enum TaskStatus {
-  _QUEUED = "queued",
-  _ROUTING = "routing",
-  _ASSIGNED = "assigned",
-  _EXECUTING = "executing",
-  _VALIDATING = "validating",
-  _COMPLETED = "completed",
-  _FAILED = "failed",
-  _TIMEOUT = "timeout",
-  _CANCELED = "canceled",
+  QUEUED = "queued",
+  ROUTING = "routing",
+  ASSIGNED = "assigned",
+  EXECUTING = "executing",
+  VALIDATING = "validating",
+  COMPLETED = "completed",
+  FAILED = "failed",
+  TIMEOUT = "timeout",
+  CANCELED = "canceled",
 }
 
 export interface TaskState {

@@ -98,7 +98,7 @@ export class DatabaseAuditStorage implements AuditStorageProvider {
   private batchBuffer: AuditEvent[] = [];
   private flushTimer?: ReturnType<typeof setTimeout>;
 
-  constructor(private config: Record<string, any>, private _logger: Logger) {
+  constructor(private config: Record<string, any>, private logger: Logger) {
     if (config.batching?.enabled) {
       this.startBatchFlush();
     }
@@ -245,7 +245,7 @@ export class DatabaseAuditStorage implements AuditStorageProvider {
  * File-based audit storage provider
  */
 export class FileAuditStorage implements AuditStorageProvider {
-  constructor(private _config: Record<string, any>, private _logger: Logger) {}
+  constructor(private config: Record<string, any>, private logger: Logger) {}
 
   async write(event: AuditEvent): Promise<void> {
     try {
@@ -301,7 +301,7 @@ export class FileAuditStorage implements AuditStorageProvider {
 export class MockAuditStorage implements AuditStorageProvider {
   private events: AuditEvent[] = [];
 
-  constructor(private _config: Record<string, any>, private _logger: Logger) {}
+  constructor(private config: Record<string, any>, private logger: Logger) {}
 
   async write(event: AuditEvent): Promise<void> {
     this.events.push(event);
@@ -367,7 +367,7 @@ export class MockAuditStorage implements AuditStorageProvider {
 export class AuditLogger {
   private storage: AuditStorageProvider;
 
-  constructor(private _config: AuditConfig, private _logger: Logger) {
+  constructor(private config: AuditConfig, private logger: Logger) {
     this.storage = this.createStorageProvider();
   }
 
@@ -391,9 +391,59 @@ export class AuditLogger {
   }
 
   /**
-   * Log an audit event
+   * Log an audit event from an AuditEvent object
+   */
+  async logEvent(event: AuditEvent): Promise<void>;
+  /**
+   * Log an audit event with individual parameters
    */
   async logEvent(
+    eventOrType: AuditEvent | string,
+    actor?: AuditEvent["actor"],
+    resource?: AuditEvent["resource"],
+    action?: string,
+    outcome?: AuditEvent["outcome"],
+    details?: Record<string, any>,
+    options?: {
+      severity?: AuditEvent["severity"];
+      metadata?: AuditEvent["metadata"];
+      compliance?: AuditEvent["compliance"];
+    }
+  ): Promise<void> {
+    // Handle AuditEvent object
+    if (typeof eventOrType === "object" && "eventType" in eventOrType) {
+      const event = eventOrType;
+      return this.logEventWithParams(
+        event.eventType,
+        event.actor,
+        event.resource,
+        event.action || "unknown",
+        event.outcome || { success: true },
+        event.details || {},
+        {
+          severity: event.severity,
+          metadata: event.metadata,
+          compliance: event.compliance,
+        }
+      );
+    }
+
+    // Handle individual parameters
+    return this.logEventWithParams(
+      eventOrType as string,
+      actor!,
+      resource!,
+      action!,
+      outcome!,
+      details!,
+      options
+    );
+  }
+
+  /**
+   * Log an audit event with individual parameters (internal implementation)
+   */
+  private async logEventWithParams(
     eventType: string,
     actor: AuditEvent["actor"],
     resource: AuditEvent["resource"],

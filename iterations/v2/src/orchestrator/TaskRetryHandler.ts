@@ -40,7 +40,7 @@ export class TaskRetryHandler extends EventEmitter {
   private attempts: Map<string, RetryAttempt[]> = new Map();
 
   constructor(
-    private _config: RetryConfig = {
+    private config: RetryConfig = {
       maxRetries: 3,
       initialBackoffMs: 1000,
       maxBackoffMs: 30000,
@@ -62,7 +62,7 @@ export class TaskRetryHandler extends EventEmitter {
     let attempts = 0;
     let lastError: any;
 
-    while (attempts < this.config.maxRetries) {
+    while (attempts < this._config.maxRetries) {
       try {
         const result = await operation();
 
@@ -78,7 +78,7 @@ export class TaskRetryHandler extends EventEmitter {
         this.recordAttempt(taskId, attempts, error, context);
 
         // Check if we should retry
-        if (attempts >= this.config.maxRetries) {
+        if (attempts >= this._config.maxRetries) {
           break;
         }
 
@@ -98,7 +98,7 @@ export class TaskRetryHandler extends EventEmitter {
 
     // All retries exhausted
     throw new TaskExecutionError(
-      `Task ${taskId} failed after ${this.config.maxRetries} attempts`,
+      `Task ${taskId} failed after ${this._config.maxRetries} attempts`,
       lastError,
       taskId,
       attempts
@@ -125,14 +125,14 @@ export class TaskRetryHandler extends EventEmitter {
    */
   private calculateBackoff(attempt: number): number {
     let delay =
-      this.config.initialBackoffMs *
-      Math.pow(this.config.backoffMultiplier, attempt - 1);
+      this._config.initialBackoffMs *
+      Math.pow(this._config.backoffMultiplier, attempt - 1);
 
     // Cap at max backoff
-    delay = Math.min(delay, this.config.maxBackoffMs);
+    delay = Math.min(delay, this._config.maxBackoffMs);
 
     // Add jitter if enabled
-    if (this.config.jitter) {
+    if (this._config.jitter) {
       delay = delay * (0.5 + Math.random() * 0.5); // ±50% jitter
     }
 
@@ -173,7 +173,7 @@ export class TaskRetryHandler extends EventEmitter {
    */
   hasExceededRetries(taskId: string): boolean {
     const attempts = this.attempts.get(taskId) || [];
-    return attempts.length >= this.config.maxRetries;
+    return attempts.length >= this._config.maxRetries;
   }
 
   /**
@@ -217,7 +217,7 @@ export class TaskRetryHandler extends EventEmitter {
    * Update retry configuration
    */
   updateConfig(newConfig: Partial<RetryConfig>): void {
-    this.config = { ...this.config, ...newConfig };
+    this._config = { ...this._config, ...newConfig };
   }
 
   /**

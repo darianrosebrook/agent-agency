@@ -35,9 +35,9 @@ export class CircuitBreakerOpenError extends Error {
 }
 
 export enum CircuitState {
-  _CLOSED = "closed", // Normal operation
-  _OPEN = "open", // Failing, reject requests
-  _HALF_OPEN = "half-open", // Testing if recovered
+  CLOSED = "closed", // Normal operation
+  OPEN = "open", // Failing, reject requests
+  HALF_OPEN = "half-open", // Testing if recovered
 }
 
 export interface CircuitBreakerConfig {

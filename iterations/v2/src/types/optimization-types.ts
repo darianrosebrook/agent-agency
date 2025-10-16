@@ -11,13 +11,13 @@
  * Performance metric types
  */
 export enum MetricType {
-  _CPU = "cpu",
-  _MEMORY = "memory",
-  _NETWORK = "network",
-  _LATENCY = "latency",
-  _THROUGHPUT = "throughput",
-  _ERROR_RATE = "error_rate",
-  _CACHE_HIT_RATE = "cache_hit_rate",
+  CPU = "cpu",
+  MEMORY = "memory",
+  NETWORK = "network",
+  LATENCY = "latency",
+  THROUGHPUT = "throughput",
+  ERROR_RATE = "error_rate",
+  CACHE_HIT_RATE = "cache_hit_rate",
 }
 
 /**
@@ -47,10 +47,10 @@ export interface PerformanceMetric {
  * Severity levels for bottlenecks
  */
 export enum BottleneckSeverity {
-  _LOW = "low",
-  _MEDIUM = "medium",
-  _HIGH = "high",
-  _CRITICAL = "critical",
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
+  CRITICAL = "critical",
 }
 
 /**
@@ -92,12 +92,12 @@ export interface Bottleneck {
  * Optimization recommendation types
  */
 export enum RecommendationType {
-  _CACHE_OPTIMIZATION = "cache_optimization",
-  _RESOURCE_ALLOCATION = "resource_allocation",
-  _QUERY_OPTIMIZATION = "query_optimization",
-  _CONCURRENCY_TUNING = "concurrency_tuning",
-  _MEMORY_MANAGEMENT = "memory_management",
-  _NETWORK_OPTIMIZATION = "network_optimization",
+  CACHE_OPTIMIZATION = "cache_optimization",
+  RESOURCE_ALLOCATION = "resource_allocation",
+  QUERY_OPTIMIZATION = "query_optimization",
+  CONCURRENCY_TUNING = "concurrency_tuning",
+  MEMORY_MANAGEMENT = "memory_management",
+  NETWORK_OPTIMIZATION = "network_optimization",
 }
 
 /**

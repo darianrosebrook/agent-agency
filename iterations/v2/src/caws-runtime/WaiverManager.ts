@@ -456,21 +456,21 @@ Please review and approve or reject this waiver request.`,
         outcome = "failure";
       }
 
-      await this.auditLogger.logEvent(
-        "waiver_action",
-        {
+      await this.auditLogger.logEvent({
+        type: "waiver_action",
+        actor: {
           id: actor,
           type: "user",
           name: actor,
         },
-        {
+        resource: {
           type: "waiver",
           id: waiver.id,
           name: `Policy ${waiver.policyId} Waiver`,
         },
-        action,
-        outcome,
-        {
+        action: action,
+        outcome: outcome,
+        metadata: {
           waiverId: waiver.id,
           policyId: waiver.policyId,
           operationPattern: waiver.operationPattern,
@@ -481,15 +481,15 @@ Please review and approve or reject this waiver request.`,
           expiresAt: waiver.expiresAt.toISOString(),
           details,
         },
-        {
+        compliance: {
           severity,
-          compliance: {
-            regulations: ["SOX", "GDPR", "HIPAA"],
-            dataClassification: "confidential",
-            retentionPeriod: 2555, // 7 years
-          },
-        }
-      );
+          regulations: ["SOX", "GDPR", "HIPAA"],
+          dataClassification: "confidential",
+          retentionPeriod: 2555, // 7 years
+        },
+        timestamp: new Date(),
+        sessionId: waiver.id,
+      });
 
       this.logger.debug("Waiver action logged to audit trail", {
         waiverId: waiver.id,

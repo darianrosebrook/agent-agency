@@ -376,7 +376,7 @@ describe("TurnLevelRLTrainer", () => {
       expect(groups.length).toBeGreaterThan(0); // At least one group
       // Should have groups for different lengths (only groups with 2+ trajectories are kept)
       const totalTrajectoriesInGroups = groups.reduce(
-        (sum: number, group) => sum + group.length,
+        (sum: number, group: any) => sum + group.length,
         0
       );
       expect(totalTrajectoriesInGroups).toBeGreaterThan(0);

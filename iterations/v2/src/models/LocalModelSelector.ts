@@ -53,7 +53,7 @@ export class LocalModelSelector {
    */
   async selectModel(criteria: ModelSelectionCriteria): Promise<SelectedModel> {
     // 1. Filter by capabilities
-    const capable = this.registry.findByCapabilities(
+    const capable = this._registry.findByCapabilities(
       criteria.requiredCapabilities
     );
 
@@ -67,7 +67,7 @@ export class LocalModelSelector {
     }
 
     // 2. Filter by hardware compatibility
-    const compatible = capable.filter((model) =>
+    const compatible = capable.filter((model: LocalModelConfig) =>
       this.isHardwareCompatible(model, criteria.availableHardware)
     );
 
@@ -80,14 +80,14 @@ export class LocalModelSelector {
 
     // 3. Score each model
     const scored = await Promise.all(
-      compatible.map(async (model) => ({
+      compatible.map(async (model: LocalModelConfig) => ({
         model,
         score: await this.scoreModel(model, criteria),
       }))
     );
 
     // 4. Sort by score (higher = better)
-    scored.sort((a, b) => b.score - a.score);
+    scored.sort((a: any, b: any) => b.score - a.score);
 
     if (scored.length === 0) {
       throw new ModelSelectorError(
@@ -341,7 +341,7 @@ export class LocalModelSelector {
     }
 
     // Check cost profile if available
-    const costProfile = this.costTracker.getCostProfile(model.id);
+    const costProfile = this._costTracker.getCostProfile(model.id);
     if (costProfile) {
       // Boost for good performance in cost profile
       if (costProfile.avgTokensPerSec > 50) {
@@ -405,7 +405,7 @@ export class LocalModelSelector {
    * @returns Bonus score (0-0.2)
    */
   private calculateRecentPerformanceBonus(modelId: string): number {
-    const recentCosts = this.costTracker.getModelCosts(modelId, 100);
+    const recentCosts = this._costTracker.getModelCosts(modelId, 100);
 
     if (recentCosts.length < 20) {
       return 0;
@@ -416,8 +416,12 @@ export class LocalModelSelector {
     const firstHalf = recentCosts.slice(0, midpoint);
     const secondHalf = recentCosts.slice(midpoint);
 
-    const firstAvgTokens = this.mean(firstHalf.map((c) => c.tokensPerSecond));
-    const secondAvgTokens = this.mean(secondHalf.map((c) => c.tokensPerSecond));
+    const firstAvgTokens = this.mean(
+      firstHalf.map((c: any) => c.tokensPerSecond)
+    );
+    const secondAvgTokens = this.mean(
+      secondHalf.map((c: any) => c.tokensPerSecond)
+    );
 
     // If improving, give bonus
     if (secondAvgTokens > firstAvgTokens) {
@@ -440,7 +444,7 @@ export class LocalModelSelector {
     criteria: ModelSelectionCriteria
   ) {
     const history = this.getPerformanceHistory(model.id, criteria.taskType);
-    const costProfile = this.costTracker.getCostProfile(model.id);
+    const costProfile = this._costTracker.getCostProfile(model.id);
 
     return {
       avgLatencyMs: history?.avgLatencyMs ?? 1000,
@@ -477,7 +481,7 @@ export class LocalModelSelector {
       reasons.push(`Avg latency: ${history.avgLatencyMs.toFixed(0)}ms`);
     }
 
-    const costProfile = this.costTracker.getCostProfile(model.id);
+    const costProfile = this._costTracker.getCostProfile(model.id);
     if (costProfile) {
       reasons.push(
         `Throughput: ${costProfile.avgTokensPerSec.toFixed(0)} tokens/s`

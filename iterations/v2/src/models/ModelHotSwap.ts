@@ -229,10 +229,10 @@ export class ModelHotSwapManager {
   private learningLayer: LearningPreservationLayer;
 
   constructor(
-    private _registry: ModelRegistry,
-    private _selector: LocalModelSelector,
-    private _costTracker: ComputeCostTracker,
-    private _config: HotSwapConfig = {
+    private registry: ModelRegistry,
+    private selector: LocalModelSelector,
+    private costTracker: ComputeCostTracker,
+    private config: HotSwapConfig = {
       enableAutoSwap: true,
       swapCooldownMs: 300000, // 5 minutes
       minSamplesBeforeSwap: 10,

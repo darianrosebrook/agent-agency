@@ -30,29 +30,29 @@ export interface SearchQuery {
  * Web content extraction types
  */
 export enum ExtractionType {
-  _FULL_PAGE = "full_page",
-  _MAIN_CONTENT = "main_content",
-  _SPECIFIC_ELEMENT = "specific_element",
-  _METADATA = "metadata",
+  FULL_PAGE = "full_page",
+  MAIN_CONTENT = "main_content",
+  SPECIFIC_ELEMENT = "specific_element",
+  METADATA = "metadata",
 }
 
 /**
  * Web traversal strategies
  */
 export enum TraversalStrategy {
-  _BREADTH_FIRST = "breadth_first",
-  _DEPTH_FIRST = "depth_first",
-  _RELEVANCE_BASED = "relevance_based",
+  BREADTH_FIRST = "breadth_first",
+  DEPTH_FIRST = "depth_first",
+  RELEVANCE_BASED = "relevance_based",
 }
 
 /**
  * Content quality levels
  */
 export enum ContentQuality {
-  _HIGH = "high",
-  _MEDIUM = "medium",
-  _LOW = "low",
-  _UNKNOWN = "unknown",
+  HIGH = "high",
+  MEDIUM = "medium",
+  LOW = "low",
+  UNKNOWN = "unknown",
 }
 
 /**
@@ -78,9 +78,9 @@ export interface ContentQualityAssessment {
  * Rate limit status
  */
 export enum RateLimitStatus {
-  _OK = "ok",
-  _THROTTLED = "throttled",
-  _BLOCKED = "blocked",
+  OK = "ok",
+  THROTTLED = "throttled",
+  BLOCKED = "blocked",
 }
 
 /**
@@ -734,17 +734,17 @@ export interface WebRateLimitRecord {
  * Web Navigator events
  */
 export enum WebNavigatorEventType {
-  _EXTRACTION_STARTED = "web.extraction.started",
-  _EXTRACTION_COMPLETED = "web.extraction.completed",
-  _EXTRACTION_FAILED = "web.extraction.failed",
-  _TRAVERSAL_STARTED = "web.traversal.started",
-  _TRAVERSAL_COMPLETED = "web.traversal.completed",
-  _TRAVERSAL_FAILED = "web.traversal.failed",
-  _RATE_LIMIT_HIT = "web.rate_limit.hit",
-  _CACHE_HIT = "web.cache.hit",
-  _CACHE_MISS = "web.cache.miss",
-  _CONTENT_SANITIZED = "web.content.sanitized",
-  _MALICIOUS_CONTENT_DETECTED = "web.content.malicious",
+  EXTRACTION_STARTED = "web.extraction.started",
+  EXTRACTION_COMPLETED = "web.extraction.completed",
+  EXTRACTION_FAILED = "web.extraction.failed",
+  TRAVERSAL_STARTED = "web.traversal.started",
+  TRAVERSAL_COMPLETED = "web.traversal.completed",
+  TRAVERSAL_FAILED = "web.traversal.failed",
+  RATE_LIMIT_HIT = "web.rate_limit.hit",
+  CACHE_HIT = "web.cache.hit",
+  CACHE_MISS = "web.cache.miss",
+  CONTENT_SANITIZED = "web.content.sanitized",
+  MALICIOUS_CONTENT_DETECTED = "web.content.malicious",
 }
 
 /**

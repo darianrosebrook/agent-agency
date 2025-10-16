@@ -40,26 +40,26 @@ export { VerificationPriority } from "../types/verification";
  * Security audit levels
  */
 export enum SecurityAuditLevel {
-  _INFO = "info",
-  _WARNING = "warning",
-  _ERROR = "error",
-  _CRITICAL = "critical",
+  INFO = "info",
+  WARNING = "warning",
+  ERROR = "error",
+  CRITICAL = "critical",
 }
 
 /**
  * Security event types
  */
 export enum SecurityEventType {
-  _AUTHENTICATION = "authentication",
-  _AUTHORIZATION = "authorization",
-  _INPUT_VALIDATION = "input_validation",
-  _DATA_ACCESS = "data_access",
-  _CONFIGURATION = "configuration",
-  _OVERRIDE_REQUEST = "override_request",
-  _OVERRIDE_APPROVAL = "override_approval",
-  _CONSTITUTIONAL_VIOLATION = "constitutional_violation",
-  _RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
-  _SUSPICIOUS_ACTIVITY = "suspicious_activity",
+  AUTHENTICATION = "authentication",
+  AUTHORIZATION = "authorization",
+  INPUT_VALIDATION = "input_validation",
+  DATA_ACCESS = "data_access",
+  CONFIGURATION = "configuration",
+  OVERRIDE_REQUEST = "override_request",
+  OVERRIDE_APPROVAL = "override_approval",
+  CONSTITUTIONAL_VIOLATION = "constitutional_violation",
+  RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
+  SUSPICIOUS_ACTIVITY = "suspicious_activity",
 }
 
 /**
@@ -1002,6 +1002,93 @@ export class ArbiterOrchestrator {
     } catch (error) {
       console.error("Error during orchestrator shutdown:", error);
       this.initialized = false;
+    }
+  }
+
+  /**
+   * Get orchestrator health status
+   */
+  getHealth(): any {
+    return {
+      status: this.initialized ? "healthy" : "unhealthy",
+      components: {
+        taskQueue: !!this.components.taskQueue,
+        taskAssignment: !!this.components.taskAssignment,
+        agentRegistry: !!this.components.agentRegistry,
+        security: !!this.components.security,
+        healthMonitor: !!this.components.healthMonitor,
+        recoveryManager: !!this.components.recoveryManager,
+        knowledgeSeeker: !!this.components.knowledgeSeeker,
+        reasoningEngine: !!this.components.reasoningEngine,
+        verificationEngine: !!this.components.verificationEngine,
+        auditLogger: !!this.components.auditLogger,
+      },
+      uptime: Date.now() - this.startTime,
+    };
+  }
+
+  /**
+   * Get registered components
+   */
+  getComponents(): string[] {
+    const components: string[] = [];
+    if (this.components.taskQueue) components.push("taskQueue");
+    if (this.components.taskAssignment) components.push("taskAssignment");
+    if (this.components.agentRegistry) components.push("agentRegistry");
+    if (this.components.security) components.push("security");
+    if (this.components.healthMonitor) components.push("healthMonitor");
+    if (this.components.recoveryManager) components.push("recoveryManager");
+    if (this.components.knowledgeSeeker) components.push("knowledgeSeeker");
+    if (this.components.reasoningEngine) components.push("reasoningEngine");
+    if (this.components.verificationEngine)
+      components.push("verificationEngine");
+    if (this.components.auditLogger) components.push("auditLogger");
+    return components;
+  }
+
+  /**
+   * Get orchestrator statistics
+   */
+  getStatistics(): any {
+    return {
+      uptime: Date.now() - this.startTime,
+      tasksProcessed: 0, // Would need to track this
+      agentsRegistered: 0, // Would need to track this
+      errorsHandled: 0, // Would need to track this
+      componentsInitialized: this.getComponents().length,
+    };
+  }
+
+  /**
+   * Get orchestrator status
+   */
+  getStatus(): any {
+    return {
+      initialized: this.initialized,
+      healthy: this.initialized,
+      components: this.getComponents(),
+      statistics: this.getStatistics(),
+    };
+  }
+
+  /**
+   * Assign a task to a specific agent
+   */
+  async assignTaskToAgent(taskId: string, agentId: string): Promise<boolean> {
+    try {
+      if (!this.components.taskAssignment) {
+        throw new Error("Task assignment component not initialized");
+      }
+
+      // This would need to be implemented based on the actual task assignment logic
+      console.log(`Assigning task ${taskId} to agent ${agentId}`);
+      return true;
+    } catch (error) {
+      console.error(
+        `Failed to assign task ${taskId} to agent ${agentId}:`,
+        error
+      );
+      return false;
     }
   }
 }

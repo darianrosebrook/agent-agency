@@ -43,7 +43,7 @@ export class WebNavigator {
 
   constructor(
     private readonly config: WebNavigatorConfig,
-    private readonly _dbClient: WebNavigatorDatabaseClient,
+    private readonly dbClient: WebNavigatorDatabaseClient,
     knowledgeSeeker: KnowledgeSeeker
   ) {
     // Initialize content extractor
@@ -346,7 +346,7 @@ export class WebNavigator {
       const dbRateLimit = await this.dbClient.getRateLimit(domain);
       if (dbRateLimit) {
         rateLimit = dbRateLimit;
-        this.rateLimits.set(domain, rateLimit);
+        this.rateLimits.set(domain, rateLimit!);
       }
     }
 

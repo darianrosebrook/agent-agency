@@ -1,0 +1,41 @@
+
+> agent-agency-v2@2.0.0 lint
+> eslint src/**/*.ts tests/**/*.ts
+
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/adapters/AuditLogger.ts
+  101:60  warning  'logger' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  248:23  warning  'config' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  248:60  warning  'logger' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  304:23  warning  'config' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  304:60  warning  'logger' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  370:23  warning  'config' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  370:52  warning  'logger' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/adapters/NotificationAdapter.ts
+   89:23  warning  'config' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+   89:60  warning  'logger' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  161:23  warning  'config' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  161:60  warning  'logger' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  230:23  warning  'config' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  230:60  warning  'logger' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  303:23  warning  'config' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  303:59  warning  'logger' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-runtime/ViolationHandler.ts
+  66:13  warning  'config' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/coordinator/FailureManager.ts
+  32:13  warning  'config' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/models/ModelHotSwap.ts
+  235:13  warning  'config' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/TaskRetryHandler.ts
+  43:13  warning  'config' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/resilience/CircuitBreaker.ts
+  79:23  warning  'config' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+✖ 20 problems (0 errors, 20 warnings)
+

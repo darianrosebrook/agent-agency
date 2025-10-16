@@ -5646,5 +5646,41 @@
     },
     "previous_hash": "edb3b51ca3bef56f92c2559c442e05c08b7a7c4410140bb8f062c1963ec3eca6",
     "hash": "b8f54ab6a33f99a678af0696400ad1f7fe9028096af09f1214128fec5bd6312b"
+  },
+  {
+    "id": "prov-1760646865469",
+    "timestamp": "2025-10-16T20:34:25.469Z",
+    "commit": {
+      "hash": "72e04b5e09922d0b0af0d81fbcd597a7cb3fb97a",
+      "message": "fix: resolve all ESLint unused variable warnings",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-16T20:34:25.471Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "b8f54ab6a33f99a678af0696400ad1f7fe9028096af09f1214128fec5bd6312b",
+    "hash": "4fb3ecf488ae0e701b6544f4b1103f4a36718d1c469d4ba292c09ecd8752a62a"
   }
 ]

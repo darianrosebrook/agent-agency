@@ -217,7 +217,7 @@ export class RegistryProvider {
   ): Promise<AgentRegistry> {
     return RegistryProvider.createAgentRegistry(
       {
-        config: this.config,
+        config: this._config,
         initOptions,
       },
       this

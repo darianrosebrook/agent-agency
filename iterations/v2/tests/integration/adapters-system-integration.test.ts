@@ -16,6 +16,7 @@ import { DistributedCacheClient } from "../../src/adapters/DistributedCacheClien
 import { IncidentNotifier } from "../../src/adapters/IncidentNotifier";
 import { InfrastructureController } from "../../src/adapters/InfrastructureController";
 import { NotificationAdapter } from "../../src/adapters/NotificationAdapter";
+import { Logger } from "../../src/observability/Logger";
 import {
   AuditEvent,
   AuditEventType,
@@ -62,7 +63,7 @@ describe("Adapters System Integration", () => {
   const createNotification = (
     title: string = "Test Notification",
     message: string = "Test message",
-    priority: NotificationPriority = NotificationPriority.MEDIUM
+    priority: NotificationPriority = NotificationPriority._MEDIUM
   ) => ({
     title,
     message,
@@ -73,17 +74,28 @@ describe("Adapters System Integration", () => {
 
   beforeEach(async () => {
     // Initialize adapters
-    auditLogger = new AuditLogger({
+    const logger = new Logger({
       level: "info",
-      outputs: ["memory"], // Use memory for testing
-      maxEntries: 1000,
+      outputs: ["memory"],
     });
 
-    cacheClient = new DistributedCacheClient({
-      nodes: ["localhost:6379"],
-      ttl: 3600000,
-      maxMemory: "100mb",
-    });
+    auditLogger = new AuditLogger(
+      {
+        level: "info",
+        outputs: ["memory"], // Use memory for testing
+        maxEntries: 1000,
+      },
+      logger
+    );
+
+    cacheClient = new DistributedCacheClient(
+      {
+        nodes: ["localhost:6379"],
+        ttl: 3600000,
+        maxMemory: "100mb",
+      },
+      logger
+    );
 
     incidentNotifier = new IncidentNotifier({
       enabled: true,
@@ -103,12 +115,15 @@ describe("Adapters System Integration", () => {
       healthCheckInterval: 30000,
     });
 
-    notificationAdapter = new NotificationAdapter({
-      providers: {
-        email: { enabled: true, smtp: { host: "localhost", port: 587 } },
-        slack: { enabled: true, webhookUrl: "https://hooks.slack.com/test" },
+    notificationAdapter = new NotificationAdapter(
+      {
+        providers: {
+          email: { enabled: true, smtp: { host: "localhost", port: 587 } },
+          slack: { enabled: true, webhookUrl: "https://hooks.slack.com/test" },
+        },
       },
-    });
+      logger
+    );
 
     // Initialize all adapters
     await Promise.all([
@@ -302,7 +317,7 @@ describe("Adapters System Integration", () => {
       const notification = createNotification(
         "System Alert",
         "Integration test notification",
-        NotificationPriority.HIGH
+        NotificationPriority._HIGH
       );
 
       // Send notification
@@ -353,7 +368,7 @@ describe("Adapters System Integration", () => {
           userName: "John Doe",
           accountType: "premium",
         },
-        priority: NotificationPriority.LOW,
+        priority: NotificationPriority._LOW,
         channels: [NotificationChannel.EMAIL],
       };
 
@@ -438,7 +453,7 @@ describe("Adapters System Integration", () => {
       const notification = createNotification(
         "Workflow Started",
         `Workflow ${workflowData.workflowId} has started processing`,
-        NotificationPriority.MEDIUM
+        NotificationPriority._MEDIUM
       );
       await notificationAdapter.send(notification);
 
@@ -731,4 +746,3 @@ describe("Adapters System Integration", () => {
     });
   });
 });
-

@@ -177,13 +177,13 @@ risk_tiers:
       useTemporaryFiles: false,
     });
 
-    _policyAdapter = new CAWSPolicyAdapter({
+    policyAdapter = new CAWSPolicyAdapter({
       projectRoot,
       enableCaching: true,
     });
 
     // MCP server constructor takes only projectRoot string
-    _mcpServer = new ArbiterMCPServer(projectRoot);
+    mcpServer = new ArbiterMCPServer(projectRoot);
 
     budgetMonitor = new BudgetMonitor({
       projectRoot,

@@ -19,10 +19,10 @@ import {
  * Turn scheduling strategy
  */
 export enum TurnSchedulingStrategy {
-  _ROUND_ROBIN = "round_robin",
-  _WEIGHTED_FAIR = "weighted_fair",
-  _PRIORITY_BASED = "priority_based",
-  _DYNAMIC_ADAPTIVE = "dynamic_adaptive",
+  ROUND_ROBIN = "round_robin",
+  WEIGHTED_FAIR = "weighted_fair",
+  PRIORITY_BASED = "priority_based",
+  DYNAMIC_ADAPTIVE = "dynamic_adaptive",
 }
 
 /**

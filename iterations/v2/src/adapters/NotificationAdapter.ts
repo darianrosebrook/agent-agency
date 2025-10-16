@@ -86,7 +86,7 @@ export interface NotificationProvider {
  * Email notification provider
  */
 export class EmailNotificationProvider implements NotificationProvider {
-  constructor(private _config: Record<string, any>, private _logger: Logger) {}
+  constructor(private config: NotificationConfig, private logger: Logger) {}
 
   async send(
     recipient: NotificationRecipient,
@@ -158,7 +158,7 @@ export class EmailNotificationProvider implements NotificationProvider {
  * Slack notification provider
  */
 export class SlackNotificationProvider implements NotificationProvider {
-  constructor(private _config: Record<string, any>, private _logger: Logger) {}
+  constructor(private _config: Record<string, any>, private logger: Logger) {}
 
   async send(
     recipient: NotificationRecipient,
@@ -227,7 +227,7 @@ export class SlackNotificationProvider implements NotificationProvider {
  * Webhook notification provider
  */
 export class WebhookNotificationProvider implements NotificationProvider {
-  constructor(private _config: Record<string, any>, private _logger: Logger) {}
+  constructor(private config: NotificationConfig, private logger: Logger) {}
 
   async send(
     recipient: NotificationRecipient,
@@ -256,7 +256,7 @@ export class WebhookNotificationProvider implements NotificationProvider {
         recipientId: recipient.id,
         messageId: `webhook_${Date.now()}_${Math.random()
           .toString(36)
-          .substr(2, 9)}`,
+          .substring(2, 9)}`,
         timestamp: new Date(),
       };
     } catch (error) {
@@ -300,7 +300,7 @@ export class NotificationAdapter {
   private rateLimitTracker: Map<string, { count: number; resetTime: number }> =
     new Map();
 
-  constructor(private _config: NotificationConfig, private _logger: Logger) {
+  constructor(private config: NotificationConfig, private logger: Logger) {
     this.initializeProviders();
   }
 
@@ -311,14 +311,20 @@ export class NotificationAdapter {
       let provider: NotificationProvider;
       switch (channel.type) {
         case "email":
-          provider = new EmailNotificationProvider(channel.config, this.logger);
+          provider = new EmailNotificationProvider(
+            channel.config as NotificationConfig,
+            this.logger
+          );
           break;
         case "slack":
-          provider = new SlackNotificationProvider(channel.config, this.logger);
+          provider = new SlackNotificationProvider(
+            channel.config as NotificationConfig,
+            this.logger
+          );
           break;
         case "webhook":
           provider = new WebhookNotificationProvider(
-            channel.config,
+            channel.config as NotificationConfig,
             this.logger
           );
           break;
@@ -375,7 +381,7 @@ export class NotificationAdapter {
       for (const channelType of channels) {
         const provider = this.providers.get(channelType);
         const channel = this.config.channels.find(
-          (c) => c.type === channelType
+          (c: NotificationChannel) => c.type === channelType
         );
 
         if (!provider || !channel) continue;

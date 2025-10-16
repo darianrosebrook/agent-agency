@@ -8,34 +8,34 @@
  */
 
 export enum ComponentType {
-  _AGENT_REGISTRY = "agent_registry",
-  _TASK_ROUTER = "task_router",
-  _CAWS_VALIDATOR = "caws_validator",
-  _PERFORMANCE_TRACKER = "performance_tracker",
-  _TASK_ORCHESTRATOR = "task_orchestrator",
-  _CONSTITUTIONAL_RUNTIME = "constitutional_runtime",
+  AGENT_REGISTRY = "agent_registry",
+  TASK_ROUTER = "task_router",
+  CAWS_VALIDATOR = "caws_validator",
+  PERFORMANCE_TRACKER = "performance_tracker",
+  TASK_ORCHESTRATOR = "task_orchestrator",
+  CONSTITUTIONAL_RUNTIME = "constitutional_runtime",
 }
 
 export enum HealthStatus {
-  _HEALTHY = "healthy",
-  _DEGRADED = "degraded",
-  _UNHEALTHY = "unhealthy",
-  _UNKNOWN = "unknown",
+  HEALTHY = "healthy",
+  DEGRADED = "degraded",
+  UNHEALTHY = "unhealthy",
+  UNKNOWN = "unknown",
 }
 
 export enum FailureType {
-  _HEALTH_CHECK_FAILURE = "health_check_failure",
-  _CONNECTION_FAILURE = "connection_failure",
-  _TIMEOUT_FAILURE = "timeout_failure",
-  _INTERNAL_ERROR = "internal_error",
-  _DEPENDENCY_FAILURE = "dependency_failure",
+  HEALTH_CHECK_FAILURE = "health_check_failure",
+  CONNECTION_FAILURE = "connection_failure",
+  TIMEOUT_FAILURE = "timeout_failure",
+  INTERNAL_ERROR = "internal_error",
+  DEPENDENCY_FAILURE = "dependency_failure",
 }
 
 export enum RecoveryStatus {
-  _IN_PROGRESS = "in_progress",
-  _SUCCESSFUL = "successful",
-  _FAILED = "failed",
-  _TIMEOUT = "timeout",
+  IN_PROGRESS = "in_progress",
+  SUCCESSFUL = "successful",
+  FAILED = "failed",
+  TIMEOUT = "timeout",
 }
 
 export interface ComponentRegistration {

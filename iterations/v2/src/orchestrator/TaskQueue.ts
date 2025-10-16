@@ -6,9 +6,11 @@
  * @author @darianrosebrook
  */
 
-import { Buffer } from "node:buffer";
-import { EventEmitter } from "events";
 import { Logger } from "@/observability/Logger";
+import { EventEmitter } from "events";
+import { Buffer } from "node:buffer";
+import { Task } from "../types/arbiter-orchestration";
+import { TaskQueueStats } from "../types/orchestrator-events";
 import type { AuthCredentials, SecurityContext } from "./SecurityManager";
 import {
   Permission,
@@ -16,8 +18,6 @@ import {
   SecurityManager,
   SecurityMiddleware,
 } from "./SecurityManager";
-import { Task } from "../types/arbiter-orchestration";
-import { TaskQueueStats } from "../types/orchestrator-events";
 
 export class TaskQueue extends EventEmitter {
   private queue: Task[] = [];
@@ -62,7 +62,7 @@ export class TaskQueue extends EventEmitter {
    */
   remove(taskId: string): boolean {
     // Check queue first
-    const queueIndex = this.queue.findIndex((t) => t.id === taskId);
+    const queueIndex = this.queue.findIndex((t: any) => t.id === taskId);
     if (queueIndex >= 0) {
       this.queue.splice(queueIndex, 1);
       this.timestamps.delete(taskId);
@@ -92,7 +92,7 @@ export class TaskQueue extends EventEmitter {
    * Check if task is queued
    */
   isQueued(taskId: string): boolean {
-    return this.queue.some((t) => t.id === taskId);
+    return this.queue.some((t: any) => t.id === taskId);
   }
 
   /**
@@ -120,7 +120,7 @@ export class TaskQueue extends EventEmitter {
    */
   getStats(): TaskQueueStats {
     const queuedTimestamps = this.queue
-      .map((task) => this.timestamps.get(task.id))
+      .map((task: any) => this.timestamps.get(task.id))
       .filter(Boolean) as Date[];
 
     const oldestQueued =
@@ -361,16 +361,13 @@ export class SecureTaskQueue {
    * Access the underlying queue for read-only operations.
    */
   get innerQueue(): TaskQueue {
-    return this.queue;
+    return this._queue;
   }
 
   /**
    * Enqueue a task after authenticating and authorizing the request.
    */
-  async enqueue(
-    task: Task,
-    credentials: AuthCredentials
-  ): Promise<void> {
+  async enqueue(task: Task, credentials: AuthCredentials): Promise<void> {
     const baseClone = this.cloneTask(task);
 
     try {
@@ -391,7 +388,7 @@ export class SecureTaskQueue {
             this.enforcePolicies(context, submissionClone);
 
             const enrichedTask = this.enrichTask(submissionClone, context);
-            this.queue.enqueue(enrichedTask);
+            this._queue.enqueue(enrichedTask);
 
             await this.recordAudit("enqueue", enrichedTask, context);
           } catch (error) {
@@ -403,7 +400,7 @@ export class SecureTaskQueue {
         }
       );
     } catch (error) {
-      if (error instanceof SecurityError && error.code === "RATE_LIMITED") {
+      if (error instanceof SecurityError && error._code === "RATE_LIMITED") {
         await this.recordAudit("rate_limited", baseClone, undefined, {
           error: error.message,
           actor: credentials.agentId,
@@ -413,10 +410,7 @@ export class SecureTaskQueue {
     }
   }
 
-  private enforcePolicies(
-    context: SecurityContext,
-    task: Task
-  ): void {
+  private enforcePolicies(context: SecurityContext, task: Task): void {
     if (task.description.length > this.descriptionLimit) {
       throw new SecurityError(
         "Task description exceeds policy limit",

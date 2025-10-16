@@ -61,9 +61,9 @@ export interface ViolationConfig {
 
 export class ViolationHandler extends EventEmitter {
   constructor(
-    private _alertManager: AlertManager,
-    private _auditLogger: AuditLogger,
-    private _config: ViolationConfig = {
+    private alertManager: AlertManager,
+    private auditLogger: AuditLogger,
+    private config: ViolationConfig = {
       alertEnabled: true,
       blockEnabled: true,
       logEnabled: true,

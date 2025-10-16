@@ -54,10 +54,10 @@ export interface RoleAssignmentResult {
  * Load balancing strategy
  */
 export enum LoadBalancingStrategy {
-  _ROUND_ROBIN = "round_robin",
-  _LEAST_LOADED = "least_loaded",
-  _CAPABILITY_BASED = "capability_based",
-  _HYBRID = "hybrid",
+  ROUND_ROBIN = "round_robin",
+  LEAST_LOADED = "least_loaded",
+  CAPABILITY_BASED = "capability_based",
+  HYBRID = "hybrid",
 }
 
 /**

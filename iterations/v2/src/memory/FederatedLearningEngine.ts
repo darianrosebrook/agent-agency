@@ -412,6 +412,92 @@ export class FederatedLearningEngine {
   }
 
   /**
+   * Submit a model update from a tenant
+   */
+  async submitModelUpdate(update: ModelUpdate): Promise<void> {
+    const tenantId = update.tenantId;
+    const topicKey = this.generateTopicKey(update.context);
+
+    // Check tenant access
+    const accessCheck = await this.tenantIsolator.checkAccess(
+      tenantId,
+      "submit-update"
+    );
+    if (!accessCheck.allowed) {
+      throw new Error(`Tenant ${tenantId} not authorized to submit updates`);
+    }
+
+    // Store update in aggregation queue
+    if (!this.aggregationQueue.has(topicKey)) {
+      this.aggregationQueue.set(topicKey, []);
+    }
+
+    const queue = this.aggregationQueue.get(topicKey)!;
+    queue.push({
+      tenantId,
+      update,
+      submittedAt: new Date(),
+    });
+
+    this.logger.debug("Model update submitted", { tenantId, topicKey });
+  }
+
+  /**
+   * Aggregate models from multiple tenants
+   */
+  async aggregateModels(): Promise<AggregatedModel> {
+    // Collect all pending updates
+    const allUpdates: ContextualMemory[] = [];
+
+    for (const queue of this.aggregationQueue.values()) {
+      for (const item of queue) {
+        allUpdates.push({
+          id: `update_${item.tenantId}_${Date.now()}`,
+          tenantId: item.tenantId,
+          content: item.update.data,
+          context: item.update.context,
+          confidence: item.update.accuracy,
+          timestamp: item.submittedAt,
+          metadata: {
+            accuracy: item.update.accuracy,
+            trainingSamples: item.update.trainingSamples,
+          },
+        });
+      }
+    }
+
+    if (allUpdates.length === 0) {
+      throw new Error("No model updates available for aggregation");
+    }
+
+    // Perform federated aggregation
+    const aggregated = this.hybridAggregation(allUpdates);
+
+    // Calculate metadata
+    const tenantCount = new Set(allUpdates.map((u) => u.tenantId)).size;
+    const averageAccuracy =
+      allUpdates.reduce((sum, u) => sum + u.confidence, 0) / allUpdates.length;
+
+    const aggregatedModel: AggregatedModel = {
+      id: `aggregated_${Date.now()}_${Math.random()}`,
+      weights: new Map(
+        aggregated.map((memory, index) => [index.toString(), memory.content])
+      ),
+      metadata: {
+        tenantCount,
+        averageAccuracy,
+        aggregationMethod: "federated_hybrid",
+        createdAt: new Date(),
+      },
+    };
+
+    // Clear processed updates
+    this.aggregationQueue.clear();
+
+    return aggregatedModel;
+  }
+
+  /**
    * Perform maintenance operations
    */
   async performMaintenance(): Promise<void> {

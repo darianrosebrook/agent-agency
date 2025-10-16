@@ -233,7 +233,10 @@ export class ArbitrationOrchestrator {
 
     // Find precedents if enabled
     if (this.config.autoApplyPrecedents) {
-      await this.transitionState(session, ArbitrationState.EVIDENCE_COLLECTION);
+      await this.transitionState(
+        session,
+        ArbitrationState.EVIDENCE_COLLECTION
+      );
       await this.findPrecedents(sessionId);
     } else {
       await this.transitionState(session, ArbitrationState.VERDICT_GENERATION);

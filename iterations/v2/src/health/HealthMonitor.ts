@@ -8,9 +8,9 @@
  */
 
 export enum HealthStatus {
-  _HEALTHY = "healthy",
-  _DEGRADED = "degraded",
-  _UNHEALTHY = "unhealthy",
+  HEALTHY = "healthy",
+  DEGRADED = "degraded",
+  UNHEALTHY = "unhealthy",
 }
 
 export interface ComponentHealth {
@@ -148,6 +148,53 @@ export class HealthMonitor {
       timestamp: new Date(),
       uptime: this.getUptimeSeconds(),
     };
+  }
+
+  /**
+   * Check health of a specific component
+   */
+  async checkComponent(name: string): Promise<ComponentHealth> {
+    const check = this.checks.get(name);
+    if (!check) {
+      return {
+        name,
+        status: HealthStatus.UNHEALTHY,
+        message: `Component '${name}' not registered`,
+        lastCheck: new Date(),
+        responseTime: 0,
+      };
+    }
+
+    try {
+      const startTime = Date.now();
+      const result = await check();
+      const responseTime = Date.now() - startTime;
+
+      const componentHealth: ComponentHealth = {
+        name,
+        status: result.status,
+        message: result.message,
+        lastCheck: new Date(),
+        responseTime,
+        details: result.details,
+      };
+
+      // Cache the result
+      this.lastResults.set(name, componentHealth);
+
+      return componentHealth;
+    } catch (error) {
+      const componentHealth: ComponentHealth = {
+        name,
+        status: HealthStatus.UNHEALTHY,
+        message: error instanceof Error ? error.message : String(error),
+        lastCheck: new Date(),
+        responseTime: 0,
+      };
+
+      this.lastResults.set(name, componentHealth);
+      return componentHealth;
+    }
   }
 
   /**

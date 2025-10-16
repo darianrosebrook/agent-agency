@@ -52,7 +52,7 @@ export class TaskQueuePersistence {
         updated_at = NOW()
     `;
 
-    await this.db.query(sql, [
+    await this._db.query(sql, [
       task.id,
       task.type,
       task.description,
@@ -91,9 +91,9 @@ export class TaskQueuePersistence {
       ORDER BY priority DESC, created_at ASC
     `;
 
-    const rows = await this.db.query(sql);
+    const rows = await this._db.query(sql);
 
-    return rows.map((row) => ({
+    return rows.map((row: any) => ({
       id: row.id,
       type: row.type,
       description: row.description,
@@ -121,7 +121,7 @@ export class TaskQueuePersistence {
       WHERE task_id = $1 AND status = 'queued'
     `;
 
-    await this.db.query(sql, [taskId]);
+    await this._db.query(sql, [taskId]);
   }
 
   /**
@@ -134,7 +134,7 @@ export class TaskQueuePersistence {
       WHERE task_id = $1
     `;
 
-    await this.db.query(sql, [taskId]);
+    await this._db.query(sql, [taskId]);
   }
 
   /**
@@ -148,7 +148,7 @@ export class TaskQueuePersistence {
       WHERE task_id = $1
     `;
 
-    await this.db.query(sql, [
+    await this._db.query(sql, [
       taskId,
       JSON.stringify(error || "Unknown error"),
     ]);
@@ -165,7 +165,7 @@ export class TaskQueuePersistence {
       RETURNING attempts
     `;
 
-    const result = await this.db.query(sql, [taskId]);
+    const result = await this._db.query(sql, [taskId]);
     return result[0]?.attempts || 0;
   }
 
@@ -179,7 +179,7 @@ export class TaskQueuePersistence {
       WHERE status = 'queued'
     `;
 
-    await this.db.query(sql);
+    await this._db.query(sql);
   }
 
   /**
@@ -206,7 +206,7 @@ export class TaskQueuePersistence {
       FROM task_queue
     `;
 
-    const countsResult = await this.db.query(countsSql);
+    const countsResult = await this._db.query(countsSql);
     const counts = countsResult[0];
 
     // Get priority distribution
@@ -217,7 +217,7 @@ export class TaskQueuePersistence {
       GROUP BY priority
     `;
 
-    const priorityRows = await this.db.query(prioritySql);
+    const priorityRows = await this._db.query(prioritySql);
     const priorityDistribution: Record<number, number> = {};
     priorityRows.forEach((row: any) => {
       priorityDistribution[row.priority] = parseInt(row.count);
@@ -230,7 +230,7 @@ export class TaskQueuePersistence {
       GROUP BY status
     `;
 
-    const statusRows = await this.db.query(statusSql);
+    const statusRows = await this._db.query(statusSql);
     const statusDistribution: Record<TaskStatus, number> = {
       [TaskStatus.QUEUED]: 0,
       [TaskStatus.ROUTING]: 0,
@@ -259,7 +259,7 @@ export class TaskQueuePersistence {
       AND completed_at IS NOT NULL
     `;
 
-    const waitTimeResult = await this.db.query(waitTimeSql);
+    const waitTimeResult = await this._db.query(waitTimeSql);
     const averageWaitTimeMs = waitTimeResult[0]?.avg_wait_ms || 0;
 
     return {
@@ -295,7 +295,7 @@ export class TaskQueuePersistence {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     `;
 
-    await this.db.query(sql, [
+    await this._db.query(sql, [
       stats.depth,
       stats.totalEnqueued,
       stats.totalDequeued,
@@ -312,7 +312,7 @@ export class TaskQueuePersistence {
    */
   async loadConfiguration(): Promise<Record<string, any>> {
     const sql = `SELECT config_key, config_value FROM queue_configuration`;
-    const rows = await this.db.query(sql);
+    const rows = await this._db.query(sql);
 
     const config: Record<string, any> = {};
     rows.forEach((row: any) => {
@@ -342,7 +342,7 @@ export class TaskQueuePersistence {
         updated_at = NOW()
     `;
 
-    await this.db.query(sql, [key, JSON.stringify(value), description]);
+    await this._db.query(sql, [key, JSON.stringify(value), description]);
   }
 
   /**
@@ -372,7 +372,7 @@ export class TaskQueuePersistence {
       AND completed_at < NOW() - INTERVAL '${olderThanDays} days'
     `;
 
-    const result = await this.db.query(sql);
+    const result = await this._db.query(sql);
     return result.length;
   }
 
@@ -399,9 +399,9 @@ export class TaskQueuePersistence {
       AND (created_at + (timeout_ms || ' milliseconds')::interval) < NOW()
     `;
 
-    const rows = await this.db.query(sql);
+    const rows = await this._db.query(sql);
 
-    return rows.map((row) => ({
+    return rows.map((row: any) => ({
       id: row.id,
       type: row.type,
       description: row.description,

@@ -27,10 +27,10 @@ export class ConstitutionalRuntime extends EventEmitter {
   private config: ConstitutionalConfig;
 
   constructor(
-    private _policyEngine: ConstitutionalPolicyEngine,
-    private _violationHandler: ViolationHandler,
-    private _waiverManager: WaiverManager,
-    private _tracing: TracingProvider,
+    private policyEngine: ConstitutionalPolicyEngine,
+    private violationHandler: ViolationHandler,
+    private waiverManager: WaiverManager,
+    private tracing: TracingProvider,
     config?: Partial<ConstitutionalConfig>
   ) {
     super();
@@ -122,7 +122,7 @@ export class ConstitutionalRuntime extends EventEmitter {
           this.emit("operation:violations-detected", {
             operationId: operation.id,
             violationCount: violations.length,
-            violations: violations.map((v) => ({
+            violations: violations.map((v: ConstitutionalViolation) => ({
               id: v.id,
               principle: v.principle,
               severity: v.severity,
@@ -314,10 +314,10 @@ export class ConstitutionalRuntime extends EventEmitter {
     recentViolations: number;
   } {
     const waivers = this.waiverManager.getWaivers();
-    const waiverStats = waivers.reduce((acc, waiver) => {
-      acc[waiver.status] = (acc[waiver.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const waiverStats: Record<string, number> = {};
+    waivers.forEach((waiver) => {
+      waiverStats[waiver.status] = (waiverStats[waiver.status] || 0) + 1;
+    });
 
     // In a full implementation, track recent violations
     const recentViolations = 0;
@@ -459,11 +459,11 @@ export class ConstitutionalRuntime extends EventEmitter {
    */
   private setupEventHandlers(): void {
     // Forward events from components
-    this.violationHandler.on("violation:handled", (event) => {
+    this.violationHandler.on("violation:handled", (event: any) => {
       this.emit("violation:handled", event);
     });
 
-    this.waiverManager.on("waiver:created", (event) => {
+    this.waiverManager.on("waiver:created", (event: any) => {
       this.emit("waiver:created", event);
     });
   }

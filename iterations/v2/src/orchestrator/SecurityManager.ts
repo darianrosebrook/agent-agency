@@ -11,20 +11,20 @@ import { AgentProfile } from "../types/arbiter-orchestration";
 
 // Temporarily define local types to fix startup issue
 export enum ViolationSeverity {
-  _LOW = "low",
-  _MEDIUM = "medium",
-  _HIGH = "high",
-  _CRITICAL = "critical",
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
+  CRITICAL = "critical",
 }
 
 export enum SecurityLevel {
-  _PUBLIC = "public",
-  _INTERNAL = "internal",
-  _CONFIDENTIAL = "confidential",
-  _RESTRICTED = "restricted",
-  _AGENT = "agent",
-  _TRUSTED_AGENT = "trusted_agent",
-  _ADMIN = "admin",
+  PUBLIC = "public",
+  INTERNAL = "internal",
+  CONFIDENTIAL = "confidential",
+  RESTRICTED = "restricted",
+  AGENT = "agent",
+  TRUSTED_AGENT = "trusted_agent",
+  ADMIN = "admin",
 }
 
 export interface SecurityContext {
@@ -45,25 +45,25 @@ export interface SecurityContext {
  */
 export enum Permission {
   /** Can submit tasks */
-  _SUBMIT_TASK = "submit_task",
+  SUBMIT_TASK = "submit_task",
 
   /** Can query own tasks */
-  _QUERY_OWN_TASKS = "query_own_tasks",
+  QUERY_OWN_TASKS = "query_own_tasks",
 
   /** Can query system status (limited) */
-  _QUERY_SYSTEM_STATUS = "query_system_status",
+  QUERY_SYSTEM_STATUS = "query_system_status",
 
   /** Can update own task progress */
-  _UPDATE_OWN_PROGRESS = "update_own_progress",
+  UPDATE_OWN_PROGRESS = "update_own_progress",
 
   /** Admin: Can query all tasks */
-  _ADMIN_QUERY_ALL = "admin_query_all",
+  ADMIN_QUERY_ALL = "admin_query_all",
 
   /** Admin: Can manage system configuration */
-  _ADMIN_MANAGE_CONFIG = "admin_manage_config",
+  ADMIN_MANAGE_CONFIG = "admin_manage_config",
 
   /** Admin: Can shutdown system */
-  _ADMIN_SHUTDOWN = "admin_shutdown",
+  ADMIN_SHUTDOWN = "admin_shutdown",
 }
 
 // SecurityLevel enum is now imported from security-policy.ts
@@ -73,28 +73,28 @@ export enum Permission {
  */
 export enum SecurityEventType {
   /** Authentication success */
-  _AUTH_SUCCESS = "auth_success",
+  AUTH_SUCCESS = "auth_success",
 
   /** Authentication failure */
-  _AUTH_FAILURE = "auth_failure",
+  AUTH_FAILURE = "auth_failure",
 
   /** Authorization failure */
-  _AUTHZ_FAILURE = "authz_failure",
+  AUTHZ_FAILURE = "authz_failure",
 
   /** Input validation failure */
-  _INPUT_VALIDATION_FAILURE = "input_validation_failure",
+  INPUT_VALIDATION_FAILURE = "input_validation_failure",
 
   /** Rate limit exceeded */
-  _RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
+  RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
 
   /** Suspicious activity detected */
-  _SUSPICIOUS_ACTIVITY = "suspicious_activity",
+  SUSPICIOUS_ACTIVITY = "suspicious_activity",
 
   /** Security policy violation */
-  _POLICY_VIOLATION = "policy_violation",
+  POLICY_VIOLATION = "policy_violation",
 
   /** Session expired */
-  _SESSION_EXPIRED = "session_expired",
+  SESSION_EXPIRED = "session_expired",
 }
 
 /**

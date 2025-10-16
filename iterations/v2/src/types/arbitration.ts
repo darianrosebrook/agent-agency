@@ -12,74 +12,74 @@
  * Severity of constitutional violation
  */
 export enum ViolationSeverity {
-  _MINOR = "minor",
-  _MODERATE = "moderate",
-  _MAJOR = "major",
-  _CRITICAL = "critical",
+  MINOR = "minor",
+  MODERATE = "moderate",
+  MAJOR = "major",
+  CRITICAL = "critical",
 }
 
 /**
  * Constitutional rule category
  */
 export enum RuleCategory {
-  _CODE_QUALITY = "code_quality",
-  _TESTING = "testing",
-  _SECURITY = "security",
-  _PERFORMANCE = "performance",
-  _DOCUMENTATION = "documentation",
-  _DEPLOYMENT = "deployment",
-  _BUDGET = "budget",
-  _PROCESS = "process",
-  _RESOURCE_MANAGEMENT = "resource_management",
+  CODE_QUALITY = "code_quality",
+  TESTING = "testing",
+  SECURITY = "security",
+  PERFORMANCE = "performance",
+  DOCUMENTATION = "documentation",
+  DEPLOYMENT = "deployment",
+  BUDGET = "budget",
+  PROCESS = "process",
+  RESOURCE_MANAGEMENT = "resource_management",
 }
 
 /**
  * Verdict outcome
  */
 export enum VerdictOutcome {
-  _APPROVED = "approved",
-  _REJECTED = "rejected",
-  _CONDITIONAL = "conditional",
-  _WAIVED = "waived",
-  _APPEALED = "appealed",
+  APPROVED = "approved",
+  REJECTED = "rejected",
+  CONDITIONAL = "conditional",
+  WAIVED = "waived",
+  APPEALED = "appealed",
 }
 
 /**
  * Waiver status
  */
 export enum WaiverStatus {
-  _PENDING = "pending",
-  _APPROVED = "approved",
-  _REJECTED = "rejected",
-  _EXPIRED = "expired",
-  _REVOKED = "revoked",
+  PENDING = "pending",
+  APPROVED = "approved",
+  REJECTED = "rejected",
+  EXPIRED = "expired",
+  REVOKED = "revoked",
 }
 
 /**
  * Arbitration session state
  */
 export enum ArbitrationState {
-  _INITIALIZED = "initialized",
-  _RULE_EVALUATION = "rule_evaluation",
-  _DEBATE_IN_PROGRESS = "debate_in_progress",
-  _EVIDENCE_COLLECTION = "evidence_collection",
-  _VERDICT_GENERATION = "verdict_generation",
-  _WAIVER_EVALUATION = "waiver_evaluation",
-  _APPEAL_REVIEW = "appeal_review",
-  _COMPLETED = "completed",
-  _FAILED = "failed",
+  INITIALIZED = "initialized",
+  RULE_EVALUATION = "rule_evaluation",
+  DEBATE_IN_PROGRESS = "debate_in_progress",
+  EVIDENCE_COLLECTION = "evidence_collection",
+  VERDICT_GENERATION = "verdict_generation",
+  WAIVER_EVALUATION = "waiver_evaluation",
+  APPEAL_REVIEW = "appeal_review",
+  COMPLETED = "completed",
+  FAILED = "failed",
 }
 
 /**
  * Appeal status
  */
 export enum AppealStatus {
-  _SUBMITTED = "submitted",
-  _UNDER_REVIEW = "under_review",
-  _UPHELD = "upheld",
-  _OVERTURNED = "overturned",
-  _FINALIZED = "finalized",
-  _WITHDRAWN = "withdrawn",
+  SUBMITTED = "submitted",
+  UNDER_REVIEW = "under_review",
+  UPHELD = "upheld",
+  OVERTURNED = "overturned",
+  FINALIZED = "finalized",
+  WITHDRAWN = "withdrawn",
 }
 
 /**

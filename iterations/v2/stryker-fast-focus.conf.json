@@ -4,9 +4,7 @@
   "reporters": ["html", "clear-text", "progress"],
   "testRunner": "jest",
   "coverageAnalysis": "off",
-  "mutate": [
-    "src/learning/AdaptivePromptEngineer.ts"
-  ],
+  "mutate": ["src/learning/AdaptivePromptEngineer.ts"],
   "mutator": {
     "plugins": ["typescript"],
     "excludedMutations": ["StringLiteral", "ArrayDeclaration", "ObjectLiteral"]
@@ -40,7 +38,7 @@
       "testMatch": [
         "**/tests/unit/learning/adaptive-prompt-engineer-mutation.test.ts"
       ],
-      "testNamePattern": "should initialize with empty state|should record successful iterations|should update success patterns when improvement delta > 0.01|should update failure patterns when error detected"
+      "testNamePattern": "should initialize with empty state|should record successful iterations|should record failed iterations|should handle sessions with no learning history"
     }
   }
 }

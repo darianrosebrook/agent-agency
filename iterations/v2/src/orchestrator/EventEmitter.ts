@@ -14,11 +14,11 @@ export { VerificationPriority } from "../types/verification";
  * Event severity levels
  */
 export enum EventSeverity {
-  _DEBUG = "debug",
-  _INFO = "info",
-  _WARN = "warn",
-  _ERROR = "error",
-  _CRITICAL = "critical",
+  DEBUG = "debug",
+  INFO = "info",
+  WARN = "warn",
+  ERROR = "error",
+  CRITICAL = "critical",
 }
 
 /**

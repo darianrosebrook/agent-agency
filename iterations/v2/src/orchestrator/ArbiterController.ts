@@ -22,16 +22,16 @@ import { WorkspaceStateManager } from "../workspace/WorkspaceStateManager.js";
 import { AgentRegistryManager } from "./AgentRegistryManager.js";
 import { ArbiterOrchestrator } from "./ArbiterOrchestrator.js";
 import { TaskOrchestrator } from "./TaskOrchestrator.js";
-import { ArbiterRuntime } from "./runtime/ArbiterRuntime.js";
 import {
-  TaskIntakeProcessor,
   TaskIntakeConfig,
+  TaskIntakeProcessor,
 } from "./intake/TaskIntakeProcessor.js";
-import { IntakeAuditLogger } from "./intake/TaskSubmissionService.js";
 import {
-  processTaskSubmission,
+  IntakeAuditLogger,
   TaskSubmissionResult,
+  processTaskSubmission,
 } from "./intake/TaskSubmissionService.js";
+import { ArbiterRuntime } from "./runtime/ArbiterRuntime.js";
 
 /**
  * ArbiterController configuration
@@ -136,14 +136,17 @@ export class ArbiterController {
       if (this.config.audit.enabled) {
         const logLevel =
           this.config.audit.logLevel === "debug"
-            ? LogLevel.DEBUG
+            ? LogLevel._DEBUG
             : this.config.audit.logLevel === "warn"
-            ? LogLevel.WARN
+            ? LogLevel._WARN
             : this.config.audit.logLevel === "error"
-            ? LogLevel.ERROR
-            : LogLevel.INFO;
+            ? LogLevel._ERROR
+            : LogLevel._INFO;
 
-        this.auditLogger = new AuditLogger("ArbiterController", logLevel) as IntakeAuditLogger;
+        this.auditLogger = new AuditLogger(
+          "ArbiterController",
+          logLevel
+        ) as IntakeAuditLogger;
         console.log("✅ Audit logger initialized");
       }
 

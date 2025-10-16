@@ -84,7 +84,7 @@ describe("Arbiter Edge Case Pipeline Integration Tests", () => {
 
     creditLedger = new CreditLedgerImpl(creditRepo);
     confidenceScorer = new ConfidenceScorer();
-    _adaptiveEngine = new AdaptivePolicyEngineImpl(creditLedger, {
+    adaptiveEngine = new AdaptivePolicyEngineImpl(creditLedger, {
       policies: {
         taskAssignment: {
           enabled: true,
@@ -117,7 +117,7 @@ describe("Arbiter Edge Case Pipeline Integration Tests", () => {
     });
     injectionDetector = new PromptInjectionDetectorImpl();
     policyEnforcer = new CAWSPolicyEnforcerImpl();
-    _auditManager = new PolicyAuditManagerImpl();
+    auditManager = new PolicyAuditManagerImpl();
 
     intakeProcessor = new TaskIntakeProcessor({
       chunkSizeBytes: 1024 * 1024, // 1MB
@@ -151,16 +151,16 @@ describe("Arbiter Edge Case Pipeline Integration Tests", () => {
       getProfile: () => null,
     };
 
-    _routingManager = new TaskRoutingManager(mockAgentRegistry, {
+    routingManager = new TaskRoutingManager(mockAgentRegistry, {
       enableBandit: true,
       minAgentsRequired: 1,
     });
 
-    _verificationEngine = new VerificationEngineImpl({
+    verificationEngine = new VerificationEngineImpl({
       maxConcurrentVerifications: 10,
     });
 
-    _arbitrationBoard = new ArbitrationBoardCoordinator(confidenceScorer, {
+    arbitrationBoard = new ArbitrationBoardCoordinator(confidenceScorer, {
       minParticipants: 3,
       confidenceThreshold: 0.7,
       escalationThreshold: 0.8,
@@ -212,12 +212,12 @@ describe("Arbiter Edge Case Pipeline Integration Tests", () => {
 
     // Initialize testing harnesses
     chaosHarness = new ChaosTestingHarness(12345);
-    _adversarialSuite = new AdversarialTestSuiteImpl(
+    adversarialSuite = new AdversarialTestSuiteImpl(
       injectionDetector,
       policyEnforcer,
       intakeProcessor
     );
-    _propertySuite = new PropertyBasedTestSuiteImpl(
+    propertySuite = new PropertyBasedTestSuiteImpl(
       {
         maxIterations: 100,
         timeoutMs: 30000,

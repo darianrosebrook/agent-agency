@@ -97,13 +97,13 @@ export class ArbiterModelManager {
     let modelId = this.currentModelByTask.get(criteria.taskType);
 
     if (!modelId) {
-      const selected = await this.selector.selectModel(criteria);
-      modelId = selected.primary.id;
+      const selected = await this._selector.selectModel(criteria);
+      modelId = selected.primary.id || "";
       this.currentModelByTask.set(criteria.taskType, modelId);
     }
 
     // 2. Get provider
-    const provider = this.hotSwap.getProvider(modelId);
+    const provider = this._hotSwap.getProvider(modelId);
 
     if (!provider) {
       throw new ArbiterModelManagerError(
@@ -122,11 +122,11 @@ export class ArbiterModelManager {
 
     // Record in cost tracker
     if (response.computeCost) {
-      this.costTracker.recordOperation(response.computeCost);
+      this._costTracker.recordOperation(response.computeCost);
     }
 
     // Record in learning layer (model-agnostic)
-    this.hotSwap.recordTaskCompletion(criteria.taskType, {
+    this._hotSwap.recordTaskCompletion(criteria.taskType, {
       latencyMs,
       quality,
       memoryMB,
@@ -134,7 +134,7 @@ export class ArbiterModelManager {
     });
 
     // Record in selector (model-specific)
-    this.selector.updatePerformanceHistory(modelId, criteria.taskType, {
+    this._selector.updatePerformanceHistory(modelId, criteria.taskType, {
       quality,
       latencyMs,
       memoryMB,
@@ -142,7 +142,7 @@ export class ArbiterModelManager {
     });
 
     // 5. Check if swap needed
-    const swapResult = await this.hotSwap.autoSwap(modelId, criteria);
+    const swapResult = await this._hotSwap.autoSwap(modelId, criteria);
 
     if (swapResult?.swapped && swapResult.newModelId) {
       // Update current model
@@ -150,7 +150,7 @@ export class ArbiterModelManager {
 
       return {
         response,
-        modelId,
+        modelId: modelId!,
         performance: {
           latencyMs,
           quality,
@@ -159,7 +159,7 @@ export class ArbiterModelManager {
         },
         swapped: true,
         swapDetails: {
-          fromModelId: modelId,
+          fromModelId: modelId!,
           toModelId: swapResult.newModelId,
           reason: swapResult.reason || "Performance-based auto-swap",
         },
@@ -168,7 +168,7 @@ export class ArbiterModelManager {
 
     return {
       response,
-      modelId,
+      modelId: modelId!,
       performance: {
         latencyMs,
         quality,
@@ -203,7 +203,7 @@ export class ArbiterModelManager {
       );
     }
 
-    const result = await this.hotSwap.hotSwap(
+    const result = await this._hotSwap.hotSwap(
       currentModelId,
       newModelId,
       taskType
@@ -239,7 +239,7 @@ export class ArbiterModelManager {
       );
     }
 
-    const result = await this.hotSwap.rollback(currentModelId, taskType);
+    const result = await this._hotSwap.rollback(currentModelId, taskType);
 
     if (result.success && result.previousModelId) {
       this.currentModelByTask.set(taskType, result.previousModelId);
@@ -272,14 +272,14 @@ export class ArbiterModelManager {
     costProfile?: any;
   } {
     const currentModel = this.currentModelByTask.get(taskType);
-    const learningLayer = this.hotSwap.getLearningLayer();
+    const learningLayer = this._hotSwap.getLearningLayer();
     const learnings = learningLayer.getTaskPerformance(taskType);
-    const swapHistory = this.hotSwap.getSwapHistory(taskType);
+    const swapHistory = this._hotSwap.getSwapHistory(taskType);
 
     let costProfile;
 
     if (currentModel) {
-      costProfile = this.costTracker.getCostProfile(currentModel);
+      costProfile = this._costTracker.getCostProfile(currentModel);
     }
 
     return {
@@ -302,7 +302,7 @@ export class ArbiterModelManager {
     swapStats: any;
     topModels: Array<{ modelId: string; taskTypes: string[] }>;
   } {
-    const swapStats = this.hotSwap.getSwapStatistics();
+    const swapStats = this._hotSwap.getSwapStatistics();
 
     // Analyze model usage
     const modelUsage = new Map<string, Set<string>>();

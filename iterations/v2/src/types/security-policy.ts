@@ -11,21 +11,21 @@
  * Security policy violation severity levels
  */
 export enum ViolationSeverity {
-  _LOW = "low",
-  _MEDIUM = "medium",
-  _HIGH = "high",
-  _CRITICAL = "critical",
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
+  CRITICAL = "critical",
 }
 
 /**
  * Policy action types
  */
 export enum PolicyAction {
-  _ALLOW = "allow",
-  _DENY = "deny",
-  _LOG = "log",
-  _QUARANTINE = "quarantine",
-  _ESCALATE = "escalate",
+  ALLOW = "allow",
+  DENY = "deny",
+  LOG = "log",
+  QUARANTINE = "quarantine",
+  ESCALATE = "escalate",
 }
 
 /**
@@ -174,13 +174,13 @@ export interface SecurityContext {
  * Security levels
  */
 export enum SecurityLevel {
-  _PUBLIC = "public",
-  _INTERNAL = "internal",
-  _CONFIDENTIAL = "confidential",
-  _RESTRICTED = "restricted",
-  _AGENT = "agent",
-  _TRUSTED_AGENT = "trusted_agent",
-  _ADMIN = "admin",
+  PUBLIC = "public",
+  INTERNAL = "internal",
+  CONFIDENTIAL = "confidential",
+  RESTRICTED = "restricted",
+  AGENT = "agent",
+  TRUSTED_AGENT = "trusted_agent",
+  ADMIN = "admin",
 }
 
 /**
@@ -268,16 +268,16 @@ export interface SecurityAuditor {
  * Security event types
  */
 export enum SecurityEventType {
-  _AUTH_SUCCESS = "auth_success",
-  _AUTH_FAILURE = "auth_failure",
-  _AUTHZ_SUCCESS = "authz_success",
-  _AUTHZ_FAILURE = "authz_failure",
-  _POLICY_VIOLATION = "policy_violation",
-  _SUSPICIOUS_ACTIVITY = "suspicious_activity",
-  _SESSION_EXPIRED = "session_expired",
-  _RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
-  _COMMAND_BLOCKED = "command_blocked",
-  _INPUT_VALIDATION_FAILED = "input_validation_failed",
+  AUTH_SUCCESS = "auth_success",
+  AUTH_FAILURE = "auth_failure",
+  AUTHZ_SUCCESS = "authz_success",
+  AUTHZ_FAILURE = "authz_failure",
+  POLICY_VIOLATION = "policy_violation",
+  SUSPICIOUS_ACTIVITY = "suspicious_activity",
+  SESSION_EXPIRED = "session_expired",
+  RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
+  COMMAND_BLOCKED = "command_blocked",
+  INPUT_VALIDATION_FAILED = "input_validation_failed",
 }
 
 /**

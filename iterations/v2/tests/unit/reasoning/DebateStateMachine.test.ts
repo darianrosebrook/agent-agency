@@ -33,7 +33,10 @@ describe("DebateStateMachine", () => {
       const session = createTestSession(DebateState.INITIALIZED);
 
       expect(
-        DebateStateMachine.canTransition(session, DebateState.CONSENSUS_REACHED)
+        DebateStateMachine.canTransition(
+          session,
+          DebateState.CONSENSUS_REACHED
+        )
       ).toBe(false);
     });
 
@@ -66,7 +69,10 @@ describe("DebateStateMachine", () => {
 
       const failedSession = createTestSession(DebateState.FAILED);
       expect(
-        DebateStateMachine.canTransition(failedSession, DebateState.INITIALIZED)
+        DebateStateMachine.canTransition(
+          failedSession,
+          DebateState.INITIALIZED
+        )
       ).toBe(false);
     });
   });
@@ -132,7 +138,9 @@ describe("DebateStateMachine", () => {
     });
 
     it("should identify failed as terminal state", () => {
-      expect(DebateStateMachine.isTerminalState(DebateState.FAILED)).toBe(true);
+      expect(DebateStateMachine.isTerminalState(DebateState.FAILED)).toBe(
+        true
+      );
     });
 
     it("should not identify non-terminal states as terminal", () => {

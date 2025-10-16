@@ -11,11 +11,11 @@
  * Resource types tracked by the system
  */
 export enum ResourceType {
-  _CPU = "cpu",
-  _MEMORY = "memory",
-  _NETWORK = "network",
-  _DISK_IO = "disk_io",
-  _AGENT_CAPACITY = "agent_capacity",
+  CPU = "cpu",
+  MEMORY = "memory",
+  NETWORK = "network",
+  DISK_IO = "disk_io",
+  AGENT_CAPACITY = "agent_capacity",
 }
 
 /**
@@ -80,21 +80,21 @@ export interface AgentResourceProfile {
  * Task priority levels
  */
 export enum TaskPriority {
-  _LOW = 0,
-  _MEDIUM = 50,
-  _HIGH = 75,
-  _CRITICAL = 100,
+  LOW = 0,
+  MEDIUM = 50,
+  HIGH = 75,
+  CRITICAL = 100,
 }
 
 /**
  * Load balancing strategy
  */
 export enum LoadBalancingStrategy {
-  _ROUND_ROBIN = "round_robin",
-  _LEAST_LOADED = "least_loaded",
-  _WEIGHTED = "weighted",
-  _RANDOM = "random",
-  _PRIORITY_BASED = "priority_based",
+  ROUND_ROBIN = "round_robin",
+  LEAST_LOADED = "least_loaded",
+  WEIGHTED = "weighted",
+  RANDOM = "random",
+  PRIORITY_BASED = "priority_based",
 }
 
 /**

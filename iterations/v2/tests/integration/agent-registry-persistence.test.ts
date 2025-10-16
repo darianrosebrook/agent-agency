@@ -10,7 +10,6 @@
 import { AgentRegistryDbClient } from "../../src/database/AgentRegistryDbClient.js";
 import { AgentRegistryManager } from "../../src/orchestrator/AgentRegistryManager.js";
 import {
-  _VerificationPriority,
   RegistryError,
   RegistryErrorType,
 } from "../../src/types/agent-registry.js";

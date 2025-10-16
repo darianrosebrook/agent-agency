@@ -28,8 +28,8 @@ export class FailureManager extends EventEmitter {
   private infrastructureController: InfrastructureController;
 
   constructor(
-    private _coordinator: SystemCoordinator,
-    private _config: { failureThreshold: number; recoveryTimeout: number },
+    private coordinator: SystemCoordinator,
+    private config: { failureThreshold: number; recoveryTimeout: number },
     incidentNotifier?: IncidentNotifier,
     infrastructureController?: InfrastructureController
   ) {

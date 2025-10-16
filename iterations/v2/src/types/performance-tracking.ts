@@ -14,29 +14,29 @@ import { Timestamp } from "./agent-registry";
  * Core performance event types for different tracking scenarios.
  */
 export enum PerformanceEventType {
-  _TASK_EXECUTION_START = "task_execution_start",
-  _TASK_EXECUTION_COMPLETE = "task_execution_complete",
-  _ROUTING_DECISION = "routing_decision",
-  _AGENT_SELECTION = "agent_selection",
-  _AGENT_REGISTRATION = "agent_registration",
-  _AGENT_STATUS_CHANGE = "agent_status_change",
-  _CONSTITUTIONAL_VALIDATION = "constitutional_validation",
-  _EVALUATION_OUTCOME = "evaluation_outcome",
-  _ANOMALY_DETECTED = "anomaly_detected",
-  _SYSTEM_LOAD_SPIKE = "system_load_spike",
+  TASK_EXECUTION_START = "task_execution_start",
+  TASK_EXECUTION_COMPLETE = "task_execution_complete",
+  ROUTING_DECISION = "routing_decision",
+  AGENT_SELECTION = "agent_selection",
+  AGENT_REGISTRATION = "agent_registration",
+  AGENT_STATUS_CHANGE = "agent_status_change",
+  CONSTITUTIONAL_VALIDATION = "constitutional_validation",
+  EVALUATION_OUTCOME = "evaluation_outcome",
+  ANOMALY_DETECTED = "anomaly_detected",
+  SYSTEM_LOAD_SPIKE = "system_load_spike",
 }
 
 /**
  * Performance metric categories for comprehensive tracking.
  */
 export enum MetricCategory {
-  _LATENCY = "latency",
-  _THROUGHPUT = "throughput",
-  _ACCURACY = "accuracy",
-  _RESOURCE_UTILIZATION = "resource_utilization",
-  _CONSTITUTIONAL_COMPLIANCE = "constitutional_compliance",
-  _COST_EFFICIENCY = "cost_efficiency",
-  _RELIABILITY = "reliability",
+  LATENCY = "latency",
+  THROUGHPUT = "throughput",
+  ACCURACY = "accuracy",
+  RESOURCE_UTILIZATION = "resource_utilization",
+  CONSTITUTIONAL_COMPLIANCE = "constitutional_compliance",
+  COST_EFFICIENCY = "cost_efficiency",
+  RELIABILITY = "reliability",
 }
 
 /**

@@ -12,48 +12,48 @@
  * Debate state enumeration
  */
 export enum DebateState {
-  _INITIALIZED = "initialized",
-  _AGENTS_ASSIGNED = "agents_assigned",
-  _ARGUMENTS_PRESENTED = "arguments_presented",
-  _EVIDENCE_AGGREGATED = "evidence_aggregated",
-  _DELIBERATION = "deliberation",
-  _CONSENSUS_FORMING = "consensus_forming",
-  _CONSENSUS_REACHED = "consensus_reached",
-  _DEADLOCKED = "deadlocked",
-  _RESOLUTION_IN_PROGRESS = "resolution_in_progress",
-  _COMPLETED = "completed",
-  _FAILED = "failed",
+  INITIALIZED = "initialized",
+  AGENTS_ASSIGNED = "agents_assigned",
+  ARGUMENTS_PRESENTED = "arguments_presented",
+  EVIDENCE_AGGREGATED = "evidence_aggregated",
+  DELIBERATION = "deliberation",
+  CONSENSUS_FORMING = "consensus_forming",
+  CONSENSUS_REACHED = "consensus_reached",
+  DEADLOCKED = "deadlocked",
+  RESOLUTION_IN_PROGRESS = "resolution_in_progress",
+  COMPLETED = "completed",
+  FAILED = "failed",
 }
 
 /**
  * Agent role in debate
  */
 export enum AgentRole {
-  _PROPONENT = "proponent",
-  _OPPONENT = "opponent",
-  _MEDIATOR = "mediator",
-  _OBSERVER = "observer",
+  PROPONENT = "proponent",
+  OPPONENT = "opponent",
+  MEDIATOR = "mediator",
+  OBSERVER = "observer",
 }
 
 /**
  * Consensus algorithm types
  */
 export enum ConsensusAlgorithm {
-  _SIMPLE_MAJORITY = "simple_majority",
-  _WEIGHTED_MAJORITY = "weighted_majority",
-  _UNANIMOUS = "unanimous",
-  _SUPERMAJORITY = "supermajority",
+  SIMPLE_MAJORITY = "simple_majority",
+  WEIGHTED_MAJORITY = "weighted_majority",
+  UNANIMOUS = "unanimous",
+  SUPERMAJORITY = "supermajority",
 }
 
 /**
  * Deadlock resolution strategy
  */
 export enum DeadlockResolutionStrategy {
-  _MEDIATOR_DECISION = "mediator_decision",
-  _TIMEOUT_DEFAULT = "timeout_default",
-  _WEIGHTED_COMPROMISE = "weighted_compromise",
-  _ESCALATE_TO_ADMIN = "escalate_to_admin",
-  _SPLIT_DECISION = "split_decision",
+  MEDIATOR_DECISION = "mediator_decision",
+  TIMEOUT_DEFAULT = "timeout_default",
+  WEIGHTED_COMPROMISE = "weighted_compromise",
+  ESCALATE_TO_ADMIN = "escalate_to_admin",
+  SPLIT_DECISION = "split_decision",
 }
 
 /**

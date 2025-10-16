@@ -91,9 +91,9 @@ describe("Memory System Integration", () => {
       const tenant3 = createTenant("tenant-3", "low");
 
       // Register tenants
-      await tenantIsolator.registerTenant(tenant1);
-      await tenantIsolator.registerTenant(tenant2);
-      await tenantIsolator.registerTenant(tenant3);
+      await tenantIsolator.registerTenant(tenant1.id, tenant1.privacyConfig);
+      await tenantIsolator.registerTenant(tenant2.id, tenant2.privacyConfig);
+      await tenantIsolator.registerTenant(tenant3.id, tenant3.privacyConfig);
 
       // Create model updates with different accuracies
       const update1 = createModelUpdate(tenant1, 0.82, 800);
@@ -118,8 +118,14 @@ describe("Memory System Integration", () => {
       const publicTenant = createTenant("public-tenant", "low");
       const privateTenant = createTenant("private-tenant", "high");
 
-      await tenantIsolator.registerTenant(publicTenant);
-      await tenantIsolator.registerTenant(privateTenant);
+      await tenantIsolator.registerTenant(
+        publicTenant.id,
+        publicTenant.privacyConfig
+      );
+      await tenantIsolator.registerTenant(
+        privateTenant.id,
+        privateTenant.privacyConfig
+      );
 
       const publicUpdate = createModelUpdate(publicTenant);
       const privateUpdate = createModelUpdate(privateTenant);
@@ -142,8 +148,8 @@ describe("Memory System Integration", () => {
       const tenant1 = createTenant("sync-tenant-1", "low");
       const tenant2 = createTenant("sync-tenant-2", "low");
 
-      await tenantIsolator.registerTenant(tenant1);
-      await tenantIsolator.registerTenant(tenant2);
+      await tenantIsolator.registerTenant(tenant1.id, tenant1.privacyConfig);
+      await tenantIsolator.registerTenant(tenant2.id, tenant2.privacyConfig);
 
       // Tenant 1 submits update first
       const update1 = createModelUpdate(tenant1, 0.9, 1500);
@@ -174,8 +180,8 @@ describe("Memory System Integration", () => {
       const tenant1 = createTenant("conflict-tenant-1", "low");
       const tenant2 = createTenant("conflict-tenant-2", "low");
 
-      await tenantIsolator.registerTenant(tenant1);
-      await tenantIsolator.registerTenant(tenant2);
+      await tenantIsolator.registerTenant(tenant1.id, tenant1.privacyConfig);
+      await tenantIsolator.registerTenant(tenant2.id, tenant2.privacyConfig);
 
       // Create conflicting updates (same model version but different weights)
       const update1 = createModelUpdate(tenant1, 0.85);
@@ -204,8 +210,8 @@ describe("Memory System Integration", () => {
       const tenant1 = createTenant("isolated-tenant-1", "high");
       const tenant2 = createTenant("isolated-tenant-2", "high");
 
-      await tenantIsolator.registerTenant(tenant1);
-      await tenantIsolator.registerTenant(tenant2);
+      await tenantIsolator.registerTenant(tenant1.id, tenant1.privacyConfig);
+      await tenantIsolator.registerTenant(tenant2.id, tenant2.privacyConfig);
 
       // Each tenant submits their own data
       const event1 = createLearningEvent(tenant1, "model_update", {
@@ -240,9 +246,18 @@ describe("Memory System Integration", () => {
       const mediumTenant = createTenant("medium-tenant", "medium");
       const secureTenant = createTenant("secure-tenant", "high");
 
-      await tenantIsolator.registerTenant(openTenant);
-      await tenantIsolator.registerTenant(mediumTenant);
-      await tenantIsolator.registerTenant(secureTenant);
+      await tenantIsolator.registerTenant(
+        openTenant.id,
+        openTenant.privacyConfig
+      );
+      await tenantIsolator.registerTenant(
+        mediumTenant.id,
+        mediumTenant.privacyConfig
+      );
+      await tenantIsolator.registerTenant(
+        secureTenant.id,
+        secureTenant.privacyConfig
+      );
 
       // Test aggregation permissions
       const canOpenAggregate = await tenantIsolator.canParticipateInAggregation(
@@ -274,7 +289,7 @@ describe("Memory System Integration", () => {
     it("should audit tenant operations", async () => {
       const tenant = createTenant("audited-tenant", "medium");
 
-      await tenantIsolator.registerTenant(tenant);
+      await tenantIsolator.registerTenant(tenant.id, tenant.privacyConfig);
 
       // Perform some operations
       const event = createLearningEvent(tenant, "model_update");
@@ -303,7 +318,7 @@ describe("Memory System Integration", () => {
       const tenant = createTenant("lifecycle-tenant", "medium");
 
       // Register tenant
-      await tenantIsolator.registerTenant(tenant);
+      await tenantIsolator.registerTenant(tenant.id, tenant.privacyConfig);
 
       // Verify tenant exists
       const existsBefore = await tenantIsolator.tenantExists(tenant.id);
@@ -336,7 +351,7 @@ describe("Memory System Integration", () => {
   describe("Performance and Scalability", () => {
     it("should handle high-frequency learning events", async () => {
       const tenant = createTenant("perf-tenant", "medium");
-      await tenantIsolator.registerTenant(tenant);
+      await tenantIsolator.registerTenant(tenant.id, tenant.privacyConfig);
 
       const eventCount = 100;
       const startTime = Date.now();
@@ -368,7 +383,7 @@ describe("Memory System Integration", () => {
       for (let i = 0; i < tenantCount; i++) {
         const tenant = createTenant(`scale-tenant-${i}`, "low");
         tenants.push(tenant);
-        await tenantIsolator.registerTenant(tenant);
+        await tenantIsolator.registerTenant(tenant.id, tenant.privacyConfig);
       }
 
       const startTime = Date.now();
@@ -406,7 +421,7 @@ describe("Memory System Integration", () => {
 
     it("should maintain performance under memory pressure", async () => {
       const tenant = createTenant("memory-tenant", "medium");
-      await tenantIsolator.registerTenant(tenant);
+      await tenantIsolator.registerTenant(tenant.id, tenant.privacyConfig);
 
       // Simulate memory pressure by creating many large events
       const largeEvents = [];
@@ -445,7 +460,9 @@ describe("Memory System Integration", () => {
 
       // Register tenants
       await Promise.all(
-        tenants.map((tenant) => tenantIsolator.registerTenant(tenant))
+        tenants.map((tenant) =>
+          tenantIsolator.registerTenant(tenant.id, tenant.privacyConfig)
+        )
       );
 
       // Submit model updates with timing measurement
@@ -475,8 +492,14 @@ describe("Memory System Integration", () => {
       const goodTenant = createTenant("good-tenant", "low");
       const badTenant = createTenant("bad-tenant", "low");
 
-      await tenantIsolator.registerTenant(goodTenant);
-      await tenantIsolator.registerTenant(badTenant);
+      await tenantIsolator.registerTenant(
+        goodTenant.id,
+        goodTenant.privacyConfig
+      );
+      await tenantIsolator.registerTenant(
+        badTenant.id,
+        badTenant.privacyConfig
+      );
 
       // Submit good update
       const goodUpdate = createModelUpdate(goodTenant, 0.9, 1500);
@@ -500,7 +523,7 @@ describe("Memory System Integration", () => {
 
     it("should support incremental learning updates", async () => {
       const tenant = createTenant("incremental-tenant", "low");
-      await tenantIsolator.registerTenant(tenant);
+      await tenantIsolator.registerTenant(tenant.id, tenant.privacyConfig);
 
       // Submit initial model
       const initialUpdate = createModelUpdate(tenant, 0.75, 500);
@@ -531,7 +554,10 @@ describe("Memory System Integration", () => {
     it("should enforce data sovereignty for high-privacy tenants", async () => {
       const sovereignTenant = createTenant("sovereign-tenant", "high");
 
-      await tenantIsolator.registerTenant(sovereignTenant);
+      await tenantIsolator.registerTenant(
+        sovereignTenant.id,
+        sovereignTenant.privacyConfig
+      );
 
       // High-privacy tenant should not participate in federation
       const canAggregate = await tenantIsolator.canParticipateInAggregation(
@@ -545,7 +571,10 @@ describe("Memory System Integration", () => {
 
       // Other tenants should not be able to access this data
       const otherTenant = createTenant("other-tenant", "low");
-      await tenantIsolator.registerTenant(otherTenant);
+      await tenantIsolator.registerTenant(
+        otherTenant.id,
+        otherTenant.privacyConfig
+      );
 
       await expect(
         tenantIsolator.getTenantEvents(sovereignTenant.id, {
@@ -557,7 +586,10 @@ describe("Memory System Integration", () => {
     it("should maintain audit trails for all operations", async () => {
       const auditedTenant = createTenant("audited-tenant", "medium");
 
-      await tenantIsolator.registerTenant(auditedTenant);
+      await tenantIsolator.registerTenant(
+        auditedTenant.id,
+        auditedTenant.privacyConfig
+      );
 
       // Perform various operations
       const event1 = createLearningEvent(auditedTenant, "model_update");
@@ -583,7 +615,10 @@ describe("Memory System Integration", () => {
     it("should handle tenant data cleanup securely", async () => {
       const cleanupTenant = createTenant("cleanup-tenant", "medium");
 
-      await tenantIsolator.registerTenant(cleanupTenant);
+      await tenantIsolator.registerTenant(
+        cleanupTenant.id,
+        cleanupTenant.privacyConfig
+      );
 
       // Store data
       const event = createLearningEvent(cleanupTenant, "model_update");
@@ -618,4 +653,3 @@ describe("Memory System Integration", () => {
     });
   });
 });
-

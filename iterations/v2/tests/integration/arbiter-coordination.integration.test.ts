@@ -86,7 +86,7 @@ describe("Arbiter Coordination Integration Tests", () => {
     );
 
     // Initialize trackers
-    _performanceTracker = new PerformanceTracker();
+    performanceTracker = new PerformanceTracker();
     costTracker = new ComputeCostTracker();
     selector = new LocalModelSelector(registry, costTracker);
 

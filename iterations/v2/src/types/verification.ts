@@ -38,24 +38,24 @@ export interface VerificationRequest {
 }
 
 export enum VerificationPriority {
-  _LOW = "low",
-  _MEDIUM = "medium",
-  _HIGH = "high",
-  _CRITICAL = "critical",
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
+  CRITICAL = "critical",
 }
 
 export enum VerificationType {
-  _FACT_CHECKING = "fact_checking",
-  _SOURCE_CREDIBILITY = "source_credibility",
-  _CROSS_REFERENCE = "cross_reference",
-  _MATH_VERIFICATION = "math_verification",
-  _CODE_VERIFICATION = "code_verification",
-  _CONTEXT_VERIFICATION = "context_verification",
-  _CONSISTENCY_CHECK = "consistency_check",
-  _LOGICAL_VALIDATION = "logical_validation",
-  _STATISTICAL_VALIDATION = "statistical_validation",
-  _CREDIBILITY_SCORING = "credibility_scoring",
-  _CONSISTENCY_VALIDATION = "consistency_validation",
+  FACT_CHECKING = "fact_checking",
+  SOURCE_CREDIBILITY = "source_credibility",
+  CROSS_REFERENCE = "cross_reference",
+  MATH_VERIFICATION = "math_verification",
+  CODE_VERIFICATION = "code_verification",
+  CONTEXT_VERIFICATION = "context_verification",
+  CONSISTENCY_CHECK = "consistency_check",
+  LOGICAL_VALIDATION = "logical_validation",
+  STATISTICAL_VALIDATION = "statistical_validation",
+  CREDIBILITY_SCORING = "credibility_scoring",
+  CONSISTENCY_VALIDATION = "consistency_validation",
 }
 
 export interface VerificationResult {
@@ -74,14 +74,14 @@ export interface VerificationResult {
 }
 
 export enum VerificationVerdict {
-  _VERIFIED_TRUE = "verified_true",
-  _VERIFIED_FALSE = "verified_false",
-  _PARTIALLY_TRUE = "partially_true",
-  _UNVERIFIED = "unverified",
-  _CONTRADICTORY = "contradictory",
-  _INSUFFICIENT_DATA = "insufficient_data",
-  _MIXED = "mixed",
-  _ERROR = "error",
+  VERIFIED_TRUE = "verified_true",
+  VERIFIED_FALSE = "verified_false",
+  PARTIALLY_TRUE = "partially_true",
+  UNVERIFIED = "unverified",
+  CONTRADICTORY = "contradictory",
+  INSUFFICIENT_DATA = "insufficient_data",
+  MIXED = "mixed",
+  ERROR = "error",
 }
 
 export interface Evidence {
@@ -233,9 +233,9 @@ export interface LogicalValidationRequest {
 }
 
 export enum LogicType {
-  _DEDUCTIVE = "deductive",
-  _INDUCTIVE = "inductive",
-  _ABDUCTIVE = "abductive",
+  DEDUCTIVE = "deductive",
+  INDUCTIVE = "inductive",
+  ABDUCTIVE = "abductive",
 }
 
 export interface LogicalValidationResult {
@@ -306,13 +306,13 @@ export class VerificationError extends Error {
 }
 
 export enum VerificationErrorCode {
-  _INVALID_REQUEST = "invalid_request",
-  _METHOD_UNAVAILABLE = "method_unavailable",
-  _TIMEOUT = "timeout",
-  _INSUFFICIENT_DATA = "insufficient_data",
-  _EXTERNAL_SERVICE_ERROR = "external_service_error",
-  _CONFIGURATION_ERROR = "configuration_error",
-  _RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
+  INVALID_REQUEST = "invalid_request",
+  METHOD_UNAVAILABLE = "method_unavailable",
+  TIMEOUT = "timeout",
+  INSUFFICIENT_DATA = "insufficient_data",
+  EXTERNAL_SERVICE_ERROR = "external_service_error",
+  CONFIGURATION_ERROR = "configuration_error",
+  RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
 }
 
 // Caching interfaces

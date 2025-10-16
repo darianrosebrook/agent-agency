@@ -17,13 +17,13 @@ export class Logger {
   private level: LogLevel;
   private name: string;
 
-  constructor(name: string, level: LogLevel = LogLevel.INFO) {
+  constructor(name: string, level: LogLevel = LogLevel._INFO) {
     this.name = name;
     this.level = level;
   }
 
   public error(message: string, ...args: any[]): void {
-    if (this.level >= LogLevel.ERROR) {
+    if (this.level >= LogLevel._ERROR) {
       console.error(
         `[${new Date().toISOString()}] ERROR [${this.name}] ${message}`,
         ...args
@@ -32,7 +32,7 @@ export class Logger {
   }
 
   public warn(message: string, ...args: any[]): void {
-    if (this.level >= LogLevel.WARN) {
+    if (this.level >= LogLevel._WARN) {
       console.warn(
         `[${new Date().toISOString()}] WARN [${this.name}] ${message}`,
         ...args
@@ -41,7 +41,7 @@ export class Logger {
   }
 
   public info(message: string, ...args: any[]): void {
-    if (this.level >= LogLevel.INFO) {
+    if (this.level >= LogLevel._INFO) {
       console.info(
         `[${new Date().toISOString()}] INFO [${this.name}] ${message}`,
         ...args
@@ -50,7 +50,7 @@ export class Logger {
   }
 
   public debug(message: string, ...args: any[]): void {
-    if (this.level >= LogLevel.DEBUG) {
+    if (this.level >= LogLevel._DEBUG) {
       console.debug(
         `[${new Date().toISOString()}] DEBUG [${this.name}] ${message}`,
         ...args

@@ -27,7 +27,7 @@ jest.mock("fs", () => ({
 
 describe("FileStatePersistence", () => {
   let persistence: FileStatePersistence;
-  let mockFs;
+  let mockFs: any;
   let tempDir: string;
 
   const mockSnapshot = {
@@ -69,26 +69,30 @@ describe("FileStatePersistence", () => {
     });
 
     it("should create storage directory when saving", async () => {
-      mockFs.access.mockRejectedValue(new Error("Directory not found"));
-      mockFs.mkdir.mockResolvedValue(undefined);
-      mockFs.writeFile.mockResolvedValue(undefined);
+      (mockFs as any).access.mockRejectedValue(
+        new Error("Directory not found")
+      );
+      (mockFs as any).mkdir.mockResolvedValue(undefined);
+      (mockFs as any).writeFile.mockResolvedValue(undefined);
 
       await persistence.saveSnapshot(mockSnapshot);
 
-      expect(mockFs.mkdir).toHaveBeenCalledWith(tempDir, { recursive: true });
+      expect((mockFs as any).mkdir).toHaveBeenCalledWith(tempDir, {
+        recursive: true,
+      });
     });
   });
 
   describe("saving snapshots", () => {
     beforeEach(() => {
-      mockFs.access.mockResolvedValue(undefined);
-      mockFs.writeFile.mockResolvedValue(undefined);
+      (mockFs as any).access.mockResolvedValue(undefined);
+      (mockFs as any).writeFile.mockResolvedValue(undefined);
     });
 
     it("should save snapshot to file", async () => {
       await persistence.saveSnapshot(mockSnapshot);
 
-      expect(mockFs.writeFile).toHaveBeenCalledWith(
+      expect((mockFs as any).writeFile).toHaveBeenCalledWith(
         join(tempDir, "test-snapshot-123.json"),
         expect.stringContaining('"id": "test-snapshot-123"'),
         "utf8"
@@ -98,7 +102,7 @@ describe("FileStatePersistence", () => {
     it("should update latest snapshot pointer", async () => {
       await persistence.saveSnapshot(mockSnapshot);
 
-      expect(mockFs.writeFile).toHaveBeenNthCalledWith(
+      expect((mockFs as any).writeFile).toHaveBeenNthCalledWith(
         2, // Second call is for latest.json
         join(tempDir, "latest.json"),
         expect.stringContaining('"id":"test-snapshot-123"'),
@@ -109,7 +113,7 @@ describe("FileStatePersistence", () => {
 
   describe("loading snapshots", () => {
     beforeEach(() => {
-      mockFs.access.mockResolvedValue(undefined);
+      (mockFs as any).access.mockResolvedValue(undefined);
     });
 
     it("should load snapshot from file", async () => {
@@ -122,7 +126,7 @@ describe("FileStatePersistence", () => {
         })),
       });
 
-      mockFs.readFile.mockResolvedValue(serialized);
+      (mockFs as any).readFile.mockResolvedValue(serialized);
 
       const loaded = await persistence.loadSnapshot("test-snapshot-123");
 
@@ -133,7 +137,7 @@ describe("FileStatePersistence", () => {
     });
 
     it("should return null for non-existent snapshot", async () => {
-      mockFs.access.mockRejectedValue(new Error("File not found"));
+      (mockFs as any).access.mockRejectedValue(new Error("File not found"));
 
       const loaded = await persistence.loadSnapshot("non-existent");
 
@@ -142,7 +146,7 @@ describe("FileStatePersistence", () => {
 
     it("should load latest snapshot", async () => {
       // Mock latest.json
-      mockFs.readFile
+      (mockFs as any).readFile
         .mockResolvedValueOnce(JSON.stringify({ id: "test-snapshot-123" }))
         .mockResolvedValueOnce(
           JSON.stringify({
@@ -162,7 +166,7 @@ describe("FileStatePersistence", () => {
     });
 
     it("should return null when no latest snapshot exists", async () => {
-      mockFs.readFile.mockRejectedValue(new Error("File not found"));
+      (mockFs as any).readFile.mockRejectedValue(new Error("File not found"));
 
       const loaded = await persistence.loadLatestSnapshot();
 
@@ -172,14 +176,14 @@ describe("FileStatePersistence", () => {
 
   describe("listing snapshots", () => {
     beforeEach(() => {
-      mockFs.access.mockResolvedValue(undefined);
-      mockFs.readdir.mockResolvedValue([
+      (mockFs as any).access.mockResolvedValue(undefined);
+      (mockFs as any).readdir.mockResolvedValue([
         "test-snapshot-123.json",
         "test-snapshot-456.json",
         "latest.json",
       ]);
 
-      mockFs.stat.mockImplementation((filePath: string) => {
+      (mockFs as any).stat.mockImplementation((filePath: string) => {
         const is123 = filePath.includes("123");
         return Promise.resolve({
           mtime: new Date(
@@ -190,7 +194,7 @@ describe("FileStatePersistence", () => {
     });
 
     it("should list snapshots ordered by recency", async () => {
-      mockFs.readFile.mockImplementation((filePath: string) => {
+      (mockFs as any).readFile.mockImplementation((filePath: string) => {
         if (filePath.includes("123")) {
           return Promise.resolve(
             JSON.stringify({
@@ -248,12 +252,12 @@ describe("FileStatePersistence", () => {
       jest
         .spyOn(persistence, "listSnapshots")
         .mockResolvedValue([newSnapshot, oldSnapshot]);
-      mockFs.unlink.mockResolvedValue(undefined);
+      (mockFs as any).unlink.mockResolvedValue(undefined);
 
       const deletedCount = await persistence.pruneSnapshots(30); // Keep 30 days
 
       expect(deletedCount).toBe(1);
-      expect(mockFs.unlink).toHaveBeenCalledWith(
+      expect((mockFs as any).unlink).toHaveBeenCalledWith(
         join(tempDir, "old-snapshot.json")
       );
     });
@@ -285,25 +289,27 @@ describe("FileStatePersistence", () => {
 
   describe("clearing storage", () => {
     it("should clear all stored snapshots", async () => {
-      mockFs.readdir.mockResolvedValue([
+      (mockFs as any).readdir.mockResolvedValue([
         "snapshot1.json",
         "snapshot2.json",
         "latest.json",
         "other-file.txt",
       ]);
 
-      mockFs.unlink.mockResolvedValue(undefined);
+      (mockFs as any).unlink.mockResolvedValue(undefined);
 
       await persistence.clear();
 
-      expect(mockFs.unlink).toHaveBeenCalledTimes(3); // Only JSON files
-      expect(mockFs.unlink).toHaveBeenCalledWith(
+      expect((mockFs as any).unlink).toHaveBeenCalledTimes(3); // Only JSON files
+      expect((mockFs as any).unlink).toHaveBeenCalledWith(
         join(tempDir, "snapshot1.json")
       );
-      expect(mockFs.unlink).toHaveBeenCalledWith(
+      expect((mockFs as any).unlink).toHaveBeenCalledWith(
         join(tempDir, "snapshot2.json")
       );
-      expect(mockFs.unlink).toHaveBeenCalledWith(join(tempDir, "latest.json"));
+      expect((mockFs as any).unlink).toHaveBeenCalledWith(
+        join(tempDir, "latest.json")
+      );
     });
   });
 });

@@ -39,7 +39,7 @@ jest.mock("path", () => ({
 
 describe("FileWatcher", () => {
   let watcher: FileWatcher;
-  let mockStat;
+  let mockStat: any;
   let mockResolve;
   let mockRelative;
   let mockExtname;
@@ -67,7 +67,7 @@ describe("FileWatcher", () => {
     mockExtname = path.extname;
 
     // Setup default mocks
-    mockResolve.mockImplementation((...args) => args.join("/"));
+    mockResolve.mockImplementation((...args: any[]) => args.join("/"));
     mockRelative.mockImplementation((from: any, to: any) =>
       to.replace(from + "/", "")
     );
@@ -99,7 +99,7 @@ describe("FileWatcher", () => {
     });
 
     it("should start file watching", async () => {
-      mockStat.mockResolvedValue({
+      (mockStat as any).mockResolvedValue({
         size: 100,
         mtime: new Date(),
         mode: 0o644,
@@ -129,9 +129,9 @@ describe("FileWatcher", () => {
 
   describe("file change handling", () => {
     let changeHandler: jest.Mock;
-    let addHandler;
-    let changeEventHandler;
-    let unlinkHandler;
+    let addHandler: any;
+    let changeEventHandler: any;
+    let unlinkHandler: any;
     let errorHandler;
 
     beforeEach(async () => {
@@ -168,7 +168,7 @@ describe("FileWatcher", () => {
 
     it("should handle file creation events", async () => {
       // Simulate file creation
-      addHandler("/workspace/src/test.ts", {
+      (addHandler as any)("/workspace/src/test.ts", {
         size: 100,
         mtime: new Date("2024-01-01T00:00:00Z"),
         mode: 0o644,
@@ -195,7 +195,7 @@ describe("FileWatcher", () => {
 
     it("should handle file modification events", async () => {
       // Simulate file modification
-      changeEventHandler("/workspace/src/test.ts", {
+      (changeEventHandler as any)("/workspace/src/test.ts", {
         size: 200,
         mtime: new Date("2024-01-01T00:00:00Z"),
         mode: 0o644,
@@ -219,7 +219,7 @@ describe("FileWatcher", () => {
 
     it("should handle file deletion events", async () => {
       // Simulate file deletion
-      unlinkHandler("/workspace/src/test.ts");
+      (unlinkHandler as any)("/workspace/src/test.ts");
 
       // Wait for debouncing
       await new Promise((resolve) => setTimeout(resolve, 150));
@@ -313,7 +313,7 @@ describe("FileWatcher", () => {
 
   describe("error handling", () => {
     let errorHandler: jest.Mock;
-    let watcherErrorHandler;
+    let watcherErrorHandler: any;
 
     beforeEach(async () => {
       errorHandler = jest.fn();
@@ -329,7 +329,7 @@ describe("FileWatcher", () => {
 
     it("should emit watcher errors", () => {
       const testError = new Error("Test watcher error");
-      watcherErrorHandler(testError);
+      (watcherErrorHandler as any)(testError);
 
       expect(errorHandler).toHaveBeenCalledWith(expect.any(Error));
     });

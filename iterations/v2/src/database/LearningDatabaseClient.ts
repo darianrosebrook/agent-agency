@@ -33,14 +33,14 @@ export class LearningDatabaseClient {
    * Get connection pool
    */
   getPool(): Pool {
-    return this.pool;
+    return this._pool;
   }
 
   /**
    * Create a new learning session
    */
   async createSession(session: LearningSession): Promise<void> {
-    const client = await this.pool.connect();
+    const client = await this._pool.connect();
 
     try {
       await client.query(
@@ -84,7 +84,7 @@ export class LearningDatabaseClient {
     sessionId: string,
     updates: Partial<LearningSession>
   ): Promise<void> {
-    const client = await this.pool.connect();
+    const client = await this._pool.connect();
 
     try {
       const setClauses: string[] = [];
@@ -154,7 +154,7 @@ export class LearningDatabaseClient {
    * Get learning session by ID
    */
   async getSession(sessionId: string): Promise<LearningSession | null> {
-    const client = await this.pool.connect();
+    const client = await this._pool.connect();
 
     try {
       const result = await client.query(
@@ -176,7 +176,7 @@ export class LearningDatabaseClient {
    * Get sessions by task ID
    */
   async getSessionsByTask(taskId: string): Promise<LearningSession[]> {
-    const client = await this.pool.connect();
+    const client = await this._pool.connect();
 
     try {
       const result = await client.query(
@@ -184,7 +184,7 @@ export class LearningDatabaseClient {
         [taskId]
       );
 
-      return result.rows.map((row) => this.mapRowToSession(row));
+      return result.rows.map((row: any) => this.mapRowToSession(row));
     } finally {
       client.release();
     }
@@ -194,7 +194,7 @@ export class LearningDatabaseClient {
    * Create learning iteration
    */
   async createIteration(iteration: LearningIteration): Promise<void> {
-    const client = await this.pool.connect();
+    const client = await this._pool.connect();
 
     try {
       await client.query(
@@ -231,7 +231,7 @@ export class LearningDatabaseClient {
    * Get iterations for a session
    */
   async getIterations(sessionId: string): Promise<LearningIteration[]> {
-    const client = await this.pool.connect();
+    const client = await this._pool.connect();
 
     try {
       const result = await client.query(
@@ -239,7 +239,7 @@ export class LearningDatabaseClient {
         [sessionId]
       );
 
-      return result.rows.map((row) => this.mapRowToIteration(row));
+      return result.rows.map((row: any) => this.mapRowToIteration(row));
     } finally {
       client.release();
     }
@@ -249,7 +249,7 @@ export class LearningDatabaseClient {
    * Create or update error pattern
    */
   async upsertErrorPattern(pattern: ErrorPattern): Promise<void> {
-    const client = await this.pool.connect();
+    const client = await this._pool.connect();
 
     try {
       await client.query(
@@ -283,7 +283,7 @@ export class LearningDatabaseClient {
    * Get error patterns by category
    */
   async getErrorPatterns(category?: string): Promise<ErrorPattern[]> {
-    const client = await this.pool.connect();
+    const client = await this._pool.connect();
 
     try {
       const query = category
@@ -303,7 +303,7 @@ export class LearningDatabaseClient {
    * Save context snapshot
    */
   async saveSnapshot(snapshot: ContextSnapshot): Promise<void> {
-    const client = await this.pool.connect();
+    const client = await this._pool.connect();
 
     try {
       await client.query(
@@ -335,7 +335,7 @@ export class LearningDatabaseClient {
    * Get context snapshot by ID
    */
   async getSnapshot(snapshotId: string): Promise<ContextSnapshot | null> {
-    const client = await this.pool.connect();
+    const client = await this._pool.connect();
 
     try {
       const result = await client.query(
@@ -359,7 +359,7 @@ export class LearningDatabaseClient {
   async transaction<T>(
     callback: (_client: PoolClient) => Promise<T>
   ): Promise<T> {
-    const client = await this.pool.connect();
+    const client = await this._pool.connect();
 
     try {
       await client.query("BEGIN");

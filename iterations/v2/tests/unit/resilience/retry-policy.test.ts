@@ -82,10 +82,10 @@ describe("RetryPolicy", () => {
       } catch (error) {
         expect(error).toBeInstanceOf(RetryExhaustedError);
         const retryError = error as RetryExhaustedError;
-        expect(retryError.stats.attempt).toBe(2);
-        expect(retryError.stats.totalAttempts).toBe(2);
-        expect(retryError.stats.lastError?.message).toBe("test error");
-        expect(retryError.stats.totalDelayMs).toBeGreaterThan(0);
+        expect(retryError._stats.attempt).toBe(2);
+        expect(retryError._stats.totalAttempts).toBe(2);
+        expect(retryError._stats.lastError?.message).toBe("test error");
+        expect(retryError._stats.totalDelayMs).toBeGreaterThan(0);
       }
     }, 5000); // 5 second timeout
   });

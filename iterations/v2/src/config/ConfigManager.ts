@@ -174,6 +174,50 @@ export class ConfigManager {
     }
   }
 
+  /**
+   * Initialize the configuration manager
+   */
+  public async initialize(): Promise<void> {
+    // Already initialized in constructor
+    return Promise.resolve();
+  }
+
+  /**
+   * Shutdown the configuration manager
+   */
+  public async shutdown(): Promise<void> {
+    // No resources to clean up
+    return Promise.resolve();
+  }
+
+  /**
+   * Load configuration (alias for reload)
+   */
+  public async loadConfiguration(config?: any): Promise<void> {
+    if (config) {
+      this.config = config;
+    } else {
+      this.reload();
+    }
+    return Promise.resolve();
+  }
+
+  /**
+   * Get configuration (alias for getAll)
+   */
+  public getConfiguration(): any {
+    return this.getAll();
+  }
+
+  /**
+   * Update configuration
+   */
+  public updateConfiguration(updates: Record<string, any>): void {
+    for (const [path, value] of Object.entries(updates)) {
+      this.set(path, value);
+    }
+  }
+
   private loadConfig(): void {
     // Load from environment variables with defaults
     this.config = {

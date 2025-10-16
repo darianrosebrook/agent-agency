@@ -11,11 +11,11 @@
  */
 export enum ComplexityLevel {
   /** Simple queries, no tool use, minimal context */
-  _TRIVIAL = "trivial",
+  TRIVIAL = "trivial",
   /** Multi-step reasoning, basic tools, moderate context */
-  _STANDARD = "standard",
+  STANDARD = "standard",
   /** Advanced reasoning, multiple tools, extensive context */
-  _COMPLEX = "complex",
+  COMPLEX = "complex",
 }
 
 /**

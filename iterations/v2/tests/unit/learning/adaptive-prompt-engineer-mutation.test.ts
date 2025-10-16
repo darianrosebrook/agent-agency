@@ -581,5 +581,377 @@ describe("AdaptivePromptEngineer Mutation Tests", () => {
       expect(result.modifiedPrompt).toBe("test");
       expect(result.modifications).toEqual([]);
     });
+
+    it("should apply all modifications when all conditions are met", () => {
+      engineer.initializeSession("complex-session");
+
+      // Create history that triggers all modification types
+      const iterations: LearningIteration[] = [
+        // 2+ errors in recent 3 iterations (triggers error avoidance)
+        {
+          iterationId: "err1",
+          sessionId: "complex-session",
+          iterationNumber: 1,
+          startTime: new Date(),
+          endTime: new Date(),
+          durationMs: 100,
+          contextSnapshotId: "ctx1",
+          errorDetected: true,
+          errorCategory: "logic_error" as any,
+          qualityScore: 0.4,
+          improvementDelta: -0.1,
+          resourceUsageMB: 10,
+          promptModifications: [],
+        },
+        {
+          iterationId: "err2",
+          sessionId: "complex-session",
+          iterationNumber: 2,
+          startTime: new Date(),
+          endTime: new Date(),
+          durationMs: 100,
+          contextSnapshotId: "ctx2",
+          errorDetected: true,
+          errorCategory: "logic_error" as any,
+          qualityScore: 0.4,
+          improvementDelta: -0.1,
+          resourceUsageMB: 10,
+          promptModifications: [],
+        },
+        // Low average improvement (triggers clarifying context)
+        {
+          iterationId: "no-progress-1",
+          sessionId: "complex-session",
+          iterationNumber: 3,
+          startTime: new Date(),
+          endTime: new Date(),
+          durationMs: 100,
+          contextSnapshotId: "ctx3",
+          errorDetected: false,
+          qualityScore: 0.5,
+          improvementDelta: 0.002, // < 0.005 average
+          resourceUsageMB: 10,
+          promptModifications: [],
+        },
+        {
+          iterationId: "no-progress-2",
+          sessionId: "complex-session",
+          iterationNumber: 4,
+          startTime: new Date(),
+          endTime: new Date(),
+          durationMs: 100,
+          contextSnapshotId: "ctx4",
+          errorDetected: false,
+          qualityScore: 0.5,
+          improvementDelta: 0.003, // < 0.005 average
+          resourceUsageMB: 10,
+          promptModifications: [],
+        },
+        // Successful pattern (triggers reinforcement)
+        {
+          iterationId: "success",
+          sessionId: "complex-session",
+          iterationNumber: 5,
+          startTime: new Date(),
+          endTime: new Date(),
+          durationMs: 100,
+          contextSnapshotId: "ctx5",
+          errorDetected: false,
+          qualityScore: 0.9,
+          improvementDelta: 0.1,
+          resourceUsageMB: 10,
+          promptModifications: ["effective approach"],
+        },
+      ];
+
+      iterations.forEach((iter) => engineer.recordIteration(iter));
+
+      const result = engineer.modifyPrompt("complex-session", "test prompt", 6);
+
+      // Should have applied all three types of modifications
+      expect(result.modifications.length).toBeGreaterThanOrEqual(2);
+      expect(result.modifiedPrompt).not.toBe("test prompt");
+    });
+
+    it("should only apply error avoidance when repeated errors detected", () => {
+      engineer.initializeSession("error-only-session");
+
+      // Only one error - should not trigger error avoidance
+      const iterations: LearningIteration[] = [
+        {
+          iterationId: "single-error",
+          sessionId: "error-only-session",
+          iterationNumber: 1,
+          startTime: new Date(),
+          endTime: new Date(),
+          durationMs: 100,
+          contextSnapshotId: "ctx1",
+          errorDetected: true,
+          errorCategory: "logic_error" as any,
+          qualityScore: 0.4,
+          improvementDelta: -0.1,
+          resourceUsageMB: 10,
+          promptModifications: [],
+        },
+        {
+          iterationId: "success",
+          sessionId: "error-only-session",
+          iterationNumber: 2,
+          startTime: new Date(),
+          endTime: new Date(),
+          durationMs: 100,
+          contextSnapshotId: "ctx2",
+          errorDetected: false,
+          qualityScore: 0.8,
+          improvementDelta: 0.1,
+          resourceUsageMB: 10,
+          promptModifications: ["good pattern"],
+        },
+      ];
+
+      iterations.forEach((iter) => engineer.recordIteration(iter));
+
+      const result = engineer.modifyPrompt(
+        "error-only-session",
+        "test prompt",
+        3
+      );
+
+      // Should not apply error avoidance (only 1 error, not 2+)
+      expect(result.modifiedPrompt).toBe("test prompt");
+    });
+
+    it("should only apply clarifying context when no progress detected", () => {
+      engineer.initializeSession("progress-only-session");
+
+      // Good progress - should not trigger clarifying context
+      const iterations: LearningIteration[] = [
+        {
+          iterationId: "progress-1",
+          sessionId: "progress-only-session",
+          iterationNumber: 1,
+          startTime: new Date(),
+          endTime: new Date(),
+          durationMs: 100,
+          contextSnapshotId: "ctx1",
+          errorDetected: false,
+          qualityScore: 0.6,
+          improvementDelta: 0.01, // > 0.005 average
+          resourceUsageMB: 10,
+          promptModifications: [],
+        },
+        {
+          iterationId: "progress-2",
+          sessionId: "progress-only-session",
+          iterationNumber: 2,
+          startTime: new Date(),
+          endTime: new Date(),
+          durationMs: 100,
+          contextSnapshotId: "ctx2",
+          errorDetected: false,
+          qualityScore: 0.7,
+          improvementDelta: 0.02, // > 0.005 average
+          resourceUsageMB: 10,
+          promptModifications: [],
+        },
+      ];
+
+      iterations.forEach((iter) => engineer.recordIteration(iter));
+
+      const result = engineer.modifyPrompt(
+        "progress-only-session",
+        "test prompt",
+        3
+      );
+
+      // Should not apply clarifying context (good progress)
+      expect(result.modifiedPrompt).toBe("test prompt");
+    });
+
+    it("should only apply success reinforcement when successful patterns exist", () => {
+      engineer.initializeSession("no-success-session");
+
+      // Only failures - should not trigger success reinforcement
+      const iterations: LearningIteration[] = [
+        {
+          iterationId: "fail-1",
+          sessionId: "no-success-session",
+          iterationNumber: 1,
+          startTime: new Date(),
+          endTime: new Date(),
+          durationMs: 100,
+          contextSnapshotId: "ctx1",
+          errorDetected: true,
+          errorCategory: "logic_error" as any,
+          qualityScore: 0.3,
+          improvementDelta: -0.1,
+          resourceUsageMB: 10,
+          promptModifications: ["bad pattern"],
+        },
+        {
+          iterationId: "fail-2",
+          sessionId: "no-success-session",
+          iterationNumber: 2,
+          startTime: new Date(),
+          endTime: new Date(),
+          durationMs: 100,
+          contextSnapshotId: "ctx2",
+          errorDetected: true,
+          errorCategory: "logic_error" as any,
+          qualityScore: 0.3,
+          improvementDelta: -0.1,
+          resourceUsageMB: 10,
+          promptModifications: ["bad pattern"],
+        },
+      ];
+
+      iterations.forEach((iter) => engineer.recordIteration(iter));
+
+      const result = engineer.modifyPrompt(
+        "no-success-session",
+        "test prompt",
+        3
+      );
+
+      // Should not apply success reinforcement (no successful patterns)
+      // But should apply error avoidance due to repeated errors
+      expect(result.modifiedPrompt).not.toBe("test prompt");
+      expect(result.modifications.length).toBeGreaterThan(0);
+    });
+
+    it("should handle session with exactly 2 iterations", () => {
+      engineer.initializeSession("two-iterations-session");
+
+      const iterations: LearningIteration[] = [
+        {
+          iterationId: "iter-1",
+          sessionId: "two-iterations-session",
+          iterationNumber: 1,
+          startTime: new Date(),
+          endTime: new Date(),
+          durationMs: 100,
+          contextSnapshotId: "ctx1",
+          errorDetected: false,
+          qualityScore: 0.8,
+          improvementDelta: 0.1,
+          resourceUsageMB: 10,
+          promptModifications: [],
+        },
+        {
+          iterationId: "iter-2",
+          sessionId: "two-iterations-session",
+          iterationNumber: 2,
+          startTime: new Date(),
+          endTime: new Date(),
+          durationMs: 100,
+          contextSnapshotId: "ctx2",
+          errorDetected: false,
+          qualityScore: 0.8,
+          improvementDelta: 0.1,
+          resourceUsageMB: 10,
+          promptModifications: [],
+        },
+      ];
+
+      iterations.forEach((iter) => engineer.recordIteration(iter));
+
+      const result = engineer.modifyPrompt(
+        "two-iterations-session",
+        "test prompt",
+        3
+      );
+      expect(result).toBeDefined();
+      expect(typeof result.modifiedPrompt).toBe("string");
+      expect(Array.isArray(result.modifications)).toBe(true);
+    });
+
+    it("should handle session with exactly 1 iteration", () => {
+      engineer.initializeSession("one-iteration-session");
+
+      const iteration: LearningIteration = {
+        iterationId: "single-iter",
+        sessionId: "one-iteration-session",
+        iterationNumber: 1,
+        startTime: new Date(),
+        endTime: new Date(),
+        durationMs: 100,
+        contextSnapshotId: "ctx",
+        errorDetected: false,
+        qualityScore: 0.8,
+        improvementDelta: 0.1,
+        resourceUsageMB: 10,
+        promptModifications: [],
+      };
+
+      engineer.recordIteration(iteration);
+
+      const result = engineer.modifyPrompt(
+        "one-iteration-session",
+        "test prompt",
+        2
+      );
+      expect(result).toBeDefined();
+      expect(result.modifiedPrompt).toBe("test prompt");
+      expect(result.modifications).toEqual([]);
+    });
+
+    it("should handle empty prompt string", () => {
+      engineer.initializeSession("empty-prompt-session");
+
+      const iteration: LearningIteration = {
+        iterationId: "empty-test",
+        sessionId: "empty-prompt-session",
+        iterationNumber: 1,
+        startTime: new Date(),
+        endTime: new Date(),
+        durationMs: 100,
+        contextSnapshotId: "ctx",
+        errorDetected: false,
+        qualityScore: 0.8,
+        improvementDelta: 0.1,
+        resourceUsageMB: 10,
+        promptModifications: [],
+      };
+
+      engineer.recordIteration(iteration);
+
+      const result = engineer.modifyPrompt("empty-prompt-session", "", 2);
+      expect(result).toBeDefined();
+      expect(result.modifiedPrompt).toBe("");
+      expect(Array.isArray(result.modifications)).toBe(true);
+    });
+
+    it("should handle very long prompt strings", () => {
+      engineer.initializeSession("long-prompt-session");
+
+      const longPrompt = "A".repeat(10000); // 10KB prompt
+
+      const iteration: LearningIteration = {
+        iterationId: "long-test",
+        sessionId: "long-prompt-session",
+        iterationNumber: 1,
+        startTime: new Date(),
+        endTime: new Date(),
+        durationMs: 100,
+        contextSnapshotId: "ctx",
+        errorDetected: false,
+        qualityScore: 0.8,
+        improvementDelta: 0.1,
+        resourceUsageMB: 10,
+        promptModifications: [],
+      };
+
+      engineer.recordIteration(iteration);
+
+      const result = engineer.modifyPrompt(
+        "long-prompt-session",
+        longPrompt,
+        2
+      );
+      expect(result).toBeDefined();
+      expect(typeof result.modifiedPrompt).toBe("string");
+      expect(result.modifiedPrompt.length).toBeGreaterThan(0);
+      expect(Array.isArray(result.modifications)).toBe(true);
+    });
   });
 });

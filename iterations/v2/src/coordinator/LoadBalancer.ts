@@ -27,7 +27,7 @@ export class LoadBalancer extends EventEmitter {
     responseTime: number;
   }> = [];
 
-  constructor(private _coordinator: SystemCoordinator) {
+  constructor(private coordinator: SystemCoordinator) {
     super();
   }
 
@@ -111,10 +111,12 @@ export class LoadBalancer extends EventEmitter {
    */
   async redistributeLoad(): Promise<void> {
     const allComponents = this.coordinator.getAllComponents();
-    const healthyComponents = allComponents.filter((component) => {
-      const health = this.coordinator.getComponentHealth(component.id);
-      return health?.status === HealthStatus.HEALTHY;
-    });
+    const healthyComponents = allComponents.filter(
+      (component: ComponentRegistration) => {
+        const health = this.coordinator.getComponentHealth(component.id);
+        return health?.status === HealthStatus.HEALTHY;
+      }
+    );
 
     if (healthyComponents.length === 0) {
       this.emit("load:redistribution-failed", {
@@ -398,4 +400,3 @@ export class LoadBalancer extends EventEmitter {
     );
   }
 }
-

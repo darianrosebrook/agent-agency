@@ -14,13 +14,13 @@ import type { ClaimBasedEvaluation } from "../verification/types.js";
  */
 export enum EvaluationCriterion {
   /** Factual accuracy and truthfulness */
-  _FAITHFULNESS = "faithfulness",
+  FAITHFULNESS = "faithfulness",
   /** Task alignment and appropriateness */
-  _RELEVANCE = "relevance",
+  RELEVANCE = "relevance",
   /** Solution elegance and minimalism */
-  _MINIMALITY = "minimality",
+  MINIMALITY = "minimality",
   /** Safety and potential for harm */
-  _SAFETY = "safety",
+  SAFETY = "safety",
 }
 
 /**

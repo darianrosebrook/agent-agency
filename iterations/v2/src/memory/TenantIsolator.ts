@@ -6,12 +6,13 @@
  * @author @darianrosebrook
  */
 
-import { TenantConfig, TenantAccessResult } from "../types/memory.js";
+import { TenantAccessResult, TenantConfig } from "../types/memory.js";
 import { Logger } from "../utils/Logger.js";
 
 export class TenantIsolator {
   private logger: Logger;
   private tenantConfigs: Map<string, TenantConfig> = new Map();
+  private tenantEvents: Map<string, any[]> = new Map();
 
   constructor(logger?: Logger) {
     this.logger = logger || new Logger("TenantIsolator");
@@ -64,5 +65,61 @@ export class TenantIsolator {
    */
   getTenantConfig(tenantId: string): TenantConfig | undefined {
     return this.tenantConfigs.get(tenantId);
+  }
+
+  /**
+   * Check if tenant has access to perform an operation
+   */
+  checkAccess(
+    tenantId: string,
+    operation: string
+  ): { allowed: boolean; reason?: string } {
+    const config = this.tenantConfigs.get(tenantId);
+    if (!config) {
+      return { allowed: false, reason: "Tenant not registered" };
+    }
+
+    // Check operation-specific permissions
+    switch (operation) {
+      case "read":
+        return { allowed: true };
+      case "write":
+        return { allowed: config.isolationLevel !== "isolated" };
+      case "federate":
+        return { allowed: config.isolationLevel === "federated" };
+      case "submit-update":
+        return { allowed: config.isolationLevel === "federated" };
+      default:
+        return { allowed: false, reason: `Unknown operation: ${operation}` };
+    }
+  }
+
+  /**
+   * Store a tenant event for auditing
+   */
+  storeTenantEvent(tenantId: string, event: any): void {
+    if (!this.tenantEvents.has(tenantId)) {
+      this.tenantEvents.set(tenantId, []);
+    }
+
+    const events = this.tenantEvents.get(tenantId)!;
+    events.push({
+      ...event,
+      tenantId,
+      timestamp: new Date(),
+    });
+
+    // Keep only last 100 events per tenant
+    if (events.length > 100) {
+      events.shift();
+    }
+  }
+
+  /**
+   * Get recent tenant events
+   */
+  getTenantEvents(tenantId: string, limit: number = 50): any[] {
+    const events = this.tenantEvents.get(tenantId) || [];
+    return events.slice(-limit);
   }
 }

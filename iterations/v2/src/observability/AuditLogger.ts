@@ -16,46 +16,46 @@ import { LogLevel, Logger } from "./Logger";
 
 export enum AuditEventType {
   // Security Events
-  _AUTHENTICATION = "authentication",
-  _AUTHORIZATION = "authorization",
-  _ACCESS_CONTROL = "access_control",
-  _DATA_ACCESS = "data_access",
-  _CONFIGURATION_CHANGE = "configuration_change",
+  AUTHENTICATION = "authentication",
+  AUTHORIZATION = "authorization",
+  ACCESS_CONTROL = "access_control",
+  DATA_ACCESS = "data_access",
+  CONFIGURATION_CHANGE = "configuration_change",
 
   // Operational Events
-  _SYSTEM_STARTUP = "system_startup",
-  _SYSTEM_SHUTDOWN = "system_shutdown",
-  _COMPONENT_FAILURE = "component_failure",
-  _COMPONENT_RECOVERY = "component_recovery",
+  SYSTEM_STARTUP = "system_startup",
+  SYSTEM_SHUTDOWN = "system_shutdown",
+  COMPONENT_FAILURE = "component_failure",
+  COMPONENT_RECOVERY = "component_recovery",
 
   // Task Events
-  _TASK_SUBMISSION = "task_submission",
-  _TASK_EXECUTION = "task_execution",
-  _TASK_COMPLETION = "task_completion",
-  _TASK_FAILURE = "task_failure",
-  _TASK_CANCELLATION = "task_cancellation",
+  TASK_SUBMISSION = "task_submission",
+  TASK_EXECUTION = "task_execution",
+  TASK_COMPLETION = "task_completion",
+  TASK_FAILURE = "task_failure",
+  TASK_CANCELLATION = "task_cancellation",
 
   // Agent Events
-  _AGENT_REGISTRATION = "agent_registration",
-  _AGENT_DEREGISTRATION = "agent_deregistration",
-  _AGENT_HEALTH_CHECK = "agent_health_check",
+  AGENT_REGISTRATION = "agent_registration",
+  AGENT_DEREGISTRATION = "agent_deregistration",
+  AGENT_HEALTH_CHECK = "agent_health_check",
 
   // Verification Events
-  _VERIFICATION_REQUEST = "verification_request",
-  _VERIFICATION_SUCCESS = "verification_success",
-  _VERIFICATION_FAILURE = "verification_failure",
+  VERIFICATION_REQUEST = "verification_request",
+  VERIFICATION_SUCCESS = "verification_success",
+  VERIFICATION_FAILURE = "verification_failure",
 
   // Compliance Events
-  _POLICY_VIOLATION = "policy_violation",
-  _COMPLIANCE_CHECK = "compliance_check",
-  _AUDIT_LOG_ACCESS = "audit_log_access",
+  POLICY_VIOLATION = "policy_violation",
+  COMPLIANCE_CHECK = "compliance_check",
+  AUDIT_LOG_ACCESS = "audit_log_access",
 }
 
 export enum AuditSeverity {
-  _LOW = "low",
-  _MEDIUM = "medium",
-  _HIGH = "high",
-  _CRITICAL = "critical",
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
+  CRITICAL = "critical",
 }
 
 /**
@@ -253,7 +253,7 @@ export class AuditLogger extends Logger {
 
   constructor(
     name: string,
-    level: LogLevel = LogLevel.INFO,
+    level: LogLevel = LogLevel._INFO,
     sinks: AuditLogSink[] = []
   ) {
     super(name, level);
