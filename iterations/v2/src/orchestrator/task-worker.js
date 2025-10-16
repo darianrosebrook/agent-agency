@@ -76,10 +76,14 @@ async function executeScriptTask(task) {
     const executeFn = new Function(
       "context",
       `
-      const { console, args, result } = context;
+      const { console, args, artifacts } = context;
+      let result = context.result;
       
       // Execute the user code directly
       ${code}
+      
+      // Update context result
+      context.result = result;
     `
     );
 

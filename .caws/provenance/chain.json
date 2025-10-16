@@ -5430,5 +5430,113 @@
     },
     "previous_hash": "6216cee38d203a295fdf77b05d70859655cdd693ec7622a8261bb670fa17615a",
     "hash": "87c1b558c8a7c4d25fc048de5b3732c962e873ad55c751995f01f1fdda10396a"
+  },
+  {
+    "id": "prov-1760594905586",
+    "timestamp": "2025-10-16T06:08:25.586Z",
+    "commit": {
+      "hash": "801b030785548e1e3410174e3be74514c4011b6e",
+      "message": "feat: complete system implementation and quality assurance",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-16T06:08:25.587Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "87c1b558c8a7c4d25fc048de5b3732c962e873ad55c751995f01f1fdda10396a",
+    "hash": "45ab26e2ac10bba350e8d71229036f70126a37da0f2d2ba08e343d86c02b0bc2"
+  },
+  {
+    "id": "prov-1760596688632",
+    "timestamp": "2025-10-16T06:38:08.632Z",
+    "commit": {
+      "hash": "ef8dcb2188cf59bb0b866482092212c1759ddc08",
+      "message": "feat: integrate Claimify research into arbiter claim extraction",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-16T06:38:08.633Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "45ab26e2ac10bba350e8d71229036f70126a37da0f2d2ba08e343d86c02b0bc2",
+    "hash": "4ee9952a0e850d09d766c35f8a3edc9cb40702dce5f7e23c00be6c32bd56e158"
+  },
+  {
+    "id": "prov-1760597700146",
+    "timestamp": "2025-10-16T06:55:00.146Z",
+    "commit": {
+      "hash": "938d76e092f3122ef54de56c801b1d50a5189d52",
+      "message": "chore: ignore CAWS workspace state snapshots and runtime artifacts",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-16T06:55:00.147Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "4ee9952a0e850d09d766c35f8a3edc9cb40702dce5f7e23c00be6c32bd56e158",
+    "hash": "17333f1db06f7ed906fde9be9004f167186d5da10b4ffa980def5b403c4b45ad"
   }
 ]

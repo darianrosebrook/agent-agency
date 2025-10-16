@@ -15,14 +15,28 @@ On January 8, 2025, the system accumulated **200+ Jest test processes** and **20
 
 ## Solutions Implemented
 
-### 1. Jest Configuration Updates
+### 1. Jest Configuration File
+
+**File**: `jest.config.js` (takes precedence over package.json)
+
+```javascript
+module.exports = {
+  maxWorkers: 2, // Limit parallel workers
+  testTimeout: 30000, // 30-second timeout per test
+  detectOpenHandles: false, // Disable open handle detection
+  forceExit: true, // Force exit when tests complete
+  workerIdleMemoryLimit: "512MB", // Memory limit per worker
+};
+```
+
+### 2. Package.json Configuration
 
 **File**: `package.json`
 
 ```json
 {
   "jest": {
-    "maxWorkers": 4, // Limit parallel workers
+    "maxWorkers": 4, // Fallback configuration
     "testTimeout": 30000, // 30-second timeout per test
     "detectOpenHandles": false, // Disable open handle detection
     "forceExit": true // Force exit when tests complete
@@ -30,13 +44,15 @@ On January 8, 2025, the system accumulated **200+ Jest test processes** and **20
 }
 ```
 
-### 2. New npm Scripts
+### 3. New npm Scripts
 
-- `npm run test:coverage` - Limited to 2 workers for development
-- `npm run test:coverage:full` - Full parallel execution for CI
+- `npm run test` - Single worker for safety
+- `npm run test:safe` - Single worker with 10s timeout
+- `npm run test:coverage` - Single worker with coverage
+- `npm run test:coverage:full` - 4 workers for CI
 - `npm run cleanup:test-processes` - Cleanup script
 
-### 3. Process Cleanup Script
+### 4. Process Cleanup Script
 
 **File**: `scripts/cleanup-test-processes.sh`
 
@@ -51,9 +67,10 @@ Automatically detects and kills hanging test processes:
 ### For Development
 
 ```bash
-# Use limited workers for development
+# Use single worker for maximum safety
+npm run test:safe
 npm run test:unit
-npm run test:coverage  # Limited to 2 workers
+npm run test:coverage  # Single worker with coverage
 
 # Check process counts regularly
 npm run cleanup:test-processes
@@ -149,4 +166,3 @@ If system becomes unresponsive due to test processes:
 ## Author
 
 @darianrosebrook - January 8, 2025
-

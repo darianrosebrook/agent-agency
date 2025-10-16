@@ -153,8 +153,9 @@ class WorkerPoolManager extends EventEmitter {
     if (taskId) {
       this.activeTasks.delete(workerId);
       this.updateWorkerMetrics(workerId, {
-        status: "completed",
+        status: "idle",
         endTime: Date.now(),
+        taskId: "",
       });
       this.emit("task_completed", taskId, result);
     }
@@ -165,8 +166,9 @@ class WorkerPoolManager extends EventEmitter {
     if (taskId) {
       this.activeTasks.delete(workerId);
       this.updateWorkerMetrics(workerId, {
-        status: "failed",
+        status: "idle",
         endTime: Date.now(),
+        taskId: "",
       });
       this.emit("task_failed", taskId, error);
     }

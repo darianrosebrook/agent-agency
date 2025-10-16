@@ -118,11 +118,11 @@ Drawing inspiration from Microsoft Research's **Claimify** framework for extract
 
 Traditional fact-checking approaches often struggle with complex, highly detailed LLM outputs because they attempt to evaluate entire texts at once. The **claim extraction** strategy breaks down complex outputs into simple, verifiable factual statements that can be independently validated. However, the effectiveness of this approach depends critically on the quality of extracted claims - inaccurate or incomplete extractions compromise the entire verification process.
 
-The arbiter stack addresses this challenge through a **three-stage claim processing pipeline**:
+The arbiter stack addresses this challenge through a **four-stage claim processing pipeline**:
 
-### Stage 1: Disambiguation and Context Resolution
+### Stage 1: Contextual Disambiguation
 
-**Ambiguity Detection**: The arbiter identifies instances where source text contains multiple possible interpretations that could lead to different factual claims.
+**Ambiguity Detection First**: Every sentence is screened for referential, structural, or temporal ambiguities _before_ any factual heuristics run. The arbiter must resolve who or what each pronoun references, which timeline the statement sits in, and whether multiple grammatical parses exist that could change the claim. This is the hard stop that prevents downstream fabrication—if we cannot resolve the ambiguity with the available conversation state, we deliberately skip extraction rather than guess.
 
 ```typescript
 interface ClaimDisambiguation {
@@ -147,9 +147,29 @@ interface AmbiguityInstance {
 }
 ```
 
-**Context-Aware Resolution**: When ambiguities can be resolved using available context, the system proceeds to claim extraction. When context is insufficient for definitive interpretation, the system labels the text as "Cannot be disambiguated" and excludes it from claim extraction to prevent false factual assertions.
+**Context-Aware Resolution**: Resolution routines operate against `ConversationContext`, threading antecedents from prior turns, entity registries, and surface-specific hints (code spans, doc sections, result tables). Successful resolutions return a rewritten, explicit sentence; unresolved spans are tagged `"cannot_disambiguate"` and handed back to the arbiter so verification can log the omission instead of hallucinating facts.
 
-### Stage 2: Precise Claim Decomposition
+### Stage 2: Verifiable Content Qualification
+
+**Factual Gatekeeping**: Only disambiguated sentences enter the qualification stage. Here we decide whether any portion is objectively checkable under CAWS budgets. The arbiter applies deterministic heuristics and lightweight semantic models to detect factual indicators (dates, quantities, authorities) and strips subjective or speculative language in-place.
+
+```typescript
+interface VerifiableContentQualification {
+  detectVerifiableContent(
+    sentence: string,
+    context: ConversationContext
+  ): Promise<VerifiableContentResult>;
+
+  rewriteUnverifiableContent(
+    sentence: string,
+    context: ConversationContext
+  ): Promise<string | null>;
+}
+```
+
+**Pass/Fail Contract**: A failure at this stage returns `hasVerifiableContent: false`, signaling the pipeline to stop. Successful qualification emits an auditable record of the indicators that justified continuation so coverage metrics can track how much source material we intentionally left untouched.
+
+### Stage 3: Precise Claim Decomposition
 
 **Atomic Claim Extraction**: Following Claimify's methodology, the arbiter decomposes complex statements into atomic, verifiable claims that can be independently fact-checked.
 
@@ -179,12 +199,12 @@ interface ExtractedClaim {
 
 **Quality Assurance**: The system ensures that extracted claims are:
 
-- **Atomic**: Each claim makes a single, specific factual assertion
-- **Complete**: All verifiable information from the source is captured
-- **Accurate**: Claims precisely reflect the source text without distortion
-- **Traceable**: Each claim can be mapped back to its source context
+- **Atomic**: Clause-level decomposition splits conjunctions and conditionals so each assertion stands alone
+- **Complete**: All verifiable fragments from the qualified sentence are covered, with gaps logged for monitoring
+- **Accurate**: Claims mirror the rewritten, explicit text with no inferred embellishments
+- **Traceable**: Each claim carries `sourceContext` snippets and pre-populated `verificationRequirements`
 
-### Stage 3: CAWS-Compliant Verification
+### Stage 4: CAWS-Compliant Verification
 
 **Evidence-Based Validation**: Extracted claims are validated against CAWS standards, requiring verifiable evidence within declared budgets and scope boundaries.
 
@@ -380,24 +400,11 @@ interface EnhancedClaimQualityMetrics {
 
 ### Claim Extraction and Verification Implementation
 
-**Multi-Stage Claim Processing**: The arbiter stack implements a approach with three distinct stages for optimal claim extraction and verification.
+**Multi-Stage Claim Processing**: The arbiter stack implements a four-stage pipeline with explicit gates that must pass before the next phase runs.
 
 ```typescript
 interface ClaimExtractionAndVerificationProcessor {
-  // Stage 1: Selection - Identify verifiable content
-  selectionStage: {
-    detectVerifiableContent(
-      sentence: string,
-      context: ConversationContext
-    ): Promise<VerifiableContentResult>;
-
-    rewriteUnverifiableContent(
-      sentence: string,
-      context: ConversationContext
-    ): Promise<string | null>; // Returns null if no verifiable content
-  };
-
-  // Stage 2: Disambiguation - Resolve ambiguities
+  // Stage 1: Contextual Disambiguation (hard gate)
   disambiguationStage: {
     identifyAmbiguities(
       sentence: string,
@@ -406,48 +413,84 @@ interface ClaimExtractionAndVerificationProcessor {
 
     resolveAmbiguities(
       sentence: string,
-      ambiguities: AmbiguityAnalysis
+      ambiguities: AmbiguityAnalysis,
+      context: ConversationContext
     ): Promise<DisambiguationResult>;
+
+    detectUnresolvableAmbiguities(
+      sentence: string,
+      context: ConversationContext
+    ): Promise<UnresolvableAmbiguity[]>;
   };
 
-  // Stage 3: Decomposition - Extract atomic claims
+  // Stage 2: Verifiable Content Qualification (runs only if Stage 1 succeeds)
+  qualificationStage: {
+    detectVerifiableContent(
+      sentence: string,
+      context: ConversationContext
+    ): Promise<VerifiableContentResult>;
+
+    rewriteUnverifiableContent(
+      sentence: string,
+      context: ConversationContext
+    ): Promise<string | null>;
+  };
+
+  // Stage 3: Atomic Claim Decomposition
   decompositionStage: {
     extractAtomicClaims(
-      disambiguatedSentence: string,
+      qualifiedSentence: string,
       context: ConversationContext
     ): Promise<AtomicClaim[]>;
 
     addContextualBrackets(
       claim: string,
       impliedContext: string
-    ): Promise<string>; // e.g., "John [celebrity] called for peace [in Middle East]"
+    ): Promise<string>;
+  };
+
+  // Stage 4: CAWS-Compliant Verification orchestration
+  verificationStage: {
+    verifyClaimEvidence(
+      claim: ExtractedClaim,
+      evidence: EvidenceManifest
+    ): Promise<VerificationResult>;
+
+    validateClaimScope(
+      claim: ExtractedClaim,
+      workingSpec: WorkingSpec
+    ): Promise<ScopeValidation>;
   };
 }
 
 interface VerifiableContentResult {
   hasVerifiableContent: boolean;
-  rewrittenSentence?: string; // Only if unverifiable content was removed
+  rewrittenSentence?: string;
+  indicators: string[]; // Audit trail for qualification decision
   confidence: number;
 }
 
 interface AmbiguityAnalysis {
-  referentialAmbiguities: string[]; // e.g., "they", "the policy", "next year"
-  structuralAmbiguities: string[]; // e.g., multiple grammatical interpretations
-  canResolve: boolean; // Whether context provides sufficient resolution
+  referentialAmbiguities: string[];
+  structuralAmbiguities: string[];
+  temporalAmbiguities: string[];
+  canResolve: boolean;
   resolutionConfidence: number;
 }
 
 interface DisambiguationResult {
   success: boolean;
   disambiguatedSentence?: string;
-  reason?: "no_ambiguity" | "resolved" | "cannot_resolve";
+  failureReason?: "no_ambiguity" | "cannot_resolve" | "insufficient_context";
+  auditTrail: ResolutionAttempt[];
 }
 
 interface AtomicClaim {
   id: string;
   statement: string;
-  contextualBrackets: string[]; // Implied context in brackets
+  contextualBrackets: string[];
   sourceSentence: string;
+  verificationRequirements: VerificationCriteria[];
   confidence: number;
 }
 ```

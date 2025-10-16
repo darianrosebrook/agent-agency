@@ -140,7 +140,7 @@ export const runtimeAgentSeeds: RuntimeAgentSeed[] = [
     name: "Knowledge Weaver",
     modelFamily: "mixtral",
     capabilities: {
-      taskTypes: ["research", "api-design", "documentation"] as const,
+      taskTypes: ["research", "api-design", "documentation", "script"] as const,
       languages: ["Python", "TypeScript"],
       specializations: ["Security audit", "Database design"], // Legacy support
       specializationsV2: [

@@ -476,8 +476,12 @@ export class ArbiterRuntime {
     let assignmentId: string | undefined;
     let routingStrategy: string | undefined;
 
+    // Check for script task payload in metadata
+    const scriptTaskPayload = options.metadata?.task?.payload;
+    const hasScriptPayload = options.task?.payload || scriptTaskPayload;
+
     // Only attempt routing for agent-based tasks, not direct script execution
-    if (!options.task?.payload) {
+    if (!hasScriptPayload) {
       try {
         const routingDecision = await this.routingManager.routeTask({
           id: taskId,
@@ -526,7 +530,7 @@ export class ArbiterRuntime {
     const task: ArbiterTask = {
       id: taskId,
       description: options.task?.description ?? options.description,
-      type: options.task?.type ?? "general",
+      type: options.task?.type ?? (scriptTaskPayload ? "script" : "general"),
       requiredCapabilities: options.task?.requiredCapabilities ?? {},
       priority: options.task?.priority ?? 5,
       timeoutMs: options.task?.timeoutMs ?? 60_000,
@@ -538,7 +542,9 @@ export class ArbiterRuntime {
       metadata: options.task?.metadata ?? options.metadata ?? {},
       attempts: options.task?.attempts ?? 0,
       maxAttempts: options.task?.maxAttempts ?? 1,
-      ...(options.task?.payload && { payload: options.task.payload }),
+      ...(hasScriptPayload && {
+        payload: options.task?.payload || scriptTaskPayload,
+      }),
     };
 
     this.stateMachine.initializeTask(taskId);

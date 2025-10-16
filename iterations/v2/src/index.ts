@@ -371,7 +371,7 @@ async function main(): Promise<void> {
     await initialize();
 
     // Start services
-    await startHttpServer();
+    // await startHttpServer(); // ObserverBridge already provides HTTP server
     await startMcpServer();
     await startTaskProcessing();
 

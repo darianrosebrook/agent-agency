@@ -1,0 +1,111 @@
+id: VERIFICATION-001
+title: "Implement hardened verification pipeline with claim extraction and fact-checking"
+risk_tier: 1
+mode: feature
+change_budget:
+  max_files: 20
+  max_loc: 1500
+blast_radius:
+  modules: ["src/verification/", "src/orchestrator/"]
+  data_migration: false
+operational_rollback_slo: "5m"
+scope:
+  in:
+    - "src/verification/"
+    - "src/orchestrator/"
+    - "tests/verification/"
+    - "tests/orchestrator/"
+    - "docs/verification/"
+  out:
+    - "src/auth/"
+    - "src/billing/"
+    - "node_modules/"
+    - "dist/"
+    - "coverage/"
+invariants:
+  - "System maintains CAWS compliance throughout verification pipeline"
+  - "Claim extraction preserves factual accuracy and context"
+  - "Ambiguity resolution uses context-aware disambiguation"
+  - "Verification results are traceable and auditable"
+  - "Pipeline handles edge cases (empty input, malformed data, timeouts)"
+acceptance:
+  - id: "A1"
+    given: "Text content with verifiable claims"
+    when: "Verification pipeline processes the content"
+    then: "Claims are extracted as atomic, verifiable statements"
+  - id: "A2"
+    given: "Text with ambiguous statements"
+    when: "Disambiguation stage processes the text and ambiguity cannot be resolved with available context"
+    then: "Ambiguous content is excluded from verification"
+  - id: "A3"
+    given: "Extracted atomic claims"
+    when: "Verification stage validates claims"
+    then: "Claims are verified against authoritative sources with evidence trail"
+  - id: "A4"
+    given: "Verification pipeline with CAWS compliance requirements"
+    when: "Pipeline processes claims"
+    then: "All operations respect CAWS budgets and scope boundaries"
+  - id: "A5"
+    given: "Verification results requiring audit"
+    when: "Results are generated"
+    then: "Complete audit trail is maintained for CAWS provenance"
+observability:
+  logging:
+    - "Verification pipeline execution logs"
+    - "Claim extraction metrics and success rates"
+    - "Verification source response times and reliability"
+    - "Error rates and failure modes"
+  metrics:
+    - "Claims processed per minute"
+    - "Verification success rate by source"
+    - "Average verification latency"
+    - "Ambiguity resolution success rate"
+    - "CAWS compliance violation rate"
+  tracing:
+    - "Full request trace from input to verification result"
+    - "Source API call traces with timing"
+    - "Claim extraction pipeline traces"
+    - "CAWS policy enforcement traces"
+rollback:
+  procedures:
+    - "Stop verification pipeline processing"
+    - "Archive current verification results"
+    - "Revert verification logic to previous version"
+    - "Restore previous verification database state"
+    - "Notify stakeholders of rollback"
+  data_migration:
+    verification_results: "Archive to backup storage"
+    claim_extraction_logs: "Preserve for audit compliance"
+    source_integrations: "Maintain connection configurations"
+  verification:
+    - "Run verification tests with previous version"
+    - "Compare verification results for consistency"
+    - "Validate CAWS compliance metrics"
+  timeline: "5 minutes for complete rollback"
+non_functional:
+  a11y:
+    - "Verification reports accessible to screen readers"
+    - "Error messages clear and actionable"
+  perf:
+    api_p95_ms: 2000  # 2 second response time for verification
+    lcp_ms: 3000      # Page load for verification dashboard
+  security:
+    - "Input validation prevents injection attacks"
+    - "Source attribution prevents misinformation"
+    - "Evidence trails cryptographically verifiable"
+    - "Rate limiting on verification requests"
+  reliability:
+    - "Graceful degradation when external sources unavailable"
+    - "Retry logic with exponential backoff"
+    - "Circuit breaker for failing verification sources"
+  scalability:
+    - "Horizontal scaling of verification workers"
+    - "Batch processing for multiple claims"
+    - "Caching of verification results"
+contracts:
+  - type: "openapi"
+    path: "docs/api/verification.yaml"
+    description: "API contract for verification pipeline endpoints"
+  - type: "typescript"
+    path: "src/types/verification.ts"
+    description: "TypeScript interfaces for verification components"

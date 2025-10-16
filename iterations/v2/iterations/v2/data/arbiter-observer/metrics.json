@@ -1,9 +1,9 @@
 {
-  "timestamp": "2025-10-16T01:59:56.244Z",
+  "timestamp": "2025-10-16T06:29:39.007Z",
   "reasoningDepthAvg": 8,
   "reasoningDepthP95": 8,
   "debateBreadthAvg": 1,
-  "taskSuccessRate": 1,
+  "taskSuccessRate": 0,
   "toolBudgetUtilization": 0,
   "activeTasks": 0,
   "queuedTasks": 0,
