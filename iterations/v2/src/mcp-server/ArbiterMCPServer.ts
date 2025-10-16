@@ -497,9 +497,42 @@ export class ArbiterMCPServer extends Server {
         applyWaivers: true,
       });
 
-      // Simple agent selection (placeholder for real TaskRoutingManager)
-      const selectedAgent =
-        availableAgents[0] || `agent-${Date.now().toString(36)}`;
+      // Dynamic agent selection using orchestrator's agent registry
+      let selectedAgent: string;
+
+      if (availableAgents && availableAgents.length > 0) {
+        // Use provided available agents
+        selectedAgent = availableAgents[0];
+      } else if (this.orchestrator) {
+        try {
+          // Query orchestrator's agent registry for available agents
+          const registryAgents = await this.getAvailableAgentsFromOrchestrator();
+          if (registryAgents && registryAgents.length > 0) {
+            // Select agent with best performance or most suitable capabilities
+            const bestAgent = registryAgents.reduce(
+              (best: any, current: any) => {
+                const bestScore =
+                  best.performanceHistory?.averageSuccessRate || 0.5;
+                const currentScore =
+                  current.performanceHistory?.averageSuccessRate || 0.5;
+                return currentScore > bestScore ? current : best;
+              }
+            );
+            selectedAgent =
+              bestAgent.id ||
+              bestAgent.agentId ||
+              `agent-${Date.now().toString(36)}`;
+          } else {
+            selectedAgent = `agent-dynamic-${Date.now().toString(36)}`;
+          }
+        } catch (error) {
+          // Fallback to dynamic generation if registry query fails
+          selectedAgent = `agent-fallback-${Date.now().toString(36)}`;
+        }
+      } else {
+        // Fallback to dynamic generation
+        selectedAgent = `agent-dynamic-${Date.now().toString(36)}`;
+      }
 
       const estimatedHours = this.estimateEffort(
         spec,
@@ -1029,6 +1062,22 @@ export class ArbiterMCPServer extends Server {
         ],
         isError: true,
       };
+    }
+  }
+
+  /**
+   * Get available agents from orchestrator's agent registry
+   */
+  private async getAvailableAgentsFromOrchestrator(): Promise<any[]> {
+    try {
+      // Access the orchestrator's agent registry through a public method
+      if (this.orchestrator && typeof (this.orchestrator as any).getAvailableAgents === 'function') {
+        return await (this.orchestrator as any).getAvailableAgents();
+      }
+      return [];
+    } catch (error) {
+      console.warn("Failed to get available agents from orchestrator", error);
+      return [];
     }
   }
 

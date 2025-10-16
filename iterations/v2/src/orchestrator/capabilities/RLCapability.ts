@@ -129,9 +129,29 @@ export class RLCapability {
       return;
     }
 
+    // Extract agent ID from task metadata or assignment ID
+    let selectedAgentId = "unknown-agent";
+    
+    // First, check if task has assignedAgent metadata
+    if ((task as any).assignedAgent) {
+      selectedAgentId = (task as any).assignedAgent;
+    }
+    // Second, try to extract from assignment ID if it contains agent info
+    else if (assignmentId && assignmentId.includes("agent-")) {
+      // Extract agent ID from assignment ID if it follows pattern with agent ID
+      const agentMatch = assignmentId.match(/agent-\w+/);
+      if (agentMatch) {
+        selectedAgentId = agentMatch[0];
+      }
+    }
+    // Third, check task metadata for routing decision
+    else if ((task as any).routingDecision?.selectedAgent?.id) {
+      selectedAgentId = (task as any).routingDecision.selectedAgent.id;
+    }
+
     const mockDecision: RLRoutingDecision = {
       taskId: task.id,
-      selectedAgent: "agent-1", // Would be extracted from assignment
+      selectedAgent: selectedAgentId,
       routingStrategy: "multi-armed-bandit",
       confidence: 0.8,
       rationale: "RL-based routing decision",
@@ -225,10 +245,33 @@ export class RLCapability {
       };
 
       if (this.components.performanceTracker) {
+        // Extract agent ID from assignment ID or task metadata
+        let agentId = "unknown-agent";
+
+        if (assignmentId && this.components.taskAssignmentManager) {
+          try {
+            const assignment =
+              await this.components.taskAssignmentManager.getAssignment(
+                assignmentId
+              );
+            agentId = assignment?.agent?.id || agentId;
+          } catch (error) {
+            this.logger?.warn(
+              "Failed to get assignment for performance tracking",
+              { assignmentId, error }
+            );
+          }
+        }
+
+        // Fallback: check if task has assignedAgent metadata
+        if (agentId === "unknown-agent" && (task as any).assignedAgent) {
+          agentId = (task as any).assignedAgent;
+        }
+
         const executionId =
           this.components.performanceTracker.startTaskExecution(
             taskId,
-            "agent-1",
+            agentId,
             {} as any
           );
 

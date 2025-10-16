@@ -1190,7 +1190,9 @@ export class CredibilityScorer {
       source: analysis.url,
       content: `Source credibility analysis: ${
         analysis.domain
-      } has a credibility score of ${(analysis.credibilityScore * 100).toFixed(1)}%`,
+      } has a credibility score of ${(analysis.credibilityScore * 100).toFixed(
+        1
+      )}%`,
       relevance: analysis.credibilityScore,
       credibility: analysis.credibilityScore,
       supporting: isSupporting,

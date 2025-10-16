@@ -351,6 +351,11 @@ export interface PerformanceEvent {
   context?: Record<string, unknown>;
 
   /**
+   * Model version used for this event (for A/B testing).
+   */
+  modelVersion?: string;
+
+  /**
    * Data integrity hash.
    */
   integrityHash: string;

@@ -358,25 +358,25 @@ export class ModelDeploymentManager extends EventEmitter {
       throw new Error(`A/B test ${testName} not found`);
     }
 
-    // Get performance data for both versions
-    const stats = this.performanceTracker.getStats();
+    // Get performance data filtered by version
+    const controlStats = this.performanceTracker.getStatsByVersion(testConfig.controlVersion);
+    const treatmentStats = this.performanceTracker.getStatsByVersion(testConfig.treatmentVersion);
 
-    // In a real implementation, we would filter data by version
-    // For now, simulate with mock data
+    // Convert performance stats to A/B test metrics format
     const controlMetrics = {
-      sampleSize: 1000,
-      averageReward: 0.75,
-      successRate: 0.85,
-      latencyMs: 250,
-      errorRate: 0.02,
+      sampleSize: controlStats.totalTaskExecutions,
+      averageReward: 0, // Would need to be calculated from actual reward data
+      successRate: controlStats.overallSuccessRate,
+      latencyMs: controlStats.averageCompletionTimeMs,
+      errorRate: 1 - controlStats.overallSuccessRate,
     };
 
     const treatmentMetrics = {
-      sampleSize: 100,
-      averageReward: 0.78,
-      successRate: 0.87,
-      latencyMs: 240,
-      errorRate: 0.015,
+      sampleSize: treatmentStats.totalTaskExecutions,
+      averageReward: 0, // Would need to be calculated from actual reward data
+      successRate: treatmentStats.overallSuccessRate,
+      latencyMs: treatmentStats.averageCompletionTimeMs,
+      errorRate: 1 - treatmentStats.overallSuccessRate,
     };
 
     // Calculate statistical significance (simplified)
@@ -706,6 +706,45 @@ export class ModelDeploymentManager extends EventEmitter {
     }
 
     return "keep_control";
+  }
+
+  /**
+   * Determines which model version to use for a request based on active A/B tests.
+   *
+   * @param requestId - Unique request identifier for consistent routing
+   * @returns Model version ID to use
+   */
+  getVersionForRequest(requestId: string): string {
+    // Check if any A/B tests are active
+    for (const [testName, testConfig] of this.activeTests) {
+      // Simple hash-based routing for consistent assignment
+      const hash = this.simpleHash(`${testName}:${requestId}`);
+      const trafficPercentage = hash % 100;
+
+      if (trafficPercentage < testConfig.trafficPercentage) {
+        return testConfig.treatmentVersion;
+      }
+    }
+
+    // No active A/B tests, return current production version
+    const productionVersion = Array.from(this.versions.values()).find(
+      (v) => v.status === "production"
+    );
+
+    return productionVersion?.id || "default";
+  }
+
+  /**
+   * Simple hash function for consistent routing.
+   */
+  private simpleHash(input: string): number {
+    let hash = 0;
+    for (let i = 0; i < input.length; i++) {
+      const char = input.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash) % 100;
   }
 
   /**

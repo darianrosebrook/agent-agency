@@ -442,4 +442,7 @@ export const EventTypes = {
   ORCHESTRATOR_STARTED: "orchestrator.started" as const,
   ORCHESTRATOR_SHUTDOWN: "orchestrator.shutdown" as const,
   ORCHESTRATOR_RESTART: "orchestrator.restart" as const,
+
+  // Audit events
+  AUDIT_EVENT: "audit.event" as const,
 } as const;

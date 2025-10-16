@@ -1022,6 +1022,53 @@ export class PerformanceTracker {
   }
 
   /**
+   * Gets performance statistics filtered by model version.
+   *
+   * @param modelVersion - Model version to filter by
+   * @returns Performance statistics for the specified version
+   */
+  getStatsByVersion(modelVersion: string): PerformanceStats {
+    const versionEvents = this.events.filter(
+      (e) => e.modelVersion === modelVersion
+    );
+
+    const routingDecisions = versionEvents.filter(
+      (e) => e.type === "routing-decision"
+    );
+    const taskExecutions = versionEvents.filter(
+      (e) => e.type === "task-execution"
+    );
+    const evaluationOutcomes = versionEvents.filter(
+      (e) => e.type === "evaluation-outcome"
+    );
+
+    const completionTimes = taskExecutions
+      .map((e) => (e.data as any).durationMs)
+      .filter((time) => time !== undefined);
+
+    const averageCompletionTime =
+      completionTimes.length > 0
+        ? completionTimes.reduce((sum, time) => sum + time, 0) /
+          completionTimes.length
+        : 0;
+
+    const successfulTasks = taskExecutions.filter(
+      (e) => (e.data as any).outcome?.success
+    ).length;
+    const successRate =
+      taskExecutions.length > 0 ? successfulTasks / taskExecutions.length : 0;
+
+    return {
+      totalRoutingDecisions: routingDecisions.length,
+      totalTaskExecutions: taskExecutions.length,
+      totalEvaluationOutcomes: evaluationOutcomes.length,
+      averageCompletionTimeMs: averageCompletionTime,
+      overallSuccessRate: successRate,
+      collectionStartedAt: this.collectionStartTime || new Date().toISOString(),
+    };
+  }
+
+  /**
    * Updates configuration.
    *
    * @param config - New configuration to apply.

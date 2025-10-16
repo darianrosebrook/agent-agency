@@ -8,14 +8,37 @@
  */
 
 import { AgentProfile } from "../types/arbiter-orchestration";
-import {
-  SecurityContext,
-  SecurityLevel,
-  ViolationSeverity,
-} from "../types/security-policy";
 
-// Re-export for backward compatibility
-export { SecurityContext, SecurityLevel, ViolationSeverity };
+// Temporarily define local types to fix startup issue
+export enum ViolationSeverity {
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
+  CRITICAL = "critical",
+}
+
+export enum SecurityLevel {
+  PUBLIC = "public",
+  INTERNAL = "internal",
+  CONFIDENTIAL = "confidential",
+  RESTRICTED = "restricted",
+  AGENT = "agent",
+  TRUSTED_AGENT = "trusted_agent",
+  ADMIN = "admin",
+}
+
+export interface SecurityContext {
+  agentId: string;
+  userId: string;
+  tenantId: string;
+  sessionId: string;
+  permissions: string[];
+  roles: string[];
+  securityLevel: SecurityLevel;
+  authenticatedAt: Date;
+  expiresAt: Date;
+  metadata: Record<string, any>;
+}
 
 /**
  * Permission types for authorization
@@ -550,8 +573,6 @@ export class SecurityManager {
         userAgent: credentials.metadata?.userAgent,
         source: credentials.metadata?.source || "api",
       },
-      ipAddress: credentials.metadata?.ipAddress || "127.0.0.1",
-      userAgent: credentials.metadata?.userAgent || "Unknown",
     };
   }
 

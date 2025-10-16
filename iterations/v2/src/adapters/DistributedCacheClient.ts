@@ -379,16 +379,65 @@ export class DistributedCacheClient {
 
   // Private methods for Redis implementation
   private async initializeRedis(): Promise<void> {
-    // In a real implementation, this would initialize a Redis client
-    // For now, we'll simulate the connection
-    this.logger.info("Initializing Redis client", {
-      host: this.config.provider.redis?.host,
-      port: this.config.provider.redis?.port,
-    });
+    try {
+      // Import Redis client dynamically to avoid dependency issues
+      const { createClient } = await import('redis');
+      
+      const redisConfig = this.config.provider.redis;
+      if (!redisConfig) {
+        throw new Error("Redis configuration is required when using Redis provider");
+      }
 
-    // Simulate connection delay
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    this.isConnected = true;
+      // Create Redis client with configuration
+      this.redisClient = createClient({
+        socket: {
+          host: redisConfig.host,
+          port: redisConfig.port,
+          reconnectStrategy: (retries) => Math.min(retries * 50, 500),
+        },
+        password: redisConfig.password,
+        database: redisConfig.database || 0,
+      });
+
+      // Handle connection events
+      this.redisClient.on('error', (err: Error) => {
+        this.logger.error('Redis client error', { error: err.message });
+        this.isConnected = false;
+      });
+
+      this.redisClient.on('connect', () => {
+        this.logger.info('Redis client connected');
+        this.isConnected = true;
+      });
+
+      this.redisClient.on('ready', () => {
+        this.logger.info('Redis client ready');
+        this.isConnected = true;
+      });
+
+      this.redisClient.on('end', () => {
+        this.logger.info('Redis client disconnected');
+        this.isConnected = false;
+      });
+
+      // Connect to Redis
+      await this.redisClient.connect();
+      
+      this.logger.info("Redis client initialized successfully", {
+        host: redisConfig.host,
+        port: redisConfig.port,
+        database: redisConfig.database || 0,
+      });
+    } catch (error) {
+      this.logger.error("Failed to initialize Redis client", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      
+      // Fall back to mock mode if Redis fails
+      this.logger.warn("Falling back to mock cache mode");
+      this.config.provider.type = "mock";
+      this.isConnected = true;
+    }
   }
 
   private async setRedis<T>(key: string, entry: CacheEntry<T>): Promise<void> {
@@ -399,8 +448,22 @@ export class DistributedCacheClient {
     const serialized = JSON.stringify(entry);
     const fullKey = this.getFullKey(key);
 
-    // In a real implementation, this would use Redis SETEX
-    this.logger.debug("Redis SETEX", { key: fullKey, ttl: entry.ttl });
+    try {
+      // Use Redis SETEX to store with TTL
+      if (entry.ttl) {
+        await this.redisClient.setex(fullKey, entry.ttl, serialized);
+      } else {
+        await this.redisClient.set(fullKey, serialized);
+      }
+      
+      this.logger.debug("Stored in Redis", { key: fullKey, ttl: entry.ttl });
+    } catch (error) {
+      this.logger.error("Failed to store in Redis", {
+        key: fullKey,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   }
 
   private async getRedis<T>(key: string): Promise<CacheEntry<T> | null> {
@@ -410,11 +473,24 @@ export class DistributedCacheClient {
 
     const fullKey = this.getFullKey(key);
 
-    // In a real implementation, this would use Redis GET
-    this.logger.debug("Redis GET", { key: fullKey });
+    try {
+      const serialized = await this.redisClient.get(fullKey);
+      
+      if (!serialized) {
+        this.logger.debug("No data found in Redis", { key: fullKey });
+        return null;
+      }
 
-    // For now, return null (no cached data)
-    return null;
+      const entry = JSON.parse(serialized) as CacheEntry<T>;
+      this.logger.debug("Retrieved from Redis", { key: fullKey });
+      return entry;
+    } catch (error) {
+      this.logger.error("Failed to retrieve from Redis", {
+        key: fullKey,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
   }
 
   private async deleteRedis(key: string): Promise<boolean> {
@@ -424,10 +500,19 @@ export class DistributedCacheClient {
 
     const fullKey = this.getFullKey(key);
 
-    // In a real implementation, this would use Redis DEL
-    this.logger.debug("Redis DEL", { key: fullKey });
-
-    return true;
+    try {
+      const result = await this.redisClient.del(fullKey);
+      const deleted = result > 0;
+      
+      this.logger.debug("Deleted from Redis", { key: fullKey, deleted });
+      return deleted;
+    } catch (error) {
+      this.logger.error("Failed to delete from Redis", {
+        key: fullKey,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
   }
 
   private async existsRedis(key: string): Promise<boolean> {
@@ -437,10 +522,17 @@ export class DistributedCacheClient {
 
     const fullKey = this.getFullKey(key);
 
-    // In a real implementation, this would use Redis EXISTS
-    this.logger.debug("Redis EXISTS", { key: fullKey });
-
-    return false;
+    try {
+      const exists = await this.redisClient.exists(fullKey);
+      this.logger.debug("Checked existence in Redis", { key: fullKey, exists: exists > 0 });
+      return exists > 0;
+    } catch (error) {
+      this.logger.error("Failed to check existence in Redis", {
+        key: fullKey,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
   }
 
   private async keysRedis(pattern: string): Promise<string[]> {
@@ -450,10 +542,17 @@ export class DistributedCacheClient {
 
     const fullPattern = this.getFullKey(pattern);
 
-    // In a real implementation, this would use Redis KEYS
-    this.logger.debug("Redis KEYS", { pattern: fullPattern });
-
-    return [];
+    try {
+      const keys = await this.redisClient.keys(fullPattern);
+      this.logger.debug("Retrieved keys from Redis", { pattern: fullPattern, count: keys.length });
+      return keys;
+    } catch (error) {
+      this.logger.error("Failed to get keys from Redis", {
+        pattern: fullPattern,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
   }
 
   private getFullKey(key: string): string {

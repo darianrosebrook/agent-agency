@@ -1,6 +1,7 @@
 import { EventEmitter } from "events";
 import { ConfigManager } from "../config/ConfigManager";
 import { Logger } from "../observability/Logger";
+import { MetricsCollector } from "../monitoring/MetricsCollector";
 import {
   FeedbackAnalysis,
   FeedbackEvent,
@@ -18,6 +19,7 @@ import { ImprovementEngine } from "./ImprovementEngine";
 export class FeedbackLoopManager extends EventEmitter {
   private config: FeedbackLoopConfig;
   private logger: Logger;
+  private metricsCollector: MetricsCollector;
 
   private collector: FeedbackCollector;
   private analyzer: FeedbackAnalyzer;
@@ -67,7 +69,10 @@ export class FeedbackLoopManager extends EventEmitter {
     // Initialize components
     this.collector = new FeedbackCollector(configManager);
     this.analyzer = new FeedbackAnalyzer(configManager);
-    this.improvementEngine = new ImprovementEngine(configManager, this.metricsCollector);
+    this.improvementEngine = new ImprovementEngine(
+      configManager,
+      this.metricsCollector
+    );
     this.pipeline = new FeedbackPipeline(configManager);
 
     this.setupEventHandlers();

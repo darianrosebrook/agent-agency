@@ -258,7 +258,7 @@ export class AuditLogger extends Logger {
     await Promise.all(this.sinks.map((sink) => sink.write(event)));
 
     // Emit event for real-time processing
-    this.eventEmitter.emit(EventTypes.AUDIT_EVENT, event);
+    this.eventEmitter.emit(event);
 
     // Also log to regular logger with appropriate level
     const logMessage = `[AUDIT] ${eventType}: ${action} on ${resource} by ${actor} (${outcome})`;
