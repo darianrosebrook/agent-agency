@@ -198,6 +198,40 @@ describe("ArbiterRuntime", () => {
     }
   });
 
+  it("builds verification context with task history and artifacts", async () => {
+    const specPath = path.join(
+      __dirname,
+      "../../fixtures/sample-working-spec.yaml"
+    );
+    const { taskId } = await runtime.submitTask({
+      description: "Analyze code change for verification context",
+      metadata: { framework: "jest" },
+      specPath,
+    });
+
+    await runtime.waitForCompletion(taskId);
+
+    const runtimeAny = runtime as any;
+    const record = runtimeAny.taskRecords.get(taskId);
+    expect(record).toBeDefined();
+
+    const conversationContext = runtimeAny.buildVerificationConversationContext(
+      taskId,
+      record
+    );
+
+    expect(
+      conversationContext.previousMessages.some((msg: string) =>
+        msg.includes("Task description")
+      )
+    ).toBe(true);
+    expect(conversationContext.metadata?.taskMetadata).toBeDefined();
+
+    const manifest = runtimeAny.buildVerificationEvidence(record);
+    expect(manifest.sources.length).toBeGreaterThan(0);
+    expect(manifest.sources[0].name).toContain("summary.md");
+  });
+
   it("rejects submissions when no eligible agents are available", async () => {
     const routingManager = (runtime as any).routingManager;
     const routeSpy = jest

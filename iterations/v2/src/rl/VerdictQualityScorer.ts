@@ -11,6 +11,16 @@
 import { ModelBasedJudge } from "../evaluation/ModelBasedJudge";
 import type { Verdict } from "../types/arbitration";
 import type { JudgmentInput } from "../types/judge";
+import type { ClaimBasedEvaluation } from "../verification/types.js";
+
+type VerdictEvaluationContext = {
+  violation?: string;
+  arguments?: Array<{ content: string; agentId: string }>;
+  rules?: Array<{ id: string; text: string }>;
+  verification?: {
+    claimEvaluation?: ClaimBasedEvaluation;
+  };
+};
 
 /**
  * Verdict quality evaluation result.
@@ -164,11 +174,7 @@ export class VerdictQualityScorer {
    */
   async evaluateVerdict(
     verdict: Verdict,
-    context?: {
-      violation?: string;
-      arguments?: Array<{ content: string; agentId: string }>;
-      rules?: Array<{ id: string; text: string }>;
-    }
+    context?: VerdictEvaluationContext
   ): Promise<VerdictQualityEvaluation> {
     // Evaluate each quality criterion
     const criteriaScores = await this.evaluateCriteria(verdict, context);
@@ -177,7 +183,17 @@ export class VerdictQualityScorer {
     const overallScore = this.calculateWeightedScore(criteriaScores);
 
     // Calculate confidence based on judge confidence levels
-    const confidence = this.calculateConfidence(criteriaScores);
+    let confidence = this.calculateConfidence(criteriaScores);
+
+    const claimConfidence = context?.verification?.claimEvaluation
+      ? this.extractClaimConfidenceFromEvaluation(
+          context.verification.claimEvaluation
+        )
+      : null;
+
+    if (claimConfidence !== null) {
+      confidence = this.blendConfidence(confidence, claimConfidence);
+    }
 
     // Generate detailed feedback if enabled
     const feedback = this.config.enableDetailedFeedback
@@ -251,11 +267,7 @@ export class VerdictQualityScorer {
    */
   private async evaluateCriteria(
     verdict: Verdict,
-    context?: {
-      violation?: string;
-      arguments?: Array<{ content: string; agentId: string }>;
-      rules?: Array<{ id: string; text: string }>;
-    }
+    context?: VerdictEvaluationContext
   ): Promise<VerdictQualityEvaluation["criteriaScores"]> {
     // Evaluate reasoning clarity
     const reasoningClarity = await this.evaluateReasoningClarity(
@@ -293,11 +305,7 @@ export class VerdictQualityScorer {
    */
   private async evaluateReasoningClarity(
     verdict: Verdict,
-    context?: {
-      violation?: string;
-      arguments?: Array<{ content: string; agentId: string }>;
-      rules?: Array<{ id: string; text: string }>;
-    }
+    context?: VerdictEvaluationContext
   ): Promise<number> {
     const judgmentInput: JudgmentInput = {
       task: `Evaluate the reasoning clarity, completeness, and coherence of this arbitration verdict for: ${
@@ -312,6 +320,7 @@ export class VerdictQualityScorer {
         rules: context?.rules || [],
         evaluationFocus: "reasoning_clarity",
       },
+      claimEvaluation: context?.verification?.claimEvaluation,
     };
 
     const result = await this.judge.evaluate(judgmentInput);
@@ -325,11 +334,7 @@ export class VerdictQualityScorer {
    */
   private async evaluateEvidenceQuality(
     verdict: Verdict,
-    context?: {
-      violation?: string;
-      arguments?: Array<{ content: string; agentId: string }>;
-      rules?: Array<{ id: string; text: string }>;
-    }
+    context?: VerdictEvaluationContext
   ): Promise<number> {
     const judgmentInput: JudgmentInput = {
       task: `Evaluate the quality, relevance, sufficiency, and credibility of evidence used in this arbitration verdict`,
@@ -345,6 +350,7 @@ export class VerdictQualityScorer {
         evidenceCount: verdict.rulesApplied?.length || 0,
         evaluationFocus: "evidence_quality",
       },
+      claimEvaluation: context?.verification?.claimEvaluation,
     };
 
     const result = await this.judge.evaluate(judgmentInput);
@@ -357,11 +363,7 @@ export class VerdictQualityScorer {
    */
   private async evaluateConstitutionalCompliance(
     verdict: Verdict,
-    context?: {
-      violation?: string;
-      arguments?: Array<{ content: string; agentId: string }>;
-      rules?: Array<{ id: string; text: string }>;
-    }
+    context?: VerdictEvaluationContext
   ): Promise<number> {
     const judgmentInput: JudgmentInput = {
       task: `Evaluate constitutional compliance, rule alignment, precedent consistency, and policy adherence of this arbitration verdict`,
@@ -378,6 +380,7 @@ export class VerdictQualityScorer {
         rules: context?.rules || [],
         evaluationFocus: "constitutional_compliance",
       },
+      claimEvaluation: context?.verification?.claimEvaluation,
     };
 
     const result = await this.judge.evaluate(judgmentInput);
@@ -390,11 +393,7 @@ export class VerdictQualityScorer {
    */
   private async evaluateFairness(
     verdict: Verdict,
-    context?: {
-      violation?: string;
-      arguments?: Array<{ content: string; agentId: string }>;
-      rules?: Array<{ id: string; text: string }>;
-    }
+    context?: VerdictEvaluationContext
   ): Promise<number> {
     const judgmentInput: JudgmentInput = {
       task: `Evaluate the fairness, impartiality, proportionality, and balanced consideration of all arguments in this arbitration verdict`,
@@ -410,6 +409,7 @@ export class VerdictQualityScorer {
         verdictId: verdict.id,
         evaluationFocus: "fairness",
       },
+      claimEvaluation: context?.verification?.claimEvaluation,
     };
 
     const result = await this.judge.evaluate(judgmentInput);
@@ -422,11 +422,7 @@ export class VerdictQualityScorer {
    */
   private async evaluateActionability(
     verdict: Verdict,
-    _context?: {
-      violation?: string;
-      arguments?: Array<{ content: string; agentId: string }>;
-      rules?: Array<{ id: string; text: string }>;
-    }
+    _context?: VerdictEvaluationContext
   ): Promise<number> {
     const judgmentInput: JudgmentInput = {
       task: `Evaluate the specificity, measurability, and feasibility of this arbitration verdict's conclusions and recommendations`,
@@ -441,6 +437,7 @@ export class VerdictQualityScorer {
         verdictId: verdict.id,
         evaluationFocus: "actionability",
       },
+      claimEvaluation: _context?.verification?.claimEvaluation,
     };
 
     const result = await this.judge.evaluate(judgmentInput);
@@ -490,17 +487,37 @@ export class VerdictQualityScorer {
     return varianceConfidence * 0.7 + extremeConfidence * 0.3;
   }
 
+  private extractClaimConfidenceFromEvaluation(
+    evaluation: ClaimBasedEvaluation
+  ): number | null {
+    const values = [
+      evaluation.overallQuality,
+      evaluation.factualAccuracyScore,
+      evaluation.cawsComplianceScore,
+    ].filter(
+      (value): value is number =>
+        typeof value === "number" && Number.isFinite(value)
+    );
+
+    if (!values.length) {
+      return null;
+    }
+
+    const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+    return Math.min(1, Math.max(0, average));
+  }
+
+  private blendConfidence(primary: number, claimConfidence: number): number {
+    return Math.min(1, Math.max(0, primary * 0.6 + claimConfidence * 0.4));
+  }
+
   /**
    * Generates detailed feedback for each criterion.
    */
   private async generateDetailedFeedback(
     verdict: Verdict,
     criteriaScores: VerdictQualityEvaluation["criteriaScores"],
-    _context?: {
-      violation?: string;
-      arguments?: Array<{ content: string; agentId: string }>;
-      rules?: Array<{ id: string; text: string }>;
-    }
+    _context?: VerdictEvaluationContext
   ): Promise<VerdictQualityEvaluation["feedback"]> {
     const feedback: VerdictQualityEvaluation["feedback"] = [];
 

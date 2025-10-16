@@ -20,6 +20,7 @@ import {
 } from "../types/verification";
 import { GoogleFactCheckProvider } from "./providers/GoogleFactCheckProvider";
 import { SnopesFactCheckProvider } from "./providers/SnopesFactCheckProvider";
+import type { ExtractedClaim } from "./types";
 
 /**
  * Fact Checker Implementation
@@ -161,6 +162,22 @@ export class FactChecker {
    * Extract verifiable claims from request content
    */
   private extractClaims(request: VerificationRequest): FactCheckClaim[] {
+    const metadataClaims = Array.isArray(request.metadata?.claims)
+      ? (request.metadata?.claims.filter(
+          (claim: any) => claim && typeof claim.statement === "string"
+        ) as ExtractedClaim[])
+      : undefined;
+
+    const preExtracted = this.normalizeExtractedClaims(
+      request.claims ??
+        (request.claimEvaluation?.extractedClaims as ExtractedClaim[] | undefined) ??
+        metadataClaims
+    );
+
+    if (preExtracted.length > 0) {
+      return preExtracted;
+    }
+
     const content = request.content.toLowerCase();
 
     // Simple claim extraction - look for factual statements
@@ -188,6 +205,25 @@ export class FactChecker {
 
     // Limit to reasonable number of claims
     return claims.slice(0, 5);
+  }
+
+  /**
+   * Normalize extracted claims provided by the claim extraction pipeline
+   */
+  private normalizeExtractedClaims(
+    claims?: ExtractedClaim[]
+  ): FactCheckClaim[] {
+    if (!claims || claims.length === 0) {
+      return [];
+    }
+
+    return claims.map((claim) => ({
+      id: claim.id,
+      text: claim.statement,
+      context: claim.sourceContext,
+      language: "en",
+      category: this.categorizeClaim(claim.statement),
+    }));
   }
 
   /**

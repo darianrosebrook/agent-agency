@@ -116,6 +116,19 @@ export interface WorkerExecutionResult {
   };
 }
 
+export interface WorkerSupervisorConfig {
+  backpressure?: {
+    saturationRatio?: number;
+    queueDepth?: number;
+    cooldownMs?: number;
+  };
+  retry?: {
+    baseDelayMs?: number;
+    maxDelayMs?: number;
+    maxAttempts?: number;
+  };
+}
+
 export interface WorkerPoolConfig {
   minPoolSize: number;
   maxPoolSize: number;
@@ -129,6 +142,7 @@ export interface WorkerPoolConfig {
     maxPathLength: number;
   };
   workerCpuLimit?: number;
+  supervisor?: WorkerSupervisorConfig;
 }
 
 export interface PleadingWorkflow {

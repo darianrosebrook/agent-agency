@@ -23,6 +23,15 @@ import { AgentRegistryManager } from "./AgentRegistryManager.js";
 import { ArbiterOrchestrator } from "./ArbiterOrchestrator.js";
 import { TaskOrchestrator } from "./TaskOrchestrator.js";
 import { ArbiterRuntime } from "./runtime/ArbiterRuntime.js";
+import {
+  TaskIntakeProcessor,
+  TaskIntakeConfig,
+} from "./intake/TaskIntakeProcessor.js";
+import { IntakeAuditLogger } from "./intake/TaskSubmissionService.js";
+import {
+  processTaskSubmission,
+  TaskSubmissionResult,
+} from "./intake/TaskSubmissionService.js";
 
 /**
  * ArbiterController configuration
@@ -52,6 +61,7 @@ export interface ArbiterControllerConfig {
     enabled: boolean;
     logLevel?: string;
   };
+  intake?: TaskIntakeConfig;
 }
 
 /**
@@ -78,16 +88,6 @@ export interface ArbiterStatus {
 }
 
 /**
- * Task submission result
- */
-export interface TaskSubmissionResult {
-  taskId: string;
-  status: "accepted" | "rejected" | "queued" | "error";
-  message?: string;
-  estimatedCompletionTime?: Date;
-}
-
-/**
  * Command execution result
  */
 export interface CommandResult {
@@ -109,7 +109,8 @@ export class ArbiterController {
   private agentRegistry?: AgentRegistryManager;
   private taskOrchestrator?: TaskOrchestrator;
   private performanceTracker?: PerformanceTracker;
-  private auditLogger?: AuditLogger;
+  private auditLogger?: IntakeAuditLogger;
+  private taskIntakeProcessor: TaskIntakeProcessor;
 
   private initialized = false;
   private startTime = Date.now();
@@ -117,6 +118,7 @@ export class ArbiterController {
 
   constructor(config: ArbiterControllerConfig) {
     this.config = config;
+    this.taskIntakeProcessor = new TaskIntakeProcessor(config.intake);
   }
 
   /**
@@ -141,7 +143,7 @@ export class ArbiterController {
             ? LogLevel.ERROR
             : LogLevel.INFO;
 
-        this.auditLogger = new AuditLogger("ArbiterController", logLevel);
+        this.auditLogger = new AuditLogger("ArbiterController", logLevel) as IntakeAuditLogger;
         console.log("✅ Audit logger initialized");
       }
 
@@ -449,44 +451,12 @@ export class ArbiterController {
     }
 
     try {
-      const taskId = `task-${++this.taskCounter}-${Date.now()}`;
-
-      if (this.auditLogger) {
-        await this.auditLogger.logAuditEvent(
-          AuditEventType.TASK_SUBMISSION,
-          AuditSeverity.LOW,
-          "system",
-          "task-queue",
-          "submit",
-          "success",
-          {
-            taskId,
-            taskType: task.type,
-            description: task.description?.substring(0, 100),
-          }
-        );
-      }
-
-      // Submit to runtime for processing
-      if (this.runtime) {
-        const result = await this.runtime.submitTask({
-          ...task,
-          id: taskId,
-        });
-
-        return {
-          taskId,
-          status: "accepted",
-          message: "Task accepted for processing",
-          estimatedCompletionTime: new Date(Date.now() + 300000), // 5 minutes estimate
-        };
-      }
-
-      return {
-        taskId,
-        status: "error",
-        message: "Runtime not available",
-      };
+      return await processTaskSubmission(task, {
+        intakeProcessor: this.taskIntakeProcessor,
+        auditLogger: this.auditLogger,
+        runtime: this.runtime,
+        generateTaskId: () => `task-${++this.taskCounter}-${Date.now()}`,
+      });
     } catch (error) {
       console.error("❌ Error submitting task:", error);
 

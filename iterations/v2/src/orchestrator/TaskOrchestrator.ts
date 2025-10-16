@@ -33,21 +33,30 @@ import { TaskQueue } from "./TaskQueue";
 import { TaskRetryHandler } from "./TaskRetryHandler";
 import { TaskRoutingManager } from "./TaskRoutingManager";
 import { TaskStateMachine } from "./TaskStateMachine";
+import {
+  BackpressureState,
+  FailurePlan,
+  SupervisorMetrics,
+  WorkerPoolSupervisor,
+  WorkerPriority,
+} from "./worker/WorkerPoolSupervisor";
 
 /**
  * Worker Pool Manager
  */
 class WorkerPoolManager extends EventEmitter {
   private workers: Map<string, Worker> = new Map();
-  private activeTasks: Map<string, string> = new Map(); // taskId -> workerId
+  private activeTasks: Map<string, string> = new Map(); // workerId -> taskId
   private workerMetrics: Map<string, TaskMetrics> = new Map();
   private config: WorkerPoolConfig;
   private artifactConfig: WorkerPoolConfig["artifactConfig"];
+  private supervisor?: WorkerPoolSupervisor;
 
-  constructor(config: WorkerPoolConfig) {
+  constructor(config: WorkerPoolConfig, supervisor?: WorkerPoolSupervisor) {
     super();
     this.config = config;
     this.artifactConfig = config.artifactConfig;
+    this.supervisor = supervisor;
     this.initializePool();
   }
 
@@ -96,6 +105,11 @@ class WorkerPoolManager extends EventEmitter {
       status: "idle",
     });
 
+    this.supervisor?.registerWorker({
+      id: workerId,
+      capabilities: this.config.workerCapabilities,
+    });
+
     return workerId;
   }
 
@@ -123,7 +137,11 @@ class WorkerPoolManager extends EventEmitter {
     const taskId = this.activeTasks.get(workerId);
     if (taskId) {
       this.activeTasks.delete(workerId);
-      this.emit("task_failed", taskId, error);
+      const plan = this.supervisor?.recordWorkerFailure(workerId, taskId, {
+        errorType: "worker_crash",
+        message: error.message,
+      });
+      this.emit("task_failed", taskId, error, plan);
     }
 
     // Remove failed worker and create replacement
@@ -157,6 +175,7 @@ class WorkerPoolManager extends EventEmitter {
         endTime: Date.now(),
         taskId: "",
       });
+      this.supervisor?.markWorkerIdle(workerId);
       this.emit("task_completed", taskId, result);
     }
   }
@@ -170,7 +189,11 @@ class WorkerPoolManager extends EventEmitter {
         endTime: Date.now(),
         taskId: "",
       });
-      this.emit("task_failed", taskId, error);
+      const plan = this.supervisor?.recordWorkerFailure(workerId, taskId, {
+        errorType: error?.name ?? "worker_error",
+        message: error?.message,
+      });
+      this.emit("task_failed", taskId, error, plan);
     }
   }
 
@@ -198,7 +221,7 @@ class WorkerPoolManager extends EventEmitter {
       );
     }
 
-    this.activeTasks.set(task.id, availableWorker);
+    this.activeTasks.set(availableWorker, task.id);
 
     const worker = this.workers.get(availableWorker);
     if (!worker) {
@@ -211,6 +234,7 @@ class WorkerPoolManager extends EventEmitter {
       startTime: Date.now(),
       status: "running",
     });
+    this.supervisor?.markWorkerBusy(availableWorker, task.id);
 
     // Send task to worker
     worker.postMessage({
@@ -349,6 +373,7 @@ class PleadingWorkflowManager extends EventEmitter {
 export class TaskOrchestrator extends EventEmitter {
   private config: TaskOrchestratorConfig;
   private workerPool: WorkerPoolManager;
+  private workerSupervisor: WorkerPoolSupervisor;
   private pleadingManager: PleadingWorkflowManager;
   private taskQueue: TaskQueue;
   private stateMachine: TaskStateMachine;
@@ -357,6 +382,7 @@ export class TaskOrchestrator extends EventEmitter {
   private performanceTracker: PerformanceTracker;
   private activeExecutions: Map<string, TaskExecution> = new Map();
   private metrics: Map<string, TaskMetrics> = new Map();
+  private retryPlans: Map<string, FailurePlan> = new Map();
 
   constructor(
     config: TaskOrchestratorConfig,
@@ -366,13 +392,38 @@ export class TaskOrchestrator extends EventEmitter {
     super();
     this.config = config;
 
-    // Initialize components
-    this.workerPool = new WorkerPoolManager({
-      minPoolSize: config.workerPool.minPoolSize,
-      maxPoolSize: config.workerPool.maxPoolSize,
-      workerCapabilities: config.workerPool.workerCapabilities,
-      workerTimeout: config.workerPool.workerTimeout,
+    const supervisorOptions = config.workerPool.supervisor ?? {};
+    this.workerSupervisor = new WorkerPoolSupervisor({
+      maxWorkers: config.workerPool.maxPoolSize,
+      backpressure: {
+        saturationRatio:
+          supervisorOptions.backpressure?.saturationRatio ?? 0.8,
+        queueDepth:
+          supervisorOptions.backpressure?.queueDepth ??
+          Math.max(1, Math.floor(config.queue.maxSize * 0.8)),
+        cooldownMs: supervisorOptions.backpressure?.cooldownMs ?? 500,
+      },
+      retry: {
+        baseDelayMs:
+          supervisorOptions.retry?.baseDelayMs ??
+          config.retry.initialDelay,
+        maxDelayMs:
+          supervisorOptions.retry?.maxDelayMs ?? config.retry.maxDelay,
+        maxAttempts:
+          supervisorOptions.retry?.maxAttempts ?? config.retry.maxAttempts,
+      },
     });
+
+    // Initialize components
+    this.workerPool = new WorkerPoolManager(
+      {
+        minPoolSize: config.workerPool.minPoolSize,
+        maxPoolSize: config.workerPool.maxPoolSize,
+        workerCapabilities: config.workerPool.workerCapabilities,
+        workerTimeout: config.workerPool.workerTimeout,
+      },
+      this.workerSupervisor
+    );
     this.pleadingManager = new PleadingWorkflowManager();
     this.taskQueue = new TaskQueue();
     this.stateMachine = new TaskStateMachine();
@@ -431,8 +482,8 @@ export class TaskOrchestrator extends EventEmitter {
       this.handleTaskCompletion(taskId, result);
     });
 
-    this.workerPool.on("task_failed", (taskId, error) => {
-      this.handleTaskFailure(taskId, error);
+    this.workerPool.on("task_failed", (taskId, error, plan) => {
+      this.handleTaskFailure(taskId, error, plan);
     });
 
     // Pleading workflow events
@@ -535,8 +586,31 @@ export class TaskOrchestrator extends EventEmitter {
   private async processQueue(): Promise<void> {
     try {
       while (true) {
-        const task = await this.taskQueue.dequeue();
-        if (!task) break;
+        const nextTask = this.taskQueue.peek();
+        if (!nextTask) {
+          break;
+        }
+
+        const queueDepth = this.taskQueue.size();
+        const decision = this.workerSupervisor.evaluateCapacity({
+          queueDepth,
+          priority: this.resolvePriority(nextTask.priority),
+          requiredCapabilities: this.extractCapabilities(nextTask),
+        });
+
+        if (decision.type === "backpressure") {
+          this.logBackpressure(decision.metrics);
+          break;
+        }
+
+        if (decision.type === "queue") {
+          break;
+        }
+
+        const task = this.taskQueue.dequeue();
+        if (!task) {
+          break;
+        }
 
         await this.executeTask(task);
       }
@@ -653,17 +727,29 @@ export class TaskOrchestrator extends EventEmitter {
       taskId,
       metadata: { executionId: execution.executionId },
     });
+
+    setImmediate(() => {
+      void this.processQueue();
+    });
   }
 
   /**
    * Handle task failure
    */
-  private async handleTaskFailure(taskId: string, error: Error): Promise<void> {
+  private async handleTaskFailure(
+    taskId: string,
+    error: Error,
+    plan?: FailurePlan
+  ): Promise<void> {
     const execution = this.activeExecutions.get(taskId);
     if (!execution) return;
 
     execution.status = "failed";
     execution.error = error.message;
+
+    if (plan) {
+      this.retryPlans.set(taskId, plan);
+    }
 
     // Check if we should retry
     // const shouldRetry = await this.retryHandler.shouldRetry(execution, error);
@@ -700,6 +786,10 @@ export class TaskOrchestrator extends EventEmitter {
       efficiencyScore: 0.0,
       tokensConsumed: 0,
       completionTimeMs: duration,
+    });
+
+    setImmediate(() => {
+      void this.processQueue();
     });
   }
 
@@ -864,6 +954,50 @@ export class TaskOrchestrator extends EventEmitter {
     }
   }
 
+  private resolvePriority(priority: number | undefined): WorkerPriority {
+    if (typeof priority !== "number") {
+      return "normal";
+    }
+    if (priority >= 9) {
+      return "urgent";
+    }
+    if (priority >= 6) {
+      return "high";
+    }
+    if (priority <= 3) {
+      return "low";
+    }
+    return "normal";
+  }
+
+  private extractCapabilities(task: any): string[] {
+    const { requiredCapabilities } = task ?? {};
+    if (!requiredCapabilities) {
+      return [];
+    }
+
+    if (Array.isArray(requiredCapabilities)) {
+      return requiredCapabilities.map((cap: any) => String(cap));
+    }
+
+    if (typeof requiredCapabilities === "object") {
+      return Object.entries(requiredCapabilities)
+        .filter(([, value]) => value !== false && value !== undefined)
+        .map(([key]) => String(key));
+    }
+
+    return [];
+  }
+
+  private logBackpressure(metrics: SupervisorMetrics): void {
+    const state: BackpressureState = this.workerSupervisor.getBackpressureState();
+    console.warn(
+      `[WorkerPoolSupervisor] backpressure active (reason=${state.reason ?? "unknown"}) saturation=${metrics.saturationRatio.toFixed(
+        2
+      )} queueDepth=${metrics.queueDepth}`
+    );
+  }
+
   /**
    * Shutdown orchestrator
    */
@@ -891,4 +1025,5 @@ export type {
   TaskStatus,
   WorkerExecutionResult,
   WorkerPoolConfig,
+  WorkerSupervisorConfig,
 } from "../types/task-runner";

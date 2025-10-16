@@ -21,6 +21,10 @@ import type {
 } from "../types/verification";
 import { VerificationType } from "../types/verification";
 import { VerificationEngineImpl } from "../verification/VerificationEngine";
+import type {
+  ConversationContext,
+  EvidenceManifest,
+} from "../verification/types";
 
 // Audit Logging imports
 import {
@@ -2935,11 +2939,18 @@ export class ArbiterOrchestrator {
         contradictoryEvidence: [],
         verificationMethods: [],
         processingTimeMs: 0,
+        claims: [],
+        claimEvaluation: undefined,
       };
     }
 
     try {
       const startTime = Date.now();
+
+      const conversationContext =
+        this.buildVerificationConversationContextFromRequest(request);
+      const evidenceManifest =
+        this.buildVerificationEvidenceFromRequest(request);
 
       // Convert request to verification request format
       const verificationRequest = {
@@ -2948,7 +2959,13 @@ export class ArbiterOrchestrator {
         type: request.type || "fact_checking",
         priority: request.priority || "medium",
         context: request.context || {},
-        metadata: request.metadata || {},
+        metadata: {
+          ...(request.metadata || {}),
+          expectedOutput: request.expectedOutput,
+          previousMessages: conversationContext.previousMessages,
+        },
+        conversationContext,
+        evidenceManifest,
       };
 
       // Execute verification
@@ -2993,6 +3010,8 @@ export class ArbiterOrchestrator {
         contradictoryEvidence: result.contradictoryEvidence,
         verificationMethods: result.methodResults?.map((m) => m.method) || [],
         processingTimeMs,
+        claims: result.claims ?? [],
+        claimEvaluation: result.claimEvaluation,
       };
     } catch (error) {
       console.error("Verification failed:", error);
@@ -3030,8 +3049,72 @@ export class ArbiterOrchestrator {
         contradictoryEvidence: [],
         verificationMethods: [],
         processingTimeMs: 0,
+        claims: [],
+        claimEvaluation: undefined,
       };
     }
+  }
+
+  private buildVerificationConversationContextFromRequest(
+    request: any
+  ): ConversationContext {
+    const conversationId = request?.id ?? `verification-${Date.now()}`;
+    const tenantId =
+      request?.metadata?.tenantId ??
+      request?.metadata?.requesterId ??
+      "arbiter";
+
+    const previousMessages: string[] = [];
+    previousMessages.push(...this.extractStringArray(request?.context));
+    previousMessages.push(
+      ...this.extractStringArray(request?.metadata?.previousMessages)
+    );
+    previousMessages.push(...this.extractStringArray(request?.information));
+    previousMessages.push(...this.extractStringArray(request?.expectedOutput));
+
+    return {
+      conversationId: String(conversationId),
+      tenantId: String(tenantId),
+      previousMessages,
+      metadata: { ...(request?.metadata ?? {}) },
+    };
+  }
+
+  private buildVerificationEvidenceFromRequest(
+    request: any
+  ): EvidenceManifest {
+    const manifestCandidate =
+      request?.evidenceManifest || request?.metadata?.evidenceManifest;
+
+    if (manifestCandidate) {
+      return manifestCandidate as EvidenceManifest;
+    }
+
+    return {
+      sources: [],
+      evidence: [],
+      quality: 0,
+      cawsCompliant: false,
+    };
+  }
+
+  private extractStringArray(value: unknown): string[] {
+    if (!value) {
+      return [];
+    }
+
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => (typeof item === "string" ? item.trim() : ""))
+        .filter((item) => item.length > 0);
+    }
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? [trimmed] : [];
+    }
+
+    return [];
   }
 
   /**

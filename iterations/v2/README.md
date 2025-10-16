@@ -136,6 +136,7 @@ Implements centralized PostgreSQL database with pgvector extension for:
 - Comprehensive test suites (unit, integration, E2E)
 - Automated quality gate enforcement
 - Provenance tracking for all changes
+- Claim extraction + verification pipeline treats every agent response as unverified until CAWS-compliant evidence validates the claims
 
 ---
 

@@ -22,6 +22,10 @@ import {
 } from "../types/knowledge";
 import { InformationProcessor } from "./InformationProcessor";
 import { SearchProviderFactory } from "./SearchProvider";
+import type {
+  ConversationContext,
+  EvidenceManifest,
+} from "../verification/types";
 
 /**
  * Knowledge Seeker implementation
@@ -621,20 +625,32 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
       return [];
     }
 
-    const verificationRequests = results.map((result, idx) => ({
-      id: `${query.id}-verify-${idx}`,
-      content: result.content || result.snippet || result.title,
-      source: result.url,
-      context: query.query,
-      priority: this.mapQueryPriorityToVerificationPriority(
-        query.metadata.priority
-      ),
-      verificationTypes: this.config.verification?.verificationTypes || [],
-      metadata: {
-        resultId: result.id,
-        provider: result.provider,
-      },
-    }));
+    const verificationRequests = results.map((result, idx) => {
+      const conversationContext = this.createVerificationConversationContext(
+        query,
+        result,
+        idx
+      );
+      const evidenceManifest = this.createVerificationEvidenceManifest(result);
+
+      return {
+        id: `${query.id}-verify-${idx}`,
+        content: result.content || result.snippet || result.title,
+        source: result.url,
+        context: query.query,
+        priority: this.mapQueryPriorityToVerificationPriority(
+          query.metadata.priority
+        ),
+        verificationTypes: this.config.verification?.verificationTypes || [],
+        metadata: {
+          resultId: result.id,
+          provider: result.provider,
+          previousMessages: conversationContext.previousMessages,
+        },
+        conversationContext,
+        evidenceManifest,
+      };
+    });
 
     // Verify results in parallel
     const verificationResults = await Promise.allSettled(
@@ -693,5 +709,82 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
       // Keep results with sufficient verification confidence
       return verification.confidence >= minConfidence;
     });
+  }
+
+  private createVerificationConversationContext(
+    query: KnowledgeQuery,
+    result: any,
+    index: number
+  ): ConversationContext {
+    const conversationId = `${query.id}-result-${result?.id ?? index}`;
+    const tenantId = query.metadata.requesterId ?? "knowledge";
+
+    const previousMessages = [
+      query.query,
+      typeof result?.title === "string" ? result.title : undefined,
+      typeof result?.content === "string"
+        ? result.content
+        : typeof result?.snippet === "string"
+        ? result.snippet
+        : undefined,
+    ].filter((value): value is string => typeof value === "string");
+
+    return {
+      conversationId,
+      tenantId: String(tenantId),
+      previousMessages,
+      metadata: {
+        queryMetadata: query.metadata,
+        provider: result?.provider,
+      },
+    };
+  }
+
+  private createVerificationEvidenceManifest(result: any): EvidenceManifest {
+    const reliability =
+      typeof result?.credibilityScore === "number"
+        ? result.credibilityScore
+        : 0.5;
+
+    const lastUpdated = result?.retrievedAt
+      ? result.retrievedAt instanceof Date
+        ? result.retrievedAt.toISOString()
+        : new Date(result.retrievedAt).toISOString()
+      : undefined;
+
+    const sources = [
+      {
+        name: result?.url ?? `provider:${result?.provider ?? "unknown"}`,
+        type: result?.sourceType ?? "web",
+        reliability,
+        lastUpdated,
+        responseTime: 0,
+      },
+    ].filter((source) => !!source.name);
+
+    const evidenceContent =
+      result?.content || result?.snippet || result?.title || "";
+
+    const evidence = evidenceContent
+      ? [
+          {
+            content: evidenceContent,
+            source: result?.url ?? result?.provider ?? "unknown",
+            strength: reliability,
+            timestamp: lastUpdated ?? new Date().toISOString(),
+            metadata: {
+              title: result?.title,
+              provider: result?.provider,
+            },
+          },
+        ]
+      : [];
+
+    return {
+      sources,
+      evidence,
+      quality: reliability,
+      cawsCompliant: false,
+    };
   }
 }

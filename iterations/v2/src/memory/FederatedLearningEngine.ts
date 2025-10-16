@@ -77,7 +77,7 @@ export class FederatedLearningEngine {
   private activeSessions: Map<string, FederatedSession> = new Map();
   private participantRegistry: Map<string, FederatedParticipant> = new Map();
   private aggregationQueue: Map<string, ContextualMemory[]> = new Map();
-  private aggregationTimer?: NodeJS.Timeout;
+  private aggregationTimer?: ReturnType<typeof setTimeout>;
   private cacheClient?: DistributedCacheClient;
 
   constructor(

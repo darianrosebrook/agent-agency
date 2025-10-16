@@ -23,6 +23,7 @@ import {
   VerificationType,
   VerificationVerdict,
 } from "../types/verification";
+import { createClaimExtractor } from "./ClaimExtractor";
 import { CredibilityScorer } from "./CredibilityScorer";
 import { FactChecker } from "./FactChecker";
 import { VerificationDatabaseClient } from "./VerificationDatabaseClient";
@@ -30,6 +31,12 @@ import { ConsistencyValidator } from "./validators/ConsistencyValidator";
 import { CrossReferenceValidator } from "./validators/CrossReferenceValidator";
 import { LogicalValidator } from "./validators/LogicalValidator";
 import { StatisticalValidator } from "./validators/StatisticalValidator";
+import type {
+  ClaimBasedEvaluation,
+  ConversationContext,
+  EvidenceManifest,
+  ExtractedClaim,
+} from "./types";
 
 /**
  * Main Verification Engine Implementation
@@ -45,6 +52,7 @@ export class VerificationEngineImpl implements VerificationEngine {
   private dbClient?: VerificationDatabaseClient;
   private activeRequests: Map<string, Promise<VerificationResult>> = new Map();
   private resultCache: Map<string, VerificationResult> = new Map();
+  private readonly claimExtractor = createClaimExtractor();
 
   constructor(
     config: VerificationEngineConfig,
@@ -350,8 +358,14 @@ export class VerificationEngineImpl implements VerificationEngine {
         },
       });
 
-      // Determine which methods to use
-      const methodsToUse = this.selectVerificationMethods(request);
+      // Enrich request with claim extraction prior to running methods
+      await this.enrichRequestWithClaims(request);
+
+      // Determine which methods to use (skip when no claims extracted)
+      const methodsToUse =
+        Array.isArray(request.claims) && request.claims.length === 0
+          ? []
+          : this.selectVerificationMethods(request);
 
       // Execute verification methods in parallel
       const methodPromises = methodsToUse.map(async (methodType) => {
@@ -588,6 +602,25 @@ export class VerificationEngineImpl implements VerificationEngine {
     startTime: number
   ): VerificationResult {
     const processingTimeMs = Date.now() - startTime;
+    const noClaimsExtracted =
+      Array.isArray(request.claims) && request.claims.length === 0;
+
+    if (noClaimsExtracted) {
+      return {
+        requestId: request.id,
+        verdict: VerificationVerdict.INSUFFICIENT_DATA,
+        confidence: 0,
+        reasoning: [
+          "No verifiable claims extracted; treat content as an unverified document requiring additional evidence.",
+        ],
+        supportingEvidence: [],
+        contradictoryEvidence: [],
+        verificationMethods: methodResults,
+        processingTimeMs,
+        claimEvaluation: request.claimEvaluation,
+        claims: request.claims ?? [],
+      };
+    }
 
     // Filter out failed methods
     const validResults = methodResults.filter(
@@ -604,6 +637,8 @@ export class VerificationEngineImpl implements VerificationEngine {
         contradictoryEvidence: [],
         verificationMethods: methodResults,
         processingTimeMs,
+        claimEvaluation: request.claimEvaluation,
+        claims: request.claims ?? [],
       };
     }
 
@@ -685,7 +720,133 @@ export class VerificationEngineImpl implements VerificationEngine {
       verificationMethods: methodResults,
       methodResults: methodResults, // Alias for backward compatibility
       processingTimeMs,
+      claimEvaluation: request.claimEvaluation,
+      claims: request.claims ?? [],
     };
+  }
+
+  /**
+   * Check cache for existing result
+   */
+  private async enrichRequestWithClaims(
+    request: VerificationRequest
+  ): Promise<void> {
+    const conversationContext = this.createConversationContext(request);
+    const evidenceManifest = this.createEvidenceManifest(request);
+
+    const evaluation: ClaimBasedEvaluation =
+      await this.claimExtractor.evaluateWithClaims(request.content, {
+        conversationContext,
+        evidenceManifest,
+      });
+
+    request.claims = this.mergeClaims(request.claims, evaluation.extractedClaims);
+    request.claimEvaluation = evaluation;
+    request.conversationContext = conversationContext;
+    request.evidenceManifest = evidenceManifest;
+  }
+
+  private createConversationContext(
+    request: VerificationRequest
+  ): ConversationContext {
+    const provided =
+      request.conversationContext ||
+      (request.metadata?.conversationContext as ConversationContext | undefined);
+
+    if (provided) {
+      return {
+        conversationId: provided.conversationId,
+        tenantId: provided.tenantId,
+        previousMessages: [...(provided.previousMessages ?? [])],
+        metadata: {
+          ...(provided.metadata ?? {}),
+          ...(request.metadata ?? {}),
+        },
+      };
+    }
+
+    const previousMessages = [
+      ...this.extractStringArray(request.context),
+      ...this.extractStringArray(request.metadata?.previousMessages),
+      ...this.extractStringArray(request.metadata?.history),
+    ];
+
+    const resolvedConversationId =
+      (request.metadata?.conversationId as string) ??
+      request.id ??
+      `verification-${Date.now()}`;
+    const resolvedTenantId =
+      (request.metadata?.tenantId as string) ??
+      (request.metadata?.requesterId as string) ??
+      "arbiter";
+
+    return {
+      conversationId: String(resolvedConversationId),
+      tenantId: String(resolvedTenantId),
+      previousMessages,
+      metadata: { ...(request.metadata ?? {}) },
+    };
+  }
+
+  private createEvidenceManifest(
+    request: VerificationRequest
+  ): EvidenceManifest {
+    if (request.evidenceManifest) {
+      return request.evidenceManifest;
+    }
+
+    const fromMetadata = request.metadata?.evidenceManifest as
+      | EvidenceManifest
+      | undefined;
+
+    if (fromMetadata) {
+      return fromMetadata;
+    }
+
+    return {
+      sources: [],
+      evidence: [],
+      quality: 0,
+      cawsCompliant: false,
+    };
+  }
+
+  private mergeClaims(
+    existing: ExtractedClaim[] | undefined,
+    generated: ExtractedClaim[]
+  ): ExtractedClaim[] {
+    const combined = [...(existing ?? []), ...generated];
+    const unique = new Map<string, ExtractedClaim>();
+
+    for (const claim of combined) {
+      const key = (claim.id || claim.statement).toLowerCase();
+      const current = unique.get(key);
+
+      if (!current || (claim.confidence ?? 0) > (current.confidence ?? 0)) {
+        unique.set(key, claim);
+      }
+    }
+
+    return Array.from(unique.values());
+  }
+
+  private extractStringArray(value: unknown): string[] {
+    if (!value) {
+      return [];
+    }
+
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => (typeof item === "string" ? item.trim() : ""))
+        .filter((item) => item.length > 0);
+    }
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? [trimmed] : [];
+    }
+
+    return [];
   }
 
   /**
@@ -728,6 +889,10 @@ export class VerificationEngineImpl implements VerificationEngine {
       content: request.content,
       source: request.source,
       verificationTypes: request.verificationTypes?.sort(),
+      conversationId: request.conversationContext?.conversationId,
+      claimSignatures: request.claims
+        ?.map((claim) => claim.statement.toLowerCase())
+        .sort(),
     };
     return Buffer.from(JSON.stringify(keyData)).toString("base64");
   }

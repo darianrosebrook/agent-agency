@@ -13,6 +13,7 @@ import {
   SearchProviderConfig,
   SearchProviderType,
 } from "../../../src/types/knowledge";
+import { VerificationVerdict } from "../../../src/types/verification";
 
 describe("KnowledgeSeeker", () => {
   let knowledgeSeeker: KnowledgeSeeker;
@@ -199,6 +200,69 @@ describe("KnowledgeSeeker", () => {
       });
 
       expect(response.results.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("Verification Integration", () => {
+    it("builds conversation-aware verification requests", async () => {
+      const configWithVerification = JSON.parse(JSON.stringify(defaultConfig));
+      configWithVerification.verification = {
+        enabled: true,
+        autoVerify: true,
+        minConfidenceThreshold: 0.5,
+        verificationTypes: ["fact_checking"],
+      };
+
+      const mockVerificationEngine = {
+        verify: jest.fn().mockResolvedValue({
+          requestId: "high-priority-query-verify-0",
+          verdict: VerificationVerdict.VERIFIED_TRUE,
+          confidence: 0.92,
+          reasoning: [],
+          supportingEvidence: [],
+          contradictoryEvidence: [],
+          verificationMethods: [],
+          processingTimeMs: 12,
+          claims: [],
+        }),
+      };
+
+      const highPriorityQuery: KnowledgeQuery = {
+        ...validQuery,
+        id: "high-priority-query",
+        metadata: {
+          ...validQuery.metadata,
+          priority: 7,
+        },
+      };
+
+      const seekerWithVerification = new KnowledgeSeeker(
+        configWithVerification,
+        undefined,
+        mockVerificationEngine
+      );
+
+      await seekerWithVerification.processQuery(highPriorityQuery);
+
+      expect(mockVerificationEngine.verify).toHaveBeenCalled();
+      const verificationRequest = mockVerificationEngine.verify.mock.calls[0][0];
+
+      expect(verificationRequest.conversationContext).toBeDefined();
+      expect(
+        verificationRequest.conversationContext.previousMessages
+      ).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining(highPriorityQuery.query),
+        ])
+      );
+
+      expect(verificationRequest.evidenceManifest).toBeDefined();
+      expect(
+        verificationRequest.evidenceManifest.sources?.[0]?.name
+      ).toBeDefined();
+      expect(
+        verificationRequest.metadata.previousMessages?.length
+      ).toBeGreaterThan(0);
     });
   });
 

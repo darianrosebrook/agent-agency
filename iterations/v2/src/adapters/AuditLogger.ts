@@ -96,7 +96,7 @@ export interface AuditStorageProvider {
  */
 export class DatabaseAuditStorage implements AuditStorageProvider {
   private batchBuffer: AuditEvent[] = [];
-  private flushTimer?: NodeJS.Timeout;
+  private flushTimer?: ReturnType<typeof setTimeout>;
 
   constructor(private config: Record<string, any>, private logger: Logger) {
     if (config.batching?.enabled) {

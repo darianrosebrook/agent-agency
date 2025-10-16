@@ -3,6 +3,13 @@
  * @author @darianrosebrook
  */
 
+import type {
+  ClaimBasedEvaluation,
+  ConversationContext,
+  EvidenceManifest,
+  ExtractedClaim,
+} from "../verification/types";
+
 export interface VerificationRequest {
   id: string;
   content: string;
@@ -12,6 +19,22 @@ export interface VerificationRequest {
   timeoutMs?: number;
   verificationTypes?: VerificationType[];
   metadata?: Record<string, any>;
+  /**
+   * Context for disambiguation during claim extraction
+   */
+  conversationContext?: ConversationContext;
+  /**
+   * Evidence manifest supplied by upstream components (optional)
+   */
+  evidenceManifest?: EvidenceManifest;
+  /**
+   * Pre-extracted claims supplied by upstream systems
+   */
+  claims?: ExtractedClaim[];
+  /**
+   * Precomputed claim evaluation to reuse across verification passes
+   */
+  claimEvaluation?: ClaimBasedEvaluation;
 }
 
 export enum VerificationPriority {
@@ -43,6 +66,8 @@ export interface VerificationResult {
   methodResults?: VerificationMethodResult[]; // Alias for backward compatibility
   processingTimeMs: number;
   error?: string;
+  claims?: ExtractedClaim[];
+  claimEvaluation?: ClaimBasedEvaluation;
 }
 
 export enum VerificationVerdict {

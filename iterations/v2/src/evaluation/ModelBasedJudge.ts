@@ -59,6 +59,8 @@ export class ModelBasedJudge {
     // Validate input
     this.validateInput(input);
 
+    const claimConfidence = this.extractClaimConfidence(input);
+
     // Evaluate each criterion
     const criteria: EvaluationCriterion[] = [
       "faithfulness" as EvaluationCriterion,
@@ -71,7 +73,11 @@ export class ModelBasedJudge {
 
     for (const criterion of criteria) {
       try {
-        const assessment = await this.evaluateCriterion(input, criterion);
+        const assessment = await this.evaluateCriterion(
+          input,
+          criterion,
+          claimConfidence
+        );
         assessments.push(assessment);
       } catch (error) {
         // Fallback to safe default if enabled
@@ -89,9 +95,16 @@ export class ModelBasedJudge {
     // Calculate overall scores
     const overallScore =
       assessments.reduce((sum, a) => sum + a.score, 0) / assessments.length;
-    const overallConfidence =
+    let overallConfidence =
       assessments.reduce((sum, a) => sum + a.confidence, 0) /
       assessments.length;
+
+    if (claimConfidence !== null) {
+      overallConfidence = this.blendConfidence(
+        overallConfidence,
+        claimConfidence
+      );
+    }
     const allCriteriaPass = assessments.every((a) => a.passes);
 
     const evaluationTimeMs = Date.now() - startTime;
@@ -103,6 +116,8 @@ export class ModelBasedJudge {
       assessments,
       overallScore,
       overallConfidence,
+      claimConfidence: claimConfidence ?? undefined,
+      claimEvaluation: input.claimEvaluation,
       allCriteriaPass,
       evaluatedAt: new Date(),
       evaluationTimeMs,
@@ -118,13 +133,22 @@ export class ModelBasedJudge {
    */
   private async evaluateCriterion(
     input: JudgmentInput,
-    criterion: EvaluationCriterion
+    criterion: EvaluationCriterion,
+    claimConfidence: number | null
   ): Promise<CriterionAssessment> {
     // Get LLM response
     const response = await this.llmProvider.evaluate(input, criterion);
 
     // Calculate confidence
-    const confidence = this.confidenceScorer.calculateConfidence(response);
+    let confidence = this.confidenceScorer.calculateConfidence(response);
+    let reasoning = response.reasoning;
+
+    if (claimConfidence !== null) {
+      confidence = this.blendConfidence(confidence, claimConfidence);
+      reasoning = `${reasoning}\nClaim evaluation confidence: ${Math.round(
+        claimConfidence * 100
+      )}%`;
+    }
 
     // Check if passes threshold
     const threshold = this.config.thresholds[criterion];
@@ -134,7 +158,7 @@ export class ModelBasedJudge {
       criterion,
       score: response.score,
       confidence,
-      reasoning: response.reasoning,
+      reasoning,
       passes,
     };
   }
@@ -155,6 +179,35 @@ export class ModelBasedJudge {
       reasoning: "Fallback assessment due to evaluation failure",
       passes: false,
     };
+  }
+
+  private extractClaimConfidence(input: JudgmentInput): number | null {
+    const evaluation = input.claimEvaluation;
+    if (!evaluation) {
+      return null;
+    }
+
+    const components = [
+      evaluation.overallQuality,
+      evaluation.factualAccuracyScore,
+      evaluation.cawsComplianceScore,
+    ].filter(
+      (value): value is number =>
+        typeof value === "number" && Number.isFinite(value)
+    );
+
+    if (components.length === 0) {
+      return null;
+    }
+
+    const average =
+      components.reduce((sum, value) => sum + value, 0) / components.length;
+
+    return Math.min(1, Math.max(0, average));
+  }
+
+  private blendConfidence(primary: number, claimConfidence: number): number {
+    return Math.min(1, Math.max(0, primary * 0.6 + claimConfidence * 0.4));
   }
 
   /**

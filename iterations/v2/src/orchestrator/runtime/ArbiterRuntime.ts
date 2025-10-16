@@ -25,6 +25,11 @@ import {
   VerificationType,
   VerificationVerdict,
 } from "../../types/verification";
+import type { VerificationResult } from "../../types/verification";
+import type {
+  ConversationContext,
+  EvidenceManifest,
+} from "../../verification/types";
 import { VerificationEngineImpl } from "../../verification/VerificationEngine";
 import { EventSeverity, events } from "../EventEmitter";
 import { EventTypes } from "../OrchestratorEvents";
@@ -97,11 +102,7 @@ export interface RuntimeTaskSnapshot {
     verdict: string;
     remediation?: string[];
   };
-  verificationResult?: {
-    verdict: VerificationVerdict;
-    confidence: number;
-    reasoning: string[];
-  };
+  verificationResult?: VerificationResult;
 }
 
 interface RuntimeTaskRecord {
@@ -123,11 +124,7 @@ interface RuntimeTaskRecord {
     verdict: string;
     remediation?: string[];
   };
-  verificationResult?: {
-    verdict: VerificationVerdict;
-    confidence: number;
-    reasoning: string[];
-  };
+  verificationResult?: VerificationResult;
 }
 
 interface ArbiterRuntimeOptions {
@@ -423,11 +420,7 @@ export class ArbiterRuntime {
           }
         : undefined,
       verificationResult: record.verificationResult
-        ? {
-            verdict: record.verificationResult.verdict,
-            confidence: record.verificationResult.confidence,
-            reasoning: [...record.verificationResult.reasoning],
-          }
+        ? { ...record.verificationResult }
         : undefined,
     };
   }
@@ -1235,22 +1228,29 @@ return context.artifacts
   private async verifyTaskOutput(
     taskId: string,
     outputPath: string
-  ): Promise<{
-    verdict: VerificationVerdict;
-    confidence: number;
-    reasoning: string[];
-  }> {
+  ): Promise<VerificationResult> {
     try {
       const content = await fsp.readFile(outputPath, "utf8");
+      const record = this.taskRecords.get(taskId);
+      const conversationContext =
+        this.buildVerificationConversationContext(taskId, record);
+      const evidenceManifest = this.buildVerificationEvidence(record);
       const request = {
         id: taskId,
         content,
         priority: VerificationPriority.MEDIUM,
-        metadata: { outputPath },
+        metadata: {
+          outputPath,
+          taskType: record?.task.type,
+          previousMessages: conversationContext.previousMessages,
+          tenantId: conversationContext.tenantId,
+        },
         timeoutMs: this.verificationConfig.defaultTimeoutMs,
         verificationTypes: this.verificationConfig.methods
           .filter((method) => method.enabled)
           .map((method) => method.type),
+        conversationContext,
+        evidenceManifest,
       };
 
       const result = await this.verificationEngine.verify(request);
@@ -1269,11 +1269,7 @@ return context.artifacts
         confidence: result.confidence,
       });
 
-      return {
-        verdict: result.verdict,
-        confidence: result.confidence,
-        reasoning: result.reasoning ?? [],
-      };
+      return result;
     } catch (error) {
       this.emitEvent(EventTypes.CAWS_COMPLIANCE, {
         taskId,
@@ -1289,6 +1285,99 @@ return context.artifacts
       });
       throw error;
     }
+  }
+
+  private buildVerificationConversationContext(
+    taskId: string,
+    record?: RuntimeTaskRecord
+  ): ConversationContext {
+    const messages: string[] = [];
+
+    if (record?.description) {
+      messages.push(`Task description: ${record.description}`);
+    }
+
+    if (Array.isArray(record?.plan)) {
+      messages.push(
+        ...record.plan
+          .filter((step): step is string => typeof step === "string")
+          .map((step, index) => `Plan ${index + 1}: ${step}`)
+      );
+    }
+
+    if (Array.isArray(record?.nextActions)) {
+      messages.push(
+        ...record.nextActions
+          .filter((action): action is string => typeof action === "string")
+          .map((action) => `Next action: ${action}`)
+      );
+    }
+
+    if (record?.task?.metadata?.previousMessages) {
+      messages.push(
+        ...this.extractStringArray(record.task.metadata.previousMessages)
+      );
+    }
+
+    if (record?.metadata?.previousMessages) {
+      messages.push(
+        ...this.extractStringArray(record.metadata.previousMessages)
+      );
+    }
+
+    const tenantId =
+      (record?.task?.metadata?.tenantId as string) ??
+      (record?.metadata?.tenantId as string) ??
+      "arbiter";
+
+    return {
+      conversationId: taskId,
+      tenantId,
+      previousMessages: messages,
+      metadata: {
+        taskMetadata: record?.task?.metadata ?? {},
+        runtimeMetadata: record?.metadata ?? {},
+      },
+    };
+  }
+
+  private buildVerificationEvidence(
+    record?: RuntimeTaskRecord
+  ): EvidenceManifest {
+    const artifactSources =
+      record?.artifacts?.manifest?.files?.map((file) => ({
+        name: file.path,
+        type: file.mimeType ?? "artifact",
+        reliability: 0.5,
+        lastUpdated: file.createdAt,
+        responseTime: 0,
+      })) ?? [];
+
+    return {
+      sources: artifactSources,
+      evidence: [],
+      quality: 0,
+      cawsCompliant: false,
+    };
+  }
+
+  private extractStringArray(value: unknown): string[] {
+    if (!value) {
+      return [];
+    }
+
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => (typeof item === "string" ? item.trim() : ""))
+        .filter((item) => item.length > 0);
+    }
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? [trimmed] : [];
+    }
+
+    return [];
   }
 
   // Registry stub method removed - now using real registry via RegistryProvider

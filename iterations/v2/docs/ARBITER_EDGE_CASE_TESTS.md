@@ -197,7 +197,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Mathematical expression parsing and evaluation
 - Code analysis integration for behavior verification
 
-- **Complex compound sentences**: Multiple independent clauses joined by conjunctions
+- **Complex compound sentences**: Multiple independent clauses joined by conjunctions (validated via Stage 3 atomic decomposition; orchestrator now forces claim extraction before verification)
 - **Nested conditionals**: Claims within claims requiring hierarchical decomposition
 - **Implicit assumptions**: Claims depending on unstated premises
 - **Mathematical/logical expressions**: Claims involving formulas or algorithms
@@ -436,6 +436,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 5.1 Load Testing
 
 **Expected Processing Flow:**
+
 - System should handle task bursts through intelligent queuing and worker scaling
 - Sustained load should maintain steady-state performance with backpressure
 - Mixed complexity should be balanced through priority scheduling
@@ -443,6 +444,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Memory pressure should trigger garbage collection and process isolation
 
 **Success Metrics:**
+
 - Task burst handling maintains < 10 second queue latency
 - Sustained load throughput > 95% of baseline performance
 - Mixed complexity balancing achieves < 20% performance variance
@@ -450,6 +452,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Memory pressure recovery time < 30 seconds
 
 **Expected Behaviors:**
+
 - Dynamic worker pool scaling based on queue depth
 - Backpressure mechanisms with configurable queue limits
 - Priority-based task scheduling for complexity balancing
@@ -465,6 +468,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 5.2 Latency Testing
 
 **Expected Processing Flow:**
+
 - System should prioritize and route sub-second tasks to dedicated fast-path workers
 - Real-time constraints should be monitored with deadline tracking
 - Network-dependent tasks should use connection pooling and caching
@@ -472,6 +476,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Computationally intensive tasks should be distributed across available cores
 
 **Success Metrics:**
+
 - Sub-second task completion rate > 95% within 100ms SLA
 - Real-time constraint violation rate < 5%
 - Network-dependent task latency < 500ms P95
@@ -479,6 +484,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Computationally intensive task parallelization efficiency > 80%
 
 **Expected Behaviors:**
+
 - Fast-path routing for latency-sensitive tasks
 - Deadline monitoring with early warning systems
 - Connection pooling and keep-alive for network tasks
@@ -494,6 +500,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 5.3 Scalability Testing
 
 **Expected Processing Flow:**
+
 - System should support seamless addition of worker nodes without downtime
 - Vertical scaling should utilize increased resources automatically
 - Database should scale with connection pooling and query optimization
@@ -501,6 +508,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Storage should scale with distributed artifact management
 
 **Success Metrics:**
+
 - Horizontal scaling adds capacity within < 60 seconds
 - Vertical scaling resource utilization > 90% of added capacity
 - Database scaling maintains < 100ms query latency at 10x load
@@ -508,6 +516,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Storage scaling handles > 1TB of artifacts with < 10% performance degradation
 
 **Expected Behaviors:**
+
 - Zero-downtime node addition and removal
 - Automatic resource detection and utilization
 - Database connection pooling with health monitoring
@@ -525,6 +534,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 6.1 Input Validation
 
 **Expected Processing Flow:**
+
 - System should sanitize all inputs before processing with multiple validation layers
 - Malicious code should be detected and blocked with comprehensive pattern matching
 - SQL injection should be prevented through parameterized queries and input sanitization
@@ -532,6 +542,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Path traversal should be blocked with canonical path validation
 
 **Success Metrics:**
+
 - Malicious input detection accuracy > 99%
 - SQL injection prevention rate = 100%
 - XSS payload neutralization rate = 100%
@@ -539,6 +550,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Command injection prevention rate = 100%
 
 **Expected Behaviors:**
+
 - Multi-layer input validation (syntax, semantic, security)
 - Pattern-based malicious content detection
 - Automatic input sanitization and escaping
@@ -554,6 +566,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 6.2 Authentication and Authorization
 
 **Expected Processing Flow:**
+
 - System should validate authentication tokens on every request
 - Authorization should be checked at resource access time with role-based controls
 - Privilege escalation attempts should be detected and blocked immediately
@@ -561,6 +574,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Session validity should be continuously monitored and expired sessions terminated
 
 **Success Metrics:**
+
 - Unauthorized access prevention rate = 100%
 - Privilege escalation detection accuracy > 99%
 - Tenant isolation violation rate = 0%
@@ -568,6 +582,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Session validation latency < 10ms
 
 **Expected Behaviors:**
+
 - Token validation with cryptographic verification
 - Real-time permission checking with caching
 - Escalation detection through behavior analysis
@@ -583,6 +598,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 6.3 Data Protection
 
 **Expected Processing Flow:**
+
 - System should scan all outputs for sensitive data patterns before transmission
 - Data encryption should be applied automatically for sensitive information
 - Backup operations should use encrypted channels and secure storage
@@ -590,6 +606,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Compliance reporting should validate against regulatory requirements automatically
 
 **Success Metrics:**
+
 - Sensitive data exposure prevention rate > 99%
 - Data encryption coverage = 100% for sensitive data
 - Backup security maintains encryption throughout process
@@ -597,6 +614,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Compliance validation accuracy > 95%
 
 **Expected Behaviors:**
+
 - Pattern-based sensitive data detection and masking
 - Automatic encryption with key management
 - Secure backup pipelines with integrity verification
@@ -614,6 +632,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 7.1 System Failures
 
 **Expected Processing Flow:**
+
 - System should detect process crashes and automatically restart critical components
 - Worker failures should trigger task reassignment and health monitoring
 - Database connection loss should initiate connection pooling and retry logic
@@ -621,6 +640,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Hardware failures should trigger resource reallocation and graceful degradation
 
 **Success Metrics:**
+
 - Arbiter process recovery time < 30 seconds
 - Worker failure task reassignment success rate > 95%
 - Database reconnection time < 10 seconds
@@ -628,6 +648,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Hardware failure graceful degradation maintains > 50% functionality
 
 **Expected Behaviors:**
+
 - Automatic process monitoring and restart procedures
 - Task state preservation during worker failures
 - Connection pooling with health checks and failover
@@ -643,6 +664,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 7.2 Data Corruption
 
 **Expected Processing Flow:**
+
 - System should detect state corruption through checksums and validation
 - Artifact corruption should be detected via integrity verification
 - Memory corruption should trigger process restart and state reconstruction
@@ -650,6 +672,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Network corruption should use error-correcting codes and retransmission
 
 **Success Metrics:**
+
 - Task state corruption detection accuracy > 95%
 - Artifact corruption detection rate = 100%
 - Memory corruption recovery time < 15 seconds
@@ -657,6 +680,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Network corruption error correction rate > 99%
 
 **Expected Behaviors:**
+
 - Checksum-based state validation and repair
 - Artifact integrity verification with automatic recovery
 - Memory corruption detection with process isolation
@@ -672,6 +696,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 7.3 Recovery Scenarios
 
 **Expected Processing Flow:**
+
 - System should assess failure scope and implement targeted recovery strategies
 - State reconciliation should detect and resolve inconsistencies automatically
 - Transaction rollback should preserve data integrity and provide compensation
@@ -679,6 +704,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Degraded operation should maintain core functionality with reduced features
 
 **Success Metrics:**
+
 - Partial recovery success rate > 85% for isolated failures
 - State reconciliation accuracy > 95% for detectable inconsistencies
 - Transaction rollback preserves > 99% of unaffected data
@@ -686,6 +712,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Degraded mode maintains > 60% of normal functionality
 
 **Expected Behaviors:**
+
 - Failure scope analysis with targeted recovery planning
 - Automatic state conflict resolution and merging
 - Transaction compensation with audit trail preservation
@@ -703,6 +730,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 8.1 MCP Protocol Integration
 
 **Expected Processing Flow:**
+
 - System should discover and validate MCP tools during initialization
 - Tool execution failures should trigger retry logic and alternative tool selection
 - Resource access should include fallback mechanisms and caching
@@ -710,6 +738,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Authentication should use token refresh and secure credential management
 
 **Success Metrics:**
+
 - MCP tool discovery success rate > 95%
 - Tool execution error recovery rate > 90%
 - Resource access availability > 99%
@@ -717,6 +746,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Authentication success rate > 98%
 
 **Expected Behaviors:**
+
 - Dynamic tool discovery with health monitoring
 - Automatic retry and failover for tool execution
 - Resource caching with invalidation strategies
@@ -732,6 +762,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 8.2 External Service Integration
 
 **Expected Processing Flow:**
+
 - System should implement adaptive rate limiting with request queuing
 - API downtime should trigger circuit breakers and fallback responses
 - Version changes should be detected and handled with compatibility layers
@@ -739,6 +770,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Network timeouts should use exponential backoff and connection pooling
 
 **Success Metrics:**
+
 - Rate limit handling maintains > 90% request success
 - API downtime recovery time < 30 seconds
 - Version compatibility success rate > 95%
@@ -746,6 +778,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Network timeout recovery rate > 85%
 
 **Expected Behaviors:**
+
 - Intelligent rate limit detection and adaptive throttling
 - Circuit breaker patterns for service unavailability
 - Version negotiation and compatibility shims
@@ -761,6 +794,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 8.3 Development Environment Integration
 
 **Expected Processing Flow:**
+
 - System should gracefully handle IDE connection failures with reconnection logic
 - Git operations should use robust error handling and state recovery
 - File system monitoring should handle permission issues and large file sets
@@ -768,6 +802,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Testing framework integration should support multiple test runners and formats
 
 **Success Metrics:**
+
 - IDE integration reconnection success rate > 95%
 - Git operation failure recovery rate > 90%
 - File system monitoring coverage > 98% of relevant files
@@ -775,6 +810,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Testing framework compatibility > 90% of popular frameworks
 
 **Expected Behaviors:**
+
 - Automatic IDE reconnection with state preservation
 - Git operation retry logic with conflict resolution
 - File system monitoring with permission handling
@@ -792,6 +828,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 9.1 Simple Feature Development
 
 **Expected Processing Flow:**
+
 - System should break down feature requests into discrete, implementable tasks
 - File operations should validate against CAWS working spec boundaries
 - Documentation updates should maintain consistency across all formats
@@ -799,6 +836,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Dependency updates should check compatibility and update lockfiles
 
 **Success Metrics:**
+
 - Feature breakdown accuracy > 90% (tasks match requirements)
 - File operation success rate > 95% within scope boundaries
 - Documentation consistency maintained > 98%
@@ -806,6 +844,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Dependency update compatibility > 90%
 
 **Expected Behaviors:**
+
 - Automated task decomposition with validation
 - CAWS compliance checking for all file operations
 - Cross-reference validation for documentation updates
@@ -821,6 +860,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 9.2 Complex Feature Development
 
 **Expected Processing Flow:**
+
 - System should coordinate multi-file changes with dependency management
 - Database migrations should include rollback scripts and data validation
 - API endpoints should generate complete CRUD operations with documentation
@@ -828,6 +868,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Third-party integrations should include error handling and rate limiting
 
 **Success Metrics:**
+
 - Multi-file coordination maintains > 95% consistency across changes
 - Database migration success rate > 98% with rollback capability
 - API endpoint completeness > 90% (includes all CRUD operations)
@@ -835,6 +876,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Third-party integration reliability > 90% with fallbacks
 
 **Expected Behaviors:**
+
 - Change coordination with atomic commit preparation
 - Migration testing with data integrity validation
 - API scaffolding with comprehensive endpoint generation
@@ -850,6 +892,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 9.3 Refactoring Scenarios
 
 **Expected Processing Flow:**
+
 - System should analyze code structure and identify refactoring opportunities
 - Function/class extraction should preserve behavior and update all references
 - Module splitting should maintain import compatibility and dependencies
@@ -857,6 +900,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Performance optimization should include benchmarking and regression testing
 
 **Success Metrics:**
+
 - Behavior preservation accuracy > 99% after refactoring
 - Reference update completeness > 95% across codebase
 - Import compatibility maintained > 98% during module splitting
@@ -864,6 +908,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Performance improvement measurable > 10% for targeted optimizations
 
 **Expected Behaviors:**
+
 - Static analysis for refactoring opportunity identification
 - Automated reference updating and import management
 - Dependency analysis for safe module splitting
@@ -879,6 +924,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 9.4 Bug Fix Scenarios
 
 **Expected Processing Flow:**
+
 - System should prioritize security fixes with immediate deployment paths
 - Performance regressions should include before/after benchmarking
 - Data corruption fixes should include integrity validation and repair scripts
@@ -886,6 +932,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Cross-browser issues should include automated compatibility testing
 
 **Success Metrics:**
+
 - Security fix deployment time < 4 hours for critical vulnerabilities
 - Performance regression fixes restore > 95% of original performance
 - Data corruption fixes prevent > 99% of future occurrences
@@ -893,6 +940,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Cross-browser compatibility > 95% across target browsers
 
 **Expected Behaviors:**
+
 - Security vulnerability scanning and prioritized patching
 - Performance regression detection with automated rollback
 - Data integrity monitoring with proactive corruption detection
@@ -908,6 +956,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 9.5 Testing and Quality Assurance
 
 **Expected Processing Flow:**
+
 - System should generate test cases covering edge cases and normal flows
 - Performance benchmarks should establish baselines and detect regressions
 - Security testing should include vulnerability scanning and penetration testing
@@ -915,6 +964,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Code quality improvements should maintain consistent standards across the codebase
 
 **Success Metrics:**
+
 - Test coverage maintained > 85% with comprehensive edge case coverage
 - Performance benchmarks detect > 95% of regressions > 5% degradation
 - Security testing identifies > 90% of known vulnerability types
@@ -922,6 +972,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Code quality metrics maintained > 85% across all quality gates
 
 **Expected Behaviors:**
+
 - Automated test case generation with edge case identification
 - Continuous performance monitoring with historical baselines
 - Integrated security scanning with vulnerability prioritization
@@ -939,6 +990,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 10.1 Multi-Agent Collaboration
 
 **Expected Processing Flow:**
+
 - System should coordinate multiple agents with clear role assignments and communication protocols
 - Code review should include automated quality checks and collaborative feedback loops
 - Pair programming should maintain synchronized state and conflict resolution
@@ -946,6 +998,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Conflict resolution should use structured decision-making frameworks
 
 **Success Metrics:**
+
 - Multi-agent coordination efficiency > 85% vs single-agent performance
 - Code review feedback quality > 90% agreement with human reviewers
 - Pair programming productivity > 80% of optimal human pair performance
@@ -953,6 +1006,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Conflict resolution success rate > 90% with structured approaches
 
 **Expected Behaviors:**
+
 - Role-based agent coordination with communication protocols
 - Automated code review with quality metrics and feedback integration
 - Real-time collaboration with conflict detection and resolution
@@ -968,6 +1022,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 #### 10.2 Adaptive Learning Scenarios
 
 **Expected Processing Flow:**
+
 - System should track skill acquisition through performance metrics and capability expansion
 - Performance improvement should use reinforcement learning and feedback loops
 - Context adaptation should include project-specific learning and preference tuning
@@ -975,6 +1030,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Cross-domain learning should identify transferable skills and knowledge mapping
 
 **Success Metrics:**
+
 - Skill acquisition rate > 15% performance improvement per learning cycle
 - Performance improvement sustained > 80% of gains after 10 sessions
 - Context adaptation accuracy > 90% for familiar project types
@@ -982,6 +1038,7 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - Cross-domain knowledge transfer > 70% effectiveness
 
 **Expected Behaviors:**
+
 - Continuous skill assessment with targeted learning interventions
 - Multi-armed bandit optimization for performance improvement
 - Context-aware learning with project history analysis
@@ -995,6 +1052,30 @@ This comprehensive test suite identifies edge cases and challenging scenarios to
 - **Cross-domain learning**: Agents applying knowledge across different domains
 
 #### 10.3 Creative and Research Tasks
+
+**Expected Processing Flow:**
+
+- System should apply creative problem-solving frameworks for algorithm design
+- Architecture decisions should use structured evaluation criteria and trade-off analysis
+- Research synthesis should integrate multiple information sources with bias detection
+- Innovation proposals should include feasibility analysis and implementation planning
+- Technical writing should maintain clarity, accuracy, and comprehensive coverage
+
+**Success Metrics:**
+
+- Algorithm design correctness > 90% for well-specified problems
+- Architecture decision quality > 85% agreement with expert reviews
+- Research synthesis accuracy > 80% with comprehensive source integration
+- Innovation proposal feasibility > 75% successful implementation rate
+- Technical writing clarity > 90% readability scores
+
+**Expected Behaviors:**
+
+- Systematic creative problem-solving with pattern recognition
+- Multi-criteria architecture evaluation with trade-off visualization
+- Source credibility assessment and bias detection in research
+- Innovation feasibility analysis with risk assessment
+- Technical writing with automated clarity and completeness checking
 
 - **Algorithm design**: Design new algorithms for specific problems
 - **Architecture decisions**: Make architectural design decisions

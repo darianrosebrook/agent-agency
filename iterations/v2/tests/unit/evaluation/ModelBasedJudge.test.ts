@@ -61,6 +61,34 @@ describe("ModelBasedJudge", () => {
 
       expect(result.overallScore).toBeCloseTo(avgScore, 5);
     });
+
+    it("should blend claim evaluation confidence into results when provided", async () => {
+      const baseInput: JudgmentInput = {
+        task: "Analyze the output",
+        output:
+          "This response contains a detailed explanation with multiple supporting statements.",
+      };
+
+      const baseline = await judge.evaluate(baseInput);
+
+      const inputWithClaims: JudgmentInput = {
+        ...baseInput,
+        claimEvaluation: {
+          extractedClaims: [],
+          verificationResults: [],
+          factualAccuracyScore: 0.2,
+          cawsComplianceScore: 0.3,
+          overallQuality: 0.25,
+        },
+      };
+
+      const withClaims = await judge.evaluate(inputWithClaims);
+
+      expect(withClaims.overallConfidence).toBeLessThan(
+        baseline.overallConfidence
+      );
+      expect(withClaims.claimConfidence).toBeCloseTo(0.25, 2);
+    });
   });
 
   describe("Threshold Checking", () => {

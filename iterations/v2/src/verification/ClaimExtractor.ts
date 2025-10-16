@@ -54,14 +54,55 @@ export class ClaimExtractor
     this.initializeVerificationSources();
   }
 
+  readonly disambiguationStage = {
+    identifyAmbiguities: (
+      sentence: string,
+      context: ConversationContext
+    ) => this.identifyAmbiguities(sentence, context),
+    resolveAmbiguities: (
+      sentence: string,
+      ambiguities: AmbiguityAnalysis,
+      context: ConversationContext
+    ) => this.resolveAmbiguities(sentence, ambiguities, context),
+    detectUnresolvableAmbiguities: (
+      sentence: string,
+      context: ConversationContext
+    ) => this.detectUnresolvableAmbiguities(sentence, context),
+  };
+
+  readonly qualificationStage = {
+    detectVerifiableContent: (
+      sentence: string,
+      context: ConversationContext
+    ) => this.detectVerifiableContent(sentence, context),
+    rewriteUnverifiableContent: (
+      sentence: string,
+      context: ConversationContext
+    ) => this.rewriteUnverifiableContent(sentence, context),
+  };
+
+  readonly decompositionStage = {
+    extractAtomicClaims: (
+      sentence: string,
+      context: ConversationContext
+    ) => this.extractAtomicClaims(sentence, context),
+    addContextualBrackets: (claim: string, impliedContext: string) =>
+      this.addContextualBrackets(claim, impliedContext),
+  };
+
+  readonly verificationStage = {
+    verifyClaimEvidence: (
+      claim: ExtractedClaim,
+      evidence: EvidenceManifest
+    ) => this.verifyClaim(claim, { evidenceManifest: evidence }),
+    validateClaimScope: (claim: ExtractedClaim, workingSpec: WorkingSpec) =>
+      Promise.resolve(
+        this.validateClaimScopeAgainstSpec(claim, workingSpec)
+      ),
+  };
+
   // ============================================================================
   // STAGE 1: CONTEXTUAL DISAMBIGUATION
-  // ============================================================================
-
-*** End Patch
-
-  // ============================================================================
-  // STAGE 2: DISAMBIGUATION - Resolve ambiguities
   // ============================================================================
 
   /**
@@ -73,7 +114,6 @@ export class ClaimExtractor
   ): Promise<AmbiguityAnalysis> {
     const referentialPatterns = [
       /\b(this|that|these|those|it|they|he|she|we|us|them|him|her)\b/gi,
-      /\b(the [a-z]+|those [a-z]+|that [a-z]+)\b/gi,
     ];
     const structuralPatterns = [
       /\b[A-Z][a-z]+ (is|are|was|were) [a-z]+ (and|or) [a-z]+\b/gi,
@@ -466,13 +506,28 @@ export class ClaimExtractor
     const claims: AtomicClaim[] = [];
     const sentences = this.splitIntoSentences(disambiguatedSentence);
 
+    const verbPattern = /\b(is|are|was|were|has|have|will|shall|did|does|announced|promised|reported|expects|pledged|committed|approved)\b/i;
+
     for (let sentenceIndex = 0; sentenceIndex < sentences.length; sentenceIndex += 1) {
       const sentence = sentences[sentenceIndex];
       const clauses = this.splitIntoClauses(sentence);
+      let lastSubject =
+        this.extractFallbackSubject(context) ?? this.extractContextEntities(context)[0] ?? null;
 
       for (let clauseIndex = 0; clauseIndex < clauses.length; clauseIndex += 1) {
         const clause = clauses[clauseIndex];
-        const normalizedClause = this.normalizeClause(clause);
+        let normalizedClause = this.normalizeClause(clause);
+
+        const subjectCandidate =
+          normalizedClause.match(/^[A-Z][a-z]+(?: [A-Z][a-z]+)*/)?.[0];
+        if (subjectCandidate && !verbPattern.test(subjectCandidate)) {
+          lastSubject = subjectCandidate;
+        } else if (lastSubject) {
+          const lowerClause =
+            normalizedClause.charAt(0).toLowerCase() +
+            normalizedClause.slice(1);
+          normalizedClause = `${lastSubject} ${lowerClause}`;
+        }
 
         if (normalizedClause.length < 8) {
           continue;
@@ -972,7 +1027,7 @@ export class ClaimExtractor
 
     const normalized: string[] = [];
     for (const clause of clauses) {
-      const hasVerb = /\b(is|are|was|were|has|have|will|shall|did|does|announced|promised|reported|expects)\b/i.test(
+      const hasVerb = /\b(is|are|was|were|has|have|will|shall|did|does|announced|promised|reported|expects|pledged|committed|approved)\b/i.test(
         clause
       );
       if (!hasVerb && normalized.length > 0) {
@@ -984,7 +1039,28 @@ export class ClaimExtractor
       }
     }
 
-    return normalized.map((clause) => clause.trim()).filter(Boolean);
+    const finalClauses: string[] = [];
+    const conjunctionRegex = /\s+(?:and|but|or)\s+/i;
+    const verbPattern = /\b(is|are|was|were|has|have|will|shall|did|does|announced|promised|reported|expects|pledged|committed|approved)\b/i;
+
+    for (const clause of normalized) {
+      if (conjunctionRegex.test(clause)) {
+        const pieces = clause
+          .split(conjunctionRegex)
+          .map((piece) => piece.trim())
+          .filter(Boolean);
+
+        const allHaveVerb = pieces.every((piece) => verbPattern.test(piece));
+        if (pieces.length > 1 && allHaveVerb) {
+          finalClauses.push(...pieces);
+          continue;
+        }
+      }
+
+      finalClauses.push(clause);
+    }
+
+    return finalClauses.map((clause) => clause.trim()).filter(Boolean);
   }
 
   private normalizeClause(clause: string): string {

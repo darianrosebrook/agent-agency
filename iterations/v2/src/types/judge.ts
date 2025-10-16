@@ -7,6 +7,7 @@
  */
 
 import { loadLLMConfig } from "@/utils/llm-config";
+import type { ClaimBasedEvaluation } from "../verification/types.js";
 
 /**
  * Evaluation criteria types
@@ -48,6 +49,10 @@ export interface JudgmentResult {
   overallScore: number;
   /** Overall confidence (average of criterion confidences) */
   overallConfidence: number;
+  /** Optional blended claim confidence from verification pipeline */
+  claimConfidence?: number;
+  /** Claim evaluation details when provided */
+  claimEvaluation?: ClaimBasedEvaluation;
   /** Whether all criteria pass thresholds */
   allCriteriaPass: boolean;
   /** Evaluation timestamp */
@@ -68,6 +73,8 @@ export interface JudgmentInput {
   expectedOutput?: string;
   /** Optional context information */
   context?: Record<string, unknown>;
+  /** Optional claim evaluation from verification engine */
+  claimEvaluation?: ClaimBasedEvaluation;
 }
 
 /**
