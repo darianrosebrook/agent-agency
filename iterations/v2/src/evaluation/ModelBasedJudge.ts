@@ -15,8 +15,15 @@ import type {
   JudgmentResult,
 } from "@/types/judge";
 import { DEFAULT_JUDGE_CONFIG } from "@/types/judge";
+import { validateLLMConfig } from "@/utils/llm-config";
 import { ConfidenceScorer } from "./ConfidenceScorer";
-import { LLMProvider, MockLLMProvider } from "./LLMProvider";
+import {
+  AnthropicProvider,
+  LLMProvider,
+  MockLLMProvider,
+  OllamaProvider,
+  OpenAIProvider,
+} from "./LLMProvider";
 
 /**
  * LLM-based judge for subjective evaluation
@@ -172,12 +179,36 @@ export class ModelBasedJudge {
    * @returns LLM provider instance
    */
   private createLLMProvider(): LLMProvider {
-    switch (this.config.llm.provider) {
+    const provider = this.config.llm.provider;
+
+    // Validate configuration for the chosen provider
+    if (!validateLLMConfig(this.config.llm)) {
+      console.warn(
+        `LLM configuration validation failed for provider "${provider}", falling back to mock provider.`
+      );
+      return new MockLLMProvider(this.config.llm);
+    }
+
+    // Create provider based on configuration
+    switch (provider) {
+      case "ollama":
+        return new OllamaProvider(this.config.llm);
+      case "openai":
+        return new OpenAIProvider(this.config.llm);
+      case "anthropic":
+        return new AnthropicProvider(this.config.llm);
+      case "model-registry":
+        // TODO: Implement ModelRegistryLLMProvider when needed
+        console.warn(
+          "Model registry provider not yet implemented, falling back to mock provider."
+        );
+        return new MockLLMProvider(this.config.llm);
       case "mock":
         return new MockLLMProvider(this.config.llm);
       default:
-        // For now, use mock provider
-        // TODO: Implement real providers (OpenAI, Anthropic)
+        console.warn(
+          `Unknown LLM provider "${provider}", using mock provider. Supported providers: ollama, openai, anthropic, mock, model-registry`
+        );
         return new MockLLMProvider(this.config.llm);
     }
   }

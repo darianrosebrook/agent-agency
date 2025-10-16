@@ -22,7 +22,7 @@
 | **ARBITER-001** | Agent Registry Manager                 | ✅ Production-Ready | [STATUS.md](components/agent-registry-manager/)                                                                | [src/orchestrator/AgentRegistryManager.ts](src/orchestrator/AgentRegistryManager.ts)                 | Fully Integrated    |
 | **ARBITER-002** | Task Routing Manager                   | ✅ Production-Ready | [STATUS.md](components/task-routing-manager/)                                                                  | [src/orchestrator/TaskRoutingManager.ts](src/orchestrator/TaskRoutingManager.ts)                     | Fully Integrated    |
 | **ARBITER-003** | CAWS Validator                         | ✅ Production-Ready | [STATUS.md](components/caws-validator/)                                                                        | [src/security/CAWSValidator.ts](src/security/CAWSValidator.ts)                                       | Fully Integrated    |
-| **ARBITER-004** | Performance Tracker                    | 🟡 Alpha (gaps)     | [STATUS.md](components/performance-tracker/)                                                                   | [src/rl/PerformanceTracker.ts](src/rl/PerformanceTracker.ts)                                         | Partially Connected |
+| **ARBITER-004** | Performance Tracker                    | 🟢 Functional       | [STATUS.md](components/performance-tracker/)                                                                   | [src/rl/PerformanceTracker.ts](src/rl/PerformanceTracker.ts)                                         | Runtime Connected   |
 | **ARBITER-005** | Arbiter Orchestrator                   | ✅ Production-Ready | [STATUS.md](components/arbiter-orchestrator/)                                                                  | [src/orchestrator/ArbiterOrchestrator.ts](src/orchestrator/ArbiterOrchestrator.ts)                   | Core Runtime        |
 | **ARBITER-006** | Knowledge Seeker                       | 🟢 Functional       | [STATUS.md](components/knowledge-seeker/)                                                                      | [src/knowledge/KnowledgeSeeker.ts](src/knowledge/KnowledgeSeeker.ts)                                 | Well Integrated     |
 | **ARBITER-007** | Verification Engine                    | 🟡 Alpha (flaky)    | [STATUS.md](components/verification-engine/)                                                                   | [src/verification/VerificationEngine.ts](src/verification/VerificationEngine.ts)                     | Needs Stabilization |
@@ -59,7 +59,7 @@
 
 - Arbiter runtime now routes through `TaskOrchestrator` with deterministic listener cleanup and timeout guards, persisting worker-produced manifests instead of legacy materialization (`src/orchestrator/runtime/ArbiterRuntime.ts`).
 - Runner contract alignment: `src/types/task-runner.ts`, `src/orchestrator/TaskOrchestrator.ts`, and `tests/unit/orchestrator/runtime.test.ts` now agree on artifact metadata and assignment handling, exposing new deterministic harness coverage.
-- Performance Tracker status reflects outstanding persistence and coverage gaps documented in `components/performance-tracker/STATUS.md`.
+- Performance Tracker now shares a single instrumentation instance across runtime, TaskOrchestrator, and Agent Registry; database persistence hooks remain optional.
 
 ### Next High-Value Focus
 

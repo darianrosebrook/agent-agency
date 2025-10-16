@@ -47,27 +47,36 @@ describe("AdaptiveResourceManager Production Validation", () => {
           agent: {
             id: "prod-agent-1",
             name: "Production Agent 1",
-            capabilities: ["task-execution", "resource-management"],
+            modelFamily: "gpt-4" as any,
+            capabilities: ["task-execution", "resource-management"] as any,
             expertiseLevel: "expert" as const,
             status: "active" as const,
             performanceScore: 0.95,
-            specialization: ["production-workloads"],
+            specialization: ["production-workloads"] as any,
+            performanceHistory: {} as any,
+            currentLoad: {} as any,
+            registeredAt: new Date().toISOString(),
+            lastActiveAt: new Date().toISOString(),
             createdAt: new Date(),
             lastActive: new Date(),
           },
-          score: 0.95,
-          matchReasons: ["expert level", "production specialization"],
+          matchScore: 0.95,
+          matchReason: "expert level, production specialization",
         },
       ],
       updatePerformance: async () => ({} as any),
       getStats: async () => ({
         totalAgents: 5,
         activeAgents: 5,
+        idleAgents: 0,
+        averageUtilization: 50,
+        averageSuccessRate: 0.9,
         averagePerformanceScore: 0.9,
         specializationDistribution: {
           "production-workloads": 3,
           "development-tasks": 2,
         },
+        lastUpdated: new Date().toISOString(),
       }),
       getProfile: async () => ({} as any),
     };
@@ -94,19 +103,26 @@ describe("AdaptiveResourceManager Production Validation", () => {
     // Access the internal resourceMonitor for agent setup
     resourceMonitor = (resourceManager as any).resourceMonitor;
 
-    // Register production-like agents
-    for (let i = 1; i <= 10; i++) {
-      await resourceMonitor.recordUsage(`agent-${i}`, {
-        type: ResourceType.CPU,
-        current: 10 * i,
-        maximum: 100,
-        usagePercent: 10 * i,
-        unit: "%",
-        timestamp: new Date(),
-        source: "production-test",
-      });
-      await resourceMonitor.updateTaskCount(`agent-${i}`, i % 3);
-    }
+    // Register production-like agents with matching IDs from mock registry
+    await resourceMonitor.recordUsage("prod-agent-1", {
+      type: ResourceType.CPU,
+      current: 20,
+      maximum: 100,
+      usagePercent: 20,
+      unit: "%",
+      timestamp: new Date(),
+      source: "production-test",
+    });
+    await resourceMonitor.recordUsage("prod-agent-1", {
+      type: ResourceType.MEMORY,
+      current: 512,
+      maximum: 2048,
+      usagePercent: 25,
+      unit: "MB",
+      timestamp: new Date(),
+      source: "production-test",
+    });
+    await resourceMonitor.updateTaskCount("prod-agent-1", 2);
   });
 
   afterEach(async () => {

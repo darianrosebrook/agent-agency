@@ -269,6 +269,13 @@ export class ArbiterRuntime {
       // Replace the stub with the real registry
       (this as any).agentRegistry = realRegistry;
 
+      if (
+        realRegistry &&
+        typeof (realRegistry as any).setPerformanceTracker === "function"
+      ) {
+        (realRegistry as any).setPerformanceTracker(this.performanceTracker);
+      }
+
       // Update the routing manager to use the real registry
       this.routingManager = new TaskRoutingManager(
         realRegistry as any,
@@ -356,8 +363,11 @@ export class ArbiterRuntime {
 
     this.taskOrchestrator = new TaskOrchestrator(
       orchestratorConfig,
-      registry as any
+      registry as any,
+      this.performanceTracker
     );
+
+    await this.taskOrchestrator.initialize();
   }
 
   getStatus(): RuntimeStatus {

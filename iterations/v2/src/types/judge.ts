@@ -6,6 +6,8 @@
  * @author @darianrosebrook
  */
 
+import { loadLLMConfig } from "@/utils/llm-config";
+
 /**
  * Evaluation criteria types
  */
@@ -73,7 +75,7 @@ export interface JudgmentInput {
  */
 export interface LLMConfig {
   /** LLM provider name */
-  provider: "openai" | "anthropic" | "mock" | "model-registry";
+  provider: "openai" | "anthropic" | "mock" | "model-registry" | "ollama";
   /** Model identifier */
   model: string;
   /** Temperature (0 for deterministic) */
@@ -104,12 +106,7 @@ export interface JudgeConfig {
  * Default judge configuration
  */
 export const DEFAULT_JUDGE_CONFIG: JudgeConfig = {
-  llm: {
-    provider: "mock",
-    model: "gpt-4",
-    temperature: 0,
-    maxTokens: 500,
-  },
+  llm: loadLLMConfig(),
   thresholds: {
     [EvaluationCriterion.FAITHFULNESS]: 0.7,
     [EvaluationCriterion.RELEVANCE]: 0.7,

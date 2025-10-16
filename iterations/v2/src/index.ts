@@ -229,7 +229,13 @@ async function startHttpServer(): Promise<void> {
     const config = await loadObserverConfig();
 
     // Create observer store
-    const store = new ObserverStoreImpl();
+    const store = new ObserverStoreImpl({
+      dataDir: process.env.OBSERVER_DATA_DIR || "./observer-data",
+      enablePersistence: true,
+      enableRedaction: true,
+      maxEventsInMemory: 1000,
+      flushIntervalMs: 5000,
+    });
 
     // Create a mock controller for now - TODO: implement proper ArbiterController
     const mockController = {

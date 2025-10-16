@@ -25,27 +25,29 @@ describe("ResourceAllocator", () => {
   beforeEach(async () => {
     monitor = new ResourceMonitor();
 
-    // Create mock agent registry
+    // Create mock agent registry with proper agent profiles
+    const mockAgent = {
+      id: "test-agent-1",
+      name: "Test Agent 1",
+      modelFamily: "gpt-4" as any,
+      capabilities: ["task-execution"] as any,
+      expertiseLevel: "intermediate" as const,
+      status: "active" as const,
+      performanceScore: 0.8,
+      specialization: ["general"] as any,
+      performanceHistory: {} as any,
+      currentLoad: {} as any,
+      registeredAt: new Date().toISOString(),
+      lastActiveAt: new Date().toISOString(),
+      createdAt: new Date(),
+      lastActive: new Date(),
+    };
+
     mockAgentRegistry = {
       initialize: async () => {},
       getAgentsByCapability: async () => [
         {
-          agent: {
-            id: "test-agent-1",
-            name: "Test Agent 1",
-            modelFamily: "gpt-4" as any,
-            capabilities: ["task-execution"] as any,
-            expertiseLevel: "intermediate" as const,
-            status: "active" as const,
-            performanceScore: 0.8,
-            specialization: ["general"] as any,
-            performanceHistory: {} as any,
-            currentLoad: {} as any,
-            registeredAt: new Date().toISOString(),
-            lastActiveAt: new Date().toISOString(),
-            createdAt: new Date(),
-            lastActive: new Date(),
-          },
+          agent: mockAgent,
           matchScore: 0.8,
           matchReason: "capability match",
         },
@@ -61,7 +63,7 @@ describe("ResourceAllocator", () => {
         specializationDistribution: { general: 1 },
         lastUpdated: new Date().toISOString(),
       }),
-      getProfile: async () => ({} as any),
+      getProfile: async () => mockAgent,
     } as any;
 
     loadBalancer = new LoadBalancer(
@@ -70,8 +72,8 @@ describe("ResourceAllocator", () => {
     );
     allocator = new ResourceAllocator(loadBalancer, mockAgentRegistry);
 
-    // Register test agents with the monitor
-    const cpu1Usage = {
+    // Register test agent with the monitor using the same ID as the mock agent
+    const cpuUsage = {
       type: ResourceType.CPU,
       current: 20,
       maximum: 100,
@@ -81,22 +83,21 @@ describe("ResourceAllocator", () => {
       source: "test",
     };
 
-    const cpu2Usage = {
-      type: ResourceType.CPU,
-      current: 40,
-      maximum: 100,
-      usagePercent: 40,
-      unit: "%",
+    const memoryUsage = {
+      type: ResourceType.MEMORY,
+      current: 512,
+      maximum: 2048,
+      usagePercent: 25,
+      unit: "MB",
       timestamp: new Date(),
       source: "test",
     };
 
-    await monitor.recordUsage("agent-1", cpu1Usage);
-    await monitor.recordUsage("agent-2", cpu2Usage);
+    await monitor.recordUsage("test-agent-1", cpuUsage);
+    await monitor.recordUsage("test-agent-1", memoryUsage);
 
-    // Set task counts so agents are considered available
-    await monitor.updateTaskCount("agent-1", 2);
-    await monitor.updateTaskCount("agent-2", 5);
+    // Set task count so agent is considered available
+    await monitor.updateTaskCount("test-agent-1", 2);
   });
 
   afterEach(() => {

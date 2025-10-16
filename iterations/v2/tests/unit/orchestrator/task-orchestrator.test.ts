@@ -88,13 +88,10 @@ describe("TaskOrchestrator Unit Tests", () => {
     };
 
     mockStateMachine = {
+      initializeTask: jest.fn(),
       transition: jest.fn(),
       getCurrentState: jest.fn(),
-      getState: jest.fn().mockReturnValue({
-        status: "pending",
-        taskId: "task-123",
-        attempts: 0,
-      }),
+      getState: jest.fn(),
     };
 
     mockRetryHandler = {
@@ -266,18 +263,16 @@ describe("TaskOrchestrator Unit Tests", () => {
 
   describe("Task Status", () => {
     it("should return current task status", async () => {
-      mockStateMachine.getCurrentState.mockResolvedValue("queued");
+      mockStateMachine.getState.mockReturnValue("queued");
 
       const status = await orchestrator.getTaskStatus("task-123");
 
-      expect(mockStateMachine.getCurrentState).toHaveBeenCalledWith("task-123");
+      expect(mockStateMachine.getState).toHaveBeenCalledWith("task-123");
       expect(status).toBe("queued");
     });
 
     it("should return null for non-existent task", async () => {
-      // Reset the mock to ensure it returns null
-      mockStateMachine.getCurrentState.mockReset();
-      mockStateMachine.getCurrentState.mockResolvedValue(null);
+      mockStateMachine.getState.mockReturnValue(null);
 
       const status = await orchestrator.getTaskStatus("non-existent");
 

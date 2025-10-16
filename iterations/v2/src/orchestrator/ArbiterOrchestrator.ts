@@ -14,6 +14,16 @@ import { AgentControlConfig } from "../types/agent-prompting";
 import { ArbitrationOrchestrator as ArbitrationProtocolEngine } from "../arbitration/ArbitrationOrchestrator";
 import { ArbiterReasoningEngine } from "../reasoning/ArbiterReasoningEngine";
 
+// Verification Engine imports
+import type {
+  VerificationEngine,
+  VerificationEngineConfig,
+} from "../types/verification";
+import { VerificationEngineImpl } from "../verification/VerificationEngine";
+
+// Audit Logging imports
+import { AuditLogger, AuditEventType, AuditSeverity } from "../observability/AuditLogger";
+
 // Workspace and Health Integration imports
 import { SystemHealthMonitor } from "../monitoring/SystemHealthMonitor.js";
 import { WorkspaceStateManager } from "../workspace/WorkspaceStateManager.js";
@@ -161,6 +171,13 @@ export interface ArbiterOrchestratorConfig {
       debateThreshold?: number; // Minimum agents needed for debate
       consensusThreshold?: number; // Required consensus level (0-1)
     };
+    verificationEngine?: {
+      enabled: boolean;
+      cacheEnabled?: boolean;
+      cacheTtlMs?: number;
+      maxConcurrent?: number;
+      timeoutMs?: number;
+    };
     humanOverride?: {
       enabled: boolean;
       requireApproval?: boolean;
@@ -252,6 +269,13 @@ export const defaultArbiterOrchestratorConfig: ArbiterOrchestratorConfig = {
       enabled: true,
       debateThreshold: 3, // Minimum agents for debate
       consensusThreshold: 0.7, // 70% consensus required
+    },
+    verificationEngine: {
+      enabled: true,
+      cacheEnabled: true,
+      cacheTtlMs: 3600000, // 1 hour
+      maxConcurrent: 10,
+      timeoutMs: 30000, // 30 seconds
     },
     humanOverride: {
       enabled: true, // Enabled by default for flexibility
@@ -359,6 +383,8 @@ export class ArbiterOrchestrator {
     // CAWS Integration components
     arbitrationProtocol?: ArbitrationProtocolEngine;
     reasoningEngine?: ArbiterReasoningEngine;
+    verificationEngine?: VerificationEngine;
+    auditLogger?: AuditLogger;
   };
   private initialized = false;
   private overrideRequests: Map<string, OverrideRequest> = new Map();
@@ -450,6 +476,47 @@ export class ArbiterOrchestrator {
           "❌ Failed to initialize Arbiter Reasoning Engine:",
           error
         );
+        throw error;
+      }
+    }
+
+    // Initialize Verification Engine (ARBITER-007)
+    if (this.config.caws.verificationEngine?.enabled) {
+      try {
+        const verificationConfig: VerificationEngineConfig = {
+          enabled: true,
+          cacheEnabled:
+            this.config.caws.verificationEngine.cacheEnabled ?? true,
+          cacheTtlMs: this.config.caws.verificationEngine.cacheTtlMs ?? 3600000, // 1 hour
+          maxConcurrentVerifications:
+            this.config.caws.verificationEngine.maxConcurrent ?? 10,
+          timeoutMs: this.config.caws.verificationEngine.timeoutMs ?? 30000, // 30 seconds
+          methods: {
+            factChecking: { enabled: true, priority: 1 },
+            crossReference: { enabled: true, priority: 2 },
+            logical: { enabled: true, priority: 3 },
+            statistical: { enabled: true, priority: 4 },
+            consistency: { enabled: true, priority: 5 },
+          },
+        };
+
+        this.components.verificationEngine = new VerificationEngineImpl(
+          verificationConfig
+        );
+        console.log("✅ Verification Engine initialized");
+      } catch (error) {
+        console.error("❌ Failed to initialize Verification Engine:", error);
+        throw error;
+      }
+    }
+
+    // Initialize Audit Logger (ARBITER-008)
+    if (this.config.security?.auditLoggingEnabled) {
+      try {
+        this.components.auditLogger = new AuditLogger("ArbiterOrchestrator");
+        console.log("✅ Audit Logger initialized");
+      } catch (error) {
+        console.error("❌ Failed to initialize Audit Logger:", error);
         throw error;
       }
     }
@@ -563,7 +630,7 @@ export class ArbiterOrchestrator {
   /**
    * Log security audit event
    */
-  private logSecurityEvent(
+  private async logSecurityEvent(
     type: SecurityEventType,
     level: SecurityAuditLevel,
     resource: string,
@@ -571,46 +638,87 @@ export class ArbiterOrchestrator {
     success: boolean,
     details: Record<string, any> = {},
     riskScore: number = 0
-  ): void {
-    const event: SecurityAuditEvent = {
-      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      timestamp: new Date(),
-      level,
-      type,
-      resource,
-      action,
-      success,
-      details: this.sanitizeAuditDetails(details), // Sanitize sensitive data
-      riskScore: Math.min(100, Math.max(0, riskScore)),
-    };
+  ): Promise<void> {
+    try {
+      // Map SecurityEventType to AuditEventType
+      let auditEventType: AuditEventType;
+      switch (type) {
+        case SecurityEventType.AUTHENTICATION:
+          auditEventType = AuditEventType.AUTHENTICATION;
+          break;
+        case SecurityEventType.AUTHORIZATION:
+          auditEventType = AuditEventType.AUTHORIZATION;
+          break;
+        case SecurityEventType.INPUT_VALIDATION:
+          auditEventType = AuditEventType.DATA_ACCESS;
+          break;
+        default:
+          auditEventType = AuditEventType.ACCESS_CONTROL;
+      }
 
-    // Add to in-memory audit log (production would use secure logging service)
-    this.securityAuditEvents.push(event);
+      // Map SecurityAuditLevel to AuditSeverity
+      let auditSeverity: AuditSeverity;
+      switch (level) {
+        case SecurityAuditLevel.CRITICAL:
+          auditSeverity = AuditSeverity.CRITICAL;
+          break;
+        case SecurityAuditLevel.ERROR:
+          auditSeverity = AuditSeverity.HIGH;
+          break;
+        case SecurityAuditLevel.WARNING:
+          auditSeverity = AuditSeverity.MEDIUM;
+          break;
+        case SecurityAuditLevel.INFO:
+          auditSeverity = AuditSeverity.LOW;
+          break;
+      }
 
-    // Maintain max audit events limit
-    if (this.securityAuditEvents.length > this.maxAuditEvents) {
-      this.securityAuditEvents.shift(); // Remove oldest
-    }
+      // Use new audit logger if available
+      if (this.components.auditLogger) {
+        await this.components.auditLogger.logAuditEvent(
+          auditEventType,
+          auditSeverity,
+          "system", // actor - could be enhanced to track actual users
+          resource,
+          action,
+          success ? "success" : "failure",
+          this.sanitizeAuditDetails(details),
+          {
+            riskScore,
+            complianceFlags: level === SecurityAuditLevel.CRITICAL ? ["security"] : [],
+          }
+        );
+      } else {
+        // Fallback to legacy audit logging
+        const event: SecurityAuditEvent = {
+          id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          timestamp: new Date(),
+          level,
+          type,
+          resource,
+          action,
+          success,
+          details: this.sanitizeAuditDetails(details),
+          riskScore: Math.min(100, Math.max(0, riskScore)),
+        };
 
-    // Log to secure logger if available
-    if (this.securityLogger) {
-      const logLevel =
-        level === SecurityAuditLevel.CRITICAL
-          ? "error"
-          : level === SecurityAuditLevel.ERROR
-          ? "error"
-          : level === SecurityAuditLevel.WARNING
-          ? "warn"
-          : "info";
+        this.securityAuditEvents.push(event);
 
-      this.securityLogger[logLevel as keyof typeof console](
-        `[SECURITY-${level.toUpperCase()}] ${type}: ${action} on ${resource}`,
-        {
+        // Maintain max audit events limit
+        if (this.securityAuditEvents.length > this.maxAuditEvents) {
+          this.securityAuditEvents.shift();
+        }
+
+        // Log to console as fallback
+        console.log(`[SECURITY-${level.toUpperCase()}] ${type}: ${action} on ${resource}`, {
           eventId: event.id,
           riskScore: event.riskScore,
           success: event.success,
-        }
-      );
+        });
+      }
+    } catch (error) {
+      console.error("Failed to log security event:", error);
+      // Continue execution - audit logging failure shouldn't break the system
     }
   }
 
@@ -651,7 +759,7 @@ export class ArbiterOrchestrator {
    * Secure error response that doesn't leak sensitive information
    */
   private createSecureError(error: any, operation: string): Error {
-    // Log the full error internally for debugging
+    // Log the full error internally for debugging (fire-and-forget)
     this.logSecurityEvent(
       SecurityEventType.SUSPICIOUS_ACTIVITY,
       SecurityAuditLevel.WARNING,
@@ -660,7 +768,7 @@ export class ArbiterOrchestrator {
       false,
       { errorType: error?.constructor?.name || "Unknown", operation },
       30
-    );
+    ).catch(err => console.error("Failed to log security event:", err));
 
     // Return sanitized error message
     const errorMessage =
@@ -688,7 +796,7 @@ export class ArbiterOrchestrator {
     // Validate and sanitize input
     const validation = this.validateTaskInput(task);
     if (!validation.valid) {
-      this.logSecurityEvent(
+      await this.logSecurityEvent(
         SecurityEventType.INPUT_VALIDATION,
         SecurityAuditLevel.WARNING,
         "task",
@@ -702,7 +810,7 @@ export class ArbiterOrchestrator {
 
     const sanitizedTask = validation.sanitizedTask;
 
-    this.logSecurityEvent(
+    await this.logSecurityEvent(
       SecurityEventType.DATA_ACCESS,
       SecurityAuditLevel.INFO,
       "task",
@@ -1656,7 +1764,7 @@ export class ArbiterOrchestrator {
   ): Promise<OverrideRequest> {
     // Check rate limits
     if (!this.checkOverrideRateLimit()) {
-      this.logSecurityEvent(
+      await this.logSecurityEvent(
         SecurityEventType.RATE_LIMIT_EXCEEDED,
         SecurityAuditLevel.WARNING,
         "override",
@@ -1700,7 +1808,7 @@ export class ArbiterOrchestrator {
     // Increment usage counter
     this.overrideUsage.count++;
 
-    this.logSecurityEvent(
+    await this.logSecurityEvent(
       SecurityEventType.OVERRIDE_REQUEST,
       SecurityAuditLevel.INFO,
       "override",
@@ -2151,7 +2259,7 @@ export class ArbiterOrchestrator {
     }
 
     // Security check - in production this would require admin privileges
-    this.logSecurityEvent(
+    await this.logSecurityEvent(
       SecurityEventType.DATA_ACCESS,
       SecurityAuditLevel.INFO,
       "security_audit",
@@ -2193,7 +2301,7 @@ export class ArbiterOrchestrator {
       true,
       { loggerType: "external" },
       0
-    );
+    ).catch(err => console.error("Failed to log security event:", err));
   }
 
   /**
@@ -2309,7 +2417,7 @@ export class ArbiterOrchestrator {
       throw new Error("Orchestrator not initialized");
     }
 
-    this.logSecurityEvent(
+    await this.logSecurityEvent(
       SecurityEventType.AUTHENTICATION,
       SecurityAuditLevel.INFO,
       "authentication",
@@ -2341,7 +2449,7 @@ export class ArbiterOrchestrator {
       true,
       { userId, action },
       15
-    );
+    ).catch(err => console.error("Failed to log security event:", err));
 
     // Placeholder implementation - would check permissions
     return true;
@@ -2409,17 +2517,72 @@ export class ArbiterOrchestrator {
     if (!this.initialized) {
       throw new Error("Orchestrator not initialized");
     }
-    // Placeholder implementation - would delegate to verification engine
-    return {
-      requestId: request.id,
-      verdict: "unverified",
-      confidence: 0.0,
-      reasoning: ["Verification not yet implemented"],
-      supportingEvidence: [],
-      contradictoryEvidence: [],
-      verificationMethods: [],
-      processingTimeMs: 0,
-    };
+
+    // Check if verification engine is available
+    if (!this.components.verificationEngine) {
+      console.warn(
+        "Verification engine not available, returning unverified result"
+      );
+      return {
+        requestId: request.id,
+        verdict: "unverified",
+        confidence: 0.0,
+        reasoning: ["Verification engine not available"],
+        supportingEvidence: [],
+        contradictoryEvidence: [],
+        verificationMethods: [],
+        processingTimeMs: 0,
+      };
+    }
+
+    try {
+      const startTime = Date.now();
+
+      // Convert request to verification request format
+      const verificationRequest = {
+        id: request.id,
+        content: request.content || request.information || request.claim,
+        type: request.type || "fact_checking",
+        priority: request.priority || "medium",
+        context: request.context || {},
+        metadata: request.metadata || {},
+      };
+
+      // Execute verification
+      const result = await this.components.verificationEngine.verify(
+        verificationRequest
+      );
+
+      const processingTimeMs = Date.now() - startTime;
+
+      // Convert result to expected format
+      return {
+        requestId: result.requestId,
+        verdict: result.verdict,
+        confidence: result.confidence,
+        reasoning: result.reasoning,
+        supportingEvidence: result.supportingEvidence,
+        contradictoryEvidence: result.contradictoryEvidence,
+        verificationMethods: result.methodResults?.map((m) => m.method) || [],
+        processingTimeMs,
+      };
+    } catch (error) {
+      console.error("Verification failed:", error);
+      return {
+        requestId: request.id,
+        verdict: "error",
+        confidence: 0.0,
+        reasoning: [
+          `Verification error: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+        ],
+        supportingEvidence: [],
+        contradictoryEvidence: [],
+        verificationMethods: [],
+        processingTimeMs: 0,
+      };
+    }
   }
 
   /**
@@ -2429,11 +2592,54 @@ export class ArbiterOrchestrator {
     if (!this.initialized) {
       throw new Error("Orchestrator not initialized");
     }
-    return {
-      methodsAvailable: 0,
-      totalVerifications: 0,
-      averageConfidence: 0.0,
-    };
+
+    if (!this.components.verificationEngine) {
+      return {
+        methodsAvailable: 0,
+        totalVerifications: 0,
+        averageConfidence: 0.0,
+        error: "Verification engine not available",
+      };
+    }
+
+    try {
+      const health = await this.components.verificationEngine.healthCheck();
+      const supportedMethods =
+        this.components.verificationEngine.getSupportedMethods();
+
+      // Get status for each method
+      const methodStats = await Promise.all(
+        supportedMethods.map(async (method) => {
+          const status =
+            await this.components.verificationEngine!.getMethodStatus(method);
+          return {
+            method,
+            enabled: status.enabled,
+            healthy: status.healthy,
+            successRate: status.successRate || 0,
+            averageProcessingTime: status.averageProcessingTime || 0,
+            lastUsed: status.lastUsed,
+          };
+        })
+      );
+
+      return {
+        methodsAvailable: health.enabledMethods,
+        totalMethods: health.totalMethods,
+        healthyMethods: health.healthyMethods,
+        activeVerifications: health.activeVerifications,
+        cacheSize: health.cacheSize,
+        methodStats,
+      };
+    } catch (error) {
+      console.error("Failed to get verification method stats:", error);
+      return {
+        methodsAvailable: 0,
+        totalVerifications: 0,
+        averageConfidence: 0.0,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
   }
 
   /**

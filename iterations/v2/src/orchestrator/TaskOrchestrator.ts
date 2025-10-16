@@ -353,7 +353,8 @@ export class TaskOrchestrator extends EventEmitter {
 
   constructor(
     config: TaskOrchestratorConfig,
-    agentRegistry?: any // Optional dependency injection
+    agentRegistry?: any, // Optional dependency injection
+    performanceTracker?: PerformanceTracker
   ) {
     super();
     this.config = config;
@@ -395,18 +396,26 @@ export class TaskOrchestrator extends EventEmitter {
       ...config.routing,
     });
 
-    this.performanceTracker = new PerformanceTracker({
-      enabled: true, // Always enable for orchestrator
-      maxEventsInMemory: 10000,
-      retentionPeriodMs: 7 * 24 * 60 * 60 * 1000, // 7 days
-      batchSize: 100,
-      anonymizeData: true,
-    });
+    this.performanceTracker =
+      performanceTracker ??
+      new PerformanceTracker({
+        enabled: true, // Always enable for orchestrator
+        maxEventsInMemory: 10000,
+        retentionPeriodMs: 7 * 24 * 60 * 60 * 1000, // 7 days
+        batchSize: 100,
+        anonymizeData: true,
+      });
 
-    // Start performance tracking
-    await this.performanceTracker.startCollection();
+    this.routingManager.setPerformanceTracker(this.performanceTracker);
 
     this.setupEventHandlers();
+  }
+
+  /**
+   * Initialize the orchestrator and start performance tracking
+   */
+  async initialize(): Promise<void> {
+    await this.performanceTracker.startCollection();
   }
 
   private setupEventHandlers(): void {
@@ -603,11 +612,16 @@ export class TaskOrchestrator extends EventEmitter {
 
     // Find the execution ID that was created during task submission
     const executionId = `${execution.taskId}-${execution.startedAt.getTime()}`;
+    const tokensConsumed =
+      typeof (result.result as any)?.tokensUsed === "number"
+        ? (result.result as any).tokensUsed
+        : 0;
+
     await this.performanceTracker.completeTaskExecution(executionId, {
       success: result.success,
       qualityScore,
       efficiencyScore: 0.8, // Default efficiency score
-      tokensConsumed: result.performance?.tokensUsed || 0,
+      tokensConsumed,
       completionTimeMs: duration,
     });
 

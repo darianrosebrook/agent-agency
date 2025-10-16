@@ -148,8 +148,13 @@ describe("SecureTaskQueue", () => {
       description: "y".repeat(6000),
     };
 
+    const secureQueueDescription = createSecureQueue({
+      auditSink,
+      metadataLimitBytes: 20000,
+    });
+
     await expect(
-      secureQueue.enqueue(longDescriptionTask, credentials)
+      secureQueueDescription.enqueue(longDescriptionTask, credentials)
     ).rejects.toThrow("Task description exceeds policy limit");
     expect(
       auditRecords.filter((record) => record.action === "reject")

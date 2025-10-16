@@ -190,7 +190,7 @@ describe("ModelBasedJudge", () => {
     it("should use default configuration", () => {
       const config = judge.getConfig();
 
-      expect(config.llm.provider).toBe("mock");
+      expect(config.llm.provider).toBe("ollama");
       expect(config.enableFallback).toBe(true);
     });
 
