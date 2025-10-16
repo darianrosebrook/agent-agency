@@ -69,41 +69,41 @@ export class RLCapability {
       }
     | undefined;
 
-  constructor(private config: RLCapabilityConfig) {}
+  constructor(private _config: RLCapabilityConfig) {}
 
   /**
    * Initialize RL components
    */
   async initialize(agentRegistry: AgentRegistryManager): Promise<void> {
     if (
-      !this.config.enableMultiArmedBandit &&
-      !this.config.enablePerformanceTracking &&
-      !this.config.enableRLTraining &&
-      !this.config.enableToolAdoption
+      !this._config.enableMultiArmedBandit &&
+      !this._config.enablePerformanceTracking &&
+      !this._config.enableRLTraining &&
+      !this._config.enableToolAdoption
     ) {
       return;
     }
 
     const taskRoutingManager = new TaskRoutingManager(agentRegistry, {
-      enableBandit: this.config.enableMultiArmedBandit,
-      ...this.config.banditConfig,
+      enableBandit: this._config.enableMultiArmedBandit,
+      ...this._config.banditConfig,
     });
 
     this.components = {
-      multiArmedBandit: this.config.enableMultiArmedBandit
-        ? new MultiArmedBandit(this.config.banditConfig)
+      multiArmedBandit: this._config.enableMultiArmedBandit
+        ? new MultiArmedBandit(this._config.banditConfig)
         : (null as any),
 
-      performanceTracker: this.config.enablePerformanceTracking
-        ? new PerformanceTracker(this.config.performanceTrackerConfig)
+      performanceTracker: this._config.enablePerformanceTracking
+        ? new PerformanceTracker(this._config.performanceTrackerConfig)
         : (null as any),
 
-      rlTrainer: this.config.enableRLTraining
-        ? new TurnLevelRLTrainer(this.config.rlTrainingConfig)
+      rlTrainer: this._config.enableRLTraining
+        ? new TurnLevelRLTrainer(this._config.rlTrainingConfig)
         : (null as any),
 
-      toolAdoptionTrainer: this.config.enableToolAdoption
-        ? new ToolAdoptionTrainer(this.config.toolAdoptionConfig)
+      toolAdoptionTrainer: this._config.enableToolAdoption
+        ? new ToolAdoptionTrainer(this._config.toolAdoptionConfig)
         : (null as any),
 
       taskRoutingManager,
@@ -131,7 +131,7 @@ export class RLCapability {
 
     // Extract agent ID from task metadata or assignment ID
     let selectedAgentId = "unknown-agent";
-    
+
     // First, check if task has assignedAgent metadata
     if ((task as any).assignedAgent) {
       selectedAgentId = (task as any).assignedAgent;
@@ -245,27 +245,24 @@ export class RLCapability {
       };
 
       if (this.components.performanceTracker) {
-        // Extract agent ID from assignment ID or task metadata
+        // Extract agent ID from assignment ID or task result metadata
         let agentId = "unknown-agent";
 
-        if (assignmentId && this.components.taskAssignmentManager) {
-          try {
-            const assignment =
-              await this.components.taskAssignmentManager.getAssignment(
-                assignmentId
-              );
-            agentId = assignment?.agent?.id || agentId;
-          } catch (error) {
-            this.logger?.warn(
-              "Failed to get assignment for performance tracking",
-              { assignmentId, error }
-            );
+        // First, try to extract from assignment ID if it contains agent info
+        if (assignmentId && assignmentId.includes("agent-")) {
+          // Extract agent ID from assignment ID if it follows pattern with agent ID
+          const agentMatch = assignmentId.match(/agent-\w+/);
+          if (agentMatch) {
+            agentId = agentMatch[0];
           }
         }
-
-        // Fallback: check if task has assignedAgent metadata
-        if (agentId === "unknown-agent" && (task as any).assignedAgent) {
-          agentId = (task as any).assignedAgent;
+        // Second, check task result metadata for agent information
+        else if ((taskResult as any).agentId) {
+          agentId = (taskResult as any).agentId;
+        }
+        // Third, check task result performance metadata
+        else if ((taskResult as any).performance?.agentId) {
+          agentId = (taskResult as any).performance.agentId;
         }
 
         const executionId =

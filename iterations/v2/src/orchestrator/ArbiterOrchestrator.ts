@@ -385,6 +385,7 @@ export class ArbiterOrchestrator {
     workspaceManager?: WorkspaceStateManager; // WorkspaceStateManager
     systemHealthMonitor?: SystemHealthMonitor; // SystemHealthMonitor
     promptingEngine?: any; // PromptingEngine
+    performanceTracker?: any; // PerformanceTracker
     // CAWS Integration components
     arbitrationProtocol?: ArbitrationProtocolEngine;
     reasoningEngine?: ArbiterReasoningEngine;
@@ -1457,12 +1458,59 @@ export class ArbiterOrchestrator {
    * Find available agents that could handle the task
    */
   private async findAvailableAgents(task: any): Promise<any[]> {
-    // Simplified implementation - would query actual agent registry
-    // In production, this would:
-    // 1. Query agent registry for agents with required capabilities
-    // 2. Filter by current availability and load
-    // 3. Consider agent performance history
+    // Use real agent registry if available
+    if (
+      this.components.agentRegistry &&
+      typeof this.components.agentRegistry.getAllAgents === "function"
+    ) {
+      try {
+        const allAgents = this.components.agentRegistry.getAllAgents();
 
+        // Filter by capability matching and availability
+        return allAgents
+          .filter((agent: any) => {
+            // Check if agent has required capabilities
+            const hasCapability =
+              !task.requiredCapabilities ||
+              task.requiredCapabilities.some(
+                (cap: string) =>
+                  agent.capabilities?.taskTypes?.includes(cap) ||
+                  agent.capabilities?.languages?.includes(cap) ||
+                  agent.capabilities?.specializations?.includes(cap)
+              );
+
+            // Check current load vs max capacity
+            const hasCapacity =
+              agent.currentLoad?.activeTasks <
+              (agent.currentLoad?.maxConcurrentTasks || 5);
+
+            // Check if agent is available (not offline or in maintenance)
+            const isAvailable = agent.currentLoad?.status === "available";
+
+            return hasCapability && hasCapacity && isAvailable;
+          })
+          .map((agent: any) => ({
+            id: agent.id,
+            capabilities: agent.capabilities,
+            currentLoad: agent.currentLoad?.activeTasks || 0,
+            maxLoad: agent.currentLoad?.maxConcurrentTasks || 5,
+            performance: {
+              quality: agent.performanceHistory?.averageQuality || 0.8,
+              speed: agent.performanceHistory?.averageSpeed || 0.8,
+              reliability: agent.performanceHistory?.averageReliability || 0.8,
+            },
+            status: agent.currentLoad?.status || "available",
+          }));
+      } catch (error) {
+        console.warn(
+          "Failed to query agent registry, falling back to mock agents:",
+          error
+        );
+      }
+    }
+
+    // Fallback to mock agents if registry is not available
+    console.warn("Agent registry not available, using mock agents");
     const mockAgents = [
       {
         id: "agent-001",
@@ -1618,7 +1666,7 @@ export class ArbiterOrchestrator {
       });
 
       // Calculate agent's familiarity with context files
-      const familiarityScore = this.calculateAgentFamiliarity(
+      const familiarityScore = await this.calculateAgentFamiliarity(
         agent.id,
         context
       );
@@ -1691,40 +1739,154 @@ export class ArbiterOrchestrator {
   /**
    * Calculate resource availability score
    */
-  private calculateResourceAvailabilityScore(
+  private async calculateResourceAvailabilityScore(
     task: any,
     agent: any
   ): Promise<number> {
-    // Placeholder for resource availability
-    // In production, this would consider:
-    // - Agent's available capacity
-    // - Task's resource requirements
-    // - System-wide resource constraints
+    try {
+      // Calculate based on agent's current load vs max capacity
+      const currentLoad = agent.currentLoad || 0;
+      const maxLoad = agent.maxLoad || 5;
+      const utilizationRatio = currentLoad / maxLoad;
 
-    // For now, base it on agent's load (inverse relationship)
-    const availableCapacity = 1 - agent.currentLoad / agent.maxLoad;
-    return Promise.resolve(availableCapacity);
+      // Base score decreases as utilization increases
+      let score = Math.max(0.1, 1.0 - utilizationRatio);
+
+      // Consider task complexity if available
+      if (task.complexity) {
+        const complexityPenalty = task.complexity * 0.1; // 10% penalty per complexity level
+        score = Math.max(0.1, score - complexityPenalty);
+      }
+
+      // Consider system health if available
+      if (this.components.systemHealthMonitor) {
+        try {
+          const healthMetrics =
+            await this.components.systemHealthMonitor.getHealthMetrics();
+          const systemLoadPenalty =
+            healthMetrics.system.memoryUsage > 80 ? 0.2 : 0;
+          score = Math.max(0.1, score - systemLoadPenalty);
+        } catch (error) {
+          console.warn(
+            "Failed to get system health for resource calculation:",
+            error
+          );
+        }
+      }
+
+      return Math.round(score * 100) / 100;
+    } catch (error) {
+      console.warn(
+        `Failed to calculate resource availability for agent ${agent.id}:`,
+        error
+      );
+      // Fallback to simple calculation
+      const availableCapacity =
+        1 - (agent.currentLoad || 0) / (agent.maxLoad || 5);
+      return Math.max(0.1, availableCapacity);
+    }
   }
 
   /**
    * Get recent workspace activity for an agent
    */
   private async getAgentWorkspaceActivity(agentId: string): Promise<number> {
-    // Placeholder - would track agent file modifications
-    // In production, this would query workspace state for agent activity
-    return Math.random() * 20; // Mock activity score
+    try {
+      // Use workspace manager if available to get real activity data
+      if (this.components.workspaceManager) {
+        // Get recent workspace changes
+        const recentChanges =
+          await this.components.workspaceManager.getRecentChanges({
+            maxAge: 24 * 60 * 60 * 1000, // Last 24 hours
+            maxCount: 100,
+          });
+
+        // Count changes attributed to this agent
+        const agentChanges = recentChanges.filter(
+          (change: any) =>
+            change.metadata?.agentId === agentId ||
+            change.metadata?.author === agentId
+        );
+
+        return agentChanges.length;
+      }
+
+      // Fallback to mock score if workspace manager not available
+      console.warn(
+        "Workspace manager not available, using mock activity score"
+      );
+      return Math.random() * 20;
+    } catch (error) {
+      console.warn(
+        `Failed to get workspace activity for agent ${agentId}:`,
+        error
+      );
+      return Math.random() * 20; // Fallback to mock score
+    }
   }
 
   /**
    * Calculate agent's familiarity with workspace context
    */
-  private calculateAgentFamiliarity(agentId: string, context: any): number {
-    // Placeholder - would analyze agent's historical interaction with context files
-    // In production, this would consider:
-    // - Files the agent has recently modified
-    // - Agent's access patterns
-    // - Task completion history
-    return Math.random() * 0.5 + 0.3; // Mock familiarity score (0.3-0.8)
+  private async calculateAgentFamiliarity(
+    agentId: string,
+    context: any
+  ): Promise<number> {
+    try {
+      let familiarityScore = 0.3; // Base score
+
+      // Use workspace manager if available
+      if (this.components.workspaceManager && context?.files) {
+        // Check agent's history with context files
+        const recentChanges =
+          await this.components.workspaceManager.getRecentChanges({
+            maxAge: 7 * 24 * 60 * 60 * 1000, // Last 7 days
+            maxCount: 200,
+          });
+
+        // Count agent's interactions with context files
+        const contextFiles = context.files || [];
+        const agentInteractions = recentChanges.filter(
+          (change: any) =>
+            (change.metadata?.agentId === agentId ||
+              change.metadata?.author === agentId) &&
+            contextFiles.some((file: string) => change.path?.includes(file))
+        );
+
+        // Calculate familiarity based on interactions
+        const interactionCount = agentInteractions.length;
+        if (interactionCount > 0) {
+          // Increase familiarity based on interaction frequency
+          familiarityScore += Math.min(0.4, interactionCount * 0.05); // Max 0.4 bonus
+        }
+      }
+
+      // Use performance tracker if available to get task completion history
+      if (this.components.performanceTracker) {
+        try {
+          // This would need to be implemented in PerformanceTracker
+          // For now, we'll use a placeholder that could be enhanced
+          const hasGoodHistory = true; // Placeholder for performance history check
+          if (hasGoodHistory) {
+            familiarityScore += 0.2; // Bonus for good performance history
+          }
+        } catch (error) {
+          console.warn(
+            "Failed to get performance history for familiarity calculation:",
+            error
+          );
+        }
+      }
+
+      // Ensure score is within bounds
+      return Math.min(0.8, Math.max(0.3, familiarityScore));
+    } catch (error) {
+      console.warn(
+        `Failed to calculate familiarity for agent ${agentId}:`,
+        error
+      );
+      return Math.random() * 0.5 + 0.3; // Fallback to mock score
+    }
   }
 
   /**

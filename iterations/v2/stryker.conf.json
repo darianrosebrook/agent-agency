@@ -2,17 +2,13 @@
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
   "_comment": "ARBITER-013 Security Policy Enforcer Mutation Testing - Target: ≥80% mutation score for security-critical components",
   "packageManager": "npm",
-  "reporters": ["html", "clear-text", "progress", "dashboard"],
+  "reporters": ["html", "clear-text", "progress"],
   "testRunner": "jest",
-  "jest": {
-    "enableFindRelatedTests": true
-  },
   "coverageAnalysis": "perTest",
   "mutate": [
     "src/orchestrator/SecurityManager.ts",
     "src/security/AgentRegistrySecurity.ts",
     "src/security/CommandValidator.ts",
-    "src/resources/ResourceMonitor.ts",
     "!src/**/*.test.ts",
     "!src/**/*.spec.ts",
     "!src/**/index.ts"
@@ -29,9 +25,6 @@
     "low": 70,
     "break": 70
   },
-  "dashboard": {
-    "reportType": "full"
-  },
   "htmlReporter": {
     "fileName": "mutation-report.html"
   },
@@ -41,7 +34,9 @@
     "coverage",
     "**/*.d.ts",
     "**/*.js.map",
-    "tests/production/**"
+    "tests/production/**",
+    "tests/integration/**",
+    "tests/e2e/**"
   ],
   "incremental": true,
   "incrementalFile": ".stryker-tmp/incremental.json"

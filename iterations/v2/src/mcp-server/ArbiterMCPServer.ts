@@ -506,7 +506,8 @@ export class ArbiterMCPServer extends Server {
       } else if (this.orchestrator) {
         try {
           // Query orchestrator's agent registry for available agents
-          const registryAgents = await this.getAvailableAgentsFromOrchestrator();
+          const registryAgents =
+            await this.getAvailableAgentsFromOrchestrator();
           if (registryAgents && registryAgents.length > 0) {
             // Select agent with best performance or most suitable capabilities
             const bestAgent = registryAgents.reduce(
@@ -1071,7 +1072,10 @@ export class ArbiterMCPServer extends Server {
   private async getAvailableAgentsFromOrchestrator(): Promise<any[]> {
     try {
       // Access the orchestrator's agent registry through a public method
-      if (this.orchestrator && typeof (this.orchestrator as any).getAvailableAgents === 'function') {
+      if (
+        this.orchestrator &&
+        typeof (this.orchestrator as any).getAvailableAgents === "function"
+      ) {
         return await (this.orchestrator as any).getAvailableAgents();
       }
       return [];

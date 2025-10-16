@@ -934,6 +934,11 @@ export interface PerformanceEvent {
    * Event data.
    */
   data: Record<string, unknown>;
+
+  /**
+   * Model version used for this event (for A/B testing).
+   */
+  modelVersion?: string;
 }
 
 /**

@@ -322,8 +322,23 @@ export class OllamaProvider extends LLMProvider {
       const data = await response.json();
       return this.parseEvaluationResponse(data.response, criterion);
     } catch (error) {
+      const errorMessage = `Ollama API connection failed: ${
+        error instanceof Error ? error.message : String(error)
+      }
+
+🔧 To fix this issue:
+
+1. Ensure Ollama is installed: https://ollama.ai/download
+2. Start Ollama server: \`ollama serve\` (run in background)
+3. Pull a model: \`ollama pull llama3.2:3b\` (or your preferred model)
+4. Verify models are available: \`ollama list\`
+5. Test API: \`curl http://localhost:11434/api/tags\`
+
+For local-first LLM usage, Ollama provides cost-free inference without API keys.
+Models are cached locally and run efficiently on your hardware.`;
+
       console.error("Ollama API error:", error);
-      throw new Error(`Failed to evaluate with Ollama: ${error}`);
+      throw new Error(errorMessage);
     }
   }
 

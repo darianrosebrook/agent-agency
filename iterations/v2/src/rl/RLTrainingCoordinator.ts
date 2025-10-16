@@ -391,6 +391,47 @@ export class RLTrainingCoordinator extends EventEmitter {
   }
 
   /**
+   * Train on trajectories directly (for external integration like FeedbackPipeline)
+   *
+   * @param trajectories - Conversation trajectories to train on
+   * @returns Training statistics
+   */
+  async trainOnTrajectories(
+    trajectories: ConversationTrajectory[]
+  ): Promise<RLTrainingStats> {
+    try {
+      this.status.currentStage = "training";
+
+      // Validate trajectories
+      if (!trajectories || trajectories.length === 0) {
+        throw new Error("No trajectories provided for training");
+      }
+
+      // Train using the internal RL trainer
+      const trainingStats = await this.rlTrainer.trainOnTrajectories(
+        trajectories
+      );
+
+      // Update status
+      this.status.totalTrainingBatches++;
+      this.status.lastTrainingTime = new Date().toISOString();
+      this.status.modelPerformance.averageReward = trainingStats.averageReward;
+
+      // Emit training completion event
+      this.emit("training_completed", {
+        stats: trainingStats,
+        trajectoriesProcessed: trajectories.length,
+      });
+
+      return trainingStats;
+    } catch (error) {
+      this.status.currentStage = "data_collection"; // Reset stage on error
+      this.emit("training_error", error);
+      throw error;
+    }
+  }
+
+  /**
    * Gets current pipeline status.
    *
    * @returns Current status

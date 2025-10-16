@@ -7,9 +7,12 @@
  * @author @darianrosebrook
  */
 
-import { EventEmitter } from "../orchestrator/EventEmitter";
-import { EventTypes } from "../orchestrator/OrchestratorEvents";
-import { Logger, LogLevel } from "./Logger";
+import {
+  BaseEvent,
+  EventEmitter,
+  EventSeverity,
+} from "../orchestrator/EventEmitter";
+import { LogLevel, Logger } from "./Logger";
 
 export enum AuditEventType {
   // Security Events
@@ -55,11 +58,49 @@ export enum AuditSeverity {
   CRITICAL = "critical",
 }
 
-export interface AuditEvent {
-  id: string;
-  timestamp: Date;
+/**
+ * Convert AuditSeverity to EventSeverity
+ */
+function auditSeverityToEventSeverity(
+  auditSeverity: AuditSeverity
+): EventSeverity {
+  switch (auditSeverity) {
+    case AuditSeverity.LOW:
+      return EventSeverity.INFO;
+    case AuditSeverity.MEDIUM:
+      return EventSeverity.WARN;
+    case AuditSeverity.HIGH:
+      return EventSeverity.ERROR;
+    case AuditSeverity.CRITICAL:
+      return EventSeverity.CRITICAL;
+    default:
+      return EventSeverity.INFO;
+  }
+}
+
+/**
+ * Convert EventSeverity back to AuditSeverity
+ */
+function eventSeverityToAuditSeverity(
+  eventSeverity: EventSeverity
+): AuditSeverity {
+  switch (eventSeverity) {
+    case EventSeverity.DEBUG:
+    case EventSeverity.INFO:
+      return AuditSeverity.LOW;
+    case EventSeverity.WARN:
+      return AuditSeverity.MEDIUM;
+    case EventSeverity.ERROR:
+      return AuditSeverity.HIGH;
+    case EventSeverity.CRITICAL:
+      return AuditSeverity.CRITICAL;
+    default:
+      return AuditSeverity.LOW;
+  }
+}
+
+export interface AuditEvent extends BaseEvent {
   eventType: AuditEventType;
-  severity: AuditSeverity;
   actor: string; // Who performed the action
   resource: string; // What was acted upon
   action: string; // What action was taken
@@ -139,7 +180,10 @@ export class MemoryAuditLogSink implements AuditLogSink {
       );
     }
     if (query.severity?.length) {
-      filtered = filtered.filter((e) => query.severity!.includes(e.severity));
+      filtered = filtered.filter((e) => {
+        const auditSeverity = eventSeverityToAuditSeverity(e.severity);
+        return query.severity!.includes(auditSeverity);
+      });
     }
     if (query.actor) {
       filtered = filtered.filter((e) => e.actor === query.actor);
@@ -166,7 +210,8 @@ export class MemoryAuditLogSink implements AuditLogSink {
     }, {} as Record<AuditEventType, number>);
 
     const eventsBySeverity = this.events.reduce((acc, event) => {
-      acc[event.severity] = (acc[event.severity] || 0) + 1;
+      const auditSeverity = eventSeverityToAuditSeverity(event.severity);
+      acc[auditSeverity] = (acc[auditSeverity] || 0) + 1;
       return acc;
     }, {} as Record<AuditSeverity, number>);
 
@@ -231,9 +276,11 @@ export class AuditLogger extends Logger {
   ): Promise<void> {
     const event: AuditEvent = {
       id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      type: "audit.event",
       timestamp: new Date(),
+      severity: auditSeverityToEventSeverity(severity),
+      source: "audit-logger",
       eventType,
-      severity,
       actor,
       resource,
       action,

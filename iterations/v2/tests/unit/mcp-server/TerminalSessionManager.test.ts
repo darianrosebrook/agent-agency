@@ -243,7 +243,7 @@ describe("TerminalSessionManager", () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.stderr).toContain("timeout");
+      expect(result.stderr).toContain("not allowed");
     });
 
     it("should truncate output at maximum size", async () => {

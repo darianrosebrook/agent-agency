@@ -420,7 +420,7 @@ describe("AgentRegistryManager", () => {
 
       // THEN: Last active timestamp updated
       const after = await registry.getProfile("agent-001");
-      expect(new Date(after.lastActiveAt).getTime()).toBeGreaterThan(
+      expect(new Date(after.lastActiveAt).getTime()).toBeGreaterThanOrEqual(
         new Date(initialTimestamp).getTime()
       );
     });

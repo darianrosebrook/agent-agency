@@ -10,6 +10,7 @@
 import * as crypto from "crypto";
 import { EventEmitter } from "events";
 import * as path from "path";
+import { fileURLToPath } from "url";
 import { Worker } from "worker_threads";
 import { PerformanceTracker } from "../rl/PerformanceTracker";
 import {
@@ -58,6 +59,10 @@ class WorkerPoolManager extends EventEmitter {
 
   private createWorker(): string {
     const workerId = crypto.randomUUID();
+
+    // ES module equivalent of __dirname
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
 
     const worker = new Worker(path.join(__dirname, "task-worker.js"), {
       workerData: {

@@ -3,11 +3,16 @@ import { ConfigManager } from "../config/ConfigManager";
 import { Logger } from "../observability/Logger";
 import { RLTrainingCoordinator } from "../rl/RLTrainingCoordinator";
 import {
+  ConversationTrajectory,
+  Reward,
+  TaskOutcome,
+  TurnLevelReward,
+} from "../types/agentic-rl";
+import {
   FeedbackEvent,
   FeedbackPipelineConfig,
   FeedbackSource,
 } from "../types/feedback-loop";
-import { ConversationTrajectory, Reward, TurnLevelReward } from "../types/agentic-rl";
 
 export interface TrainingDataBatch {
   id: string;
@@ -413,18 +418,21 @@ export class FeedbackPipeline extends EventEmitter {
       const trajectories = this.convertBatchToTrajectories(batch);
 
       if (trajectories.length === 0) {
-        this.logger.warn(`No valid trajectories could be extracted from batch ${batch.id}`);
+        this.logger.warn(
+          `No valid trajectories could be extracted from batch ${batch.id}`
+        );
         return;
       }
 
       // Send to RL training system
-      const trainingStats = await this.rlTrainingCoordinator.trainOnTrajectories(trajectories);
+      const trainingStats =
+        await this.rlTrainingCoordinator.trainOnTrajectories(trajectories);
 
       this.logger.info(
         `RL training completed for batch ${batch.id}: ` +
-        `${trainingStats.totalSamples} samples, ` +
-        `avg reward: ${trainingStats.averageReward.toFixed(3)}, ` +
-        `training time: ${trainingStats.trainingTimeMs}ms`
+          `${trainingStats.trajectoriesProcessed} trajectories, ` +
+          `avg reward: ${trainingStats.averageReward.toFixed(3)}, ` +
+          `training time: ${trainingStats.trainingTimeMs}ms`
       );
 
       // Emit training completion event
@@ -433,17 +441,20 @@ export class FeedbackPipeline extends EventEmitter {
         trainingStats,
         trajectoriesProcessed: trajectories.length,
       });
-
     } catch (error) {
       this.logger.error(`RL training failed for batch ${batch.id}`, { error });
-      throw new Error(`Training system error: ${error.message}`);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw new Error(`Training system error: ${errorMessage}`);
     }
   }
 
   /**
    * Convert TrainingDataBatch to ConversationTrajectory format for RL training
    */
-  private convertBatchToTrajectories(batch: TrainingDataBatch): ConversationTrajectory[] {
+  private convertBatchToTrajectories(
+    batch: TrainingDataBatch
+  ): ConversationTrajectory[] {
     const trajectories: ConversationTrajectory[] = [];
 
     // Group events by conversation/task
@@ -459,12 +470,18 @@ export class FeedbackPipeline extends EventEmitter {
     // Convert each entity's events to a trajectory
     for (const [entityId, events] of eventsByEntity) {
       try {
-        const trajectory = this.convertEntityEventsToTrajectory(entityId, events, batch);
+        const trajectory = this.convertEntityEventsToTrajectory(
+          entityId,
+          events,
+          batch
+        );
         if (trajectory) {
           trajectories.push(trajectory);
         }
       } catch (error) {
-        this.logger.warn(`Failed to convert entity ${entityId} to trajectory`, { error });
+        this.logger.warn(`Failed to convert entity ${entityId} to trajectory`, {
+          error,
+        });
       }
     }
 
@@ -480,7 +497,10 @@ export class FeedbackPipeline extends EventEmitter {
     batch: TrainingDataBatch
   ): ConversationTrajectory | null {
     // Sort events by timestamp
-    events.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    events.sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
 
     // Extract turn-level rewards from events
     const turns: TurnLevelReward[] = [];
@@ -492,10 +512,12 @@ export class FeedbackPipeline extends EventEmitter {
 
       turns.push({
         turnNumber: i + 1,
-        reward,
-        actionLogProbs: [], // Would be populated by actual model outputs
-        valueEstimate: 0,   // Would be computed by value network
-        advantages: [],     // Would be computed during training
+        toolChoice: { toolId: "feedback_processing", parameters: {} }, // Default tool choice
+        informationGain: Math.abs(reward), // Convert reward to information gain
+        formatCorrectness: 0.8, // Default value
+        taskProgress: Math.max(0, reward), // Positive rewards indicate progress
+        safetyScore: 0.9, // Default value
+        totalReward: reward,
       });
 
       totalReward += reward;
@@ -548,7 +570,10 @@ export class FeedbackPipeline extends EventEmitter {
   /**
    * Determine final task outcome from events and batch quality
    */
-  private determineFinalOutcome(events: FeedbackEvent[], qualityScore: number): TaskOutcome {
+  private determineFinalOutcome(
+    events: FeedbackEvent[],
+    qualityScore: number
+  ): TaskOutcome {
     // Check for explicit outcomes in events
     for (const event of events) {
       if (event.context?.outcome) {
@@ -558,11 +583,29 @@ export class FeedbackPipeline extends EventEmitter {
 
     // Infer from quality score and event patterns
     if (qualityScore > 0.8) {
-      return "success";
+      return {
+        success: true,
+        qualityScore,
+        efficiencyScore: 0.8,
+        tokensConsumed: 1000,
+        completionTimeMs: 5000,
+      };
     } else if (qualityScore < 0.3) {
-      return "failure";
+      return {
+        success: false,
+        qualityScore,
+        efficiencyScore: 0.2,
+        tokensConsumed: 1000,
+        completionTimeMs: 5000,
+      };
     } else {
-      return "partial_success";
+      return {
+        success: true,
+        qualityScore,
+        efficiencyScore: 0.5,
+        tokensConsumed: 1000,
+        completionTimeMs: 5000,
+      };
     }
   }
 

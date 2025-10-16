@@ -108,9 +108,12 @@ export interface ArtifactManifest {
  * Custom error for artifact quota violations.
  */
 export class ArtifactQuotaExceeded extends Error {
-  constructor(message: string, public readonly quotaType: "size" | "files") {
+  public readonly quotaType: "size" | "files";
+  
+  constructor(message: string, quotaType: "size" | "files") {
     super(message);
     this.name = "ArtifactQuotaExceeded";
+    this.quotaType = quotaType;
   }
 }
 
@@ -118,9 +121,12 @@ export class ArtifactQuotaExceeded extends Error {
  * Custom error for invalid artifact paths.
  */
 export class InvalidArtifactPath extends Error {
-  constructor(message: string, public readonly path: string) {
+  public readonly path: string;
+  
+  constructor(message: string, path: string) {
     super(message);
     this.name = "InvalidArtifactPath";
+    this.path = path;
   }
 }
 

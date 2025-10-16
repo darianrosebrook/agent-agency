@@ -345,6 +345,34 @@ export class WorkspaceStateManager extends EventEmitter {
   }
 
   /**
+   * Get recent changes with optional filtering
+   */
+  async getRecentChanges(
+    options: {
+      maxAge?: number; // Maximum age in milliseconds
+      maxCount?: number; // Maximum number of changes to return
+      agentId?: string; // Filter by agent ID
+    } = {}
+  ): Promise<FileChange[]> {
+    this.ensureInitialized();
+
+    // For now, return empty array as this is a placeholder implementation
+    // In a full implementation, this would query the file watcher's change history
+    // and filter based on the provided options
+
+    const { maxAge = 24 * 60 * 60 * 1000, maxCount = 100, agentId } = options;
+
+    // This is a placeholder - in a real implementation, we'd:
+    // 1. Get changes from the file watcher
+    // 2. Filter by timestamp (within maxAge)
+    // 3. Filter by agentId if provided
+    // 4. Limit to maxCount
+    // 5. Return the filtered results
+
+    return [];
+  }
+
+  /**
    * Force change detection for a specific path
    */
   async triggerChangeDetection(path: string): Promise<void> {

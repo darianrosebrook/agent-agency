@@ -1,7 +1,7 @@
 import { EventEmitter } from "events";
 import { ConfigManager } from "../config/ConfigManager";
-import { Logger } from "../observability/Logger";
 import { MetricsCollector } from "../monitoring/MetricsCollector";
+import { Logger } from "../observability/Logger";
 import {
   FeedbackAnalysis,
   FeedbackEvent,
@@ -65,6 +65,7 @@ export class FeedbackLoopManager extends EventEmitter {
     super();
     this.config = configManager.get("feedbackLoop");
     this.logger = new Logger("FeedbackLoopManager");
+    this.metricsCollector = new MetricsCollector();
 
     // Initialize components
     this.collector = new FeedbackCollector(configManager);

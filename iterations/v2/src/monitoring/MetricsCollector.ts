@@ -7,7 +7,7 @@
  * @author @darianrosebrook
  */
 
-import { freemem, loadavg, totalmem } from "os";
+import { cpus, freemem, loadavg, totalmem } from "os";
 import { PerformanceTrackerDatabaseClient } from "../database/PerformanceTrackerDatabaseClient.js";
 import { SystemMetrics } from "./types.js";
 
@@ -90,11 +90,11 @@ export class MetricsCollector {
    */
   private async getCpuUsage(timeDiff: number): Promise<number> {
     try {
-      const cpus = require("os").cpus();
+      const cpuData = cpus();
       let totalIdle = 0;
       let totalTick = 0;
 
-      for (const cpu of cpus) {
+      for (const cpu of cpuData) {
         for (const type in cpu.times) {
           totalTick += (cpu.times as any)[type];
         }

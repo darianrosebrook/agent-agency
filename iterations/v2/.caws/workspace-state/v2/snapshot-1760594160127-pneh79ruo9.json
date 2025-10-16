@@ -1,0 +1,4770 @@
+{
+  "id": "snapshot-1760594160127-pneh79ruo9",
+  "timestamp": "2025-10-16T05:56:00.127Z",
+  "files": [
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/index.ts",
+      "relativePath": "src/index.ts",
+      "size": 11725,
+      "mtime": "2025-10-16T04:56:08.854Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/setup.ts",
+      "relativePath": "tests/setup.ts",
+      "size": 2939,
+      "mtime": "2025-10-16T04:04:07.756Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/test-utils.ts",
+      "relativePath": "tests/test-utils.ts",
+      "size": 12992,
+      "mtime": "2025-10-12T22:57:42.061Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/workspace/ContextManager.ts",
+      "relativePath": "src/workspace/ContextManager.ts",
+      "size": 10267,
+      "mtime": "2025-10-14T02:38:07.528Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/workspace/FileWatcher.ts",
+      "relativePath": "src/workspace/FileWatcher.ts",
+      "size": 11321,
+      "mtime": "2025-10-15T08:32:15.011Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/workspace/StatePersistence.ts",
+      "relativePath": "src/workspace/StatePersistence.ts",
+      "size": 9915,
+      "mtime": "2025-10-14T02:38:07.536Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/workspace/StateSnapshot.ts",
+      "relativePath": "src/workspace/StateSnapshot.ts",
+      "size": 8253,
+      "mtime": "2025-10-14T02:38:07.534Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/workspace/WorkspaceStateManager.ts",
+      "relativePath": "src/workspace/WorkspaceStateManager.ts",
+      "size": 13888,
+      "mtime": "2025-10-16T05:40:27.712Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/workspace/index.ts",
+      "relativePath": "src/workspace/index.ts",
+      "size": 1557,
+      "mtime": "2025-10-14T02:38:07.526Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/artifact-sandbox.test.ts",
+      "relativePath": "tests/unit/artifact-sandbox.test.ts",
+      "size": 13436,
+      "mtime": "2025-10-15T23:44:24.207Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/workspace/types/workspace-state.ts",
+      "relativePath": "src/workspace/types/workspace-state.ts",
+      "size": 7185,
+      "mtime": "2025-10-14T02:38:07.525Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/web/ContentExtractor.ts",
+      "relativePath": "src/web/ContentExtractor.ts",
+      "size": 16619,
+      "mtime": "2025-10-16T02:38:20.611Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/web/SearchEngine.ts",
+      "relativePath": "src/web/SearchEngine.ts",
+      "size": 6894,
+      "mtime": "2025-10-15T03:50:47.758Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/web/TraversalEngine.ts",
+      "relativePath": "src/web/TraversalEngine.ts",
+      "size": 12694,
+      "mtime": "2025-10-15T03:53:48.271Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/web/WebNavigator.ts",
+      "relativePath": "src/web/WebNavigator.ts",
+      "size": 14820,
+      "mtime": "2025-10-15T08:53:16.233Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/workspace/FileWatcher.test.ts",
+      "relativePath": "tests/unit/workspace/FileWatcher.test.ts",
+      "size": 9027,
+      "mtime": "2025-10-15T08:32:15.070Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/workspace/StatePersistence.test.ts",
+      "relativePath": "tests/unit/workspace/StatePersistence.test.ts",
+      "size": 8874,
+      "mtime": "2025-10-14T15:44:55.954Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/verification/CredibilityScorer.ts",
+      "relativePath": "src/verification/CredibilityScorer.ts",
+      "size": 27752,
+      "mtime": "2025-10-16T04:31:41.551Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/verification/FactChecker.ts",
+      "relativePath": "src/verification/FactChecker.ts",
+      "size": 21774,
+      "mtime": "2025-10-16T04:24:10.875Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/verification/VerificationDatabaseClient.ts",
+      "relativePath": "src/verification/VerificationDatabaseClient.ts",
+      "size": 16831,
+      "mtime": "2025-10-15T13:05:02.807Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/verification/VerificationEngine.ts",
+      "relativePath": "src/verification/VerificationEngine.ts",
+      "size": 31939,
+      "mtime": "2025-10-16T04:31:48.668Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/web/content-extractor.test.ts",
+      "relativePath": "tests/unit/web/content-extractor.test.ts",
+      "size": 14473,
+      "mtime": "2025-10-16T02:38:22.663Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/web/search-engine.test.ts",
+      "relativePath": "tests/unit/web/search-engine.test.ts",
+      "size": 29088,
+      "mtime": "2025-10-15T22:35:40.473Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/web/traversal-engine.test.ts",
+      "relativePath": "tests/unit/web/traversal-engine.test.ts",
+      "size": 15856,
+      "mtime": "2025-10-15T03:53:48.386Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/web/web-navigator.test.ts",
+      "relativePath": "tests/unit/web/web-navigator.test.ts",
+      "size": 36276,
+      "mtime": "2025-10-15T09:37:43.851Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/verification/credibility-scorer.test.ts",
+      "relativePath": "tests/unit/verification/credibility-scorer.test.ts",
+      "size": 14252,
+      "mtime": "2025-10-15T02:16:33.078Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/verification/fact-checker.test.ts",
+      "relativePath": "tests/unit/verification/fact-checker.test.ts",
+      "size": 11167,
+      "mtime": "2025-10-15T02:44:10.074Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/verification/verification-engine-hardening.test.ts",
+      "relativePath": "tests/unit/verification/verification-engine-hardening.test.ts",
+      "size": 26946,
+      "mtime": "2025-10-15T22:35:39.182Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/verification/verification-engine.test.ts",
+      "relativePath": "tests/unit/verification/verification-engine.test.ts",
+      "size": 8176,
+      "mtime": "2025-10-14T01:40:28.642Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/verification/validators/ConsistencyValidator.ts",
+      "relativePath": "src/verification/validators/ConsistencyValidator.ts",
+      "size": 36315,
+      "mtime": "2025-10-16T04:25:10.883Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/verification/validators/CrossReferenceValidator.ts",
+      "relativePath": "src/verification/validators/CrossReferenceValidator.ts",
+      "size": 25066,
+      "mtime": "2025-10-16T05:24:22.464Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/verification/validators/LogicalValidator.ts",
+      "relativePath": "src/verification/validators/LogicalValidator.ts",
+      "size": 24523,
+      "mtime": "2025-10-16T04:31:33.298Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/verification/validators/StatisticalValidator.ts",
+      "relativePath": "src/verification/validators/StatisticalValidator.ts",
+      "size": 33683,
+      "mtime": "2025-10-16T04:25:10.683Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/verification/providers/GoogleFactCheckProvider.ts",
+      "relativePath": "src/verification/providers/GoogleFactCheckProvider.ts",
+      "size": 8437,
+      "mtime": "2025-10-14T02:38:07.664Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/verification/providers/SnopesFactCheckProvider.ts",
+      "relativePath": "src/verification/providers/SnopesFactCheckProvider.ts",
+      "size": 10904,
+      "mtime": "2025-10-14T02:38:07.667Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/verification/validators/consistency.test.ts",
+      "relativePath": "tests/unit/verification/validators/consistency.test.ts",
+      "size": 11211,
+      "mtime": "2025-10-15T15:54:30.775Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/verification/validators/cross-reference.test.ts",
+      "relativePath": "tests/unit/verification/validators/cross-reference.test.ts",
+      "size": 12845,
+      "mtime": "2025-10-16T04:04:07.967Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/verification/validators/logical.test.ts",
+      "relativePath": "tests/unit/verification/validators/logical.test.ts",
+      "size": 13503,
+      "mtime": "2025-10-16T02:38:10.944Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/verification/validators/statistical.test.ts",
+      "relativePath": "tests/unit/verification/validators/statistical.test.ts",
+      "size": 15034,
+      "mtime": "2025-10-16T03:06:40.000Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/utils/Logger.ts",
+      "relativePath": "src/utils/Logger.ts",
+      "size": 1112,
+      "mtime": "2025-10-14T02:38:07.586Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/utils/llm-config.ts",
+      "relativePath": "src/utils/llm-config.ts",
+      "size": 666,
+      "mtime": "2025-10-16T05:00:59.646Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/thinking/BudgetAllocator.test.ts",
+      "relativePath": "tests/unit/thinking/BudgetAllocator.test.ts",
+      "size": 11060,
+      "mtime": "2025-10-13T01:35:18.949Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/thinking/TaskComplexityAnalyzer.test.ts",
+      "relativePath": "tests/unit/thinking/TaskComplexityAnalyzer.test.ts",
+      "size": 9068,
+      "mtime": "2025-10-13T01:35:11.153Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/thinking/ThinkingBudgetManager.test.ts",
+      "relativePath": "tests/unit/thinking/ThinkingBudgetManager.test.ts",
+      "size": 14252,
+      "mtime": "2025-10-13T01:35:18.949Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/README.md",
+      "relativePath": "src/types/README.md",
+      "size": 11978,
+      "mtime": "2025-10-12T00:03:19.149Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".md",
+      "mimeType": "text/markdown"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/agent-prompting.ts",
+      "relativePath": "src/types/agent-prompting.ts",
+      "size": 7154,
+      "mtime": "2025-10-14T05:09:40.884Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/agent-registry.ts",
+      "relativePath": "src/types/agent-registry.ts",
+      "size": 11264,
+      "mtime": "2025-10-16T03:07:09.636Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/agentic-rl.ts",
+      "relativePath": "src/types/agentic-rl.ts",
+      "size": 15695,
+      "mtime": "2025-10-16T04:34:42.150Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/arbiter-orchestration.ts",
+      "relativePath": "src/types/arbiter-orchestration.ts",
+      "size": 14169,
+      "mtime": "2025-10-16T00:47:56.957Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/arbitration.ts",
+      "relativePath": "src/types/arbitration.ts",
+      "size": 9987,
+      "mtime": "2025-10-16T04:24:56.604Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/caws-constitutional.ts",
+      "relativePath": "src/types/caws-constitutional.ts",
+      "size": 4105,
+      "mtime": "2025-10-14T05:09:40.354Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/caws-types.ts",
+      "relativePath": "src/types/caws-types.ts",
+      "size": 4054,
+      "mtime": "2025-10-14T02:38:07.394Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/coordinator.ts",
+      "relativePath": "src/types/coordinator.ts",
+      "size": 3577,
+      "mtime": "2025-10-14T02:38:07.438Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/database-types.ts",
+      "relativePath": "src/types/database-types.ts",
+      "size": 17471,
+      "mtime": "2025-10-14T02:38:07.440Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/evaluation.ts",
+      "relativePath": "src/types/evaluation.ts",
+      "size": 4178,
+      "mtime": "2025-10-14T02:38:07.410Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/feedback-loop.ts",
+      "relativePath": "src/types/feedback-loop.ts",
+      "size": 8115,
+      "mtime": "2025-10-14T05:09:39.918Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/judge.ts",
+      "relativePath": "src/types/judge.ts",
+      "size": 4012,
+      "mtime": "2025-10-16T03:47:55.368Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/knowledge.ts",
+      "relativePath": "src/types/knowledge.ts",
+      "size": 9651,
+      "mtime": "2025-10-14T04:36:44.234Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/learning-coordination.ts",
+      "relativePath": "src/types/learning-coordination.ts",
+      "size": 7235,
+      "mtime": "2025-10-16T02:52:24.132Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/memory.ts",
+      "relativePath": "src/types/memory.ts",
+      "size": 1227,
+      "mtime": "2025-10-14T02:38:07.422Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/model-registry.ts",
+      "relativePath": "src/types/model-registry.ts",
+      "size": 13791,
+      "mtime": "2025-10-15T03:01:51.500Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/optimization-types.ts",
+      "relativePath": "src/types/optimization-types.ts",
+      "size": 7380,
+      "mtime": "2025-10-14T02:38:07.436Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/orchestrator-events.ts",
+      "relativePath": "src/types/orchestrator-events.ts",
+      "size": 2451,
+      "mtime": "2025-10-14T02:38:07.397Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/performance-tracking.ts",
+      "relativePath": "src/types/performance-tracking.ts",
+      "size": 14678,
+      "mtime": "2025-10-16T04:30:24.872Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/reasoning.ts",
+      "relativePath": "src/types/reasoning.ts",
+      "size": 5526,
+      "mtime": "2025-10-14T02:38:07.390Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/resource-types.ts",
+      "relativePath": "src/types/resource-types.ts",
+      "size": 9751,
+      "mtime": "2025-10-14T02:38:07.426Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/security-policy.ts",
+      "relativePath": "src/types/security-policy.ts",
+      "size": 12264,
+      "mtime": "2025-10-16T04:39:25.115Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/task-runner.ts",
+      "relativePath": "src/types/task-runner.ts",
+      "size": 4326,
+      "mtime": "2025-10-16T02:20:16.069Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/task-state.ts",
+      "relativePath": "src/types/task-state.ts",
+      "size": 814,
+      "mtime": "2025-10-14T02:38:07.413Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/thinking-budget.ts",
+      "relativePath": "src/types/thinking-budget.ts",
+      "size": 4208,
+      "mtime": "2025-10-14T02:38:07.428Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/verification.ts",
+      "relativePath": "src/types/verification.ts",
+      "size": 7550,
+      "mtime": "2025-10-16T03:36:23.831Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/types/web.ts",
+      "relativePath": "src/types/web.ts",
+      "size": 14506,
+      "mtime": "2025-10-15T03:53:48.379Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/security/CommandValidator.test.ts",
+      "relativePath": "tests/unit/security/CommandValidator.test.ts",
+      "size": 12762,
+      "mtime": "2025-10-14T04:37:11.086Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/security/agent-registry-security-hardening.test.ts",
+      "relativePath": "tests/unit/security/agent-registry-security-hardening.test.ts",
+      "size": 28264,
+      "mtime": "2025-10-16T03:11:38.670Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/security/agent-registry-security.test.ts",
+      "relativePath": "tests/unit/security/agent-registry-security.test.ts",
+      "size": 15296,
+      "mtime": "2025-10-15T08:32:15.973Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/security/command-validator-hardening.test.ts",
+      "relativePath": "tests/unit/security/command-validator-hardening.test.ts",
+      "size": 24004,
+      "mtime": "2025-10-16T03:23:27.274Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/thinking/BudgetAllocator.ts",
+      "relativePath": "src/thinking/BudgetAllocator.ts",
+      "size": 6169,
+      "mtime": "2025-10-14T02:38:07.689Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/thinking/TaskComplexityAnalyzer.ts",
+      "relativePath": "src/thinking/TaskComplexityAnalyzer.ts",
+      "size": 5124,
+      "mtime": "2025-10-14T02:38:07.695Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/thinking/ThinkingBudgetManager.ts",
+      "relativePath": "src/thinking/ThinkingBudgetManager.ts",
+      "size": 6126,
+      "mtime": "2025-10-14T02:38:07.693Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/thinking/index.ts",
+      "relativePath": "src/thinking/index.ts",
+      "size": 639,
+      "mtime": "2025-10-14T02:38:07.691Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/rl/multi-armed-bandit.test.ts",
+      "relativePath": "tests/unit/rl/multi-armed-bandit.test.ts",
+      "size": 12409,
+      "mtime": "2025-10-12T22:50:23.405Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/rl/performance-tracker-hardening.test.ts",
+      "relativePath": "tests/unit/rl/performance-tracker-hardening.test.ts",
+      "size": 32638,
+      "mtime": "2025-10-13T23:16:31.524Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/rl/performance-tracker.test.ts",
+      "relativePath": "tests/unit/rl/performance-tracker.test.ts",
+      "size": 17631,
+      "mtime": "2025-10-13T23:16:31.507Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/rl/tool-adoption-trainer.test.ts",
+      "relativePath": "tests/unit/rl/tool-adoption-trainer.test.ts",
+      "size": 13891,
+      "mtime": "2025-10-12T22:50:23.403Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/rl/turn-level-rl-trainer.test.ts",
+      "relativePath": "tests/unit/rl/turn-level-rl-trainer.test.ts",
+      "size": 15947,
+      "mtime": "2025-10-12T22:50:23.401Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/security/AgentRegistrySecurity.ts",
+      "relativePath": "src/security/AgentRegistrySecurity.ts",
+      "size": 23864,
+      "mtime": "2025-10-16T00:47:57.328Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/security/CommandValidator.ts",
+      "relativePath": "src/security/CommandValidator.ts",
+      "size": 8288,
+      "mtime": "2025-10-15T19:20:03.215Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/resources/AdaptiveResourceManager.test.ts",
+      "relativePath": "tests/unit/resources/AdaptiveResourceManager.test.ts",
+      "size": 4690,
+      "mtime": "2025-10-16T03:06:11.864Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/resources/LoadBalancer.test.ts",
+      "relativePath": "tests/unit/resources/LoadBalancer.test.ts",
+      "size": 7252,
+      "mtime": "2025-10-15T08:08:40.056Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/resources/ResourceAllocator.test.ts",
+      "relativePath": "tests/unit/resources/ResourceAllocator.test.ts",
+      "size": 9990,
+      "mtime": "2025-10-16T03:47:50.226Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/resources/ResourceMonitor.test.ts",
+      "relativePath": "tests/unit/resources/ResourceMonitor.test.ts",
+      "size": 8881,
+      "mtime": "2025-10-16T04:10:00.319Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/rl/DebateOutcomeTracker.ts",
+      "relativePath": "src/rl/DebateOutcomeTracker.ts",
+      "size": 18207,
+      "mtime": "2025-10-14T02:38:07.823Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/rl/ModelDeploymentManager.ts",
+      "relativePath": "src/rl/ModelDeploymentManager.ts",
+      "size": 21526,
+      "mtime": "2025-10-16T04:34:19.157Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/rl/MultiArmedBandit.ts",
+      "relativePath": "src/rl/MultiArmedBandit.ts",
+      "size": 9794,
+      "mtime": "2025-10-14T02:38:07.815Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/rl/PerformanceTracker.ts",
+      "relativePath": "src/rl/PerformanceTracker.ts",
+      "size": 38589,
+      "mtime": "2025-10-16T05:24:22.199Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/rl/RLTrainingCoordinator.ts",
+      "relativePath": "src/rl/RLTrainingCoordinator.ts",
+      "size": 18568,
+      "mtime": "2025-10-16T04:50:21.388Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/rl/ToolAdoptionTrainer.ts",
+      "relativePath": "src/rl/ToolAdoptionTrainer.ts",
+      "size": 18292,
+      "mtime": "2025-10-14T02:38:07.817Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/rl/TurnLevelRLTrainer.ts",
+      "relativePath": "src/rl/TurnLevelRLTrainer.ts",
+      "size": 19345,
+      "mtime": "2025-10-14T02:38:07.812Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/rl/VerdictQualityScorer.ts",
+      "relativePath": "src/rl/VerdictQualityScorer.ts",
+      "size": 17598,
+      "mtime": "2025-10-14T02:38:07.805Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/rl/index.ts",
+      "relativePath": "src/rl/index.ts",
+      "size": 1665,
+      "mtime": "2025-10-14T02:38:07.825Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/resilience/circuit-breaker.test.ts",
+      "relativePath": "tests/unit/resilience/circuit-breaker.test.ts",
+      "size": 8122,
+      "mtime": "2025-10-15T02:44:10.018Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/resilience/resilient-database-client.test.ts",
+      "relativePath": "tests/unit/resilience/resilient-database-client.test.ts",
+      "size": 13001,
+      "mtime": "2025-10-12T22:50:23.370Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/resilience/retry-policy.test.ts",
+      "relativePath": "tests/unit/resilience/retry-policy.test.ts",
+      "size": 9655,
+      "mtime": "2025-10-15T02:56:37.834Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/resources/AdaptiveResourceManager.ts",
+      "relativePath": "src/resources/AdaptiveResourceManager.ts",
+      "size": 12741,
+      "mtime": "2025-10-16T02:58:52.783Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/resources/LoadBalancer.ts",
+      "relativePath": "src/resources/LoadBalancer.ts",
+      "size": 10245,
+      "mtime": "2025-10-14T02:38:07.515Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/resources/ResourceAllocator.ts",
+      "relativePath": "src/resources/ResourceAllocator.ts",
+      "size": 9346,
+      "mtime": "2025-10-16T03:06:18.621Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/resources/ResourceMonitor.ts",
+      "relativePath": "src/resources/ResourceMonitor.ts",
+      "size": 9594,
+      "mtime": "2025-10-15T08:32:14.732Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/reasoning/AgentCoordinator.test.ts",
+      "relativePath": "tests/unit/reasoning/AgentCoordinator.test.ts",
+      "size": 22085,
+      "mtime": "2025-10-13T05:50:34.083Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/reasoning/AppealHandler.test.ts",
+      "relativePath": "tests/unit/reasoning/AppealHandler.test.ts",
+      "size": 19451,
+      "mtime": "2025-10-13T06:12:26.070Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/reasoning/ArbiterReasoningEngine.test.ts",
+      "relativePath": "tests/unit/reasoning/ArbiterReasoningEngine.test.ts",
+      "size": 19163,
+      "mtime": "2025-10-15T22:35:39.429Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/reasoning/ArgumentStructure.test.ts",
+      "relativePath": "tests/unit/reasoning/ArgumentStructure.test.ts",
+      "size": 14162,
+      "mtime": "2025-10-15T22:35:39.814Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/reasoning/ConsensusEngine.test.ts",
+      "relativePath": "tests/unit/reasoning/ConsensusEngine.test.ts",
+      "size": 12793,
+      "mtime": "2025-10-13T05:34:26.549Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/reasoning/DeadlockResolver.test.ts",
+      "relativePath": "tests/unit/reasoning/DeadlockResolver.test.ts",
+      "size": 25753,
+      "mtime": "2025-10-13T06:12:25.564Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/reasoning/DebateStateMachine.test.ts",
+      "relativePath": "tests/unit/reasoning/DebateStateMachine.test.ts",
+      "size": 13363,
+      "mtime": "2025-10-15T22:35:39.542Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/reasoning/EvidenceAggregator.test.ts",
+      "relativePath": "tests/unit/reasoning/EvidenceAggregator.test.ts",
+      "size": 11047,
+      "mtime": "2025-10-15T22:35:39.724Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/reasoning/TurnManager.test.ts",
+      "relativePath": "tests/unit/reasoning/TurnManager.test.ts",
+      "size": 21983,
+      "mtime": "2025-10-13T06:05:06.022Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/resilience/CircuitBreaker.ts",
+      "relativePath": "src/resilience/CircuitBreaker.ts",
+      "size": 6477,
+      "mtime": "2025-10-16T04:31:19.094Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/resilience/ResilientDatabaseClient.ts",
+      "relativePath": "src/resilience/ResilientDatabaseClient.ts",
+      "size": 11770,
+      "mtime": "2025-10-14T02:38:07.705Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/resilience/RetryPolicy.ts",
+      "relativePath": "src/resilience/RetryPolicy.ts",
+      "size": 5350,
+      "mtime": "2025-10-14T04:36:44.133Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/resilience/index.ts",
+      "relativePath": "src/resilience/index.ts",
+      "size": 184,
+      "mtime": "2025-10-14T02:38:07.703Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/provenance/provenance-tracker-unit.test.ts",
+      "relativePath": "tests/unit/provenance/provenance-tracker-unit.test.ts",
+      "size": 17551,
+      "mtime": "2025-10-15T09:29:50.376Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/reasoning/AgentCoordinator.ts",
+      "relativePath": "src/reasoning/AgentCoordinator.ts",
+      "size": 16122,
+      "mtime": "2025-10-14T02:38:07.645Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/reasoning/AppealHandler.ts",
+      "relativePath": "src/reasoning/AppealHandler.ts",
+      "size": 11552,
+      "mtime": "2025-10-14T02:38:07.650Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/reasoning/ArbiterReasoningEngine.ts",
+      "relativePath": "src/reasoning/ArbiterReasoningEngine.ts",
+      "size": 15012,
+      "mtime": "2025-10-15T22:35:37.340Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/reasoning/ArgumentStructure.ts",
+      "relativePath": "src/reasoning/ArgumentStructure.ts",
+      "size": 7686,
+      "mtime": "2025-10-15T22:35:37.766Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/reasoning/ConsensusEngine.ts",
+      "relativePath": "src/reasoning/ConsensusEngine.ts",
+      "size": 10639,
+      "mtime": "2025-10-14T02:38:07.647Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/reasoning/DeadlockResolver.ts",
+      "relativePath": "src/reasoning/DeadlockResolver.ts",
+      "size": 12494,
+      "mtime": "2025-10-14T02:38:07.652Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/reasoning/DebateStateMachine.ts",
+      "relativePath": "src/reasoning/DebateStateMachine.ts",
+      "size": 6480,
+      "mtime": "2025-10-14T02:38:07.638Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/reasoning/EvidenceAggregator.ts",
+      "relativePath": "src/reasoning/EvidenceAggregator.ts",
+      "size": 7837,
+      "mtime": "2025-10-14T02:38:07.642Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/reasoning/TurnManager.ts",
+      "relativePath": "src/reasoning/TurnManager.ts",
+      "size": 16241,
+      "mtime": "2025-10-14T02:38:07.636Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/ArbiterOrchestrator.test.ts",
+      "relativePath": "tests/unit/orchestrator/ArbiterOrchestrator.test.ts",
+      "size": 50966,
+      "mtime": "2025-10-15T09:13:32.762Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/agent-profile.test.ts",
+      "relativePath": "tests/unit/orchestrator/agent-profile.test.ts",
+      "size": 23993,
+      "mtime": "2025-10-12T22:50:23.428Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/agent-registry-manager.test.ts",
+      "relativePath": "tests/unit/orchestrator/agent-registry-manager.test.ts",
+      "size": 20667,
+      "mtime": "2025-10-16T05:01:09.908Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/arbiter-orchestrator.test.ts",
+      "relativePath": "tests/unit/orchestrator/arbiter-orchestrator.test.ts",
+      "size": 7770,
+      "mtime": "2025-10-15T08:52:33.799Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/dynamic-agent-selection.test.ts",
+      "relativePath": "tests/unit/orchestrator/dynamic-agent-selection.test.ts",
+      "size": 7694,
+      "mtime": "2025-10-16T04:34:30.758Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/enhanced-specialization.test.ts",
+      "relativePath": "tests/unit/orchestrator/enhanced-specialization.test.ts",
+      "size": 10521,
+      "mtime": "2025-10-16T02:08:51.073Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/event-system.test.ts",
+      "relativePath": "tests/unit/orchestrator/event-system.test.ts",
+      "size": 9165,
+      "mtime": "2025-10-15T02:23:55.610Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/runtime.test.ts",
+      "relativePath": "tests/unit/orchestrator/runtime.test.ts",
+      "size": 8178,
+      "mtime": "2025-10-16T02:28:51.372Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/secure-task-queue.test.ts",
+      "relativePath": "tests/unit/orchestrator/secure-task-queue.test.ts",
+      "size": 6420,
+      "mtime": "2025-10-16T03:08:16.838Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/security-policy-enforcer-hardening.test.ts",
+      "relativePath": "tests/unit/orchestrator/security-policy-enforcer-hardening.test.ts",
+      "size": 35540,
+      "mtime": "2025-10-16T05:24:11.714Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/security.test.ts",
+      "relativePath": "tests/unit/orchestrator/security.test.ts",
+      "size": 9324,
+      "mtime": "2025-10-14T04:37:11.507Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/task-orchestrator.test.ts",
+      "relativePath": "tests/unit/orchestrator/task-orchestrator.test.ts",
+      "size": 13193,
+      "mtime": "2025-10-16T03:19:22.186Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/task-routing-manager.test.ts",
+      "relativePath": "tests/unit/orchestrator/task-routing-manager.test.ts",
+      "size": 16242,
+      "mtime": "2025-10-15T08:48:56.023Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/task-state-machine.test.ts",
+      "relativePath": "tests/unit/orchestrator/task-state-machine.test.ts",
+      "size": 14758,
+      "mtime": "2025-10-15T08:32:15.830Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/validation.test.ts",
+      "relativePath": "tests/unit/orchestrator/validation.test.ts",
+      "size": 4471,
+      "mtime": "2025-10-12T22:50:23.438Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/provenance/ProvenanceTracker.ts",
+      "relativePath": "src/provenance/ProvenanceTracker.ts",
+      "size": 34598,
+      "mtime": "2025-10-15T09:29:50.140Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/provenance/index.ts",
+      "relativePath": "src/provenance/index.ts",
+      "size": 603,
+      "mtime": "2025-10-14T02:38:07.687Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/utils/StatisticsCollector.test.ts",
+      "relativePath": "tests/unit/orchestrator/utils/StatisticsCollector.test.ts",
+      "size": 11383,
+      "mtime": "2025-10-13T05:24:11.579Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/utils/TaskLifecycleManager.test.ts",
+      "relativePath": "tests/unit/orchestrator/utils/TaskLifecycleManager.test.ts",
+      "size": 13319,
+      "mtime": "2025-10-13T05:24:11.434Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/provenance/types/provenance-types.ts",
+      "relativePath": "src/provenance/types/provenance-types.ts",
+      "size": 12231,
+      "mtime": "2025-10-15T09:29:50.275Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/research/ResearchDetector.test.ts",
+      "relativePath": "tests/unit/orchestrator/research/ResearchDetector.test.ts",
+      "size": 20650,
+      "mtime": "2025-10-12T22:50:23.410Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/research/ResearchProvenance.test.ts",
+      "relativePath": "tests/unit/orchestrator/research/ResearchProvenance.test.ts",
+      "size": 17566,
+      "mtime": "2025-10-12T22:50:23.408Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/research/TaskResearchAugmenter.test.ts",
+      "relativePath": "tests/unit/orchestrator/research/TaskResearchAugmenter.test.ts",
+      "size": 25959,
+      "mtime": "2025-10-15T08:52:33.698Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/AgentProfile.ts",
+      "relativePath": "src/orchestrator/AgentProfile.ts",
+      "size": 8011,
+      "mtime": "2025-10-16T02:08:54.633Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/AgentRegistryManager.ts",
+      "relativePath": "src/orchestrator/AgentRegistryManager.ts",
+      "size": 44255,
+      "mtime": "2025-10-16T04:57:57.283Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/ArbiterController.ts",
+      "relativePath": "src/orchestrator/ArbiterController.ts",
+      "size": 18929,
+      "mtime": "2025-10-16T05:24:21.977Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/ArbiterOrchestrator.ts",
+      "relativePath": "src/orchestrator/ArbiterOrchestrator.ts",
+      "size": 93148,
+      "mtime": "2025-10-16T05:40:47.202Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/DatabaseClient.ts",
+      "relativePath": "src/orchestrator/DatabaseClient.ts",
+      "size": 13803,
+      "mtime": "2025-10-14T02:38:07.852Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/EventEmitter.ts",
+      "relativePath": "src/orchestrator/EventEmitter.ts",
+      "size": 12037,
+      "mtime": "2025-10-15T08:48:56.333Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/HealthMonitor.ts",
+      "relativePath": "src/orchestrator/HealthMonitor.ts",
+      "size": 21882,
+      "mtime": "2025-10-14T02:38:07.856Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/LearningIntegration.ts",
+      "relativePath": "src/orchestrator/LearningIntegration.ts",
+      "size": 10992,
+      "mtime": "2025-10-16T02:52:24.131Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/Mutex.ts",
+      "relativePath": "src/orchestrator/Mutex.ts",
+      "size": 3969,
+      "mtime": "2025-10-14T02:38:07.838Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/OrchestratorEvents.ts",
+      "relativePath": "src/orchestrator/OrchestratorEvents.ts",
+      "size": 10919,
+      "mtime": "2025-10-16T04:29:27.051Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/RecoveryManager.ts",
+      "relativePath": "src/orchestrator/RecoveryManager.ts",
+      "size": 22504,
+      "mtime": "2025-10-15T22:35:35.101Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/RegistryProvider.ts",
+      "relativePath": "src/orchestrator/RegistryProvider.ts",
+      "size": 6858,
+      "mtime": "2025-10-15T22:33:57.345Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/SecurityManager.ts",
+      "relativePath": "src/orchestrator/SecurityManager.ts",
+      "size": 19111,
+      "mtime": "2025-10-16T05:53:09.737Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/TaskAssignment.ts",
+      "relativePath": "src/orchestrator/TaskAssignment.ts",
+      "size": 19889,
+      "mtime": "2025-10-14T02:38:07.900Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/TaskOrchestrator.ts",
+      "relativePath": "src/orchestrator/TaskOrchestrator.ts",
+      "size": 24577,
+      "mtime": "2025-10-16T05:55:59.342Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/TaskQueue.ts",
+      "relativePath": "src/orchestrator/TaskQueue.ts",
+      "size": 14305,
+      "mtime": "2025-10-16T03:07:08.418Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/TaskQueuePersistence.ts",
+      "relativePath": "src/orchestrator/TaskQueuePersistence.ts",
+      "size": 11719,
+      "mtime": "2025-10-14T02:38:07.903Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/TaskRetryHandler.ts",
+      "relativePath": "src/orchestrator/TaskRetryHandler.ts",
+      "size": 4895,
+      "mtime": "2025-10-14T02:38:07.850Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/TaskRoutingManager.ts",
+      "relativePath": "src/orchestrator/TaskRoutingManager.ts",
+      "size": 16877,
+      "mtime": "2025-10-15T22:33:57.346Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/TaskStateMachine.ts",
+      "relativePath": "src/orchestrator/TaskStateMachine.ts",
+      "size": 5526,
+      "mtime": "2025-10-14T13:48:59.679Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/TerminalSessionManager.ts",
+      "relativePath": "src/orchestrator/TerminalSessionManager.ts",
+      "size": 11920,
+      "mtime": "2025-10-15T22:35:35.124Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/Validation.ts",
+      "relativePath": "src/orchestrator/Validation.ts",
+      "size": 14895,
+      "mtime": "2025-10-14T05:09:32.570Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/task-worker.js",
+      "relativePath": "src/orchestrator/task-worker.js",
+      "size": 11711,
+      "mtime": "2025-10-15T22:33:57.173Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".js",
+      "mimeType": "application/javascript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/orchestrator/capabilities/RLCapability.test.ts",
+      "relativePath": "tests/unit/orchestrator/capabilities/RLCapability.test.ts",
+      "size": 11160,
+      "mtime": "2025-10-13T05:24:11.259Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/workers/ArtifactSandbox.ts",
+      "relativePath": "src/orchestrator/workers/ArtifactSandbox.ts",
+      "size": 12084,
+      "mtime": "2025-10-16T00:47:56.843Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/optimization/BottleneckDetector.test.ts",
+      "relativePath": "tests/unit/optimization/BottleneckDetector.test.ts",
+      "size": 11088,
+      "mtime": "2025-10-14T15:36:20.216Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/optimization/PerformanceMonitor.test.ts",
+      "relativePath": "tests/unit/optimization/PerformanceMonitor.test.ts",
+      "size": 10372,
+      "mtime": "2025-10-14T01:38:44.323Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/optimization/RuntimeOptimizer.test.ts",
+      "relativePath": "tests/unit/optimization/RuntimeOptimizer.test.ts",
+      "size": 4207,
+      "mtime": "2025-10-14T01:02:43.984Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/utils/StatisticsCollector.ts",
+      "relativePath": "src/orchestrator/utils/StatisticsCollector.ts",
+      "size": 3794,
+      "mtime": "2025-10-14T02:38:07.886Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/utils/TaskLifecycleManager.ts",
+      "relativePath": "src/orchestrator/utils/TaskLifecycleManager.ts",
+      "size": 4896,
+      "mtime": "2025-10-14T02:38:07.884Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/observer/redactor.test.ts",
+      "relativePath": "tests/unit/observer/redactor.test.ts",
+      "size": 2300,
+      "mtime": "2025-10-15T20:09:22.734Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/observer/store.test.ts",
+      "relativePath": "tests/unit/observer/store.test.ts",
+      "size": 2476,
+      "mtime": "2025-10-15T20:09:47.730Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/runtime/ArbiterRuntime.ts",
+      "relativePath": "src/orchestrator/runtime/ArbiterRuntime.ts",
+      "size": 39802,
+      "mtime": "2025-10-16T03:16:56.363Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/runtime/runtimeAgentDataset.ts",
+      "relativePath": "src/orchestrator/runtime/runtimeAgentDataset.ts",
+      "size": 4657,
+      "mtime": "2025-10-16T02:08:49.172Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/monitoring/SystemHealthMonitor.test.ts",
+      "relativePath": "tests/unit/monitoring/SystemHealthMonitor.test.ts",
+      "size": 20267,
+      "mtime": "2025-10-14T04:46:51.505Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/research/README.md",
+      "relativePath": "src/orchestrator/research/README.md",
+      "size": 11841,
+      "mtime": "2025-10-12T04:57:09.940Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".md",
+      "mimeType": "text/markdown"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/research/ResearchDetector.ts",
+      "relativePath": "src/orchestrator/research/ResearchDetector.ts",
+      "size": 12006,
+      "mtime": "2025-10-14T02:38:07.830Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/research/ResearchProvenance.ts",
+      "relativePath": "src/orchestrator/research/ResearchProvenance.ts",
+      "size": 8491,
+      "mtime": "2025-10-14T02:38:07.832Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/research/TaskResearchAugmenter.ts",
+      "relativePath": "src/orchestrator/research/TaskResearchAugmenter.ts",
+      "size": 8639,
+      "mtime": "2025-10-15T22:35:35.173Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/models/ComputeCostTracker.test.ts",
+      "relativePath": "tests/unit/models/ComputeCostTracker.test.ts",
+      "size": 21179,
+      "mtime": "2025-10-15T01:26:03.086Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/models/LocalModelSelector.test.ts",
+      "relativePath": "tests/unit/models/LocalModelSelector.test.ts",
+      "size": 24652,
+      "mtime": "2025-10-15T03:30:16.434Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/models/ModelRegistry.test.ts",
+      "relativePath": "tests/unit/models/ModelRegistry.test.ts",
+      "size": 18434,
+      "mtime": "2025-10-15T01:26:03.101Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/models/PerformanceTrackerBridge.test.ts",
+      "relativePath": "tests/unit/models/PerformanceTrackerBridge.test.ts",
+      "size": 30615,
+      "mtime": "2025-10-15T09:24:27.287Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/prompting/AgentEagernessManager.ts",
+      "relativePath": "src/orchestrator/prompting/AgentEagernessManager.ts",
+      "size": 20266,
+      "mtime": "2025-10-14T02:38:07.866Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/prompting/ContextGatheringCoordinator.ts",
+      "relativePath": "src/orchestrator/prompting/ContextGatheringCoordinator.ts",
+      "size": 16999,
+      "mtime": "2025-10-14T02:38:07.861Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/prompting/PromptingEngine.ts",
+      "relativePath": "src/orchestrator/prompting/PromptingEngine.ts",
+      "size": 20110,
+      "mtime": "2025-10-14T02:38:07.874Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/prompting/ReasoningEffortController.ts",
+      "relativePath": "src/orchestrator/prompting/ReasoningEffortController.ts",
+      "size": 16538,
+      "mtime": "2025-10-14T02:38:07.871Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/prompting/SelfReflectionManager.ts",
+      "relativePath": "src/orchestrator/prompting/SelfReflectionManager.ts",
+      "size": 20201,
+      "mtime": "2025-10-14T02:38:07.869Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/prompting/ToolBudgetManager.ts",
+      "relativePath": "src/orchestrator/prompting/ToolBudgetManager.ts",
+      "size": 21440,
+      "mtime": "2025-10-14T02:38:07.864Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/prompting/XMLPromptProcessor.ts",
+      "relativePath": "src/orchestrator/prompting/XMLPromptProcessor.ts",
+      "size": 14168,
+      "mtime": "2025-10-14T02:38:07.876Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/orchestrator/capabilities/RLCapability.ts",
+      "relativePath": "src/orchestrator/capabilities/RLCapability.ts",
+      "size": 14092,
+      "mtime": "2025-10-16T04:36:07.728Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/models/providers/OllamaProvider.test.ts",
+      "relativePath": "tests/unit/models/providers/OllamaProvider.test.ts",
+      "size": 11733,
+      "mtime": "2025-10-15T08:32:15.808Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/memory/FederatedLearningEngine.test.ts",
+      "relativePath": "tests/unit/memory/FederatedLearningEngine.test.ts",
+      "size": 2572,
+      "mtime": "2025-10-16T03:06:07.169Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/optimization/BottleneckDetector.ts",
+      "relativePath": "src/optimization/BottleneckDetector.ts",
+      "size": 9560,
+      "mtime": "2025-10-14T02:38:07.503Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/optimization/PerformanceMonitor.ts",
+      "relativePath": "src/optimization/PerformanceMonitor.ts",
+      "size": 6252,
+      "mtime": "2025-10-15T08:32:14.133Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/optimization/RuntimeOptimizer.ts",
+      "relativePath": "src/optimization/RuntimeOptimizer.ts",
+      "size": 15457,
+      "mtime": "2025-10-15T08:32:14.160Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/mcp-server/TerminalSessionManager.test.ts",
+      "relativePath": "tests/unit/mcp-server/TerminalSessionManager.test.ts",
+      "size": 20335,
+      "mtime": "2025-10-16T05:01:00.066Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/mcp-server/arbiter-mcp-server.test.ts",
+      "relativePath": "tests/unit/mcp-server/arbiter-mcp-server.test.ts",
+      "size": 15808,
+      "mtime": "2025-10-15T03:50:22.497Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/observer/ObserverBridge.ts",
+      "relativePath": "src/observer/ObserverBridge.ts",
+      "size": 4551,
+      "mtime": "2025-10-16T00:53:09.154Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/observer/auth.ts",
+      "relativePath": "src/observer/auth.ts",
+      "size": 1733,
+      "mtime": "2025-10-15T19:56:47.102Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/observer/config.ts",
+      "relativePath": "src/observer/config.ts",
+      "size": 6467,
+      "mtime": "2025-10-15T20:47:27.531Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/observer/index.ts",
+      "relativePath": "src/observer/index.ts",
+      "size": 631,
+      "mtime": "2025-10-15T20:04:48.896Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/observer/redactor.ts",
+      "relativePath": "src/observer/redactor.ts",
+      "size": 2282,
+      "mtime": "2025-10-15T19:59:22.293Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/observer/singleton.ts",
+      "relativePath": "src/observer/singleton.ts",
+      "size": 277,
+      "mtime": "2025-10-15T20:04:42.679Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/observer/types.ts",
+      "relativePath": "src/observer/types.ts",
+      "size": 5245,
+      "mtime": "2025-10-16T01:44:43.843Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/learning/adaptive-prompt-engineer.test.ts",
+      "relativePath": "tests/unit/learning/adaptive-prompt-engineer.test.ts",
+      "size": 3693,
+      "mtime": "2025-10-14T15:10:21.546Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/learning/context-preservation-engine.test.ts",
+      "relativePath": "tests/unit/learning/context-preservation-engine.test.ts",
+      "size": 30695,
+      "mtime": "2025-10-14T15:10:21.591Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/learning/error-pattern-recognizer.test.ts",
+      "relativePath": "tests/unit/learning/error-pattern-recognizer.test.ts",
+      "size": 19321,
+      "mtime": "2025-10-16T02:42:44.824Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/learning/feedback-generator.test.ts",
+      "relativePath": "tests/unit/learning/feedback-generator.test.ts",
+      "size": 8958,
+      "mtime": "2025-10-16T02:42:44.703Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/learning/iteration-manager.test.ts",
+      "relativePath": "tests/unit/learning/iteration-manager.test.ts",
+      "size": 20887,
+      "mtime": "2025-10-15T02:52:57.767Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/learning/learning-database-client.test.ts",
+      "relativePath": "tests/unit/learning/learning-database-client.test.ts",
+      "size": 12506,
+      "mtime": "2025-10-15T08:52:33.799Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/learning/multi-turn-learning-coordinator.test.ts",
+      "relativePath": "tests/unit/learning/multi-turn-learning-coordinator.test.ts",
+      "size": 19631,
+      "mtime": "2025-10-14T00:14:41.531Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/knowledge/information-processor.test.ts",
+      "relativePath": "tests/unit/knowledge/information-processor.test.ts",
+      "size": 13965,
+      "mtime": "2025-10-14T14:27:19.589Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/knowledge/knowledge-seeker-hardening.test.ts",
+      "relativePath": "tests/unit/knowledge/knowledge-seeker-hardening.test.ts",
+      "size": 45685,
+      "mtime": "2025-10-16T02:38:16.314Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/knowledge/knowledge-seeker.test.ts",
+      "relativePath": "tests/unit/knowledge/knowledge-seeker.test.ts",
+      "size": 13911,
+      "mtime": "2025-10-15T08:32:15.997Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/knowledge/search-provider.test.ts",
+      "relativePath": "tests/unit/knowledge/search-provider.test.ts",
+      "size": 9000,
+      "mtime": "2025-10-14T14:27:19.353Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/observer/persistence/AsyncFileWriter.ts",
+      "relativePath": "src/observer/persistence/AsyncFileWriter.ts",
+      "size": 5200,
+      "mtime": "2025-10-15T20:09:13.429Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/observer/persistence/ObserverStoreImpl.ts",
+      "relativePath": "src/observer/persistence/ObserverStoreImpl.ts",
+      "size": 22940,
+      "mtime": "2025-10-16T01:44:15.455Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/feedback-loop/feedback-loop-manager.test.ts",
+      "relativePath": "tests/unit/feedback-loop/feedback-loop-manager.test.ts",
+      "size": 17518,
+      "mtime": "2025-10-15T13:05:02.884Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/feedback-loop/feedback-pipeline-rl-integration.test.ts",
+      "relativePath": "tests/unit/feedback-loop/feedback-pipeline-rl-integration.test.ts",
+      "size": 11489,
+      "mtime": "2025-10-16T04:40:55.873Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/feedback-loop/improvement-engine-metrics.test.ts",
+      "relativePath": "tests/unit/feedback-loop/improvement-engine-metrics.test.ts",
+      "size": 12707,
+      "mtime": "2025-10-16T04:16:20.288Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/observer/http/ObserverHttpServer.ts",
+      "relativePath": "src/observer/http/ObserverHttpServer.ts",
+      "size": 12274,
+      "mtime": "2025-10-15T20:02:35.299Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/observer/http/SseManager.ts",
+      "relativePath": "src/observer/http/SseManager.ts",
+      "size": 4191,
+      "mtime": "2025-10-15T19:57:09.649Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/evaluation/ASTDiffAnalyzer.test.ts",
+      "relativePath": "tests/unit/evaluation/ASTDiffAnalyzer.test.ts",
+      "size": 7040,
+      "mtime": "2025-10-13T01:56:58.480Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/evaluation/ConfidenceScorer.test.ts",
+      "relativePath": "tests/unit/evaluation/ConfidenceScorer.test.ts",
+      "size": 4673,
+      "mtime": "2025-10-13T02:14:23.160Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/evaluation/MinimalDiffEvaluator.test.ts",
+      "relativePath": "tests/unit/evaluation/MinimalDiffEvaluator.test.ts",
+      "size": 7275,
+      "mtime": "2025-10-13T01:56:58.481Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/evaluation/ModelBasedJudge.test.ts",
+      "relativePath": "tests/unit/evaluation/ModelBasedJudge.test.ts",
+      "size": 6972,
+      "mtime": "2025-10-16T03:48:05.537Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/evaluation/ModelRegistryLLMProvider.test.ts",
+      "relativePath": "tests/unit/evaluation/ModelRegistryLLMProvider.test.ts",
+      "size": 17255,
+      "mtime": "2025-10-13T17:44:20.748Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/evaluation/ScaffoldingDetector.test.ts",
+      "relativePath": "tests/unit/evaluation/ScaffoldingDetector.test.ts",
+      "size": 4978,
+      "mtime": "2025-10-13T01:56:58.473Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/evaluation/dspy-evaluation-bridge.test.ts",
+      "relativePath": "tests/unit/evaluation/dspy-evaluation-bridge.test.ts",
+      "size": 7660,
+      "mtime": "2025-10-16T05:47:36.788Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/evaluation/model-based-judge-retry.test.ts",
+      "relativePath": "tests/unit/evaluation/model-based-judge-retry.test.ts",
+      "size": 7119,
+      "mtime": "2025-10-16T05:50:43.480Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/evaluation/retry-manager.test.ts",
+      "relativePath": "tests/unit/evaluation/retry-manager.test.ts",
+      "size": 10622,
+      "mtime": "2025-10-16T05:42:48.381Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/observability/AuditLogger.ts",
+      "relativePath": "src/observability/AuditLogger.ts",
+      "size": 12858,
+      "mtime": "2025-10-16T04:46:50.527Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/observability/Logger.ts",
+      "relativePath": "src/observability/Logger.ts",
+      "size": 1409,
+      "mtime": "2025-10-15T19:20:02.791Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/observability/TracingProvider.ts",
+      "relativePath": "src/observability/TracingProvider.ts",
+      "size": 3056,
+      "mtime": "2025-10-14T02:38:07.629Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/observability/index.ts",
+      "relativePath": "src/observability/index.ts",
+      "size": 132,
+      "mtime": "2025-10-14T02:38:07.633Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/coordinator/system-coordinator.test.ts",
+      "relativePath": "tests/unit/coordinator/system-coordinator.test.ts",
+      "size": 6078,
+      "mtime": "2025-10-14T14:39:32.281Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/monitoring/BudgetMonitor.ts",
+      "relativePath": "src/monitoring/BudgetMonitor.ts",
+      "size": 16454,
+      "mtime": "2025-10-14T02:38:07.795Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/monitoring/MetricsCollector.ts",
+      "relativePath": "src/monitoring/MetricsCollector.ts",
+      "size": 13996,
+      "mtime": "2025-10-16T05:55:50.116Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/monitoring/SystemHealthMonitor.ts",
+      "relativePath": "src/monitoring/SystemHealthMonitor.ts",
+      "size": 19004,
+      "mtime": "2025-10-16T04:00:52.449Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/monitoring/index.ts",
+      "relativePath": "src/monitoring/index.ts",
+      "size": 1106,
+      "mtime": "2025-10-14T02:38:07.803Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/monitoring/types.ts",
+      "relativePath": "src/monitoring/types.ts",
+      "size": 4416,
+      "mtime": "2025-10-14T02:38:07.800Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/config/app-config.test.ts",
+      "relativePath": "tests/unit/config/app-config.test.ts",
+      "size": 4234,
+      "mtime": "2025-10-12T22:50:23.312Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/caws-validator/budget-validator.test.ts",
+      "relativePath": "tests/unit/caws-validator/budget-validator.test.ts",
+      "size": 15691,
+      "mtime": "2025-10-14T15:58:54.186Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/caws-validator/caws-validator.test.ts",
+      "relativePath": "tests/unit/caws-validator/caws-validator.test.ts",
+      "size": 15966,
+      "mtime": "2025-10-14T15:58:54.095Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/caws-validator/rule-engine.test.ts",
+      "relativePath": "tests/unit/caws-validator/rule-engine.test.ts",
+      "size": 17127,
+      "mtime": "2025-10-14T15:58:54.140Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/caws-validator/spec-validator.test.ts",
+      "relativePath": "tests/unit/caws-validator/spec-validator.test.ts",
+      "size": 11424,
+      "mtime": "2025-10-14T15:58:54.050Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/monitoring/types/budget-monitor-types.ts",
+      "relativePath": "src/monitoring/types/budget-monitor-types.ts",
+      "size": 5423,
+      "mtime": "2025-10-14T02:38:07.791Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/caws-runtime/constitutional-runtime.test.ts",
+      "relativePath": "tests/unit/caws-runtime/constitutional-runtime.test.ts",
+      "size": 11463,
+      "mtime": "2025-10-15T08:32:15.767Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/caws-runtime/violation-handler-sanitizer.test.ts",
+      "relativePath": "tests/unit/caws-runtime/violation-handler-sanitizer.test.ts",
+      "size": 12043,
+      "mtime": "2025-10-16T05:52:40.598Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/caws-runtime/waiver-manager-notifications.test.ts",
+      "relativePath": "tests/unit/caws-runtime/waiver-manager-notifications.test.ts",
+      "size": 11290,
+      "mtime": "2025-10-16T04:03:19.963Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/models/ArbiterModelManager.ts",
+      "relativePath": "src/models/ArbiterModelManager.ts",
+      "size": 9431,
+      "mtime": "2025-10-14T14:09:05.093Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/models/ComputeCostTracker.ts",
+      "relativePath": "src/models/ComputeCostTracker.ts",
+      "size": 10301,
+      "mtime": "2025-10-15T08:32:15.743Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/models/LocalModelSelector.ts",
+      "relativePath": "src/models/LocalModelSelector.ts",
+      "size": 14705,
+      "mtime": "2025-10-15T03:30:16.229Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/models/ModelHotSwap.ts",
+      "relativePath": "src/models/ModelHotSwap.ts",
+      "size": 18362,
+      "mtime": "2025-10-14T14:04:47.099Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/models/ModelRegistry.ts",
+      "relativePath": "src/models/ModelRegistry.ts",
+      "size": 15356,
+      "mtime": "2025-10-14T02:38:07.592Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/models/PerformanceTrackerBridge.ts",
+      "relativePath": "src/models/PerformanceTrackerBridge.ts",
+      "size": 12850,
+      "mtime": "2025-10-15T05:17:46.203Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/benchmarking/data-collector.test.ts",
+      "relativePath": "tests/unit/benchmarking/data-collector.test.ts",
+      "size": 17385,
+      "mtime": "2025-10-15T08:32:15.544Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/benchmarking/metric-aggregator.test.ts",
+      "relativePath": "tests/unit/benchmarking/metric-aggregator.test.ts",
+      "size": 24805,
+      "mtime": "2025-10-15T08:32:15.384Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/benchmarking/performance-analyzer.test.ts",
+      "relativePath": "tests/unit/benchmarking/performance-analyzer.test.ts",
+      "size": 24484,
+      "mtime": "2025-10-14T01:05:23.025Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/benchmarking/rl-data-pipeline.test.ts",
+      "relativePath": "tests/unit/benchmarking/rl-data-pipeline.test.ts",
+      "size": 23760,
+      "mtime": "2025-10-15T09:24:27.376Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/arbitration/AppealArbitrator.test.ts",
+      "relativePath": "tests/unit/arbitration/AppealArbitrator.test.ts",
+      "size": 16490,
+      "mtime": "2025-10-13T14:49:16.066Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/arbitration/ArbitrationOrchestrator.test.ts",
+      "relativePath": "tests/unit/arbitration/ArbitrationOrchestrator.test.ts",
+      "size": 18612,
+      "mtime": "2025-10-13T16:21:44.232Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/arbitration/ConstitutionalRuleEngine.test.ts",
+      "relativePath": "tests/unit/arbitration/ConstitutionalRuleEngine.test.ts",
+      "size": 17658,
+      "mtime": "2025-10-13T06:16:40.577Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/arbitration/PrecedentManager.test.ts",
+      "relativePath": "tests/unit/arbitration/PrecedentManager.test.ts",
+      "size": 19854,
+      "mtime": "2025-10-13T14:49:16.072Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/arbitration/VerdictGenerator.test.ts",
+      "relativePath": "tests/unit/arbitration/VerdictGenerator.test.ts",
+      "size": 17055,
+      "mtime": "2025-10-13T14:30:07.614Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/arbitration/WaiverInterpreter.test.ts",
+      "relativePath": "tests/unit/arbitration/WaiverInterpreter.test.ts",
+      "size": 17752,
+      "mtime": "2025-10-13T14:30:07.690Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/arbitration/ml-precedent-matcher.test.ts",
+      "relativePath": "tests/unit/arbitration/ml-precedent-matcher.test.ts",
+      "size": 14392,
+      "mtime": "2025-10-16T05:32:20.136Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/models/providers/AppleSiliconProvider.ts",
+      "relativePath": "src/models/providers/AppleSiliconProvider.ts",
+      "size": 8752,
+      "mtime": "2025-10-14T15:36:19.881Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/models/providers/GPUOptimizedProvider.ts",
+      "relativePath": "src/models/providers/GPUOptimizedProvider.ts",
+      "size": 9086,
+      "mtime": "2025-10-14T15:35:58.062Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/models/providers/LocalModelProvider.ts",
+      "relativePath": "src/models/providers/LocalModelProvider.ts",
+      "size": 4792,
+      "mtime": "2025-10-14T14:09:05.011Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/models/providers/OllamaProvider.ts",
+      "relativePath": "src/models/providers/OllamaProvider.ts",
+      "size": 8526,
+      "mtime": "2025-10-14T02:38:07.605Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/unit/adapters/distributed-cache-client.test.ts",
+      "relativePath": "tests/unit/adapters/distributed-cache-client.test.ts",
+      "size": 5830,
+      "mtime": "2025-10-16T04:09:58.077Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/memory/FederatedLearningEngine.ts",
+      "relativePath": "src/memory/FederatedLearningEngine.ts",
+      "size": 24418,
+      "mtime": "2025-10-16T03:50:45.614Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/memory/TenantIsolator.ts",
+      "relativePath": "src/memory/TenantIsolator.ts",
+      "size": 1654,
+      "mtime": "2025-10-14T02:38:07.447Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/security/terminal-security.test.ts",
+      "relativePath": "tests/security/terminal-security.test.ts",
+      "size": 6751,
+      "mtime": "2025-10-14T04:37:11.471Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/mcp-server/ArbiterMCPServer.ts",
+      "relativePath": "src/mcp-server/ArbiterMCPServer.ts",
+      "size": 37587,
+      "mtime": "2025-10-16T04:34:19.657Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/mcp-server/index.ts",
+      "relativePath": "src/mcp-server/index.ts",
+      "size": 481,
+      "mtime": "2025-10-14T02:38:07.548Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/security/penetration/injection-attacks.test.ts",
+      "relativePath": "tests/security/penetration/injection-attacks.test.ts",
+      "size": 12335,
+      "mtime": "2025-10-13T21:15:25.127Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/mcp-server/types/mcp-types.ts",
+      "relativePath": "src/mcp-server/types/mcp-types.ts",
+      "size": 5522,
+      "mtime": "2025-10-14T02:38:07.543Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/mcp-server/types/terminal-types.ts",
+      "relativePath": "src/mcp-server/types/terminal-types.ts",
+      "size": 7639,
+      "mtime": "2025-10-14T02:38:07.541Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/mcp-server/tools/terminal-tools.ts",
+      "relativePath": "src/mcp-server/tools/terminal-tools.ts",
+      "size": 4039,
+      "mtime": "2025-10-14T02:38:07.539Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/mcp-server/handlers/knowledge-tools.ts",
+      "relativePath": "src/mcp-server/handlers/knowledge-tools.ts",
+      "size": 10587,
+      "mtime": "2025-10-15T22:35:38.411Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/mcp-server/handlers/terminal-handlers.ts",
+      "relativePath": "src/mcp-server/handlers/terminal-handlers.ts",
+      "size": 7344,
+      "mtime": "2025-10-15T08:53:16.222Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/mcp/arbiter-mcp-server.ts",
+      "relativePath": "src/mcp/arbiter-mcp-server.ts",
+      "size": 40860,
+      "mtime": "2025-10-15T22:35:37.874Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/production/resources/AdaptiveResourceManager.production.test.ts",
+      "relativePath": "tests/production/resources/AdaptiveResourceManager.production.test.ts",
+      "size": 22010,
+      "mtime": "2025-10-16T03:47:55.995Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/lifecycle/ShutdownManager.ts",
+      "relativePath": "src/lifecycle/ShutdownManager.ts",
+      "size": 4108,
+      "mtime": "2025-10-14T02:38:07.555Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/lifecycle/index.ts",
+      "relativePath": "src/lifecycle/index.ts",
+      "size": 166,
+      "mtime": "2025-10-14T02:38:07.557Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/production/optimization/RuntimeOptimizer.production.test.ts",
+      "relativePath": "tests/production/optimization/RuntimeOptimizer.production.test.ts",
+      "size": 11270,
+      "mtime": "2025-10-15T07:39:38.568Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/learning/AdaptivePromptEngineer.ts",
+      "relativePath": "src/learning/AdaptivePromptEngineer.ts",
+      "size": 13112,
+      "mtime": "2025-10-15T09:37:44.024Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/learning/ContextPreservationEngine.ts",
+      "relativePath": "src/learning/ContextPreservationEngine.ts",
+      "size": 11415,
+      "mtime": "2025-10-14T02:38:07.493Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/learning/ErrorPatternRecognizer.ts",
+      "relativePath": "src/learning/ErrorPatternRecognizer.ts",
+      "size": 12939,
+      "mtime": "2025-10-16T02:52:24.132Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/learning/FeedbackGenerator.ts",
+      "relativePath": "src/learning/FeedbackGenerator.ts",
+      "size": 15137,
+      "mtime": "2025-10-14T02:38:07.492Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/learning/IterationManager.ts",
+      "relativePath": "src/learning/IterationManager.ts",
+      "size": 11122,
+      "mtime": "2025-10-15T02:52:57.893Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/learning/MultiTurnLearningCoordinator.ts",
+      "relativePath": "src/learning/MultiTurnLearningCoordinator.ts",
+      "size": 19344,
+      "mtime": "2025-10-16T02:52:24.132Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/learning/index.ts",
+      "relativePath": "src/learning/index.ts",
+      "size": 1070,
+      "mtime": "2025-10-14T02:38:07.498Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/performance/high-precision-benchmarks.test.ts",
+      "relativePath": "tests/performance/high-precision-benchmarks.test.ts",
+      "size": 14736,
+      "mtime": "2025-10-16T05:52:14.784Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/performance/jwt-performance-realistic.test.ts",
+      "relativePath": "tests/performance/jwt-performance-realistic.test.ts",
+      "size": 11768,
+      "mtime": "2025-10-16T05:52:14.761Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/performance/knowledge-seeker-performance.test.ts",
+      "relativePath": "tests/performance/knowledge-seeker-performance.test.ts",
+      "size": 18787,
+      "mtime": "2025-10-13T23:16:31.543Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/performance/security-performance-benchmarks.test.ts",
+      "relativePath": "tests/performance/security-performance-benchmarks.test.ts",
+      "size": 21187,
+      "mtime": "2025-10-16T05:40:21.005Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/performance/security-realistic-benchmarks.test.ts",
+      "relativePath": "tests/performance/security-realistic-benchmarks.test.ts",
+      "size": 21966,
+      "mtime": "2025-10-16T05:55:18.478Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/knowledge/InformationProcessor.ts",
+      "relativePath": "src/knowledge/InformationProcessor.ts",
+      "size": 12430,
+      "mtime": "2025-10-15T22:35:36.562Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/knowledge/KnowledgeSeeker.ts",
+      "relativePath": "src/knowledge/KnowledgeSeeker.ts",
+      "size": 20926,
+      "mtime": "2025-10-15T22:35:36.371Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/knowledge/SearchProvider.ts",
+      "relativePath": "src/knowledge/SearchProvider.ts",
+      "size": 17505,
+      "mtime": "2025-10-15T22:35:36.934Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/performance/resources/AdaptiveResourceManager.performance.test.ts",
+      "relativePath": "tests/performance/resources/AdaptiveResourceManager.performance.test.ts",
+      "size": 12820,
+      "mtime": "2025-10-16T05:17:28.701Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/knowledge/providers/BingSearchProvider.ts",
+      "relativePath": "src/knowledge/providers/BingSearchProvider.ts",
+      "size": 7058,
+      "mtime": "2025-10-14T02:38:07.712Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/knowledge/providers/DuckDuckGoSearchProvider.ts",
+      "relativePath": "src/knowledge/providers/DuckDuckGoSearchProvider.ts",
+      "size": 9908,
+      "mtime": "2025-10-14T02:38:07.709Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/knowledge/providers/GoogleSearchProvider.ts",
+      "relativePath": "src/knowledge/providers/GoogleSearchProvider.ts",
+      "size": 7196,
+      "mtime": "2025-10-14T02:38:07.707Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/performance/optimization/RuntimeOptimizer.performance.test.ts",
+      "relativePath": "tests/performance/optimization/RuntimeOptimizer.performance.test.ts",
+      "size": 12134,
+      "mtime": "2025-10-15T07:39:38.454Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/health/HealthMonitor.ts",
+      "relativePath": "src/health/HealthMonitor.ts",
+      "size": 4647,
+      "mtime": "2025-10-14T02:38:07.508Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/health/index.ts",
+      "relativePath": "src/health/index.ts",
+      "size": 191,
+      "mtime": "2025-10-14T02:38:07.510Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/mocks/knowledge-mocks.ts",
+      "relativePath": "tests/mocks/knowledge-mocks.ts",
+      "size": 7997,
+      "mtime": "2025-10-15T22:35:41.112Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/guidance/IterativeGuidance.ts",
+      "relativePath": "src/guidance/IterativeGuidance.ts",
+      "size": 36535,
+      "mtime": "2025-10-14T02:38:07.471Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/guidance/index.ts",
+      "relativePath": "src/guidance/index.ts",
+      "size": 535,
+      "mtime": "2025-10-14T02:38:07.473Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/agent-registry-persistence.test.ts",
+      "relativePath": "tests/integration/agent-registry-persistence.test.ts",
+      "size": 13649,
+      "mtime": "2025-10-12T22:50:23.448Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/arbiter-coordination.integration.test.ts",
+      "relativePath": "tests/integration/arbiter-coordination.integration.test.ts",
+      "size": 18941,
+      "mtime": "2025-10-13T21:39:27.541Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/e2e-task-artifact-flow.test.ts",
+      "relativePath": "tests/integration/e2e-task-artifact-flow.test.ts",
+      "size": 18850,
+      "mtime": "2025-10-16T00:53:09.037Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/orchestrator-integration.test.ts",
+      "relativePath": "tests/integration/orchestrator-integration.test.ts",
+      "size": 11706,
+      "mtime": "2025-10-12T22:50:23.475Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/performance-tracker-agent-integration.test.ts",
+      "relativePath": "tests/integration/performance-tracker-agent-integration.test.ts",
+      "size": 10265,
+      "mtime": "2025-10-16T02:09:09.360Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/performance-tracker-integration.test.ts",
+      "relativePath": "tests/integration/performance-tracker-integration.test.ts",
+      "size": 10115,
+      "mtime": "2025-10-16T02:59:42.714Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/real-llm-inference.integration.test.ts",
+      "relativePath": "tests/integration/real-llm-inference.integration.test.ts",
+      "size": 13409,
+      "mtime": "2025-10-13T21:39:27.411Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/registry-initialization.test.ts",
+      "relativePath": "tests/integration/registry-initialization.test.ts",
+      "size": 8373,
+      "mtime": "2025-10-15T22:24:11.427Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/rl-pipeline.test.ts",
+      "relativePath": "tests/integration/rl-pipeline.test.ts",
+      "size": 30449,
+      "mtime": "2025-10-13T02:38:22.681Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/task-routing-real.test.ts",
+      "relativePath": "tests/integration/task-routing-real.test.ts",
+      "size": 11164,
+      "mtime": "2025-10-16T00:31:32.220Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/terminal-mcp-integration.test.ts",
+      "relativePath": "tests/integration/terminal-mcp-integration.test.ts",
+      "size": 9171,
+      "mtime": "2025-10-15T08:53:16.220Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/guidance/types/guidance-types.ts",
+      "relativePath": "src/guidance/types/guidance-types.ts",
+      "size": 9460,
+      "mtime": "2025-10-14T02:38:07.468Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/workspace/WorkspaceStateManager.integration.test.ts",
+      "relativePath": "tests/integration/workspace/WorkspaceStateManager.integration.test.ts",
+      "size": 8780,
+      "mtime": "2025-10-13T20:32:01.525Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/feedback-loop/FeedbackAnalyzer.ts",
+      "relativePath": "src/feedback-loop/FeedbackAnalyzer.ts",
+      "size": 21367,
+      "mtime": "2025-10-15T13:05:03.059Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/feedback-loop/FeedbackCollector.ts",
+      "relativePath": "src/feedback-loop/FeedbackCollector.ts",
+      "size": 15491,
+      "mtime": "2025-10-15T13:05:02.938Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/feedback-loop/FeedbackLoopManager.ts",
+      "relativePath": "src/feedback-loop/FeedbackLoopManager.ts",
+      "size": 15578,
+      "mtime": "2025-10-16T04:37:58.098Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/feedback-loop/FeedbackPipeline.ts",
+      "relativePath": "src/feedback-loop/FeedbackPipeline.ts",
+      "size": 28356,
+      "mtime": "2025-10-16T04:50:21.446Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/feedback-loop/ImprovementEngine.ts",
+      "relativePath": "src/feedback-loop/ImprovementEngine.ts",
+      "size": 17149,
+      "mtime": "2025-10-16T04:10:24.519Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/feedback-loop/index.ts",
+      "relativePath": "src/feedback-loop/index.ts",
+      "size": 225,
+      "mtime": "2025-10-14T02:38:07.748Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/web/web-extraction-flow.test.ts",
+      "relativePath": "tests/integration/web/web-extraction-flow.test.ts",
+      "size": 5862,
+      "mtime": "2025-10-15T00:41:53.770Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/web/web-navigator-integration.test.ts",
+      "relativePath": "tests/integration/web/web-navigator-integration.test.ts",
+      "size": 8319,
+      "mtime": "2025-10-15T08:53:16.240Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/evaluation/ASTDiffAnalyzer.ts",
+      "relativePath": "src/evaluation/ASTDiffAnalyzer.ts",
+      "size": 5540,
+      "mtime": "2025-10-14T02:38:07.769Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/evaluation/ConfidenceScorer.ts",
+      "relativePath": "src/evaluation/ConfidenceScorer.ts",
+      "size": 2578,
+      "mtime": "2025-10-14T02:38:07.753Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/evaluation/DSPyEvaluationBridge.ts",
+      "relativePath": "src/evaluation/DSPyEvaluationBridge.ts",
+      "size": 10254,
+      "mtime": "2025-10-16T05:48:13.729Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/evaluation/LLMProvider.ts",
+      "relativePath": "src/evaluation/LLMProvider.ts",
+      "size": 14837,
+      "mtime": "2025-10-16T05:38:26.916Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/evaluation/MinimalDiffEvaluator.ts",
+      "relativePath": "src/evaluation/MinimalDiffEvaluator.ts",
+      "size": 5449,
+      "mtime": "2025-10-14T02:38:07.761Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/evaluation/ModelBasedJudge.ts",
+      "relativePath": "src/evaluation/ModelBasedJudge.ts",
+      "size": 8468,
+      "mtime": "2025-10-16T05:38:27.438Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/evaluation/ModelRegistryLLMProvider.ts",
+      "relativePath": "src/evaluation/ModelRegistryLLMProvider.ts",
+      "size": 11017,
+      "mtime": "2025-10-14T02:38:07.764Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/evaluation/ScaffoldingDetector.ts",
+      "relativePath": "src/evaluation/ScaffoldingDetector.ts",
+      "size": 4973,
+      "mtime": "2025-10-14T02:38:07.759Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/evaluation/index.ts",
+      "relativePath": "src/evaluation/index.ts",
+      "size": 617,
+      "mtime": "2025-10-14T02:38:07.766Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/verification/verification-database.test.ts",
+      "relativePath": "tests/integration/verification/verification-database.test.ts",
+      "size": 16438,
+      "mtime": "2025-10-15T13:05:02.584Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/security/policy-enforcement.integration.test.ts",
+      "relativePath": "tests/integration/security/policy-enforcement.integration.test.ts",
+      "size": 16113,
+      "mtime": "2025-10-13T21:15:24.765Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/security/security-enforcement-e2e.test.ts",
+      "relativePath": "tests/integration/security/security-enforcement-e2e.test.ts",
+      "size": 15463,
+      "mtime": "2025-10-16T03:30:50.610Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/security/security-policy-enforcer-integration.test.ts",
+      "relativePath": "tests/integration/security/security-policy-enforcer-integration.test.ts",
+      "size": 22469,
+      "mtime": "2025-10-16T05:40:20.561Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/evaluation/retry/RetryManager.ts",
+      "relativePath": "src/evaluation/retry/RetryManager.ts",
+      "size": 10165,
+      "mtime": "2025-10-16T05:42:48.194Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/rl/performance-tracker.integration.test.ts",
+      "relativePath": "tests/integration/rl/performance-tracker.integration.test.ts",
+      "size": 17303,
+      "mtime": "2025-10-13T23:16:31.524Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/rl/rl-pipeline-integration.test.ts",
+      "relativePath": "tests/integration/rl/rl-pipeline-integration.test.ts",
+      "size": 16946,
+      "mtime": "2025-10-13T17:28:58.511Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/dspy-integration/DSPyClient.ts",
+      "relativePath": "src/dspy-integration/DSPyClient.ts",
+      "size": 8117,
+      "mtime": "2025-10-15T02:16:17.331Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/dspy-integration/index.ts",
+      "relativePath": "src/dspy-integration/index.ts",
+      "size": 433,
+      "mtime": "2025-10-14T02:38:07.451Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/resources/AdaptiveResourceManager.integration.test.ts",
+      "relativePath": "tests/integration/resources/AdaptiveResourceManager.integration.test.ts",
+      "size": 10276,
+      "mtime": "2025-10-16T05:17:28.669Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/database/AgentRegistryDatabaseClient.ts",
+      "relativePath": "src/database/AgentRegistryDatabaseClient.ts",
+      "size": 17350,
+      "mtime": "2025-10-16T04:25:15.228Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/database/AgentRegistryDbClient.ts",
+      "relativePath": "src/database/AgentRegistryDbClient.ts",
+      "size": 28322,
+      "mtime": "2025-10-16T02:08:53.601Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/database/ConnectionPoolManager.ts",
+      "relativePath": "src/database/ConnectionPoolManager.ts",
+      "size": 13962,
+      "mtime": "2025-10-16T04:04:07.807Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/database/KnowledgeDatabaseClient.ts",
+      "relativePath": "src/database/KnowledgeDatabaseClient.ts",
+      "size": 12332,
+      "mtime": "2025-10-14T02:38:07.364Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/database/LearningDatabaseClient.ts",
+      "relativePath": "src/database/LearningDatabaseClient.ts",
+      "size": 14251,
+      "mtime": "2025-10-15T15:36:51.795Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/database/PerformanceTrackerDatabaseClient.ts",
+      "relativePath": "src/database/PerformanceTrackerDatabaseClient.ts",
+      "size": 17826,
+      "mtime": "2025-10-16T02:59:42.705Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/database/WebNavigatorDatabaseClient.ts",
+      "relativePath": "src/database/WebNavigatorDatabaseClient.ts",
+      "size": 15683,
+      "mtime": "2025-10-14T02:38:07.361Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/research/research-flow.test.ts",
+      "relativePath": "tests/integration/research/research-flow.test.ts",
+      "size": 17674,
+      "mtime": "2025-10-15T02:10:05.683Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/coordinator/ComponentHealthMonitor.ts",
+      "relativePath": "src/coordinator/ComponentHealthMonitor.ts",
+      "size": 10031,
+      "mtime": "2025-10-14T02:43:16.925Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/coordinator/FailureManager.ts",
+      "relativePath": "src/coordinator/FailureManager.ts",
+      "size": 24270,
+      "mtime": "2025-10-16T03:36:23.619Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/coordinator/LoadBalancer.ts",
+      "relativePath": "src/coordinator/LoadBalancer.ts",
+      "size": 10818,
+      "mtime": "2025-10-14T02:38:07.372Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/coordinator/SystemCoordinator.ts",
+      "relativePath": "src/coordinator/SystemCoordinator.ts",
+      "size": 13131,
+      "mtime": "2025-10-15T08:32:15.137Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/coordinator/index.ts",
+      "relativePath": "src/coordinator/index.ts",
+      "size": 357,
+      "mtime": "2025-10-14T13:51:05.984Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/provenance/provenance-tracker.test.ts",
+      "relativePath": "tests/integration/provenance/provenance-tracker.test.ts",
+      "size": 25551,
+      "mtime": "2025-10-14T01:39:33.154Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/config/AppConfig.ts",
+      "relativePath": "src/config/AppConfig.ts",
+      "size": 7032,
+      "mtime": "2025-10-15T22:33:57.208Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/config/ConfigManager.ts",
+      "relativePath": "src/config/ConfigManager.ts",
+      "size": 10819,
+      "mtime": "2025-10-14T02:38:07.454Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/config/index.ts",
+      "relativePath": "src/config/index.ts",
+      "size": 147,
+      "mtime": "2025-10-14T02:38:07.458Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/config/performance-config.ts",
+      "relativePath": "src/config/performance-config.ts",
+      "size": 15415,
+      "mtime": "2025-10-14T02:38:07.460Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/orchestrator/EnhancedAgentSelection.integration.test.ts",
+      "relativePath": "tests/integration/orchestrator/EnhancedAgentSelection.integration.test.ts",
+      "size": 14732,
+      "mtime": "2025-10-13T21:02:38.481Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/orchestrator/full-system-integration.test.ts",
+      "relativePath": "tests/integration/orchestrator/full-system-integration.test.ts",
+      "size": 15833,
+      "mtime": "2025-10-15T00:00:17.951Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/orchestrator/orchestrator-research.test.ts",
+      "relativePath": "tests/integration/orchestrator/orchestrator-research.test.ts",
+      "size": 6480,
+      "mtime": "2025-10-12T22:50:23.503Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/orchestrator/orchestrator-verification.test.ts",
+      "relativePath": "tests/integration/orchestrator/orchestrator-verification.test.ts",
+      "size": 11017,
+      "mtime": "2025-10-15T00:33:12.049Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/orchestrator/prompting-engine.integration.test.ts",
+      "relativePath": "tests/integration/orchestrator/prompting-engine.integration.test.ts",
+      "size": 17590,
+      "mtime": "2025-10-12T22:50:23.505Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-validator/CAWSValidator.ts",
+      "relativePath": "src/caws-validator/CAWSValidator.ts",
+      "size": 28567,
+      "mtime": "2025-10-16T04:06:13.615Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/orchestration/task-orchestrator.integration.test.ts",
+      "relativePath": "tests/integration/orchestration/task-orchestrator.integration.test.ts",
+      "size": 17791,
+      "mtime": "2025-10-15T09:16:56.477Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/optimization/RuntimeOptimizer.integration.test.ts",
+      "relativePath": "tests/integration/optimization/RuntimeOptimizer.integration.test.ts",
+      "size": 12875,
+      "mtime": "2025-10-15T07:39:38.310Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-validator/waivers/WaiverManager.ts",
+      "relativePath": "src/caws-validator/waivers/WaiverManager.ts",
+      "size": 4491,
+      "mtime": "2025-10-14T02:38:07.620Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/monitoring/budget-monitor.test.ts",
+      "relativePath": "tests/integration/monitoring/budget-monitor.test.ts",
+      "size": 18662,
+      "mtime": "2025-10-12T22:50:23.493Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-validator/validation/BudgetValidator.ts",
+      "relativePath": "src/caws-validator/validation/BudgetValidator.ts",
+      "size": 7302,
+      "mtime": "2025-10-14T02:38:07.622Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-validator/validation/RuleEngine.ts",
+      "relativePath": "src/caws-validator/validation/RuleEngine.ts",
+      "size": 16330,
+      "mtime": "2025-10-14T02:38:07.626Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-validator/validation/SpecValidator.ts",
+      "relativePath": "src/caws-validator/validation/SpecValidator.ts",
+      "size": 13171,
+      "mtime": "2025-10-14T02:38:07.624Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/models/ModelRegistryE2EIntegration.test.ts",
+      "relativePath": "tests/integration/models/ModelRegistryE2EIntegration.test.ts",
+      "size": 17792,
+      "mtime": "2025-10-15T00:07:15.661Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/models/ModelRegistryIntegration.test.ts",
+      "relativePath": "tests/integration/models/ModelRegistryIntegration.test.ts",
+      "size": 19360,
+      "mtime": "2025-10-13T17:54:49.469Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-validator/utils/policy-loader.ts",
+      "relativePath": "src/caws-validator/utils/policy-loader.ts",
+      "size": 2790,
+      "mtime": "2025-10-14T02:38:07.618Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/mcp-server/arbiter-mcp-server.test.ts",
+      "relativePath": "tests/integration/mcp-server/arbiter-mcp-server.test.ts",
+      "size": 12574,
+      "mtime": "2025-10-15T08:32:14.568Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-validator/types/validation-types.ts",
+      "relativePath": "src/caws-validator/types/validation-types.ts",
+      "size": 10269,
+      "mtime": "2025-10-14T02:38:07.615Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/learning/iteration-workflow.test.ts",
+      "relativePath": "tests/integration/learning/iteration-workflow.test.ts",
+      "size": 10088,
+      "mtime": "2025-10-12T23:00:39.577Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/learning/orchestrator-integration.test.ts",
+      "relativePath": "tests/integration/learning/orchestrator-integration.test.ts",
+      "size": 9961,
+      "mtime": "2025-10-12T22:50:23.457Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-validator/__tests__/mock-code-quality-gate.test.ts",
+      "relativePath": "src/caws-validator/__tests__/mock-code-quality-gate.test.ts",
+      "size": 11665,
+      "mtime": "2025-10-16T03:15:03.267Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/knowledge/knowledge-seeker-research.integration.test.ts",
+      "relativePath": "tests/integration/knowledge/knowledge-seeker-research.integration.test.ts",
+      "size": 22639,
+      "mtime": "2025-10-15T22:35:39.012Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/knowledge/knowledge-seeker-verification.test.ts",
+      "relativePath": "tests/integration/knowledge/knowledge-seeker-verification.test.ts",
+      "size": 14501,
+      "mtime": "2025-10-15T08:32:16.020Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-runtime/ConstitutionalPolicyEngine.ts",
+      "relativePath": "src/caws-runtime/ConstitutionalPolicyEngine.ts",
+      "size": 8907,
+      "mtime": "2025-10-15T22:35:37.916Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-runtime/ConstitutionalRuntime.ts",
+      "relativePath": "src/caws-runtime/ConstitutionalRuntime.ts",
+      "size": 11519,
+      "mtime": "2025-10-14T02:38:07.584Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-runtime/DefaultPolicies.ts",
+      "relativePath": "src/caws-runtime/DefaultPolicies.ts",
+      "size": 9339,
+      "mtime": "2025-10-14T02:38:07.579Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-runtime/ViolationHandler.ts",
+      "relativePath": "src/caws-runtime/ViolationHandler.ts",
+      "size": 18708,
+      "mtime": "2025-10-16T05:55:37.744Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-runtime/WaiverManager.ts",
+      "relativePath": "src/caws-runtime/WaiverManager.ts",
+      "size": 14420,
+      "mtime": "2025-10-16T04:03:19.944Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-runtime/index.ts",
+      "relativePath": "src/caws-runtime/index.ts",
+      "size": 591,
+      "mtime": "2025-10-14T05:09:46.137Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/guidance/iterative-guidance.test.ts",
+      "relativePath": "tests/integration/guidance/iterative-guidance.test.ts",
+      "size": 29009,
+      "mtime": "2025-10-12T22:50:23.450Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-integration/index.ts",
+      "relativePath": "src/caws-integration/index.ts",
+      "size": 793,
+      "mtime": "2025-10-14T02:38:07.569Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/foundation/arbiter-001-004-integration.test.ts",
+      "relativePath": "tests/integration/foundation/arbiter-001-004-integration.test.ts",
+      "size": 16833,
+      "mtime": "2025-10-12T22:50:23.464Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/feedback-loop/feedback-loop-integration.test.ts",
+      "relativePath": "tests/integration/feedback-loop/feedback-loop-integration.test.ts",
+      "size": 12827,
+      "mtime": "2025-10-15T13:05:02.938Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-integration/utils/spec-file-manager.ts",
+      "relativePath": "src/caws-integration/utils/spec-file-manager.ts",
+      "size": 8195,
+      "mtime": "2025-10-14T02:38:07.562Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/e2e/agent-registry-e2e.test.ts",
+      "relativePath": "tests/integration/e2e/agent-registry-e2e.test.ts",
+      "size": 19791,
+      "mtime": "2025-10-14T13:51:09.862Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-integration/types/arbiter-caws-types.ts",
+      "relativePath": "src/caws-integration/types/arbiter-caws-types.ts",
+      "size": 3381,
+      "mtime": "2025-10-14T02:38:07.559Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/dspy/DSPyClient.integration.test.ts",
+      "relativePath": "tests/integration/dspy/DSPyClient.integration.test.ts",
+      "size": 7639,
+      "mtime": "2025-10-15T09:29:50.274Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/dspy/DSPyEvaluationBridge.integration.test.ts",
+      "relativePath": "tests/integration/dspy/DSPyEvaluationBridge.integration.test.ts",
+      "size": 7917,
+      "mtime": "2025-10-15T02:16:16.979Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-integration/adapters/CAWSPolicyAdapter.ts",
+      "relativePath": "src/caws-integration/adapters/CAWSPolicyAdapter.ts",
+      "size": 9940,
+      "mtime": "2025-10-14T02:38:07.564Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/caws-integration/adapters/CAWSValidationAdapter.ts",
+      "relativePath": "src/caws-integration/adapters/CAWSValidationAdapter.ts",
+      "size": 8152,
+      "mtime": "2025-10-14T02:38:07.567Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/database/agent-registry-db.test.ts",
+      "relativePath": "tests/integration/database/agent-registry-db.test.ts",
+      "size": 8289,
+      "mtime": "2025-10-13T00:43:02.747Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/database/knowledge-database.test.ts",
+      "relativePath": "tests/integration/database/knowledge-database.test.ts",
+      "size": 4433,
+      "mtime": "2025-10-13T00:43:02.793Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/benchmarking/DataCollector.ts",
+      "relativePath": "src/benchmarking/DataCollector.ts",
+      "size": 22570,
+      "mtime": "2025-10-15T08:32:15.459Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/benchmarking/MetricAggregator.ts",
+      "relativePath": "src/benchmarking/MetricAggregator.ts",
+      "size": 29929,
+      "mtime": "2025-10-15T08:32:15.299Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/benchmarking/PerformanceAnalyzer.ts",
+      "relativePath": "src/benchmarking/PerformanceAnalyzer.ts",
+      "size": 32041,
+      "mtime": "2025-10-15T04:01:16.536Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/benchmarking/PerformanceMonitor.ts",
+      "relativePath": "src/benchmarking/PerformanceMonitor.ts",
+      "size": 15566,
+      "mtime": "2025-10-14T02:43:16.839Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/benchmarking/RLDataPipeline.ts",
+      "relativePath": "src/benchmarking/RLDataPipeline.ts",
+      "size": 25649,
+      "mtime": "2025-10-15T08:52:33.793Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/caws-validator/caws-validator.integration.test.ts",
+      "relativePath": "tests/integration/caws-validator/caws-validator.integration.test.ts",
+      "size": 15951,
+      "mtime": "2025-10-14T02:59:34.636Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/caws-integration/caws-policy-adapter.test.ts",
+      "relativePath": "tests/integration/caws-integration/caws-policy-adapter.test.ts",
+      "size": 13565,
+      "mtime": "2025-10-12T22:50:23.470Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/caws-integration/caws-validation-adapter.test.ts",
+      "relativePath": "tests/integration/caws-integration/caws-validation-adapter.test.ts",
+      "size": 8146,
+      "mtime": "2025-10-12T22:50:23.472Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/caws-integration/spec-file-manager.test.ts",
+      "relativePath": "tests/integration/caws-integration/spec-file-manager.test.ts",
+      "size": 10932,
+      "mtime": "2025-10-15T08:32:15.851Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/benchmarking/__tests__/performance-benchmarks.test.ts",
+      "relativePath": "src/benchmarking/__tests__/performance-benchmarks.test.ts",
+      "size": 24064,
+      "mtime": "2025-10-14T02:43:17.957Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/benchmarking/performance-tracking-e2e.test.ts",
+      "relativePath": "tests/integration/benchmarking/performance-tracking-e2e.test.ts",
+      "size": 21525,
+      "mtime": "2025-10-12T22:50:23.490Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/arbitration/AppealArbitrator.ts",
+      "relativePath": "src/arbitration/AppealArbitrator.ts",
+      "size": 12932,
+      "mtime": "2025-10-14T02:43:16.424Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/arbitration/ArbitrationOrchestrator.ts",
+      "relativePath": "src/arbitration/ArbitrationOrchestrator.ts",
+      "size": 19701,
+      "mtime": "2025-10-14T02:43:16.537Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/arbitration/ConstitutionalRuleEngine.ts",
+      "relativePath": "src/arbitration/ConstitutionalRuleEngine.ts",
+      "size": 20553,
+      "mtime": "2025-10-16T05:11:44.554Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/arbitration/PrecedentManager.ts",
+      "relativePath": "src/arbitration/PrecedentManager.ts",
+      "size": 14714,
+      "mtime": "2025-10-14T02:38:07.735Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/arbitration/VerdictGenerator.ts",
+      "relativePath": "src/arbitration/VerdictGenerator.ts",
+      "size": 11544,
+      "mtime": "2025-10-14T02:38:07.724Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/arbitration/WaiverInterpreter.ts",
+      "relativePath": "src/arbitration/WaiverInterpreter.ts",
+      "size": 11636,
+      "mtime": "2025-10-14T02:43:16.728Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/arbitration/index.ts",
+      "relativePath": "src/arbitration/index.ts",
+      "size": 5503,
+      "mtime": "2025-10-14T14:01:33.970Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/integration/arbitration/arbitration-workflows-e2e.test.ts",
+      "relativePath": "tests/integration/arbitration/arbitration-workflows-e2e.test.ts",
+      "size": 29965,
+      "mtime": "2025-10-13T16:44:59.900Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/helpers/knowledge-helpers.ts",
+      "relativePath": "tests/helpers/knowledge-helpers.ts",
+      "size": 2343,
+      "mtime": "2025-10-12T20:50:26.055Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/helpers/test-fixtures.ts",
+      "relativePath": "tests/helpers/test-fixtures.ts",
+      "size": 10540,
+      "mtime": "2025-10-14T13:51:04.247Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/helpers/verification-helpers.ts",
+      "relativePath": "tests/helpers/verification-helpers.ts",
+      "size": 7310,
+      "mtime": "2025-10-15T13:05:02.492Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/arbitration/adapters/MLPrecedentMatcher.ts",
+      "relativePath": "src/arbitration/adapters/MLPrecedentMatcher.ts",
+      "size": 15693,
+      "mtime": "2025-10-16T05:11:44.349Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/fixtures/sample-working-spec.yaml",
+      "relativePath": "tests/fixtures/sample-working-spec.yaml",
+      "size": 470,
+      "mtime": "2025-10-16T01:56:27.823Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".yaml",
+      "mimeType": "application/yaml"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/fixtures/security-test-data.json",
+      "relativePath": "tests/fixtures/security-test-data.json",
+      "size": 1405,
+      "mtime": "2025-10-15T07:13:18.287Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".json",
+      "mimeType": "application/json"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/fixtures/test-allowlist.json",
+      "relativePath": "tests/fixtures/test-allowlist.json",
+      "size": 218,
+      "mtime": "2025-10-16T04:44:29.050Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".json",
+      "mimeType": "application/json"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/adapters/AuditLogger.ts",
+      "relativePath": "src/adapters/AuditLogger.ts",
+      "size": 13611,
+      "mtime": "2025-10-16T04:03:19.835Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/adapters/DistributedCacheClient.ts",
+      "relativePath": "src/adapters/DistributedCacheClient.ts",
+      "size": 15357,
+      "mtime": "2025-10-16T04:29:07.661Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/adapters/IncidentNotifier.ts",
+      "relativePath": "src/adapters/IncidentNotifier.ts",
+      "size": 16922,
+      "mtime": "2025-10-16T03:36:23.025Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/adapters/InfrastructureController.ts",
+      "relativePath": "src/adapters/InfrastructureController.ts",
+      "size": 20480,
+      "mtime": "2025-10-16T03:36:23.143Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/src/adapters/NotificationAdapter.ts",
+      "relativePath": "src/adapters/NotificationAdapter.ts",
+      "size": 14170,
+      "mtime": "2025-10-16T04:03:19.721Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/e2e/README.md",
+      "relativePath": "tests/e2e/README.md",
+      "size": 13399,
+      "mtime": "2025-10-13T19:35:56.263Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".md",
+      "mimeType": "text/markdown"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/e2e/advanced-reasoning.e2e.test.ts",
+      "relativePath": "tests/e2e/advanced-reasoning.e2e.test.ts",
+      "size": 12117,
+      "mtime": "2025-10-13T20:28:59.384Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/e2e/arbiter-complete-workflow.e2e.test.ts",
+      "relativePath": "tests/e2e/arbiter-complete-workflow.e2e.test.ts",
+      "size": 77257,
+      "mtime": "2025-10-15T09:14:14.917Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/e2e/arbiter-orchestrator.e2e.test.ts",
+      "relativePath": "tests/e2e/arbiter-orchestrator.e2e.test.ts",
+      "size": 23550,
+      "mtime": "2025-10-14T02:43:18.006Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/e2e/code-generation.e2e.test.ts",
+      "relativePath": "tests/e2e/code-generation.e2e.test.ts",
+      "size": 9361,
+      "mtime": "2025-10-13T20:44:40.613Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/e2e/design-token.e2e.test.ts",
+      "relativePath": "tests/e2e/design-token.e2e.test.ts",
+      "size": 11284,
+      "mtime": "2025-10-13T20:44:40.650Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/e2e/terminal-agent-workflow.test.ts",
+      "relativePath": "tests/e2e/terminal-agent-workflow.test.ts",
+      "size": 14248,
+      "mtime": "2025-10-15T02:10:05.119Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/e2e/text-transformation.e2e.test.ts",
+      "relativePath": "tests/e2e/text-transformation.e2e.test.ts",
+      "size": 10506,
+      "mtime": "2025-10-13T19:51:29.372Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/e2e/utils/evaluation-helpers.ts",
+      "relativePath": "tests/e2e/utils/evaluation-helpers.ts",
+      "size": 9349,
+      "mtime": "2025-10-13T18:20:20.487Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/e2e/types/evaluation.ts",
+      "relativePath": "tests/e2e/types/evaluation.ts",
+      "size": 4613,
+      "mtime": "2025-10-13T18:20:20.140Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/e2e/runners/AdvancedReasoningRunner.ts",
+      "relativePath": "tests/e2e/runners/AdvancedReasoningRunner.ts",
+      "size": 20880,
+      "mtime": "2025-10-13T20:28:59.366Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/e2e/runners/CodeGenerationRunner.ts",
+      "relativePath": "tests/e2e/runners/CodeGenerationRunner.ts",
+      "size": 15704,
+      "mtime": "2025-10-13T20:44:40.650Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/e2e/runners/DesignTokenRunner.ts",
+      "relativePath": "tests/e2e/runners/DesignTokenRunner.ts",
+      "size": 17363,
+      "mtime": "2025-10-13T20:44:40.670Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/e2e/runners/README.md",
+      "relativePath": "tests/e2e/runners/README.md",
+      "size": 10946,
+      "mtime": "2025-10-13T18:20:19.700Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".md",
+      "mimeType": "text/markdown"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/e2e/runners/TextTransformationRunner.ts",
+      "relativePath": "tests/e2e/runners/TextTransformationRunner.ts",
+      "size": 12449,
+      "mtime": "2025-10-13T19:51:29.372Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/e2e/runners/V2EvaluationRunner.ts",
+      "relativePath": "tests/e2e/runners/V2EvaluationRunner.ts",
+      "size": 14400,
+      "mtime": "2025-10-13T19:43:31.890Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/database/ConnectionPoolManager.test.ts",
+      "relativePath": "tests/database/ConnectionPoolManager.test.ts",
+      "size": 14858,
+      "mtime": "2025-10-12T22:57:41.857Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    },
+    {
+      "path": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v2/tests/benchmarks/foundation-performance.test.ts",
+      "relativePath": "tests/benchmarks/foundation-performance.test.ts",
+      "size": 13430,
+      "mtime": "2025-10-12T22:50:23.508Z",
+      "mode": 33188,
+      "isBinary": false,
+      "extension": ".ts",
+      "mimeType": "application/typescript"
+    }
+  ],
+  "fileCount": 476,
+  "totalSize": 6406497,
+  "hash": "16306f88e5e091e3d12d3d319cccf4b237b5daf1af9cf23e00dcc8cbf4dca9bc",
+  "previousSnapshotId": "snapshot-1760594159932-jdn3fk95sd"
+}

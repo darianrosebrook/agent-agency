@@ -13,6 +13,7 @@ import {
   RubricOptimizationRequest,
 } from "@/dspy-integration";
 import { Logger } from "@/observability/Logger";
+import type { JudgmentInput } from "@/types/judge";
 import { ModelBasedJudge } from "./ModelBasedJudge";
 
 /**
@@ -221,20 +222,105 @@ export class DSPyEvaluationBridge {
   private async evaluateRubricLegacy(
     request: RubricEvaluationRequest
   ): Promise<RubricEvaluationResult> {
-    // TODO: Integrate with existing rubric evaluation
-    // This would call the existing RubricEngineeringFramework
+    this.logger.info("Using integrated rubric evaluation with ModelBasedJudge");
 
-    this.logger.info("Using legacy rubric evaluation");
+    try {
+      // Create a model-based judge for rubric evaluation
+      const judge = new ModelBasedJudge({
+        enableFallback: true,
+        timeoutMs: 30000,
+      });
 
-    return {
-      score: 0.75,
-      reasoning: "Legacy evaluation (DSPy not available)",
-      suggestions: [],
-      metadata: {
-        enhanced: false,
-        dspyUsed: false,
-      },
-    };
+      // Prepare judgment input
+      const judgmentInput: JudgmentInput = {
+        task: request.taskContext,
+        output: request.agentOutput,
+        context: {
+          rubricEvaluation: true,
+          timestamp: new Date().toISOString(),
+        },
+      };
+
+      // Get judgment from the model-based judge
+      const judgment = await judge.evaluate(judgmentInput);
+
+      // Convert judgment result to rubric evaluation result
+      const score = judgment.overallScore;
+      const reasoning = "Evaluated using model-based judge";
+
+      // Extract suggestions from criterion assessments
+      const suggestions: string[] = [];
+      for (const assessment of judgment.assessments || []) {
+        if (assessment.reasoning) {
+          suggestions.push(`${assessment.criterion}: ${assessment.reasoning}`);
+        }
+      }
+
+      return {
+        score,
+        reasoning,
+        suggestions,
+        metadata: {
+          enhanced: false,
+          dspyUsed: false,
+          judgeUsed: true,
+          confidence: judgment.overallConfidence,
+          criteriaEvaluated: judgment.assessments?.length || 0,
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        "Rubric evaluation failed, falling back to basic scoring",
+        { error }
+      );
+
+      // Fallback to basic keyword-based scoring
+      const score = this.calculateBasicRubricScore(request);
+      const reasoning = "Basic keyword-based evaluation (judge failed)";
+
+      return {
+        score,
+        reasoning,
+        suggestions: ["Consider using more specific evaluation criteria"],
+        metadata: {
+          enhanced: false,
+          dspyUsed: false,
+          fallbackUsed: true,
+        },
+      };
+    }
+  }
+
+  /**
+   * Calculate basic rubric score using keyword matching
+   */
+  private calculateBasicRubricScore(request: RubricEvaluationRequest): number {
+    const { taskContext, agentOutput, evaluationCriteria } = request;
+
+    // Simple keyword-based scoring
+    const criteriaWords = evaluationCriteria.toLowerCase().split(/\s+/);
+    const outputWords = agentOutput.toLowerCase().split(/\s+/);
+    const contextWords = taskContext.toLowerCase().split(/\s+/);
+
+    let matches = 0;
+    let totalCriteria = 0;
+
+    for (const criterion of criteriaWords) {
+      if (criterion.length > 3) {
+        // Ignore short words
+        totalCriteria++;
+        if (
+          outputWords.includes(criterion) ||
+          contextWords.includes(criterion)
+        ) {
+          matches++;
+        }
+      }
+    }
+
+    // Return score between 0.3 and 0.9 based on matches
+    const baseScore = totalCriteria > 0 ? matches / totalCriteria : 0.5;
+    return Math.max(0.3, Math.min(0.9, baseScore));
   }
 
   /**

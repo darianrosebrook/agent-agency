@@ -23,6 +23,10 @@ import {
   RuleEngineConfig,
   ViolationSeverity,
 } from "@/types/arbitration";
+import {
+  MLPrecedentMatcher,
+  MLPrecedentMatcherConfig,
+} from "./adapters/MLPrecedentMatcher";
 
 /**
  * Evaluation context for rule checking
@@ -86,7 +90,13 @@ export class ConstitutionalRuleEngine {
   /** Rule evaluation cache */
   private evaluationCache: Map<string, RuleEvaluationResult> = new Map();
 
-  constructor(config?: Partial<RuleEngineConfig>) {
+  /** ML/NLP precedent matcher */
+  private mlPrecedentMatcher: MLPrecedentMatcher;
+
+  constructor(
+    config?: Partial<RuleEngineConfig>,
+    mlConfig?: Partial<MLPrecedentMatcherConfig>
+  ) {
     this.config = {
       strictMode: true,
       usePrecedents: true,
@@ -95,6 +105,9 @@ export class ConstitutionalRuleEngine {
       enableWaivers: true,
       ...config,
     };
+
+    // Initialize ML precedent matcher
+    this.mlPrecedentMatcher = new MLPrecedentMatcher(mlConfig);
   }
 
   /**
@@ -234,7 +247,7 @@ export class ConstitutionalRuleEngine {
     const applicablePrecedents = this.findApplicablePrecedents(rule, context);
 
     // Evaluate rule condition
-    const violated = this.evaluateCondition(
+    const violated = await this.evaluateCondition(
       rule,
       context,
       applicablePrecedents
@@ -269,11 +282,11 @@ export class ConstitutionalRuleEngine {
   /**
    * Evaluate rule condition
    */
-  private evaluateCondition(
+  private async evaluateCondition(
     rule: ConstitutionalRule,
     context: EvaluationContext,
     precedents: Precedent[]
-  ): boolean {
+  ): Promise<boolean> {
     // In strict mode, any missing required evidence is a violation
     if (this.config.strictMode && this.config.requireEvidence) {
       const hasRequiredEvidence = rule.requiredEvidence.every(
@@ -287,7 +300,7 @@ export class ConstitutionalRuleEngine {
 
     // Apply precedent-based interpretation
     if (this.config.usePrecedents && precedents.length > 0) {
-      return this.evaluateWithPrecedents(rule, context, precedents);
+      return await this.evaluateWithPrecedents(rule, context, precedents);
     }
 
     // Default rule evaluation logic
@@ -295,17 +308,70 @@ export class ConstitutionalRuleEngine {
   }
 
   /**
-   * Evaluate with precedents
+   * Evaluate with precedents using ML/NLP matching
    */
-  private evaluateWithPrecedents(
+  private async evaluateWithPrecedents(
+    rule: ConstitutionalRule,
+    context: EvaluationContext,
+    precedents: Precedent[]
+  ): Promise<boolean> {
+    if (!this.config.usePrecedents || precedents.length === 0) {
+      return true; // No precedents to check against
+    }
+
+    try {
+      // Use ML/NLP precedent matcher for better accuracy
+      const mlMatches = await this.mlPrecedentMatcher.findSimilarPrecedents(
+        {
+          action: context.action,
+          actor: context.actor,
+          parameters: context.parameters,
+          environment: context.environment,
+          category: this.getRuleCategory(context.action),
+          severity: ViolationSeverity.MODERATE, // Default severity
+        },
+        precedents
+      );
+
+      // If no similar precedent found with ML matching, allow the action
+      if (mlMatches.length === 0) {
+        return true;
+      }
+
+      // Use the best ML match
+      const bestMatch = mlMatches[0];
+
+      // Log ML matching results for transparency
+      console.log(
+        `ML Precedent Match: ${bestMatch.score.toFixed(3)} - ${
+          bestMatch.reasoning
+        }`
+      );
+
+      return bestMatch.precedent.verdict.outcome === "rejected";
+    } catch (error) {
+      console.warn(
+        "ML precedent matching failed, falling back to rule-based matching:",
+        error
+      );
+
+      // Fallback to original rule-based matching
+      return this.evaluateWithPrecedentsFallback(rule, context, precedents);
+    }
+  }
+
+  /**
+   * Fallback precedent evaluation using original rule-based approach
+   */
+  private evaluateWithPrecedentsFallback(
     rule: ConstitutionalRule,
     context: EvaluationContext,
     precedents: Precedent[]
   ): boolean {
-    // Find most similar precedent using semantic matching
-    const scoredPrecedents = precedents.map(precedent => ({
+    // Find most similar precedent using original method
+    const scoredPrecedents = precedents.map((precedent) => ({
       precedent,
-      score: this.calculatePrecedentSimilarity(context, precedent)
+      score: this.calculatePrecedentSimilarity(context, precedent),
     }));
 
     // Sort by similarity score (highest first)
@@ -337,7 +403,9 @@ export class ConstitutionalRuleEngine {
     const maxScore = 100;
 
     // Category matching (20 points)
-    if (precedent.applicability.category === this.getRuleCategory(context.action)) {
+    if (
+      precedent.applicability.category === this.getRuleCategory(context.action)
+    ) {
       score += 20;
     }
 
@@ -361,12 +429,17 @@ export class ConstitutionalRuleEngine {
     const contextText = [
       context.action,
       JSON.stringify(context.parameters),
-      JSON.stringify(context.environment)
-    ].join(" ").toLowerCase();
+      JSON.stringify(context.environment),
+    ]
+      .join(" ")
+      .toLowerCase();
 
     let factMatchScore = 0;
     for (const fact of precedent.keyFacts) {
-      const factSimilarity = this.calculateTextSimilarity(contextText, fact.toLowerCase());
+      const factSimilarity = this.calculateTextSimilarity(
+        contextText,
+        fact.toLowerCase()
+      );
       factMatchScore = Math.max(factMatchScore, factSimilarity);
     }
     score += factMatchScore * 35;
@@ -381,13 +454,14 @@ export class ConstitutionalRuleEngine {
     const words1 = new Set(text1.toLowerCase().split(/\s+/));
     const words2 = new Set(text2.toLowerCase().split(/\s+/));
 
-    const intersection = new Set([...words1].filter(x => words2.has(x)));
+    const intersection = new Set([...words1].filter((x) => words2.has(x)));
     const union = new Set([...words1, ...words2]);
 
     const overlap = intersection.size / union.size;
 
     // Bonus for substring matches (suggests stronger semantic connection)
-    const substringBonus = text1.includes(text2) || text2.includes(text1) ? 0.2 : 0;
+    const substringBonus =
+      text1.includes(text2) || text2.includes(text1) ? 0.2 : 0;
 
     return Math.min(overlap + substringBonus, 1.0);
   }
@@ -400,7 +474,9 @@ export class ConstitutionalRuleEngine {
     const lowerActor = actor.toLowerCase();
     const lowerPattern = pattern.toLowerCase();
 
-    return lowerActor.includes(lowerPattern) || lowerPattern.includes(lowerActor);
+    return (
+      lowerActor.includes(lowerPattern) || lowerPattern.includes(lowerActor)
+    );
   }
 
   /**
@@ -687,5 +763,19 @@ export class ConstitutionalRuleEngine {
       cacheSize: this.evaluationCache.size,
       rulesByCategory,
     };
+  }
+
+  /**
+   * Configure ML precedent matcher
+   */
+  public configureMLMatcher(config: Partial<MLPrecedentMatcherConfig>): void {
+    this.mlPrecedentMatcher.updateConfig(config);
+  }
+
+  /**
+   * Get ML precedent matcher configuration
+   */
+  public getMLMatcherConfig(): MLPrecedentMatcherConfig {
+    return this.mlPrecedentMatcher.getConfig();
   }
 }

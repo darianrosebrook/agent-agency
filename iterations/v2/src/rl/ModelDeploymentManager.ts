@@ -359,8 +359,12 @@ export class ModelDeploymentManager extends EventEmitter {
     }
 
     // Get performance data filtered by version
-    const controlStats = this.performanceTracker.getStatsByVersion(testConfig.controlVersion);
-    const treatmentStats = this.performanceTracker.getStatsByVersion(testConfig.treatmentVersion);
+    const controlStats = this.performanceTracker.getStatsByVersion(
+      testConfig.controlVersion
+    );
+    const treatmentStats = this.performanceTracker.getStatsByVersion(
+      testConfig.treatmentVersion
+    );
 
     // Convert performance stats to A/B test metrics format
     const controlMetrics = {

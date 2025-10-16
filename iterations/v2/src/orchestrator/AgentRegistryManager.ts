@@ -587,6 +587,15 @@ export class AgentRegistryManager {
   }
 
   /**
+   * Get all registered agents
+   *
+   * @returns Array of all agent profiles
+   */
+  getAllAgents(): AgentProfile[] {
+    return Array.from(this.agents.values());
+  }
+
+  /**
    * Query agents by capability and return sorted by performance.
    *
    * @param query - Query parameters with required capabilities

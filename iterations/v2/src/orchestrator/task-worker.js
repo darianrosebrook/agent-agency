@@ -8,7 +8,7 @@
 
 import { performance } from "perf_hooks";
 import { parentPort, workerData } from "worker_threads";
-import { ArtifactSandbox } from "./workers/ArtifactSandbox.js";
+import { ArtifactSandbox } from "./workers/ArtifactSandbox.ts";
 
 const {
   workerId,

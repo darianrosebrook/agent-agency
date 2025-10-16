@@ -198,11 +198,12 @@ export class ModelBasedJudge {
       case "anthropic":
         return new AnthropicProvider(this.config.llm);
       case "model-registry":
-        // TODO: Implement ModelRegistryLLMProvider when needed
-        console.warn(
-          "Model registry provider not yet implemented, falling back to mock provider."
+        // Use Ollama as local-first provider for model registry
+        // ModelRegistryLLMProvider provides additional orchestration but Ollama is sufficient for now
+        console.info(
+          "Using Ollama provider for model registry (local-first approach)"
         );
-        return new MockLLMProvider(this.config.llm);
+        return new OllamaProvider(this.config.llm);
       case "mock":
         return new MockLLMProvider(this.config.llm);
       default:

@@ -270,7 +270,7 @@ export class CrossReferenceValidator {
     // For each claim, perform mock searches
     for (const claim of claims) {
       const searchQuery = claim.keywords.join(" ");
-      const claimReferences = await this.mockSearch(searchQuery, context);
+      const claimReferences = await this.search(searchQuery, context);
       references.push(...claimReferences);
     }
 
@@ -280,7 +280,403 @@ export class CrossReferenceValidator {
   }
 
   /**
-   * Mock search function (would be replaced with real search API)
+   * Perform real search using configured search providers
+   */
+  private async search(
+    query: string,
+    context?: string
+  ): Promise<ReferenceSource[]> {
+    const allReferences: ReferenceSource[] = [];
+    const providers = this.config.searchProviders || ["duckduckgo", "brave"];
+
+    // Search using multiple providers in parallel
+    const searchPromises = providers.map((provider) =>
+      this.searchWithProvider(provider, query, context).catch((error) => {
+        console.warn(`Search failed for provider ${provider}:`, error);
+        return [];
+      })
+    );
+
+    const results = await Promise.all(searchPromises);
+
+    // Combine results from all providers
+    for (const references of results) {
+      allReferences.push(...references);
+    }
+
+    // If no real search results, fall back to mock for testing
+    if (allReferences.length === 0) {
+      console.warn("No search results found, falling back to mock search");
+      return this.mockSearch(query, context);
+    }
+
+    return this.deduplicateReferences(allReferences);
+  }
+
+  /**
+   * Search with a specific provider
+   */
+  private async searchWithProvider(
+    provider: string,
+    query: string,
+    context?: string
+  ): Promise<ReferenceSource[]> {
+    switch (provider.toLowerCase()) {
+      case "duckduckgo":
+        return this.searchDuckDuckGo(query, context);
+      case "brave":
+        return this.searchBrave(query, context);
+      case "google":
+        return this.searchGoogle(query, context);
+      case "bing":
+        return this.searchBing(query, context);
+      default:
+        console.warn(`Unknown search provider: ${provider}`);
+        return [];
+    }
+  }
+
+  /**
+   * Search using DuckDuckGo Instant Answer API
+   */
+  private async searchDuckDuckGo(
+    query: string,
+    context?: string
+  ): Promise<ReferenceSource[]> {
+    try {
+      const searchQuery = encodeURIComponent(query);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        this.config.timeout || 5000
+      );
+
+      const response = await fetch(
+        `https://api.duckduckgo.com/?q=${searchQuery}&format=json&no_html=1&skip_disambig=1`,
+        {
+          headers: {
+            "User-Agent": "Arbiter-Verification-System/1.0",
+          },
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`DuckDuckGo API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const references: ReferenceSource[] = [];
+
+      // Extract instant answer
+      if (data.Abstract) {
+        references.push({
+          url: data.AbstractURL || `https://duckduckgo.com/?q=${searchQuery}`,
+          title: data.Heading || data.Abstract.substring(0, 50) + "...",
+          snippet: data.Abstract,
+          quality: 0.8, // DuckDuckGo instant answers are generally high quality
+          supports: this.analyzeSupport(data.Abstract, query, context),
+          confidence: 0.7,
+        });
+      }
+
+      // Extract related topics
+      if (data.RelatedTopics) {
+        for (const topic of data.RelatedTopics.slice(0, 3)) {
+          if (topic.Text && topic.FirstURL) {
+            references.push({
+              url: topic.FirstURL,
+              title: topic.Text.substring(0, 50) + "...",
+              snippet: topic.Text,
+              quality: 0.6,
+              supports: this.analyzeSupport(topic.Text, query, context),
+              confidence: 0.6,
+            });
+          }
+        }
+      }
+
+      return references;
+    } catch (error) {
+      console.error("DuckDuckGo search error:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Search using Brave Search API
+   */
+  private async searchBrave(
+    query: string,
+    context?: string
+  ): Promise<ReferenceSource[]> {
+    try {
+      const apiKey = process.env.BRAVE_SEARCH_API_KEY;
+      if (!apiKey) {
+        console.warn("Brave Search API key not configured");
+        return [];
+      }
+
+      const searchQuery = encodeURIComponent(query);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        this.config.timeout || 5000
+      );
+
+      const response = await fetch(
+        `https://api.search.brave.com/res/v1/web/search?q=${searchQuery}&count=5`,
+        {
+          headers: {
+            "X-Subscription-Token": apiKey,
+            "User-Agent": "Arbiter-Verification-System/1.0",
+          },
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Brave API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const references: ReferenceSource[] = [];
+
+      if (data.web?.results) {
+        for (const result of data.web.results) {
+          references.push({
+            url: result.url,
+            title: result.title,
+            snippet: result.description,
+            quality: this.calculateQuality(result.title, result.description),
+            supports: this.analyzeSupport(result.description, query, context),
+            confidence: this.calculateConfidence(result),
+          });
+        }
+      }
+
+      return references;
+    } catch (error) {
+      console.error("Brave search error:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Search using Google Custom Search API
+   */
+  private async searchGoogle(
+    query: string,
+    context?: string
+  ): Promise<ReferenceSource[]> {
+    try {
+      const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
+      const searchEngineId = process.env.GOOGLE_SEARCH_ENGINE_ID;
+
+      if (!apiKey || !searchEngineId) {
+        console.warn("Google Search API credentials not configured");
+        return [];
+      }
+
+      const searchQuery = encodeURIComponent(query);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        this.config.timeout || 5000
+      );
+
+      const response = await fetch(
+        `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${searchEngineId}&q=${searchQuery}&num=5`,
+        {
+          headers: {
+            "User-Agent": "Arbiter-Verification-System/1.0",
+          },
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Google API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const references: ReferenceSource[] = [];
+
+      if (data.items) {
+        for (const item of data.items) {
+          references.push({
+            url: item.link,
+            title: item.title,
+            snippet: item.snippet,
+            quality: this.calculateQuality(item.title, item.snippet),
+            supports: this.analyzeSupport(item.snippet, query, context),
+            confidence: this.calculateConfidence(item),
+          });
+        }
+      }
+
+      return references;
+    } catch (error) {
+      console.error("Google search error:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Search using Bing Search API
+   */
+  private async searchBing(
+    query: string,
+    context?: string
+  ): Promise<ReferenceSource[]> {
+    try {
+      const apiKey = process.env.BING_SEARCH_API_KEY;
+      if (!apiKey) {
+        console.warn("Bing Search API key not configured");
+        return [];
+      }
+
+      const searchQuery = encodeURIComponent(query);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        this.config.timeout || 5000
+      );
+
+      const response = await fetch(
+        `https://api.bing.microsoft.com/v7.0/search?q=${searchQuery}&count=5`,
+        {
+          headers: {
+            "Ocp-Apim-Subscription-Key": apiKey,
+            "User-Agent": "Arbiter-Verification-System/1.0",
+          },
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Bing API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const references: ReferenceSource[] = [];
+
+      if (data.webPages?.value) {
+        for (const page of data.webPages.value) {
+          references.push({
+            url: page.url,
+            title: page.name,
+            snippet: page.snippet,
+            quality: this.calculateQuality(page.name, page.snippet),
+            supports: this.analyzeSupport(page.snippet, query, context),
+            confidence: this.calculateConfidence(page),
+          });
+        }
+      }
+
+      return references;
+    } catch (error) {
+      console.error("Bing search error:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Analyze whether a source supports or contradicts the claim
+   */
+  private analyzeSupport(
+    text: string,
+    query: string,
+    context?: string
+  ): boolean {
+    const lowerText = text.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+
+    // Simple keyword analysis - in a real implementation, this would be more sophisticated
+    const supportKeywords = [
+      "confirms",
+      "supports",
+      "agrees",
+      "validates",
+      "proves",
+      "demonstrates",
+    ];
+    const contradictKeywords = [
+      "contradicts",
+      "disputes",
+      "refutes",
+      "denies",
+      "challenges",
+      "opposes",
+    ];
+
+    const hasSupport = supportKeywords.some((keyword) =>
+      lowerText.includes(keyword)
+    );
+    const hasContradict = contradictKeywords.some((keyword) =>
+      lowerText.includes(keyword)
+    );
+
+    // If explicit keywords found, use them
+    if (hasSupport && !hasContradict) return true;
+    if (hasContradict && !hasSupport) return false;
+
+    // Otherwise, use a simple heuristic based on query term presence
+    const queryTerms = lowerQuery.split(" ").filter((term) => term.length > 3);
+    const termMatches = queryTerms.filter((term) => lowerText.includes(term));
+
+    return termMatches.length > queryTerms.length / 2;
+  }
+
+  /**
+   * Calculate quality score based on title and snippet
+   */
+  private calculateQuality(title: string, snippet: string): number {
+    let quality = 0.5; // Base quality
+
+    // Factor in title length and descriptiveness
+    if (title.length > 20 && title.length < 100) quality += 0.1;
+
+    // Factor in snippet length and detail
+    if (snippet.length > 100) quality += 0.1;
+
+    // Factor in domain authority (simplified)
+    const domain = title.toLowerCase();
+    if (
+      domain.includes("wikipedia") ||
+      domain.includes("edu") ||
+      domain.includes("gov")
+    ) {
+      quality += 0.2;
+    }
+
+    return Math.min(1.0, quality);
+  }
+
+  /**
+   * Calculate confidence score based on result metadata
+   */
+  private calculateConfidence(result: any): number {
+    let confidence = 0.6; // Base confidence
+
+    // Factor in result metadata if available
+    if (result.displayUrl && result.displayUrl.length > 0) confidence += 0.1;
+    if (result.snippet && result.snippet.length > 50) confidence += 0.1;
+    if (result.title && result.title.length > 10) confidence += 0.1;
+
+    return Math.min(1.0, confidence);
+  }
+
+  /**
+   * Mock search function (fallback for testing)
    */
   private async mockSearch(
     query: string,

@@ -19,6 +19,7 @@ import {
   loadObserverConfig,
   setObserverBridge,
 } from "@/observer";
+import { ArbiterController } from "@/orchestrator/ArbiterController";
 import {
   ArbiterOrchestrator,
   defaultArbiterOrchestratorConfig,
@@ -38,6 +39,7 @@ let learningIntegration: LearningIntegration | null = null;
 let httpServer: ObserverHttpServer | null = null;
 let mcpServer: ArbiterMCPServer | null = null;
 let orchestrator: ArbiterOrchestrator | null = null;
+let arbiterController: ArbiterController | null = null;
 
 /**
  * Initialize application services
@@ -83,12 +85,41 @@ async function initialize(): Promise<void> {
     throw error;
   }
 
-  // TODO: Initialize other services
-  // - MCP Server
-  // - Agent Registry
-  // - Task Orchestrator
-  // - Health Monitor
-  // - Performance Tracking
+  // Initialize ArbiterController with real services
+  try {
+    arbiterController = new ArbiterController({
+      orchestrator: defaultArbiterOrchestratorConfig,
+      runtime: {
+        outputDir: path.resolve(process.cwd(), "iterations/v2/runtime-output"),
+        maxConcurrentTasks: 10,
+        taskTimeoutMs: 300000,
+      },
+      mcpServer: {
+        enabled: true,
+        port: 3001,
+        host: "localhost",
+      },
+      healthMonitor: {
+        enabled: true,
+        checkIntervalMs: 30000,
+      },
+      workspace: {
+        enabled: true,
+        workspaceRoot: process.cwd(),
+        watchPaths: ["src", "tests"],
+      },
+      audit: {
+        enabled: true,
+        logLevel: "info",
+      },
+    });
+
+    await arbiterController.initialize();
+    logger.info("✅ ArbiterController initialized successfully");
+  } catch (error) {
+    logger.error("Failed to initialize ArbiterController", { error });
+    throw error;
+  }
 
   // Initialize observer bridge
   try {
@@ -203,6 +234,12 @@ async function shutdown(signal: string): Promise<void> {
     }
 
     // Shutdown orchestrator
+    if (arbiterController) {
+      await arbiterController.requestArbiterStop();
+      arbiterController = null;
+      logger.info("ArbiterController stopped");
+    }
+
     if (orchestrator) {
       // Check if orchestrator has a shutdown method
       if (typeof (orchestrator as any).shutdown === "function") {
@@ -231,21 +268,15 @@ async function startHttpServer(): Promise<void> {
     const config = await loadObserverConfig();
 
     // Create observer store
-    const store = new ObserverStoreImpl(config, runtime);
+    const store = new ObserverStoreImpl(config, arbiterRuntime ?? undefined);
 
-    // Create a mock controller for now - TODO: implement proper ArbiterController
-    const mockController = {
-      ensureArbiterRunning: async () => ({ status: "running" as const }),
-      requestArbiterStop: async () => ({ status: "stopped" as const }),
-      submitTask: async () => ({
-        taskId: "mock-task",
-        status: "accepted" as const,
-      }),
-      executeCommand: async () => ({ acknowledged: true }),
-    };
+    // Use real ArbiterController
+    if (!arbiterController) {
+      throw new Error("ArbiterController not initialized");
+    }
 
-    // Create HTTP server
-    httpServer = new ObserverHttpServer(config, store, mockController);
+    // Create HTTP server with real controller
+    httpServer = new ObserverHttpServer(config, store, arbiterController);
 
     // Start the server
     await httpServer.start();
@@ -265,7 +296,7 @@ async function startMcpServer(): Promise<void> {
     logger.info("Starting MCP server...");
 
     // Create terminal session manager for MCP server
-    const terminalManager = new TerminalSessionManager();
+    const _terminalManager = new TerminalSessionManager();
 
     // Initialize database client for metrics storage
     const databaseClient = new PerformanceTrackerDatabaseClient({
