@@ -27,9 +27,9 @@ export interface RetryAttempt {
 export class TaskExecutionError extends Error {
   constructor(
     message: string,
-    public readonly originalError: any,
-    public readonly taskId: string,
-    public readonly attempts: number
+    public readonly _originalError: any,
+    public readonly _taskId: string,
+    public readonly _attempts: number
   ) {
     super(message);
     this.name = "TaskExecutionError";
@@ -40,7 +40,7 @@ export class TaskRetryHandler extends EventEmitter {
   private attempts: Map<string, RetryAttempt[]> = new Map();
 
   constructor(
-    private config: RetryConfig = {
+    private _config: RetryConfig = {
       maxRetries: 3,
       initialBackoffMs: 1000,
       maxBackoffMs: 30000,
@@ -146,7 +146,7 @@ export class TaskRetryHandler extends EventEmitter {
     taskId: string,
     attempt: number,
     error: any,
-    context?: Record<string, any>
+    _context?: Record<string, any>
   ): void {
     const retryAttempt: RetryAttempt = {
       taskId,

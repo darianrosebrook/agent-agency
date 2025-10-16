@@ -27,7 +27,7 @@ export interface RetryConfig {
   jitter: boolean;
 
   /** Function to determine if error is retryable */
-  isRetryable?: (error: any) => boolean;
+  isRetryable?: (_error: any) => boolean;
 
   /** Name for logging */
   name?: string;
@@ -146,7 +146,7 @@ export class RetryPolicy {
  * Error thrown when all retry attempts are exhausted
  */
 export class RetryExhaustedError extends Error {
-  constructor(message: string, public stats: RetryStats) {
+  constructor(message: string, public _stats: RetryStats) {
     super(message);
     this.name = "RetryExhaustedError";
   }

@@ -305,7 +305,7 @@ describe("Artifact Sandbox Security", () => {
         { path: "test.unknown", content: "unknown content", mime: undefined },
       ];
 
-      for (const { path, content, mime } of testFiles) {
+      for (const { path, content, _mime } of testFiles) {
         await sandbox.writeFile(path, content);
       }
 

@@ -19,7 +19,7 @@ import type {
  * Model registry errors
  */
 export class ModelRegistryError extends Error {
-  constructor(message: string, public code: string) {
+  constructor(message: string, public _code: string) {
     super(message);
     this.name = "ModelRegistryError";
   }

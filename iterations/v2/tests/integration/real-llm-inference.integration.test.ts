@@ -55,7 +55,7 @@ function createPerformanceProfile(
 describe("Real LLM Inference Integration Tests", () => {
   let registry: ModelRegistry;
   let ollamaProvider: OllamaProvider;
-  let performanceTracker: PerformanceTracker;
+  let _performanceTracker: PerformanceTracker;
   let costTracker: ComputeCostTracker;
   let registeredModelId: string;
 
@@ -102,7 +102,7 @@ describe("Real LLM Inference Integration Tests", () => {
     });
 
     // Initialize trackers
-    performanceTracker = new PerformanceTracker();
+    _performanceTracker = new PerformanceTracker();
     costTracker = new ComputeCostTracker();
 
     console.log("✅ Real LLM Integration Tests Ready\n");
@@ -306,7 +306,7 @@ Code:`;
 
       // Perform LLM call
       const prompt = "Rewrite this professionally: 'sup dude'";
-      const response = await ollamaProvider.generate({
+      const _response = await ollamaProvider.generate({
         prompt,
         temperature: 0.7,
         maxTokens: 50,

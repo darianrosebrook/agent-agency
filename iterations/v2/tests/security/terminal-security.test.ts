@@ -45,7 +45,7 @@ afterEach(async () => {
 
 describe("Command Injection Prevention", () => {
   describe("Shell Metacharacter Detection", () => {
-    const dangerousChars = [
+    const _dangerousChars = [
       ";", // Command chaining
       "|", // Pipe
       "&", // Background execution

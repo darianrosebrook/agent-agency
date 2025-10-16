@@ -49,7 +49,7 @@ class MockMCPClient {
     this.responses.set(toolName, response);
   }
 
-  async callTool(name: string, args: any): Promise<any> {
+  async callTool(name: string, _args: any): Promise<any> {
     const response = this.responses.get(name);
     if (!response) {
       throw new Error(`No mock response for tool: ${name}`);
@@ -60,7 +60,7 @@ class MockMCPClient {
 
 describe("Terminal Agent E2E Workflow", () => {
   let orchestrator: ArbiterOrchestrator;
-  let mockMcpClient: MockMCPClient;
+  let _mockMcpClient: MockMCPClient;
   const testProjectRoot = path.join(__dirname, "../test-project-root");
 
   afterEach(async () => {

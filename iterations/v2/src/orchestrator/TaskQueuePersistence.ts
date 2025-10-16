@@ -10,15 +10,17 @@
 import { Task, TaskStatus } from "../types/arbiter-orchestration";
 
 export interface DatabaseConnection {
-  query(sql: string, params?: any[]): Promise<any[]>;
-  transaction<T>(callback: (tx: DatabaseConnection) => Promise<T>): Promise<T>;
+  query(_sql: string, _params?: any[]): Promise<any[]>;
+  transaction<T>(
+    _callback: (_tx: DatabaseConnection) => Promise<T>
+  ): Promise<T>;
 }
 
 /**
  * Task Queue Database Operations
  */
 export class TaskQueuePersistence {
-  constructor(private db: DatabaseConnection) {}
+  constructor(private _db: DatabaseConnection) {}
 
   /**
    * Initialize database tables if they don't exist

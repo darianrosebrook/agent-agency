@@ -197,7 +197,7 @@ export class CAWSValidator {
     options: ValidationOptions = {}
   ): Promise<CAWSValidationResult> {
     // First validate with suggestions to get fixes
-    const validationWithSuggestions =
+    const _validationWithSuggestions =
       await this.specValidator.validateWithSuggestions(spec, {
         autoFix: true,
       });
@@ -357,7 +357,7 @@ export class CAWSValidator {
    */
   private async executeQualityGates(
     spec: WorkingSpec,
-    policy: any // CAWSPolicy
+    _policy: any // CAWSPolicy
   ): Promise<QualityGateResult[]> {
     const results: QualityGateResult[] = [];
     const startTime = Date.now();
@@ -681,7 +681,7 @@ export class CAWSValidator {
       let lintingResult;
       try {
         // Run linting
-        const lintOutput = execSync("npm run lint", {
+        const _lintOutput = execSync("npm run lint", {
           cwd: process.cwd(),
           encoding: "utf8",
           stdio: "pipe",
@@ -749,7 +749,7 @@ export class CAWSValidator {
       let securityResult;
       try {
         // Run security audit
-        const securityOutput = execSync("npm audit --audit-level=moderate", {
+        const _securityOutput = execSync("npm audit --audit-level=moderate", {
           cwd: process.cwd(),
           encoding: "utf8",
           stdio: "pipe",

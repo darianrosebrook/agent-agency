@@ -271,7 +271,7 @@ class WorkerPoolManager extends EventEmitter {
 
   async shutdown(): Promise<void> {
     const shutdownPromises = Array.from(this.workers.entries()).map(
-      ([workerId, worker]) => {
+      ([_workerId, worker]) => {
         return new Promise<void>((resolve) => {
           const timeoutId = setTimeout(() => worker.terminate(), 5000); // Force terminate after 5s
           worker.once("exit", () => {
@@ -603,7 +603,7 @@ export class TaskOrchestrator extends EventEmitter {
       timestamp: new Date().toISOString(),
     };
 
-    const executionId = this.performanceTracker.startTaskExecution(
+    const _executionId = this.performanceTracker.startTaskExecution(
       sanitizedTask.id,
       routingDecision.selectedAgent.id,
       performanceRoutingDecision,
@@ -858,7 +858,7 @@ export class TaskOrchestrator extends EventEmitter {
    */
   private async initiatePleading(taskId: string, context: any): Promise<void> {
     try {
-      const workflow = await this.pleadingManager.initiatePleading(
+      const _workflow = await this.pleadingManager.initiatePleading(
         taskId,
         context
       );
@@ -986,7 +986,7 @@ export class TaskOrchestrator extends EventEmitter {
 
   private shouldInitiatePleading(
     execution: TaskExecution,
-    error: Error
+    _error: Error
   ): boolean {
     // Simple logic: initiate pleading for high-priority tasks that failed
     return execution.attempts >= 2; // After at least 2 attempts

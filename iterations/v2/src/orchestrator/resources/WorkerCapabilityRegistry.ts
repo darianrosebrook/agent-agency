@@ -14,6 +14,9 @@ import {
   WorkerRegistrationRequest,
 } from "../repositories/WorkerCapabilityRepository";
 
+// Node.js types
+type NodeJS_Timeout = ReturnType<typeof setTimeout>;
+
 export interface WorkerCapabilityRegistry {
   /**
    * Register a new worker with capabilities
@@ -79,7 +82,7 @@ export interface WorkerRegistryStatistics {
  * Implementation of WorkerCapabilityRegistry with PostgreSQL backing
  */
 export class WorkerCapabilityRegistryImpl implements WorkerCapabilityRegistry {
-  private cleanupInterval: NodeJS.Timeout | null = null;
+  private cleanupInterval: NodeJS_Timeout | null = null;
   private lastCleanup: Date | null = null;
 
   constructor(

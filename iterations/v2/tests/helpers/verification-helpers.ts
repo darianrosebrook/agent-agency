@@ -149,7 +149,7 @@ export function createCompleteTestResult(
  */
 export function createTestRequests(
   count: number,
-  baseId = "test"
+  _baseId = "test"
 ): VerificationRequest[] {
   const priorities = [
     VerificationPriority.LOW,

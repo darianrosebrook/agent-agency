@@ -20,7 +20,7 @@ import type { ModelRegistry } from "./ModelRegistry";
  * Model selector error
  */
 export class ModelSelectorError extends Error {
-  constructor(message: string, public code: string) {
+  constructor(message: string, public _code: string) {
     super(message);
     this.name = "ModelSelectorError";
   }
@@ -40,8 +40,8 @@ export class LocalModelSelector {
     new Map();
 
   constructor(
-    private registry: ModelRegistry,
-    private costTracker: ComputeCostTracker
+    private _registry: ModelRegistry,
+    private _costTracker: ComputeCostTracker
   ) {}
 
   /**

@@ -266,7 +266,7 @@ export class SystemHealthMonitor extends EventEmitter {
   /**
    * Record agent error
    */
-  recordAgentError(agentId: string, errorType: string = "generic"): void {
+  recordAgentError(agentId: string, _errorType: string = "generic"): void {
     const metrics = this.agentHealthMetrics.get(agentId);
     if (!metrics) {
       this.updateAgentHealth(agentId, {

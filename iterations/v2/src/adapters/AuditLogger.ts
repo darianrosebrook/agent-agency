@@ -84,10 +84,10 @@ export interface AuditConfig {
 }
 
 export interface AuditStorageProvider {
-  write(event: AuditEvent): Promise<void>;
-  writeBatch(events: AuditEvent[]): Promise<void>;
-  query(query: AuditQuery): Promise<AuditEvent[]>;
-  delete(olderThan: Date): Promise<number>;
+  write(_event: AuditEvent): Promise<void>;
+  writeBatch(_events: AuditEvent[]): Promise<void>;
+  query(_query: AuditQuery): Promise<AuditEvent[]>;
+  delete(_olderThan: Date): Promise<number>;
   healthCheck(): Promise<{ healthy: boolean; error?: string }>;
 }
 
@@ -98,7 +98,7 @@ export class DatabaseAuditStorage implements AuditStorageProvider {
   private batchBuffer: AuditEvent[] = [];
   private flushTimer?: ReturnType<typeof setTimeout>;
 
-  constructor(private config: Record<string, any>, private logger: Logger) {
+  constructor(private config: Record<string, any>, private _logger: Logger) {
     if (config.batching?.enabled) {
       this.startBatchFlush();
     }
@@ -245,7 +245,7 @@ export class DatabaseAuditStorage implements AuditStorageProvider {
  * File-based audit storage provider
  */
 export class FileAuditStorage implements AuditStorageProvider {
-  constructor(private config: Record<string, any>, private logger: Logger) {}
+  constructor(private _config: Record<string, any>, private _logger: Logger) {}
 
   async write(event: AuditEvent): Promise<void> {
     try {
@@ -268,7 +268,7 @@ export class FileAuditStorage implements AuditStorageProvider {
     }
   }
 
-  async query(query: AuditQuery): Promise<AuditEvent[]> {
+  async query(_query: AuditQuery): Promise<AuditEvent[]> {
     // File-based storage typically doesn't support complex queries
     this.logger.warn("File-based audit storage does not support queries");
     return [];
@@ -301,7 +301,7 @@ export class FileAuditStorage implements AuditStorageProvider {
 export class MockAuditStorage implements AuditStorageProvider {
   private events: AuditEvent[] = [];
 
-  constructor(private config: Record<string, any>, private logger: Logger) {}
+  constructor(private _config: Record<string, any>, private _logger: Logger) {}
 
   async write(event: AuditEvent): Promise<void> {
     this.events.push(event);
@@ -367,7 +367,7 @@ export class MockAuditStorage implements AuditStorageProvider {
 export class AuditLogger {
   private storage: AuditStorageProvider;
 
-  constructor(private config: AuditConfig, private logger: Logger) {
+  constructor(private _config: AuditConfig, private _logger: Logger) {
     this.storage = this.createStorageProvider();
   }
 

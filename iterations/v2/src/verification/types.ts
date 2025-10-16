@@ -382,21 +382,21 @@ export interface ClaimExtractionAndVerificationProcessor {
   disambiguationStage: {
     /** Identify ambiguities in a sentence */
     identifyAmbiguities(
-      sentence: string,
-      context: ConversationContext
+      _sentence: string,
+      _context: ConversationContext
     ): Promise<AmbiguityAnalysis>;
 
     /** Resolve identified ambiguities */
     resolveAmbiguities(
-      sentence: string,
-      ambiguities: AmbiguityAnalysis,
-      context: ConversationContext
+      _sentence: string,
+      _ambiguities: AmbiguityAnalysis,
+      _context: ConversationContext
     ): Promise<DisambiguationResult>;
 
     /** Identify ambiguities that cannot be resolved */
     detectUnresolvableAmbiguities(
-      sentence: string,
-      context: ConversationContext
+      _sentence: string,
+      _context: ConversationContext
     ): Promise<UnresolvableAmbiguity[]>;
   };
 
@@ -404,14 +404,14 @@ export interface ClaimExtractionAndVerificationProcessor {
   qualificationStage: {
     /** Detect verifiable content in a sentence */
     detectVerifiableContent(
-      sentence: string,
-      context: ConversationContext
+      _sentence: string,
+      _context: ConversationContext
     ): Promise<VerifiableContentResult>;
 
     /** Rewrite unverifiable content */
     rewriteUnverifiableContent(
-      sentence: string,
-      context: ConversationContext
+      _sentence: string,
+      _context: ConversationContext
     ): Promise<string | null>;
   };
 
@@ -419,14 +419,14 @@ export interface ClaimExtractionAndVerificationProcessor {
   decompositionStage: {
     /** Extract atomic claims from disambiguated text */
     extractAtomicClaims(
-      disambiguatedSentence: string,
-      context: ConversationContext
+      _disambiguatedSentence: string,
+      _context: ConversationContext
     ): Promise<AtomicClaim[]>;
 
     /** Add contextual brackets for implied context */
     addContextualBrackets(
-      claim: string,
-      impliedContext: string
+      _claim: string,
+      _impliedContext: string
     ): Promise<string>;
   };
 
@@ -434,14 +434,14 @@ export interface ClaimExtractionAndVerificationProcessor {
   verificationStage: {
     /** Verify claims against CAWS evidence requirements */
     verifyClaimEvidence(
-      claim: ExtractedClaim,
-      evidence: EvidenceManifest
+      _claim: ExtractedClaim,
+      _evidence: EvidenceManifest
     ): Promise<VerificationResult>;
 
     /** Check claim compliance with CAWS budgets */
     validateClaimScope(
-      claim: ExtractedClaim,
-      workingSpec: WorkingSpec
+      _claim: ExtractedClaim,
+      _workingSpec: WorkingSpec
     ): Promise<ScopeValidation>;
   };
 }
@@ -452,21 +452,21 @@ export interface ClaimExtractionAndVerificationProcessor {
 export interface AmbiguityHandler {
   /** Identify unresolvable ambiguities */
   detectUnresolvableAmbiguities(
-    sentence: string,
-    context: ConversationContext
+    _sentence: string,
+    _context: ConversationContext
   ): Promise<UnresolvableAmbiguity[]>;
 
   /** Handle referential ambiguity */
   handleReferentialAmbiguity(
-    ambiguousPhrase: string,
-    context: ConversationContext
+    _ambiguousPhrase: string,
+    _context: ConversationContext
   ): Promise<ResolutionAttempt>;
 
   /** Handle structural ambiguity */
   handleStructuralAmbiguity(
-    sentence: string,
-    possibleInterpretations: string[],
-    context: ConversationContext
+    _sentence: string,
+    _possibleInterpretations: string[],
+    _context: ConversationContext
   ): Promise<ResolutionAttempt>;
 }
 
@@ -483,7 +483,11 @@ export interface ResolutionAttempt {
   /** Confidence in the resolution */
   confidence: number;
   /** Resolution strategy employed */
-  strategy?: "context_lookup" | "pattern_inference" | "surface_hint" | "fallback";
+  strategy?:
+    | "context_lookup"
+    | "pattern_inference"
+    | "surface_hint"
+    | "fallback";
   /** Additional notes or metadata */
   metadata?: Record<string, any>;
 }
@@ -494,14 +498,14 @@ export interface ResolutionAttempt {
 export interface CAWSClaimVerification {
   /** Verify claims against CAWS evidence requirements */
   verifyClaimEvidence(
-    claim: ExtractedClaim,
-    evidence: EvidenceManifest
+    _claim: ExtractedClaim,
+    _evidence: EvidenceManifest
   ): Promise<VerificationResult>;
 
   /** Check claim compliance with CAWS budgets */
   validateClaimScope(
-    claim: ExtractedClaim,
-    workingSpec: WorkingSpec
+    _claim: ExtractedClaim,
+    _workingSpec: WorkingSpec
   ): Promise<ScopeValidation>;
 }
 
@@ -511,14 +515,14 @@ export interface CAWSClaimVerification {
 export interface ClaimBasedArbiter {
   /** Evaluate worker outputs using claim extraction */
   evaluateWithClaims(
-    workerOutput: any,
-    taskContext: any
+    _workerOutput: any,
+    _taskContext: any
   ): Promise<ClaimBasedEvaluation>;
 
   /** Compare competing outputs using claim verification */
   compareOutputs(
-    outputs: any[],
-    verificationCriteria: VerificationCriteria
+    _outputs: any[],
+    _verificationCriteria: VerificationCriteria
   ): Promise<ArbitrationDecision>;
 }
 
@@ -565,16 +569,22 @@ export interface ArbitrationDecision {
  */
 export interface MultiModalClaimProcessor {
   /** Extract claims from code outputs */
-  extractCodeClaims(codeOutput: any, specification: any): Promise<CodeClaim[]>;
+  extractCodeClaims(
+    _codeOutput: any,
+    _specification: any
+  ): Promise<CodeClaim[]>;
 
   /** Extract claims from documentation */
   extractDocumentationClaims(
-    docOutput: any,
-    styleGuide: any
+    _docOutput: any,
+    _styleGuide: any
   ): Promise<DocumentationClaim[]>;
 
   /** Extract claims from data analysis outputs */
-  extractDataClaims(analysisOutput: any, dataSchema: any): Promise<DataClaim[]>;
+  extractDataClaims(
+    _analysisOutput: any,
+    _dataSchema: any
+  ): Promise<DataClaim[]>;
 }
 
 /**
@@ -629,15 +639,15 @@ export interface DataClaim {
 export interface ClaimLearningSystem {
   /** Learn from verification feedback */
   learnFromVerification(
-    claims: ExtractedClaim[],
-    verificationResults: VerificationResult[],
-    humanFeedback?: any
+    _claims: ExtractedClaim[],
+    _verificationResults: VerificationResult[],
+    _humanFeedback?: any
   ): Promise<LearningUpdate>;
 
   /** Adapt extraction patterns based on task surface */
   adaptExtractionPatterns(
-    taskSurface: string,
-    historicalPerformance: any
+    _taskSurface: string,
+    _historicalPerformance: any
   ): Promise<PatternUpdate>;
 }
 

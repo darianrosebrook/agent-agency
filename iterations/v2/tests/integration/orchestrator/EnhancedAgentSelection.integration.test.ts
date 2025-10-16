@@ -35,7 +35,7 @@ jest.mock("path", () => ({
 describe("Enhanced Agent Selection with Workspace Integration", () => {
   let orchestrator: ArbiterOrchestrator;
   let workspaceManager: WorkspaceStateManager;
-  let systemHealthMonitor: any;
+  let systemHealthMonitor;
 
   // Mock agents with different capabilities and workspace familiarity
   const mockAgents = [
@@ -188,7 +188,7 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
       // Mock agent workspace activity - typescript expert has high activity
       jest
         .spyOn(orchestrator as any, "getAgentWorkspaceActivity")
-        .mockImplementation((...args: any[]) => {
+        .mockImplementation((...args) => {
           const agentId = args[0] as string;
           if (agentId === "agent-typescript-expert") return Promise.resolve(40); // High activity
           if (agentId === "agent-generalist") return Promise.resolve(10); // Low activity
@@ -198,7 +198,7 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
       // Mock agent familiarity - typescript expert is very familiar
       jest
         .spyOn(orchestrator as any, "calculateAgentFamiliarity")
-        .mockImplementation((...args: any[]) => {
+        .mockImplementation((...args) => {
           const agentId = args[0] as string;
           if (agentId === "agent-typescript-expert") return 0.8; // High familiarity
           if (agentId === "agent-generalist") return 0.4; // Medium familiarity
@@ -325,14 +325,14 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
       // Mock high workspace relevance for one agent
       jest
         .spyOn(orchestrator as any, "getAgentWorkspaceActivity")
-        .mockImplementation((...args: any[]) =>
+        .mockImplementation((...args) =>
           Promise.resolve(
             (args[0] as string) === "agent-typescript-expert" ? 50 : 5
           )
         );
       jest
         .spyOn(orchestrator as any, "calculateAgentFamiliarity")
-        .mockImplementation((...args: any[]) =>
+        .mockImplementation((...args) =>
           (args[0] as string) === "agent-typescript-expert" ? 0.9 : 0.3
         );
 
@@ -416,7 +416,7 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
       // Mock workspace factors to favor the typescript expert
       jest
         .spyOn(orchestrator as any, "getAgentWorkspaceActivity")
-        .mockImplementation((...args: any[]) => {
+        .mockImplementation((...args) => {
           const agentId = args[0] as string;
           return Promise.resolve(
             agentId === "agent-typescript-expert" ? 50 : 5
@@ -424,7 +424,7 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
         });
       jest
         .spyOn(orchestrator as any, "calculateAgentFamiliarity")
-        .mockImplementation((...args: any[]) => {
+        .mockImplementation((...args) => {
           const agentId = args[0] as string;
           return agentId === "agent-typescript-expert" ? 0.9 : 0.3;
         });

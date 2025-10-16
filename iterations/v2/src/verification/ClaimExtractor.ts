@@ -752,7 +752,7 @@ export class ClaimExtractor
    */
   async adaptExtractionPatterns(
     taskSurface: string,
-    historicalPerformance: any
+    _historicalPerformance: any
   ): Promise<PatternUpdate> {
     const updatedPatterns: Record<string, any> = {};
     const impact: Record<string, number> = {};
@@ -1508,7 +1508,7 @@ export class ClaimExtractor
 
   private generateStructuralInterpretations(
     phrase: string,
-    sentence: string
+    _sentence: string
   ): string[] {
     const interpretations = new Set<string>([phrase]);
 
@@ -1688,7 +1688,7 @@ export function createClaimExtractor(): ClaimExtractor {
  */
 export function validateClaimExtraction(
   claims: AtomicClaim[],
-  sourceText: string
+  _sourceText: string
 ): { isValid: boolean; errors: string[]; warnings: string[] } {
   const errors: string[] = [];
   const warnings: string[] = [];

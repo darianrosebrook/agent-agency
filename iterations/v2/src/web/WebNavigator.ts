@@ -43,7 +43,7 @@ export class WebNavigator {
 
   constructor(
     private readonly config: WebNavigatorConfig,
-    private readonly dbClient: WebNavigatorDatabaseClient,
+    private readonly _dbClient: WebNavigatorDatabaseClient,
     knowledgeSeeker: KnowledgeSeeker
   ) {
     // Initialize content extractor

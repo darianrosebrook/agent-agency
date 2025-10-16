@@ -55,7 +55,7 @@ function createPerformanceProfile(
 describe("Arbiter Coordination Integration Tests", () => {
   let registry: ModelRegistry;
   // let orchestrator: ArbiterOrchestrator; // Not used in these tests
-  let performanceTracker: PerformanceTracker;
+  let _performanceTracker: PerformanceTracker;
   let costTracker: ComputeCostTracker;
   let selector: LocalModelSelector;
 
@@ -86,7 +86,7 @@ describe("Arbiter Coordination Integration Tests", () => {
     );
 
     // Initialize trackers
-    performanceTracker = new PerformanceTracker();
+    _performanceTracker = new PerformanceTracker();
     costTracker = new ComputeCostTracker();
     selector = new LocalModelSelector(registry, costTracker);
 

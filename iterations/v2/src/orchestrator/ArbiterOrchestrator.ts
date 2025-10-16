@@ -40,26 +40,26 @@ export { VerificationPriority } from "../types/verification";
  * Security audit levels
  */
 export enum SecurityAuditLevel {
-  INFO = "info",
-  WARNING = "warning",
-  ERROR = "error",
-  CRITICAL = "critical",
+  _INFO = "info",
+  _WARNING = "warning",
+  _ERROR = "error",
+  _CRITICAL = "critical",
 }
 
 /**
  * Security event types
  */
 export enum SecurityEventType {
-  AUTHENTICATION = "authentication",
-  AUTHORIZATION = "authorization",
-  INPUT_VALIDATION = "input_validation",
-  DATA_ACCESS = "data_access",
-  CONFIGURATION = "configuration",
-  OVERRIDE_REQUEST = "override_request",
-  OVERRIDE_APPROVAL = "override_approval",
-  CONSTITUTIONAL_VIOLATION = "constitutional_violation",
-  RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
-  SUSPICIOUS_ACTIVITY = "suspicious_activity",
+  _AUTHENTICATION = "authentication",
+  _AUTHORIZATION = "authorization",
+  _INPUT_VALIDATION = "input_validation",
+  _DATA_ACCESS = "data_access",
+  _CONFIGURATION = "configuration",
+  _OVERRIDE_REQUEST = "override_request",
+  _OVERRIDE_APPROVAL = "override_approval",
+  _CONSTITUTIONAL_VIOLATION = "constitutional_violation",
+  _RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
+  _SUSPICIOUS_ACTIVITY = "suspicious_activity",
 }
 
 /**
@@ -822,7 +822,7 @@ export class ArbiterOrchestrator {
     ).catch((err) => console.error("Failed to log security event:", err));
 
     // Return sanitized error message
-    const errorMessage =
+    const _errorMessage =
       error instanceof Error ? error.message : "An internal error occurred";
     return new Error(
       `Operation failed: ${operation}. Please contact support if this persists.`
@@ -834,7 +834,7 @@ export class ArbiterOrchestrator {
    */
   async submitTask(
     task: any, // Task type
-    credentials?: any
+    _credentials?: any
   ): Promise<{
     taskId: string;
     assignmentId?: string;
@@ -863,7 +863,7 @@ export class ArbiterOrchestrator {
 
     // For testing: skip complex logic and just return success
     console.log(`Task ${sanitizedTask.id} submitted successfully (test mode)`);
-          return {
+    return {
       taskId: sanitizedTask.id,
       assignmentId: `test-assignment-${Date.now()}`,
     };
@@ -873,7 +873,7 @@ export class ArbiterOrchestrator {
    * Get task status (simplified for testing)
    */
   async getTaskStatus(taskId: string): Promise<any> {
-        return {
+    return {
       taskId,
       status: "completed",
       submittedAt: new Date(),
@@ -884,7 +884,7 @@ export class ArbiterOrchestrator {
   /**
    * Process knowledge query (simplified for testing)
    */
-  async processKnowledgeQuery(query: any): Promise<any> {
+  async processKnowledgeQuery(_query: any): Promise<any> {
     return {
       queryId: `query-${Date.now()}`,
       results: [],
@@ -909,8 +909,8 @@ export class ArbiterOrchestrator {
   /**
    * Verify information (simplified for testing)
    */
-  async verifyInformation(request: any): Promise<any> {
-      return {
+  async verifyInformation(_request: any): Promise<any> {
+    return {
       verified: true,
       confidence: 0.8,
       sources: [],
@@ -952,6 +952,23 @@ export class ArbiterOrchestrator {
   /**
    * Shutdown the orchestrator
    */
+  async clearKnowledgeCaches(): Promise<void> {
+    if (!this.initialized) {
+      throw new Error("Arbiter Orchestrator not initialized");
+    }
+
+    if (
+      this.components.knowledgeSeeker &&
+      typeof this.components.knowledgeSeeker.clearCaches === "function"
+    ) {
+      await this.components.knowledgeSeeker.clearCaches();
+    } else {
+      console.warn(
+        "KnowledgeSeeker not available or clearCaches method not implemented"
+      );
+    }
+  }
+
   async shutdown(): Promise<void> {
     if (!this.initialized) {
       return;

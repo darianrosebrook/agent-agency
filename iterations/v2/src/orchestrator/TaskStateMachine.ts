@@ -19,9 +19,9 @@ export { VerificationPriority } from "../types/verification";
 
 export class TaskStateMachineError extends Error {
   constructor(
-    public taskId: string,
-    public from: TaskState,
-    public to: TaskState,
+    public _taskId: string,
+    public _from: TaskState,
+    public _to: TaskState,
     message: string
   ) {
     super(message);

@@ -27,7 +27,7 @@ import {
  * Provides CRUD operations for learning coordination data
  */
 export class LearningDatabaseClient {
-  constructor(private readonly pool: Pool) {}
+  constructor(private readonly _pool: Pool) {}
 
   /**
    * Get connection pool

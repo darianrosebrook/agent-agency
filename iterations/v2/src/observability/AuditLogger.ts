@@ -16,46 +16,46 @@ import { LogLevel, Logger } from "./Logger";
 
 export enum AuditEventType {
   // Security Events
-  AUTHENTICATION = "authentication",
-  AUTHORIZATION = "authorization",
-  ACCESS_CONTROL = "access_control",
-  DATA_ACCESS = "data_access",
-  CONFIGURATION_CHANGE = "configuration_change",
+  _AUTHENTICATION = "authentication",
+  _AUTHORIZATION = "authorization",
+  _ACCESS_CONTROL = "access_control",
+  _DATA_ACCESS = "data_access",
+  _CONFIGURATION_CHANGE = "configuration_change",
 
   // Operational Events
-  SYSTEM_STARTUP = "system_startup",
-  SYSTEM_SHUTDOWN = "system_shutdown",
-  COMPONENT_FAILURE = "component_failure",
-  COMPONENT_RECOVERY = "component_recovery",
+  _SYSTEM_STARTUP = "system_startup",
+  _SYSTEM_SHUTDOWN = "system_shutdown",
+  _COMPONENT_FAILURE = "component_failure",
+  _COMPONENT_RECOVERY = "component_recovery",
 
   // Task Events
-  TASK_SUBMISSION = "task_submission",
-  TASK_EXECUTION = "task_execution",
-  TASK_COMPLETION = "task_completion",
-  TASK_FAILURE = "task_failure",
-  TASK_CANCELLATION = "task_cancellation",
+  _TASK_SUBMISSION = "task_submission",
+  _TASK_EXECUTION = "task_execution",
+  _TASK_COMPLETION = "task_completion",
+  _TASK_FAILURE = "task_failure",
+  _TASK_CANCELLATION = "task_cancellation",
 
   // Agent Events
-  AGENT_REGISTRATION = "agent_registration",
-  AGENT_DEREGISTRATION = "agent_deregistration",
-  AGENT_HEALTH_CHECK = "agent_health_check",
+  _AGENT_REGISTRATION = "agent_registration",
+  _AGENT_DEREGISTRATION = "agent_deregistration",
+  _AGENT_HEALTH_CHECK = "agent_health_check",
 
   // Verification Events
-  VERIFICATION_REQUEST = "verification_request",
-  VERIFICATION_SUCCESS = "verification_success",
-  VERIFICATION_FAILURE = "verification_failure",
+  _VERIFICATION_REQUEST = "verification_request",
+  _VERIFICATION_SUCCESS = "verification_success",
+  _VERIFICATION_FAILURE = "verification_failure",
 
   // Compliance Events
-  POLICY_VIOLATION = "policy_violation",
-  COMPLIANCE_CHECK = "compliance_check",
-  AUDIT_LOG_ACCESS = "audit_log_access",
+  _POLICY_VIOLATION = "policy_violation",
+  _COMPLIANCE_CHECK = "compliance_check",
+  _AUDIT_LOG_ACCESS = "audit_log_access",
 }
 
 export enum AuditSeverity {
-  LOW = "low",
-  MEDIUM = "medium",
-  HIGH = "high",
-  CRITICAL = "critical",
+  _LOW = "low",
+  _MEDIUM = "medium",
+  _HIGH = "high",
+  _CRITICAL = "critical",
 }
 
 /**
@@ -133,15 +133,15 @@ export interface AuditLogQuery {
 }
 
 export interface AuditLogSink {
-  write(event: AuditEvent): Promise<void>;
-  query(query: AuditLogQuery): Promise<AuditEvent[]>;
+  write(_event: AuditEvent): Promise<void>;
+  query(_query: AuditLogQuery): Promise<AuditEvent[]>;
   getStats(): Promise<{
     totalEvents: number;
     eventsByType: Record<AuditEventType, number>;
     eventsBySeverity: Record<AuditSeverity, number>;
     retentionStats: Record<string, number>;
   }>;
-  cleanup(olderThanDays: number): Promise<number>; // Returns number of records cleaned
+  cleanup(_olderThanDays: number): Promise<number>; // Returns number of records cleaned
 }
 
 /**

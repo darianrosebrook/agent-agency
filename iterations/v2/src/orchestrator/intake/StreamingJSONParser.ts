@@ -7,6 +7,9 @@
 
 import { EventEmitter } from "events";
 
+// Node.js types
+type NodeJS_Timeout = ReturnType<typeof setTimeout>;
+
 export interface StreamingJSONParseOptions {
   maxChunkSize?: number; // Default: 8192 bytes
   maxTotalSize?: number; // Default: 10MB
@@ -45,7 +48,7 @@ export class StreamingJSONParser extends EventEmitter {
   private bytesProcessed: number = 0;
   private startTime: number = 0;
   private options: Required<StreamingJSONParseOptions>;
-  private timeoutId?: NodeJS.Timeout;
+  private timeoutId?: NodeJS_Timeout;
 
   constructor(options: StreamingJSONParseOptions = {}) {
     super();

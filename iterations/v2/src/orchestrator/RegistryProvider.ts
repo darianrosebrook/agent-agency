@@ -195,7 +195,7 @@ export class RegistryProvider {
    * @param eventName - Name of the event
    * @param data - Event data (currently unused)
    */
-  private emit(eventName: string, data?: any): void {
+  private emit(eventName: string, _data?: any): void {
     const listeners = this.eventListeners.get(eventName);
     if (listeners) {
       listeners.forEach((callback) => callback());
@@ -204,7 +204,7 @@ export class RegistryProvider {
     }
   }
 
-  private constructor(private config?: Partial<AgentRegistryConfig>) {}
+  private constructor(private _config?: Partial<AgentRegistryConfig>) {}
 
   /**
    * Create a registry with this provider's configuration.

@@ -132,7 +132,7 @@ export class ConsensusEngine {
     votes: DebateVote[],
     options: ConsensusOptions
   ): ConsensusResult {
-    const total = tally.for + tally.against + tally.abstain;
+    const _total = tally.for + tally.against + tally.abstain;
     const votingTotal = tally.for + tally.against; // Exclude abstentions from percentage
 
     let reached = false;
@@ -206,7 +206,7 @@ export class ConsensusEngine {
     averageConfidence: number,
     reached: boolean
   ): string {
-    const total = tally.for + tally.against + tally.abstain;
+    const _total = tally.for + tally.against + tally.abstain;
     const votingTotal = tally.for + tally.against;
 
     const forPercent =
@@ -307,7 +307,7 @@ export class ConsensusEngine {
   public static validateConsensusResult(
     result: ConsensusResult,
     votes: DebateVote[],
-    participants: DebateParticipant[]
+    _participants: DebateParticipant[]
   ): boolean {
     // Verify vote counts match
     const forCount = votes.filter((v) => v.position === "for").length;

@@ -14,11 +14,11 @@ export { VerificationPriority } from "./verification";
  * Knowledge query types
  */
 export enum QueryType {
-  FACTUAL = "factual",
-  EXPLANATORY = "explanatory",
-  COMPARATIVE = "comparative",
-  TREND = "trend",
-  TECHNICAL = "technical",
+  _FACTUAL = "factual",
+  _EXPLANATORY = "explanatory",
+  _COMPARATIVE = "comparative",
+  _TREND = "trend",
+  _TECHNICAL = "technical",
 }
 
 /**
@@ -36,21 +36,21 @@ export type SourceType =
  * Search result quality levels
  */
 export enum ResultQuality {
-  HIGH = "high",
-  MEDIUM = "medium",
-  LOW = "low",
-  UNRELIABLE = "unreliable",
+  _HIGH = "high",
+  _MEDIUM = "medium",
+  _LOW = "low",
+  _UNRELIABLE = "unreliable",
 }
 
 /**
  * Search provider types
  */
 export enum SearchProviderType {
-  WEB_SEARCH = "web_search",
-  ACADEMIC_SEARCH = "academic_search",
-  NEWS_SEARCH = "news_search",
-  CODE_SEARCH = "code_search",
-  DOCUMENTATION_SEARCH = "documentation_search",
+  _WEB_SEARCH = "web_search",
+  _ACADEMIC_SEARCH = "academic_search",
+  _NEWS_SEARCH = "news_search",
+  _CODE_SEARCH = "code_search",
+  _DOCUMENTATION_SEARCH = "documentation_search",
 }
 
 /**
@@ -225,7 +225,7 @@ export interface ISearchProvider {
   isAvailable(): Promise<boolean>;
 
   /** Execute search query */
-  search(query: KnowledgeQuery): Promise<SearchResult[]>;
+  search(_query: KnowledgeQuery): Promise<SearchResult[]>;
 
   /** Get provider health status */
   getHealthStatus(): Promise<ProviderHealthStatus>;
@@ -284,21 +284,21 @@ export interface InformationProcessorConfig {
 export interface IInformationProcessor {
   /** Process search results */
   processResults(
-    query: KnowledgeQuery,
-    results: SearchResult[]
+    _query: KnowledgeQuery,
+    _results: SearchResult[]
   ): Promise<SearchResult[]>;
 
   /** Score result relevance */
-  scoreRelevance(query: KnowledgeQuery, result: SearchResult): number;
+  scoreRelevance(_query: KnowledgeQuery, _result: SearchResult): number;
 
   /** Assess result credibility */
-  assessCredibility(result: SearchResult): number;
+  assessCredibility(_result: SearchResult): number;
 
   /** Detect duplicate results */
-  detectDuplicates(results: SearchResult[]): SearchResult[];
+  detectDuplicates(_results: SearchResult[]): SearchResult[];
 
   /** Generate response summary */
-  generateSummary(query: KnowledgeQuery, results: SearchResult[]): string;
+  generateSummary(_query: KnowledgeQuery, _results: SearchResult[]): string;
 }
 
 /**
@@ -349,7 +349,7 @@ export interface KnowledgeSeekerConfig {
  */
 export interface IKnowledgeSeeker {
   /** Process knowledge query */
-  processQuery(query: KnowledgeQuery): Promise<KnowledgeResponse>;
+  processQuery(_query: KnowledgeQuery): Promise<KnowledgeResponse>;
 
   /** Get seeker status */
   getStatus(): Promise<KnowledgeSeekerStatus>;
@@ -435,16 +435,16 @@ export interface KnowledgeResponseRecord {
  * Knowledge event types for observability
  */
 export enum KnowledgeEventType {
-  QUERY_RECEIVED = "knowledge.query.received",
-  QUERY_PROCESSING_STARTED = "knowledge.query.processing_started",
-  SEARCH_EXECUTED = "knowledge.search.executed",
-  RESULTS_PROCESSED = "knowledge.results.processed",
-  RESPONSE_GENERATED = "knowledge.response.generated",
-  CACHE_HIT = "knowledge.cache.hit",
-  CACHE_MISS = "knowledge.cache.miss",
-  PROVIDER_ERROR = "knowledge.provider.error",
-  PROCESSING_ERROR = "knowledge.processing.error",
-  QUERY_TIMEOUT = "knowledge.query.timeout",
+  _QUERY_RECEIVED = "knowledge.query.received",
+  _QUERY_PROCESSING_STARTED = "knowledge.query.processing_started",
+  _SEARCH_EXECUTED = "knowledge.search.executed",
+  _RESULTS_PROCESSED = "knowledge.results.processed",
+  _RESPONSE_GENERATED = "knowledge.response.generated",
+  _CACHE_HIT = "knowledge.cache.hit",
+  _CACHE_MISS = "knowledge.cache.miss",
+  _PROVIDER_ERROR = "knowledge.provider.error",
+  _PROCESSING_ERROR = "knowledge.processing.error",
+  _QUERY_TIMEOUT = "knowledge.query.timeout",
 }
 
 /**

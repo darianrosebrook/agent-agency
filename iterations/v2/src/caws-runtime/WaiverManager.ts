@@ -182,7 +182,7 @@ export class WaiverManager extends EventEmitter {
    */
   async checkWaiver(
     operation: OperationContext,
-    context: EvaluationContext
+    _context: EvaluationContext
   ): Promise<WaiverCheckResult> {
     // Expire old waivers first
     this.expireWaivers();

@@ -99,15 +99,15 @@ export interface TaskInput {
 }
 
 export enum TaskStatus {
-  QUEUED = "queued",
-  ROUTING = "routing",
-  ASSIGNED = "assigned",
-  EXECUTING = "executing",
-  VALIDATING = "validating",
-  COMPLETED = "completed",
-  FAILED = "failed",
-  TIMEOUT = "timeout",
-  CANCELED = "canceled",
+  _QUEUED = "queued",
+  _ROUTING = "routing",
+  _ASSIGNED = "assigned",
+  _EXECUTING = "executing",
+  _VALIDATING = "validating",
+  _COMPLETED = "completed",
+  _FAILED = "failed",
+  _TIMEOUT = "timeout",
+  _CANCELED = "canceled",
 }
 
 export interface TaskState {
@@ -595,7 +595,7 @@ export interface OrchestratorEvent {
  */
 
 export class OrchestratorError extends Error {
-  constructor(message: string, public code: string, public details?: any) {
+  constructor(message: string, public _code: string, public _details?: any) {
     super(message);
     this.name = "OrchestratorError";
   }
@@ -645,19 +645,19 @@ export interface IArbiterOrchestrator {
   initialize(): Promise<void>;
   shutdown(): Promise<void>;
 
-  submitTask(request: TaskRequest): Promise<Task>;
-  getTaskStatus(taskId: string): Promise<TaskState>;
-  cancelTask(taskId: string): Promise<boolean>;
+  submitTask(_request: TaskRequest): Promise<Task>;
+  getTaskStatus(_taskId: string): Promise<TaskState>;
+  cancelTask(_taskId: string): Promise<boolean>;
 
   getStats(): Promise<OrchestratorStats>;
   getHealth(): Promise<SystemHealth>;
 
-  registerAgent(profile: AgentProfile): Promise<void>;
-  unregisterAgent(agentId: string): Promise<void>;
+  registerAgent(_profile: AgentProfile): Promise<void>;
+  unregisterAgent(_agentId: string): Promise<void>;
 }
 
 export interface ITaskQueue {
-  enqueue(task: Task): Promise<void>;
+  enqueue(_task: Task): Promise<void>;
   dequeue(): Promise<Task | null>;
   peek(): Promise<Task | null>;
   size(): Promise<number>;
@@ -665,30 +665,30 @@ export interface ITaskQueue {
 }
 
 export interface ITaskRouter {
-  route(task: Task): Promise<RoutingDecision>;
+  route(_task: Task): Promise<RoutingDecision>;
   getRoutingStats(): Promise<Record<string, any>>;
 }
 
 export interface ICAWSValidator {
-  validate(result: TaskResult): Promise<CAWSValidationResult>;
+  validate(_result: TaskResult): Promise<CAWSValidationResult>;
   getValidationStats(): Promise<Record<string, any>>;
 }
 
 export interface IPerformanceTracker {
-  trackExecution(execution: TaskExecution): Promise<void>;
-  trackResult(result: TaskResult): Promise<void>;
-  getMetrics(query: any): Promise<PerformanceMetrics[]>;
+  trackExecution(_execution: TaskExecution): Promise<void>;
+  trackResult(_result: TaskResult): Promise<void>;
+  getMetrics(_query: any): Promise<PerformanceMetrics[]>;
 }
 
 export interface IHealthMonitor {
   checkHealth(): Promise<SystemHealth>;
-  checkAgentHealth(agentId: string): Promise<AgentHealth>;
+  checkAgentHealth(_agentId: string): Promise<AgentHealth>;
   startMonitoring(): Promise<void>;
   stopMonitoring(): Promise<void>;
 }
 
 export interface IRecoveryManager {
-  handleFailure(component: string, error: Error): Promise<RecoveryAction>;
-  executeRecovery(action: RecoveryAction): Promise<boolean>;
-  getRecoveryHistory(limit?: number): RecoveryAction[];
+  handleFailure(_component: string, _error: Error): Promise<RecoveryAction>;
+  executeRecovery(_action: RecoveryAction): Promise<boolean>;
+  getRecoveryHistory(_limit?: number): RecoveryAction[];
 }

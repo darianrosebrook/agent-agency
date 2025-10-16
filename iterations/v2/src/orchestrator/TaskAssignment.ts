@@ -285,8 +285,8 @@ export class TaskAssignmentManager {
   async createAssignment(
     task: Task,
     routingDecision: RoutingDecision,
-    onAssignmentTimeout?: (assignment: TaskAssignment) => void,
-    onProgressTimeout?: (assignment: TaskAssignment) => void
+    onAssignmentTimeout?: (_assignment: TaskAssignment) => void,
+    onProgressTimeout?: (_assignment: TaskAssignment) => void
   ): Promise<TaskAssignment> {
     const assignment: TaskAssignment = {
       id: `assignment-${task.id}-${Date.now()}`,
@@ -415,7 +415,7 @@ export class TaskAssignmentManager {
   completeAssignment(
     assignmentId: string,
     result: TaskResult,
-    onCompletion?: (assignment: TaskAssignment, result: TaskResult) => void
+    onCompletion?: (_assignment: TaskAssignment, _result: TaskResult) => void
   ): boolean {
     const assignment = this.assignments.get(assignmentId);
     const execution = this.executions.get(assignmentId);
@@ -459,7 +459,7 @@ export class TaskAssignmentManager {
     assignmentId: string,
     error: string,
     canRetry: boolean = true,
-    onFailure?: (assignment: TaskAssignment, error: string) => void
+    onFailure?: (_assignment: TaskAssignment, _error: string) => void
   ): boolean {
     const assignment = this.assignments.get(assignmentId);
     const execution = this.executions.get(assignmentId);
@@ -537,7 +537,7 @@ export class TaskAssignmentManager {
    */
   timeoutAssignment(
     assignmentId: string,
-    onTimeout?: (assignment: TaskAssignment) => void
+    onTimeout?: (_assignment: TaskAssignment) => void
   ): boolean {
     const assignment = this.assignments.get(assignmentId);
     if (!assignment) {
@@ -590,7 +590,7 @@ export class TaskAssignmentManager {
    */
   private handleAcknowledgmentTimeout(
     assignment: TaskAssignment,
-    onTimeout?: (assignment: TaskAssignment) => void
+    onTimeout?: (_assignment: TaskAssignment) => void
   ): void {
     // Agent didn't acknowledge within timeout
     this.failAssignment(
@@ -610,7 +610,7 @@ export class TaskAssignmentManager {
    */
   private checkProgressTimeout(
     assignment: TaskAssignment,
-    onTimeout?: (assignment: TaskAssignment) => void
+    onTimeout?: (_assignment: TaskAssignment) => void
   ): void {
     const execution = this.executions.get(assignment.id);
     if (!execution) {
@@ -719,8 +719,8 @@ export class TaskAssignmentFactory {
     task: Task,
     routingDecision: RoutingDecision,
     callbacks?: {
-      onAcknowledgmentTimeout?: (assignment: TaskAssignment) => void;
-      onProgressTimeout?: (assignment: TaskAssignment) => void;
+      onAcknowledgmentTimeout?: (_assignment: TaskAssignment) => void;
+      onProgressTimeout?: (_assignment: TaskAssignment) => void;
     }
   ): Promise<TaskAssignment> {
     return this.manager.createAssignment(

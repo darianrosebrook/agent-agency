@@ -52,12 +52,12 @@ export interface AppealRequest {
  * Appeal status during processing
  */
 export enum AppealStatus {
-  SUBMITTED = "submitted",
-  UNDER_REVIEW = "under_review",
-  APPROVED = "approved",
-  REJECTED = "rejected",
-  ESCALATED = "escalated",
-  WITHDRAWN = "withdrawn",
+  _SUBMITTED = "submitted",
+  _UNDER_REVIEW = "under_review",
+  _APPROVED = "approved",
+  _REJECTED = "rejected",
+  _ESCALATED = "escalated",
+  _WITHDRAWN = "withdrawn",
 }
 
 /**

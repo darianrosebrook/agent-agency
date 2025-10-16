@@ -42,7 +42,7 @@ export interface PropertyTestFailure {
 
 export interface PropertyBasedTestSuite {
   runAllPropertyTests(): Promise<PropertyTestResult[]>;
-  runPropertyTest(propertyName: string): Promise<PropertyTestResult | null>;
+  runPropertyTest(_propertyName: string): Promise<PropertyTestResult | null>;
   getTestSummary(): Promise<{
     totalProperties: number;
     passedProperties: number;
@@ -972,5 +972,8 @@ class DeterministicGenerator {
     return array;
   }
 }
+
+
+
 
 

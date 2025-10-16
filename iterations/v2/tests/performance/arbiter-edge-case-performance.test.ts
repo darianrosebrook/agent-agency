@@ -31,6 +31,13 @@ import { ChaosTestingHarness } from "../../src/testing/ChaosTestingHarness";
 import { TaskInput } from "../../src/types/arbiter-orchestration";
 import { VerificationType } from "../../src/types/verification";
 
+// Additional imports for missing types
+import { CreditLedger } from "../../src/orchestrator/credit/CreditLedger";
+import { AdaptivePolicyEngineImpl } from "../../src/orchestrator/policy/AdaptivePolicyEngine";
+import { PolicyAuditManagerImpl } from "../../src/orchestrator/policy/PolicyAuditManager";
+import { CAWSPolicyEnforcer } from "../../src/orchestrator/security/CAWSPolicyEnforcer";
+import { VerificationEngineImpl } from "../../src/verification/VerificationEngine";
+
 // Performance baselines and thresholds
 const PERFORMANCE_BASELINES = {
   // Task processing times (milliseconds)
@@ -112,10 +119,10 @@ describe("Arbiter Edge Case Performance Tests", () => {
     });
 
     const creditLedger = new CreditLedger(creditRepo);
-    const confidenceScorer = new ConfidenceScorer();
-    const adaptiveEngine = new AdaptivePolicyEngine();
+    const _confidenceScorer = new ConfidenceScorer();
+    const adaptiveEngine = new AdaptivePolicyEngineImpl(creditLedger, {});
     const policyEnforcer = new CAWSPolicyEnforcer();
-    const auditManager = new PolicyAuditManager();
+    const auditManager = new PolicyAuditManagerImpl();
 
     const intakeProcessor = new TaskIntakeProcessor({
       maxPayloadSize: 2 * 1024 * 1024, // 2MB for performance tests
@@ -131,7 +138,7 @@ describe("Arbiter Edge Case Performance Tests", () => {
       timeoutMs: 45000, // Longer timeout for performance tests
     });
 
-    const verificationEngine = new VerificationEngine({
+    const verificationEngine = new VerificationEngineImpl({
       adapters: ["math", "code", "context"],
       timeoutMs: 90000,
       enableSandboxing: true,
@@ -278,7 +285,7 @@ describe("Arbiter Edge Case Performance Tests", () => {
 
     // Monitor database queries
     const originalQuery = dbPool.query.bind(dbPool);
-    dbPool.query = function (...args: any[]) {
+    dbPool.query = function (...args) {
       const queryStart = Date.now();
       dbQueryCount++;
       return originalQuery(...args).then((result: any) => {

@@ -88,7 +88,7 @@ export class MetricsCollector {
   /**
    * Calculate CPU usage percentage
    */
-  private async getCpuUsage(timeDiff: number): Promise<number> {
+  private async getCpuUsage(_timeDiff: number): Promise<number> {
     try {
       const cpuData = cpus();
       let totalIdle = 0;
@@ -101,8 +101,8 @@ export class MetricsCollector {
         totalIdle += cpu.times.idle;
       }
 
-      const idle = totalIdle / cpus.length;
-      const total = totalTick / cpus.length;
+      const _idle = totalIdle / cpus.length;
+      const _total = totalTick / cpus.length;
 
       // This is a simplified calculation - in production you'd track previous values
       // For now, return a mock value based on load average
@@ -175,7 +175,7 @@ export class MetricsCollector {
    * Get network I/O statistics
    */
   private async getNetworkIO(
-    timeDiff: number
+    _timeDiff: number
   ): Promise<{ bytesInPerSecond: number; bytesOutPerSecond: number }> {
     try {
       // This is a simplified implementation
@@ -269,7 +269,7 @@ export class MetricsCollector {
    */
   calculateAverages(
     metrics: SystemMetrics[],
-    periodMs: number
+    _periodMs: number
   ): Partial<SystemMetrics> {
     if (metrics.length === 0) return {};
 

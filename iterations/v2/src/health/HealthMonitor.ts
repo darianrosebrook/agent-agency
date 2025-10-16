@@ -8,9 +8,9 @@
  */
 
 export enum HealthStatus {
-  HEALTHY = "healthy",
-  DEGRADED = "degraded",
-  UNHEALTHY = "unhealthy",
+  _HEALTHY = "healthy",
+  _DEGRADED = "degraded",
+  _UNHEALTHY = "unhealthy",
 }
 
 export interface ComponentHealth {

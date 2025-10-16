@@ -10,7 +10,7 @@
 import { AgentRegistryDbClient } from "../../src/database/AgentRegistryDbClient.js";
 import { AgentRegistryManager } from "../../src/orchestrator/AgentRegistryManager.js";
 import {
-  VerificationPriority,
+  _VerificationPriority,
   RegistryError,
   RegistryErrorType,
 } from "../../src/types/agent-registry.js";
@@ -250,7 +250,7 @@ describe("Agent Registry Persistence Integration", () => {
       (registry as any).agents.set(agentId, mockAgent);
 
       // Mock database failure for performance recording
-      const mockRecord = jest
+      const _mockRecord = jest
         .spyOn(dbClient, "recordPerformance")
         .mockRejectedValue(new Error("Database write failed"));
 
@@ -384,7 +384,7 @@ describe("Agent Registry Persistence Integration", () => {
       };
 
       // Mock database connection failure
-      const mockRegister = jest
+      const _mockRegister = jest
         .spyOn(dbClient, "registerAgent")
         .mockRejectedValue(new Error("Connection timeout"));
 
@@ -403,7 +403,7 @@ describe("Agent Registry Persistence Integration", () => {
       const agentId = "retrieve-fail-agent";
 
       // Mock database retrieval failure
-      const mockGet = jest
+      const _mockGet = jest
         .spyOn(dbClient, "getAgent")
         .mockRejectedValue(new Error("Query failed"));
 
@@ -434,7 +434,7 @@ describe("Agent Registry Persistence Integration", () => {
 
       // Mock database failure after partial operations
       let callCount = 0;
-      const mockRegister = jest
+      const _mockRegister = jest
         .spyOn(dbClient, "registerAgent")
         .mockImplementation(async () => {
           callCount++;

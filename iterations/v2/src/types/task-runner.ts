@@ -11,34 +11,34 @@
 import type { ArtifactManifest } from "../orchestrator/workers/ArtifactSandbox.js";
 
 export enum TaskStatus {
-  PENDING = "pending",
-  QUEUED = "queued",
-  ASSIGNED = "assigned",
-  RUNNING = "running",
-  SUSPENDED = "suspended",
-  COMPLETED = "completed",
-  FAILED = "failed",
-  CANCELLED = "cancelled",
+  _PENDING = "pending",
+  _QUEUED = "queued",
+  _ASSIGNED = "assigned",
+  _RUNNING = "running",
+  _SUSPENDED = "suspended",
+  _COMPLETED = "completed",
+  _FAILED = "failed",
+  _CANCELLED = "cancelled",
 }
 
 export enum TaskPriority {
-  LOW = "low",
-  MEDIUM = "medium",
-  HIGH = "high",
-  CRITICAL = "critical",
+  _LOW = "low",
+  _MEDIUM = "medium",
+  _HIGH = "high",
+  _CRITICAL = "critical",
 }
 
 export enum TaskOrchestratorEvents {
-  TASK_SUBMITTED = "task_submitted",
-  TASK_STARTED = "task_started",
-  TASK_COMPLETED = "task_completed",
-  TASK_FAILED = "task_failed",
-  TASK_RETRY_SCHEDULED = "task_retry_scheduled",
-  PLEADING_INITIATED = "pleading_initiated",
-  PLEADING_APPROVED = "pleading_approved",
-  PLEADING_DENIED = "pleading_denied",
-  WORKER_CREATED = "worker_created",
-  WORKER_DESTROYED = "worker_destroyed",
+  _TASK_SUBMITTED = "task_submitted",
+  _TASK_STARTED = "task_started",
+  _TASK_COMPLETED = "task_completed",
+  _TASK_FAILED = "task_failed",
+  _TASK_RETRY_SCHEDULED = "task_retry_scheduled",
+  _PLEADING_INITIATED = "pleading_initiated",
+  _PLEADING_APPROVED = "pleading_approved",
+  _PLEADING_DENIED = "pleading_denied",
+  _WORKER_CREATED = "worker_created",
+  _WORKER_DESTROYED = "worker_destroyed",
 }
 
 export interface Task {

@@ -134,7 +134,7 @@ export interface ObserverStore {
   getStatus(): ObserverStatusSummary;
   getMetrics(): ObserverMetricsSnapshot;
   getProgress(): ObserverProgressSummary;
-  listEvents(params: {
+  listEvents(_params: {
     cursor?: string;
     limit?: number;
     since?: Date;
@@ -146,7 +146,7 @@ export interface ObserverStore {
     events: ObserverEventPayload[];
     nextCursor?: string;
   }>;
-  listChainOfThought(params: {
+  listChainOfThought(_params: {
     taskId?: string;
     cursor?: string;
     limit?: number;
@@ -155,7 +155,7 @@ export interface ObserverStore {
     entries: ChainOfThoughtEntry[];
     nextCursor?: string;
   }>;
-  getTask(taskId: string): Promise<{
+  getTask(_taskId: string): Promise<{
     taskId: string;
   state: string;
   progress: string[];
@@ -174,7 +174,7 @@ export interface ObserverStore {
     reasoning: string[];
   };
 } | null>;
-  appendObservation(note: {
+  appendObservation(_note: {
     message: string;
     taskId?: string;
     author?: string;
@@ -214,6 +214,6 @@ export interface SubmitTaskResult {
 export interface ArbiterController {
   ensureArbiterRunning(): Promise<{ status: "running" | "starting" }>;
   requestArbiterStop(): Promise<{ status: "stopping" | "stopped" }>;
-  submitTask(payload: SubmitTaskPayload): Promise<SubmitTaskResult>;
-  executeCommand(command: string): Promise<{ acknowledged: boolean; note?: string }>;
+  submitTask(_payload: SubmitTaskPayload): Promise<SubmitTaskResult>;
+  executeCommand(_command: string): Promise<{ acknowledged: boolean; note?: string }>;
 }

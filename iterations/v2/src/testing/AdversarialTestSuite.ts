@@ -45,9 +45,9 @@ export interface AdversarialTestResult {
 
 export interface AdversarialTestSuite {
   runAllTests(): Promise<AdversarialTestResult[]>;
-  runCategoryTests(category: string): Promise<AdversarialTestResult[]>;
-  runSeverityTests(severity: string): Promise<AdversarialTestResult[]>;
-  runSpecificTest(testId: string): Promise<AdversarialTestResult | null>;
+  runCategoryTests(_category: string): Promise<AdversarialTestResult[]>;
+  runSeverityTests(_severity: string): Promise<AdversarialTestResult[]>;
+  runSpecificTest(_testId: string): Promise<AdversarialTestResult | null>;
   getTestSummary(): Promise<{
     total: number;
     passed: number;
@@ -598,5 +598,8 @@ export class AdversarialTestSuiteImpl implements AdversarialTestSuite {
     console.log("===============================\n");
   }
 }
+
+
+
 
 

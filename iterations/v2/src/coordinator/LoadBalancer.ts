@@ -27,7 +27,7 @@ export class LoadBalancer extends EventEmitter {
     responseTime: number;
   }> = [];
 
-  constructor(private coordinator: SystemCoordinator) {
+  constructor(private _coordinator: SystemCoordinator) {
     super();
   }
 

@@ -508,12 +508,12 @@ export class PerformanceImpactMeasurer {
     }
 
     const startTime = performance.now();
-    const startMemory = process.memoryUsage();
+    const _startMemory = process.memoryUsage();
 
     await operation();
 
     const endTime = performance.now();
-    const endMemory = process.memoryUsage();
+    const _endMemory = process.memoryUsage();
 
     const monitor = new PerformanceMonitor();
     const afterSnapshot = await monitor.takeSnapshot();

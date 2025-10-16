@@ -370,7 +370,7 @@ export class DeadlockResolver {
   /**
    * Resolves via timeout default
    */
-  private resolveTimeoutDefault(session: DebateSession): DeadlockResolution {
+  private resolveTimeoutDefault(_session: DebateSession): DeadlockResolution {
     // Default to "against" on timeout (conservative approach)
     return {
       strategy: DeadlockResolutionStrategy.TIMEOUT_DEFAULT,
@@ -424,7 +424,7 @@ export class DeadlockResolver {
   /**
    * Resolves via escalation
    */
-  private resolveEscalateToAdmin(session: DebateSession): DeadlockResolution {
+  private resolveEscalateToAdmin(_session: DebateSession): DeadlockResolution {
     return {
       strategy: DeadlockResolutionStrategy.ESCALATE_TO_ADMIN,
       decision: "escalated",
@@ -437,7 +437,7 @@ export class DeadlockResolver {
   /**
    * Resolves via split decision
    */
-  private resolveSplitDecision(session: DebateSession): DeadlockResolution {
+  private resolveSplitDecision(_session: DebateSession): DeadlockResolution {
     return {
       strategy: DeadlockResolutionStrategy.SPLIT_DECISION,
       decision: "split",

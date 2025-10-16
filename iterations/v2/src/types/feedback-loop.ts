@@ -6,22 +6,22 @@ import { ComponentHealth } from "./coordinator";
 export { VerificationPriority } from "./verification";
 
 export enum FeedbackSource {
-  PERFORMANCE_METRICS = "performance_metrics",
-  TASK_OUTCOMES = "task_outcomes",
-  USER_RATINGS = "user_ratings",
-  SYSTEM_EVENTS = "system_events",
-  CONSTITUTIONAL_VIOLATIONS = "constitutional_violations",
-  COMPONENT_HEALTH = "component_health",
-  ROUTING_DECISIONS = "routing_decisions",
-  AGENT_FEEDBACK = "agent_feedback",
+  _PERFORMANCE_METRICS = "performance_metrics",
+  _TASK_OUTCOMES = "task_outcomes",
+  _USER_RATINGS = "user_ratings",
+  _SYSTEM_EVENTS = "system_events",
+  _CONSTITUTIONAL_VIOLATIONS = "constitutional_violations",
+  _COMPONENT_HEALTH = "component_health",
+  _ROUTING_DECISIONS = "routing_decisions",
+  _AGENT_FEEDBACK = "agent_feedback",
 }
 
 export enum FeedbackType {
-  NUMERIC_METRIC = "numeric_metric",
-  CATEGORICAL_EVENT = "categorical_event",
-  TEXT_FEEDBACK = "text_feedback",
-  RATING_SCALE = "rating_scale",
-  BINARY_OUTCOME = "binary_outcome",
+  _NUMERIC_METRIC = "numeric_metric",
+  _CATEGORICAL_EVENT = "categorical_event",
+  _TEXT_FEEDBACK = "text_feedback",
+  _RATING_SCALE = "rating_scale",
+  _BINARY_OUTCOME = "binary_outcome",
 }
 
 export interface FeedbackEvent {
@@ -49,8 +49,8 @@ export interface PerformanceMetrics {
 }
 
 export interface PerformanceFeedback extends FeedbackEvent {
-  source: FeedbackSource.PERFORMANCE_METRICS;
-  type: FeedbackType.NUMERIC_METRIC;
+  source: FeedbackSource._PERFORMANCE_METRICS;
+  type: FeedbackType._NUMERIC_METRIC;
   value: PerformanceMetrics;
 }
 

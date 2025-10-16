@@ -453,7 +453,7 @@ export class RuntimeOptimizer implements IRuntimeOptimizer {
       groupedMetrics.set(key, group);
     }
 
-    for (const [key, group] of groupedMetrics) {
+    for (const [_key, group] of groupedMetrics) {
       if (group.length < this.config.minDataPointsForTrend) continue;
 
       const values = group.map((m) => m.value);

@@ -94,7 +94,7 @@ describe("SecurityManager", () => {
   });
 
   describe("Authorization", () => {
-    let context: any;
+    let context;
 
     beforeEach(() => {
       const credentials: AuthCredentials = {
@@ -127,7 +127,7 @@ describe("SecurityManager", () => {
   });
 
   describe("Trusted Agent Permissions", () => {
-    let context: any;
+    let context;
 
     beforeEach(() => {
       const trustedAgent = { ...testAgent, id: "trusted-agent" };
@@ -146,7 +146,7 @@ describe("SecurityManager", () => {
   });
 
   describe("Admin Agent Permissions", () => {
-    let context: any;
+    let context;
 
     beforeEach(() => {
       const adminAgent = { ...testAgent, id: "admin-agent" };
@@ -177,7 +177,7 @@ describe("SecurityManager", () => {
   });
 
   describe("Rate Limiting", () => {
-    let context: any;
+    let context;
 
     beforeEach(() => {
       const credentials: AuthCredentials = {
@@ -210,7 +210,7 @@ describe("SecurityManager", () => {
   });
 
   describe("Input Sanitization", () => {
-    let context: any;
+    let context;
 
     beforeEach(() => {
       const credentials: AuthCredentials = {
@@ -274,8 +274,8 @@ describe("SecurityManager", () => {
   });
 
   describe("Resource Access Control", () => {
-    let agent1Context: any;
-    let agent2Context: any;
+    let agent1Context;
+    let agent2Context;
 
     beforeEach(() => {
       const agent2 = { ...testAgent, id: "agent-2" };

@@ -7,14 +7,14 @@
  */
 
 export enum TaskState {
-  PENDING = "pending",
-  QUEUED = "queued",
-  ASSIGNED = "assigned",
-  RUNNING = "running",
-  SUSPENDED = "suspended",
-  COMPLETED = "completed",
-  FAILED = "failed",
-  CANCELLED = "cancelled",
+  _PENDING = "pending",
+  _QUEUED = "queued",
+  _ASSIGNED = "assigned",
+  _RUNNING = "running",
+  _SUSPENDED = "suspended",
+  _COMPLETED = "completed",
+  _FAILED = "failed",
+  _CANCELLED = "cancelled",
 }
 
 export interface TaskStateTransition {

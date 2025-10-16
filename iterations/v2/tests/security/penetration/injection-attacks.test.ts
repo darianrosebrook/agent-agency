@@ -6,6 +6,7 @@
  * @author @darianrosebrook
  */
 
+import { describe, expect, fail, it } from "@jest/globals";
 import {
   AuthCredentials,
   SecurityContext,

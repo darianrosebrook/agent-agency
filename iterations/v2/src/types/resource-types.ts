@@ -11,11 +11,11 @@
  * Resource types tracked by the system
  */
 export enum ResourceType {
-  CPU = "cpu",
-  MEMORY = "memory",
-  NETWORK = "network",
-  DISK_IO = "disk_io",
-  AGENT_CAPACITY = "agent_capacity",
+  _CPU = "cpu",
+  _MEMORY = "memory",
+  _NETWORK = "network",
+  _DISK_IO = "disk_io",
+  _AGENT_CAPACITY = "agent_capacity",
 }
 
 /**
@@ -80,21 +80,21 @@ export interface AgentResourceProfile {
  * Task priority levels
  */
 export enum TaskPriority {
-  LOW = 0,
-  MEDIUM = 50,
-  HIGH = 75,
-  CRITICAL = 100,
+  _LOW = 0,
+  _MEDIUM = 50,
+  _HIGH = 75,
+  _CRITICAL = 100,
 }
 
 /**
  * Load balancing strategy
  */
 export enum LoadBalancingStrategy {
-  ROUND_ROBIN = "round_robin",
-  LEAST_LOADED = "least_loaded",
-  WEIGHTED = "weighted",
-  RANDOM = "random",
-  PRIORITY_BASED = "priority_based",
+  _ROUND_ROBIN = "round_robin",
+  _LEAST_LOADED = "least_loaded",
+  _WEIGHTED = "weighted",
+  _RANDOM = "random",
+  _PRIORITY_BASED = "priority_based",
 }
 
 /**
@@ -372,7 +372,7 @@ export interface IResourceMonitor {
   /**
    * Get current resource usage for an agent
    */
-  getAgentResources(agentId: string): Promise<AgentResourceProfile | null>;
+  getAgentResources(_agentId: string): Promise<AgentResourceProfile | null>;
 
   /**
    * Get all agent resource profiles
@@ -382,7 +382,7 @@ export interface IResourceMonitor {
   /**
    * Record resource usage
    */
-  recordUsage(agentId: string, usage: ResourceUsage): Promise<void>;
+  recordUsage(_agentId: string, _usage: ResourceUsage): Promise<void>;
 
   /**
    * Get resource pool statistics
@@ -398,14 +398,14 @@ export interface ILoadBalancer {
    * Select agent for task assignment
    */
   selectAgent(
-    request: ResourceAllocationRequest,
-    availableAgents: string[]
+    _request: ResourceAllocationRequest,
+    _availableAgents: string[]
   ): Promise<LoadBalancingDecision>;
 
   /**
    * Update load balancing strategy
    */
-  setStrategy(strategy: LoadBalancingStrategy): void;
+  setStrategy(_strategy: LoadBalancingStrategy): void;
 
   /**
    * Get current strategy
@@ -426,13 +426,13 @@ export interface IResourceAllocator {
    * Allocate resources for a task
    */
   allocate(
-    request: ResourceAllocationRequest
+    _request: ResourceAllocationRequest
   ): Promise<ResourceAllocationResult>;
 
   /**
    * Release allocated resources
    */
-  release(requestId: string): Promise<void>;
+  release(_requestId: string): Promise<void>;
 
   /**
    * Get allocation statistics
@@ -447,7 +447,7 @@ export interface IResourceAllocator {
   /**
    * Update rate limits
    */
-  updateRateLimits(config: RateLimitConfig): void;
+  updateRateLimits(_config: RateLimitConfig): void;
 }
 
 /**
@@ -473,13 +473,13 @@ export interface IAdaptiveResourceManager {
    * Allocate resources for a task
    */
   allocateResources(
-    request: ResourceAllocationRequest
+    _request: ResourceAllocationRequest
   ): Promise<ResourceAllocationResult>;
 
   /**
    * Release resources for a completed task
    */
-  releaseResources(requestId: string): Promise<void>;
+  releaseResources(_requestId: string): Promise<void>;
 
   /**
    * Perform capacity analysis
@@ -499,7 +499,7 @@ export interface IAdaptiveResourceManager {
   /**
    * Update configuration
    */
-  updateConfig(config: Partial<AdaptiveResourceManagerConfig>): void;
+  updateConfig(_config: Partial<AdaptiveResourceManagerConfig>): void;
 
   /**
    * Get health status
@@ -515,7 +515,7 @@ export interface IAdaptiveResourceManager {
    * Handle agent failover
    */
   handleFailover(
-    failedAgentId: string,
-    backupAgentId: string
+    _failedAgentId: string,
+    _backupAgentId: string
   ): Promise<FailoverEvent>;
 }

@@ -8,6 +8,20 @@
 import fc from "fast-check";
 import { TaskIntakeProcessor } from "../../../../src/orchestrator/intake/TaskIntakeProcessor";
 
+// Define BufferEncoding type for compatibility
+type BufferEncoding =
+  | "ascii"
+  | "utf8"
+  | "utf-8"
+  | "utf16le"
+  | "ucs2"
+  | "ucs-2"
+  | "base64"
+  | "base64url"
+  | "latin1"
+  | "binary"
+  | "hex";
+
 const BASE_TASK = {
   id: "task-edge-001",
   type: "analysis",

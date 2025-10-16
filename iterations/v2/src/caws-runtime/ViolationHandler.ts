@@ -61,9 +61,9 @@ export interface ViolationConfig {
 
 export class ViolationHandler extends EventEmitter {
   constructor(
-    private alertManager: AlertManager,
-    private auditLogger: AuditLogger,
-    private config: ViolationConfig = {
+    private _alertManager: AlertManager,
+    private _auditLogger: AuditLogger,
+    private _config: ViolationConfig = {
       alertEnabled: true,
       blockEnabled: true,
       logEnabled: true,
@@ -714,18 +714,18 @@ export class ViolationHandler extends EventEmitter {
 // TODO: Implement these interfaces
 // Placeholder interfaces for dependencies
 export interface AlertManager {
-  sendAlert(alert: AlertMessage): Promise<void>;
+  sendAlert(_alert: AlertMessage): Promise<void>;
   escalateViolation(
-    violation: ConstitutionalViolation,
-    operation: OperationContext,
-    context: EvaluationContext
+    _violation: ConstitutionalViolation,
+    _operation: OperationContext,
+    _context: EvaluationContext
   ): Promise<void>;
 }
 
 export interface AuditLogger {
   logViolation(
-    violation: ConstitutionalViolation,
-    operation: OperationContext,
-    context: EvaluationContext
+    _violation: ConstitutionalViolation,
+    _operation: OperationContext,
+    _context: EvaluationContext
   ): Promise<void>;
 }

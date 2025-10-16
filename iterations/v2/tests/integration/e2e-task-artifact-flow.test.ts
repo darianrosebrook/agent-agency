@@ -70,7 +70,7 @@ class MockTaskOrchestrator {
 
 // Mock registry for E2E tests
 class MockAgentRegistry {
-  private agents: any[] = [
+  private agents = [
     {
       id: "mock-agent-1",
       name: "Mock Code Agent",
@@ -235,7 +235,7 @@ describe("E2E Task Flow: Submit → Route → Artifact → Observe", () => {
       taskIds.map((taskId: string) => runtime.getTaskStatus(taskId))
     );
 
-    statuses.forEach((status: any, index: number) => {
+    statuses.forEach((status: any, _index: number) => {
       expect(status.status).toBe("completed");
       expect(status.result.output).toBe("Mock task completed successfully");
       expect(status.result.artifacts.length).toBeGreaterThan(0);

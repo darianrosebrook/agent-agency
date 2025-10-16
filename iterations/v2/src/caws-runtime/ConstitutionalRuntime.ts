@@ -9,28 +9,28 @@
 
 import { EventEmitter } from "events";
 import {
-  OperationContext,
-  EvaluationContext,
-  ComplianceResult,
-  ConstitutionalViolation,
-  WaiverCheckResult,
   AuditResult,
+  ComplianceResult,
   ConstitutionalConfig,
+  ConstitutionalViolation,
+  EvaluationContext,
+  OperationContext,
+  WaiverCheckResult,
 } from "../types/caws-constitutional";
 
+import { TracingProvider } from "../observability/TracingProvider";
 import { ConstitutionalPolicyEngine } from "./ConstitutionalPolicyEngine";
 import { ViolationHandler } from "./ViolationHandler";
 import { WaiverManager } from "./WaiverManager";
-import { TracingProvider } from "../observability/TracingProvider";
 
 export class ConstitutionalRuntime extends EventEmitter {
   private config: ConstitutionalConfig;
 
   constructor(
-    private policyEngine: ConstitutionalPolicyEngine,
-    private violationHandler: ViolationHandler,
-    private waiverManager: WaiverManager,
-    private tracing: TracingProvider,
+    private _policyEngine: ConstitutionalPolicyEngine,
+    private _violationHandler: ViolationHandler,
+    private _waiverManager: WaiverManager,
+    private _tracing: TracingProvider,
     config?: Partial<ConstitutionalConfig>
   ) {
     super();
@@ -68,71 +68,83 @@ export class ConstitutionalRuntime extends EventEmitter {
       };
     }
 
-    return this.tracing.traceOperation("constitutional:validateOperation", async () => {
-      const startTime = Date.now();
+    return this.tracing.traceOperation(
+      "constitutional:validateOperation",
+      async () => {
+        const startTime = Date.now();
 
-      // Check for active waivers first
-      const waiverCheck = await this.waiverManager.checkWaiver(operation, context);
-
-      if (waiverCheck.hasActiveWaiver) {
-        this.emit("operation:waiver-applied", {
-          operationId: operation.id,
-          waiverId: waiverCheck.waiver?.id,
-          timestamp: new Date(),
-        });
-
-        return {
-          operationId: operation.id,
-          compliant: true,
-          violations: [],
-          evaluations: [],
-          timestamp: new Date(),
-          duration: Date.now() - startTime,
-          waiverApplied: true,
-          waiverId: waiverCheck.waiver?.id,
-        };
-      }
-
-      // Evaluate against policies
-      const result = await this.policyEngine.evaluateCompliance(operation, context);
-
-      // Handle violations
-      if (!result.compliant && result.violations.length > 0) {
-        // Limit violations to prevent overload
-        const violations = result.violations.slice(0, this.config.maxViolationsPerOperation);
-
-        await this.violationHandler.handleViolations(
-          violations,
+        // Check for active waivers first
+        const waiverCheck = await this.waiverManager.checkWaiver(
           operation,
-          context,
-          this.config.violationResponseTimeout
+          context
         );
 
-        this.emit("operation:violations-detected", {
+        if (waiverCheck.hasActiveWaiver) {
+          this.emit("operation:waiver-applied", {
+            operationId: operation.id,
+            waiverId: waiverCheck.waiver?.id,
+            timestamp: new Date(),
+          });
+
+          return {
+            operationId: operation.id,
+            compliant: true,
+            violations: [],
+            evaluations: [],
+            timestamp: new Date(),
+            duration: Date.now() - startTime,
+            waiverApplied: true,
+            waiverId: waiverCheck.waiver?.id,
+          };
+        }
+
+        // Evaluate against policies
+        const result = await this.policyEngine.evaluateCompliance(
+          operation,
+          context
+        );
+
+        // Handle violations
+        if (!result.compliant && result.violations.length > 0) {
+          // Limit violations to prevent overload
+          const violations = result.violations.slice(
+            0,
+            this.config.maxViolationsPerOperation
+          );
+
+          await this.violationHandler.handleViolations(
+            violations,
+            operation,
+            context,
+            this.config.violationResponseTimeout
+          );
+
+          this.emit("operation:violations-detected", {
+            operationId: operation.id,
+            violationCount: violations.length,
+            violations: violations.map((v) => ({
+              id: v.id,
+              principle: v.principle,
+              severity: v.severity,
+              message: v.message,
+            })),
+            timestamp: new Date(),
+          });
+        }
+
+        result.duration = Date.now() - startTime;
+
+        this.emit("operation:validated", {
           operationId: operation.id,
-          violationCount: violations.length,
-          violations: violations.map(v => ({
-            id: v.id,
-            principle: v.principle,
-            severity: v.severity,
-            message: v.message,
-          })),
+          compliant: result.compliant,
+          violationCount: result.violations.length,
+          duration: result.duration,
           timestamp: new Date(),
         });
+
+        return result;
       }
-
-      result.duration = Date.now() - startTime;
-
-      this.emit("operation:validated", {
-        operationId: operation.id,
-        compliant: result.compliant,
-        violationCount: result.violations.length,
-        duration: result.duration,
-        timestamp: new Date(),
-      });
-
-      return result;
-    });
+    );
   }
 
   /**
@@ -140,8 +152,8 @@ export class ConstitutionalRuntime extends EventEmitter {
    */
   async monitorOperation(
     operation: OperationContext,
-    executionContext: any,
-    context: EvaluationContext
+    _executionContext: any,
+    _context: EvaluationContext
   ): Promise<void> {
     if (!this.config.enabled) return;
 
@@ -176,56 +188,59 @@ export class ConstitutionalRuntime extends EventEmitter {
       };
     }
 
-    return this.tracing.traceOperation("constitutional:auditOperation", async () => {
-      // Create audit operation context
-      const auditOperation: OperationContext = {
-        id: `audit-${operation.id}`,
-        type: "operation_audit",
-        timestamp: new Date(),
-        agentId: operation.agentId,
-        userId: operation.userId,
-        sessionId: operation.sessionId,
-        payload: {
-          originalOperation: operation,
-          executionResult: result,
-        },
-        metadata: {
-          auditType: "post_execution",
-          originalOperationId: operation.id,
-        },
-      };
+    return this.tracing.traceOperation(
+      "constitutional:auditOperation",
+      async () => {
+        // Create audit operation context
+        const auditOperation: OperationContext = {
+          id: `audit-${operation.id}`,
+          type: "operation_audit",
+          timestamp: new Date(),
+          agentId: operation.agentId,
+          userId: operation.userId,
+          sessionId: operation.sessionId,
+          payload: {
+            originalOperation: operation,
+            executionResult: result,
+          },
+          metadata: {
+            auditType: "post_execution",
+            originalOperationId: operation.id,
+          },
+        };
 
-      // Evaluate audit compliance
-      const compliance = await this.policyEngine.evaluateCompliance(
-        auditOperation,
-        context
-      );
+        // Evaluate audit compliance
+        const compliance = await this.policyEngine.evaluateCompliance(
+          auditOperation,
+          context
+        );
 
-      // Calculate compliance score (0-100)
-      const score = this.calculateComplianceScore(compliance);
+        // Calculate compliance score (0-100)
+        const score = this.calculateComplianceScore(compliance);
 
-      // Generate recommendations
-      const recommendations = this.generateRecommendations(compliance);
+        // Generate recommendations
+        const recommendations = this.generateRecommendations(compliance);
 
-      const auditResult: AuditResult = {
-        operationId: operation.id,
-        compliant: compliance.compliant,
-        violations: compliance.violations,
-        recommendations,
-        score,
-        timestamp: new Date(),
-        auditorVersion: "1.0.0",
-      };
+        const auditResult: AuditResult = {
+          operationId: operation.id,
+          compliant: compliance.compliant,
+          violations: compliance.violations,
+          recommendations,
+          score,
+          timestamp: new Date(),
+          auditorVersion: "1.0.0",
+        };
 
-      this.emit("operation:audited", {
-        operationId: operation.id,
-        score,
-        violationCount: compliance.violations.length,
-        timestamp: new Date(),
-      });
+        this.emit("operation:audited", {
+          operationId: operation.id,
+          score,
+          violationCount: compliance.violations.length,
+          timestamp: new Date(),
+        });
 
-      return auditResult;
-    });
+        return auditResult;
+      }
+    );
   }
 
   /**
@@ -344,15 +359,23 @@ export class ConstitutionalRuntime extends EventEmitter {
     }
 
     // Weight violations by severity
-    const violationWeights = compliance.violations.reduce((total, violation) => {
-      switch (violation.severity) {
-        case "low": return total + 5;
-        case "medium": return total + 15;
-        case "high": return total + 30;
-        case "critical": return total + 50;
-        default: return total + 10;
-      }
-    }, 0);
+    const violationWeights = compliance.violations.reduce(
+      (total, violation) => {
+        switch (violation.severity) {
+          case "low":
+            return total + 5;
+          case "medium":
+            return total + 15;
+          case "high":
+            return total + 30;
+          case "critical":
+            return total + 50;
+          default:
+            return total + 10;
+        }
+      },
+      0
+    );
 
     return Math.max(0, 100 - violationWeights);
   }
@@ -368,41 +391,64 @@ export class ConstitutionalRuntime extends EventEmitter {
     }
 
     // Group violations by principle
-    const violationsByPrinciple = compliance.violations.reduce((acc, violation) => {
-      if (!acc[violation.principle]) {
-        acc[violation.principle] = [];
-      }
-      acc[violation.principle].push(violation);
-      return acc;
-    }, {} as Record<string, ConstitutionalViolation[]>);
+    const violationsByPrinciple = compliance.violations.reduce(
+      (acc, violation) => {
+        if (!acc[violation.principle]) {
+          acc[violation.principle] = [];
+        }
+        acc[violation.principle].push(violation);
+        return acc;
+      },
+      {} as Record<string, ConstitutionalViolation[]>
+    );
 
     // Generate recommendations for each principle
-    for (const [principle, violations] of Object.entries(violationsByPrinciple)) {
+    for (const [principle, _violations] of Object.entries(
+      violationsByPrinciple
+    )) {
       switch (principle) {
         case "transparency":
-          recommendations.push("Consider adding more detailed audit logging to improve transparency.");
+          recommendations.push(
+            "Consider adding more detailed audit logging to improve transparency."
+          );
           break;
         case "accountability":
-          recommendations.push("Ensure all operations include proper user and agent identification.");
+          recommendations.push(
+            "Ensure all operations include proper user and agent identification."
+          );
           break;
         case "safety":
-          recommendations.push("Review operation parameters to ensure system safety constraints.");
+          recommendations.push(
+            "Review operation parameters to ensure system safety constraints."
+          );
           break;
         case "fairness":
-          recommendations.push("Audit decision-making processes for potential bias.");
+          recommendations.push(
+            "Audit decision-making processes for potential bias."
+          );
           break;
         case "privacy":
-          recommendations.push("Verify data handling complies with privacy regulations.");
+          recommendations.push(
+            "Verify data handling complies with privacy regulations."
+          );
           break;
         case "reliability":
-          recommendations.push("Implement additional error handling and monitoring.");
+          recommendations.push(
+            "Implement additional error handling and monitoring."
+          );
           break;
       }
     }
 
     // Add waiver recommendation if violations are present
-    if (compliance.violations.some(v => v.severity === "high" || v.severity === "critical")) {
-      recommendations.push("Consider requesting a waiver for exceptional circumstances.");
+    if (
+      compliance.violations.some(
+        (v) => v.severity === "high" || v.severity === "critical"
+      )
+    ) {
+      recommendations.push(
+        "Consider requesting a waiver for exceptional circumstances."
+      );
     }
 
     return recommendations;

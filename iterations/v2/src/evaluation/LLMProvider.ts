@@ -31,8 +31,8 @@ export abstract class LLMProvider {
    * @returns LLM response with score and confidence
    */
   abstract evaluate(
-    input: JudgmentInput,
-    criterion: EvaluationCriterion
+    _input: JudgmentInput,
+    _criterion: EvaluationCriterion
   ): Promise<LLMResponse>;
 }
 

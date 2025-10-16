@@ -20,8 +20,8 @@ import {
 interface StateTransition {
   from: DebateState;
   to: DebateState;
-  guard?: (session: DebateSession) => boolean;
-  action?: (session: DebateSession) => void;
+  guard?: (_session: DebateSession) => boolean;
+  action?: (_session: DebateSession) => void;
 }
 
 /**

@@ -28,7 +28,7 @@ export class DatabaseTestUtils {
   /**
    * Mock database query implementation
    */
-  private static mockQuery(sql: string, params: any[]): Promise<any> {
+  private static mockQuery(sql: string, params): Promise<any> {
     // Simple mock implementation for basic operations
     if (sql.includes("SELECT 1")) {
       return Promise.resolve({ rows: [{ "?column?": 1 }], rowCount: 1 });
@@ -162,7 +162,7 @@ export class DatabaseTestUtils {
   static async queryWithTenantContext<T = any>(
     tenantId: string,
     sql: string,
-    params: any[] = []
+    params = []
   ): Promise<{ rows: T[]; rowCount: number }> {
     const manager = ConnectionPoolManager.getInstance();
     return manager.queryWithTenantContext<T>(tenantId, sql, params);
@@ -207,9 +207,9 @@ export class DatabaseTestUtils {
    * Useful for integration tests
    */
   static async seedTestData(data: {
-    agents?: any[];
-    tasks?: any[];
-    tenants?: any[];
+    agents?;
+    tasks?;
+    tenants?;
   }): Promise<void> {
     const pool = this.getPool();
 

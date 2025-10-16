@@ -35,9 +35,9 @@ export class CircuitBreakerOpenError extends Error {
 }
 
 export enum CircuitState {
-  CLOSED = "closed", // Normal operation
-  OPEN = "open", // Failing, reject requests
-  HALF_OPEN = "half-open", // Testing if recovered
+  _CLOSED = "closed", // Normal operation
+  _OPEN = "open", // Failing, reject requests
+  _HALF_OPEN = "half-open", // Testing if recovered
 }
 
 export interface CircuitBreakerConfig {
@@ -76,7 +76,7 @@ export class CircuitBreaker {
   private lastFailure: Date | null = null;
   private lastSuccess: Date | null = null;
 
-  constructor(private config: CircuitBreakerConfig) {}
+  constructor(private _config: CircuitBreakerConfig) {}
 
   /**
    * Execute an operation with circuit breaker protection

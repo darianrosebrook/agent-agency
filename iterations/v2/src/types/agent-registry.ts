@@ -470,13 +470,13 @@ export interface RegistryStats {
  * Error types that can occur in registry operations.
  */
 export enum RegistryErrorType {
-  AGENT_NOT_FOUND = "AGENT_NOT_FOUND",
-  AGENT_ALREADY_EXISTS = "AGENT_ALREADY_EXISTS",
-  REGISTRY_FULL = "REGISTRY_FULL",
-  INVALID_AGENT_DATA = "INVALID_AGENT_DATA",
-  QUERY_FAILED = "QUERY_FAILED",
-  UPDATE_FAILED = "UPDATE_FAILED",
-  DATABASE_ERROR = "DATABASE_ERROR",
+  _AGENT_NOT_FOUND = "AGENT_NOT_FOUND",
+  _AGENT_ALREADY_EXISTS = "AGENT_ALREADY_EXISTS",
+  _REGISTRY_FULL = "REGISTRY_FULL",
+  _INVALID_AGENT_DATA = "INVALID_AGENT_DATA",
+  _QUERY_FAILED = "QUERY_FAILED",
+  _UPDATE_FAILED = "UPDATE_FAILED",
+  _DATABASE_ERROR = "DATABASE_ERROR",
 }
 
 /**
@@ -484,9 +484,9 @@ export enum RegistryErrorType {
  */
 export class RegistryError extends Error {
   constructor(
-    public readonly type: RegistryErrorType,
+    public readonly _type: RegistryErrorType,
     message: string,
-    public readonly context?: Record<string, unknown>
+    public readonly _context?: Record<string, unknown>
   ) {
     super(message);
     this.name = "RegistryError";
@@ -502,14 +502,14 @@ export interface AgentRegistry {
    * Initialize the registry with optional seeding data.
    * @param options - Initialization options including seeds and mode
    */
-  initialize(options?: RegistryInitOptions): Promise<void>;
+  initialize(_options?: RegistryInitOptions): Promise<void>;
 
   /**
    * Query agents by capability requirements.
    * @param query - Capability query parameters
    * @returns Array of matching agents with scores
    */
-  getAgentsByCapability(query: AgentQuery): Promise<AgentQueryResult[]>;
+  getAgentsByCapability(_query: AgentQuery): Promise<AgentQueryResult[]>;
 
   /**
    * Update performance metrics for an agent after task completion.
@@ -517,8 +517,8 @@ export interface AgentRegistry {
    * @param metrics - Performance metrics from completed task
    */
   updatePerformance(
-    agentId: AgentId,
-    metrics: PerformanceMetrics
+    _agentId: AgentId,
+    _metrics: PerformanceMetrics
   ): Promise<AgentProfile>;
 
   /**
@@ -532,7 +532,7 @@ export interface AgentRegistry {
    * @param agentId - ID of the agent to retrieve
    * @returns Agent profile
    */
-  getProfile(agentId: AgentId): Promise<AgentProfile>;
+  getProfile(_agentId: AgentId): Promise<AgentProfile>;
 }
 
 /**

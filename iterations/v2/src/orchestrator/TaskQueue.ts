@@ -301,7 +301,7 @@ export interface TaskQueueAuditRecord {
 }
 
 export interface TaskQueueAuditSink {
-  record(event: TaskQueueAuditRecord): Promise<void> | void;
+  record(_event: TaskQueueAuditRecord): Promise<void> | void;
 }
 
 export interface SecureTaskQueueOptions {
@@ -329,7 +329,7 @@ export class SecureTaskQueue {
   private readonly redactMetadataKeys: string[];
 
   constructor(
-    private readonly queue: TaskQueue,
+    private readonly _queue: TaskQueue,
     private readonly securityManager: SecurityManager,
     options: SecureTaskQueueOptions = {}
   ) {

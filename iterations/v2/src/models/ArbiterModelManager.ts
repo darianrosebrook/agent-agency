@@ -20,7 +20,7 @@ import type { ModelRegistry } from "./ModelRegistry";
  * Arbiter model manager error
  */
 export class ArbiterModelManagerError extends Error {
-  constructor(message: string, public code: string) {
+  constructor(message: string, public _code: string) {
     super(message);
     this.name = "ArbiterModelManagerError";
   }
@@ -68,10 +68,10 @@ export class ArbiterModelManager {
   private currentModelByTask: Map<string, string> = new Map();
 
   constructor(
-    private registry: ModelRegistry,
-    private selector: LocalModelSelector,
-    private costTracker: ComputeCostTracker,
-    private hotSwap: ModelHotSwapManager
+    private _registry: ModelRegistry,
+    private _selector: LocalModelSelector,
+    private _costTracker: ComputeCostTracker,
+    private _hotSwap: ModelHotSwapManager
   ) {}
 
   /**

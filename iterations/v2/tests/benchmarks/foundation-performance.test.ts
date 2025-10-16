@@ -20,7 +20,7 @@ import { AgentRegistryManager } from "../../src/orchestrator/AgentRegistryManage
 import { TaskRoutingManager } from "../../src/orchestrator/TaskRoutingManager";
 import { PerformanceTracker } from "../../src/rl/PerformanceTracker";
 import {
-  VerificationPriority,
+  _VerificationPriority,
   createMinimalTask,
   createMinimalWorkingSpec,
   createMultipleAgents,

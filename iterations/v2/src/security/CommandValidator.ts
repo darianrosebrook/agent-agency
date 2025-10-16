@@ -137,7 +137,7 @@ export class CommandValidator {
       return { valid: true };
     }
 
-    const issues: string[] = [];
+    const _issues: string[] = [];
 
     for (const arg of args) {
       // Check argument length
@@ -242,7 +242,7 @@ export class CommandValidator {
    * @returns Validation result
    */
   validateCommand(command: string, args?: string[]): SecurityValidationResult {
-    const issues: string[] = [];
+    const _issues: string[] = [];
 
     // Validate command
     if (!this.isCommandAllowed(command)) {

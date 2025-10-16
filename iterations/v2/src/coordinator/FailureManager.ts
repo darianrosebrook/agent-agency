@@ -28,8 +28,8 @@ export class FailureManager extends EventEmitter {
   private infrastructureController: InfrastructureController;
 
   constructor(
-    private coordinator: SystemCoordinator,
-    private config: { failureThreshold: number; recoveryTimeout: number },
+    private _coordinator: SystemCoordinator,
+    private _config: { failureThreshold: number; recoveryTimeout: number },
     incidentNotifier?: IncidentNotifier,
     infrastructureController?: InfrastructureController
   ) {
@@ -438,7 +438,7 @@ export class FailureManager extends EventEmitter {
    */
   private async createIncidentTicket(
     failure: FailureEvent,
-    recoveryError: any
+    _recoveryError: any
   ): Promise<string> {
     // Generate unique incident ID
     const incidentId = `INC-${failure.componentId}-${Date.now()}`;
@@ -479,7 +479,7 @@ export class FailureManager extends EventEmitter {
     failure: FailureEvent,
     incidentId: string
   ): Promise<void> {
-    const notification = {
+    const _notification = {
       incidentId,
       componentId: failure.componentId,
       failureType: failure.failureType,
@@ -516,7 +516,7 @@ export class FailureManager extends EventEmitter {
     recoveryError: any,
     incidentId: string
   ): Promise<void> {
-    const diagnostics = {
+    const _diagnostics = {
       incidentId,
       componentId: failure.componentId,
       failureType: failure.failureType,
@@ -558,7 +558,7 @@ export class FailureManager extends EventEmitter {
     recoveryError: any,
     incidentId: string
   ): Promise<void> {
-    const incidentLog = {
+    const _incidentLog = {
       incidentId,
       componentId: failure.componentId,
       failureType: failure.failureType,

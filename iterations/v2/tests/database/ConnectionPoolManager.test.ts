@@ -409,7 +409,7 @@ describe("ConnectionPoolManager", () => {
       let callCount = 0;
       pool.query = jest
         .fn()
-        .mockImplementation(async (queryText: string, values?: any[]) => {
+        .mockImplementation(async (queryText: string, values?) => {
           callCount++;
           if (callCount === 1) {
             // First call (SET LOCAL) fails

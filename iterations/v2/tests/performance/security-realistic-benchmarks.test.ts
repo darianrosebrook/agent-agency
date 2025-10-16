@@ -172,7 +172,7 @@ describe("Security Components - Realistic Performance Benchmarks", () => {
         const startTime = performance.now();
 
         // Generate a real JWT token
-        const token = jwt.sign(
+        const _token = jwt.sign(
           {
             agentId: `agent-${i}`,
             tenantId: "test-tenant",
@@ -430,7 +430,7 @@ describe("Security Components - Realistic Performance Benchmarks", () => {
         const startTime = performance.now();
 
         // Perform rate limit check
-        const allowed = securityManager.checkRateLimit(context!, "submitTask");
+        const _allowed = securityManager.checkRateLimit(context!, "submitTask");
 
         const endTime = performance.now();
         latencies.push(endTime - startTime);
@@ -515,7 +515,7 @@ describe("Security Components - Realistic Performance Benchmarks", () => {
         const startTime = performance.now();
 
         // Validate command with complex arguments
-        const result = commandValidator.validateCommand(
+        const _result = commandValidator.validateCommand(
           testCase.cmd,
           testCase.args
         );
@@ -663,7 +663,7 @@ describe("Security Components - Realistic Performance Benchmarks", () => {
           securityManager.authorize(context, Permission.SUBMIT_TASK);
         }
 
-        const registryContext = await agentRegistrySecurity.authenticate(token);
+        const _registryContext = await agentRegistrySecurity.authenticate(token);
         commandValidator.validateCommand("echo", [`test-${i}`]);
 
         const endTime = performance.now();

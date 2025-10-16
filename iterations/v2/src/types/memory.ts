@@ -53,8 +53,8 @@ export interface TenantAccessResult {
 
 export interface TenantIsolator {
   validateTenantAccess(
-    tenantId: string,
-    operation: string,
-    resource: string
+    _tenantId: string,
+    _operation: string,
+    _resource: string
   ): Promise<TenantAccessResult>;
 }

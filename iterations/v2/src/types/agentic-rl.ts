@@ -956,11 +956,11 @@ export interface JSONSchema {
  * Error types for RL operations.
  */
 export enum RLErrorType {
-  INVALID_TRAJECTORY = "INVALID_TRAJECTORY",
-  TRAINING_FAILED = "TRAINING_FAILED",
-  BUDGET_EXCEEDED = "BUDGET_EXCEEDED",
-  INVALID_CONFIG = "INVALID_CONFIG",
-  MODEL_ERROR = "MODEL_ERROR",
+  _INVALID_TRAJECTORY = "INVALID_TRAJECTORY",
+  _TRAINING_FAILED = "TRAINING_FAILED",
+  _BUDGET_EXCEEDED = "BUDGET_EXCEEDED",
+  _INVALID_CONFIG = "INVALID_CONFIG",
+  _MODEL_ERROR = "MODEL_ERROR",
 }
 
 /**
@@ -968,9 +968,9 @@ export enum RLErrorType {
  */
 export class RLError extends Error {
   constructor(
-    public readonly type: RLErrorType,
+    public readonly _type: RLErrorType,
     message: string,
-    public readonly context?: Record<string, unknown>
+    public readonly _context?: Record<string, unknown>
   ) {
     super(message);
     this.name = "RLError";

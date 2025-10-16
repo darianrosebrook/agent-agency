@@ -33,7 +33,7 @@ export class TenantIsolator {
   async validateTenantAccess(
     tenantId: string,
     operation: string,
-    resource: string
+    _resource: string
   ): Promise<TenantAccessResult> {
     const config = this.tenantConfigs.get(tenantId);
 

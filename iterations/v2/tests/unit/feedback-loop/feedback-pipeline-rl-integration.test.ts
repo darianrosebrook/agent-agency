@@ -15,7 +15,7 @@ describe("FeedbackPipeline RL Integration", () => {
   let configManager: ConfigManager;
   let feedbackPipeline: FeedbackPipeline;
   let rlTrainingCoordinator: RLTrainingCoordinator;
-  let mockRLTrainer: any;
+  let mockRLTrainer;
 
   beforeEach(() => {
     configManager = ConfigManager.getInstance();

@@ -27,7 +27,7 @@ jest.mock("fs", () => ({
 
 describe("FileStatePersistence", () => {
   let persistence: FileStatePersistence;
-  let mockFs: any;
+  let mockFs;
   let tempDir: string;
 
   const mockSnapshot = {

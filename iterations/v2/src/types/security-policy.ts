@@ -11,21 +11,21 @@
  * Security policy violation severity levels
  */
 export enum ViolationSeverity {
-  LOW = "low",
-  MEDIUM = "medium",
-  HIGH = "high",
-  CRITICAL = "critical",
+  _LOW = "low",
+  _MEDIUM = "medium",
+  _HIGH = "high",
+  _CRITICAL = "critical",
 }
 
 /**
  * Policy action types
  */
 export enum PolicyAction {
-  ALLOW = "allow",
-  DENY = "deny",
-  LOG = "log",
-  QUARANTINE = "quarantine",
-  ESCALATE = "escalate",
+  _ALLOW = "allow",
+  _DENY = "deny",
+  _LOG = "log",
+  _QUARANTINE = "quarantine",
+  _ESCALATE = "escalate",
 }
 
 /**
@@ -174,13 +174,13 @@ export interface SecurityContext {
  * Security levels
  */
 export enum SecurityLevel {
-  PUBLIC = "public",
-  INTERNAL = "internal",
-  CONFIDENTIAL = "confidential",
-  RESTRICTED = "restricted",
-  AGENT = "agent",
-  TRUSTED_AGENT = "trusted_agent",
-  ADMIN = "admin",
+  _PUBLIC = "public",
+  _INTERNAL = "internal",
+  _CONFIDENTIAL = "confidential",
+  _RESTRICTED = "restricted",
+  _AGENT = "agent",
+  _TRUSTED_AGENT = "trusted_agent",
+  _ADMIN = "admin",
 }
 
 /**
@@ -206,25 +206,25 @@ export interface SecurityMetadata {
 export interface PolicyEngine {
   /** Evaluate policy for given context and action */
   evaluatePolicy(
-    context: SecurityContext,
-    action: string,
-    resource: string
+    _context: SecurityContext,
+    _action: string,
+    _resource: string
   ): Promise<PolicyDecision>;
 
   /** Validate a security policy */
-  validatePolicy(policy: SecurityPolicy): ValidationResult;
+  validatePolicy(_policy: SecurityPolicy): ValidationResult;
 
   /** Update a security policy */
-  updatePolicy(policy: SecurityPolicy): Promise<void>;
+  updatePolicy(_policy: SecurityPolicy): Promise<void>;
 
   /** Get all active policies */
   getActivePolicies(): Promise<SecurityPolicy[]>;
 
   /** Get policy by ID */
-  getPolicy(policyId: string): Promise<SecurityPolicy | null>;
+  getPolicy(_policyId: string): Promise<SecurityPolicy | null>;
 
   /** Delete a policy */
-  deletePolicy(policyId: string): Promise<void>;
+  deletePolicy(_policyId: string): Promise<void>;
 }
 
 /**
@@ -232,16 +232,19 @@ export interface PolicyEngine {
  */
 export interface CommandValidator {
   /** Validate a command string */
-  validateCommand(command: string, context: SecurityContext): ValidationResult;
+  validateCommand(
+    _command: string,
+    _context: SecurityContext
+  ): ValidationResult;
 
   /** Sanitize a command string */
-  sanitizeCommand(command: string): string;
+  sanitizeCommand(_command: string): string;
 
   /** Check if command is dangerous */
-  isDangerousCommand(command: string): boolean;
+  isDangerousCommand(_command: string): boolean;
 
   /** Get allowed commands for context */
-  getAllowedCommands(context: SecurityContext): string[];
+  getAllowedCommands(_context: SecurityContext): string[];
 }
 
 /**
@@ -249,32 +252,32 @@ export interface CommandValidator {
  */
 export interface SecurityAuditor {
   /** Log a security event */
-  logSecurityEvent(event: SecurityEvent): void;
+  logSecurityEvent(_event: SecurityEvent): void;
 
   /** Log a policy violation */
-  logPolicyViolation(violation: PolicyViolation): void;
+  logPolicyViolation(_violation: PolicyViolation): void;
 
   /** Get audit trail */
-  getAuditTrail(filter: AuditFilter): Promise<AuditEntry[]>;
+  getAuditTrail(_filter: AuditFilter): Promise<AuditEntry[]>;
 
   /** Get security events */
-  getSecurityEvents(filter: SecurityEventFilter): Promise<SecurityEvent[]>;
+  getSecurityEvents(_filter: SecurityEventFilter): Promise<SecurityEvent[]>;
 }
 
 /**
  * Security event types
  */
 export enum SecurityEventType {
-  AUTH_SUCCESS = "auth_success",
-  AUTH_FAILURE = "auth_failure",
-  AUTHZ_SUCCESS = "authz_success",
-  AUTHZ_FAILURE = "authz_failure",
-  POLICY_VIOLATION = "policy_violation",
-  SUSPICIOUS_ACTIVITY = "suspicious_activity",
-  SESSION_EXPIRED = "session_expired",
-  RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
-  COMMAND_BLOCKED = "command_blocked",
-  INPUT_VALIDATION_FAILED = "input_validation_failed",
+  _AUTH_SUCCESS = "auth_success",
+  _AUTH_FAILURE = "auth_failure",
+  _AUTHZ_SUCCESS = "authz_success",
+  _AUTHZ_FAILURE = "authz_failure",
+  _POLICY_VIOLATION = "policy_violation",
+  _SUSPICIOUS_ACTIVITY = "suspicious_activity",
+  _SESSION_EXPIRED = "session_expired",
+  _RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
+  _COMMAND_BLOCKED = "command_blocked",
+  _INPUT_VALIDATION_FAILED = "input_validation_failed",
 }
 
 /**
@@ -430,13 +433,16 @@ export interface AuditEntry {
  */
 export interface ThreatDetector {
   /** Detect threats in input */
-  detectThreats(input: string, context: SecurityContext): ThreatDetectionResult;
+  detectThreats(
+    _input: string,
+    _context: SecurityContext
+  ): ThreatDetectionResult;
 
   /** Get threat patterns */
   getThreatPatterns(): ThreatPattern[];
 
   /** Update threat patterns */
-  updateThreatPatterns(patterns: ThreatPattern[]): void;
+  updateThreatPatterns(_patterns: ThreatPattern[]): void;
 }
 
 /**
@@ -505,28 +511,28 @@ export interface ThreatPattern {
 export interface AccessControl {
   /** Check if access is allowed */
   checkAccess(
-    context: SecurityContext,
-    resource: string,
-    action: string
+    _context: SecurityContext,
+    _resource: string,
+    _action: string
   ): Promise<boolean>;
 
   /** Grant access */
   grantAccess(
-    context: SecurityContext,
-    resource: string,
-    action: string,
-    duration?: number
+    _context: SecurityContext,
+    _resource: string,
+    _action: string,
+    _duration?: number
   ): Promise<void>;
 
   /** Revoke access */
   revokeAccess(
-    context: SecurityContext,
-    resource: string,
-    action: string
+    _context: SecurityContext,
+    _resource: string,
+    _action: string
   ): Promise<void>;
 
   /** Get permissions for context */
-  getPermissions(context: SecurityContext): Promise<string[]>;
+  getPermissions(_context: SecurityContext): Promise<string[]>;
 }
 
 /**
@@ -596,7 +602,7 @@ export interface SecurityPolicyConfig {
  * Security error
  */
 export class SecurityError extends Error {
-  constructor(message: string, public code: string, public details?: any) {
+  constructor(message: string, public _code: string, public _details?: any) {
     super(message);
     this.name = "SecurityError";
   }

@@ -2,6 +2,9 @@ import crypto from "crypto";
 import { ServerResponse } from "http";
 import { ObserverConfig, ObserverSseClient, ObserverEventPayload } from "../types";
 
+// Node.js types
+type NodeJS_Timeout = ReturnType<typeof setTimeout>;
+
 interface SseFilters {
   taskId?: string;
   type?: string;
@@ -17,7 +20,7 @@ export class SseManager {
   private readonly config: ObserverConfig;
   private readonly clients = new Map<string, ObserverSseClient>();
   private readonly order: string[] = [];
-  private heartbeatTimer?: NodeJS.Timeout;
+  private heartbeatTimer?: NodeJS_Timeout;
   private started = false;
 
   constructor(config: ObserverConfig) {

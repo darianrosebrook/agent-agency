@@ -158,7 +158,7 @@ describe("AdaptiveResourceManager Production Validation", () => {
 
       // Execute requests in batches to simulate production load
       const batchSize = 20;
-      const results: any[] = [];
+      const results = [];
 
       for (let i = 0; i < requests.length; i += batchSize) {
         const batch = requests.slice(i, i + batchSize);
@@ -235,7 +235,7 @@ describe("AdaptiveResourceManager Production Validation", () => {
     it("should maintain performance under sustained load", async () => {
       const numBatches = 10;
       const batchSize = 20;
-      const allResults: any[] = [];
+      const allResults = [];
 
       for (let batch = 0; batch < numBatches; batch++) {
         const batchRequests: ResourceAllocationRequest[] = [];

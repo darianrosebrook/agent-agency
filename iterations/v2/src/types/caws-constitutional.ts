@@ -11,35 +11,35 @@
 export { VerificationPriority } from "./verification";
 
 export enum ConstitutionalPrinciple {
-  TRANSPARENCY = "transparency",
-  ACCOUNTABILITY = "accountability",
-  SAFETY = "safety",
-  FAIRNESS = "fairness",
-  PRIVACY = "privacy",
-  RELIABILITY = "reliability",
+  _TRANSPARENCY = "transparency",
+  _ACCOUNTABILITY = "accountability",
+  _SAFETY = "safety",
+  _FAIRNESS = "fairness",
+  _PRIVACY = "privacy",
+  _RELIABILITY = "reliability",
 }
 
 export enum ViolationSeverity {
-  LOW = "low",
-  MEDIUM = "medium",
-  HIGH = "high",
-  CRITICAL = "critical",
+  _LOW = "low",
+  _MEDIUM = "medium",
+  _HIGH = "high",
+  _CRITICAL = "critical",
 }
 
 export enum RuleOperator {
-  EQUALS = "equals",
-  NOT_EQUALS = "not_equals",
-  CONTAINS = "contains",
-  NOT_CONTAINS = "not_contains",
-  GREATER_THAN = "greater_than",
-  LESS_THAN = "less_than",
-  GREATER_THAN_OR_EQUAL = "greater_than_or_equal",
-  LESS_THAN_OR_EQUAL = "less_than_or_equal",
-  REGEX_MATCH = "regex_match",
-  EXISTS = "exists",
-  NOT_EXISTS = "not_exists",
-  IN = "in",
-  NOT_IN = "not_in",
+  _EQUALS = "equals",
+  _NOT_EQUALS = "not_equals",
+  _CONTAINS = "contains",
+  _NOT_CONTAINS = "not_contains",
+  _GREATER_THAN = "greater_than",
+  _LESS_THAN = "less_than",
+  _GREATER_THAN_OR_EQUAL = "greater_than_or_equal",
+  _LESS_THAN_OR_EQUAL = "less_than_or_equal",
+  _REGEX_MATCH = "regex_match",
+  _EXISTS = "exists",
+  _NOT_EXISTS = "not_exists",
+  _IN = "in",
+  _NOT_IN = "not_in",
 }
 
 export interface ConstitutionalPolicy {
@@ -149,11 +149,11 @@ export interface WaiverRequest {
 }
 
 export enum WaiverStatus {
-  PENDING = "pending",
-  APPROVED = "approved",
-  REJECTED = "rejected",
-  EXPIRED = "expired",
-  REVOKED = "revoked",
+  _PENDING = "pending",
+  _APPROVED = "approved",
+  _REJECTED = "rejected",
+  _EXPIRED = "expired",
+  _REVOKED = "revoked",
 }
 
 export interface WaiverCheckResult {

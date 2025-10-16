@@ -74,11 +74,11 @@ export interface NotificationResult {
 
 export interface NotificationProvider {
   send(
-    recipient: NotificationRecipient,
-    message: NotificationMessage,
-    channel: NotificationChannel
+    _recipient: NotificationRecipient,
+    _message: NotificationMessage,
+    _channel: NotificationChannel
   ): Promise<NotificationResult>;
-  validateConfig(config: Record<string, any>): boolean;
+  validateConfig(_config: Record<string, any>): boolean;
   healthCheck(): Promise<{ healthy: boolean; error?: string }>;
 }
 
@@ -86,12 +86,12 @@ export interface NotificationProvider {
  * Email notification provider
  */
 export class EmailNotificationProvider implements NotificationProvider {
-  constructor(private config: Record<string, any>, private logger: Logger) {}
+  constructor(private _config: Record<string, any>, private _logger: Logger) {}
 
   async send(
     recipient: NotificationRecipient,
     message: NotificationMessage,
-    channel: NotificationChannel
+    _channel: NotificationChannel
   ): Promise<NotificationResult> {
     try {
       // In a real implementation, this would integrate with:
@@ -158,12 +158,12 @@ export class EmailNotificationProvider implements NotificationProvider {
  * Slack notification provider
  */
 export class SlackNotificationProvider implements NotificationProvider {
-  constructor(private config: Record<string, any>, private logger: Logger) {}
+  constructor(private _config: Record<string, any>, private _logger: Logger) {}
 
   async send(
     recipient: NotificationRecipient,
     message: NotificationMessage,
-    channel: NotificationChannel
+    _channel: NotificationChannel
   ): Promise<NotificationResult> {
     try {
       const slackChannel = recipient.channels.slack;
@@ -227,7 +227,7 @@ export class SlackNotificationProvider implements NotificationProvider {
  * Webhook notification provider
  */
 export class WebhookNotificationProvider implements NotificationProvider {
-  constructor(private config: Record<string, any>, private logger: Logger) {}
+  constructor(private _config: Record<string, any>, private _logger: Logger) {}
 
   async send(
     recipient: NotificationRecipient,
@@ -300,7 +300,7 @@ export class NotificationAdapter {
   private rateLimitTracker: Map<string, { count: number; resetTime: number }> =
     new Map();
 
-  constructor(private config: NotificationConfig, private logger: Logger) {
+  constructor(private _config: NotificationConfig, private _logger: Logger) {
     this.initializeProviders();
   }
 

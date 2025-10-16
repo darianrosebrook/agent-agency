@@ -29,7 +29,7 @@ import type { LocalModelProvider } from "./providers/LocalModelProvider";
  * Hot-swap error
  */
 export class HotSwapError extends Error {
-  constructor(message: string, public code: string) {
+  constructor(message: string, public _code: string) {
     super(message);
     this.name = "HotSwapError";
   }
@@ -229,10 +229,10 @@ export class ModelHotSwapManager {
   private learningLayer: LearningPreservationLayer;
 
   constructor(
-    private registry: ModelRegistry,
-    private selector: LocalModelSelector,
-    private costTracker: ComputeCostTracker,
-    private config: HotSwapConfig = {
+    private _registry: ModelRegistry,
+    private _selector: LocalModelSelector,
+    private _costTracker: ComputeCostTracker,
+    private _config: HotSwapConfig = {
       enableAutoSwap: true,
       swapCooldownMs: 300000, // 5 minutes
       minSamplesBeforeSwap: 10,

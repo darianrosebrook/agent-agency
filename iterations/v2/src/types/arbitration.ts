@@ -12,74 +12,74 @@
  * Severity of constitutional violation
  */
 export enum ViolationSeverity {
-  MINOR = "minor",
-  MODERATE = "moderate",
-  MAJOR = "major",
-  CRITICAL = "critical",
+  _MINOR = "minor",
+  _MODERATE = "moderate",
+  _MAJOR = "major",
+  _CRITICAL = "critical",
 }
 
 /**
  * Constitutional rule category
  */
 export enum RuleCategory {
-  CODE_QUALITY = "code_quality",
-  TESTING = "testing",
-  SECURITY = "security",
-  PERFORMANCE = "performance",
-  DOCUMENTATION = "documentation",
-  DEPLOYMENT = "deployment",
-  BUDGET = "budget",
-  PROCESS = "process",
-  RESOURCE_MANAGEMENT = "resource_management",
+  _CODE_QUALITY = "code_quality",
+  _TESTING = "testing",
+  _SECURITY = "security",
+  _PERFORMANCE = "performance",
+  _DOCUMENTATION = "documentation",
+  _DEPLOYMENT = "deployment",
+  _BUDGET = "budget",
+  _PROCESS = "process",
+  _RESOURCE_MANAGEMENT = "resource_management",
 }
 
 /**
  * Verdict outcome
  */
 export enum VerdictOutcome {
-  APPROVED = "approved",
-  REJECTED = "rejected",
-  CONDITIONAL = "conditional",
-  WAIVED = "waived",
-  APPEALED = "appealed",
+  _APPROVED = "approved",
+  _REJECTED = "rejected",
+  _CONDITIONAL = "conditional",
+  _WAIVED = "waived",
+  _APPEALED = "appealed",
 }
 
 /**
  * Waiver status
  */
 export enum WaiverStatus {
-  PENDING = "pending",
-  APPROVED = "approved",
-  REJECTED = "rejected",
-  EXPIRED = "expired",
-  REVOKED = "revoked",
+  _PENDING = "pending",
+  _APPROVED = "approved",
+  _REJECTED = "rejected",
+  _EXPIRED = "expired",
+  _REVOKED = "revoked",
 }
 
 /**
  * Arbitration session state
  */
 export enum ArbitrationState {
-  INITIALIZED = "initialized",
-  RULE_EVALUATION = "rule_evaluation",
-  DEBATE_IN_PROGRESS = "debate_in_progress",
-  EVIDENCE_COLLECTION = "evidence_collection",
-  VERDICT_GENERATION = "verdict_generation",
-  WAIVER_EVALUATION = "waiver_evaluation",
-  APPEAL_REVIEW = "appeal_review",
-  COMPLETED = "completed",
-  FAILED = "failed",
+  _INITIALIZED = "initialized",
+  _RULE_EVALUATION = "rule_evaluation",
+  _DEBATE_IN_PROGRESS = "debate_in_progress",
+  _EVIDENCE_COLLECTION = "evidence_collection",
+  _VERDICT_GENERATION = "verdict_generation",
+  _WAIVER_EVALUATION = "waiver_evaluation",
+  _APPEAL_REVIEW = "appeal_review",
+  _COMPLETED = "completed",
+  _FAILED = "failed",
 }
 
 /**
  * Appeal status
  */
 export enum AppealStatus {
-  SUBMITTED = "submitted",
-  UNDER_REVIEW = "under_review",
-  UPHELD = "upheld",
-  OVERTURNED = "overturned",
-  FINALIZED = "finalized",
-  WITHDRAWN = "withdrawn",
+  _SUBMITTED = "submitted",
+  _UNDER_REVIEW = "under_review",
+  _UPHELD = "upheld",
+  _OVERTURNED = "overturned",
+  _FINALIZED = "finalized",
+  _WITHDRAWN = "withdrawn",
 }
 
 /**
@@ -518,9 +518,9 @@ export interface ArbitrationProtocolConfig {
 export class ArbitrationError extends Error {
   constructor(
     message: string,
-    public code: string,
-    public sessionId?: string,
-    public ruleId?: string
+    public _code: string,
+    public _sessionId?: string,
+    public _ruleId?: string
   ) {
     super(message);
     this.name = "ArbitrationError";

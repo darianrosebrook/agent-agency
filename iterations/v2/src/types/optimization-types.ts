@@ -11,13 +11,13 @@
  * Performance metric types
  */
 export enum MetricType {
-  CPU = "cpu",
-  MEMORY = "memory",
-  NETWORK = "network",
-  LATENCY = "latency",
-  THROUGHPUT = "throughput",
-  ERROR_RATE = "error_rate",
-  CACHE_HIT_RATE = "cache_hit_rate",
+  _CPU = "cpu",
+  _MEMORY = "memory",
+  _NETWORK = "network",
+  _LATENCY = "latency",
+  _THROUGHPUT = "throughput",
+  _ERROR_RATE = "error_rate",
+  _CACHE_HIT_RATE = "cache_hit_rate",
 }
 
 /**
@@ -47,10 +47,10 @@ export interface PerformanceMetric {
  * Severity levels for bottlenecks
  */
 export enum BottleneckSeverity {
-  LOW = "low",
-  MEDIUM = "medium",
-  HIGH = "high",
-  CRITICAL = "critical",
+  _LOW = "low",
+  _MEDIUM = "medium",
+  _HIGH = "high",
+  _CRITICAL = "critical",
 }
 
 /**
@@ -92,12 +92,12 @@ export interface Bottleneck {
  * Optimization recommendation types
  */
 export enum RecommendationType {
-  CACHE_OPTIMIZATION = "cache_optimization",
-  RESOURCE_ALLOCATION = "resource_allocation",
-  QUERY_OPTIMIZATION = "query_optimization",
-  CONCURRENCY_TUNING = "concurrency_tuning",
-  MEMORY_MANAGEMENT = "memory_management",
-  NETWORK_OPTIMIZATION = "network_optimization",
+  _CACHE_OPTIMIZATION = "cache_optimization",
+  _RESOURCE_ALLOCATION = "resource_allocation",
+  _QUERY_OPTIMIZATION = "query_optimization",
+  _CONCURRENCY_TUNING = "concurrency_tuning",
+  _MEMORY_MANAGEMENT = "memory_management",
+  _NETWORK_OPTIMIZATION = "network_optimization",
 }
 
 /**
@@ -229,7 +229,7 @@ export interface OptimizationEngineConfig {
 
   /** Bottleneck detection thresholds */
   thresholds: {
-    [key in MetricType]?: number;
+    [_key in MetricType]?: number;
   };
 
   /** Enable cache optimization */
@@ -278,29 +278,29 @@ export interface IPerformanceMonitor {
   /**
    * Record a performance metric
    */
-  recordMetric(metric: PerformanceMetric): Promise<void>;
+  recordMetric(_metric: PerformanceMetric): Promise<void>;
 
   /**
    * Get metrics for a time window
    */
   getMetrics(
-    startTime: Date,
-    endTime: Date,
-    metricType?: MetricType
+    _startTime: Date,
+    _endTime: Date,
+    _metricType?: MetricType
   ): Promise<PerformanceMetric[]>;
 
   /**
    * Get latest metrics
    */
   getLatestMetrics(
-    count: number,
-    metricType?: MetricType
+    _count: number,
+    _metricType?: MetricType
   ): Promise<PerformanceMetric[]>;
 
   /**
    * Clear old metrics
    */
-  clearMetrics(olderThan: Date): Promise<void>;
+  clearMetrics(_olderThan: Date): Promise<void>;
 }
 
 /**
@@ -310,12 +310,12 @@ export interface IBottleneckDetector {
   /**
    * Detect bottlenecks from metrics
    */
-  detectBottlenecks(metrics: PerformanceMetric[]): Promise<Bottleneck[]>;
+  detectBottlenecks(_metrics: PerformanceMetric[]): Promise<Bottleneck[]>;
 
   /**
    * Update bottleneck thresholds
    */
-  updateThresholds(thresholds: Partial<Record<MetricType, number>>): void;
+  updateThresholds(_thresholds: Partial<Record<MetricType, number>>): void;
 
   /**
    * Get active bottlenecks
@@ -325,7 +325,7 @@ export interface IBottleneckDetector {
   /**
    * Clear resolved bottlenecks
    */
-  clearResolvedBottlenecks(olderThan: Date): Promise<void>;
+  clearResolvedBottlenecks(_olderThan: Date): Promise<void>;
 }
 
 /**
@@ -370,7 +370,7 @@ export interface IRuntimeOptimizer {
   /**
    * Update configuration
    */
-  updateConfig(config: Partial<OptimizationEngineConfig>): void;
+  updateConfig(_config: Partial<OptimizationEngineConfig>): void;
 
   /**
    * Get health status

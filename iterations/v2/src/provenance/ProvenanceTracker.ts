@@ -831,8 +831,8 @@ export class ProvenanceTracker extends EventEmitter {
   }
 
   private async generateQualityMetricsTrends(
-    chain: ProvenanceChain,
-    period: { start: string; end: string }
+    _chain: ProvenanceChain,
+    _period: { start: string; end: string }
   ): Promise<ProvenanceReport["qualityMetrics"]> {
     // This would analyze the quality metrics from provenance entries
     // For now, return empty trends

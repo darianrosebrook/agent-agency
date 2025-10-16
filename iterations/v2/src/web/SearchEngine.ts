@@ -92,9 +92,9 @@ export class SearchEngine {
   private cache: Map<string, { results: SearchResults; expiresAt: Date }>;
 
   constructor(
-    private readonly knowledgeSeeker: KnowledgeSeeker,
-    private readonly contentExtractor: ContentExtractor,
-    private readonly config: SearchEngineConfig
+    private readonly _knowledgeSeeker: KnowledgeSeeker,
+    private readonly _contentExtractor: ContentExtractor,
+    private readonly _config: SearchEngineConfig
   ) {
     this.cache = new Map();
   }
@@ -103,8 +103,8 @@ export class SearchEngine {
    * Execute search query
    */
   async search(
-    query: string | SearchQuery,
-    options?: {
+    _query: string | SearchQuery,
+    _options?: {
       maxResults?: number;
       queryType?: QueryType;
       enrichContent?: boolean;

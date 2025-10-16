@@ -196,7 +196,7 @@ export class TaskRoutingManager {
         error instanceof Error ? error.message : String(error);
 
       // Create error routing decision
-      const errorDecision: RoutingDecision = {
+      const _errorDecision: RoutingDecision = {
         id: `routing-error-${Date.now()}`,
         taskId: task.id,
         selectedAgent: null as any, // No agent selected
@@ -259,7 +259,7 @@ export class TaskRoutingManager {
   private async routeWithBandit(
     task: Task,
     candidates: AgentQueryResult[],
-    performanceContext?: any
+    _performanceContext?: any
   ): Promise<RoutingDecision> {
     if (!this.multiArmedBandit) {
       throw new Error("Multi-armed bandit not initialized");

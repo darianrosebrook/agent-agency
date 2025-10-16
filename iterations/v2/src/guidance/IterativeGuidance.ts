@@ -808,7 +808,7 @@ export class IterativeGuidance extends EventEmitter {
   private assessRisks(
     acceptanceCriteria: AcceptanceProgress[],
     gaps: GapAnalysis[],
-    workEstimate: WorkEstimate
+    _workEstimate: WorkEstimate
   ): ProgressSummary["riskAssessment"] {
     let riskScore = 0;
 
@@ -1094,7 +1094,7 @@ export class IterativeGuidance extends EventEmitter {
     );
   }
 
-  private areExternalSystemsAvailable(criterion: any): boolean {
+  private areExternalSystemsAvailable(_criterion: any): boolean {
     // Check if contracts are defined for external systems
     return (this.config.spec.contracts?.length ?? 0) > 0;
   }

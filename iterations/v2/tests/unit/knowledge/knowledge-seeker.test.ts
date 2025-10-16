@@ -17,7 +17,7 @@ import { VerificationVerdict } from "../../../src/types/verification";
 
 describe("KnowledgeSeeker", () => {
   let knowledgeSeeker: KnowledgeSeeker;
-  let mockProvider: any;
+  let mockProvider;
 
   const mockProviderConfig: SearchProviderConfig = {
     name: "mock",
@@ -245,12 +245,11 @@ describe("KnowledgeSeeker", () => {
       await seekerWithVerification.processQuery(highPriorityQuery);
 
       expect(mockVerificationEngine.verify).toHaveBeenCalled();
-      const verificationRequest = mockVerificationEngine.verify.mock.calls[0][0];
+      const verificationRequest =
+        mockVerificationEngine.verify.mock.calls[0][0];
 
       expect(verificationRequest.conversationContext).toBeDefined();
-      expect(
-        verificationRequest.conversationContext.previousMessages
-      ).toEqual(
+      expect(verificationRequest.conversationContext.previousMessages).toEqual(
         expect.arrayContaining([
           expect.stringContaining(highPriorityQuery.query),
         ])

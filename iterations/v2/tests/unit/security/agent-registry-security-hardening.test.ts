@@ -21,7 +21,7 @@ import {
 
 describe("Agent Registry Security - Production Hardening (ARBITER-013)", () => {
   let security: AgentRegistrySecurity;
-  let mockLogger: any;
+  let mockLogger;
 
   const createTestAgent = (id: string): AgentProfile => ({
     id,

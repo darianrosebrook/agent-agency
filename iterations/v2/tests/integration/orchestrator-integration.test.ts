@@ -128,7 +128,7 @@ describe("Orchestrator Integration", () => {
   describe("Task Lifecycle Integration", () => {
     it("should handle complete task lifecycle with security and events", async () => {
       // Setup event tracking
-      const eventsReceived: any[] = [];
+      const eventsReceived = [];
       events.on("task.enqueued", (event) => eventsReceived.push(event));
       events.on("task.dequeued", (event) => eventsReceived.push(event));
 

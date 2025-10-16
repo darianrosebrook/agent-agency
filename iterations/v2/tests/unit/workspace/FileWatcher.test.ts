@@ -39,10 +39,10 @@ jest.mock("path", () => ({
 
 describe("FileWatcher", () => {
   let watcher: FileWatcher;
-  let mockStat: any;
-  let mockResolve: any;
-  let mockRelative: any;
-  let mockExtname: any;
+  let mockStat;
+  let mockResolve;
+  let mockRelative;
+  let mockExtname;
 
   const mockConfig: FileWatcherConfig = {
     watchPaths: ["src", "tests"],
@@ -67,7 +67,7 @@ describe("FileWatcher", () => {
     mockExtname = path.extname;
 
     // Setup default mocks
-    mockResolve.mockImplementation((...args: any[]) => args.join("/"));
+    mockResolve.mockImplementation((...args) => args.join("/"));
     mockRelative.mockImplementation((from: any, to: any) =>
       to.replace(from + "/", "")
     );
@@ -129,10 +129,10 @@ describe("FileWatcher", () => {
 
   describe("file change handling", () => {
     let changeHandler: jest.Mock;
-    let addHandler: any;
-    let changeEventHandler: any;
-    let unlinkHandler: any;
-    let errorHandler: any;
+    let addHandler;
+    let changeEventHandler;
+    let unlinkHandler;
+    let errorHandler;
 
     beforeEach(async () => {
       changeHandler = jest.fn();
@@ -313,7 +313,7 @@ describe("FileWatcher", () => {
 
   describe("error handling", () => {
     let errorHandler: jest.Mock;
-    let watcherErrorHandler: any;
+    let watcherErrorHandler;
 
     beforeEach(async () => {
       errorHandler = jest.fn();

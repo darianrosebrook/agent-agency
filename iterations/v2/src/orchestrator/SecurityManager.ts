@@ -11,20 +11,20 @@ import { AgentProfile } from "../types/arbiter-orchestration";
 
 // Temporarily define local types to fix startup issue
 export enum ViolationSeverity {
-  LOW = "low",
-  MEDIUM = "medium",
-  HIGH = "high",
-  CRITICAL = "critical",
+  _LOW = "low",
+  _MEDIUM = "medium",
+  _HIGH = "high",
+  _CRITICAL = "critical",
 }
 
 export enum SecurityLevel {
-  PUBLIC = "public",
-  INTERNAL = "internal",
-  CONFIDENTIAL = "confidential",
-  RESTRICTED = "restricted",
-  AGENT = "agent",
-  TRUSTED_AGENT = "trusted_agent",
-  ADMIN = "admin",
+  _PUBLIC = "public",
+  _INTERNAL = "internal",
+  _CONFIDENTIAL = "confidential",
+  _RESTRICTED = "restricted",
+  _AGENT = "agent",
+  _TRUSTED_AGENT = "trusted_agent",
+  _ADMIN = "admin",
 }
 
 export interface SecurityContext {
@@ -45,25 +45,25 @@ export interface SecurityContext {
  */
 export enum Permission {
   /** Can submit tasks */
-  SUBMIT_TASK = "submit_task",
+  _SUBMIT_TASK = "submit_task",
 
   /** Can query own tasks */
-  QUERY_OWN_TASKS = "query_own_tasks",
+  _QUERY_OWN_TASKS = "query_own_tasks",
 
   /** Can query system status (limited) */
-  QUERY_SYSTEM_STATUS = "query_system_status",
+  _QUERY_SYSTEM_STATUS = "query_system_status",
 
   /** Can update own task progress */
-  UPDATE_OWN_PROGRESS = "update_own_progress",
+  _UPDATE_OWN_PROGRESS = "update_own_progress",
 
   /** Admin: Can query all tasks */
-  ADMIN_QUERY_ALL = "admin_query_all",
+  _ADMIN_QUERY_ALL = "admin_query_all",
 
   /** Admin: Can manage system configuration */
-  ADMIN_MANAGE_CONFIG = "admin_manage_config",
+  _ADMIN_MANAGE_CONFIG = "admin_manage_config",
 
   /** Admin: Can shutdown system */
-  ADMIN_SHUTDOWN = "admin_shutdown",
+  _ADMIN_SHUTDOWN = "admin_shutdown",
 }
 
 // SecurityLevel enum is now imported from security-policy.ts
@@ -73,28 +73,28 @@ export enum Permission {
  */
 export enum SecurityEventType {
   /** Authentication success */
-  AUTH_SUCCESS = "auth_success",
+  _AUTH_SUCCESS = "auth_success",
 
   /** Authentication failure */
-  AUTH_FAILURE = "auth_failure",
+  _AUTH_FAILURE = "auth_failure",
 
   /** Authorization failure */
-  AUTHZ_FAILURE = "authz_failure",
+  _AUTHZ_FAILURE = "authz_failure",
 
   /** Input validation failure */
-  INPUT_VALIDATION_FAILURE = "input_validation_failure",
+  _INPUT_VALIDATION_FAILURE = "input_validation_failure",
 
   /** Rate limit exceeded */
-  RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
+  _RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
 
   /** Suspicious activity detected */
-  SUSPICIOUS_ACTIVITY = "suspicious_activity",
+  _SUSPICIOUS_ACTIVITY = "suspicious_activity",
 
   /** Security policy violation */
-  POLICY_VIOLATION = "policy_violation",
+  _POLICY_VIOLATION = "policy_violation",
 
   /** Session expired */
-  SESSION_EXPIRED = "session_expired",
+  _SESSION_EXPIRED = "session_expired",
 }
 
 /**
@@ -690,7 +690,7 @@ class RateLimiter {
  * Security error class
  */
 export class SecurityError extends Error {
-  constructor(message: string, public code: string, public details?: any) {
+  constructor(message: string, public _code: string, public _details?: any) {
     super(message);
     this.name = "SecurityError";
   }
@@ -713,7 +713,7 @@ export class SecurityMiddleware {
     credentials: AuthCredentials,
     permission: Permission,
     action: keyof SecurityConfig["rateLimits"],
-    operation: (context: SecurityContext) => Promise<T>
+    operation: (_context: SecurityContext) => Promise<T>
   ): Promise<T> {
     // Authenticate
     const context = this.securityManager.authenticate(credentials);

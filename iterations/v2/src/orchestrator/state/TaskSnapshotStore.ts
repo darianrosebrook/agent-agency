@@ -13,6 +13,9 @@ import {
   TaskSnapshotRepository,
 } from "../repositories/TaskSnapshotRepository";
 
+// Node.js types
+type NodeJS_Timeout = ReturnType<typeof setTimeout>;
+
 export interface TaskSnapshotStore {
   /**
    * Save task execution snapshot
@@ -77,7 +80,7 @@ export interface TaskSnapshotStoreStatistics {
  * Implementation of TaskSnapshotStore with PostgreSQL backing
  */
 export class TaskSnapshotStoreImpl implements TaskSnapshotStore {
-  private cleanupInterval: NodeJS.Timeout | null = null;
+  private cleanupInterval: NodeJS_Timeout | null = null;
   private lastCleanup: Date | null = null;
 
   constructor(

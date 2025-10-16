@@ -14,11 +14,11 @@ export { VerificationPriority } from "../types/verification";
  * Event severity levels
  */
 export enum EventSeverity {
-  DEBUG = "debug",
-  INFO = "info",
-  WARN = "warn",
-  ERROR = "error",
-  CRITICAL = "critical",
+  _DEBUG = "debug",
+  _INFO = "info",
+  _WARN = "warn",
+  _ERROR = "error",
+  _CRITICAL = "critical",
 }
 
 /**
@@ -60,7 +60,7 @@ export interface BaseEvent {
  * Event handler function type
  */
 export type EventHandler<T extends BaseEvent = BaseEvent> = (
-  event: T
+  _event: T
 ) => void | Promise<void>;
 
 /**
@@ -83,7 +83,7 @@ export interface EventFilter {
   taskIds?: string[];
 
   /** Custom filter function */
-  customFilter?: (event: BaseEvent) => boolean;
+  customFilter?: (_event: BaseEvent) => boolean;
 }
 
 /**

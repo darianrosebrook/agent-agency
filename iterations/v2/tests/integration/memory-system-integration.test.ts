@@ -280,7 +280,7 @@ describe("Memory System Integration", () => {
       const event = createLearningEvent(tenant, "model_update");
       await tenantIsolator.storeTenantEvent(tenant.id, event);
 
-      const retrievedEvents = await tenantIsolator.getTenantEvents(tenant.id);
+      const _retrievedEvents = await tenantIsolator.getTenantEvents(tenant.id);
 
       // Check audit trail
       const auditLog = await tenantIsolator.getTenantAuditLog(tenant.id);
@@ -566,7 +566,7 @@ describe("Memory System Integration", () => {
       await tenantIsolator.storeTenantEvent(auditedTenant.id, event1);
       await tenantIsolator.storeTenantEvent(auditedTenant.id, event2);
 
-      const events = await tenantIsolator.getTenantEvents(auditedTenant.id);
+      const _events = await tenantIsolator.getTenantEvents(auditedTenant.id);
 
       // Audit log should capture all operations
       const auditLog = await tenantIsolator.getTenantAuditLog(auditedTenant.id);

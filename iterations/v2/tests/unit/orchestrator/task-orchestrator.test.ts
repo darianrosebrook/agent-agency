@@ -23,11 +23,11 @@ import { TaskPriority } from "../../../src/types/task-runner.js";
 
 describe("TaskOrchestrator Unit Tests", () => {
   let orchestrator: TaskOrchestrator;
-  let mockTaskQueue: any;
-  let mockStateMachine: any;
-  let mockRetryHandler: any;
-  let mockRoutingManager: any;
-  let mockPerformanceTracker: any;
+  let mockTaskQueue;
+  let mockStateMachine;
+  let mockRetryHandler;
+  let mockRoutingManager;
+  let mockPerformanceTracker;
 
   const validConfig: TaskOrchestratorConfig = {
     workerPool: {

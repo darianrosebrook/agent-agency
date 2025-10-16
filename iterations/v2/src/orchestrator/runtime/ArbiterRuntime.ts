@@ -19,18 +19,18 @@ import {
   WorkerExecutionResult,
 } from "../../types/task-runner";
 import { TaskState } from "../../types/task-state";
+import type { VerificationResult } from "../../types/verification";
 import {
   VerificationEngineConfig,
   VerificationPriority,
   VerificationType,
   VerificationVerdict,
 } from "../../types/verification";
-import type { VerificationResult } from "../../types/verification";
+import { VerificationEngineImpl } from "../../verification/VerificationEngine";
 import type {
   ConversationContext,
   EvidenceManifest,
 } from "../../verification/types";
-import { VerificationEngineImpl } from "../../verification/VerificationEngine";
 import { EventSeverity, events } from "../EventEmitter";
 import { EventTypes } from "../OrchestratorEvents";
 import { RegistryProvider } from "../RegistryProvider.js";
@@ -931,7 +931,12 @@ export class ArbiterRuntime {
     }>((resolve, reject) => {
       let settled = false;
       let latestAssignedAgent = fallbackAssignedAgentId;
-      let timeoutHandle: NodeJS.Timeout;
+      const timeoutHandle: ReturnType<typeof setTimeout> = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          reject(new Error("Task execution timeout"));
+        }
+      }, timeoutMs);
 
       const cleanup = () => {
         orchestrator.off(TaskOrchestratorEvents.TASK_COMPLETED, onCompleted);
@@ -986,13 +991,7 @@ export class ArbiterRuntime {
       orchestrator.on(TaskOrchestratorEvents.TASK_COMPLETED, onCompleted);
       orchestrator.on(TaskOrchestratorEvents.TASK_FAILED, onFailed);
 
-      timeoutHandle = setTimeout(() => {
-        rejectOnce(
-          new Error(
-            `TaskOrchestrator timeout after ${timeoutMs}ms for task ${taskId}`
-          )
-        );
-      }, timeoutMs);
+      // Timeout already set in const declaration above
 
       orchestrator
         .submitTask(runnerTask)
@@ -1232,8 +1231,10 @@ return context.artifacts
     try {
       const content = await fsp.readFile(outputPath, "utf8");
       const record = this.taskRecords.get(taskId);
-      const conversationContext =
-        this.buildVerificationConversationContext(taskId, record);
+      const conversationContext = this.buildVerificationConversationContext(
+        taskId,
+        record
+      );
       const evidenceManifest = this.buildVerificationEvidence(record);
       const request = {
         id: taskId,

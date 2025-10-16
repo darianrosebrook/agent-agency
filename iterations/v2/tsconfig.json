@@ -4,6 +4,7 @@
     "outDir": "./dist",
     "rootDir": ".",
     "baseUrl": ".",
+    "types": ["node", "jest"],
     "paths": {
       "@/*": ["src/*"],
       "@/rl/*": ["src/rl/*"],

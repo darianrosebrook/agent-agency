@@ -56,7 +56,7 @@ export class ResilientDatabaseClient {
   }> = [];
 
   constructor(
-    private databaseClient: AgentRegistryDatabaseClient,
+    private _databaseClient: AgentRegistryDatabaseClient,
     private config: ResilientClientConfig = {
       enableFallback: true,
       circuitBreaker: {

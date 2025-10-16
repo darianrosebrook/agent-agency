@@ -408,7 +408,7 @@ export class FeedbackAnalyzer {
     entityId: string,
     entityType: string,
     insights: FeedbackInsight[],
-    metrics: FeedbackAnalysis["metrics"]
+    _metrics: FeedbackAnalysis["metrics"]
   ): FeedbackRecommendation[] {
     const recommendations: FeedbackRecommendation[] = [];
 

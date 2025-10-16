@@ -68,7 +68,7 @@ describe("Knowledge Database Integration", () => {
     });
 
     it("should handle empty result sets", async () => {
-      const results: any[] = [];
+      const results = [];
 
       await expect(dbClient.storeResults(results)).resolves.not.toThrow();
     });

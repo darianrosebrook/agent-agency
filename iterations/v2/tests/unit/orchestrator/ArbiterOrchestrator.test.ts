@@ -4,6 +4,7 @@
  * Tests CAWS integration and constitutional compliance checking
  */
 
+import { beforeEach, describe, expect, fail } from "@jest/globals";
 import {
   ArbiterOrchestrator,
   defaultArbiterOrchestratorConfig,

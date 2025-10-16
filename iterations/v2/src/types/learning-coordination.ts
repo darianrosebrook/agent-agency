@@ -45,13 +45,13 @@ export interface LearningSession {
  * Learning session status states
  */
 export enum LearningSessionStatus {
-  INITIALIZING = "initializing",
-  ACTIVE = "active",
-  EVALUATING = "evaluating",
-  COMPLETED = "completed",
-  FAILED = "failed",
-  TIMEOUT = "timeout",
-  RESOURCE_EXHAUSTED = "resource_exhausted",
+  _INITIALIZING = "initializing",
+  _ACTIVE = "active",
+  _EVALUATING = "evaluating",
+  _COMPLETED = "completed",
+  _FAILED = "failed",
+  _TIMEOUT = "timeout",
+  _RESOURCE_EXHAUSTED = "resource_exhausted",
 }
 
 /**
@@ -78,16 +78,16 @@ export interface LearningIteration {
  * Error categories for pattern recognition
  */
 export enum ErrorCategory {
-  SYNTAX_ERROR = "syntax_error",
-  TYPE_ERROR = "type_error",
-  RUNTIME_ERROR = "runtime_error",
-  LOGIC_ERROR = "logic_error",
-  RESOURCE_ERROR = "resource_error",
-  TIMEOUT_ERROR = "timeout_error",
-  VALIDATION_ERROR = "validation_error",
-  DEPENDENCY_ERROR = "dependency_error",
-  CONFIGURATION_ERROR = "configuration_error",
-  UNKNOWN = "unknown",
+  _SYNTAX_ERROR = "syntax_error",
+  _TYPE_ERROR = "type_error",
+  _RUNTIME_ERROR = "runtime_error",
+  _LOGIC_ERROR = "logic_error",
+  _RESOURCE_ERROR = "resource_error",
+  _TIMEOUT_ERROR = "timeout_error",
+  _VALIDATION_ERROR = "validation_error",
+  _DEPENDENCY_ERROR = "dependency_error",
+  _CONFIGURATION_ERROR = "configuration_error",
+  _UNKNOWN = "unknown",
 }
 
 /**
@@ -163,11 +163,11 @@ export interface IterationFeedback {
  * Feedback types
  */
 export enum FeedbackType {
-  ERROR_CORRECTION = "error_correction",
-  PERFORMANCE_IMPROVEMENT = "performance_improvement",
-  QUALITY_ENHANCEMENT = "quality_enhancement",
-  APPROACH_SUGGESTION = "approach_suggestion",
-  PATTERN_RECOGNITION = "pattern_recognition",
+  _ERROR_CORRECTION = "error_correction",
+  _PERFORMANCE_IMPROVEMENT = "performance_improvement",
+  _QUALITY_ENHANCEMENT = "quality_enhancement",
+  _APPROACH_SUGGESTION = "approach_suggestion",
+  _PATTERN_RECOGNITION = "pattern_recognition",
 }
 
 /**
@@ -186,10 +186,10 @@ export interface FeedbackRecommendation {
  * Recommendation priority levels
  */
 export enum RecommendationPriority {
-  CRITICAL = "critical",
-  HIGH = "high",
-  MEDIUM = "medium",
-  LOW = "low",
+  _CRITICAL = "critical",
+  _HIGH = "high",
+  _MEDIUM = "medium",
+  _LOW = "low",
 }
 
 /**
@@ -233,13 +233,13 @@ export interface PromptModification {
  * Prompt modification types
  */
 export enum PromptModificationType {
-  ADD_CONTEXT = "add_context",
-  REMOVE_NOISE = "remove_noise",
-  EMPHASIZE_PATTERN = "emphasize_pattern",
-  AVOID_PATTERN = "avoid_pattern",
-  CLARIFY_INSTRUCTION = "clarify_instruction",
-  ADD_CONSTRAINT = "add_constraint",
-  SIMPLIFY = "simplify",
+  _ADD_CONTEXT = "add_context",
+  _REMOVE_NOISE = "remove_noise",
+  _EMPHASIZE_PATTERN = "emphasize_pattern",
+  _AVOID_PATTERN = "avoid_pattern",
+  _CLARIFY_INSTRUCTION = "clarify_instruction",
+  _ADD_CONSTRAINT = "add_constraint",
+  _SIMPLIFY = "simplify",
 }
 
 /**
@@ -273,20 +273,20 @@ export interface ResourceMonitoring {
  * Learning coordinator events
  */
 export enum LearningCoordinatorEvent {
-  SESSION_STARTED = "learning:session_started",
-  SESSION_COMPLETED = "learning:session_completed",
-  SESSION_FAILED = "learning:session_failed",
-  ITERATION_STARTED = "learning:iteration_started",
-  ITERATION_COMPLETED = "learning:iteration_completed",
-  ERROR_DETECTED = "learning:error_detected",
-  PATTERN_RECOGNIZED = "learning:pattern_recognized",
-  FEEDBACK_GENERATED = "learning:feedback_generated",
-  PROMPT_MODIFIED = "learning:prompt_modified",
-  CONTEXT_PRESERVED = "learning:context_preserved",
-  QUALITY_THRESHOLD_MET = "learning:quality_threshold_met",
-  RESOURCE_WARNING = "learning:resource_warning",
-  RESOURCE_EXHAUSTED = "learning:resource_exhausted",
-  COORDINATOR_SHUTDOWN = "learning:coordinator_shutdown",
+  _SESSION_STARTED = "learning:session_started",
+  _SESSION_COMPLETED = "learning:session_completed",
+  _SESSION_FAILED = "learning:session_failed",
+  _ITERATION_STARTED = "learning:iteration_started",
+  _ITERATION_COMPLETED = "learning:iteration_completed",
+  _ERROR_DETECTED = "learning:error_detected",
+  _PATTERN_RECOGNIZED = "learning:pattern_recognized",
+  _FEEDBACK_GENERATED = "learning:feedback_generated",
+  _PROMPT_MODIFIED = "learning:prompt_modified",
+  _CONTEXT_PRESERVED = "learning:context_preserved",
+  _QUALITY_THRESHOLD_MET = "learning:quality_threshold_met",
+  _RESOURCE_WARNING = "learning:resource_warning",
+  _RESOURCE_EXHAUSTED = "learning:resource_exhausted",
+  _COORDINATOR_SHUTDOWN = "learning:coordinator_shutdown",
 }
 
 /**

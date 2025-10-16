@@ -79,7 +79,7 @@ export interface RecoveryStrategy {
   successCriteria: {
     healthCheck: boolean;
     responseTimeMs?: number;
-    customChecks?: Array<(result: any) => boolean>;
+    customChecks?: Array<(_result: any) => boolean>;
   };
 }
 

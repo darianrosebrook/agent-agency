@@ -269,7 +269,7 @@ export class FeedbackLoopManager extends EventEmitter {
   public getStats(): FeedbackStats {
     const uptime = Date.now() - this.startTime.getTime();
     const collectorStats = this.collector.getStats();
-    const improvementStats = this.improvementEngine.getStats();
+    const _improvementStats = this.improvementEngine.getStats();
     const pipelineStats = this.pipeline.getStats();
 
     return {

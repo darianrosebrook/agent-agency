@@ -167,7 +167,7 @@ export interface ScoringCriterion {
   points: number;
 
   /** Evaluation function */
-  evaluate: (task: Task, context: TaskContext) => Promise<number>;
+  evaluate: (_task: Task, _context: TaskContext) => Promise<number>;
 }
 
 /**

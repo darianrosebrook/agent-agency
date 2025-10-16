@@ -56,9 +56,9 @@ export interface ChaosMetrics {
 export interface DeterministicPRNG {
   seed: number;
   next(): number; // Returns 0-1
-  nextInt(max: number): number; // Returns 0 to max-1
+  nextInt(_max: number): number; // Returns 0 to max-1
   nextGaussian(): number; // Returns normally distributed value
-  reset(seed: number): void;
+  reset(_seed: number): void;
 }
 
 /**

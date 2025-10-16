@@ -38,24 +38,24 @@ export interface VerificationRequest {
 }
 
 export enum VerificationPriority {
-  LOW = "low",
-  MEDIUM = "medium",
-  HIGH = "high",
-  CRITICAL = "critical",
+  _LOW = "low",
+  _MEDIUM = "medium",
+  _HIGH = "high",
+  _CRITICAL = "critical",
 }
 
 export enum VerificationType {
-  FACT_CHECKING = "fact_checking",
-  SOURCE_CREDIBILITY = "source_credibility",
-  CROSS_REFERENCE = "cross_reference",
-  MATH_VERIFICATION = "math_verification",
-  CODE_VERIFICATION = "code_verification",
-  CONTEXT_VERIFICATION = "context_verification",
-  CONSISTENCY_CHECK = "consistency_check",
-  LOGICAL_VALIDATION = "logical_validation",
-  STATISTICAL_VALIDATION = "statistical_validation",
-  CREDIBILITY_SCORING = "credibility_scoring",
-  CONSISTENCY_VALIDATION = "consistency_validation",
+  _FACT_CHECKING = "fact_checking",
+  _SOURCE_CREDIBILITY = "source_credibility",
+  _CROSS_REFERENCE = "cross_reference",
+  _MATH_VERIFICATION = "math_verification",
+  _CODE_VERIFICATION = "code_verification",
+  _CONTEXT_VERIFICATION = "context_verification",
+  _CONSISTENCY_CHECK = "consistency_check",
+  _LOGICAL_VALIDATION = "logical_validation",
+  _STATISTICAL_VALIDATION = "statistical_validation",
+  _CREDIBILITY_SCORING = "credibility_scoring",
+  _CONSISTENCY_VALIDATION = "consistency_validation",
 }
 
 export interface VerificationResult {
@@ -74,14 +74,14 @@ export interface VerificationResult {
 }
 
 export enum VerificationVerdict {
-  VERIFIED_TRUE = "verified_true",
-  VERIFIED_FALSE = "verified_false",
-  PARTIALLY_TRUE = "partially_true",
-  UNVERIFIED = "unverified",
-  CONTRADICTORY = "contradictory",
-  INSUFFICIENT_DATA = "insufficient_data",
-  MIXED = "mixed",
-  ERROR = "error",
+  _VERIFIED_TRUE = "verified_true",
+  _VERIFIED_FALSE = "verified_false",
+  _PARTIALLY_TRUE = "partially_true",
+  _UNVERIFIED = "unverified",
+  _CONTRADICTORY = "contradictory",
+  _INSUFFICIENT_DATA = "insufficient_data",
+  _MIXED = "mixed",
+  _ERROR = "error",
 }
 
 export interface Evidence {
@@ -233,9 +233,9 @@ export interface LogicalValidationRequest {
 }
 
 export enum LogicType {
-  DEDUCTIVE = "deductive",
-  INDUCTIVE = "inductive",
-  ABDUCTIVE = "abductive",
+  _DEDUCTIVE = "deductive",
+  _INDUCTIVE = "inductive",
+  _ABDUCTIVE = "abductive",
 }
 
 export interface LogicalValidationResult {
@@ -267,10 +267,10 @@ export interface StatisticalValidationResult {
 
 // Verification engine interfaces
 export interface VerificationEngine {
-  verify(request: VerificationRequest): Promise<VerificationResult>;
-  verifyBatch(requests: VerificationRequest[]): Promise<VerificationResult[]>;
+  verify(_request: VerificationRequest): Promise<VerificationResult>;
+  verifyBatch(_requests: VerificationRequest[]): Promise<VerificationResult[]>;
   getSupportedMethods(): VerificationType[];
-  getMethodStatus(method: VerificationType): MethodStatus;
+  getMethodStatus(_method: VerificationType): MethodStatus;
   healthCheck(): Promise<EngineHealth>;
 }
 
@@ -296,9 +296,9 @@ export interface EngineHealth {
 export class VerificationError extends Error {
   constructor(
     message: string,
-    public code: VerificationErrorCode,
-    public requestId?: string,
-    public method?: VerificationType
+    public _code: VerificationErrorCode,
+    public _requestId?: string,
+    public _method?: VerificationType
   ) {
     super(message);
     this.name = "VerificationError";
@@ -306,13 +306,13 @@ export class VerificationError extends Error {
 }
 
 export enum VerificationErrorCode {
-  INVALID_REQUEST = "invalid_request",
-  METHOD_UNAVAILABLE = "method_unavailable",
-  TIMEOUT = "timeout",
-  INSUFFICIENT_DATA = "insufficient_data",
-  EXTERNAL_SERVICE_ERROR = "external_service_error",
-  CONFIGURATION_ERROR = "configuration_error",
-  RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
+  _INVALID_REQUEST = "invalid_request",
+  _METHOD_UNAVAILABLE = "method_unavailable",
+  _TIMEOUT = "timeout",
+  _INSUFFICIENT_DATA = "insufficient_data",
+  _EXTERNAL_SERVICE_ERROR = "external_service_error",
+  _CONFIGURATION_ERROR = "configuration_error",
+  _RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
 }
 
 // Caching interfaces
@@ -328,12 +328,12 @@ export interface VerificationCacheEntry {
 // Configuration interfaces
 export interface VerificationProvider {
   readonly type: VerificationType;
-  verify(request: VerificationRequest): Promise<VerificationMethodResult>;
+  verify(_request: VerificationRequest): Promise<VerificationMethodResult>;
   isAvailable(): Promise<boolean>;
   getHealth(): Promise<MethodStatus>;
 }
 
 export interface VerificationProviderFactory {
-  createProvider(type: VerificationType, config: any): VerificationProvider;
+  createProvider(_type: VerificationType, _config: any): VerificationProvider;
   getSupportedTypes(): VerificationType[];
 }

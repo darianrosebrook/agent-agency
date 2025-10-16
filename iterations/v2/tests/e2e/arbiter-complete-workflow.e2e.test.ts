@@ -137,8 +137,8 @@ describe("Complete Arbiter Workflow E2E Test", () => {
   // Test components
   let specManager: SpecFileManager;
   let validationAdapter: CAWSValidationAdapter;
-  let policyAdapter: CAWSPolicyAdapter;
-  let mcpServer: ArbiterMCPServer;
+  let _policyAdapter: CAWSPolicyAdapter;
+  let _mcpServer: ArbiterMCPServer;
   let budgetMonitor: BudgetMonitor;
   let guidance: IterativeGuidance;
   let provenanceTracker: ProvenanceTracker;
@@ -263,12 +263,12 @@ risk_tiers:
       useTemporaryFiles: false,
     });
 
-    policyAdapter = new CAWSPolicyAdapter({
+    _policyAdapter = new CAWSPolicyAdapter({
       projectRoot,
       enableCaching: true,
     });
 
-    mcpServer = new ArbiterMCPServer(projectRoot);
+    _mcpServer = new ArbiterMCPServer(projectRoot);
 
     budgetMonitor = new BudgetMonitor({
       projectRoot,
@@ -310,6 +310,12 @@ risk_tiers:
     }
     if (provenanceTracker) {
       provenanceTracker.stop();
+    }
+    if (_policyAdapter) {
+      await _policyAdapter.cleanup();
+    }
+    if (_mcpServer) {
+      await _mcpServer.stop();
     }
 
     try {
@@ -615,7 +621,7 @@ risk_tiers:
           description: "All core components implemented",
           threshold: 0.9,
           weight: 0.3,
-          evaluate: async (output: any) => {
+          evaluate: async (_output: any) => {
             const implementedTasks = Array.from(implementationProgress.keys());
             const totalTasks = taskBreakdown.length;
             const completeness = implementedTasks.length / totalTasks;
@@ -637,7 +643,7 @@ risk_tiers:
           description: "Code follows best practices and standards",
           threshold: 0.8,
           weight: 0.25,
-          evaluate: async (output: any) => {
+          evaluate: async (_output: any) => {
             // Simulate code quality assessment
             const totalLines = Array.from(
               implementationProgress.values()
@@ -679,7 +685,7 @@ risk_tiers:
           description: "Implementation stays within CAWS budget limits",
           threshold: 0.95,
           weight: 0.2,
-          evaluate: async (output: any) => {
+          evaluate: async (_output: any) => {
             const budgetStatus = budgetMonitor.getStatus();
             const fileCompliance =
               budgetStatus.currentUsage.filesChanged /
@@ -706,7 +712,7 @@ risk_tiers:
           description: "All acceptance criteria are addressed",
           threshold: 0.85,
           weight: 0.25,
-          evaluate: async (output: any) => {
+          evaluate: async (_output: any) => {
             // Simulate acceptance criteria evaluation
             const totalCriteria = ecommerceSpec.acceptance.length;
             const addressedCriteria = Math.min(
@@ -1263,7 +1269,7 @@ export interface PaymentRequest {
 
 export interface PaymentMethod {
   type: 'credit_card' | 'paypal' | 'stripe';
-  details: any;
+  details;
 }
 
 export interface PaymentResult {
@@ -1387,14 +1393,14 @@ export interface PaymentRequest {
   currency: string;
   orderId: string;
   customerId: string;
-  paymentMethod: any;
+  paymentMethod;
 }
 
 export interface GatewayResponse {
   success: boolean;
   transactionId?: string;
   error?: string;
-  rawResponse?: any;
+  rawResponse?;
 }`;
 }
 

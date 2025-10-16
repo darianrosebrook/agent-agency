@@ -400,7 +400,7 @@ export class InfrastructureController {
 
   private async restartDockerContainer(
     componentId: string,
-    params?: Record<string, any>
+    _params?: Record<string, any>
   ): Promise<void> {
     if (!this.config.providers.docker?.enabled) {
       throw new Error("Docker provider is not enabled");
@@ -419,7 +419,7 @@ export class InfrastructureController {
 
   private async restartKubernetesPod(
     componentId: string,
-    params?: Record<string, any>
+    _params?: Record<string, any>
   ): Promise<void> {
     if (!this.config.providers.kubernetes?.enabled) {
       throw new Error("Kubernetes provider is not enabled");
@@ -438,7 +438,7 @@ export class InfrastructureController {
 
   private async restartSystemdService(
     componentId: string,
-    params?: Record<string, any>
+    _params?: Record<string, any>
   ): Promise<void> {
     if (!this.config.providers.systemd?.enabled) {
       throw new Error("Systemd provider is not enabled");
@@ -457,7 +457,7 @@ export class InfrastructureController {
 
   private async restartProcess(
     componentId: string,
-    params?: Record<string, any>
+    _params?: Record<string, any>
   ): Promise<void> {
     // TODO: Implement process restart
     // Find PID and send restart signal, or restart via process manager
@@ -469,7 +469,7 @@ export class InfrastructureController {
 
   private async restartLambdaFunction(
     componentId: string,
-    params?: Record<string, any>
+    _params?: Record<string, any>
   ): Promise<void> {
     if (!this.config.providers.aws?.enabled) {
       throw new Error("AWS provider is not enabled");

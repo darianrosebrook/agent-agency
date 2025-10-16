@@ -78,8 +78,8 @@ describe("ARBITER Orchestrator End-to-End Integration Tests", () => {
   // Components
   let specManager: SpecFileManager;
   let validationAdapter: CAWSValidationAdapter;
-  let policyAdapter: CAWSPolicyAdapter;
-  let mcpServer: ArbiterMCPServer;
+  let _policyAdapter: CAWSPolicyAdapter;
+  let _mcpServer: ArbiterMCPServer;
   let budgetMonitor: BudgetMonitor;
   let guidance: IterativeGuidance;
   let provenanceTracker: ProvenanceTracker;
@@ -93,34 +93,46 @@ describe("ARBITER Orchestrator End-to-End Integration Tests", () => {
     await fs.mkdir(path.join(projectRoot, ".caws"), { recursive: true });
 
     // Create CAWS tools directory and allowlist
-    await fs.mkdir(path.join(projectRoot, "apps", "tools", "caws"), { recursive: true });
-    const allowlistPath = path.join(projectRoot, "apps", "tools", "caws", "tools-allow.json");
+    await fs.mkdir(path.join(projectRoot, "apps", "tools", "caws"), {
+      recursive: true,
+    });
+    const allowlistPath = path.join(
+      projectRoot,
+      "apps",
+      "tools",
+      "caws",
+      "tools-allow.json"
+    );
     await fs.writeFile(
       allowlistPath,
-      JSON.stringify([
-        "npm",
-        "node",
-        "git",
-        "ls",
-        "cd",
-        "mkdir",
-        "rm",
-        "cp",
-        "mv",
-        "echo",
-        "cat",
-        "grep",
-        "find",
-        "which",
-        "pwd",
-        "head",
-        "tail",
-        "wc",
-        "sort",
-        "uniq",
-        "chmod",
-        "chown"
-      ], null, 2)
+      JSON.stringify(
+        [
+          "npm",
+          "node",
+          "git",
+          "ls",
+          "cd",
+          "mkdir",
+          "rm",
+          "cp",
+          "mv",
+          "echo",
+          "cat",
+          "grep",
+          "find",
+          "which",
+          "pwd",
+          "head",
+          "tail",
+          "wc",
+          "sort",
+          "uniq",
+          "chmod",
+          "chown",
+        ],
+        null,
+        2
+      )
     );
 
     // Write policy file
@@ -165,13 +177,13 @@ risk_tiers:
       useTemporaryFiles: false,
     });
 
-    policyAdapter = new CAWSPolicyAdapter({
+    _policyAdapter = new CAWSPolicyAdapter({
       projectRoot,
       enableCaching: true,
     });
 
     // MCP server constructor takes only projectRoot string
-    mcpServer = new ArbiterMCPServer(projectRoot);
+    _mcpServer = new ArbiterMCPServer(projectRoot);
 
     budgetMonitor = new BudgetMonitor({
       projectRoot,
@@ -233,6 +245,12 @@ risk_tiers:
     if (provenanceTracker) {
       provenanceTracker.stop();
     }
+    if (_policyAdapter) {
+      await _policyAdapter.cleanup();
+    }
+    if (_mcpServer) {
+      await _mcpServer.stop();
+    }
 
     try {
       await fs.rm(tempDir, { recursive: true, force: true });
@@ -247,7 +265,7 @@ risk_tiers:
       console.log("🧪 Phase 1: Spec Creation & Validation");
 
       // Save spec to file system
-      const specPath = await specManager.writeSpecFile(testSpec);
+      const _specPath = await specManager.writeSpecFile(testSpec);
 
       // Validate spec via CAWS
       const validation = await validationAdapter.validateExistingSpec();
@@ -364,7 +382,7 @@ risk_tiers:
       console.log("🧪 Phase 4: Progress Monitoring");
 
       // Simulate progress monitoring
-      const monitorArgs = {
+      const _monitorArgs = {
         taskId,
         projectRoot,
         detailed: true,
@@ -592,7 +610,7 @@ risk_tiers:
       // Simulate a component failure and recovery
 
       // Create a corrupted state
-      const badSpec = { ...testSpec, acceptance: undefined } as any;
+      const _badSpec = { ...testSpec, acceptance: undefined } as any;
 
       // Components should handle gracefully
       const guidanceAnalysis = await guidance.analyzeProgress();

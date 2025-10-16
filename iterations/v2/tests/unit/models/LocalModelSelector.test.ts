@@ -11,7 +11,7 @@ import {
 } from "@/models/LocalModelSelector";
 import { ModelRegistry } from "@/models/ModelRegistry";
 import type { ModelSelectionCriteria } from "@/types/model-registry";
-import { beforeEach, describe, expect, it } from "@jest/globals";
+import { beforeEach, describe, expect, fail, it } from "@jest/globals";
 
 describe("LocalModelSelector", () => {
   let selector: LocalModelSelector;

@@ -156,7 +156,7 @@ describe("Task Routing with Real Agents", () => {
       const selectedLoad = selectedAgent!.agent.currentLoad.utilizationPercent;
 
       // Check that no other agent has significantly lower load
-      const lowerLoadAgents = eligibleAgents.filter(
+      const _lowerLoadAgents = eligibleAgents.filter(
         (agent) =>
           agent.agent.currentLoad.utilizationPercent < selectedLoad - 10 // 10% threshold
       );
@@ -307,7 +307,7 @@ describe("Task Routing with Real Agents", () => {
         taskType: "code-editing",
       });
 
-      const hasLowerUtilizationAlternatives = eligibleAgents.some(
+      const _hasLowerUtilizationAlternatives = eligibleAgents.some(
         (agent) => agent.agent.currentLoad.utilizationPercent < utilization
       );
 

@@ -3,6 +3,9 @@ import path from "path";
 import { once } from "events";
 import { ObserverConfig } from "../types";
 
+// Node.js types
+type NodeJS_Timeout = ReturnType<typeof setTimeout>;
+
 interface WriteTask {
   payload: string;
   resolve: () => void;
@@ -19,7 +22,7 @@ export class AsyncFileWriter {
   private stream?: fs.WriteStream;
   private queue: WriteTask[] = [];
   private flushing = false;
-  private flushTimer?: NodeJS.Timeout;
+  private flushTimer?: NodeJS_Timeout;
   private bytesWrittenSinceSync = 0;
   private currentFilePath?: string;
   private currentFileSize = 0;

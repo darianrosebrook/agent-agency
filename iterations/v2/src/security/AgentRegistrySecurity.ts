@@ -50,23 +50,23 @@ export interface AuditEvent {
 }
 
 export enum AuditEventType {
-  AGENT_REGISTRATION = "agent_registration",
-  AGENT_UPDATE = "agent_update",
-  AGENT_DELETION = "agent_deletion",
-  AGENT_QUERY = "agent_query",
-  PERFORMANCE_UPDATE = "performance_update",
-  SECURITY_VIOLATION = "security_violation",
-  AUTHENTICATION_FAILURE = "authentication_failure",
-  AUTHENTICATION_SUCCESS = "authentication_success",
-  AUTHORIZATION_FAILURE = "authorization_failure",
+  _AGENT_REGISTRATION = "agent_registration",
+  _AGENT_UPDATE = "agent_update",
+  _AGENT_DELETION = "agent_deletion",
+  _AGENT_QUERY = "agent_query",
+  _PERFORMANCE_UPDATE = "performance_update",
+  _SECURITY_VIOLATION = "security_violation",
+  _AUTHENTICATION_FAILURE = "authentication_failure",
+  _AUTHENTICATION_SUCCESS = "authentication_success",
+  _AUTHORIZATION_FAILURE = "authorization_failure",
 }
 
 export enum AuditAction {
-  CREATE = "create",
-  READ = "read",
-  UPDATE = "update",
-  DELETE = "delete",
-  QUERY = "query",
+  _CREATE = "create",
+  _READ = "read",
+  _UPDATE = "update",
+  _DELETE = "delete",
+  _QUERY = "query",
 }
 
 export interface SecurityConfig {

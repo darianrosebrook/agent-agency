@@ -509,7 +509,7 @@ describe("Security Component Performance Benchmarks", () => {
           }
         });
 
-      const results = await Promise.all(promises);
+      const _results = await Promise.all(promises);
       const endTime = performance.now();
       const totalTime = endTime - startTime;
       const avgTimePerOperation = totalTime / mixedOperations;

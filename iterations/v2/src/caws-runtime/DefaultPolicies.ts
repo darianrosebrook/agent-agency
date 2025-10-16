@@ -301,7 +301,7 @@ export const defaultCawsPolicies: ConstitutionalPolicy[] = [
  * Load default policies into policy engine
  */
 export function loadDefaultPolicies(
-  policyEngine: { registerPolicy: (policy: ConstitutionalPolicy) => void }
+  policyEngine: { registerPolicy: (_policy: ConstitutionalPolicy) => void }
 ): void {
   for (const policy of defaultCawsPolicies) {
     policyEngine.registerPolicy(policy);

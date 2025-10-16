@@ -98,7 +98,7 @@ describe("StreamingJSONParser", () => {
       const jsonString = JSON.stringify(originalData);
       const chunks = createStreamingChunks(jsonString, 10); // Small chunks
 
-      const chunkEvents: any[] = [];
+      const chunkEvents = [];
       parser.on("chunkProcessed", (chunk) => {
         chunkEvents.push(chunk);
       });

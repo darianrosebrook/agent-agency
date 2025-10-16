@@ -203,7 +203,7 @@ export class AdaptivePromptEngineer extends EventEmitter {
    */
   private identifySuccessfulPatterns(_history: LearningIteration[]): string[] {
     const patterns: string[] = [];
-    for (const pattern of this.successPatterns.values()) {
+    for (const pattern of Array.from(this.successPatterns.values())) {
       if (
         pattern.successCount > pattern.failureCount &&
         pattern.averageQualityImprovement > 0.01

@@ -265,7 +265,7 @@ describe("AdaptiveResourceManager Performance", () => {
       const totalRequests = batchSize * numBatches;
 
       let totalTime = 0;
-      const allResults: any[] = [];
+      const allResults = [];
 
       for (let batch = 0; batch < numBatches; batch++) {
         const requests: ResourceAllocationRequest[] = [];

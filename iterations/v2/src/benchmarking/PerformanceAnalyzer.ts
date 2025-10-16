@@ -1055,7 +1055,7 @@ export class PerformanceAnalyzer extends EventEmitter {
       // Could trigger dashboard updates or notifications
     });
 
-    this.on("analysis_error", (error) => {
+    this.on("analysis_error", (_error) => {
       // Could trigger alerting for analysis system issues
     });
   }
