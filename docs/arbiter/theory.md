@@ -108,7 +108,400 @@ Another aspect of traceability is **versioning**: as we update models or prompts
 
 Finally, because the orchestrator mainly deals with decisions and coordination (which are less compute-intensive than generating large texts), we can afford these extra checks and logging without hurting overall throughput too much. The arbiter’s decision loop will typically be faster than the LLMs’ inference time (e.g., evaluating a model’s answer might take a few milliseconds, whereas the model took a few seconds to generate it). Thus, we trade a bit of overhead for a **huge gain in reliability**. By prioritizing decisions and rules over sheer generation, the orchestrator ensures the final outputs meet our quality bar. In other words, **speed is achieved not by rushing outputs, but by intelligently orchestrating and vetting them** – this results in a more correct result faster than having to manually fix errors later. The orchestrator’s lightweight auditing steps still likely cost less time than a full generation run, so it’s a worthwhile investment in the pipeline.
 
-**In summary**, the arbiter stack will include comprehensive logging, verification steps, and possibly an oversight model, all aimed at **correctness and traceability**. These features make the system robust and trustworthy. Should anything go wrong or need improvement, we can audit the process and adjust rules or models accordingly, confident that we have a clear view into the “why” behind each output. This turns the multi-LLM pipeline into a **governable, observable process rather than a black-box**[cudocompute.com](https://www.cudocompute.com/blog/llms-ai-orchestration-toolkits-comparison#:~:text=in%20economic%20value%20by%202028,ai%20%20across%20enterprise%20workflows)[research.aimultiple.com](https://research.aimultiple.com/llm-orchestration/#:~:text=,Augmented%20Generation%20%28RAG%29%20pipelines).
+**In summary**, the arbiter stack will include comprehensive logging, verification steps, and possibly an oversight model, all aimed at **correctness and traceability**. These features make the system robust and trustworthy. Should anything go wrong or need improvement, we can audit the process and adjust rules or models accordingly, confident that we have a clear view into the "why" behind each output. This turns the multi-LLM pipeline into a **governable, observable process rather than a black-box**[cudocompute.com](https://www.cudocompute.com/blog/llms-ai-orchestration-toolkits-comparison#:~:text=in%20economic%20value%20by%202028,ai%20%20across%20enterprise%20workflows)[research.aimultiple.com](https://research.aimultiple.com/llm-orchestration/#:~:text=,Augmented%20Generation%20%28RAG%29%20pipelines).
+
+## High-Quality Claim Extraction and Factual Verification
+
+Drawing inspiration from Microsoft Research's **Claimify** framework for extracting high-quality claims from language model outputs, the arbiter stack incorporates sophisticated claim extraction and verification mechanisms to ensure factual accuracy and reduce hallucinations in multi-agent orchestration.
+
+### The Claim Extraction Challenge
+
+Traditional fact-checking approaches often struggle with complex, highly detailed LLM outputs because they attempt to evaluate entire texts at once. The **claim extraction** strategy breaks down complex outputs into simple, verifiable factual statements that can be independently validated. However, the effectiveness of this approach depends critically on the quality of extracted claims - inaccurate or incomplete extractions compromise the entire verification process.
+
+The arbiter stack addresses this challenge through a **three-stage claim processing pipeline**:
+
+### Stage 1: Disambiguation and Context Resolution
+
+**Ambiguity Detection**: The arbiter identifies instances where source text contains multiple possible interpretations that could lead to different factual claims.
+
+```typescript
+interface ClaimDisambiguation {
+  // Identify ambiguous phrases that require context resolution
+  detectAmbiguities(
+    text: string,
+    context: ConversationContext
+  ): Promise<AmbiguityInstance[]>;
+
+  // Resolve ambiguities using available context
+  resolveAmbiguity(
+    ambiguousPhrase: string,
+    context: ConversationContext
+  ): Promise<ResolutionResult>;
+}
+
+interface AmbiguityInstance {
+  phrase: string;
+  possibleInterpretations: string[];
+  contextDependency: boolean;
+  resolutionConfidence: number;
+}
+```
+
+**Context-Aware Resolution**: When ambiguities can be resolved using available context, the system proceeds to claim extraction. When context is insufficient for definitive interpretation, the system labels the text as "Cannot be disambiguated" and excludes it from claim extraction to prevent false factual assertions.
+
+### Stage 2: Precise Claim Decomposition
+
+**Atomic Claim Extraction**: Following Claimify's methodology, the arbiter decomposes complex statements into atomic, verifiable claims that can be independently fact-checked.
+
+```typescript
+interface ClaimExtractor {
+  // Extract atomic claims from disambiguated text
+  extractClaims(
+    text: string,
+    context: ConversationContext
+  ): Promise<ExtractedClaim[]>;
+
+  // Validate claim completeness and accuracy
+  validateClaims(
+    claims: ExtractedClaim[],
+    sourceText: string
+  ): Promise<ValidationResult>;
+}
+
+interface ExtractedClaim {
+  id: string;
+  statement: string;
+  confidence: number;
+  sourceContext: string;
+  verificationRequirements: VerificationCriteria[];
+}
+```
+
+**Quality Assurance**: The system ensures that extracted claims are:
+
+- **Atomic**: Each claim makes a single, specific factual assertion
+- **Complete**: All verifiable information from the source is captured
+- **Accurate**: Claims precisely reflect the source text without distortion
+- **Traceable**: Each claim can be mapped back to its source context
+
+### Stage 3: CAWS-Compliant Verification
+
+**Evidence-Based Validation**: Extracted claims are validated against CAWS standards, requiring verifiable evidence within declared budgets and scope boundaries.
+
+```typescript
+interface CAWSClaimVerification {
+  // Verify claims against CAWS evidence requirements
+  verifyClaimEvidence(
+    claim: ExtractedClaim,
+    evidence: EvidenceManifest
+  ): Promise<VerificationResult>;
+
+  // Check claim compliance with CAWS budgets
+  validateClaimScope(
+    claim: ExtractedClaim,
+    workingSpec: WorkingSpec
+  ): Promise<ScopeValidation>;
+}
+
+interface VerificationResult {
+  status: "VERIFIED" | "UNVERIFIED" | "INSUFFICIENT_EVIDENCE";
+  evidenceQuality: number;
+  cawsCompliance: boolean;
+  verificationTrail: VerificationStep[];
+}
+```
+
+### Integration with Arbiter Decision Making
+
+**Claim-Based Arbitration**: The arbiter uses extracted and verified claims as the foundation for evaluating worker model outputs, ensuring decisions are based on factual accuracy rather than rhetorical persuasiveness.
+
+```typescript
+interface ClaimBasedArbiter {
+  // Evaluate worker outputs using claim extraction
+  evaluateWithClaims(
+    workerOutput: WorkerOutput,
+    taskContext: TaskContext
+  ): Promise<ClaimBasedEvaluation>;
+
+  // Compare competing outputs using claim verification
+  compareOutputs(
+    outputs: WorkerOutput[],
+    verificationCriteria: VerificationCriteria
+  ): Promise<ArbitrationDecision>;
+}
+
+interface ClaimBasedEvaluation {
+  extractedClaims: ExtractedClaim[];
+  verificationResults: VerificationResult[];
+  factualAccuracyScore: number;
+  cawsComplianceScore: number;
+  overallQuality: number;
+}
+```
+
+### Advanced Claim Processing Features
+
+**Multi-Modal Claim Extraction**: The system extends beyond text to handle claims in code, documentation, and structured data outputs.
+
+```typescript
+interface MultiModalClaimProcessor {
+  // Extract claims from code outputs
+  extractCodeClaims(
+    codeOutput: CodeOutput,
+    specification: CodeSpecification
+  ): Promise<CodeClaim[]>;
+
+  // Extract claims from documentation
+  extractDocumentationClaims(
+    docOutput: DocumentationOutput,
+    styleGuide: DocumentationStandards
+  ): Promise<DocumentationClaim[]>;
+
+  // Extract claims from data analysis outputs
+  extractDataClaims(
+    analysisOutput: DataAnalysisOutput,
+    dataSchema: DataSchema
+  ): Promise<DataClaim[]>;
+}
+```
+
+**Continuous Learning from Verification**: The system learns from claim verification outcomes to improve extraction accuracy and reduce false positives.
+
+```typescript
+interface ClaimLearningSystem {
+  // Learn from verification feedback
+  learnFromVerification(
+    claims: ExtractedClaim[],
+    verificationResults: VerificationResult[],
+    humanFeedback?: HumanFeedback
+  ): Promise<LearningUpdate>;
+
+  // Adapt extraction patterns based on task surface
+  adaptExtractionPatterns(
+    taskSurface: TaskSurface,
+    historicalPerformance: PerformanceMetrics
+  ): Promise<PatternUpdate>;
+}
+```
+
+### Standardized Evaluation Framework
+
+Drawing from the research framework in "Towards Effective Extraction and Evaluation of Factual Claims" [arXiv:2502.10855](https://arxiv.org/abs/2502.10855), the arbiter stack implements a comprehensive evaluation system for claim extraction quality.
+
+**Research-Based Evaluation Metrics**:
+
+```typescript
+interface ResearchBasedClaimEvaluation {
+  // Coverage metrics (from Metropolitansky & Larson 2025)
+  coverageMetrics: {
+    factualCoverage: number; // % of factual content successfully extracted
+    semanticCoverage: number; // % of semantic meaning preserved
+    contextualCoverage: number; // % of contextual information retained
+  };
+
+  // Decontextualization quality (novel approach from research)
+  decontextualizationMetrics: {
+    selfContainment: number; // Claims can be understood without source context
+    ambiguityReduction: number; // % reduction in ambiguous interpretations
+    precisionRetention: number; // % of original precision maintained
+  };
+
+  // Automated evaluation methods
+  automatedEvaluation: {
+    claimCompleteness: number; // Automated assessment of claim completeness
+    factualAccuracy: number; // Automated fact-checking against knowledge bases
+    consistencyScore: number; // Internal consistency across extracted claims
+  };
+}
+```
+
+**Scalable Evaluation Pipeline**:
+
+```typescript
+interface ScalableClaimEvaluation {
+  // Replicable evaluation methods from research
+  evaluationPipeline: {
+    batchProcessing: boolean; // Process multiple claims simultaneously
+    parallelVerification: boolean; // Parallel fact-checking across claims
+    cachingStrategy: "semantic" | "exact" | "hybrid"; // Cache verification results
+  };
+
+  // Research-backed quality thresholds
+  qualityThresholds: {
+    minimumCoverage: 0.85; // 85% factual coverage required
+    minimumDecontextualization: 0.8; // 80% self-containment required
+    maximumAmbiguity: 0.15; // <15% ambiguous claims allowed
+  };
+
+  // Automated quality gates
+  qualityGates: {
+    preExtractionValidation: boolean; // Validate input before extraction
+    postExtractionVerification: boolean; // Verify claims after extraction
+    continuousMonitoring: boolean; // Real-time quality monitoring
+  };
+}
+```
+
+### Quality Metrics and Monitoring
+
+**Enhanced Claim Quality Dashboard**: Real-time monitoring incorporating research-backed metrics for claim extraction accuracy, verification success rates, and factual consistency across the arbiter stack.
+
+```typescript
+interface EnhancedClaimQualityMetrics {
+  // Research-based extraction quality metrics
+  extractionMetrics: {
+    accuracy: number; // % of correctly extracted claims
+    completeness: number; // % of verifiable content captured
+    precision: number; // % of extracted claims that are factual
+    recall: number; // % of factual content successfully extracted
+    coverage: number; // Research-based coverage metric
+    decontextualization: number; // Research-based self-containment metric
+  };
+
+  // Enhanced verification performance metrics
+  verificationMetrics: {
+    verificationRate: number; // % of claims successfully verified
+    evidenceQuality: number; // Average evidence strength
+    cawsCompliance: number; // % of claims meeting CAWS standards
+    ambiguityResolution: number; // % of ambiguities successfully resolved
+    contextualPreservation: number; // % of context preserved in claims
+  };
+
+  // System health indicators with research backing
+  healthIndicators: {
+    hallucinationRate: number; // % of outputs containing unverified claims
+    claimConsistency: number; // Consistency across multiple extractions
+    processingLatency: number; // Average claim extraction time
+    evaluationReliability: number; // Reliability of automated evaluation
+    scalabilityMetrics: number; // Performance under load
+  };
+}
+```
+
+### Claim Extraction and Verification Implementation
+
+**Multi-Stage Claim Processing**: The arbiter stack implements a approach with three distinct stages for optimal claim extraction and verification.
+
+```typescript
+interface ClaimExtractionAndVerificationProcessor {
+  // Stage 1: Selection - Identify verifiable content
+  selectionStage: {
+    detectVerifiableContent(
+      sentence: string,
+      context: ConversationContext
+    ): Promise<VerifiableContentResult>;
+
+    rewriteUnverifiableContent(
+      sentence: string,
+      context: ConversationContext
+    ): Promise<string | null>; // Returns null if no verifiable content
+  };
+
+  // Stage 2: Disambiguation - Resolve ambiguities
+  disambiguationStage: {
+    identifyAmbiguities(
+      sentence: string,
+      context: ConversationContext
+    ): Promise<AmbiguityAnalysis>;
+
+    resolveAmbiguities(
+      sentence: string,
+      ambiguities: AmbiguityAnalysis
+    ): Promise<DisambiguationResult>;
+  };
+
+  // Stage 3: Decomposition - Extract atomic claims
+  decompositionStage: {
+    extractAtomicClaims(
+      disambiguatedSentence: string,
+      context: ConversationContext
+    ): Promise<AtomicClaim[]>;
+
+    addContextualBrackets(
+      claim: string,
+      impliedContext: string
+    ): Promise<string>; // e.g., "John [celebrity] called for peace [in Middle East]"
+  };
+}
+
+interface VerifiableContentResult {
+  hasVerifiableContent: boolean;
+  rewrittenSentence?: string; // Only if unverifiable content was removed
+  confidence: number;
+}
+
+interface AmbiguityAnalysis {
+  referentialAmbiguities: string[]; // e.g., "they", "the policy", "next year"
+  structuralAmbiguities: string[]; // e.g., multiple grammatical interpretations
+  canResolve: boolean; // Whether context provides sufficient resolution
+  resolutionConfidence: number;
+}
+
+interface DisambiguationResult {
+  success: boolean;
+  disambiguatedSentence?: string;
+  reason?: "no_ambiguity" | "resolved" | "cannot_resolve";
+}
+
+interface AtomicClaim {
+  id: string;
+  statement: string;
+  contextualBrackets: string[]; // Implied context in brackets
+  sourceSentence: string;
+  confidence: number;
+}
+```
+
+**Ambiguity Handling**: Unlike traditional methods that ignore or assume resolution of ambiguities, the arbiter stack explicitly identifies when ambiguity cannot be resolved and excludes such content from fact-checking.
+
+```typescript
+interface AmbiguityHandler {
+  // Identify unresolvable ambiguities (unique to Claimify approach)
+  detectUnresolvableAmbiguities(
+    sentence: string,
+    context: ConversationContext
+  ): Promise<UnresolvableAmbiguity[]>;
+
+  // Handle different types of ambiguity
+  handleReferentialAmbiguity(
+    ambiguousPhrase: string,
+    context: ConversationContext
+  ): Promise<ResolutionAttempt>;
+
+  handleStructuralAmbiguity(
+    sentence: string,
+    possibleInterpretations: string[],
+    context: ConversationContext
+  ): Promise<ResolutionAttempt>;
+}
+
+interface UnresolvableAmbiguity {
+  type: "referential" | "structural" | "temporal";
+  phrase: string;
+  possibleInterpretations: string[];
+  reason:
+    | "insufficient_context"
+    | "multiple_valid_readings"
+    | "external_knowledge_required";
+}
+
+interface ResolutionAttempt {
+  success: boolean;
+  resolvedPhrase?: string;
+  confidence: number;
+  fallbackStrategy?: "exclude_from_verification" | "request_human_review";
+}
+```
+
+### Integration with CAWS Governance
+
+**Provenance Tracking**: Every extracted claim is tracked through the CAWS provenance system, creating immutable audit trails for factual assertions.
+
+**Waiver Management**: Claims that cannot be verified within CAWS budgets trigger appropriate waiver processes, ensuring transparency about verification limitations.
+
+**Quality Gates**: Claim extraction and verification become integral components of CAWS quality gates, with specific thresholds for factual accuracy and evidence quality.
+
+This claim extraction and verification system transforms the arbiter from a simple output selector into a **factual accuracy guardian**, ensuring that all AI-generated content meets rigorous standards for truthfulness and verifiability while maintaining CAWS compliance and governance requirements.
 
 ## CAWS-Compliant Arbitration Protocol
 
@@ -943,6 +1336,7 @@ This isn't just wrapping AI in another AI blindly – we're constructing a measu
 - **CUDO Compute Blog** – _LLM Orchestration Toolkits Compared_ (Emmanuel Ohiri, Aug 2025)[cudocompute.com](https://www.cudocompute.com/blog/llms-ai-orchestration-toolkits-comparison#:~:text=in%20economic%20value%20by%202028,ai%20%20across%20enterprise%20workflows)
 - AIMultiple Research – _Top 12 LLM Orchestration Frameworks_ (Hazal Şimşek, Sep 2025)[research.aimultiple.com](https://research.aimultiple.com/llm-orchestration/#:~:text=,Augmented%20Generation%20%28RAG%29%20pipelines)
 - GitHub (a-agmon) – _Graph-Flow: High-Performance Multi-Agent Orchestration in Rust_ (2023)[github.com](https://github.com/a-agmon/rs-graph-llm#:~:text=High)
+- **Metropolitansky, D. & Larson, J.** – _Towards Effective Extraction and Evaluation of Factual Claims_ (arXiv:2502.10855, 2025)[arxiv.org](https://arxiv.org/abs/2502.10855) – Research framework for claim extraction evaluation and Claimify methodology
 
 Citations
 
