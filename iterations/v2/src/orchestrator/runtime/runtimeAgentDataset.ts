@@ -25,7 +25,25 @@ export const runtimeAgentSeeds: RuntimeAgentSeed[] = [
     capabilities: {
       taskTypes: ["documentation", "code-editing", "testing"],
       languages: ["TypeScript", "JavaScript"],
-      specializations: ["Frontend architecture", "API design"],
+      specializations: ["Frontend architecture", "API design"], // Legacy support
+      specializationsV2: [
+        {
+          type: "Frontend architecture",
+          level: "expert",
+          successRate: 0.94,
+          taskCount: 45,
+          averageQuality: 0.91,
+          lastUsed: "2025-10-15T10:30:00Z",
+        },
+        {
+          type: "API design",
+          level: "intermediate",
+          successRate: 0.88,
+          taskCount: 28,
+          averageQuality: 0.85,
+          lastUsed: "2025-10-14T15:20:00Z",
+        },
+      ],
     },
     performanceHistory: {
       successRate: 0.94,
@@ -46,7 +64,25 @@ export const runtimeAgentSeeds: RuntimeAgentSeed[] = [
     capabilities: {
       taskTypes: ["code-editing", "refactoring", "code-review"],
       languages: ["TypeScript", "Python", "Go"],
-      specializations: ["Performance optimization", "Backend architecture"],
+      specializations: ["Performance optimization", "Backend architecture"], // Legacy support
+      specializationsV2: [
+        {
+          type: "Performance optimization",
+          level: "expert",
+          successRate: 0.92,
+          taskCount: 38,
+          averageQuality: 0.89,
+          lastUsed: "2025-10-15T08:15:00Z",
+        },
+        {
+          type: "Backend architecture",
+          level: "expert",
+          successRate: 0.95,
+          taskCount: 42,
+          averageQuality: 0.93,
+          lastUsed: "2025-10-15T12:45:00Z",
+        },
+      ],
     },
     performanceHistory: {
       successRate: 0.9,
@@ -67,7 +103,25 @@ export const runtimeAgentSeeds: RuntimeAgentSeed[] = [
     capabilities: {
       taskTypes: ["testing", "code-review", "documentation"] as const,
       languages: ["TypeScript", "JavaScript"],
-      specializations: ["API design", "DevOps"],
+      specializations: ["API design", "DevOps"], // Legacy support
+      specializationsV2: [
+        {
+          type: "API design",
+          level: "intermediate",
+          successRate: 0.91,
+          taskCount: 31,
+          averageQuality: 0.87,
+          lastUsed: "2025-10-14T16:30:00Z",
+        },
+        {
+          type: "DevOps",
+          level: "novice",
+          successRate: 0.82,
+          taskCount: 12,
+          averageQuality: 0.78,
+          lastUsed: "2025-10-13T09:15:00Z",
+        },
+      ],
     },
     performanceHistory: {
       successRate: 0.92,
@@ -88,7 +142,25 @@ export const runtimeAgentSeeds: RuntimeAgentSeed[] = [
     capabilities: {
       taskTypes: ["research", "api-design", "documentation"] as const,
       languages: ["Python", "TypeScript"],
-      specializations: ["Security audit", "Database design"],
+      specializations: ["Security audit", "Database design"], // Legacy support
+      specializationsV2: [
+        {
+          type: "Security audit",
+          level: "expert",
+          successRate: 0.96,
+          taskCount: 29,
+          averageQuality: 0.94,
+          lastUsed: "2025-10-15T11:00:00Z",
+        },
+        {
+          type: "Database design",
+          level: "intermediate",
+          successRate: 0.89,
+          taskCount: 18,
+          averageQuality: 0.86,
+          lastUsed: "2025-10-14T14:20:00Z",
+        },
+      ],
     },
     performanceHistory: {
       successRate: 0.88,

@@ -12,6 +12,7 @@
 import { createHash } from "crypto";
 import { EventEmitter } from "events";
 import type { LearningDatabaseClient } from "../database/LearningDatabaseClient.js";
+import { Logger } from "../observability/Logger.js";
 import type {
   ErrorPattern,
   LearningIteration,
@@ -41,6 +42,7 @@ export interface ErrorAnalysisResult {
 export class ErrorPatternRecognizer extends EventEmitter {
   private knownPatterns: Map<string, ErrorPattern>;
   private dbClient: LearningDatabaseClient;
+  private logger: Logger;
 
   // Regex patterns for common error types
   private static readonly ERROR_PATTERNS = {
@@ -128,16 +130,28 @@ export class ErrorPatternRecognizer extends EventEmitter {
     super();
     this.dbClient = dbClient;
     this.knownPatterns = new Map();
+    this.logger = new Logger("ErrorPatternRecognizer");
   }
 
   /**
    * Initialize by loading known patterns from database
    */
   async initialize(): Promise<void> {
-    const patterns = await this.dbClient.getErrorPatterns();
+    try {
+      const patterns = await this.dbClient.getErrorPatterns();
 
-    for (const pattern of patterns) {
-      this.knownPatterns.set(pattern.patternId, pattern);
+      for (const pattern of patterns) {
+        this.knownPatterns.set(pattern.patternId, pattern);
+      }
+    } catch (error) {
+      // If database table doesn't exist yet, start with empty patterns
+      // This is expected during initial setup or migration
+      this.logger.warn(
+        "Failed to load error patterns from database, starting with empty set",
+        {
+          error: error instanceof Error ? error.message : String(error),
+        }
+      );
     }
   }
 

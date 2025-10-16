@@ -396,9 +396,15 @@ export class TaskOrchestrator extends EventEmitter {
     });
 
     this.performanceTracker = new PerformanceTracker({
-      enabled: config.performance.trackingEnabled,
+      enabled: true, // Always enable for orchestrator
       maxEventsInMemory: 10000,
+      retentionPeriodMs: 7 * 24 * 60 * 60 * 1000, // 7 days
+      batchSize: 100,
+      anonymizeData: true,
     });
+
+    // Start performance tracking
+    await this.performanceTracker.startCollection();
 
     this.setupEventHandlers();
   }
@@ -481,7 +487,12 @@ export class TaskOrchestrator extends EventEmitter {
       task.id,
       routingDecision.selectedAgent.id,
       performanceRoutingDecision,
-      { taskType: task.type, priority: task.priority }
+      {
+        taskType: task.type,
+        priority: task.priority,
+        timeoutMs: task.timeout,
+        budget: task.budget,
+      }
     );
 
     this.emit(TaskOrchestratorEvents.TASK_SUBMITTED, task);
@@ -585,8 +596,20 @@ export class TaskOrchestrator extends EventEmitter {
       "Task completed successfully"
     );
 
-    // Track performance
-    // await this.performanceTracker.recordTaskCompletion(execution, result);
+    // Track performance - record task completion
+    const duration =
+      execution.completedAt.getTime() - execution.startedAt.getTime();
+    const qualityScore = result.success ? 0.8 : 0.2; // Basic quality assessment
+
+    // Find the execution ID that was created during task submission
+    const executionId = `${execution.taskId}-${execution.startedAt.getTime()}`;
+    await this.performanceTracker.completeTaskExecution(executionId, {
+      success: result.success,
+      qualityScore,
+      efficiencyScore: 0.8, // Default efficiency score
+      tokensConsumed: result.performance?.tokensUsed || 0,
+      completionTimeMs: duration,
+    });
 
     // Update metrics
     this.updateTaskMetrics(taskId, {
@@ -646,8 +669,17 @@ export class TaskOrchestrator extends EventEmitter {
       this.emit(TaskOrchestratorEvents.TASK_FAILED, execution);
     }
 
-    // Track performance
-    // await this.performanceTracker.recordTaskFailure(execution, error);
+    // Track performance - record failed task completion
+    const duration = Date.now() - execution.startedAt.getTime();
+    const executionId = `${execution.taskId}-${execution.startedAt.getTime()}`;
+
+    await this.performanceTracker.completeTaskExecution(executionId, {
+      success: false,
+      qualityScore: 0.0,
+      efficiencyScore: 0.0,
+      tokensConsumed: 0,
+      completionTimeMs: duration,
+    });
   }
 
   /**

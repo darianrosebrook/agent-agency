@@ -68,7 +68,8 @@ export class LogicalValidator {
   }> = [
     {
       name: "Ad Hominem",
-      pattern: /\b(you can't trust|because he's|because she's|not a scientist|not qualified)\b/i,
+      pattern:
+        /\b(you can't trust|because he's|because she's|not a scientist|not qualified)\b/i,
       description: "Attacking the person instead of the argument",
       severity: "high",
     },
@@ -80,7 +81,8 @@ export class LogicalValidator {
     },
     {
       name: "False Dichotomy",
-      pattern: /\b(either|you're either)\b.*\b(or|against)\b.*\b(no middle ground|no other option)\b/i,
+      pattern:
+        /\b(either|you're either)\b.*\b(or|against)\b.*\b(no middle ground|no other option)\b/i,
       description: "Presenting only two options when more exist",
       severity: "medium",
     },
@@ -106,8 +108,10 @@ export class LogicalValidator {
     },
     {
       name: "Hasty Generalization",
-      pattern: /\b(all|every|always|never|none)\b.*\b(are|is|was|were)\b/i,
-      description: "Drawing broad conclusions from limited evidence",
+      pattern:
+        /\b(all|every|always|never|none)\b.*\b(people|humans|men|women|students|doctors|scientists|experts)\b.*\b(are|is|was|were)\b.*\b(bad|good|stupid|smart|evil|kind|cruel|generous|dishonest|honest)\b/i,
+      description:
+        "Drawing broad conclusions from limited evidence about human characteristics",
       severity: "medium",
     },
   ];
@@ -178,7 +182,9 @@ export class LogicalValidator {
         processingTimeMs: Date.now() - startTime,
         evidenceCount: argument.premises.length + argument.connectives.length,
         metadata: {
-          fallacies: fallacies.map(f => f.type.toLowerCase().replace(/\s+/g, '_')),
+          fallacies: fallacies.map((f) =>
+            f.type.toLowerCase().replace(/\s+/g, "_")
+          ),
           argumentStructure: argument.structure,
           premiseCount: argument.premises.length,
           connectiveCount: argument.connectives.length,
@@ -321,34 +327,42 @@ export class LogicalValidator {
         });
       }
     }
-    
 
     return fallacies;
   }
 
-  private detectAffirmingConsequent(content: string, fallacies: LogicalFallacy[]): void {
+  private detectAffirmingConsequent(
+    content: string,
+    fallacies: LogicalFallacy[]
+  ): void {
     // Pattern: If A then B. B. Therefore A.
     // Look for the structure: If X, then Y. Y. Therefore, X (or similar)
-    const pattern = /if\s+([^,]+),\s*([^,]+)\.\s*([^,]+)\.\s*therefore,\s*[^,]*/i;
+    const pattern =
+      /if\s+([^,]+),\s*([^,]+)\.\s*([^,]+)\.\s*therefore,\s*[^,]*/i;
     if (pattern.test(content)) {
       // Additional check: the second statement should be similar to the consequent
       const match = content.match(pattern);
       if (match) {
         const consequent = match[2].toLowerCase();
         const secondStatement = match[3].toLowerCase();
-        
+
         // Check if the second statement is affirming the consequent (not negating it)
         // If the second statement contains "not", it's likely a negation, not affirmation
-        if (!secondStatement.includes('not')) {
+        if (!secondStatement.includes("not")) {
           // Check if the second statement is similar to the consequent
-          const consequentWords = consequent.split(' ');
-          const secondWords = secondStatement.split(' ');
-          
+          const consequentWords = consequent.split(" ");
+          const secondWords = secondStatement.split(" ");
+
           // Count word matches between consequent and second statement
-          const wordMatches = consequentWords.filter(word => 
-            secondWords.some(sw => sw === word || sw.includes(word + ' ') || sw.includes(' ' + word))
+          const wordMatches = consequentWords.filter((word) =>
+            secondWords.some(
+              (sw) =>
+                sw === word ||
+                sw.includes(word + " ") ||
+                sw.includes(" " + word)
+            )
           ).length;
-          
+
           // If most words match, it's likely affirming the consequent
           if (wordMatches >= consequentWords.length * 0.7) {
             fallacies.push({
@@ -363,44 +377,55 @@ export class LogicalValidator {
     }
   }
 
-  private detectDenyingAntecedent(content: string, fallacies: LogicalFallacy[]): void {
+  private detectDenyingAntecedent(
+    content: string,
+    fallacies: LogicalFallacy[]
+  ): void {
     // Pattern: If A then B. Not A. Therefore not B.
     // This is different from modus tollens: If A then B. Not B. Therefore not A.
     // Denying antecedent: If A then B. Not A. Therefore not B. (INVALID)
     // Modus tollens: If A then B. Not B. Therefore not A. (VALID)
-    const pattern = /if\s+([^,]+),\s*([^,]+)\.\s*[^,]*not[^,]*\.\s*therefore,\s*[^,]*not[^,]*/i;
+    const pattern =
+      /if\s+([^,]+),\s*([^,]+)\.\s*[^,]*not[^,]*\.\s*therefore,\s*[^,]*not[^,]*/i;
     if (pattern.test(content)) {
       const match = content.match(pattern);
       if (match) {
         const antecedent = match[1].toLowerCase();
         const consequent = match[2].toLowerCase();
-        
+
         // Check if this is actually denying antecedent (invalid) vs modus tollens (valid)
         // In denying antecedent, we deny the antecedent and conclude the negation of the consequent
         // In modus tollens, we deny the consequent and conclude the negation of the antecedent
-        const secondStatement = content.split('.')[1].toLowerCase();
-        const thirdStatement = content.split('.')[2].toLowerCase();
-        
+        const secondStatement = content.split(".")[1].toLowerCase();
+        const thirdStatement = content.split(".")[2].toLowerCase();
+
         // If the second statement denies the antecedent (not the consequent), it's denying antecedent
         // Check if the second statement is about the antecedent, not the consequent
-        const antecedentWords = antecedent.split(' ');
-        const consequentWords = consequent.split(' ');
-        const secondWords = secondStatement.split(' ');
-        
+        const antecedentWords = antecedent.split(" ");
+        const consequentWords = consequent.split(" ");
+        const secondWords = secondStatement.split(" ");
+
         // Count how many words from antecedent vs consequent appear in second statement
         // Use exact word matching to avoid false positives
-        const antecedentMatches = antecedentWords.filter(word => 
-          secondWords.some(sw => sw === word || sw.includes(word + ' ') || sw.includes(' ' + word))
+        const antecedentMatches = antecedentWords.filter((word) =>
+          secondWords.some(
+            (sw) =>
+              sw === word || sw.includes(word + " ") || sw.includes(" " + word)
+          )
         ).length;
-        const consequentMatches = consequentWords.filter(word => 
-          secondWords.some(sw => sw === word || sw.includes(word + ' ') || sw.includes(' ' + word))
+        const consequentMatches = consequentWords.filter((word) =>
+          secondWords.some(
+            (sw) =>
+              sw === word || sw.includes(word + " ") || sw.includes(" " + word)
+          )
         ).length;
-        
+
         // If more antecedent words match, it's denying antecedent (invalid)
         if (antecedentMatches > consequentMatches) {
           fallacies.push({
             type: "Denying Antecedent",
-            description: "Assuming the negation of the antecedent proves the negation of the consequent",
+            description:
+              "Assuming the negation of the antecedent proves the negation of the consequent",
             location: this.findFallacyLocation(content, pattern),
             severity: "high",
           });
@@ -409,7 +434,11 @@ export class LogicalValidator {
     }
   }
 
-  private detectCircularReasoning(content: string, argument: LogicalArgument, fallacies: LogicalFallacy[]): void {
+  private detectCircularReasoning(
+    content: string,
+    argument: LogicalArgument,
+    fallacies: LogicalFallacy[]
+  ): void {
     // Check for circular reasoning in argument structure
     if (argument.premises.length > 0 && argument.conclusion) {
       const conclusionWords = new Set(

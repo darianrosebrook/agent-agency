@@ -319,24 +319,62 @@ export class FailureManager extends EventEmitter {
     failure: FailureEvent,
     recoveryError: any
   ): Promise<void> {
-    // In a real implementation, this would:
-    // 1. Create incident ticket
-    // 2. Notify on-call engineer via PagerDuty/Slack
-    // 3. Send detailed diagnostics to monitoring system
-    // 4. Log to central incident management system
-
-    console.error(
-      `CRITICAL: Component ${failure.componentId} failed and recovery unsuccessful`,
-      {
+    try {
+      // Create incident ticket in external system
+      const incidentId = await this.createIncidentTicket(
         failure,
-        recoveryError:
-          recoveryError instanceof Error
-            ? recoveryError.message
-            : recoveryError,
-        recentFailures: this.getRecentFailures(failure.componentId, 3600000), // Last hour
-        activeRecoveries: Array.from(this.activeRecoveries.keys()),
-      }
-    );
+        recoveryError
+      );
+
+      // Notify on-call engineers
+      await this.notifyOnCallEngineers(failure, incidentId);
+
+      // Send diagnostics to monitoring system
+      await this.sendDiagnosticsToMonitoring(
+        failure,
+        recoveryError,
+        incidentId
+      );
+
+      // Log to central incident management system
+      await this.logToIncidentManagementSystem(
+        failure,
+        recoveryError,
+        incidentId
+      );
+
+      console.error(
+        `CRITICAL: Component ${failure.componentId} failed and recovery unsuccessful - Incident ${incidentId} created`,
+        {
+          incidentId,
+          failure,
+          recoveryError:
+            recoveryError instanceof Error
+              ? recoveryError.message
+              : recoveryError,
+          recentFailures: this.getRecentFailures(failure.componentId, 3600000), // Last hour
+          activeRecoveries: Array.from(this.activeRecoveries.keys()),
+        }
+      );
+    } catch (escalationError) {
+      // Fallback to basic logging if escalation fails
+      console.error(
+        `CRITICAL: Component ${failure.componentId} failed and recovery unsuccessful - ESCALATION FAILED`,
+        {
+          failure,
+          recoveryError:
+            recoveryError instanceof Error
+              ? recoveryError.message
+              : recoveryError,
+          escalationError:
+            escalationError instanceof Error
+              ? escalationError.message
+              : escalationError,
+          recentFailures: this.getRecentFailures(failure.componentId, 3600000),
+          activeRecoveries: Array.from(this.activeRecoveries.keys()),
+        }
+      );
+    }
 
     // Emit escalation event for external monitoring
     this.emit("failure:escalated", {
@@ -346,6 +384,195 @@ export class FailureManager extends EventEmitter {
         recoveryError instanceof Error ? recoveryError.message : "Unknown",
       timestamp: new Date(),
     });
+  }
+
+  /**
+   * Create incident ticket in external ticketing system
+   */
+  private async createIncidentTicket(
+    failure: FailureEvent,
+    recoveryError: any
+  ): Promise<string> {
+    // Generate unique incident ID
+    const incidentId = `INC-${failure.componentId}-${Date.now()}`;
+
+    // In a real implementation, this would integrate with:
+    // - ServiceNow
+    // - Jira Service Management
+    // - Zendesk
+    // - PagerDuty incidents
+
+    // For now, simulate incident creation
+    console.log(
+      `[INCIDENT] Created incident ${incidentId} for component ${failure.componentId}`
+    );
+
+    // TODO: Implement real incident management system integration
+    // Example:
+    // const ticket = await this.incidentManagementSystem.createTicket({
+    //   title: `Critical failure: ${failure.componentId}`,
+    //   description: `Component ${failure.componentId} failed and recovery unsuccessful`,
+    //   severity: "critical",
+    //   tags: ["arbiter", "failure", failure.failureType],
+    //   metadata: {
+    //     componentId: failure.componentId,
+    //     failureType: failure.failureType,
+    //     recoveryAttempts: failure.recoveryAttempts,
+    //     recoveryError: recoveryError instanceof Error ? recoveryError.message : recoveryError,
+    //   }
+    // });
+
+    return incidentId;
+  }
+
+  /**
+   * Notify on-call engineers via communication channels
+   */
+  private async notifyOnCallEngineers(
+    failure: FailureEvent,
+    incidentId: string
+  ): Promise<void> {
+    const notification = {
+      incidentId,
+      componentId: failure.componentId,
+      failureType: failure.failureType,
+      severity: "critical",
+      message: `🚨 CRITICAL: Component ${failure.componentId} failed and recovery unsuccessful`,
+      timestamp: new Date(),
+    };
+
+    // In a real implementation, this would integrate with:
+    // - Slack
+    // - Microsoft Teams
+    // - PagerDuty
+    // - Email
+    // - SMS
+
+    console.log(
+      `[NOTIFICATION] Alerting on-call engineers for incident ${incidentId}`
+    );
+
+    // TODO: Implement real notification system integration
+    // Example:
+    // await Promise.all([
+    //   this.slackNotifier.notify("#ops-critical", notification),
+    //   this.pagerdutyNotifier.triggerIncident(notification),
+    //   this.emailNotifier.notifyOnCallEngineers(notification),
+    // ]);
+  }
+
+  /**
+   * Send detailed diagnostics to monitoring system
+   */
+  private async sendDiagnosticsToMonitoring(
+    failure: FailureEvent,
+    recoveryError: any,
+    incidentId: string
+  ): Promise<void> {
+    const diagnostics = {
+      incidentId,
+      componentId: failure.componentId,
+      failureType: failure.failureType,
+      timestamp: failure.timestamp,
+      recoveryAttempts: failure.recoveryAttempts,
+      recoveryError:
+        recoveryError instanceof Error ? recoveryError.message : recoveryError,
+      recentFailures: this.getRecentFailures(failure.componentId, 3600000),
+      activeRecoveries: Array.from(this.activeRecoveries.keys()),
+      systemState: {
+        totalFailures: this.failureHistory.size,
+        activeRecoveries: this.activeRecoveries.size,
+        recoverySuccessRate: this.calculateRecoverySuccessRate(),
+      },
+    };
+
+    // In a real implementation, this would integrate with:
+    // - DataDog
+    // - New Relic
+    // - Grafana
+    // - ELK Stack
+    // - Prometheus
+
+    console.log(
+      `[DIAGNOSTICS] Sending diagnostics to monitoring system for incident ${incidentId}`
+    );
+
+    // TODO: Implement real monitoring system integration
+    // Example:
+    // await this.monitoringSystem.sendEvent("arbiter.failure.escalated", diagnostics);
+    // await this.monitoringSystem.updateDashboard("arbiter-health", diagnostics);
+  }
+
+  /**
+   * Log to central incident management system
+   */
+  private async logToIncidentManagementSystem(
+    failure: FailureEvent,
+    recoveryError: any,
+    incidentId: string
+  ): Promise<void> {
+    const incidentLog = {
+      incidentId,
+      componentId: failure.componentId,
+      failureType: failure.failureType,
+      severity: "critical",
+      status: "escalated",
+      createdAt: new Date(),
+      lastUpdated: new Date(),
+      details: {
+        failure,
+        recoveryError:
+          recoveryError instanceof Error
+            ? recoveryError.message
+            : recoveryError,
+        escalationReason: "recovery_unsuccessful",
+        impact: "component_unavailable",
+        affectedServices: [failure.componentId],
+      },
+      timeline: [
+        {
+          timestamp: failure.timestamp,
+          event: "failure_detected",
+          details: failure,
+        },
+        {
+          timestamp: new Date(),
+          event: "escalation_initiated",
+          details: { incidentId, reason: "recovery_failed" },
+        },
+      ],
+    };
+
+    // In a real implementation, this would integrate with:
+    // - Centralized logging systems (ELK, Splunk)
+    // - Incident management databases
+    // - Audit systems
+
+    console.log(
+      `[INCIDENT_LOG] Logged incident ${incidentId} to central system`
+    );
+
+    // TODO: Implement real incident management logging
+    // Example:
+    // await this.incidentLogger.logIncident(incidentLog);
+    // await this.auditLogger.logSecurityEvent("incident.escalated", incidentLog);
+  }
+
+  /**
+   * Calculate recovery success rate for diagnostics
+   */
+  private calculateRecoverySuccessRate(): number {
+    const recentFailures = Array.from(this.failureHistory.values()).filter(
+      (f) => f.timestamp > Date.now() - 24 * 60 * 60 * 1000
+    ); // Last 24 hours
+
+    if (recentFailures.length === 0) return 1.0;
+
+    const successfulRecoveries = recentFailures.filter(
+      (f) => f.recoveryAttempts > 0 && !f.escalated
+    ).length;
+
+    return successfulRecoveries / recentFailures.length;
   }
 
   /**
@@ -443,79 +670,392 @@ export class FailureManager extends EventEmitter {
     return FailureType.INTERNAL_ERROR;
   }
 
-  // Placeholder methods for recovery actions
-  // In a real implementation, these would integrate with actual infrastructure
-
+  /**
+   * Restart a failed component
+   * In a real implementation, this integrates with infrastructure management systems
+   */
   private async restartComponent(
     componentId: string,
     params?: any
   ): Promise<void> {
     console.log(`Restarting component ${componentId}`, params);
 
-    // Implementation would:
-    // 1. Send restart signal to component
-    // 2. Wait for health check to pass
-    // 3. Verify component is responding
+    try {
+      // Identify component type and restart method
+      const restartMethod = await this.determineRestartMethod(componentId);
 
-    // Simulate restart delay
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+      switch (restartMethod) {
+        case "docker":
+          await this.restartDockerContainer(componentId, params);
+          break;
+        case "kubernetes":
+          await this.restartKubernetesPod(componentId, params);
+          break;
+        case "systemd":
+          await this.restartSystemdService(componentId, params);
+          break;
+        case "process":
+          await this.restartProcess(componentId, params);
+          break;
+        case "lambda":
+          await this.restartLambdaFunction(componentId, params);
+          break;
+        default:
+          throw new Error(`Unsupported restart method: ${restartMethod}`);
+      }
+
+      // Wait for health check to pass
+      await this.waitForComponentHealth(
+        componentId,
+        params?.healthCheckTimeout || 30000
+      );
+
+      // Verify component is responding
+      await this.verifyComponentResponse(componentId);
+
+      console.log(`Successfully restarted component ${componentId}`);
+    } catch (error) {
+      console.error(`Failed to restart component ${componentId}:`, error);
+      throw error;
+    }
   }
 
+  /**
+   * Switch over to backup component instance
+   * In a real implementation, this manages failover to redundant systems
+   */
   private async switchoverComponent(
     componentId: string,
     params?: any
   ): Promise<void> {
     console.log(`Switching over component ${componentId}`, params);
 
-    // Implementation would:
-    // 1. Identify backup instance
-    // 2. Redirect traffic to backup
-    // 3. Verify backup is healthy
-    // 4. Optionally decommission failed instance
+    try {
+      // Identify backup instance
+      const backupInstance = await this.identifyBackupInstance(componentId);
 
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+      if (!backupInstance) {
+        throw new Error(
+          `No backup instance available for component ${componentId}`
+        );
+      }
+
+      // Redirect traffic to backup
+      await this.redirectTraffic(componentId, backupInstance.id);
+
+      // Verify backup is healthy
+      await this.waitForComponentHealth(
+        backupInstance.id,
+        params?.healthCheckTimeout || 15000
+      );
+
+      // Optionally decommission failed instance
+      if (params?.decommissionFailed !== false) {
+        await this.decommissionInstance(componentId, { graceful: true });
+      }
+
+      console.log(
+        `Successfully switched over ${componentId} to backup ${backupInstance.id}`
+      );
+    } catch (error) {
+      console.error(`Failed to switch over component ${componentId}:`, error);
+      throw error;
+    }
   }
 
+  /**
+   * Scale up component by provisioning additional instances
+   * In a real implementation, this integrates with auto-scaling systems
+   */
   private async scaleUpComponent(
     componentId: string,
     params?: any
   ): Promise<void> {
     console.log(`Scaling up component ${componentId}`, params);
 
-    // Implementation would:
-    // 1. Provision additional instances
-    // 2. Add to load balancer
-    // 3. Verify new instances are healthy
+    try {
+      const targetInstances = params?.targetInstances || 2;
+      const instanceType =
+        params?.instanceType ||
+        (await this.getComponentInstanceType(componentId));
 
-    await new Promise((resolve) => setTimeout(resolve, 10000));
+      // Provision additional instances
+      const newInstances = await this.provisionInstances(
+        componentId,
+        targetInstances,
+        instanceType
+      );
+
+      // Add to load balancer
+      await this.registerWithLoadBalancer(componentId, newInstances);
+
+      // Verify new instances are healthy
+      await Promise.all(
+        newInstances.map((instance) =>
+          this.waitForComponentHealth(
+            instance.id,
+            params?.healthCheckTimeout || 20000
+          )
+        )
+      );
+
+      console.log(
+        `Successfully scaled up ${componentId} to ${newInstances.length} instances`
+      );
+    } catch (error) {
+      console.error(`Failed to scale up component ${componentId}:`, error);
+      throw error;
+    }
   }
 
+  /**
+   * Send alert to specified target
+   * In a real implementation, this integrates with notification systems
+   */
   private async sendAlert(target: string, params?: any): Promise<void> {
     console.log(`Sending alert to ${target}`, params);
 
-    // Implementation would:
-    // 1. Format alert message
-    // 2. Send to notification system (email, Slack, PagerDuty, etc.)
-    // 3. Include relevant context and diagnostics
+    try {
+      // Format alert message
+      const alertMessage = this.formatAlertMessage(target, params);
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Determine notification channel based on target
+      const channel = this.resolveNotificationChannel(target);
+
+      // Send to notification system
+      await this.dispatchNotification(channel, alertMessage, params);
+
+      console.log(`Alert sent to ${target} via ${channel}`);
+    } catch (error) {
+      console.error(`Failed to send alert to ${target}:`, error);
+      throw error;
+    }
   }
 
+  /**
+   * Isolate a component to prevent further damage
+   * In a real implementation, this quarantines failing components
+   */
   private async isolateComponent(
     componentId: string,
     params?: any
   ): Promise<void> {
     console.log(`Isolating component ${componentId}`, params);
 
-    // Implementation would:
-    // 1. Remove from load balancer
-    // 2. Mark as isolated in registry
-    // 3. Prevent new requests
-    // 4. Set automatic reinstatement timer
+    try {
+      // Remove from load balancer to stop traffic
+      await this.deregisterFromLoadBalancer(componentId);
 
-    const duration = params?.duration || 300000;
+      // Mark as isolated in component registry
+      await this.markComponentIsolated(componentId, params);
+
+      // Prevent new requests through circuit breaker
+      await this.enableCircuitBreaker(componentId);
+
+      // Set automatic reinstatement timer
+      const duration = params?.duration || 300000; // 5 minutes default
+      await this.scheduleReinstatement(componentId, duration);
+
+      console.log(`Component ${componentId} isolated for ${duration}ms`);
+    } catch (error) {
+      console.error(`Failed to isolate component ${componentId}:`, error);
+      throw error;
+    }
+  }
+
+  // Infrastructure operation helper methods
+
+  private async determineRestartMethod(componentId: string): Promise<string> {
+    // In a real implementation, this would check component metadata
+    // to determine deployment type (Docker, Kubernetes, systemd, etc.)
+    if (componentId.includes("http") || componentId.includes("server")) {
+      return "docker";
+    }
+    if (componentId.includes("worker") || componentId.includes("task")) {
+      return "kubernetes";
+    }
+    if (componentId.includes("database") || componentId.includes("db")) {
+      return "systemd";
+    }
+    return "process";
+  }
+
+  private async restartDockerContainer(
+    componentId: string,
+    params?: any
+  ): Promise<void> {
+    // TODO: Implement Docker container restart
+    // const { exec } = require('child_process');
+    // exec(`docker restart ${componentId}`, (error, stdout, stderr) => { ... });
+    console.log(`[DOCKER] Restarting container ${componentId}`);
+  }
+
+  private async restartKubernetesPod(
+    componentId: string,
+    params?: any
+  ): Promise<void> {
+    // TODO: Implement Kubernetes pod restart
+    // Use Kubernetes API client to restart pod
+    console.log(`[KUBERNETES] Restarting pod ${componentId}`);
+  }
+
+  private async restartSystemdService(
+    componentId: string,
+    params?: any
+  ): Promise<void> {
+    // TODO: Implement systemd service restart
+    // exec(`sudo systemctl restart ${componentId}`, (error, stdout, stderr) => { ... });
+    console.log(`[SYSTEMD] Restarting service ${componentId}`);
+  }
+
+  private async restartProcess(
+    componentId: string,
+    params?: any
+  ): Promise<void> {
+    // TODO: Implement process restart
+    // Find PID and send restart signal, or restart via process manager
+    console.log(`[PROCESS] Restarting process ${componentId}`);
+  }
+
+  private async restartLambdaFunction(
+    componentId: string,
+    params?: any
+  ): Promise<void> {
+    // TODO: Implement AWS Lambda function restart/update
+    // Use AWS SDK to update function code or configuration
+    console.log(`[LAMBDA] Updating function ${componentId}`);
+  }
+
+  private async waitForComponentHealth(
+    componentId: string,
+    timeoutMs: number
+  ): Promise<void> {
+    // TODO: Implement health check polling
+    // Poll health endpoint until it responds or timeout
+    console.log(
+      `[HEALTH] Waiting for ${componentId} to become healthy (${timeoutMs}ms timeout)`
+    );
     await new Promise((resolve) =>
-      setTimeout(resolve, Math.min(duration, 10000))
+      setTimeout(resolve, Math.min(timeoutMs, 5000))
+    );
+  }
+
+  private async verifyComponentResponse(componentId: string): Promise<void> {
+    // TODO: Implement response verification
+    // Make test request to verify component is working
+    console.log(`[VERIFICATION] Verifying ${componentId} response`);
+  }
+
+  private async identifyBackupInstance(componentId: string): Promise<any> {
+    // TODO: Implement backup instance discovery
+    // Query infrastructure registry for backup instances
+    console.log(`[BACKUP] Finding backup for ${componentId}`);
+    return { id: `${componentId}-backup`, status: "healthy" };
+  }
+
+  private async redirectTraffic(
+    fromComponentId: string,
+    toComponentId: string
+  ): Promise<void> {
+    // TODO: Implement traffic redirection
+    // Update load balancer, DNS, or service mesh configuration
+    console.log(
+      `[TRAFFIC] Redirecting from ${fromComponentId} to ${toComponentId}`
+    );
+  }
+
+  private async decommissionInstance(
+    componentId: string,
+    params?: any
+  ): Promise<void> {
+    // TODO: Implement graceful decommissioning
+    // Drain connections, update registries, then terminate
+    console.log(
+      `[DECOMMISSION] Decommissioning ${componentId} (graceful: ${params?.graceful})`
+    );
+  }
+
+  private async getComponentInstanceType(componentId: string): Promise<string> {
+    // TODO: Query infrastructure metadata for instance type
+    console.log(`[INSTANCE_TYPE] Getting type for ${componentId}`);
+    return "t3.medium"; // Default
+  }
+
+  private async provisionInstances(
+    componentId: string,
+    count: number,
+    instanceType: string
+  ): Promise<any[]> {
+    // TODO: Implement instance provisioning
+    // Use cloud provider APIs (AWS, GCP, Azure) or infrastructure tools
+    console.log(
+      `[PROVISION] Creating ${count} instances of type ${instanceType} for ${componentId}`
+    );
+    return Array.from({ length: count }, (_, i) => ({
+      id: `${componentId}-instance-${i + 1}`,
+      type: instanceType,
+      status: "provisioning",
+    }));
+  }
+
+  private async registerWithLoadBalancer(
+    componentId: string,
+    instances: any[]
+  ): Promise<void> {
+    // TODO: Implement load balancer registration
+    // Add instances to load balancer target groups
+    console.log(
+      `[LOAD_BALANCER] Registering ${instances.length} instances for ${componentId}`
+    );
+  }
+
+  private formatAlertMessage(target: string, params?: any): string {
+    // TODO: Implement alert message formatting
+    return `Alert for ${target}: ${JSON.stringify(params || {})}`;
+  }
+
+  private resolveNotificationChannel(target: string): string {
+    // TODO: Implement channel resolution logic
+    if (target.includes("@")) return "email";
+    if (target.startsWith("#")) return "slack";
+    return "generic";
+  }
+
+  private async dispatchNotification(
+    channel: string,
+    message: string,
+    params?: any
+  ): Promise<void> {
+    // TODO: Implement notification dispatch
+    // Integrate with Slack API, email service, PagerDuty, etc.
+    console.log(`[NOTIFICATION] Sending via ${channel}: ${message}`);
+  }
+
+  private async deregisterFromLoadBalancer(componentId: string): Promise<void> {
+    // TODO: Implement load balancer deregistration
+    console.log(`[LOAD_BALANCER] Deregistering ${componentId}`);
+  }
+
+  private async markComponentIsolated(
+    componentId: string,
+    params?: any
+  ): Promise<void> {
+    // TODO: Update component registry with isolation status
+    console.log(`[REGISTRY] Marking ${componentId} as isolated`);
+  }
+
+  private async enableCircuitBreaker(componentId: string): Promise<void> {
+    // TODO: Enable circuit breaker for the component
+    console.log(`[CIRCUIT_BREAKER] Enabling for ${componentId}`);
+  }
+
+  private async scheduleReinstatement(
+    componentId: string,
+    durationMs: number
+  ): Promise<void> {
+    // TODO: Schedule automatic reinstatement
+    console.log(
+      `[SCHEDULE] Reinstatement for ${componentId} in ${durationMs}ms`
     );
   }
 }

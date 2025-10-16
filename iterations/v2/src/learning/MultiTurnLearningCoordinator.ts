@@ -639,4 +639,33 @@ export class MultiTurnLearningCoordinator extends EventEmitter {
   async getSession(sessionId: string): Promise<LearningSession | null> {
     return this.dbClient.getSession(sessionId);
   }
+
+  /**
+   * Shutdown the learning coordinator
+   *
+   * @returns Promise that resolves when shutdown is complete
+   */
+  async shutdown(): Promise<void> {
+    // Cancel all active sessions
+    for (const session of this.activeSessions.values()) {
+      if (
+        session.status === LearningSessionStatus.ACTIVE ||
+        session.status === LearningSessionStatus.EVALUATING
+      ) {
+        session.status = LearningSessionStatus.FAILED; // Mark as failed due to shutdown
+        session.endTime = new Date();
+      }
+    }
+
+    // Clear active sessions
+    this.activeSessions.clear();
+
+    // Remove all event listeners
+    this.removeAllListeners();
+
+    this.emit(LearningCoordinatorEvent.COORDINATOR_SHUTDOWN, {
+      timestamp: new Date(),
+      activeSessionsCancelled: this.activeSessions.size,
+    });
+  }
 }

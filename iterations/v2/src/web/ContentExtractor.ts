@@ -75,8 +75,14 @@ export class ContentExtractor {
     };
     const response = await this.fetchUrl(url, securityContext);
 
+    // Sanitize HTML if required before parsing
+    let htmlContent = response.data;
+    if (config.security?.sanitizeHtml) {
+      htmlContent = this.sanitizeHtml(htmlContent);
+    }
+
     // Parse HTML
-    const $ = cheerio.load(response.data);
+    const $ = cheerio.load(htmlContent);
 
     // Extract content based on configuration
     let extractedContent: string;
@@ -84,11 +90,6 @@ export class ContentExtractor {
       extractedContent = this.extractBySelector($, config.selector);
     } else {
       extractedContent = this.extractMainContent($, config);
-    }
-
-    // Sanitize content if required
-    if (config.security?.sanitizeHtml) {
-      extractedContent = this.sanitizeHtml(extractedContent);
     }
 
     // Enforce max length
@@ -132,6 +133,7 @@ export class ContentExtractor {
       url,
       title: $("title").text().trim() || this.extractTitleFromUrl(url),
       content: extractedContent,
+      textContent: extractedContent, // Plain text content
       html: config.includeMetadata ? response.data : undefined,
       links,
       images,
@@ -139,6 +141,8 @@ export class ContentExtractor {
       quality,
       contentHash,
       extractedAt: new Date(),
+      statusCode: response.status,
+      contentType: response.headers["content-type"] || "text/html",
     };
 
     return webContent;

@@ -1,0 +1,23 @@
+id: TEST-003
+title: "Sample Working Spec for Tests"
+risk_tier: 3
+mode: feature
+change_budget:
+  max_files: 10
+  max_loc: 200
+blast_radius:
+  modules: ["src"]
+  data_migration: false
+operational_rollback_slo: 5m
+scope:
+  in: ["src/"]
+  out: ["node_modules/"]
+invariants:
+  - "Task execution must remain deterministic."
+acceptance:
+  - id: "AC1"
+    given: "Valid request"
+    when: "Task runner executes"
+    then: "Produces an artefact"
+non_functional: {}
+contracts: []

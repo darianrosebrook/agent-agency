@@ -40,15 +40,47 @@ async function waitForPostgres(host = "localhost", port = 5432, retries = 30) {
 }
 
 async function setupDatabase() {
-  const client = new Client({
+  // First connect to default postgres database to create our test database
+  const adminClient = new Client({
     host: process.env.DB_HOST || "localhost",
     port: process.env.DB_PORT || 5432,
     user: process.env.POSTGRES_USER || "postgres",
     password: process.env.POSTGRES_PASSWORD || "password",
-    database: process.env.POSTGRES_DB || "arbiter_test",
+    database: "postgres",
   });
 
+  const testDbName = process.env.POSTGRES_DB || "arbiter_test";
+  let client;
+
   try {
+    await adminClient.connect();
+    console.log("✅ Connected to postgres database");
+
+    // Create test database if it doesn't exist
+    const dbExists = await adminClient.query(
+      "SELECT 1 FROM pg_database WHERE datname = $1",
+      [testDbName]
+    );
+
+    if (dbExists.rows.length === 0) {
+      console.log(`📄 Creating database: ${testDbName}`);
+      await adminClient.query(`CREATE DATABASE ${testDbName}`);
+      console.log("✅ Database created");
+    } else {
+      console.log(`✅ Database ${testDbName} already exists`);
+    }
+
+    await adminClient.end();
+
+    // Now connect to the test database
+    client = new Client({
+      host: process.env.DB_HOST || "localhost",
+      port: process.env.DB_PORT || 5432,
+      user: process.env.POSTGRES_USER || "postgres",
+      password: process.env.POSTGRES_PASSWORD || "password",
+      database: testDbName,
+    });
+
     await client.connect();
     console.log("✅ Connected to test database");
 
@@ -64,15 +96,9 @@ async function setupDatabase() {
         console.log(`📄 Running migration: ${file}`);
         const sql = fs.readFileSync(path.join(migrationsDir, file), "utf8");
 
-        // Split on semicolons and execute each statement
-        const statements = sql
-          .split(";")
-          .filter((stmt) => stmt.trim().length > 0);
-
-        for (const statement of statements) {
-          if (statement.trim()) {
-            await client.query(statement);
-          }
+        // Execute the entire SQL file as one query to handle functions and complex statements
+        if (sql.trim()) {
+          await client.query(sql);
         }
       }
 

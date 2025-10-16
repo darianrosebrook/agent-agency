@@ -23,8 +23,12 @@ import type {
   AgentQuery,
   AgentQueryResult,
   AgentRegistryConfig,
+  ExpertiseLevel,
   PerformanceMetrics,
   RegistryStats,
+  Specialization,
+  SpecializationProfile,
+  SpecializationRequirement,
 } from "../types/agent-registry";
 import { RegistryError, RegistryErrorType } from "../types/agent-registry";
 import { AgentProfileHelper } from "./AgentProfile";
@@ -611,12 +615,26 @@ export class AgentRegistryManager {
         }
       }
 
-      // Check specialization requirements if specified
+      // Check specialization requirements (legacy support)
       if (query.specializations && query.specializations.length > 0) {
-        const hasAllSpecializations = query.specializations.every((spec) =>
-          profile.capabilities.specializations.includes(spec)
+        const hasAllSpecializations = query.specializations.every(
+          (spec) =>
+            profile.capabilities.specializations?.includes(spec) ||
+            profile.capabilities.specializationsV2?.some((s) => s.type === spec)
         );
         if (!hasAllSpecializations) {
+          continue;
+        }
+      }
+
+      // Check enhanced specialization requirements
+      if (query.specializationQuery && query.specializationQuery.length > 0) {
+        const meetsSpecializationRequirements =
+          this.evaluateSpecializationRequirements(
+            profile,
+            query.specializationQuery
+          );
+        if (!meetsSpecializationRequirements) {
           continue;
         }
       }
@@ -717,6 +735,23 @@ export class AgentRegistryManager {
         }
       }
 
+      // Record performance metrics with performance tracker if available
+      if (this.performanceTracker) {
+        try {
+          await this.performanceTracker.recordTaskPerformance(
+            agentId,
+            metrics.taskType || "unknown",
+            metrics
+          );
+        } catch (error) {
+          // Log but don't fail the operation
+          console.warn(
+            `Failed to record task performance with performance tracker for agent ${agentId}:`,
+            error
+          );
+        }
+      }
+
       return AgentProfileHelper.cloneProfile(updatedProfile);
     } catch (error) {
       throw new RegistryError(
@@ -769,6 +804,171 @@ export class AgentRegistryManager {
     this.agents.set(agentId, updatedProfile);
 
     return AgentProfileHelper.cloneProfile(updatedProfile);
+  }
+
+  /**
+   * Update specialization performance after task completion.
+   *
+   * @param agentId - ID of the agent
+   * @param specialization - Type of specialization used
+   * @param metrics - Performance metrics for the task
+   * @returns Updated agent profile
+   */
+  async updateSpecializationPerformance(
+    agentId: AgentId,
+    specialization: Specialization,
+    metrics: PerformanceMetrics
+  ): Promise<AgentProfile> {
+    const profile = this.agents.get(agentId);
+
+    if (!profile) {
+      throw new RegistryError(
+        RegistryErrorType.AGENT_NOT_FOUND,
+        `Agent with ID ${agentId} not found`,
+        { agentId }
+      );
+    }
+
+    const updatedProfile = AgentProfileHelper.cloneProfile(profile);
+    const specializations = updatedProfile.capabilities.specializationsV2 || [];
+
+    // Find or create specialization profile
+    let specProfile = specializations.find((s) => s.type === specialization);
+    if (!specProfile) {
+      specProfile = {
+        type: specialization,
+        level: "novice",
+        successRate: 0,
+        taskCount: 0,
+        averageQuality: 0,
+      };
+      specializations.push(specProfile);
+    }
+
+    // Update running averages
+    const newTaskCount = specProfile.taskCount + 1;
+    specProfile.successRate =
+      (specProfile.successRate * specProfile.taskCount +
+        (metrics.success ? 1 : 0)) /
+      newTaskCount;
+    specProfile.averageQuality =
+      (specProfile.averageQuality * specProfile.taskCount +
+        metrics.qualityScore) /
+      newTaskCount;
+    specProfile.taskCount = newTaskCount;
+    specProfile.lastUsed = new Date().toISOString();
+
+    // Update expertise level based on performance and experience
+    specProfile.level = this.calculateExpertiseLevel(specProfile);
+
+    updatedProfile.capabilities.specializationsV2 = specializations;
+    updatedProfile.lastActiveAt = new Date().toISOString();
+
+    this.agents.set(agentId, updatedProfile);
+
+    // Record specialization performance with performance tracker if available
+    if (this.performanceTracker) {
+      try {
+        await this.performanceTracker.recordTaskPerformance(
+          agentId,
+          specialization,
+          {
+            success: metrics.success,
+            qualityScore: metrics.qualityScore,
+            latencyMs: 0, // Specialization updates don't have latency
+          }
+        );
+      } catch (error) {
+        // Log but don't fail the operation
+        console.warn(
+          `Failed to record specialization performance with performance tracker for agent ${agentId}:`,
+          error
+        );
+      }
+    }
+
+    return AgentProfileHelper.cloneProfile(updatedProfile);
+  }
+
+  /**
+   * Get specialization performance statistics across all agents.
+   *
+   * @param specialization - Optional: filter by specialization type
+   * @returns Statistics about specialization performance
+   */
+  async getSpecializationStats(specialization?: Specialization): Promise<
+    {
+      specialization: Specialization;
+      totalAgents: number;
+      averageSuccessRate: number;
+      averageQuality: number;
+      expertiseDistribution: Record<ExpertiseLevel, number>;
+      totalTasks: number;
+    }[]
+  > {
+    const stats: Map<
+      Specialization,
+      {
+        agents: number;
+        totalSuccessRate: number;
+        totalQuality: number;
+        expertiseLevels: Map<ExpertiseLevel, number>;
+        totalTasks: number;
+      }
+    > = new Map();
+
+    for (const profile of this.agents.values()) {
+      const specializations = profile.capabilities.specializationsV2 || [];
+
+      for (const spec of specializations) {
+        if (specialization && spec.type !== specialization) continue;
+
+        if (!stats.has(spec.type)) {
+          stats.set(spec.type, {
+            agents: 0,
+            totalSuccessRate: 0,
+            totalQuality: 0,
+            expertiseLevels: new Map(),
+            totalTasks: 0,
+          });
+        }
+
+        const stat = stats.get(spec.type)!;
+        stat.agents++;
+        stat.totalSuccessRate += spec.successRate;
+        stat.totalQuality += spec.averageQuality;
+        stat.totalTasks += spec.taskCount;
+
+        const levelCount = stat.expertiseLevels.get(spec.level) || 0;
+        stat.expertiseLevels.set(spec.level, levelCount + 1);
+      }
+    }
+
+    const result = [];
+    for (const [specType, stat] of stats.entries()) {
+      // Ensure all expertise levels are present in distribution
+      const expertiseDistribution: Record<ExpertiseLevel, number> = {
+        novice: 0,
+        intermediate: 0,
+        expert: 0,
+        master: 0,
+      };
+
+      for (const [level, count] of stat.expertiseLevels.entries()) {
+        expertiseDistribution[level as ExpertiseLevel] = count;
+      }
+
+      result.push({
+        specialization: specType,
+        totalAgents: stat.agents,
+        averageSuccessRate: stat.totalSuccessRate / stat.agents,
+        averageQuality: stat.totalQuality / stat.agents,
+        expertiseDistribution,
+        totalTasks: stat.totalTasks,
+      });
+    }
+
+    return result;
   }
 
   /**
@@ -855,13 +1055,25 @@ export class AgentRegistryManager {
       weights += 0.3;
     }
 
-    // Specialization matches (if specified)
+    // Specialization matches (legacy)
     if (query.specializations && query.specializations.length > 0) {
-      const matchedSpecs = query.specializations.filter((spec) =>
-        profile.capabilities.specializations.includes(spec)
+      const matchedSpecs = query.specializations.filter(
+        (spec) =>
+          profile.capabilities.specializations?.includes(spec) ||
+          profile.capabilities.specializationsV2?.some((s) => s.type === spec)
       ).length;
       score += (matchedSpecs / query.specializations.length) * 0.2;
       weights += 0.2;
+    }
+
+    // Enhanced specialization scoring
+    if (query.specializationQuery && query.specializationQuery.length > 0) {
+      const specializationScore = this.calculateSpecializationScore(
+        profile,
+        query.specializationQuery
+      );
+      score += specializationScore * 0.25; // Increased weight for enhanced specializations
+      weights += 0.25;
     }
 
     // Performance bonus
@@ -1015,10 +1227,13 @@ export class AgentRegistryManager {
     }
 
     // Adjust based on agent capabilities (more specialized = better performance)
-    const capabilityBonus = Math.min(
-      profile.capabilities.specializations.length * 0.02,
-      0.1
-    );
+    const legacySpecializations = profile.capabilities.specializations || [];
+    const enhancedSpecializations =
+      profile.capabilities.specializationsV2 || [];
+    const totalSpecializations =
+      legacySpecializations.length + enhancedSpecializations.length;
+
+    const capabilityBonus = Math.min(totalSpecializations * 0.02, 0.1);
     baselineAccuracy = Math.min(baselineAccuracy + capabilityBonus, 0.95);
 
     // Language support bonus (more languages = slightly higher cost but better accuracy)
@@ -1035,6 +1250,179 @@ export class AgentRegistryManager {
       costPerTask: baselineCost,
       reliability: baselineReliability,
     };
+  }
+
+  /**
+   * Evaluate if an agent meets enhanced specialization requirements.
+   *
+   * @param profile - Agent profile to evaluate
+   * @param requirements - Specialization requirements to check
+   * @returns True if agent meets all requirements
+   */
+  private evaluateSpecializationRequirements(
+    profile: AgentProfile,
+    requirements: SpecializationRequirement[]
+  ): boolean {
+    const specializations = profile.capabilities.specializationsV2 || [];
+
+    for (const req of requirements) {
+      const matchingSpec = specializations.find((s) => s.type === req.type);
+
+      if (!matchingSpec) {
+        // Required specializations must exist
+        if (req.required !== false) {
+          return false;
+        }
+        continue;
+      }
+
+      // Check minimum expertise level
+      if (
+        req.minLevel &&
+        this.compareExpertiseLevels(matchingSpec.level, req.minLevel) < 0
+      ) {
+        return false;
+      }
+
+      // Check minimum success rate
+      if (req.minSuccessRate && matchingSpec.successRate < req.minSuccessRate) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Calculate specialization match score for enhanced queries.
+   *
+   * @param profile - Agent profile to score
+   * @param requirements - Specialization requirements
+   * @returns Score from 0.0 to 1.0
+   */
+  private calculateSpecializationScore(
+    profile: AgentProfile,
+    requirements: SpecializationRequirement[]
+  ): number {
+    const specializations = profile.capabilities.specializationsV2 || [];
+    let totalScore = 0;
+    let totalWeight = 0;
+
+    for (const req of requirements) {
+      const matchingSpec = specializations.find((s) => s.type === req.type);
+      const weight = req.required === false ? 0.5 : 1.0; // Optional specs have lower weight
+      totalWeight += weight;
+
+      if (!matchingSpec) {
+        continue; // No penalty for missing optional specializations
+      }
+
+      let specScore = 0;
+
+      // Expertise level score (0-0.4)
+      if (req.minLevel) {
+        const levelDiff = this.compareExpertiseLevels(
+          matchingSpec.level,
+          req.minLevel
+        );
+        if (levelDiff >= 0) {
+          specScore += 0.4; // Meets or exceeds requirement
+        } else if (levelDiff === -1) {
+          specScore += 0.2; // Close but below requirement
+        }
+        // 0 if significantly below requirement
+      } else {
+        // No specific level required - score based on absolute level
+        specScore += this.expertiseLevelScore(matchingSpec.level) * 0.4;
+      }
+
+      // Success rate score (0-0.4)
+      if (req.minSuccessRate) {
+        if (matchingSpec.successRate >= req.minSuccessRate) {
+          specScore += 0.4;
+        } else {
+          specScore += (matchingSpec.successRate / req.minSuccessRate) * 0.4;
+        }
+      } else {
+        specScore += matchingSpec.successRate * 0.4;
+      }
+
+      // Experience bonus (0-0.2) - based on task count
+      const experienceScore = Math.min(matchingSpec.taskCount / 50, 1) * 0.2;
+      specScore += experienceScore;
+
+      totalScore += specScore * weight;
+    }
+
+    return totalWeight > 0 ? totalScore / totalWeight : 0;
+  }
+
+  /**
+   * Compare two expertise levels.
+   *
+   * @param level1 - First expertise level
+   * @param level2 - Second expertise level
+   * @returns Positive if level1 > level2, negative if level1 < level2, 0 if equal
+   */
+  private compareExpertiseLevels(
+    level1: ExpertiseLevel,
+    level2: ExpertiseLevel
+  ): number {
+    const levels: ExpertiseLevel[] = [
+      "novice",
+      "intermediate",
+      "expert",
+      "master",
+    ];
+    const index1 = levels.indexOf(level1);
+    const index2 = levels.indexOf(level2);
+    return index1 - index2;
+  }
+
+  /**
+   * Convert expertise level to numerical score.
+   *
+   * @param level - Expertise level
+   * @returns Score from 0.0 to 1.0
+   */
+  private expertiseLevelScore(level: ExpertiseLevel): number {
+    switch (level) {
+      case "novice":
+        return 0.25;
+      case "intermediate":
+        return 0.5;
+      case "expert":
+        return 0.75;
+      case "master":
+        return 1.0;
+      default:
+        return 0.25;
+    }
+  }
+
+  /**
+   * Calculate expertise level based on specialization performance.
+   *
+   * @param specProfile - Specialization profile with metrics
+   * @returns Appropriate expertise level
+   */
+  private calculateExpertiseLevel(
+    specProfile: SpecializationProfile
+  ): ExpertiseLevel {
+    const { successRate, taskCount, averageQuality } = specProfile;
+
+    // Weighted scoring based on experience, success, and quality
+    const experienceScore = Math.min(taskCount / 100, 1) * 0.3; // 30% weight
+    const successScore = successRate * 0.4; // 40% weight
+    const qualityScore = averageQuality * 0.3; // 30% weight
+
+    const totalScore = experienceScore + successScore + qualityScore;
+
+    // Thresholds for expertise levels - more conservative for new specializations
+    if (totalScore >= 0.9 && taskCount >= 50) return "master";
+    if (totalScore >= 0.75 && taskCount >= 25) return "expert";
+    if (totalScore >= 0.6 && taskCount >= 10) return "intermediate";
+    return "novice";
   }
 
   /**

@@ -370,4 +370,27 @@ export class LearningIntegration extends EventEmitter {
   getActiveLearningTasks(): string[] {
     return Array.from(this.activeLearningTasks);
   }
+
+  /**
+   * Shutdown the learning integration
+   *
+   * @returns Promise that resolves when shutdown is complete
+   */
+  async shutdown(): Promise<void> {
+    // Cancel all active learning tasks
+    for (const taskKey of this.activeLearningTasks) {
+      this.activeLearningTasks.delete(taskKey);
+    }
+
+    // Clear all performance history
+    this.performanceHistory.clear();
+
+    // Shutdown the coordinator
+    await this.coordinator.shutdown();
+
+    // Remove all event listeners
+    this.removeAllListeners();
+
+    this.emit("learning-integration:shutdown", { timestamp: new Date() });
+  }
 }

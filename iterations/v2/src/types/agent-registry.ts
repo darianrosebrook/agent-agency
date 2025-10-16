@@ -32,7 +32,11 @@ export type TaskType =
   | "testing"
   | "debugging"
   | "refactoring"
-  | "api-design";
+  | "api-design"
+  | "analysis"
+  | "validation"
+  | "general"
+  | "script-execution";
 
 /**
  * Programming languages an agent can work with.
@@ -61,10 +65,51 @@ export type Specialization =
   | "DevOps";
 
 /**
+ * Expertise levels for specializations.
+ */
+export type ExpertiseLevel = "novice" | "intermediate" | "expert" | "master";
+
+/**
+ * Enhanced specialization with expertise level and performance metrics.
+ */
+export interface SpecializationProfile {
+  /**
+   * The specialization type.
+   */
+  type: Specialization;
+
+  /**
+   * Expertise level in this specialization.
+   */
+  level: ExpertiseLevel;
+
+  /**
+   * Success rate specifically for this specialization (0.0 - 1.0).
+   */
+  successRate: number;
+
+  /**
+   * Number of tasks completed in this specialization.
+   */
+  taskCount: number;
+
+  /**
+   * Average quality score for this specialization.
+   */
+  averageQuality: number;
+
+  /**
+   * Last time this specialization was used.
+   */
+  lastUsed?: Timestamp;
+}
+
+/**
  * Model family identifier for the underlying AI model.
  */
 export type ModelFamily =
   | "gpt-4"
+  | "gpt-3.5-turbo"
   | "claude-3"
   | "claude-3.5"
   | "gemini-pro"
@@ -86,9 +131,15 @@ export interface AgentCapabilities {
   languages: ProgrammingLanguage[];
 
   /**
-   * Specialized skills beyond basic capabilities.
+   * Specialized skills beyond basic capabilities with expertise levels.
+   * @deprecated Use specializationsV2 for enhanced specialization tracking
    */
-  specializations: Specialization[];
+  specializations?: Specialization[];
+
+  /**
+   * Enhanced specialization profiles with expertise levels and metrics.
+   */
+  specializationsV2?: SpecializationProfile[];
 }
 
 /**
@@ -232,9 +283,15 @@ export interface AgentQuery {
   languages?: ProgrammingLanguage[];
 
   /**
-   * Optional: Required specializations.
+   * Optional: Required specializations (legacy - prefer specializationQuery).
+   * @deprecated Use specializationQuery for enhanced matching
    */
   specializations?: Specialization[];
+
+  /**
+   * Optional: Enhanced specialization query with expertise requirements.
+   */
+  specializationQuery?: SpecializationRequirement[];
 
   /**
    * Optional: Maximum utilization threshold (0-100).
@@ -246,6 +303,31 @@ export interface AgentQuery {
    * Optional: Minimum success rate threshold (0.0 - 1.0).
    */
   minSuccessRate?: number;
+}
+
+/**
+ * Requirements for specialization matching.
+ */
+export interface SpecializationRequirement {
+  /**
+   * Required specialization type.
+   */
+  type: Specialization;
+
+  /**
+   * Minimum expertise level required.
+   */
+  minLevel?: ExpertiseLevel;
+
+  /**
+   * Minimum success rate for this specialization.
+   */
+  minSuccessRate?: number;
+
+  /**
+   * Whether this specialization is required (true) or preferred (false).
+   */
+  required?: boolean;
 }
 
 /**

@@ -15,6 +15,9 @@ import { ConnectionPoolManager } from "@/database/ConnectionPoolManager";
 // eslint-disable-next-line no-undef
 jest.setTimeout(30000);
 
+// Setup timer mocks to prevent hanging tests
+jest.useFakeTimers();
+
 // Global test setup
 // eslint-disable-next-line no-undef
 beforeAll(async () => {
@@ -64,6 +67,9 @@ beforeAll(async () => {
 // Global test teardown
 // eslint-disable-next-line no-undef
 afterAll(async () => {
+  // Restore real timers for cleanup
+  jest.useRealTimers();
+
   // Cleanup database connection pool
   try {
     const manager = ConnectionPoolManager.getInstance();

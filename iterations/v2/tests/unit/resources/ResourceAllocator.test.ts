@@ -7,6 +7,7 @@
 import { LoadBalancer } from "@/resources/LoadBalancer";
 import { ResourceAllocator } from "@/resources/ResourceAllocator";
 import { ResourceMonitor } from "@/resources/ResourceMonitor";
+import type { AgentRegistry } from "@/types/agent-registry";
 import {
   LoadBalancingStrategy,
   ResourceType,
@@ -19,14 +20,55 @@ describe("ResourceAllocator", () => {
   let monitor: ResourceMonitor;
   let loadBalancer: LoadBalancer;
   let allocator: ResourceAllocator;
+  let mockAgentRegistry: AgentRegistry;
 
   beforeEach(async () => {
     monitor = new ResourceMonitor();
+
+    // Create mock agent registry
+    mockAgentRegistry = {
+      initialize: async () => {},
+      getAgentsByCapability: async () => [
+        {
+          agent: {
+            id: "test-agent-1",
+            name: "Test Agent 1",
+            modelFamily: "gpt-4" as any,
+            capabilities: ["task-execution"] as any,
+            expertiseLevel: "intermediate" as const,
+            status: "active" as const,
+            performanceScore: 0.8,
+            specialization: ["general"] as any,
+            performanceHistory: {} as any,
+            currentLoad: {} as any,
+            registeredAt: new Date().toISOString(),
+            lastActiveAt: new Date().toISOString(),
+            createdAt: new Date(),
+            lastActive: new Date(),
+          },
+          matchScore: 0.8,
+          matchReason: "capability match",
+        },
+      ],
+      updatePerformance: async () => ({} as any),
+      getStats: async () => ({
+        totalAgents: 1,
+        activeAgents: 1,
+        idleAgents: 0,
+        averageUtilization: 50,
+        averageSuccessRate: 0.8,
+        averagePerformanceScore: 0.8,
+        specializationDistribution: { general: 1 },
+        lastUpdated: new Date().toISOString(),
+      }),
+      getProfile: async () => ({} as any),
+    } as any;
+
     loadBalancer = new LoadBalancer(
       monitor,
       LoadBalancingStrategy.LEAST_LOADED
     );
-    allocator = new ResourceAllocator(loadBalancer);
+    allocator = new ResourceAllocator(loadBalancer, mockAgentRegistry);
 
     // Register test agents with the monitor
     const cpu1Usage = {
@@ -207,10 +249,14 @@ describe("ResourceAllocator", () => {
 
     it("should track failed allocation statistics", async () => {
       // Create allocator with very low rate limit to force failure
-      const lowRateAllocator = new ResourceAllocator(loadBalancer, {
-        maxRequests: 0, // No requests allowed
-        windowMs: 1000,
-      });
+      const lowRateAllocator = new ResourceAllocator(
+        loadBalancer,
+        mockAgentRegistry,
+        {
+          maxRequests: 0, // No requests allowed
+          windowMs: 1000,
+        }
+      );
 
       const request: ResourceAllocationRequest = {
         requestId: "req-1",
@@ -243,10 +289,14 @@ describe("ResourceAllocator", () => {
   describe("Rate Limiting", () => {
     it("should respect rate limits", async () => {
       // Create allocator with low rate limit
-      const lowRateAllocator = new ResourceAllocator(loadBalancer, {
-        maxRequests: 1,
-        windowMs: 1000,
-      });
+      const lowRateAllocator = new ResourceAllocator(
+        loadBalancer,
+        mockAgentRegistry,
+        {
+          maxRequests: 1,
+          windowMs: 1000,
+        }
+      );
 
       const request1: ResourceAllocationRequest = {
         requestId: "req-1",

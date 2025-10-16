@@ -273,7 +273,7 @@ export class AgentProfileHelper {
         ...profile.capabilities,
         taskTypes: [...profile.capabilities.taskTypes],
         languages: [...profile.capabilities.languages],
-        specializations: [...profile.capabilities.specializations],
+        specializations: [...(profile.capabilities.specializations || [])],
       },
       performanceHistory: { ...profile.performanceHistory },
       currentLoad: { ...profile.currentLoad },

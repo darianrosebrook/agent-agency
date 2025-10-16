@@ -194,8 +194,9 @@ export class AgentRegistryDbClient {
           );
         }
 
-        // Insert specializations
-        for (const specialization of profile.capabilities.specializations) {
+        // Insert specializations (legacy support)
+        for (const specialization of profile.capabilities.specializations ||
+          []) {
           await client.query(
             `
             INSERT INTO agent_capabilities (agent_id, capability_name, score, metadata)
@@ -444,8 +445,9 @@ export class AgentRegistryDbClient {
           );
         }
 
-        // Insert new capabilities - specializations
-        for (const specialization of updates.capabilities.specializations) {
+        // Insert new capabilities - specializations (legacy support)
+        for (const specialization of updates.capabilities.specializations ||
+          []) {
           await client.query(
             `
             INSERT INTO agent_capabilities (agent_id, capability_name, score, metadata)

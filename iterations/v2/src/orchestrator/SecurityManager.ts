@@ -421,6 +421,26 @@ export class SecurityManager {
   }
 
   /**
+   * Get immutable view of policy configuration
+   */
+  getPolicyConfig(): SecurityConfig["policies"] {
+    return {
+      ...this.config.policies,
+      suspiciousPatterns: [...this.config.policies.suspiciousPatterns],
+    };
+  }
+
+  /**
+   * Determine whether agent is trusted (trusted or admin)
+   */
+  isTrustedAgent(agentId: string): boolean {
+    return (
+      this.config.trustedAgents.includes(agentId) ||
+      this.config.adminAgents.includes(agentId)
+    );
+  }
+
+  /**
    * Check if agent can access resource
    */
   canAccessResource(
@@ -436,10 +456,10 @@ export class SecurityManager {
       return true;
     }
 
-    // Restricted/Confidential level can access all resources
+    // Admin/Trusted level can access all resources
     if (
-      context.securityLevel === SecurityLevel.RESTRICTED ||
-      context.securityLevel === SecurityLevel.CONFIDENTIAL
+      context.securityLevel === SecurityLevel.ADMIN ||
+      context.securityLevel === SecurityLevel.TRUSTED_AGENT
     ) {
       return true;
     }

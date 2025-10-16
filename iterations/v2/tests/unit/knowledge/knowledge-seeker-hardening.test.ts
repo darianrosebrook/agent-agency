@@ -1343,6 +1343,7 @@ describe("ARBITER-006 Knowledge Seeker - Hardening Tests", () => {
         storeQuery: jest.fn().mockResolvedValue(undefined),
         storeResults: jest.fn().mockResolvedValue(undefined),
         storeResponse: jest.fn().mockResolvedValue(undefined),
+        storeCachedResponse: jest.fn().mockResolvedValue(undefined),
         updateQueryStatus: jest.fn().mockResolvedValue(undefined),
         getCachedResponse: jest.fn().mockResolvedValue(null), // No cached response
       } as any;

@@ -35,7 +35,9 @@ interface StatisticalClaim {
     | "correlation"
     | "sample"
     | "probability"
-    | "rate";
+    | "rate"
+    | "distribution"
+    | "confidence_interval";
   value?: number;
   sampleSize?: number;
   context: string;
@@ -86,13 +88,53 @@ export class StatisticalValidator {
       const claims = this.extractStatisticalClaims(request.content);
 
       if (claims.length === 0) {
+        const implicitIssues = this.detectImplicitStatisticalIssues(
+          request.content
+        );
+
+        if (implicitIssues.length === 0) {
+          return {
+            method: VerificationType.STATISTICAL_VALIDATION,
+            verdict: VerificationVerdict.UNVERIFIED,
+            confidence: 0,
+            reasoning: ["No statistical claims found in content"],
+            processingTimeMs: Date.now() - startTime,
+            evidenceCount: 0,
+          };
+        }
+
+        const highSeverityImplicit = implicitIssues.filter(
+          (issue) => issue.severity === "high"
+        );
+
+        const verdict =
+          highSeverityImplicit.length > 0
+            ? VerificationVerdict.VERIFIED_FALSE
+            : VerificationVerdict.UNVERIFIED;
+
+        const reasoning = implicitIssues.map((issue) => issue.description);
+        if (verdict === VerificationVerdict.UNVERIFIED) {
+          reasoning.unshift(
+            "Statistical-style claim lacks supporting quantitative evidence"
+          );
+        }
+
         return {
           method: VerificationType.STATISTICAL_VALIDATION,
-          verdict: VerificationVerdict.INSUFFICIENT_DATA,
-          confidence: 0,
-          reasoning: ["No statistical claims found in content"],
+          verdict,
+          confidence: verdict === VerificationVerdict.VERIFIED_FALSE ? 0.6 : 0.2,
+          reasoning,
           processingTimeMs: Date.now() - startTime,
           evidenceCount: 0,
+          metadata: {
+            issues: implicitIssues.map((issue) => issue.type),
+            totalIssues: implicitIssues.length,
+            highSeverityIssues: highSeverityImplicit.length,
+            mediumSeverityIssues: implicitIssues.filter(
+              (issue) => issue.severity === "medium"
+            ).length,
+            claimsAnalyzed: 0,
+          },
         };
       }
 
@@ -101,6 +143,13 @@ export class StatisticalValidator {
       console.log(
         "Sample size issues:",
         sampleSizeIssues.map((i) => ({ type: i.type, severity: i.severity }))
+      );
+
+      // Validate percentages
+      const percentageIssues = this.validatePercentages(claims);
+      console.log(
+        "Percentage issues:",
+        percentageIssues.map((i) => ({ type: i.type, severity: i.severity }))
       );
 
       // Detect data manipulation signals
@@ -115,6 +164,13 @@ export class StatisticalValidator {
         request.content,
         claims
       );
+
+      // Validate statistical significance reporting
+      const significanceIssues = this.validateSignificance(claims);
+      console.log(
+        "Significance issues:",
+        significanceIssues.map((i) => ({ type: i.type, severity: i.severity }))
+      );
       console.log(
         "Correlation issues:",
         correlationIssues.map((i) => ({ type: i.type, severity: i.severity }))
@@ -124,8 +180,10 @@ export class StatisticalValidator {
       const assessment = this.assessStatistics(
         claims,
         sampleSizeIssues,
+        percentageIssues,
         manipulationSignals,
-        correlationIssues
+        correlationIssues,
+        significanceIssues
       );
       console.log("Final assessment:", assessment);
 
@@ -139,18 +197,32 @@ export class StatisticalValidator {
         metadata: {
           issues: [
             ...sampleSizeIssues,
+            ...percentageIssues,
             ...manipulationSignals,
             ...correlationIssues,
+            ...significanceIssues,
           ].map((issue) => issue.type),
           totalIssues:
             sampleSizeIssues.length +
+            percentageIssues.length +
             manipulationSignals.length +
-            correlationIssues.length,
+            correlationIssues.length +
+            significanceIssues.length,
           highSeverityIssues: [
             ...sampleSizeIssues,
+            ...percentageIssues,
             ...manipulationSignals,
             ...correlationIssues,
+            ...significanceIssues,
           ].filter((issue) => issue.severity === "high").length,
+          mediumSeverityIssues: [
+            ...sampleSizeIssues,
+            ...percentageIssues,
+            ...manipulationSignals,
+            ...correlationIssues,
+            ...significanceIssues,
+          ].filter((issue) => issue.severity === "medium").length,
+          claimsAnalyzed: claims.length,
         },
       };
     } catch (error) {
@@ -177,7 +249,7 @@ export class StatisticalValidator {
 
     // Split into sentences
     const sentences = content
-      .split(/[.!?]+/)
+      .split(/(?<!\d)[.!?]+(?!\d)/)
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
 
@@ -185,12 +257,12 @@ export class StatisticalValidator {
       // First, check for sample sizes in the sentence
       // Try pattern: "500 participants" (number before word)
       let sampleMatch = sentence.match(
-        /(\d+)\s+(n|sample|participants?|subjects?|people)\b/i
+        /(\d+)\s+(n|sample|participants?|subjects?|people|respondents?|patients?)\b/i
       );
       if (!sampleMatch) {
         // Try pattern: "participants = 500" (word before number)
         sampleMatch = sentence.match(
-          /\b(n|sample|participants?|subjects?|people)\s*=?\s*(\d+)/i
+          /\b(n|sample|participants?|subjects?|people|respondents?|patients?)\s*=?\s*(\d+)/i
         );
       }
 
@@ -207,15 +279,38 @@ export class StatisticalValidator {
       }
 
       // Check for percentages
-      const percentageMatch = sentence.match(/(\d+(?:\.\d+)?)\s*%/);
-      if (percentageMatch) {
-        claims.push({
-          text: sentence,
-          type: "percentage",
-          value: parseFloat(percentageMatch[1]),
-          sampleSize: sampleSize, // Link to sample size if found in same sentence
-          context: this.extractContext(sentence),
-        });
+      const percentageMatches = sentence.matchAll(/(\d+(?:\.\d+)?)\s*%/g);
+      for (const match of percentageMatches) {
+        const value = parseFloat(match[1]);
+        const matchIndex = match.index ?? sentence.indexOf(match[0]);
+        const windowStart = Math.max(0, matchIndex - 15);
+        const windowEnd = Math.min(
+          sentence.length,
+          matchIndex + match[0].length + 15
+        );
+        const windowText = sentence.slice(windowStart, windowEnd);
+        const isConfidenceInterval = /\b(ci|confidence interval)\b/i.test(
+          windowText
+        );
+
+        if (isConfidenceInterval) {
+          claims.push({
+            text: sentence,
+            type: "confidence_interval",
+            value,
+            sampleSize,
+            context: this.extractContext(sentence),
+            confidence: value,
+          });
+        } else {
+          claims.push({
+            text: sentence,
+            type: "percentage",
+            value,
+            sampleSize,
+            context: this.extractContext(sentence),
+          });
+        }
       }
 
       // Check for means/averages
@@ -296,6 +391,30 @@ export class StatisticalValidator {
         const existingClaim = claims[claims.length - 1];
         if (existingClaim) {
           existingClaim.confidence = parseInt(confidenceMatch[1], 10);
+        }
+      }
+
+      // Detect explicit numeric sequences that imply data distributions
+      const sequenceMatch = sentence.match(
+        /(\d+(?:\.\d+)?)(?:\s*(?:,|and)\s*(\d+(?:\.\d+)?)){2,}/
+      );
+      if (
+        sequenceMatch &&
+        /\b(measurements?|values?|numbers?|scores?|data)\b/i.test(sentence)
+      ) {
+        const numericValues = sentence
+          .match(/\d+(?:\.\d+)?/g)
+          ?.map((value) => parseFloat(value));
+
+        if (numericValues && numericValues.length >= 3) {
+          claims.push({
+            text: sentence,
+            type: "distribution",
+            context: this.extractContext(sentence),
+            value:
+              numericValues.reduce((acc, value) => acc + value, 0) /
+              numericValues.length,
+          });
         }
       }
     }
@@ -405,7 +524,7 @@ export class StatisticalValidator {
 
         if (decimalPlaces > 4) {
           issues.push({
-            type: "Excessive Precision",
+            type: "excessive_precision",
             severity: "low",
             description: `Value ${claim.value} reported with ${decimalPlaces} decimal places, may indicate false precision`,
             claim: claim.text,
@@ -421,7 +540,7 @@ export class StatisticalValidator {
           (!claim.sampleSize || claim.sampleSize < this.config.minSampleSize)
         ) {
           issues.push({
-            type: "Suspiciously Round Number",
+            type: "suspicious_round_number",
             severity: "low",
             description: `Percentage value ${claim.value}% is a multiple of 5, which may indicate rounding or estimation`,
             claim: claim.text,
@@ -431,11 +550,13 @@ export class StatisticalValidator {
 
       // Check for cherry-picking indicators
       if (
-        /\b(selected|chosen|specific|particular|certain)\b/i.test(claim.text)
+        /\b(selected|chosen|specific|particular|certain)\b/i.test(claim.text) ||
+        /\bother studies\b/i.test(claim.text) ||
+        /\bnote\b.*\bother\b.*\bstudies\b/i.test(claim.text)
       ) {
         issues.push({
-          type: "Potential Cherry-Picking",
-          severity: "medium",
+          type: "cherry_picking",
+          severity: "high",
           description: "Language suggests selective reporting of data",
           claim: claim.text,
         });
@@ -446,10 +567,41 @@ export class StatisticalValidator {
     const pValueClaims = claims.filter((c) => c.pValue !== undefined);
     if (pValueClaims.length > 3) {
       issues.push({
-        type: "Multiple P-Values",
+        type: "multiple_p_values",
         severity: "medium",
         description: `${pValueClaims.length} p-values reported, which may indicate p-hacking or multiple testing`,
         claim: `Multiple statistical tests: ${pValueClaims.length} p-values`,
+      });
+    }
+
+    // Check for explicit p-hacking language (high severity)
+    const content = claims
+      .map((c) => c.text)
+      .join(" ")
+      .toLowerCase();
+    const pHackingIndicators = [
+      /excluding outliers/i,
+      /removing.*participants/i,
+      /trying.*different.*analyses/i,
+      /multiple.*analyses/i,
+      /data.*manipulation/i,
+      /selective.*reporting/i,
+      /cherry.*picking/i,
+    ];
+
+    const pHackingMatches = pHackingIndicators.filter((pattern) =>
+      pattern.test(content)
+    );
+    if (pHackingMatches.length > 0) {
+      issues.push({
+        type: "p_hacking",
+        severity: "high",
+        description: `Detected ${
+          pHackingMatches.length
+        } indicators of p-hacking: ${pHackingMatches
+          .map((p) => p.source)
+          .join(", ")}`,
+        claim: claims.map((c) => c.text).join(" | "),
       });
     }
 
@@ -457,12 +609,42 @@ export class StatisticalValidator {
     for (const claim of pValueClaims) {
       if (claim.pValue && claim.pValue < 0.001) {
         issues.push({
-          type: "Extremely Significant Result",
+          type: "extremely_significant_result",
           severity: "low",
           description: `P-value ${claim.pValue} is extremely small, verify this is not a data entry error`,
           claim: claim.text,
         });
       }
+    }
+
+    // Check for suspicious data patterns (high severity)
+    const fullText = claims
+      .map((c) => c.text)
+      .join(" ")
+      .toLowerCase();
+    const suspiciousPatterns = [
+      /exactly.*10\.0.*20\.0.*30\.0.*40\.0.*50\.0/i, // Arithmetic progression
+      /no variation/i,
+      /identical.*values/i,
+      /same.*number/i,
+      /perfect.*correlation/i,
+      /zero.*variance/i,
+    ];
+
+    const suspiciousMatches = suspiciousPatterns.filter((pattern) =>
+      pattern.test(fullText)
+    );
+    if (suspiciousMatches.length > 0) {
+      issues.push({
+        type: "suspicious_data_pattern",
+        severity: "high",
+        description: `Detected ${
+          suspiciousMatches.length
+        } indicators of suspicious data patterns: ${suspiciousMatches
+          .map((p) => p.source)
+          .join(", ")}`,
+        claim: claims.map((c) => c.text).join(" | "),
+      });
     }
 
     return issues;
@@ -504,7 +686,7 @@ export class StatisticalValidator {
       for (const pattern of causalPatterns) {
         if (pattern.test(claim.text) || pattern.test(content)) {
           issues.push({
-            type: "Correlation vs Causation",
+            type: "correlation_causation_confusion",
             severity: "high",
             description:
               "Causal language used with correlation data - correlation does not imply causation",
@@ -524,11 +706,140 @@ export class StatisticalValidator {
 
       if (!hasConfoundingMention && correlationClaims.length > 1) {
         issues.push({
-          type: "Missing Confounding Discussion",
+          type: "missing_confounding_discussion",
           severity: "medium",
           description:
             "Multiple correlations reported without discussing potential confounding variables",
           claim: "Multiple correlation claims",
+        });
+      }
+    }
+
+    return issues;
+  }
+
+  /**
+   * Validate percentage claims and check for sum consistency
+   */
+  private validatePercentages(claims: StatisticalClaim[]): StatisticalIssue[] {
+    const issues: StatisticalIssue[] = [];
+    const percentageClaims = claims.filter((c) => c.type === "percentage");
+
+    if (percentageClaims.length < 2) {
+      // Still validate individual percentage math if possible
+      for (const claim of percentageClaims) {
+        this.evaluatePercentageAccuracy(claim, issues);
+      }
+      return issues;
+    }
+
+    // Group percentages by context (same sentence or related context)
+    const contextGroups: { [key: string]: StatisticalClaim[] } = {};
+    for (const claim of percentageClaims) {
+      const contextKey = claim.context || "general";
+      if (!contextGroups[contextKey]) {
+        contextGroups[contextKey] = [];
+      }
+      contextGroups[contextKey].push(claim);
+      this.evaluatePercentageAccuracy(claim, issues);
+    }
+
+    // Check each context group for sum validation
+    for (const [context, groupClaims] of Object.entries(contextGroups)) {
+      if (groupClaims.length < 2) continue;
+
+      const sum = groupClaims.reduce(
+        (acc, claim) => acc + (claim.value || 0),
+        0
+      );
+
+      // Check if sum is approximately 100% (allow small tolerance)
+      const tolerance = 1.0; // Allow 1% tolerance
+      const isValidSum = Math.abs(sum - 100) <= tolerance;
+
+      if (!isValidSum) {
+        issues.push({
+          type: "percentage_sum_error",
+          severity: "high",
+          description: `Percentages sum to ${sum.toFixed(
+            1
+          )}% instead of 100%. Individual percentages: ${groupClaims
+            .map((c) => `${c.value}%`)
+            .join(", ")}`,
+          claim: groupClaims.map((c) => c.text).join(" | "),
+        });
+      }
+    }
+
+    return issues;
+  }
+
+  private evaluatePercentageAccuracy(
+    claim: StatisticalClaim,
+    issues: StatisticalIssue[]
+  ): void {
+    if (claim.value === undefined) {
+      return;
+    }
+
+    const sampleSize =
+      claim.sampleSize ?? this.extractSampleSizeFromText(claim.text);
+    if (!sampleSize || sampleSize <= 0) {
+      return;
+    }
+
+    const numerator = this.extractNumeratorFromText(claim.text);
+    if (numerator === undefined) {
+      return;
+    }
+
+    const expectedPercentage = (numerator / sampleSize) * 100;
+    const tolerance = 1;
+
+    if (Math.abs(expectedPercentage - claim.value) > tolerance) {
+      issues.push({
+        type: "incorrect_percentage",
+        severity: "high",
+        description: `Reported ${claim.value}% does not match ${numerator}/${sampleSize} (expected ${expectedPercentage.toFixed(
+          1
+        )}%)`,
+        claim: claim.text,
+      });
+    }
+  }
+
+  private validateSignificance(claims: StatisticalClaim[]): StatisticalIssue[] {
+    const issues: StatisticalIssue[] = [];
+
+    for (const claim of claims) {
+      if (claim.pValue !== undefined) {
+        if (claim.pValue > (this.config.significanceLevel ?? 0.05)) {
+          issues.push({
+            type: "weak_significance",
+            severity: "high",
+            description: `Reported p-value ${claim.pValue} exceeds significance threshold ${this.config.significanceLevel}`,
+            claim: claim.text,
+          });
+        }
+
+        if (
+          claim.pValue <= (this.config.significanceLevel ?? 0.05) &&
+          claim.sampleSize &&
+          claim.sampleSize < this.config.minSampleSize
+        ) {
+          issues.push({
+            type: "underpowered_significance",
+            severity: "medium",
+            description: `Result marked significant with small sample size (n=${claim.sampleSize})`,
+            claim: claim.text,
+          });
+        }
+      } else if (/statistically significant/i.test(claim.text)) {
+        issues.push({
+          type: "missing_significance_details",
+          severity: "medium",
+          description: "Claim mentions statistical significance without reporting p-value",
+          claim: claim.text,
         });
       }
     }
@@ -542,8 +853,10 @@ export class StatisticalValidator {
   private assessStatistics(
     claims: StatisticalClaim[],
     sampleSizeIssues: StatisticalIssue[],
+    percentageIssues: StatisticalIssue[],
     manipulationSignals: StatisticalIssue[],
-    correlationIssues: StatisticalIssue[]
+    correlationIssues: StatisticalIssue[],
+    significanceIssues: StatisticalIssue[]
   ): {
     verdict: VerificationVerdict;
     confidence: number;
@@ -567,8 +880,10 @@ export class StatisticalValidator {
 
     const allIssues = [
       ...sampleSizeIssues,
+      ...percentageIssues,
       ...manipulationSignals,
       ...correlationIssues,
+      ...significanceIssues,
     ];
 
     // No issues found
@@ -632,5 +947,78 @@ export class StatisticalValidator {
       confidence: 0.4,
       reasoning,
     };
+  }
+
+  private detectImplicitStatisticalIssues(content: string): StatisticalIssue[] {
+    const issues: StatisticalIssue[] = [];
+    const normalized = content.toLowerCase();
+    const trimmedContent = content.trim();
+
+    if (
+      /\b(most|majority|nearly all|almost all|more than half|many|often)\b/.test(
+        normalized
+      )
+    ) {
+      issues.push({
+        type: "missing_sample_size",
+        severity: "medium",
+        description:
+          "Qualitative statistical claim provided without sample size or numeric support",
+        claim: trimmedContent,
+      });
+    }
+
+    const fallbackClaims: StatisticalClaim[] = [
+      {
+        text: trimmedContent,
+        type: "distribution",
+        context: this.extractContext(trimmedContent),
+      },
+    ];
+
+    const manipulationIssues = this.detectManipulation(fallbackClaims).filter(
+      (issue) =>
+        issue.type === "suspicious_data_pattern" || issue.type === "p_hacking"
+    );
+
+    issues.push(...manipulationIssues);
+
+    return issues;
+  }
+
+  private extractSampleSizeFromText(text: string): number | undefined {
+    const normalized = text.toLowerCase();
+
+    const ofPattern = normalized.match(
+      /\b(?:of|out of)\s+(\d+(?:\.\d+)?)\s*(?:participants?|respondents?|people|subjects?|patients?)?/i
+    );
+    if (ofPattern) {
+      return parseFloat(ofPattern[1]);
+    }
+
+    const nPattern = normalized.match(/\bn\s*=?\s*(\d+(?:\.\d+)?)/i);
+    if (nPattern) {
+      return parseFloat(nPattern[1]);
+    }
+
+    return undefined;
+  }
+
+  private extractNumeratorFromText(text: string): number | undefined {
+    const parenthetical = text.match(
+      /(\d+(?:\.\d+)?)\s*\(\s*(\d+(?:\.\d+)?)%\s*\)/
+    );
+    if (parenthetical) {
+      return parseFloat(parenthetical[1]);
+    }
+
+    const ofPattern = text.match(
+      /(\d+(?:\.\d+)?)\s+(?:of|out of)\s+(\d+(?:\.\d+)?)/i
+    );
+    if (ofPattern) {
+      return parseFloat(ofPattern[1]);
+    }
+
+    return undefined;
   }
 }

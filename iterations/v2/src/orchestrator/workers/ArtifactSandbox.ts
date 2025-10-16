@@ -321,6 +321,18 @@ export class ArtifactSandbox {
   }
 
   /**
+   * Generate the artifact manifest for this task.
+   */
+  getManifest(): ArtifactManifest {
+    return {
+      taskId: this.config.taskId,
+      files: Array.from(this.files.values()),
+      totalSize: this.totalSize,
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  /**
    * Validate that a path is safe and doesn't escape the sandbox.
    *
    * @param relativePath - Path to validate

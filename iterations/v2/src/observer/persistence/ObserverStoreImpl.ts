@@ -280,6 +280,16 @@ export class ObserverStoreImpl implements ObserverStore, ArbiterController {
     currentPlan?: string;
     nextActions?: string[];
     redacted?: boolean;
+    caws?: {
+      passed: boolean;
+      verdict: string;
+      remediation?: string[];
+    };
+    verification?: {
+      verdict: string;
+      confidence: number;
+      reasoning: string[];
+    };
   } | null> {
     const runtimeSnapshot = this.runtime?.getTaskSnapshot(taskId);
 
@@ -318,6 +328,20 @@ export class ObserverStoreImpl implements ObserverStore, ArbiterController {
         currentPlan: planSummary,
         nextActions: runtimeSnapshot.nextActions,
         redacted: false,
+        caws: runtimeSnapshot.cawsResult
+          ? {
+              passed: runtimeSnapshot.cawsResult.passed,
+              verdict: runtimeSnapshot.cawsResult.verdict,
+              remediation: runtimeSnapshot.cawsResult.remediation,
+            }
+          : undefined,
+        verification: runtimeSnapshot.verificationResult
+          ? {
+              verdict: runtimeSnapshot.verificationResult.verdict,
+              confidence: runtimeSnapshot.verificationResult.confidence,
+              reasoning: runtimeSnapshot.verificationResult.reasoning,
+            }
+          : undefined,
       };
     }
 
@@ -588,6 +612,21 @@ export class ObserverStoreImpl implements ObserverStore, ArbiterController {
       this.totalTasks += 1;
     } else if (event.type === "policy.caws.violation") {
       this.policyViolations += 1;
+    } else if (event.type === "caws.validation") {
+      const passed = event.metadata?.passed;
+      const verdict = String(event.metadata?.verdict ?? "").toLowerCase();
+      if (passed === false || verdict === "fail" || verdict === "waiver-required") {
+        this.policyViolations += 1;
+      }
+    } else if (event.type === "caws.compliance") {
+      const verdict = String(event.metadata?.verdict ?? "").toLowerCase();
+      if (
+        verdict === "verified_false" ||
+        verdict === "contradictory" ||
+        verdict === "error"
+      ) {
+        this.policyViolations += 1;
+      }
     } else if (event.type.startsWith("budget.")) {
       const debit = Number(event.metadata?.debit ?? 0);
       const limit = Number(event.metadata?.limit ?? 0);

@@ -1,0 +1,167 @@
+id: RL-001
+title: "ThinkingBudgetManager - Adaptive Token Allocation for RL Training"
+version: "1.0.0"
+mode: feature
+risk_tier: 2
+status: spec_complete
+
+executive_summary:
+  purpose: |
+    The ThinkingBudgetManager implements adaptive token allocation for RL training, treating thinking as an optimizable resource.
+    It allocates computational budgets based on task complexity to prevent resource exhaustion while maximizing training efficiency.
+  scope:
+    - Token allocation by task complexity (trivial/standard/complex)
+    - Budget tracking and enforcement with hard ceilings
+    - Task complexity analysis based on task surface
+    - Integration with RL training pipeline
+  success_criteria:
+    - Allocate tokens correctly per complexity level (≤500/≤2000/≤8000)
+    - Prevent budget exhaustion with hard ceilings
+    - Track usage accurately across training sessions
+    - Allocation decisions complete within 50ms P95
+
+change_budget:
+  max_files: 15
+  max_loc: 600
+
+blast_radius:
+  modules: ["src/thinking", "src/rl"]
+  data_migration: false
+  breaking_changes: false
+  external_impact: medium
+
+operational_rollback_slo: "5m"
+
+threats:
+  - "Budget exhaustion causing training failures"
+  - "Incorrect complexity assessment leading to resource waste"
+  - "Race conditions in concurrent budget allocation"
+  - "Memory leaks from unbounded budget tracking"
+
+scope:
+  in:
+    - "iterations/v2/src/thinking/"
+    - "iterations/v2/src/types/thinking-budget.ts"
+    - "iterations/v2/tests/unit/thinking/"
+  out:
+    - "node_modules/"
+    - "dist/"
+    - "iterations/poc/"
+
+invariants:
+  - "Token allocation never exceeds hard ceilings per complexity tier"
+  - "Budget tracking maintains accurate counts across concurrent allocations"
+  - "Complexity analysis is deterministic for same task characteristics"
+  - "All budget operations complete within performance budgets"
+
+acceptance:
+  - id: "RL-001-A1"
+    given: "Task with trivial complexity (simple query, no tools)"
+    when: "ThinkingBudgetManager allocates tokens"
+    then: "Budget allocated ≤500 tokens within 50ms"
+
+  - id: "RL-001-A2"
+    given: "Task with standard complexity (multi-step, basic tools)"
+    when: "ThinkingBudgetManager allocates tokens"
+    then: "Budget allocated ≤2000 tokens within 50ms"
+
+  - id: "RL-001-A3"
+    given: "Task with complex complexity (multi-turn, advanced reasoning)"
+    when: "ThinkingBudgetManager allocates tokens"
+    then: "Budget allocated ≤8000 tokens within 50ms"
+
+  - id: "RL-001-A4"
+    given: "Multiple concurrent budget allocation requests"
+    when: "Budget manager processes 100+ requests simultaneously"
+    then: "All allocations tracked accurately without race conditions"
+
+  - id: "RL-001-A5"
+    given: "Task attempts to exceed allocated budget"
+    when: "Budget enforcement checks usage"
+    then: "Hard ceiling enforced and budget exhaustion prevented"
+
+non_functional:
+  performance:
+    allocation_decision_p95_ms: 50
+    complexity_analysis_p95_ms: 20
+    budget_tracking_overhead_ms: 5
+    concurrent_allocations_per_sec: 500
+    memory_usage_mb: 20
+
+  reliability:
+    availability_percent: 99.9
+    error_rate_percent: 0.1
+    graceful_degradation: true
+
+  scalability:
+    max_concurrent_tasks: 1000
+    max_tracked_budgets: 10000
+    horizontal_scaling: true
+
+  security:
+    input_validation: "strict"
+    resource_limits: "enforced"
+    audit_logging: "all-allocations"
+
+  usability:
+    api_design: "fluent-builder-pattern"
+    error_messages: "actionable-with-context"
+    documentation: "comprehensive-examples"
+
+contracts:
+  - type: "typescript"
+    path: "src/types/thinking-budget.ts"
+    version: "1.0.0"
+    description: "Core thinking budget interfaces and types"
+
+  - type: "typescript"
+    path: "src/thinking/ThinkingBudgetManager.ts"
+    version: "1.0.0"
+    description: "Main budget manager implementation"
+
+observability:
+  metrics:
+    - "thinking_budget_allocations"
+    - "complexity_distribution"
+    - "budget_exhaustion_rate"
+    - "allocation_latency_p95"
+
+  logs:
+    - level: "info"
+      events: ["budget_allocated", "complexity_assessed", "budget_tracked"]
+    - level: "warn"
+      events: ["high_budget_usage", "near_exhaustion"]
+    - level: "error"
+      events: ["budget_exceeded", "allocation_failed"]
+
+  traces:
+    - "budget_allocation_span"
+    - "complexity_analysis_span"
+
+migrations: []
+
+rollback:
+  slo: "5m"
+  strategy: "feature-flag"
+  impact: "low"
+  monitoring: "budget_allocation_disabled"
+
+ai_assessment:
+  reasoning: "Token budget management requires careful tracking and enforcement logic. While straightforward algorithmically, the concurrent access patterns and performance requirements demand rigorous testing. AI can implement the core logic but human oversight needed for performance optimization."
+
+  risks:
+    - "Race conditions in concurrent budget tracking"
+    - "Performance overhead affecting RL training speed"
+    - "Incorrect complexity assessment leading to poor allocations"
+
+  opportunities:
+    - "Well-defined algorithm with clear boundaries"
+    - "Testable with deterministic inputs"
+    - "Performance optimization opportunities clear"
+
+  recommendations:
+    - "Use atomic operations for budget tracking"
+    - "Profile early for performance bottlenecks"
+    - "Include extensive concurrent access tests"
+    - "Implement circuit breakers for budget exhaustion"
+

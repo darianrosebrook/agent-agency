@@ -30,8 +30,38 @@ describe("AdaptiveResourceManager Integration", () => {
 
     await healthMonitor.initialize();
 
+    // Create mock agent registry for integration test
+    const mockAgentRegistry = {
+      initialize: async () => {},
+      getAgentsByCapability: async () => [
+        {
+          agent: {
+            id: "test-agent-1",
+            name: "Test Agent 1",
+            capabilities: [],
+            expertiseLevel: "intermediate" as const,
+            status: "active" as const,
+            performanceScore: 0.8,
+            specialization: [],
+            createdAt: new Date(),
+            lastActive: new Date(),
+          },
+          score: 0.8,
+          matchReasons: ["basic capabilities match"],
+        },
+      ],
+      updatePerformance: async () => ({} as any),
+      getStats: async () => ({
+        totalAgents: 1,
+        activeAgents: 1,
+        averagePerformanceScore: 0.8,
+        specializationDistribution: {},
+      }),
+      getProfile: async () => ({} as any),
+    };
+
     // Initialize AdaptiveResourceManager
-    resourceManager = new AdaptiveResourceManager({
+    resourceManager = new AdaptiveResourceManager(mockAgentRegistry, {
       enabled: true,
       monitoringIntervalMs: 1000,
       loadBalancingStrategy: LoadBalancingStrategy.LEAST_LOADED,

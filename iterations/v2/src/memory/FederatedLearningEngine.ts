@@ -73,6 +73,7 @@ export class FederatedLearningEngine {
   private activeSessions: Map<string, FederatedSession> = new Map();
   private participantRegistry: Map<string, FederatedParticipant> = new Map();
   private aggregationQueue: Map<string, ContextualMemory[]> = new Map();
+  private aggregationTimer?: NodeJS.Timeout;
 
   constructor(
     config: FederatedLearningConfig,
@@ -406,10 +407,21 @@ export class FederatedLearningEngine {
     this.logger.info("Federated learning maintenance completed");
   }
 
+  /**
+   * Shutdown the federated learning engine and clean up resources
+   */
+  async shutdown(): Promise<void> {
+    if (this.aggregationTimer) {
+      clearInterval(this.aggregationTimer);
+      this.aggregationTimer = undefined;
+    }
+    this.logger.info("Federated learning engine shutdown");
+  }
+
   // Private methods
 
   private startAggregationScheduler(): void {
-    setInterval(async () => {
+    this.aggregationTimer = setInterval(async () => {
       try {
         await this.processPendingAggregations();
       } catch (error) {

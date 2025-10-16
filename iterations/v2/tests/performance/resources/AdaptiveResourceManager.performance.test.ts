@@ -21,7 +21,40 @@ describe("AdaptiveResourceManager Performance", () => {
   let resourceManager: AdaptiveResourceManager;
 
   beforeEach(async () => {
-    resourceManager = new AdaptiveResourceManager({
+    // Create mock agent registry for performance test
+    const mockAgentRegistry = {
+      initialize: async () => {},
+      getAgentsByCapability: async () => [
+        {
+          agent: {
+            id: "perf-agent-1",
+            name: "Performance Agent 1",
+            capabilities: ["high-throughput"],
+            expertiseLevel: "expert" as const,
+            status: "active" as const,
+            performanceScore: 0.98,
+            specialization: ["performance-critical"],
+            createdAt: new Date(),
+            lastActive: new Date(),
+          },
+          score: 0.98,
+          matchReasons: ["high performance score", "expert level"],
+        },
+      ],
+      updatePerformance: async () => ({} as any),
+      getStats: async () => ({
+        totalAgents: 10,
+        activeAgents: 10,
+        averagePerformanceScore: 0.95,
+        specializationDistribution: {
+          "performance-critical": 5,
+          "general-purpose": 5,
+        },
+      }),
+      getProfile: async () => ({} as any),
+    };
+
+    resourceManager = new AdaptiveResourceManager(mockAgentRegistry, {
       enabled: true,
       monitoringIntervalMs: 1000,
       loadBalancingStrategy: LoadBalancingStrategy.LEAST_LOADED,

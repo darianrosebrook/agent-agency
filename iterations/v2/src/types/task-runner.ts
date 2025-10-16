@@ -52,6 +52,14 @@ export interface Task {
   timeout?: number; // milliseconds
   retries?: number;
   dependencies?: string[]; // task IDs this task depends on
+  description?: string;
+  requiredCapabilities?: Record<string, any>;
+  budget?: {
+    maxFiles: number;
+    maxLoc: number;
+  };
+  traceId?: string;
+  artifactRoot?: string;
 }
 
 export interface TaskResult {

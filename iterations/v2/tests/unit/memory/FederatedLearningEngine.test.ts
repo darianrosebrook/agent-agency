@@ -35,8 +35,13 @@ describe("FederatedLearningEngine", () => {
     );
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Clean up any running intervals/timers
+    if (engine) {
+      await engine.shutdown();
+    }
     jest.clearAllMocks();
+    jest.clearAllTimers();
   });
 
   describe("participant registration", () => {

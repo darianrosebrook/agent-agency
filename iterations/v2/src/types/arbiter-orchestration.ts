@@ -28,7 +28,8 @@ export type TaskType =
   | "analysis"
   | "research"
   | "validation"
-  | "general";
+  | "general"
+  | "script-execution";
 
 /**
  * Core task lifecycle types
@@ -70,6 +71,13 @@ export interface Task {
 
   /** Maximum allowed attempts */
   maxAttempts: number;
+
+  /** Optional payload for script execution tasks */
+  payload?: {
+    code: string;
+    args?: any[];
+    timeout?: number;
+  };
 }
 
 export interface TaskRequest extends Omit<Task, "id" | "createdAt"> {

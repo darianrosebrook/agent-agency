@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "ls",
+    "echo",
+    "cat",
+    "pwd",
+    "npm",
+    "git",
+    "docker",
+    "kubectl",
+    "node"
+  ]
+}

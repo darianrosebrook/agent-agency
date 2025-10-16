@@ -5,15 +5,15 @@ import {
   globalEventEmitter,
 } from "../orchestrator/EventEmitter";
 import { EventTypes } from "../orchestrator/OrchestratorEvents";
+import { ArbiterRuntime } from "../orchestrator/runtime/ArbiterRuntime";
+import { loadObserverConfig } from "./config";
+import { ObserverHttpServer } from "./http/ObserverHttpServer";
+import { ObserverStoreImpl } from "./persistence/ObserverStoreImpl";
 import {
   ChainOfThoughtEntry,
   ObserverConfig,
   ObserverEventPayload,
 } from "./types";
-import { loadObserverConfig } from "./config";
-import { ObserverStoreImpl } from "./persistence/ObserverStoreImpl";
-import { ObserverHttpServer } from "./http/ObserverHttpServer";
-import { ArbiterRuntime } from "../orchestrator/runtime/ArbiterRuntime";
 
 /**
  * Arbiter Observer Bridge
@@ -27,7 +27,7 @@ export class ObserverBridge {
   private readonly server: ObserverHttpServer;
   private readonly handler: (event: BaseEvent) => void;
   private readonly registeredTypes: string[] = [];
-  private metricsTimer?: NodeJS.Timeout;
+  private metricsTimer?: ReturnType<typeof setTimeout>;
   private started = false;
 
   constructor(runtime?: ArbiterRuntime | null, config?: ObserverConfig) {
@@ -141,7 +141,9 @@ export class ObserverBridge {
   }
 }
 
-function mapSeverity(severity: EventSeverity): "debug" | "info" | "warn" | "error" {
+function mapSeverity(
+  severity: EventSeverity
+): "debug" | "info" | "warn" | "error" {
   switch (severity) {
     case EventSeverity.DEBUG:
       return "debug";

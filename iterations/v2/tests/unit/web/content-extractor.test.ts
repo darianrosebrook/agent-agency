@@ -18,6 +18,46 @@ import { ContentExtractor } from "../../../src/web/ContentExtractor";
 jest.mock("axios");
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
+// Create a mock axios instance
+const mockAxiosInstance = {
+  get: jest.fn(),
+  post: jest.fn(),
+  put: jest.fn(),
+  delete: jest.fn(),
+};
+
+// Mock HTML content for testing
+const mockHtml = `
+    <html>
+      <head>
+        <title>Test Page</title>
+        <meta name="description" content="Test description">
+      </head>
+      <body>
+        <h1>Main Heading</h1>
+        <p>This is a test paragraph.</p>
+        <a href="/link1">Link 1</a>
+        <img src="/image1.jpg" alt="Test image">
+        <script>alert('dangerous');</script>
+      </body>
+    </html>
+  `;
+
+// Mock axios.create to return our mock instance
+mockedAxios.create.mockReturnValue(mockAxiosInstance as any);
+
+// Set up default mock responses
+mockAxiosInstance.get.mockResolvedValue({
+  data: mockHtml,
+  status: 200,
+  statusText: "OK",
+  headers: {
+    "content-type": "text/html",
+    "content-length": mockHtml.length.toString(),
+  },
+  config: {},
+} as any);
+
 describe("ContentExtractor", () => {
   let extractor: ContentExtractor;
   let mockConfig: ContentExtractionConfig;
@@ -28,6 +68,13 @@ describe("ContentExtractor", () => {
       timeoutMs: 5000,
       maxRedirects: 3,
       verifySsl: true,
+      includeLinks: true,
+      includeImages: true,
+      includeMetadata: true,
+      security: {
+        sanitizeHtml: true,
+        verifySsl: true,
+      },
     } as ContentExtractionConfig;
 
     extractor = new ContentExtractor({
@@ -77,34 +124,6 @@ describe("ContentExtractor", () => {
 
   describe("content fetching", () => {
     const mockUrl = "https://example.com/page";
-    const mockHtml = `
-      <html>
-        <head>
-          <title>Test Page</title>
-          <meta name="description" content="Test description">
-        </head>
-        <body>
-          <h1>Main Heading</h1>
-          <p>This is a test paragraph.</p>
-          <a href="/link1">Link 1</a>
-          <img src="/image1.jpg" alt="Test image">
-          <script>alert('dangerous');</script>
-        </body>
-      </html>
-    `;
-
-    beforeEach(() => {
-      mockedAxios.get.mockResolvedValue({
-        data: mockHtml,
-        status: 200,
-        statusText: "OK",
-        headers: {
-          "content-type": "text/html",
-          "content-length": mockHtml.length.toString(),
-        },
-        config: {},
-      } as any);
-    });
 
     it("should fetch HTML content successfully", async () => {
       const result = await extractor.extractContent(mockUrl, mockConfig);
@@ -128,8 +147,8 @@ describe("ContentExtractor", () => {
       const result = await extractor.extractContent(mockUrl, mockConfig);
 
       expect(result.metadata).toBeDefined();
-      expect(result.metadata.title).toBe("Test Page");
-      expect(result.metadata.description).toBe("Test description");
+      expect(result.title).toBe("Test Page"); // Title comes from <title> tag
+      expect(result.metadata.metaTags?.description).toBe("Test description");
     });
 
     it("should extract links when configured", async () => {
@@ -146,7 +165,7 @@ describe("ContentExtractor", () => {
 
       expect(result.images).toBeDefined();
       expect(result.images.length).toBeGreaterThan(0);
-      expect(result.images[0]).toHaveProperty("src");
+      expect(result.images[0]).toHaveProperty("url");
       expect(result.images[0]).toHaveProperty("alt");
     });
 

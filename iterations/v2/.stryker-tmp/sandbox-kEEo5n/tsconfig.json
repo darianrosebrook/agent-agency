@@ -1,0 +1,34 @@
+{
+  "extends": "../../../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ],
+      "@/rl/*": [
+        "src/rl/*"
+      ],
+      "@/thinking/*": [
+        "src/thinking/*"
+      ],
+      "@/evaluation/*": [
+        "src/evaluation/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "apps/**/*",
+    "tests/**/*",
+    "scripts/**/*",
+    "src/mcp"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "coverage"
+  ]
+}

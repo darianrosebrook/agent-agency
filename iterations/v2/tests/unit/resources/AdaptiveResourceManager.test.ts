@@ -5,6 +5,7 @@
  */
 
 import { AdaptiveResourceManager } from "@/resources/AdaptiveResourceManager";
+import type { AgentRegistry } from "@/types/agent-registry";
 import {
   TaskPriority,
   type ResourceAllocationRequest,
@@ -13,9 +14,23 @@ import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
 
 describe("AdaptiveResourceManager", () => {
   let manager: AdaptiveResourceManager;
+  let mockAgentRegistry: jest.Mocked<AgentRegistry>;
 
   beforeEach(() => {
-    manager = new AdaptiveResourceManager();
+    mockAgentRegistry = {
+      initialize: jest.fn().mockResolvedValue(undefined),
+      getAgentsByCapability: jest.fn().mockResolvedValue([]),
+      updatePerformance: jest.fn().mockResolvedValue({} as any),
+      getStats: jest.fn().mockResolvedValue({
+        totalAgents: 0,
+        activeAgents: 0,
+        averagePerformanceScore: 0,
+        specializationDistribution: {},
+      }),
+      getProfile: jest.fn().mockResolvedValue({} as any),
+    };
+
+    manager = new AdaptiveResourceManager(mockAgentRegistry);
   });
 
   afterEach(async () => {

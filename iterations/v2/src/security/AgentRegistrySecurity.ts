@@ -9,15 +9,15 @@
 
 import jwt from "jsonwebtoken";
 import { AgentProfile } from "../types/agent-registry.js";
-import {
+import type {
   SecurityContext,
-  SecurityLevel,
   ViolationSeverity,
-} from "../types/security-policy";
+} from "../types/security-policy.js";
+import { SecurityLevel } from "../types/security-policy.js";
 import { Logger } from "../utils/Logger.js";
 
 // Re-export commonly used types
-export { VerificationPriority } from "../types/verification";
+export { VerificationPriority } from "../types/verification.js";
 
 // Re-export for backward compatibility
 export { SecurityContext, SecurityLevel, ViolationSeverity };

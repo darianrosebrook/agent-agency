@@ -157,13 +157,23 @@ export interface ObserverStore {
   }>;
   getTask(taskId: string): Promise<{
     taskId: string;
-    state: string;
-    progress: string[];
-    lastUpdated: string;
-    currentPlan?: string;
-    nextActions?: string[];
-    redacted?: boolean;
-  } | null>;
+  state: string;
+  progress: string[];
+  lastUpdated: string;
+  currentPlan?: string;
+  nextActions?: string[];
+  redacted?: boolean;
+  caws?: {
+    passed: boolean;
+    verdict: string;
+    remediation?: string[];
+  };
+  verification?: {
+    verdict: string;
+    confidence: number;
+    reasoning: string[];
+  };
+} | null>;
   appendObservation(note: {
     message: string;
     taskId?: string;

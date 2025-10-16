@@ -4,6 +4,8 @@
  * @module caws-validator
  */
 
+import * as fs from "fs";
+import * as path from "path";
 import { PerformanceTracker } from "../rl/PerformanceTracker";
 import { WorkingSpec } from "../types/caws-types";
 import type {
@@ -11,6 +13,7 @@ import type {
   CAWSValidationResult,
   ChangeStats,
   DerivedBudget,
+  QualityGateResult,
   SpecValidationResult,
   ValidationOptions,
 } from "./types/validation-types";
@@ -235,18 +238,155 @@ export class CAWSValidator {
   }
 
   /**
+   * Execute mock code quality gate - scan for placeholder implementations
+   */
+  private async executeMockCodeQualityGate(
+    spec: WorkingSpec,
+    startTime: number
+  ): Promise<QualityGateResult> {
+    const mockPatterns = [
+      // Direct mock indicators
+      /\/\/\s*TODO:/gi,
+      /\/\/\s*PLACEHOLDER:/gi,
+      /\/\/\s*MOCK DATA:/gi,
+      /\/\/\s*FIXME:/gi,
+      /\/\/\s*HACK:/gi,
+
+      // Implementation placeholders
+      /In a real implementation,/gi,
+      /not yet implemented/gi,
+      /coming soon/gi,
+      /tbd|tbd\./gi,
+
+      // Mock data patterns
+      /\b(agent-1|agent-2|agent-3)\b/gi,
+      /\b(user-123|test-user)\b/gi,
+      /\b(mock-|test-|example-|dummy-|fake-)\w+/gi,
+
+      // Placeholder returns
+      /return \[\];/gi,
+      /return \{\};/gi,
+      /return ".*";/gi,
+      /return \d+;/gi,
+      /return true;/gi,
+      /return false;/gi,
+
+      // Console logging implementations
+      /console\.log\(/gi,
+      /console\.warn\(/gi,
+      /console\.error\(/gi,
+    ];
+
+    const findings: Array<{
+      file: string;
+      line: number;
+      pattern: string;
+      content: string;
+    }> = [];
+
+    // Scan files in scope
+    const scopeFiles = [
+      ...(spec.scope?.in || []),
+      ...(spec.scope?.out || []).filter((path) => path.includes("src/")), // Include some out-of-scope src files for completeness
+    ];
+
+    for (const filePath of scopeFiles) {
+      if (
+        !filePath.includes("src/") ||
+        filePath.includes("/test") ||
+        filePath.includes("/__tests__/") ||
+        filePath.endsWith(".test.ts") ||
+        filePath.endsWith(".spec.ts")
+      ) {
+        continue; // Skip non-src files and test files
+      }
+
+      try {
+        const fullPath = path.join(process.cwd(), filePath);
+        if (!fs.existsSync(fullPath)) continue;
+
+        const content = fs.readFileSync(fullPath, "utf-8");
+        const lines = content.split("\n");
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          for (const pattern of mockPatterns) {
+            const matches = line.match(pattern);
+            if (matches) {
+              findings.push({
+                file: filePath,
+                line: i + 1,
+                pattern: pattern.source,
+                content: line.trim(),
+              });
+              break; // Only record first match per line
+            }
+          }
+        }
+      } catch (error) {
+        // Skip files that can't be read
+        continue;
+      }
+    }
+
+    const passed = findings.length === 0;
+    const score = Math.max(0, 100 - findings.length * 10); // Deduct 10 points per finding
+
+    let message: string;
+    if (passed) {
+      message = "✅ No mocked or placeholder implementations found";
+    } else {
+      message =
+        `🚫 Found ${findings.length} instances of mocked/placeholder code. ` +
+        `Score: ${score}/100. Review required before production deployment.`;
+    }
+
+    return {
+      gate: "mock-code-detection",
+      passed,
+      score,
+      threshold: 100,
+      message,
+      evidence: findings,
+      executionTime: Date.now() - startTime,
+    };
+  }
+
+  /**
    * Execute quality gates for the working spec
    */
   private async executeQualityGates(
     spec: WorkingSpec,
     policy: any // CAWSPolicy
-  ): Promise<any[]> {
-    // QualityGateResult[]
-    const results: any[] = [];
+  ): Promise<QualityGateResult[]> {
+    const results: QualityGateResult[] = [];
+    const startTime = Date.now();
 
-    // TODO: Implement quality gate execution
-    // This would run coverage checks, mutation testing, etc.
-    // For now, return empty array
+    try {
+      // Mock Code Quality Gate - Check for placeholder implementations
+      const mockGateResult = await this.executeMockCodeQualityGate(
+        spec,
+        startTime
+      );
+      results.push(mockGateResult);
+
+      // TODO: Add additional quality gates here
+      // - Coverage checks
+      // - Mutation testing
+      // - Security scans
+      // - Performance benchmarks
+    } catch (error) {
+      console.error("Quality gate execution failed", error);
+      results.push({
+        gate: "quality-gate-execution",
+        passed: false,
+        message: `Quality gate execution failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        executionTime: Date.now() - startTime,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     return results;
   }

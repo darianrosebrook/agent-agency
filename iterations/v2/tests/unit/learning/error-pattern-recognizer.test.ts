@@ -199,8 +199,7 @@ describe("ErrorPatternRecognizer", () => {
         promptModifications: [],
       };
 
-      const errorMessage =
-        "TypeError: Cannot read property 'name' of undefined";
+      const errorMessage = "TypeError: Cannot read property 'x' of undefined";
 
       const result = await recognizer.analyzeError(iteration, errorMessage);
 

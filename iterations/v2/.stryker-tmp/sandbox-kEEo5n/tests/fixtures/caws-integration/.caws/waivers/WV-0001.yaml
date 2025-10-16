@@ -1,0 +1,18 @@
+id: WV-0001
+title: Test waiver for increased budget
+reason: emergency_hotfix
+status: active
+gates:
+  - budget_limit
+expires_at: "2026-12-31T23:59:59Z"
+approvers:
+  - tech-lead@test.com
+  - security@test.com
+impact_level: medium
+mitigation_plan: Close monitoring and rollback plan ready
+delta:
+  max_files: 15
+  max_loc: 500
+created_at: "2025-01-01T00:00:00Z"
+created_by: developer@test.com
+

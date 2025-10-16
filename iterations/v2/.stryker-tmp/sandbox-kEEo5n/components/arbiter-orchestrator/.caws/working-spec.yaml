@@ -1,0 +1,81 @@
+id: ARBITER-005
+title: "CAWS Arbiter Orchestrator"
+risk_tier: 1
+mode: feature
+change_budget:
+  max_files: 15
+  max_loc: 2000
+blast_radius:
+  modules: ["orchestrator", "arbitration", "reasoning"]
+  data_migration: false
+operational_rollback_slo: "5m"
+scope:
+  in:
+    - "src/orchestrator/"
+    - "src/arbitration/"
+    - "src/reasoning/"
+    - "tests/integration/orchestrator/"
+    - "tests/unit/orchestrator/"
+  out:
+    - "src/models/"
+    - "src/rl/"
+    - "src/benchmarking/"
+invariants:
+  - "System maintains CAWS constitutional compliance in all orchestration decisions"
+  - "Multi-agent coordination never creates deadlock conditions"
+  - "Orchestration preserves task integrity and agent autonomy"
+  - "Override system requires explicit human approval for CAWS violations"
+acceptance:
+  - id: "A1"
+    given: "Task submitted to orchestrator without CAWS violations"
+    when: "Orchestrator processes the task"
+    then: "Task is routed to appropriate agents without constitutional review"
+  - id: "A2"
+    given: "Task submitted with potential CAWS violations"
+    when: "Orchestrator detects violation risk"
+    then: "Task is escalated to ARBITER-015 arbitration protocol for constitutional review"
+  - id: "A3"
+    given: "Multiple agents available for task execution"
+    when: "Orchestrator coordinates task assignment"
+    then: "Agents are assigned based on capability matching and load balancing"
+  - id: "A4"
+    given: "Multi-agent task requires debate coordination"
+    when: "Orchestrator initiates debate workflow"
+    then: "ARBITER-016 reasoning engine coordinates structured argumentation and consensus formation"
+  - id: "A5"
+    given: "Task execution encounters conflict between agents"
+    when: "Orchestrator detects agent disagreement"
+    then: "Conflict is escalated to constitutional arbitration with proper evidence collection"
+  - id: "A6"
+    given: "System requires human intervention for CAWS violation"
+    when: "Orchestrator detects critical constitutional issue"
+    then: "Human override system is activated with clear justification and approval workflow"
+  - id: "A7"
+    given: "Orchestrator processes high-volume concurrent tasks"
+    when: "Load exceeds capacity thresholds"
+    then: "Tasks are prioritized and queued without CAWS compliance violations"
+  - id: "A8"
+    given: "Agent fails during task execution"
+    when: "Orchestrator detects agent failure"
+    then: "Task is reassigned with constitutional compliance verification"
+non_functional:
+  a11y: []
+  perf:
+    api_p95_ms: 250
+    orchestration_p95_ms: 500
+    debate_coordination_p95_ms: 2000
+    concurrent_tasks_capacity: 100
+  security: ["input-validation", "authorization", "audit-logging", "caws-enforcement"]
+contracts:
+  - type: "openapi"
+    path: "docs/api/orchestrator-api.yaml"
+    endpoints:
+      - "POST /orchestrate/task"
+      - "GET /orchestrate/status/{taskId}"
+      - "POST /orchestrate/override/{taskId}"
+      - "GET /orchestrate/metrics"
+  - type: "internal"
+    interfaces:
+      - "ArbiterOrchestrator.evaluateTask(task: Task): OrchestrationResult"
+      - "ArbiterOrchestrator.coordinateDebate(agents: Agent[], context: DebateContext): DebateResult"
+      - "ArbiterOrchestrator.enforceConstitutionalCompliance(task: Task, agents: Agent[]): ComplianceResult"

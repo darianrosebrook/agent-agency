@@ -1,19 +1,38 @@
 import crypto from "crypto";
 import fsp from "fs/promises";
+import yaml from "js-yaml";
 import path from "path";
+import { CAWSValidator } from "../../caws-validator/CAWSValidator";
+import type { CAWSValidationResult } from "../../caws-validator/types/validation-types";
 import { getObserverBridge } from "../../observer";
 import type { ChainOfThoughtEntry } from "../../observer/types";
 import { PerformanceTracker } from "../../rl/PerformanceTracker";
 import type { AgentRegistry } from "../../types/agent-registry";
-import type { Task } from "../../types/arbiter-orchestration";
+import type { Task as ArbiterTask } from "../../types/arbiter-orchestration";
+import type { WorkingSpec } from "../../types/caws-types";
+import {
+  Task as RunnerTask,
+  TaskExecution as RunnerTaskExecution,
+  TaskOrchestratorConfig,
+  TaskOrchestratorEvents,
+  TaskPriority,
+  WorkerExecutionResult,
+} from "../../types/task-runner";
 import { TaskState } from "../../types/task-state";
-import { events, EventSeverity } from "../EventEmitter";
+import {
+  VerificationEngineConfig,
+  VerificationPriority,
+  VerificationType,
+  VerificationVerdict,
+} from "../../types/verification";
+import { VerificationEngineImpl } from "../../verification/VerificationEngine";
+import { EventSeverity, events } from "../EventEmitter";
 import { EventTypes } from "../OrchestratorEvents";
 import { RegistryProvider } from "../RegistryProvider.js";
+import { TaskOrchestrator } from "../TaskOrchestrator";
 import { TaskQueue } from "../TaskQueue";
 import { TaskRoutingManager } from "../TaskRoutingManager";
 import { TaskStateMachine } from "../TaskStateMachine";
-// import type { ArtifactManifest } from "../workers/ArtifactSandbox";
 import { runtimeAgentSeeds } from "./runtimeAgentDataset.js";
 
 // Temporary inline type until import is fixed
@@ -38,7 +57,7 @@ export interface SubmitTaskOptions {
   specPath?: string;
   metadata?: Record<string, any>;
   // Allow full task specification for script execution or direct task submission
-  task?: Partial<Task>;
+  task?: Partial<ArbiterTask>;
 }
 
 export interface RuntimeStatus {
@@ -71,11 +90,22 @@ export interface RuntimeTaskSnapshot {
     manifest: ArtifactManifest;
     rootPath: string;
   };
+  assignedAgentId?: string;
   metadata?: Record<string, any>;
+  cawsResult?: {
+    passed: boolean;
+    verdict: string;
+    remediation?: string[];
+  };
+  verificationResult?: {
+    verdict: VerificationVerdict;
+    confidence: number;
+    reasoning: string[];
+  };
 }
 
 interface RuntimeTaskRecord {
-  task: Task;
+  task: ArbiterTask;
   description: string;
   plan: string[];
   nextActions: string[];
@@ -87,6 +117,16 @@ interface RuntimeTaskRecord {
   artifacts?: {
     manifest: ArtifactManifest;
     rootPath: string;
+  };
+  cawsResult?: {
+    passed: boolean;
+    verdict: string;
+    remediation?: string[];
+  };
+  verificationResult?: {
+    verdict: VerificationVerdict;
+    confidence: number;
+    reasoning: string[];
   };
 }
 
@@ -106,6 +146,15 @@ const DEFAULT_ROUTING_CONFIG = {
   capabilityMatchWeight: 0.7,
 };
 
+const DEFAULT_ORCHESTRATOR_TIMEOUT_MS = 60_000;
+
+export class NoEligibleAgentsError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NoEligibleAgentsError";
+  }
+}
+
 /**
  * Arbiter runtime powered by in-process queueing and routing primitives.
  * Tasks submitted through the observer bridge are queued, routed to mock
@@ -116,14 +165,21 @@ export class ArbiterRuntime {
   private readonly queue = new TaskQueue();
   private readonly stateMachine = new TaskStateMachine();
   private readonly performanceTracker = new PerformanceTracker({
-    enabled: false,
-    maxEventsInMemory: 1000,
+    enabled: true,
+    maxEventsInMemory: 10000,
+    retentionPeriodMs: 7 * 24 * 60 * 60 * 1000, // 7 days
+    batchSize: 100,
+    anonymizeData: true,
   });
+  private readonly cawsValidator: CAWSValidator;
+  private readonly verificationEngine: VerificationEngineImpl;
+  private readonly verificationConfig: VerificationEngineConfig;
   private readonly agentRegistry: AgentRegistry;
   private routingManager: TaskRoutingManager;
+  private taskOrchestrator: TaskOrchestrator | null = null;
+  private workerArtifactsRoot: string | null = null;
   private readonly options: ArbiterRuntimeOptions;
   private readonly taskRecords = new Map<string, RuntimeTaskRecord>();
-  private readonly activeExecutions = new Map<string, any>(); // taskId -> execution result
   private readonly completionResolvers = new Map<
     string,
     { resolve: () => void; reject: (_error: unknown) => void }
@@ -140,6 +196,13 @@ export class ArbiterRuntime {
 
   constructor(options: ArbiterRuntimeOptions) {
     this.options = options;
+    this.cawsValidator = new CAWSValidator({
+      performanceTracker: this.performanceTracker,
+    });
+    this.verificationConfig = this.createVerificationConfig();
+    this.verificationEngine = new VerificationEngineImpl(
+      this.verificationConfig
+    );
     // Registry will be initialized in start() method
     this.agentRegistry = null as any; // Temporary - will be replaced in initializeRegistry()
     this.routingManager = new TaskRoutingManager(
@@ -153,12 +216,20 @@ export class ArbiterRuntime {
     if (this.running) return;
     this.running = true;
     await fsp.mkdir(this.options.outputDir, { recursive: true });
+
+    // Start performance tracking
+    await this.performanceTracker.startCollection();
+
     await this.initializeRegistry();
   }
 
   async stop(): Promise<void> {
     this.running = false;
     this.processing = false;
+    if (this.taskOrchestrator) {
+      await this.taskOrchestrator.shutdown();
+      this.taskOrchestrator = null;
+    }
   }
 
   /**
@@ -205,11 +276,18 @@ export class ArbiterRuntime {
       );
       this.routingManager.setPerformanceTracker(this.performanceTracker);
 
+      await this.initializeTaskOrchestrator(realRegistry);
+
       // Wait for ready event
       await readyPromise;
 
       this.registryReady = true;
       console.log("Agent registry initialized successfully");
+
+      // Record agent registry initialization in Performance Tracker
+      // Note: Agent registry doesn't expose getAgents() method, so we'll skip this for now
+      // This would need to be implemented when the agent registry API is available
+      console.log("Performance Tracker ready for agent registration tracking");
     } catch (error) {
       console.error("Failed to initialize agent registry:", error);
       throw new Error(
@@ -218,6 +296,68 @@ export class ArbiterRuntime {
         }`
       );
     }
+  }
+
+  private async initializeTaskOrchestrator(
+    registry: AgentRegistry
+  ): Promise<void> {
+    if (this.taskOrchestrator) {
+      await this.taskOrchestrator.shutdown();
+      this.taskOrchestrator = null;
+    }
+
+    const artifactsRoot = path.join(this.options.outputDir, "worker-artifacts");
+    await fsp.mkdir(artifactsRoot, { recursive: true });
+    this.workerArtifactsRoot = artifactsRoot;
+
+    const orchestratorConfig: TaskOrchestratorConfig = {
+      workerPool: {
+        minPoolSize: 1,
+        maxPoolSize: 1,
+        workerCapabilities: ["script"],
+        workerTimeout: 60_000,
+        artifactConfig: {
+          rootPath: artifactsRoot,
+          maxFileSizeBytes: 10 * 1024 * 1024,
+          maxTotalFiles: 100,
+          maxPathLength: 255,
+        },
+      },
+      queue: {
+        maxSize: 100,
+        priorityLevels: [
+          TaskPriority.LOW,
+          TaskPriority.MEDIUM,
+          TaskPriority.HIGH,
+          TaskPriority.CRITICAL,
+        ],
+        persistenceEnabled: false,
+      },
+      retry: {
+        maxAttempts: 1,
+        backoffMultiplier: 2,
+        initialDelay: 1_000,
+        maxDelay: 10_000,
+      },
+      routing: {
+        enabled: true,
+        strategy: "load_balanced",
+      },
+      performance: {
+        trackingEnabled: false,
+        metricsInterval: 60_000,
+      },
+      pleading: {
+        enabled: false,
+        requiredApprovals: 0,
+        timeoutHours: 1,
+      },
+    };
+
+    this.taskOrchestrator = new TaskOrchestrator(
+      orchestratorConfig,
+      registry as any
+    );
   }
 
   getStatus(): RuntimeStatus {
@@ -260,7 +400,25 @@ export class ArbiterRuntime {
       nextActions: [...record.nextActions],
       outputPath: record.outputPath,
       artifacts: record.artifacts,
+      assignedAgentId:
+        (record.metadata?.assignedAgentId as string | undefined) ?? undefined,
       metadata: record.metadata ? { ...record.metadata } : undefined,
+      cawsResult: record.cawsResult
+        ? {
+            passed: record.cawsResult.passed,
+            verdict: record.cawsResult.verdict,
+            remediation: record.cawsResult.remediation
+              ? [...record.cawsResult.remediation]
+              : undefined,
+          }
+        : undefined,
+      verificationResult: record.verificationResult
+        ? {
+            verdict: record.verificationResult.verdict,
+            confidence: record.verificationResult.confidence,
+            reasoning: [...record.verificationResult.reasoning],
+          }
+        : undefined,
     };
   }
 
@@ -294,40 +452,68 @@ export class ArbiterRuntime {
     const createdAt = new Date();
     const plan = this.generatePlan(options.description, options.metadata);
 
-    let assignmentId = "arbiter-runtime";
+    let cawsValidation: CAWSValidationResult | null = null;
+    let specMetadataPath: string | undefined;
+    if (options.specPath) {
+      const absoluteSpecPath = path.isAbsolute(options.specPath)
+        ? options.specPath
+        : path.resolve(process.cwd(), options.specPath);
+      specMetadataPath = path.relative(process.cwd(), absoluteSpecPath);
+      cawsValidation = await this.enforceCawsPolicies(taskId, absoluteSpecPath);
+    }
 
-    // Only attempt routing for agent-based tasks, not script execution
+    const fallbackAssignmentId = "arbiter-runtime";
+    let assignmentId: string | undefined;
+    let routingStrategy: string | undefined;
+
+    // Only attempt routing for agent-based tasks, not direct script execution
     if (!options.task?.payload) {
       try {
-        const decision = await this.routingManager.routeTask({
+        const routingDecision = await this.routingManager.routeTask({
           id: taskId,
+          description: options.task?.description ?? options.description,
           type: options.task?.type ?? "code-editing",
-          requiredCapabilities: options.task?.requiredCapabilities ?? ["documentation"],
+          requiredCapabilities: options.task?.requiredCapabilities ?? {},
+          priority: options.task?.priority ?? 5,
+          timeoutMs: options.task?.timeoutMs ?? 60_000,
+          budget: options.task?.budget ?? {
+            maxFiles: 10,
+            maxLoc: 500,
+          },
+          createdAt: createdAt,
+          metadata: options.task?.metadata ?? options.metadata ?? {},
+          attempts: options.task?.attempts ?? 0,
+          maxAttempts: options.task?.maxAttempts ?? 1,
         } as any);
-        assignmentId = decision.selectedAgent?.id ?? assignmentId;
+        assignmentId = routingDecision.selectedAgent?.id;
+        routingStrategy = routingDecision.strategy;
         this.emitEvent(EventTypes.TASK_ASSIGNED, {
           taskId,
-          agentId: assignmentId,
-          strategy: decision.strategy,
+          agentId: assignmentId ?? fallbackAssignmentId,
+          strategy: routingDecision.strategy,
         });
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         this.emitEvent(EventTypes.TASK_ASSIGNED, {
           taskId,
-          agentId: assignmentId,
-          error: error instanceof Error ? error.message : String(error),
+          agentId: fallbackAssignmentId,
+          error: message,
         });
+        throw new NoEligibleAgentsError(
+          `No eligible agents for task ${taskId}: ${message}`
+        );
       }
     } else {
       // Script execution tasks don't need routing
       this.emitEvent(EventTypes.TASK_ASSIGNED, {
         taskId,
-        agentId: assignmentId,
+        agentId: fallbackAssignmentId,
         strategy: "direct-execution",
       });
     }
 
     // Create task from provided specification or defaults
-    const task: Task = {
+    const task: ArbiterTask = {
       id: taskId,
       description: options.task?.description ?? options.description,
       type: options.task?.type ?? "general",
@@ -356,8 +542,23 @@ export class ArbiterRuntime {
       createdAt,
       updatedAt: createdAt,
       status: TaskState.QUEUED,
-      metadata: options.metadata,
+      metadata: {
+        ...(options.metadata ?? {}),
+        ...(specMetadataPath && {
+          specPath: specMetadataPath,
+        }),
+        assignedAgentId: assignmentId ?? fallbackAssignmentId,
+        ...(routingStrategy && { routingStrategy }),
+      },
     };
+
+    if (cawsValidation) {
+      record.cawsResult = {
+        passed: cawsValidation.passed,
+        verdict: cawsValidation.verdict,
+        remediation: cawsValidation.remediation,
+      };
+    }
 
     this.taskRecords.set(taskId, record);
     this.queue.enqueue(task);
@@ -379,7 +580,7 @@ export class ArbiterRuntime {
 
     return {
       taskId,
-      assignmentId,
+      assignmentId: assignmentId ?? fallbackAssignmentId,
       queued: true,
     };
   }
@@ -435,7 +636,7 @@ export class ArbiterRuntime {
     }
   }
 
-  private async executeTask(task: Task): Promise<void> {
+  private async executeTask(task: ArbiterTask): Promise<void> {
     const record = this.taskRecords.get(task.id);
     if (!record) {
       return;
@@ -444,6 +645,32 @@ export class ArbiterRuntime {
     const start = Date.now();
     record.status = TaskState.ASSIGNED;
     record.updatedAt = new Date();
+
+    // Start performance tracking for this task
+    const assignedAgentId =
+      (record.metadata?.assignedAgentId as string) || "arbiter-runtime";
+    const routingDecision = {
+      taskId: task.id,
+      selectedAgent: assignedAgentId,
+      routingStrategy: ((record.metadata?.routingStrategy as string) ||
+        "direct-execution") as any, // Type assertion for compatibility
+      confidence: 0.8, // Default confidence for runtime execution
+      rationale: "Arbiter runtime execution",
+      alternativesConsidered: [],
+      timestamp: new Date().toISOString(),
+    };
+
+    const executionId = this.performanceTracker.startTaskExecution(
+      task.id,
+      assignedAgentId,
+      routingDecision,
+      {
+        taskType: task.type,
+        priority: task.priority,
+        timeoutMs: task.timeoutMs,
+        budget: task.budget,
+      }
+    );
 
     this.stateMachine.transition(task.id, TaskState.ASSIGNED, "Task assigned");
     this.emitEvent(EventTypes.TASK_ASSIGNED, {
@@ -479,19 +706,64 @@ export class ArbiterRuntime {
     try {
       let outputPath: string;
 
-      // If worker provided artifacts, use them instead of generating summary
-      const execution = this.activeExecutions.get(task.id);
-      if (execution?.result?.artifacts) {
-        record.artifacts = execution.result.artifacts;
-        outputPath = execution.result.artifacts.rootPath;
+      const currentAssignmentId = record.metadata?.assignedAgentId
+        ? String(record.metadata.assignedAgentId)
+        : undefined;
+      const runOutcome = await this.runWithTaskOrchestrator(
+        record,
+        currentAssignmentId
+      );
+      const executionResult = runOutcome.result;
+      const resolvedAgentId =
+        runOutcome.assignedAgentId ?? currentAssignmentId ?? "arbiter-runtime";
+
+      if (resolvedAgentId) {
+        record.metadata = {
+          ...record.metadata,
+          assignedAgentId: resolvedAgentId,
+        };
+      }
+
+      if (executionResult?.artifacts) {
+        record.artifacts = {
+          manifest: executionResult.artifacts.manifest,
+          rootPath: executionResult.artifacts.rootPath,
+        };
+        const firstFile =
+          executionResult.artifacts.manifest.files[0]?.path ?? "summary.md";
+        outputPath = path.join(executionResult.artifacts.rootPath, firstFile);
         record.outputPath = outputPath;
-        console.log(
-          `Task produced ${execution.result.artifacts.manifest.files.length} artifact files`
-        );
+        if (executionResult.logs?.length) {
+          record.metadata = {
+            ...(record.metadata ?? {}),
+            logs: executionResult.logs,
+          };
+        }
       } else {
-        // Fallback to legacy summary generation
         outputPath = await this.materializeTask(task.id, record);
         record.outputPath = outputPath;
+      }
+
+      const verification = await this.verifyTaskOutput(
+        task.id,
+        record.outputPath!
+      );
+      record.verificationResult = verification;
+
+      const failedVerification =
+        (verification.verdict === VerificationVerdict.VERIFIED_FALSE ||
+          verification.verdict === VerificationVerdict.CONTRADICTORY) &&
+        verification.confidence >=
+          this.verificationConfig.minConfidenceThreshold;
+      const erroredVerification =
+        verification.verdict === VerificationVerdict.ERROR;
+
+      if (failedVerification || erroredVerification) {
+        throw new Error(
+          `Verification failed with verdict ${
+            verification.verdict
+          } (confidence ${(verification.confidence * 100).toFixed(1)}%)`
+        );
       }
 
       record.status = TaskState.COMPLETED;
@@ -504,9 +776,6 @@ export class ArbiterRuntime {
           record.outputPath!
         )}`,
       });
-      await this.recordChainOfThought(task.id, "verify", {
-        content: "Verified artefact content and recorded completion.",
-      });
 
       this.stateMachine.transition(
         task.id,
@@ -516,13 +785,24 @@ export class ArbiterRuntime {
       this.queue.complete(task.id);
       this.emitEvent(EventTypes.TASK_COMPLETED, {
         taskId: task.id,
-        outputPath,
+        outputPath: record.outputPath,
       });
 
       this.completedTasks += 1;
       const duration = Date.now() - start;
       this.lastDuration = duration;
       this.cumulativeDuration += duration;
+
+      // Record successful task completion in Performance Tracker
+      if (executionId) {
+        await this.performanceTracker.completeTaskExecution(executionId, {
+          success: true,
+          qualityScore: verification.confidence, // Use verification confidence as quality score
+          efficiencyScore: 0.8, // Default efficiency score
+          tokensConsumed: 0, // Would need to be extracted from execution result
+          completionTimeMs: duration,
+        });
+      }
     } catch (error) {
       record.status = TaskState.FAILED;
       record.updatedAt = new Date();
@@ -545,6 +825,17 @@ export class ArbiterRuntime {
       });
 
       this.failedTasks += 1;
+
+      // Record failed task completion in Performance Tracker
+      if (executionId) {
+        await this.performanceTracker.completeTaskExecution(executionId, {
+          success: false,
+          qualityScore: 0.0,
+          efficiencyScore: 0.0,
+          tokensConsumed: 0,
+          completionTimeMs: Date.now() - start,
+        });
+      }
     } finally {
       const resolver = this.completionResolvers.get(task.id);
       if (resolver) {
@@ -562,23 +853,7 @@ export class ArbiterRuntime {
     await fsp.mkdir(taskDir, { recursive: true });
 
     const summaryPath = path.join(taskDir, "summary.md");
-    const content = [
-      `# Arbiter Task ${taskId}`,
-      "",
-      `**Created:** ${record.createdAt.toISOString()}`,
-      `**Last Updated:** ${new Date().toISOString()}`,
-      "",
-      "## Description",
-      record.description,
-      "",
-      "## Plan",
-      ...record.plan.map((step, index) => `${index + 1}. ${step}`),
-      "",
-      "## Metadata",
-      "```json",
-      JSON.stringify(record.metadata ?? {}, null, 2),
-      "```",
-    ].join("\n");
+    const content = this.generateSummaryContent(taskId, record);
 
     await fsp.writeFile(summaryPath, content, "utf8");
     return summaryPath;
@@ -619,6 +894,385 @@ export class ArbiterRuntime {
 
     plan.push("Prepare verification notes for observer review.");
     return plan;
+  }
+
+  private async runWithTaskOrchestrator(
+    record: RuntimeTaskRecord,
+    fallbackAssignedAgentId?: string
+  ): Promise<{
+    result: WorkerExecutionResult | null;
+    assignedAgentId?: string;
+  }> {
+    if (!this.taskOrchestrator) {
+      return { result: null, assignedAgentId: fallbackAssignedAgentId };
+    }
+
+    const runnerTask = this.toRunnerTask(record, fallbackAssignedAgentId);
+    const orchestrator = this.taskOrchestrator;
+    const taskId = runnerTask.id;
+    const envTimeoutMs = Number(process.env.ARBITER_ORCHESTRATOR_TIMEOUT_MS);
+    const timeoutMs =
+      Number.isFinite(envTimeoutMs) && envTimeoutMs > 0
+        ? envTimeoutMs
+        : DEFAULT_ORCHESTRATOR_TIMEOUT_MS;
+
+    return new Promise<{
+      result: WorkerExecutionResult | null;
+      assignedAgentId?: string;
+    }>((resolve, reject) => {
+      let settled = false;
+      let latestAssignedAgent = fallbackAssignedAgentId;
+      let timeoutHandle: NodeJS.Timeout;
+
+      const cleanup = () => {
+        orchestrator.off(TaskOrchestratorEvents.TASK_COMPLETED, onCompleted);
+        orchestrator.off(TaskOrchestratorEvents.TASK_FAILED, onFailed);
+        clearTimeout(timeoutHandle);
+      };
+
+      const resolveOnce = (value: {
+        result: WorkerExecutionResult | null;
+        assignedAgentId?: string;
+      }) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        cleanup();
+        resolve(value);
+      };
+
+      const rejectOnce = (error: unknown) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        cleanup();
+        reject(
+          error instanceof Error ? error : new Error(String(error ?? "error"))
+        );
+      };
+
+      const onCompleted = (execution: RunnerTaskExecution) => {
+        if (execution.taskId !== taskId) {
+          return;
+        }
+        resolveOnce({
+          result: execution.result ?? null,
+          assignedAgentId: execution.agentId ?? latestAssignedAgent,
+        });
+      };
+
+      const onFailed = (execution: RunnerTaskExecution) => {
+        if (execution.taskId !== taskId) {
+          return;
+        }
+        rejectOnce(
+          new Error(
+            execution.error ?? `Task ${execution.taskId} failed in worker`
+          )
+        );
+      };
+
+      orchestrator.on(TaskOrchestratorEvents.TASK_COMPLETED, onCompleted);
+      orchestrator.on(TaskOrchestratorEvents.TASK_FAILED, onFailed);
+
+      timeoutHandle = setTimeout(() => {
+        rejectOnce(
+          new Error(
+            `TaskOrchestrator timeout after ${timeoutMs}ms for task ${taskId}`
+          )
+        );
+      }, timeoutMs);
+
+      orchestrator
+        .submitTask(runnerTask)
+        .then(() => {
+          if (runnerTask.assignedAgent) {
+            latestAssignedAgent = runnerTask.assignedAgent;
+          }
+        })
+        .catch(rejectOnce);
+    });
+  }
+
+  private toRunnerTask(
+    record: RuntimeTaskRecord,
+    fallbackAssignedAgentId?: string
+  ): RunnerTask {
+    const task = record.task;
+    const priority = this.mapPriority(task.priority);
+    const assignedAgentId =
+      fallbackAssignedAgentId && fallbackAssignedAgentId !== "arbiter-runtime"
+        ? fallbackAssignedAgentId
+        : undefined;
+    const artifactRoot =
+      this.workerArtifactsRoot ??
+      path.join(this.options.outputDir, "worker-artifacts");
+
+    if (task.payload && task.payload.code) {
+      return {
+        id: task.id,
+        type: "script",
+        priority,
+        payload: {
+          code: task.payload.code,
+          args: task.payload.args ?? [],
+          timeout: task.payload.timeout ?? task.timeoutMs,
+        },
+        metadata: {
+          ...task.metadata,
+          description: task.description,
+          plan: record.plan,
+          traceId: task.metadata?.traceId ?? task.id,
+          artifactRoot: path.join(artifactRoot, task.id),
+        },
+        assignedAgent:
+          assignedAgentId !== undefined ? assignedAgentId : undefined,
+        createdAt: task.createdAt,
+        timeout: task.timeoutMs,
+        requiredCapabilities: task.requiredCapabilities,
+        budget: task.budget,
+      };
+    }
+
+    const summary = this.generateSummaryContent(task.id, record);
+    const script = this.generateWorkerScript(summary);
+
+    return {
+      id: task.id,
+      type: "script",
+      priority,
+      payload: {
+        code: script,
+        timeout: task.timeoutMs ?? 60_000,
+      },
+      metadata: {
+        description: task.description,
+        plan: record.plan,
+        specPath: record.metadata?.specPath,
+        traceId: task.metadata?.traceId ?? task.id,
+        artifactRoot: path.join(artifactRoot, task.id),
+      },
+      assignedAgent:
+        assignedAgentId !== undefined ? assignedAgentId : undefined,
+      createdAt: task.createdAt,
+      timeout: task.timeoutMs,
+      requiredCapabilities: task.requiredCapabilities,
+      budget: task.budget,
+    };
+  }
+
+  private mapPriority(priority: number): TaskPriority {
+    if (priority >= 9) {
+      return TaskPriority.CRITICAL;
+    }
+    if (priority >= 7) {
+      return TaskPriority.HIGH;
+    }
+    if (priority >= 4) {
+      return TaskPriority.MEDIUM;
+    }
+    return TaskPriority.LOW;
+  }
+
+  private generateWorkerScript(summary: string): string {
+    const serializedSummary = JSON.stringify(summary);
+    return `
+const summary = ${serializedSummary};
+return context.artifacts
+  .writeFile("summary.md", summary)
+  .then(() => {
+    context.result = { summaryPath: "summary.md" };
+  });
+`;
+  }
+
+  private generateSummaryContent(
+    taskId: string,
+    record: RuntimeTaskRecord
+  ): string {
+    return [
+      `# Arbiter Task ${taskId}`,
+      "",
+      `**Created:** ${record.createdAt.toISOString()}`,
+      `**Last Updated:** ${new Date().toISOString()}`,
+      "",
+      "## Description",
+      record.description,
+      "",
+      "## Plan",
+      ...record.plan.map((step, index) => `${index + 1}. ${step}`),
+      "",
+      "## Metadata",
+      "```json",
+      JSON.stringify(record.metadata ?? {}, null, 2),
+      "```",
+    ].join("\n");
+  }
+
+  private async enforceCawsPolicies(
+    taskId: string,
+    specPath: string
+  ): Promise<CAWSValidationResult> {
+    const spec = await this.loadWorkingSpec(specPath);
+    const validation = await this.cawsValidator.validateWorkingSpec(spec, {
+      projectRoot: path.dirname(specPath),
+      checkBudget: true,
+    });
+
+    this.emitEvent(EventTypes.CAWS_VALIDATION, {
+      taskId,
+      specId: spec.id,
+      passed: validation.passed,
+      verdict: validation.verdict,
+      timestamp: validation.timestamp,
+    });
+
+    await this.recordChainOfThought(taskId, "verify", {
+      content: validation.passed
+        ? `CAWS validation passed for spec ${spec.id}`
+        : `CAWS validation failed for spec ${spec.id}: ${validation.verdict}`,
+      confidence: validation.passed ? 0.9 : 0.4,
+    });
+
+    // Record CAWS validation in Performance Tracker
+    await this.performanceTracker.recordConstitutionalValidation({
+      taskId,
+      agentId: "arbiter-runtime", // CAWS validation is done by runtime
+      validationResult: {
+        valid: validation.passed,
+        violations:
+          validation.remediation?.map((msg) => ({
+            severity: "medium" as const, // Default severity
+            message: msg,
+          })) ?? [],
+        complianceScore: validation.passed ? 1.0 : 0.0,
+        processingTimeMs: 0, // CAWS validation result doesn't expose this
+        ruleCount: 0, // CAWS validation result doesn't expose this
+      },
+    });
+
+    if (!validation.passed) {
+      const remediation = validation.remediation?.join("; ") ?? "None provided";
+      throw new Error(
+        `CAWS validation failed for ${spec.id}. Verdict: ${validation.verdict}. Remediation: ${remediation}`
+      );
+    }
+
+    return validation;
+  }
+
+  private async loadWorkingSpec(specPath: string): Promise<WorkingSpec> {
+    try {
+      const contents = await fsp.readFile(specPath, "utf8");
+      const parsed = yaml.load(contents);
+      if (!parsed || typeof parsed !== "object") {
+        throw new Error("Invalid CAWS specification format");
+      }
+      return parsed as WorkingSpec;
+    } catch (error) {
+      throw new Error(
+        `Failed to load working spec at ${specPath}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
+  private createVerificationConfig(): VerificationEngineConfig {
+    return {
+      defaultTimeoutMs: 5000,
+      maxConcurrentVerifications: 3,
+      minConfidenceThreshold: 0.6,
+      maxEvidencePerMethod: 5,
+      cacheEnabled: false,
+      cacheTtlMs: 60_000,
+      retryAttempts: 1,
+      retryDelayMs: 500,
+      methods: [
+        {
+          type: VerificationType.CONSISTENCY_CHECK,
+          enabled: true,
+          priority: 1,
+          timeoutMs: 2000,
+          config: {},
+        },
+        {
+          type: VerificationType.LOGICAL_VALIDATION,
+          enabled: true,
+          priority: 2,
+          timeoutMs: 2000,
+          config: {},
+        },
+        {
+          type: VerificationType.FACT_CHECKING,
+          enabled: true,
+          priority: 3,
+          timeoutMs: 4000,
+          config: {},
+        },
+      ],
+    };
+  }
+
+  private async verifyTaskOutput(
+    taskId: string,
+    outputPath: string
+  ): Promise<{
+    verdict: VerificationVerdict;
+    confidence: number;
+    reasoning: string[];
+  }> {
+    try {
+      const content = await fsp.readFile(outputPath, "utf8");
+      const request = {
+        id: taskId,
+        content,
+        priority: VerificationPriority.MEDIUM,
+        metadata: { outputPath },
+        timeoutMs: this.verificationConfig.defaultTimeoutMs,
+        verificationTypes: this.verificationConfig.methods
+          .filter((method) => method.enabled)
+          .map((method) => method.type),
+      };
+
+      const result = await this.verificationEngine.verify(request);
+
+      this.emitEvent(EventTypes.CAWS_COMPLIANCE, {
+        taskId,
+        verdict: result.verdict,
+        confidence: result.confidence,
+        processingTimeMs: result.processingTimeMs,
+      });
+
+      await this.recordChainOfThought(taskId, "verify", {
+        content: `Verification verdict: ${result.verdict} (confidence ${(
+          result.confidence * 100
+        ).toFixed(1)}%)`,
+        confidence: result.confidence,
+      });
+
+      return {
+        verdict: result.verdict,
+        confidence: result.confidence,
+        reasoning: result.reasoning ?? [],
+      };
+    } catch (error) {
+      this.emitEvent(EventTypes.CAWS_COMPLIANCE, {
+        taskId,
+        verdict: VerificationVerdict.ERROR,
+        confidence: 0,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      await this.recordChainOfThought(taskId, "critique", {
+        content: `Verification failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        confidence: 0.3,
+      });
+      throw error;
+    }
   }
 
   // Registry stub method removed - now using real registry via RegistryProvider

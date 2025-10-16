@@ -286,6 +286,7 @@ export enum LearningCoordinatorEvent {
   QUALITY_THRESHOLD_MET = "learning:quality_threshold_met",
   RESOURCE_WARNING = "learning:resource_warning",
   RESOURCE_EXHAUSTED = "learning:resource_exhausted",
+  COORDINATOR_SHUTDOWN = "learning:coordinator_shutdown",
 }
 
 /**

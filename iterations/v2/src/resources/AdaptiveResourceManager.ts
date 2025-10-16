@@ -8,6 +8,7 @@
  */
 
 import { Logger } from "@/observability/Logger";
+import type { AgentRegistry } from "@/types/agent-registry";
 import {
   LoadBalancingStrategy,
   type AdaptiveResourceManagerConfig,
@@ -64,7 +65,10 @@ export class AdaptiveResourceManager implements IAdaptiveResourceManager {
   private lastCapacityAnalysis?: CapacityAnalysis;
   private failoverEvents: FailoverEvent[] = [];
 
-  constructor(config: Partial<AdaptiveResourceManagerConfig> = {}) {
+  constructor(
+    agentRegistry: AgentRegistry,
+    config: Partial<AdaptiveResourceManagerConfig> = {}
+  ) {
     this.logger = new Logger("AdaptiveResourceManager");
     this.config = { ...DEFAULT_CONFIG, ...config };
 
@@ -86,9 +90,13 @@ export class AdaptiveResourceManager implements IAdaptiveResourceManager {
       this.config.loadBalancingStrategy
     );
 
-    this.resourceAllocator = new ResourceAllocator(this.loadBalancer, {
-      dynamicAdjustment: this.config.enableDynamicRateLimiting,
-    });
+    this.resourceAllocator = new ResourceAllocator(
+      this.loadBalancer,
+      agentRegistry,
+      {
+        dynamicAdjustment: this.config.enableDynamicRateLimiting,
+      }
+    );
   }
 
   /**

@@ -133,7 +133,7 @@ describe("FeedbackGenerator", () => {
           durationMs: 120,
           contextSnapshotId: "ctx-3",
           errorDetected: false,
-          qualityScore: 0.85,
+          qualityScore: 0.7, // Below threshold to trigger recommendations
           improvementDelta: 0.1,
           resourceUsageMB: 15,
           promptModifications: [],

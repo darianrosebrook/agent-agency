@@ -8,6 +8,7 @@
  */
 
 import { Logger } from "@/observability/Logger";
+import type { AgentRegistry } from "@/types/agent-registry";
 import {
   type IResourceAllocator,
   type RateLimitConfig,
@@ -42,6 +43,7 @@ interface AllocationRecord {
 export class ResourceAllocator implements IResourceAllocator {
   private logger: Logger;
   private loadBalancer: LoadBalancer;
+  private agentRegistry: AgentRegistry;
   private activeAllocations: Map<string, AllocationRecord> = new Map();
   private rateLimitConfig: RateLimitConfig;
   private allocationStats = {
@@ -53,10 +55,12 @@ export class ResourceAllocator implements IResourceAllocator {
 
   constructor(
     loadBalancer: LoadBalancer,
+    agentRegistry: AgentRegistry,
     rateLimitConfig?: Partial<RateLimitConfig>
   ) {
     this.logger = new Logger("ResourceAllocator");
     this.loadBalancer = loadBalancer;
+    this.agentRegistry = agentRegistry;
     this.rateLimitConfig = {
       maxRequests: 1000,
       windowMs: 60000, // 1 minute
@@ -282,14 +286,48 @@ export class ResourceAllocator implements IResourceAllocator {
 
   /**
    * Get available agents
-   * In a real implementation, this would query the agent registry
+   * Queries the agent registry for agents that can handle general tasks
    *
    * @returns List of available agent IDs
    */
   private async getAvailableAgents(): Promise<string[]> {
-    // Placeholder: return mock agents
-    // In real implementation, query agent registry for healthy agents
-    return ["agent-1", "agent-2", "agent-3"];
+    try {
+      // Query for agents with basic capabilities (no specific requirements)
+      const basicQuery = {
+        taskType: "code-editing" as const,
+        requiredCapabilities: [],
+        minExpertiseLevel: "novice" as const,
+        maxResults: 10,
+      };
+
+      const results = await this.agentRegistry.getAgentsByCapability(
+        basicQuery
+      );
+
+      // Return agent IDs from the results
+      return results.map((result) => result.agent.id);
+    } catch (error) {
+      this.logger.warn("Failed to query agent registry for available agents", {
+        error,
+      });
+
+      // Fallback: try to get registry stats to see if there are any agents
+      try {
+        const stats = await this.agentRegistry.getStats();
+        if (stats.totalAgents > 0) {
+          // If we have agents but query failed, return a generic list
+          // This is still better than hardcoded mock data
+          this.logger.info(
+            `Registry has ${stats.totalAgents} agents but query failed`
+          );
+        }
+      } catch (statsError) {
+        this.logger.warn("Failed to get registry stats", { statsError });
+      }
+
+      // Return empty array as last resort - better than mock data
+      return [];
+    }
   }
 
   /**

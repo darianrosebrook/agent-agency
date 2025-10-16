@@ -10,6 +10,7 @@
  */
 
 import { DataCollector } from "../benchmarking/DataCollector";
+import { PerformanceTrackerDatabaseClient } from "../database/PerformanceTrackerDatabaseClient.js";
 import {
   PerformanceEvent,
   RoutingDecision,
@@ -54,6 +55,11 @@ export interface PerformanceTrackerConfig {
    * Whether to anonymize collected data.
    */
   anonymizeData: boolean;
+
+  /**
+   * Whether to enable database persistence.
+   */
+  enableDatabasePersistence?: boolean;
 }
 
 /**
@@ -65,6 +71,7 @@ const DEFAULT_CONFIG: PerformanceTrackerConfig = {
   retentionPeriodMs: 30 * 24 * 60 * 60 * 1000, // 30 days
   batchSize: 100,
   anonymizeData: true,
+  enableDatabasePersistence: true,
 };
 
 /**
@@ -168,6 +175,8 @@ export class PerformanceTracker {
   private taskExecutions: TaskExecutionData[] = [];
   private isCollecting: boolean = false;
   private dataCollector?: DataCollector;
+  private databaseClient?: PerformanceTrackerDatabaseClient;
+  private pendingEvents: PerformanceEvent[] = [];
 
   /**
    * Creates a new performance tracker instance.
@@ -182,6 +191,7 @@ export class PerformanceTracker {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.dataCollector = dataCollector; // Use provided collector if available
     this.initializeBenchmarkingIntegration();
+    this.initializeDatabaseClient();
   }
 
   /**
@@ -222,11 +232,45 @@ export class PerformanceTracker {
   }
 
   /**
+   * Initializes database client for persistent storage.
+   */
+  private initializeDatabaseClient(): void {
+    if (!this.config.enableDatabasePersistence) {
+      return;
+    }
+
+    try {
+      this.databaseClient = new PerformanceTrackerDatabaseClient({
+        enableQueryLogging: false,
+        enableRetries: true,
+        maxRetries: 3,
+        retryDelayMs: 1000,
+        batchSize: this.config.batchSize,
+      });
+    } catch (error) {
+      console.warn(
+        "Failed to initialize database client, using memory-only storage:",
+        error
+      );
+    }
+  }
+
+  /**
    * Starts data collection.
    */
-  startCollection(): void {
+  async startCollection(): Promise<void> {
     if (this.config.enabled) {
       this.isCollecting = true;
+
+      // Initialize database client if enabled
+      if (this.databaseClient && this.config.enableDatabasePersistence) {
+        try {
+          await this.databaseClient.initialize();
+        } catch (error) {
+          console.warn("Failed to initialize database client:", error);
+        }
+      }
+
       // Also start the benchmarking data collector
       if (this.dataCollector) {
         this.dataCollector.startCollection();
@@ -237,11 +281,86 @@ export class PerformanceTracker {
   /**
    * Stops data collection.
    */
-  stopCollection(): void {
+  async stopCollection(): Promise<void> {
     this.isCollecting = false;
-    // Also stop the benchmarking data collector
+
+    // Flush any pending events to database
+    await this.flushPendingEvents();
+
+    // Stop the benchmarking data collector
     if (this.dataCollector) {
       this.dataCollector.stopCollection();
+    }
+
+    // Shutdown database client
+    if (this.databaseClient) {
+      try {
+        await this.databaseClient.shutdown();
+      } catch (error) {
+        console.warn("Error during database client shutdown:", error);
+      }
+    }
+  }
+
+  /**
+   * Flushes pending events to database.
+   */
+  private async flushPendingEvents(): Promise<void> {
+    if (!this.databaseClient || this.pendingEvents.length === 0) {
+      return;
+    }
+
+    try {
+      await this.databaseClient.storePerformanceEventsBatch([
+        ...this.pendingEvents,
+      ]);
+      this.pendingEvents = [];
+    } catch (error) {
+      console.warn("Failed to flush pending events to database:", error);
+    }
+  }
+
+  /**
+   * Records an event with optional database persistence.
+   */
+  public async recordEvent(event: PerformanceEvent): Promise<void> {
+    if (!this.isCollecting) {
+      return;
+    }
+
+    // Store in memory
+    this.events.push(event);
+
+    // Convert to database format and store if enabled
+    if (this.databaseClient && this.config.enableDatabasePersistence) {
+      try {
+        const dbEvent = {
+          id: `${event.type}-${Date.now()}-${Math.random()
+            .toString(36)
+            .substr(2, 9)}`,
+          type: event.type,
+          agentId: (event.data?.agentId as string) || "",
+          taskId: (event.data?.taskId as string) || "",
+          timestamp: event.timestamp,
+          routingDecision: event.data?.routingDecision || {},
+          outcome: event.data?.outcome || {},
+          context: event.data || {},
+        };
+
+        this.pendingEvents.push(dbEvent as any);
+
+        // Flush if batch size reached
+        if (this.pendingEvents.length >= this.config.batchSize) {
+          await this.flushPendingEvents();
+        }
+      } catch (error) {
+        console.warn("Failed to prepare event for database:", error);
+      }
+    }
+
+    // Clean up old events if memory limit exceeded
+    if (this.events.length > this.config.maxEventsInMemory) {
+      this.events = this.events.slice(-this.config.maxEventsInMemory);
     }
   }
 
@@ -280,22 +399,18 @@ export class PerformanceTracker {
       },
     };
 
-    this.addEvent(event);
+    await this.recordEvent(event);
 
-    // Forward to data collector if available
-    if (this.dataCollector) {
+    // Store agent performance profile in database
+    if (this.databaseClient && this.config.enableDatabasePersistence) {
       try {
-        await this.dataCollector.recordAgentRegistration(agentId, {
+        await this.databaseClient.storeAgentPerformanceProfile(agentId, {
           capabilities: agentData.capabilities,
           baselineMetrics: agentData.baselineMetrics,
           registrationTimestamp: agentData.registrationTimestamp,
         });
       } catch (error) {
-        // Graceful degradation - log but don't fail
-        console.warn(
-          "Failed to record agent registration in benchmarking system:",
-          error
-        );
+        console.warn("Failed to store agent profile in database:", error);
       }
     }
   }
@@ -607,19 +722,6 @@ export class PerformanceTracker {
   }
 
   /**
-   * Records a general performance event.
-   *
-   * @param event - Performance event to record.
-   */
-  async recordEvent(event: PerformanceEvent): Promise<void> {
-    if (!this.isCollecting || !this.config.enabled) {
-      return;
-    }
-
-    this.addEvent(this.anonymizeDataIfNeeded(event) as PerformanceEvent);
-  }
-
-  /**
    * Records thinking budget allocation for RL training.
    *
    * @param taskId - Task identifier.
@@ -791,6 +893,43 @@ export class PerformanceTracker {
     };
 
     this.addEvent(event);
+  }
+
+  /**
+   * Records task performance metrics from agent registry updates.
+   *
+   * @param agentId - ID of the agent that completed the task
+   * @param taskType - Type of task performed
+   * @param metrics - Performance metrics from the task execution
+   */
+  async recordTaskPerformance(
+    agentId: string,
+    taskType: string,
+    metrics: import("../types/agent-registry").PerformanceMetrics
+  ): Promise<void> {
+    if (!this.isCollecting || !this.config.enabled) {
+      return;
+    }
+
+    const event: PerformanceEvent = {
+      type: "task-execution",
+      timestamp: new Date().toISOString(),
+      data: {
+        agentId,
+        taskType,
+        success: metrics.success,
+        qualityScore: metrics.qualityScore,
+        latencyMs: metrics.latencyMs,
+        tokensUsed: metrics.tokensUsed,
+        eventType: "agent_performance",
+      },
+    };
+
+    this.addEvent(event);
+
+    // Note: DataCollector integration for task performance could be added here
+    // but requires mapping agent-registry PerformanceMetrics to performance-tracking PerformanceMetrics
+    // For now, we rely on the event-based storage in the PerformanceTracker itself
   }
 
   /**

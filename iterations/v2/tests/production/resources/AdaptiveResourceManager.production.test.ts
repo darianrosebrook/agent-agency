@@ -39,8 +39,41 @@ describe("AdaptiveResourceManager Production Validation", () => {
     });
     await healthMonitor.initialize();
 
+    // Create mock agent registry for production test
+    const mockAgentRegistry = {
+      initialize: async () => {},
+      getAgentsByCapability: async () => [
+        {
+          agent: {
+            id: "prod-agent-1",
+            name: "Production Agent 1",
+            capabilities: ["task-execution", "resource-management"],
+            expertiseLevel: "expert" as const,
+            status: "active" as const,
+            performanceScore: 0.95,
+            specialization: ["production-workloads"],
+            createdAt: new Date(),
+            lastActive: new Date(),
+          },
+          score: 0.95,
+          matchReasons: ["expert level", "production specialization"],
+        },
+      ],
+      updatePerformance: async () => ({} as any),
+      getStats: async () => ({
+        totalAgents: 5,
+        activeAgents: 5,
+        averagePerformanceScore: 0.9,
+        specializationDistribution: {
+          "production-workloads": 3,
+          "development-tasks": 2,
+        },
+      }),
+      getProfile: async () => ({} as any),
+    };
+
     // Initialize AdaptiveResourceManager with production-like configuration
-    resourceManager = new AdaptiveResourceManager({
+    resourceManager = new AdaptiveResourceManager(mockAgentRegistry, {
       enabled: true,
       monitoringIntervalMs: 1000,
       loadBalancingStrategy: LoadBalancingStrategy.LEAST_LOADED,
