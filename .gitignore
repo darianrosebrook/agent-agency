@@ -8,6 +8,14 @@
 .caws/.cache/
 .caws/tmp/
 
+# CAWS workspace state snapshots (auto-generated)
+.caws/workspace-state/**/snapshot-*.json
+**/.caws/workspace-state/**/snapshot-*.json
+
+# CAWS runtime artifacts and temporary outputs
+iterations/*/output/
+iterations/*/current_*.txt
+
 # Build outputs (common patterns)
 dist/
 build/
