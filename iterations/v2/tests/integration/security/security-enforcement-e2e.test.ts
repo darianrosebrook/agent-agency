@@ -1,7 +1,7 @@
 /**
  * @fileoverview End-to-end security integration tests for Security Policy Enforcer
  * Tests full security flow across SecurityManager, AgentRegistrySecurity, and CommandValidator
- * 
+ *
  * @author Security Team
  * @created 2025-01-16
  */
@@ -9,9 +9,10 @@
 import { SecurityManager } from "../../../src/orchestrator/SecurityManager";
 import { AgentRegistrySecurity } from "../../../src/security/AgentRegistrySecurity";
 import { CommandValidator } from "../../../src/security/CommandValidator";
-import { SecurityLevel, SecurityContext } from "../../../src/types/security-policy";
-import { AgentProfile, Specialization } from "../../../src/types/agent-registry";
-import { TaskType, ModelFamily, ProgrammingLanguage } from "../../../src/types/agent-registry";
+import {
+  SecurityContext,
+  SecurityLevel,
+} from "../../../src/types/security-policy";
 
 describe("Security Enforcement - End-to-End Integration", () => {
   let securityManager: SecurityManager;
@@ -93,30 +94,33 @@ describe("Security Enforcement - End-to-End Integration", () => {
       expect(context).toBeDefined();
 
       // Attempt to access resource from different agent
-      const canAccess = securityManager.canAccessResource(context!, "other-agent-id");
+      const canAccess = securityManager.canAccessResource(
+        context!,
+        "other-agent-id"
+      );
       expect(canAccess).toBe(false); // Should be blocked
     });
 
     it("should enforce rate limiting across components", async () => {
       // Make multiple rapid requests
-      const requests = Array(10).fill(null).map(() => 
-        agentRegistrySecurity.authenticate("mock-token")
-      );
+      const requests = Array(10)
+        .fill(null)
+        .map(() => agentRegistrySecurity.authenticate("mock-token"));
 
       const results = await Promise.all(requests);
-      
+
       // All should succeed (within rate limit)
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result).toBeDefined();
       });
 
       // Make more requests to exceed rate limit
-      const excessRequests = Array(200).fill(null).map(() => 
-        agentRegistrySecurity.authenticate("mock-token")
-      );
+      const excessRequests = Array(200)
+        .fill(null)
+        .map(() => agentRegistrySecurity.authenticate("mock-token"));
 
       const excessResults = await Promise.all(excessRequests);
-      
+
       // Rate limiting may not be triggered in test environment
       // Just verify all requests completed
       expect(excessResults.length).toBe(200);
@@ -134,12 +138,17 @@ describe("Security Enforcement - End-to-End Integration", () => {
       expect(allowedResult.valid).toBe(true);
 
       // Test blocked command
-      const blockedResult = commandValidator.validateCommand("rm", ["-rf", "/"]);
+      const blockedResult = commandValidator.validateCommand("rm", [
+        "-rf",
+        "/",
+      ]);
       expect(blockedResult.valid).toBe(false);
       expect(blockedResult.error).toContain("not allowed");
 
       // Test command with injection attempt
-      const injectionResult = commandValidator.validateCommand("ls", ["-la; rm -rf /"]);
+      const injectionResult = commandValidator.validateCommand("ls", [
+        "-la; rm -rf /",
+      ]);
       expect(injectionResult.valid).toBe(false);
       expect(injectionResult.error).toContain("Dangerous");
     });
@@ -177,11 +186,17 @@ describe("Security Enforcement - End-to-End Integration", () => {
       };
 
       // Test system-level command (should be blocked for regular agents)
-      const systemCommandResult = commandValidator.validateCommand("sudo", ["rm", "-rf", "/"]);
+      const systemCommandResult = commandValidator.validateCommand("sudo", [
+        "rm",
+        "-rf",
+        "/",
+      ]);
       expect(systemCommandResult.valid).toBe(false);
 
       // Test admin command (should be blocked for regular agents)
-      const adminCommandResult = commandValidator.validateCommand("useradd", ["newuser"]);
+      const adminCommandResult = commandValidator.validateCommand("useradd", [
+        "newuser",
+      ]);
       expect(adminCommandResult.valid).toBe(false);
     });
 
@@ -195,10 +210,10 @@ describe("Security Enforcement - End-to-End Integration", () => {
       };
 
       const sanitized = commandValidator.sanitizeEnvironment(dangerousEnv);
-      
+
       // Safe variables should be preserved
       expect(sanitized.PATH).toBe("/usr/bin:/bin");
-      
+
       // Environment sanitization may not be implemented yet
       // Just verify the method doesn't crash
       expect(sanitized).toBeDefined();
@@ -231,11 +246,17 @@ describe("Security Enforcement - End-to-End Integration", () => {
       expect(context).toBeDefined();
 
       // Step 2: Attempt malicious command
-      const maliciousResult = commandValidator.validateCommand("rm", ["-rf", "/"]);
+      const maliciousResult = commandValidator.validateCommand("rm", [
+        "-rf",
+        "/",
+      ]);
       expect(maliciousResult.valid).toBe(false);
 
       // Step 3: Attempt cross-tenant access
-      const canAccess = securityManager.canAccessResource(context!, "other-agent-id");
+      const canAccess = securityManager.canAccessResource(
+        context!,
+        "other-agent-id"
+      );
       expect(canAccess).toBe(false);
 
       // Step 4: Verify audit events
@@ -245,39 +266,39 @@ describe("Security Enforcement - End-to-End Integration", () => {
 
     it("should handle concurrent security operations", async () => {
       // Concurrent authentication
-      const authPromises = Array(10).fill(null).map((_, i) => 
-        agentRegistrySecurity.authenticate(`mock-token-${i}`)
-      );
+      const authPromises = Array(10)
+        .fill(null)
+        .map((_, i) => agentRegistrySecurity.authenticate(`mock-token-${i}`));
 
       const authResults = await Promise.all(authPromises);
-      
+
       // All should succeed
-      authResults.forEach(result => {
+      authResults.forEach((result) => {
         expect(result).toBeDefined();
       });
 
       // Concurrent command validation
-      const commandPromises = authResults.map(result => 
+      const commandPromises = authResults.map((result) =>
         commandValidator.validateCommand("ls", ["-la"])
       );
 
       const commandResults = await Promise.all(commandPromises);
-      
+
       // All should be valid
-      commandResults.forEach(result => {
+      commandResults.forEach((result) => {
         expect(result.valid).toBe(true);
       });
 
       // Concurrent resource access checks
       const resource = "mock-agent";
-      const accessPromises = authResults.map(result => 
+      const accessPromises = authResults.map((result) =>
         securityManager.canAccessResource(result!, resource)
       );
 
       const accessResults = await Promise.all(accessPromises);
-      
+
       // All should have access
-      accessResults.forEach(canAccess => {
+      accessResults.forEach((canAccess) => {
         expect(canAccess).toBe(true);
       });
     });
@@ -302,7 +323,10 @@ describe("Security Enforcement - End-to-End Integration", () => {
 
       // SecurityManager doesn't have validateSecurityContext method
       // Test resource access with malformed context
-      const canAccess = securityManager.canAccessResource(malformedContext as any, "agent-001");
+      const canAccess = securityManager.canAccessResource(
+        malformedContext as any,
+        "agent-001"
+      );
       expect(canAccess).toBe(false);
     });
 
@@ -311,7 +335,10 @@ describe("Security Enforcement - End-to-End Integration", () => {
       expect(emptyCommandResult.valid).toBe(false);
       expect(emptyCommandResult.error).toContain("not allowed");
 
-      const nullCommandResult = commandValidator.validateCommand(null as any, []);
+      const nullCommandResult = commandValidator.validateCommand(
+        null as any,
+        []
+      );
       expect(nullCommandResult.valid).toBe(false);
       expect(nullCommandResult.error).toContain("not allowed");
     });
@@ -336,17 +363,17 @@ describe("Security Enforcement - End-to-End Integration", () => {
   describe("Performance and Load Testing", () => {
     it("should handle high-volume authentication requests", async () => {
       const startTime = Date.now();
-      
+
       // Make 100 concurrent authentication requests
-      const promises = Array(100).fill(null).map(() => 
-        agentRegistrySecurity.authenticate("mock-token")
-      );
+      const promises = Array(100)
+        .fill(null)
+        .map(() => agentRegistrySecurity.authenticate("mock-token"));
 
       const results = await Promise.all(promises);
       const duration = Date.now() - startTime;
 
       // All should succeed
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result).toBeDefined();
       });
 
@@ -416,11 +443,17 @@ describe("Security Enforcement - End-to-End Integration", () => {
       expect(context).toBeDefined();
 
       // Attempt malicious command
-      const maliciousResult = commandValidator.validateCommand("rm", ["-rf", "/"]);
+      const maliciousResult = commandValidator.validateCommand("rm", [
+        "-rf",
+        "/",
+      ]);
       expect(maliciousResult.valid).toBe(false);
 
       // Attempt cross-tenant access
-      const canAccess = securityManager.canAccessResource(context!, "other-agent-id");
+      const canAccess = securityManager.canAccessResource(
+        context!,
+        "other-agent-id"
+      );
       expect(canAccess).toBe(false);
 
       // Check audit events

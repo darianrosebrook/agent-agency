@@ -272,28 +272,24 @@ export class VerificationEngineImpl implements VerificationEngine {
         averageProcessingTime = healthData.responseTime;
         break;
       case VerificationType.LOGICAL_VALIDATION:
-        // Logical validator doesn't have health tracking yet, use defaults
-        healthData = { available: true, responseTime: 50, errorRate: 0.01 };
-        successRate = 0.99;
-        averageProcessingTime = 50;
+        healthData = this.logicalValidator.getHealth();
+        successRate = 1 - healthData.errorRate;
+        averageProcessingTime = healthData.responseTime;
         break;
       case VerificationType.CROSS_REFERENCE:
-        // Cross-reference validator doesn't have health tracking yet, use defaults
-        healthData = { available: true, responseTime: 75, errorRate: 0.02 };
-        successRate = 0.98;
-        averageProcessingTime = 75;
+        healthData = this.crossReferenceValidator.getHealth();
+        successRate = 1 - healthData.errorRate;
+        averageProcessingTime = healthData.responseTime;
         break;
       case VerificationType.STATISTICAL_VALIDATION:
-        // Statistical validator doesn't have health tracking yet, use defaults
-        healthData = { available: true, responseTime: 100, errorRate: 0.03 };
-        successRate = 0.97;
-        averageProcessingTime = 100;
+        healthData = this.statisticalValidator.getHealth();
+        successRate = 1 - healthData.errorRate;
+        averageProcessingTime = healthData.responseTime;
         break;
       case VerificationType.CONSISTENCY_VALIDATION:
-        // Consistency validator doesn't have health tracking yet, use defaults
-        healthData = { available: true, responseTime: 60, errorRate: 0.015 };
-        successRate = 0.985;
-        averageProcessingTime = 60;
+        healthData = this.consistencyValidator.getHealth();
+        successRate = 1 - healthData.errorRate;
+        averageProcessingTime = healthData.responseTime;
         break;
       default:
         healthData = { available: false, responseTime: 0, errorRate: 1 };
@@ -645,21 +641,49 @@ export class VerificationEngineImpl implements VerificationEngine {
       Array.isArray(result.reasoning) ? result.reasoning : [result.reasoning]
     );
 
-    // Create aggregated evidence (simplified)
+    // Aggregate evidence from all verification methods
     const supportingEvidence: Evidence[] = [];
     const contradictoryEvidence: Evidence[] = [];
+    const evidenceMap = new Map<string, Evidence>();
 
-    // In a real implementation, this would aggregate evidence from all methods
-    // For now, we create placeholder evidence
+    // Collect all evidence from verification methods
+    for (const result of validResults) {
+      if (result.supportingEvidence) {
+        for (const evidence of result.supportingEvidence) {
+          const key = this.generateEvidenceKey(evidence);
+          if (!evidenceMap.has(key)) {
+            evidenceMap.set(key, evidence);
+            supportingEvidence.push(evidence);
+          }
+        }
+      }
+
+      if (result.contradictoryEvidence) {
+        for (const evidence of result.contradictoryEvidence) {
+          const key = this.generateEvidenceKey(evidence);
+          if (!evidenceMap.has(key)) {
+            evidenceMap.set(key, evidence);
+            contradictoryEvidence.push(evidence);
+          }
+        }
+      }
+    }
+
+    // Resolve conflicts between supporting and contradictory evidence
+    const resolvedEvidence = this.resolveEvidenceConflicts(
+      supportingEvidence,
+      contradictoryEvidence
+    );
 
     return {
       requestId: request.id,
       verdict: consensusVerdict,
       confidence: Math.min(1.0, adjustedConfidence),
       reasoning: allReasoning,
-      supportingEvidence,
-      contradictoryEvidence,
+      supportingEvidence: resolvedEvidence.supporting,
+      contradictoryEvidence: resolvedEvidence.contradictory,
       verificationMethods: methodResults,
+      methodResults: methodResults, // Alias for backward compatibility
       processingTimeMs,
     };
   }
@@ -776,5 +800,262 @@ export class VerificationEngineImpl implements VerificationEngine {
       );
       return [];
     }
+  }
+
+  /**
+   * Generate a unique key for evidence deduplication
+   */
+  private generateEvidenceKey(evidence: Evidence): string {
+    // Create a key based on evidence content and source
+    const content = JSON.stringify(evidence.content);
+    const source = evidence.source || "unknown";
+    const type = evidence.type || "unknown";
+
+    // Use a simple hash of the content for deduplication
+    return `${type}:${source}:${this.simpleHash(content)}`;
+  }
+
+  /**
+   * Simple hash function for evidence deduplication
+   */
+  private simpleHash(str: string): string {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
+  }
+
+  /**
+   * Check if two pieces of evidence are conflicting
+   */
+  private isEvidenceConflicting(
+    evidence1: Evidence,
+    evidence2: Evidence
+  ): boolean {
+    // Simple conflict detection based on content similarity
+    // In a real implementation, this would use more sophisticated NLP
+    const content1 = JSON.stringify(evidence1.content).toLowerCase();
+    const content2 = JSON.stringify(evidence2.content).toLowerCase();
+
+    // Check for significant overlap in content
+    const words1 = content1.split(/\s+/);
+    const words2 = content2.split(/\s+/);
+
+    const commonWords = words1.filter((word) => words2.includes(word));
+    const similarity =
+      commonWords.length / Math.max(words1.length, words2.length);
+
+    // Consider it conflicting if similarity is above threshold
+    return similarity > 0.3;
+  }
+
+  /**
+   * Resolve a conflict between two pieces of evidence
+   */
+  private resolveEvidenceConflict(
+    supporting: Evidence,
+    contradictory: Evidence
+  ): { winner: "supporting" | "contradictory"; reasoning: string } {
+    // Simple resolution based on evidence strength and recency
+    const supportStrength = this.calculateEvidenceStrength(supporting);
+    const contraStrength = this.calculateEvidenceStrength(contradictory);
+
+    // If strengths are similar, prefer more recent evidence
+    if (Math.abs(supportStrength - contraStrength) < 0.1) {
+      const supportTime = supporting.timestamp?.getTime() || 0;
+      const contraTime = contradictory.timestamp?.getTime() || 0;
+
+      if (supportTime > contraTime) {
+        return {
+          winner: "supporting",
+          reasoning: "Supporting evidence is more recent",
+        };
+      } else {
+        return {
+          winner: "contradictory",
+          reasoning: "Contradictory evidence is more recent",
+        };
+      }
+    }
+
+    // Otherwise, prefer stronger evidence
+    if (supportStrength > contraStrength) {
+      return {
+        winner: "supporting",
+        reasoning: `Supporting evidence is stronger (${supportStrength.toFixed(
+          2
+        )} vs ${contraStrength.toFixed(2)})`,
+      };
+    } else {
+      return {
+        winner: "contradictory",
+        reasoning: `Contradictory evidence is stronger (${contraStrength.toFixed(
+          2
+        )} vs ${supportStrength.toFixed(2)})`,
+      };
+    }
+  }
+
+  /**
+   * Calculate the strength of a piece of evidence
+   */
+  private calculateEvidenceStrength(evidence: Evidence): number {
+    let strength = 0.5; // Base strength
+
+    // Boost strength based on evidence type
+    switch (evidence.type) {
+      case "factual":
+        strength += 0.3;
+        break;
+      case "statistical":
+        strength += 0.2;
+        break;
+      case "testimonial":
+        strength += 0.1;
+        break;
+      case "circumstantial":
+        strength -= 0.1;
+        break;
+    }
+
+    // Boost strength based on source reliability
+    if (evidence.source) {
+      if (
+        evidence.source.includes("official") ||
+        evidence.source.includes("government")
+      ) {
+        strength += 0.2;
+      } else if (
+        evidence.source.includes("peer-reviewed") ||
+        evidence.source.includes("academic")
+      ) {
+        strength += 0.15;
+      } else if (
+        evidence.source.includes("news") ||
+        evidence.source.includes("media")
+      ) {
+        strength += 0.05;
+      }
+    }
+
+    // Boost strength based on recency (if timestamp available)
+    if (evidence.timestamp) {
+      const age = Date.now() - evidence.timestamp.getTime();
+      const ageInDays = age / (1000 * 60 * 60 * 24);
+
+      if (ageInDays < 1) {
+        strength += 0.1; // Very recent
+      } else if (ageInDays < 7) {
+        strength += 0.05; // Recent
+      } else if (ageInDays > 365) {
+        strength -= 0.1; // Old
+      }
+    }
+
+    return Math.max(0, Math.min(1, strength));
+  }
+
+  /**
+   * Resolve conflicts between supporting and contradictory evidence
+   * by comparing credibility scores and removing duplicates
+   */
+  private resolveEvidenceConflicts(
+    supportingEvidence: Evidence[],
+    contradictoryEvidence: Evidence[]
+  ): { supporting: Evidence[]; contradictory: Evidence[] } {
+    const supportingMap = new Map<string, Evidence>();
+    const contradictoryMap = new Map<string, Evidence>();
+
+    // Process supporting evidence
+    for (const evidence of supportingEvidence) {
+      const key = this.generateEvidenceKey(evidence);
+      const existing = supportingMap.get(key);
+
+      if (!existing) {
+        supportingMap.set(key, evidence);
+      } else {
+        // If we have duplicate evidence, keep the one with higher credibility
+        if (
+          this.calculateEvidenceStrength(evidence) >
+          this.calculateEvidenceStrength(existing)
+        ) {
+          supportingMap.set(key, evidence);
+        }
+      }
+    }
+
+    // Process contradictory evidence
+    for (const evidence of contradictoryEvidence) {
+      const key = this.generateEvidenceKey(evidence);
+      const existing = contradictoryMap.get(key);
+
+      if (!existing) {
+        contradictoryMap.set(key, evidence);
+      } else {
+        // If we have duplicate evidence, keep the one with higher credibility
+        if (
+          this.calculateEvidenceStrength(evidence) >
+          this.calculateEvidenceStrength(existing)
+        ) {
+          contradictoryMap.set(key, evidence);
+        }
+      }
+    }
+
+    // Remove contradictory evidence that has stronger supporting evidence
+    const finalSupporting: Evidence[] = [];
+    const finalContradictory: Evidence[] = [];
+
+    for (const [key, supporting] of supportingMap.entries()) {
+      const contradictory = contradictoryMap.get(key);
+
+      if (contradictory) {
+        // Compare evidence strength
+        const supportingStrength = this.calculateEvidenceStrength(supporting);
+        const contradictoryStrength =
+          this.calculateEvidenceStrength(contradictory);
+
+        if (supportingStrength > contradictoryStrength) {
+          // Supporting evidence is stronger, keep it
+          finalSupporting.push(supporting);
+        } else if (contradictoryStrength > supportingStrength) {
+          // Contradictory evidence is stronger, keep it
+          finalContradictory.push(contradictory);
+        } else {
+          // Equal strength - keep both but mark as conflicting
+          supporting.metadata = {
+            ...supporting.metadata,
+            conflicting: true,
+            conflictStrength: contradictoryStrength,
+          };
+          contradictory.metadata = {
+            ...contradictory.metadata,
+            conflicting: true,
+            conflictStrength: supportingStrength,
+          };
+          finalSupporting.push(supporting);
+          finalContradictory.push(contradictory);
+        }
+
+        // Remove from contradictory map since we've processed it
+        contradictoryMap.delete(key);
+      } else {
+        // No conflict, add to final supporting evidence
+        finalSupporting.push(supporting);
+      }
+    }
+
+    // Add remaining contradictory evidence that wasn't in conflict
+    for (const contradictory of contradictoryMap.values()) {
+      finalContradictory.push(contradictory);
+    }
+
+    return {
+      supporting: finalSupporting,
+      contradictory: finalContradictory,
+    };
   }
 }

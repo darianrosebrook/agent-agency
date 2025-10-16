@@ -16,7 +16,11 @@ import { ConnectionPoolManager } from "@/database/ConnectionPoolManager";
 jest.setTimeout(30000);
 
 // Setup timer mocks to prevent hanging tests
-jest.useFakeTimers();
+// Use fake timers but allow real timers for database operations
+jest.useFakeTimers({
+  advanceTimers: false,
+  doNotFake: ["setImmediate", "setInterval", "setTimeout"],
+});
 
 // Global test setup
 // eslint-disable-next-line no-undef
@@ -67,10 +71,7 @@ beforeAll(async () => {
 // Global test teardown
 // eslint-disable-next-line no-undef
 afterAll(async () => {
-  // Restore real timers for cleanup
-  jest.useRealTimers();
-
-  // Cleanup database connection pool
+  // Cleanup database connection pool first
   try {
     const manager = ConnectionPoolManager.getInstance();
     if (manager.isInitialized()) {
@@ -83,6 +84,12 @@ afterAll(async () => {
       error instanceof Error ? error.message : error
     );
   }
+
+  // Reset singleton for clean state between test suites
+  ConnectionPoolManager.resetForTesting();
+
+  // Restore real timers for cleanup
+  jest.useRealTimers();
 
   // Give a moment for any remaining async operations to complete
   await new Promise((resolve) => setTimeout(resolve, 100));

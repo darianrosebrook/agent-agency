@@ -1,16 +1,15 @@
-/** @type {import('jest').Config} */
-module.exports = {
+const config = {
   preset: "ts-jest/presets/default-esm",
   testEnvironment: "node",
   extensionsToTreatAsEsm: [".ts"],
   globals: {
     "ts-jest": {
       useESM: true,
-      tsconfig: "tsconfig.json",
+      tsconfig: "iterations/v2/tsconfig.json",
     },
   },
   moduleNameMapper: {
-    "^@/(.*)$": "<rootDir>/src/$1",
+    "^@/(.*)$": "<rootDir>/iterations/v2/src/$1",
     "^(\\.\\.?\\/.*)\\.js$": "$1",
   },
   testMatch: ["**/__tests__/**/*.ts", "**/?(*.)+(spec|test).ts"],
@@ -20,9 +19,10 @@ module.exports = {
     "!src/**/index.ts",
   ],
   coverageReporters: ["text", "lcov", "html"],
-  setupFilesAfterEnv: ["<rootDir>/tests/setup.ts"],
+  setupFilesAfterEnv: ["<rootDir>/iterations/v2/tests/setup.ts"],
   testTimeout: 10000,
   detectOpenHandles: true,
-  noWatch: true,
   forceExit: true,
 };
+
+export default config;

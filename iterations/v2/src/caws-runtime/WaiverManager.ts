@@ -8,6 +8,13 @@
  */
 
 import { EventEmitter } from "events";
+import { AuditConfig, AuditLogger } from "../adapters/AuditLogger.js";
+import {
+  NotificationAdapter,
+  NotificationConfig,
+  NotificationMessage,
+} from "../adapters/NotificationAdapter.js";
+import { Logger } from "../observability/Logger.js";
 import {
   EvaluationContext,
   OperationContext,
@@ -18,6 +25,31 @@ import {
 
 export class WaiverManager extends EventEmitter {
   private waivers: Map<string, WaiverRequest> = new Map();
+  private notificationAdapter?: NotificationAdapter;
+  private auditLogger?: AuditLogger;
+  private logger: Logger;
+
+  constructor(
+    notificationConfig?: NotificationConfig,
+    auditConfig?: AuditConfig,
+    logger?: Logger
+  ) {
+    super();
+    this.logger = logger || new Logger("WaiverManager");
+
+    // Initialize notification adapter
+    if (notificationConfig) {
+      this.notificationAdapter = new NotificationAdapter(
+        notificationConfig,
+        this.logger
+      );
+    }
+
+    // Initialize audit logger
+    if (auditConfig) {
+      this.auditLogger = new AuditLogger(auditConfig, this.logger);
+    }
+  }
 
   /**
    * Request a waiver for policy violations
@@ -328,13 +360,71 @@ export class WaiverManager extends EventEmitter {
    * Notify approvers of waiver request
    */
   private async notifyApprovers(waiver: WaiverRequest): Promise<void> {
-    // In a real implementation, this would send notifications
-    // via email, Slack, or other communication channels
-    console.log(
-      `Waiver ${waiver.id} requires approval for policy ${waiver.policyId}`
-    );
-    console.log(`Reason: ${waiver.reason}`);
-    console.log(`Requested by: ${waiver.requestedBy}`);
+    if (!this.notificationAdapter) {
+      this.logger.warn(
+        "No notification adapter configured, skipping approver notification"
+      );
+      return;
+    }
+
+    try {
+      const message: NotificationMessage = {
+        title: "Waiver Request Requires Approval",
+        body: `A waiver request has been submitted for policy ${
+          waiver.policyId
+        }.
+
+Request Details:
+- Waiver ID: ${waiver.id}
+- Policy: ${waiver.policyId}
+- Operation Pattern: ${waiver.operationPattern}
+- Reason: ${waiver.reason}
+- Justification: ${waiver.justification}
+- Requested by: ${waiver.requestedBy}
+- Expires: ${waiver.expiresAt.toISOString()}
+
+Please review and approve or reject this waiver request.`,
+        priority: "high",
+        metadata: {
+          waiverId: waiver.id,
+          policyId: waiver.policyId,
+          requestedBy: waiver.requestedBy,
+          expiresAt: waiver.expiresAt.toISOString(),
+        },
+      };
+
+      const results = await this.notificationAdapter.sendToDefaultRecipients(
+        message
+      );
+
+      const successCount = results.filter((r) => r.success).length;
+      const failureCount = results.filter((r) => !r.success).length;
+
+      this.logger.info("Waiver approval notifications sent", {
+        waiverId: waiver.id,
+        successCount,
+        failureCount,
+        totalRecipients: results.length,
+      });
+
+      if (failureCount > 0) {
+        this.logger.warn("Some waiver notifications failed", {
+          waiverId: waiver.id,
+          failures: results
+            .filter((r) => !r.success)
+            .map((r) => ({
+              recipientId: r.recipientId,
+              channel: r.channel,
+              error: r.error,
+            })),
+        });
+      }
+    } catch (error) {
+      this.logger.error("Failed to send waiver approval notifications", {
+        waiverId: waiver.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   /**
@@ -346,21 +436,74 @@ export class WaiverManager extends EventEmitter {
     actor: string,
     details?: string
   ): Promise<void> {
-    // In a real implementation, this would write to audit logs
-    const logEntry = {
-      waiverId: waiver.id,
-      policyId: waiver.policyId,
-      action,
-      actor,
-      details,
-      timestamp: new Date(),
-    };
+    if (!this.auditLogger) {
+      this.logger.warn("No audit logger configured, skipping audit log");
+      return;
+    }
 
-    console.log(
-      `Waiver ${waiver.id} ${action} by ${actor}${
-        details ? `: ${details}` : ""
-      }`
-    );
+    try {
+      // Determine severity based on action
+      let severity: "low" | "medium" | "high" | "critical" = "medium";
+      if (action === "approved" || action === "rejected") {
+        severity = "high";
+      } else if (action === "revoked") {
+        severity = "critical";
+      }
+
+      // Determine outcome
+      let outcome: "success" | "failure" | "partial" = "success";
+      if (action === "rejected") {
+        outcome = "failure";
+      }
+
+      await this.auditLogger.logEvent(
+        "waiver_action",
+        {
+          id: actor,
+          type: "user",
+          name: actor,
+        },
+        {
+          type: "waiver",
+          id: waiver.id,
+          name: `Policy ${waiver.policyId} Waiver`,
+        },
+        action,
+        outcome,
+        {
+          waiverId: waiver.id,
+          policyId: waiver.policyId,
+          operationPattern: waiver.operationPattern,
+          reason: waiver.reason,
+          justification: waiver.justification,
+          requestedBy: waiver.requestedBy,
+          status: waiver.status,
+          expiresAt: waiver.expiresAt.toISOString(),
+          details,
+        },
+        {
+          severity,
+          compliance: {
+            regulations: ["SOX", "GDPR", "HIPAA"],
+            dataClassification: "confidential",
+            retentionPeriod: 2555, // 7 years
+          },
+        }
+      );
+
+      this.logger.debug("Waiver action logged to audit trail", {
+        waiverId: waiver.id,
+        action,
+        actor,
+      });
+    } catch (error) {
+      this.logger.error("Failed to log waiver action to audit trail", {
+        waiverId: waiver.id,
+        action,
+        actor,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   /**
@@ -369,5 +512,54 @@ export class WaiverManager extends EventEmitter {
   clear(): void {
     this.waivers.clear();
     this.emit("waivers:cleared");
+  }
+
+  /**
+   * Health check for notification and audit systems
+   */
+  async healthCheck(): Promise<{
+    healthy: boolean;
+    notifications: boolean;
+    audit: boolean;
+    activeWaivers: number;
+  }> {
+    const health = {
+      healthy: true,
+      notifications: true,
+      audit: true,
+      activeWaivers: this.waivers.size,
+    };
+
+    // Check notification adapter health
+    if (this.notificationAdapter) {
+      try {
+        const notificationHealth = await this.notificationAdapter.healthCheck();
+        health.notifications = notificationHealth.healthy;
+        if (!notificationHealth.healthy) health.healthy = false;
+      } catch (error) {
+        health.notifications = false;
+        health.healthy = false;
+        this.logger.error("Notification adapter health check failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    // Check audit logger health
+    if (this.auditLogger) {
+      try {
+        const auditHealth = await this.auditLogger.healthCheck();
+        health.audit = auditHealth.healthy;
+        if (!auditHealth.healthy) health.healthy = false;
+      } catch (error) {
+        health.audit = false;
+        health.healthy = false;
+        this.logger.error("Audit logger health check failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    return health;
   }
 }

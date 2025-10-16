@@ -1,0 +1,24 @@
+{
+  "packageManager": "npm",
+  "reporters": ["clear-text", "progress"],
+  "testRunner": "jest",
+  "coverageAnalysis": "off",
+  "mutate": [
+    "src/orchestrator/SecurityManager.ts"
+  ],
+  "mutator": {
+    "plugins": ["typescript"]
+  },
+  "timeoutMS": 10000,
+  "maxConcurrentTestRunners": 1,
+  "thresholds": {
+    "high": 80,
+    "low": 70,
+    "break": 70
+  },
+  "ignorePatterns": [
+    "dist",
+    "node_modules",
+    "coverage"
+  ]
+}

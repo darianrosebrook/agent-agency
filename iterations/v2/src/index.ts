@@ -8,7 +8,9 @@
  */
 
 import { ConnectionPoolManager } from "@/database/ConnectionPoolManager";
+import { PerformanceTrackerDatabaseClient } from "@/database/PerformanceTrackerDatabaseClient";
 import { ArbiterMCPServer } from "@/mcp-server/ArbiterMCPServer";
+import { SystemHealthMonitor } from "@/monitoring/SystemHealthMonitor";
 import { Logger } from "@/observability/Logger";
 import {
   ObserverBridge,
@@ -229,13 +231,7 @@ async function startHttpServer(): Promise<void> {
     const config = await loadObserverConfig();
 
     // Create observer store
-    const store = new ObserverStoreImpl({
-      dataDir: process.env.OBSERVER_DATA_DIR || "./observer-data",
-      enablePersistence: true,
-      enableRedaction: true,
-      maxEventsInMemory: 1000,
-      flushIntervalMs: 5000,
-    });
+    const store = new ObserverStoreImpl(config, runtime);
 
     // Create a mock controller for now - TODO: implement proper ArbiterController
     const mockController = {
@@ -271,8 +267,27 @@ async function startMcpServer(): Promise<void> {
     // Create terminal session manager for MCP server
     const terminalManager = new TerminalSessionManager();
 
-    // Create orchestrator instance with default config
-    orchestrator = new ArbiterOrchestrator(defaultArbiterOrchestratorConfig);
+    // Initialize database client for metrics storage
+    const databaseClient = new PerformanceTrackerDatabaseClient({
+      enableQueryLogging: false,
+      enableRetries: true,
+      maxRetries: 3,
+      retryDelayMs: 1000,
+      batchSize: 100,
+    });
+
+    // Initialize database client
+    await databaseClient.initialize();
+
+    // Create system health monitor with database client
+    const systemHealthMonitor = new SystemHealthMonitor({}, databaseClient);
+
+    // Create orchestrator instance with default config and system health monitor
+    orchestrator = new ArbiterOrchestrator(
+      defaultArbiterOrchestratorConfig,
+      undefined,
+      systemHealthMonitor
+    );
 
     // Initialize orchestrator
     await orchestrator.initialize();

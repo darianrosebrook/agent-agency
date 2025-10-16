@@ -79,6 +79,10 @@ export class CredibilityScorer {
       const aggregatedResult = this.aggregateCredibilityResults(sourceAnalyses);
       const processingTime = Math.max(1, Date.now() - startTime);
 
+      // Generate evidence from credibility analysis
+      const { supportingEvidence, contradictoryEvidence } =
+        this.generateEvidenceFromAnalyses(sourceAnalyses);
+
       // Record successful verification
       this.recordSuccess(processingTime);
 
@@ -89,6 +93,8 @@ export class CredibilityScorer {
         reasoning: aggregatedResult.explanations,
         processingTimeMs: processingTime,
         evidenceCount: sourceAnalyses.length,
+        supportingEvidence,
+        contradictoryEvidence,
       };
     } catch (error) {
       const processingTime = Math.max(1, Date.now() - startTime);
@@ -1132,5 +1138,72 @@ export class CredibilityScorer {
       this.healthMetrics.errorRate =
         this.healthMetrics.errorRate * (1 - alpha) + currentErrorRate * alpha;
     }
+  }
+
+  /**
+   * Generate structured evidence from credibility analyses
+   */
+  private generateEvidenceFromAnalyses(sourceAnalyses: SourceAnalysis[]): {
+    supportingEvidence: any[];
+    contradictoryEvidence: any[];
+  } {
+    const supportingEvidence: any[] = [];
+    const contradictoryEvidence: any[] = [];
+
+    for (const analysis of sourceAnalyses) {
+      // Convert each source analysis to evidence
+      const evidence = this.convertSourceAnalysisToEvidence(analysis);
+
+      if (evidence.supporting) {
+        supportingEvidence.push(evidence);
+      } else {
+        contradictoryEvidence.push(evidence);
+      }
+    }
+
+    return { supportingEvidence, contradictoryEvidence };
+  }
+
+  /**
+   * Convert a source analysis to structured evidence
+   */
+  private convertSourceAnalysisToEvidence(analysis: SourceAnalysis): any {
+    // Credibility scorer typically provides supporting evidence for trustworthy sources
+    // and contradictory evidence for untrustworthy sources
+    const isSupporting = analysis.credibilityScore >= 0.6;
+
+    // Determine evidence type based on source characteristics
+    let evidenceType = "testimonial";
+    if (
+      analysis.url.includes("academic") ||
+      analysis.url.includes("university")
+    ) {
+      evidenceType = "factual";
+    } else if (
+      analysis.url.includes("government") ||
+      analysis.url.includes("official")
+    ) {
+      evidenceType = "factual";
+    }
+
+    return {
+      source: analysis.url,
+      content: `Source credibility analysis: ${
+        analysis.domain
+      } has a credibility score of ${(analysis.credibilityScore * 100).toFixed(1)}%`,
+      relevance: analysis.credibilityScore,
+      credibility: analysis.credibilityScore,
+      supporting: isSupporting,
+      verificationDate: new Date(),
+      type: evidenceType,
+      timestamp: new Date(),
+      metadata: {
+        credibilityScore: analysis.credibilityScore,
+        domain: analysis.domain,
+        url: analysis.url,
+        analysisDate: analysis.analysisDate,
+        method: "credibility-scoring",
+      },
+    };
   }
 }

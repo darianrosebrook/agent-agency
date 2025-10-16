@@ -1,18 +1,25 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
-  "_comment": "ARBITER-013 Security Policy Enforcer Mutation Testing - Target: ≥80% mutation score for security-critical components",
+  "_comment": "ARBITER-013 Security Components Mutation Testing - Target: ≥80% mutation score",
   "packageManager": "npm",
-  "reporters": ["html", "clear-text", "progress", "dashboard"],
+  "reporters": ["html", "clear-text", "progress"],
   "testRunner": "jest",
   "jest": {
-    "enableFindRelatedTests": true
+    "enableFindRelatedTests": true,
+    "config": {
+      "testMatch": [
+        "**/tests/unit/orchestrator/security-policy-enforcer-hardening.test.ts",
+        "**/tests/unit/security/agent-registry-security-hardening.test.ts",
+        "**/tests/unit/security/command-validator-hardening.test.ts",
+        "**/tests/integration/security/security-enforcement-e2e.test.ts"
+      ]
+    }
   },
   "coverageAnalysis": "perTest",
   "mutate": [
     "src/orchestrator/SecurityManager.ts",
     "src/security/AgentRegistrySecurity.ts",
     "src/security/CommandValidator.ts",
-    "src/resources/ResourceMonitor.ts",
     "!src/**/*.test.ts",
     "!src/**/*.spec.ts",
     "!src/**/index.ts"
@@ -21,19 +28,16 @@
     "plugins": ["typescript"],
     "excludedMutations": ["StringLiteral", "ArrayDeclaration"]
   },
-  "timeoutMS": 60000,
-  "timeoutFactor": 2.0,
-  "concurrency": 1,
+  "timeoutMS": 20000,
+  "timeoutFactor": 1.5,
+  "maxConcurrentTestRunners": 1,
   "thresholds": {
     "high": 80,
     "low": 70,
     "break": 70
   },
-  "dashboard": {
-    "reportType": "full"
-  },
   "htmlReporter": {
-    "fileName": "mutation-report.html"
+    "fileName": "mutation-report-security.html"
   },
   "ignorePatterns": [
     "dist",
@@ -43,6 +47,5 @@
     "**/*.js.map",
     "tests/production/**"
   ],
-  "incremental": true,
-  "incrementalFile": ".stryker-tmp/incremental.json"
+  "incremental": false
 }

@@ -8,6 +8,7 @@
  */
 
 import { freemem, loadavg, totalmem } from "os";
+import { PerformanceTrackerDatabaseClient } from "../database/PerformanceTrackerDatabaseClient.js";
 import { SystemMetrics } from "./types.js";
 
 export class MetricsCollector {
@@ -16,6 +17,16 @@ export class MetricsCollector {
     { bytesIn: number; bytesOut: number }
   > = new Map();
   private lastCollectionTime: number = Date.now();
+  private databaseClient?: PerformanceTrackerDatabaseClient;
+
+  /**
+   * Initialize the metrics collector with database client
+   */
+  async initialize(
+    databaseClient?: PerformanceTrackerDatabaseClient
+  ): Promise<void> {
+    this.databaseClient = databaseClient;
+  }
 
   /**
    * Collect comprehensive system metrics
@@ -41,7 +52,7 @@ export class MetricsCollector {
 
     this.lastCollectionTime = now;
 
-    return {
+    const metrics: SystemMetrics = {
       cpuUsage,
       memoryUsage: memInfo.usage,
       availableMemoryMB: memInfo.availableMB,
@@ -52,6 +63,26 @@ export class MetricsCollector {
       loadAverage: [loadAverage[0], loadAverage[1], loadAverage[2]],
       timestamp: new Date(),
     };
+
+    // Store metrics in database if client is available
+    if (this.databaseClient) {
+      try {
+        await this.databaseClient.storeSystemHealthMetrics({
+          timestamp: metrics.timestamp.toISOString(),
+          cpuUsage: metrics.cpuUsage,
+          memoryUsage: metrics.memoryUsage,
+          activeConnections: 0, // Would need to be passed from connection pool
+          queueDepth: 0, // Would need to be passed from task queue
+          errorRate: 0, // Would need to be calculated from recent errors
+          responseTimeMs: 0, // Would need to be calculated from recent requests
+        });
+      } catch (error) {
+        console.warn("Failed to store system metrics in database:", error);
+        // Continue execution - database failure shouldn't break metrics collection
+      }
+    }
+
+    return metrics;
   }
 
   /**
@@ -168,10 +199,69 @@ export class MetricsCollector {
   /**
    * Get historical metrics for trend analysis
    */
-  getHistoricalMetrics(count: number = 10): SystemMetrics[] {
-    // In a real implementation, this would return stored historical data
-    // For now, return empty array
-    return [];
+  async getHistoricalMetrics(
+    count: number = 10,
+    startTime?: Date,
+    endTime?: Date
+  ): Promise<SystemMetrics[]> {
+    if (!this.databaseClient) {
+      console.warn("Database client not available for historical metrics");
+      return [];
+    }
+
+    try {
+      // Query system health metrics from database
+      const pool = this.databaseClient["poolManager"].getPool();
+      const client = await pool.connect();
+
+      try {
+        let query = `
+          SELECT
+            timestamp, cpu_usage, memory_usage, active_connections,
+            queue_depth, error_rate, response_time_ms,
+            created_at
+          FROM system_health_metrics
+        `;
+        const params: any[] = [];
+        const conditions: string[] = [];
+
+        if (startTime) {
+          conditions.push(`timestamp >= $${params.length + 1}`);
+          params.push(startTime.toISOString());
+        }
+
+        if (endTime) {
+          conditions.push(`timestamp <= $${params.length + 1}`);
+          params.push(endTime.toISOString());
+        }
+
+        if (conditions.length > 0) {
+          query += ` WHERE ${conditions.join(" AND ")}`;
+        }
+
+        query += ` ORDER BY timestamp DESC LIMIT $${params.length + 1}`;
+        params.push(count);
+
+        const result = await client.query(query, params);
+
+        return result.rows.map((row) => ({
+          cpuUsage: parseFloat(row.cpu_usage) || 0,
+          memoryUsage: parseFloat(row.memory_usage) || 0,
+          availableMemoryMB: 0, // Not stored in current schema
+          totalMemoryMB: 0, // Not stored in current schema
+          diskUsage: 0, // Not stored in current schema
+          availableDiskGB: 0, // Not stored in current schema
+          networkIO: { bytesInPerSecond: 0, bytesOutPerSecond: 0 }, // Not stored in current schema
+          loadAverage: [0, 0, 0], // Not stored in current schema
+          timestamp: new Date(row.timestamp),
+        }));
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error("Failed to retrieve historical metrics:", error);
+      return [];
+    }
   }
 
   /**
@@ -215,6 +305,158 @@ export class MetricsCollector {
           sum.networkIO.bytesOutPerSecond / metrics.length
         ),
       },
+    };
+  }
+
+  /**
+   * Analyze trends in historical metrics
+   */
+  async analyzeTrends(
+    hoursBack: number = 24,
+    metricTypes: (keyof SystemMetrics)[] = ["cpuUsage", "memoryUsage"]
+  ): Promise<{
+    trends: Record<
+      string,
+      {
+        direction: "increasing" | "decreasing" | "stable";
+        changePercent: number;
+        average: number;
+        min: number;
+        max: number;
+        volatility: number;
+      }
+    >;
+    analysisPeriod: { start: Date; end: Date };
+  }> {
+    const endTime = new Date();
+    const startTime = new Date(endTime.getTime() - hoursBack * 60 * 60 * 1000);
+
+    const historicalMetrics = await this.getHistoricalMetrics(
+      1000,
+      startTime,
+      endTime
+    );
+
+    if (historicalMetrics.length < 2) {
+      return {
+        trends: {},
+        analysisPeriod: { start: startTime, end: endTime },
+      };
+    }
+
+    const trends: Record<string, any> = {};
+
+    for (const metricType of metricTypes) {
+      if (metricType === "timestamp") continue;
+
+      const values = historicalMetrics
+        .map((m) => {
+          const value = (m as any)[metricType];
+          if (typeof value === "number") return value;
+          if (metricType === "networkIO") {
+            return value?.bytesInPerSecond || 0;
+          }
+          if (metricType === "loadAverage") {
+            return value?.[0] || 0;
+          }
+          return 0;
+        })
+        .filter((v) => v !== null && v !== undefined);
+
+      if (values.length < 2) continue;
+
+      const firstHalf = values.slice(0, Math.floor(values.length / 2));
+      const secondHalf = values.slice(Math.floor(values.length / 2));
+
+      const firstAvg =
+        firstHalf.reduce((sum, v) => sum + v, 0) / firstHalf.length;
+      const secondAvg =
+        secondHalf.reduce((sum, v) => sum + v, 0) / secondHalf.length;
+
+      const changePercent = ((secondAvg - firstAvg) / firstAvg) * 100;
+      const overallAvg = values.reduce((sum, v) => sum + v, 0) / values.length;
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+
+      // Calculate volatility (standard deviation)
+      const variance =
+        values.reduce((sum, v) => sum + Math.pow(v - overallAvg, 2), 0) /
+        values.length;
+      const volatility = Math.sqrt(variance);
+
+      let direction: "increasing" | "decreasing" | "stable" = "stable";
+      if (Math.abs(changePercent) > 5) {
+        // 5% threshold for significance
+        direction = changePercent > 0 ? "increasing" : "decreasing";
+      }
+
+      trends[metricType] = {
+        direction,
+        changePercent: Math.round(changePercent * 100) / 100,
+        average: Math.round(overallAvg * 100) / 100,
+        min: Math.round(min * 100) / 100,
+        max: Math.round(max * 100) / 100,
+        volatility: Math.round(volatility * 100) / 100,
+      };
+    }
+
+    return {
+      trends,
+      analysisPeriod: { start: startTime, end: endTime },
+    };
+  }
+
+  /**
+   * Get metrics summary with historical context
+   */
+  async getMetricsSummary(hoursBack: number = 24): Promise<{
+    current: SystemMetrics | null;
+    historical: {
+      average: Partial<SystemMetrics>;
+      trends: Record<string, any>;
+      dataPoints: number;
+    };
+    alerts: string[];
+  }> {
+    const endTime = new Date();
+    const startTime = new Date(endTime.getTime() - hoursBack * 60 * 60 * 1000);
+
+    const historicalMetrics = await this.getHistoricalMetrics(
+      1000,
+      startTime,
+      endTime
+    );
+    const current = historicalMetrics.length > 0 ? historicalMetrics[0] : null;
+    const trends = await this.analyzeTrends(hoursBack);
+
+    const alerts: string[] = [];
+
+    // Generate alerts based on trends
+    for (const [metric, trend] of Object.entries(trends.trends)) {
+      if (
+        trend.direction === "increasing" &&
+        Math.abs(trend.changePercent) > 20
+      ) {
+        alerts.push(
+          `${metric} is trending upward by ${trend.changePercent}% over ${hoursBack} hours`
+        );
+      }
+      if (trend.volatility > 50) {
+        alerts.push(`${metric} shows high volatility (${trend.volatility})`);
+      }
+    }
+
+    return {
+      current,
+      historical: {
+        average: this.calculateAverages(
+          historicalMetrics,
+          hoursBack * 60 * 60 * 1000
+        ),
+        trends: trends.trends,
+        dataPoints: historicalMetrics.length,
+      },
+      alerts,
     };
   }
 }

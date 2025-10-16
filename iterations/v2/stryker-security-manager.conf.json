@@ -1,0 +1,45 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "ARBITER-013 SecurityManager Mutation Testing",
+  "packageManager": "npm",
+  "reporters": ["html", "clear-text", "progress"],
+  "testRunner": "jest",
+  "jest": {
+    "enableFindRelatedTests": true,
+    "config": {
+      "testMatch": [
+        "**/tests/unit/orchestrator/security-policy-enforcer-hardening.test.ts"
+      ]
+    }
+  },
+  "coverageAnalysis": "perTest",
+  "mutate": [
+    "src/orchestrator/SecurityManager.ts",
+    "!src/**/*.test.ts",
+    "!src/**/*.spec.ts",
+    "!src/**/index.ts"
+  ],
+  "mutator": {
+    "plugins": ["typescript"],
+    "excludedMutations": ["StringLiteral", "ArrayDeclaration"]
+  },
+  "timeoutMS": 15000,
+  "timeoutFactor": 1.5,
+  "maxConcurrentTestRunners": 1,
+  "thresholds": {
+    "high": 80,
+    "low": 70,
+    "break": 70
+  },
+  "htmlReporter": {
+    "fileName": "mutation-report-security-manager.html"
+  },
+  "ignorePatterns": [
+    "dist",
+    "node_modules",
+    "coverage",
+    "**/*.d.ts",
+    "**/*.js.map"
+  ],
+  "incremental": false
+}

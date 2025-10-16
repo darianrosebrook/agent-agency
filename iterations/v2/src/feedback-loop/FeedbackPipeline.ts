@@ -1,11 +1,13 @@
 import { EventEmitter } from "events";
 import { ConfigManager } from "../config/ConfigManager";
 import { Logger } from "../observability/Logger";
+import { RLTrainingCoordinator } from "../rl/RLTrainingCoordinator";
 import {
   FeedbackEvent,
   FeedbackPipelineConfig,
   FeedbackSource,
 } from "../types/feedback-loop";
+import { ConversationTrajectory, Reward, TurnLevelReward } from "../types/agentic-rl";
 
 export interface TrainingDataBatch {
   id: string;
@@ -24,6 +26,7 @@ export interface TrainingDataBatch {
 export class FeedbackPipeline extends EventEmitter {
   private config: FeedbackPipelineConfig;
   private logger: Logger;
+  private rlTrainingCoordinator?: RLTrainingCoordinator;
 
   // Pipeline state
   private pendingBatches: TrainingDataBatch[] = [];
@@ -40,10 +43,14 @@ export class FeedbackPipeline extends EventEmitter {
     lastProcessingTime: undefined as string | undefined,
   };
 
-  constructor(configManager: ConfigManager) {
+  constructor(
+    configManager: ConfigManager,
+    rlTrainingCoordinator?: RLTrainingCoordinator
+  ) {
     super();
     this.config = configManager.get("feedbackLoop.pipeline");
     this.logger = new Logger("FeedbackPipeline");
+    this.rlTrainingCoordinator = rlTrainingCoordinator;
   }
 
   public async processBatch(
@@ -377,25 +384,186 @@ export class FeedbackPipeline extends EventEmitter {
   }
 
   private async sendToTraining(batch: TrainingDataBatch): Promise<void> {
-    // In a real implementation, this would send to RL training system
-    // For now, simulate the operation
+    if (!this.rlTrainingCoordinator) {
+      // Fallback to simulation if no RL training coordinator provided
+      this.logger.info(
+        `RL training coordinator not available, simulating training for batch ${batch.id}`
+      );
+
+      // Simulate network call
+      await this.delay(Math.random() * 500 + 100);
+
+      // Simulate occasional failures
+      if (Math.random() < 0.05) {
+        throw new Error("Training system temporarily unavailable");
+      }
+
+      this.logger.debug(`Simulated training completed for batch ${batch.id}`);
+      return;
+    }
 
     this.logger.info(
-      `Sending batch ${batch.id} to training system (${
+      `Sending batch ${batch.id} to RL training system (${
         batch.events.length
       } events, quality: ${batch.qualityScore.toFixed(2)})`
     );
 
-    // Simulate network call
-    await this.delay(Math.random() * 500 + 100);
+    try {
+      // Convert TrainingDataBatch to ConversationTrajectory format
+      const trajectories = this.convertBatchToTrajectories(batch);
 
-    // Simulate occasional failures
-    if (Math.random() < 0.05) {
-      // 5% failure rate
-      throw new Error("Training system temporarily unavailable");
+      if (trajectories.length === 0) {
+        this.logger.warn(`No valid trajectories could be extracted from batch ${batch.id}`);
+        return;
+      }
+
+      // Send to RL training system
+      const trainingStats = await this.rlTrainingCoordinator.trainOnTrajectories(trajectories);
+
+      this.logger.info(
+        `RL training completed for batch ${batch.id}: ` +
+        `${trainingStats.totalSamples} samples, ` +
+        `avg reward: ${trainingStats.averageReward.toFixed(3)}, ` +
+        `training time: ${trainingStats.trainingTimeMs}ms`
+      );
+
+      // Emit training completion event
+      this.emit("training_completed", {
+        batchId: batch.id,
+        trainingStats,
+        trajectoriesProcessed: trajectories.length,
+      });
+
+    } catch (error) {
+      this.logger.error(`RL training failed for batch ${batch.id}`, { error });
+      throw new Error(`Training system error: ${error.message}`);
+    }
+  }
+
+  /**
+   * Convert TrainingDataBatch to ConversationTrajectory format for RL training
+   */
+  private convertBatchToTrajectories(batch: TrainingDataBatch): ConversationTrajectory[] {
+    const trajectories: ConversationTrajectory[] = [];
+
+    // Group events by conversation/task
+    const eventsByEntity = new Map<string, FeedbackEvent[]>();
+    for (const event of batch.events) {
+      const entityId = event.entityId;
+      if (!eventsByEntity.has(entityId)) {
+        eventsByEntity.set(entityId, []);
+      }
+      eventsByEntity.get(entityId)!.push(event);
     }
 
-    this.logger.debug(`Successfully sent batch ${batch.id} to training`);
+    // Convert each entity's events to a trajectory
+    for (const [entityId, events] of eventsByEntity) {
+      try {
+        const trajectory = this.convertEntityEventsToTrajectory(entityId, events, batch);
+        if (trajectory) {
+          trajectories.push(trajectory);
+        }
+      } catch (error) {
+        this.logger.warn(`Failed to convert entity ${entityId} to trajectory`, { error });
+      }
+    }
+
+    return trajectories;
+  }
+
+  /**
+   * Convert entity events to a single ConversationTrajectory
+   */
+  private convertEntityEventsToTrajectory(
+    entityId: string,
+    events: FeedbackEvent[],
+    batch: TrainingDataBatch
+  ): ConversationTrajectory | null {
+    // Sort events by timestamp
+    events.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    // Extract turn-level rewards from events
+    const turns: TurnLevelReward[] = [];
+    let totalReward = 0;
+
+    for (let i = 0; i < events.length; i++) {
+      const event = events[i];
+      const reward = this.extractRewardFromEvent(event);
+
+      turns.push({
+        turnNumber: i + 1,
+        reward,
+        actionLogProbs: [], // Would be populated by actual model outputs
+        valueEstimate: 0,   // Would be computed by value network
+        advantages: [],     // Would be computed during training
+      });
+
+      totalReward += reward;
+    }
+
+    if (turns.length === 0) {
+      return null;
+    }
+
+    // Determine final outcome based on aggregated events
+    const finalOutcome = this.determineFinalOutcome(events, batch.qualityScore);
+
+    return {
+      conversationId: entityId,
+      turns,
+      finalOutcome,
+      totalReward,
+    };
+  }
+
+  /**
+   * Extract reward value from a feedback event
+   */
+  private extractRewardFromEvent(event: FeedbackEvent): Reward {
+    // Extract reward based on event type and value
+    switch (event.type) {
+      case "numeric_metric":
+        return typeof event.value === "number" ? event.value : 0;
+
+      case "rating_scale":
+        // Convert rating to reward (assuming 1-5 scale, convert to -1 to 1)
+        const rating = typeof event.value === "number" ? event.value : 3;
+        return (rating - 3) / 2; // 1-> -1, 3->0, 5->1
+
+      case "binary_outcome":
+        return event.value === true || event.value === "success" ? 1 : -1;
+
+      case "categorical_event":
+        // Map common categories to rewards
+        const value = String(event.value).toLowerCase();
+        if (value.includes("success") || value.includes("completed")) return 1;
+        if (value.includes("error") || value.includes("failed")) return -1;
+        return 0;
+
+      default:
+        return 0;
+    }
+  }
+
+  /**
+   * Determine final task outcome from events and batch quality
+   */
+  private determineFinalOutcome(events: FeedbackEvent[], qualityScore: number): TaskOutcome {
+    // Check for explicit outcomes in events
+    for (const event of events) {
+      if (event.context?.outcome) {
+        return event.context.outcome as TaskOutcome;
+      }
+    }
+
+    // Infer from quality score and event patterns
+    if (qualityScore > 0.8) {
+      return "success";
+    } else if (qualityScore < 0.3) {
+      return "failure";
+    } else {
+      return "partial_success";
+    }
   }
 
   private anonymizeEvents(events: FeedbackEvent[]): FeedbackEvent[] {

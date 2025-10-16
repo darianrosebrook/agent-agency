@@ -139,7 +139,7 @@ export class AgentRegistryDatabaseClient {
         );
       }
 
-      for (const specialization of agent.capabilities.specializations) {
+      for (const specialization of agent.capabilities.specializations || []) {
         await client.query(
           `
           INSERT INTO agent_capabilities (agent_id, capability_type, capability_value)

@@ -67,7 +67,7 @@ export class FeedbackLoopManager extends EventEmitter {
     // Initialize components
     this.collector = new FeedbackCollector(configManager);
     this.analyzer = new FeedbackAnalyzer(configManager);
-    this.improvementEngine = new ImprovementEngine(configManager);
+    this.improvementEngine = new ImprovementEngine(configManager, this.metricsCollector);
     this.pipeline = new FeedbackPipeline(configManager);
 
     this.setupEventHandlers();

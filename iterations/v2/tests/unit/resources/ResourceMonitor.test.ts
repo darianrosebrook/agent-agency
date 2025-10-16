@@ -218,4 +218,101 @@ describe("ResourceMonitor", () => {
       // Should not throw
     });
   });
+
+  describe("Lifecycle Management", () => {
+    it("should start monitoring when not already running", async () => {
+      // Test that start() doesn't throw and can be called
+      await expect(monitor.start()).resolves.not.toThrow();
+
+      // Test that we can call stop() after start()
+      await expect(monitor.stop()).resolves.not.toThrow();
+    });
+
+    it("should warn and return early if already running", async () => {
+      // Mock logger.warn to capture the warning
+      const loggerSpy = jest
+        .spyOn(monitor["logger"], "warn")
+        .mockImplementation();
+
+      // Start monitoring first time
+      await monitor.start();
+
+      // Start again - should warn and return early
+      await monitor.start();
+
+      expect(loggerSpy).toHaveBeenCalledWith(
+        "Resource monitor already running"
+      );
+
+      loggerSpy.mockRestore();
+    });
+
+    it("should handle timer management correctly", async () => {
+      // Mock setInterval and clearInterval
+      const mockTimer = 123 as any;
+      const setIntervalSpy = jest
+        .spyOn(global, "setInterval")
+        .mockReturnValue(mockTimer);
+      const clearIntervalSpy = jest.spyOn(global, "clearInterval");
+
+      // Start monitoring - should set up timer
+      await monitor.start();
+
+      expect(setIntervalSpy).toHaveBeenCalled();
+      expect(clearIntervalSpy).not.toHaveBeenCalled(); // No existing timer to clear
+
+      setIntervalSpy.mockRestore();
+      clearIntervalSpy.mockRestore();
+    });
+
+    it("should handle timer cleanup when stopping", async () => {
+      // Mock setInterval to return a mock timer
+      const mockTimer = 123 as any;
+      const setIntervalSpy = jest
+        .spyOn(global, "setInterval")
+        .mockReturnValue(mockTimer);
+      const clearIntervalSpy = jest.spyOn(global, "clearInterval");
+
+      await monitor.start();
+      await monitor.stop();
+
+      expect(clearIntervalSpy).toHaveBeenCalledWith(mockTimer);
+
+      setIntervalSpy.mockRestore();
+      clearIntervalSpy.mockRestore();
+    });
+
+    it("should stop monitoring and clear timer", async () => {
+      // Mock setInterval to return a mock timer
+      const mockTimer = 123 as any;
+      const setIntervalSpy = jest
+        .spyOn(global, "setInterval")
+        .mockReturnValue(mockTimer);
+      const clearIntervalSpy = jest.spyOn(global, "clearInterval");
+
+      await monitor.start();
+      await monitor.stop();
+
+      expect(clearIntervalSpy).toHaveBeenCalledWith(mockTimer);
+
+      setIntervalSpy.mockRestore();
+      clearIntervalSpy.mockRestore();
+    });
+
+    it("should handle stop when not running", async () => {
+      // Should not throw when stopping a non-running monitor
+      await expect(monitor.stop()).resolves.not.toThrow();
+    });
+
+    it("should handle multiple start/stop cycles", async () => {
+      // Test multiple start/stop cycles don't cause issues
+      await monitor.start();
+      await monitor.stop();
+      await monitor.start();
+      await monitor.stop();
+
+      // Should not throw
+      expect(true).toBe(true);
+    });
+  });
 });

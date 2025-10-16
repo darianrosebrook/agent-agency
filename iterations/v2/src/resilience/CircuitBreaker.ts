@@ -128,15 +128,30 @@ export class CircuitBreaker {
    * Execute operation with timeout
    */
   private async executeWithTimeout<T>(operation: () => Promise<T>): Promise<T> {
-    return Promise.race([
-      operation(),
-      new Promise<T>((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Operation timeout")),
-          this.config.timeoutMs
-        )
-      ),
-    ]);
+    let timeoutId: NodeJS.Timeout | undefined;
+
+    const timeoutPromise = new Promise<T>((_, reject) => {
+      timeoutId = setTimeout(
+        () => reject(new Error("Operation timeout")),
+        this.config.timeoutMs
+      );
+    });
+
+    try {
+      const result = await Promise.race([operation(), timeoutPromise]);
+
+      // Clear the timeout since the operation completed successfully
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      return result;
+    } catch (error) {
+      // Clear the timeout in case of error too
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      throw error;
+    }
   }
 
   /**

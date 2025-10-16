@@ -267,7 +267,13 @@ export class OllamaProvider extends LLMProvider {
   }
 
   /**
-   * Evaluates using Ollama API
+   * Evaluates using Ollama API with hyper-efficiency optimizations
+   *
+   * Optimized for local-first, cost-free LLM usage with:
+   * - Reduced context window (2048 tokens) for faster inference
+   * - Multi-threading and GPU acceleration when available
+   * - Memory-efficient settings (FP16 KV cache, memory mapping)
+   * - Low VRAM mode for resource-constrained environments
    *
    * @param input Judgment input
    * @param criterion Criterion to evaluate
@@ -292,6 +298,17 @@ export class OllamaProvider extends LLMProvider {
           options: {
             temperature: this.config.temperature,
             num_predict: this.config.maxTokens,
+            // Hyper-efficiency optimizations for local-first LLMs
+            num_ctx: 2048, // Reduced context window for efficiency
+            num_thread: -1, // Use all available CPU threads
+            num_gpu: -1, // Use all available GPU layers
+            main_gpu: 0, // Primary GPU for acceleration
+            low_vram: true, // Optimize for low VRAM usage
+            f16_kv: true, // Use FP16 for KV cache
+            logits_all: false, // Don't compute logits for all tokens
+            vocab_only: false, // Load full model, not vocab only
+            use_mmap: true, // Use memory mapping for faster loading
+            use_mlock: false, // Don't lock memory (allow swapping)
           },
         }),
       });

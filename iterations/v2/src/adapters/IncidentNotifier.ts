@@ -239,7 +239,9 @@ export class IncidentNotifier {
         timestamp: failure.timestamp,
         context: failure.context,
         recoveryError:
-          recoveryError instanceof Error ? recoveryError.message : recoveryError,
+          recoveryError instanceof Error
+            ? recoveryError.message
+            : recoveryError,
       },
     };
   }
@@ -253,7 +255,11 @@ export class IncidentNotifier {
     description += `**Timestamp:** ${failure.timestamp.toISOString()}\n`;
 
     if (failure.context) {
-      description += `**Context:** ${JSON.stringify(failure.context, null, 2)}\n`;
+      description += `**Context:** ${JSON.stringify(
+        failure.context,
+        null,
+        2
+      )}\n`;
     }
 
     if (recoveryError) {
@@ -512,7 +518,11 @@ export class IncidentNotifier {
     notes?: string
   ): Promise<void> {
     // TODO: Implement ServiceNow ticket update
-    this.logger.info("Updating ServiceNow ticket", { incidentId, status, notes });
+    this.logger.info("Updating ServiceNow ticket", {
+      incidentId,
+      status,
+      notes,
+    });
   }
 
   private async updateJiraTicket(
@@ -539,7 +549,11 @@ export class IncidentNotifier {
     notes?: string
   ): Promise<void> {
     // TODO: Implement PagerDuty incident update
-    this.logger.info("Updating PagerDuty incident", { incidentId, status, notes });
+    this.logger.info("Updating PagerDuty incident", {
+      incidentId,
+      status,
+      notes,
+    });
   }
 
   private async sendToMonitoringSystem(
@@ -564,10 +578,13 @@ export class IncidentNotifier {
         lastError = error instanceof Error ? error : new Error(String(error));
 
         if (attempt === this.config.retry.maxAttempts) {
-          this.logger.error(`Failed ${operationName} after ${attempt} attempts`, {
-            error: lastError,
-            attempts: attempt,
-          });
+          this.logger.error(
+            `Failed ${operationName} after ${attempt} attempts`,
+            {
+              error: lastError,
+              attempts: attempt,
+            }
+          );
           throw lastError;
         }
 

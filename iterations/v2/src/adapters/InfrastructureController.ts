@@ -243,7 +243,8 @@ export class InfrastructureController {
     const operationId = `scale-${componentId}-${Date.now()}`;
     const targetInstances = params?.targetInstances || 2;
     const instanceType =
-      params?.instanceType || (await this.getComponentInstanceType(componentId));
+      params?.instanceType ||
+      (await this.getComponentInstanceType(componentId));
 
     const operation: ScalingOperation = {
       componentId,

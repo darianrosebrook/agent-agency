@@ -28,6 +28,8 @@ export enum VerificationType {
   CONSISTENCY_CHECK = "consistency_check",
   LOGICAL_VALIDATION = "logical_validation",
   STATISTICAL_VALIDATION = "statistical_validation",
+  CREDIBILITY_SCORING = "credibility_scoring",
+  CONSISTENCY_VALIDATION = "consistency_validation",
 }
 
 export interface VerificationResult {
@@ -38,6 +40,7 @@ export interface VerificationResult {
   supportingEvidence: Evidence[];
   contradictoryEvidence: Evidence[];
   verificationMethods: VerificationMethodResult[];
+  methodResults?: VerificationMethodResult[]; // Alias for backward compatibility
   processingTimeMs: number;
   error?: string;
 }
@@ -60,6 +63,8 @@ export interface Evidence {
   credibility: number;
   supporting: boolean;
   verificationDate: Date;
+  type?: string; // Type of evidence (factual, statistical, testimonial, circumstantial)
+  timestamp?: Date; // When the evidence was collected
   metadata?: Record<string, any>;
 }
 
@@ -71,6 +76,8 @@ export interface VerificationMethodResult {
   processingTimeMs: number;
   evidenceCount: number;
   evidence?: any[]; // Supporting evidence for the verification result
+  supportingEvidence?: Evidence[]; // Structured supporting evidence
+  contradictoryEvidence?: Evidence[]; // Structured contradictory evidence
   metadata?: Record<string, any>;
 }
 

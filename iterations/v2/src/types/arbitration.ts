@@ -30,6 +30,7 @@ export enum RuleCategory {
   DEPLOYMENT = "deployment",
   BUDGET = "budget",
   PROCESS = "process",
+  RESOURCE_MANAGEMENT = "resource_management",
 }
 
 /**

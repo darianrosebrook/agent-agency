@@ -20,6 +20,7 @@ import {
 export class SystemHealthMonitor extends EventEmitter {
   private config: SystemHealthMonitorConfig;
   private metricsCollector: MetricsCollector;
+  private databaseClient?: any; // PerformanceTrackerDatabaseClient
   private metricsHistory: SystemMetrics[] = [];
   private agentHealthMetrics: Map<string, AgentHealthMetrics> = new Map();
   private alerts: HealthAlert[] = [];
@@ -31,7 +32,10 @@ export class SystemHealthMonitor extends EventEmitter {
   private metricsCollectionTimer?: ReturnType<typeof setInterval>;
   private healthCheckTimer?: ReturnType<typeof setInterval>;
 
-  constructor(config: Partial<SystemHealthMonitorConfig> = {}) {
+  constructor(
+    config: Partial<SystemHealthMonitorConfig> = {},
+    databaseClient?: any
+  ) {
     super();
 
     this.config = {
@@ -56,6 +60,7 @@ export class SystemHealthMonitor extends EventEmitter {
       ...config,
     };
 
+    this.databaseClient = databaseClient;
     this.metricsCollector = new MetricsCollector();
   }
 
@@ -64,6 +69,11 @@ export class SystemHealthMonitor extends EventEmitter {
    */
   async initialize(): Promise<void> {
     console.log("Initializing System Health Monitor...");
+
+    // Initialize metrics collector with database client
+    if (this.databaseClient) {
+      await this.metricsCollector.initialize(this.databaseClient);
+    }
 
     // Start metrics collection
     await this.startMetricsCollection();
@@ -104,7 +114,7 @@ export class SystemHealthMonitor extends EventEmitter {
 
     const overallHealth = this.calculateOverallHealth(systemMetrics);
 
-    // Mock system-wide metrics (would be collected from various sources in production)
+    // Get real system-wide metrics from various sources
     const errorRate = this.calculateSystemErrorRate();
     const queueDepth = this.getEstimatedQueueDepth();
 
@@ -116,6 +126,64 @@ export class SystemHealthMonitor extends EventEmitter {
       queueDepth,
       circuitBreakerOpen: this.circuitBreakerState === "open",
       timestamp: new Date(),
+    };
+  }
+
+  /**
+   * Get historical metrics summary with trends and alerts
+   */
+  async getHistoricalMetricsSummary(hoursBack: number = 24): Promise<{
+    current: SystemMetrics | null;
+    historical: {
+      average: Partial<SystemMetrics>;
+      trends: Record<string, any>;
+      dataPoints: number;
+    };
+    alerts: string[];
+    agentMetrics: Map<string, AgentHealthMetrics>;
+    systemAlerts: HealthAlert[];
+  }> {
+    const summary = await this.metricsCollector.getMetricsSummary(hoursBack);
+
+    // Add agent-specific trends and alerts
+    const agentAlerts: string[] = [];
+    for (const [agentId, metrics] of this.agentHealthMetrics) {
+      if (metrics.healthScore < 0.5) {
+        agentAlerts.push(
+          `Agent ${agentId} health critically low (${(
+            metrics.healthScore * 100
+          ).toFixed(1)}%)`
+        );
+      } else if (metrics.healthScore < 0.7) {
+        agentAlerts.push(
+          `Agent ${agentId} health degraded (${(
+            metrics.healthScore * 100
+          ).toFixed(1)}%)`
+        );
+      }
+
+      if (metrics.errorRate > this.config.thresholds.agentErrorRateThreshold) {
+        agentAlerts.push(
+          `Agent ${agentId} high error rate (${metrics.errorRate} errors/min)`
+        );
+      }
+
+      if (
+        metrics.responseTimeP95 >
+        this.config.thresholds.agentResponseTimeThreshold
+      ) {
+        agentAlerts.push(
+          `Agent ${agentId} slow response time (${metrics.responseTimeP95}ms)`
+        );
+      }
+    }
+
+    return {
+      current: summary.current,
+      historical: summary.historical,
+      alerts: [...summary.alerts, ...agentAlerts],
+      agentMetrics: new Map(this.agentHealthMetrics),
+      systemAlerts: this.alerts.filter((alert) => !alert.resolved),
     };
   }
 

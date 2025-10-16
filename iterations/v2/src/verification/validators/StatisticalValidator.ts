@@ -62,6 +62,25 @@ interface StatisticalIssue {
  */
 export class StatisticalValidator {
   private config: StatisticalConfig;
+  private healthMetrics: {
+    totalRequests: number;
+    successfulRequests: number;
+    failedRequests: number;
+    responseTimes: number[];
+    lastHealthCheck: Date;
+    consecutiveFailures: number;
+    lastResponseTime: number;
+    errorRate: number;
+  } = {
+    totalRequests: 0,
+    successfulRequests: 0,
+    failedRequests: 0,
+    responseTimes: [],
+    lastHealthCheck: new Date(),
+    consecutiveFailures: 0,
+    lastResponseTime: 0,
+    errorRate: 0,
+  };
 
   constructor(config: Partial<StatisticalConfig> = {}) {
     this.config = {
@@ -122,7 +141,8 @@ export class StatisticalValidator {
         return {
           method: VerificationType.STATISTICAL_VALIDATION,
           verdict,
-          confidence: verdict === VerificationVerdict.VERIFIED_FALSE ? 0.6 : 0.2,
+          confidence:
+            verdict === VerificationVerdict.VERIFIED_FALSE ? 0.6 : 0.2,
           reasoning,
           processingTimeMs: Date.now() - startTime,
           evidenceCount: 0,
@@ -800,7 +820,9 @@ export class StatisticalValidator {
       issues.push({
         type: "incorrect_percentage",
         severity: "high",
-        description: `Reported ${claim.value}% does not match ${numerator}/${sampleSize} (expected ${expectedPercentage.toFixed(
+        description: `Reported ${
+          claim.value
+        }% does not match ${numerator}/${sampleSize} (expected ${expectedPercentage.toFixed(
           1
         )}%)`,
         claim: claim.text,
@@ -838,7 +860,8 @@ export class StatisticalValidator {
         issues.push({
           type: "missing_significance_details",
           severity: "medium",
-          description: "Claim mentions statistical significance without reporting p-value",
+          description:
+            "Claim mentions statistical significance without reporting p-value",
           claim: claim.text,
         });
       }
@@ -1020,5 +1043,83 @@ export class StatisticalValidator {
     }
 
     return undefined;
+  }
+
+  /**
+   * Get method health status
+   */
+  getHealth(): { available: boolean; responseTime: number; errorRate: number } {
+    // Update error rate based on recent metrics
+    this.updateErrorRate();
+
+    // Check availability based on consecutive failures and recent activity
+    const now = new Date();
+    const timeSinceLastCheck =
+      now.getTime() - this.healthMetrics.lastHealthCheck.getTime();
+    const available: boolean =
+      this.healthMetrics.consecutiveFailures < 3 && timeSinceLastCheck < 300000; // 5 minutes
+
+    // Calculate average response time
+    const avgResponseTime =
+      this.healthMetrics.responseTimes.length > 0
+        ? this.healthMetrics.responseTimes.reduce(
+            (sum, time) => sum + time,
+            0
+          ) / this.healthMetrics.responseTimes.length
+        : this.healthMetrics.lastResponseTime || 0;
+
+    return {
+      available,
+      responseTime: Math.round(avgResponseTime),
+      errorRate: Math.round(this.healthMetrics.errorRate * 100) / 100,
+    };
+  }
+
+  /**
+   * Record a successful verification request
+   */
+  private recordSuccess(responseTime: number): void {
+    this.healthMetrics.totalRequests++;
+    this.healthMetrics.successfulRequests++;
+    this.healthMetrics.consecutiveFailures = 0;
+    this.healthMetrics.lastResponseTime = responseTime;
+    this.healthMetrics.responseTimes.push(responseTime);
+
+    // Keep only last 100 response times for rolling average
+    if (this.healthMetrics.responseTimes.length > 100) {
+      this.healthMetrics.responseTimes.shift();
+    }
+
+    this.healthMetrics.lastHealthCheck = new Date();
+  }
+
+  /**
+   * Record a failed verification request
+   */
+  private recordFailure(responseTime: number): void {
+    this.healthMetrics.totalRequests++;
+    this.healthMetrics.failedRequests++;
+    this.healthMetrics.consecutiveFailures++;
+    this.healthMetrics.lastResponseTime = responseTime;
+    this.healthMetrics.responseTimes.push(responseTime);
+
+    // Keep only last 100 response times for rolling average
+    if (this.healthMetrics.responseTimes.length > 100) {
+      this.healthMetrics.responseTimes.shift();
+    }
+
+    this.healthMetrics.lastHealthCheck = new Date();
+  }
+
+  /**
+   * Update error rate based on recent metrics
+   */
+  private updateErrorRate(): void {
+    if (this.healthMetrics.totalRequests > 0) {
+      this.healthMetrics.errorRate =
+        this.healthMetrics.failedRequests / this.healthMetrics.totalRequests;
+    } else {
+      this.healthMetrics.errorRate = 0;
+    }
   }
 }

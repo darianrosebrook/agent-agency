@@ -17,6 +17,7 @@
    - New module (`src/observer/ArbiterObserverBridge.ts`) running inside the Arbiter process.  
    - Provides an HTTP+SSE surface on loopback (default `http://127.0.0.1:4387`) with optional Unix domain socket mode for status queries, task submission, progress polling, event streaming, and metrics snapshots.  
    - Wires the new `ArbiterRuntime` task loop (TaskQueue + TaskStateMachine) so observer submissions execute real workflows and emit chain-of-thought + artifacts for auditing.  
+   - Boots a production-flavoured `AgentRegistryManager` seeded from `runtimeAgentDataset` so routing decisions honor real capability/load profiles instead of hard-coded stubs.  
    - Registers with `globalEventEmitter`, `TaskLifecycleManager`, `PerformanceTracker`, `ToolBudgetManager`, and `ArbiterReasoningEngine` to capture task + reasoning signals.
 
 2. **Telemetry Persistence & Query API**  

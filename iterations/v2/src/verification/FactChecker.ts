@@ -119,6 +119,10 @@ export class FactChecker {
       const aggregatedResult = this.aggregateFactCheckResults(factCheckResults);
       const processingTime = Math.max(1, Date.now() - startTime);
 
+      // Generate evidence from fact-check results
+      const { supportingEvidence, contradictoryEvidence } =
+        this.generateEvidenceFromResults(factCheckResults);
+
       // Record successful verification
       this.recordSuccess(processingTime);
 
@@ -129,6 +133,8 @@ export class FactChecker {
         reasoning: aggregatedResult.explanations,
         processingTimeMs: processingTime,
         evidenceCount: aggregatedResult.evidenceCount,
+        supportingEvidence,
+        contradictoryEvidence,
       };
     } catch (error) {
       const processingTime = Math.max(1, Date.now() - startTime);
@@ -530,9 +536,9 @@ export class FactChecker {
     const now = new Date();
     const timeSinceLastCheck =
       now.getTime() - this.healthMetrics.lastHealthCheck.getTime();
-    const available =
+    const available: boolean =
       this.healthMetrics.consecutiveFailures < 3 &&
-      (this.googleProvider || this.snopesProvider) &&
+      Boolean(this.googleProvider || this.snopesProvider) &&
       timeSinceLastCheck < 300000; // 5 minutes
 
     // Calculate average response time
@@ -591,5 +597,97 @@ export class FactChecker {
       this.healthMetrics.errorRate =
         this.healthMetrics.errorRate * (1 - alpha) + currentErrorRate * alpha;
     }
+  }
+
+  /**
+   * Generate structured evidence from fact-check results
+   */
+  private generateEvidenceFromResults(factCheckResults: FactCheckResult[]): {
+    supportingEvidence: any[];
+    contradictoryEvidence: any[];
+  } {
+    const supportingEvidence: any[] = [];
+    const contradictoryEvidence: any[] = [];
+
+    for (const result of factCheckResults) {
+      // Convert each fact-check result to evidence
+      const evidence = this.convertFactCheckResultToEvidence(result);
+
+      if (evidence.supporting) {
+        supportingEvidence.push(evidence);
+      } else {
+        contradictoryEvidence.push(evidence);
+      }
+    }
+
+    return { supportingEvidence, contradictoryEvidence };
+  }
+
+  /**
+   * Convert a fact-check result to structured evidence
+   */
+  private convertFactCheckResultToEvidence(result: FactCheckResult): any {
+    const isSupporting =
+      result.verdict === VerificationVerdict.VERIFIED_TRUE ||
+      result.verdict === VerificationVerdict.PARTIALLY_TRUE;
+
+    // Determine credibility based on verdict
+    let credibility = 0.5;
+    switch (result.verdict) {
+      case VerificationVerdict.VERIFIED_TRUE:
+        credibility = 0.9;
+        break;
+      case VerificationVerdict.PARTIALLY_TRUE:
+        credibility = 0.7;
+        break;
+      case VerificationVerdict.VERIFIED_FALSE:
+        credibility = 0.1;
+        break;
+      case VerificationVerdict.UNVERIFIED:
+        credibility = 0.5;
+        break;
+    }
+
+    // Determine evidence type
+    let evidenceType = "factual";
+    if (
+      result.sources.some(
+        (s) =>
+          s.url.includes("statistical") ||
+          s.url.includes("data") ||
+          s.publisher.includes("statistical") ||
+          s.publisher.includes("data")
+      )
+    ) {
+      evidenceType = "statistical";
+    } else if (
+      result.sources.some(
+        (s) =>
+          s.url.includes("news") ||
+          s.url.includes("media") ||
+          s.publisher.includes("news") ||
+          s.publisher.includes("media")
+      )
+    ) {
+      evidenceType = "testimonial";
+    }
+
+    return {
+      source:
+        result.sources.map((s) => s.url).join(", ") || "fact-checking service",
+      content: result.explanation,
+      relevance: result.confidence,
+      credibility,
+      supporting: isSupporting,
+      verificationDate: new Date(),
+      type: evidenceType,
+      timestamp: new Date(),
+      metadata: {
+        verdict: result.verdict,
+        originalClaim: result.claim,
+        sources: result.sources,
+        method: "fact-checking",
+      },
+    };
   }
 }

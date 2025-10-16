@@ -8,13 +8,17 @@
  * @author @darianrosebrook
  */
 
+import {
+  DistributedCacheClient,
+  DistributedCacheConfig,
+} from "../adapters/DistributedCacheClient.js";
+import { Logger } from "../observability/Logger.js";
 import type {
   ContextualMemory,
   FederatedInsights,
   TaskContext,
   TenantConfig,
 } from "../types/memory.js";
-import { Logger } from "../utils/Logger.js";
 import { TenantIsolator } from "./TenantIsolator.js";
 
 export interface FederatedLearningConfig {
@@ -74,15 +78,22 @@ export class FederatedLearningEngine {
   private participantRegistry: Map<string, FederatedParticipant> = new Map();
   private aggregationQueue: Map<string, ContextualMemory[]> = new Map();
   private aggregationTimer?: NodeJS.Timeout;
+  private cacheClient?: DistributedCacheClient;
 
   constructor(
     config: FederatedLearningConfig,
     tenantIsolator: TenantIsolator,
+    cacheConfig?: DistributedCacheConfig,
     logger?: Logger
   ) {
     this.config = config;
     this.tenantIsolator = tenantIsolator;
     this.logger = logger || new Logger("FederatedLearningEngine");
+
+    // Initialize distributed cache client
+    if (cacheConfig) {
+      this.cacheClient = new DistributedCacheClient(cacheConfig, this.logger);
+    }
 
     if (config.enabled) {
       this.startAggregationScheduler();
@@ -92,6 +103,33 @@ export class FederatedLearningEngine {
         minParticipants: config.minParticipants,
       });
     }
+  }
+
+  /**
+   * Initialize the federated learning engine
+   */
+  async initialize(): Promise<void> {
+    if (this.cacheClient) {
+      await this.cacheClient.initialize();
+      this.logger.info("Distributed cache client initialized");
+    }
+  }
+
+  /**
+   * Shutdown the federated learning engine
+   */
+  async shutdown(): Promise<void> {
+    if (this.aggregationTimer) {
+      clearInterval(this.aggregationTimer);
+      this.aggregationTimer = undefined;
+    }
+
+    if (this.cacheClient) {
+      await this.cacheClient.shutdown();
+      this.logger.info("Distributed cache client shutdown");
+    }
+
+    this.logger.info("Federated learning engine shutdown");
   }
 
   /**
@@ -179,6 +217,15 @@ export class FederatedLearningEngine {
       const queue = this.aggregationQueue.get(topicKey)!;
       queue.push(...anonymizedInsights);
 
+      // Track tenant contribution in distributed cache
+      if (this.cacheClient) {
+        await this.cacheClient.trackTenantContribution(
+          tenantId,
+          topicKey,
+          anonymizedInsights.length
+        );
+      }
+
       // Update participant metrics
       participant.lastContribution = new Date();
       participant.reputationScore = Math.min(
@@ -239,7 +286,7 @@ export class FederatedLearningEngine {
       return {
         insights: accessibleInsights,
         confidence: this.calculateFederatedConfidence(accessibleInsights),
-        sourceTenants: this.getSourceTenants(topicKey),
+        sourceTenants: await this.getSourceTenants(topicKey),
         aggregationMethod: this.config.aggregationMethod,
         privacyPreserved: true,
       };
@@ -407,17 +454,6 @@ export class FederatedLearningEngine {
     this.logger.info("Federated learning maintenance completed");
   }
 
-  /**
-   * Shutdown the federated learning engine and clean up resources
-   */
-  async shutdown(): Promise<void> {
-    if (this.aggregationTimer) {
-      clearInterval(this.aggregationTimer);
-      this.aggregationTimer = undefined;
-    }
-    this.logger.info("Federated learning engine shutdown");
-  }
-
   // Private methods
 
   private startAggregationScheduler(): void {
@@ -460,8 +496,19 @@ export class FederatedLearningEngine {
       this.aggregationQueue.delete(topicKey);
 
       // Cache the results for participants to access
-      const _cacheKey = `federated_${topicKey}`;
-      // In a real implementation, this would be stored in a distributed cache
+      const cacheKey = `federated_${topicKey}`;
+      if (this.cacheClient) {
+        await this.cacheClient.set(
+          cacheKey,
+          aggregatedInsights,
+          86400 * 7, // 7 days TTL
+          {
+            topicKey,
+            aggregatedAt: new Date(),
+            insightsCount: aggregatedInsights.length,
+          }
+        );
+      }
 
       this.logger.info(`Completed aggregation for topic: ${topicKey}`, {
         aggregatedCount: aggregatedInsights.length,
@@ -683,11 +730,36 @@ export class FederatedLearningEngine {
   }
 
   private async getAggregatedInsights(
-    _topicKey: string
+    topicKey: string
   ): Promise<ContextualMemory[]> {
-    // In a real implementation, this would fetch from distributed cache/database
-    // For now, return empty array
-    return [];
+    if (!this.cacheClient) {
+      this.logger.warn("No cache client available, returning empty insights");
+      return [];
+    }
+
+    try {
+      const cacheKey = `federated_${topicKey}`;
+      const cachedInsights = await this.cacheClient.get<ContextualMemory[]>(
+        cacheKey
+      );
+
+      if (cachedInsights) {
+        this.logger.debug("Retrieved aggregated insights from cache", {
+          topicKey,
+          insightsCount: cachedInsights.length,
+        });
+        return cachedInsights;
+      }
+
+      this.logger.debug("No cached insights found", { topicKey });
+      return [];
+    } catch (error) {
+      this.logger.error("Failed to retrieve aggregated insights from cache", {
+        topicKey,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
   }
 
   private async filterInsightsForParticipant(
@@ -720,9 +792,30 @@ export class FederatedLearningEngine {
     return Math.min(1.0, (avgRelevance + diversity) / 2);
   }
 
-  private getSourceTenants(_topicKey: string): string[] {
-    // In a real implementation, this would track which tenants contributed to each topic
-    return Array.from(this.participantRegistry.keys()).slice(0, 3); // Placeholder
+  private async getSourceTenants(topicKey: string): Promise<string[]> {
+    if (!this.cacheClient) {
+      this.logger.warn(
+        "No cache client available, returning placeholder tenants"
+      );
+      return Array.from(this.participantRegistry.keys()).slice(0, 3);
+    }
+
+    try {
+      const sourceTenants = await this.cacheClient.getSourceTenants(topicKey);
+
+      this.logger.debug("Retrieved source tenants from cache", {
+        topicKey,
+        tenantCount: sourceTenants.length,
+      });
+
+      return sourceTenants;
+    } catch (error) {
+      this.logger.error("Failed to retrieve source tenants from cache", {
+        topicKey,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return Array.from(this.participantRegistry.keys()).slice(0, 3);
+    }
   }
 
   private generateTopicKey(context: TaskContext): string {

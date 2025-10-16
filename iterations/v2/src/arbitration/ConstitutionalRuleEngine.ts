@@ -302,12 +302,127 @@ export class ConstitutionalRuleEngine {
     context: EvaluationContext,
     precedents: Precedent[]
   ): boolean {
-    // Find most similar precedent
-    const mostSimilar = precedents[0]; // Simplified: take first precedent
+    // Find most similar precedent using semantic matching
+    const scoredPrecedents = precedents.map(precedent => ({
+      precedent,
+      score: this.calculatePrecedentSimilarity(context, precedent)
+    }));
 
-    // Apply precedent reasoning
-    // In a real implementation, this would use ML/NLP to match context to precedent
+    // Sort by similarity score (highest first)
+    scoredPrecedents.sort((a, b) => b.score - a.score);
+
+    const mostSimilar = scoredPrecedents[0]?.precedent;
+    if (!mostSimilar) {
+      return false; // No precedents available
+    }
+
+    // Apply precedent reasoning based on similarity threshold
+    const SIMILARITY_THRESHOLD = 0.3; // Minimum similarity to apply precedent
+    if (scoredPrecedents[0].score < SIMILARITY_THRESHOLD) {
+      return false; // Not similar enough to apply precedent
+    }
+
     return mostSimilar.verdict.outcome === "rejected";
+  }
+
+  /**
+   * Calculate similarity score between evaluation context and precedent
+   * Uses simple text-based semantic matching (not full ML/NLP)
+   */
+  private calculatePrecedentSimilarity(
+    context: EvaluationContext,
+    precedent: Precedent
+  ): number {
+    let score = 0;
+    const maxScore = 100;
+
+    // Category matching (20 points)
+    if (precedent.applicability.category === this.getRuleCategory(context.action)) {
+      score += 20;
+    }
+
+    // Action similarity (30 points)
+    const actionSimilarity = this.calculateTextSimilarity(
+      context.action,
+      precedent.keyFacts.join(" ").toLowerCase()
+    );
+    score += actionSimilarity * 30;
+
+    // Actor pattern matching (15 points)
+    const actorPatterns = precedent.applicability.conditions;
+    for (const pattern of actorPatterns) {
+      if (this.matchesActorPattern(context.actor, pattern)) {
+        score += 15;
+        break; // Only count once
+      }
+    }
+
+    // Key facts matching (35 points)
+    const contextText = [
+      context.action,
+      JSON.stringify(context.parameters),
+      JSON.stringify(context.environment)
+    ].join(" ").toLowerCase();
+
+    let factMatchScore = 0;
+    for (const fact of precedent.keyFacts) {
+      const factSimilarity = this.calculateTextSimilarity(contextText, fact.toLowerCase());
+      factMatchScore = Math.max(factMatchScore, factSimilarity);
+    }
+    score += factMatchScore * 35;
+
+    return Math.min(score / maxScore, 1.0); // Normalize to 0-1
+  }
+
+  /**
+   * Simple text similarity using word overlap and substring matching
+   */
+  private calculateTextSimilarity(text1: string, text2: string): number {
+    const words1 = new Set(text1.toLowerCase().split(/\s+/));
+    const words2 = new Set(text2.toLowerCase().split(/\s+/));
+
+    const intersection = new Set([...words1].filter(x => words2.has(x)));
+    const union = new Set([...words1, ...words2]);
+
+    const overlap = intersection.size / union.size;
+
+    // Bonus for substring matches (suggests stronger semantic connection)
+    const substringBonus = text1.includes(text2) || text2.includes(text1) ? 0.2 : 0;
+
+    return Math.min(overlap + substringBonus, 1.0);
+  }
+
+  /**
+   * Check if actor matches a condition pattern
+   */
+  private matchesActorPattern(actor: string, pattern: string): boolean {
+    // Simple pattern matching - could be enhanced with regex
+    const lowerActor = actor.toLowerCase();
+    const lowerPattern = pattern.toLowerCase();
+
+    return lowerActor.includes(lowerPattern) || lowerPattern.includes(lowerActor);
+  }
+
+  /**
+   * Map action to rule category
+   */
+  private getRuleCategory(action: string): RuleCategory {
+    const actionLower = action.toLowerCase();
+
+    if (actionLower.includes("commit") || actionLower.includes("push")) {
+      return RuleCategory.CODE_QUALITY;
+    }
+    if (actionLower.includes("deploy") || actionLower.includes("release")) {
+      return RuleCategory.DEPLOYMENT;
+    }
+    if (actionLower.includes("access") || actionLower.includes("permission")) {
+      return RuleCategory.SECURITY;
+    }
+    if (actionLower.includes("resource") || actionLower.includes("quota")) {
+      return RuleCategory.RESOURCE_MANAGEMENT;
+    }
+
+    return RuleCategory.CODE_QUALITY; // Default
   }
 
   /**

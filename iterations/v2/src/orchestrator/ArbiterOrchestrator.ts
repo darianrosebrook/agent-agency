@@ -19,6 +19,7 @@ import type {
   VerificationEngine,
   VerificationEngineConfig,
 } from "../types/verification";
+import { VerificationType } from "../types/verification";
 import { VerificationEngineImpl } from "../verification/VerificationEngine";
 
 // Audit Logging imports
@@ -488,20 +489,54 @@ export class ArbiterOrchestrator {
     if (this.config.caws.verificationEngine?.enabled) {
       try {
         const verificationConfig: VerificationEngineConfig = {
-          enabled: true,
+          defaultTimeoutMs:
+            this.config.caws.verificationEngine.timeoutMs ?? 30000,
+          minConfidenceThreshold: 0.7,
+          maxEvidencePerMethod: 10,
           cacheEnabled:
             this.config.caws.verificationEngine.cacheEnabled ?? true,
           cacheTtlMs: this.config.caws.verificationEngine.cacheTtlMs ?? 3600000, // 1 hour
           maxConcurrentVerifications:
             this.config.caws.verificationEngine.maxConcurrent ?? 10,
-          timeoutMs: this.config.caws.verificationEngine.timeoutMs ?? 30000, // 30 seconds
-          methods: {
-            factChecking: { enabled: true, priority: 1 },
-            crossReference: { enabled: true, priority: 2 },
-            logical: { enabled: true, priority: 3 },
-            statistical: { enabled: true, priority: 4 },
-            consistency: { enabled: true, priority: 5 },
-          },
+          retryAttempts: 3,
+          retryDelayMs: 1000,
+          methods: [
+            {
+              type: VerificationType.FACT_CHECKING,
+              enabled: true,
+              priority: 1,
+              timeoutMs: 10000,
+              config: {},
+            },
+            {
+              type: VerificationType.CROSS_REFERENCE,
+              enabled: true,
+              priority: 2,
+              timeoutMs: 10000,
+              config: {},
+            },
+            {
+              type: VerificationType.LOGICAL_VALIDATION,
+              enabled: true,
+              priority: 3,
+              timeoutMs: 10000,
+              config: {},
+            },
+            {
+              type: VerificationType.STATISTICAL_VALIDATION,
+              enabled: true,
+              priority: 4,
+              timeoutMs: 10000,
+              config: {},
+            },
+            {
+              type: VerificationType.CONSISTENCY_VALIDATION,
+              enabled: true,
+              priority: 5,
+              timeoutMs: 10000,
+              config: {},
+            },
+          ],
         };
 
         this.components.verificationEngine = new VerificationEngineImpl(

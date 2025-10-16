@@ -83,6 +83,8 @@ export class ConnectionPoolManager {
   private config: DatabaseConnectionConfig | null = null;
   private createdAt: Date | null = null;
   private isShuttingDown: boolean = false;
+  private signalHandlers: { SIGTERM: () => void; SIGINT: () => void } | null =
+    null;
 
   // Private constructor prevents direct instantiation
   private constructor() {
@@ -251,14 +253,18 @@ export class ConnectionPoolManager {
       await client.query("SELECT app.set_tenant_context($1, $2, $3)", [
         tenantId,
         context?.userId || null,
-        context?.sessionId || null
+        context?.sessionId || null,
       ]);
 
       return client;
     } catch (error) {
       // Release client if context setup fails
       client.release();
-      throw new Error(`Failed to set context: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to set context: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     }
   }
 
@@ -360,6 +366,13 @@ export class ConnectionPoolManager {
       console.error("[ConnectionPool] Error during shutdown:", error);
       throw error;
     } finally {
+      // Remove signal handlers to prevent memory leaks
+      if (this.signalHandlers) {
+        process.removeListener("SIGTERM", this.signalHandlers.SIGTERM);
+        process.removeListener("SIGINT", this.signalHandlers.SIGINT);
+        this.signalHandlers = null;
+      }
+
       this.pool = null;
       this.config = null;
       this.createdAt = null;
@@ -414,16 +427,25 @@ export class ConnectionPoolManager {
       }
     };
 
-    process.on("SIGTERM", () => shutdownHandler("SIGTERM"));
-    process.on("SIGINT", () => shutdownHandler("SIGINT"));
+    // Store handlers so we can remove them later
+    this.signalHandlers = {
+      SIGTERM: () => shutdownHandler("SIGTERM"),
+      SIGINT: () => shutdownHandler("SIGINT"),
+    };
+
+    process.on("SIGTERM", this.signalHandlers.SIGTERM);
+    process.on("SIGINT", this.signalHandlers.SIGINT);
   }
 
   /**
    * Reset singleton (for testing only)
    */
   static resetForTesting(): void {
-    if (ConnectionPoolManager.instance?.pool) {
-      ConnectionPoolManager.instance.pool.end().catch(console.error);
+    if (
+      ConnectionPoolManager.instance?.pool &&
+      !ConnectionPoolManager.instance.isShuttingDown
+    ) {
+      ConnectionPoolManager.instance.shutdown().catch(console.error);
     }
     ConnectionPoolManager.instance = null;
   }

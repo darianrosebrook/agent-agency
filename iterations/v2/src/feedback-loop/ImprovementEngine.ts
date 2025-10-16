@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
 import { ConfigManager } from "../config/ConfigManager";
+import { MetricsCollector } from "../monitoring/MetricsCollector";
 import { Logger } from "../observability/Logger";
 import {
   FeedbackRecommendation,
@@ -9,6 +10,7 @@ import {
 export class ImprovementEngine extends EventEmitter {
   private config: ImprovementEngineConfig;
   private logger: Logger;
+  private metricsCollector: MetricsCollector;
 
   // Track active improvements and cooldowns
   private activeImprovements: Map<
@@ -22,10 +24,11 @@ export class ImprovementEngine extends EventEmitter {
   private successRates: Map<string, { successes: number; attempts: number }> =
     new Map();
 
-  constructor(configManager: ConfigManager) {
+  constructor(configManager: ConfigManager, metricsCollector: MetricsCollector) {
     super();
     this.config = configManager.get("feedbackLoop.improvements");
     this.logger = new Logger("ImprovementEngine");
+    this.metricsCollector = metricsCollector;
   }
 
   public async evaluateRecommendation(
@@ -270,21 +273,124 @@ export class ImprovementEngine extends EventEmitter {
       return { effective: false, monitoringComplete: false };
     }
 
-    // In a real implementation, this would query actual metrics
-    // For now, simulate based on expected impact
-    const expectedImpact = recommendation.expectedImpact.improvementPercent;
-    const actualImpact = expectedImpact * (0.8 + Math.random() * 0.4); // 80-120% of expected
-    const effective = actualImpact > expectedImpact * 0.5; // At least 50% of expected improvement
+    try {
+      // Query real metrics before and after implementation
+      const implementationDate = new Date(implementationTime);
+      const beforeStart = new Date(implementationDate.getTime() - this.config.monitoringPeriodMs);
+      const afterEnd = new Date(implementationDate.getTime() + this.config.monitoringPeriodMs);
 
-    this.emit("improvement:monitored", {
+      // Get metrics before implementation
+      const beforeMetrics = await this.metricsCollector.getHistoricalMetrics(
+        100,
+        beforeStart,
+        implementationDate
+      );
+
+      // Get metrics after implementation
+      const afterMetrics = await this.metricsCollector.getHistoricalMetrics(
+        100,
+        implementationDate,
+        afterEnd
+      );
+
+      if (beforeMetrics.length === 0 || afterMetrics.length === 0) {
+        this.logger.warn("Insufficient metrics data for improvement monitoring", {
+          recommendationId: recommendation.id,
+          beforeCount: beforeMetrics.length,
+          afterCount: afterMetrics.length,
+        });
+        return { effective: false, monitoringComplete: true };
+      }
+
+      // Calculate actual improvement based on the target metric
+      const actualImpact = await this.calculateActualImprovement(
+        recommendation,
+        beforeMetrics,
+        afterMetrics
+      );
+
+      const expectedImpact = recommendation.expectedImpact.improvementPercent;
+      const effective = actualImpact > expectedImpact * 0.5; // At least 50% of expected improvement
+
+      this.logger.info("Improvement monitoring completed", {
+        recommendationId: recommendation.id,
+        targetEntity: recommendation.action.targetEntity,
+        expectedImpact,
+        actualImpact,
+        effective,
+        beforeMetricsCount: beforeMetrics.length,
+        afterMetricsCount: afterMetrics.length,
+      });
+
+      this.emit("improvement:monitored", {
+        recommendationId: recommendation.id,
+        targetEntity: recommendation.action.targetEntity,
+        effective,
+        actualImpact,
+        expectedImpact,
+      });
+
+      return { effective, actualImpact, monitoringComplete: true };
+    } catch (error) {
+      this.logger.error("Failed to monitor improvement effects", {
+        recommendationId: recommendation.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      // Fallback to conservative assessment
+      return { effective: false, monitoringComplete: true };
+    }
+  }
+
+  /**
+   * Calculate actual improvement percentage based on metrics comparison
+   */
+  private async calculateActualImprovement(
+    recommendation: FeedbackRecommendation,
+    beforeMetrics: any[],
+    afterMetrics: any[]
+  ): Promise<number> {
+    const targetMetric = recommendation.expectedImpact.metric;
+    
+    // Calculate average values for the target metric
+    const beforeAvg = this.calculateAverageMetric(beforeMetrics, targetMetric);
+    const afterAvg = this.calculateAverageMetric(afterMetrics, targetMetric);
+
+    if (beforeAvg === 0) {
+      this.logger.warn("Cannot calculate improvement: before value is zero", {
+        recommendationId: recommendation.id,
+        targetMetric,
+      });
+      return 0;
+    }
+
+    // Calculate percentage improvement
+    const improvement = ((afterAvg - beforeAvg) / beforeAvg) * 100;
+
+    this.logger.debug("Calculated improvement", {
       recommendationId: recommendation.id,
-      targetEntity: recommendation.action.targetEntity,
-      effective,
-      actualImpact,
-      expectedImpact,
+      targetMetric,
+      beforeAvg,
+      afterAvg,
+      improvement,
     });
 
-    return { effective, actualImpact, monitoringComplete: true };
+    return improvement;
+  }
+
+  /**
+   * Calculate average value for a specific metric across a set of metrics
+   */
+  private calculateAverageMetric(metrics: any[], metricName: string): number {
+    if (metrics.length === 0) return 0;
+
+    const values = metrics
+      .map(m => m[metricName])
+      .filter(value => typeof value === 'number' && !isNaN(value));
+
+    if (values.length === 0) return 0;
+
+    return values.reduce((sum, value) => sum + value, 0) / values.length;
   }
 
   private async executeImprovement(

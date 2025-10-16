@@ -16,9 +16,9 @@ import {
   RecoveryStatus,
 } from "../types/coordinator";
 
-import { SystemCoordinator } from "./SystemCoordinator";
 import { IncidentNotifier } from "../adapters/IncidentNotifier";
 import { InfrastructureController } from "../adapters/InfrastructureController";
+import { SystemCoordinator } from "./SystemCoordinator";
 
 export class FailureManager extends EventEmitter {
   private activeRecoveries = new Map<string, FailureRecovery>();
@@ -34,40 +34,44 @@ export class FailureManager extends EventEmitter {
     infrastructureController?: InfrastructureController
   ) {
     super();
-    
-    // Initialize adapters with default configurations
-    this.incidentNotifier = incidentNotifier || new IncidentNotifier({
-      enabled: true,
-      incidentSystem: {
-        type: "mock", // Default to mock for development
-      },
-      notifications: {
-        enabled: true,
-        targets: [
-          {
-            type: "slack",
-            address: "#ops-critical",
-            name: "Ops Team",
-          },
-        ],
-        escalationDelayMs: 300000, // 5 minutes
-      },
-    });
 
-    this.infrastructureController = infrastructureController || new InfrastructureController({
-      enabled: true,
-      providers: {
-        docker: { enabled: true },
-        kubernetes: { enabled: true },
-        systemd: { enabled: true, sudoRequired: false },
-      },
-      healthCheck: {
+    // Initialize adapters with default configurations
+    this.incidentNotifier =
+      incidentNotifier ||
+      new IncidentNotifier({
         enabled: true,
-        timeoutMs: 30000,
-        intervalMs: 5000,
-        maxRetries: 6,
-      },
-    });
+        incidentSystem: {
+          type: "mock", // Default to mock for development
+        },
+        notifications: {
+          enabled: true,
+          targets: [
+            {
+              type: "slack",
+              address: "#ops-critical",
+              name: "Ops Team",
+            },
+          ],
+          escalationDelayMs: 300000, // 5 minutes
+        },
+      });
+
+    this.infrastructureController =
+      infrastructureController ||
+      new InfrastructureController({
+        enabled: true,
+        providers: {
+          docker: { enabled: true },
+          kubernetes: { enabled: true },
+          systemd: { enabled: true, sudoRequired: false },
+        },
+        healthCheck: {
+          enabled: true,
+          timeoutMs: 30000,
+          intervalMs: 5000,
+          maxRetries: 6,
+        },
+      });
   }
 
   /**
@@ -743,7 +747,10 @@ export class FailureManager extends EventEmitter {
     console.log(`Switching over component ${componentId}`, params);
 
     try {
-      await this.infrastructureController.switchoverComponent(componentId, params);
+      await this.infrastructureController.switchoverComponent(
+        componentId,
+        params
+      );
       console.log(`Successfully switched over component ${componentId}`);
     } catch (error) {
       console.error(`Failed to switch over component ${componentId}:`, error);
@@ -786,10 +793,16 @@ export class FailureManager extends EventEmitter {
 
     try {
       // Format alert message
-      const alertMessage = `Alert for ${target}: ${JSON.stringify(params || {})}`;
+      const alertMessage = `Alert for ${target}: ${JSON.stringify(
+        params || {}
+      )}`;
 
       // Determine notification channel based on target
-      const channel = target.includes("@") ? "email" : target.startsWith("#") ? "slack" : "generic";
+      const channel = target.includes("@")
+        ? "email"
+        : target.startsWith("#")
+        ? "slack"
+        : "generic";
 
       // Send to notification system
       console.log(`[NOTIFICATION] Sending via ${channel}: ${alertMessage}`);

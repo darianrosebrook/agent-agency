@@ -59,6 +59,25 @@ interface LogicalFallacy {
  */
 export class LogicalValidator {
   private config: LogicalConfig;
+  private healthMetrics: {
+    totalRequests: number;
+    successfulRequests: number;
+    failedRequests: number;
+    responseTimes: number[];
+    lastHealthCheck: Date;
+    consecutiveFailures: number;
+    lastResponseTime: number;
+    errorRate: number;
+  } = {
+    totalRequests: 0,
+    successfulRequests: 0,
+    failedRequests: 0,
+    responseTimes: [],
+    lastHealthCheck: new Date(),
+    consecutiveFailures: 0,
+    lastResponseTime: 0,
+    errorRate: 0,
+  };
 
   private readonly fallacyPatterns: Array<{
     name: string;
@@ -174,13 +193,27 @@ export class LogicalValidator {
       // Assess overall logic
       const assessment = this.assessLogic(argument, validity, fallacies);
 
+      // Generate evidence from logical analysis
+      const { supportingEvidence, contradictoryEvidence } =
+        this.generateEvidenceFromAnalysis(
+          argument,
+          validity,
+          fallacies,
+          assessment
+        );
+
+      const processingTime = Date.now() - startTime;
+      this.recordSuccess(processingTime);
+
       return {
         method: VerificationType.LOGICAL_VALIDATION,
         verdict: assessment.verdict,
         confidence: assessment.confidence,
         reasoning: assessment.reasoning,
-        processingTimeMs: Date.now() - startTime,
+        processingTimeMs: processingTime,
         evidenceCount: argument.premises.length + argument.connectives.length,
+        supportingEvidence,
+        contradictoryEvidence,
         metadata: {
           fallacies: fallacies.map((f) =>
             f.type.toLowerCase().replace(/\s+/g, "_")
@@ -195,6 +228,9 @@ export class LogicalValidator {
         },
       };
     } catch (error) {
+      const processingTime = Date.now() - startTime;
+      this.recordFailure(processingTime);
+
       return {
         method: VerificationType.LOGICAL_VALIDATION,
         verdict: VerificationVerdict.ERROR,
@@ -204,7 +240,7 @@ export class LogicalValidator {
             error instanceof Error ? error.message : String(error)
           }`,
         ],
-        processingTimeMs: Date.now() - startTime,
+        processingTimeMs: processingTime,
         evidenceCount: 0,
       };
     }
@@ -602,5 +638,174 @@ export class LogicalValidator {
       confidence: 0.4,
       reasoning,
     };
+  }
+
+  /**
+   * Generate structured evidence from logical analysis
+   */
+  private generateEvidenceFromAnalysis(
+    argument: LogicalArgument,
+    validity: any,
+    fallacies: LogicalFallacy[],
+    assessment: any
+  ): { supportingEvidence: any[]; contradictoryEvidence: any[] } {
+    const supportingEvidence: any[] = [];
+    const contradictoryEvidence: any[] = [];
+
+    // Generate evidence from argument structure
+    if (argument.premises.length > 0) {
+      supportingEvidence.push({
+        source: "logical-analysis",
+        content: `Found ${argument.premises.length} premises in logical argument structure`,
+        relevance: 0.8,
+        credibility: validity.score || 0.5,
+        supporting: true,
+        verificationDate: new Date(),
+        type: "factual",
+        timestamp: new Date(),
+        metadata: {
+          premises: argument.premises,
+          argumentStructure: argument.structure,
+          method: "logical-validation",
+        },
+      });
+    }
+
+    // Generate evidence from fallacies (contradictory)
+    for (const fallacy of fallacies) {
+      contradictoryEvidence.push({
+        source: "logical-analysis",
+        content: `Detected logical fallacy: ${fallacy.description}`,
+        relevance: 0.9,
+        credibility: 0.8,
+        supporting: false,
+        verificationDate: new Date(),
+        type: "factual",
+        timestamp: new Date(),
+        metadata: {
+          fallacyType: fallacy.type,
+          fallacyDescription: fallacy.description,
+          method: "logical-validation",
+        },
+      });
+    }
+
+    // Generate evidence from validity assessment
+    if (validity.score > 0.7) {
+      supportingEvidence.push({
+        source: "logical-analysis",
+        content: `Logical argument structure validated with confidence ${(
+          validity.score * 100
+        ).toFixed(1)}%`,
+        relevance: validity.score,
+        credibility: validity.score,
+        supporting: true,
+        verificationDate: new Date(),
+        type: "factual",
+        timestamp: new Date(),
+        metadata: {
+          validityScore: validity.score,
+          method: "logical-validation",
+        },
+      });
+    } else if (validity.score < 0.4) {
+      contradictoryEvidence.push({
+        source: "logical-analysis",
+        content: `Logical argument structure found invalid with confidence ${(
+          (1 - validity.score) *
+          100
+        ).toFixed(1)}%`,
+        relevance: 1 - validity.score,
+        credibility: 1 - validity.score,
+        supporting: false,
+        verificationDate: new Date(),
+        type: "factual",
+        timestamp: new Date(),
+        metadata: {
+          validityScore: validity.score,
+          method: "logical-validation",
+        },
+      });
+    }
+
+    return { supportingEvidence, contradictoryEvidence };
+  }
+
+  /**
+   * Get method health status
+   */
+  getHealth(): { available: boolean; responseTime: number; errorRate: number } {
+    // Update error rate based on recent metrics
+    this.updateErrorRate();
+
+    // Check availability based on consecutive failures and recent activity
+    const now = new Date();
+    const timeSinceLastCheck =
+      now.getTime() - this.healthMetrics.lastHealthCheck.getTime();
+    const available: boolean =
+      this.healthMetrics.consecutiveFailures < 3 && timeSinceLastCheck < 300000; // 5 minutes
+
+    // Calculate average response time
+    const avgResponseTime =
+      this.healthMetrics.responseTimes.length > 0
+        ? this.healthMetrics.responseTimes.reduce(
+            (sum, time) => sum + time,
+            0
+          ) / this.healthMetrics.responseTimes.length
+        : this.healthMetrics.lastResponseTime || 0;
+
+    return {
+      available,
+      responseTime: Math.round(avgResponseTime),
+      errorRate: Math.round(this.healthMetrics.errorRate * 100) / 100,
+    };
+  }
+
+  /**
+   * Record a successful verification request
+   */
+  private recordSuccess(responseTime: number): void {
+    this.healthMetrics.totalRequests++;
+    this.healthMetrics.successfulRequests++;
+    this.healthMetrics.consecutiveFailures = 0;
+    this.healthMetrics.lastResponseTime = responseTime;
+    this.healthMetrics.responseTimes.push(responseTime);
+
+    // Keep only last 100 response times for rolling average
+    if (this.healthMetrics.responseTimes.length > 100) {
+      this.healthMetrics.responseTimes.shift();
+    }
+
+    this.healthMetrics.lastHealthCheck = new Date();
+  }
+
+  /**
+   * Record a failed verification request
+   */
+  private recordFailure(responseTime: number): void {
+    this.healthMetrics.totalRequests++;
+    this.healthMetrics.failedRequests++;
+    this.healthMetrics.consecutiveFailures++;
+    this.healthMetrics.lastResponseTime = responseTime;
+    this.healthMetrics.responseTimes.push(responseTime);
+
+    // Keep only last 100 response times for rolling average
+    if (this.healthMetrics.responseTimes.length > 100) {
+      this.healthMetrics.responseTimes.shift();
+    }
+
+    this.healthMetrics.lastHealthCheck = new Date();
+  }
+
+  /**
+   * Update error rate based on recent metrics
+   */
+  private updateErrorRate(): void {
+    if (this.healthMetrics.totalRequests > 0) {
+      this.healthMetrics.errorRate =
+        this.healthMetrics.failedRequests / this.healthMetrics.totalRequests;
+    } else {
+      this.healthMetrics.errorRate = 0;
+    }
   }
 }
