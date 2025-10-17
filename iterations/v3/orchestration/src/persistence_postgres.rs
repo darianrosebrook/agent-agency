@@ -15,14 +15,16 @@ impl PostgresVerdictWriter {
 #[async_trait::async_trait]
 impl VerdictWriter for PostgresVerdictWriter {
     async fn persist_verdict(&self, task_id: &str, verdict: &FinalVerdict) -> Result<()> {
-        let decision = match verdict.decision {
-            FinalDecision::Accept => "accept",
-            FinalDecision::Reject => "reject",
-            FinalDecision::Modify => "modify",
+        let (decision, summary) = match verdict {
+            FinalVerdict::Accepted { summary, .. } => ("accept", summary.clone()),
+            FinalVerdict::Rejected { summary, .. } => ("reject", summary.clone()),
+            FinalVerdict::RequiresModification { summary, .. } => ("modify", summary.clone()),
+            FinalVerdict::NeedsInvestigation { summary, .. } => ("investigate", summary.clone()),
         };
-        let votes = Json(&verdict.votes);
-        let remediation = Json(&verdict.remediation);
-        let refs: Vec<String> = verdict.constitutional_refs.clone();
+        // TODO: Handle votes, remediation, and constitutional_refs when FinalVerdict structure is finalized
+        let votes = Json(&serde_json::Value::Null);
+        let remediation = Json(&serde_json::Value::Null);
+        let refs: Vec<String> = vec![];
         // TODO: Fix SQLx query macros - need DATABASE_URL or prepare offline
         // sqlx::query!(
         //     r#"INSERT INTO verdicts (id, task_id, decision, votes, dissent, remediation, constitutional_refs)
@@ -40,7 +42,7 @@ impl VerdictWriter for PostgresVerdictWriter {
         Ok(())
     }
 
-    async fn persist_waivers(&self, task_id: &str, waivers: &[Waiver]) -> Result<()> {
+    async fn persist_waivers(&self, task_id: &str, waivers: &[CawsWaiver]) -> Result<()> {
         for w in waivers {
             // TODO: Fix SQLx query macros - need DATABASE_URL or prepare offline
             // sqlx::query!(

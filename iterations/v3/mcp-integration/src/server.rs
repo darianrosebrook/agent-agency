@@ -176,6 +176,12 @@ impl MCPServer {
         Ok(result)
     }
 
+    // Test helper: register a tool directly in registry
+    #[cfg(test)]
+    pub async fn execute_tool_registry_register(&self, tool: MCPTool) {
+        let _ = self.tool_registry.register_tool(tool).await;
+    }
+
     /// Discover and register tools
     pub async fn discover_tools(&self) -> Result<ToolDiscoveryResult> {
         info!("Starting tool discovery");
@@ -195,6 +201,10 @@ impl MCPServer {
     pub async fn get_registry_stats(&self) -> ToolRegistryStats {
         self.tool_registry.get_statistics().await
     }
+
+    /// Test-only: register tool via server
+    #[cfg(test)]
+    pub async fn test_register_tool(&self, tool: MCPTool) -> Result<()> { self.tool_registry.register_tool(tool).await }
 
     /// Start HTTP server
     async fn start_http_server(&self) -> Result<()> {

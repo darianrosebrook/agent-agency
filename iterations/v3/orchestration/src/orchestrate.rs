@@ -2,27 +2,33 @@ use crate::caws_runtime::{CawsRuntimeValidator, DefaultValidator, DiffStats, Tas
 use crate::adapter::build_short_circuit_verdict;
 use anyhow::Result;
 use agent_agency_council::types::*;
+use agent_agency_council::models::TaskSpec as CouncilTaskSpec;
 use agent_agency_council::coordinator::ConsensusCoordinator;
 use crate::persistence::VerdictWriter;
-use agent_agency_apple_silicon::AllocationPlanner;
+use agent_agency_apple_silicon::{
+    AllocationPlanner,
+    adaptive_resource_manager::{
+        SystemSensors, AppleModelRegistry, AppleModelRegistryConfig, SimplePlanner
+    }
+};
 use agent_agency_council::coordinator::ProvenanceEmitter;
 use crate::provenance::OrchestrationProvenanceEmitter;
 use std::collections::HashMap;
 
-fn to_task_spec(desc: &TaskDescriptor) -> TaskSpec {
+fn to_task_spec(desc: &TaskDescriptor) -> CouncilTaskSpec {
     // Expanded mapping to include id/name/risk_tier/scope and deterministic seeds placeholder
     let now = chrono::Utc::now();
-    TaskSpec {
+    CouncilTaskSpec {
         id: uuid::Uuid::new_v4(),
         title: format!("task-{}", desc.task_id),
         description: "Orchestrated task".to_string(),
         risk_tier: match desc.risk_tier {
-            1 => RiskTier::Tier1,
-            2 => RiskTier::Tier2,
-            3 => RiskTier::Tier3,
-            _ => RiskTier::Tier3,
+            1 => agent_agency_council::models::RiskTier::Tier1,
+            2 => agent_agency_council::models::RiskTier::Tier2,
+            3 => agent_agency_council::models::RiskTier::Tier3,
+            _ => agent_agency_council::models::RiskTier::Tier3,
         },
-        scope: TaskScope {
+        scope: agent_agency_council::models::TaskScope {
             files_affected: desc.scope_in.clone(),
             max_files: None,
             max_loc: None,
@@ -33,28 +39,29 @@ fn to_task_spec(desc: &TaskDescriptor) -> TaskSpec {
             .clone()
             .unwrap_or_default()
             .into_iter()
-            .map(|criterion| AcceptanceCriterion {
+            .map(|criterion| agent_agency_council::models::AcceptanceCriterion {
                 id: uuid::Uuid::new_v4().to_string(),
                 description: criterion,
-                verification_method: VerificationMethod::Automated,
-                priority: Priority::High,
             })
             .collect(),
-        context: TaskContext {
+        context: agent_agency_council::models::TaskContext {
             workspace_root: ".".to_string(),
             git_branch: "main".to_string(),
             recent_changes: vec![],
             dependencies: HashMap::new(),
-            environment: Environment::Development,
+            environment: agent_agency_council::models::Environment::Development,
         },
-        worker_output: WorkerOutput {
+        worker_output: agent_agency_council::models::WorkerOutput {
             content: "".to_string(),
             files_modified: vec![],
             rationale: "".to_string(),
-            self_assessment: SelfAssessment {
+            self_assessment: agent_agency_council::models::SelfAssessment {
                 confidence: 0.0,
                 concerns: vec![],
                 improvements: vec![],
+                caws_compliance: 0.0,
+                estimated_effort: None,
+                quality_score: 0.0,
             },
             metadata: HashMap::new(),
         },
@@ -72,7 +79,7 @@ pub async fn orchestrate_task(
     diff: &DiffStats,
     tests_added: bool,
     deterministic: bool,
-    coordinator: &ConsensusCoordinator,
+    coordinator: &mut ConsensusCoordinator,
     writer: &dyn VerdictWriter,
     emitter: &dyn ProvenanceEmitter,
     orch_emitter: &OrchestrationProvenanceEmitter,
@@ -83,13 +90,13 @@ pub async fn orchestrate_task(
         2 => agent_agency_apple_silicon::Tier::T2, 
         _ => agent_agency_apple_silicon::Tier::T3 
     };
-    let sensors = agent_agency_apple_silicon::SystemSensors::detect();
-    let registry = agent_agency_apple_silicon::AppleModelRegistry::from_path(std::path::Path::new(
+    let sensors = SystemSensors::detect();
+    let registry = AppleModelRegistry::from_path(std::path::Path::new(
         std::env::var("ARM_MODEL_REGISTRY_JSON").unwrap_or_default().as_str(),
-    )).unwrap_or_else(|| agent_agency_apple_silicon::AppleModelRegistry::from_config(
-        agent_agency_apple_silicon::AppleModelRegistryConfig { models: std::collections::HashMap::new() }
+    )).unwrap_or_else(|| AppleModelRegistry::from_config(
+        AppleModelRegistryConfig { models: std::collections::HashMap::new() }
     ));
-    let planner = agent_agency_apple_silicon::SimplePlanner::new(sensors, registry);
+    let planner = SimplePlanner::new(sensors, registry);
     let req = agent_agency_apple_silicon::AllocationRequest {
         model: "gemma-3n-judge".to_string(),
         supported_precisions: vec![agent_agency_apple_silicon::Precision::Int8, agent_agency_apple_silicon::Precision::Fp16],
@@ -133,10 +140,7 @@ pub async fn orchestrate_task(
         // Emit provenance for validation-based short-circuit decision
         emitter.on_judge_verdict(uuid::Uuid::nil(), "runtime-validator", 1.0, "short_circuit", 1.0);
         let result = coordinator
-            .evaluate_task_with_validation(
-                to_task_spec(desc),
-                short.clone(),
-            )
+            .evaluate_task(to_task_spec(desc))
             .await?;
         writer.persist_verdict(&desc.task_id, &result.final_verdict).await.ok();
         emitter.on_final_verdict(result.task_id, &result.final_verdict);

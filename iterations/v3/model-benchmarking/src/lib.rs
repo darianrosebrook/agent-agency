@@ -19,6 +19,8 @@ pub mod regression_detector;
 pub mod types;
 pub mod metrics_collector;
 
+use tracing::info;
+
 pub use benchmark_runner::BenchmarkRunner;
 pub use scoring_system::MultiDimensionalScoringSystem;
 pub use performance_tracker::PerformanceTracker;
@@ -43,12 +45,12 @@ impl ModelBenchmarkingSystem {
     pub async fn new() -> Result<Self, BenchmarkingError> {
         info!("Initializing model benchmarking system");
 
-        let benchmark_runner = BenchmarkRunner::new().await?;
-        let scoring_system = MultiDimensionalScoringSystem::new().await?;
-        let performance_tracker = PerformanceTracker::new().await?;
-        let model_evaluator = ModelEvaluator::new().await?;
-        let regression_detector = regression_detector::RegressionDetector::new().await?;
-        let metrics_collector = metrics_collector::MetricsCollector::new().await?;
+        let benchmark_runner = BenchmarkRunner::new();
+        let scoring_system = MultiDimensionalScoringSystem::new();
+        let performance_tracker = PerformanceTracker::new();
+        let model_evaluator = ModelEvaluator::new();
+        let regression_detector = regression_detector::RegressionDetector::new();
+        let metrics_collector = metrics_collector::MetricsCollector::new();
 
         Ok(Self {
             benchmark_runner,

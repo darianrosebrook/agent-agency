@@ -1,10 +1,9 @@
 use crate::types::*;
+use crate::secrets_detection::SecretsDetector;
 use anyhow::Result;
 use tracing::{debug, info};
-use std::collections::HashMap;
 
 /// Security policy manager
-#[derive(Debug)]
 pub struct SecurityPolicy {
     /// Security policy configuration
     config: SecurityPolicyConfig,
@@ -309,7 +308,6 @@ impl SecurityPolicy {
 }
 
 /// Policy validation rule
-#[derive(Debug)]
 pub struct PolicyValidationRule {
     /// Rule name
     pub name: String,

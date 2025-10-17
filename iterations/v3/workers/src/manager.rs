@@ -218,10 +218,10 @@ impl WorkerPoolManager {
                 WorkerPoolEvent::TaskCompleted { task_id, worker_id, result: result.clone() }
             }
             ExecutionStatus::Failed | ExecutionStatus::Timeout | ExecutionStatus::Cancelled => {
-                WorkerPoolEvent::TaskFailed { 
-                    task_id, 
-                    worker_id, 
-                    error: result.error_message.unwrap_or_else(|| "Unknown error".to_string())
+                WorkerPoolEvent::TaskFailed {
+                    task_id,
+                    worker_id,
+                    error: result.error_message.as_ref().unwrap_or(&"Unknown error".to_string()).clone()
                 }
             }
         };

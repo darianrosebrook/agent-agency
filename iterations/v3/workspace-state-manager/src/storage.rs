@@ -7,6 +7,7 @@ use crate::types::*;
 use anyhow::Result;
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use serde_json;
+use sqlx::Row;
 use std::collections::HashMap;
 use std::fs;
 use std::io::{Read, Write};
@@ -414,7 +415,7 @@ impl StateStorage for DatabaseStorage {
             .await
             .map_err(|e| WorkspaceError::Storage(format!("Failed to list states: {}", e)))?;
 
-        let states = rows.into_iter()
+        let states: Vec<StateId> = rows.into_iter()
             .map(|row| StateId(row.get("id")))
             .collect();
 

@@ -26,6 +26,12 @@ impl Default for StateId {
     }
 }
 
+impl std::fmt::Display for StateId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 /// Represents a file in the workspace with its metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileState {

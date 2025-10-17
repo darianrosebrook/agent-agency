@@ -13,4 +13,16 @@ impl OrchestrationProvenanceEmitter {
         // Placeholder implementation
         Ok(())
     }
+
+    pub fn orchestrate_enter(&self, _task_id: &str, _scope: &[String], _deterministic: bool) {
+        // Placeholder implementation
+    }
+
+    pub fn validation_result(&self, _task_id: &str, _passed: bool) {
+        // Placeholder implementation
+    }
+
+    pub fn orchestrate_exit(&self, _task_id: &str, _status: &str) {
+        // Placeholder implementation
+    }
 }

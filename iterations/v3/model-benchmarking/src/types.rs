@@ -354,3 +354,59 @@ pub enum BenchmarkingError {
     MetricsCollectionFailed(String),
 }
 
+/// Alert for performance regressions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegressionAlert {
+    pub model_id: Uuid,
+    pub metric_name: String,
+    pub current_value: f64,
+    pub previous_value: f64,
+    pub regression_percentage: f64,
+    pub severity: RegressionSeverity,
+    pub timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RegressionSeverity {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+/// Benchmark report containing results and analysis
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BenchmarkReport {
+    pub report_id: Uuid,
+    pub timestamp: DateTime<Utc>,
+    pub benchmark_results: Vec<BenchmarkResult>,
+    pub performance_summary: PerformanceSummary,
+    pub regression_alerts: Vec<RegressionAlert>,
+    pub recommendations: Vec<ModelRecommendation>,
+}
+
+/// Result of comparing model performance against baseline
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComparisonResult {
+    pub improvement_percentage: f64,
+    pub regression_areas: Vec<String>,
+    pub improvement_areas: Vec<String>,
+    pub recommendation: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RecommendationPriority {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ImplementationEffort {
+    Low,
+    Medium,
+    High,
+    VeryHigh,
+}
+

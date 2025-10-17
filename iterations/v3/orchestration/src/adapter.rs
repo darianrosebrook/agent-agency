@@ -13,7 +13,7 @@ fn code_to_ref(code: &ViolationCode) -> &'static str {
 
 /// Build a short-circuit FinalVerdict when CAWS-critical violations occur.
 /// Returns None if no hard-fail violations are present.
-pub fn build_short_circuit_verdict(v: &ValidationResult) -> Option<api::FinalVerdict> {
+pub fn build_short_circuit_verdict(v: &ValidationResult) -> Option<FinalVerdict> {
     let mut remediation: Vec<String> = Vec::new();
     let mut refs: Vec<String> = Vec::new();
     let mut hard_fail = false;
@@ -26,12 +26,9 @@ pub fn build_short_circuit_verdict(v: &ValidationResult) -> Option<api::FinalVer
     }
 
     if hard_fail {
-        Some(api::FinalVerdict {
-            decision: api::FinalDecision::Reject,
-            votes: vec![],
-            dissent: "CAWS runtime validation failed".to_string(),
-            remediation,
-            constitutional_refs: refs,
+        Some(FinalVerdict::Rejected {
+            primary_reasons: remediation,
+            summary: "CAWS runtime validation failed".to_string(),
         })
     } else {
         None

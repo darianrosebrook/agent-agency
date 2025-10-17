@@ -14,7 +14,6 @@ use chrono::Utc;
 use std::time::Instant;
 
 /// Main security policy enforcer
-#[derive(Debug)]
 pub struct SecurityPolicyEnforcer {
     /// Security policy configuration
     config: SecurityPolicyConfig,
