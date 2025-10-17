@@ -1,28 +1,28 @@
 [
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::initialize",
+      "function_name": "HttpServerHandle::shutdown",
       "return_type": "-> Result<()>",
       "span": {
         "start": {
-          "line": 64,
+          "line": 29,
           "column": 5
         },
         "end": {
-          "line": 93,
+          "line": 44,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 66,
+        "line": 31,
         "column": 9
       },
       "end": {
-        "line": 92,
+        "line": 43,
         "column": 15
       }
     },
@@ -31,539 +31,389 @@
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
+      "function_name": "unauthorized_http_response",
+      "return_type": "-> Response<Body>",
       "span": {
         "start": {
-          "line": 95,
-          "column": 5
+          "line": 47,
+          "column": 1
         },
         "end": {
-          "line": 132,
-          "column": 6
+          "line": 52,
+          "column": 2
         }
       }
     },
     "span": {
       "start": {
-        "line": 101,
-        "column": 9
+        "line": 48,
+        "column": 5
       },
       "end": {
-        "line": 131,
-        "column": 41
+        "line": 51,
+        "column": 28
       }
     },
-    "replacement": "(0.0, true)",
+    "replacement": "Response::new()",
     "genre": "FnValue"
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
+      "function_name": "unauthorized_http_response",
+      "return_type": "-> Response<Body>",
       "span": {
         "start": {
-          "line": 95,
-          "column": 5
+          "line": 47,
+          "column": 1
         },
         "end": {
-          "line": 132,
-          "column": 6
+          "line": 52,
+          "column": 2
         }
       }
     },
     "span": {
       "start": {
-        "line": 101,
-        "column": 9
+        "line": 48,
+        "column": 5
       },
       "end": {
-        "line": 131,
-        "column": 41
+        "line": 51,
+        "column": 28
       }
     },
-    "replacement": "(0.0, false)",
+    "replacement": "Response::from_iter([Default::default()])",
     "genre": "FnValue"
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
+      "function_name": "unauthorized_http_response",
+      "return_type": "-> Response<Body>",
       "span": {
         "start": {
-          "line": 95,
-          "column": 5
+          "line": 47,
+          "column": 1
         },
         "end": {
-          "line": 132,
-          "column": 6
+          "line": 52,
+          "column": 2
         }
       }
     },
     "span": {
       "start": {
-        "line": 101,
-        "column": 9
+        "line": 48,
+        "column": 5
       },
       "end": {
-        "line": 131,
-        "column": 41
+        "line": 51,
+        "column": 28
       }
     },
-    "replacement": "(1.0, true)",
+    "replacement": "Response::new(Default::default())",
     "genre": "FnValue"
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
+      "function_name": "unauthorized_http_response",
+      "return_type": "-> Response<Body>",
       "span": {
         "start": {
-          "line": 95,
-          "column": 5
+          "line": 47,
+          "column": 1
         },
         "end": {
-          "line": 132,
-          "column": 6
+          "line": 52,
+          "column": 2
         }
       }
     },
     "span": {
       "start": {
-        "line": 101,
-        "column": 9
+        "line": 48,
+        "column": 5
       },
       "end": {
-        "line": 131,
-        "column": 41
+        "line": 51,
+        "column": 28
       }
     },
-    "replacement": "(1.0, false)",
+    "replacement": "Response::from(Default::default())",
     "genre": "FnValue"
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
+      "function_name": "rate_limited_http_response",
+      "return_type": "-> Response<Body>",
       "span": {
         "start": {
-          "line": 95,
-          "column": 5
+          "line": 54,
+          "column": 1
         },
         "end": {
-          "line": 132,
-          "column": 6
+          "line": 59,
+          "column": 2
         }
       }
     },
     "span": {
       "start": {
-        "line": 101,
-        "column": 9
+        "line": 55,
+        "column": 5
       },
       "end": {
-        "line": 131,
-        "column": 41
+        "line": 58,
+        "column": 28
       }
     },
-    "replacement": "(-1.0, true)",
+    "replacement": "Response::new()",
     "genre": "FnValue"
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
+      "function_name": "rate_limited_http_response",
+      "return_type": "-> Response<Body>",
       "span": {
         "start": {
-          "line": 95,
-          "column": 5
+          "line": 54,
+          "column": 1
         },
         "end": {
-          "line": 132,
-          "column": 6
+          "line": 59,
+          "column": 2
         }
       }
     },
     "span": {
       "start": {
-        "line": 101,
-        "column": 9
+        "line": 55,
+        "column": 5
       },
       "end": {
-        "line": 131,
-        "column": 41
+        "line": 58,
+        "column": 28
       }
     },
-    "replacement": "(-1.0, false)",
+    "replacement": "Response::from_iter([Default::default()])",
     "genre": "FnValue"
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
+      "function_name": "rate_limited_http_response",
+      "return_type": "-> Response<Body>",
       "span": {
         "start": {
-          "line": 95,
-          "column": 5
+          "line": 54,
+          "column": 1
         },
         "end": {
-          "line": 132,
-          "column": 6
+          "line": 59,
+          "column": 2
         }
       }
     },
     "span": {
       "start": {
-        "line": 108,
-        "column": 21
+        "line": 55,
+        "column": 5
       },
       "end": {
-        "line": 108,
-        "column": 23
+        "line": 58,
+        "column": 28
       }
     },
-    "replacement": "-=",
-    "genre": "BinaryOperator"
+    "replacement": "Response::new(Default::default())",
+    "genre": "FnValue"
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
+      "function_name": "rate_limited_http_response",
+      "return_type": "-> Response<Body>",
       "span": {
         "start": {
-          "line": 95,
-          "column": 5
+          "line": 54,
+          "column": 1
         },
         "end": {
-          "line": 132,
-          "column": 6
+          "line": 59,
+          "column": 2
         }
       }
     },
     "span": {
       "start": {
-        "line": 108,
-        "column": 21
+        "line": 55,
+        "column": 5
       },
       "end": {
-        "line": 108,
-        "column": 23
+        "line": 58,
+        "column": 28
       }
     },
-    "replacement": "*=",
-    "genre": "BinaryOperator"
+    "replacement": "Response::from(Default::default())",
+    "genre": "FnValue"
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
+      "function_name": "unauthorized_ws_response",
+      "return_type": "-> ws::Response",
       "span": {
         "start": {
-          "line": 95,
-          "column": 5
+          "line": 61,
+          "column": 1
         },
         "end": {
-          "line": 132,
-          "column": 6
+          "line": 63,
+          "column": 2
         }
       }
     },
     "span": {
       "start": {
-        "line": 120,
-        "column": 41
+        "line": 62,
+        "column": 5
       },
       "end": {
-        "line": 120,
-        "column": 42
+        "line": 62,
+        "column": 69
       }
     },
-    "replacement": "+",
-    "genre": "BinaryOperator"
+    "replacement": "Default::default()",
+    "genre": "FnValue"
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
+      "function_name": "rate_limited_ws_response",
+      "return_type": "-> ws::Response",
       "span": {
         "start": {
-          "line": 95,
-          "column": 5
+          "line": 65,
+          "column": 1
         },
         "end": {
-          "line": 132,
-          "column": 6
+          "line": 67,
+          "column": 2
         }
       }
     },
     "span": {
       "start": {
-        "line": 120,
-        "column": 41
+        "line": 66,
+        "column": 5
       },
       "end": {
-        "line": 120,
-        "column": 42
+        "line": 66,
+        "column": 81
       }
     },
-    "replacement": "/",
-    "genre": "BinaryOperator"
+    "replacement": "Default::default()",
+    "genre": "FnValue"
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
+      "function_name": "RateLimiter::allow",
+      "return_type": "-> bool",
       "span": {
         "start": {
-          "line": 95,
+          "line": 85,
           "column": 5
         },
         "end": {
-          "line": 132,
+          "line": 98,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 122,
-        "column": 37
+        "line": 86,
+        "column": 9
       },
       "end": {
-        "line": 122,
-        "column": 38
+        "line": 97,
+        "column": 10
       }
     },
-    "replacement": "+",
-    "genre": "BinaryOperator"
+    "replacement": "true",
+    "genre": "FnValue"
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
+      "function_name": "RateLimiter::allow",
+      "return_type": "-> bool",
       "span": {
         "start": {
-          "line": 95,
+          "line": 85,
           "column": 5
         },
         "end": {
-          "line": 132,
+          "line": 98,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 122,
-        "column": 37
+        "line": 86,
+        "column": 9
       },
       "end": {
-        "line": 122,
-        "column": 38
+        "line": 97,
+        "column": 10
       }
     },
-    "replacement": "/",
-    "genre": "BinaryOperator"
+    "replacement": "false",
+    "genre": "FnValue"
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
+      "function_name": "RateLimiter::allow",
+      "return_type": "-> bool",
       "span": {
         "start": {
-          "line": 95,
+          "line": 85,
           "column": 5
         },
         "end": {
-          "line": 132,
+          "line": 98,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 122,
-        "column": 48
+        "line": 87,
+        "column": 50
       },
       "end": {
-        "line": 122,
-        "column": 49
-      }
-    },
-    "replacement": "%",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
-      "span": {
-        "start": {
-          "line": 95,
-          "column": 5
-        },
-        "end": {
-          "line": 132,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 122,
-        "column": 48
-      },
-      "end": {
-        "line": 122,
-        "column": 49
-      }
-    },
-    "replacement": "*",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
-      "span": {
-        "start": {
-          "line": 95,
-          "column": 5
-        },
-        "end": {
-          "line": 132,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 122,
-        "column": 55
-      },
-      "end": {
-        "line": 122,
-        "column": 56
-      }
-    },
-    "replacement": "-",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
-      "span": {
-        "start": {
-          "line": 95,
-          "column": 5
-        },
-        "end": {
-          "line": 132,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 122,
-        "column": 55
-      },
-      "end": {
-        "line": 122,
-        "column": 56
-      }
-    },
-    "replacement": "*",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
-      "span": {
-        "start": {
-          "line": 95,
-          "column": 5
-        },
-        "end": {
-          "line": 132,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 128,
-        "column": 30
-      },
-      "end": {
-        "line": 128,
-        "column": 31
-      }
-    },
-    "replacement": "==",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
-      "span": {
-        "start": {
-          "line": 95,
-          "column": 5
-        },
-        "end": {
-          "line": 132,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 128,
-        "column": 30
-      },
-      "end": {
-        "line": 128,
-        "column": 31
+        "line": 87,
+        "column": 52
       }
     },
     "replacement": "<",
@@ -571,178 +421,118 @@
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::calculate_compliance_score",
-      "return_type": "-> (f32, bool)",
+      "function_name": "RateLimiter::allow",
+      "return_type": "-> bool",
       "span": {
         "start": {
-          "line": 95,
+          "line": 85,
           "column": 5
         },
         "end": {
-          "line": 132,
+          "line": 98,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 128,
-        "column": 30
+        "line": 92,
+        "column": 23
       },
       "end": {
-        "line": 128,
-        "column": 31
+        "line": 92,
+        "column": 25
       }
     },
-    "replacement": ">=",
+    "replacement": "<",
     "genre": "BinaryOperator"
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::validate_tool",
-      "return_type": "-> Result<CawsComplianceResult>",
+      "function_name": "RateLimiter::allow",
+      "return_type": "-> bool",
       "span": {
         "start": {
-          "line": 134,
+          "line": 85,
           "column": 5
         },
         "end": {
-          "line": 213,
+          "line": 98,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 136,
-        "column": 9
+        "line": 95,
+        "column": 24
       },
       "end": {
-        "line": 212,
-        "column": 19
+        "line": 95,
+        "column": 26
       }
     },
-    "replacement": "Ok(Default::default())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::validate_tool_execution",
-      "return_type": "-> Result<CawsComplianceResult>",
-      "span": {
-        "start": {
-          "line": 215,
-          "column": 5
-        },
-        "end": {
-          "line": 259,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 221,
-        "column": 9
-      },
-      "end": {
-        "line": 258,
-        "column": 11
-      }
-    },
-    "replacement": "Ok(Default::default())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::validate_tool_execution",
-      "return_type": "-> Result<CawsComplianceResult>",
-      "span": {
-        "start": {
-          "line": 215,
-          "column": 5
-        },
-        "end": {
-          "line": 259,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 234,
-        "column": 13
-      },
-      "end": {
-        "line": 234,
-        "column": 15
-      }
-    },
-    "replacement": "||",
+    "replacement": "-=",
     "genre": "BinaryOperator"
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::validate_tool_execution",
-      "return_type": "-> Result<CawsComplianceResult>",
+      "function_name": "RateLimiter::allow",
+      "return_type": "-> bool",
       "span": {
         "start": {
-          "line": 215,
+          "line": 85,
           "column": 5
         },
         "end": {
-          "line": 259,
+          "line": 98,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 231,
-        "column": 13
+        "line": 95,
+        "column": 24
       },
       "end": {
-        "line": 231,
-        "column": 15
+        "line": 95,
+        "column": 26
       }
     },
-    "replacement": "&&",
+    "replacement": "*=",
     "genre": "BinaryOperator"
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::load_rulebook",
+      "function_name": "MCPServer::start",
       "return_type": "-> Result<()>",
       "span": {
         "start": {
-          "line": 261,
+          "line": 136,
           "column": 5
         },
         "end": {
-          "line": 335,
+          "line": 178,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 263,
+        "line": 138,
         "column": 9
       },
       "end": {
-        "line": 334,
+        "line": 177,
         "column": 15
       }
     },
@@ -751,28 +541,148 @@
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::load_rulebook",
-      "return_type": "-> Result<()>",
+      "function_name": "MCPServer::spawn_http_server",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
       "span": {
         "start": {
-          "line": 261,
+          "line": 180,
           "column": 5
         },
         "end": {
-          "line": 335,
+          "line": 245,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 269,
+        "line": 182,
+        "column": 9
+      },
+      "end": {
+        "line": 244,
+        "column": 36
+      }
+    },
+    "replacement": "Ok((Receiver::new(), Default::default()))",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::spawn_http_server",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 180,
+          "column": 5
+        },
+        "end": {
+          "line": 245,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 182,
+        "column": 9
+      },
+      "end": {
+        "line": 244,
+        "column": 36
+      }
+    },
+    "replacement": "Ok((Receiver::from_iter([()]), Default::default()))",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::spawn_http_server",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 180,
+          "column": 5
+        },
+        "end": {
+          "line": 245,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 182,
+        "column": 9
+      },
+      "end": {
+        "line": 244,
+        "column": 36
+      }
+    },
+    "replacement": "Ok((Receiver::new(()), Default::default()))",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::spawn_http_server",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 180,
+          "column": 5
+        },
+        "end": {
+          "line": 245,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 182,
+        "column": 9
+      },
+      "end": {
+        "line": 244,
+        "column": 36
+      }
+    },
+    "replacement": "Ok((Receiver::from(()), Default::default()))",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::spawn_http_server",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 180,
+          "column": 5
+        },
+        "end": {
+          "line": 245,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 182,
         "column": 12
       },
       "end": {
-        "line": 269,
+        "line": 182,
         "column": 13
       }
     },
@@ -781,419 +691,449 @@
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::load_rulebook::map_sev",
-      "return_type": "-> crate::types::ViolationSeverity",
+      "function_name": "MCPServer::spawn_http_server",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
       "span": {
         "start": {
-          "line": 294,
-          "column": 9
-        },
-        "end": {
-          "line": 302,
-          "column": 10
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 295,
-        "column": 13
-      },
-      "end": {
-        "line": 301,
-        "column": 14
-      }
-    },
-    "replacement": "Default::default()",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::load_rulebook::map_sev",
-      "return_type": "-> crate::types::ViolationSeverity",
-      "span": {
-        "start": {
-          "line": 294,
-          "column": 9
-        },
-        "end": {
-          "line": 302,
-          "column": 10
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 296,
-        "column": 17
-      },
-      "end": {
-        "line": 296,
-        "column": 65
-      }
-    },
-    "replacement": "",
-    "genre": "MatchArm"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::load_rulebook::map_sev",
-      "return_type": "-> crate::types::ViolationSeverity",
-      "span": {
-        "start": {
-          "line": 294,
-          "column": 9
-        },
-        "end": {
-          "line": 302,
-          "column": 10
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 297,
-        "column": 17
-      },
-      "end": {
-        "line": 297,
-        "column": 80
-      }
-    },
-    "replacement": "",
-    "genre": "MatchArm"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::load_rulebook::map_sev",
-      "return_type": "-> crate::types::ViolationSeverity",
-      "span": {
-        "start": {
-          "line": 294,
-          "column": 9
-        },
-        "end": {
-          "line": 302,
-          "column": 10
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 298,
-        "column": 17
-      },
-      "end": {
-        "line": 298,
-        "column": 67
-      }
-    },
-    "replacement": "",
-    "genre": "MatchArm"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::load_rulebook::map_sev",
-      "return_type": "-> crate::types::ViolationSeverity",
-      "span": {
-        "start": {
-          "line": 294,
-          "column": 9
-        },
-        "end": {
-          "line": 302,
-          "column": 10
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 299,
-        "column": 17
-      },
-      "end": {
-        "line": 299,
-        "column": 73
-      }
-    },
-    "replacement": "",
-    "genre": "MatchArm"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::load_rulebook::map_cat",
-      "return_type": "-> RuleCategory",
-      "span": {
-        "start": {
-          "line": 303,
-          "column": 9
-        },
-        "end": {
-          "line": 313,
-          "column": 10
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 304,
-        "column": 13
-      },
-      "end": {
-        "line": 312,
-        "column": 14
-      }
-    },
-    "replacement": "Default::default()",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::load_rulebook::map_cat",
-      "return_type": "-> RuleCategory",
-      "span": {
-        "start": {
-          "line": 303,
-          "column": 9
-        },
-        "end": {
-          "line": 313,
-          "column": 10
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 305,
-        "column": 17
-      },
-      "end": {
-        "line": 305,
-        "column": 54
-      }
-    },
-    "replacement": "",
-    "genre": "MatchArm"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::load_rulebook::map_cat",
-      "return_type": "-> RuleCategory",
-      "span": {
-        "start": {
-          "line": 303,
-          "column": 9
-        },
-        "end": {
-          "line": 313,
-          "column": 10
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 306,
-        "column": 17
-      },
-      "end": {
-        "line": 306,
-        "column": 60
-      }
-    },
-    "replacement": "",
-    "genre": "MatchArm"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::load_rulebook::map_cat",
-      "return_type": "-> RuleCategory",
-      "span": {
-        "start": {
-          "line": 303,
-          "column": 9
-        },
-        "end": {
-          "line": 313,
-          "column": 10
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 307,
-        "column": 17
-      },
-      "end": {
-        "line": 307,
-        "column": 64
-      }
-    },
-    "replacement": "",
-    "genre": "MatchArm"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::load_rulebook::map_cat",
-      "return_type": "-> RuleCategory",
-      "span": {
-        "start": {
-          "line": 303,
-          "column": 9
-        },
-        "end": {
-          "line": 313,
-          "column": 10
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 308,
-        "column": 17
-      },
-      "end": {
-        "line": 308,
-        "column": 52
-      }
-    },
-    "replacement": "",
-    "genre": "MatchArm"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::load_rulebook::map_cat",
-      "return_type": "-> RuleCategory",
-      "span": {
-        "start": {
-          "line": 303,
-          "column": 9
-        },
-        "end": {
-          "line": 313,
-          "column": 10
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 309,
-        "column": 17
-      },
-      "end": {
-        "line": 309,
-        "column": 58
-      }
-    },
-    "replacement": "",
-    "genre": "MatchArm"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::load_rulebook::map_cat",
-      "return_type": "-> RuleCategory",
-      "span": {
-        "start": {
-          "line": 303,
-          "column": 9
-        },
-        "end": {
-          "line": 313,
-          "column": 10
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 310,
-        "column": 17
-      },
-      "end": {
-        "line": 310,
-        "column": 58
-      }
-    },
-    "replacement": "",
-    "genre": "MatchArm"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
-    "function": {
-      "function_name": "CawsIntegration::get_rulebook",
-      "return_type": "-> CawsRulebook",
-      "span": {
-        "start": {
-          "line": 337,
+          "line": 180,
           "column": 5
         },
         "end": {
-          "line": 341,
+          "line": 245,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 339,
+        "line": 214,
+        "column": 37
+      },
+      "end": {
+        "line": 214,
+        "column": 39
+      }
+    },
+    "replacement": "==",
+    "genre": "BinaryOperator"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::spawn_http_server",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 180,
+          "column": 5
+        },
+        "end": {
+          "line": 245,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 221,
+        "column": 28
+      },
+      "end": {
+        "line": 221,
+        "column": 29
+      }
+    },
+    "replacement": "",
+    "genre": "UnaryOperator"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::build_io_handler",
+      "return_type": "-> IoHandler<()>",
+      "span": {
+        "start": {
+          "line": 247,
+          "column": 5
+        },
+        "end": {
+          "line": 299,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 253,
         "column": 9
       },
       "end": {
-        "line": 340,
-        "column": 25
+        "line": 298,
+        "column": 11
       }
     },
-    "replacement": "Default::default()",
+    "replacement": "IoHandler::new()",
     "genre": "FnValue"
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::clear_compliance_cache",
+      "function_name": "MCPServer::build_io_handler",
+      "return_type": "-> IoHandler<()>",
+      "span": {
+        "start": {
+          "line": 247,
+          "column": 5
+        },
+        "end": {
+          "line": 299,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 253,
+        "column": 9
+      },
+      "end": {
+        "line": 298,
+        "column": 11
+      }
+    },
+    "replacement": "IoHandler::from_iter([()])",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::build_io_handler",
+      "return_type": "-> IoHandler<()>",
+      "span": {
+        "start": {
+          "line": 247,
+          "column": 5
+        },
+        "end": {
+          "line": 299,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 253,
+        "column": 9
+      },
+      "end": {
+        "line": 298,
+        "column": 11
+      }
+    },
+    "replacement": "IoHandler::new(())",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::build_io_handler",
+      "return_type": "-> IoHandler<()>",
+      "span": {
+        "start": {
+          "line": 247,
+          "column": 5
+        },
+        "end": {
+          "line": 299,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 253,
+        "column": 9
+      },
+      "end": {
+        "line": 298,
+        "column": 11
+      }
+    },
+    "replacement": "IoHandler::from(())",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::start_http_with_readiness",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 301,
+          "column": 5
+        },
+        "end": {
+          "line": 306,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 305,
+        "column": 9
+      },
+      "end": {
+        "line": 305,
+        "column": 39
+      }
+    },
+    "replacement": "Ok((Receiver::new(), Default::default()))",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::start_http_with_readiness",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 301,
+          "column": 5
+        },
+        "end": {
+          "line": 306,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 305,
+        "column": 9
+      },
+      "end": {
+        "line": 305,
+        "column": 39
+      }
+    },
+    "replacement": "Ok((Receiver::from_iter([()]), Default::default()))",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::start_http_with_readiness",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 301,
+          "column": 5
+        },
+        "end": {
+          "line": 306,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 305,
+        "column": 9
+      },
+      "end": {
+        "line": 305,
+        "column": 39
+      }
+    },
+    "replacement": "Ok((Receiver::new(()), Default::default()))",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::start_http_with_readiness",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 301,
+          "column": 5
+        },
+        "end": {
+          "line": 306,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 305,
+        "column": 9
+      },
+      "end": {
+        "line": 305,
+        "column": 39
+      }
+    },
+    "replacement": "Ok((Receiver::from(()), Default::default()))",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::start_ws_with_readiness",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 308,
+          "column": 5
+        },
+        "end": {
+          "line": 312,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 311,
+        "column": 9
+      },
+      "end": {
+        "line": 311,
+        "column": 44
+      }
+    },
+    "replacement": "Ok((Receiver::new(), Default::default()))",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::start_ws_with_readiness",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 308,
+          "column": 5
+        },
+        "end": {
+          "line": 312,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 311,
+        "column": 9
+      },
+      "end": {
+        "line": 311,
+        "column": 44
+      }
+    },
+    "replacement": "Ok((Receiver::from_iter([()]), Default::default()))",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::start_ws_with_readiness",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 308,
+          "column": 5
+        },
+        "end": {
+          "line": 312,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 311,
+        "column": 9
+      },
+      "end": {
+        "line": 311,
+        "column": 44
+      }
+    },
+    "replacement": "Ok((Receiver::new(()), Default::default()))",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::start_ws_with_readiness",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 308,
+          "column": 5
+        },
+        "end": {
+          "line": 312,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 311,
+        "column": 9
+      },
+      "end": {
+        "line": 311,
+        "column": 44
+      }
+    },
+    "replacement": "Ok((Receiver::from(()), Default::default()))",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::push_connection_for_testing",
       "return_type": "",
       "span": {
         "start": {
-          "line": 343,
+          "line": 314,
           "column": 5
         },
         "end": {
-          "line": 348,
+          "line": 317,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 345,
+        "line": 315,
         "column": 9
       },
       "end": {
-        "line": 347,
-        "column": 48
+        "line": 316,
+        "column": 32
       }
     },
     "replacement": "()",
@@ -1201,17 +1141,227 @@
   },
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/caws_integration.rs",
+    "file": "mcp-integration/src/server.rs",
     "function": {
-      "function_name": "CawsIntegration::shutdown",
-      "return_type": "-> Result<()>",
+      "function_name": "MCPServer::spawn_websocket_server",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
       "span": {
         "start": {
-          "line": 350,
+          "line": 319,
           "column": 5
         },
         "end": {
-          "line": 357,
+          "line": 384,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 320,
+        "column": 9
+      },
+      "end": {
+        "line": 383,
+        "column": 34
+      }
+    },
+    "replacement": "Ok((Receiver::new(), Default::default()))",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::spawn_websocket_server",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 319,
+          "column": 5
+        },
+        "end": {
+          "line": 384,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 320,
+        "column": 9
+      },
+      "end": {
+        "line": 383,
+        "column": 34
+      }
+    },
+    "replacement": "Ok((Receiver::from_iter([()]), Default::default()))",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::spawn_websocket_server",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 319,
+          "column": 5
+        },
+        "end": {
+          "line": 384,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 320,
+        "column": 9
+      },
+      "end": {
+        "line": 383,
+        "column": 34
+      }
+    },
+    "replacement": "Ok((Receiver::new(()), Default::default()))",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::spawn_websocket_server",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 319,
+          "column": 5
+        },
+        "end": {
+          "line": 384,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 320,
+        "column": 9
+      },
+      "end": {
+        "line": 383,
+        "column": 34
+      }
+    },
+    "replacement": "Ok((Receiver::from(()), Default::default()))",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::spawn_websocket_server",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 319,
+          "column": 5
+        },
+        "end": {
+          "line": 384,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 320,
+        "column": 12
+      },
+      "end": {
+        "line": 320,
+        "column": 13
+      }
+    },
+    "replacement": "",
+    "genre": "UnaryOperator"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::spawn_websocket_server",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 319,
+          "column": 5
+        },
+        "end": {
+          "line": 384,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 327,
+        "column": 44
+      },
+      "end": {
+        "line": 327,
+        "column": 45
+      }
+    },
+    "replacement": "-",
+    "genre": "BinaryOperator"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::spawn_websocket_server",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 319,
+          "column": 5
+        },
+        "end": {
+          "line": 384,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 327,
+        "column": 44
+      },
+      "end": {
+        "line": 327,
+        "column": 45
+      }
+    },
+    "replacement": "*",
+    "genre": "BinaryOperator"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::spawn_websocket_server",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 319,
+          "column": 5
+        },
+        "end": {
+          "line": 384,
           "column": 6
         }
       }
@@ -1219,14 +1369,404 @@
     "span": {
       "start": {
         "line": 352,
+        "column": 33
+      },
+      "end": {
+        "line": 352,
+        "column": 35
+      }
+    },
+    "replacement": "==",
+    "genre": "BinaryOperator"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::spawn_websocket_server",
+      "return_type": "-> Result<(oneshot::Receiver<()>, HttpServerHandle)>",
+      "span": {
+        "start": {
+          "line": 319,
+          "column": 5
+        },
+        "end": {
+          "line": 384,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 359,
+        "column": 24
+      },
+      "end": {
+        "line": 359,
+        "column": 25
+      }
+    },
+    "replacement": "",
+    "genre": "UnaryOperator"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::stop",
+      "return_type": "-> Result<()>",
+      "span": {
+        "start": {
+          "line": 386,
+          "column": 5
+        },
+        "end": {
+          "line": 429,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 388,
         "column": 9
       },
       "end": {
-        "line": 356,
+        "line": 428,
         "column": 15
       }
     },
     "replacement": "Ok(())",
     "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::get_status",
+      "return_type": "-> MCPServerStatus",
+      "span": {
+        "start": {
+          "line": 431,
+          "column": 5
+        },
+        "end": {
+          "line": 435,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 433,
+        "column": 9
+      },
+      "end": {
+        "line": 434,
+        "column": 23
+      }
+    },
+    "replacement": "Default::default()",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::get_connections",
+      "return_type": "-> Vec<MCPConnection>",
+      "span": {
+        "start": {
+          "line": 437,
+          "column": 5
+        },
+        "end": {
+          "line": 441,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 439,
+        "column": 9
+      },
+      "end": {
+        "line": 440,
+        "column": 28
+      }
+    },
+    "replacement": "vec![]",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::get_connections",
+      "return_type": "-> Vec<MCPConnection>",
+      "span": {
+        "start": {
+          "line": 437,
+          "column": 5
+        },
+        "end": {
+          "line": 441,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 439,
+        "column": 9
+      },
+      "end": {
+        "line": 440,
+        "column": 28
+      }
+    },
+    "replacement": "vec![Default::default()]",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::execute_tool",
+      "return_type": "-> Result<ToolExecutionResult>",
+      "span": {
+        "start": {
+          "line": 443,
+          "column": 5
+        },
+        "end": {
+          "line": 481,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 445,
+        "column": 9
+      },
+      "end": {
+        "line": 480,
+        "column": 19
+      }
+    },
+    "replacement": "Ok(Default::default())",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::discover_tools",
+      "return_type": "-> Result<ToolDiscoveryResult>",
+      "span": {
+        "start": {
+          "line": 489,
+          "column": 5
+        },
+        "end": {
+          "line": 505,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 491,
+        "column": 9
+      },
+      "end": {
+        "line": 504,
+        "column": 19
+      }
+    },
+    "replacement": "Ok(Default::default())",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::get_registry_stats",
+      "return_type": "-> ToolRegistryStats",
+      "span": {
+        "start": {
+          "line": 507,
+          "column": 5
+        },
+        "end": {
+          "line": 510,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 509,
+        "column": 9
+      },
+      "end": {
+        "line": 509,
+        "column": 50
+      }
+    },
+    "replacement": "Default::default()",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::register_tool_for_testing",
+      "return_type": "-> Result<()>",
+      "span": {
+        "start": {
+          "line": 518,
+          "column": 5
+        },
+        "end": {
+          "line": 523,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 521,
+        "column": 9
+      },
+      "end": {
+        "line": 522,
+        "column": 53
+      }
+    },
+    "replacement": "Ok(())",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::start_http_server",
+      "return_type": "-> Result<()>",
+      "span": {
+        "start": {
+          "line": 525,
+          "column": 5
+        },
+        "end": {
+          "line": 550,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 527,
+        "column": 9
+      },
+      "end": {
+        "line": 549,
+        "column": 10
+      }
+    },
+    "replacement": "Ok(())",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::start_http_server",
+      "return_type": "-> Result<()>",
+      "span": {
+        "start": {
+          "line": 525,
+          "column": 5
+        },
+        "end": {
+          "line": 550,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 527,
+        "column": 12
+      },
+      "end": {
+        "line": 527,
+        "column": 13
+      }
+    },
+    "replacement": "",
+    "genre": "UnaryOperator"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::start_websocket_server",
+      "return_type": "-> Result<()>",
+      "span": {
+        "start": {
+          "line": 552,
+          "column": 5
+        },
+        "end": {
+          "line": 580,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 554,
+        "column": 9
+      },
+      "end": {
+        "line": 579,
+        "column": 10
+      }
+    },
+    "replacement": "Ok(())",
+    "genre": "FnValue"
+  },
+  {
+    "package": "agent-agency-mcp",
+    "file": "mcp-integration/src/server.rs",
+    "function": {
+      "function_name": "MCPServer::start_websocket_server",
+      "return_type": "-> Result<()>",
+      "span": {
+        "start": {
+          "line": 552,
+          "column": 5
+        },
+        "end": {
+          "line": 580,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 554,
+        "column": 12
+      },
+      "end": {
+        "line": 554,
+        "column": 13
+      }
+    },
+    "replacement": "",
+    "genre": "UnaryOperator"
   }
 ]

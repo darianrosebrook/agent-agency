@@ -4,10 +4,8 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use chrono::Utc;
 use std::collections::HashMap;
-use uuid::Uuid;
 
 use crate::types::*;
 
@@ -29,32 +27,111 @@ impl DatabaseProvenanceStorage {
 #[async_trait]
 impl super::service::ProvenanceStorage for DatabaseProvenanceStorage {
     async fn store_record(&self, record: &ProvenanceRecord) -> Result<()> {
-        // TODO: Implement database storage
-        // This would use the existing database infrastructure from agent-agency-database
+        // TODO: Implement database storage with the following requirements:
+        // 1. Database integration: Integrate with existing database infrastructure
+        //    - Use agent-agency-database infrastructure for storage operations
+        //    - Implement proper database connection and transaction management
+        //    - Handle database-specific operations and optimizations
+        // 2. Data serialization: Serialize provenance records for database storage
+        //    - Convert provenance records to database-compatible format
+        //    - Handle data type conversions and validation
+        //    - Implement proper data encoding and compression
+        // 3. Storage operations: Perform database storage operations
+        //    - Insert provenance records into appropriate database tables
+        //    - Handle database transactions and atomicity
+        //    - Implement proper error handling and rollback
+        // 4. Performance optimization: Optimize database storage performance
+        //    - Use batch operations for multiple records
+        //    - Implement proper indexing and query optimization
+        //    - Handle large data volumes efficiently
         tracing::info!("Storing provenance record: {}", record.id);
         Ok(())
     }
 
     async fn update_record(&self, record: &ProvenanceRecord) -> Result<()> {
-        // TODO: Implement database update
+        // TODO: Implement database update with the following requirements:
+        // 1. Update operations: Implement database update operations
+        //    - Update existing provenance records in database
+        //    - Handle partial updates and field modifications
+        //    - Implement proper update validation and constraints
+        // 2. Data validation: Validate updated data before database operations
+        //    - Verify data integrity and completeness
+        //    - Check data constraints and business rules
+        //    - Handle data validation errors and corrections
+        // 3. Transaction management: Handle database transactions for updates
+        //    - Implement proper transaction management and atomicity
+        //    - Handle update failures and rollback operations
+        //    - Ensure data consistency during updates
+        // 4. Performance optimization: Optimize database update performance
+        //    - Use efficient update operations and queries
+        //    - Implement proper indexing for update operations
+        //    - Handle large update operations efficiently
         tracing::info!("Updating provenance record: {}", record.id);
         Ok(())
     }
 
     async fn get_record(&self, id: &str) -> Result<Option<ProvenanceRecord>> {
-        // TODO: Implement database retrieval
+        // TODO: Implement database retrieval with the following requirements:
+        // 1. Query construction: Construct database queries for record retrieval
+        //    - Build SQL queries with proper parameters and conditions
+        //    - Handle query optimization and performance
+        //    - Implement proper query security and injection prevention
+        // 2. Data retrieval: Retrieve provenance records from database
+        //    - Execute database queries and fetch results
+        //    - Handle database connection and transaction management
+        //    - Implement proper error handling and timeout management
+        // 3. Data deserialization: Deserialize database results to provenance records
+        //    - Convert database rows to provenance record structures
+        //    - Handle data type conversions and validation
+        //    - Implement proper data decoding and decompression
+        // 4. Result processing: Process and validate retrieved data
+        //    - Validate data integrity and completeness
+        //    - Handle missing or corrupted data
+        //    - Implement proper result formatting and return
         tracing::info!("Getting provenance record: {}", id);
         Ok(None)
     }
 
     async fn query_records(&self, query: &ProvenanceQuery) -> Result<Vec<ProvenanceRecord>> {
-        // TODO: Implement database query
+        // TODO: Implement database query with the following requirements:
+        // 1. Query construction: Construct database queries for provenance record search
+        //    - Build SQL queries based on provenance query parameters
+        //    - Handle complex query conditions and filters
+        //    - Implement proper query optimization and performance
+        // 2. Data retrieval: Retrieve provenance records based on query criteria
+        //    - Execute database queries and fetch multiple results
+        //    - Handle database connection and transaction management
+        //    - Implement proper error handling and timeout management
+        // 3. Data processing: Process and validate retrieved provenance data
+        //    - Convert database rows to provenance record structures
+        //    - Handle data type conversions and validation
+        //    - Implement proper data decoding and decompression
+        // 4. Result formatting: Format and return retrieved provenance records
+        //    - Validate data integrity and completeness
+        //    - Handle missing or corrupted data
+        //    - Implement proper result formatting and return
         tracing::info!("Querying provenance records");
         Ok(vec![])
     }
 
     async fn get_statistics(&self, time_range: Option<TimeRange>) -> Result<ProvenanceStats> {
-        // TODO: Implement statistics calculation from database
+        // TODO: Implement statistics calculation from database with the following requirements:
+        // 1. Statistics calculation: Calculate provenance statistics from database
+        //    - Aggregate provenance data for statistical analysis
+        //    - Calculate metrics like total records, success rates, and trends
+        //    - Handle time-based statistics and filtering
+        // 2. Data aggregation: Aggregate provenance data for statistics
+        //    - Group and aggregate data by various dimensions
+        //    - Calculate statistical measures and metrics
+        //    - Handle large datasets efficiently
+        // 3. Performance optimization: Optimize statistics calculation performance
+        //    - Use efficient database aggregation queries
+        //    - Implement proper indexing for statistics queries
+        //    - Handle large data volumes efficiently
+        // 4. Result formatting: Format and return calculated statistics
+        //    - Convert aggregated data to statistics format
+        //    - Handle missing or incomplete data
+        //    - Implement proper result formatting and return
         Ok(ProvenanceStats {
             total_records: 0,
             total_verdicts: 0,
@@ -72,7 +149,23 @@ impl super::service::ProvenanceStorage for DatabaseProvenanceStorage {
     }
 
     async fn delete_record(&self, id: &str) -> Result<()> {
-        // TODO: Implement database deletion
+        // TODO: Implement database deletion with the following requirements:
+        // 1. Deletion operations: Implement database deletion operations
+        //    - Delete provenance records from database
+        //    - Handle cascading deletions and related data cleanup
+        //    - Implement proper deletion validation and constraints
+        // 2. Data validation: Validate deletion operations before execution
+        //    - Verify deletion permissions and authorization
+        //    - Check for dependent data and relationships
+        //    - Handle deletion validation errors and constraints
+        // 3. Transaction management: Handle database transactions for deletions
+        //    - Implement proper transaction management and atomicity
+        //    - Handle deletion failures and rollback operations
+        //    - Ensure data consistency during deletions
+        // 4. Performance optimization: Optimize database deletion performance
+        //    - Use efficient deletion operations and queries
+        //    - Implement proper indexing for deletion operations
+        //    - Handle large deletion operations efficiently
         tracing::info!("Deleting provenance record: {}", id);
         Ok(())
     }

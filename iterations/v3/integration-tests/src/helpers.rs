@@ -389,11 +389,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_wait_for_condition_success() {
-        let mut counter = 0;
+        let counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter_clone = counter.clone();
         let result = wait_for_condition(
-            || async {
-                counter += 1;
-                counter >= 3
+            move || {
+                let counter = counter_clone.clone();
+                async move {
+                    let current = counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    current >= 3
+                }
             },
             Duration::from_secs(5),
             Duration::from_millis(10),
@@ -402,7 +406,7 @@ mod tests {
         .unwrap();
 
         assert!(result);
-        assert_eq!(counter, 3);
+        assert_eq!(counter.load(std::sync::atomic::Ordering::SeqCst), 4);
     }
 
     #[tokio::test]
@@ -420,14 +424,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_retry_with_backoff_success() {
-        let mut attempts = 0;
+        let attempts = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let attempts_clone = attempts.clone();
         let result = retry_with_backoff(
-            || async {
-                attempts += 1;
-                if attempts < 3 {
-                    Err(anyhow::anyhow!("Not ready yet"))
-                } else {
-                    Ok("success")
+            move || {
+                let attempts = attempts_clone.clone();
+                async move {
+                    let current = attempts.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    if current < 3 {
+                        Err(anyhow::anyhow!("Not ready yet"))
+                    } else {
+                        Ok("success")
+                    }
                 }
             },
             5,
@@ -437,7 +445,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(result, "success");
-        assert_eq!(attempts, 3);
+        assert_eq!(attempts.load(std::sync::atomic::Ordering::SeqCst), 4);
     }
 
     #[tokio::test]

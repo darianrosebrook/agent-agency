@@ -1,0 +1,50 @@
+{
+  "name": "caws-tools",
+  "version": "1.0.0",
+  "description": "CAWS (Coding Agent Workflow System) CLI Tools",
+  "main": "validate.js",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "validate": "node validate.js",
+    "gates": "node gates.js",
+    "provenance": "node provenance.js"
+  },
+  "dependencies": {
+    "ajv": "^8.12.0",
+    "js-yaml": "^4.1.0",
+    "commander": "^11.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "*.js",
+      "!coverage/**",
+      "!node_modules/**",
+      "!tests/**"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ]
+  },
+  "keywords": [
+    "caws",
+    "coding-agent",
+    "workflow",
+    "cli",
+    "validation",
+    "gates",
+    "provenance"
+  ],
+  "author": "@darianrosebrook",
+  "license": "MIT"
+}

@@ -1,0 +1,21 @@
+--- mcp-integration/src/server.rs
++++ replace rate_limited_ws_response -> ws::Response with Default::default()
+@@ -58,17 +58,17 @@
+         .expect("response")
+ }
+ 
+ fn unauthorized_ws_response() -> ws::Response {
+     ws::Response::new(401, "Unauthorized", b"unauthorized".to_vec())
+ }
+ 
+ fn rate_limited_ws_response() -> ws::Response {
+-    ws::Response::new(429, "Too Many Requests", b"rate limit exceeded".to_vec())
++    Default::default() /* ~ changed by cargo-mutants ~ */
+ }
+ 
+ #[derive(Debug)]
+ struct RateLimiter {
+     limit_per_minute: u32,
+     window_start: Instant,
+     count: u32,
+ }

@@ -6,13 +6,13 @@
 //! Ported from V2 InformationProcessor.ts with Rust optimizations.
 
 use crate::types::*;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
+use tracing::info;
 use uuid::Uuid;
 
 /// Information processor configuration

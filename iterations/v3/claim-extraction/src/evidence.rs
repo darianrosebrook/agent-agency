@@ -159,8 +159,25 @@ impl EvidenceCollector {
         claim: &AtomicClaim,
         _context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
-        // TODO: Integrate with actual code analysis tools
-        // For now, return placeholder evidence structure
+        // TODO: Integrate with actual code analysis tools with the following requirements:
+        // 1. Static analysis integration: Integrate with static code analysis tools
+        //    - Use tools like ESLint, SonarQube, or CodeClimate for code quality analysis
+        //    - Run linters, type checkers, and security scanners on relevant code
+        //    - Extract code metrics, complexity scores, and quality indicators
+        // 2. Dynamic analysis integration: Integrate with dynamic analysis tools
+        //    - Use runtime analysis tools to verify code behavior
+        //    - Run performance profilers and memory analyzers
+        //    - Execute code coverage tools and test runners
+        // 3. Code structure analysis: Analyze code structure and architecture
+        //    - Parse ASTs and analyze code organization and patterns
+        //    - Identify design patterns, architectural decisions, and code smells
+        //    - Analyze dependencies, coupling, and cohesion metrics
+        // 4. Evidence synthesis: Synthesize analysis results into evidence
+        //    - Combine multiple analysis results into comprehensive evidence
+        //    - Weight evidence based on tool reliability and analysis quality
+        //    - Format evidence for claim verification and validation
+        // 5. Return Vec<Evidence> with actual code analysis results (not placeholders)
+        // 6. Include detailed analysis findings, metrics, and quality assessments
 
         let evidence = Evidence {
             id: Uuid::new_v4(),
@@ -186,7 +203,21 @@ impl EvidenceCollector {
         claim: &AtomicClaim,
         _context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
-        // TODO: Integrate with test runner
+        // TODO: Integrate with test runner with the following requirements:
+        // 1. Test execution integration: Integrate with test execution frameworks
+        //    - Use frameworks like Jest, Mocha, or pytest for test execution
+        //    - Run unit tests, integration tests, and end-to-end tests
+        //    - Collect test results, coverage reports, and performance metrics
+        // 2. Test result analysis: Analyze test execution results
+        //    - Parse test output and identify passing/failing tests
+        //    - Extract test coverage information and quality metrics
+        //    - Analyze test performance and execution time data
+        // 3. Evidence generation: Generate evidence from test results
+        //    - Convert test results into standardized evidence format
+        //    - Weight evidence based on test quality and coverage
+        //    - Include test execution details and result summaries
+        // 4. Return Vec<Evidence> with actual test execution results (not placeholders)
+        // 5. Include comprehensive test results, coverage data, and quality metrics
 
         let evidence = Evidence {
             id: Uuid::new_v4(),
@@ -212,7 +243,21 @@ impl EvidenceCollector {
         claim: &AtomicClaim,
         _context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
-        // TODO: Integrate with documentation search
+        // TODO: Integrate with documentation search with the following requirements:
+        // 1. Documentation indexing: Index and search documentation sources
+        //    - Index README files, API docs, and technical specifications
+        //    - Search code comments, inline documentation, and docstrings
+        //    - Index external documentation and reference materials
+        // 2. Search integration: Integrate with documentation search tools
+        //    - Use tools like Elasticsearch or Solr for full-text search
+        //    - Implement semantic search for concept-based queries
+        //    - Support fuzzy matching and typo tolerance
+        // 3. Evidence extraction: Extract relevant evidence from documentation
+        //    - Find documentation that supports or contradicts claims
+        //    - Extract relevant quotes, examples, and specifications
+        //    - Identify documentation gaps and inconsistencies
+        // 4. Return Vec<Evidence> with actual documentation search results (not placeholders)
+        // 5. Include relevant documentation excerpts, references, and supporting materials
 
         let evidence = Evidence {
             id: Uuid::new_v4(),
@@ -238,7 +283,21 @@ impl EvidenceCollector {
         claim: &AtomicClaim,
         _context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
-        // TODO: Integrate with performance monitoring
+        // TODO: Integrate with performance monitoring with the following requirements:
+        // 1. Performance metrics collection: Collect performance metrics and data
+        //    - Use tools like Prometheus, Grafana, or APM solutions
+        //    - Collect CPU, memory, disk, and network performance data
+        //    - Monitor application performance and response times
+        // 2. Performance analysis: Analyze performance data for evidence
+        //    - Identify performance trends, bottlenecks, and anomalies
+        //    - Compare performance against baselines and benchmarks
+        //    - Analyze performance impact of code changes
+        // 3. Evidence synthesis: Synthesize performance data into evidence
+        //    - Convert performance metrics into evidence format
+        //    - Weight evidence based on data quality and relevance
+        //    - Include performance analysis and insights
+        // 4. Return Vec<Evidence> with actual performance monitoring results (not placeholders)
+        // 5. Include detailed performance metrics, analysis, and quality assessments
 
         let evidence = Evidence {
             id: Uuid::new_v4(),
@@ -264,7 +323,21 @@ impl EvidenceCollector {
         claim: &AtomicClaim,
         _context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
-        // TODO: Integrate with security scanning tools
+        // TODO: Integrate with security scanning tools with the following requirements:
+        // 1. Security tool integration: Integrate with security scanning tools
+        //    - Use tools like OWASP ZAP, Snyk, or SonarQube Security
+        //    - Run vulnerability scanners and security linters
+        //    - Perform dependency scanning and license compliance checks
+        // 2. Security analysis: Analyze security scan results
+        //    - Parse security scan output and identify vulnerabilities
+        //    - Assess security risk levels and impact assessments
+        //    - Analyze security trends and compliance status
+        // 3. Evidence generation: Generate evidence from security analysis
+        //    - Convert security findings into evidence format
+        //    - Weight evidence based on vulnerability severity and impact
+        //    - Include security recommendations and remediation steps
+        // 4. Return Vec<Evidence> with actual security scanning results (not placeholders)
+        // 5. Include detailed security findings, risk assessments, and remediation guidance
 
         let evidence = Evidence {
             id: Uuid::new_v4(),
@@ -290,7 +363,21 @@ impl EvidenceCollector {
         claim: &AtomicClaim,
         _context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
-        // TODO: Integrate with CAWS validation
+        // TODO: Integrate with CAWS validation with the following requirements:
+        // 1. CAWS integration: Integrate with CAWS (Coding Agent Workflow System) validation
+        //    - Use CAWS validation tools for code quality and compliance checking
+        //    - Run CAWS-specific quality gates and validation rules
+        //    - Perform CAWS workflow compliance and process validation
+        // 2. Validation analysis: Analyze CAWS validation results
+        //    - Parse CAWS validation output and identify compliance issues
+        //    - Assess quality gate status and validation success rates
+        //    - Analyze workflow compliance and process adherence
+        // 3. Evidence synthesis: Synthesize CAWS validation into evidence
+        //    - Convert CAWS validation results into evidence format
+        //    - Weight evidence based on validation success and quality scores
+        //    - Include CAWS recommendations and improvement suggestions
+        // 4. Return Vec<Evidence> with actual CAWS validation results (not placeholders)
+        // 5. Include detailed CAWS validation findings, compliance status, and quality metrics
 
         let evidence = Evidence {
             id: Uuid::new_v4(),

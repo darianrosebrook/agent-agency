@@ -1,0 +1,22 @@
+--- mcp-integration/src/server.rs
++++ replace MCPServer::push_connection_for_testing with ()
+@@ -307,18 +307,17 @@
+ 
+     pub async fn start_ws_with_readiness(
+         &self,
+     ) -> Result<(oneshot::Receiver<()>, HttpServerHandle)> {
+         self.spawn_websocket_server().await
+     }
+ 
+     pub async fn push_connection_for_testing(&self, connection: MCPConnection) {
+-        let mut guard = self.connections.write().await;
+-        guard.push(connection);
++        () /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     async fn spawn_websocket_server(&self) -> Result<(oneshot::Receiver<()>, HttpServerHandle)> {
+         if !self.config.server.enable_websocket {
+             bail!("WebSocket disabled");
+         }
+ 
+         let (ready_tx, ready_rx) = oneshot::channel();

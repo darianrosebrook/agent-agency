@@ -2,15 +2,14 @@
 //!
 //! Main service for managing provenance records with git integration and signing
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::Utc;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::{
-    git_integration::{GitIntegration, GitTrailerManager},
+    git_integration::GitIntegration,
     signer::{SignerFactory, SignerTrait, SigningAlgorithm},
     types::*,
     ProvenanceConfig,
@@ -70,7 +69,23 @@ impl ProvenanceService {
             .join(".git")
             .exists()
         {
-            // TODO: Re-enable when GitIntegration trait is properly implemented
+            // TODO: Re-enable when GitIntegration trait is properly implemented with the following requirements:
+            // 1. Git integration implementation: Implement proper GitIntegration trait
+            //    - Complete GitIntegration trait implementation with all required methods
+            //    - Handle Git operations with proper error handling and validation
+            //    - Implement thread-safe Git operations and async support
+            // 2. Git trailer management: Implement Git trailer management functionality
+            //    - Handle Git trailer addition, modification, and removal
+            //    - Implement proper Git trailer validation and formatting
+            //    - Handle Git trailer synchronization and consistency
+            // 3. Error handling: Implement robust error handling for Git operations
+            //    - Handle Git-specific errors and exceptions
+            //    - Provide meaningful error messages and recovery options
+            //    - Implement proper error propagation and handling
+            // 4. Performance optimization: Optimize Git operations for performance
+            //    - Implement efficient Git operation caching and batching
+            //    - Minimize Git repository access and operations
+            //    - Handle large repositories and operations efficiently
             // Some(Box::new(GitTrailerManager::new(
             //     &config.git.repository_path,
             //     config.git.branch.clone(),
@@ -207,7 +222,23 @@ impl ProvenanceService {
                 start: chrono::DateTime::from_timestamp(0, 0).unwrap_or_else(Utc::now),
                 end: Utc::now(),
             }),
-            filters_applied: vec![], // TODO: Extract from query
+            filters_applied: vec![], // TODO: Extract from query with the following requirements:
+            // 1. Query parsing: Parse provenance query to extract applied filters
+            //    - Extract filter conditions from provenance query parameters
+            //    - Parse filter types, values, and operators
+            //    - Handle complex filter combinations and nested conditions
+            // 2. Filter validation: Validate extracted filters for correctness
+            //    - Verify filter syntax and parameter validity
+            //    - Check filter compatibility and consistency
+            //    - Handle filter validation errors and corrections
+            // 3. Filter processing: Process filters for provenance data export
+            //    - Apply filters to provenance data selection
+            //    - Handle filter execution and result filtering
+            //    - Implement proper filter performance optimization
+            // 4. Filter documentation: Document applied filters in export metadata
+            //    - Record filter details in export metadata
+            //    - Provide filter descriptions and explanations
+            //    - Enable filter audit and traceability
             export_reason: "Data export requested".to_string(),
             recipient: None,
         };

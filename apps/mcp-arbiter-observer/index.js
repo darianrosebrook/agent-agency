@@ -218,6 +218,99 @@ class ArbiterObserverServer extends Server {
             required: ["message"],
           },
         },
+        {
+          name: "file_read",
+          description: "Read the contents of a file",
+          inputSchema: {
+            type: "object",
+            properties: {
+              target_file: {
+                type: "string",
+                description:
+                  "Path to the file to read, relative to workspace root",
+              },
+              offset: {
+                type: "number",
+                description: "Optional line number to start reading from",
+              },
+              limit: {
+                type: "number",
+                description: "Optional number of lines to read",
+              },
+            },
+            required: ["target_file"],
+          },
+        },
+        {
+          name: "file_search_replace",
+          description: "Search and replace text in a file",
+          inputSchema: {
+            type: "object",
+            properties: {
+              file_path: {
+                type: "string",
+                description:
+                  "Path to the file to modify, relative to workspace root",
+              },
+              old_string: {
+                type: "string",
+                description: "Text to replace",
+              },
+              new_string: {
+                type: "string",
+                description: "Replacement text",
+              },
+              replace_all: {
+                type: "boolean",
+                description: "Whether to replace all occurrences",
+                default: false,
+              },
+            },
+            required: ["file_path", "old_string", "new_string"],
+          },
+        },
+        {
+          name: "file_write",
+          description: "Write content to a file (overwrites existing file)",
+          inputSchema: {
+            type: "object",
+            properties: {
+              file_path: {
+                type: "string",
+                description:
+                  "Path to the file to write, relative to workspace root",
+              },
+              contents: {
+                type: "string",
+                description: "Content to write to the file",
+              },
+            },
+            required: ["file_path", "contents"],
+          },
+        },
+        {
+          name: "run_terminal_cmd",
+          description: "Execute a terminal command",
+          inputSchema: {
+            type: "object",
+            properties: {
+              command: {
+                type: "string",
+                description: "Terminal command to execute",
+              },
+              is_background: {
+                type: "boolean",
+                description: "Whether to run in background",
+                default: false,
+              },
+              explanation: {
+                type: "string",
+                description: "Explanation of why this command is needed",
+              },
+            },
+            required: ["command"],
+          },
+        },
       ],
     }));
 
@@ -227,9 +320,13 @@ class ArbiterObserverServer extends Server {
       try {
         switch (name) {
           case "arbiter_start":
-            return this.wrapResponse(await this.client.post("/observer/arbiter/start"));
+            return this.wrapResponse(
+              await this.client.post("/observer/arbiter/start")
+            );
           case "arbiter_stop":
-            return this.wrapResponse(await this.client.post("/observer/arbiter/stop"));
+            return this.wrapResponse(
+              await this.client.post("/observer/arbiter/stop")
+            );
           case "arbiter_status":
             return this.wrapResponse(await this.client.get("/observer/status"));
           case "arbiter_execute":
@@ -255,9 +352,13 @@ class ArbiterObserverServer extends Server {
               )
             );
           case "arbiter_metrics":
-            return this.wrapResponse(await this.client.get("/observer/metrics"));
+            return this.wrapResponse(
+              await this.client.get("/observer/metrics")
+            );
           case "arbiter_progress":
-            return this.wrapResponse(await this.client.get("/observer/progress"));
+            return this.wrapResponse(
+              await this.client.get("/observer/progress")
+            );
           case "arbiter_observe":
             return this.wrapResponse(
               await this.client.post("/observer/observations", {
@@ -266,6 +367,14 @@ class ArbiterObserverServer extends Server {
                 author: args.author,
               })
             );
+          case "file_read":
+            return await this.handleFileRead(args);
+          case "file_search_replace":
+            return await this.handleFileSearchReplace(args);
+          case "file_write":
+            return await this.handleFileWrite(args);
+          case "run_terminal_cmd":
+            return await this.handleTerminalCmd(args);
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -314,8 +423,127 @@ class ArbiterObserverServer extends Server {
     return this.wrapResponse(result);
   }
 
+  async handleFileRead(args) {
+    try {
+      const fs = await import("fs/promises");
+      const path = await import("path");
+
+      const fullPath = path.resolve(process.cwd(), args.target_file);
+      let content = await fs.readFile(fullPath, "utf-8");
+
+      // Handle offset and limit
+      if (args.offset || args.limit) {
+        const lines = content.split("\n");
+        const startLine = (args.offset || 1) - 1; // Convert to 0-based
+        const endLine = args.limit ? startLine + args.limit : lines.length;
+
+        content = lines.slice(startLine, endLine).join("\n");
+      }
+
+      return this.wrapResponse(content);
+    } catch (error) {
+      throw new Error(
+        `Failed to read file ${args.target_file}: ${error.message}`
+      );
+    }
+  }
+
+  async handleFileSearchReplace(args) {
+    try {
+      const fs = await import("fs/promises");
+      const path = await import("path");
+
+      const fullPath = path.resolve(process.cwd(), args.file_path);
+      let content = await fs.readFile(fullPath, "utf-8");
+
+      if (args.replace_all) {
+        content = content.split(args.old_string).join(args.new_string);
+      } else {
+        const index = content.indexOf(args.old_string);
+        if (index === -1) {
+          throw new Error(`Text "${args.old_string}" not found in file`);
+        }
+        content = content.replace(args.old_string, args.new_string);
+      }
+
+      await fs.writeFile(fullPath, content, "utf-8");
+      return this.wrapResponse(
+        `Successfully replaced text in ${args.file_path}`
+      );
+    } catch (error) {
+      throw new Error(
+        `Failed to modify file ${args.file_path}: ${error.message}`
+      );
+    }
+  }
+
+  async handleFileWrite(args) {
+    try {
+      const fs = await import("fs/promises");
+      const path = await import("path");
+
+      const fullPath = path.resolve(process.cwd(), args.file_path);
+      await fs.writeFile(fullPath, args.contents, "utf-8");
+      return this.wrapResponse(`Successfully wrote to ${args.file_path}`);
+    } catch (error) {
+      throw new Error(
+        `Failed to write file ${args.file_path}: ${error.message}`
+      );
+    }
+  }
+
+  async handleTerminalCmd(args) {
+    try {
+      const { exec } = await import("child_process");
+      const util = await import("util");
+      const execAsync = util.promisify(exec);
+
+      // Basic security: prevent dangerous commands
+      const dangerousPatterns = [
+        /rm\s+-rf\s+\//,
+        />/,
+        /sudo/,
+        /chmod\s+777/,
+        /dd\s+if=/,
+      ];
+
+      if (dangerousPatterns.some((pattern) => pattern.test(args.command))) {
+        throw new Error("Command contains potentially dangerous operations");
+      }
+
+      const { stdout, stderr } = await execAsync(args.command, {
+        cwd: process.cwd(),
+        timeout: 30000, // 30 second timeout
+        maxBuffer: 1024 * 1024, // 1MB buffer
+      });
+
+      const result = {
+        command: args.command,
+        stdout: stdout.trim(),
+        stderr: stderr.trim(),
+        exitCode: 0,
+      };
+
+      return this.wrapResponse(JSON.stringify(result, null, 2));
+    } catch (error) {
+      if (error.code) {
+        // exec error with exit code
+        const result = {
+          command: args.command,
+          stdout: error.stdout?.trim() || "",
+          stderr: error.stderr?.trim() || "",
+          exitCode: error.code,
+          error: error.message,
+        };
+        return this.wrapResponse(JSON.stringify(result, null, 2));
+      }
+      throw new Error(`Command execution failed: ${error.message}`);
+    }
+  }
+
   wrapResponse(body) {
-    const text = typeof body === "string" ? body : JSON.stringify(body, null, 2);
+    const text =
+      typeof body === "string" ? body : JSON.stringify(body, null, 2);
     return {
       content: [{ type: "text", text }],
     };
@@ -340,4 +568,3 @@ main().catch((error) => {
   console.error("Observer MCP failed:", error);
   process.exit(1);
 });
-

@@ -706,14 +706,14 @@ impl Default for WorkerCapabilities {
     }
 }
 
-/// Task execution context
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Task execution context for workers
+#[derive(Debug, Clone)]
 pub struct TaskContext {
-    pub task_id: Uuid,
-    pub worker_id: Uuid,
-    pub start_time: DateTime<Utc>,
+    pub task_id: uuid::Uuid,
+    pub worker_id: uuid::Uuid,
+    pub start_time: chrono::DateTime<chrono::Utc>,
     pub timeout_ms: u64,
     pub retry_count: u32,
     pub max_retries: u32,
-    pub metadata: HashMap<String, serde_json::Value>,
+    pub metadata: std::collections::HashMap<String, serde_json::Value>,
 }

@@ -8,7 +8,7 @@ use std::sync::Arc;
 use tokio::fs;
 use tokio::sync::RwLock;
 use tokio::time::{interval, Duration};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 use uuid::Uuid;
 
 /// Configuration loader with hot-reloading support
@@ -80,7 +80,7 @@ impl ConfigLoader {
     pub async fn load(&self) -> Result<ConfigLoadResult> {
         let mut config = HashMap::new();
         let mut errors = Vec::new();
-        let mut warnings = Vec::new();
+        let warnings = Vec::new();
 
         // Load from file first
         if let Err(e) = self.load_from_file(&mut config).await {

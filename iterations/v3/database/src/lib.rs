@@ -3,12 +3,17 @@
 //! Provides database connectivity, connection pooling, and data access patterns
 //! for the council-based arbiter system.
 
+pub mod backup;
 pub mod client;
+pub mod health;
 pub mod migrations;
 pub mod models;
 pub mod queries;
 
-pub use client::DatabaseClient;
+pub use backup::{BackupManager, BackupResult};
+pub use client::{DatabaseClient, DatabaseHealthStatus};
+pub use health::{DatabaseHealthChecker, HealthCheckResult};
+pub use migrations::{MigrationManager, MigrationResult};
 pub use models::*;
 
 /// Database configuration

@@ -5,22 +5,27 @@
 //! against CAWS principles and quality standards.
 
 pub mod advanced_arbitration;
-pub mod claim_extraction;
+// pub mod claim_extraction;  // Temporarily commented to resolve circular dependency
 pub mod coordinator;
 pub mod evidence_enrichment;
-pub mod learning;
+pub mod intelligent_edge_case_testing;
 pub mod models;
 pub mod predictive_learning_system;
 pub mod predictive_quality_assessor;
-pub mod intelligent_edge_case_testing;
+pub mod resilience; // V2 Production Resilience
 pub mod semantic;
 pub mod types;
 pub use types::*;
 
 // Re-export key components
+pub use intelligent_edge_case_testing::{
+    IntelligentEdgeCaseTesting, IntelligentTestInsights, TestSpecification,
+};
 pub use predictive_learning_system::{LearningInsights, PredictiveLearningSystem, TaskOutcome};
 pub use predictive_quality_assessor::{PredictiveQualityAssessor, QualityPrediction};
-pub use intelligent_edge_case_testing::{IntelligentEdgeCaseTesting, IntelligentTestInsights, TestSpecification};
+
+#[cfg(test)]
+mod advanced_arbitration_tests;
 
 #[cfg(test)]
 mod predictive_learning_system_tests;

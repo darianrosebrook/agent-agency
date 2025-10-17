@@ -1,0 +1,97 @@
+{
+  "id": "FIX-V3-WARNINGS-001",
+  "title": "Fix remaining compilation warnings in v3 claim-extraction crate",
+  "description": "Fix the remaining 10 compilation warnings in the v3 claim-extraction crate by removing unused imports and prefixing unused variables with underscores",
+  "priority": "high",
+  "status": "pending",
+  "created_at": "2024-01-20T12:20:00Z",
+  "assigned_to": "arbiter-orchestrator",
+  "context": {
+    "workspace": "/Users/darianrosebrook/Desktop/Projects/agent-agency",
+    "target_directory": "iterations/v3",
+    "package": "claim-extraction"
+  },
+  "steps": [
+    {
+      "id": "step-1",
+      "description": "Check current warnings in claim-extraction crate",
+      "command": "cd /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3 && cargo check --package claim-extraction 2>&1 | grep 'warning:' | head -10",
+      "expected_output": "List of remaining warnings"
+    },
+    {
+      "id": "step-2", 
+      "description": "Fix unused import 'warn' in multi_modal_verification.rs",
+      "command": "file_search_replace",
+      "args": {
+        "file_path": "iterations/v3/claim-extraction/src/multi_modal_verification.rs",
+        "old_string": "use tracing::{debug, info, warn};",
+        "new_string": "use tracing::{debug, info};"
+      }
+    },
+    {
+      "id": "step-3",
+      "description": "Fix unused variable 'last_subject' in decomposition.rs", 
+      "command": "file_search_replace",
+      "args": {
+        "file_path": "iterations/v3/claim-extraction/src/decomposition.rs",
+        "old_string": "let last_subject = self.extract_fallback_subject(context);",
+        "new_string": "let _last_subject = self.extract_fallback_subject(context);"
+      }
+    },
+    {
+      "id": "step-4",
+      "description": "Fix unused variable 'verification_requirements' in verification.rs",
+      "command": "file_search_replace", 
+      "args": {
+        "file_path": "iterations/v3/claim-extraction/src/verification.rs",
+        "old_string": "let verification_requirements = self.extract_requirements(context);",
+        "new_string": "let _verification_requirements = self.extract_requirements(context);"
+      }
+    },
+    {
+      "id": "step-5",
+      "description": "Fix unused variable 'context' in qualification.rs",
+      "command": "file_search_replace",
+      "args": {
+        "file_path": "iterations/v3/claim-extraction/src/qualification.rs", 
+        "old_string": "let context = self.build_context(claim);",
+        "new_string": "let _context = self.build_context(claim);"
+      }
+    },
+    {
+      "id": "step-6",
+      "description": "Fix unused variable 'context_map' in disambiguation.rs",
+      "command": "file_search_replace",
+      "args": {
+        "file_path": "iterations/v3/claim-extraction/src/disambiguation.rs",
+        "old_string": "let context_map = self.build_context_map(claims);", 
+        "new_string": "let _context_map = self.build_context_map(claims);"
+      }
+    },
+    {
+      "id": "step-7",
+      "description": "Fix unused variable 'qualification_result' in qualification.rs",
+      "command": "file_search_replace",
+      "args": {
+        "file_path": "iterations/v3/claim-extraction/src/qualification.rs",
+        "old_string": "let qualification_result = self.qualify_claim(claim);",
+        "new_string": "let _qualification_result = self.qualify_claim(claim);"
+      }
+    },
+    {
+      "id": "step-8",
+      "description": "Verify all warnings are fixed",
+      "command": "cd /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3 && cargo check --package claim-extraction 2>&1 | grep 'warning:' | wc -l",
+      "expected_output": "0"
+    }
+  ],
+  "success_criteria": [
+    "All compilation warnings in claim-extraction crate are resolved",
+    "cargo check passes without warnings",
+    "Code compiles successfully"
+  ],
+  "tools_required": [
+    "file_search_replace",
+    "run_terminal_cmd"
+  ]
+}

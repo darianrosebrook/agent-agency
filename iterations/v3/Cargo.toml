@@ -18,6 +18,7 @@ members = [
     "workspace-state-manager",
     "resilience",
     "config",
+    "database",
     "integration-tests"
 ]
 

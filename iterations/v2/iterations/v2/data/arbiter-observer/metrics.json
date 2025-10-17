@@ -1,7 +1,7 @@
 {
-  "timestamp": "2025-10-17T00:49:40.702Z",
-  "reasoningDepthAvg": 6,
-  "reasoningDepthP95": 6,
+  "timestamp": "2025-10-17T19:22:43.622Z",
+  "reasoningDepthAvg": 14,
+  "reasoningDepthP95": 14,
   "debateBreadthAvg": 1,
   "taskSuccessRate": 0,
   "toolBudgetUtilization": 0,

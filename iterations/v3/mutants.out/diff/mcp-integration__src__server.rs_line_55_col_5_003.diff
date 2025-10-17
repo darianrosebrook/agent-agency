@@ -1,0 +1,24 @@
+--- mcp-integration/src/server.rs
++++ replace rate_limited_http_response -> Response<Body> with Response::from(Default::default())
+@@ -47,20 +47,17 @@
+ fn unauthorized_http_response() -> Response<Body> {
+     Response::builder()
+         .status(StatusCode::UNAUTHORIZED)
+         .body(Body::from("unauthorized"))
+         .expect("response")
+ }
+ 
+ fn rate_limited_http_response() -> Response<Body> {
+-    Response::builder()
+-        .status(StatusCode::TOO_MANY_REQUESTS)
+-        .body(Body::from("rate limit exceeded"))
+-        .expect("response")
++    Response::from(Default::default()) /* ~ changed by cargo-mutants ~ */
+ }
+ 
+ fn unauthorized_ws_response() -> ws::Response {
+     ws::Response::new(401, "Unauthorized", b"unauthorized".to_vec())
+ }
+ 
+ fn rate_limited_ws_response() -> ws::Response {
+     ws::Response::new(429, "Too Many Requests", b"rate limit exceeded".to_vec())

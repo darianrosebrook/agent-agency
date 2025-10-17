@@ -1,0 +1,21 @@
+--- mcp-integration/src/server.rs
++++ replace + with * in MCPServer::spawn_websocket_server
+@@ -319,17 +319,17 @@
+     async fn spawn_websocket_server(&self) -> Result<(oneshot::Receiver<()>, HttpServerHandle)> {
+         if !self.config.server.enable_websocket {
+             bail!("WebSocket disabled");
+         }
+ 
+         let (ready_tx, ready_rx) = oneshot::channel();
+         let (stop_tx, stop_rx) = oneshot::channel();
+ 
+-        let port = self.config.server.port + 1;
++        let port = self.config.server.port * /* ~ changed by cargo-mutants ~ */ 1;
+         let addr: SocketAddr = format!("{}:{}", self.config.server.host, port).parse()?;
+         let registry = self.tool_registry.clone();
+         let registry_stats = self.tool_registry.clone();
+         let caws = self.caws_integration.clone();
+         let version_payload = Arc::new(serde_json::json!({
+             "name": self.config.server.server_name.clone(),
+             "version": self.config.server.version.clone(),
+         }));

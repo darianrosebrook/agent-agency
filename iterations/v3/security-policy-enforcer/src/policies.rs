@@ -310,6 +310,13 @@ impl SecurityPolicy {
                 require_council_approval: true,
                 council_timeout: 30,
             },
+            rate_limiting: RateLimitingPolicy {
+                enabled: true,
+                requests_per_window: 100,
+                window_seconds: 60,
+                burst_size: 20,
+                cleanup_interval_seconds: 300,
+            },
         }
     }
 }

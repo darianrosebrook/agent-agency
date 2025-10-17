@@ -6,7 +6,7 @@
 use crate::types::*;
 use anyhow::Result;
 use chrono::Utc;
-use tracing::{debug, info, warn};
+use tracing::debug;
 use uuid::Uuid;
 
 /// Stage 4: Verification with evidence collection
@@ -158,7 +158,27 @@ impl EvidenceCollector {
 /// Integrates with council for complex verification
 #[derive(Debug)]
 struct CouncilIntegrator {
-    // TODO: Add council integration logic
+    // TODO: Add council integration logic with the following requirements:
+    // 1. Council communication: Establish communication channels with council system
+    //    - Implement API clients for council submission and response handling
+    //    - Handle authentication and authorization for council access
+    //    - Manage connection pooling and retry logic for council interactions
+    // 2. Claim submission: Submit claims to council for evaluation and arbitration
+    //    - Format claims according to council input specifications
+    //    - Include relevant context and supporting evidence
+    //    - Handle submission validation and error responses
+    // 3. Verdict collection: Collect and process council verdicts and decisions
+    //    - Parse council responses and extract verdict information
+    //    - Handle different verdict types (approval, rejection, modification)
+    //    - Process dissenting opinions and minority reports
+    // 4. Evidence integration: Integrate council verdicts as evidence for claims
+    //    - Convert council decisions into evidence format
+    //    - Weight evidence based on council confidence and consensus
+    //    - Handle conflicting verdicts and resolution strategies
+    // 5. Debate handling: Manage council debate and deliberation processes
+    //    - Track debate progress and participant contributions
+    //    - Handle consensus building and conflict resolution
+    //    - Process final decisions and reasoning explanations
 }
 
 impl CouncilIntegrator {
@@ -171,10 +191,29 @@ impl CouncilIntegrator {
         claim: &AtomicClaim,
         context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
-        // TODO: Implement council integration
-        // - Submit claim to council for evaluation
-        // - Collect council verdict as evidence
-        // - Handle council dissent and debate
+        // TODO: Implement council integration with the following requirements:
+        // 1. Claim preparation: Prepare claim for council submission
+        //    - Format claim according to council input specifications
+        //    - Include relevant context, evidence, and supporting information
+        //    - Validate claim completeness and submission requirements
+        // 2. Council submission: Submit claim to council for evaluation
+        //    - Send claim to council arbitration system
+        //    - Handle submission errors and retry logic
+        //    - Track submission status and processing progress
+        // 3. Verdict collection: Collect council verdicts and decisions
+        //    - Poll for council decisions and verdict updates
+        //    - Parse verdict responses and extract decision information
+        //    - Handle different verdict types and confidence levels
+        // 4. Evidence conversion: Convert council verdicts to evidence format
+        //    - Transform council decisions into standardized evidence structures
+        //    - Weight evidence based on council confidence and consensus
+        //    - Include reasoning and justification from council deliberations
+        // 5. Dissent handling: Process dissenting opinions and minority reports
+        //    - Extract and analyze dissenting viewpoints
+        //    - Weight minority opinions appropriately
+        //    - Include alternative perspectives in evidence collection
+        // 6. Return Vec<Evidence> with actual council verdicts (not placeholders)
+        // 7. Include comprehensive evidence from council deliberations and decisions
 
         debug!("Verifying claim with council: {}", claim.claim_text);
 

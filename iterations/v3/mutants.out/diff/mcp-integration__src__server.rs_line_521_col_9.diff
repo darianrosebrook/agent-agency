@@ -1,0 +1,22 @@
+--- mcp-integration/src/server.rs
++++ replace MCPServer::register_tool_for_testing -> Result<()> with Ok(())
+@@ -513,18 +513,17 @@
+     #[cfg(test)]
+     pub async fn test_register_tool(&self, tool: MCPTool) -> Result<()> {
+         self.tool_registry.register_tool(tool).await
+     }
+ 
+     /// Register tool for testing purposes (feature-gated for test utilities)
+     #[cfg(feature = "test-utils")]
+     pub async fn register_tool_for_testing(&self, tool: MCPTool) -> Result<()> {
+-        info!("Registering tool for testing: {}", tool.name);
+-        self.tool_registry.register_tool(tool).await
++        Ok(()) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     /// Start HTTP server
+     async fn start_http_server(&self) -> Result<()> {
+         if !self.config.server.enable_http {
+             return Ok(());
+         }
+ 

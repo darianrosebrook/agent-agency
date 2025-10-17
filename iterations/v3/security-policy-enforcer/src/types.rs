@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Security policy configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SecurityPolicyConfig {
     /// File access policies
     pub file_access: FileAccessPolicy,
@@ -16,10 +16,12 @@ pub struct SecurityPolicyConfig {
     pub audit: AuditPolicy,
     /// Integration with council for security decisions
     pub council_integration: CouncilIntegrationConfig,
+    /// Rate limiting configuration
+    pub rate_limiting: RateLimitingPolicy,
 }
 
 /// File access control policy
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct FileAccessPolicy {
     /// Allowed file patterns (glob patterns)
     pub allowed_patterns: Vec<String>,
@@ -38,7 +40,7 @@ pub struct FileAccessPolicy {
 }
 
 /// Command execution control policy
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CommandExecutionPolicy {
     /// Allowed command patterns
     pub allowed_commands: Vec<String>,
@@ -57,7 +59,7 @@ pub struct CommandExecutionPolicy {
 }
 
 /// Secrets detection policy
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SecretsDetectionPolicy {
     /// Enable secrets detection
     pub enabled: bool,
@@ -72,7 +74,7 @@ pub struct SecretsDetectionPolicy {
 }
 
 /// Secret detection pattern
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SecretPattern {
     /// Pattern name
     pub name: String,
@@ -85,7 +87,7 @@ pub struct SecretPattern {
 }
 
 /// Secret severity levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum SecretSeverity {
     Low,
     Medium,
@@ -93,8 +95,47 @@ pub enum SecretSeverity {
     Critical,
 }
 
-/// Audit policy configuration
+/// Rate limiting policy configuration
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RateLimitingPolicy {
+    /// Enable rate limiting
+    pub enabled: bool,
+    /// Maximum requests per window per IP
+    pub requests_per_window: u32,
+    /// Time window in seconds
+    pub window_seconds: u64,
+    /// Maximum burst size
+    pub burst_size: u32,
+    /// Cleanup interval for expired entries (seconds)
+    pub cleanup_interval_seconds: u64,
+}
+
+/// Rate limiting request context
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RateLimitRequest {
+    /// Client identifier (IP, user ID, etc.)
+    pub client_id: String,
+    /// Request path or operation
+    pub operation: String,
+    /// Request timestamp
+    pub timestamp: DateTime<Utc>,
+}
+
+/// Rate limiting result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RateLimitResult {
+    /// Whether the request is allowed
+    pub allowed: bool,
+    /// Current request count in window
+    pub current_count: u32,
+    /// Window reset time
+    pub reset_time: DateTime<Utc>,
+    /// Retry after seconds (if denied)
+    pub retry_after_seconds: Option<u64>,
+}
+
+/// Audit policy configuration
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AuditPolicy {
     /// Enable audit logging
     pub enabled: bool,
@@ -111,7 +152,7 @@ pub struct AuditPolicy {
 }
 
 /// Council integration configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CouncilIntegrationConfig {
     /// Enable council integration for security decisions
     pub enabled: bool,
@@ -124,7 +165,7 @@ pub struct CouncilIntegrationConfig {
 }
 
 /// Security violation types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum SecurityViolationType {
     FileAccessDenied,
     CommandExecutionDenied,
@@ -136,7 +177,7 @@ pub enum SecurityViolationType {
 }
 
 /// Security violation details
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SecurityViolation {
     /// Unique violation ID
     pub id: Uuid,
@@ -161,7 +202,7 @@ pub struct SecurityViolation {
 }
 
 /// Council decision for security violations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CouncilDecision {
     /// Decision ID
     pub decision_id: Uuid,
@@ -176,7 +217,7 @@ pub struct CouncilDecision {
 }
 
 /// Security audit event
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SecurityAuditEvent {
     /// Event ID
     pub id: Uuid,
@@ -197,7 +238,7 @@ pub struct SecurityAuditEvent {
 }
 
 /// Audit event types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum AuditEventType {
     FileAccess,
     CommandExecution,
@@ -208,7 +249,7 @@ pub enum AuditEventType {
 }
 
 /// Audit result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum AuditResult {
     Allowed,
     Denied,
@@ -216,6 +257,92 @@ pub enum AuditResult {
     Approved,
     Rejected,
     Warning,
+}
+
+/// Source metadata for audit log ingestion
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct AuditEventSource {
+    /// Originating subsystem or service name
+    pub system: String,
+    /// Component within the subsystem that emitted the event
+    pub component: String,
+    /// Deployment environment descriptor (e.g., prod, staging)
+    pub environment: String,
+}
+
+/// Structured audit log entry used for ingestion/analysis pipelines
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AuditLogEntry {
+    /// Schema version for forward compatibility
+    pub schema_version: String,
+    /// Source metadata describing the emitter
+    #[serde(default)]
+    pub source: AuditEventSource,
+    /// Structured security audit event payload
+    pub event: SecurityAuditEvent,
+}
+
+impl AuditLogEntry {
+    /// Canonical schema version supported by the current parser
+    pub const CURRENT_VERSION: &'static str = "1.0";
+
+    /// Validate schema version compatibility
+    pub fn validate(&self) -> anyhow::Result<()> {
+        if self.schema_version != Self::CURRENT_VERSION {
+            anyhow::bail!("Unsupported audit schema version: {}", self.schema_version);
+        }
+        Ok(())
+    }
+}
+
+/// Normalized severity level used by the analysis engine
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub enum SeverityLevel {
+    Informational,
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+impl SeverityLevel {
+    /// Map domain-specific severity (e.g., secret severity) into normalized levels
+    pub fn from_secret(severity: SecretSeverity) -> Self {
+        match severity {
+            SecretSeverity::Low => SeverityLevel::Low,
+            SecretSeverity::Medium => SeverityLevel::Medium,
+            SecretSeverity::High => SeverityLevel::High,
+            SecretSeverity::Critical => SeverityLevel::Critical,
+        }
+    }
+}
+
+/// Quantitative severity score produced by the analysis engine
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SeverityScore {
+    /// Normalized severity band
+    pub level: SeverityLevel,
+    /// Numeric score within [0.0, 1.0]
+    pub score: f32,
+    /// Explanation of the contributing factors
+    pub rationale: String,
+    /// Event identifiers used to compute the score
+    pub contributing_events: Vec<Uuid>,
+}
+
+/// Aggregated analysis derived from a batch of audit events
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SecurityAnalysis {
+    /// Total number of processed events
+    pub total_events: usize,
+    /// Count of events grouped by result type
+    pub events_by_result: HashMap<String, usize>,
+    /// Count of events grouped by audit type
+    pub events_by_type: HashMap<String, usize>,
+    /// Highest severity score observed in the batch
+    pub overall_severity: SeverityScore,
+    /// Optional note for anomalies discovered during analysis
+    pub notes: Vec<String>,
 }
 
 /// Security policy enforcement result

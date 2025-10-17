@@ -1,0 +1,61 @@
+--- mcp-integration/src/server.rs
++++ replace MCPServer::stop -> Result<()> with Ok(())
+@@ -380,57 +380,17 @@
+             shutdown_tx: Some(stop_tx),
+         };
+ 
+         Ok((ready_rx, ws_handle))
+     }
+ 
+     /// Stop the MCP server
+     pub async fn stop(&self) -> Result<()> {
+-        info!(
+-            server_name = %self.config.server.server_name,
+-            "Stopping MCP server"
+-        );
+-
+-        // Update status
+-        {
+-            let mut status = self.status.write().await;
+-            *status = MCPServerStatus::Stopping;
+-        }
+-
+-        // Stop components
+-        self.tool_discovery.stop().await?;
+-        self.tool_registry.shutdown().await?;
+-        self.caws_integration.shutdown().await?;
+-
+-        if let Some(handle) = self.http_handle.write().await.take() {
+-            handle.shutdown().await?;
+-        }
+-        if let Some(handle) = self.ws_handle.write().await.take() {
+-            handle.shutdown().await?;
+-        }
+-
+-        // Close all connections
+-        {
+-            let mut connections = self.connections.write().await;
+-            connections.clear();
+-        }
+-
+-        // Update status
+-        {
+-            let mut status = self.status.write().await;
+-            *status = MCPServerStatus::Stopped;
+-        }
+-
+-        info!(
+-            server_name = %self.config.server.server_name,
+-            status = "stopped",
+-            "MCP server stopped successfully"
+-        );
+-        Ok(())
++        Ok(()) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     /// Get server status
+     pub async fn get_status(&self) -> MCPServerStatus {
+         let status = self.status.read().await;
+         status.clone()
+     }
+ 

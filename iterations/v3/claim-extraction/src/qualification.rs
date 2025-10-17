@@ -6,7 +6,7 @@
 use crate::types::*;
 use anyhow::Result;
 use regex::Regex;
-use tracing::{debug, info, warn};
+use tracing::debug;
 
 /// Stage 2: Qualification of verifiable content
 #[derive(Debug)]
@@ -264,7 +264,27 @@ impl VerifiabilityDetector {
 /// Rewrites content to make it verifiable
 #[derive(Debug)]
 struct ContentRewriter {
-    // TODO: Add content rewriting logic
+    // TODO: Add content rewriting logic with the following requirements:
+    // 1. Content analysis: Analyze content to identify rewriting opportunities
+    //    - Parse content structure and identify ambiguous or unclear statements
+    //    - Detect subjective language, vague terms, and unverifiable claims
+    //    - Identify areas where specificity and clarity can be improved
+    // 2. Rewriting strategies: Implement various content rewriting approaches
+    //    - Convert subjective statements to objective, measurable claims
+    //    - Replace vague terms with specific, quantifiable language
+    //    - Add context and constraints to make claims more verifiable
+    // 3. Verification enhancement: Rewrite content to improve verifiability
+    //    - Add specific metrics, criteria, and measurable outcomes
+    //    - Include temporal constraints and scope limitations
+    //    - Provide clear success criteria and validation methods
+    // 4. Language optimization: Improve clarity and precision of language
+    //    - Replace ambiguous terms with precise technical language
+    //    - Eliminate unnecessary complexity while maintaining accuracy
+    //    - Ensure consistent terminology and clear communication
+    // 5. Context preservation: Maintain original intent while improving verifiability
+    //    - Preserve the core meaning and intent of original content
+    //    - Add necessary context without changing fundamental claims
+    //    - Balance specificity with maintainability and readability
 }
 
 impl ContentRewriter {

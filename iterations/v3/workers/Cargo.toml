@@ -22,6 +22,7 @@ config.workspace = true
 
 # Internal crate dependencies
 agent-agency-council = { path = "../council" }
+# claim-extraction = { path = "../claim-extraction" }  # Temporarily commented to resolve circular dependency
 
 # Worker-specific dependencies
 dashmap = "5.5"  # Concurrent hashmap for worker registry

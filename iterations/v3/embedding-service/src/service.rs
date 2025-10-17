@@ -62,7 +62,7 @@ impl EmbeddingServiceImpl {
     /// Create embedding metadata
     fn create_metadata(
         &self,
-        text: &str,
+        _text: &str,
         content_type: ContentType,
         source: &str,
         tags: Vec<String>,
@@ -98,7 +98,7 @@ impl EmbeddingService for EmbeddingServiceImpl {
             .provider
             .generate_embeddings(&[text.to_string()])
             .await?;
-        let processing_time = start_time.elapsed().as_millis() as u64;
+        let _processing_time = start_time.elapsed().as_millis() as u64;
 
         let vector = vectors
             .into_iter()

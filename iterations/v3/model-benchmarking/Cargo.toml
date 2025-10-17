@@ -36,6 +36,9 @@ sqlx.workspace = true
 # Council integration
 agent-agency-council = { path = "../council" }
 
+# Claim extraction integration
+claim-extraction = { path = "../claim-extraction" }
+
 # For examples
 tracing-subscriber = "0.3"
 

@@ -3,8 +3,6 @@
 //! This module implements V3's superior quality assessment capabilities that surpass V2's
 //! basic quality checking with predictive quality analysis, trend detection, and regression prevention.
 
-use crate::models::TaskSpec;
-use crate::types::*;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -12,7 +10,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
-use uuid::Uuid;
 
 /// Predictive Quality Assessor that surpasses V2's basic quality checking
 #[derive(Debug)]

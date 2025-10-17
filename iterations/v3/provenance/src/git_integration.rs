@@ -6,11 +6,10 @@
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use git2::{Commit, Repository, Signature};
+use git2::{Repository, Signature};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::Mutex;
-use uuid::Uuid;
 
 use crate::types::ProvenanceRecord;
 
@@ -103,19 +102,67 @@ impl GitTrailerManager {
     fn get_branch_ref(&self) -> Result<()> {
         let refname = format!("refs/heads/{}", self.branch);
         let _repo = self.repository.lock().unwrap();
-        // TODO: Implement proper reference handling without lifetime issues
+        // TODO: Implement proper reference handling without lifetime issues with the following requirements:
+        // 1. Reference management: Implement proper Git reference handling
+        //    - Handle Git references with proper lifetime management
+        //    - Implement reference resolution and validation
+        //    - Handle reference updates and synchronization
+        // 2. Thread safety: Ensure thread-safe Git operations
+        //    - Implement proper locking mechanisms for Git operations
+        //    - Handle concurrent access to Git repository
+        //    - Ensure data consistency across multiple threads
+        // 3. Error handling: Implement robust error handling for Git operations
+        //    - Handle Git-specific errors and exceptions
+        //    - Provide meaningful error messages and recovery options
+        //    - Implement proper error propagation and handling
+        // 4. Performance optimization: Optimize Git operations for performance
+        //    - Implement efficient reference caching and lookup
+        //    - Minimize Git repository access and operations
+        //    - Handle large repositories and reference sets efficiently
         Ok(())
     }
 
     /// Get the current HEAD commit (simplified for now)
     fn get_head_commit(&self) -> Result<()> {
-        // TODO: Implement proper commit handling without lifetime issues
+        // TODO: Implement proper commit handling without lifetime issues with the following requirements:
+        // 1. Commit management: Implement proper Git commit handling
+        //    - Handle Git commits with proper lifetime management
+        //    - Implement commit resolution and validation
+        //    - Handle commit history traversal and analysis
+        // 2. Thread safety: Ensure thread-safe commit operations
+        //    - Implement proper locking mechanisms for commit access
+        //    - Handle concurrent access to commit data
+        //    - Ensure data consistency across multiple threads
+        // 3. Error handling: Implement robust error handling for commit operations
+        //    - Handle Git-specific commit errors and exceptions
+        //    - Provide meaningful error messages and recovery options
+        //    - Implement proper error propagation and handling
+        // 4. Performance optimization: Optimize commit operations for performance
+        //    - Implement efficient commit caching and lookup
+        //    - Minimize Git repository access for commit operations
+        //    - Handle large commit histories efficiently
         Ok(())
     }
 }
 
 // Temporarily disable async trait implementation due to thread safety issues
-// TODO: Implement proper thread-safe git integration
+// TODO: Implement proper thread-safe git integration with the following requirements:
+// 1. Thread safety: Implement thread-safe Git operations
+//    - Use proper synchronization primitives for Git repository access
+//    - Handle concurrent Git operations safely
+//    - Implement proper locking mechanisms and deadlock prevention
+// 2. Async integration: Implement proper async Git integration
+//    - Use async Git libraries and operations
+//    - Handle async Git operations with proper error handling
+//    - Implement proper async trait implementations
+// 3. Error handling: Implement robust error handling for Git operations
+//    - Handle Git-specific errors and exceptions
+//    - Provide meaningful error messages and recovery options
+//    - Implement proper error propagation and handling
+// 4. Performance optimization: Optimize Git operations for performance
+//    - Implement efficient Git operation caching
+//    - Minimize Git repository access and operations
+//    - Handle large repositories and operations efficiently
 /*
 #[async_trait]
 impl GitIntegration for GitTrailerManager {

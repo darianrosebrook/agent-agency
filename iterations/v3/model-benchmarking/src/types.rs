@@ -92,6 +92,8 @@ pub struct BenchmarkResult {
     pub metrics: BenchmarkMetrics,
     pub score: f64,
     pub ranking: u32,
+    /// SLA validation results for this benchmark
+    pub sla_validation: Option<SlaValidationReport>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -417,4 +419,88 @@ pub enum ImplementationEffort {
     Medium,
     High,
     VeryHigh,
+}
+
+/// Service Level Agreement (SLA) definitions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SlaDefinition {
+    /// Name of the SLA metric
+    pub name: String,
+    /// Target value for the metric
+    pub target: f64,
+    /// Unit of measurement
+    pub unit: String,
+    /// Whether higher values are better (e.g., accuracy) or lower (e.g., latency)
+    pub higher_is_better: bool,
+    /// Tolerance for SLA violations (percentage)
+    pub tolerance_percent: f64,
+}
+
+/// SLA validation result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SlaValidationResult {
+    /// SLA definition that was validated
+    pub sla: SlaDefinition,
+    /// Actual measured value
+    pub actual_value: f64,
+    /// Whether the SLA was met
+    pub passed: bool,
+    /// How much the SLA was exceeded/failed by (percentage)
+    pub deviation_percent: f64,
+    /// Severity level of the SLA violation
+    pub severity: SlaViolationSeverity,
+}
+
+/// Severity levels for SLA violations
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum SlaViolationSeverity {
+    /// Minor violation, performance degraded but functional
+    Minor,
+    /// Moderate violation, significant performance impact
+    Moderate,
+    /// Critical violation, system may be unusable
+    Critical,
+    /// Catastrophic violation, system failure
+    Catastrophic,
+}
+
+/// Collection of SLA definitions for the system
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SlaTargets {
+    /// API response time P95 (milliseconds)
+    pub api_p95_ms: SlaDefinition,
+    /// Council consensus time (milliseconds)
+    pub council_consensus_ms: SlaDefinition,
+    /// Apple Silicon ANE utilization (percentage)
+    pub ane_utilization_percent: SlaDefinition,
+    /// Memory usage (GB)
+    pub memory_usage_gb: SlaDefinition,
+}
+
+/// SLA validation report
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SlaValidationReport {
+    /// Timestamp when validation was performed
+    pub timestamp: DateTime<Utc>,
+    /// Overall SLA compliance status
+    pub overall_compliant: bool,
+    /// Individual SLA validation results
+    pub sla_results: Vec<SlaValidationResult>,
+    /// Summary statistics
+    pub summary: SlaSummary,
+}
+
+/// SLA validation summary
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SlaSummary {
+    /// Number of SLAs that passed
+    pub passed_count: usize,
+    /// Number of SLAs that failed
+    pub failed_count: usize,
+    /// Critical SLA violations
+    pub critical_violations: usize,
+    /// Average deviation from targets (percentage)
+    pub average_deviation_percent: f64,
+    /// Most severe violation
+    pub worst_violation: Option<SlaValidationResult>,
 }

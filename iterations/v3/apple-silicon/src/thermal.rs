@@ -136,7 +136,7 @@ mod tests {
             max_temperature_c: 85,
             check_interval_ms: 5000,
             auto_throttle: true,
-            throttle_threshold_c: 80,
+            thermal_throttle_threshold_celsius: 80,
         };
 
         let manager = ThermalManager::new(config);

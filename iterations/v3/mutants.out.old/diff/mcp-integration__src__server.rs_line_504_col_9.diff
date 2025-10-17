@@ -1,0 +1,21 @@
+--- mcp-integration/src/server.rs
++++ replace MCPServer::get_registry_stats -> ToolRegistryStats with Default::default()
+@@ -496,17 +496,17 @@
+             "Tool discovery completed: {} tools discovered",
+             result.discovered_tools.len()
+         );
+         Ok(result)
+     }
+ 
+     /// Get tool registry statistics
+     pub async fn get_registry_stats(&self) -> ToolRegistryStats {
+-        self.tool_registry.get_statistics().await
++        Default::default() /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     /// Test-only: register tool via server
+     #[cfg(test)]
+     pub async fn test_register_tool(&self, tool: MCPTool) -> Result<()> {
+         self.tool_registry.register_tool(tool).await
+     }
+ 

@@ -1,6 +1,5 @@
 //! Types for reflexive learning system
 
-use agent_agency_council::learning::TaskOutcome;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -17,7 +16,7 @@ pub struct LearningTask {
     pub context: TaskContext,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum TaskType {
     CodeGeneration,
     CodeReview,
@@ -85,11 +84,65 @@ pub enum ConstraintSeverity {
     Critical,
 }
 
+/// Quality indicators captured from council evaluations
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum QualityIndicator {
+    HighConfidence,
+    ComprehensiveEvidence,
+    MinimalDissent,
+    EfficientExecution,
+    StrongCAWSCompliance,
+    CompleteClaimVerification,
+}
+
+/// Categories for failure analysis
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum FailureCategory {
+    ConsensusFailure,
+    ResourceExhaustion,
+    CAWSViolation,
+    ClaimVerificationFailure,
+    JudgeTimeout,
+    SystemError,
+}
+
+/// Partial results captured when a task times out
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PartialResults {
+    pub completed_judges: Vec<Uuid>,
+    pub partial_consensus: f32,
+    pub estimated_completion: f32,
+}
+
+/// Outcome classification for predictive learning
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TaskOutcome {
+    Success {
+        confidence: f32,
+        quality_indicators: Vec<QualityIndicator>,
+    },
+    PartialSuccess {
+        issues: Vec<String>,
+        confidence: f32,
+        remediation_applied: bool,
+    },
+    Failure {
+        reason: String,
+        failure_category: FailureCategory,
+        recoverable: bool,
+    },
+    Timeout {
+        duration_ms: u64,
+        partial_results: Option<PartialResults>,
+    },
+}
+
 /// Learning session tracking progress
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LearningSession {
     pub id: Uuid,
     pub task_id: Uuid,
+    pub task_type: TaskType,
     pub start_time: DateTime<Utc>,
     pub current_turn: u32,
     pub progress: ProgressMetrics,

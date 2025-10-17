@@ -6,11 +6,13 @@ use crate::types::*;
 use crate::{CawsIntegration, ToolDiscovery, ToolRegistry};
 use anyhow::{anyhow, bail, Result};
 use jsonrpc_core::{Error as JsonRpcError, IoHandler, Params, Value};
-use jsonrpc_http_server::ServerBuilder;
+use jsonrpc_http_server::hyper::{Body, Response, StatusCode};
+use jsonrpc_http_server::{RequestMiddlewareAction, ServerBuilder};
+use jsonrpc_ws_server::ws;
 use jsonrpc_ws_server::ServerBuilder as WsServerBuilder;
 use std::net::SocketAddr;
-use std::sync::Arc;
-use std::time::Duration;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use tokio::sync::{oneshot, RwLock};
 use tokio::task::JoinHandle;
 use tokio::time::timeout;
@@ -42,6 +44,60 @@ impl HttpServerHandle {
     }
 }
 
+fn unauthorized_http_response() -> Response<Body> {
+    Response::builder()
+        .status(StatusCode::UNAUTHORIZED)
+        .body(Body::from("unauthorized"))
+        .expect("response")
+}
+
+fn rate_limited_http_response() -> Response<Body> {
+    Response::builder()
+        .status(StatusCode::TOO_MANY_REQUESTS)
+        .body(Body::from("rate limit exceeded"))
+        .expect("response")
+}
+
+fn unauthorized_ws_response() -> ws::Response {
+    ws::Response::new(401, "Unauthorized", b"unauthorized".to_vec())
+}
+
+fn rate_limited_ws_response() -> ws::Response {
+    ws::Response::new(429, "Too Many Requests", b"rate limit exceeded".to_vec())
+}
+
+#[derive(Debug)]
+struct RateLimiter {
+    limit_per_minute: u32,
+    window_start: Instant,
+    count: u32,
+}
+
+impl RateLimiter {
+    fn new(limit_per_minute: u32) -> Self {
+        Self {
+            limit_per_minute,
+            window_start: Instant::now(),
+            count: 0,
+        }
+    }
+
+    fn allow(&mut self) -> bool {
+        let now = Instant::now();
+        if now.duration_since(self.window_start) >= Duration::from_secs(60) {
+            self.window_start = now;
+            self.count = 0;
+        }
+
+        if self.count >= self.limit_per_minute {
+            false
+        } else {
+            self.count += 1;
+            true
+        }
+    }
+}
+
 /// Main MCP server
 #[derive(Debug)]
 pub struct MCPServer {
@@ -53,11 +109,17 @@ pub struct MCPServer {
     connections: Arc<RwLock<Vec<MCPConnection>>>,
     http_handle: Arc<RwLock<Option<HttpServerHandle>>>,
     ws_handle: Arc<RwLock<Option<HttpServerHandle>>>,
+    rate_limiter: Option<Arc<Mutex<RateLimiter>>>,
 }
 
 impl MCPServer {
     /// Create a new MCP server
     pub fn new(config: MCPConfig) -> Self {
+        let rate_limiter = config
+            .server
+            .requests_per_minute
+            .map(|limit| Arc::new(Mutex::new(RateLimiter::new(limit))));
+
         Self {
             config,
             tool_registry: Arc::new(ToolRegistry::new()),
@@ -67,6 +129,7 @@ impl MCPServer {
             connections: Arc::new(RwLock::new(Vec::new())),
             http_handle: Arc::new(RwLock::new(None)),
             ws_handle: Arc::new(RwLock::new(None)),
+            rate_limiter,
         }
     }
 
@@ -131,6 +194,8 @@ impl MCPServer {
             "name": self.config.server.server_name.clone(),
             "version": self.config.server.version.clone(),
         }));
+        let auth_api_key = self.config.server.auth_api_key.clone();
+        let rate_limiter = self.rate_limiter.clone();
 
         let handle = tokio::task::spawn_blocking(move || {
             let io = Self::build_io_handler(
@@ -139,7 +204,30 @@ impl MCPServer {
                 caws.clone(),
                 version_payload.clone(),
             );
-            let server = ServerBuilder::new(io)
+            let builder = ServerBuilder::new(io).request_middleware(
+                move |request: jsonrpc_http_server::hyper::Request<Body>| {
+                    if let Some(ref expected) = auth_api_key {
+                        let provided = request
+                            .headers()
+                            .get("x-api-key")
+                            .and_then(|value| value.to_str().ok());
+                        if provided != Some(expected.as_str()) {
+                            return RequestMiddlewareAction::from(unauthorized_http_response());
+                        }
+                    }
+
+                    if let Some(ref limiter) = rate_limiter {
+                        let mut guard = limiter.lock().unwrap();
+                        if !guard.allow() {
+                            return RequestMiddlewareAction::from(rate_limited_http_response());
+                        }
+                    }
+
+                    RequestMiddlewareAction::from(request)
+                },
+            );
+
+            let server = builder
                 .threads(1)
                 .start_http(&addr.parse().expect("valid addr"))
                 .expect("start http");
@@ -223,6 +311,11 @@ impl MCPServer {
         self.spawn_websocket_server().await
     }
 
+    pub async fn push_connection_for_testing(&self, connection: MCPConnection) {
+        let mut guard = self.connections.write().await;
+        guard.push(connection);
+    }
+
     async fn spawn_websocket_server(&self) -> Result<(oneshot::Receiver<()>, HttpServerHandle)> {
         if !self.config.server.enable_websocket {
             bail!("WebSocket disabled");
@@ -240,6 +333,8 @@ impl MCPServer {
             "name": self.config.server.server_name.clone(),
             "version": self.config.server.version.clone(),
         }));
+        let auth_api_key = self.config.server.auth_api_key.clone();
+        let rate_limiter = self.rate_limiter.clone();
 
         let handle = tokio::task::spawn_blocking(move || {
             let io = MCPServer::build_io_handler(
@@ -249,7 +344,28 @@ impl MCPServer {
                 version_payload.clone(),
             );
 
+            let middleware = move |req: &ws::Request| {
+                if let Some(ref expected) = auth_api_key {
+                    let provided = req
+                        .header("x-api-key")
+                        .and_then(|value| std::str::from_utf8(value).ok());
+                    if provided != Some(expected.as_str()) {
+                        return Some(unauthorized_ws_response());
+                    }
+                }
+
+                if let Some(ref limiter) = rate_limiter {
+                    let mut guard = limiter.lock().unwrap();
+                    if !guard.allow() {
+                        return Some(rate_limited_ws_response());
+                    }
+                }
+
+                None
+            };
+
             let server = WsServerBuilder::new(io)
+                .request_middleware(middleware)
                 .start(&addr)
                 .expect("start websocket server");
             let close_handle = server.close_handle();

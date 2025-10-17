@@ -5,10 +5,12 @@
 
 use crate::evidence_enrichment::EvidenceEnrichmentCoordinator;
 use crate::models::TaskSpec;
+use crate::resilience::ResilienceManager;
 use crate::types::{ConsensusResult, FinalVerdict, JudgeVerdict};
 use crate::CouncilConfig;
 use anyhow::Result;
 use std::collections::HashMap;
+use std::sync::Arc;
 use uuid::Uuid;
 
 /// Main coordinator for council consensus building
@@ -16,6 +18,7 @@ pub struct ConsensusCoordinator {
     config: CouncilConfig,
     emitter: std::sync::Arc<dyn ProvenanceEmitter>,
     evidence_enrichment: EvidenceEnrichmentCoordinator,
+    resilience_manager: Arc<ResilienceManager>, // V2 production resilience
 }
 
 /// Provenance emission interface for council events
@@ -54,6 +57,7 @@ impl ConsensusCoordinator {
             config,
             emitter: std::sync::Arc::new(NoopEmitter),
             evidence_enrichment: EvidenceEnrichmentCoordinator::new(),
+            resilience_manager: Arc::new(ResilienceManager::new()), // V2 production resilience
         }
     }
 
@@ -68,10 +72,12 @@ impl ConsensusCoordinator {
         let task_id = task_spec.id;
         println!("Starting council evaluation for task {}", task_id);
 
-        // Enrich task with evidence from claim extraction
-        let evidence = self
-            .evidence_enrichment
-            .enrich_task_evidence(&task_spec)
+        // Enrich task with evidence from claim extraction (with V2 resilience)
+        let task_spec_clone = task_spec.clone();
+        let evidence = self.resilience_manager
+            .execute_resilient("evidence_enrichment", move || {
+                self.evidence_enrichment.enrich_task_evidence(&task_spec_clone)
+            })
             .await?;
 
         // Create individual judge verdicts with evidence enhancement
@@ -143,8 +149,28 @@ impl ConsensusCoordinator {
             final_verdict,
             individual_verdicts,
             consensus_score,
-            debate_rounds: 0,        // TODO: Implement debate protocol
-            evaluation_time_ms: 100, // TODO: Measure actual evaluation time
+            debate_rounds: 0,        // TODO: Implement debate protocol with the following requirements:
+            // 1. Debate initiation: Initiate debate when consensus cannot be reached
+            //    - Identify conflicting positions and arguments
+            //    - Set up debate structure and rules
+            //    - Assign debate participants and moderators
+            // 2. Debate management: Manage debate process and flow
+            //    - Track debate rounds and participant contributions
+            //    - Enforce debate rules and time limits
+            //    - Handle debate interruptions and conflicts
+            // 3. Debate resolution: Resolve debates and reach consensus
+            //    - Evaluate debate arguments and evidence
+            //    - Apply debate resolution algorithms
+            //    - Generate final debate outcomes and decisions
+            evaluation_time_ms: 100, // TODO: Measure actual evaluation time with the following requirements:
+            // 1. Time measurement: Measure actual evaluation time accurately
+            //    - Track evaluation start and end times
+            //    - Measure individual component evaluation times
+            //    - Calculate total evaluation duration
+            // 2. Performance monitoring: Monitor evaluation performance
+            //    - Track evaluation speed and efficiency
+            //    - Identify performance bottlenecks
+            //    - Optimize evaluation performance
             timestamp: chrono::Utc::now(),
         };
 
@@ -254,5 +280,33 @@ impl ConsensusCoordinator {
         metrics.insert("total_evaluations".to_string(), 0.0);
         metrics.insert("consensus_rate".to_string(), 0.85);
         metrics
+    }
+
+    /// Get resilience health status (V2 production monitoring)
+    pub async fn get_resilience_health(&self) -> crate::resilience::HealthStatus {
+        self.resilience_manager.health_status().await
+    }
+
+    /// Get circuit breaker statuses for monitoring (V2 pattern)
+    pub async fn get_circuit_breaker_statuses(&self) -> HashMap<String, crate::resilience::CircuitBreakerStatus> {
+        self.resilience_manager.circuit_breaker_statuses().await
+    }
+
+    /// Register council health checks (V2 pattern)
+    pub async fn register_health_checks(&self) {
+        // Register evidence enrichment health check
+        struct EvidenceEnrichmentHealthCheck;
+        impl crate::resilience::HealthCheck for EvidenceEnrichmentHealthCheck {
+            async fn check_health(&self) -> crate::resilience::HealthCheckResult {
+                // Simple health check - just return healthy for now
+                // In production, this would test actual evidence enrichment functionality
+                crate::resilience::HealthCheckResult::Healthy
+            }
+        }
+
+        self.resilience_manager.register_health_check(
+            "evidence_enrichment".to_string(),
+            Box::new(EvidenceEnrichmentHealthCheck),
+        ).await;
     }
 }

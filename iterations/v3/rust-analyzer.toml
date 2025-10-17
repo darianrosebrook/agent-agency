@@ -1,0 +1,63 @@
+# Rust Analyzer Configuration for Agent Agency V3 Workspace
+
+# Enable proc-macro support for all crates
+[proc-macro]
+enable = true
+
+# Cargo configuration
+[cargo]
+# Enable build scripts
+buildScripts.enable = true
+# Use all features for better analysis
+allFeatures = true
+# Load all targets
+loadOutDirsFromCheck = true
+
+# Linked projects - explicitly specify the workspace root
+linkedProjects = ["Cargo.toml"]
+
+# Diagnostics configuration
+[diagnostics]
+# Enable all diagnostics
+enable = true
+# Disable some noisy warnings
+disabled = [
+    "unresolved-macro-call",
+    "missing-unsafe",
+]
+
+# Completion configuration
+[completion]
+# Enable auto-import completions
+autoimport.enable = true
+# Enable postfix completions
+postfix.enable = true
+
+# Inlay hints
+[inlayHints]
+# Enable parameter hints
+parameterHints.enable = true
+# Enable type hints
+typeHints.enable = true
+# Enable chaining hints
+chainingHints.enable = true
+
+# LSP configuration
+[lsp]
+# Enable semantic highlighting
+semanticHighlighting = true
+# Enable inlay hints
+inlayHints.enable = true
+
+# Files configuration
+[files]
+# Watch additional files
+watcher = "notify"
+# Exclude certain directories from analysis
+excludeDirs = [
+    "target",
+    "node_modules",
+    ".git",
+    "dist",
+    "build"
+]

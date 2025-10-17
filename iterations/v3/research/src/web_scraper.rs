@@ -6,7 +6,7 @@ use crate::types::*;
 use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
+use tracing::info;
 
 /// Web scraper for content extraction
 #[derive(Debug)]
@@ -36,7 +36,25 @@ impl WebScraper {
     pub async fn scrape_url(&self, url: &str) -> Result<WebScrapingResult> {
         info!("Scraping URL: {}", url);
 
-        // TODO: Implement actual web scraping
+        // TODO: Implement actual web scraping with the following requirements:
+        // 1. HTTP client integration: Implement robust HTTP client for web scraping
+        //    - Use libraries like reqwest or hyper for HTTP requests
+        //    - Handle different content types (HTML, JSON, XML, etc.)
+        //    - Implement proper error handling and retry logic
+        // 2. Content parsing: Parse web content for relevant information
+        //    - Use libraries like scraper or select for HTML parsing
+        //    - Extract titles, main content, and metadata
+        //    - Handle different content structures and formats
+        // 3. Content filtering: Filter and clean scraped content
+        //    - Remove navigation, ads, and irrelevant content
+        //    - Extract main article content and important information
+        //    - Handle dynamic content and JavaScript-rendered pages
+        // 4. Rate limiting and politeness: Implement respectful scraping practices
+        //    - Respect robots.txt and rate limiting
+        //    - Implement delays between requests
+        //    - Handle different website policies and restrictions
+        // 5. Return WebScrapingResult with actual scraped content (not placeholders)
+        // 6. Include comprehensive content extraction and metadata
         let result = WebScrapingResult {
             url: url.to_string(),
             title: "Scraped Title".to_string(),

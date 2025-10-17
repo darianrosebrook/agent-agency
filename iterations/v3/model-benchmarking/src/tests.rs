@@ -123,6 +123,7 @@ async fn test_metrics_collector() -> Result<()> {
         },
         score: 0.90,
         ranking: 1,
+        sla_validation: None,
     };
 
     // Store the result
@@ -172,6 +173,7 @@ async fn test_performance_trend_calculation() -> Result<()> {
             },
             score: 0.75,
             ranking: 1,
+            sla_validation: None,
         },
         BenchmarkResult {
             model_id,
@@ -184,7 +186,8 @@ async fn test_performance_trend_calculation() -> Result<()> {
                 compliance: 0.0,
             },
             score: 0.80,
-            ranking: 1,
+            ranking: 2,
+            sla_validation: None,
         },
         BenchmarkResult {
             model_id,
@@ -197,7 +200,8 @@ async fn test_performance_trend_calculation() -> Result<()> {
                 compliance: 0.0,
             },
             score: 0.85,
-            ranking: 1,
+            ranking: 3,
+            sla_validation: None,
         },
     ];
 

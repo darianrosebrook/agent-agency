@@ -5,7 +5,8 @@
 
 use crate::types::*;
 use anyhow::Result;
-use tracing::{debug, info, warn};
+use tracing::debug;
+use uuid::Uuid;
 
 /// Stage 3: Decomposition into atomic claims
 #[derive(Debug)]
@@ -22,7 +23,7 @@ impl DecompositionStage {
         }
     }
 
-    /// Process a sentence through decomposition
+    /// Process a sentence through decomposition (ported from V2)
     pub async fn process(
         &self,
         sentence: &str,
@@ -30,53 +31,93 @@ impl DecompositionStage {
     ) -> Result<DecompositionResult> {
         debug!("Starting decomposition for: {}", sentence);
 
-        // Extract atomic claims
+        // Extract atomic claims using V2 compound sentence decomposition
         let atomic_claims = self.extract_atomic_claims(sentence, context).await?;
 
-        // Add contextual brackets to each claim
-        let mut enhanced_claims = Vec::new();
-        for mut claim in atomic_claims {
-            let implied_context = self.build_implied_context(context);
-            self.add_contextual_brackets(&mut claim, &implied_context)
-                .await?;
-            enhanced_claims.push(claim);
-        }
-
-        let decomposition_confidence = self.calculate_decomposition_confidence(&enhanced_claims);
+        let decomposition_confidence = self.calculate_decomposition_confidence(&atomic_claims);
 
         Ok(DecompositionResult {
-            atomic_claims: enhanced_claims,
+            atomic_claims,
             decomposition_confidence,
         })
     }
 
-    /// Extract atomic claims from a disambiguated sentence
+    /// Extract atomic claims from a disambiguated sentence (ported from V2)
     pub async fn extract_atomic_claims(
         &self,
         disambiguated_sentence: &str,
         context: &ProcessingContext,
     ) -> Result<Vec<AtomicClaim>> {
-        let mut claims = Vec::new();
+        let _claims: Vec<AtomicClaim> = Vec::new();
+        let sentences = self.split_into_sentences(disambiguated_sentence);
 
-        // Extract different types of claims
-        claims.extend(
-            self.claim_extractor
-                .extract_factual_claims(disambiguated_sentence)?,
-        );
-        claims.extend(
-            self.claim_extractor
-                .extract_procedural_claims(disambiguated_sentence)?,
-        );
-        claims.extend(
-            self.claim_extractor
-                .extract_technical_claims(disambiguated_sentence, context)?,
-        );
-        claims.extend(
-            self.claim_extractor
-                .extract_constitutional_claims(disambiguated_sentence)?,
-        );
+        let mut all_claims = Vec::new();
 
-        Ok(claims)
+        for (sentence_index, sentence) in sentences.iter().enumerate() {
+            // First, decompose compound sentences (ported from V2)
+            let compound_claims = self.decompose_compound_sentence(sentence);
+            let last_subject = self.extract_fallback_subject(context)
+                .or_else(|| self.extract_context_entities(context).first().cloned())
+                .unwrap_or_default();
+
+            for (compound_index, compound_claim) in compound_claims.iter().enumerate() {
+                let clauses = self.split_into_clauses(compound_claim);
+                let mut clause_offset = 0;
+
+                for clause in &clauses {
+                    let normalized_clause = self.normalize_clause(clause);
+
+                    // Extract or propagate subject (ported from V2 logic)
+                    let subject_candidate = self.extract_subject_candidate(&normalized_clause);
+                    let last_subject = if let Some(subject) = subject_candidate {
+                        if !self.is_verb(subject) {
+                            subject.to_string()
+                        } else {
+                            last_subject.clone()
+                        }
+                    } else if !normalized_clause.is_empty() && !normalized_clause.chars().next().unwrap().is_uppercase() {
+                        // Prepend subject if clause doesn't start with one
+                        format!("{} {}", last_subject, normalized_clause)
+                    } else {
+                        last_subject.clone()
+                    };
+
+                    if normalized_clause.len() < 8 {
+                        continue;
+                    }
+
+                    let claim_id = self.generate_claim_id(context.task_id, sentence_index, compound_index * 100 + clause_offset);
+
+                    // Extract contextual brackets (ported from V2)
+                    let contextual_brackets = self.extract_contextual_brackets(&normalized_clause, context).await?;
+
+                    // Apply contextual brackets to the statement
+                    let bracketed_statement = self.apply_contextual_brackets(&normalized_clause, &contextual_brackets);
+
+                    let verification_requirements = self.derive_verification_requirements(&normalized_clause, &contextual_brackets);
+                    let confidence = self.calculate_claim_confidence(&normalized_clause);
+
+                    let claim = AtomicClaim {
+                        id: claim_id,
+                        claim_text: bracketed_statement,
+                        claim_type: self.infer_claim_type(&normalized_clause),
+                        verifiability: self.assess_verifiability(&normalized_clause),
+                        scope: ClaimScope {
+                            working_spec_id: context.working_spec_id.clone(),
+                            component_boundaries: vec!["system".to_string()], // Basic scope
+                            data_impact: DataImpact::None,
+                        },
+                        confidence,
+                        contextual_brackets,
+                    };
+
+                    all_claims.push(claim);
+                    clause_offset += 1;
+                }
+            }
+        }
+
+        Ok(all_claims)
     }
 
     /// Add contextual brackets to claims for proper scope
@@ -329,7 +370,27 @@ impl ClaimExtractor {
 /// Adds contextual brackets to claims
 #[derive(Debug)]
 struct ContextBracketAdder {
-    // TODO: Add context bracket logic
+    // TODO: Add context bracket logic with the following requirements:
+    // 1. Context identification: Identify missing context in claims
+    //    - Parse claims to find implicit context dependencies
+    //    - Identify temporal, spatial, and domain-specific context gaps
+    //    - Detect assumptions and prerequisite knowledge requirements
+    // 2. Context extraction: Extract relevant context from available sources
+    //    - Search documentation, specifications, and related materials
+    //    - Extract contextual information from surrounding text
+    //    - Identify relevant background information and constraints
+    // 3. Context bracketing: Add contextual brackets to claims
+    //    - Insert contextual information in appropriate bracket format
+    //    - Maintain claim readability while adding necessary context
+    //    - Ensure context brackets are clearly distinguished from main claim
+    // 4. Context validation: Validate added context for accuracy and relevance
+    //    - Verify that added context is accurate and up-to-date
+    //    - Ensure context relevance to the specific claim
+    //    - Check for context conflicts or inconsistencies
+    // 5. Context optimization: Optimize context for clarity and completeness
+    //    - Balance context completeness with claim conciseness
+    //    - Ensure context provides sufficient information for verification
+    //    - Remove redundant or unnecessary contextual information
 }
 
 impl ContextBracketAdder {
@@ -373,4 +434,287 @@ pub struct ConfidenceThreshold {
     pub evidence_type: EvidenceType,
     pub minimum_confidence: f64,
     pub weight: f64,
+}
+
+impl DecompositionStage {
+    /// Split text into sentences (ported from V2)
+    fn split_into_sentences(&self, text: &str) -> Vec<String> {
+        // Simple sentence splitting on periods, question marks, exclamation marks
+        let sentence_endings = regex::Regex::new(r"[.!?]+").unwrap();
+        let mut sentences = Vec::new();
+        let mut last_end = 0;
+
+        for mat in sentence_endings.find_iter(text) {
+            let sentence = text[last_end..mat.end()].trim().to_string();
+            if !sentence.is_empty() {
+                sentences.push(sentence);
+            }
+            last_end = mat.end();
+        }
+
+        // Add any remaining text as a sentence
+        if last_end < text.len() {
+            let remaining = text[last_end..].trim().to_string();
+            if !remaining.is_empty() {
+                sentences.push(remaining);
+            }
+        }
+
+        if sentences.is_empty() {
+            sentences.push(text.to_string());
+        }
+
+        sentences
+    }
+
+    /// Decompose compound sentences into separate atomic claims (ported from V2)
+    fn decompose_compound_sentence(&self, sentence: &str) -> Vec<String> {
+        // Handle compound sentences connected by coordinating conjunctions
+        let conjunctions = regex::Regex::new(r"\s+(and|but|or|yet|so|nor|for)\s+").unwrap();
+        let verb_pattern = regex::Regex::new(r"\b(is|are|was|were|has|have|will|shall|did|does|announced|promised|reported|expects|pledged|committed|approved|supports|uses|provides|contains|includes|requires|needs|allows|enables)\b").unwrap();
+
+        // Split on conjunctions, but only if both parts can stand as independent claims
+        if conjunctions.is_match(sentence) {
+            let parts: Vec<&str> = conjunctions.split(sentence).collect();
+            let mut clean_parts = Vec::new();
+
+            // Remove the conjunctions themselves (they appear at odd indices after split)
+            for (i, part) in parts.iter().enumerate() {
+                if i % 2 == 0 {
+                    clean_parts.push(part.trim().to_string());
+                }
+            }
+
+            // Check if all parts have verbs and can be independent claims
+            let all_have_verbs = clean_parts.iter().all(|part| verb_pattern.is_match(part));
+            let all_long_enough = clean_parts.iter().all(|part| part.len() > 10);
+            let reasonable_split = clean_parts.len() >= 2 && clean_parts.len() <= 4;
+
+            if all_have_verbs && all_long_enough && reasonable_split {
+                // Additional check: each part should have a clear subject-predicate structure
+                let valid_parts: Vec<String> = clean_parts.into_iter()
+                    .filter(|part| {
+                        let has_verb = verb_pattern.is_match(part);
+                        let words: Vec<&str> = part.split_whitespace().collect();
+                        let has_subject_structure = words.len() >= 3; // Basic heuristic
+                        has_verb && has_subject_structure
+                    })
+                    .collect();
+
+                if !valid_parts.is_empty() {
+                    return valid_parts;
+                }
+            }
+        }
+
+        // If no valid decomposition, return the original sentence
+        vec![sentence.to_string()]
+    }
+
+    /// Split a compound claim into clauses
+    fn split_into_clauses(&self, claim: &str) -> Vec<String> {
+        // For now, treat each compound claim as a single clause
+        // In V2 this would handle more complex clause splitting
+        vec![claim.to_string()]
+    }
+
+    /// Normalize a clause for processing
+    fn normalize_clause(&self, clause: &str) -> String {
+        clause.trim().to_string()
+    }
+
+    /// Extract fallback subject from context
+    fn extract_fallback_subject(&self, context: &ProcessingContext) -> Option<String> {
+        context.domain_hints.first().cloned()
+    }
+
+    /// Extract context entities from processing context
+    fn extract_context_entities(&self, context: &ProcessingContext) -> Vec<String> {
+        let mut entities = Vec::new();
+
+        // Extract from domain hints
+        for hint in &context.domain_hints {
+            entities.push(hint.clone());
+        }
+
+        // Extract from surrounding context (basic entity detection)
+        if !context.surrounding_context.is_empty() {
+            let entity_pattern = regex::Regex::new(r"\b[A-Z][a-z]+\b").unwrap();
+            for mat in entity_pattern.find_iter(&context.surrounding_context) {
+                entities.push(mat.as_str().to_string());
+            }
+        }
+
+        entities.into_iter().collect::<std::collections::HashSet<_>>().into_iter().collect()
+    }
+
+    /// Extract subject candidate from clause
+    fn extract_subject_candidate<'a>(&self, clause: &'a str) -> Option<&'a str> {
+        // Look for capitalized words at the beginning
+        if let Some(first_word) = clause.split_whitespace().next() {
+            if first_word.chars().next()?.is_uppercase() {
+                Some(first_word)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Check if a word is a verb
+    fn is_verb(&self, word: &str) -> bool {
+        let verbs = [
+            "is", "are", "was", "were", "has", "have", "will", "shall", "did", "does",
+            "announced", "promised", "reported", "expects", "pledged", "committed", "approved"
+        ];
+        verbs.contains(&word.to_lowercase().as_str())
+    }
+
+    /// Generate a unique claim ID
+    fn generate_claim_id(&self, task_id: Uuid, sentence_index: usize, offset: usize) -> Uuid {
+        // Create a deterministic UUID based on inputs
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = DefaultHasher::new();
+        task_id.hash(&mut hasher);
+        sentence_index.hash(&mut hasher);
+        offset.hash(&mut hasher);
+
+        let hash = hasher.finish();
+        Uuid::from_u128(hash as u128)
+    }
+
+    /// Extract contextual brackets for a claim (ported from V2)
+    async fn extract_contextual_brackets(&self, claim: &str, context: &ProcessingContext) -> Result<Vec<String>> {
+        let mut brackets = Vec::new();
+
+        // Add working spec context
+        brackets.push(format!("[spec: {}]", context.working_spec_id));
+
+        // Add domain context from hints
+        for hint in &context.domain_hints {
+            brackets.push(format!("[domain: {}]", hint));
+        }
+
+        // Add technical term disambiguation (basic implementation)
+        let technical_terms = ["API", "UI", "UX", "DB", "SQL", "HTTP", "JSON", "XML"];
+        for term in &technical_terms {
+            if claim.contains(term) {
+                let expansion = match *term {
+                    "API" => "Application Programming Interface",
+                    "UI" => "User Interface",
+                    "UX" => "User Experience",
+                    "DB" => "Database",
+                    "SQL" => "Structured Query Language",
+                    _ => term,
+                };
+                brackets.push(format!("{} [{}]", term, expansion));
+            }
+        }
+
+        Ok(brackets)
+    }
+
+    /// Apply contextual brackets to a statement
+    fn apply_contextual_brackets(&self, statement: &str, brackets: &[String]) -> String {
+        let mut bracketed = statement.to_string();
+
+        for bracket in brackets {
+            // Apply technical term brackets by replacing the term
+            if bracket.contains(" [") && bracket.contains("]") {
+                if let Some(term_end) = bracket.find(" [") {
+                    let term = &bracket[..term_end];
+                    let regex = regex::Regex::new(&format!(r"\b{}\b", regex::escape(term))).unwrap();
+                    bracketed = regex.replace_all(&bracketed, bracket).to_string();
+                }
+            }
+        }
+
+        bracketed
+    }
+
+    /// Derive verification requirements for a claim
+    fn derive_verification_requirements(&self, claim: &str, brackets: &[String]) -> Vec<String> {
+        let mut requirements = Vec::new();
+
+        // Basic requirements based on claim content
+        if claim.contains("performance") || claim.contains("speed") || claim.contains("time") {
+            requirements.push("Performance measurement".to_string());
+        }
+
+        if claim.contains("security") || claim.contains("auth") || claim.contains("permission") {
+            requirements.push("Security verification".to_string());
+        }
+
+        if claim.contains("database") || claim.contains("data") {
+            requirements.push("Data integrity check".to_string());
+        }
+
+        // Add requirements based on brackets
+        for bracket in brackets {
+            if bracket.contains("API") {
+                requirements.push("API contract verification".to_string());
+            }
+            if bracket.contains("security") {
+                requirements.push("Security audit".to_string());
+            }
+        }
+
+        requirements
+    }
+
+    /// Calculate confidence for a claim
+    fn calculate_claim_confidence(&self, claim: &str) -> f64 {
+        let mut confidence: f64 = 0.5; // Base confidence
+
+        // Boost for specific terms
+        if claim.contains("is") || claim.contains("has") || claim.contains("does") {
+            confidence += 0.2;
+        }
+
+        // Boost for technical terms
+        if claim.contains("API") || claim.contains("database") || claim.contains("system") {
+            confidence += 0.1;
+        }
+
+        // Penalize for vague terms
+        if claim.contains("maybe") || claim.contains("might") || claim.contains("could") {
+            confidence -= 0.2;
+        }
+
+        confidence.max(0.0).min(1.0)
+    }
+
+    /// Infer claim type from content
+    fn infer_claim_type(&self, claim: &str) -> ClaimType {
+        if claim.contains("security") || claim.contains("auth") || claim.contains("permission") {
+            ClaimType::Security
+        } else if claim.contains("performance") || claim.contains("speed") || claim.contains("time") {
+            ClaimType::Performance
+        } else if claim.contains("API") || claim.contains("function") || claim.contains("method") {
+            ClaimType::Technical
+        } else if claim.contains("CAWS") || claim.contains("constitutional") {
+            ClaimType::Constitutional
+        } else if claim.contains("step") || claim.contains("process") || claim.contains("procedure") {
+            ClaimType::Procedural
+        } else {
+            ClaimType::Factual
+        }
+    }
+
+    /// Assess verifiability of a claim
+    fn assess_verifiability(&self, claim: &str) -> VerifiabilityLevel {
+        if claim.contains("is") || claim.contains("has") || claim.contains("contains") {
+            VerifiabilityLevel::DirectlyVerifiable
+        } else if claim.contains("should") || claim.contains("must") || claim.contains("requires") {
+            VerifiabilityLevel::IndirectlyVerifiable
+        } else if claim.contains("better") || claim.contains("improved") || claim.contains("enhanced") {
+            VerifiabilityLevel::RequiresContext
+        } else {
+            VerifiabilityLevel::Unverifiable
+        }
+    }
+
 }

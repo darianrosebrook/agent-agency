@@ -69,7 +69,12 @@ export class AccessControlManager {
   private rateLimitCache: Map<string, { count: number; resetTime: number }> =
     new Map();
 
-  constructor(config: Partial<AccessControlConfig> = {}, logger?: Logger) {
+  constructor(
+    config: Partial<
+      AccessControlConfig & { initializeDefaults?: boolean }
+    > = {},
+    logger?: Logger
+  ) {
     this.config = {
       enableAccessControl: true,
       defaultEffect: "deny",
@@ -85,8 +90,10 @@ export class AccessControlManager {
 
     this.logger = logger || new Logger("AccessControlManager");
 
-    // Initialize with default policies
-    this.initializeDefaultPolicies();
+    // Initialize with default policies unless explicitly disabled
+    if (config.initializeDefaults !== false) {
+      this.initializeDefaultPolicies();
+    }
   }
 
   /**

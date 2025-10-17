@@ -162,20 +162,33 @@ impl IntegrationTestRunner {
 
 /// Initialize tracing for integration tests
 pub fn init_test_logging() {
-    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+    use std::sync::Once;
+    use tracing_subscriber::filter::EnvFilter;
+    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-    tracing_subscriber::registry()
-        .with(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "integration_tests=debug,agent_agency=debug".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    static INIT: Once = Once::new();
+
+    INIT.call_once(|| {
+        tracing_subscriber::registry()
+            .with(
+                EnvFilter::try_from_default_env()
+                    .unwrap_or_else(|_| "integration_tests=debug,agent_agency=debug".into()),
+            )
+            .with(tracing_subscriber::fmt::layer())
+            .init();
+    });
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::claim_extraction_tests::ClaimExtractionIntegrationTests;
+    use crate::council_tests::CouncilIntegrationTests;
+    use crate::cross_component_tests::CrossComponentIntegrationTests;
+    use crate::end_to_end_tests::EndToEndIntegrationTests;
+    use crate::orchestration_tests::OrchestrationIntegrationTests;
+    use crate::performance_tests::PerformanceTests;
+    use crate::research_tests::ResearchIntegrationTests;
 
     #[tokio::test]
     async fn test_integration_runner_creation() {
@@ -190,5 +203,210 @@ mod tests {
         assert_eq!(config.max_concurrent_tests, 10);
         assert!(!config.enable_performance_tests);
         assert!(!config.enable_load_tests);
+    }
+
+    #[tokio::test]
+    async fn test_council_integration() {
+        init_test_logging();
+        let tests = CouncilIntegrationTests::new();
+        let results = tests.run_all_tests().await.unwrap();
+        assert!(
+            !results.is_empty(),
+            "Council integration tests should produce results"
+        );
+        for result in results {
+            assert!(
+                result.success,
+                "Council test '{}' failed: {:?}",
+                result.test_name, result.error_message
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_claim_extraction_integration() {
+        init_test_logging();
+        let tests = ClaimExtractionIntegrationTests::new();
+        let results = tests.run_all_tests().await.unwrap();
+        assert!(
+            !results.is_empty(),
+            "Claim extraction integration tests should produce results"
+        );
+        for result in results {
+            assert!(
+                result.success,
+                "Claim extraction test '{}' failed: {:?}",
+                result.test_name, result.error_message
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_research_integration() {
+        init_test_logging();
+        let tests = ResearchIntegrationTests::new();
+        let results = tests.run_all_tests().await.unwrap();
+        assert!(
+            !results.is_empty(),
+            "Research integration tests should produce results"
+        );
+        for result in results {
+            assert!(
+                result.success,
+                "Research test '{}' failed: {:?}",
+                result.test_name, result.error_message
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_orchestration_integration() {
+        init_test_logging();
+        let tests = OrchestrationIntegrationTests::new();
+        let results = tests.run_all_tests().await.unwrap();
+        assert!(
+            !results.is_empty(),
+            "Orchestration integration tests should produce results"
+        );
+        for result in results {
+            assert!(
+                result.success,
+                "Orchestration test '{}' failed: {:?}",
+                result.test_name, result.error_message
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_cross_component_integration() {
+        init_test_logging();
+        let tests = CrossComponentIntegrationTests::new();
+        let results = tests.run_all_tests().await.unwrap();
+        assert!(
+            !results.is_empty(),
+            "Cross-component integration tests should produce results"
+        );
+        for result in results {
+            assert!(
+                result.success,
+                "Cross-component test '{}' failed: {:?}",
+                result.test_name, result.error_message
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_end_to_end_integration() {
+        init_test_logging();
+        let tests = EndToEndIntegrationTests::new();
+        let results = tests.run_all_tests().await.unwrap();
+        assert!(
+            !results.is_empty(),
+            "End-to-end integration tests should produce results"
+        );
+        for result in results {
+            assert!(
+                result.success,
+                "End-to-end test '{}' failed: {:?}",
+                result.test_name, result.error_message
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_performance_integration() {
+        init_test_logging();
+        let tests = PerformanceTests::new();
+        let results = tests.run_all_tests().await.unwrap();
+        assert!(
+            !results.is_empty(),
+            "Performance integration tests should produce results"
+        );
+        for result in results {
+            assert!(
+                result.success,
+                "Performance test '{}' failed: {:?}",
+                result.test_name, result.error_message
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_all_integration_suites() {
+        init_test_logging();
+
+        // Run all integration test suites
+        let suites = vec![
+            (
+                "Council",
+                CouncilIntegrationTests::new().run_all_tests().await,
+            ),
+            (
+                "Claim Extraction",
+                ClaimExtractionIntegrationTests::new().run_all_tests().await,
+            ),
+            (
+                "Research",
+                ResearchIntegrationTests::new().run_all_tests().await,
+            ),
+            (
+                "Orchestration",
+                OrchestrationIntegrationTests::new().run_all_tests().await,
+            ),
+            (
+                "Cross Component",
+                CrossComponentIntegrationTests::new().run_all_tests().await,
+            ),
+            (
+                "End to End",
+                EndToEndIntegrationTests::new().run_all_tests().await,
+            ),
+            ("Performance", PerformanceTests::new().run_all_tests().await),
+        ];
+
+        let mut total_tests = 0;
+        let mut passed_tests = 0;
+
+        for (suite_name, result) in suites {
+            match result {
+                Ok(results) => {
+                    total_tests += results.len();
+                    let passed = results.iter().filter(|r| r.success).count();
+                    passed_tests += passed;
+                    println!(
+                        "✅ {}: {}/{} tests passed",
+                        suite_name,
+                        passed,
+                        results.len()
+                    );
+
+                    // Report failures
+                    for result in results.iter().filter(|r| !r.success) {
+                        println!(
+                            "❌ {} - {}: {:?}",
+                            suite_name, result.test_name, result.error_message
+                        );
+                    }
+                }
+                Err(e) => {
+                    println!("❌ {}: Failed to run suite - {:?}", suite_name, e);
+                }
+            }
+        }
+
+        println!(
+            "📊 Integration Test Summary: {}/{} tests passed across all suites",
+            passed_tests, total_tests
+        );
+        assert!(
+            passed_tests > 0,
+            "At least some integration tests should pass"
+        );
+        assert!(
+            passed_tests >= total_tests / 2,
+            "At least half of integration tests should pass (got {}/{})",
+            passed_tests,
+            total_tests
+        );
     }
 }

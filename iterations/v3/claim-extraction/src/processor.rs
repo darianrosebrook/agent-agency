@@ -30,6 +30,7 @@ impl ClaimExtractionProcessor {
     }
 
     /// Run the complete claim extraction and verification pipeline
+    /// Implements the four-stage Claimify pipeline with V3 multi-modal verification
     pub async fn run(
         &self,
         input: &str,
@@ -38,15 +39,15 @@ impl ClaimExtractionProcessor {
         let start_time = Instant::now();
         info!("Starting claim extraction for input: {}", input);
 
-        // Stage 1: Disambiguation
-        debug!("Stage 1: Disambiguation");
+        // Stage 1: Contextual Disambiguation (Ported from V2)
+        debug!("Stage 1: Contextual Disambiguation");
         let disambiguation_result = self
             .disambiguation_stage
             .process(input, ctx)
             .await
             .map_err(|e| ClaimExtractionError::DisambiguationFailed(e.to_string()))?;
 
-        // Stage 2: Qualification
+        // Stage 2: Qualification (Ported from V2)
         debug!("Stage 2: Qualification");
         let qualification_result = self
             .qualification_stage
@@ -54,38 +55,28 @@ impl ClaimExtractionProcessor {
             .await
             .map_err(|e| ClaimExtractionError::QualificationFailed(e.to_string()))?;
 
-        // Stage 3: Decomposition
+        // Stage 3: Decomposition (Ported from V2 with compound sentence handling)
         debug!("Stage 3: Decomposition");
-        // Process each verifiable part through decomposition
-        let mut decomposition_results = Vec::new();
-        for verifiable_part in &qualification_result.verifiable_parts {
-            let result = self
-                .decomposition_stage
-                .process(&verifiable_part.content, ctx)
-                .await
-                .map_err(|e| ClaimExtractionError::DecompositionFailed(e.to_string()))?;
-            decomposition_results.push(result);
-        }
+        let decomposition_result = self
+            .decomposition_stage
+            .process(&disambiguation_result.disambiguated_sentence, ctx)
+            .await
+            .map_err(|e| ClaimExtractionError::DecompositionFailed(e.to_string()))?;
 
-        // Collect all atomic claims from decomposition results
-        let mut all_atomic_claims = Vec::new();
-        for result in &decomposition_results {
-            all_atomic_claims.extend(result.atomic_claims.clone());
-        }
-
-        // Stage 4: Traditional Verification (for evidence collection)
-        debug!("Stage 4: Traditional Verification");
+        // Stage 4: Verification (Ported from V2 evidence-based verification)
+        debug!("Stage 4: Verification");
         let verification_result = self
             .verification_stage
-            .process(&all_atomic_claims, ctx)
+            .process(&decomposition_result.atomic_claims, ctx)
             .await
             .map_err(|e| ClaimExtractionError::VerificationFailed(e.to_string()))?;
 
         // Stage 5: Multi-Modal Verification (V3's superior verification)
         debug!("Stage 5: Multi-Modal Verification");
+        let atomic_claims = decomposition_result.atomic_claims.clone();
         let verified_claims = self
             .multi_modal_verifier
-            .verify_claims(all_atomic_claims.clone())
+            .verify_claims(atomic_claims.clone())
             .await
             .map_err(|e| {
                 ClaimExtractionError::VerificationFailed(format!(
@@ -114,13 +105,13 @@ impl ClaimExtractionProcessor {
             }
         }
 
-        let claims_count = all_atomic_claims.len();
+        let claims_count = atomic_claims.len();
         let evidence_count = all_evidence.len();
 
         Ok(ClaimExtractionResult {
             original_sentence: input.to_string(),
             disambiguated_sentence: disambiguation_result.disambiguated_sentence,
-            atomic_claims: all_atomic_claims,
+            atomic_claims: atomic_claims,
             verification_evidence: all_evidence,
             processing_metadata: ProcessingMetadata {
                 processing_time_ms: processing_time,

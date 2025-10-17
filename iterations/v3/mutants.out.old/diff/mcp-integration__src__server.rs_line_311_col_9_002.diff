@@ -1,0 +1,21 @@
+--- mcp-integration/src/server.rs
++++ replace MCPServer::start_ws_with_readiness -> Result<(oneshot::Receiver<()>, HttpServerHandle)> with Ok((Receiver::new(()), Default::default()))
+@@ -303,17 +303,17 @@
+         &self,
+     ) -> Result<(oneshot::Receiver<()>, HttpServerHandle)> {
+         self.spawn_http_server().await
+     }
+ 
+     pub async fn start_ws_with_readiness(
+         &self,
+     ) -> Result<(oneshot::Receiver<()>, HttpServerHandle)> {
+-        self.spawn_websocket_server().await
++        Ok((Receiver::new(()), Default::default())) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     async fn spawn_websocket_server(&self) -> Result<(oneshot::Receiver<()>, HttpServerHandle)> {
+         if !self.config.server.enable_websocket {
+             bail!("WebSocket disabled");
+         }
+ 
+         let (ready_tx, ready_rx) = oneshot::channel();

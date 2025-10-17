@@ -1,8 +1,10 @@
 //! Semantic evaluation integration for council judges
 
 use crate::types::*;
+use crate::resilience::{CircuitBreakerConfig, ResilienceManager}; // V2 resilience patterns
 use anyhow::Result;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// Semantic context for judge evaluation
 #[derive(Debug, Clone)]
@@ -36,6 +38,7 @@ pub struct KnowledgeEmbedding {
 pub struct SemanticEvaluator {
     embedding_service: Box<dyn embedding_service::EmbeddingService>,
     context_cache: HashMap<String, JudgeSemanticContext>,
+    resilience_manager: Arc<ResilienceManager>, // V2 resilience patterns
 }
 
 impl SemanticEvaluator {
@@ -43,6 +46,7 @@ impl SemanticEvaluator {
         Self {
             embedding_service,
             context_cache: HashMap::new(),
+            resilience_manager: Arc::new(ResilienceManager::new()), // V2 resilience patterns
         }
     }
 
@@ -59,14 +63,22 @@ impl SemanticEvaluator {
             return Ok(cached.clone());
         }
 
-        // Generate task embedding
+        // Generate task embedding with V2 circuit breaker protection
         let task_embedding = self
-            .embedding_service
-            .generate_embedding(
-                &task_description,
-                embedding_service::ContentType::TaskDescription,
-                "council_semantic",
-            )
+            .resilience_manager
+            .execute_resilient("embedding_service", || {
+                let description = task_description.clone();
+                let service = &self.embedding_service;
+                async move {
+                    service
+                        .generate_embedding(
+                            &description,
+                            embedding_service::ContentType::TaskDescription,
+                            "council_semantic",
+                        )
+                        .await
+                }
+            })
             .await?;
 
         // Generate context
@@ -92,8 +104,21 @@ impl SemanticEvaluator {
         source: &str,
     ) -> Result<()> {
         let evidence_embedding = self
-            .embedding_service
-            .generate_embedding(evidence, embedding_service::ContentType::Evidence, source)
+            .resilience_manager
+            .execute_resilient("embedding_service", || {
+                let evidence_text = evidence.to_string();
+                let source_name = source.to_string();
+                let service = &self.embedding_service;
+                async move {
+                    service
+                        .generate_embedding(
+                            &evidence_text,
+                            embedding_service::ContentType::Evidence,
+                            &source_name,
+                        )
+                        .await
+                }
+            })
             .await?;
 
         // Calculate relevance to task

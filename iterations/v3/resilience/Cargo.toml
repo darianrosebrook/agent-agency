@@ -1,8 +1,8 @@
 [package]
 name = "agent-agency-resilience"
-version = "0.1.0"
-edition = "2021"
-authors = ["Agent Agency Team"]
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
 description = "V3 Resilience module with circuit breakers, retry logic, health checks, and structured logging"
 license = "MIT"
 repository = "https://github.com/agent-agency/agent-agency"

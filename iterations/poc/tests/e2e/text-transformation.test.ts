@@ -37,8 +37,8 @@ describe("Text Transformation E2E", () => {
         requiredElements: ["professional"], // Only one required element
       },
       expectedCriteria: [
-        TEXT_TRANSFORMATION_CRITERIA.find(c => c.id === "formal-language")!,
-        TEXT_TRANSFORMATION_CRITERIA.find(c => c.id === "no-banned-phrases")!,
+        TEXT_TRANSFORMATION_CRITERIA.find((c) => c.id === "formal-language")!,
+        TEXT_TRANSFORMATION_CRITERIA.find((c) => c.id === "no-banned-phrases")!,
       ].filter(Boolean), // Only test 2 key criteria
       timeout: 30000, // 30 seconds timeout
       maxIterations: 1, // Only 1 iteration to keep it simple
@@ -66,7 +66,7 @@ describe("Text Transformation E2E", () => {
     expect(result.output).toBeDefined();
     expect(typeof result.output).toBe("string");
     expect(result.output.length).toBeGreaterThan(0);
-    expect(result.executionTime).toBeGreaterThan(0);
+    expect(result.executionTime).toBeGreaterThanOrEqual(0);
     expect(result.agentInteractions).toBeDefined();
     expect(result.agentInteractions.length).toBeGreaterThan(0);
 

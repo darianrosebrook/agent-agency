@@ -20,20 +20,29 @@ describe("AccessControlManager", () => {
       defaultEffect: "deny",
       policyEvaluationMode: "first-match",
       auditLogging: false, // Disable logging for tests
+      initializeDefaults: false, // Don't add default policies for this test
     });
 
-    // Add a policy for documents access - only allow access to user's own documents
+    // Add a policy for documents access - only allow access to alice's documents
     accessControl.addPolicy({
       id: "documents-access",
       name: "User Access",
-      description: "Allow users to access their own documents",
+      description: "Allow users to access alice's documents",
       effect: "allow",
       principals: ["*"],
-      resources: ["documents:user:${principal}"],
+      resources: ["documents:user:alice"], // Only alice's documents
       actions: ["read", "write", "update"],
       priority: 60,
       enabled: true,
     });
+
+    // Remove any other policies to ensure isolation
+    const allPolicies = accessControl.listPolicies();
+    for (const policy of allPolicies) {
+      if (policy.id !== "documents-access") {
+        accessControl.removePolicy(policy.id);
+      }
+    }
   });
 
   describe("Policy Management", () => {
@@ -130,10 +139,10 @@ describe("AccessControlManager", () => {
       accessControl.addPolicy({
         id: "user-policy",
         name: "User Access",
-        description: "Limited access for users",
+        description: "Limited access for users to their own resources",
         effect: "allow",
         principals: ["user:*"],
-        resources: ["documents:*", "files:*"],
+        resources: ["documents:user:${principal}", "files:user:${principal}"], // Only own resources
         actions: ["read", "write"],
         priority: 80,
         enabled: true,

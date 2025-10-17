@@ -3,20 +3,36 @@
 //! Executes tasks by communicating with worker models and handling the execution lifecycle.
 
 use crate::types::*;
-use agent_agency_council::models::{
-    CouncilTaskContext as CouncilCouncilTaskContext,
-    CouncilWorkerOutput as CouncilCouncilWorkerOutput, Environment, FileModification,
-    FileOperation, RiskTier, SelfAssessment, TaskSpec,
-};
+use agent_agency_council::models::{TaskContext as CouncilTaskContext, WorkerOutput as CouncilWorkerOutput, Environment as ConfigEnvironment};
+use agent_agency_council::models::{RiskTier, TaskSpec};
 use anyhow::{Context, Result};
-use std::sync::Arc;
-use tracing::{debug, error, info, warn};
+use tracing::{info, warn};
 use uuid::Uuid;
 
 /// Task executor for running tasks with workers
 #[derive(Debug)]
 pub struct TaskExecutor {
-    // TODO: Add HTTP client for model communication
+    // TODO: Add HTTP client for model communication with the following requirements:
+    // 1. HTTP client implementation: Implement robust HTTP client for worker communication
+    //    - Use reqwest or hyper for HTTP requests and responses
+    //    - Handle connection pooling and keep-alive connections
+    //    - Implement proper timeout and retry logic
+    // 2. Authentication and security: Implement secure communication with workers
+    //    - Handle API keys, tokens, and authentication headers
+    //    - Implement TLS/SSL for secure communication
+    //    - Validate worker certificates and security credentials
+    // 3. Request/response handling: Handle HTTP requests and responses
+    //    - Serialize task data to appropriate formats (JSON, protobuf, etc.)
+    //    - Handle different content types and response formats
+    //    - Implement proper error handling and status code processing
+    // 4. Performance optimization: Optimize HTTP communication performance
+    //    - Use connection pooling and keep-alive connections
+    //    - Implement request batching and pipelining
+    //    - Handle concurrent requests efficiently
+    // 5. Error handling: Implement comprehensive error handling
+    //    - Handle network errors, timeouts, and connection failures
+    //    - Implement retry logic with exponential backoff
+    //    - Provide meaningful error messages and recovery strategies
     // client: reqwest::Client,
     clock: Box<dyn Clock + Send + Sync>,
     id_gen: Box<dyn IdGenerator + Send + Sync>,
@@ -43,8 +59,27 @@ impl TaskExecutor {
 
         info!("Executing task {} with worker {}", task_id, worker_id);
 
-        // TODO: Get worker from registry
-        // For now, simulate execution
+        // TODO: Get worker from registry with the following requirements:
+        // 1. Worker registry integration: Integrate with worker registry system
+        //    - Query worker registry for available workers
+        //    - Filter workers by capability and availability
+        //    - Handle worker discovery and registration
+        // 2. Worker selection: Select appropriate worker for task execution
+        //    - Match worker capabilities with task requirements
+        //    - Consider worker load and performance metrics
+        //    - Implement worker selection algorithms and strategies
+        // 3. Worker communication: Establish communication with selected worker
+        //    - Handle worker authentication and authorization
+        //    - Manage worker connections and session state
+        //    - Implement worker health monitoring and status checks
+        // 4. Task execution: Execute tasks on selected workers
+        //    - Send task data to worker for execution
+        //    - Monitor task progress and execution status
+        //    - Handle task completion and result collection
+        // 5. Error handling: Handle worker and execution errors
+        //    - Handle worker failures and unavailability
+        //    - Implement task retry and fallback strategies
+        //    - Provide meaningful error messages and recovery options
 
         // Prepare execution input
         let execution_input = self.prepare_execution_input(&task_spec)?;
@@ -192,13 +227,13 @@ impl TaskExecutor {
         }
     }
 
-    /// Convert council CouncilTaskContext to workers CouncilTaskContext
+    /// Convert council TaskContext to workers TaskContext
     fn convert_task_context(
         &self,
-        _council_context: &agent_agency_council::models::CouncilTaskContext,
-    ) -> CouncilTaskContext {
+        _council_context: &agent_agency_council::models::TaskContext,
+    ) -> TaskContext {
         // Create execution context with defaults - would map actual fields in real implementation
-        CouncilTaskContext {
+        TaskContext {
             task_id: Uuid::new_v4(),
             worker_id: Uuid::new_v4(),
             start_time: chrono::Utc::now(),
@@ -225,8 +260,25 @@ impl TaskExecutor {
         worker_id: Uuid,
         input: &ExecutionInput,
     ) -> Result<RawExecutionResult> {
-        // TODO: Implement actual HTTP call to worker model
-        // For now, simulate execution
+        // TODO: Implement actual HTTP call to worker model with the following requirements:
+        // 1. HTTP request construction: Construct proper HTTP requests for worker communication
+        //    - Build HTTP requests with appropriate headers and authentication
+        //    - Serialize task data to request body (JSON, protobuf, etc.)
+        //    - Handle different HTTP methods and content types
+        // 2. Worker communication: Establish communication with worker models
+        //    - Send HTTP requests to worker endpoints
+        //    - Handle worker responses and status codes
+        //    - Implement proper error handling and retry logic
+        // 3. Response processing: Process worker responses and results
+        //    - Parse response data and extract execution results
+        //    - Handle different response formats and content types
+        //    - Validate response data and handle malformed responses
+        // 4. Performance optimization: Optimize HTTP communication performance
+        //    - Use connection pooling and keep-alive connections
+        //    - Implement request batching and pipelining
+        //    - Handle concurrent requests efficiently
+        // 5. Return RawExecutionResult with actual worker execution results (not simulated)
+        // 6. Include comprehensive execution details and performance metrics
 
         info!(
             "Executing task {} with worker {} (simulated)",
@@ -294,26 +346,25 @@ impl TaskExecutor {
         }
 
         // Parse worker output
-        let worker_output =
-            match serde_json::from_str::<CouncilWorkerOutput>(&raw_result.raw_output) {
-                Ok(output) => output,
-                Err(e) => {
-                    warn!("Failed to parse worker output: {}", e);
-                    return Ok(TaskExecutionResult {
-                        task_id,
-                        worker_id,
-                        status: ExecutionStatus::Failed,
-                        output: None,
-                        error_message: Some(format!("Invalid output format: {}", e)),
-                        execution_time_ms: raw_result.execution_time_ms,
-                        tokens_used: raw_result.tokens_used,
-                        quality_metrics: QualityMetrics::default(),
-                        caws_compliance: CawsComplianceResult::default(),
-                        started_at,
-                        completed_at,
-                    });
-                }
-            };
+        let worker_output = match serde_json::from_str::<WorkerOutput>(&raw_result.raw_output) {
+            Ok(output) => output,
+            Err(e) => {
+                warn!("Failed to parse worker output: {}", e);
+                return Ok(TaskExecutionResult {
+                    task_id,
+                    worker_id,
+                    status: ExecutionStatus::Failed,
+                    output: None,
+                    error_message: Some(format!("Invalid output format: {}", e)),
+                    execution_time_ms: raw_result.execution_time_ms,
+                    tokens_used: raw_result.tokens_used,
+                    quality_metrics: QualityMetrics::default(),
+                    caws_compliance: CawsComplianceResult::default(),
+                    started_at,
+                    completed_at,
+                });
+            }
+        };
 
         // Calculate quality metrics
         let quality_metrics = self.calculate_quality_metrics(&worker_output);
@@ -346,7 +397,7 @@ impl TaskExecutor {
     }
 
     /// Calculate quality metrics for worker output
-    fn calculate_quality_metrics(&self, output: &CouncilWorkerOutput) -> QualityMetrics {
+    fn calculate_quality_metrics(&self, output: &WorkerOutput) -> QualityMetrics {
         QualityMetrics {
             completeness_score: if output.content.is_empty() { 0.0 } else { 0.9 },
             correctness_score: output.self_assessment.quality_score,
@@ -358,7 +409,7 @@ impl TaskExecutor {
     }
 
     /// Check CAWS compliance for worker output
-    fn check_caws_compliance(&self, output: &CouncilWorkerOutput) -> CawsComplianceResult {
+    fn check_caws_compliance(&self, output: &WorkerOutput) -> CawsComplianceResult {
         let mut violations = Vec::new();
         let mut compliance_score: f32 = 1.0;
 
@@ -434,7 +485,7 @@ impl Default for TaskExecutor {
 struct ExecutionInput {
     prompt: String,
     task_id: Uuid,
-    context: CouncilTaskContext,
+    context: TaskContext,
     requirements: TaskRequirements,
     caws_spec: Option<CawsSpec>,
 }
@@ -517,19 +568,19 @@ mod tests {
             title: "Test Task".to_string(),
             description: "A test task description".to_string(),
             risk_tier: RiskTier::Tier2,
-            scope: TaskScope {
+            scope: TaskSpec {
                 files_affected: vec!["src/test.rs".to_string()],
                 max_files: Some(5),
                 max_loc: Some(1000),
                 domains: vec!["backend".to_string()],
             },
             acceptance_criteria: vec![],
-            context: CouncilTaskContext {
+              context: CouncilTaskContext {
                 workspace_root: "/workspace".to_string(),
                 git_branch: "main".to_string(),
                 recent_changes: vec![],
                 dependencies: std::collections::HashMap::new(),
-                environment: Environment::Development,
+                environment: ConfigEnvironment::Development,
             },
             worker_output: CouncilWorkerOutput {
                 content: "".to_string(),
@@ -561,7 +612,7 @@ mod tests {
     async fn test_calculate_quality_metrics() {
         let executor = TaskExecutor::new();
 
-        let output = CouncilWorkerOutput {
+        let output = WorkerOutput {
             content: "Test implementation".to_string(),
             files_modified: vec![],
             rationale: "Test rationale".to_string(),
@@ -585,7 +636,7 @@ mod tests {
     async fn test_check_caws_compliance() {
         let executor = TaskExecutor::new();
 
-        let output = CouncilWorkerOutput {
+        let output = WorkerOutput {
             content: "Test implementation".to_string(),
             files_modified: vec![
                 FileModification {

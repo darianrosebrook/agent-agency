@@ -1,0 +1,24 @@
+--- mcp-integration/src/server.rs
++++ replace unauthorized_http_response -> Response<Body> with Response::new()
+@@ -40,20 +40,17 @@
+             .map_err(|err| anyhow!("HTTP server task failed: {}", err))?;
+ 
+         info!("HTTP server shutdown complete");
+         Ok(())
+     }
+ }
+ 
+ fn unauthorized_http_response() -> Response<Body> {
+-    Response::builder()
+-        .status(StatusCode::UNAUTHORIZED)
+-        .body(Body::from("unauthorized"))
+-        .expect("response")
++    Response::new() /* ~ changed by cargo-mutants ~ */
+ }
+ 
+ fn rate_limited_http_response() -> Response<Body> {
+     Response::builder()
+         .status(StatusCode::TOO_MANY_REQUESTS)
+         .body(Body::from("rate limit exceeded"))
+         .expect("response")
+ }

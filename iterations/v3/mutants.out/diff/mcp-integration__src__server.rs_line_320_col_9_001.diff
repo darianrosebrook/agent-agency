@@ -1,0 +1,84 @@
+--- mcp-integration/src/server.rs
++++ replace MCPServer::spawn_websocket_server -> Result<(oneshot::Receiver<()>, HttpServerHandle)> with Ok((Receiver::from_iter([()]), Default::default()))
+@@ -312,80 +312,17 @@
+     }
+ 
+     pub async fn push_connection_for_testing(&self, connection: MCPConnection) {
+         let mut guard = self.connections.write().await;
+         guard.push(connection);
+     }
+ 
+     async fn spawn_websocket_server(&self) -> Result<(oneshot::Receiver<()>, HttpServerHandle)> {
+-        if !self.config.server.enable_websocket {
+-            bail!("WebSocket disabled");
+-        }
+-
+-        let (ready_tx, ready_rx) = oneshot::channel();
+-        let (stop_tx, stop_rx) = oneshot::channel();
+-
+-        let port = self.config.server.port + 1;
+-        let addr: SocketAddr = format!("{}:{}", self.config.server.host, port).parse()?;
+-        let registry = self.tool_registry.clone();
+-        let registry_stats = self.tool_registry.clone();
+-        let caws = self.caws_integration.clone();
+-        let version_payload = Arc::new(serde_json::json!({
+-            "name": self.config.server.server_name.clone(),
+-            "version": self.config.server.version.clone(),
+-        }));
+-        let auth_api_key = self.config.server.auth_api_key.clone();
+-        let rate_limiter = self.rate_limiter.clone();
+-
+-        let handle = tokio::task::spawn_blocking(move || {
+-            let io = MCPServer::build_io_handler(
+-                registry.clone(),
+-                registry_stats.clone(),
+-                caws.clone(),
+-                version_payload.clone(),
+-            );
+-
+-            let middleware = move |req: &ws::Request| {
+-                if let Some(ref expected) = auth_api_key {
+-                    let provided = req
+-                        .header("x-api-key")
+-                        .and_then(|value| std::str::from_utf8(value).ok());
+-                    if provided != Some(expected.as_str()) {
+-                        return Some(unauthorized_ws_response());
+-                    }
+-                }
+-
+-                if let Some(ref limiter) = rate_limiter {
+-                    let mut guard = limiter.lock().unwrap();
+-                    if !guard.allow() {
+-                        return Some(rate_limited_ws_response());
+-                    }
+-                }
+-
+-                None
+-            };
+-
+-            let server = WsServerBuilder::new(io)
+-                .request_middleware(middleware)
+-                .start(&addr)
+-                .expect("start websocket server");
+-            let close_handle = server.close_handle();
+-            let _ = ready_tx.send(());
+-            let _ = stop_rx.blocking_recv();
+-            close_handle.close();
+-            let _ = server.wait();
+-        });
+-
+-        let ws_handle = HttpServerHandle {
+-            join_handle: handle,
+-            shutdown_tx: Some(stop_tx),
+-        };
+-
+-        Ok((ready_rx, ws_handle))
++        Ok((Receiver::from_iter([()]), Default::default())) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     /// Stop the MCP server
+     pub async fn stop(&self) -> Result<()> {
+         info!(
+             server_name = %self.config.server.server_name,
+             "Stopping MCP server"
+         );

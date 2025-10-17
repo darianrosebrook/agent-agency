@@ -17,7 +17,9 @@ pub mod model_evaluator;
 pub mod performance_tracker;
 pub mod regression_detector;
 pub mod scoring_system;
+pub mod sla_validator;
 pub mod types;
+pub mod v3_superiority_benchmark;
 
 #[cfg(test)]
 mod tests;
@@ -28,7 +30,9 @@ pub use benchmark_runner::BenchmarkRunner;
 pub use model_evaluator::ModelEvaluator;
 pub use performance_tracker::PerformanceTracker;
 pub use scoring_system::MultiDimensionalScoringSystem;
+pub use sla_validator::{format_sla_report, SlaValidator};
 pub use types::*;
+pub use v3_superiority_benchmark::V3SuperiorityBenchmark;
 
 /// Main benchmarking system coordinator
 ///

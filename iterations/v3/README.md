@@ -121,11 +121,11 @@ iterations/v3/
 3. Pull required baseline models via Ollama (fine-tuning happens later):
 
    ```bash
-   ollama pull llama3.3:3b
-   ollama pull codellama:7b
    ollama pull gemma3n:e2b
    ollama pull gemma3n:e4b
    ollama pull embeddinggemma
+   ollama pull llama3.3:3b
+   ollama pull codellama:7b
    ollama pull mistral:3b
    ```
 

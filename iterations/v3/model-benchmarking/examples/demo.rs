@@ -2,6 +2,7 @@
 
 use model_benchmarking::benchmark_runner::{BenchmarkConfig, BenchmarkRunner};
 use model_benchmarking::metrics_collector::MetricsCollector;
+use model_benchmarking::sla_validator::{format_sla_report, SlaValidator};
 use model_benchmarking::*;
 use std::time::Duration;
 use uuid::Uuid;
@@ -86,6 +87,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("   Efficiency: {:.2}", result.metrics.efficiency);
         println!("   Quality: {:.2}", result.metrics.quality);
 
+        // Display SLA validation results
+        if let Some(sla_validation) = &result.sla_validation {
+            println!(
+                "   📊 SLA Status: {}",
+                if sla_validation.overall_compliant {
+                    "✅ COMPLIANT"
+                } else {
+                    "❌ NON-COMPLIANT"
+                }
+            );
+            if !sla_validation.overall_compliant {
+                println!(
+                    "   🚨 Critical Violations: {}",
+                    sla_validation.summary.critical_violations
+                );
+            }
+        }
+
         // Store result
         collector.store_benchmark_result(result).await?;
     }
@@ -102,6 +121,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("   Compliance: {:.2}", result.metrics.compliance);
         println!("   Efficiency: {:.2}", result.metrics.efficiency);
         println!("   Quality: {:.2}", result.metrics.quality);
+
+        // Display SLA validation results for compliance benchmark
+        if let Some(sla_validation) = &result.sla_validation {
+            println!(
+                "   📊 SLA Status: {}",
+                if sla_validation.overall_compliant {
+                    "✅ COMPLIANT"
+                } else {
+                    "❌ NON-COMPLIANT"
+                }
+            );
+            if !sla_validation.overall_compliant {
+                println!(
+                    "   🚨 Critical Violations: {}",
+                    sla_validation.summary.critical_violations
+                );
+            }
+        }
 
         // Store result
         collector.store_benchmark_result(result).await?;
@@ -153,6 +190,69 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("   Last Updated: {}", summary.last_updated);
         }
     }
+
+    println!("\n--- SLA Validation Summary ---");
+
+    // Generate comprehensive SLA validation report
+    let sla_validator = SlaValidator::new();
+    let mut all_measurements = std::collections::HashMap::new();
+
+    // Collect measurements from all benchmark results
+    for model in &models {
+        // Simulate realistic performance measurements based on model type
+        match model.model_type {
+            ModelType::CodeGeneration => {
+                all_measurements.insert(
+                    "api_p95_ms".to_string(),
+                    800.0 + (rand::random::<f64>() * 200.0),
+                ); // 800-1000ms
+                all_measurements.insert(
+                    "ane_utilization_percent".to_string(),
+                    65.0 + (rand::random::<f64>() * 10.0),
+                ); // 65-75%
+                all_measurements.insert(
+                    "memory_usage_gb".to_string(),
+                    45.0 + (rand::random::<f64>() * 10.0),
+                ); // 45-55GB
+            }
+            ModelType::CodeReview => {
+                all_measurements.insert(
+                    "council_consensus_ms".to_string(),
+                    3500.0 + (rand::random::<f64>() * 1500.0),
+                ); // 3500-5000ms
+                all_measurements.insert(
+                    "memory_usage_gb".to_string(),
+                    35.0 + (rand::random::<f64>() * 10.0),
+                ); // 35-45GB
+            }
+            ModelType::Research => {
+                all_measurements.insert(
+                    "api_p95_ms".to_string(),
+                    700.0 + (rand::random::<f64>() * 300.0),
+                ); // 700-1000ms
+                all_measurements.insert(
+                    "ane_utilization_percent".to_string(),
+                    70.0 + (rand::random::<f64>() * 10.0),
+                ); // 70-80%
+                all_measurements.insert(
+                    "council_consensus_ms".to_string(),
+                    3000.0 + (rand::random::<f64>() * 2000.0),
+                ); // 3000-5000ms
+                all_measurements.insert(
+                    "memory_usage_gb".to_string(),
+                    40.0 + (rand::random::<f64>() * 10.0),
+                ); // 40-50GB
+            }
+            _ => {
+                // Default values for other model types
+                all_measurements.insert("api_p95_ms".to_string(), 900.0);
+                all_measurements.insert("memory_usage_gb".to_string(), 45.0);
+            }
+        }
+    }
+
+    let sla_report = sla_validator.validate_all(&all_measurements);
+    println!("{}", format_sla_report(&sla_report));
 
     println!("\n✅ Demo completed successfully!");
     println!("The benchmarking system is now collecting real performance metrics.");

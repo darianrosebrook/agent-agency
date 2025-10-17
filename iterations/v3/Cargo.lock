@@ -58,7 +58,6 @@ dependencies = [
 name = "agent-agency-context-preservation-engine"
 version = "0.1.0"
 dependencies = [
- "agent-agency-council",
  "agent-agency-research",
  "agent-agency-security-policy-enforcer",
  "agent-agency-workers",
@@ -88,16 +87,39 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
+ "claim-extraction",
  "config",
  "crossbeam",
  "dashmap",
  "embedding-service",
  "jsonschema",
  "parking_lot 0.12.5",
+ "rand 0.8.5",
  "regex",
  "reqwest 0.11.27",
  "serde",
  "serde_json",
+ "sqlx",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-test",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "agent-agency-database"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "deadpool",
+ "deadpool-postgres 0.11.0",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha2",
  "sqlx",
  "thiserror 1.0.69",
  "tokio",
@@ -822,7 +844,6 @@ dependencies = [
 name = "claim-extraction"
 version = "0.1.0"
 dependencies = [
- "agent-agency-research",
  "anyhow",
  "async-trait",
  "chrono",
@@ -2941,6 +2962,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ffbee8634e0d45d258acb448e7eaab3fce7a0a467395d4d9f228e3c1f01fb2e4"
 
 [[package]]
+name = "matchers"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1525a2a28c7f4fa0fc98bb91ae755d1e2d1505079e05539e35bc876b5d65ae9"
+dependencies = [
+ "regex-automata",
+]
+
+[[package]]
 name = "matchit"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3081,6 +3111,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
+ "claim-extraction",
  "criterion",
  "prometheus",
  "rand 0.8.5",
@@ -5979,10 +6010,14 @@ version = "0.3.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2054a14f5307d601f88daf0553e1cbf472acc4f2c51afab632431cdcd72124d5"
 dependencies = [
+ "matchers",
  "nu-ansi-term",
+ "once_cell",
+ "regex-automata",
  "sharded-slab",
  "smallvec",
  "thread_local",
+ "tracing",
  "tracing-core",
  "tracing-log",
 ]

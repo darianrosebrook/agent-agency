@@ -2,7 +2,7 @@ use crate::types::*;
 use anyhow::Result;
 use chrono::Utc;
 use regex::Regex;
-use tracing::{debug, error, warn};
+use tracing::{debug, error};
 use uuid::Uuid;
 
 /// Secrets detector

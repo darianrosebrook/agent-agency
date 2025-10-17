@@ -25,6 +25,35 @@ pub struct ClaimExtractionResult {
     pub processing_metadata: ProcessingMetadata,
 }
 
+/// Analysis of ambiguities in a sentence (ported from V2)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DisambiguationAnalysis {
+    pub referential_ambiguities: Vec<String>,
+    pub structural_ambiguities: Vec<String>,
+    pub temporal_ambiguities: Vec<String>,
+    pub can_resolve: bool,
+    pub resolution_confidence: f64,
+}
+
+/// Factors used to compute disambiguation confidence
+#[derive(Debug, Clone)]
+pub struct DisambiguationConfidenceFactors {
+    pub referential_ambiguities: usize,
+    pub structural_ambiguities: usize,
+    pub temporal_ambiguities: usize,
+    pub referential_resolvable: bool,
+    pub temporal_resolvable: bool,
+    pub structural_resolvable: bool,
+}
+
+/// Information about a pronoun referent
+#[derive(Debug, Clone)]
+pub struct ReferentInfo {
+    pub entity: String,
+    pub confidence: f64,
+    pub source: String,
+}
+
 /// Individual atomic claim extracted from sentence
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AtomicClaim {
@@ -221,6 +250,7 @@ pub struct Ambiguity {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(PartialEq)]
 pub enum AmbiguityType {
     Pronoun,
     TechnicalTerm,

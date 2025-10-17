@@ -32,18 +32,19 @@ pub struct MCPConfig {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ServerConfig {
-    /// Server host
+    pub server_name: String,
+    pub version: String,
     pub host: String,
-    /// Server port
     pub port: u16,
-    /// Enable WebSocket transport
-    pub enable_websocket: bool,
-    /// Enable HTTP transport
+    pub enable_tls: bool,
     pub enable_http: bool,
-    /// Maximum concurrent connections
+    pub enable_websocket: bool,
     pub max_connections: u32,
-    /// Connection timeout in seconds
-    pub connection_timeout_seconds: u64,
+    pub connection_timeout_ms: u64,
+    pub enable_compression: bool,
+    pub log_level: String,
+    pub auth_api_key: Option<String>,
+    pub requests_per_minute: Option<u32>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -116,12 +117,19 @@ impl Default for MCPConfig {
     fn default() -> Self {
         Self {
             server: ServerConfig {
+                server_name: "agent-agency-mcp".to_string(),
+                version: env!("CARGO_PKG_VERSION").to_string(),
                 host: "127.0.0.1".to_string(),
                 port: 8080,
+                enable_tls: false,
                 enable_websocket: true,
                 enable_http: true,
                 max_connections: 100,
-                connection_timeout_seconds: 300,
+                connection_timeout_ms: 300_000,
+                enable_compression: false,
+                log_level: "info".to_string(),
+                auth_api_key: None,
+                requests_per_minute: None,
             },
             tool_discovery: ToolDiscoveryConfig {
                 enable_auto_discovery: true,

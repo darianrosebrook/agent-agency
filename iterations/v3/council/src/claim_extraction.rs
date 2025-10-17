@@ -8,11 +8,10 @@
  *               4. CAWS-compliant verification
  */
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 use uuid::Uuid;
 
 use crate::types::{
@@ -35,7 +34,7 @@ pub struct ClaimExtractor {
 
 impl ClaimExtractor {
     pub fn new() -> Self {
-        let mut extractor = Self {
+        let extractor = Self {
             ambiguity_patterns: Arc::new(RwLock::new(HashMap::new())),
             extraction_patterns: Arc::new(RwLock::new(HashMap::new())),
             verification_sources: Arc::new(RwLock::new(HashMap::new())),

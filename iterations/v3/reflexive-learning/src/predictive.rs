@@ -1,13 +1,13 @@
 //! Predictive learning system components for V3
 
-use agent_agency_council::learning::{FailureCategory, QualityIndicator, TaskOutcome};
 use std::collections::HashSet;
 use tracing::{debug, instrument};
 
 use crate::types::{
-    LearningStrategy, LearningSystemError, PerformancePrediction, PredictiveLearningInsights,
-    ResourcePrediction, ResourcePressureLevel, RiskLevel, StrategyAdjustmentFocus,
-    StrategyAdjustmentSuggestion, StrategyOptimizationPlan, TaskLearningSnapshot,
+    FailureCategory, LearningStrategy, LearningSystemError, PerformancePrediction,
+    PredictiveLearningInsights, QualityIndicator, ResourcePrediction, ResourcePressureLevel,
+    RiskLevel, StrategyAdjustmentFocus, StrategyAdjustmentSuggestion, StrategyOptimizationPlan,
+    TaskLearningSnapshot, TaskOutcome,
 };
 
 /// Configuration parameters for predictive learning

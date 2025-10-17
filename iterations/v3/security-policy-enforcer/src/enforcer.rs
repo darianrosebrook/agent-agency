@@ -2,6 +2,7 @@ use crate::audit::SecurityAuditor;
 use crate::command_execution::CommandExecutionController;
 use crate::file_access::FileAccessController;
 use crate::policies::SecurityPolicy;
+use crate::rate_limiting::RateLimiter;
 use crate::secrets_detection::SecretsDetector;
 use crate::types::*;
 
@@ -16,17 +17,21 @@ use uuid::Uuid;
 /// Main security policy enforcer
 pub struct SecurityPolicyEnforcer {
     /// Security policy configuration
-    config: SecurityPolicyConfig,
+    config: Arc<RwLock<SecurityPolicyConfig>>,
+    /// Previous configuration for rollback support
+    previous_config: Arc<RwLock<Option<SecurityPolicyConfig>>>,
     /// File access controller
-    file_access_controller: Arc<FileAccessController>,
+    file_access_controller: Arc<RwLock<Arc<FileAccessController>>>,
     /// Command execution controller
-    command_execution_controller: Arc<CommandExecutionController>,
+    command_execution_controller: Arc<RwLock<Arc<CommandExecutionController>>>,
     /// Secrets detector
-    secrets_detector: Arc<SecretsDetector>,
+    secrets_detector: Arc<RwLock<Arc<SecretsDetector>>>,
     /// Security auditor
-    security_auditor: Arc<SecurityAuditor>,
+    security_auditor: Arc<RwLock<Arc<SecurityAuditor>>>,
+    /// Rate limiter
+    rate_limiter: Arc<RwLock<Arc<RateLimiter>>>,
     /// Security policy
-    security_policy: Arc<SecurityPolicy>,
+    security_policy: Arc<RwLock<SecurityPolicy>>,
     /// Enforcement statistics
     stats: Arc<RwLock<SecurityStats>>,
 }
@@ -36,18 +41,27 @@ impl SecurityPolicyEnforcer {
     pub fn new(config: SecurityPolicyConfig) -> Result<Self> {
         info!("Initializing security policy enforcer");
 
-        let file_access_controller =
-            Arc::new(FileAccessController::new(config.file_access.clone())?);
+        let file_access_controller = Arc::new(RwLock::new(Arc::new(FileAccessController::new(
+            config.file_access.clone(),
+        )?)));
 
-        let command_execution_controller = Arc::new(CommandExecutionController::new(
-            config.command_execution.clone(),
-        )?);
+        let command_execution_controller = Arc::new(RwLock::new(Arc::new(
+            CommandExecutionController::new(config.command_execution.clone())?,
+        )));
 
-        let secrets_detector = Arc::new(SecretsDetector::new(config.secrets_detection.clone())?);
+        let secrets_detector = Arc::new(RwLock::new(Arc::new(SecretsDetector::new(
+            config.secrets_detection.clone(),
+        )?)));
 
-        let security_auditor = Arc::new(SecurityAuditor::new(config.audit.clone())?);
+        let security_auditor = Arc::new(RwLock::new(Arc::new(SecurityAuditor::new(
+            config.audit.clone(),
+        )?)));
 
-        let security_policy = Arc::new(SecurityPolicy::new(config.clone())?);
+        let rate_limiter = Arc::new(RwLock::new(Arc::new(RateLimiter::new(
+            config.rate_limiting.clone(),
+        ))));
+
+        let security_policy = Arc::new(RwLock::new(SecurityPolicy::new(config.clone())?));
 
         let stats = Arc::new(RwLock::new(SecurityStats {
             total_operations: 0,
@@ -63,14 +77,77 @@ impl SecurityPolicyEnforcer {
         }));
 
         Ok(Self {
-            config,
+            config: Arc::new(RwLock::new(config)),
+            previous_config: Arc::new(RwLock::new(None)),
             file_access_controller,
             command_execution_controller,
             secrets_detector,
             security_auditor,
+            rate_limiter,
             security_policy,
             stats,
         })
+    }
+
+    /// Check rate limiting for a request
+    pub async fn check_rate_limit(&self, request: &RateLimitRequest) -> Result<RateLimitResult> {
+        let start_time = Instant::now();
+        debug!("Checking rate limit for client: {}", request.client_id);
+
+        let rate_limiter = { self.rate_limiter.read().await.clone() };
+        let result = rate_limiter.check_rate_limit(request).await?;
+
+        // Update statistics
+        {
+            let mut stats = self.stats.write().await;
+            stats.total_operations += 1;
+            if result.allowed {
+                stats.operations_allowed += 1;
+            } else {
+                stats.operations_denied += 1;
+            }
+            stats.avg_enforcement_time_ms = (stats.avg_enforcement_time_ms * (stats.total_operations - 1) as f64 +
+                start_time.elapsed().as_millis() as f64) / stats.total_operations as f64;
+            stats.last_updated = Utc::now();
+        }
+
+        // Audit the rate limit check
+        {
+            let auditor = self.security_auditor.read().await.clone();
+            let audit_event = SecurityAuditEvent {
+                id: Uuid::new_v4(),
+                timestamp: Utc::now(),
+                event_type: AuditEventType::SecurityCheck,
+                actor: request.client_id.clone(),
+                resource: request.operation.clone(),
+                action: "rate_limit_check".to_string(),
+                result: if result.allowed {
+                    AuditResult::Allowed
+                } else {
+                    AuditResult::Denied
+                },
+                metadata: {
+                    let mut metadata = std::collections::HashMap::new();
+                    metadata.insert("allowed".to_string(), result.allowed.to_string());
+                    metadata.insert("current_count".to_string(), result.current_count.to_string());
+                    if let Some(retry_after) = result.retry_after_seconds {
+                        metadata.insert("retry_after_seconds".to_string(), retry_after.to_string());
+                    }
+                    metadata
+                },
+            };
+            auditor.log_event(&audit_event).await?;
+        }
+
+        info!(
+            "Rate limit check for {} operation {}: {} (count: {})",
+            request.client_id,
+            request.operation,
+            if result.allowed { "ALLOWED" } else { "DENIED" },
+            result.current_count
+        );
+
+        Ok(result)
     }
 
     /// Enforce file access policy
@@ -83,10 +160,15 @@ impl SecurityPolicyEnforcer {
 
         let mut violations = Vec::new();
         let mut audit_events = Vec::new();
-        let mut council_decision = None;
+        let council_decision = None;
+
+        let config_snapshot = { self.config.read().await.clone() };
+        let file_access_controller = { self.file_access_controller.read().await.clone() };
+        let secrets_detector = { self.secrets_detector.read().await.clone() };
+        let auditor = { self.security_auditor.read().await.clone() };
 
         // Check file access policy
-        match self.file_access_controller.check_access(request).await {
+        match file_access_controller.check_access(request).await {
             Ok(result) => {
                 if result.allowed {
                     debug!("File access allowed for: {}", request.file_path);
@@ -146,7 +228,7 @@ impl SecurityPolicyEnforcer {
 
         // Scan for secrets if file access is for reading
         if matches!(request.access_type, FileAccessType::Read) {
-            if let Ok(scan_result) = self.secrets_detector.scan_file(&request.file_path).await {
+            if let Ok(scan_result) = secrets_detector.scan_file(&request.file_path).await {
                 if !scan_result.secrets_found.is_empty() {
                     warn!("Secrets detected in file: {}", request.file_path);
                     violations.push(SecurityViolation {
@@ -161,7 +243,7 @@ impl SecurityPolicyEnforcer {
                         actor: request.actor.clone(),
                         timestamp: Utc::now(),
                         context: request.context.clone(),
-                        blocked: self.config.secrets_detection.block_on_secrets,
+                        blocked: config_snapshot.secrets_detection.block_on_secrets,
                         council_decision: None,
                     });
 
@@ -188,7 +270,7 @@ impl SecurityPolicyEnforcer {
 
         // Log audit events
         for event in &audit_events {
-            self.security_auditor.log_event(event).await?;
+            auditor.log_event(event).await?;
         }
 
         Ok(SecurityEnforcementResult {
@@ -213,14 +295,13 @@ impl SecurityPolicyEnforcer {
 
         let mut violations = Vec::new();
         let mut audit_events = Vec::new();
-        let mut council_decision = None;
+        let council_decision = None;
+
+        let command_controller = { self.command_execution_controller.read().await.clone() };
+        let auditor = { self.security_auditor.read().await.clone() };
 
         // Check command execution policy
-        match self
-            .command_execution_controller
-            .check_execution(request)
-            .await
-        {
+        match command_controller.check_execution(request).await {
             Ok(result) => {
                 if result.allowed {
                     debug!("Command execution allowed: {}", request.command);
@@ -287,7 +368,7 @@ impl SecurityPolicyEnforcer {
 
         // Log audit events
         for event in &audit_events {
-            self.security_auditor.log_event(event).await?;
+            auditor.log_event(event).await?;
         }
 
         Ok(SecurityEnforcementResult {
@@ -301,10 +382,13 @@ impl SecurityPolicyEnforcer {
 
     /// Scan content for secrets
     pub async fn scan_content(&self, content: &str, context: &str) -> Result<SecretsScanResult> {
-        let start_time = Instant::now();
+        let _start_time = Instant::now();
         debug!("Scanning content for secrets");
 
-        let scan_result = self.secrets_detector.scan_content(content, context).await?;
+        let secrets_detector = { self.secrets_detector.read().await.clone() };
+        let auditor = { self.security_auditor.read().await.clone() };
+
+        let scan_result = secrets_detector.scan_content(content, context).await?;
 
         // Log audit event if secrets found
         if !scan_result.secrets_found.is_empty() {
@@ -318,7 +402,7 @@ impl SecurityPolicyEnforcer {
                 timestamp: Utc::now(),
                 metadata: std::collections::HashMap::new(),
             };
-            self.security_auditor.log_event(&audit_event).await?;
+            auditor.log_event(&audit_event).await?;
         }
 
         Ok(scan_result)
@@ -366,16 +450,84 @@ impl SecurityPolicyEnforcer {
         path.starts_with(workspace_root)
     }
 
-    /// Get security policy configuration
-    pub fn get_config(&self) -> &SecurityPolicyConfig {
-        &self.config
+    /// Get security policy configuration snapshot
+    pub async fn get_config(&self) -> SecurityPolicyConfig {
+        self.config.read().await.clone()
     }
 
-    /// Update security policy configuration
+    /// Update security policy configuration with validation and rollback snapshot.
     pub async fn update_config(&self, new_config: SecurityPolicyConfig) -> Result<()> {
-        // In a real implementation, this would update the configuration
-        // and reinitialize components as needed
-        info!("Security policy configuration updated");
+        self.apply_config(new_config, true).await
+    }
+
+    /// Roll back to the previously applied configuration if available.
+    pub async fn rollback_config(&self) -> Result<()> {
+        let previous = {
+            let mut guard = self.previous_config.write().await;
+            guard.take()
+        };
+
+        let config = match previous {
+            Some(cfg) => cfg,
+            None => anyhow::bail!("No previous configuration available for rollback"),
+        };
+
+        self.apply_config(config, false).await
+    }
+
+    async fn apply_config(
+        &self,
+        new_config: SecurityPolicyConfig,
+        backup_previous: bool,
+    ) -> Result<()> {
+        // Validate and construct new components first so we can bail without mutation on failure.
+        let new_policy = SecurityPolicy::new(new_config.clone())?;
+        let new_file_access = Arc::new(FileAccessController::new(new_config.file_access.clone())?);
+        let new_command_controller = Arc::new(CommandExecutionController::new(
+            new_config.command_execution.clone(),
+        )?);
+        let new_secrets_detector =
+            Arc::new(SecretsDetector::new(new_config.secrets_detection.clone())?);
+        let new_auditor = Arc::new(SecurityAuditor::new(new_config.audit.clone())?);
+
+        if backup_previous {
+            let previous_snapshot = self.config.read().await.clone();
+            let mut guard = self.previous_config.write().await;
+            *guard = Some(previous_snapshot);
+        }
+
+        {
+            let mut guard = self.config.write().await;
+            *guard = new_config.clone();
+        }
+        {
+            let mut guard = self.file_access_controller.write().await;
+            *guard = new_file_access;
+        }
+        {
+            let mut guard = self.command_execution_controller.write().await;
+            *guard = new_command_controller;
+        }
+        {
+            let mut guard = self.secrets_detector.write().await;
+            *guard = new_secrets_detector;
+        }
+        {
+            let mut guard = self.security_auditor.write().await;
+            *guard = new_auditor;
+        }
+        {
+            let mut guard = self.security_policy.write().await;
+            *guard = new_policy;
+        }
+
+        info!("Security policy configuration applied successfully");
         Ok(())
+    }
+
+    /// Analyze raw audit logs (JSON or NDJSON) and return severity summary.
+    pub async fn analyze_audit_logs(&self, raw: &str) -> Result<SecurityAnalysis> {
+        let auditor = { self.security_auditor.read().await.clone() };
+        auditor.ingest_and_analyze(raw)
     }
 }

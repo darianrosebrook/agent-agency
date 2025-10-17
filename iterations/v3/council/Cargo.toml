@@ -25,9 +25,13 @@ dashmap = "5.5"  # Concurrent hashmap for verdict storage
 crossbeam = "0.8"  # Lock-free data structures
 parking_lot = "0.12"  # Fast mutexes for coordination
 regex = "1.10"  # Regex patterns for claim extraction
+rand = "0.8"  # Random jitter for retry logic
 
 # Embedding service integration
 embedding-service = { path = "../embedding-service" }
+
+# Claim extraction integration
+claim-extraction = { path = "../claim-extraction" }
 
 [dev-dependencies]
 jsonschema = "0.17"

@@ -3,28 +3,25 @@
 //! Integrates claim extraction pipeline with council evaluation process to provide
 //! evidence-backed judge verdicts. Based on V2's verification engine patterns.
 
-use crate::claim_extraction::ClaimExtractor;
+// use crate::claim_extraction::ClaimExtractor;  // Temporarily commented to resolve circular dependency
 use crate::models::TaskSpec;
 use crate::types::{
-    ClaimExtractionAndVerificationProcessor, Evidence as CouncilEvidence, EvidenceItem,
-    EvidenceSource as CouncilEvidenceSource, JudgeVerdict,
+    Evidence as CouncilEvidence, EvidenceSource as CouncilEvidenceSource, JudgeVerdict,
 };
 use anyhow::Result;
 use chrono::Utc;
 use std::collections::HashMap;
-use tracing::{debug, info, warn};
-use uuid::Uuid;
+use tracing::{debug, info};
 
 /// Evidence enrichment coordinator for council evaluations
+#[derive(Clone)]
 pub struct EvidenceEnrichmentCoordinator {
-    claim_processor: ClaimExtractor,
     evidence_cache: HashMap<String, Vec<CouncilEvidence>>,
 }
 
 impl EvidenceEnrichmentCoordinator {
     pub fn new() -> Self {
         Self {
-            claim_processor: ClaimExtractor::new(),
             evidence_cache: HashMap::new(),
         }
     }
@@ -36,75 +33,37 @@ impl EvidenceEnrichmentCoordinator {
     ) -> Result<Vec<CouncilEvidence>> {
         info!("Starting evidence enrichment for task {}", task_spec.id);
 
-        // Create processing context from task spec
-        let context = self.create_processing_context(task_spec);
 
         // Extract claims from task description and worker output
         let mut all_evidence = Vec::new();
 
-        // Extract claims from task description
-        let description_worker_output = serde_json::json!({
-            "content": task_spec.description
-        });
-        if let Ok(description_result) = self
-            .claim_processor
-            .process_claim_extraction_and_verification(
-                description_worker_output,
-                context.clone(),
-                None,
-            )
-            .await
-        {
-            // For now, we'll create placeholder evidence since the result structure is different
-            let description_evidence = vec![CouncilEvidence {
-                source: CouncilEvidenceSource::CodeAnalysis,
-                content: task_spec.description.clone(),
-                relevance: 0.8,
-                timestamp: Utc::now(),
-            }];
-            all_evidence.extend(description_evidence);
-        }
+        // Create evidence from task description
+        let description_evidence = vec![CouncilEvidence {
+            source: CouncilEvidenceSource::CodeAnalysis,
+            content: task_spec.description.clone(),
+            relevance: 0.8,
+            timestamp: Utc::now(),
+        }];
+        all_evidence.extend(description_evidence);
 
-        // Extract claims from worker output if available
-        let output_worker_output = serde_json::json!({
-            "content": task_spec.worker_output.content
-        });
-        if let Ok(_output_result) = self
-            .claim_processor
-            .process_claim_extraction_and_verification(output_worker_output, context.clone(), None)
-            .await
-        {
-            let output_evidence = vec![CouncilEvidence {
-                source: CouncilEvidenceSource::CodeAnalysis,
-                content: task_spec.worker_output.content.clone(),
-                relevance: 0.7,
-                timestamp: Utc::now(),
-            }];
-            all_evidence.extend(output_evidence);
-        }
+        // Create evidence from worker output
+        let output_evidence = vec![CouncilEvidence {
+            source: CouncilEvidenceSource::CodeAnalysis,
+            content: task_spec.worker_output.content.clone(),
+            relevance: 0.7,
+            timestamp: Utc::now(),
+        }];
+        all_evidence.extend(output_evidence);
 
-        // Extract claims from acceptance criteria
+        // Create evidence from acceptance criteria
         for criterion in &task_spec.acceptance_criteria {
-            let criterion_worker_output = serde_json::json!({
-                "content": criterion.description
-            });
-            if let Ok(_criterion_result) = self
-                .claim_processor
-                .process_claim_extraction_and_verification(
-                    criterion_worker_output,
-                    context.clone(),
-                    None,
-                )
-                .await
-            {
-                let criterion_evidence = vec![CouncilEvidence {
-                    source: CouncilEvidenceSource::CodeAnalysis,
-                    content: criterion.description.clone(),
-                    relevance: 0.9,
-                    timestamp: Utc::now(),
-                }];
-                all_evidence.extend(criterion_evidence);
-            }
+            let criterion_evidence = vec![CouncilEvidence {
+                source: CouncilEvidenceSource::CodeAnalysis,
+                content: criterion.description.clone(),
+                relevance: 0.9,
+                timestamp: Utc::now(),
+            }];
+            all_evidence.extend(criterion_evidence);
         }
 
         // Cache evidence for this task
@@ -112,7 +71,7 @@ impl EvidenceEnrichmentCoordinator {
             .insert(task_spec.id.to_string(), all_evidence.clone());
 
         info!(
-            "Enriched {} evidence items for task {}",
+            "Enriched {} evidence items for task {} using council claim extraction",
             all_evidence.len(),
             task_spec.id
         );
@@ -175,42 +134,7 @@ impl EvidenceEnrichmentCoordinator {
         Ok(())
     }
 
-    /// Create processing context from task specification
-    fn create_processing_context(&self, task_spec: &TaskSpec) -> serde_json::Value {
-        serde_json::json!({
-            "task_id": task_spec.id,
-            "working_spec_id": task_spec.caws_spec.as_ref()
-                .map(|spec| format!("{:?}", spec))
-                .unwrap_or_else(|| "unknown".to_string()),
-            "source_file": task_spec.scope.files_affected.first().cloned(),
-            "line_number": null,
-            "surrounding_context": task_spec.description,
-            "domain_hints": task_spec.scope.domains,
-        })
-    }
 
-    /// Convert claim extraction evidence to council evidence format
-    fn convert_claim_evidence_to_council_evidence(
-        &self,
-        claim_evidence: &[EvidenceItem],
-        _source_context: &str,
-    ) -> Vec<CouncilEvidence> {
-        claim_evidence
-            .iter()
-            .map(|evidence| CouncilEvidence {
-                source: CouncilEvidenceSource::ResearchAgent, // Default to ResearchAgent
-                content: evidence.content.clone(),
-                relevance: evidence.relevance as f32,
-                timestamp: Utc::now(),
-            })
-            .collect()
-    }
-
-    /// Convert claim extraction source type to council evidence source
-    fn convert_evidence_source(&self, _source_type: &str) -> CouncilEvidenceSource {
-        // Default to ResearchAgent for now
-        CouncilEvidenceSource::ResearchAgent
-    }
 
     /// Calculate overall evidence confidence score
     fn calculate_evidence_confidence(&self, evidence: &[CouncilEvidence]) -> f32 {

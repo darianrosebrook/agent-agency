@@ -4,15 +4,10 @@
 
 use crate::types::*;
 use crate::{LoadBalancingStrategy, RoutingAlgorithm};
-use agent_agency_council::models::{
-    CouncilTaskContext as CouncilCouncilTaskContext,
-    CouncilWorkerOutput as CouncilCouncilWorkerOutput, Environment, FileModification,
-    FileOperation, RiskTier, SelfAssessment, TaskSpec,
-};
+use agent_agency_council::models::{RiskTier, TaskSpec, TaskContext as CouncilTaskContext, WorkerOutput as CouncilWorkerOutput, Environment as ConfigEnvironment};
 use anyhow::{Context, Result};
 use dashmap::DashMap;
-use std::sync::Arc;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 use uuid::Uuid;
 
 /// Task router implementation
@@ -116,7 +111,7 @@ impl TaskRouter {
         // Extract languages from scope and context
         let mut required_languages = Vec::new();
         let mut required_frameworks = Vec::new();
-        let mut required_domains = task_spec.scope.domains.clone();
+        let required_domains = task_spec.scope.domains.clone();
 
         // Analyze task description and context for technology requirements
         let description = &task_spec.description.to_lowercase();
@@ -288,8 +283,25 @@ impl TaskRouter {
             return Ok(Vec::new());
         }
 
-        // TODO: Implement actual round robin with persistent state
-        // For now, just select the first candidate
+        // TODO: Implement actual round robin with persistent state with the following requirements:
+        // 1. State persistence: Maintain persistent state for round robin selection
+        //    - Store last selected worker index in persistent storage
+        //    - Handle state recovery and initialization
+        //    - Ensure state consistency across system restarts
+        // 2. Round robin logic: Implement proper round robin selection algorithm
+        //    - Cycle through available workers in order
+        //    - Handle worker availability and health status
+        //    - Implement fair distribution across all eligible workers
+        // 3. Load balancing: Balance load across available workers
+        //    - Consider worker capacity and current load
+        //    - Implement weighted round robin for different worker capabilities
+        //    - Handle worker failures and recovery
+        // 4. Performance optimization: Optimize selection performance
+        //    - Use efficient data structures for worker tracking
+        //    - Implement caching for frequently accessed state
+        //    - Handle concurrent access to selection state
+        // 5. Return WorkerAssignment with actual round robin selection (not first candidate)
+        // 6. Include proper reasoning and selection justification
         let candidate = &candidates[0];
         let assignment = WorkerAssignment {
             worker_id: candidate.worker.id,
@@ -522,21 +534,21 @@ mod tests {
             title: "Implement Rust API".to_string(),
             description: "Create a REST API in Rust with tokio".to_string(),
             risk_tier: RiskTier::Tier2,
-            scope: TaskScope {
+            scope: TaskSpec {
                 files_affected: vec!["src/api.rs".to_string()],
                 max_files: Some(5),
                 max_loc: Some(1000),
                 domains: vec!["backend".to_string()],
             },
             acceptance_criteria: vec![],
-            context: CouncilTaskContext {
+              context: CouncilTaskContext {
                 workspace_root: "/workspace".to_string(),
                 git_branch: "main".to_string(),
                 recent_changes: vec![],
                 dependencies: std::collections::HashMap::new(),
-                environment: Environment::Development,
+                environment: ConfigEnvironment::Development,
             },
-            worker_output: CouncilWorkerOutput {
+              worker_output: CouncilWorkerOutput {
                 content: "".to_string(),
                 files_modified: vec![],
                 rationale: "".to_string(),
@@ -574,21 +586,21 @@ mod tests {
             title: "Test task".to_string(),
             description: "A simple test task".to_string(),
             risk_tier: RiskTier::Tier2,
-            scope: TaskScope {
+            scope: TaskSpec {
                 files_affected: vec!["file1.rs".to_string(), "file2.rs".to_string()],
                 max_files: Some(5),
                 max_loc: Some(1000),
                 domains: vec!["backend".to_string()],
             },
             acceptance_criteria: vec![],
-            context: CouncilTaskContext {
+              context: CouncilTaskContext {
                 workspace_root: "/workspace".to_string(),
                 git_branch: "main".to_string(),
                 recent_changes: vec![],
                 dependencies: std::collections::HashMap::new(),
-                environment: Environment::Development,
+                environment: ConfigEnvironment::Development,
             },
-            worker_output: CouncilWorkerOutput {
+              worker_output: CouncilWorkerOutput {
                 content: "".to_string(),
                 files_modified: vec![],
                 rationale: "".to_string(),

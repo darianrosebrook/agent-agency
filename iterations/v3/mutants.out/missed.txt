@@ -1,0 +1,2 @@
+mcp-integration/src/server.rs:31:9: replace HttpServerHandle::shutdown -> Result<()> with Ok(())
+mcp-integration/src/server.rs:521:9: replace MCPServer::register_tool_for_testing -> Result<()> with Ok(())

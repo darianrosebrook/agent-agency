@@ -32,8 +32,7 @@ pub use types::*;
 
 use anyhow::Result;
 use std::time::Instant;
-use tracing::{error, info, warn};
-use uuid::Uuid;
+use tracing::{info, warn};
 
 /// Main claim extraction and verification processor
 ///

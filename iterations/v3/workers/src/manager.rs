@@ -6,13 +6,13 @@
 use crate::types::*;
 use crate::{CawsChecker, TaskExecutor, TaskRouter, WorkerPoolConfig};
 use agent_agency_council::models::TaskSpec;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use dashmap::DashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use tokio::time::{Duration, Instant};
-use tracing::{debug, error, info, warn};
+use tracing::{info, warn};
 use uuid::Uuid;
 
 /// Main worker pool manager
@@ -299,8 +299,25 @@ impl WorkerPoolManager {
     async fn check_worker_health(&self, worker: &Worker) -> Result<bool> {
         let start_time = Instant::now();
 
-        // TODO: Implement actual health check
-        // For now, simulate health check
+        // TODO: Implement actual health check with the following requirements:
+        // 1. Health check implementation: Implement comprehensive health check for workers
+        //    - Send health check requests to worker endpoints
+        //    - Check worker availability, responsiveness, and status
+        //    - Validate worker functionality and capability
+        // 2. Health metrics collection: Collect health metrics and performance data
+        //    - Measure response times and availability
+        //    - Collect resource usage and performance metrics
+        //    - Monitor worker capacity and load
+        // 3. Health status evaluation: Evaluate worker health status
+        //    - Determine health status based on multiple factors
+        //    - Implement health thresholds and criteria
+        //    - Handle different health states and transitions
+        // 4. Error handling: Handle health check failures and errors
+        //    - Handle network errors and timeouts
+        //    - Implement retry logic for failed health checks
+        //    - Provide meaningful error messages and recovery options
+        // 5. Return actual health check results (not simulated)
+        // 6. Include comprehensive health metrics and status information
         tokio::time::sleep(Duration::from_millis(100)).await;
 
         let response_time = start_time.elapsed().as_millis() as u64;
@@ -335,8 +352,25 @@ impl WorkerPoolManager {
                     let worker = entry.value();
                     let worker_id = worker.id;
 
-                    // TODO: Implement actual health check
-                    // For now, just update heartbeat
+                    // TODO: Implement actual health check with the following requirements:
+                    // 1. Health check implementation: Implement comprehensive health check for workers
+                    //    - Send health check requests to worker endpoints
+                    //    - Check worker availability, responsiveness, and status
+                    //    - Validate worker functionality and capability
+                    // 2. Health metrics collection: Collect health metrics and performance data
+                    //    - Measure response times and availability
+                    //    - Collect resource usage and performance metrics
+                    //    - Monitor worker capacity and load
+                    // 3. Health status evaluation: Evaluate worker health status
+                    //    - Determine health status based on multiple factors
+                    //    - Implement health thresholds and criteria
+                    //    - Handle different health states and transitions
+                    // 4. Error handling: Handle health check failures and errors
+                    //    - Handle network errors and timeouts
+                    //    - Implement retry logic for failed health checks
+                    //    - Provide meaningful error messages and recovery options
+                    // 5. Update worker status with actual health check results (not just heartbeat)
+                    // 6. Include comprehensive health metrics and status information
                     if let Some(mut worker_mut) = workers.get_mut(&worker_id) {
                         worker_mut.last_heartbeat = chrono::Utc::now();
                     }
@@ -353,8 +387,25 @@ impl WorkerPoolManager {
         info!("Auto-discovering workers from endpoints");
 
         for endpoint in &self.config.registry.discovery_endpoints {
-            // TODO: Implement actual worker discovery
-            // For now, create mock workers
+            // TODO: Implement actual worker discovery with the following requirements:
+            // 1. Worker discovery implementation: Implement comprehensive worker discovery
+            //    - Query discovery endpoints for available workers
+            //    - Handle different discovery protocols and formats
+            //    - Implement worker registration and deregistration
+            // 2. Worker validation: Validate discovered workers
+            //    - Check worker capabilities and requirements
+            //    - Validate worker credentials and authentication
+            //    - Verify worker availability and health status
+            // 3. Worker registration: Register discovered workers in registry
+            //    - Add workers to worker registry with proper metadata
+            //    - Handle worker updates and status changes
+            //    - Implement worker lifecycle management
+            // 4. Error handling: Handle discovery failures and errors
+            //    - Handle network errors and discovery endpoint failures
+            //    - Implement retry logic for failed discovery attempts
+            //    - Provide meaningful error messages and recovery options
+            // 5. Return actual discovered workers (not mock workers)
+            // 6. Include comprehensive worker information and capabilities
             let mock_worker = WorkerRegistration {
                 name: format!("Auto-discovered worker at {}", endpoint),
                 worker_type: WorkerType::Generalist,

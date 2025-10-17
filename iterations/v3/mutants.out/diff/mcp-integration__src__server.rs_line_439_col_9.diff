@@ -1,0 +1,22 @@
+--- mcp-integration/src/server.rs
++++ replace MCPServer::get_connections -> Vec<MCPConnection> with vec![]
+@@ -431,18 +431,17 @@
+     /// Get server status
+     pub async fn get_status(&self) -> MCPServerStatus {
+         let status = self.status.read().await;
+         status.clone()
+     }
+ 
+     /// Get active connections
+     pub async fn get_connections(&self) -> Vec<MCPConnection> {
+-        let connections = self.connections.read().await;
+-        connections.clone()
++        vec![] /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     /// Execute a tool
+     pub async fn execute_tool(&self, request: ToolExecutionRequest) -> Result<ToolExecutionResult> {
+         info!(
+             "Executing tool: {} (request: {})",
+             request.tool_id, request.id
+         );

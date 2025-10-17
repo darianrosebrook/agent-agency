@@ -1,0 +1,21 @@
+--- mcp-integration/src/server.rs
++++ replace >= with < in RateLimiter::allow
+@@ -79,17 +79,17 @@
+             limit_per_minute,
+             window_start: Instant::now(),
+             count: 0,
+         }
+     }
+ 
+     fn allow(&mut self) -> bool {
+         let now = Instant::now();
+-        if now.duration_since(self.window_start) >= Duration::from_secs(60) {
++        if now.duration_since(self.window_start) < /* ~ changed by cargo-mutants ~ */ Duration::from_secs(60) {
+             self.window_start = now;
+             self.count = 0;
+         }
+ 
+         if self.count >= self.limit_per_minute {
+             false
+         } else {
+             self.count += 1;

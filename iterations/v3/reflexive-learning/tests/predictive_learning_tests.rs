@@ -1,11 +1,17 @@
-use agent_agency_council::learning::{FailureCategory, QualityIndicator, TaskOutcome};
-use reflexive_learning::{
-    LearningStrategy, PredictiveLearningConfig, PredictiveLearningSystem, ResourcePressureLevel,
-    TaskLearningSnapshot,
+use chrono::{Duration, Utc};
+use reflexive_learning::coordinator::{
+    Action, ActionType, Feedback, FeedbackSource, LearningConfig, MultiTurnLearningCoordinator,
+    Outcome, ResourceUsage, TurnData,
 };
 use reflexive_learning::{
-    ProgressMetrics, ResourceUtilization, RiskLevel, StrategyAdjustmentFocus,
+    Constraint, ConstraintSeverity, ConstraintType, CriterionType, FailureCategory,
+    LearningStrategy, LearningTask, PerformanceTrends, PredictiveLearningConfig,
+    PredictiveLearningSystem, ProgressMetrics, QualityIndicator, ResourcePressureLevel,
+    ResourceUtilization, RiskLevel, StrategyAdjustmentFocus, SuccessCriterion, TaskComplexity,
+    TaskContext, TaskLearningSnapshot, TaskOutcome, TaskType, TrendData, TrendDirection,
 };
+use serde_json::json;
+use uuid::Uuid;
 
 fn default_progress() -> ProgressMetrics {
     ProgressMetrics {
@@ -73,7 +79,7 @@ async fn predictive_learning_high_quality_outcome_targets_low_risk() {
 
 #[tokio::test]
 async fn predictive_learning_partial_success_pushes_quality_adjustments() {
-    let mut system = PredictiveLearningSystem::new(PredictiveLearningConfig {
+    let system = PredictiveLearningSystem::new(PredictiveLearningConfig {
         success_baseline: 0.7,
         partial_penalty: 0.2,
         failure_penalty: 0.4,
@@ -121,6 +127,105 @@ async fn predictive_learning_partial_success_pushes_quality_adjustments() {
     assert!(
         insights.performance.success_probability < 0.85,
         "Partial success should yield moderated success probability"
+    );
+}
+
+#[tokio::test]
+async fn coordinator_process_turn_emits_predictive_insights() {
+    let mut coordinator = MultiTurnLearningCoordinator::new(LearningConfig::default());
+
+    let task = LearningTask {
+        id: Uuid::new_v4(),
+        task_type: TaskType::CodeGeneration,
+        complexity: TaskComplexity::Moderate,
+        expected_duration: Duration::minutes(5),
+        success_criteria: vec![SuccessCriterion {
+            criterion_type: CriterionType::Quality,
+            description: "Maintain Tier-1 quality standards".to_string(),
+            measurable: true,
+            weight: 1.0,
+        }],
+        context: TaskContext {
+            domain: "agentic-systems".to_string(),
+            technology_stack: vec!["rust".to_string()],
+            constraints: vec![Constraint {
+                constraint_type: ConstraintType::Quality,
+                description: "Maintain 0.9+ quality score".to_string(),
+                severity: ConstraintSeverity::Hard,
+            }],
+            historical_performance: None,
+        },
+    };
+
+    let mut session = coordinator
+        .start_session(task)
+        .await
+        .expect("session start should succeed");
+
+    let turn_data = TurnData {
+        turn_number: 1,
+        action_taken: Action {
+            action_type: ActionType::CodeGeneration,
+            parameters: json!({ "prompt": "Implement predictive analysis" }),
+            resource_usage: ResourceUsage {
+                cpu_time: Duration::seconds(12),
+                memory_usage: 4_096,
+                token_usage: 8_000,
+                network_usage: 1_200,
+            },
+        },
+        outcome: Outcome {
+            success: true,
+            quality_score: 0.9,
+            efficiency_score: 0.82,
+            error_count: 0,
+            feedback: vec![Feedback {
+                source: FeedbackSource::Council,
+                content: "Comprehensive evidence compiled".to_string(),
+                confidence: 0.92,
+                timestamp: Utc::now(),
+            }],
+        },
+        performance_metrics: PerformanceTrends {
+            short_term: TrendData {
+                direction: TrendDirection::Improving,
+                magnitude: 0.2,
+                confidence: 0.8,
+                data_points: 3,
+            },
+            medium_term: TrendData {
+                direction: TrendDirection::Improving,
+                magnitude: 0.15,
+                confidence: 0.75,
+                data_points: 6,
+            },
+            long_term: TrendData {
+                direction: TrendDirection::Stable,
+                magnitude: 0.05,
+                confidence: 0.6,
+                data_points: 10,
+            },
+        },
+        context_changes: Vec::new(),
+    };
+
+    let result = coordinator
+        .process_turn(&mut session, turn_data)
+        .await
+        .expect("turn processing should succeed");
+
+    let predictive = result
+        .predictive_insights
+        .expect("predictive insights should be present");
+
+    assert!(
+        predictive.performance.success_probability > 0.7,
+        "expected meaningful success probability, got {:?}",
+        predictive.performance.success_probability
+    );
+    assert!(
+        predictive.strategy.confidence > 0.6,
+        "strategy optimizer should emit confident recommendation"
     );
 }
 

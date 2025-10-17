@@ -1,0 +1,66 @@
+--- mcp-integration/src/server.rs
++++ replace MCPServer::build_io_handler -> IoHandler<()> with IoHandler::new(())
+@@ -245,62 +245,17 @@
+     }
+ 
+     fn build_io_handler(
+         registry: Arc<ToolRegistry>,
+         registry_stats: Arc<ToolRegistry>,
+         caws: Arc<CawsIntegration>,
+         version_payload: Arc<serde_json::Value>,
+     ) -> IoHandler<()> {
+-        let mut io = IoHandler::default();
+-
+-        io.add_sync_method("health", move |_| Ok(Value::String("ok".into())));
+-
+-        let registry_for_tools = registry.clone();
+-        io.add_method("tools", move |_| {
+-            let registry_for_tools = registry_for_tools.clone();
+-            async move { Ok(serde_json::to_value(&registry_for_tools.get_all_tools().await).unwrap()) }
+-        });
+-
+-        let registry_for_stats = registry_stats.clone();
+-        io.add_method("stats", move |_| {
+-            let registry_for_stats = registry_for_stats.clone();
+-            async move {
+-                let stats = registry_for_stats.get_statistics().await;
+-                Ok(serde_json::to_value(&stats).unwrap())
+-            }
+-        });
+-
+-        let version_payload = version_payload.clone();
+-        io.add_sync_method("version", move |_| Ok(version_payload.as_ref().clone()));
+-
+-        let caws_validate = caws.clone();
+-        io.add_method("validate", move |params: Params| {
+-            let caws_validate = caws_validate.clone();
+-            async move {
+-                let v: Value = params.parse().unwrap_or(Value::Null);
+-                let tool: crate::types::MCPTool =
+-                    serde_json::from_value(v).map_err(|e| JsonRpcError {
+-                        code: jsonrpc_core::ErrorCode::InvalidParams,
+-                        message: "Invalid tool format".to_string(),
+-                        data: Some(serde_json::Value::String(e.to_string())),
+-                    })?;
+-                let res = caws_validate
+-                    .validate_tool(&tool)
+-                    .await
+-                    .map_err(|e| JsonRpcError {
+-                        code: jsonrpc_core::ErrorCode::InternalError,
+-                        message: "Tool validation failed".to_string(),
+-                        data: Some(serde_json::Value::String(e.to_string())),
+-                    })?;
+-                Ok(serde_json::to_value(&res).unwrap())
+-            }
+-        });
+-
+-        io
++        IoHandler::new(()) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     /// Start the MCP HTTP server and return a readiness receiver and structured handle for tests.
+     pub async fn start_http_with_readiness(
+         &self,
+     ) -> Result<(oneshot::Receiver<()>, HttpServerHandle)> {
+         self.spawn_http_server().await
+     }

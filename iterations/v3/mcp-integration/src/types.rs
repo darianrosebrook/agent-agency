@@ -451,6 +451,8 @@ pub struct ServerConfig {
     pub connection_timeout_ms: u64,
     pub enable_compression: bool,
     pub log_level: String,
+    pub auth_api_key: Option<String>,
+    pub requests_per_minute: Option<u32>,
 }
 
 /// Tool discovery configuration

@@ -1,10 +1,8 @@
 //! Configuration validation and schema enforcement
 
 use anyhow::{anyhow, Result};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{error, info, warn};
-use validator::{Validate, ValidationError as ValidatorError, ValidationErrors};
+use validator::Validate;
 
 /// Configuration validation result
 #[derive(Debug, Clone)]

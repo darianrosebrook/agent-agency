@@ -5,15 +5,16 @@
 use crate::types::*;
 use anyhow::{Context, Result};
 use qdrant_client::qdrant::{
-    vectors_config::Config, CreateCollection, Distance, PointStruct, SearchPoints, Value,
+    vectors_config::Config, CreateCollection, Distance, PointStruct, SearchPoints,
     VectorParams, VectorsConfig, WithPayloadSelector,
+    qdrant_client::QdrantClient,
 };
 use qdrant_client::Qdrant;
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 /// Vector search engine for semantic knowledge retrieval
@@ -39,8 +40,8 @@ impl std::fmt::Debug for VectorSearchEngine {
     }
 }
 
-#[derive(Debug, Default)]
-struct VectorSearchMetrics {
+#[derive(Debug, Clone, Default)]
+pub struct VectorSearchMetrics {
     total_searches: u64,
     cache_hits: u64,
     average_search_time_ms: f64,
@@ -283,8 +284,25 @@ impl VectorSearchEngine {
 
     /// Generate embedding for text content
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>> {
-        // TODO: Implement actual embedding generation
-        // For now, return a dummy embedding
+        // TODO: Implement actual embedding generation with the following requirements:
+        // 1. Embedding model integration: Integrate with embedding models
+        //    - Use pre-trained models like BERT, RoBERTa, or sentence-transformers
+        //    - Support multiple embedding models and model selection
+        //    - Handle model loading, caching, and performance optimization
+        // 2. Text preprocessing: Preprocess text for embedding generation
+        //    - Clean and normalize text content
+        //    - Handle tokenization and text segmentation
+        //    - Manage text length limits and truncation
+        // 3. Embedding generation: Generate high-quality embeddings
+        //    - Use appropriate embedding models for different content types
+        //    - Handle batch processing for efficiency
+        //    - Ensure embedding quality and consistency
+        // 4. Embedding optimization: Optimize embedding performance
+        //    - Implement embedding caching and reuse
+        //    - Use efficient vector operations and libraries
+        //    - Handle memory management and resource optimization
+        // 5. Return Vec<f32> with actual embeddings (not dummy values)
+        // 6. Include proper error handling and validation
         let embedding_size = self.vector_size as usize;
         let mut embedding = vec![0.0; embedding_size];
 
@@ -636,17 +654,6 @@ impl VectorSearchEngine {
     }
 }
 
-impl Clone for VectorSearchMetrics {
-    fn clone(&self) -> Self {
-        Self {
-            total_searches: self.total_searches,
-            cache_hits: self.cache_hits,
-            average_search_time_ms: self.average_search_time_ms,
-            average_results_count: self.average_results_count,
-            last_search_time: self.last_search_time,
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -678,7 +685,7 @@ mod tests {
                     // Create a dummy engine for testing
                     VectorSearchEngine {
                         client: Arc::new(
-                            QdrantClient::from_url("http://localhost:6333")
+                            QdrantClient::from("http://localhost:6333")
                                 .build()
                                 .unwrap(),
                         ),

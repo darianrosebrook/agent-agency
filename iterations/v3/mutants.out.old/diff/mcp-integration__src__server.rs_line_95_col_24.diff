@@ -1,0 +1,21 @@
+--- mcp-integration/src/server.rs
++++ replace += with -= in RateLimiter::allow
+@@ -87,17 +87,17 @@
+         if now.duration_since(self.window_start) >= Duration::from_secs(60) {
+             self.window_start = now;
+             self.count = 0;
+         }
+ 
+         if self.count >= self.limit_per_minute {
+             false
+         } else {
+-            self.count += 1;
++            self.count -= /* ~ changed by cargo-mutants ~ */ 1;
+             true
+         }
+     }
+ }
+ 
+ /// Main MCP server
+ #[derive(Debug)]
+ pub struct MCPServer {

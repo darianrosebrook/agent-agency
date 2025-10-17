@@ -1,0 +1,16 @@
+mcp-integration/src/server.rs:55:5: replace rate_limited_http_response -> Response<Body> with Response::new(Default::default())
+mcp-integration/src/server.rs:86:9: replace RateLimiter::allow -> bool with true
+mcp-integration/src/server.rs:86:9: replace RateLimiter::allow -> bool with false
+mcp-integration/src/server.rs:87:50: replace >= with < in RateLimiter::allow
+mcp-integration/src/server.rs:92:23: replace >= with < in RateLimiter::allow
+mcp-integration/src/server.rs:95:24: replace += with -= in RateLimiter::allow
+mcp-integration/src/server.rs:95:24: replace += with *= in RateLimiter::allow
+mcp-integration/src/server.rs:182:12: delete ! in MCPServer::spawn_http_server
+mcp-integration/src/server.rs:214:37: replace != with == in MCPServer::spawn_http_server
+mcp-integration/src/server.rs:221:28: delete ! in MCPServer::spawn_http_server
+mcp-integration/src/server.rs:253:9: replace MCPServer::build_io_handler -> IoHandler<()> with IoHandler::new()
+mcp-integration/src/server.rs:315:12: delete ! in MCPServer::spawn_websocket_server
+mcp-integration/src/server.rs:322:44: replace + with - in MCPServer::spawn_websocket_server
+mcp-integration/src/server.rs:322:44: replace + with * in MCPServer::spawn_websocket_server
+mcp-integration/src/server.rs:347:33: replace != with == in MCPServer::spawn_websocket_server
+mcp-integration/src/server.rs:354:24: delete ! in MCPServer::spawn_websocket_server

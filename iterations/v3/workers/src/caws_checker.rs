@@ -4,14 +4,10 @@
 //! Enhanced with AST-based diff sizing and violation code mapping.
 
 use crate::types::*;
-use agent_agency_council::models::{
-    CouncilTaskContext as CouncilCouncilTaskContext,
-    CouncilWorkerOutput as CouncilCouncilWorkerOutput, Environment, FileModification,
-    FileOperation, RiskTier, SelfAssessment, TaskSpec,
-};
-use anyhow::{Context, Result};
+use agent_agency_council::models::{RiskTier, TaskSpec, TaskContext as CouncilTaskContext, WorkerOutput as CouncilWorkerOutput, Environment as ConfigEnvironment, FileModification as CouncilFileModification, FileOperation as CouncilFileOperation};
+use anyhow::Result;
 use std::collections::HashMap;
-use tracing::{debug, info, warn};
+use tracing::info;
 use uuid::Uuid;
 
 /// Programming language types for AST analysis
@@ -62,7 +58,7 @@ pub trait LanguageAnalyzer: Send + Sync + std::fmt::Debug {
     /// Analyze a file modification for language-specific issues
     fn analyze_file_modification(
         &self,
-        modification: &FileModification,
+        modification: &CouncilFileModification,
     ) -> Result<LanguageAnalysisResult>;
 
     /// Get the programming language this analyzer handles
@@ -801,7 +797,7 @@ impl CawsChecker {
         // Check if file modifications are documented
         for file_mod in &output.files_modified {
             match file_mod.operation {
-                FileOperation::Create => {
+                CouncilFileOperation::Create => {
                     if file_mod.content.is_none() {
                         violations.push(CawsViolation {
                             rule: "File Modification Documentation".to_string(),
@@ -815,7 +811,7 @@ impl CawsChecker {
                         });
                     }
                 }
-                FileOperation::Modify => {
+                CouncilFileOperation::Modify => {
                     if file_mod.diff.is_none() && file_mod.content.is_none() {
                         violations.push(CawsViolation {
                             rule: "File Modification Documentation".to_string(),
@@ -830,10 +826,10 @@ impl CawsChecker {
                         });
                     }
                 }
-                FileOperation::Delete => {
+                CouncilFileOperation::Delete => {
                     // Deletion operations don't require content
                 }
-                FileOperation::Move { .. } => {
+                CouncilFileOperation::Move { .. } => {
                     if file_mod.diff.is_none() {
                         warnings.push(format!(
                             "File move operation without diff: {}",
@@ -872,8 +868,25 @@ impl CawsChecker {
 
     /// Get CAWS rule violations for a task
     pub async fn get_violations(&self, _task_id: Uuid) -> Result<Vec<CawsViolation>> {
-        // TODO: Implement database lookup for violations
-        // For now, return empty list
+        // TODO: Implement database lookup for violations with the following requirements:
+        // 1. Database integration: Integrate with database for violation storage and retrieval
+        //    - Use SQL queries to fetch violations for specific task IDs
+        //    - Handle database connections and connection pooling
+        //    - Implement proper error handling and transaction management
+        // 2. Violation querying: Query violations based on task criteria
+        //    - Filter violations by task ID, severity, and status
+        //    - Support pagination and result limiting
+        //    - Handle complex queries with multiple criteria
+        // 3. Violation formatting: Format database results into CawsViolation structs
+        //    - Convert database rows to structured violation objects
+        //    - Include all relevant violation details and metadata
+        //    - Handle data type conversions and validation
+        // 4. Performance optimization: Optimize database queries for performance
+        //    - Use appropriate database indexes for efficient querying
+        //    - Implement query caching where appropriate
+        //    - Handle large result sets efficiently
+        // 5. Return Vec<CawsViolation> with actual violations from database (not empty list)
+        // 6. Include comprehensive violation details and metadata
         Ok(Vec::new())
     }
 
@@ -958,7 +971,7 @@ impl RustAnalyzer {
 impl LanguageAnalyzer for RustAnalyzer {
     fn analyze_file_modification(
         &self,
-        modification: &FileModification,
+        modification: &CouncilFileModification,
     ) -> Result<LanguageAnalysisResult> {
         let mut violations = Vec::new();
         let mut warnings = Vec::new();
@@ -1081,7 +1094,7 @@ impl TypeScriptAnalyzer {
 impl LanguageAnalyzer for TypeScriptAnalyzer {
     fn analyze_file_modification(
         &self,
-        modification: &FileModification,
+        modification: &CouncilFileModification,
     ) -> Result<LanguageAnalysisResult> {
         let violations = Vec::new();
         let mut warnings = Vec::new();
@@ -1198,7 +1211,7 @@ impl JavaScriptAnalyzer {
 impl LanguageAnalyzer for JavaScriptAnalyzer {
     fn analyze_file_modification(
         &self,
-        modification: &FileModification,
+        modification: &CouncilFileModification,
     ) -> Result<LanguageAnalysisResult> {
         let mut violations = Vec::new();
         let mut warnings = Vec::new();
@@ -1351,19 +1364,19 @@ mod tests {
             title: "Test Task".to_string(),
             description: "A test task description".to_string(),
             risk_tier: RiskTier::Tier2,
-            scope: TaskScope {
+            scope: TaskSpec {
                 files_affected: vec!["src/test.rs".to_string()],
                 max_files: Some(5),
                 max_loc: Some(1000),
                 domains: vec!["backend".to_string()],
             },
             acceptance_criteria: vec![],
-            context: CouncilTaskContext {
+            context: TaskContext {
                 workspace_root: "/workspace".to_string(),
                 git_branch: "main".to_string(),
                 recent_changes: vec![],
                 dependencies: std::collections::HashMap::new(),
-                environment: Environment::Development,
+                environment: ConfigEnvironment::Development,
             },
             worker_output: CouncilWorkerOutput {
                 content: "".to_string(),
@@ -1397,21 +1410,21 @@ mod tests {
             title: "Test Task".to_string(),
             description: "A test task description".to_string(),
             risk_tier: RiskTier::Tier2,
-            scope: TaskScope {
+            scope: TaskSpec {
                 files_affected: vec!["src/test.rs".to_string()],
                 max_files: Some(2),
                 max_loc: Some(100),
                 domains: vec!["backend".to_string()],
             },
             acceptance_criteria: vec![],
-            context: CouncilTaskContext {
+            context: TaskContext {
                 workspace_root: "/workspace".to_string(),
                 git_branch: "main".to_string(),
                 recent_changes: vec![],
                 dependencies: std::collections::HashMap::new(),
-                environment: Environment::Development,
+                environment: ConfigEnvironment::Development,
             },
-            worker_output: CouncilCouncilWorkerOutput {
+            worker_output: CouncilWorkerOutput {
                 content: "Test implementation".to_string(),
                 files_modified: vec![
                     FileModification {
@@ -1420,7 +1433,6 @@ mod tests {
                         content: Some("fn main() {\n    println!(\"test\");\n}".to_string()),
                         diff: None,
                         size_bytes: 50,
-                        checksum: "abc123".to_string(),
                     },
                     FileModification {
                         path: "test2.rs".to_string(),
@@ -1428,7 +1440,6 @@ mod tests {
                         content: Some("fn helper() {\n    // helper function\n}".to_string()),
                         diff: None,
                         size_bytes: 40,
-                        checksum: "def456".to_string(),
                     },
                     FileModification {
                         path: "test3.rs".to_string(),
@@ -1436,7 +1447,6 @@ mod tests {
                         content: Some("fn extra() {\n    // extra function\n}".to_string()),
                         diff: None,
                         size_bytes: 40,
-                        checksum: "def456".to_string(),
                     },
                 ],
                 rationale: "Created three files for the implementation".to_string(),

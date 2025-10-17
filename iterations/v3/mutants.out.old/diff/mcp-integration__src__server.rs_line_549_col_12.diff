@@ -1,0 +1,21 @@
+--- mcp-integration/src/server.rs
++++ delete ! in MCPServer::start_websocket_server
+@@ -541,17 +541,17 @@
+                 handle.shutdown().await?;
+                 bail!("HTTP server failed to become ready in time");
+             }
+         }
+     }
+ 
+     /// Start WebSocket server
+     async fn start_websocket_server(&self) -> Result<()> {
+-        if !self.config.server.enable_websocket {
++        if  /* ~ changed by cargo-mutants ~ */self.config.server.enable_websocket {
+             return Ok(());
+         }
+ 
+         info!(
+             "Starting WebSocket server on port {}",
+             self.config.server.port + 1
+         );
+ 

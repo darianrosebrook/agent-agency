@@ -7,7 +7,7 @@ pub mod confidence_manager;
 pub mod content_processor;
 pub mod context_builder;
 pub mod embeddings;
-pub mod enhanced_knowledge_seeker;
+// pub mod enhanced_knowledge_seeker; // Temporarily disabled due to compilation issues
 pub mod information_processor;
 pub mod knowledge_seeker;
 pub mod types;
@@ -17,9 +17,9 @@ pub mod web_scraper;
 pub use confidence_manager::{ConfidenceManager, ConfidenceManagerConfig, IConfidenceManager};
 pub use content_processor::ContentProcessor;
 pub use context_builder::ContextBuilder;
-pub use enhanced_knowledge_seeker::{
-    EnhancedKnowledgeSeeker, EnhancedKnowledgeSeekerConfig, IEnhancedKnowledgeSeeker,
-};
+// pub use enhanced_knowledge_seeker::{
+//     EnhancedKnowledgeSeeker, EnhancedKnowledgeSeekerConfig, IEnhancedKnowledgeSeeker,
+// }; // Temporarily commented due to compilation issues
 pub use information_processor::{
     IInformationProcessor, InformationProcessor, InformationProcessorConfig,
 };

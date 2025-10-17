@@ -1,8 +1,9 @@
 [package]
 name = "embedding-service"
-version = "0.1.0"
-edition = "2021"
-authors = ["@darianrosebrook"]
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
 
 [dependencies]
 tokio = { version = "1.0", features = ["full"] }
