@@ -168,7 +168,27 @@ class EnhancedHiddenTodoAnalyzer:
                 r'\bpending\b.*\bimplementation\b',
             ],
 
-            # Workaround/Hack patterns
+            # TODO: Implement comprehensive workaround and hack pattern detection with the following requirements:
+            # 1. Pattern compilation: Build robust workaround pattern recognition
+            #    - Compile regex patterns for common workaround markers
+            #    - Include hack indicators and temporary solution markers
+            #    - Support multiple languages and commenting styles
+            #    - Handle case variations and common abbreviations
+            # 2. Workaround analysis: Analyze workaround code for technical debt assessment
+            #    - Assess the technical debt introduced by workarounds
+            #    - Identify workarounds that should be replaced with proper solutions
+            #    - Calculate maintenance cost of workaround implementations
+            #    - Prioritize workarounds by impact and frequency of execution
+            # 3. Hack detection: Identify code hacks and anti-patterns
+            #    - Detect code that circumvents proper design patterns
+            #    - Identify hacks that compromise system integrity
+            #    - Flag code that works but violates best practices
+            #    - Generate reports on hack locations and severity
+            # 4. Refactoring recommendations: Provide improvement suggestions
+            #    - Generate specific recommendations for replacing workarounds
+            #    - Suggest proper design patterns to replace hacks
+            #    - Provide code examples for refactoring workarounds
+            #    - Estimate effort and risk for each refactoring task
             'workarounds': [
                 r'\bworkaround\b',
                 r'\bhack\b',

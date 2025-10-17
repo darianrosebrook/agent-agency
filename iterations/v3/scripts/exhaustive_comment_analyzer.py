@@ -1,8 +1,29 @@
 #!/usr/bin/env python3
 """
-Exhaustive Comment Analysis Script
+TODO: Implement comprehensive comment analysis system with the following requirements:
+@description: Build a comprehensive analysis system for ALL comments in project files to discover hidden technical debt, incomplete implementations, and maintenance issues
 
-@description: Comprehensive analysis of ALL comments in project files to discover
+Requirements:
+1. Multi-language comment parsing: Support parsing comments across multiple programming languages
+   - Handle different comment syntaxes (//, /* */, #, --, etc.)
+   - Support single-line and multi-line comments
+   - Parse docstring formats (JSDoc, Rustdoc, Python docstrings)
+   - Handle nested comments and comment blocks
+2. Pattern recognition engine: Implement sophisticated pattern matching for technical debt indicators
+   - Build regex patterns for TODO, FIXME, and other markers
+   - Detect implicit incomplete implementations
+   - Identify placeholder code and stub implementations
+   - Find workaround patterns and hack indicators
+3. Statistical analysis: Generate comprehensive statistics and reports
+   - Calculate comment density and quality metrics
+   - Track patterns across files and modules
+   - Generate trend analysis over time
+   - Provide actionable insights and recommendations
+4. Integration and automation: Support CI/CD integration and automated monitoring
+   - Generate reports in multiple formats (JSON, Markdown, HTML)
+   - Integrate with git hooks and CI pipelines
+   - Support baseline comparisons and regression detection
+   - Provide configuration and customization options
 hidden TODO patterns, incomplete implementations, and technical debt indicators.
 This script goes beyond the standard todo analyzer to capture every possible
 indicator of incomplete work across all supported languages.
