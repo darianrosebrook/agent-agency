@@ -11,6 +11,10 @@ use tracing::{info, warn, error, debug};
 use uuid::Uuid;
 use chrono::Utc;
 use std::time::Instant;
+use std::collections::HashMap;
+use flate2::{write::GzEncoder, read::GzDecoder, Compression};
+use std::io::{Read, Write};
+use sha2::{Sha256, Digest};
 
 /// Context preservation engine
 #[derive(Debug)]
@@ -27,6 +31,10 @@ pub struct ContextPreservationEngine {
     multi_tenant_manager: Arc<MultiTenantManager>,
     /// Engine statistics
     stats: Arc<RwLock<ContextPreservationStats>>,
+    /// Snapshot cache for fast access
+    snapshot_cache: Arc<RwLock<HashMap<String, ContextSnapshot>>>,
+    /// Base snapshots for differential storage
+    base_snapshots: Arc<RwLock<HashMap<String, String>>>,
 }
 
 impl ContextPreservationEngine {
@@ -61,6 +69,8 @@ impl ContextPreservationEngine {
             context_synthesizer,
             multi_tenant_manager,
             stats,
+            snapshot_cache: Arc::new(RwLock::new(HashMap::new())),
+            base_snapshots: Arc::new(RwLock::new(HashMap::new())),
         })
     }
 
@@ -292,6 +302,179 @@ impl ContextPreservationEngine {
         &self.config
     }
 
+    /// Create a context snapshot with compression and differential storage
+    pub async fn create_snapshot(
+        &self,
+        session_id: &str,
+        iteration_number: u32,
+        context: &serde_json::Value,
+    ) -> Result<ContextSnapshot> {
+        let start_time = Instant::now();
+        info!("Creating snapshot for session: {}, iteration: {}", session_id, iteration_number);
+
+        let snapshot_id = self.generate_snapshot_id(session_id, iteration_number);
+        let context_string = serde_json::to_string(context)?;
+        let original_size = context_string.len();
+
+        // Check size limits
+        let size_mb = original_size as f64 / (1024.0 * 1024.0);
+        if size_mb > self.config.storage.max_snapshot_size_mb as f64 {
+            return Err(anyhow::anyhow!(
+                "Context size {:.2}MB exceeds limit of {}MB",
+                size_mb,
+                self.config.storage.max_snapshot_size_mb
+            ));
+        }
+
+        let compressed_data = if self.config.storage.enable_differential_storage {
+            // Try differential storage
+            let mut base_snapshots = self.base_snapshots.write().await;
+            if let Some(base_snapshot_id) = base_snapshots.get(session_id) {
+                if let Some(base_snapshot) = self.snapshot_cache.read().await.get(base_snapshot_id) {
+                    let base_context: serde_json::Value = self.restore_snapshot_internal(base_snapshot).await?;
+                    let diff = self.compute_diff(&base_context, context)?;
+                    let diff_string = serde_json::to_string(&diff)?;
+                    let compressed = self.compress_data(diff_string.as_bytes())?;
+                    let based_on_snapshot_id = Some(base_snapshot_id.clone());
+
+                    // Update base snapshot
+                    base_snapshots.insert(session_id.to_string(), snapshot_id.clone());
+
+                    (compressed, true, based_on_snapshot_id)
+                } else {
+                    // Base snapshot not found, fall back to full compression
+                    let compressed = self.compress_data(context_string.as_bytes())?;
+                    (compressed, false, None)
+                }
+            } else {
+                // No base snapshot, create full compressed snapshot
+                let compressed = self.compress_data(context_string.as_bytes())?;
+                base_snapshots.insert(session_id.to_string(), snapshot_id.clone());
+                (compressed, false, None)
+            }
+        } else {
+            // No differential storage, just compress
+            let compressed = self.compress_data(context_string.as_bytes())?;
+            (compressed, false, None)
+        };
+
+        let compressed_size = compressed_data.0.len();
+        let checksum = if self.config.storage.checksum_validation {
+            Some(self.compute_checksum(&context_string))
+        } else {
+            None
+        };
+
+        let snapshot = ContextSnapshot {
+            id: snapshot_id.clone(),
+            session_id: session_id.to_string(),
+            iteration_number,
+            timestamp: Utc::now(),
+            original_size: original_size as u64,
+            compressed_size: compressed_size as u64,
+            compression_ratio: original_size as f64 / compressed_size as f64,
+            is_diff: compressed_data.1,
+            based_on_snapshot_id: compressed_data.2,
+            checksum,
+            metadata: HashMap::new(),
+        };
+
+        // Cache the snapshot
+        self.snapshot_cache.write().await.insert(snapshot_id.clone(), snapshot.clone());
+
+        let time_ms = start_time.elapsed().as_millis() as u64;
+        info!(
+            "Created snapshot {} for session {} in {}ms (ratio: {:.2})",
+            snapshot_id, session_id, time_ms, snapshot.compression_ratio
+        );
+
+        Ok(snapshot)
+    }
+
+    /// Restore a context snapshot
+    pub async fn restore_snapshot(&self, snapshot_id: &str) -> Result<ContextRestorationResult> {
+        let start_time = Instant::now();
+        info!("Restoring snapshot: {}", snapshot_id);
+
+        let cache = self.snapshot_cache.read().await;
+        let snapshot = match cache.get(snapshot_id) {
+            Some(s) => s.clone(),
+            None => {
+                return Ok(ContextRestorationResult {
+                    snapshot_id: snapshot_id.to_string(),
+                    success: false,
+                    context: None,
+                    restoration_time_ms: start_time.elapsed().as_millis() as u64,
+                    error: Some("Snapshot not found".to_string()),
+                });
+            }
+        };
+
+        let context = self.restore_snapshot_internal(&snapshot).await?;
+        let time_ms = start_time.elapsed().as_millis() as u64;
+
+        info!("Restored snapshot {} in {}ms", snapshot_id, time_ms);
+
+        Ok(ContextRestorationResult {
+            snapshot_id: snapshot_id.to_string(),
+            success: true,
+            context: Some(context),
+            restoration_time_ms: time_ms,
+            error: None,
+        })
+    }
+
+    /// Get snapshot metadata
+    pub async fn get_snapshot_metadata(&self, snapshot_id: &str) -> Option<ContextSnapshot> {
+        self.snapshot_cache.read().await.get(snapshot_id).cloned()
+    }
+
+    /// Clear all snapshots for a session
+    pub async fn clear_session(&self, session_id: &str) -> Result<()> {
+        info!("Clearing snapshots for session: {}", session_id);
+
+        let mut cache = self.snapshot_cache.write().await;
+        let mut base_snapshots = self.base_snapshots.write().await;
+
+        let mut snapshots_to_delete = Vec::new();
+        for (snapshot_id, snapshot) in cache.iter() {
+            if snapshot.session_id == session_id {
+                snapshots_to_delete.push(snapshot_id.clone());
+            }
+        }
+
+        for snapshot_id in snapshots_to_delete {
+            cache.remove(&snapshot_id);
+        }
+
+        base_snapshots.remove(session_id);
+
+        info!("Cleared all snapshots for session: {}", session_id);
+        Ok(())
+    }
+
+    /// Get cache statistics
+    pub async fn get_cache_stats(&self) -> ContextCacheStats {
+        let cache = self.snapshot_cache.read().await;
+        let base_snapshots = self.base_snapshots.read().await;
+
+        let total_snapshots = cache.len();
+        let total_size: u64 = cache.values().map(|s| s.compressed_size).sum();
+        let avg_compression_ratio = if total_snapshots > 0 {
+            cache.values().map(|s| s.compression_ratio).sum::<f64>() / total_snapshots as f64
+        } else {
+            0.0
+        };
+
+        ContextCacheStats {
+            total_snapshots,
+            total_size_bytes: total_size,
+            avg_compression_ratio,
+            base_snapshots_count: base_snapshots.len(),
+            sessions_count: base_snapshots.len(),
+        }
+    }
+
     /// Update engine configuration
     pub async fn update_config(&self, new_config: ContextPreservationConfig) -> Result<()> {
         info!("Updating context preservation engine configuration");
@@ -323,5 +506,133 @@ impl ContextPreservationEngine {
         }
 
         Ok(healthy)
+    }
+
+    /// Generate a unique snapshot ID
+    fn generate_snapshot_id(&self, session_id: &str, iteration_number: u32) -> String {
+        format!("snapshot_{}_{}_{}", session_id, iteration_number, Utc::now().timestamp_millis())
+    }
+
+    /// Compress data using gzip
+    fn compress_data(&self, data: &[u8]) -> Result<Vec<u8>> {
+        if !self.config.storage.enable_compression {
+            return Ok(data.to_vec());
+        }
+
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::new(self.config.storage.compression_level));
+        encoder.write_all(data)?;
+        encoder.finish().map_err(Into::into)
+    }
+
+    /// Decompress data using gzip
+    fn decompress_data(&self, compressed_data: &[u8]) -> Result<Vec<u8>> {
+        if !self.config.storage.enable_compression {
+            return Ok(compressed_data.to_vec());
+        }
+
+        let mut decoder = GzDecoder::new(compressed_data);
+        let mut decompressed = Vec::new();
+        decoder.read_to_end(&mut decompressed)?;
+        Ok(decompressed)
+    }
+
+    /// Compute SHA256 checksum of data
+    fn compute_checksum(&self, data: &str) -> String {
+        let mut hasher = Sha256::new();
+        hasher.update(data.as_bytes());
+        format!("{:x}", hasher.finalize())
+    }
+
+    /// Compute diff between two JSON values
+    fn compute_diff(&self, base: &serde_json::Value, current: &serde_json::Value) -> Result<serde_json::Value> {
+        match (base, current) {
+            (serde_json::Value::Object(base_obj), serde_json::Value::Object(current_obj)) => {
+                let mut diff = serde_json::Map::new();
+
+                // Find added/changed fields
+                for (key, current_value) in current_obj {
+                    if let Some(base_value) = base_obj.get(key) {
+                        if base_value != current_value {
+                            diff.insert(key.clone(), current_value.clone());
+                        }
+                    } else {
+                        diff.insert(key.clone(), current_value.clone());
+                    }
+                }
+
+                // Find deleted fields
+                for (key, _) in base_obj {
+                    if !current_obj.contains_key(key) {
+                        diff.insert(format!("__deleted__{}", key), serde_json::Value::Null);
+                    }
+                }
+
+                Ok(serde_json::Value::Object(diff))
+            }
+            _ => Ok(current.clone()),
+        }
+    }
+
+    /// Apply diff to reconstruct original value
+    fn apply_diff(&self, base: &serde_json::Value, diff: &serde_json::Value) -> Result<serde_json::Value> {
+        match (base, diff) {
+            (serde_json::Value::Object(base_obj), serde_json::Value::Object(diff_obj)) => {
+                let mut result = base_obj.clone();
+
+                for (key, diff_value) in diff_obj {
+                    if key.starts_with("__deleted__") {
+                        let original_key = key.strip_prefix("__deleted__").unwrap();
+                        result.remove(original_key);
+                    } else {
+                        result.insert(key.clone(), diff_value.clone());
+                    }
+                }
+
+                Ok(serde_json::Value::Object(result))
+            }
+            _ => Ok(base.clone()),
+        }
+    }
+
+    /// Internal snapshot restoration (without public API wrapper)
+    async fn restore_snapshot_internal(&self, snapshot: &ContextSnapshot) -> Result<serde_json::Value> {
+        let compressed_data = &snapshot.compressed_data;
+        let decompressed = self.decompress_data(compressed_data)?;
+
+        if snapshot.is_diff {
+            if let Some(base_snapshot_id) = &snapshot.based_on_snapshot_id {
+                // This is a diff, need to restore base and apply diff
+                let cache = self.snapshot_cache.read().await;
+                if let Some(base_snapshot) = cache.get(base_snapshot_id) {
+                    let base_context = self.restore_snapshot_internal(base_snapshot).await?;
+                    let diff_string = String::from_utf8(decompressed)?;
+                    let diff: serde_json::Value = serde_json::from_str(&diff_string)?;
+                    self.apply_diff(&base_context, &diff)
+                } else {
+                    Err(anyhow::anyhow!("Base snapshot {} not found for diff restoration", base_snapshot_id))
+                }
+            } else {
+                Err(anyhow::anyhow!("Diff snapshot missing base snapshot ID"))
+            }
+        } else {
+            // Full snapshot
+            let context_string = String::from_utf8(decompressed)?;
+            let context: serde_json::Value = serde_json::from_str(&context_string)?;
+
+            // Validate checksum if enabled
+            if self.config.storage.checksum_validation {
+                if let Some(expected_checksum) = &snapshot.checksum {
+                    let actual_checksum = self.compute_checksum(&context_string);
+                    if actual_checksum != *expected_checksum {
+                        return Err(anyhow::anyhow!(
+                            "Checksum validation failed for snapshot {}: expected {}, got {}",
+                            snapshot.id, expected_checksum, actual_checksum
+                        ));
+                    }
+                }
+            }
+
+            Ok(context)
+        }
     }
 }

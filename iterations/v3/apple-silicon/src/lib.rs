@@ -11,6 +11,7 @@ pub mod routing;
 pub mod quantization;
 pub mod memory;
 pub mod types;
+pub mod adaptive_resource_manager;
 
 pub use core_ml::CoreMLManager;
 pub use metal_gpu::MetalGPUManager;
@@ -20,6 +21,15 @@ pub use routing::InferenceRouter;
 pub use quantization::QuantizationManager;
 pub use memory::MemoryManager;
 pub use types::*;
+pub use adaptive_resource_manager::{
+    AllocationPlanner, AllocationPlan, AllocationRequest, DeviceKind, DeviceSensors, ModelRegistry,
+    Precision, Tier, WorkloadHint,
+};
+
+/// Convenience function to plan an allocation using a provided planner.
+pub fn adaptive_plan_for<P: AllocationPlanner>(planner: &P, req: &AllocationRequest) -> AllocationPlan {
+    planner.plan(req)
+}
 
 /// Apple Silicon configuration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

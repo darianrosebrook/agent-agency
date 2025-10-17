@@ -22,9 +22,6 @@ regex = "1.10"
 nom = "7.1"  # Parser combinators for claim parsing
 petgraph = "0.6"  # Graph algorithms for claim relationships
 
-# Council integration
-agent-agency-council = { path = "../council" }
-
 # Research integration for evidence gathering
 agent-agency-research = { path = "../research" }
 

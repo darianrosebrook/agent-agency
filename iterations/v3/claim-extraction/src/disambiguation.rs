@@ -10,6 +10,7 @@ use regex::Regex;
 use std::collections::HashMap;
 
 /// Stage 1: Contextual disambiguation of sentences
+#[derive(Debug)]
 pub struct DisambiguationStage {
     ambiguity_detector: AmbiguityDetector,
     context_resolver: ContextResolver,
@@ -124,6 +125,7 @@ impl DisambiguationStage {
 }
 
 /// Detects various types of ambiguities in text
+#[derive(Debug)]
 struct AmbiguityDetector {
     pronoun_regex: Regex,
     technical_term_patterns: Vec<Regex>,
@@ -242,6 +244,7 @@ impl AmbiguityDetector {
 }
 
 /// Resolves ambiguities using available context
+#[derive(Debug)]
 struct ContextResolver {
     domain_context: HashMap<String, String>,
 }
@@ -297,37 +300,4 @@ impl ContextResolver {
     }
 }
 
-/// Represents an ambiguity found in text
-#[derive(Debug, Clone)]
-pub struct Ambiguity {
-    pub ambiguity_type: AmbiguityType,
-    pub position: (usize, usize), // Start and end character positions
-    pub original_text: String,
-    pub possible_resolutions: Vec<String>,
-    pub confidence: f64,
-}
-
-#[derive(Debug, Clone)]
-pub enum AmbiguityType {
-    Pronoun,
-    TechnicalTerm,
-    ScopeBoundary,
-    TemporalReference,
-    Quantifier,
-}
-
-/// Ambiguity that cannot be resolved with available context
-#[derive(Debug, Clone)]
-pub struct UnresolvableAmbiguity {
-    pub ambiguity: Ambiguity,
-    pub reason: UnresolvableReason,
-    pub suggested_context: Vec<String>,
-}
-
-#[derive(Debug, Clone)]
-pub enum UnresolvableReason {
-    InsufficientContext,
-    MultipleValidInterpretations,
-    DomainSpecificUnknown,
-    TemporalUncertainty,
-}
+// Types imported from types.rs - no need to redefine here

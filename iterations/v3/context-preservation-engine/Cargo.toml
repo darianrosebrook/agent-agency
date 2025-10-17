@@ -23,6 +23,8 @@ crossbeam = "0.8"
 parking_lot = "0.12"
 lru = "0.12"
 futures = "0.3"
+flate2 = "1.0"
+sha2 = "0.10"
 
 # Database integration
 sqlx = { workspace = true, features = ["postgres", "chrono", "uuid"] }

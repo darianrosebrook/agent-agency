@@ -28,6 +28,9 @@ parking_lot = "0.12"  # Fast mutexes for coordination
 # Embedding service integration
 embedding-service = { path = "../embedding-service" }
 
+# Claim extraction integration
+claim-extraction = { path = "../claim-extraction" }
+
 [dev-dependencies]
 jsonschema = "0.17"
 serde_json = "1"

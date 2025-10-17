@@ -10,6 +10,7 @@ use uuid::Uuid;
 use chrono::Utc;
 
 /// Stage 4: Verification with evidence collection
+#[derive(Debug)]
 pub struct VerificationStage {
     evidence_collector: EvidenceCollector,
     council_integrator: CouncilIntegrator,
@@ -83,6 +84,7 @@ impl VerificationStage {
 }
 
 /// Collects evidence for claims
+#[derive(Debug)]
 struct EvidenceCollector {
     code_analyzer: CodeAnalyzer,
     test_runner: TestRunner,
@@ -132,6 +134,7 @@ impl EvidenceCollector {
 }
 
 /// Integrates with council for complex verification
+#[derive(Debug)]
 struct CouncilIntegrator {
     // TODO: Add council integration logic
 }
@@ -170,6 +173,7 @@ impl CouncilIntegrator {
 }
 
 // Evidence collection tools (stubs for now)
+#[derive(Debug)]
 struct CodeAnalyzer;
 impl CodeAnalyzer {
     fn new() -> Self { Self }
@@ -192,6 +196,7 @@ impl CodeAnalyzer {
     }
 }
 
+#[derive(Debug)]
 struct TestRunner;
 impl TestRunner {
     fn new() -> Self { Self }
@@ -214,6 +219,7 @@ impl TestRunner {
     }
 }
 
+#[derive(Debug)]
 struct DocumentationReviewer;
 impl DocumentationReviewer {
     fn new() -> Self { Self }
@@ -236,6 +242,7 @@ impl DocumentationReviewer {
     }
 }
 
+#[derive(Debug)]
 struct PerformanceMeasurer;
 impl PerformanceMeasurer {
     fn new() -> Self { Self }
@@ -258,6 +265,7 @@ impl PerformanceMeasurer {
     }
 }
 
+#[derive(Debug)]
 struct SecurityScanner;
 impl SecurityScanner {
     fn new() -> Self { Self }

@@ -29,6 +29,7 @@ use std::time::Instant;
 /// 
 /// Integrates with council debate protocol to provide evidence
 /// for claim verification during judicial evaluation.
+#[derive(Debug)]
 pub struct ClaimExtractionAndVerificationProcessor {
     disambiguation_stage: disambiguation::DisambiguationStage,
     qualification_stage: qualification::QualificationStage,
@@ -145,6 +146,10 @@ impl ClaimExtractionAndVerificationProcessor {
 
         let processing_time_ms = start_time.elapsed().as_millis() as u64;
         
+        // Capture lengths before moving
+        let claims_count = atomic_claims.len() as u32;
+        let evidence_count = verification_evidence.len() as u32;
+        
         let result = ClaimExtractionResult {
             original_sentence: sentence.to_string(),
             disambiguated_sentence,
@@ -154,8 +159,8 @@ impl ClaimExtractionAndVerificationProcessor {
                 processing_time_ms,
                 stages_completed,
                 ambiguities_resolved: 0, // TODO: Track from disambiguation stage
-                claims_extracted: atomic_claims.len() as u32,
-                evidence_collected: verification_evidence.len() as u32,
+                claims_extracted: claims_count,
+                evidence_collected: evidence_count,
                 errors,
             },
         };

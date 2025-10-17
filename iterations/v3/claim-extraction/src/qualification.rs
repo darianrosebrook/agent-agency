@@ -9,6 +9,7 @@ use tracing::{info, warn, debug};
 use regex::Regex;
 
 /// Stage 2: Qualification of verifiable content
+#[derive(Debug)]
 pub struct QualificationStage {
     verifiability_detector: VerifiabilityDetector,
     content_rewriter: ContentRewriter,
@@ -98,6 +99,7 @@ impl QualificationStage {
 }
 
 /// Detects what content can be verified
+#[derive(Debug)]
 struct VerifiabilityDetector {
     factual_patterns: Vec<Regex>,
     technical_patterns: Vec<Regex>,
@@ -240,6 +242,7 @@ impl VerifiabilityDetector {
 }
 
 /// Rewrites content to make it verifiable
+#[derive(Debug)]
 struct ContentRewriter {
     // TODO: Add content rewriting logic
 }
@@ -259,61 +262,4 @@ pub struct VerifiabilityAssessment {
     pub confidence: f64,
 }
 
-/// Content that can be verified
-#[derive(Debug, Clone)]
-pub struct VerifiableContent {
-    pub position: (usize, usize),
-    pub content: String,
-    pub verification_method: VerificationMethod,
-    pub evidence_requirements: Vec<EvidenceRequirement>,
-}
-
-/// Content that cannot be verified
-#[derive(Debug, Clone)]
-pub struct UnverifiableContent {
-    pub position: (usize, usize),
-    pub content: String,
-    pub reason: UnverifiableReason,
-    pub suggested_rewrite: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-pub enum VerificationMethod {
-    CodeAnalysis,
-    TestExecution,
-    DocumentationReview,
-    PerformanceMeasurement,
-    SecurityScan,
-    ConstitutionalCheck, // CAWS compliance
-}
-
-#[derive(Debug, Clone)]
-pub struct EvidenceRequirement {
-    pub evidence_type: EvidenceType,
-    pub minimum_confidence: f64,
-    pub source_requirements: Vec<SourceRequirement>,
-}
-
-#[derive(Debug, Clone)]
-pub struct SourceRequirement {
-    pub source_type: SourceType,
-    pub authority_level: AuthorityLevel,
-    pub freshness_requirement: Option<chrono::Duration>,
-}
-
-#[derive(Debug, Clone)]
-pub enum AuthorityLevel {
-    Primary,    // Direct source
-    Secondary,  // Referenced source
-    Tertiary,   // Background context
-}
-
-#[derive(Debug, Clone)]
-pub enum UnverifiableReason {
-    SubjectiveLanguage,
-    VagueCriteria,
-    MissingContext,
-    OpinionBased,
-    FuturePrediction,
-    EmotionalContent,
-}
+// Types imported from types.rs - no need to redefine here

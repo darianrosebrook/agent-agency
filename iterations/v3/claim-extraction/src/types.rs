@@ -211,7 +211,7 @@ pub enum ClaimExtractionError {
 }
 
 /// Represents an ambiguity found in text
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Ambiguity {
     pub ambiguity_type: AmbiguityType,
     pub position: (usize, usize), // Start and end character positions
@@ -220,7 +220,7 @@ pub struct Ambiguity {
     pub confidence: f64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum AmbiguityType {
     Pronoun,
     TechnicalTerm,
@@ -230,14 +230,14 @@ pub enum AmbiguityType {
 }
 
 /// Ambiguity that cannot be resolved with available context
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct UnresolvableAmbiguity {
     pub ambiguity: Ambiguity,
     pub reason: UnresolvableReason,
     pub suggested_context: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum UnresolvableReason {
     InsufficientContext,
     MultipleValidInterpretations,
@@ -246,7 +246,7 @@ pub enum UnresolvableReason {
 }
 
 /// Content that can be verified
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct VerifiableContent {
     pub position: (usize, usize),
     pub content: String,
@@ -255,7 +255,7 @@ pub struct VerifiableContent {
 }
 
 /// Content that cannot be verified
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct UnverifiableContent {
     pub position: (usize, usize),
     pub content: String,
@@ -263,7 +263,7 @@ pub struct UnverifiableContent {
     pub suggested_rewrite: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum VerificationMethod {
     CodeAnalysis,
     TestExecution,
@@ -273,28 +273,28 @@ pub enum VerificationMethod {
     ConstitutionalCheck, // CAWS compliance
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct EvidenceRequirement {
     pub evidence_type: EvidenceType,
     pub minimum_confidence: f64,
     pub source_requirements: Vec<SourceRequirement>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SourceRequirement {
     pub source_type: SourceType,
     pub authority_level: AuthorityLevel,
     pub freshness_requirement: Option<chrono::Duration>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum AuthorityLevel {
     Primary,    // Direct source
     Secondary,  // Referenced source
     Tertiary,   // Background context
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum UnverifiableReason {
     SubjectiveLanguage,
     VagueCriteria,

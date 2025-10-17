@@ -28,6 +28,9 @@ use orchestration::persistence_postgres::PostgresVerdictWriter;
 use orchestration::orchestrate::orchestrate_task;
 use orchestration::caws_runtime::{WorkingSpec, TaskDescriptor, DiffStats};
 use council::{CouncilConfig, ConsensusCoordinator};
+use council::coordinator::NoopEmitter;
+use orchestration::provenance::{OrchestrationProvenanceEmitter, InMemoryBackend};
+use parking_lot::Mutex;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -40,7 +43,11 @@ async fn main() -> anyhow::Result<()> {
     let diff = DiffStats { files_changed: 1, lines_changed: 5, touched_paths: vec!["src/lib.rs".into()] };
 
     let coord = ConsensusCoordinator::new(CouncilConfig::default());
-    let verdict = orchestrate_task(&spec, &desc, &diff, true, true, &coord, &writer).await?;
+    let council_emitter = NoopEmitter;
+    // Orchestration provenance (example in-memory backend; replace with provenance service client)
+    let orch_backend = InMemoryBackend(Mutex::new(Vec::new()));
+    let orch_emitter = OrchestrationProvenanceEmitter::new(std::sync::Arc::new(orch_backend));
+    let verdict = orchestrate_task(&spec, &desc, &diff, true, true, &coord, &writer, &council_emitter, &orch_emitter).await?;
     println!("Final decision: {:?}", verdict.decision);
     Ok(())
 }

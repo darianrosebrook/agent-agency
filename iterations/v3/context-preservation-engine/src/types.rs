@@ -33,6 +33,16 @@ pub struct ContextStorageConfig {
     pub enable_memory_cache: bool,
     /// Cache size limit (bytes)
     pub cache_size_limit: u64,
+    /// Enable compression
+    pub enable_compression: bool,
+    /// Enable differential storage
+    pub enable_differential_storage: bool,
+    /// Compression level (1-9)
+    pub compression_level: u32,
+    /// Maximum snapshot size in MB
+    pub max_snapshot_size_mb: u32,
+    /// Enable checksum validation
+    pub checksum_validation: bool,
 }
 
 /// Multi-tenant configuration
@@ -515,4 +525,63 @@ pub struct ContextPreservationStats {
     pub synthesis_rate: f64,
     /// Last updated
     pub last_updated: DateTime<Utc>,
+}
+
+/// Context snapshot for differential storage
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextSnapshot {
+    /// Snapshot ID
+    pub id: String,
+    /// Session ID
+    pub session_id: String,
+    /// Iteration number
+    pub iteration_number: u32,
+    /// Timestamp
+    pub timestamp: DateTime<Utc>,
+    /// Original size in bytes
+    pub original_size: u64,
+    /// Compressed size in bytes
+    pub compressed_size: u64,
+    /// Compression ratio
+    pub compression_ratio: f64,
+    /// Whether this is a differential snapshot
+    pub is_diff: bool,
+    /// Base snapshot ID (for diff snapshots)
+    pub based_on_snapshot_id: Option<String>,
+    /// SHA256 checksum
+    pub checksum: Option<String>,
+    /// Compressed context data
+    pub compressed_data: Vec<u8>,
+    /// Additional metadata
+    pub metadata: HashMap<String, String>,
+}
+
+/// Context restoration result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextRestorationResult {
+    /// Snapshot ID
+    pub snapshot_id: String,
+    /// Success flag
+    pub success: bool,
+    /// Restored context (if successful)
+    pub context: Option<serde_json::Value>,
+    /// Time taken to restore (ms)
+    pub restoration_time_ms: u64,
+    /// Error message (if failed)
+    pub error: Option<String>,
+}
+
+/// Cache statistics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextCacheStats {
+    /// Total number of snapshots
+    pub total_snapshots: usize,
+    /// Total size in bytes
+    pub total_size_bytes: u64,
+    /// Average compression ratio
+    pub avg_compression_ratio: f64,
+    /// Number of base snapshots
+    pub base_snapshots_count: usize,
+    /// Number of active sessions
+    pub sessions_count: usize,
 }

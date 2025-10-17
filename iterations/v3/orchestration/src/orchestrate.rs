@@ -4,6 +4,8 @@ use anyhow::Result;
 use council::contracts as api;
 use council::ConsensusCoordinator;
 use crate::persistence::VerdictWriter;
+use council::coordinator::ProvenanceEmitter;
+use crate::provenance::OrchestrationProvenanceEmitter;
 
 fn to_task_spec(desc: &TaskDescriptor) -> council::types::TaskSpec {
     // Expanded mapping to include id/name/risk_tier/scope and deterministic seeds placeholder
@@ -42,7 +44,11 @@ pub async fn orchestrate_task(
     deterministic: bool,
     coordinator: &ConsensusCoordinator,
     writer: &dyn VerdictWriter,
+    emitter: &dyn ProvenanceEmitter,
+    orch_emitter: &OrchestrationProvenanceEmitter,
 ) -> Result<api::FinalVerdict> {
+    // Lifecycle enter provenance
+    orch_emitter.orchestrate_enter(&desc.task_id, &desc.scope_in, deterministic);
     let validator = DefaultValidator;
     let validation = validator
         .validate(spec, desc, diff, &[], &[], tests_added, deterministic, vec![])
@@ -50,6 +56,9 @@ pub async fn orchestrate_task(
         .expect("validation failed");
 
     if let Some(short) = build_short_circuit_verdict(&validation) {
+        orch_emitter.validation_result(&desc.task_id, true);
+        // Emit provenance for validation-based short-circuit decision
+        emitter.on_judge_verdict(uuid::Uuid::nil(), "runtime-validator", 1.0, "short_circuit", 1.0);
         let result = coordinator
             .evaluate_task_with_validation(
                 to_task_spec(desc),
@@ -57,6 +66,8 @@ pub async fn orchestrate_task(
             )
             .await?;
         writer.persist_verdict(&desc.task_id, &result.final_verdict).await.ok();
+        emitter.on_final_verdict(result.task_id, &result.final_verdict);
+        orch_emitter.orchestrate_exit(&desc.task_id, "short_circuit");
         return Ok(result.final_verdict);
     }
 
@@ -64,5 +75,7 @@ pub async fn orchestrate_task(
         .evaluate_task(to_task_spec(desc))
         .await?;
     writer.persist_verdict(&desc.task_id, &result.final_verdict).await.ok();
+    emitter.on_final_verdict(result.task_id, &result.final_verdict);
+    orch_emitter.orchestrate_exit(&desc.task_id, "completed");
     Ok(result.final_verdict)
 }

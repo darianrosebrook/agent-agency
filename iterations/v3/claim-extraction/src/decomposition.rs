@@ -8,6 +8,7 @@ use anyhow::Result;
 use tracing::{info, warn, debug};
 
 /// Stage 3: Decomposition into atomic claims
+#[derive(Debug)]
 pub struct DecompositionStage {
     claim_extractor: ClaimExtractor,
     context_bracket_adder: ContextBracketAdder,
@@ -155,6 +156,7 @@ impl DecompositionStage {
 }
 
 /// Extracts atomic claims from text
+#[derive(Debug)]
 struct ClaimExtractor {
     factual_patterns: Vec<regex::Regex>,
     procedural_patterns: Vec<regex::Regex>,
@@ -167,11 +169,11 @@ impl ClaimExtractor {
         Self {
             factual_patterns: vec![
                 regex::Regex::new(r"\b(is|are|was|were|has|have|had)\s+([^.!?]+)").unwrap(),
-                regex::new(r"\b(contains|includes|excludes|equals|matches|differs)\s+([^.!?]+)").unwrap(),
+                regex::Regex::new(r"\b(contains|includes|excludes|equals|matches|differs)\s+([^.!?]+)").unwrap(),
             ],
             procedural_patterns: vec![
                 regex::Regex::new(r"\b(should|must|can|cannot|will|shall)\s+([^.!?]+)").unwrap(),
-                regex::new(r"\b(processes|handles|manages|creates|updates|deletes)\s+([^.!?]+)").unwrap(),
+                regex::Regex::new(r"\b(processes|handles|manages|creates|updates|deletes)\s+([^.!?]+)").unwrap(),
             ],
             technical_patterns: vec![
                 regex::Regex::new(r"\b(function|method|class|interface|type)\s+([^.!?]+)").unwrap(),
@@ -286,6 +288,7 @@ impl ClaimExtractor {
 }
 
 /// Adds contextual brackets to claims
+#[derive(Debug)]
 struct ContextBracketAdder {
     // TODO: Add context bracket logic
 }
