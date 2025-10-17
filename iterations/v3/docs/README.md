@@ -8,8 +8,10 @@ Contents:
 - interaction-contracts.md
 - open-questions-and-research.md
 - architecture.md
- - contracts/
- - adr/
+- contracts/
+- adr/
+ - caws-runtime-validator.md
+ - database/provenance.md
 
 ADR Index:
 - adr/ADR-001-consensus-weighting.md

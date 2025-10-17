@@ -1,0 +1,39 @@
+[package]
+name = "agent-agency-mcp"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace dependencies
+tokio.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+# MCP-specific dependencies
+jsonrpc-core = "18.0"
+jsonrpc-derive = "18.0"
+jsonrpc-ws-server = "18.0"
+jsonrpc-http-server = "18.0"
+tokio-tungstenite = "0.21"
+futures-util = "0.3"
+url = "2.4"
+uuid.workspace = true
+
+# Tool discovery and management
+dashmap = "5.5"
+parking_lot = "0.12"
+chrono.workspace = true
+
+# CAWS integration
+walkdir = "2.4"
+glob = "0.3"
+toml = "0.8"
+
+[dev-dependencies]
+tokio-test = "0.4"

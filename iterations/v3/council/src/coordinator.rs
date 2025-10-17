@@ -4,6 +4,7 @@
 //! through the debate protocol.
 
 use crate::types::*;
+use crate::contracts as api;
 use crate::debate::DebateProtocol;
 use crate::verdicts::VerdictStore;
 use anyhow::{Context, Result};
@@ -88,6 +89,31 @@ impl ConsensusCoordinator {
 
         info!("Completed council evaluation for task {}", task_id);
         Ok(result)
+    }
+
+    /// Evaluate a task with a precomputed CAWS runtime validation decision.
+    /// If the validation indicates a hard reject, short-circuit without judge evaluation.
+    pub async fn evaluate_task_with_validation(
+        &self,
+        task_spec: TaskSpec,
+        validation: api::FinalVerdict,
+    ) -> Result<ConsensusResult> {
+        let task_id = task_spec.id;
+        if let api::FinalDecision::Reject = validation.decision {
+            let verdict_id = Uuid::new_v4();
+            return Ok(ConsensusResult {
+                task_id,
+                verdict_id,
+                final_verdict: validation,
+                individual_verdicts: std::collections::HashMap::new(),
+                consensus_score: 0.0,
+                debate_rounds: 0,
+                evaluation_time_ms: 0,
+                timestamp: chrono::Utc::now(),
+            });
+        }
+        // Otherwise fall back to full council evaluation
+        self.evaluate_task(task_spec).await
     }
 
     /// Submit task to all judges for parallel evaluation
@@ -259,10 +285,10 @@ impl ConsensusCoordinator {
 
         let final_verdict = if consensus_score >= threshold {
             // Consensus reached
-            self.create_acceptance_verdict(&individual_verdicts, consensus_score)
+            self.create_acceptance_verdict_api(&individual_verdicts, consensus_score)
         } else {
             // Need to resolve conflicts through debate
-            self.resolve_conflicts(task_id, individual_verdicts.clone()).await?
+            self.reject_verdict_api("Consensus not reached")
         };
 
         Ok(ConsensusResult {
@@ -314,29 +340,28 @@ impl ConsensusCoordinator {
     }
 
     /// Create acceptance verdict from individual verdicts
-    fn create_acceptance_verdict(
+    fn create_acceptance_verdict_api(
         &self,
         individual_verdicts: &HashMap<JudgeId, JudgeVerdict>,
         consensus_score: f32,
-    ) -> FinalVerdict {
-        let mut summary_parts = Vec::new();
-        
-        for (judge_id, verdict) in individual_verdicts {
-            match verdict {
-                JudgeVerdict::Pass { reasoning, .. } => {
-                    summary_parts.push(format!("{}: {}", judge_id, reasoning));
-                }
-                JudgeVerdict::Uncertain { reasoning, .. } => {
-                    summary_parts.push(format!("{}: {} (uncertain)", judge_id, reasoning));
-                }
-                _ => {} // Skip failed verdicts for acceptance
-            }
-        }
+    ) -> api::FinalVerdict {
+        let votes: Vec<api::VoteEntry> = individual_verdicts
+            .iter()
+            .map(|(judge_id, verdict)| {
+                let weight = self.get_judge_weight(judge_id);
+                let v = match verdict {
+                    JudgeVerdict::Pass { .. } => api::VerdictSimple::Pass,
+                    JudgeVerdict::Fail { .. } => api::VerdictSimple::Fail,
+                    JudgeVerdict::Uncertain { .. } => api::VerdictSimple::Uncertain,
+                };
+                api::VoteEntry { judge_id: judge_id.clone(), weight, verdict: v }
+            })
+            .collect();
+        api::FinalVerdict { decision: api::FinalDecision::Accept, votes, dissent: String::new(), remediation: vec![], constitutional_refs: vec![] }
+    }
 
-        FinalVerdict::Accepted {
-            confidence: consensus_score,
-            summary: summary_parts.join("; "),
-        }
+    fn reject_verdict_api(&self, reason: &str) -> api::FinalVerdict {
+        api::FinalVerdict { decision: api::FinalDecision::Reject, votes: vec![], dissent: reason.to_string(), remediation: vec![], constitutional_refs: vec![] }
     }
 
     /// Resolve conflicts through debate protocol

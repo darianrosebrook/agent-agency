@@ -13,6 +13,7 @@ flowchart LR
   subgraph Orchestration
     R[Task Router]
     E[Execution Manager]
+    CV[CAWS Runtime Validator]
     Cc[Council Coordinator]
   end
 
@@ -40,6 +41,8 @@ flowchart LR
   Ra --> Ws
   Wg --> E
   Ws --> E
+  E --> CV
+  CV --> Cc
   E --> Cc
   Cc --> Jc
   Cc --> Jt
@@ -72,4 +75,3 @@ See also:
 - components/*.md
 - interaction-contracts.md
 - open-questions-and-research.md
-

@@ -34,4 +34,6 @@ Indexes:
 Notes:
 - Aligns with ADR-003 for JWS signing (Ed25519).
 - Hash chain computed across verdicts per task to detect tampering.
-
+- See migrations: v3/database/migrations/001_create_verdicts.sql
+ - Orchestration provides a VerdictWriter abstraction; see Postgres implementation in v3/orchestration/src/persistence_postgres.rs
+ - Database connectivity via env var: `DATABASE_URL=postgres://user:pass@localhost:5432/agent_agency`

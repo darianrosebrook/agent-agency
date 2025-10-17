@@ -3,7 +3,9 @@ resolver = "2"
 members = [
     "council",
     "workers",
-    "apple-silicon"
+    "apple-silicon",
+    "research",
+    "mcp-integration"
 ]
 
 [workspace.package]
