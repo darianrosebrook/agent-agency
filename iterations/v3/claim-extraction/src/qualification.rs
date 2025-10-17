@@ -1,12 +1,12 @@
 //! Stage 2: Verifiable Content Qualification
-//! 
+//!
 //! Determines which content can be verified and rewrites unverifiable
 //! content to make it verifiable. Based on V2 qualification logic.
 
 use crate::types::*;
 use anyhow::Result;
-use tracing::{info, warn, debug};
 use regex::Regex;
+use tracing::{debug, info, warn};
 
 /// Stage 2: Qualification of verifiable content
 #[derive(Debug)]
@@ -33,7 +33,7 @@ impl QualificationStage {
 
         // Detect verifiable content
         let assessment = self.detect_verifiable_content(sentence, context).await?;
-        
+
         Ok(QualificationResult {
             verifiable_parts: assessment.verifiable_parts,
             unverifiable_parts: assessment.unverifiable_parts,
@@ -51,19 +51,32 @@ impl QualificationStage {
         let mut unverifiable_parts = Vec::new();
 
         // Detect factual claims
-        verifiable_parts.extend(self.verifiability_detector.detect_factual_claims(sentence)?);
+        verifiable_parts.extend(
+            self.verifiability_detector
+                .detect_factual_claims(sentence)?,
+        );
 
         // Detect technical assertions
-        verifiable_parts.extend(self.verifiability_detector.detect_technical_assertions(sentence, context)?);
+        verifiable_parts.extend(
+            self.verifiability_detector
+                .detect_technical_assertions(sentence, context)?,
+        );
 
         // Detect measurable outcomes
-        verifiable_parts.extend(self.verifiability_detector.detect_measurable_outcomes(sentence)?);
+        verifiable_parts.extend(
+            self.verifiability_detector
+                .detect_measurable_outcomes(sentence)?,
+        );
 
         // Detect unverifiable content
-        unverifiable_parts.extend(self.verifiability_detector.detect_unverifiable_content(sentence)?);
+        unverifiable_parts.extend(
+            self.verifiability_detector
+                .detect_unverifiable_content(sentence)?,
+        );
 
         // Calculate overall verifiability
-        let overall_verifiability = self.calculate_overall_verifiability(&verifiable_parts, &unverifiable_parts);
+        let overall_verifiability =
+            self.calculate_overall_verifiability(&verifiable_parts, &unverifiable_parts);
 
         Ok(VerifiabilityAssessment {
             overall_verifiability,
@@ -85,7 +98,7 @@ impl QualificationStage {
         }
 
         let verifiable_ratio = verifiable.len() as f32 / total_parts as f32;
-        
+
         if verifiable_ratio >= 0.8 {
             VerifiabilityLevel::DirectlyVerifiable
         } else if verifiable_ratio >= 0.5 {
@@ -111,17 +124,20 @@ impl VerifiabilityDetector {
     fn new() -> Self {
         Self {
             factual_patterns: vec![
-                Regex::new(r"\b(is|are|was|were|has|have|had|will|should|must|can|cannot)\b").unwrap(),
+                Regex::new(r"\b(is|are|was|were|has|have|had|will|should|must|can|cannot)\b")
+                    .unwrap(),
                 Regex::new(r"\b(contains|includes|excludes|equals|matches|differs)\b").unwrap(),
             ],
             technical_patterns: vec![
                 Regex::new(r"\b(function|method|class|interface|type|API|endpoint)\b").unwrap(),
                 Regex::new(r"\b(implements|extends|inherits|overrides|calls|returns)\b").unwrap(),
-                Regex::new(r"\b(validates|processes|handles|manages|creates|updates|deletes)\b").unwrap(),
+                Regex::new(r"\b(validates|processes|handles|manages|creates|updates|deletes)\b")
+                    .unwrap(),
             ],
             measurable_patterns: vec![
                 Regex::new(r"\b(\d+)\s*(ms|seconds?|minutes?|hours?|bytes?|KB|MB|GB)\b").unwrap(),
-                Regex::new(r"\b(performance|speed|latency|throughput|memory|CPU|bandwidth)\b").unwrap(),
+                Regex::new(r"\b(performance|speed|latency|throughput|memory|CPU|bandwidth)\b")
+                    .unwrap(),
                 Regex::new(r"\b(response time|execution time|processing time)\b").unwrap(),
             ],
             unverifiable_patterns: vec![
@@ -134,7 +150,7 @@ impl VerifiabilityDetector {
 
     fn detect_factual_claims(&self, sentence: &str) -> Result<Vec<VerifiableContent>> {
         let mut claims = Vec::new();
-        
+
         for pattern in &self.factual_patterns {
             for mat in pattern.find_iter(sentence) {
                 claims.push(VerifiableContent {
@@ -153,13 +169,17 @@ impl VerifiabilityDetector {
                 });
             }
         }
-        
+
         Ok(claims)
     }
 
-    fn detect_technical_assertions(&self, sentence: &str, context: &ProcessingContext) -> Result<Vec<VerifiableContent>> {
+    fn detect_technical_assertions(
+        &self,
+        sentence: &str,
+        context: &ProcessingContext,
+    ) -> Result<Vec<VerifiableContent>> {
         let mut assertions = Vec::new();
-        
+
         for pattern in &self.technical_patterns {
             for mat in pattern.find_iter(sentence) {
                 assertions.push(VerifiableContent {
@@ -178,13 +198,13 @@ impl VerifiabilityDetector {
                 });
             }
         }
-        
+
         Ok(assertions)
     }
 
     fn detect_measurable_outcomes(&self, sentence: &str) -> Result<Vec<VerifiableContent>> {
         let mut outcomes = Vec::new();
-        
+
         for pattern in &self.measurable_patterns {
             for mat in pattern.find_iter(sentence) {
                 outcomes.push(VerifiableContent {
@@ -203,13 +223,13 @@ impl VerifiabilityDetector {
                 });
             }
         }
-        
+
         Ok(outcomes)
     }
 
     fn detect_unverifiable_content(&self, sentence: &str) -> Result<Vec<UnverifiableContent>> {
         let mut unverifiable = Vec::new();
-        
+
         for pattern in &self.unverifiable_patterns {
             for mat in pattern.find_iter(sentence) {
                 unverifiable.push(UnverifiableContent {
@@ -220,7 +240,7 @@ impl VerifiabilityDetector {
                 });
             }
         }
-        
+
         Ok(unverifiable)
     }
 

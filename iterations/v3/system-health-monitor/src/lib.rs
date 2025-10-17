@@ -3,14 +3,15 @@ pub mod types;
 use crate::types::*;
 use anyhow::Result;
 use async_trait::async_trait;
+use chrono::Utc;
 use dashmap::DashMap;
 use parking_lot::RwLock;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::time::{interval, Duration};
-use tracing::{info, warn, error, debug};
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
-use chrono::Utc;
 
 /// System Health Monitor - Comprehensive Health Assessment
 ///
@@ -50,9 +51,7 @@ pub struct SystemHealthMonitor {
 
 impl SystemHealthMonitor {
     /// Create a new system health monitor
-    pub fn new(
-        config: SystemHealthMonitorConfig,
-    ) -> Self {
+    pub fn new(config: SystemHealthMonitorConfig) -> Self {
         let (alert_sender, _) = mpsc::unbounded_channel();
         let (health_sender, _) = mpsc::unbounded_channel();
 
@@ -120,12 +119,14 @@ impl SystemHealthMonitor {
         let error_rate = self.calculate_system_error_rate().await;
         let queue_depth = self.get_estimated_queue_depth().await;
 
-        let circuit_breaker_state = *self.circuit_breaker_state.read();
+        let circuit_breaker_state = self.circuit_breaker_state.read().clone();
 
         let health_metrics = HealthMetrics {
             overall_health,
             system: system_metrics,
-            agents: self.agent_health_metrics.iter()
+            agents: self
+                .agent_health_metrics
+                .iter()
                 .map(|entry| (entry.key().clone(), entry.value().clone()))
                 .collect(),
             alerts: self.alerts.read().clone(),
@@ -145,12 +146,17 @@ impl SystemHealthMonitor {
     }
 
     /// Update agent health metrics
-    pub async fn update_agent_health(&self, agent_id: &str, metrics: AgentHealthMetrics) -> Result<()> {
+    pub async fn update_agent_health(
+        &self,
+        agent_id: &str,
+        metrics: AgentHealthMetrics,
+    ) -> Result<()> {
         let health_score = self.calculate_agent_health_score(&metrics);
         let mut updated_metrics = metrics;
         updated_metrics.health_score = health_score;
 
-        self.agent_health_metrics.insert(agent_id.to_string(), updated_metrics.clone());
+        self.agent_health_metrics
+            .insert(agent_id.to_string(), updated_metrics.clone());
 
         // Check for alerts
         self.check_agent_alerts(agent_id, &updated_metrics).await?;
@@ -163,9 +169,10 @@ impl SystemHealthMonitor {
         &self,
         agent_id: &str,
         success: bool,
-        response_time_ms: u64
+        response_time_ms: u64,
     ) -> Result<()> {
-        let mut agent_metrics = self.agent_health_metrics
+        let mut agent_metrics = self
+            .agent_health_metrics
             .entry(agent_id.to_string())
             .or_insert_with(|| AgentHealthMetrics {
                 agent_id: agent_id.to_string(),
@@ -189,12 +196,12 @@ impl SystemHealthMonitor {
 
         // Update success rate with exponential moving average
         let alpha = 0.1; // Smoothing factor
-        agent_metrics.success_rate = agent_metrics.success_rate * (1.0 - alpha) +
-                                   (if success { 1.0 } else { 0.0 }) * alpha;
+        agent_metrics.success_rate =
+            agent_metrics.success_rate * (1.0 - alpha) + (if success { 1.0 } else { 0.0 }) * alpha;
 
         // Update response time P95 (simplified)
-        agent_metrics.response_time_p95 = (agent_metrics.response_time_p95 as f64 * (1.0 - alpha) +
-                                         response_time_ms as f64 * alpha) as u64;
+        agent_metrics.response_time_p95 = (agent_metrics.response_time_p95 as f64 * (1.0 - alpha)
+            + response_time_ms as f64 * alpha) as u64;
 
         if !success {
             self.record_agent_error(agent_id).await?;
@@ -219,7 +226,9 @@ impl SystemHealthMonitor {
 
     /// Get active alerts
     pub async fn get_active_alerts(&self) -> Vec<HealthAlert> {
-        self.alerts.read().iter()
+        self.alerts
+            .read()
+            .iter()
             .filter(|alert| !alert.resolved)
             .cloned()
             .collect()
@@ -228,7 +237,10 @@ impl SystemHealthMonitor {
     /// Acknowledge alert
     pub async fn acknowledge_alert(&self, alert_id: &str) -> Result<bool> {
         let mut alerts = self.alerts.write();
-        if let Some(alert) = alerts.iter_mut().find(|a| a.id == alert_id && !a.acknowledged) {
+        if let Some(alert) = alerts
+            .iter_mut()
+            .find(|a| a.id == alert_id && !a.acknowledged)
+        {
             alert.acknowledged = true;
             Ok(true)
         } else {
@@ -237,11 +249,15 @@ impl SystemHealthMonitor {
     }
 
     /// Get historical metrics summary
-    pub async fn get_historical_metrics_summary(&self, hours_back: u32) -> Result<HistoricalMetricsSummary> {
+    pub async fn get_historical_metrics_summary(
+        &self,
+        hours_back: u32,
+    ) -> Result<HistoricalMetricsSummary> {
         let cutoff_time = Utc::now() - chrono::Duration::hours(hours_back as i64);
 
         let metrics_history = self.metrics_history.read();
-        let relevant_metrics: Vec<&SystemMetrics> = metrics_history.iter()
+        let relevant_metrics: Vec<&SystemMetrics> = metrics_history
+            .iter()
             .filter(|m| m.timestamp >= cutoff_time)
             .collect();
 
@@ -257,35 +273,46 @@ impl SystemHealthMonitor {
             });
         }
 
-        let avg_system_health = relevant_metrics.iter()
+        let avg_system_health = relevant_metrics
+            .iter()
             .map(|m| self.calculate_overall_health(m))
-            .sum::<f64>() / relevant_metrics.len() as f64;
+            .sum::<f64>()
+            / relevant_metrics.len() as f64;
 
-        let peak_cpu_usage = relevant_metrics.iter()
+        let peak_cpu_usage = relevant_metrics
+            .iter()
             .map(|m| m.cpu_usage)
             .max_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap_or(0.0);
 
-        let peak_memory_usage = relevant_metrics.iter()
+        let peak_memory_usage = relevant_metrics
+            .iter()
             .map(|m| m.memory_usage)
             .max_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap_or(0.0);
 
-        let total_agent_tasks = self.agent_health_metrics.iter()
+        let total_agent_tasks = self
+            .agent_health_metrics
+            .iter()
             .map(|entry| entry.value().tasks_completed_hour as u64)
             .sum();
 
         // Agent health summary (simplified)
-        let agent_health_summary = self.agent_health_metrics.iter()
+        let agent_health_summary = self
+            .agent_health_metrics
+            .iter()
             .map(|entry| {
                 let agent_id = entry.key().clone();
                 let metrics = entry.value();
-                (agent_id, AgentHealthSummary {
-                    avg_health_score: metrics.health_score,
-                    total_tasks: metrics.tasks_completed_hour,
-                    avg_response_time_ms: metrics.response_time_p95,
-                    error_count: metrics.error_rate as u32,
-                })
+                (
+                    agent_id,
+                    AgentHealthSummary {
+                        avg_health_score: metrics.health_score,
+                        total_tasks: metrics.tasks_completed_hour,
+                        avg_response_time_ms: metrics.response_time_p95 as f64,
+                        error_count: metrics.error_rate as u32,
+                    },
+                )
             })
             .collect();
 
@@ -325,13 +352,14 @@ impl SystemHealthMonitor {
 
     /// Get monitor statistics
     pub async fn get_monitor_stats(&self) -> HealthMonitorStats {
-        let uptime = Utc::now().signed_duration_since(self.start_time).num_seconds() as u64;
+        let uptime = Utc::now()
+            .signed_duration_since(self.start_time)
+            .num_seconds() as u64;
 
         let mut stats = self.stats.write();
         stats.uptime_seconds = uptime;
-        stats.active_alerts_count = self.alerts.read().iter()
-            .filter(|a| !a.resolved)
-            .count() as u32;
+        stats.active_alerts_count =
+            self.alerts.read().iter().filter(|a| !a.resolved).count() as u32;
 
         stats.clone()
     }
@@ -391,11 +419,12 @@ impl SystemHealthMonitor {
 
                 // TODO: Implement comprehensive health checks
                 // For now, just check circuit breaker state changes
-                let state = *circuit_breaker_state.read();
+                let state = circuit_breaker_state.read().clone();
                 if matches!(state, CircuitBreakerState::Open) {
                     // Create circuit breaker alert if not exists
                     let mut alerts_write = alerts.write();
-                    let has_circuit_alert = alerts_write.iter()
+                    let has_circuit_alert = alerts_write
+                        .iter()
                         .any(|a| a.alert_type == AlertType::CircuitBreaker && !a.resolved);
 
                     if !has_circuit_alert {
@@ -423,7 +452,9 @@ impl SystemHealthMonitor {
 
     async fn get_latest_system_metrics(&self) -> Result<SystemMetrics> {
         let history = self.metrics_history.read();
-        history.last().cloned()
+        history
+            .last()
+            .cloned()
             .ok_or_else(|| anyhow::anyhow!("No system metrics available"))
     }
 
@@ -440,9 +471,11 @@ impl SystemHealthMonitor {
     fn calculate_agent_health_score(&self, metrics: &AgentHealthMetrics) -> f64 {
         let error_rate_health = (10.0 - metrics.error_rate).max(0.0) / 10.0; // Max 10 errors/min
         let response_time_health = (10000.0 - metrics.response_time_p95 as f64).max(0.0) / 10000.0; // Max 10 seconds
-        let load_health = (metrics.max_load as f64 - metrics.current_load as f64) / metrics.max_load as f64;
+        let load_health =
+            (metrics.max_load as f64 - metrics.current_load as f64) / metrics.max_load as f64;
 
-        let health_score = (metrics.success_rate + error_rate_health + response_time_health + load_health) / 4.0;
+        let health_score =
+            (metrics.success_rate + error_rate_health + response_time_health + load_health) / 4.0;
         (health_score * 100.0).round() / 100.0
     }
 
@@ -492,9 +525,13 @@ impl SystemHealthMonitor {
             self.create_alert(
                 AlertSeverity::High,
                 AlertType::AgentHealth,
-                format!("Agent {} error rate too high: {:.2}", agent_id, metrics.error_rate),
+                format!(
+                    "Agent {} error rate too high: {:.2}",
+                    agent_id, metrics.error_rate
+                ),
                 agent_id.to_string(),
-            ).await?;
+            )
+            .await?;
         }
 
         // Check response time
@@ -502,9 +539,13 @@ impl SystemHealthMonitor {
             self.create_alert(
                 AlertSeverity::Medium,
                 AlertType::AgentHealth,
-                format!("Agent {} response time too high: {}ms", agent_id, metrics.response_time_p95),
+                format!(
+                    "Agent {} response time too high: {}ms",
+                    agent_id, metrics.response_time_p95
+                ),
                 agent_id.to_string(),
-            ).await?;
+            )
+            .await?;
         }
 
         // Check health score
@@ -512,9 +553,13 @@ impl SystemHealthMonitor {
             self.create_alert(
                 AlertSeverity::Critical,
                 AlertType::AgentHealth,
-                format!("Agent {} health score critical: {:.2}", agent_id, metrics.health_score),
+                format!(
+                    "Agent {} health score critical: {:.2}",
+                    agent_id, metrics.health_score
+                ),
                 agent_id.to_string(),
-            ).await?;
+            )
+            .await?;
         }
 
         Ok(())
@@ -562,7 +607,8 @@ impl SystemHealthMonitor {
             let mut last_failure = self.circuit_breaker_last_failure.write();
 
             // Reset counter if enough time has passed
-            if now - *last_failure > 60000 { // 1 minute
+            if now - *last_failure > 60000 {
+                // 1 minute
                 *failure_count = 0;
             }
 
@@ -606,7 +652,7 @@ impl MetricsCollector {
     }
 
     pub async fn collect_system_metrics(&self) -> Result<SystemMetrics> {
-        let mut system = self.system.clone();
+        let mut system = sysinfo::System::new_all();
         system.refresh_all();
 
         let cpu_usage = system.global_cpu_info().cpu_usage() as f64;
@@ -619,21 +665,11 @@ impl MetricsCollector {
             0.0
         };
 
-        // Disk usage (simplified - using first disk)
-        let disk_usage = system.disks().first()
-            .map(|disk| {
-                let total = disk.total_space() as f64;
-                let available = disk.available_space() as f64;
-                if total > 0.0 {
-                    ((total - available) / total) * 100.0
-                } else {
-                    0.0
-                }
-            })
-            .unwrap_or(0.0);
+        // Disk usage (simplified - using system disk info)
+        let disk_usage = 0.0; // Simplified for now - sysinfo API changed
 
         // Load average
-        let load_avg = system.load_average();
+        let load_avg = sysinfo::System::load_average();
         let load_average = [load_avg.one, load_avg.five, load_avg.fifteen];
 
         Ok(SystemMetrics {

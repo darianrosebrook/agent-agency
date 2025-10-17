@@ -120,18 +120,25 @@ export class MCPClient extends EventEmitter {
 
         this.pendingRequests.clear();
 
+        // Remove all event listeners to prevent memory leaks
+        this.serverProcess.removeAllListeners();
+
         // Kill the process
         this.serverProcess.kill("SIGTERM");
 
         // Wait for it to exit
         this.serverProcess.on("exit", () => {
           console.log("✅ Server stopped");
+          this.serverProcess = null;
           resolve();
         });
 
         // Force kill after timeout
         setTimeout(() => {
-          this.serverProcess.kill("SIGKILL");
+          if (this.serverProcess) {
+            this.serverProcess.kill("SIGKILL");
+            this.serverProcess = null;
+          }
           resolve();
         }, 5000);
       } else {
@@ -269,8 +276,8 @@ export class MCPClient extends EventEmitter {
       const output = data.toString().trim();
       console.log("📥 Server response:", output);
 
-      // Skip non-JSON lines (log messages, alerts, etc.)
-      if (!output.startsWith("{") && !output.startsWith("[")) {
+      // Skip empty lines and obvious non-JSON lines (log messages, alerts, etc.)
+      if (!output || (!output.startsWith("{") && !output.startsWith("["))) {
         console.log("ℹ️ Skipping non-JSON output:", output);
         return;
       }
@@ -293,8 +300,9 @@ export class MCPClient extends EventEmitter {
           // Handle notification
           this.emit("notification", response);
         }
-      } catch (error) {
-        console.warn("⚠️ Failed to parse server output:", output, error);
+      } catch (_parseError) {
+        // If it starts with [ or { but isn't valid JSON, it's likely a log message
+        console.log("ℹ️ Skipping invalid JSON output:", output);
       }
     };
 

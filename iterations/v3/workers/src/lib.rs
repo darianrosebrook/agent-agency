@@ -3,16 +3,16 @@
 //! Manages a pool of specialized AI workers for task execution, with intelligent
 //! routing, CAWS compliance checking, and performance tracking.
 
+pub mod caws_checker;
+pub mod executor;
 pub mod manager;
 pub mod router;
-pub mod executor;
-pub mod caws_checker;
 pub mod types;
 
+pub use caws_checker::{CawsChecker, ChangeComplexity};
+pub use executor::TaskExecutor;
 pub use manager::WorkerPoolManager;
 pub use router::TaskRouter;
-pub use executor::TaskExecutor;
-pub use caws_checker::{CawsChecker, ChangeComplexity};
 pub use types::*;
 
 /// Worker pool configuration
@@ -58,7 +58,7 @@ pub struct RoutingConfig {
     pub load_balancing: LoadBalancingStrategy,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum RoutingAlgorithm {
     CapabilityBased,
     LoadBalanced,
@@ -79,7 +79,7 @@ impl Default for WorkerPoolConfig {
     fn default() -> Self {
         Self {
             max_concurrent_workers: 10,
-            task_timeout_ms: 30000, // 30 seconds
+            task_timeout_ms: 30000,          // 30 seconds
             health_check_interval_ms: 60000, // 1 minute
             caws_compliance_enabled: true,
             performance_tracking_enabled: true,

@@ -1,6 +1,6 @@
 use crate::types::*;
 use anyhow::Result;
-use tracing::{debug, warn, error};
+use tracing::{debug, error, warn};
 use uuid::Uuid;
 
 /// AST analyzer for language-specific analysis

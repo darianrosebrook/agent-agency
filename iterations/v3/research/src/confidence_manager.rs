@@ -85,8 +85,8 @@ pub struct ConfidenceManagerConfig {
 impl Default for ConfidenceManagerConfig {
     fn default() -> Self {
         Self {
-            default_decay_rate: 0.95, // 5% decay per update
-            reinforcement_step: 0.05, // 5% confidence increase
+            default_decay_rate: 0.95,  // 5% decay per update
+            reinforcement_step: 0.05,  // 5% confidence increase
             skepticism_threshold: 0.5, // Flag for review below this
             max_confidence: 1.0,
             min_confidence: 0.0,
@@ -101,19 +101,19 @@ impl Default for ConfidenceManagerConfig {
 pub trait IConfidenceManager: Send + Sync {
     /// Update knowledge entry with new information (immutable update)
     async fn update_knowledge(&self, request: KnowledgeUpdateRequest) -> Result<()>;
-    
+
     /// Reinforce confidence for existing knowledge
     async fn reinforce_confidence(&self, request: ConfidenceReinforcementRequest) -> Result<()>;
-    
+
     /// Get confidence score for an entity
     async fn get_confidence(&self, entity_id: &str) -> Result<f64>;
-    
+
     /// Get knowledge entry with confidence information
     async fn get_knowledge_entry(&self, entity_id: &str) -> Result<Option<KnowledgeEntry>>;
-    
+
     /// Apply time-based decay to knowledge entries
     async fn apply_decay(&self, entity_ids: Vec<String>) -> Result<()>;
-    
+
     /// Get entries below skepticism threshold
     async fn get_skeptical_entries(&self) -> Result<Vec<KnowledgeEntry>>;
 }
@@ -145,23 +145,28 @@ impl ConfidenceManager {
         let now = Utc::now();
         let time_since_update = now.signed_duration_since(entry.updated_at);
         let hours_since_update = time_since_update.num_hours() as f64;
-        
+
         // Apply exponential decay: confidence * decay_rate^(hours/24)
-        let decay_factor = self.config.default_decay_rate.powf(hours_since_update / 24.0);
+        let decay_factor = self
+            .config
+            .default_decay_rate
+            .powf(hours_since_update / 24.0);
         let decayed_confidence = entry.confidence * decay_factor;
-        
+
         // Ensure confidence stays within bounds
-        decayed_confidence.max(self.config.min_confidence).min(self.config.max_confidence)
+        decayed_confidence
+            .max(self.config.min_confidence)
+            .min(self.config.max_confidence)
     }
 
     /// Calculate reinforcement bonus based on type
     fn calculate_reinforcement_bonus(&self, reinforcement_type: &ReinforcementType) -> f64 {
         match reinforcement_type {
             ReinforcementType::DirectConfirmation => 0.15, // 15% boost
-            ReinforcementType::Consensus => 0.10, // 10% boost
-            ReinforcementType::ExpertValidation => 0.12, // 12% boost
-            ReinforcementType::CrossReference => 0.08, // 8% boost
-            ReinforcementType::TimeDecay => -0.05, // 5% decay
+            ReinforcementType::Consensus => 0.10,          // 10% boost
+            ReinforcementType::ExpertValidation => 0.12,   // 12% boost
+            ReinforcementType::CrossReference => 0.08,     // 8% boost
+            ReinforcementType::TimeDecay => -0.05,         // 5% decay
         }
     }
 
@@ -183,7 +188,7 @@ impl ConfidenceManager {
 impl IConfidenceManager for ConfidenceManager {
     async fn update_knowledge(&self, request: KnowledgeUpdateRequest) -> Result<()> {
         let confidence = self.validate_confidence(request.confidence)?;
-        
+
         let now = Utc::now();
         let entry = KnowledgeEntry {
             id: Uuid::new_v4(),
@@ -203,12 +208,12 @@ impl IConfidenceManager for ConfidenceManager {
         let entity_id = request.entity_id.clone();
         let mut entries = self.knowledge_entries.write().await;
         entries.insert(entity_id.clone(), entry);
-        
+
         info!(
             "Updated knowledge for entity {} with confidence {}",
             entity_id, confidence
         );
-        
+
         Ok(())
     }
 
@@ -327,7 +332,7 @@ mod tests {
         };
 
         manager.update_knowledge(request).await.unwrap();
-        
+
         let confidence = manager.get_confidence("test-entity").await.unwrap();
         assert_eq!(confidence, 0.8);
 
@@ -342,7 +347,7 @@ mod tests {
         };
 
         manager.reinforce_confidence(reinforcement).await.unwrap();
-        
+
         let updated_confidence = manager.get_confidence("test-entity").await.unwrap();
         assert!(updated_confidence > 0.8); // Should be higher due to reinforcement
     }
@@ -365,7 +370,7 @@ mod tests {
         };
 
         manager.update_knowledge(request).await.unwrap();
-        
+
         // Simulate time passing by manually updating the entry
         let mut entries = manager.knowledge_entries.write().await;
         if let Some(entry) = entries.get_mut("test-entity") {
@@ -396,7 +401,7 @@ mod tests {
         };
 
         manager.update_knowledge(request).await.unwrap();
-        
+
         let skeptical_entries = manager.get_skeptical_entries().await.unwrap();
         assert_eq!(skeptical_entries.len(), 1);
         assert_eq!(skeptical_entries[0].entity_id, "low-confidence-entity");

@@ -3,23 +3,23 @@
 //! This crate provides comprehensive integration testing for all V3 components,
 //! including cross-component communication, end-to-end workflows, and performance benchmarks.
 
-pub mod test_utils;
 pub mod fixtures;
-pub mod mocks;
 pub mod helpers;
+pub mod mocks;
+pub mod test_utils;
 
-pub mod council_tests;
-pub mod research_tests;
-pub mod orchestration_tests;
 pub mod claim_extraction_tests;
+pub mod council_tests;
 pub mod cross_component_tests;
 pub mod end_to_end_tests;
+pub mod orchestration_tests;
 pub mod performance_tests;
+pub mod research_tests;
 
-pub use test_utils::*;
 pub use fixtures::*;
-pub use mocks::*;
 pub use helpers::*;
+pub use mocks::*;
+pub use test_utils::*;
 
 /// Integration test configuration
 #[derive(Debug, Clone)]
@@ -162,8 +162,8 @@ impl IntegrationTestRunner {
 
 /// Initialize tracing for integration tests
 pub fn init_test_logging() {
-    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, filter::EnvFilter};
-    
+    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+
     tracing_subscriber::registry()
         .with(
             EnvFilter::try_from_default_env()

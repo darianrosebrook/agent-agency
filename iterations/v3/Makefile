@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: verify test-coverage coverage-report schema-validate clean
+.PHONY: verify test-coverage coverage-report schema-validate clean mutants-mcp mutants-mcp-list mutants-mcp-files
 
 verify: test-coverage schema-validate
 	@echo "Verify complete. Coverage artifacts in v3/target/coverage/."
@@ -27,8 +27,14 @@ clean:
 	cargo clean
 	rm -rf target/coverage
 
-# mutation:
-# 	@echo "Mutation testing stub (disabled). Choose a tool per language:"
-# 	@echo "- Rust: cargo-mutants or equivalent (configure thresholds per tier)"
-# 	@echo "- JS/TS: Stryker (mutation score thresholds per tier)"
-# 	@echo "Enable in CI and here once tooling is selected and configured."
+mutants-mcp:
+	@echo "Running cargo-mutants for agent-agency-mcp (900s timeout)..."
+	@cargo mutants --manifest-path v3/Cargo.toml --package agent-agency-mcp --timeout 900 --no-shuffle --baseline run
+
+mutants-mcp-list:
+	@cargo mutants --manifest-path v3/Cargo.toml --package agent-agency-mcp --list
+
+mutants-mcp-files:
+	@if [ -z "$(FILES)" ]; then echo "Usage: make mutants-mcp-files FILES='mcp-integration/src/*.rs'"; exit 1; fi
+	@echo "Running cargo-mutants for agent-agency-mcp files: $(FILES)"
+	@cargo mutants --manifest-path v3/Cargo.toml --package agent-agency-mcp --file "$(FILES)" --timeout 900 --no-shuffle --baseline run

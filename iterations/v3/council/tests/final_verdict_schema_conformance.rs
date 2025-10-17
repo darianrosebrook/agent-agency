@@ -46,14 +46,14 @@ fn final_verdict_conforms_to_schema() {
         .join("docs")
         .join("contracts")
         .join("final-verdict.schema.json");
-    let schema_str = fs::read_to_string(&schema_path)
-        .expect("failed to read final-verdict.schema.json");
-    let schema_json: serde_json::Value = serde_json::from_str(&schema_str)
-        .expect("invalid schema JSON");
+    let schema_str =
+        fs::read_to_string(&schema_path).expect("failed to read final-verdict.schema.json");
+    let schema_json: serde_json::Value =
+        serde_json::from_str(&schema_str).expect("invalid schema JSON");
 
     // Validate using jsonschema crate
-    let compiled = jsonschema::JSONSchema::compile(&schema_json)
-        .expect("failed to compile JSON Schema");
+    let compiled =
+        jsonschema::JSONSchema::compile(&schema_json).expect("failed to compile JSON Schema");
     if let Err(errors) = compiled.validate(&verdict) {
         for e in errors {
             eprintln!("Schema error: {} at {}", e, e.instance_path);
@@ -61,4 +61,3 @@ fn final_verdict_conforms_to_schema() {
         panic!("FinalVerdict JSON does not conform to schema");
     }
 }
-

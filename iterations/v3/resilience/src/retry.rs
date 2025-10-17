@@ -6,11 +6,11 @@
 //! Ported from V2 retry patterns with Rust optimizations.
 
 use anyhow::Result;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tokio::time::{sleep, Instant};
 use tracing::{debug, error, info, warn};
-use rand::Rng;
 
 /// Retry configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -60,10 +60,10 @@ pub struct RetryStats {
 pub enum RetryError {
     #[error("Max retry attempts exceeded: {attempts}")]
     MaxAttemptsExceeded { attempts: u32 },
-    
+
     #[error("Retry aborted: {reason}")]
     Aborted { reason: String },
-    
+
     #[error("Underlying error: {0}")]
     Underlying(#[from] Box<dyn std::error::Error + Send + Sync>),
 }
@@ -130,12 +130,12 @@ impl RetryExecutor {
                         "Operation succeeded on attempt {} after {}ms (total delay: {}ms)",
                         attempt, attempt_duration, total_delay_ms
                     );
-                    
+
                     return Ok(result);
                 }
                 Err(error) => {
                     let attempt_duration = attempt_start.elapsed().as_millis() as u64;
-                    
+
                     if !self.policy.should_retry(attempt, &error) {
                         error!(
                             "Operation failed after {} attempts (total delay: {}ms): {}",
@@ -172,7 +172,8 @@ impl RetryExecutor {
 
         // Apply exponential backoff
         if self.config.use_exponential_backoff {
-            delay_ms = (delay_ms as f64 * self.config.backoff_multiplier.powi(attempt as i32 - 1)) as u64;
+            delay_ms =
+                (delay_ms as f64 * self.config.backoff_multiplier.powi(attempt as i32 - 1)) as u64;
         }
 
         // Apply maximum delay limit
@@ -195,10 +196,7 @@ impl RetryExecutor {
 }
 
 /// Convenience function to execute an operation with retry
-pub async fn retry<F, T, E>(
-    operation: F,
-    config: RetryConfig,
-) -> Result<T, RetryError>
+pub async fn retry<F, T, E>(operation: F, config: RetryConfig) -> Result<T, RetryError>
 where
     F: Fn() -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<T, E>> + Send>>,
     E: std::error::Error + Send + Sync + 'static,
@@ -232,11 +230,11 @@ mod tests {
     async fn test_retry_success_on_first_attempt() {
         let config = RetryConfig::default();
         let executor = RetryExecutor::with_default_policy(config);
-        
-        let result = executor.execute(|| {
-            Box::pin(async { Ok::<i32, Box<dyn std::error::Error + Send + Sync>>(42) })
-        }).await;
-        
+
+        let result = executor
+            .execute(|| Box::pin(async { Ok::<i32, Box<dyn std::error::Error + Send + Sync>>(42) }))
+            .await;
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 42);
     }
@@ -249,24 +247,26 @@ mod tests {
             ..Default::default()
         };
         let executor = RetryExecutor::with_default_policy(config);
-        
+
         let attempt_count = Arc::new(AtomicU32::new(0));
         let attempt_count_clone = attempt_count.clone();
-        
-        let result = executor.execute(move || {
-            let attempt_count = attempt_count_clone.clone();
-            Box::pin(async move {
-                let current_attempt = attempt_count.fetch_add(1, Ordering::Relaxed) + 1;
-                if current_attempt < 3 {
-                    Err::<i32, Box<dyn std::error::Error + Send + Sync>>(
-                        Box::new(std::io::Error::new(std::io::ErrorKind::Other, "test error"))
-                    )
-                } else {
-                    Ok(42)
-                }
+
+        let result = executor
+            .execute(move || {
+                let attempt_count = attempt_count_clone.clone();
+                Box::pin(async move {
+                    let current_attempt = attempt_count.fetch_add(1, Ordering::Relaxed) + 1;
+                    if current_attempt < 3 {
+                        Err::<i32, Box<dyn std::error::Error + Send + Sync>>(Box::new(
+                            std::io::Error::new(std::io::ErrorKind::Other, "test error"),
+                        ))
+                    } else {
+                        Ok(42)
+                    }
+                })
             })
-        }).await;
-        
+            .await;
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 42);
         assert_eq!(attempt_count.load(Ordering::Relaxed), 3);
@@ -280,15 +280,17 @@ mod tests {
             ..Default::default()
         };
         let executor = RetryExecutor::with_default_policy(config);
-        
-        let result = executor.execute(|| {
-            Box::pin(async {
-                Err::<i32, Box<dyn std::error::Error + Send + Sync>>(
-                    Box::new(std::io::Error::new(std::io::ErrorKind::Other, "test error"))
-                )
+
+        let result = executor
+            .execute(|| {
+                Box::pin(async {
+                    Err::<i32, Box<dyn std::error::Error + Send + Sync>>(Box::new(
+                        std::io::Error::new(std::io::ErrorKind::Other, "test error"),
+                    ))
+                })
             })
-        }).await;
-        
+            .await;
+
         assert!(result.is_err());
         match result.unwrap_err() {
             RetryError::MaxAttemptsExceeded { attempts } => {
@@ -310,12 +312,12 @@ mod tests {
             use_jitter: false,
         };
         let executor = RetryExecutor::with_default_policy(config);
-        
+
         // Test delay calculation
         let delay1 = executor.calculate_delay(1);
         let delay2 = executor.calculate_delay(2);
         let delay3 = executor.calculate_delay(3);
-        
+
         assert_eq!(delay1, 100); // initial_delay_ms
         assert_eq!(delay2, 200); // 100 * 2^1
         assert_eq!(delay3, 400); // 100 * 2^2
@@ -328,11 +330,13 @@ mod tests {
             initial_delay_ms: 10,
             ..Default::default()
         };
-        
-        let result = retry(|| {
-            Box::pin(async { Ok::<i32, Box<dyn std::error::Error + Send + Sync>>(42) })
-        }, config).await;
-        
+
+        let result = retry(
+            || Box::pin(async { Ok::<i32, Box<dyn std::error::Error + Send + Sync>>(42) }),
+            config,
+        )
+        .await;
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 42);
     }

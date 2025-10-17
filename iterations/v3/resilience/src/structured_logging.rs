@@ -146,33 +146,55 @@ impl StructuredLogger {
 
     /// Log an info message
     pub async fn info(&self, message: &str, metadata: Option<HashMap<String, serde_json::Value>>) {
-        self.log(LogLevel::Info, message, None, None, metadata).await;
+        self.log(LogLevel::Info, message, None, None, metadata)
+            .await;
     }
 
     /// Log a warning message
     pub async fn warn(&self, message: &str, metadata: Option<HashMap<String, serde_json::Value>>) {
-        self.log(LogLevel::Warn, message, None, None, metadata).await;
+        self.log(LogLevel::Warn, message, None, None, metadata)
+            .await;
     }
 
     /// Log an error message
-    pub async fn error(&self, message: &str, error: Option<ErrorDetails>, metadata: Option<HashMap<String, serde_json::Value>>) {
-        self.log(LogLevel::Error, message, error, None, metadata).await;
+    pub async fn error(
+        &self,
+        message: &str,
+        error: Option<ErrorDetails>,
+        metadata: Option<HashMap<String, serde_json::Value>>,
+    ) {
+        self.log(LogLevel::Error, message, error, None, metadata)
+            .await;
     }
 
     /// Log a debug message
     pub async fn debug(&self, message: &str, metadata: Option<HashMap<String, serde_json::Value>>) {
-        self.log(LogLevel::Debug, message, None, None, metadata).await;
+        self.log(LogLevel::Debug, message, None, None, metadata)
+            .await;
     }
 
     /// Log a trace message
     pub async fn trace(&self, message: &str, metadata: Option<HashMap<String, serde_json::Value>>) {
-        self.log(LogLevel::Trace, message, None, None, metadata).await;
+        self.log(LogLevel::Trace, message, None, None, metadata)
+            .await;
     }
 
     /// Log performance metrics
-    pub async fn log_performance(&self, operation: &str, duration_ms: u64, metadata: Option<HashMap<String, serde_json::Value>>) {
+    pub async fn log_performance(
+        &self,
+        operation: &str,
+        duration_ms: u64,
+        metadata: Option<HashMap<String, serde_json::Value>>,
+    ) {
         if self.config.enable_performance_logging {
-            self.log(LogLevel::Info, &format!("Operation '{}' completed in {}ms", operation, duration_ms), None, Some(operation.to_string()), metadata).await;
+            self.log(
+                LogLevel::Info,
+                &format!("Operation '{}' completed in {}ms", operation, duration_ms),
+                None,
+                Some(operation.to_string()),
+                metadata,
+            )
+            .await;
         }
     }
 
@@ -273,7 +295,11 @@ pub struct PerformanceTimer {
 
 impl PerformanceTimer {
     /// Create a new performance timer
-    pub fn new(logger: Arc<StructuredLogger>, operation: String, metadata: Option<HashMap<String, serde_json::Value>>) -> Self {
+    pub fn new(
+        logger: Arc<StructuredLogger>,
+        operation: String,
+        metadata: Option<HashMap<String, serde_json::Value>>,
+    ) -> Self {
         Self {
             logger,
             operation,
@@ -285,12 +311,18 @@ impl PerformanceTimer {
     /// Finish timing and log the result
     pub async fn finish(self) {
         let duration = self.start_time.elapsed().unwrap_or_default().as_millis() as u64;
-        self.logger.log_performance(&self.operation, duration, self.metadata).await;
+        self.logger
+            .log_performance(&self.operation, duration, self.metadata)
+            .await;
     }
 }
 
 /// Convenience function to create a performance timer
-pub fn start_timer(logger: Arc<StructuredLogger>, operation: String, metadata: Option<HashMap<String, serde_json::Value>>) -> PerformanceTimer {
+pub fn start_timer(
+    logger: Arc<StructuredLogger>,
+    operation: String,
+    metadata: Option<HashMap<String, serde_json::Value>>,
+) -> PerformanceTimer {
     PerformanceTimer::new(logger, operation, metadata)
 }
 
@@ -333,7 +365,7 @@ mod tests {
     async fn test_structured_logger_creation() {
         let config = LoggingConfig::default();
         let logger = StructuredLogger::new(config);
-        
+
         assert_eq!(logger.get_correlation_id().await, None);
         assert_eq!(logger.get_span_id().await, None);
         assert_eq!(logger.get_trace_id().await, None);
@@ -343,10 +375,10 @@ mod tests {
     async fn test_structured_logger_correlation() {
         let config = LoggingConfig::default();
         let logger = StructuredLogger::new(config);
-        
+
         let correlation_id = "test-correlation-id".to_string();
         logger.set_correlation_id(correlation_id.clone()).await;
-        
+
         assert_eq!(logger.get_correlation_id().await, Some(correlation_id));
     }
 
@@ -354,10 +386,12 @@ mod tests {
     async fn test_structured_logger_metadata() {
         let config = LoggingConfig::default();
         let logger = StructuredLogger::new(config);
-        
-        logger.add_metadata("key1".to_string(), "value1".into()).await;
+
+        logger
+            .add_metadata("key1".to_string(), "value1".into())
+            .await;
         logger.add_metadata("key2".to_string(), 42.into()).await;
-        
+
         let metadata = logger.get_metadata().await;
         assert_eq!(metadata.len(), 2);
         assert_eq!(metadata.get("key1"), Some(&"value1".into()));
@@ -368,7 +402,7 @@ mod tests {
     async fn test_structured_logger_with_component() {
         let config = LoggingConfig::default();
         let logger = StructuredLogger::new(config);
-        
+
         let component_logger = logger.with_component("test-component".to_string());
         assert_eq!(component_logger.config.component_name, "test-component");
     }
@@ -377,22 +411,25 @@ mod tests {
     async fn test_structured_logger_with_correlation_id() {
         let config = LoggingConfig::default();
         let logger = StructuredLogger::new(config);
-        
+
         let correlation_id = "test-correlation-id".to_string();
         let correlated_logger = logger.with_correlation_id(correlation_id.clone()).await;
-        
-        assert_eq!(correlated_logger.get_correlation_id().await, Some(correlation_id));
+
+        assert_eq!(
+            correlated_logger.get_correlation_id().await,
+            Some(correlation_id)
+        );
     }
 
     #[tokio::test]
     async fn test_performance_timer() {
         let config = LoggingConfig::default();
         let logger = Arc::new(StructuredLogger::new(config));
-        
+
         let timer = start_timer(logger.clone(), "test-operation".to_string(), None);
         tokio::time::sleep(Duration::from_millis(10)).await;
         timer.finish().await;
-        
+
         // The timer should have logged the performance
         // In a real test, you might want to capture the log output
     }
@@ -401,7 +438,7 @@ mod tests {
     async fn test_error_logger() {
         let error = std::io::Error::new(std::io::ErrorKind::Other, "test error");
         let error_details = ErrorLogger::create_error_details(&error);
-        
+
         assert_eq!(error_details.error_message, "test error");
         assert!(!error_details.error_type.is_empty());
     }
@@ -411,9 +448,9 @@ mod tests {
         let error = std::io::Error::new(std::io::ErrorKind::Other, "test error");
         let mut context = HashMap::new();
         context.insert("key".to_string(), "value".into());
-        
+
         let error_details = ErrorLogger::create_error_details_with_context(&error, context);
-        
+
         assert_eq!(error_details.error_message, "test error");
         assert_eq!(error_details.context.len(), 1);
         assert_eq!(error_details.context.get("key"), Some(&"value".into()));

@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn, error};
+use tracing::{debug, error, info, warn};
 
 /// Core ML model manager
 #[derive(Debug)]
@@ -28,14 +28,21 @@ impl CoreMLManager {
     }
 
     /// Load a model into Core ML
-    pub async fn load_model(&self, model_path: &str, optimization_target: OptimizationTarget) -> Result<ModelInfo> {
-        info!("Loading Core ML model: {} for {:?}", model_path, optimization_target);
+    pub async fn load_model(
+        &self,
+        model_path: &str,
+        optimization_target: OptimizationTarget,
+    ) -> Result<ModelInfo> {
+        info!(
+            "Loading Core ML model: {} for {:?}",
+            model_path, optimization_target
+        );
 
         // TODO: Implement actual Core ML model loading
         // For now, simulate model loading
-        
+
         let model_name = self.extract_model_name(model_path);
-        
+
         // Simulate loading process
         tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
 
@@ -46,7 +53,11 @@ impl CoreMLManager {
             size_gb: 2.5,
             quantization: QuantizationMethod::INT8,
             optimization_status: OptimizationStatus::Optimized,
-            supported_targets: vec![OptimizationTarget::ANE, OptimizationTarget::GPU, OptimizationTarget::CPU],
+            supported_targets: vec![
+                OptimizationTarget::ANE,
+                OptimizationTarget::GPU,
+                OptimizationTarget::CPU,
+            ],
             performance_metrics: ModelPerformanceMetrics::default(),
             is_loaded: true,
             loaded_target: Some(optimization_target.clone()),
@@ -83,8 +94,10 @@ impl CoreMLManager {
         {
             let mut models = self.loaded_models.write().await;
             if let Some(loaded_model) = models.remove(model_name) {
-                info!("Model {} unloaded (inferences: {}, total time: {}ms)", 
-                    model_name, loaded_model.inference_count, loaded_model.total_inference_time_ms);
+                info!(
+                    "Model {} unloaded (inferences: {}, total time: {}ms)",
+                    model_name, loaded_model.inference_count, loaded_model.total_inference_time_ms
+                );
             } else {
                 return Err(anyhow::anyhow!("Model not found: {}", model_name));
             }
@@ -120,7 +133,7 @@ impl CoreMLManager {
         // TODO: Implement actual Core ML inference
         // For now, simulate inference
         let inference_time = self.simulate_inference_time(&request).await;
-        
+
         let tokens_generated = request.max_tokens.unwrap_or(100);
         let tokens_per_second = (tokens_generated as f32 / inference_time as f32) * 1000.0;
 
@@ -135,7 +148,9 @@ impl CoreMLManager {
             tokens_per_second,
             optimization_target_used: request.optimization_target.clone(),
             resource_usage: resource_usage.clone(),
-            quality_metrics: self.calculate_quality_metrics(&request, &resource_usage).await,
+            quality_metrics: self
+                .calculate_quality_metrics(&request, &resource_usage)
+                .await,
             error: None,
         };
 
@@ -151,8 +166,10 @@ impl CoreMLManager {
             }
         }
 
-        info!("Core ML inference completed: {}ms, {:.1} tokens/sec", 
-            inference_time, tokens_per_second);
+        info!(
+            "Core ML inference completed: {}ms, {:.1} tokens/sec",
+            inference_time, tokens_per_second
+        );
 
         Ok(result)
     }
@@ -170,7 +187,10 @@ impl CoreMLManager {
     }
 
     /// Get model performance metrics
-    pub async fn get_performance_metrics(&self, model_name: &str) -> Result<Option<ModelPerformanceMetrics>> {
+    pub async fn get_performance_metrics(
+        &self,
+        model_name: &str,
+    ) -> Result<Option<ModelPerformanceMetrics>> {
         let metrics = self.performance_metrics.read().await;
         Ok(metrics.get(model_name).cloned())
     }
@@ -182,24 +202,29 @@ impl CoreMLManager {
         target: OptimizationTarget,
         quantization: Option<QuantizationMethod>,
     ) -> Result<ModelInfo> {
-        info!("Optimizing model {} for {:?} with {:?}", model_name, target, quantization);
+        info!(
+            "Optimizing model {} for {:?} with {:?}",
+            model_name, target, quantization
+        );
 
         // TODO: Implement actual model optimization
         // For now, simulate optimization process
-        
+
         tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
 
         // Get current model info
         let mut model_info = {
             let cache = self.model_cache.read().await;
-            cache.get(model_name).cloned()
+            cache
+                .get(model_name)
+                .cloned()
                 .ok_or_else(|| anyhow::anyhow!("Model not found: {}", model_name))?
         };
 
         // Update optimization status
         model_info.optimization_status = OptimizationStatus::Optimized;
         model_info.quantization = quantization.unwrap_or(QuantizationMethod::INT8);
-        
+
         // Update supported targets if needed
         if !model_info.supported_targets.contains(&target) {
             model_info.supported_targets.push(target.clone());
@@ -211,7 +236,10 @@ impl CoreMLManager {
             cache.insert(model_name.to_string(), model_info.clone());
         }
 
-        info!("Model {} optimized successfully for {:?}", model_name, target);
+        info!(
+            "Model {} optimized successfully for {:?}",
+            model_name, target
+        );
         Ok(model_info)
     }
 
@@ -222,7 +250,10 @@ impl CoreMLManager {
         target: OptimizationTarget,
         iterations: u32,
     ) -> Result<Vec<BenchmarkResult>> {
-        info!("Benchmarking model {} on {:?} ({} iterations)", model_name, target, iterations);
+        info!(
+            "Benchmarking model {} on {:?} ({} iterations)",
+            model_name, target, iterations
+        );
 
         let mut results = Vec::new();
 
@@ -287,9 +318,9 @@ impl CoreMLManager {
         // Adjust based on input length and max tokens
         let input_length = request.input.len();
         let max_tokens = request.max_tokens.unwrap_or(100);
-        
+
         let complexity_factor = 1.0 + (input_length as f64 / 1000.0) + (max_tokens as f64 / 1000.0);
-        
+
         (base_time as f64 * complexity_factor) as u64
     }
 
@@ -329,18 +360,23 @@ impl CoreMLManager {
     /// Update performance metrics for a model
     async fn update_performance_metrics(&self, model_name: &str, result: &InferenceResult) {
         let mut metrics = self.performance_metrics.write().await;
-        
+
         if let Some(model_metrics) = metrics.get_mut(model_name) {
             // Update running averages
             let total_inferences = model_metrics.total_inferences + 1;
-            let total_time = model_metrics.average_inference_time_ms * model_metrics.total_inferences as f64 + result.inference_time_ms as f64;
-            let total_tokens_per_sec = model_metrics.average_tokens_per_second * model_metrics.total_inferences as f64 + result.tokens_per_second as f64;
-            
+            let total_time = model_metrics.average_inference_time_ms
+                * model_metrics.total_inferences as f64
+                + result.inference_time_ms as f64;
+            let total_tokens_per_sec = model_metrics.average_tokens_per_second
+                * model_metrics.total_inferences as f64
+                + result.tokens_per_second as f64;
+
             model_metrics.average_inference_time_ms = total_time / total_inferences as f64;
-            model_metrics.average_tokens_per_second = total_tokens_per_sec / total_inferences as f64;
+            model_metrics.average_tokens_per_second =
+                total_tokens_per_sec / total_inferences as f64;
             model_metrics.total_inferences = total_inferences;
             model_metrics.memory_usage_mb = result.resource_usage.memory_used_mb;
-            
+
             // Update efficiency scores based on target used
             match result.optimization_target_used {
                 OptimizationTarget::ANE => model_metrics.ane_efficiency = 0.9,
@@ -373,7 +409,7 @@ impl CoreMLManager {
                 total_inferences: 1,
                 success_rate: 1.0,
             };
-            
+
             metrics.insert(model_name.to_string(), new_metrics);
         }
     }
@@ -409,9 +445,15 @@ mod tests {
     #[tokio::test]
     async fn test_load_model() {
         let manager = CoreMLManager::new();
-        
-        let model_info = manager.load_model("/path/to/model.mlmodel", OptimizationTarget::ANE).await.unwrap();
-        assert_eq!(model_info.optimization_status, OptimizationStatus::Optimized);
+
+        let model_info = manager
+            .load_model("/path/to/model.mlmodel", OptimizationTarget::ANE)
+            .await
+            .unwrap();
+        assert_eq!(
+            model_info.optimization_status,
+            OptimizationStatus::Optimized
+        );
         assert!(model_info.is_loaded);
         assert_eq!(model_info.loaded_target, Some(OptimizationTarget::ANE));
     }
@@ -419,22 +461,32 @@ mod tests {
     #[tokio::test]
     async fn test_unload_model() {
         let manager = CoreMLManager::new();
-        
-        let model_info = manager.load_model("/path/to/model.mlmodel", OptimizationTarget::ANE).await.unwrap();
+
+        let model_info = manager
+            .load_model("/path/to/model.mlmodel", OptimizationTarget::ANE)
+            .await
+            .unwrap();
         assert!(model_info.is_loaded);
-        
+
         manager.unload_model(&model_info.name).await.unwrap();
-        
-        let unloaded_info = manager.get_model_info(&model_info.name).await.unwrap().unwrap();
+
+        let unloaded_info = manager
+            .get_model_info(&model_info.name)
+            .await
+            .unwrap()
+            .unwrap();
         assert!(!unloaded_info.is_loaded);
     }
 
     #[tokio::test]
     async fn test_run_inference() {
         let manager = CoreMLManager::new();
-        
-        let model_info = manager.load_model("/path/to/model.mlmodel", OptimizationTarget::ANE).await.unwrap();
-        
+
+        let model_info = manager
+            .load_model("/path/to/model.mlmodel", OptimizationTarget::ANE)
+            .await
+            .unwrap();
+
         let request = InferenceRequest {
             id: uuid::Uuid::new_v4(),
             model_name: model_info.name.clone(),
@@ -457,28 +509,42 @@ mod tests {
     #[tokio::test]
     async fn test_optimize_model() {
         let manager = CoreMLManager::new();
-        
-        let model_info = manager.load_model("/path/to/model.mlmodel", OptimizationTarget::ANE).await.unwrap();
-        
-        let optimized = manager.optimize_model(
-            &model_info.name,
-            OptimizationTarget::GPU,
-            Some(QuantizationMethod::INT4),
-        ).await.unwrap();
-        
+
+        let model_info = manager
+            .load_model("/path/to/model.mlmodel", OptimizationTarget::ANE)
+            .await
+            .unwrap();
+
+        let optimized = manager
+            .optimize_model(
+                &model_info.name,
+                OptimizationTarget::GPU,
+                Some(QuantizationMethod::INT4),
+            )
+            .await
+            .unwrap();
+
         assert_eq!(optimized.quantization, QuantizationMethod::INT4);
-        assert!(optimized.supported_targets.contains(&OptimizationTarget::GPU));
+        assert!(optimized
+            .supported_targets
+            .contains(&OptimizationTarget::GPU));
     }
 
     #[tokio::test]
     async fn test_benchmark_model() {
         let manager = CoreMLManager::new();
-        
-        let model_info = manager.load_model("/path/to/model.mlmodel", OptimizationTarget::ANE).await.unwrap();
-        
-        let results = manager.benchmark_model(&model_info.name, OptimizationTarget::ANE, 3).await.unwrap();
+
+        let model_info = manager
+            .load_model("/path/to/model.mlmodel", OptimizationTarget::ANE)
+            .await
+            .unwrap();
+
+        let results = manager
+            .benchmark_model(&model_info.name, OptimizationTarget::ANE, 3)
+            .await
+            .unwrap();
         assert_eq!(results.len(), 3);
-        
+
         for result in results {
             assert_eq!(result.model_name, model_info.name);
             assert_eq!(result.optimization_target, OptimizationTarget::ANE);
@@ -489,10 +555,10 @@ mod tests {
     #[test]
     fn test_extract_model_name() {
         let manager = CoreMLManager::new();
-        
+
         let name1 = manager.extract_model_name("/path/to/my_model.mlmodel");
         assert_eq!(name1, "my_model");
-        
+
         let name2 = manager.extract_model_name("simple_model");
         assert_eq!(name2, "simple_model");
     }

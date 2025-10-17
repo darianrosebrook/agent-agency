@@ -315,17 +315,31 @@ export class AccessControlManager {
    */
   private matchesPolicy(request: AccessRequest, policy: AccessPolicy): boolean {
     // Check principal
-    if (!this.matchesPattern(request.principal, policy.principals)) {
+    if (
+      !this.matchesPattern(
+        request.principal,
+        policy.principals,
+        request.principal
+      )
+    ) {
       return false;
     }
 
     // Check resource
-    if (!this.matchesPattern(request.resource, policy.resources)) {
+    if (
+      !this.matchesPattern(
+        request.resource,
+        policy.resources,
+        request.principal
+      )
+    ) {
       return false;
     }
 
     // Check action
-    if (!this.matchesPattern(request.action, policy.actions)) {
+    if (
+      !this.matchesPattern(request.action, policy.actions, request.principal)
+    ) {
       return false;
     }
 
@@ -335,7 +349,11 @@ export class AccessControlManager {
   /**
    * Check if value matches any of the patterns
    */
-  private matchesPattern(value: string, patterns: string[]): boolean {
+  private matchesPattern(
+    value: string,
+    patterns: string[],
+    principal: string
+  ): boolean {
     return patterns.some((pattern) => {
       if (pattern === "*") {
         return true;
@@ -347,7 +365,7 @@ export class AccessControlManager {
       }
 
       if (pattern.includes("${principal}")) {
-        const expanded = pattern.replace("${principal}", value);
+        const expanded = pattern.replace("${principal}", principal);
         return this.matchesSimplePattern(value, expanded);
       }
 

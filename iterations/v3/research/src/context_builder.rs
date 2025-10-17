@@ -5,13 +5,13 @@
 
 use crate::types::*;
 use anyhow::Result;
+use serde::{Deserialize, Serialize};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 use uuid::Uuid;
-use serde::{Deserialize, Serialize};
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 
 /// Context builder for synthesizing research results
 #[derive(Debug)]
@@ -54,15 +54,20 @@ impl CrossReferenceDetector {
         &self,
         results: &[ResearchResult],
     ) -> Result<Vec<CrossReference>> {
-        debug!("Detecting cross-references among {} research results", results.len());
-        
+        debug!(
+            "Detecting cross-references among {} research results",
+            results.len()
+        );
+
         let mut cross_references = Vec::new();
-        
+
         // Simple similarity-based cross-reference detection
         for (i, result1) in results.iter().enumerate() {
             for (j, result2) in results.iter().enumerate() {
-                if i >= j { continue; } // Avoid self-comparison and duplicates
-                
+                if i >= j {
+                    continue;
+                } // Avoid self-comparison and duplicates
+
                 let similarity = self.calculate_similarity(result1, result2);
                 if similarity >= self.similarity_threshold {
                     let cross_ref = CrossReference {
@@ -70,17 +75,20 @@ impl CrossReferenceDetector {
                         target_id: Uuid::new_v4(),
                         relationship: CrossReferenceType::Related,
                         strength: similarity,
-                        context: format!("Similarity between '{}' and '{}'", result1.title, result2.title),
+                        context: format!(
+                            "Similarity between '{}' and '{}'",
+                            result1.title, result2.title
+                        ),
                     };
                     cross_references.push(cross_ref);
                 }
             }
         }
-        
+
         // Sort by strength and limit results
         cross_references.sort_by(|a, b| b.strength.partial_cmp(&a.strength).unwrap());
         cross_references.truncate(self.max_references);
-        
+
         debug!("Found {} cross-references", cross_references.len());
         Ok(cross_references)
     }
@@ -88,31 +96,35 @@ impl CrossReferenceDetector {
     /// Calculate similarity between two research results
     fn calculate_similarity(&self, result1: &ResearchResult, result2: &ResearchResult) -> f32 {
         // Simple keyword-based similarity calculation
-        let keywords1: std::collections::HashSet<String> = result1.content
+        let keywords1: std::collections::HashSet<String> = result1
+            .content
             .split_whitespace()
             .map(|w| w.to_lowercase())
             .collect();
 
-        let keywords2: std::collections::HashSet<String> = result2.content
+        let keywords2: std::collections::HashSet<String> = result2
+            .content
             .split_whitespace()
             .map(|w| w.to_lowercase())
             .collect();
-        
+
         let intersection = keywords1.intersection(&keywords2).count();
         let union = keywords1.union(&keywords2).count();
-        
-        if union == 0 { 0.0 } else { intersection as f32 / union as f32 }
+
+        if union == 0 {
+            0.0
+        } else {
+            intersection as f32 / union as f32
+        }
     }
 }
 
 impl ContextBuilder {
     /// Create a new context builder
     pub fn new(config: ContextSynthesisConfig) -> Self {
-        let cross_reference_detector = CrossReferenceDetector::new(
-            config.similarity_threshold,
-            config.max_cross_references,
-        );
-        
+        let cross_reference_detector =
+            CrossReferenceDetector::new(config.similarity_threshold, config.max_cross_references);
+
         Self {
             config,
             cache: Arc::new(RwLock::new(std::collections::HashMap::new())),
@@ -130,7 +142,8 @@ impl ContextBuilder {
         info!("Synthesizing context for query: {}", query_id);
 
         // Detect cross-references
-        let cross_references = self.cross_reference_detector
+        let cross_references = self
+            .cross_reference_detector
             .detect_cross_references(&results)
             .await?;
 
@@ -177,52 +190,61 @@ impl ContextBuilder {
             "Context synthesis completed for query: {} in {}ms with confidence {:.2}",
             query_id, synthesis_time_ms, synthesis_confidence
         );
-        
+
         Ok((synthesized_context, metrics))
     }
 
     /// Calculate evidence precision score
     fn calculate_evidence_precision(&self, results: &[ResearchResult]) -> f32 {
-        if results.is_empty() { return 0.0; }
-        
+        if results.is_empty() {
+            return 0.0;
+        }
+
         // Simple precision calculation based on source reliability and content quality
-        let total_score: f32 = results.iter().map(|result| {
-            let source_reliability = match &result.source {
-                KnowledgeSource::Documentation(_) => 0.9,
-                KnowledgeSource::CodeRepository(_) => 0.8,
-                KnowledgeSource::WebPage(_) => 0.6,
-                KnowledgeSource::CommunityPost(_) => 0.7,
-                KnowledgeSource::AcademicPaper(_) => 0.9,
-                KnowledgeSource::ApiDocumentation(_) => 0.8,
-                KnowledgeSource::InternalKnowledgeBase(_) => 0.8,
-            };
-            
-            let content_quality = if result.content.len() > 100 { 0.8 } else { 0.5 };
-            source_reliability * content_quality * result.confidence_score
-        }).sum();
-        
+        let total_score: f32 = results
+            .iter()
+            .map(|result| {
+                let source_reliability = match &result.source {
+                    KnowledgeSource::Documentation(_) => 0.9,
+                    KnowledgeSource::CodeRepository(_) => 0.8,
+                    KnowledgeSource::WebPage(_) => 0.6,
+                    KnowledgeSource::CommunityPost(_) => 0.7,
+                    KnowledgeSource::AcademicPaper(_) => 0.9,
+                    KnowledgeSource::ApiDocumentation(_) => 0.8,
+                    KnowledgeSource::InternalKnowledgeBase(_) => 0.8,
+                };
+
+                let content_quality = if result.content.len() > 100 { 0.8 } else { 0.5 };
+                source_reliability * content_quality * result.confidence_score
+            })
+            .sum();
+
         total_score / results.len() as f32
     }
 
     /// Calculate evidence recall score
     fn calculate_evidence_recall(&self, results: &[ResearchResult]) -> f32 {
-        if results.is_empty() { return 0.0; }
-        
+        if results.is_empty() {
+            return 0.0;
+        }
+
         // Simple recall calculation based on coverage of result types
         let unique_sources: std::collections::HashSet<_> = results
             .iter()
             .map(|result| std::mem::discriminant(&result.source))
             .collect();
-        
+
         unique_sources.len() as f32 / 7.0 // 7 source types in KnowledgeSource enum
     }
 
     /// Calculate context reuse rate
     async fn calculate_context_reuse_rate(&self, results: &[ResearchResult]) -> f32 {
         let cache = self.cache.read().await;
-        
-        if cache.is_empty() { return 0.0; }
-        
+
+        if cache.is_empty() {
+            return 0.0;
+        }
+
         let mut reuse_count = 0;
         for result in results {
             let mut hasher = DefaultHasher::new();
@@ -233,7 +255,7 @@ impl ContextBuilder {
                 reuse_count += 1;
             }
         }
-        
+
         reuse_count as f32 / results.len() as f32
     }
 
@@ -244,7 +266,7 @@ impl ContextBuilder {
             .map(|result| std::mem::discriminant(&result.source))
             .collect::<std::collections::HashSet<_>>()
             .len();
-            
+
         let summary = format!(
             "Synthesized context from {} research results covering {} different source types.",
             results.len(),
@@ -269,9 +291,16 @@ impl ContextBuilder {
         recall_score: f32,
     ) -> f32 {
         let evidence_confidence = if results.len() >= 3 { 0.8 } else { 0.5 };
-        let cross_ref_confidence = if !cross_references.is_empty() { 0.7 } else { 0.5 };
-        
-        (evidence_confidence * 0.4 + precision_score * 0.3 + recall_score * 0.2 + cross_ref_confidence * 0.1)
+        let cross_ref_confidence = if !cross_references.is_empty() {
+            0.7
+        } else {
+            0.5
+        };
+
+        (evidence_confidence * 0.4
+            + precision_score * 0.3
+            + recall_score * 0.2
+            + cross_ref_confidence * 0.1)
             .min(1.0)
     }
 

@@ -1,7 +1,7 @@
 use crate::types::*;
 use anyhow::Result;
-use tracing::{debug, warn, error};
 use std::path::Path;
+use tracing::{debug, error, warn};
 
 /// Language support for detecting and analyzing different programming languages
 #[derive(Debug)]

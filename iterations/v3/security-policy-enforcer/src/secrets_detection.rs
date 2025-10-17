@@ -1,9 +1,9 @@
 use crate::types::*;
 use anyhow::Result;
-use regex::Regex;
-use tracing::{debug, warn, error};
-use uuid::Uuid;
 use chrono::Utc;
+use regex::Regex;
+use tracing::{debug, error, warn};
+use uuid::Uuid;
 
 /// Secrets detector
 #[derive(Debug)]
@@ -144,13 +144,13 @@ impl SecretsDetector {
     fn extract_context(&self, line: &str, start: usize, end: usize) -> String {
         let context_start = start.saturating_sub(20);
         let context_end = (end + 20).min(line.len());
-        
+
         let context = &line[context_start..context_end];
-        
+
         // Redact the actual secret
         let secret_part = &line[start..end];
         let redacted_secret = "*".repeat(secret_part.len());
-        
+
         context.replace(secret_part, &redacted_secret)
     }
 
@@ -162,7 +162,7 @@ impl SecretsDetector {
     /// Update secrets detection policy
     pub async fn update_policy(&mut self, new_policy: SecretsDetectionPolicy) -> Result<()> {
         debug!("Updating secrets detection policy");
-        
+
         // Recompile patterns
         let mut secret_patterns = Vec::new();
         for pattern in &new_policy.secret_patterns {
@@ -182,7 +182,7 @@ impl SecretsDetector {
                 }
             }
         }
-        
+
         self.secret_patterns = secret_patterns;
         self.policy = new_policy;
         Ok(())

@@ -3,31 +3,34 @@
 //! Provides optimized inference routing for Apple Silicon hardware including
 //! Apple Neural Engine (ANE), Metal GPU, and CPU cores with thermal management.
 
-pub mod core_ml;
-pub mod metal_gpu;
-pub mod ane;
-pub mod thermal;
-pub mod routing;
-pub mod quantization;
-pub mod memory;
-pub mod types;
 pub mod adaptive_resource_manager;
+pub mod ane;
+pub mod core_ml;
+pub mod memory;
+pub mod metal_gpu;
+pub mod quantization;
+pub mod routing;
+pub mod thermal;
+pub mod types;
 
-pub use core_ml::CoreMLManager;
-pub use metal_gpu::MetalGPUManager;
-pub use ane::ANEManager;
-pub use thermal::ThermalManager;
-pub use routing::InferenceRouter;
-pub use quantization::QuantizationManager;
-pub use memory::MemoryManager;
-pub use types::*;
 pub use adaptive_resource_manager::{
-    AllocationPlanner, AllocationPlan, AllocationRequest, DeviceKind, DeviceSensors, ModelRegistry,
+    AllocationPlan, AllocationPlanner, AllocationRequest, DeviceKind, DeviceSensors, ModelRegistry,
     Precision, Tier, WorkloadHint,
 };
+pub use ane::ANEManager;
+pub use core_ml::CoreMLManager;
+pub use memory::MemoryManager;
+pub use metal_gpu::MetalGPUManager;
+pub use quantization::QuantizationManager;
+pub use routing::InferenceRouter;
+pub use thermal::ThermalManager;
+pub use types::*;
 
 /// Convenience function to plan an allocation using a provided planner.
-pub fn adaptive_plan_for<P: AllocationPlanner>(planner: &P, req: &AllocationRequest) -> AllocationPlan {
+pub fn adaptive_plan_for<P: AllocationPlanner>(
+    planner: &P,
+    req: &AllocationRequest,
+) -> AllocationPlan {
     planner.plan(req)
 }
 

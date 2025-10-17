@@ -1,11 +1,11 @@
 //! Integration tests for the Orchestration system
 
 use anyhow::Result;
-use tracing::{info, debug};
+use tracing::{debug, info};
 
+use crate::fixtures::{TestDataGenerator, TestFixtures};
+use crate::mocks::{MockDatabase, MockEventEmitter, MockFactory, MockMetricsCollector};
 use crate::test_utils::{TestExecutor, TestResult, DEFAULT_TEST_TIMEOUT};
-use crate::fixtures::{TestFixtures, TestDataGenerator};
-use crate::mocks::{MockFactory, MockDatabase, MockEventEmitter, MockMetricsCollector};
 
 /// Orchestration integration test suite
 pub struct OrchestrationIntegrationTests {
@@ -41,7 +41,10 @@ impl OrchestrationIntegrationTests {
         // Test worker selection
         results.push(
             self.executor
-                .execute("orchestration_worker_selection", self.test_worker_selection())
+                .execute(
+                    "orchestration_worker_selection",
+                    self.test_worker_selection(),
+                )
                 .await,
         );
 
@@ -315,11 +318,25 @@ mod tests {
     #[tokio::test]
     async fn test_mock_metrics_setup() {
         let tests = OrchestrationIntegrationTests::new();
-        
-        tests.mock_metrics.record_metric("test_metric".to_string(), 42.0).await.unwrap();
-        tests.mock_metrics.increment_counter("test_counter".to_string()).await.unwrap();
-        
-        assert_eq!(tests.mock_metrics.get_metric("test_metric").await, Some(42.0));
-        assert_eq!(tests.mock_metrics.get_counter("test_counter").await, Some(1));
+
+        tests
+            .mock_metrics
+            .record_metric("test_metric".to_string(), 42.0)
+            .await
+            .unwrap();
+        tests
+            .mock_metrics
+            .increment_counter("test_counter".to_string())
+            .await
+            .unwrap();
+
+        assert_eq!(
+            tests.mock_metrics.get_metric("test_metric").await,
+            Some(42.0)
+        );
+        assert_eq!(
+            tests.mock_metrics.get_counter("test_counter").await,
+            Some(1)
+        );
     }
 }

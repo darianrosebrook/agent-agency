@@ -1,6 +1,6 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ViolationCode {
@@ -61,12 +61,14 @@ pub struct TaskDescriptor {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ValidatorError {
-    #[error("invalid spec: {0}")] InvalidSpec(String),
+    #[error("invalid spec: {0}")]
+    InvalidSpec(String),
 }
 
 #[async_trait::async_trait]
 pub trait CawsRuntimeValidator: Send + Sync {
-    async fn validate(&self,
+    async fn validate(
+        &self,
         spec: &WorkingSpec,
         desc: &TaskDescriptor,
         diff_stats: &DiffStats,
@@ -74,7 +76,7 @@ pub trait CawsRuntimeValidator: Send + Sync {
         language_hints: &[String],
         tests_added: bool,
         deterministic: bool,
-        waivers: Vec<WaiverRef>
+        waivers: Vec<WaiverRef>,
     ) -> Result<ValidationResult, ValidatorError>;
 }
 
@@ -86,7 +88,11 @@ pub struct DiffStats {
 }
 
 pub struct DefaultValidator;
-impl DefaultValidator { fn mde(&self) -> impl MinimalDiffEvaluator { NoopMde } }
+impl DefaultValidator {
+    fn mde(&self) -> impl MinimalDiffEvaluator {
+        NoopMde
+    }
+}
 
 // Minimal Diff Evaluator (stub interface)
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -100,21 +106,30 @@ pub struct MdeFinding {
 
 #[async_trait::async_trait]
 pub trait MinimalDiffEvaluator: Send + Sync {
-    async fn analyze(&self, patches: &[String], language_hints: &[String]) -> Result<MdeFinding, ValidatorError>;
+    async fn analyze(
+        &self,
+        patches: &[String],
+        language_hints: &[String],
+    ) -> Result<MdeFinding, ValidatorError>;
 }
 
 pub struct NoopMde;
 
 #[async_trait::async_trait]
 impl MinimalDiffEvaluator for NoopMde {
-    async fn analyze(&self, _patches: &[String], _language_hints: &[String]) -> Result<MdeFinding, ValidatorError> {
+    async fn analyze(
+        &self,
+        _patches: &[String],
+        _language_hints: &[String],
+    ) -> Result<MdeFinding, ValidatorError> {
         Ok(MdeFinding::default())
     }
 }
 
 #[async_trait::async_trait]
 impl CawsRuntimeValidator for DefaultValidator {
-    async fn validate(&self,
+    async fn validate(
+        &self,
         spec: &WorkingSpec,
         desc: &TaskDescriptor,
         diff_stats: &DiffStats,
@@ -122,25 +137,74 @@ impl CawsRuntimeValidator for DefaultValidator {
         language_hints: &[String],
         tests_added: bool,
         deterministic: bool,
-        waivers: Vec<WaiverRef>
+        waivers: Vec<WaiverRef>,
     ) -> Result<ValidationResult, ValidatorError> {
-        if spec.risk_tier < 1 || spec.risk_tier > 3 { return Err(ValidatorError::InvalidSpec("risk_tier".into())); }
-        let within_budget = diff_stats.files_changed <= spec.change_budget_max_files && diff_stats.lines_changed <= spec.change_budget_max_loc;
-        let within_scope = diff_stats.touched_paths.iter().all(|p| desc.scope_in.iter().any(|s| p.starts_with(s)));
-        let snapshot = ComplianceSnapshot { within_scope, within_budget, tests_added, deterministic };
+        if spec.risk_tier < 1 || spec.risk_tier > 3 {
+            return Err(ValidatorError::InvalidSpec("risk_tier".into()));
+        }
+        let within_budget = diff_stats.files_changed <= spec.change_budget_max_files
+            && diff_stats.lines_changed <= spec.change_budget_max_loc;
+        let within_scope = diff_stats
+            .touched_paths
+            .iter()
+            .all(|p| desc.scope_in.iter().any(|s| p.starts_with(s)));
+        let snapshot = ComplianceSnapshot {
+            within_scope,
+            within_budget,
+            tests_added,
+            deterministic,
+        };
 
         let mut violations = Vec::new();
         // Invoke Minimal Diff Evaluator (stub) for future AST-aware checks
-        let mde = self.mde().analyze(patches, language_hints).await.unwrap_or_default();
+        let mde = self
+            .mde()
+            .analyze(patches, language_hints)
+            .await
+            .unwrap_or_default();
         // If suggested_split or excessive ast_change_units, hint remediation via budget violation context
         if mde.suggested_split || mde.ast_change_units > 1000 {
-            violations.push(Violation { code: ViolationCode::BudgetExceeded, message: "Large or complex diff detected".into(), remediation: Some("Split changes and reduce AST-level churn".into())});
+            violations.push(Violation {
+                code: ViolationCode::BudgetExceeded,
+                message: "Large or complex diff detected".into(),
+                remediation: Some("Split changes and reduce AST-level churn".into()),
+            });
         }
-        if !within_scope { violations.push(Violation { code: ViolationCode::OutOfScope, message: "Touched file outside scope".into(), remediation: Some("Restrict changes to scope.in or update working spec".into())}); }
-        if !within_budget { violations.push(Violation { code: ViolationCode::BudgetExceeded, message: "Change budget exceeded".into(), remediation: Some("Split PR or request budget waiver".into())}); }
-        if !tests_added { violations.push(Violation { code: ViolationCode::MissingTests, message: "No tests added".into(), remediation: Some("Add failing test first per CAWS".into())}); }
-        if !deterministic { violations.push(Violation { code: ViolationCode::NonDeterministic, message: "Non-deterministic code detected".into(), remediation: Some("Inject time/uuid/random".into())}); }
+        if !within_scope {
+            violations.push(Violation {
+                code: ViolationCode::OutOfScope,
+                message: "Touched file outside scope".into(),
+                remediation: Some("Restrict changes to scope.in or update working spec".into()),
+            });
+        }
+        if !within_budget {
+            violations.push(Violation {
+                code: ViolationCode::BudgetExceeded,
+                message: "Change budget exceeded".into(),
+                remediation: Some("Split PR or request budget waiver".into()),
+            });
+        }
+        if !tests_added {
+            violations.push(Violation {
+                code: ViolationCode::MissingTests,
+                message: "No tests added".into(),
+                remediation: Some("Add failing test first per CAWS".into()),
+            });
+        }
+        if !deterministic {
+            violations.push(Violation {
+                code: ViolationCode::NonDeterministic,
+                message: "Non-deterministic code detected".into(),
+                remediation: Some("Inject time/uuid/random".into()),
+            });
+        }
 
-        Ok(ValidationResult { task_id: desc.task_id.clone(), snapshot, violations, waivers, validated_at: Utc::now() })
+        Ok(ValidationResult {
+            task_id: desc.task_id.clone(),
+            snapshot,
+            violations,
+            waivers,
+            validated_at: Utc::now(),
+        })
     }
 }

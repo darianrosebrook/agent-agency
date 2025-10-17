@@ -1,16 +1,19 @@
 //! Evidence Enrichment for Council Evaluation
-//! 
+//!
 //! Integrates claim extraction pipeline with council evaluation process to provide
 //! evidence-backed judge verdicts. Based on V2's verification engine patterns.
 
-use crate::types::{JudgeVerdict, Evidence as CouncilEvidence, EvidenceSource as CouncilEvidenceSource, ClaimExtractionAndVerificationProcessor, EvidenceItem};
-use crate::models::TaskSpec;
 use crate::claim_extraction::ClaimExtractor;
+use crate::models::TaskSpec;
+use crate::types::{
+    ClaimExtractionAndVerificationProcessor, Evidence as CouncilEvidence, EvidenceItem,
+    EvidenceSource as CouncilEvidenceSource, JudgeVerdict,
+};
 use anyhow::Result;
-use tracing::{info, debug, warn};
-use uuid::Uuid;
 use chrono::Utc;
 use std::collections::HashMap;
+use tracing::{debug, info, warn};
+use uuid::Uuid;
 
 /// Evidence enrichment coordinator for council evaluations
 pub struct EvidenceEnrichmentCoordinator {
@@ -43,11 +46,15 @@ impl EvidenceEnrichmentCoordinator {
         let description_worker_output = serde_json::json!({
             "content": task_spec.description
         });
-        if let Ok(description_result) = self.claim_processor.process_claim_extraction_and_verification(
-            description_worker_output,
-            context.clone(),
-            None,
-        ).await {
+        if let Ok(description_result) = self
+            .claim_processor
+            .process_claim_extraction_and_verification(
+                description_worker_output,
+                context.clone(),
+                None,
+            )
+            .await
+        {
             // For now, we'll create placeholder evidence since the result structure is different
             let description_evidence = vec![CouncilEvidence {
                 source: CouncilEvidenceSource::CodeAnalysis,
@@ -62,11 +69,11 @@ impl EvidenceEnrichmentCoordinator {
         let output_worker_output = serde_json::json!({
             "content": task_spec.worker_output.content
         });
-        if let Ok(_output_result) = self.claim_processor.process_claim_extraction_and_verification(
-            output_worker_output,
-            context.clone(),
-            None,
-        ).await {
+        if let Ok(_output_result) = self
+            .claim_processor
+            .process_claim_extraction_and_verification(output_worker_output, context.clone(), None)
+            .await
+        {
             let output_evidence = vec![CouncilEvidence {
                 source: CouncilEvidenceSource::CodeAnalysis,
                 content: task_spec.worker_output.content.clone(),
@@ -81,11 +88,15 @@ impl EvidenceEnrichmentCoordinator {
             let criterion_worker_output = serde_json::json!({
                 "content": criterion.description
             });
-            if let Ok(_criterion_result) = self.claim_processor.process_claim_extraction_and_verification(
-                criterion_worker_output,
-                context.clone(),
-                None,
-            ).await {
+            if let Ok(_criterion_result) = self
+                .claim_processor
+                .process_claim_extraction_and_verification(
+                    criterion_worker_output,
+                    context.clone(),
+                    None,
+                )
+                .await
+            {
                 let criterion_evidence = vec![CouncilEvidence {
                     source: CouncilEvidenceSource::CodeAnalysis,
                     content: criterion.description.clone(),
@@ -97,9 +108,14 @@ impl EvidenceEnrichmentCoordinator {
         }
 
         // Cache evidence for this task
-        self.evidence_cache.insert(task_spec.id.to_string(), all_evidence.clone());
+        self.evidence_cache
+            .insert(task_spec.id.to_string(), all_evidence.clone());
 
-        info!("Enriched {} evidence items for task {}", all_evidence.len(), task_spec.id);
+        info!(
+            "Enriched {} evidence items for task {}",
+            all_evidence.len(),
+            task_spec.id
+        );
         Ok(all_evidence)
     }
 
@@ -115,26 +131,42 @@ impl EvidenceEnrichmentCoordinator {
         task_id: &str,
         evidence: &[CouncilEvidence],
     ) -> Result<()> {
-        debug!("Enhancing verdict with {} evidence items for task {}", evidence.len(), task_id);
+        debug!(
+            "Enhancing verdict with {} evidence items for task {}",
+            evidence.len(),
+            task_id
+        );
 
         // Calculate evidence-based confidence adjustment
         let evidence_confidence = self.calculate_evidence_confidence(evidence);
-        
+
         // Add evidence summary to verdict reasoning
         let evidence_summary = self.generate_evidence_summary(evidence);
-        
+
         // Update verdict based on evidence strength
         match verdict {
-            JudgeVerdict::Pass { reasoning, confidence, evidence: verdict_evidence } => {
+            JudgeVerdict::Pass {
+                reasoning,
+                confidence,
+                evidence: verdict_evidence,
+            } => {
                 *reasoning = format!("{} Evidence: {}", reasoning, evidence_summary);
                 *confidence = (*confidence * 0.7 + evidence_confidence * 0.3).min(1.0);
                 verdict_evidence.extend(evidence.iter().cloned());
             }
-            JudgeVerdict::Fail { reasoning, evidence: verdict_evidence, .. } => {
+            JudgeVerdict::Fail {
+                reasoning,
+                evidence: verdict_evidence,
+                ..
+            } => {
                 *reasoning = format!("{} Evidence: {}", reasoning, evidence_summary);
                 verdict_evidence.extend(evidence.iter().cloned());
             }
-            JudgeVerdict::Uncertain { reasoning, evidence: verdict_evidence, .. } => {
+            JudgeVerdict::Uncertain {
+                reasoning,
+                evidence: verdict_evidence,
+                ..
+            } => {
                 *reasoning = format!("{} Evidence: {}", reasoning, evidence_summary);
                 verdict_evidence.extend(evidence.iter().cloned());
             }
@@ -198,7 +230,8 @@ impl EvidenceEnrichmentCoordinator {
 
         // Bonus for recent evidence
         let now = Utc::now();
-        let recent_evidence_count = evidence.iter()
+        let recent_evidence_count = evidence
+            .iter()
             .filter(|e| (now - e.timestamp).num_hours() < 24)
             .count();
         let recency_bonus = if recent_evidence_count > 0 {
@@ -216,9 +249,8 @@ impl EvidenceEnrichmentCoordinator {
             return "No supporting evidence found".to_string();
         }
 
-        let source_counts: HashMap<CouncilEvidenceSource, usize> = evidence
-            .iter()
-            .fold(HashMap::new(), |mut acc, e| {
+        let source_counts: HashMap<CouncilEvidenceSource, usize> =
+            evidence.iter().fold(HashMap::new(), |mut acc, e| {
                 *acc.entry(e.source.clone()).or_insert(0) += 1;
                 acc
             });
@@ -229,10 +261,15 @@ impl EvidenceEnrichmentCoordinator {
             .collect::<Vec<_>>()
             .join(", ");
 
-        let avg_relevance = evidence.iter().map(|e| e.relevance).sum::<f32>() / evidence.len() as f32;
+        let avg_relevance =
+            evidence.iter().map(|e| e.relevance).sum::<f32>() / evidence.len() as f32;
 
-        format!("{} sources ({}), avg relevance: {:.2}", 
-                source_summary, evidence.len(), avg_relevance)
+        format!(
+            "{} sources ({}), avg relevance: {:.2}",
+            source_summary,
+            evidence.len(),
+            avg_relevance
+        )
     }
 
     /// Format evidence source for human-readable output

@@ -12,9 +12,11 @@ impl RegressionDetector {
         Self {}
     }
 
-    pub async fn check_for_regressions(&self, _results: &[BenchmarkResult]) -> Result<Vec<RegressionAlert>> {
+    pub async fn check_for_regressions(
+        &self,
+        _results: &[BenchmarkResult],
+    ) -> Result<Vec<RegressionAlert>> {
         // TODO: Implement regression detection
         Ok(vec![])
     }
 }
-

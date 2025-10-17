@@ -1,22 +1,22 @@
 //! Embedding provider trait and implementations
 
-use async_trait::async_trait;
-use anyhow::Result;
-use std::hash::{Hash, Hasher};
 use crate::types::*;
+use anyhow::Result;
+use async_trait::async_trait;
+use std::hash::{Hash, Hasher};
 
 /// Trait for embedding providers
 #[async_trait]
 pub trait EmbeddingProvider: Send + Sync {
     /// Generate embeddings for a batch of texts
     async fn generate_embeddings(&self, texts: &[String]) -> Result<Vec<EmbeddingVector>>;
-    
+
     /// Get the dimension of embeddings produced by this provider
     fn dimension(&self) -> usize;
-    
+
     /// Get the model name
     fn model_name(&self) -> &str;
-    
+
     /// Check if the provider is available
     async fn health_check(&self) -> Result<bool>;
 }
@@ -51,14 +51,15 @@ impl OllamaEmbeddingProvider {
 impl EmbeddingProvider for OllamaEmbeddingProvider {
     async fn generate_embeddings(&self, texts: &[String]) -> Result<Vec<EmbeddingVector>> {
         let mut embeddings = Vec::new();
-        
+
         for text in texts {
             let request_body = serde_json::json!({
                 "model": self.model_name,
                 "prompt": text
             });
 
-            let response = self.client
+            let response = self
+                .client
                 .post(&format!("{}/api/embeddings", self.base_url))
                 .json(&request_body)
                 .send()
@@ -101,7 +102,8 @@ impl EmbeddingProvider for OllamaEmbeddingProvider {
     }
 
     async fn health_check(&self) -> Result<bool> {
-        let response = self.client
+        let response = self
+            .client
             .get(&format!("{}/api/tags", self.base_url))
             .send()
             .await?;
@@ -135,7 +137,7 @@ impl EmbeddingProvider for DummyEmbeddingProvider {
                 let mut hasher = std::collections::hash_map::DefaultHasher::new();
                 std::hash::Hash::hash(text, &mut hasher);
                 let hash = hasher.finish();
-                
+
                 // Generate deterministic vector from hash
                 (0..self.dimension)
                     .map(|i| {

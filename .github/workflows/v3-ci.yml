@@ -1,0 +1,207 @@
+name: v3 CI
+
+on:
+  push:
+    paths:
+      - 'iterations/v3/**'
+      - '.github/workflows/v3-ci.yml'
+  pull_request:
+    paths:
+      - 'iterations/v3/**'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint_rust:
+    name: Rust Lint (clippy + fmt)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy,rustfmt
+      - name: clippy
+        run: |
+          cd iterations/v3
+          cargo clippy --all --all-features -- -D warnings
+      - name: fmt
+        run: |
+          cd iterations/v3
+          cargo fmt --all -- --check
+
+  lint_js:
+    name: JS/TS Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint --if-present
+
+  typecheck_js:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run typecheck --if-present
+
+  test_rust:
+    name: Rust Tests + Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install tarpaulin
+        run: cargo install cargo-tarpaulin@0.30.0
+      - name: Run tests
+        run: |
+          cd iterations/v3
+          cargo test --all --all-features --no-fail-fast --verbose
+      - name: Coverage per crate
+        run: |
+          cd iterations/v3
+          mkdir -p target/coverage
+          for toml in $(rg -n "^\[package\]" -l . | rg Cargo.toml); do
+            crate=$(dirname "$toml")
+            echo "::group::Coverage $crate"
+            (cd "$crate" && cargo tarpaulin -o Xml -o Stdout --timeout 120 --engine llvm --fail-under 0 --out target/coverage)
+            echo "::endgroup::"
+          done
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-rust-coverage
+          path: iterations/v3/**/tarpaulin-report.xml
+
+  test_js:
+    name: JS/TS Unit + Integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Run unit tests
+        run: npm test -- --runInBand
+      - name: Coverage report (JS)
+        run: npm run test:coverage --if-present
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v3-js-coverage
+          path: coverage/**
+
+  contracts:
+    name: Contract Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run test:contract --if-present
+
+  sast_and_secrets:
+    name: SAST and Secret Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run CodeQL (JS, TS, Rust)
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript,typescript,rust
+      - uses: github/codeql-action/analyze@v3
+      - name: Secret scanning (truffleHog)
+        uses: trufflesecurity/truffleshog@v3
+        with:
+          extra_args: "--only-verified"
+
+  enforce_tier_thresholds:
+    name: Enforce Tier Thresholds
+    needs: [test_rust, test_js]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: v3-rust-coverage
+          path: artifacts/rust
+      - uses: actions/download-artifact@v4
+        with:
+          name: v3-js-coverage
+          path: artifacts/js
+      - name: Determine risk tier
+        id: tier
+        run: |
+          if [ -f .caws/working-spec.yaml ]; then
+            tier=$(node -e "const fs=require('fs');const y=require('yaml');const d=y.parse(fs.readFileSync('.caws/working-spec.yaml','utf8'));console.log(d.risk_tier||2)")
+          else
+            tier=2
+          fi
+          echo "tier=$tier" >> $GITHUB_OUTPUT
+      - name: Enforce coverage thresholds
+        run: |
+          sudo apt-get update && sudo apt-get install -y libxml2-utils bc
+          TIER=${{ steps.tier.outputs.tier }}
+          if [ "$TIER" = "1" ]; then RUST_MIN=90; JS_MIN=90; elif [ "$TIER" = "2" ]; then RUST_MIN=80; JS_MIN=80; else RUST_MIN=70; JS_MIN=70; fi
+          echo "Tier $TIER => Rust>=$RUST_MIN JS>=$JS_MIN"
+          bash iterations/v3/scripts/coverage-summary.sh artifacts/rust artifacts/js > summary.json
+          cat summary.json
+          RUST_PCT=$(node -e "console.log(require('fs').readFileSync('summary.json','utf8') && JSON.parse(require('fs').readFileSync('summary.json','utf8')).rust.percent)")
+          JS_PCT=$(node -e "console.log(require('fs').readFileSync('summary.json','utf8') && JSON.parse(require('fs').readFileSync('summary.json','utf8')).js.percent)")
+          RUST_INT=${RUST_PCT%.*}
+          JS_INT=${JS_PCT%.*}
+          echo "Rust: $RUST_INT%  JS: $JS_INT%"
+          if [ "$RUST_INT" -lt "$RUST_MIN" ]; then echo "Rust coverage below threshold"; exit 1; fi
+          if [ "$JS_INT" -lt "$JS_MIN" ]; then echo "JS coverage below threshold"; exit 1; fi
+      - name: Provenance dashboard link
+        run: |
+          echo "Provenance: run 'caws provenance show --format=dashboard' locally"
+
+  nightly_mutation:
+    name: Nightly Mutation + Perf
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    schedule:
+      - cron: '0 6 * * *'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-mutants
+        run: cargo install cargo-mutants@0.6.9
+      - name: Run cargo-mutants per crate
+        run: |
+          cd iterations/v3
+          for toml in $(rg -n "^\[package\]" -l . | rg Cargo.toml); do
+            crate=$(dirname "$toml")
+            echo "::group::Mutants $crate"
+            (cd "$crate" && cargo mutants --no-shuffle --timeout 120 --jobs 2 || true)
+            echo "::endgroup::"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v3-mutation-reports
+          path: iterations/v3/**/mutants.out/**
+      - name: JS mutation (stryker) if present
+        run: |
+          if [ -f stryker.conf.json ] || [ -f stryker.conf.cjs ]; then
+            npm ci && npx stryker run || true
+          fi
+      - name: Perf watchdog
+        run: |
+          if npm run -s perf:ci >/dev/null 2>&1; then npm run perf:ci; else echo "No perf:ci script"; fi

@@ -2,7 +2,6 @@
  * @fileoverview Storage implementations for workspace state management
  * @author @darianrosebrook
  */
-
 use crate::types::*;
 use anyhow::Result;
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
@@ -33,15 +32,18 @@ impl FileStorage {
 
     /// Ensure the storage directory exists
     fn ensure_directory(&self) -> Result<(), WorkspaceError> {
-        fs::create_dir_all(&self.base_path)
-            .map_err(|e| WorkspaceError::Storage(format!("Failed to create storage directory: {}", e)))?;
-        
-        fs::create_dir_all(self.base_path.join("states"))
-            .map_err(|e| WorkspaceError::Storage(format!("Failed to create states directory: {}", e)))?;
-        
-        fs::create_dir_all(self.base_path.join("diffs"))
-            .map_err(|e| WorkspaceError::Storage(format!("Failed to create diffs directory: {}", e)))?;
-        
+        fs::create_dir_all(&self.base_path).map_err(|e| {
+            WorkspaceError::Storage(format!("Failed to create storage directory: {}", e))
+        })?;
+
+        fs::create_dir_all(self.base_path.join("states")).map_err(|e| {
+            WorkspaceError::Storage(format!("Failed to create states directory: {}", e))
+        })?;
+
+        fs::create_dir_all(self.base_path.join("diffs")).map_err(|e| {
+            WorkspaceError::Storage(format!("Failed to create diffs directory: {}", e))
+        })?;
+
         Ok(())
     }
 
@@ -52,24 +54,31 @@ impl FileStorage {
 
     /// Get path for a diff file
     fn diff_path(&self, from: StateId, to: StateId) -> PathBuf {
-        self.base_path.join("diffs").join(format!("{}-{}.json", from.0, to.0))
+        self.base_path
+            .join("diffs")
+            .join(format!("{}-{}.json", from.0, to.0))
     }
 
     /// Serialize and optionally compress data
     fn serialize_data<T: serde::Serialize>(&self, data: &T) -> Result<Vec<u8>, WorkspaceError> {
         let json = serde_json::to_vec(data)?;
-        
+
         if self.compress {
             let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
             encoder.write_all(&json)?;
-            encoder.finish().map_err(|e| WorkspaceError::Storage(format!("Compression failed: {}", e)))
+            encoder
+                .finish()
+                .map_err(|e| WorkspaceError::Storage(format!("Compression failed: {}", e)))
         } else {
             Ok(json)
         }
     }
 
     /// Deserialize and optionally decompress data
-    fn deserialize_data<T: serde::de::DeserializeOwned>(&self, data: &[u8]) -> Result<T, WorkspaceError> {
+    fn deserialize_data<T: serde::de::DeserializeOwned>(
+        &self,
+        data: &[u8],
+    ) -> Result<T, WorkspaceError> {
         let json = if self.compress {
             let mut decoder = GzDecoder::new(data);
             let mut decompressed = Vec::new();
@@ -87,27 +96,27 @@ impl FileStorage {
 impl StateStorage for FileStorage {
     async fn store_state(&self, state: &WorkspaceState) -> Result<(), WorkspaceError> {
         self.ensure_directory()?;
-        
+
         let path = self.state_path(state.id);
         let data = self.serialize_data(state)?;
-        
+
         fs::write(&path, data)
             .map_err(|e| WorkspaceError::Storage(format!("Failed to write state file: {}", e)))?;
-        
+
         debug!("Stored workspace state {:?} to {:?}", state.id, path);
         Ok(())
     }
 
     async fn get_state(&self, id: StateId) -> Result<WorkspaceState, WorkspaceError> {
         let path = self.state_path(id);
-        
+
         if !path.exists() {
             return Err(WorkspaceError::StateNotFound(id));
         }
-        
+
         let data = fs::read(&path)
             .map_err(|e| WorkspaceError::Storage(format!("Failed to read state file: {}", e)))?;
-        
+
         let state: WorkspaceState = self.deserialize_data(&data)?;
         debug!("Retrieved workspace state {:?} from {:?}", id, path);
         Ok(state)
@@ -115,16 +124,17 @@ impl StateStorage for FileStorage {
 
     async fn list_states(&self) -> Result<Vec<StateId>, WorkspaceError> {
         self.ensure_directory()?;
-        
+
         let states_dir = self.base_path.join("states");
         let mut states = Vec::new();
-        
-        for entry in fs::read_dir(&states_dir)
-            .map_err(|e| WorkspaceError::Storage(format!("Failed to read states directory: {}", e)))?
-        {
-            let entry = entry
-                .map_err(|e| WorkspaceError::Storage(format!("Failed to read directory entry: {}", e)))?;
-            
+
+        for entry in fs::read_dir(&states_dir).map_err(|e| {
+            WorkspaceError::Storage(format!("Failed to read states directory: {}", e))
+        })? {
+            let entry = entry.map_err(|e| {
+                WorkspaceError::Storage(format!("Failed to read directory entry: {}", e))
+            })?;
+
             if let Some(file_name) = entry.file_name().to_str() {
                 if file_name.ends_with(".json") {
                     if let Some(uuid_str) = file_name.strip_suffix(".json") {
@@ -135,48 +145,53 @@ impl StateStorage for FileStorage {
                 }
             }
         }
-        
+
         debug!("Listed {} stored states", states.len());
         Ok(states)
     }
 
     async fn delete_state(&self, id: StateId) -> Result<(), WorkspaceError> {
         let path = self.state_path(id);
-        
+
         if path.exists() {
-            fs::remove_file(&path)
-                .map_err(|e| WorkspaceError::Storage(format!("Failed to delete state file: {}", e)))?;
+            fs::remove_file(&path).map_err(|e| {
+                WorkspaceError::Storage(format!("Failed to delete state file: {}", e))
+            })?;
             debug!("Deleted workspace state {:?}", id);
         }
-        
+
         Ok(())
     }
 
     async fn store_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
         self.ensure_directory()?;
-        
+
         let path = self.diff_path(diff.from_state, diff.to_state);
         let data = self.serialize_data(diff)?;
-        
+
         fs::write(&path, data)
             .map_err(|e| WorkspaceError::Storage(format!("Failed to write diff file: {}", e)))?;
-        
-        debug!("Stored workspace diff {:?} -> {:?}", diff.from_state, diff.to_state);
+
+        debug!(
+            "Stored workspace diff {:?} -> {:?}",
+            diff.from_state, diff.to_state
+        );
         Ok(())
     }
 
     async fn get_diff(&self, from: StateId, to: StateId) -> Result<WorkspaceDiff, WorkspaceError> {
         let path = self.diff_path(from, to);
-        
+
         if !path.exists() {
-            return Err(WorkspaceError::DiffComputation(
-                format!("Diff not found between states {:?} and {:?}", from, to)
-            ));
+            return Err(WorkspaceError::DiffComputation(format!(
+                "Diff not found between states {:?} and {:?}",
+                from, to
+            )));
         }
-        
+
         let data = fs::read(&path)
             .map_err(|e| WorkspaceError::Storage(format!("Failed to read diff file: {}", e)))?;
-        
+
         let diff: WorkspaceDiff = self.deserialize_data(&data)?;
         debug!("Retrieved workspace diff {:?} -> {:?}", from, to);
         Ok(diff)
@@ -184,19 +199,19 @@ impl StateStorage for FileStorage {
 
     async fn cleanup(&self, max_states: usize) -> Result<usize, WorkspaceError> {
         let states = self.list_states().await?;
-        
+
         if states.len() <= max_states {
             return Ok(0);
         }
-        
+
         // Sort states by ID (which includes timestamp information)
         let mut sorted_states = states;
         sorted_states.sort_by_key(|s| s.0);
-        
+
         // Delete oldest states
         let to_delete = sorted_states.len() - max_states;
         let mut deleted = 0;
-        
+
         for state_id in sorted_states.into_iter().take(to_delete) {
             if let Err(e) = self.delete_state(state_id).await {
                 warn!("Failed to delete state {:?}: {}", state_id, e);
@@ -204,7 +219,7 @@ impl StateStorage for FileStorage {
                 deleted += 1;
             }
         }
-        
+
         info!("Cleaned up {} old workspace states", deleted);
         Ok(deleted)
     }
@@ -242,7 +257,8 @@ impl StateStorage for MemoryStorage {
     }
 
     async fn get_state(&self, id: StateId) -> Result<WorkspaceState, WorkspaceError> {
-        self.states.get(&id)
+        self.states
+            .get(&id)
             .cloned()
             .ok_or_else(|| WorkspaceError::StateNotFound(id))
     }
@@ -257,16 +273,20 @@ impl StateStorage for MemoryStorage {
     }
 
     async fn store_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
-        debug!("Stored workspace diff {:?} -> {:?} in memory", diff.from_state, diff.to_state);
+        debug!(
+            "Stored workspace diff {:?} -> {:?} in memory",
+            diff.from_state, diff.to_state
+        );
         Ok(())
     }
 
     async fn get_diff(&self, from: StateId, to: StateId) -> Result<WorkspaceDiff, WorkspaceError> {
-        self.diffs.get(&(from, to))
-            .cloned()
-            .ok_or_else(|| WorkspaceError::DiffComputation(
-                format!("Diff not found between states {:?} and {:?}", from, to)
+        self.diffs.get(&(from, to)).cloned().ok_or_else(|| {
+            WorkspaceError::DiffComputation(format!(
+                "Diff not found between states {:?} and {:?}",
+                from, to
             ))
+        })
     }
 
     async fn cleanup(&self, max_states: usize) -> Result<usize, WorkspaceError> {
@@ -274,7 +294,7 @@ impl StateStorage for MemoryStorage {
         if current_count <= max_states {
             return Ok(0);
         }
-        
+
         let to_delete = current_count - max_states;
         debug!("Would clean up {} states from memory storage", to_delete);
         Ok(to_delete)
@@ -353,11 +373,11 @@ impl DatabaseStorage {
 #[async_trait::async_trait]
 impl StateStorage for DatabaseStorage {
     async fn store_state(&self, state: &WorkspaceState) -> Result<(), WorkspaceError> {
-        let metadata_json = serde_json::to_value(&state.metadata)
-            .map_err(|e| WorkspaceError::Serialization(e))?;
-        
-        let state_json = serde_json::to_value(state)
-            .map_err(|e| WorkspaceError::Serialization(e))?;
+        let metadata_json =
+            serde_json::to_value(&state.metadata).map_err(|e| WorkspaceError::Serialization(e))?;
+
+        let state_json =
+            serde_json::to_value(state).map_err(|e| WorkspaceError::Serialization(e))?;
 
         sqlx::query(
             r#"
@@ -402,8 +422,8 @@ impl StateStorage for DatabaseStorage {
             })?;
 
         let state_json: serde_json::Value = row.get("state_data");
-        let state: WorkspaceState = serde_json::from_value(state_json)
-            .map_err(|e| WorkspaceError::Serialization(e))?;
+        let state: WorkspaceState =
+            serde_json::from_value(state_json).map_err(|e| WorkspaceError::Serialization(e))?;
 
         debug!("Retrieved workspace state {:?} from database", id);
         Ok(state)
@@ -415,9 +435,7 @@ impl StateStorage for DatabaseStorage {
             .await
             .map_err(|e| WorkspaceError::Storage(format!("Failed to list states: {}", e)))?;
 
-        let states: Vec<StateId> = rows.into_iter()
-            .map(|row| StateId(row.get("id")))
-            .collect();
+        let states: Vec<StateId> = rows.into_iter().map(|row| StateId(row.get("id"))).collect();
 
         debug!("Listed {} stored states from database", states.len());
         Ok(states)
@@ -435,8 +453,7 @@ impl StateStorage for DatabaseStorage {
     }
 
     async fn store_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
-        let diff_json = serde_json::to_value(diff)
-            .map_err(|e| WorkspaceError::Serialization(e))?;
+        let diff_json = serde_json::to_value(diff).map_err(|e| WorkspaceError::Serialization(e))?;
 
         sqlx::query(
             r#"
@@ -463,28 +480,37 @@ impl StateStorage for DatabaseStorage {
         .await
         .map_err(|e| WorkspaceError::Storage(format!("Failed to store diff: {}", e)))?;
 
-        debug!("Stored workspace diff {:?} -> {:?} in database", diff.from_state, diff.to_state);
+        debug!(
+            "Stored workspace diff {:?} -> {:?} in database",
+            diff.from_state, diff.to_state
+        );
         Ok(())
     }
 
     async fn get_diff(&self, from: StateId, to: StateId) -> Result<WorkspaceDiff, WorkspaceError> {
-        let row = sqlx::query("SELECT diff_data FROM workspace_diffs WHERE from_state = $1 AND to_state = $2")
-            .bind(from.0)
-            .bind(to.0)
-            .fetch_one(&self.pool)
-            .await
-            .map_err(|e| match e {
-                sqlx::Error::RowNotFound => WorkspaceError::DiffComputation(
-                    format!("Diff not found between states {:?} and {:?}", from, to)
-                ),
-                _ => WorkspaceError::Storage(format!("Failed to retrieve diff: {}", e)),
-            })?;
+        let row = sqlx::query(
+            "SELECT diff_data FROM workspace_diffs WHERE from_state = $1 AND to_state = $2",
+        )
+        .bind(from.0)
+        .bind(to.0)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => WorkspaceError::DiffComputation(format!(
+                "Diff not found between states {:?} and {:?}",
+                from, to
+            )),
+            _ => WorkspaceError::Storage(format!("Failed to retrieve diff: {}", e)),
+        })?;
 
         let diff_json: serde_json::Value = row.get("diff_data");
-        let diff: WorkspaceDiff = serde_json::from_value(diff_json)
-            .map_err(|e| WorkspaceError::Serialization(e))?;
+        let diff: WorkspaceDiff =
+            serde_json::from_value(diff_json).map_err(|e| WorkspaceError::Serialization(e))?;
 
-        debug!("Retrieved workspace diff {:?} -> {:?} from database", from, to);
+        debug!(
+            "Retrieved workspace diff {:?} -> {:?} from database",
+            from, to
+        );
         Ok(diff)
     }
 

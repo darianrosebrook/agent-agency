@@ -3,8 +3,8 @@
 //! Contains the core model definitions for the council system,
 //! including task specifications, judge evaluations, and consensus results.
 
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Task specification for council evaluation

@@ -3,9 +3,12 @@
 //! Routes tasks to appropriate workers based on capabilities, load, and other factors.
 
 use crate::types::*;
-use crate::{RoutingAlgorithm, LoadBalancingStrategy};
-use agent_agency_council::models::RiskTier;
-use agent_agency_council::models::TaskSpec;
+use crate::{LoadBalancingStrategy, RoutingAlgorithm};
+use agent_agency_council::models::{
+    CouncilTaskContext as CouncilCouncilTaskContext,
+    CouncilWorkerOutput as CouncilCouncilWorkerOutput, Environment, FileModification,
+    FileOperation, RiskTier, SelfAssessment, TaskSpec,
+};
 use anyhow::{Context, Result};
 use dashmap::DashMap;
 use std::sync::Arc;
@@ -58,7 +61,9 @@ impl TaskRouter {
         let candidates = self.get_candidate_workers(&requirements, workers).await;
 
         if candidates.is_empty() {
-            return Err(anyhow::anyhow!("No suitable workers found for task requirements"));
+            return Err(anyhow::anyhow!(
+                "No suitable workers found for task requirements"
+            ));
         }
 
         // Apply routing algorithm
@@ -67,21 +72,22 @@ impl TaskRouter {
                 self.route_by_capability(&candidates, &requirements).await?
             }
             RoutingAlgorithm::LoadBalanced => {
-                self.route_by_load_balancing(&candidates, &requirements).await?
+                self.route_by_load_balancing(&candidates, &requirements)
+                    .await?
             }
             RoutingAlgorithm::RoundRobin => {
-                self.route_by_round_robin(&candidates, &requirements).await?
+                self.route_by_round_robin(&candidates, &requirements)
+                    .await?
             }
             RoutingAlgorithm::LeastBusy => {
                 self.route_by_least_busy(&candidates, &requirements).await?
             }
-            RoutingAlgorithm::Hybrid => {
-                self.route_by_hybrid(&candidates, &requirements).await?
-            }
+            RoutingAlgorithm::Hybrid => self.route_by_hybrid(&candidates, &requirements).await?,
         };
 
         // Calculate estimated completion time
-        let estimated_completion = self.calculate_estimated_completion_time(&selected_workers, &requirements);
+        let estimated_completion =
+            self.calculate_estimated_completion_time(&selected_workers, &requirements);
 
         // Calculate confidence score
         let confidence_score = self.calculate_confidence_score(&selected_workers, &requirements);
@@ -89,13 +95,19 @@ impl TaskRouter {
         let result = TaskRoutingResult {
             task_id: task_spec.id,
             selected_workers,
-            routing_reasoning: format!("Used {:?} algorithm with {:.1}% confidence", 
-                self.routing_algorithm, confidence_score * 100.0),
+            routing_reasoning: format!(
+                "Used {:?} algorithm with {:.1}% confidence",
+                self.routing_algorithm,
+                confidence_score * 100.0
+            ),
             estimated_completion_time: estimated_completion,
             confidence_score,
         };
 
-        debug!("Task routing completed: {} workers selected", result.selected_workers.len());
+        debug!(
+            "Task routing completed: {} workers selected",
+            result.selected_workers.len()
+        );
         Ok(result)
     }
 
@@ -108,13 +120,18 @@ impl TaskRouter {
 
         // Analyze task description and context for technology requirements
         let description = &task_spec.description.to_lowercase();
-        let context_json = serde_json::to_string(&task_spec.context).unwrap_or_default().to_lowercase();
+        let context_json = serde_json::to_string(&task_spec.context)
+            .unwrap_or_default()
+            .to_lowercase();
 
         // Detect programming languages
         if description.contains("rust") || context_json.contains("rust") {
             required_languages.push("rust".to_string());
         }
-        if description.contains("typescript") || description.contains("javascript") || context_json.contains("typescript") {
+        if description.contains("typescript")
+            || description.contains("javascript")
+            || context_json.contains("typescript")
+        {
             required_languages.push("typescript".to_string());
         }
         if description.contains("python") || context_json.contains("python") {
@@ -170,11 +187,11 @@ impl TaskRouter {
 
         for entry in workers.iter() {
             let worker = entry.value();
-            
+
             // Check if worker can handle the task
             if worker.can_handle_task(requirements) {
                 let capability_score = worker.calculate_capability_score(requirements);
-                
+
                 // Only include workers above threshold
                 if capability_score >= self.capability_threshold {
                     let estimated_time = self.estimate_execution_time(worker, requirements);
@@ -186,9 +203,9 @@ impl TaskRouter {
                         estimated_execution_time_ms: estimated_time,
                         load_factor,
                         combined_score: self.calculate_combined_score(
-                            capability_score, 
-                            estimated_time, 
-                            load_factor
+                            capability_score,
+                            estimated_time,
+                            load_factor,
                         ),
                     });
                 }
@@ -240,7 +257,8 @@ impl TaskRouter {
         }
 
         // Find worker with lowest load
-        let best_candidate = candidates.iter()
+        let best_candidate = candidates
+            .iter()
             .min_by(|a, b| a.load_factor.partial_cmp(&b.load_factor).unwrap())
             .unwrap();
 
@@ -296,10 +314,15 @@ impl TaskRouter {
         }
 
         // Find worker with lowest current load
-        let best_candidate = candidates.iter()
-            .min_by(|a, b| a.worker.performance_metrics.current_load
-                .partial_cmp(&b.worker.performance_metrics.current_load)
-                .unwrap())
+        let best_candidate = candidates
+            .iter()
+            .min_by(|a, b| {
+                a.worker
+                    .performance_metrics
+                    .current_load
+                    .partial_cmp(&b.worker.performance_metrics.current_load)
+                    .unwrap()
+            })
             .unwrap();
 
         let assignment = WorkerAssignment {
@@ -350,13 +373,13 @@ impl TaskRouter {
     /// Estimate context length for a task
     fn estimate_context_length(&self, task_spec: &TaskSpec) -> u32 {
         let base_length = 2000; // Base context length
-        
+
         // Add length based on scope
         let scope_length = task_spec.scope.files_affected.len() as u32 * 500;
-        
+
         // Add length based on description complexity
         let description_length = task_spec.description.len() as u32;
-        
+
         // Add length based on risk tier
         let risk_multiplier = match task_spec.risk_tier {
             RiskTier::Tier1 => 2.0,
@@ -370,18 +393,21 @@ impl TaskRouter {
     /// Estimate execution time for a worker and task
     fn estimate_execution_time(&self, worker: &Worker, requirements: &TaskRequirements) -> u64 {
         let base_time = 5000; // 5 seconds base time
-        
+
         // Adjust based on worker speed score
         let speed_factor = 1.0 / (worker.capabilities.speed_score + 0.1); // Avoid division by zero
-        
+
         // Adjust based on context length
         let context_factor = (requirements.context_length_estimate as f64 / 4000.0).max(0.5);
-        
-        // Adjust based on number of requirements
-        let complexity_factor = 1.0 + (requirements.required_languages.len() + 
-                                      requirements.required_frameworks.len()) as f64 * 0.1;
 
-        (base_time as f64 * speed_factor as f64 * context_factor as f64 * complexity_factor as f64) as u64
+        // Adjust based on number of requirements
+        let complexity_factor = 1.0
+            + (requirements.required_languages.len() + requirements.required_frameworks.len())
+                as f64
+                * 0.1;
+
+        (base_time as f64 * speed_factor as f64 * context_factor as f64 * complexity_factor as f64)
+            as u64
     }
 
     /// Calculate load factor for a worker
@@ -399,24 +425,34 @@ impl TaskRouter {
     }
 
     /// Calculate combined score for worker selection
-    fn calculate_combined_score(&self, capability_score: f32, estimated_time: u64, load_factor: f32) -> f32 {
+    fn calculate_combined_score(
+        &self,
+        capability_score: f32,
+        estimated_time: u64,
+        load_factor: f32,
+    ) -> f32 {
         // Normalize execution time (shorter is better)
         let time_score = 1.0 / (estimated_time as f32 / 10000.0 + 0.1);
-        
+
         // Invert load factor (lower load is better)
         let load_score = 1.0 - load_factor;
-        
+
         // Weighted combination
         capability_score * 0.5 + time_score * 0.3 + load_score * 0.2
     }
 
     /// Calculate estimated completion time
-    fn calculate_estimated_completion_time(&self, assignments: &[WorkerAssignment], _requirements: &TaskRequirements) -> chrono::DateTime<chrono::Utc> {
+    fn calculate_estimated_completion_time(
+        &self,
+        assignments: &[WorkerAssignment],
+        _requirements: &TaskRequirements,
+    ) -> chrono::DateTime<chrono::Utc> {
         if assignments.is_empty() {
             return chrono::Utc::now();
         }
 
-        let max_time = assignments.iter()
+        let max_time = assignments
+            .iter()
             .map(|a| a.estimated_execution_time_ms)
             .max()
             .unwrap_or(0);
@@ -425,23 +461,28 @@ impl TaskRouter {
     }
 
     /// Calculate confidence score for the routing decision
-    fn calculate_confidence_score(&self, assignments: &[WorkerAssignment], requirements: &TaskRequirements) -> f32 {
+    fn calculate_confidence_score(
+        &self,
+        assignments: &[WorkerAssignment],
+        requirements: &TaskRequirements,
+    ) -> f32 {
         if assignments.is_empty() {
             return 0.0;
         }
 
         let best_assignment = &assignments[0];
-        
+
         // Base confidence on capability match
         let capability_confidence = best_assignment.capability_match_score;
-        
+
         // Adjust based on number of candidates (more candidates = higher confidence)
         let availability_confidence = (assignments.len() as f32 / 5.0).min(1.0);
-        
+
         // Adjust based on load factor (lower load = higher confidence)
         let load_confidence = 1.0 - best_assignment.load_factor;
-        
-        (capability_confidence * 0.6 + availability_confidence * 0.2 + load_confidence * 0.2).min(1.0)
+
+        (capability_confidence * 0.6 + availability_confidence * 0.2 + load_confidence * 0.2)
+            .min(1.0)
     }
 }
 
@@ -475,7 +516,7 @@ mod tests {
     #[tokio::test]
     async fn test_task_spec_to_requirements() {
         let router = TaskRouter::new();
-        
+
         let task_spec = TaskSpec {
             id: Uuid::new_v4(),
             title: "Implement Rust API".to_string(),
@@ -488,14 +529,14 @@ mod tests {
                 domains: vec!["backend".to_string()],
             },
             acceptance_criteria: vec![],
-            context: TaskContext {
+            context: CouncilTaskContext {
                 workspace_root: "/workspace".to_string(),
                 git_branch: "main".to_string(),
                 recent_changes: vec![],
                 dependencies: std::collections::HashMap::new(),
                 environment: Environment::Development,
             },
-            worker_output: WorkerOutput {
+            worker_output: CouncilWorkerOutput {
                 content: "".to_string(),
                 files_modified: vec![],
                 rationale: "".to_string(),
@@ -513,9 +554,13 @@ mod tests {
         };
 
         let requirements = router.task_spec_to_requirements(&task_spec);
-        
-        assert!(requirements.required_languages.contains(&"rust".to_string()));
-        assert!(requirements.required_frameworks.contains(&"tokio".to_string()));
+
+        assert!(requirements
+            .required_languages
+            .contains(&"rust".to_string()));
+        assert!(requirements
+            .required_frameworks
+            .contains(&"tokio".to_string()));
         assert_eq!(requirements.min_quality_score, 0.8); // Tier2
         assert_eq!(requirements.min_caws_awareness, 0.85); // Tier2
     }
@@ -523,7 +568,7 @@ mod tests {
     #[tokio::test]
     async fn test_estimate_context_length() {
         let router = TaskRouter::new();
-        
+
         let task_spec = TaskSpec {
             id: Uuid::new_v4(),
             title: "Test task".to_string(),
@@ -536,14 +581,14 @@ mod tests {
                 domains: vec!["backend".to_string()],
             },
             acceptance_criteria: vec![],
-            context: TaskContext {
+            context: CouncilTaskContext {
                 workspace_root: "/workspace".to_string(),
                 git_branch: "main".to_string(),
                 recent_changes: vec![],
                 dependencies: std::collections::HashMap::new(),
                 environment: Environment::Development,
             },
-            worker_output: WorkerOutput {
+            worker_output: CouncilWorkerOutput {
                 content: "".to_string(),
                 files_modified: vec![],
                 rationale: "".to_string(),
@@ -567,11 +612,11 @@ mod tests {
     #[tokio::test]
     async fn test_route_by_capability() {
         let router = TaskRouter::new();
-        
+
         let mut capabilities = WorkerCapabilities::default();
         capabilities.languages = vec!["rust".to_string()];
         capabilities.quality_score = 0.9;
-        
+
         let worker = Worker::new(
             "test-worker".to_string(),
             WorkerType::Generalist,
@@ -591,17 +636,18 @@ mod tests {
             context_length_estimate: 4000,
         };
 
-        let candidates = vec![
-            WorkerCandidate {
-                worker,
-                capability_score: 0.9,
-                estimated_execution_time_ms: 5000,
-                load_factor: 0.3,
-                combined_score: 0.8,
-            }
-        ];
+        let candidates = vec![WorkerCandidate {
+            worker,
+            capability_score: 0.9,
+            estimated_execution_time_ms: 5000,
+            load_factor: 0.3,
+            combined_score: 0.8,
+        }];
 
-        let assignments = router.route_by_capability(&candidates, &requirements).await.unwrap();
+        let assignments = router
+            .route_by_capability(&candidates, &requirements)
+            .await
+            .unwrap();
         assert_eq!(assignments.len(), 1);
         assert_eq!(assignments[0].capability_match_score, 0.9);
     }

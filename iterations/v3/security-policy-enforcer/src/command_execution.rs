@@ -1,9 +1,9 @@
 use crate::types::*;
 use anyhow::Result;
-use regex::Regex;
-use tracing::{debug, warn, error};
-use uuid::Uuid;
 use chrono::Utc;
+use regex::Regex;
+use tracing::{debug, error, warn};
+use uuid::Uuid;
 
 /// Command execution controller
 #[derive(Debug)]
@@ -49,7 +49,10 @@ impl CommandExecutionController {
 
         // Check if command matches denied patterns
         if self.matches_patterns(&request.command, &self.denied_patterns) {
-            warn!("Command execution denied - matches denied pattern: {}", request.command);
+            warn!(
+                "Command execution denied - matches denied pattern: {}",
+                request.command
+            );
             violations.push(SecurityViolation {
                 id: Uuid::new_v4(),
                 violation_type: SecurityViolationType::CommandExecutionDenied,
@@ -68,12 +71,18 @@ impl CommandExecutionController {
         // Check if command matches allowed patterns (if any are specified)
         if !self.policy.allowed_commands.is_empty() {
             if !self.matches_patterns(&request.command, &self.allowed_patterns) {
-                warn!("Command execution denied - doesn't match allowed pattern: {}", request.command);
+                warn!(
+                    "Command execution denied - doesn't match allowed pattern: {}",
+                    request.command
+                );
                 violations.push(SecurityViolation {
                     id: Uuid::new_v4(),
                     violation_type: SecurityViolationType::CommandExecutionDenied,
                     severity: SecretSeverity::Medium,
-                    description: format!("Command doesn't match allowed pattern: {}", request.command),
+                    description: format!(
+                        "Command doesn't match allowed pattern: {}",
+                        request.command
+                    ),
                     resource: request.command.clone(),
                     actor: request.actor.clone(),
                     timestamp: Utc::now(),
@@ -170,7 +179,11 @@ impl CommandExecutionController {
             actor: request.actor.clone(),
             resource: request.command.clone(),
             action: "execute".to_string(),
-            result: if allowed { AuditResult::Allowed } else { AuditResult::Denied },
+            result: if allowed {
+                AuditResult::Allowed
+            } else {
+                AuditResult::Denied
+            },
             timestamp: Utc::now(),
             metadata: request.context.clone(),
         };
@@ -198,51 +211,139 @@ impl CommandExecutionController {
     /// Check if command involves network access
     fn is_network_command(&self, command: &str) -> bool {
         let network_commands = [
-            "curl", "wget", "ssh", "scp", "rsync", "ping", "traceroute",
-            "netstat", "ss", "telnet", "ftp", "sftp", "nc", "ncat",
-            "dig", "nslookup", "host", "whois", "mtr", "tcpdump",
-            "wireshark", "tshark", "nmap", "masscan", "zmap",
+            "curl",
+            "wget",
+            "ssh",
+            "scp",
+            "rsync",
+            "ping",
+            "traceroute",
+            "netstat",
+            "ss",
+            "telnet",
+            "ftp",
+            "sftp",
+            "nc",
+            "ncat",
+            "dig",
+            "nslookup",
+            "host",
+            "whois",
+            "mtr",
+            "tcpdump",
+            "wireshark",
+            "tshark",
+            "nmap",
+            "masscan",
+            "zmap",
         ];
 
         let command_lower = command.to_lowercase();
-        network_commands.iter().any(|&cmd| command_lower.contains(cmd))
+        network_commands
+            .iter()
+            .any(|&cmd| command_lower.contains(cmd))
     }
 
     /// Check if command involves file system modifications
     fn is_file_modification_command(&self, command: &str) -> bool {
         let file_modification_commands = [
-            "rm", "rmdir", "mv", "cp", "mkdir", "touch", "chmod",
-            "chown", "chgrp", "ln", "ln -s", "dd", "truncate",
-            "fallocate", "mkfs", "fsck", "mount", "umount",
-            "fdisk", "parted", "gparted", "wipefs", "mkfs.ext4",
-            "mkfs.xfs", "mkfs.btrfs", "mkfs.ntfs", "mkfs.fat",
+            "rm",
+            "rmdir",
+            "mv",
+            "cp",
+            "mkdir",
+            "touch",
+            "chmod",
+            "chown",
+            "chgrp",
+            "ln",
+            "ln -s",
+            "dd",
+            "truncate",
+            "fallocate",
+            "mkfs",
+            "fsck",
+            "mount",
+            "umount",
+            "fdisk",
+            "parted",
+            "gparted",
+            "wipefs",
+            "mkfs.ext4",
+            "mkfs.xfs",
+            "mkfs.btrfs",
+            "mkfs.ntfs",
+            "mkfs.fat",
         ];
 
         let command_lower = command.to_lowercase();
-        file_modification_commands.iter().any(|&cmd| command_lower.starts_with(cmd))
+        file_modification_commands
+            .iter()
+            .any(|&cmd| command_lower.starts_with(cmd))
     }
 
     /// Check if command involves process spawning
     fn is_process_spawning_command(&self, command: &str) -> bool {
         let process_spawning_commands = [
-            "exec", "eval", "source", ". ", "bash", "sh", "zsh",
-            "fish", "csh", "tcsh", "ksh", "dash", "python",
-            "python3", "node", "npm", "yarn", "pnpm", "cargo",
-            "go", "java", "ruby", "perl", "php", "rustc",
-            "gcc", "g++", "clang", "clang++", "make", "cmake",
-            "ninja", "bazel", "buck", "scons", "ant", "maven",
-            "gradle", "docker", "podman", "kubectl", "helm",
-            "terraform", "ansible", "puppet", "chef", "vagrant",
+            "exec",
+            "eval",
+            "source",
+            ". ",
+            "bash",
+            "sh",
+            "zsh",
+            "fish",
+            "csh",
+            "tcsh",
+            "ksh",
+            "dash",
+            "python",
+            "python3",
+            "node",
+            "npm",
+            "yarn",
+            "pnpm",
+            "cargo",
+            "go",
+            "java",
+            "ruby",
+            "perl",
+            "php",
+            "rustc",
+            "gcc",
+            "g++",
+            "clang",
+            "clang++",
+            "make",
+            "cmake",
+            "ninja",
+            "bazel",
+            "buck",
+            "scons",
+            "ant",
+            "maven",
+            "gradle",
+            "docker",
+            "podman",
+            "kubectl",
+            "helm",
+            "terraform",
+            "ansible",
+            "puppet",
+            "chef",
+            "vagrant",
         ];
 
         let command_lower = command.to_lowercase();
-        process_spawning_commands.iter().any(|&cmd| command_lower.starts_with(cmd))
+        process_spawning_commands
+            .iter()
+            .any(|&cmd| command_lower.starts_with(cmd))
     }
 
     /// Compile command patterns into regex patterns
     fn compile_patterns(patterns: &[String]) -> Result<Vec<Regex>> {
         let mut compiled = Vec::new();
-        
+
         for pattern in patterns {
             // Convert glob pattern to regex
             let regex_pattern = Self::glob_to_regex(pattern);
@@ -254,7 +355,7 @@ impl CommandExecutionController {
                 }
             }
         }
-        
+
         Ok(compiled)
     }
 
@@ -262,7 +363,7 @@ impl CommandExecutionController {
     fn glob_to_regex(glob: &str) -> String {
         let mut regex = String::new();
         regex.push('^');
-        
+
         for ch in glob.chars() {
             match ch {
                 '*' => regex.push_str(".*"),
@@ -282,7 +383,7 @@ impl CommandExecutionController {
                 _ => regex.push(ch),
             }
         }
-        
+
         regex.push('$');
         regex
     }
@@ -295,12 +396,12 @@ impl CommandExecutionController {
     /// Update command execution policy
     pub async fn update_policy(&mut self, new_policy: CommandExecutionPolicy) -> Result<()> {
         debug!("Updating command execution policy");
-        
+
         // Recompile patterns
         self.allowed_patterns = Self::compile_patterns(&new_policy.allowed_commands)?;
         self.denied_patterns = Self::compile_patterns(&new_policy.denied_commands)?;
         self.dangerous_patterns = Self::compile_patterns(&new_policy.dangerous_commands)?;
-        
+
         self.policy = new_policy;
         Ok(())
     }

@@ -27,6 +27,7 @@ export class E2ETestRunner {
     mcpServer: null,
   };
 
+  private aiAvailable = false;
   private projectRoot = path.resolve(__dirname, "../../");
 
   /**
@@ -85,13 +86,16 @@ export class E2ETestRunner {
         try {
           await execAsync("ollama pull gemma:3n", { timeout: 60000 });
           console.log("✅ Gemma model ready");
-        } catch (error) {
+          this.aiAvailable = true;
+        } catch (_error) {
           console.log(
             "⚠️  Could not pull Gemma model, tests will skip AI features"
           );
+          this.aiAvailable = false;
         }
-      } catch (error) {
+      } catch (_error) {
         console.log("⚠️  Ollama not available, AI tests will be skipped");
+        this.aiAvailable = false;
       }
 
       console.log("✅ E2E environment ready");
@@ -100,6 +104,13 @@ export class E2ETestRunner {
       await this.teardown();
       throw error;
     }
+  }
+
+  /**
+   * Check if AI services are available
+   */
+  isAIAvailable(): boolean {
+    return this.aiAvailable;
   }
 
   /**
@@ -145,7 +156,7 @@ export class E2ETestRunner {
       await execAsync(
         "docker stop $(docker ps -q --filter ancestor=postgres:16-alpine --filter ancestor=redis:7-alpine)"
       );
-    } catch (error) {
+    } catch (_error) {
       // Ignore errors if no containers are running
     }
 
@@ -164,7 +175,7 @@ export class E2ETestRunner {
         await execAsync("pg_isready -h localhost -p 5432", { timeout: 5000 });
         console.log("✅ PostgreSQL ready");
         return;
-      } catch (error) {
+      } catch (_error) {
         if (attempt === maxAttempts) {
           throw new Error("PostgreSQL failed to start");
         }
@@ -188,7 +199,7 @@ export class E2ETestRunner {
         });
         console.log("✅ Redis ready");
         return;
-      } catch (error) {
+      } catch (_error) {
         if (attempt === maxAttempts) {
           throw new Error("Redis failed to start");
         }

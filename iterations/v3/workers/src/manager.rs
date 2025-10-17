@@ -4,13 +4,13 @@
 //! health checking, load balancing, and performance monitoring.
 
 use crate::types::*;
-use crate::{TaskRouter, TaskExecutor, CawsChecker, WorkerPoolConfig};
+use crate::{CawsChecker, TaskExecutor, TaskRouter, WorkerPoolConfig};
 use agent_agency_council::models::TaskSpec;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use dashmap::DashMap;
 use std::sync::Arc;
-use tokio::sync::{RwLock, mpsc};
+use tokio::sync::{mpsc, RwLock};
 use tokio::time::{Duration, Instant};
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
@@ -71,7 +71,10 @@ impl WorkerPoolManager {
             self.auto_discover_workers().await?;
         }
 
-        info!("Worker pool manager initialized with {} workers", self.workers.len());
+        info!(
+            "Worker pool manager initialized with {} workers",
+            self.workers.len()
+        );
         Ok(())
     }
 
@@ -101,11 +104,14 @@ impl WorkerPoolManager {
         self.update_stats().await;
 
         // Send event
-        let _ = self.event_sender.send(WorkerPoolEvent::WorkerRegistered { 
-            worker: worker_clone.clone() 
+        let _ = self.event_sender.send(WorkerPoolEvent::WorkerRegistered {
+            worker: worker_clone.clone(),
         });
 
-        info!("Registered worker: {} ({})", worker_clone.name, worker_clone.id);
+        info!(
+            "Registered worker: {} ({})",
+            worker_clone.name, worker_clone.id
+        );
         Ok(worker_clone)
     }
 
@@ -113,8 +119,8 @@ impl WorkerPoolManager {
     pub async fn deregister_worker(&self, worker_id: Uuid) -> Result<()> {
         if let Some((_, worker)) = self.workers.remove(&worker_id) {
             // Send event
-            let _ = self.event_sender.send(WorkerPoolEvent::WorkerDeregistered { 
-                worker_id: worker.id 
+            let _ = self.event_sender.send(WorkerPoolEvent::WorkerDeregistered {
+                worker_id: worker.id,
             });
 
             info!("Deregistered worker: {} ({})", worker.name, worker.id);
@@ -130,17 +136,23 @@ impl WorkerPoolManager {
 
     /// Get worker by ID
     pub async fn get_worker(&self, worker_id: Uuid) -> Option<Worker> {
-        self.workers.get(&worker_id).map(|entry| entry.value().clone())
+        self.workers
+            .get(&worker_id)
+            .map(|entry| entry.value().clone())
     }
 
     /// Get all workers
     pub async fn get_workers(&self) -> Vec<Worker> {
-        self.workers.iter().map(|entry| entry.value().clone()).collect()
+        self.workers
+            .iter()
+            .map(|entry| entry.value().clone())
+            .collect()
     }
 
     /// Get available workers
     pub async fn get_available_workers(&self) -> Vec<Worker> {
-        self.workers.iter()
+        self.workers
+            .iter()
             .filter(|entry| matches!(entry.value().status, WorkerStatus::Available))
             .map(|entry| entry.value().clone())
             .collect()
@@ -148,7 +160,8 @@ impl WorkerPoolManager {
 
     /// Get workers by type
     pub async fn get_workers_by_type(&self, worker_type: &WorkerType) -> Vec<Worker> {
-        self.workers.iter()
+        self.workers
+            .iter()
             .filter(|entry| &entry.value().worker_type == worker_type)
             .map(|entry| entry.value().clone())
             .collect()
@@ -160,8 +173,11 @@ impl WorkerPoolManager {
         info!("Executing task: {} ({})", task_spec.title, task_id);
 
         // Route task to appropriate workers
-        let routing_result = self.task_router.route_task(&task_spec, &self.workers).await?;
-        
+        let routing_result = self
+            .task_router
+            .route_task(&task_spec, &self.workers)
+            .await?;
+
         if routing_result.selected_workers.is_empty() {
             return Err(anyhow::anyhow!("No suitable workers found for task"));
         }
@@ -174,29 +190,33 @@ impl WorkerPoolManager {
         if let Some(mut worker) = self.workers.get_mut(&worker_id) {
             let old_status = worker.status.clone();
             worker.status = WorkerStatus::Busy;
-            
+
             // Send event
-            let _ = self.event_sender.send(WorkerPoolEvent::WorkerStatusChanged {
-                worker_id,
-                old_status,
-                new_status: WorkerStatus::Busy,
-            });
+            let _ = self
+                .event_sender
+                .send(WorkerPoolEvent::WorkerStatusChanged {
+                    worker_id,
+                    old_status,
+                    new_status: WorkerStatus::Busy,
+                });
         }
 
         // Send task assignment event
-        let _ = self.event_sender.send(WorkerPoolEvent::TaskAssigned {
-            task_id,
-            worker_id,
-        });
+        let _ = self
+            .event_sender
+            .send(WorkerPoolEvent::TaskAssigned { task_id, worker_id });
 
         // Execute task
-        let result = self.task_executor.execute_task(task_spec, worker_id).await?;
+        let result = self
+            .task_executor
+            .execute_task(task_spec, worker_id)
+            .await?;
         let result_status = result.status.clone();
 
         // Update worker performance metrics
         if let Some(mut worker) = self.workers.get_mut(&worker_id) {
             worker.update_performance_metrics(&result);
-            
+
             // Reset status based on result
             worker.status = match result_status {
                 ExecutionStatus::Completed | ExecutionStatus::Partial => WorkerStatus::Available,
@@ -215,13 +235,21 @@ impl WorkerPoolManager {
         // Send completion event
         let event = match result.status {
             ExecutionStatus::Completed | ExecutionStatus::Partial => {
-                WorkerPoolEvent::TaskCompleted { task_id, worker_id, result: result.clone() }
+                WorkerPoolEvent::TaskCompleted {
+                    task_id,
+                    worker_id,
+                    result: result.clone(),
+                }
             }
             ExecutionStatus::Failed | ExecutionStatus::Timeout | ExecutionStatus::Cancelled => {
                 WorkerPoolEvent::TaskFailed {
                     task_id,
                     worker_id,
-                    error: result.error_message.as_ref().unwrap_or(&"Unknown error".to_string()).clone()
+                    error: result
+                        .error_message
+                        .as_ref()
+                        .unwrap_or(&"Unknown error".to_string())
+                        .clone(),
                 }
             }
         };
@@ -232,18 +260,24 @@ impl WorkerPoolManager {
     }
 
     /// Update worker status
-    pub async fn update_worker_status(&self, worker_id: Uuid, new_status: WorkerStatus) -> Result<()> {
+    pub async fn update_worker_status(
+        &self,
+        worker_id: Uuid,
+        new_status: WorkerStatus,
+    ) -> Result<()> {
         if let Some(mut worker) = self.workers.get_mut(&worker_id) {
             let old_status = worker.status.clone();
             worker.status = new_status.clone();
             worker.last_heartbeat = chrono::Utc::now();
 
             // Send event
-            let _ = self.event_sender.send(WorkerPoolEvent::WorkerStatusChanged {
-                worker_id,
-                old_status,
-                new_status,
-            });
+            let _ = self
+                .event_sender
+                .send(WorkerPoolEvent::WorkerStatusChanged {
+                    worker_id,
+                    old_status,
+                    new_status,
+                });
 
             // Update stats
             self.update_stats().await;
@@ -264,18 +298,21 @@ impl WorkerPoolManager {
     /// Check worker health
     async fn check_worker_health(&self, worker: &Worker) -> Result<bool> {
         let start_time = Instant::now();
-        
+
         // TODO: Implement actual health check
         // For now, simulate health check
         tokio::time::sleep(Duration::from_millis(100)).await;
-        
+
         let response_time = start_time.elapsed().as_millis() as u64;
-        
+
         // Simulate health check result
         let is_healthy = response_time < 1000; // Healthy if response < 1s
-        
+
         if !is_healthy {
-            warn!("Worker health check failed: {} ({})", worker.name, worker.id);
+            warn!(
+                "Worker health check failed: {} ({})",
+                worker.name, worker.id
+            );
         }
 
         Ok(is_healthy)
@@ -289,15 +326,15 @@ impl WorkerPoolManager {
 
         let handle = tokio::spawn(async move {
             let mut interval = tokio::time::interval(interval);
-            
+
             loop {
                 interval.tick().await;
-                
+
                 // Check health of all workers
                 for entry in workers.iter() {
                     let worker = entry.value();
                     let worker_id = worker.id;
-                    
+
                     // TODO: Implement actual health check
                     // For now, just update heartbeat
                     if let Some(mut worker_mut) = workers.get_mut(&worker_id) {
@@ -328,7 +365,10 @@ impl WorkerPoolManager {
             };
 
             if let Err(e) = self.register_worker(mock_worker).await {
-                warn!("Failed to register auto-discovered worker at {}: {}", endpoint, e);
+                warn!(
+                    "Failed to register auto-discovered worker at {}: {}",
+                    endpoint, e
+                );
             }
         }
 
@@ -338,16 +378,27 @@ impl WorkerPoolManager {
     /// Update pool statistics
     async fn update_stats(&self) {
         let mut stats = self.stats.write().await;
-        
+
         stats.total_workers = self.workers.len() as u32;
-        stats.available_workers = self.workers.iter()
+        stats.available_workers = self
+            .workers
+            .iter()
             .filter(|entry| matches!(entry.value().status, WorkerStatus::Available))
             .count() as u32;
-        stats.busy_workers = self.workers.iter()
+        stats.busy_workers = self
+            .workers
+            .iter()
             .filter(|entry| matches!(entry.value().status, WorkerStatus::Busy))
             .count() as u32;
-        stats.unavailable_workers = self.workers.iter()
-            .filter(|entry| matches!(entry.value().status, WorkerStatus::Unavailable | WorkerStatus::Maintenance))
+        stats.unavailable_workers = self
+            .workers
+            .iter()
+            .filter(|entry| {
+                matches!(
+                    entry.value().status,
+                    WorkerStatus::Unavailable | WorkerStatus::Maintenance
+                )
+            })
             .count() as u32;
 
         // Calculate averages
@@ -387,7 +438,11 @@ impl WorkerPoolManager {
         }
 
         // Deregister all workers
-        let worker_ids: Vec<Uuid> = self.workers.iter().map(|entry| entry.key().clone()).collect();
+        let worker_ids: Vec<Uuid> = self
+            .workers
+            .iter()
+            .map(|entry| entry.key().clone())
+            .collect();
         for worker_id in worker_ids {
             if let Err(e) = self.deregister_worker(worker_id).await {
                 warn!("Failed to deregister worker during shutdown: {}", e);
@@ -461,7 +516,7 @@ mod tests {
     async fn test_worker_registration() {
         let config = WorkerPoolConfig::default();
         let manager = WorkerPoolManager::new(config);
-        
+
         let registration = WorkerRegistration {
             name: "test-worker".to_string(),
             worker_type: WorkerType::Generalist,
@@ -480,7 +535,7 @@ mod tests {
     async fn test_worker_deregistration() {
         let config = WorkerPoolConfig::default();
         let manager = WorkerPoolManager::new(config);
-        
+
         let registration = WorkerRegistration {
             name: "test-worker".to_string(),
             worker_type: WorkerType::Generalist,
@@ -499,7 +554,7 @@ mod tests {
     async fn test_get_available_workers() {
         let config = WorkerPoolConfig::default();
         let manager = WorkerPoolManager::new(config);
-        
+
         let registration = WorkerRegistration {
             name: "test-worker".to_string(),
             worker_type: WorkerType::Generalist,
@@ -510,7 +565,7 @@ mod tests {
         };
 
         manager.register_worker(registration).await.unwrap();
-        
+
         let available = manager.get_available_workers().await;
         assert_eq!(available.len(), 1);
         assert_eq!(available[0].name, "test-worker");

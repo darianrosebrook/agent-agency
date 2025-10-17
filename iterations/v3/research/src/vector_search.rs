@@ -3,18 +3,18 @@
 //! Provides semantic search capabilities using vector embeddings and Qdrant database.
 
 use crate::types::*;
-use uuid::Uuid;
 use anyhow::{Context, Result};
-use qdrant_client::Qdrant;
 use qdrant_client::qdrant::{
-    vectors_config::Config, CreateCollection, Distance, PointStruct, SearchPoints,
-    VectorParams, VectorsConfig, WithPayloadSelector, Value,
+    vectors_config::Config, CreateCollection, Distance, PointStruct, SearchPoints, Value,
+    VectorParams, VectorsConfig, WithPayloadSelector,
 };
+use qdrant_client::Qdrant;
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
+use uuid::Uuid;
 
 /// Vector search engine for semantic knowledge retrieval
 pub struct VectorSearchEngine {
@@ -57,7 +57,10 @@ impl VectorSearchEngine {
         similarity_threshold: f32,
         max_results: u32,
     ) -> Result<Self> {
-        info!("Initializing vector search engine: {} at {}", collection_name, qdrant_url);
+        info!(
+            "Initializing vector search engine: {} at {}",
+            collection_name, qdrant_url
+        );
 
         let client = Qdrant::from_url(qdrant_url)
             .build()
@@ -90,7 +93,7 @@ impl VectorSearchEngine {
 
         if !collection_exists {
             info!("Creating collection: {}", self.collection_name);
-            
+
             let create_collection = CreateCollection {
                 collection_name: self.collection_name.clone(),
                 vectors_config: Some(VectorsConfig {
@@ -103,9 +106,11 @@ impl VectorSearchEngine {
                 ..Default::default()
             };
 
-            self.client.create_collection(create_collection).await
+            self.client
+                .create_collection(create_collection)
+                .await
                 .context("Failed to create collection")?;
-            
+
             info!("Collection {} created successfully", self.collection_name);
         }
 
@@ -121,21 +126,29 @@ impl VectorSearchEngine {
     ) -> Result<Vec<KnowledgeEntry>> {
         let start_time = std::time::Instant::now();
         let limit = limit.unwrap_or(self.max_results);
-        
+
         // Create cache key
         let cache_key = self.create_cache_key(query_vector, limit, &filter);
-        
+
         // Check cache first
         {
             let cache = self.cache.read().await;
             if let Some(cached_results) = cache.get(&cache_key) {
                 debug!("Cache hit for vector search");
-                self.update_metrics(true, start_time.elapsed().as_millis() as u64, cached_results.len() as u32).await;
+                self.update_metrics(
+                    true,
+                    start_time.elapsed().as_millis() as u64,
+                    cached_results.len() as u32,
+                )
+                .await;
                 return Ok(cached_results.clone());
             }
         }
 
-        debug!("Performing vector search with {} dimensions", query_vector.len());
+        debug!(
+            "Performing vector search with {} dimensions",
+            query_vector.len()
+        );
 
         // Build search request
         let search_points = SearchPoints {
@@ -144,13 +157,18 @@ impl VectorSearchEngine {
             limit: limit as u64,
             score_threshold: Some(self.similarity_threshold),
             with_payload: Some(WithPayloadSelector {
-                selector_options: Some(qdrant_client::qdrant::with_payload_selector::SelectorOptions::Enable(true)),
+                selector_options: Some(
+                    qdrant_client::qdrant::with_payload_selector::SelectorOptions::Enable(true),
+                ),
             }),
             ..Default::default()
         };
 
         // Execute search
-        let search_result = self.client.search_points(search_points).await
+        let search_result = self
+            .client
+            .search_points(search_points)
+            .await
             .context("Vector search failed")?;
 
         // Convert results to knowledge entries
@@ -167,11 +185,19 @@ impl VectorSearchEngine {
             cache.insert(cache_key, knowledge_entries.clone());
         }
 
-        self.update_metrics(false, start_time.elapsed().as_millis() as u64, knowledge_entries.len() as u32).await;
-        
-        info!("Vector search completed: {} results in {}ms", 
-            knowledge_entries.len(), start_time.elapsed().as_millis());
-        
+        self.update_metrics(
+            false,
+            start_time.elapsed().as_millis() as u64,
+            knowledge_entries.len() as u32,
+        )
+        .await;
+
+        info!(
+            "Vector search completed: {} results in {}ms",
+            knowledge_entries.len(),
+            start_time.elapsed().as_millis()
+        );
+
         Ok(knowledge_entries)
     }
 
@@ -196,7 +222,10 @@ impl VectorSearchEngine {
 
             info!("Added knowledge entry to vector database: {}", entry.id);
         } else {
-            warn!("Knowledge entry has no embedding, skipping vector storage: {}", entry.id);
+            warn!(
+                "Knowledge entry has no embedding, skipping vector storage: {}",
+                entry.id
+            );
         }
 
         Ok(())
@@ -230,11 +259,13 @@ impl VectorSearchEngine {
     /// Delete knowledge entry from vector database
     pub async fn delete_knowledge_entry(&self, entry_id: &Uuid) -> Result<()> {
         let points_selector = qdrant_client::qdrant::PointsSelector {
-            points_selector_one_of: Some(qdrant_client::qdrant::points_selector::PointsSelectorOneOf::Points(
-                qdrant_client::qdrant::PointsIdsList {
-                    ids: vec![entry_id.to_string().into()],
-                },
-            )),
+            points_selector_one_of: Some(
+                qdrant_client::qdrant::points_selector::PointsSelectorOneOf::Points(
+                    qdrant_client::qdrant::PointsIdsList {
+                        ids: vec![entry_id.to_string().into()],
+                    },
+                ),
+            ),
         };
 
         self.client
@@ -256,7 +287,7 @@ impl VectorSearchEngine {
         // For now, return a dummy embedding
         let embedding_size = self.vector_size as usize;
         let mut embedding = vec![0.0; embedding_size];
-        
+
         // Simple hash-based embedding for demo
         let hash = text.len() as u32;
         for i in 0..embedding_size {
@@ -294,17 +325,20 @@ impl VectorSearchEngine {
         limit: u32,
         filter: &Option<HashMap<String, serde_json::Value>>,
     ) -> String {
-        let vector_hash = query_vector.iter().fold(0u32, |acc, &x| {
-            acc.wrapping_add(x.to_bits())
-        });
-        
+        let vector_hash = query_vector
+            .iter()
+            .fold(0u32, |acc, &x| acc.wrapping_add(x.to_bits()));
+
         let filter_hash = if let Some(filter) = filter {
             serde_json::to_string(filter).unwrap_or_default().len() as u32
         } else {
             0
         };
 
-        format!("{}_{}_{}_{}", vector_hash, limit, filter_hash, self.similarity_threshold)
+        format!(
+            "{}_{}_{}_{}",
+            vector_hash, limit, filter_hash, self.similarity_threshold
+        )
     }
 
     /// Extract string value from Qdrant Value
@@ -320,42 +354,59 @@ impl VectorSearchEngine {
         &self,
         point: qdrant_client::qdrant::ScoredPoint,
     ) -> Result<Option<KnowledgeEntry>> {
-        let id_str = point.id.as_ref().map(|id| match id {
-            qdrant_client::qdrant::PointId { point_id_options: Some(options) } => match options {
-                qdrant_client::qdrant::point_id::PointIdOptions::Num(num) => num.to_string(),
-                qdrant_client::qdrant::point_id::PointIdOptions::Uuid(uuid) => uuid.to_string(),
-            },
-            _ => "".to_string(),
-        }).unwrap_or_else(|| "".to_string());
-        let entry_id = Uuid::parse_str(&id_str)
-            .context("Invalid UUID in point ID")?;
+        let id_str = point
+            .id
+            .as_ref()
+            .map(|id| match id {
+                qdrant_client::qdrant::PointId {
+                    point_id_options: Some(options),
+                } => match options {
+                    qdrant_client::qdrant::point_id::PointIdOptions::Num(num) => num.to_string(),
+                    qdrant_client::qdrant::point_id::PointIdOptions::Uuid(uuid) => uuid.to_string(),
+                },
+                _ => "".to_string(),
+            })
+            .unwrap_or_else(|| "".to_string());
+        let entry_id = Uuid::parse_str(&id_str).context("Invalid UUID in point ID")?;
 
         let payload = point.payload;
-        let title = payload.get("title")
+        let title = payload
+            .get("title")
             .and_then(|v| self.extract_string_value(v))
             .unwrap_or_else(|| "".to_string());
 
-        let content = payload.get("content")
+        let content = payload
+            .get("content")
             .and_then(|v| self.extract_string_value(v))
             .unwrap_or_else(|| "".to_string());
 
-        let source_type = payload.get("source_type")
+        let source_type = payload
+            .get("source_type")
             .and_then(|v| self.extract_string_value(v))
             .unwrap_or_else(|| "Unknown".to_string());
 
         let source = match source_type.as_str() {
             "WebPage" => {
-                let url = payload.get("url").and_then(|v| self.extract_string_value(v)).unwrap_or_else(|| "".to_string());
+                let url = payload
+                    .get("url")
+                    .and_then(|v| self.extract_string_value(v))
+                    .unwrap_or_else(|| "".to_string());
                 KnowledgeSource::WebPage(url)
-            },
+            }
             "Documentation" => {
-                let doc_path = payload.get("doc_path").and_then(|v| self.extract_string_value(v)).unwrap_or_else(|| "".to_string());
+                let doc_path = payload
+                    .get("doc_path")
+                    .and_then(|v| self.extract_string_value(v))
+                    .unwrap_or_else(|| "".to_string());
                 KnowledgeSource::Documentation(doc_path)
-            },
+            }
             "CodeRepository" => {
-                let repo_url = payload.get("repo_url").and_then(|v| self.extract_string_value(v)).unwrap_or_else(|| "".to_string());
+                let repo_url = payload
+                    .get("repo_url")
+                    .and_then(|v| self.extract_string_value(v))
+                    .unwrap_or_else(|| "".to_string());
                 KnowledgeSource::CodeRepository(repo_url)
-            },
+            }
             _ => KnowledgeSource::WebPage("".to_string()),
         };
 
@@ -377,21 +428,22 @@ impl VectorSearchEngine {
 
         let tags: Vec<String> = if let Some(qdrant_value) = payload.get("tags") {
             match &qdrant_value.kind {
-                Some(qdrant_client::qdrant::value::Kind::ListValue(list_val)) => {
-                    list_val.values.iter().filter_map(|v| {
-                        match &v.kind {
-                            Some(qdrant_client::qdrant::value::Kind::StringValue(s)) => Some(s.clone()),
-                            _ => None,
-                        }
-                    }).collect()
-                }
+                Some(qdrant_client::qdrant::value::Kind::ListValue(list_val)) => list_val
+                    .values
+                    .iter()
+                    .filter_map(|v| match &v.kind {
+                        Some(qdrant_client::qdrant::value::Kind::StringValue(s)) => Some(s.clone()),
+                        _ => None,
+                    })
+                    .collect(),
                 _ => Vec::new(),
             }
         } else {
             Vec::new()
         };
 
-        let created_at = payload.get("created_at")
+        let created_at = payload
+            .get("created_at")
             .and_then(|v| self.extract_string_value(v))
             .and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).ok())
             .map(|dt| dt.with_timezone(&chrono::Utc))
@@ -422,9 +474,15 @@ impl VectorSearchEngine {
             title,
             content,
             source,
-            source_url: payload.get("source_url").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            source_url: payload
+                .get("source_url")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
             content_type,
-            language: payload.get("language").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            language: payload
+                .get("language")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
             tags,
             embedding: Some(embedding),
             created_at,
@@ -438,32 +496,44 @@ impl VectorSearchEngine {
     }
 
     /// Convert knowledge entry to Qdrant payload
-    fn knowledge_entry_to_payload(&self, entry: &KnowledgeEntry) -> HashMap<String, serde_json::Value> {
+    fn knowledge_entry_to_payload(
+        &self,
+        entry: &KnowledgeEntry,
+    ) -> HashMap<String, serde_json::Value> {
         let mut payload = HashMap::new();
-        
+
         payload.insert("title".to_string(), json!(entry.title));
         payload.insert("content".to_string(), json!(entry.content));
-        payload.insert("content_type".to_string(), json!(format!("{:?}", entry.content_type)));
-        payload.insert("created_at".to_string(), json!(entry.created_at.to_rfc3339()));
-        payload.insert("updated_at".to_string(), json!(entry.updated_at.to_rfc3339()));
+        payload.insert(
+            "content_type".to_string(),
+            json!(format!("{:?}", entry.content_type)),
+        );
+        payload.insert(
+            "created_at".to_string(),
+            json!(entry.created_at.to_rfc3339()),
+        );
+        payload.insert(
+            "updated_at".to_string(),
+            json!(entry.updated_at.to_rfc3339()),
+        );
         payload.insert("tags".to_string(), json!(entry.tags));
-        
+
         match &entry.source {
             KnowledgeSource::WebPage(url) => {
                 payload.insert("source_type".to_string(), json!("WebPage"));
                 payload.insert("url".to_string(), json!(url));
-            },
+            }
             KnowledgeSource::Documentation(path) => {
                 payload.insert("source_type".to_string(), json!("Documentation"));
                 payload.insert("doc_path".to_string(), json!(path));
-            },
+            }
             KnowledgeSource::CodeRepository(url) => {
                 payload.insert("source_type".to_string(), json!("CodeRepository"));
                 payload.insert("repo_url".to_string(), json!(url));
-            },
+            }
             _ => {
                 payload.insert("source_type".to_string(), json!("Unknown"));
-            },
+            }
         }
 
         if let Some(url) = &entry.source_url {
@@ -478,56 +548,71 @@ impl VectorSearchEngine {
     }
 
     /// Convert serde_json::Value payload to qdrant_client::qdrant::Value payload
-    fn convert_payload_to_qdrant(&self, payload: HashMap<String, serde_json::Value>) -> HashMap<String, qdrant_client::qdrant::Value> {
-        payload.into_iter().map(|(k, v)| {
-            let qdrant_value = match v {
-                serde_json::Value::Null => qdrant_client::qdrant::Value {
-                    kind: Some(qdrant_client::qdrant::value::Kind::NullValue(0)),
-                },
-                serde_json::Value::Bool(b) => qdrant_client::qdrant::Value {
-                    kind: Some(qdrant_client::qdrant::value::Kind::BoolValue(b)),
-                },
-                serde_json::Value::Number(n) => {
-                    if let Some(i) = n.as_i64() {
-                        qdrant_client::qdrant::Value {
-                            kind: Some(qdrant_client::qdrant::value::Kind::IntegerValue(i)),
-                        }
-                    } else if let Some(f) = n.as_f64() {
-                        qdrant_client::qdrant::Value {
-                            kind: Some(qdrant_client::qdrant::value::Kind::DoubleValue(f)),
-                        }
-                    } else {
-                        qdrant_client::qdrant::Value {
-                            kind: Some(qdrant_client::qdrant::value::Kind::StringValue(n.to_string())),
+    fn convert_payload_to_qdrant(
+        &self,
+        payload: HashMap<String, serde_json::Value>,
+    ) -> HashMap<String, qdrant_client::qdrant::Value> {
+        payload
+            .into_iter()
+            .map(|(k, v)| {
+                let qdrant_value = match v {
+                    serde_json::Value::Null => qdrant_client::qdrant::Value {
+                        kind: Some(qdrant_client::qdrant::value::Kind::NullValue(0)),
+                    },
+                    serde_json::Value::Bool(b) => qdrant_client::qdrant::Value {
+                        kind: Some(qdrant_client::qdrant::value::Kind::BoolValue(b)),
+                    },
+                    serde_json::Value::Number(n) => {
+                        if let Some(i) = n.as_i64() {
+                            qdrant_client::qdrant::Value {
+                                kind: Some(qdrant_client::qdrant::value::Kind::IntegerValue(i)),
+                            }
+                        } else if let Some(f) = n.as_f64() {
+                            qdrant_client::qdrant::Value {
+                                kind: Some(qdrant_client::qdrant::value::Kind::DoubleValue(f)),
+                            }
+                        } else {
+                            qdrant_client::qdrant::Value {
+                                kind: Some(qdrant_client::qdrant::value::Kind::StringValue(
+                                    n.to_string(),
+                                )),
+                            }
                         }
                     }
-                },
-                serde_json::Value::String(s) => qdrant_client::qdrant::Value {
-                    kind: Some(qdrant_client::qdrant::value::Kind::StringValue(s)),
-                },
-                serde_json::Value::Array(arr) => {
-                    let qdrant_list = arr.into_iter().map(|item| {
-                        match item {
-                            serde_json::Value::String(s) => qdrant_client::qdrant::Value {
-                                kind: Some(qdrant_client::qdrant::value::Kind::StringValue(s)),
-                            },
-                            _ => qdrant_client::qdrant::Value {
-                                kind: Some(qdrant_client::qdrant::value::Kind::StringValue(item.to_string())),
-                            },
+                    serde_json::Value::String(s) => qdrant_client::qdrant::Value {
+                        kind: Some(qdrant_client::qdrant::value::Kind::StringValue(s)),
+                    },
+                    serde_json::Value::Array(arr) => {
+                        let qdrant_list = arr
+                            .into_iter()
+                            .map(|item| match item {
+                                serde_json::Value::String(s) => qdrant_client::qdrant::Value {
+                                    kind: Some(qdrant_client::qdrant::value::Kind::StringValue(s)),
+                                },
+                                _ => qdrant_client::qdrant::Value {
+                                    kind: Some(qdrant_client::qdrant::value::Kind::StringValue(
+                                        item.to_string(),
+                                    )),
+                                },
+                            })
+                            .collect();
+                        qdrant_client::qdrant::Value {
+                            kind: Some(qdrant_client::qdrant::value::Kind::ListValue(
+                                qdrant_client::qdrant::ListValue {
+                                    values: qdrant_list,
+                                },
+                            )),
                         }
-                    }).collect();
-                    qdrant_client::qdrant::Value {
-                        kind: Some(qdrant_client::qdrant::value::Kind::ListValue(qdrant_client::qdrant::ListValue {
-                            values: qdrant_list,
-                        })),
                     }
-                },
-                serde_json::Value::Object(_) => qdrant_client::qdrant::Value {
-                    kind: Some(qdrant_client::qdrant::value::Kind::StringValue(v.to_string())),
-                },
-            };
-            (k, qdrant_value)
-        }).collect()
+                    serde_json::Value::Object(_) => qdrant_client::qdrant::Value {
+                        kind: Some(qdrant_client::qdrant::value::Kind::StringValue(
+                            v.to_string(),
+                        )),
+                    },
+                };
+                (k, qdrant_value)
+            })
+            .collect()
     }
 
     /// Update search metrics
@@ -537,14 +622,16 @@ impl VectorSearchEngine {
         if cache_hit {
             metrics.cache_hits += 1;
         }
-        
+
         // Update running averages
         let total = metrics.total_searches;
-        metrics.average_search_time_ms = 
-            (metrics.average_search_time_ms * (total - 1) as f64 + search_time_ms as f64) / total as f64;
-        metrics.average_results_count = 
-            (metrics.average_results_count * (total - 1) as f32 + results_count as f32) / total as f32;
-        
+        metrics.average_search_time_ms = (metrics.average_search_time_ms * (total - 1) as f64
+            + search_time_ms as f64)
+            / total as f64;
+        metrics.average_results_count = (metrics.average_results_count * (total - 1) as f32
+            + results_count as f32)
+            / total as f32;
+
         metrics.last_search_time = Some(chrono::Utc::now());
     }
 }
@@ -573,13 +660,9 @@ mod tests {
             return;
         }
 
-        let engine = VectorSearchEngine::new(
-            "http://localhost:6333",
-            "test_collection",
-            1536,
-            0.7,
-            10,
-        ).await;
+        let engine =
+            VectorSearchEngine::new("http://localhost:6333", "test_collection", 1536, 0.7, 10)
+                .await;
 
         // In a real test environment, we'd assert the engine was created successfully
         // For now, we just ensure it compiles
@@ -588,28 +671,29 @@ mod tests {
 
     #[tokio::test]
     async fn test_embedding_generation() {
-        let engine = VectorSearchEngine::new(
-            "http://localhost:6333",
-            "test_collection",
-            1536,
-            0.7,
-            10,
-        ).await.unwrap_or_else(|_| {
-            // Create a dummy engine for testing
-            VectorSearchEngine {
-                client: Arc::new(QdrantClient::from_url("http://localhost:6333").build().unwrap()),
-                collection_name: "test".to_string(),
-                vector_size: 1536,
-                similarity_threshold: 0.7,
-                max_results: 10,
-                cache: Arc::new(RwLock::new(HashMap::new())),
-                metrics: Arc::new(RwLock::new(VectorSearchMetrics::default())),
-            }
-        });
+        let engine =
+            VectorSearchEngine::new("http://localhost:6333", "test_collection", 1536, 0.7, 10)
+                .await
+                .unwrap_or_else(|_| {
+                    // Create a dummy engine for testing
+                    VectorSearchEngine {
+                        client: Arc::new(
+                            QdrantClient::from_url("http://localhost:6333")
+                                .build()
+                                .unwrap(),
+                        ),
+                        collection_name: "test".to_string(),
+                        vector_size: 1536,
+                        similarity_threshold: 0.7,
+                        max_results: 10,
+                        cache: Arc::new(RwLock::new(HashMap::new())),
+                        metrics: Arc::new(RwLock::new(VectorSearchMetrics::default())),
+                    }
+                });
 
         let embedding = engine.generate_embedding("test text").await.unwrap();
         assert_eq!(embedding.len(), 1536);
-        
+
         // Check that embedding is normalized (magnitude close to 1.0)
         let magnitude: f32 = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
         assert!((magnitude - 1.0).abs() < 0.1);

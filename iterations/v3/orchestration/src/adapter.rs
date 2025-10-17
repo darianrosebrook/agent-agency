@@ -21,7 +21,11 @@ pub fn build_short_circuit_verdict(v: &ValidationResult) -> Option<FinalVerdict>
     for viol in &v.violations {
         // All current violations are treated as hard-fail unless waived in upstream logic.
         hard_fail = true;
-        remediation.push(viol.remediation.clone().unwrap_or_else(|| viol.message.clone()));
+        remediation.push(
+            viol.remediation
+                .clone()
+                .unwrap_or_else(|| viol.message.clone()),
+        );
         refs.push(code_to_ref(&viol.code).to_string());
     }
 
@@ -34,4 +38,3 @@ pub fn build_short_circuit_verdict(v: &ValidationResult) -> Option<FinalVerdict>
         None
     }
 }
-

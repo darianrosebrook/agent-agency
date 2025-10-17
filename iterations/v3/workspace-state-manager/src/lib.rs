@@ -1,18 +1,19 @@
+pub mod manager;
+pub mod rollback;
+pub mod storage;
 /**
  * @fileoverview Workspace State Manager - Repository state management with stable views, diffs, and rollback capabilities
  * @author @darianrosebrook
  */
-
 pub mod types;
-pub mod manager;
-pub mod storage;
-pub mod rollback;
 
 // Re-export main types and functionality
-pub use types::*;
 pub use manager::WorkspaceStateManager;
-pub use storage::{FileStorage, MemoryStorage, DatabaseStorage};
-pub use rollback::{RollbackManager, WorkspaceViewManager, ViewMetadata, RollbackResult};
+pub use rollback::{RollbackManager, RollbackResult, ViewMetadata, WorkspaceViewManager};
+pub use storage::{DatabaseStorage, FileStorage, MemoryStorage};
+pub use types::*;
+
+use std::sync::Arc;
 
 /// Create a new workspace state manager with file-based storage
 pub fn create_file_manager(
@@ -52,7 +53,7 @@ mod tests {
     async fn test_workspace_state_capture() {
         let temp_dir = TempDir::new().unwrap();
         let workspace_path = temp_dir.path();
-        
+
         // Create some test files
         std::fs::create_dir_all(workspace_path.join("src")).unwrap();
         std::fs::write(workspace_path.join("README.md"), "# Test Project").unwrap();
@@ -69,15 +70,19 @@ mod tests {
         // Verify we can retrieve the state
         let state = manager.get_state(result.data).await.unwrap();
         assert_eq!(state.total_files, 2);
-        assert!(state.files.contains_key(&std::path::PathBuf::from("README.md")));
-        assert!(state.files.contains_key(&std::path::PathBuf::from("src/main.rs")));
+        assert!(state
+            .files
+            .contains_key(&std::path::PathBuf::from("README.md")));
+        assert!(state
+            .files
+            .contains_key(&std::path::PathBuf::from("src/main.rs")));
     }
 
     #[tokio::test]
     async fn test_workspace_diff() {
         let temp_dir = TempDir::new().unwrap();
         let workspace_path = temp_dir.path();
-        
+
         // Create initial files
         std::fs::create_dir_all(workspace_path.join("src")).unwrap();
         std::fs::write(workspace_path.join("README.md"), "# Test Project").unwrap();
@@ -99,7 +104,10 @@ mod tests {
         let modified_state = modified_result.data;
 
         // Compute diff
-        let diff_result = manager.compute_diff(initial_state, modified_state).await.unwrap();
+        let diff_result = manager
+            .compute_diff(initial_state, modified_state)
+            .await
+            .unwrap();
         let diff = diff_result.data;
 
         assert_eq!(diff.files_modified, 1); // README.md
@@ -112,21 +120,24 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let workspace_path = temp_dir.path();
         let views_dir = temp_dir.path().join("views");
-        
+
         // Create test files
         std::fs::create_dir_all(workspace_path.join("src")).unwrap();
         std::fs::write(workspace_path.join("README.md"), "# Test Project").unwrap();
 
         let config = WorkspaceConfig::default();
-        let manager = create_memory_manager(workspace_path, config);
-        let view_manager = WorkspaceViewManager::new(manager, &views_dir);
+        let manager = Arc::new(create_memory_manager(workspace_path, config));
+        let view_manager = WorkspaceViewManager::new(Arc::clone(&manager), &views_dir);
 
         // Capture state
         let result = manager.capture_state().await.unwrap();
         let state_id = result.data;
 
         // Create view
-        let view_result = view_manager.create_view(state_id, Some("test-view".to_string())).await.unwrap();
+        let view_result = view_manager
+            .create_view(state_id, Some("test-view".to_string()))
+            .await
+            .unwrap();
         let view_path = view_result.data;
 
         // Verify view was created
@@ -145,14 +156,14 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let workspace_path = temp_dir.path();
         let backup_dir = temp_dir.path().join("backups");
-        
+
         // Create initial files
         std::fs::create_dir_all(workspace_path.join("src")).unwrap();
         std::fs::write(workspace_path.join("README.md"), "# Test Project").unwrap();
 
         let config = WorkspaceConfig::default();
-        let manager = create_memory_manager(workspace_path, config);
-        let rollback_manager = RollbackManager::new(manager, &backup_dir);
+        let manager = Arc::new(create_memory_manager(workspace_path, config));
+        let rollback_manager = RollbackManager::new(Arc::clone(&manager), &backup_dir);
 
         // Capture initial state
         let result = manager.capture_state().await.unwrap();
@@ -163,8 +174,11 @@ mod tests {
         std::fs::write(workspace_path.join("src/main.rs"), "fn main() {}").unwrap();
 
         // Perform rollback
-        let rollback_result = rollback_manager.rollback_to_state(initial_state, false).await.unwrap();
-        
+        let rollback_result = rollback_manager
+            .rollback_to_state(initial_state, false)
+            .await
+            .unwrap();
+
         assert!(rollback_result.success);
         assert_eq!(rollback_result.files_modified, 1); // README.md restored
         assert_eq!(rollback_result.files_removed, 1); // src/main.rs removed

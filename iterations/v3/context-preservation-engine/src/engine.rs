@@ -1,20 +1,20 @@
-use crate::types::*;
 use crate::context_manager::ContextManager;
 use crate::context_store::ContextStore;
 use crate::context_synthesizer::ContextSynthesizer;
 use crate::multi_tenant::MultiTenantManager;
+use crate::types::*;
 
 use anyhow::Result;
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use tracing::{info, warn, error, debug};
-use uuid::Uuid;
 use chrono::Utc;
-use std::time::Instant;
+use flate2::{read::GzDecoder, write::GzEncoder, Compression};
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
-use flate2::{write::GzEncoder, read::GzDecoder, Compression};
 use std::io::{Read, Write};
-use sha2::{Sha256, Digest};
+use std::sync::Arc;
+use std::time::Instant;
+use tokio::sync::RwLock;
+use tracing::{debug, error, info, warn};
+use uuid::Uuid;
 
 /// Context preservation engine
 #[derive(Debug)]
@@ -83,28 +83,48 @@ impl ContextPreservationEngine {
         info!("Preserving context for tenant: {}", request.tenant_id);
 
         // Validate tenant access
-        if !self.multi_tenant_manager.validate_tenant_access(&request.tenant_id).await? {
-            return Err(anyhow::anyhow!("Tenant access denied: {}", request.tenant_id));
+        if !self
+            .multi_tenant_manager
+            .validate_tenant_access(&request.tenant_id)
+            .await?
+        {
+            return Err(anyhow::anyhow!(
+                "Tenant access denied: {}",
+                request.tenant_id
+            ));
         }
 
         // Check tenant limits
-        if !self.multi_tenant_manager.check_tenant_limits(&request.tenant_id, &request.context_data).await? {
-            return Err(anyhow::anyhow!("Tenant limits exceeded: {}", request.tenant_id));
+        if !self
+            .multi_tenant_manager
+            .check_tenant_limits(&request.tenant_id, &request.context_data)
+            .await?
+        {
+            return Err(anyhow::anyhow!(
+                "Tenant limits exceeded: {}",
+                request.tenant_id
+            ));
         }
 
         // Generate context ID
         let context_id = Uuid::new_v4();
 
         // Process context data
-        let processed_context_data = self.context_manager.process_context_data(&request.context_data).await?;
+        let processed_context_data = self
+            .context_manager
+            .process_context_data(&request.context_data)
+            .await?;
 
         // Store context
-        let storage_result = self.context_store.store_context(
-            &context_id,
-            &request.tenant_id,
-            &processed_context_data,
-            &request.metadata,
-        ).await?;
+        let storage_result = self
+            .context_store
+            .store_context(
+                &context_id,
+                &request.tenant_id,
+                &processed_context_data,
+                &request.metadata,
+            )
+            .await?;
 
         if !storage_result.stored {
             return Err(anyhow::anyhow!("Failed to store context: {}", context_id));
@@ -112,24 +132,28 @@ impl ContextPreservationEngine {
 
         // Synthesize context if enabled
         let synthesis_results = if request.options.enable_synthesis {
-            self.context_synthesizer.synthesize_context(
-                &context_id,
-                &request.tenant_id,
-                &processed_context_data,
-                &request.metadata,
-            ).await?
+            self.context_synthesizer
+                .synthesize_context(
+                    &context_id,
+                    &request.tenant_id,
+                    &processed_context_data,
+                    &request.metadata,
+                )
+                .await?
         } else {
             Vec::new()
         };
 
         // Create cross-references if enabled
         let cross_references = if request.options.enable_cross_referencing {
-            self.context_synthesizer.create_cross_references(
-                &context_id,
-                &request.tenant_id,
-                &processed_context_data,
-                &request.metadata,
-            ).await?
+            self.context_synthesizer
+                .create_cross_references(
+                    &context_id,
+                    &request.tenant_id,
+                    &processed_context_data,
+                    &request.metadata,
+                )
+                .await?
         } else {
             Vec::new()
         };
@@ -150,13 +174,18 @@ impl ContextPreservationEngine {
                 failed_preservations: 0,
                 avg_preservation_time_ms: preservation_time_ms as f64,
                 context_reuse_rate: 0.0,
-                cross_reference_rate: if cross_references.is_empty() { 0.0 } else { 1.0 },
+                cross_reference_rate: if cross_references.is_empty() {
+                    0.0
+                } else {
+                    1.0
+                },
                 last_updated: Utc::now(),
             },
         };
 
         // Update statistics
-        self.update_stats(true, false, preservation_time_ms, 0).await;
+        self.update_stats(true, false, preservation_time_ms, 0)
+            .await;
 
         info!(
             "Context preserved successfully in {}ms - ID: {}, Tenant: {}",
@@ -172,18 +201,28 @@ impl ContextPreservationEngine {
         request: &ContextRetrievalRequest,
     ) -> Result<ContextRetrievalResult> {
         let start_time = Instant::now();
-        info!("Retrieving context: {} for tenant: {}", request.context_id, request.tenant_id);
+        info!(
+            "Retrieving context: {} for tenant: {}",
+            request.context_id, request.tenant_id
+        );
 
         // Validate tenant access
-        if !self.multi_tenant_manager.validate_tenant_access(&request.tenant_id).await? {
-            return Err(anyhow::anyhow!("Tenant access denied: {}", request.tenant_id));
+        if !self
+            .multi_tenant_manager
+            .validate_tenant_access(&request.tenant_id)
+            .await?
+        {
+            return Err(anyhow::anyhow!(
+                "Tenant access denied: {}",
+                request.tenant_id
+            ));
         }
 
         // Retrieve context from store
-        let stored_context = self.context_store.retrieve_context(
-            &request.context_id,
-            &request.tenant_id,
-        ).await?;
+        let stored_context = self
+            .context_store
+            .retrieve_context(&request.context_id, &request.tenant_id)
+            .await?;
 
         if stored_context.is_none() {
             let result = ContextRetrievalResult {
@@ -197,7 +236,8 @@ impl ContextPreservationEngine {
                 retrieval_time_ms: start_time.elapsed().as_millis() as u64,
             };
 
-            self.update_stats(false, false, 0, result.retrieval_time_ms).await;
+            self.update_stats(false, false, 0, result.retrieval_time_ms)
+                .await;
             return Ok(result);
         }
 
@@ -205,21 +245,27 @@ impl ContextPreservationEngine {
 
         // Retrieve relationships if requested
         let relationships = if request.options.include_relationships {
-            self.context_store.get_context_relationships(&request.context_id).await?
+            self.context_store
+                .get_context_relationships(&request.context_id)
+                .await?
         } else {
             Vec::new()
         };
 
         // Retrieve cross-references if requested
         let cross_references = if request.options.include_cross_references {
-            self.context_store.get_context_cross_references(&request.context_id).await?
+            self.context_store
+                .get_context_cross_references(&request.context_id)
+                .await?
         } else {
             Vec::new()
         };
 
         // Retrieve synthesis results if requested
         let synthesis_results = if request.options.include_synthesis {
-            self.context_store.get_context_synthesis_results(&request.context_id).await?
+            self.context_store
+                .get_context_synthesis_results(&request.context_id)
+                .await?
         } else {
             Vec::new()
         };
@@ -276,7 +322,8 @@ impl ContextPreservationEngine {
             let total_preservations = stats.successful_preservations + stats.failed_preservations;
             if total_preservations > 0 {
                 let total_time = stats.avg_preservation_time_ms * (total_preservations - 1) as f64;
-                stats.avg_preservation_time_ms = (total_time + preservation_time_ms as f64) / total_preservations as f64;
+                stats.avg_preservation_time_ms =
+                    (total_time + preservation_time_ms as f64) / total_preservations as f64;
             }
         } else {
             stats.total_retrievals += 1;
@@ -290,7 +337,8 @@ impl ContextPreservationEngine {
             let total_retrievals = stats.successful_retrievals + stats.failed_retrievals;
             if total_retrievals > 0 {
                 let total_time = stats.avg_retrieval_time_ms * (total_retrievals - 1) as f64;
-                stats.avg_retrieval_time_ms = (total_time + retrieval_time_ms as f64) / total_retrievals as f64;
+                stats.avg_retrieval_time_ms =
+                    (total_time + retrieval_time_ms as f64) / total_retrievals as f64;
             }
         }
 
@@ -310,7 +358,10 @@ impl ContextPreservationEngine {
         context: &serde_json::Value,
     ) -> Result<ContextSnapshot> {
         let start_time = Instant::now();
-        info!("Creating snapshot for session: {}, iteration: {}", session_id, iteration_number);
+        info!(
+            "Creating snapshot for session: {}, iteration: {}",
+            session_id, iteration_number
+        );
 
         let snapshot_id = self.generate_snapshot_id(session_id, iteration_number);
         let context_string = serde_json::to_string(context)?;
@@ -330,8 +381,10 @@ impl ContextPreservationEngine {
             // Try differential storage
             let mut base_snapshots = self.base_snapshots.write().await;
             if let Some(base_snapshot_id) = base_snapshots.get(session_id) {
-                if let Some(base_snapshot) = self.snapshot_cache.read().await.get(base_snapshot_id) {
-                    let base_context: serde_json::Value = self.restore_snapshot_internal(base_snapshot).await?;
+                if let Some(base_snapshot) = self.snapshot_cache.read().await.get(base_snapshot_id)
+                {
+                    let base_context: serde_json::Value =
+                        self.restore_snapshot_internal(base_snapshot).await?;
                     let diff = self.compute_diff(&base_context, context)?;
                     let diff_string = serde_json::to_string(&diff)?;
                     let compressed = self.compress_data(diff_string.as_bytes())?;
@@ -381,7 +434,10 @@ impl ContextPreservationEngine {
         };
 
         // Cache the snapshot
-        self.snapshot_cache.write().await.insert(snapshot_id.clone(), snapshot.clone());
+        self.snapshot_cache
+            .write()
+            .await
+            .insert(snapshot_id.clone(), snapshot.clone());
 
         let time_ms = start_time.elapsed().as_millis() as u64;
         info!(
@@ -502,8 +558,10 @@ impl ContextPreservationEngine {
         if healthy {
             debug!("Health check passed");
         } else {
-            warn!("Health check failed - Store: {}, Multi-tenant: {}, Synthesizer: {}", 
-                  store_healthy, multi_tenant_healthy, synthesizer_healthy);
+            warn!(
+                "Health check failed - Store: {}, Multi-tenant: {}, Synthesizer: {}",
+                store_healthy, multi_tenant_healthy, synthesizer_healthy
+            );
         }
 
         Ok(healthy)
@@ -511,7 +569,12 @@ impl ContextPreservationEngine {
 
     /// Generate a unique snapshot ID
     fn generate_snapshot_id(&self, session_id: &str, iteration_number: u32) -> String {
-        format!("snapshot_{}_{}_{}", session_id, iteration_number, Utc::now().timestamp_millis())
+        format!(
+            "snapshot_{}_{}_{}",
+            session_id,
+            iteration_number,
+            Utc::now().timestamp_millis()
+        )
     }
 
     /// Compress data using gzip
@@ -520,7 +583,10 @@ impl ContextPreservationEngine {
             return Ok(data.to_vec());
         }
 
-        let mut encoder = GzEncoder::new(Vec::new(), Compression::new(self.config.storage.compression_level));
+        let mut encoder = GzEncoder::new(
+            Vec::new(),
+            Compression::new(self.config.storage.compression_level),
+        );
         encoder.write_all(data)?;
         encoder.finish().map_err(Into::into)
     }
@@ -545,7 +611,11 @@ impl ContextPreservationEngine {
     }
 
     /// Compute diff between two JSON values
-    fn compute_diff(&self, base: &serde_json::Value, current: &serde_json::Value) -> Result<serde_json::Value> {
+    fn compute_diff(
+        &self,
+        base: &serde_json::Value,
+        current: &serde_json::Value,
+    ) -> Result<serde_json::Value> {
         match (base, current) {
             (serde_json::Value::Object(base_obj), serde_json::Value::Object(current_obj)) => {
                 let mut diff = serde_json::Map::new();
@@ -575,7 +645,11 @@ impl ContextPreservationEngine {
     }
 
     /// Apply diff to reconstruct original value
-    fn apply_diff(&self, base: &serde_json::Value, diff: &serde_json::Value) -> Result<serde_json::Value> {
+    fn apply_diff(
+        &self,
+        base: &serde_json::Value,
+        diff: &serde_json::Value,
+    ) -> Result<serde_json::Value> {
         match (base, diff) {
             (serde_json::Value::Object(base_obj), serde_json::Value::Object(diff_obj)) => {
                 let mut result = base_obj.clone();
@@ -596,7 +670,11 @@ impl ContextPreservationEngine {
     }
 
     /// Internal snapshot restoration (without public API wrapper)
-    fn restore_snapshot_internal<'a>(&'a self, snapshot: &'a ContextSnapshot) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<serde_json::Value>> + Send + 'a>> {
+    fn restore_snapshot_internal<'a>(
+        &'a self,
+        snapshot: &'a ContextSnapshot,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<serde_json::Value>> + Send + 'a>>
+    {
         Box::pin(async move {
             let compressed_data = &snapshot.compressed_data;
             let decompressed = self.decompress_data(compressed_data)?;
@@ -607,34 +685,39 @@ impl ContextPreservationEngine {
                     let cache = self.snapshot_cache.read().await;
                     if let Some(base_snapshot) = cache.get(base_snapshot_id) {
                         let base_context = self.restore_snapshot_internal(base_snapshot).await?;
-                    let diff_string = String::from_utf8(decompressed)?;
-                    let diff: serde_json::Value = serde_json::from_str(&diff_string)?;
-                    self.apply_diff(&base_context, &diff)
+                        let diff_string = String::from_utf8(decompressed)?;
+                        let diff: serde_json::Value = serde_json::from_str(&diff_string)?;
+                        self.apply_diff(&base_context, &diff)
+                    } else {
+                        Err(anyhow::anyhow!(
+                            "Base snapshot {} not found for diff restoration",
+                            base_snapshot_id
+                        ))
+                    }
                 } else {
-                    Err(anyhow::anyhow!("Base snapshot {} not found for diff restoration", base_snapshot_id))
+                    Err(anyhow::anyhow!("Diff snapshot missing base snapshot ID"))
                 }
             } else {
-                Err(anyhow::anyhow!("Diff snapshot missing base snapshot ID"))
-            }
-        } else {
-            // Full snapshot
-            let context_string = String::from_utf8(decompressed)?;
-            let context: serde_json::Value = serde_json::from_str(&context_string)?;
+                // Full snapshot
+                let context_string = String::from_utf8(decompressed)?;
+                let context: serde_json::Value = serde_json::from_str(&context_string)?;
 
-            // Validate checksum if enabled
-            if self.config.storage.checksum_validation {
-                if let Some(expected_checksum) = &snapshot.checksum {
-                    let actual_checksum = self.compute_checksum(&context_string);
-                    if actual_checksum != *expected_checksum {
-                        return Err(anyhow::anyhow!(
-                            "Checksum validation failed for snapshot {}: expected {}, got {}",
-                            snapshot.id, expected_checksum, actual_checksum
-                        ));
+                // Validate checksum if enabled
+                if self.config.storage.checksum_validation {
+                    if let Some(expected_checksum) = &snapshot.checksum {
+                        let actual_checksum = self.compute_checksum(&context_string);
+                        if actual_checksum != *expected_checksum {
+                            return Err(anyhow::anyhow!(
+                                "Checksum validation failed for snapshot {}: expected {}, got {}",
+                                snapshot.id,
+                                expected_checksum,
+                                actual_checksum
+                            ));
+                        }
                     }
                 }
-            }
 
-            Ok(context)
+                Ok(context)
             }
         })
     }

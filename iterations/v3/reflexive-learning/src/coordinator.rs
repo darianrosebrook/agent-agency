@@ -1,11 +1,11 @@
 //! Multi-Turn Learning Coordinator
-//! 
+//!
 //! Main coordinator for reflexive learning loop. Based on V2 MultiTurnLearningCoordinator
 //! (671 lines) with Rust adaptations and council integration.
 
 use crate::types::*;
 use anyhow::Result;
-use tracing::{info, warn, debug, instrument};
+use tracing::{debug, info, instrument, warn};
 use uuid::Uuid;
 
 /// Main learning coordinator
@@ -115,7 +115,10 @@ impl MultiTurnLearningCoordinator {
 
         self.active_sessions.insert(session.id, session.clone());
 
-        info!("Started learning session: {} for task: {}", session.id, task.id);
+        info!(
+            "Started learning session: {} for task: {}",
+            session.id, task.id
+        );
         Ok(session)
     }
 
@@ -125,7 +128,10 @@ impl MultiTurnLearningCoordinator {
         session: &mut LearningSession,
         turn_data: TurnData,
     ) -> Result<TurnLearningResult, LearningSystemError> {
-        debug!("Processing turn {} for session: {}", turn_data.turn_number, session.id);
+        debug!(
+            "Processing turn {} for session: {}",
+            turn_data.turn_number, session.id
+        );
 
         session.current_turn += 1;
 
@@ -139,7 +145,9 @@ impl MultiTurnLearningCoordinator {
         let credit_assignment = self.assign_credit(session, &turn_data).await?;
 
         // Determine strategy adjustments
-        let strategy_adjustments = self.determine_strategy_adjustments(session, &turn_data).await?;
+        let strategy_adjustments = self
+            .determine_strategy_adjustments(session, &turn_data)
+            .await?;
 
         // Generate recommendations for next turn
         let next_turn_recommendations = self.generate_recommendations(session, &turn_data).await?;
@@ -152,7 +160,10 @@ impl MultiTurnLearningCoordinator {
             next_turn_recommendations,
         };
 
-        info!("Processed turn {} for session: {}", session.current_turn, session.id);
+        info!(
+            "Processed turn {} for session: {}",
+            session.current_turn, session.id
+        );
         Ok(result)
     }
 
@@ -168,19 +179,21 @@ impl MultiTurnLearningCoordinator {
 
         // Update quality score with exponential moving average
         let alpha = 0.3; // Smoothing factor
-        session.progress.quality_score = alpha * turn_data.outcome.quality_score + 
-            (1.0 - alpha) * session.progress.quality_score;
+        session.progress.quality_score = alpha * turn_data.outcome.quality_score
+            + (1.0 - alpha) * session.progress.quality_score;
 
         // Update efficiency score
         session.progress.efficiency_score = turn_data.outcome.efficiency_score;
 
         // Update error rate
-        session.progress.error_rate = turn_data.outcome.error_count as f64 / session.current_turn as f64;
+        session.progress.error_rate =
+            turn_data.outcome.error_count as f64 / session.current_turn as f64;
 
         // Calculate learning velocity
         if session.current_turn > 0 {
-            let progress_delta = session.progress.completion_percentage - 
-                (session.current_turn as f64 - 1.0) / self.config.expected_max_turns as f64 * 100.0;
+            let progress_delta = session.progress.completion_percentage
+                - (session.current_turn as f64 - 1.0) / self.config.expected_max_turns as f64
+                    * 100.0;
             session.progress.learning_velocity = progress_delta / session.current_turn as f64;
         }
 
@@ -209,14 +222,23 @@ impl MultiTurnLearningCoordinator {
         if turn_data.outcome.error_count > 0 {
             insights.push(LearningInsight {
                 insight_type: InsightType::ErrorPattern,
-                description: format!("{} errors detected in this turn", turn_data.outcome.error_count),
+                description: format!(
+                    "{} errors detected in this turn",
+                    turn_data.outcome.error_count
+                ),
                 confidence: 0.9,
                 actionable: true,
             });
         }
 
         // Resource pattern insight
-        if turn_data.action_taken.resource_usage.cpu_time.as_seconds_f64() > 10.0 {
+        if turn_data
+            .action_taken
+            .resource_usage
+            .cpu_time
+            .as_seconds_f64()
+            > 10.0
+        {
             insights.push(LearningInsight {
                 insight_type: InsightType::ResourcePattern,
                 description: "High CPU usage detected".to_string(),
@@ -237,7 +259,11 @@ impl MultiTurnLearningCoordinator {
         let turn_credit = TurnCredit {
             turn_number: turn_data.turn_number,
             credit_amount: if turn_data.outcome.success { 1.0 } else { -0.5 },
-            credit_type: if turn_data.outcome.success { CreditType::Positive } else { CreditType::Negative },
+            credit_type: if turn_data.outcome.success {
+                CreditType::Positive
+            } else {
+                CreditType::Negative
+            },
             contributing_factors: vec![
                 ContributingFactor {
                     factor_type: FactorType::Quality,
@@ -299,11 +325,12 @@ impl MultiTurnLearningCoordinator {
                 AdjustmentType::QualityThreshold => {
                     // Apply quality threshold adjustment
                     session.learning_state.current_strategy = LearningStrategy::Conservative;
-                },
+                }
                 AdjustmentType::ResourceAllocation => {
                     // Apply resource allocation adjustment
-                    session.learning_state.resource_utilization.efficiency_ratio += adjustment.magnitude;
-                },
+                    session.learning_state.resource_utilization.efficiency_ratio +=
+                        adjustment.magnitude;
+                }
                 _ => {
                     // Handle other adjustment types
                 }
@@ -383,7 +410,9 @@ impl MultiTurnLearningCoordinator {
         let recommendations = self.generate_final_recommendations(&session).await?;
 
         // Update historical performance
-        let historical_update = self.update_historical_performance(&session, &final_metrics).await?;
+        let historical_update = self
+            .update_historical_performance(&session, &final_metrics)
+            .await?;
 
         let result = LearningResult {
             session_id: session.id,
@@ -396,7 +425,10 @@ impl MultiTurnLearningCoordinator {
         // Remove session from active sessions
         self.active_sessions.remove(&session.id);
 
-        info!("Ended learning session: {} with {} turns", session.id, session.current_turn);
+        info!(
+            "Ended learning session: {} with {} turns",
+            session.id, session.current_turn
+        );
         Ok(result)
     }
 
@@ -452,7 +484,9 @@ impl MultiTurnLearningCoordinator {
             let turn_range = if i == 0 {
                 (0, adaptation.timestamp.timestamp() as u32)
             } else {
-                let prev_timestamp = session.learning_state.adaptation_history[i - 1].timestamp.timestamp() as u32;
+                let prev_timestamp = session.learning_state.adaptation_history[i - 1]
+                    .timestamp
+                    .timestamp() as u32;
                 (prev_timestamp, adaptation.timestamp.timestamp() as u32)
             };
 
@@ -474,24 +508,37 @@ impl MultiTurnLearningCoordinator {
     ) -> Result<ContextUtilization, LearningSystemError> {
         let contexts_used = session.context_preservation.preserved_contexts.len() as u32;
         let context_effectiveness = if contexts_used > 0 {
-            session.context_preservation.context_usage.values().sum::<u32>() as f64 / contexts_used as f64
+            session
+                .context_preservation
+                .context_usage
+                .values()
+                .sum::<u32>() as f64
+                / contexts_used as f64
         } else {
             0.0
         };
 
         let context_freshness = if !session.context_preservation.context_freshness.is_empty() {
             let now = chrono::Utc::now();
-            let total_age = session.context_preservation.context_freshness.values()
+            let total_age = session
+                .context_preservation
+                .context_freshness
+                .values()
                 .map(|timestamp| (now - *timestamp).num_seconds())
                 .sum::<i64>();
-            let avg_age = total_age as f64 / session.context_preservation.context_freshness.len() as f64;
+            let avg_age =
+                total_age as f64 / session.context_preservation.context_freshness.len() as f64;
             1.0 / (avg_age / 3600.0 + 1.0) // Freshness decreases with age
         } else {
             0.0
         };
 
         let context_reuse_rate = if contexts_used > 0 {
-            let total_usage = session.context_preservation.context_usage.values().sum::<u32>() as f64;
+            let total_usage = session
+                .context_preservation
+                .context_usage
+                .values()
+                .sum::<u32>() as f64;
             total_usage / contexts_used as f64
         } else {
             0.0
@@ -564,18 +611,24 @@ impl MultiTurnLearningCoordinator {
         let performance_update = PerformanceUpdate {
             average_completion_time: final_metrics.completion_time,
             average_quality_score: final_metrics.final_quality_score,
-            success_rate: if final_metrics.final_quality_score > 0.7 { 1.0 } else { 0.0 },
+            success_rate: if final_metrics.final_quality_score > 0.7 {
+                1.0
+            } else {
+                0.0
+            },
             efficiency_improvement: final_metrics.final_efficiency_score,
         };
 
-        let pattern_updates = vec![
-            PatternUpdate {
-                pattern_type: PatternType::SuccessPattern,
-                frequency_change: if final_metrics.final_quality_score > 0.8 { 0.1 } else { -0.1 },
-                impact_change: final_metrics.final_quality_score,
-                mitigation_effectiveness: 0.8,
+        let pattern_updates = vec![PatternUpdate {
+            pattern_type: PatternType::SuccessPattern,
+            frequency_change: if final_metrics.final_quality_score > 0.8 {
+                0.1
+            } else {
+                -0.1
             },
-        ];
+            impact_change: final_metrics.final_quality_score,
+            mitigation_effectiveness: 0.8,
+        }];
 
         Ok(HistoricalUpdate {
             task_type: TaskType::CodeGeneration, // This should come from the original task
@@ -808,4 +861,3 @@ pub enum PatternType {
     QualityPattern,
     ResourcePattern,
 }
-

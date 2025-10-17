@@ -1,15 +1,17 @@
+use crate::persistence::VerdictWriter;
+use agent_agency_council::types::*;
 use anyhow::Result;
 use sqlx::types::Json;
 use sqlx::PgPool;
-use agent_agency_council::types::*;
-use crate::persistence::VerdictWriter;
 
 pub struct PostgresVerdictWriter {
     pool: PgPool,
 }
 
 impl PostgresVerdictWriter {
-    pub fn new(pool: PgPool) -> Self { Self { pool } }
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
 }
 
 #[async_trait::async_trait]
@@ -59,4 +61,3 @@ impl VerdictWriter for PostgresVerdictWriter {
         Ok(())
     }
 }
-

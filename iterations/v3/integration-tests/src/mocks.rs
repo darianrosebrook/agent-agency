@@ -385,11 +385,11 @@ impl MockUuidGenerator {
     pub async fn generate(&self) -> Result<Uuid> {
         let uuids = self.uuids.read().await;
         let mut index = self.current_index.write().await;
-        
+
         if *index >= uuids.len() {
             return Err(anyhow::anyhow!("No more UUIDs available"));
         }
-        
+
         let uuid = uuids[*index];
         *index += 1;
         Ok(uuid)
@@ -454,16 +454,16 @@ mod tests {
     #[tokio::test]
     async fn test_mock_database() {
         let db = MockDatabase::new();
-        
+
         let key = "test-key".to_string();
         let value = serde_json::json!({"test": "data"});
-        
+
         db.insert(key.clone(), value.clone()).await.unwrap();
         let retrieved = db.get(&key).await.unwrap();
-        
+
         assert_eq!(retrieved, Some(value));
         assert_eq!(db.count().await, 1);
-        
+
         db.delete(&key).await.unwrap();
         assert_eq!(db.count().await, 0);
     }
@@ -471,15 +471,15 @@ mod tests {
     #[tokio::test]
     async fn test_mock_redis() {
         let redis = MockRedis::new();
-        
+
         let key = "test-key".to_string();
         let value = "test-value".to_string();
-        
+
         redis.set(key.clone(), value.clone()).await.unwrap();
         let retrieved = redis.get(&key).await.unwrap();
-        
+
         assert_eq!(retrieved, Some(value));
-        
+
         redis.del(&key).await.unwrap();
         let retrieved = redis.get(&key).await.unwrap();
         assert_eq!(retrieved, None);
@@ -488,17 +488,17 @@ mod tests {
     #[tokio::test]
     async fn test_mock_http_client() {
         let client = MockHttpClient::new();
-        
+
         let url = "https://example.com/test".to_string();
         let response = MockResponse {
             status: 200,
             body: "test response".to_string(),
             headers: HashMap::new(),
         };
-        
+
         client.mock_response(url.clone(), response.clone()).await;
         let retrieved = client.get(&url).await.unwrap();
-        
+
         assert_eq!(retrieved.status, 200);
         assert_eq!(retrieved.body, "test response");
     }
@@ -506,13 +506,16 @@ mod tests {
     #[tokio::test]
     async fn test_mock_event_emitter() {
         let emitter = MockEventEmitter::new();
-        
+
         let event_type = "test-event".to_string();
         let data = serde_json::json!({"test": "data"});
-        
-        emitter.emit(event_type.clone(), data.clone()).await.unwrap();
+
+        emitter
+            .emit(event_type.clone(), data.clone())
+            .await
+            .unwrap();
         let events = emitter.get_events_by_type(&event_type).await;
-        
+
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].event_type, event_type);
         assert_eq!(events[0].data, data);
@@ -521,10 +524,16 @@ mod tests {
     #[tokio::test]
     async fn test_mock_metrics_collector() {
         let collector = MockMetricsCollector::new();
-        
-        collector.record_metric("test-metric".to_string(), 42.0).await.unwrap();
-        collector.increment_counter("test-counter".to_string()).await.unwrap();
-        
+
+        collector
+            .record_metric("test-metric".to_string(), 42.0)
+            .await
+            .unwrap();
+        collector
+            .increment_counter("test-counter".to_string())
+            .await
+            .unwrap();
+
         assert_eq!(collector.get_metric("test-metric").await, Some(42.0));
         assert_eq!(collector.get_counter("test-counter").await, Some(1));
     }

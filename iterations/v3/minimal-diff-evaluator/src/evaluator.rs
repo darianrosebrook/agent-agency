@@ -1,18 +1,18 @@
-use crate::types::*;
 use crate::ast_analyzer::ASTAnalyzer;
 use crate::change_classifier::ChangeClassifier;
 use crate::impact_analyzer::ImpactAnalyzer;
 use crate::language_support::LanguageSupport;
+use crate::types::*;
 
 use anyhow::Result;
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use tracing::{info, warn, error, debug};
-use uuid::Uuid;
 use chrono::Utc;
-use std::time::Instant;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
+use std::sync::Arc;
+use std::time::Instant;
+use tokio::sync::RwLock;
+use tracing::{debug, error, info, warn};
+use uuid::Uuid;
 
 /// Minimal diff evaluator
 #[derive(Debug)]
@@ -75,12 +75,17 @@ impl MinimalDiffEvaluator {
         let evaluation_id = Uuid::new_v4();
 
         // Detect programming language
-        let language = self.language_support.detect_language(file_path, diff_content).await?;
+        let language = self
+            .language_support
+            .detect_language(file_path, diff_content)
+            .await?;
         debug!("Detected language: {:?}", language);
 
         // Perform AST-based analysis if enabled
         let mut language_analysis = if self.config.enable_ast_analysis {
-            self.ast_analyzer.analyze_diff(diff_content, file_path, &language).await?
+            self.ast_analyzer
+                .analyze_diff(diff_content, file_path, &language)
+                .await?
         } else {
             LanguageAnalysisResult {
                 language: language.clone(),
@@ -105,20 +110,16 @@ impl MinimalDiffEvaluator {
         };
 
         // Classify the change
-        let change_classification = self.change_classifier.classify_change(
-            diff_content,
-            &language_analysis,
-            context,
-        ).await?;
+        let change_classification = self
+            .change_classifier
+            .classify_change(diff_content, &language_analysis, context)
+            .await?;
 
         // Analyze impact if enabled
         let impact_analysis = if self.config.enable_impact_analysis {
-            self.impact_analyzer.analyze_impact(
-                diff_content,
-                file_path,
-                &language_analysis,
-                context,
-            ).await?
+            self.impact_analyzer
+                .analyze_impact(diff_content, file_path, &language_analysis, context)
+                .await?
         } else {
             ImpactAnalysis {
                 files_affected: 1,
@@ -142,10 +143,8 @@ impl MinimalDiffEvaluator {
         );
 
         // Calculate change complexity score
-        let change_complexity_score = self.calculate_change_complexity_score(
-            &language_analysis,
-            &change_classification,
-        );
+        let change_complexity_score =
+            self.calculate_change_complexity_score(&language_analysis, &change_classification);
 
         // Calculate change impact score
         let change_impact_score = self.calculate_change_impact_score(&impact_analysis);
@@ -302,8 +301,10 @@ impl MinimalDiffEvaluator {
                 recommendation_type: RecommendationType::ReduceComplexity,
                 priority: PriorityLevel::High,
                 description: "High complexity detected in changes".to_string(),
-                action: "Consider breaking down complex changes into smaller, more focused changes".to_string(),
-                expected_benefit: "Improved maintainability and reduced risk of introducing bugs".to_string(),
+                action: "Consider breaking down complex changes into smaller, more focused changes"
+                    .to_string(),
+                expected_benefit: "Improved maintainability and reduced risk of introducing bugs"
+                    .to_string(),
                 implementation_effort: EffortLevel::Medium,
             });
         }
@@ -317,7 +318,8 @@ impl MinimalDiffEvaluator {
                     priority: PriorityLevel::Medium,
                     description: "Low test coverage detected".to_string(),
                     action: "Add tests for the changed code".to_string(),
-                    expected_benefit: "Better code quality and reduced risk of regressions".to_string(),
+                    expected_benefit: "Better code quality and reduced risk of regressions"
+                        .to_string(),
                     implementation_effort: EffortLevel::High,
                 });
             }
@@ -359,23 +361,31 @@ impl MinimalDiffEvaluator {
 
         // Update averages
         let total = stats.total_evaluations as f64;
-        stats.avg_surgical_change_score = 
-            (stats.avg_surgical_change_score * (total - 1.0) + result.surgical_change_score) / total;
-        stats.avg_change_complexity_score = 
-            (stats.avg_change_complexity_score * (total - 1.0) + result.change_complexity_score) / total;
-        stats.avg_change_impact_score = 
+        stats.avg_surgical_change_score = (stats.avg_surgical_change_score * (total - 1.0)
+            + result.surgical_change_score)
+            / total;
+        stats.avg_change_complexity_score = (stats.avg_change_complexity_score * (total - 1.0)
+            + result.change_complexity_score)
+            / total;
+        stats.avg_change_impact_score =
             (stats.avg_change_impact_score * (total - 1.0) + result.change_impact_score) / total;
 
         // Update language counts
-        *stats.evaluations_by_language.entry(result.language_analysis.language.clone())
+        *stats
+            .evaluations_by_language
+            .entry(result.language_analysis.language.clone())
             .or_insert(0) += 1;
 
         // Update change type counts
-        *stats.evaluations_by_change_type.entry(result.change_classification.primary_type.clone())
+        *stats
+            .evaluations_by_change_type
+            .entry(result.change_classification.primary_type.clone())
             .or_insert(0) += 1;
 
         // Update risk level counts
-        *stats.evaluations_by_risk_level.entry(result.change_classification.risk_level.clone())
+        *stats
+            .evaluations_by_risk_level
+            .entry(result.change_classification.risk_level.clone())
             .or_insert(0) += 1;
 
         stats.last_updated = Utc::now();

@@ -1,11 +1,13 @@
 //! End-to-end integration tests
 
 use anyhow::Result;
-use tracing::{info, debug};
+use tracing::{debug, info};
 
+use crate::fixtures::{TestDataGenerator, TestFixtures};
+use crate::mocks::{
+    MockDatabase, MockEventEmitter, MockFactory, MockHttpClient, MockMetricsCollector,
+};
 use crate::test_utils::{TestExecutor, TestResult, LONG_TEST_TIMEOUT};
-use crate::fixtures::{TestFixtures, TestDataGenerator};
-use crate::mocks::{MockFactory, MockDatabase, MockEventEmitter, MockMetricsCollector, MockHttpClient};
 
 /// End-to-end integration test suite
 pub struct EndToEndIntegrationTests {
@@ -36,14 +38,20 @@ impl EndToEndIntegrationTests {
         // Test complete task execution workflow
         results.push(
             self.executor
-                .execute("e2e_complete_task_workflow", self.test_complete_task_workflow())
+                .execute(
+                    "e2e_complete_task_workflow",
+                    self.test_complete_task_workflow(),
+                )
                 .await,
         );
 
         // Test multi-tenant scenario
         results.push(
             self.executor
-                .execute("e2e_multi_tenant_scenario", self.test_multi_tenant_scenario())
+                .execute(
+                    "e2e_multi_tenant_scenario",
+                    self.test_multi_tenant_scenario(),
+                )
                 .await,
         );
 
@@ -57,7 +65,10 @@ impl EndToEndIntegrationTests {
         // Test performance under load
         results.push(
             self.executor
-                .execute("e2e_performance_under_load", self.test_performance_under_load())
+                .execute(
+                    "e2e_performance_under_load",
+                    self.test_performance_under_load(),
+                )
                 .await,
         );
 
@@ -306,7 +317,10 @@ impl EndToEndIntegrationTests {
         // let avg_response_time = metrics.get("average_response_time_ms").unwrap_or(&0.0);
         // assert!(*avg_response_time <= 5000.0); // Maximum 5 seconds average response time
 
-        info!("✅ Performance under load test completed in {:?}", total_duration);
+        info!(
+            "✅ Performance under load test completed in {:?}",
+            total_duration
+        );
         Ok(())
     }
 
@@ -436,13 +450,21 @@ mod tests {
     #[tokio::test]
     async fn test_e2e_mock_setup() {
         let tests = EndToEndIntegrationTests::new();
-        
+
         let working_spec = TestFixtures::working_spec();
         let task_context = TestFixtures::task_context();
-        
-        tests.mock_db.insert("spec-123".to_string(), working_spec).await.unwrap();
-        tests.mock_db.insert("context-123".to_string(), task_context).await.unwrap();
-        
+
+        tests
+            .mock_db
+            .insert("spec-123".to_string(), working_spec)
+            .await
+            .unwrap();
+        tests
+            .mock_db
+            .insert("context-123".to_string(), task_context)
+            .await
+            .unwrap();
+
         assert_eq!(tests.mock_db.count().await, 2);
     }
 }

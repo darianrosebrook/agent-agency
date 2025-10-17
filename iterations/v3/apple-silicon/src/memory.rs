@@ -39,7 +39,7 @@ impl MemoryManager {
     pub async fn start_monitoring(&self) -> Result<()> {
         let mut active = self.monitoring_active.write().await;
         *active = true;
-        
+
         info!("Memory monitoring started");
         Ok(())
     }
@@ -48,7 +48,7 @@ impl MemoryManager {
     pub async fn stop_monitoring(&self) -> Result<()> {
         let mut active = self.monitoring_active.write().await;
         *active = false;
-        
+
         info!("Memory monitoring stopped");
         Ok(())
     }
@@ -84,8 +84,10 @@ impl MemoryManager {
         };
 
         if usage_percent > 90.0 {
-            warn!("High memory usage: {:.1}% ({}/{} MB)", 
-                usage_percent, used_memory_mb, status.total_memory_mb);
+            warn!(
+                "High memory usage: {:.1}% ({}/{} MB)",
+                usage_percent, used_memory_mb, status.total_memory_mb
+            );
         }
 
         Ok(())
@@ -102,10 +104,10 @@ impl MemoryManager {
     pub async fn cleanup_memory(&self) -> Result<u64> {
         // TODO: Implement actual memory cleanup
         // For now, simulate cleanup
-        
+
         let status = self.current_status.read().await;
         let cleaned_mb = status.cache_size_mb / 2; // Simulate cleaning half the cache
-        
+
         info!("Memory cleanup completed: {} MB freed", cleaned_mb);
         Ok(cleaned_mb)
     }
@@ -139,7 +141,7 @@ mod tests {
             pressure_monitoring: true,
             cleanup_threshold_percent: 80,
         };
-        
+
         let manager = MemoryManager::new(config);
         let status = manager.get_memory_status().await;
         assert_eq!(status.total_memory_mb, 16384);
@@ -149,8 +151,11 @@ mod tests {
     #[tokio::test]
     async fn test_memory_status_update() {
         let manager = MemoryManager::default();
-        
-        manager.update_memory_status(8192, 1024, 2048).await.unwrap();
+
+        manager
+            .update_memory_status(8192, 1024, 2048)
+            .await
+            .unwrap();
         let status = manager.get_memory_status().await;
         assert_eq!(status.used_memory_mb, 8192);
         assert_eq!(status.cache_size_mb, 1024);
@@ -161,17 +166,17 @@ mod tests {
     #[tokio::test]
     async fn test_memory_pressure_levels() {
         let manager = MemoryManager::default();
-        
+
         // Normal usage
         manager.update_memory_status(16384, 0, 0).await.unwrap();
         let status = manager.get_memory_status().await;
         assert_eq!(status.memory_pressure, MemoryPressure::Normal);
-        
+
         // Warning level
         manager.update_memory_status(24576, 0, 0).await.unwrap();
         let status = manager.get_memory_status().await;
         assert_eq!(status.memory_pressure, MemoryPressure::Warning);
-        
+
         // Critical level
         manager.update_memory_status(30000, 0, 0).await.unwrap();
         let status = manager.get_memory_status().await;
@@ -181,10 +186,13 @@ mod tests {
     #[tokio::test]
     async fn test_memory_cleanup() {
         let manager = MemoryManager::default();
-        
-        manager.update_memory_status(28000, 4000, 2000).await.unwrap();
+
+        manager
+            .update_memory_status(28000, 4000, 2000)
+            .await
+            .unwrap();
         assert!(manager.needs_cleanup().await);
-        
+
         let cleaned = manager.cleanup_memory().await.unwrap();
         assert_eq!(cleaned, 2000); // Half of cache size
     }

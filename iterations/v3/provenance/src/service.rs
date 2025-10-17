@@ -10,9 +10,9 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::{
-    types::*,
-    signer::{SignerTrait, SignerFactory, SigningAlgorithm},
     git_integration::{GitIntegration, GitTrailerManager},
+    signer::{SignerFactory, SignerTrait, SigningAlgorithm},
+    types::*,
     ProvenanceConfig,
 };
 
@@ -66,7 +66,10 @@ impl ProvenanceService {
             },
         )?;
 
-        let git_integration = if std::path::Path::new(&config.git.repository_path).join(".git").exists() {
+        let git_integration = if std::path::Path::new(&config.git.repository_path)
+            .join(".git")
+            .exists()
+        {
             // TODO: Re-enable when GitIntegration trait is properly implemented
             // Some(Box::new(GitTrailerManager::new(
             //     &config.git.repository_path,
@@ -96,13 +99,12 @@ impl ProvenanceService {
         if let Some(ref git) = self.git_integration {
             if self.config.git.auto_commit {
                 let commit_message = self.generate_commit_message(&signed_record);
-                let commit_hash = git.create_provenance_commit(
-                    &commit_message,
-                    &signed_record,
-                ).await?;
-                
+                let commit_hash = git
+                    .create_provenance_commit(&commit_message, &signed_record)
+                    .await?;
+
                 signed_record.git_commit_hash = Some(commit_hash);
-                
+
                 // Update the record with git commit hash
                 self.storage.update_record(&signed_record).await?;
             }
@@ -116,18 +118,18 @@ impl ProvenanceService {
         let decision_summary = record.decision_summary();
         let consensus_score = record.consensus_score;
         let compliance_score = record.caws_compliance.compliance_score;
-        
+
         format!(
             "CAWS Verdict {}: {} (Consensus: {:.2}, Compliance: {:.2})",
-            record.verdict_id,
-            decision_summary,
-            consensus_score,
-            compliance_score
+            record.verdict_id, decision_summary, consensus_score, compliance_score
         )
     }
 
     /// Verify provenance record integrity
-    pub async fn verify_integrity(&self, record: &ProvenanceRecord) -> Result<IntegrityCheckResult> {
+    pub async fn verify_integrity(
+        &self,
+        record: &ProvenanceRecord,
+    ) -> Result<IntegrityCheckResult> {
         let mut issues = Vec::new();
         let mut is_valid = true;
 
@@ -167,7 +169,8 @@ impl ProvenanceService {
         // Verify timestamp consistency
         let now = Utc::now();
         let time_diff = (now - record.timestamp).num_seconds();
-        if time_diff.abs() > 3600 { // More than 1 hour difference
+        if time_diff.abs() > 3600 {
+            // More than 1 hour difference
             issues.push(IntegrityIssue {
                 record_id: record.id,
                 issue_type: IntegrityIssueType::TimestampInconsistent,
@@ -196,7 +199,7 @@ impl ProvenanceService {
         format: ExportFormat,
     ) -> Result<ProvenanceExport> {
         let records = self.storage.query_records(&query).await?;
-        
+
         let export_id = Uuid::new_v4();
         let metadata = ExportMetadata {
             total_records: records.len() as u64,
@@ -228,7 +231,7 @@ impl ProvenanceService {
         // Get all records (in batches to avoid memory issues)
         let batch_size = 1000;
         let mut offset = 0;
-        
+
         loop {
             let query = ProvenanceQuery {
                 task_id: None,
@@ -250,7 +253,7 @@ impl ProvenanceService {
                 let integrity_result = self.verify_integrity(&record).await?;
                 all_issues.extend(integrity_result.issues);
                 checked_records += integrity_result.checked_records;
-                
+
                 if !integrity_result.is_valid {
                     all_valid = false;
                 }
@@ -281,7 +284,7 @@ impl ProvenanceService {
         };
 
         let records = self.storage.query_records(&query).await?;
-        
+
         // Sort by timestamp
         let mut sorted_records = records;
         sorted_records.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
@@ -298,8 +301,14 @@ impl ProvenanceService {
 
         // Capture values before moving sorted_records
         let chain_length = sorted_records.len() as u32;
-        let created_at = sorted_records.first().map(|r| r.timestamp).unwrap_or_else(Utc::now);
-        let last_updated = sorted_records.last().map(|r| r.timestamp).unwrap_or_else(Utc::now);
+        let created_at = sorted_records
+            .first()
+            .map(|r| r.timestamp)
+            .unwrap_or_else(Utc::now);
+        let last_updated = sorted_records
+            .last()
+            .map(|r| r.timestamp)
+            .unwrap_or_else(Utc::now);
 
         Ok(ProvenanceChain {
             chain_id: Uuid::new_v4(),
@@ -320,11 +329,11 @@ impl ProvenanceService {
             verdict_id: Uuid::new_v4(),
             task_id: Uuid::new_v4(),
             timestamp: Utc::now(),
-            caws_compliance: CawsComplianceProvenance { 
+            caws_compliance: CawsComplianceProvenance {
                 is_compliant: true,
-                compliance_score: 0.0, 
-                violations: vec![], 
-                waivers_used: vec![], 
+                compliance_score: 0.0,
+                violations: vec![],
+                waivers_used: vec![],
                 budget_adherence: BudgetAdherence {
                     max_files: 0,
                     actual_files: 0,
@@ -355,7 +364,6 @@ impl ProvenanceService {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -366,12 +374,9 @@ mod tests {
     async fn test_provenance_service_creation() {
         let config = ProvenanceConfig::default();
         let storage = MockProvenanceStorage::new();
-        
-        let service = ProvenanceService::with_defaults(
-            Box::new(storage),
-            config,
-        ).unwrap();
-        
+
+        let service = ProvenanceService::with_defaults(Box::new(storage), config).unwrap();
+
         // Service should be created successfully
         assert_eq!(service.config.signing.algorithm, SigningAlgorithm::EdDSA);
     }
@@ -380,15 +385,12 @@ mod tests {
     async fn test_provenance_record_integrity_verification() {
         let config = ProvenanceConfig::default();
         let storage = MockProvenanceStorage::new();
-        
-        let service = ProvenanceService::with_defaults(
-            Box::new(storage),
-            config,
-        ).unwrap();
+
+        let service = ProvenanceService::with_defaults(Box::new(storage), config).unwrap();
 
         let record = create_test_provenance_record();
         let signed_record = service.record_provenance(record).await.unwrap();
-        
+
         let integrity_result = service.verify_integrity(&signed_record).await.unwrap();
         assert!(integrity_result.is_valid);
         assert_eq!(integrity_result.checked_records, 1);

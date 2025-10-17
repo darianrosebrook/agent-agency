@@ -1,5 +1,5 @@
 //! Claim Extraction & Verification Pipeline
-//! 
+//!
 //! Implements the 4-stage claim processing pipeline required by theory:
 //! 1. Contextual disambiguation
 //! 2. Verifiable content qualification  
@@ -9,27 +9,34 @@
 //! Based on V2 ClaimExtractor.ts (1677 lines) with Rust adaptations and
 //! council integration for evidence collection in debate protocol.
 
-pub mod disambiguation;
-pub mod qualification;
 pub mod decomposition;
-pub mod verification;
-pub mod processor;
-pub mod types;
+pub mod disambiguation;
 pub mod evidence;
+pub mod multi_modal_verification;
+pub mod processor;
+pub mod qualification;
+pub mod types;
+pub mod verification;
 
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod multi_modal_verification_tests;
+
+pub use multi_modal_verification::{
+    MultiModalVerificationEngine, VerificationResults, VerifiedClaim,
+};
 pub use processor::ClaimExtractionProcessor;
 pub use types::*;
 
 use anyhow::Result;
-use tracing::{info, warn, error};
-use uuid::Uuid;
 use std::time::Instant;
+use tracing::{error, info, warn};
+use uuid::Uuid;
 
 /// Main claim extraction and verification processor
-/// 
+///
 /// Integrates with council debate protocol to provide evidence
 /// for claim verification during judicial evaluation.
 #[derive(Debug)]
@@ -71,8 +78,10 @@ impl ClaimExtractionAndVerificationProcessor {
             Ok(disambiguation_result) => {
                 disambiguated_sentence = disambiguation_result.disambiguated_sentence;
                 stages_completed.push(ProcessingStage::Disambiguation);
-                info!("Disambiguation completed: {} ambiguities resolved", 
-                      disambiguation_result.ambiguities_resolved);
+                info!(
+                    "Disambiguation completed: {} ambiguities resolved",
+                    disambiguation_result.ambiguities_resolved
+                );
             }
             Err(e) => {
                 let error = ProcessingError {
@@ -82,16 +91,25 @@ impl ClaimExtractionAndVerificationProcessor {
                     recoverable: true,
                 };
                 errors.push(error);
-                warn!("Disambiguation failed, continuing with original sentence: {}", e);
+                warn!(
+                    "Disambiguation failed, continuing with original sentence: {}",
+                    e
+                );
             }
         }
 
         // Stage 2: Qualification
-        match self.qualification_stage.process(&disambiguated_sentence, context).await {
+        match self
+            .qualification_stage
+            .process(&disambiguated_sentence, context)
+            .await
+        {
             Ok(qualification_result) => {
                 stages_completed.push(ProcessingStage::Qualification);
-                info!("Qualification completed: {} verifiable parts found", 
-                      qualification_result.verifiable_parts.len());
+                info!(
+                    "Qualification completed: {} verifiable parts found",
+                    qualification_result.verifiable_parts.len()
+                );
             }
             Err(e) => {
                 let error = ProcessingError {
@@ -106,12 +124,18 @@ impl ClaimExtractionAndVerificationProcessor {
         }
 
         // Stage 3: Decomposition
-        match self.decomposition_stage.process(&disambiguated_sentence, context).await {
+        match self
+            .decomposition_stage
+            .process(&disambiguated_sentence, context)
+            .await
+        {
             Ok(decomposition_result) => {
                 atomic_claims = decomposition_result.atomic_claims;
                 stages_completed.push(ProcessingStage::Decomposition);
-                info!("Decomposition completed: {} atomic claims extracted", 
-                      atomic_claims.len());
+                info!(
+                    "Decomposition completed: {} atomic claims extracted",
+                    atomic_claims.len()
+                );
             }
             Err(e) => {
                 let error = ProcessingError {
@@ -127,12 +151,18 @@ impl ClaimExtractionAndVerificationProcessor {
 
         // Stage 4: Verification (evidence collection)
         if !atomic_claims.is_empty() {
-            match self.verification_stage.process(&atomic_claims, context).await {
+            match self
+                .verification_stage
+                .process(&atomic_claims, context)
+                .await
+            {
                 Ok(verification_result) => {
                     verification_evidence = verification_result.evidence;
                     stages_completed.push(ProcessingStage::Verification);
-                    info!("Verification completed: {} evidence items collected", 
-                          verification_evidence.len());
+                    info!(
+                        "Verification completed: {} evidence items collected",
+                        verification_evidence.len()
+                    );
                 }
                 Err(e) => {
                     let error = ProcessingError {
@@ -148,11 +178,11 @@ impl ClaimExtractionAndVerificationProcessor {
         }
 
         let processing_time_ms = start_time.elapsed().as_millis() as u64;
-        
+
         // Capture lengths before moving
         let claims_count = atomic_claims.len() as u32;
         let evidence_count = verification_evidence.len() as u32;
-        
+
         let result = ClaimExtractionResult {
             original_sentence: sentence.to_string(),
             disambiguated_sentence,
@@ -168,9 +198,12 @@ impl ClaimExtractionAndVerificationProcessor {
             },
         };
 
-        info!("Claim extraction completed in {}ms with {} claims and {} evidence items", 
-              processing_time_ms, result.processing_metadata.claims_extracted, 
-              result.processing_metadata.evidence_collected);
+        info!(
+            "Claim extraction completed in {}ms with {} claims and {} evidence items",
+            processing_time_ms,
+            result.processing_metadata.claims_extracted,
+            result.processing_metadata.evidence_collected
+        );
 
         Ok(result)
     }

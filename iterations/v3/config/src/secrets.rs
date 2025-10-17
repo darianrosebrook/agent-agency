@@ -1,14 +1,14 @@
 //! Secure secrets management with encryption
 
 use anyhow::Result;
-use base64::{Engine as _, engine::general_purpose};
+use base64::{engine::general_purpose, Engine as _};
 use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
 use ring::rand::SecureRandom;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// Secure secrets manager
@@ -79,7 +79,9 @@ impl SecretsManager {
     pub fn new(encryption_key: &str) -> Result<Self> {
         let key_bytes = general_purpose::STANDARD.decode(encryption_key)?;
         if key_bytes.len() != 32 {
-            return Err(anyhow::anyhow!("Encryption key must be 32 bytes (256 bits)"));
+            return Err(anyhow::anyhow!(
+                "Encryption key must be 32 bytes (256 bits)"
+            ));
         }
 
         let unbound_key = UnboundKey::new(&AES_256_GCM, &key_bytes)
@@ -110,10 +112,10 @@ impl SecretsManager {
         };
 
         let encrypted_secret = self.encrypt_secret(value)?;
-        
+
         let mut secrets = self.secrets.write().await;
         secrets.insert(name.to_string(), encrypted_secret);
-        
+
         info!("Stored secret: {}", name);
         Ok(())
     }
@@ -130,7 +132,7 @@ impl SecretsManager {
                 updated_at: chrono::Utc::now(), // Placeholder
                 tags: vec![],
             };
-            
+
             Ok(Some(Secret {
                 metadata,
                 value: SecretValue::new(value),
@@ -150,11 +152,11 @@ impl SecretsManager {
     pub async fn delete_secret(&self, name: &str) -> Result<bool> {
         let mut secrets = self.secrets.write().await;
         let removed = secrets.remove(name).is_some();
-        
+
         if removed {
             info!("Deleted secret: {}", name);
         }
-        
+
         Ok(removed)
     }
 
@@ -177,13 +179,13 @@ impl SecretsManager {
         ring::rand::SystemRandom::new()
             .fill(&mut nonce_bytes)
             .map_err(|_| anyhow::anyhow!("Failed to generate nonce"))?;
-        
+
         let nonce = Nonce::try_assume_unique_for_key(&nonce_bytes)
             .map_err(|_| anyhow::anyhow!("Invalid nonce"))?;
 
         let mut data = value.as_bytes().to_vec();
         let aad = Aad::empty();
-        
+
         self.encryption_key
             .seal_in_place_append_tag(nonce, aad, &mut data)
             .map_err(|_| anyhow::anyhow!("Encryption failed"))?;
@@ -201,19 +203,18 @@ impl SecretsManager {
 
         let mut data = encrypted_secret.encrypted_data.clone();
         let aad = Aad::empty();
-        
+
         self.encryption_key
             .open_in_place(nonce, aad, &mut data)
             .map_err(|_| anyhow::anyhow!("Decryption failed"))?;
 
-        String::from_utf8(data)
-            .map_err(|_| anyhow::anyhow!("Invalid UTF-8 in decrypted data"))
+        String::from_utf8(data).map_err(|_| anyhow::anyhow!("Invalid UTF-8 in decrypted data"))
     }
 
     /// Load secrets from environment variables
     pub async fn load_from_env(&self, prefix: &str) -> Result<()> {
         let mut loaded_count = 0;
-        
+
         let env_vars: Vec<(String, String)> = std::env::vars().collect();
         for (key, value) in env_vars {
             if key.starts_with(prefix) {
@@ -222,8 +223,11 @@ impl SecretsManager {
                 loaded_count += 1;
             }
         }
-        
-        info!("Loaded {} secrets from environment variables with prefix: {}", loaded_count, prefix);
+
+        info!(
+            "Loaded {} secrets from environment variables with prefix: {}",
+            loaded_count, prefix
+        );
         Ok(())
     }
 
@@ -238,12 +242,12 @@ impl SecretsManager {
     pub async fn import_secrets(&self, data: &[u8]) -> Result<()> {
         let imported_secrets: HashMap<String, EncryptedSecret> = serde_json::from_slice(data)?;
         let mut secrets = self.secrets.write().await;
-        
+
         let count = imported_secrets.len();
         for (name, encrypted_secret) in imported_secrets {
             secrets.insert(name.clone(), encrypted_secret);
         }
-        
+
         info!("Imported {} secrets", count);
         Ok(())
     }
@@ -272,12 +276,13 @@ impl Default for SecretsConfig {
 }
 
 /// Global secrets manager instance
-static SECRETS_MANAGER: once_cell::sync::OnceCell<Arc<SecretsManager>> = once_cell::sync::OnceCell::new();
+static SECRETS_MANAGER: once_cell::sync::OnceCell<Arc<SecretsManager>> =
+    once_cell::sync::OnceCell::new();
 
 /// Initialize the global secrets manager
 pub fn init_secrets_manager(config: &SecretsConfig) -> Result<()> {
     let manager = Arc::new(SecretsManager::new(&config.encryption_key)?);
-    
+
     if config.auto_load_env {
         tokio::spawn({
             let manager = manager.clone();
@@ -289,17 +294,19 @@ pub fn init_secrets_manager(config: &SecretsConfig) -> Result<()> {
             }
         });
     }
-    
-    SECRETS_MANAGER.set(manager)
+
+    SECRETS_MANAGER
+        .set(manager)
         .map_err(|_| anyhow::anyhow!("Secrets manager already initialized"))?;
-    
+
     info!("Secrets manager initialized");
     Ok(())
 }
 
 /// Get the global secrets manager
 pub fn get_secrets_manager() -> Result<Arc<SecretsManager>> {
-    SECRETS_MANAGER.get()
+    SECRETS_MANAGER
+        .get()
         .cloned()
         .ok_or_else(|| anyhow::anyhow!("Secrets manager not initialized"))
 }

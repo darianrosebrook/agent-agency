@@ -3,15 +3,15 @@
 //! Provides Model Context Protocol (MCP) server integration for CAWS tool discovery,
 //! modular extension, and seamless integration with external tools and services.
 
+pub mod caws_integration;
 pub mod server;
 pub mod tool_discovery;
-pub mod caws_integration;
 pub mod tool_registry;
 pub mod types;
 
+pub use caws_integration::CawsIntegration;
 pub use server::MCPServer;
 pub use tool_discovery::ToolDiscovery;
-pub use caws_integration::CawsIntegration;
 pub use tool_registry::ToolRegistry;
 pub use types::*;
 

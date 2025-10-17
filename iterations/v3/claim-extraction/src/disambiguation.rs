@@ -1,13 +1,13 @@
 //! Stage 1: Contextual Disambiguation
-//! 
+//!
 //! Identifies and resolves ambiguities in sentences to prepare for
 //! claim extraction. Based on V2 disambiguation logic with Rust adaptations.
 
 use crate::types::*;
 use anyhow::Result;
-use tracing::{info, warn, debug};
 use regex::Regex;
 use std::collections::HashMap;
+use tracing::{debug, info, warn};
 
 /// Stage 1: Contextual disambiguation of sentences
 #[derive(Debug)]
@@ -37,10 +37,14 @@ impl DisambiguationStage {
         debug!("Identified {} ambiguities", ambiguities.len());
 
         // Resolve ambiguities
-        let disambiguated_sentence = self.resolve_ambiguities(sentence, &ambiguities, context).await?;
-        
+        let disambiguated_sentence = self
+            .resolve_ambiguities(sentence, &ambiguities, context)
+            .await?;
+
         // Detect unresolvable ambiguities
-        let unresolvable = self.detect_unresolvable_ambiguities(sentence, context).await?;
+        let unresolvable = self
+            .detect_unresolvable_ambiguities(sentence, context)
+            .await?;
 
         Ok(DisambiguationResult {
             original_sentence: sentence.to_string(),
@@ -62,13 +66,19 @@ impl DisambiguationStage {
         ambiguities.extend(self.ambiguity_detector.detect_pronouns(sentence)?);
 
         // Detect technical terms
-        ambiguities.extend(self.ambiguity_detector.detect_technical_terms(sentence, context)?);
+        ambiguities.extend(
+            self.ambiguity_detector
+                .detect_technical_terms(sentence, context)?,
+        );
 
         // Detect scope boundaries
         ambiguities.extend(self.ambiguity_detector.detect_scope_boundaries(sentence)?);
 
         // Detect temporal references
-        ambiguities.extend(self.ambiguity_detector.detect_temporal_references(sentence)?);
+        ambiguities.extend(
+            self.ambiguity_detector
+                .detect_temporal_references(sentence)?,
+        );
 
         Ok(ambiguities)
     }
@@ -87,7 +97,9 @@ impl DisambiguationStage {
         sorted_ambiguities.sort_by(|a, b| b.position.0.cmp(&a.position.0));
 
         for ambiguity in sorted_ambiguities {
-            let resolution = self.context_resolver.resolve_ambiguity(&ambiguity, context)?;
+            let resolution = self
+                .context_resolver
+                .resolve_ambiguity(&ambiguity, context)?;
             if let Some(resolution) = resolution {
                 resolved_sentence = format!(
                     "{}{}{}",
@@ -111,7 +123,10 @@ impl DisambiguationStage {
         let mut unresolvable = Vec::new();
 
         for ambiguity in ambiguities {
-            if let Some(reason) = self.context_resolver.check_unresolvable(&ambiguity, context) {
+            if let Some(reason) = self
+                .context_resolver
+                .check_unresolvable(&ambiguity, context)
+            {
                 unresolvable.push(UnresolvableAmbiguity {
                     ambiguity,
                     reason,
@@ -141,18 +156,20 @@ impl AmbiguityDetector {
                 Regex::new(r"\b(API|UI|UX|DB|SQL|HTTP|JSON|XML)\b").unwrap(),
                 Regex::new(r"\b(function|method|class|interface|type)\b").unwrap(),
             ],
-            scope_boundary_patterns: vec![
-                Regex::new(r"\b(in|within|inside|outside|across|between)\s+([a-zA-Z_]+)\b").unwrap(),
-            ],
-            temporal_patterns: vec![
-                Regex::new(r"\b(before|after|during|while|when|then|now|later)\b").unwrap(),
-            ],
+            scope_boundary_patterns: vec![Regex::new(
+                r"\b(in|within|inside|outside|across|between)\s+([a-zA-Z_]+)\b",
+            )
+            .unwrap()],
+            temporal_patterns: vec![Regex::new(
+                r"\b(before|after|during|while|when|then|now|later)\b",
+            )
+            .unwrap()],
         }
     }
 
     fn detect_pronouns(&self, sentence: &str) -> Result<Vec<Ambiguity>> {
         let mut ambiguities = Vec::new();
-        
+
         for mat in self.pronoun_regex.find_iter(sentence) {
             ambiguities.push(Ambiguity {
                 ambiguity_type: AmbiguityType::Pronoun,
@@ -166,13 +183,17 @@ impl AmbiguityDetector {
                 confidence: 0.8,
             });
         }
-        
+
         Ok(ambiguities)
     }
 
-    fn detect_technical_terms(&self, sentence: &str, context: &ProcessingContext) -> Result<Vec<Ambiguity>> {
+    fn detect_technical_terms(
+        &self,
+        sentence: &str,
+        context: &ProcessingContext,
+    ) -> Result<Vec<Ambiguity>> {
         let mut ambiguities = Vec::new();
-        
+
         for pattern in &self.technical_term_patterns {
             for mat in pattern.find_iter(sentence) {
                 ambiguities.push(Ambiguity {
@@ -184,13 +205,13 @@ impl AmbiguityDetector {
                 });
             }
         }
-        
+
         Ok(ambiguities)
     }
 
     fn detect_scope_boundaries(&self, sentence: &str) -> Result<Vec<Ambiguity>> {
         let mut ambiguities = Vec::new();
-        
+
         for pattern in &self.scope_boundary_patterns {
             for mat in pattern.find_iter(sentence) {
                 ambiguities.push(Ambiguity {
@@ -205,13 +226,13 @@ impl AmbiguityDetector {
                 });
             }
         }
-        
+
         Ok(ambiguities)
     }
 
     fn detect_temporal_references(&self, sentence: &str) -> Result<Vec<Ambiguity>> {
         let mut ambiguities = Vec::new();
-        
+
         for pattern in &self.temporal_patterns {
             for mat in pattern.find_iter(sentence) {
                 ambiguities.push(Ambiguity {
@@ -227,7 +248,7 @@ impl AmbiguityDetector {
                 });
             }
         }
-        
+
         Ok(ambiguities)
     }
 
@@ -255,11 +276,15 @@ impl ContextResolver {
         domain_context.insert("system".to_string(), "the Agent Agency system".to_string());
         domain_context.insert("component".to_string(), "the current component".to_string());
         domain_context.insert("function".to_string(), "the specified function".to_string());
-        
+
         Self { domain_context }
     }
 
-    fn resolve_ambiguity(&self, ambiguity: &Ambiguity, context: &ProcessingContext) -> Result<Option<String>> {
+    fn resolve_ambiguity(
+        &self,
+        ambiguity: &Ambiguity,
+        context: &ProcessingContext,
+    ) -> Result<Option<String>> {
         match ambiguity.ambiguity_type {
             AmbiguityType::Pronoun => {
                 // Use domain hints to resolve pronouns
@@ -269,22 +294,18 @@ impl ContextResolver {
                     Ok(Some("the system".to_string()))
                 }
             }
-            AmbiguityType::TechnicalTerm => {
-                Ok(ambiguity.possible_resolutions.first().cloned())
-            }
-            AmbiguityType::ScopeBoundary => {
-                Ok(Some(format!("in {}", context.working_spec_id)))
-            }
-            AmbiguityType::TemporalReference => {
-                Ok(Some("during execution".to_string()))
-            }
-            AmbiguityType::Quantifier => {
-                Ok(Some("all instances".to_string()))
-            }
+            AmbiguityType::TechnicalTerm => Ok(ambiguity.possible_resolutions.first().cloned()),
+            AmbiguityType::ScopeBoundary => Ok(Some(format!("in {}", context.working_spec_id))),
+            AmbiguityType::TemporalReference => Ok(Some("during execution".to_string())),
+            AmbiguityType::Quantifier => Ok(Some("all instances".to_string())),
         }
     }
 
-    fn check_unresolvable(&self, ambiguity: &Ambiguity, context: &ProcessingContext) -> Option<UnresolvableReason> {
+    fn check_unresolvable(
+        &self,
+        ambiguity: &Ambiguity,
+        context: &ProcessingContext,
+    ) -> Option<UnresolvableReason> {
         match ambiguity.ambiguity_type {
             AmbiguityType::Pronoun if context.domain_hints.is_empty() => {
                 Some(UnresolvableReason::InsufficientContext)

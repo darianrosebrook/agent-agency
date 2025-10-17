@@ -1,7 +1,11 @@
 use agent_agency_mcp::tool_discovery::ToolDiscovery;
 use agent_agency_mcp::types::*;
 
-fn write_manifest(dir: &tempfile::TempDir, name: &str, json: serde_json::Value) -> std::path::PathBuf {
+fn write_manifest(
+    dir: &tempfile::TempDir,
+    name: &str,
+    json: serde_json::Value,
+) -> std::path::PathBuf {
     let path = dir.path().join(name);
     std::fs::write(&path, json.to_string()).unwrap();
     path

@@ -19,9 +19,9 @@ impl TestEnvironment {
     pub fn new() -> Result<Self> {
         let temp_dir = tempfile::tempdir()?;
         let test_start_time = Instant::now();
-        
+
         info!("Created test environment at: {:?}", temp_dir.path());
-        
+
         Ok(Self {
             temp_dir,
             test_start_time,
@@ -59,7 +59,7 @@ impl TestExecutor {
         let result = timeout(self.timeout, test_fn).await;
 
         let duration = start_time.elapsed();
-        
+
         match result {
             Ok(Ok(_)) => {
                 info!("✅ Test passed: {} (took {:?})", test_name, duration);
@@ -82,7 +82,10 @@ impl TestExecutor {
                 }
             }
             Err(_) => {
-                warn!("⏰ Test timed out: {} (after {:?})", test_name, self.timeout);
+                warn!(
+                    "⏰ Test timed out: {} (after {:?})",
+                    test_name, self.timeout
+                );
                 TestResult {
                     test_name: test_name.to_string(),
                     duration,
@@ -222,11 +225,17 @@ pub mod assertions {
         Ok(())
     }
 
-    pub fn assert_metric_within_bounds(actual: f64, expected_min: f64, expected_max: f64) -> Result<()> {
+    pub fn assert_metric_within_bounds(
+        actual: f64,
+        expected_min: f64,
+        expected_max: f64,
+    ) -> Result<()> {
         if actual < expected_min || actual > expected_max {
             return Err(anyhow!(
                 "Metric value {} is outside expected bounds [{}, {}]",
-                actual, expected_min, expected_max
+                actual,
+                expected_min,
+                expected_max
             ));
         }
         Ok(())
@@ -236,7 +245,8 @@ pub mod assertions {
         if actual < expected_min {
             return Err(anyhow!(
                 "Success rate {} is below expected minimum {}",
-                actual, expected_min
+                actual,
+                expected_min
             ));
         }
         Ok(())
@@ -260,7 +270,11 @@ impl PerformanceMeasurer {
     pub fn checkpoint(&mut self, name: &str) {
         let now = Instant::now();
         self.checkpoints.push((name.to_string(), now));
-        debug!("Checkpoint '{}' at {:?}", name, now.duration_since(self.start_time));
+        debug!(
+            "Checkpoint '{}' at {:?}",
+            name,
+            now.duration_since(self.start_time)
+        );
     }
 
     pub fn get_elapsed(&self) -> Duration {
@@ -282,12 +296,12 @@ impl PerformanceMeasurer {
 
     pub fn generate_report(&self) -> String {
         let mut report = format!("Performance Report (Total: {:?})\n", self.get_elapsed());
-        
+
         for (name, time) in &self.checkpoints {
             let elapsed = time.duration_since(self.start_time);
             report.push_str(&format!("  {}: {:?}\n", name, elapsed));
         }
-        
+
         report
     }
 }
@@ -312,8 +326,8 @@ mod tests {
     #[tokio::test]
     async fn test_test_executor_success() {
         let executor = TestExecutor::new(Duration::from_secs(5));
-        let result = executor.execute("test_success", async { Ok(()) }).await;
-        
+        let result = executor.execute("test_success", async { Ok::<(), _>(()) }).await;
+
         assert!(result.success);
         assert!(result.error_message.is_none());
     }
@@ -321,10 +335,12 @@ mod tests {
     #[tokio::test]
     async fn test_test_executor_failure() {
         let executor = TestExecutor::new(Duration::from_secs(5));
-        let result = executor.execute("test_failure", async { 
-            Err(anyhow::anyhow!("Test error")) 
-        }).await;
-        
+        let result = executor
+            .execute("test_failure", async {
+                Err::<(), _>(anyhow::anyhow!("Test error"))
+            })
+            .await;
+
         assert!(!result.success);
         assert!(result.error_message.is_some());
     }
@@ -336,7 +352,7 @@ mod tests {
         measurer.checkpoint("first");
         std::thread::sleep(Duration::from_millis(10));
         measurer.checkpoint("second");
-        
+
         assert!(measurer.get_elapsed() > Duration::from_millis(20));
         assert!(measurer.get_checkpoint_duration("first").unwrap() > Duration::from_millis(10));
         assert!(measurer.get_checkpoint_duration("second").unwrap() > Duration::from_millis(20));
@@ -346,10 +362,10 @@ mod tests {
     fn test_generators() {
         let uuid = generators::generate_uuid();
         assert!(!uuid.is_nil());
-        
+
         let email = generators::generate_email();
         assert!(email.contains("@example.com"));
-        
+
         let spec = generators::generate_working_spec();
         assert!(spec.get("id").is_some());
         assert!(spec.get("title").is_some());

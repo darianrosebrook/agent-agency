@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
+use uuid::Uuid;
 
 /// Main inference router for Apple Silicon
 #[derive(Debug)]
@@ -35,14 +36,19 @@ impl InferenceRouter {
 
     /// Route an inference request to the optimal target
     pub async fn route_inference(&self, request: InferenceRequest) -> Result<RoutingDecision> {
-        info!("Routing inference request: {} ({})", request.model_name, request.id);
+        info!(
+            "Routing inference request: {} ({})",
+            request.model_name, request.id
+        );
 
         // Get current system state
         let capabilities = self.system_capabilities.read().await;
         let resource_usage = self.current_resource_usage.read().await;
 
         // Determine available targets
-        let available_targets = self.get_available_targets(&capabilities, &resource_usage).await;
+        let available_targets = self
+            .get_available_targets(&capabilities, &resource_usage)
+            .await;
 
         if available_targets.is_empty() {
             return Err(anyhow::anyhow!("No available inference targets"));
@@ -52,18 +58,20 @@ impl InferenceRouter {
         let model_performance = self.get_model_performance(&request.model_name).await;
 
         // Calculate routing decision
-        let decision = self.calculate_routing_decision(
-            &request,
-            &available_targets,
-            &model_performance,
-            &resource_usage,
-        ).await?;
+        let decision = self
+            .calculate_routing_decision(
+                &request,
+                &available_targets,
+                &model_performance,
+                &resource_usage,
+            )
+            .await?;
 
         // Store routing decision
         {
             let mut history = self.routing_history.write().await;
             history.push(decision.clone());
-            
+
             // Keep only last 1000 decisions
             if history.len() > 1000 {
                 let drain_count = history.len() - 1000;
@@ -71,8 +79,11 @@ impl InferenceRouter {
             }
         }
 
-        info!("Routing decision: {:?} (confidence: {:.1}%)", 
-            decision.selected_target, decision.confidence * 100.0);
+        info!(
+            "Routing decision: {:?} (confidence: {:.1}%)",
+            decision.selected_target,
+            decision.confidence * 100.0
+        );
 
         Ok(decision)
     }
@@ -86,16 +97,18 @@ impl InferenceRouter {
         let mut available = Vec::new();
 
         // Check ANE availability
-        if capabilities.ane_available && 
-           resource_usage.ane_percent < 90.0 && 
-           resource_usage.thermal_celsius < 80.0 {
+        if capabilities.ane_available
+            && resource_usage.ane_percent < 90.0
+            && resource_usage.thermal_celsius < 80.0
+        {
             available.push(OptimizationTarget::ANE);
         }
 
         // Check Metal GPU availability
-        if capabilities.metal_available && 
-           resource_usage.gpu_percent < 85.0 && 
-           resource_usage.thermal_celsius < 85.0 {
+        if capabilities.metal_available
+            && resource_usage.gpu_percent < 85.0
+            && resource_usage.thermal_celsius < 85.0
+        {
             available.push(OptimizationTarget::GPU);
         }
 
@@ -125,18 +138,16 @@ impl InferenceRouter {
 
         // Score each available target
         for target in available_targets {
-            let score = self.calculate_target_score(
-                target,
-                request,
-                model_performance,
-                resource_usage,
-            ).await;
+            let score = self
+                .calculate_target_score(target, request, model_performance, resource_usage)
+                .await;
 
             target_scores.insert(target.clone(), score);
         }
 
         // Select the best target
-        let (selected_target, score) = target_scores.iter()
+        let (selected_target, score) = target_scores
+            .iter()
             .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
             .unwrap();
 
@@ -150,29 +161,21 @@ impl InferenceRouter {
         );
 
         // Estimate execution time
-        let estimated_time = self.estimate_execution_time(
-            selected_target.clone(),
-            request,
-            model_performance,
-        ).await;
+        let estimated_time = self
+            .estimate_execution_time(selected_target.clone(), request, model_performance)
+            .await;
 
         // Calculate confidence
-        let confidence = self.calculate_confidence(
-            *score,
-            target_scores.len(),
-            resource_usage,
-        );
+        let confidence = self.calculate_confidence(*score, target_scores.len(), resource_usage);
 
         // Get alternatives (other available targets)
         let mut alternatives = available_targets.to_vec();
         alternatives.retain(|t| t != selected_target);
 
         // Estimate resource requirements
-        let resource_requirements = self.estimate_resource_requirements(
-            selected_target.clone(),
-            request,
-            model_performance,
-        ).await;
+        let resource_requirements = self
+            .estimate_resource_requirements(selected_target.clone(), request, model_performance)
+            .await;
 
         Ok(RoutingDecision {
             request_id: request.id,
@@ -196,7 +199,9 @@ impl InferenceRouter {
         let mut score = 0.0;
 
         // Performance score (40% weight)
-        let performance_score = self.calculate_performance_score(target, model_performance).await;
+        let performance_score = self
+            .calculate_performance_score(target, model_performance)
+            .await;
         score += performance_score * 0.4;
 
         // Resource availability score (25% weight)
@@ -227,7 +232,9 @@ impl InferenceRouter {
                 OptimizationTarget::CPU => perf.cpu_efficiency,
                 OptimizationTarget::Auto => {
                     // Use the best available efficiency
-                    perf.ane_efficiency.max(perf.gpu_efficiency).max(perf.cpu_efficiency)
+                    perf.ane_efficiency
+                        .max(perf.gpu_efficiency)
+                        .max(perf.cpu_efficiency)
                 }
             }
         } else {
@@ -262,7 +269,7 @@ impl InferenceRouter {
         resource_usage: &ResourceUsage,
     ) -> f32 {
         let current_temp = resource_usage.thermal_celsius;
-        
+
         // Lower temperature is better
         let thermal_score = if current_temp < 60.0 {
             1.0
@@ -291,30 +298,24 @@ impl InferenceRouter {
     ) -> f32 {
         // High priority requests prefer faster targets
         match request.priority {
-            InferencePriority::Critical => {
-                match target {
-                    OptimizationTarget::ANE => 1.0,
-                    OptimizationTarget::GPU => 0.9,
-                    OptimizationTarget::CPU => 0.7,
-                    OptimizationTarget::Auto => 0.8,
-                }
-            }
-            InferencePriority::High => {
-                match target {
-                    OptimizationTarget::ANE => 0.9,
-                    OptimizationTarget::GPU => 1.0,
-                    OptimizationTarget::CPU => 0.6,
-                    OptimizationTarget::Auto => 0.7,
-                }
-            }
-            InferencePriority::Normal => {
-                match target {
-                    OptimizationTarget::ANE => 0.8,
-                    OptimizationTarget::GPU => 0.9,
-                    OptimizationTarget::CPU => 0.8,
-                    OptimizationTarget::Auto => 0.8,
-                }
-            }
+            InferencePriority::Critical => match target {
+                OptimizationTarget::ANE => 1.0,
+                OptimizationTarget::GPU => 0.9,
+                OptimizationTarget::CPU => 0.7,
+                OptimizationTarget::Auto => 0.8,
+            },
+            InferencePriority::High => match target {
+                OptimizationTarget::ANE => 0.9,
+                OptimizationTarget::GPU => 1.0,
+                OptimizationTarget::CPU => 0.6,
+                OptimizationTarget::Auto => 0.7,
+            },
+            InferencePriority::Normal => match target {
+                OptimizationTarget::ANE => 0.8,
+                OptimizationTarget::GPU => 0.9,
+                OptimizationTarget::CPU => 0.8,
+                OptimizationTarget::Auto => 0.8,
+            },
             InferencePriority::Low => {
                 match target {
                     OptimizationTarget::ANE => 0.6,
@@ -341,7 +342,10 @@ impl InferenceRouter {
         );
 
         // Add performance reasoning
-        if let Some(best_perf) = target_scores.iter().max_by(|a, b| a.1.partial_cmp(b.1).unwrap()) {
+        if let Some(best_perf) = target_scores
+            .iter()
+            .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+        {
             if best_perf.0 == &selected_target {
                 reasoning.push_str(" - best performance available");
             }
@@ -350,13 +354,22 @@ impl InferenceRouter {
         // Add resource reasoning
         match selected_target {
             OptimizationTarget::ANE => {
-                reasoning.push_str(&format!(" - ANE at {:.1}% usage", resource_usage.ane_percent));
+                reasoning.push_str(&format!(
+                    " - ANE at {:.1}% usage",
+                    resource_usage.ane_percent
+                ));
             }
             OptimizationTarget::GPU => {
-                reasoning.push_str(&format!(" - GPU at {:.1}% usage", resource_usage.gpu_percent));
+                reasoning.push_str(&format!(
+                    " - GPU at {:.1}% usage",
+                    resource_usage.gpu_percent
+                ));
             }
             OptimizationTarget::CPU => {
-                reasoning.push_str(&format!(" - CPU at {:.1}% usage", resource_usage.cpu_percent));
+                reasoning.push_str(&format!(
+                    " - CPU at {:.1}% usage",
+                    resource_usage.cpu_percent
+                ));
             }
             OptimizationTarget::Auto => {
                 reasoning.push_str(" - auto-selected optimal target");
@@ -365,9 +378,15 @@ impl InferenceRouter {
 
         // Add thermal reasoning
         if resource_usage.thermal_celsius > 75.0 {
-            reasoning.push_str(&format!(" - thermal: {:.1}°C (high)", resource_usage.thermal_celsius));
+            reasoning.push_str(&format!(
+                " - thermal: {:.1}°C (high)",
+                resource_usage.thermal_celsius
+            ));
         } else {
-            reasoning.push_str(&format!(" - thermal: {:.1}°C (good)", resource_usage.thermal_celsius));
+            reasoning.push_str(&format!(
+                " - thermal: {:.1}°C (good)",
+                resource_usage.thermal_celsius
+            ));
         }
 
         reasoning
@@ -396,7 +415,7 @@ impl InferenceRouter {
                 OptimizationTarget::CPU => perf.cpu_efficiency,
                 OptimizationTarget::Auto => 0.8,
             };
-            
+
             (base_time as f64 / efficiency as f64) as u64
         } else {
             base_time
@@ -492,7 +511,11 @@ impl InferenceRouter {
     }
 
     /// Update model performance metrics
-    pub async fn update_model_performance(&self, model_name: String, metrics: ModelPerformanceMetrics) {
+    pub async fn update_model_performance(
+        &self,
+        model_name: String,
+        metrics: ModelPerformanceMetrics,
+    ) {
         let mut cache = self.model_performance_cache.write().await;
         cache.insert(model_name, metrics);
     }
@@ -507,7 +530,9 @@ impl InferenceRouter {
         let mut total_confidence = 0.0;
 
         for decision in history.iter() {
-            *target_counts.entry(decision.selected_target.clone()).or_insert(0) += 1;
+            *target_counts
+                .entry(decision.selected_target.clone())
+                .or_insert(0) += 1;
             total_requests += 1;
             total_confidence += decision.confidence;
         }
@@ -613,7 +638,7 @@ mod tests {
             load_balancing: true,
             performance_monitoring: true,
         };
-        
+
         let router = InferenceRouter::new(config);
         assert!(router.config.load_balancing);
     }
@@ -629,7 +654,9 @@ mod tests {
         let capabilities = SystemCapabilities::default();
         let resource_usage = ResourceUsage::default();
 
-        let targets = router.get_available_targets(&capabilities, &resource_usage).await;
+        let targets = router
+            .get_available_targets(&capabilities, &resource_usage)
+            .await;
         assert!(!targets.is_empty());
         assert!(targets.contains(&OptimizationTarget::ANE));
         assert!(targets.contains(&OptimizationTarget::GPU));
@@ -657,12 +684,9 @@ mod tests {
         };
 
         let resource_usage = ResourceUsage::default();
-        let score = router.calculate_target_score(
-            &OptimizationTarget::ANE,
-            &request,
-            &None,
-            &resource_usage,
-        ).await;
+        let score = router
+            .calculate_target_score(&OptimizationTarget::ANE, &request, &None, &resource_usage)
+            .await;
 
         assert!(score > 0.0);
         assert!(score <= 1.0);
@@ -688,17 +712,13 @@ mod tests {
             metadata: HashMap::new(),
         };
 
-        let ane_time = router.estimate_execution_time(
-            OptimizationTarget::ANE,
-            &request,
-            &None,
-        ).await;
+        let ane_time = router
+            .estimate_execution_time(OptimizationTarget::ANE, &request, &None)
+            .await;
 
-        let cpu_time = router.estimate_execution_time(
-            OptimizationTarget::CPU,
-            &request,
-            &None,
-        ).await;
+        let cpu_time = router
+            .estimate_execution_time(OptimizationTarget::CPU, &request, &None)
+            .await;
 
         assert!(ane_time < cpu_time); // ANE should be faster than CPU
     }

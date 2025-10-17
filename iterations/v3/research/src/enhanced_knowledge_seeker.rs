@@ -6,11 +6,13 @@
 //!
 //! Ported from V2 KnowledgeSeeker.ts with Rust optimizations.
 
-use crate::types::*;
-use crate::confidence_manager::{IConfidenceManager, ConfidenceManager, KnowledgeUpdateRequest};
-use crate::information_processor::{IInformationProcessor, InformationProcessor, ProcessedSearchResult};
+use crate::confidence_manager::{ConfidenceManager, IConfidenceManager, KnowledgeUpdateRequest};
+use crate::information_processor::{
+    IInformationProcessor, InformationProcessor, ProcessedSearchResult,
+};
 use crate::knowledge_seeker::ResearchEvent;
-use crate::{VectorSearchEngine, ContextBuilder, WebScraper, ContentProcessor};
+use crate::types::*;
+use crate::{ContentProcessor, ContextBuilder, VectorSearchEngine, WebScraper};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use dashmap::DashMap;
@@ -18,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
-use tokio::sync::{RwLock, mpsc};
+use tokio::sync::{mpsc, RwLock};
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
@@ -202,19 +204,19 @@ pub struct ConfidenceStats {
 pub trait IEnhancedKnowledgeSeeker: Send + Sync {
     /// Process a knowledge query with enhanced features
     async fn process_query(&self, query: KnowledgeQuery) -> Result<EnhancedKnowledgeResponse>;
-    
+
     /// Get seeker status and health information
     async fn get_status(&self) -> Result<EnhancedKnowledgeSeekerStatus>;
-    
+
     /// Clear all caches
     async fn clear_caches(&self) -> Result<()>;
-    
+
     /// Update confidence for an entity
     async fn update_confidence(&self, entity_id: String, confidence: f64) -> Result<()>;
-    
+
     /// Perform semantic search
     async fn semantic_search(&self, query: &KnowledgeQuery) -> Result<Vec<SemanticSearchResult>>;
-    
+
     /// Perform hybrid search
     async fn hybrid_search(&self, query: &KnowledgeQuery) -> Result<Vec<HybridSearchResult>>;
 }
@@ -228,20 +230,20 @@ pub struct EnhancedKnowledgeSeeker {
     content_processor: Arc<ContentProcessor>,
     confidence_manager: Arc<dyn IConfidenceManager>,
     information_processor: Arc<dyn IInformationProcessor>,
-    
+
     // Active research sessions
     active_sessions: Arc<DashMap<Uuid, ResearchSession>>,
-    
+
     // Caches
     query_cache: Arc<DashMap<String, EnhancedKnowledgeResponse>>,
     result_cache: Arc<DashMap<String, Vec<ProcessedSearchResult>>>,
-    
+
     // Active queries tracking
     active_queries: Arc<DashMap<Uuid, tokio::task::JoinHandle<Result<EnhancedKnowledgeResponse>>>>,
-    
+
     // Event channel for research events
     event_sender: mpsc::UnboundedSender<ResearchQuery>,
-    
+
     // Status tracking
     status: Arc<RwLock<EnhancedKnowledgeSeekerStatus>>,
 }
@@ -300,7 +302,7 @@ impl EnhancedKnowledgeSeeker {
     /// Generate cache key for query
     fn generate_cache_key(&self, query: &KnowledgeQuery) -> String {
         use std::collections::hash_map::DefaultHasher;
-        
+
         let mut hasher = DefaultHasher::new();
         query.query.hash(&mut hasher);
         query.query_type.hash(&mut hasher);
@@ -319,7 +321,11 @@ impl EnhancedKnowledgeSeeker {
     }
 
     /// Store query in cache
-    async fn store_query_cache(&self, query: &KnowledgeQuery, response: &EnhancedKnowledgeResponse) {
+    async fn store_query_cache(
+        &self,
+        query: &KnowledgeQuery,
+        response: &EnhancedKnowledgeResponse,
+    ) {
         if !self.config.caching.enable_query_caching {
             return;
         }
@@ -329,7 +335,10 @@ impl EnhancedKnowledgeSeeker {
     }
 
     /// Perform semantic search using embeddings and graph
-    async fn perform_semantic_search(&self, query: &KnowledgeQuery) -> Result<Vec<SemanticSearchResult>> {
+    async fn perform_semantic_search(
+        &self,
+        query: &KnowledgeQuery,
+    ) -> Result<Vec<SemanticSearchResult>> {
         if !self.config.semantic_search.enabled {
             return Ok(vec![]);
         }
@@ -338,11 +347,14 @@ impl EnhancedKnowledgeSeeker {
         let query_embedding = self.vector_search.generate_embedding(&query.query).await?;
 
         // Perform vector search
-        let vector_results = self.vector_search.search(
-            &query_embedding,
-            Some(self.config.semantic_search.max_results as u32),
-            None, // No filter for now
-        ).await?;
+        let vector_results = self
+            .vector_search
+            .search(
+                &query_embedding,
+                Some(self.config.semantic_search.max_results as u32),
+                None, // No filter for now
+            )
+            .await?;
 
         // Convert to semantic results
         let semantic_results: Vec<SemanticSearchResult> = vector_results
@@ -351,7 +363,7 @@ impl EnhancedKnowledgeSeeker {
                 entity_id: result.id.to_string(),
                 entity_type: "capability".to_string(), // Default type
                 content: result.content,
-                confidence: 0.8, // Default confidence for now
+                confidence: 0.8,           // Default confidence for now
                 graph_connections: vec![], // TODO: Implement graph connections
                 metadata: result.metadata,
             })
@@ -367,18 +379,24 @@ impl EnhancedKnowledgeSeeker {
     }
 
     /// Perform hybrid search combining vector, keyword, and graph
-    async fn perform_hybrid_search(&self, query: &KnowledgeQuery) -> Result<Vec<HybridSearchResult>> {
+    async fn perform_hybrid_search(
+        &self,
+        query: &KnowledgeQuery,
+    ) -> Result<Vec<HybridSearchResult>> {
         if !self.config.hybrid_search.enabled {
             return Ok(vec![]);
         }
 
         // Perform vector search
         let query_embedding = self.vector_search.generate_embedding(&query.query).await?;
-        let vector_results = self.vector_search.search(
-            &query_embedding,
-            Some(self.config.semantic_search.max_results as u32),
-            None, // No filter for now
-        ).await?;
+        let vector_results = self
+            .vector_search
+            .search(
+                &query_embedding,
+                Some(self.config.semantic_search.max_results as u32),
+                None, // No filter for now
+            )
+            .await?;
 
         // Perform keyword search (placeholder - would need to implement web search)
         let keyword_results = vec![]; // TODO: Implement web search functionality
@@ -386,14 +404,17 @@ impl EnhancedKnowledgeSeeker {
         // Combine results using fusion strategy
         let hybrid_results = match self.config.hybrid_search.fusion_strategy {
             FusionStrategy::ReciprocalRankFusion => {
-                self.fuse_results_rrf(vector_results, keyword_results).await?
+                self.fuse_results_rrf(vector_results, keyword_results)
+                    .await?
             }
             FusionStrategy::WeightedCombination => {
-                self.fuse_results_weighted(vector_results, keyword_results).await?
+                self.fuse_results_weighted(vector_results, keyword_results)
+                    .await?
             }
             FusionStrategy::LearningToRank => {
                 // TODO: Implement learning-to-rank
-                self.fuse_results_weighted(vector_results, keyword_results).await?
+                self.fuse_results_weighted(vector_results, keyword_results)
+                    .await?
             }
         };
 
@@ -417,7 +438,10 @@ impl EnhancedKnowledgeSeeker {
         // Add vector scores
         for (rank, result) in vector_results.iter().enumerate() {
             let rrf_score = 1.0 / (60.0 + (rank + 1) as f64); // k=60 for RRF
-            combined_scores.insert(result.id, rrf_score * self.config.hybrid_search.vector_weight);
+            combined_scores.insert(
+                result.id,
+                rrf_score * self.config.hybrid_search.vector_weight,
+            );
         }
 
         // Add keyword scores
@@ -483,13 +507,16 @@ impl EnhancedKnowledgeSeeker {
     }
 
     /// Update confidence scores for entities in results
-    async fn update_confidence_scores(&self, results: &[ProcessedSearchResult]) -> HashMap<String, f64> {
+    async fn update_confidence_scores(
+        &self,
+        results: &[ProcessedSearchResult],
+    ) -> HashMap<String, f64> {
         let mut confidence_scores = HashMap::new();
 
         for result in results {
             // Extract potential entity IDs from content
             let entity_candidates = self.extract_entity_candidates(&result.content);
-            
+
             for entity_id in entity_candidates {
                 if let Ok(confidence) = self.confidence_manager.get_confidence(&entity_id).await {
                     confidence_scores.insert(entity_id, confidence);
@@ -519,7 +546,7 @@ impl EnhancedKnowledgeSeeker {
     async fn update_processing_stats(&self, success: bool, processing_time_ms: u64) {
         let mut status = self.status.write().await;
         status.processing_stats.total_queries += 1;
-        
+
         if success {
             status.processing_stats.successful_queries += 1;
         } else {
@@ -529,7 +556,7 @@ impl EnhancedKnowledgeSeeker {
         // Update average processing time
         let total = status.processing_stats.total_queries;
         let current_avg = status.processing_stats.average_processing_time_ms;
-        status.processing_stats.average_processing_time_ms = 
+        status.processing_stats.average_processing_time_ms =
             (current_avg * (total - 1) as f64 + processing_time_ms as f64) / total as f64;
     }
 }
@@ -541,7 +568,10 @@ impl IEnhancedKnowledgeSeeker for EnhancedKnowledgeSeeker {
 
         // Check if query is already being processed
         if self.active_queries.contains_key(&query.id) {
-            return Err(anyhow::anyhow!("Query {} is already being processed", query.id));
+            return Err(anyhow::anyhow!(
+                "Query {} is already being processed",
+                query.id
+            ));
         }
 
         // Check cache first
@@ -551,7 +581,10 @@ impl IEnhancedKnowledgeSeeker for EnhancedKnowledgeSeeker {
         }
 
         // Perform semantic search
-        let semantic_results = self.perform_semantic_search(&query).await.unwrap_or_default();
+        let semantic_results = self
+            .perform_semantic_search(&query)
+            .await
+            .unwrap_or_default();
 
         // Perform hybrid search
         let hybrid_results = self.perform_hybrid_search(&query).await.unwrap_or_default();
@@ -560,7 +593,11 @@ impl IEnhancedKnowledgeSeeker for EnhancedKnowledgeSeeker {
         let traditional_results = vec![]; // TODO: Implement web search functionality
 
         // Process results through information processor
-        let processed_results = self.information_processor.process_results(&query, traditional_results).await?.to_vec();
+        let processed_results = self
+            .information_processor
+            .process_results(&query, traditional_results)
+            .await?
+            .to_vec();
 
         // Update confidence scores
         let confidence_scores = self.update_confidence_scores(&processed_results).await;
@@ -569,7 +606,7 @@ impl IEnhancedKnowledgeSeeker for EnhancedKnowledgeSeeker {
         let semantic_count = semantic_results.len();
         let hybrid_count = hybrid_results.len();
         let confidence_count = confidence_scores.len();
-        
+
         let response = EnhancedKnowledgeResponse {
             query_id: query.id,
             results: processed_results,
@@ -593,7 +630,8 @@ impl IEnhancedKnowledgeSeeker for EnhancedKnowledgeSeeker {
         self.store_query_cache(&query, &response).await;
 
         // Update statistics
-        self.update_processing_stats(true, response.processing_metadata.processing_time_ms).await;
+        self.update_processing_stats(true, response.processing_metadata.processing_time_ms)
+            .await;
 
         info!(
             "Processed query '{}' in {}ms with {} results",
@@ -628,7 +666,10 @@ impl IEnhancedKnowledgeSeeker for EnhancedKnowledgeSeeker {
         };
 
         self.confidence_manager.update_knowledge(request).await?;
-        info!("Updated confidence for entity {} to {}", entity_id, confidence);
+        info!(
+            "Updated confidence for entity {} to {}",
+            entity_id, confidence
+        );
         Ok(())
     }
 
@@ -657,9 +698,16 @@ mod tests {
     #[tokio::test]
     async fn test_cache_key_generation() {
         let config = EnhancedKnowledgeSeekerConfig::default();
+        let (tx, _rx) = mpsc::unbounded_channel();
         let seeker = EnhancedKnowledgeSeeker::new(
             config,
-            // TODO: Add mock dependencies
+            Arc::new(MockVectorSearchEngine::new()),
+            Arc::new(MockContextBuilder::new()),
+            Arc::new(MockWebScraper::new()),
+            Arc::new(MockContentProcessor::new()),
+            Arc::new(MockConfidenceManager::new()),
+            Arc::new(MockInformationProcessor::new()),
+            tx,
         );
 
         let query = KnowledgeQuery {
@@ -674,5 +722,139 @@ mod tests {
 
         let cache_key = seeker.generate_cache_key(&query);
         assert!(!cache_key.is_empty());
+    }
+}
+
+// Mock implementations for testing
+#[cfg(test)]
+mod mocks {
+    use super::*;
+    use crate::vector_search::{SearchResult, VectorSearchEngine};
+    use crate::context_builder::ContextBuilder;
+    use crate::web_scraper::WebScraper;
+    use crate::content_processor::ContentProcessor;
+    use crate::confidence_manager::{ConfidenceManager, KnowledgeUpdateRequest};
+    use crate::information_processor::{InformationProcessor, ProcessedSearchResult};
+
+    pub struct MockVectorSearchEngine;
+
+    impl MockVectorSearchEngine {
+        pub fn new() -> Self {
+            Self
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl VectorSearchEngine for MockVectorSearchEngine {
+        async fn search(&self, _query: &str, _limit: usize) -> Result<Vec<SearchResult>> {
+            Ok(vec![])
+        }
+        async fn index(&self, _content: &str, _metadata: HashMap<String, serde_json::Value>) -> Result<String> {
+            Ok("mock_id".to_string())
+        }
+        async fn delete(&self, _id: &str) -> Result<()> {
+            Ok(())
+        }
+        async fn get_metrics(&self) -> crate::vector_search::VectorSearchMetrics {
+            crate::vector_search::VectorSearchMetrics {
+                total_vectors: 0,
+                index_size: 0,
+                search_time_ms: 0.0,
+            }
+        }
+    }
+
+    pub struct MockContextBuilder;
+
+    impl MockContextBuilder {
+        pub fn new() -> Self {
+            Self
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl ContextBuilder for MockContextBuilder {
+        async fn build_context(&self, _content: Vec<String>, _query: &str) -> Result<String> {
+            Ok("mock context".to_string())
+        }
+    }
+
+    pub struct MockWebScraper;
+
+    impl MockWebScraper {
+        pub fn new() -> Self {
+            Self
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl WebScraper for MockWebScraper {
+        async fn scrape(&self, _url: &str) -> Result<String> {
+            Ok("mock content".to_string())
+        }
+    }
+
+    pub struct MockContentProcessor;
+
+    impl MockContentProcessor {
+        pub fn new() -> Self {
+            Self
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl ContentProcessor for MockContentProcessor {
+        async fn process(&self, _content: &str) -> Result<crate::content_processor::ProcessedContent> {
+            Ok(crate::content_processor::ProcessedContent {
+                summary: "mock summary".to_string(),
+                keywords: vec![],
+                entities: vec![],
+                sentiment: 0.0,
+            })
+        }
+    }
+
+    pub struct MockConfidenceManager;
+
+    impl MockConfidenceManager {
+        pub fn new() -> Self {
+            Self
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl IConfidenceManager for MockConfidenceManager {
+        async fn update_confidence(&self, _request: KnowledgeUpdateRequest) -> Result<f64> {
+            Ok(0.8)
+        }
+        async fn get_confidence(&self, _query: &str) -> Result<f64> {
+            Ok(0.8)
+        }
+        async fn get_statistics(&self) -> Result<ConfidenceManager> {
+            Ok(ConfidenceManager {
+                total_updates: 0,
+                average_confidence: 0.0,
+                confidence_distribution: HashMap::new(),
+            })
+        }
+    }
+
+    pub struct MockInformationProcessor;
+
+    impl MockInformationProcessor {
+        pub fn new() -> Self {
+            Self
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl IInformationProcessor for MockInformationProcessor {
+        async fn process_search_results(&self, _results: Vec<crate::vector_search::SearchResult>) -> Result<ProcessedSearchResult> {
+            Ok(ProcessedSearchResult {
+                processed_results: vec![],
+                synthesis_summary: "mock synthesis".to_string(),
+                confidence_score: 0.8,
+            })
+        }
     }
 }

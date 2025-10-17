@@ -1,10 +1,10 @@
 use crate::types::*;
 use anyhow::Result;
+use chrono::Utc;
 use regex::Regex;
 use std::path::Path;
-use tracing::{debug, warn, error};
+use tracing::{debug, error, warn};
 use uuid::Uuid;
-use chrono::Utc;
 
 /// File access controller
 #[derive(Debug)]
@@ -50,7 +50,10 @@ impl FileAccessController {
 
         // Check if file path matches denied patterns
         if self.matches_patterns(&request.file_path, &self.denied_patterns) {
-            warn!("File access denied - matches denied pattern: {}", request.file_path);
+            warn!(
+                "File access denied - matches denied pattern: {}",
+                request.file_path
+            );
             violations.push(SecurityViolation {
                 id: Uuid::new_v4(),
                 violation_type: SecurityViolationType::FileAccessDenied,
@@ -69,12 +72,18 @@ impl FileAccessController {
         // Check if file path matches allowed patterns (if any are specified)
         if !self.policy.allowed_patterns.is_empty() {
             if !self.matches_patterns(&request.file_path, &self.allowed_patterns) {
-                warn!("File access denied - doesn't match allowed pattern: {}", request.file_path);
+                warn!(
+                    "File access denied - doesn't match allowed pattern: {}",
+                    request.file_path
+                );
                 violations.push(SecurityViolation {
                     id: Uuid::new_v4(),
                     violation_type: SecurityViolationType::FileAccessDenied,
                     severity: SecretSeverity::Medium,
-                    description: format!("File doesn't match allowed pattern: {}", request.file_path),
+                    description: format!(
+                        "File doesn't match allowed pattern: {}",
+                        request.file_path
+                    ),
                     resource: request.file_path.clone(),
                     actor: request.actor.clone(),
                     timestamp: Utc::now(),
@@ -97,14 +106,20 @@ impl FileAccessController {
         if matches!(request.access_type, FileAccessType::Read) {
             if let Ok(metadata) = std::fs::metadata(&request.file_path) {
                 if metadata.len() > self.policy.max_file_size {
-                    warn!("File access denied - file too large: {} ({} bytes)", 
-                          request.file_path, metadata.len());
+                    warn!(
+                        "File access denied - file too large: {} ({} bytes)",
+                        request.file_path,
+                        metadata.len()
+                    );
                     violations.push(SecurityViolation {
                         id: Uuid::new_v4(),
                         violation_type: SecurityViolationType::ResourceLimitExceeded,
                         severity: SecretSeverity::Medium,
-                        description: format!("File too large: {} bytes (max: {})", 
-                                            metadata.len(), self.policy.max_file_size),
+                        description: format!(
+                            "File too large: {} bytes (max: {})",
+                            metadata.len(),
+                            self.policy.max_file_size
+                        ),
                         resource: request.file_path.clone(),
                         actor: request.actor.clone(),
                         timestamp: Utc::now(),
@@ -168,7 +183,11 @@ impl FileAccessController {
             actor: request.actor.clone(),
             resource: request.file_path.clone(),
             action: format!("{:?}", request.access_type),
-            result: if allowed { AuditResult::Allowed } else { AuditResult::Denied },
+            result: if allowed {
+                AuditResult::Allowed
+            } else {
+                AuditResult::Denied
+            },
             timestamp: Utc::now(),
             metadata: request.context.clone(),
         };
@@ -196,7 +215,7 @@ impl FileAccessController {
     /// Compile glob patterns into regex patterns
     fn compile_patterns(patterns: &[String]) -> Result<Vec<Regex>> {
         let mut compiled = Vec::new();
-        
+
         for pattern in patterns {
             // Convert glob pattern to regex
             let regex_pattern = Self::glob_to_regex(pattern);
@@ -208,7 +227,7 @@ impl FileAccessController {
                 }
             }
         }
-        
+
         Ok(compiled)
     }
 
@@ -216,7 +235,7 @@ impl FileAccessController {
     fn glob_to_regex(glob: &str) -> String {
         let mut regex = String::new();
         regex.push('^');
-        
+
         for ch in glob.chars() {
             match ch {
                 '*' => regex.push_str(".*"),
@@ -236,7 +255,7 @@ impl FileAccessController {
                 _ => regex.push(ch),
             }
         }
-        
+
         regex.push('$');
         regex
     }
@@ -249,12 +268,12 @@ impl FileAccessController {
     /// Update file access policy
     pub async fn update_policy(&mut self, new_policy: FileAccessPolicy) -> Result<()> {
         debug!("Updating file access policy");
-        
+
         // Recompile patterns
         self.allowed_patterns = Self::compile_patterns(&new_policy.allowed_patterns)?;
         self.denied_patterns = Self::compile_patterns(&new_policy.denied_patterns)?;
         self.sensitive_patterns = Self::compile_patterns(&new_policy.sensitive_patterns)?;
-        
+
         self.policy = new_policy;
         Ok(())
     }

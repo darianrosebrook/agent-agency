@@ -1,11 +1,11 @@
 //! Integration tests for the Research system
 
 use anyhow::Result;
-use tracing::{info, debug};
+use tracing::{debug, info};
 
+use crate::fixtures::{TestDataGenerator, TestFixtures};
+use crate::mocks::{MockDatabase, MockEventEmitter, MockFactory, MockHttpClient};
 use crate::test_utils::{TestExecutor, TestResult, DEFAULT_TEST_TIMEOUT};
-use crate::fixtures::{TestFixtures, TestDataGenerator};
-use crate::mocks::{MockFactory, MockDatabase, MockEventEmitter, MockHttpClient};
 
 /// Research integration test suite
 pub struct ResearchIntegrationTests {
@@ -48,7 +48,10 @@ impl ResearchIntegrationTests {
         // Test cross-reference detection
         results.push(
             self.executor
-                .execute("research_cross_reference_detection", self.test_cross_reference_detection())
+                .execute(
+                    "research_cross_reference_detection",
+                    self.test_cross_reference_detection(),
+                )
                 .await,
         );
 
@@ -191,7 +194,8 @@ impl ResearchIntegrationTests {
                         </ul>
                     </body>
                 </html>
-            "#.to_string(),
+            "#
+            .to_string(),
             headers: std::collections::HashMap::new(),
         };
 
@@ -305,18 +309,23 @@ mod tests {
     #[tokio::test]
     async fn test_mock_http_setup() {
         let tests = ResearchIntegrationTests::new();
-        
+
         let mock_response = crate::mocks::MockResponse {
             status: 200,
             body: "test response".to_string(),
             headers: std::collections::HashMap::new(),
         };
-        
-        tests.mock_http
+
+        tests
+            .mock_http
             .mock_response("https://example.com/test".to_string(), mock_response)
             .await;
-        
-        let response = tests.mock_http.get("https://example.com/test").await.unwrap();
+
+        let response = tests
+            .mock_http
+            .get("https://example.com/test")
+            .await
+            .unwrap();
         assert_eq!(response.status, 200);
         assert_eq!(response.body, "test response");
     }

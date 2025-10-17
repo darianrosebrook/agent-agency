@@ -1,6 +1,6 @@
 use crate::types::*;
 use anyhow::Result;
-use tracing::{debug, warn, error};
+use tracing::{debug, error, warn};
 use uuid::Uuid;
 
 /// Context manager for processing and managing context data
@@ -18,10 +18,7 @@ impl ContextManager {
     }
 
     /// Process context data
-    pub async fn process_context_data(
-        &self,
-        context_data: &ContextData,
-    ) -> Result<ContextData> {
+    pub async fn process_context_data(&self, context_data: &ContextData) -> Result<ContextData> {
         debug!("Processing context data");
 
         // For now, return the context data as-is

@@ -1,6 +1,7 @@
 use crate::types::*;
 use anyhow::Result;
-use tracing::{debug, warn, error};
+use serde::{Deserialize, Serialize};
+use tracing::{debug, error, warn};
 use uuid::Uuid;
 
 /// Context store for persistent storage and retrieval of contexts
@@ -47,7 +48,10 @@ impl ContextStore {
         context_id: &Uuid,
         tenant_id: &str,
     ) -> Result<Option<(ContextData, ContextMetadata)>> {
-        debug!("Retrieving context: {} for tenant: {}", context_id, tenant_id);
+        debug!(
+            "Retrieving context: {} for tenant: {}",
+            context_id, tenant_id
+        );
 
         // For now, return None (context not found)
         // In a real implementation, this would:

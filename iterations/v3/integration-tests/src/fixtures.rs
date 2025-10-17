@@ -321,17 +321,15 @@ impl TestDataGenerator {
             .map(|i| {
                 let mut evidence = TestFixtures::evidence_item();
                 evidence["id"] = Value::String(format!("evidence-{:03}", i + 1));
-                evidence["relevance"] = Value::Number(serde_json::Number::from_f64(0.5 + (i as f64 * 0.1)).unwrap());
+                evidence["relevance"] =
+                    Value::Number(serde_json::Number::from_f64(0.5 + (i as f64 * 0.1)).unwrap());
                 evidence
             })
             .collect()
     }
 
     /// Generate test data with specific characteristics
-    pub fn generate_custom_data(
-        template: Value,
-        modifications: HashMap<String, Value>,
-    ) -> Value {
+    pub fn generate_custom_data(template: Value, modifications: HashMap<String, Value>) -> Value {
         let mut data = template;
         for (key, value) in modifications {
             data[key] = value;
@@ -380,7 +378,10 @@ impl TestScenarioBuilder {
     }
 
     pub fn with_expected_result(mut self, result: Value) -> Self {
-        self.scenario["expected_results"].as_array_mut().unwrap().push(result);
+        self.scenario["expected_results"]
+            .as_array_mut()
+            .unwrap()
+            .push(result);
         self
     }
 
@@ -439,8 +440,14 @@ mod tests {
     fn test_generate_custom_data() {
         let template = TestFixtures::working_spec();
         let mut modifications = HashMap::new();
-        modifications.insert("risk_tier".to_string(), Value::Number(serde_json::Number::from(1)));
-        modifications.insert("title".to_string(), Value::String("Custom Title".to_string()));
+        modifications.insert(
+            "risk_tier".to_string(),
+            Value::Number(serde_json::Number::from(1)),
+        );
+        modifications.insert(
+            "title".to_string(),
+            Value::String("Custom Title".to_string()),
+        );
 
         let custom_data = TestDataGenerator::generate_custom_data(template, modifications);
         assert_eq!(custom_data["risk_tier"], 1);

@@ -33,7 +33,11 @@ async fn init_loads_rulebook_and_clears_cache() {
         author: "a".into(),
         tool_type: ToolType::Utility,
         capabilities: vec![],
-        parameters: ToolParameters { required: vec![], optional: vec![], constraints: vec![] },
+        parameters: ToolParameters {
+            required: vec![],
+            optional: vec![],
+            constraints: vec![],
+        },
         output_schema: serde_json::json!({}),
         caws_compliance: CawsComplianceStatus::Unknown,
         registration_time: chrono::Utc::now(),
@@ -67,7 +71,11 @@ async fn validate_tool_detects_missing_contracts() {
         author: "a".into(),
         tool_type: ToolType::Utility,
         capabilities: vec![],
-        parameters: ToolParameters { required: vec![], optional: vec![], constraints: vec![] },
+        parameters: ToolParameters {
+            required: vec![],
+            optional: vec![],
+            constraints: vec![],
+        },
         output_schema: serde_json::Value::Null, // should trigger contract violation
         caws_compliance: CawsComplianceStatus::Unknown,
         registration_time: chrono::Utc::now(),
@@ -95,7 +103,11 @@ async fn validate_execution_requires_timeout_for_network() {
         author: "a".into(),
         tool_type: ToolType::Utility,
         capabilities: vec![ToolCapability::NetworkAccess],
-        parameters: ToolParameters { required: vec![], optional: vec![], constraints: vec![] },
+        parameters: ToolParameters {
+            required: vec![],
+            optional: vec![],
+            constraints: vec![],
+        },
         output_schema: serde_json::json!({}),
         caws_compliance: CawsComplianceStatus::Unknown,
         registration_time: chrono::Utc::now(),

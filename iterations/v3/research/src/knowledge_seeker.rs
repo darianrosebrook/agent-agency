@@ -5,15 +5,15 @@
 
 use crate::types::*;
 use crate::ContentProcessingConfig;
-use uuid::Uuid;
-use std::collections::HashMap;
-use crate::{VectorSearchEngine, ContextBuilder, WebScraper, ContentProcessor};
+use crate::{ContentProcessor, ContextBuilder, VectorSearchEngine, WebScraper};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use dashmap::DashMap;
+use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{RwLock, mpsc};
+use tokio::sync::{mpsc, RwLock};
 use tracing::{debug, error, info, warn};
+use uuid::Uuid;
 
 /// Main knowledge seeker for research coordination
 #[derive(Debug)]
@@ -23,16 +23,16 @@ pub struct KnowledgeSeeker {
     context_builder: Arc<ContextBuilder>,
     web_scraper: Arc<WebScraper>,
     content_processor: Arc<ContentProcessor>,
-    
+
     // Active research sessions
     active_sessions: Arc<DashMap<Uuid, ResearchSession>>,
-    
+
     // Research metrics
     metrics: Arc<RwLock<ResearchMetrics>>,
-    
+
     // Event channel for research events
     event_sender: mpsc::UnboundedSender<ResearchEvent>,
-    
+
     // Status
     status: Arc<RwLock<ResearchAgentStatus>>,
 }
@@ -57,13 +57,17 @@ impl KnowledgeSeeker {
         let (event_sender, _event_receiver) = mpsc::unbounded_channel();
 
         // Initialize vector search engine
-        let vector_search = Arc::new(VectorSearchEngine::new(
-            &config.vector_search.qdrant_url,
-            &config.vector_search.collection_name,
-            config.vector_search.dimension as u32,
-            config.vector_search.similarity_threshold,
-            config.vector_search.max_results,
-        ).await.context("Failed to initialize vector search engine")?);
+        let vector_search = Arc::new(
+            VectorSearchEngine::new(
+                &config.vector_search.qdrant_url,
+                &config.vector_search.collection_name,
+                config.vector_search.dimension as u32,
+                config.vector_search.similarity_threshold,
+                config.vector_search.max_results,
+            )
+            .await
+            .context("Failed to initialize vector search engine")?,
+        );
 
         // Initialize other components
         let context_builder = Arc::new(ContextBuilder::new(config.context_synthesis.clone()));
@@ -113,9 +117,12 @@ impl KnowledgeSeeker {
     /// Execute a research query
     pub async fn execute_query(&self, query: ResearchQuery) -> Result<Vec<ResearchResult>> {
         let start_time = std::time::Instant::now();
-        
-        info!("Executing research query: {} (type: {:?})", query.query, query.query_type);
-        
+
+        info!(
+            "Executing research query: {} (type: {:?})",
+            query.query, query.query_type
+        );
+
         // Update status
         {
             let mut status = self.status.write().await;
@@ -123,16 +130,23 @@ impl KnowledgeSeeker {
         }
 
         // Emit query started event
-        let _ = self.event_sender.send(ResearchEvent::QueryStarted(query.id));
+        let _ = self
+            .event_sender
+            .send(ResearchEvent::QueryStarted(query.id));
 
         let results = match self.execute_query_internal(query.clone()).await {
             Ok(results) => {
-                info!("Research query completed successfully: {} results", results.len());
+                info!(
+                    "Research query completed successfully: {} results",
+                    results.len()
+                );
                 results
-            },
+            }
             Err(e) => {
                 error!("Research query failed: {}", e);
-                let _ = self.event_sender.send(ResearchEvent::ErrorOccurred(e.to_string()));
+                let _ = self
+                    .event_sender
+                    .send(ResearchEvent::ErrorOccurred(e.to_string()));
                 return Err(e);
             }
         };
@@ -144,10 +158,13 @@ impl KnowledgeSeeker {
         }
 
         // Emit query completed event
-        let _ = self.event_sender.send(ResearchEvent::QueryCompleted(query.id, results.clone()));
+        let _ = self
+            .event_sender
+            .send(ResearchEvent::QueryCompleted(query.id, results.clone()));
 
         // Update metrics
-        self.update_metrics(true, start_time.elapsed().as_millis() as u64, &results).await;
+        self.update_metrics(true, start_time.elapsed().as_millis() as u64, &results)
+            .await;
 
         Ok(results)
     }
@@ -160,13 +177,17 @@ impl KnowledgeSeeker {
     ) -> Result<SynthesizedContext> {
         info!("Synthesizing context for query: {}", query_id);
 
-        let (synthesized_context, _metrics) = self.context_builder
+        let (synthesized_context, _metrics) = self
+            .context_builder
             .synthesize_context(query_id, results)
             .await
             .context("Context synthesis failed")?;
 
         // Emit context synthesized event
-        let _ = self.event_sender.send(ResearchEvent::ContextSynthesized(query_id, synthesized_context.clone()));
+        let _ = self.event_sender.send(ResearchEvent::ContextSynthesized(
+            query_id,
+            synthesized_context.clone(),
+        ));
 
         info!("Context synthesis completed for query: {}", query_id);
         Ok(synthesized_context)
@@ -190,11 +211,16 @@ impl KnowledgeSeeker {
         };
 
         self.active_sessions.insert(session.id, session.clone());
-        
-        // Emit session created event
-        let _ = self.event_sender.send(ResearchEvent::SessionCreated(session.id));
 
-        info!("Created research session: {} ({})", session.session_name, session.id);
+        // Emit session created event
+        let _ = self
+            .event_sender
+            .send(ResearchEvent::SessionCreated(session.id));
+
+        info!(
+            "Created research session: {} ({})",
+            session.session_name, session.id
+        );
         Ok(session)
     }
 
@@ -216,10 +242,12 @@ impl KnowledgeSeeker {
         if let Some(mut session) = self.active_sessions.get_mut(&session_id) {
             session.is_active = false;
             session.last_activity = chrono::Utc::now();
-            
+
             // Emit session completed event
-            let _ = self.event_sender.send(ResearchEvent::SessionCompleted(session_id));
-            
+            let _ = self
+                .event_sender
+                .send(ResearchEvent::SessionCompleted(session_id));
+
             info!("Completed research session: {}", session_id);
         } else {
             return Err(anyhow::anyhow!("Session not found: {}", session_id));
@@ -286,11 +314,14 @@ impl KnowledgeSeeker {
 
     /// Update configuration
     pub async fn update_config(&self, update: ResearchConfigUpdate) -> Result<()> {
-        info!("Updating research configuration: {} = {:?}", update.field, update.value);
-        
+        info!(
+            "Updating research configuration: {} = {:?}",
+            update.field, update.value
+        );
+
         // TODO: Implement configuration updates
         // This would involve updating the relevant config fields and restarting affected components
-        
+
         Ok(())
     }
 
@@ -299,13 +330,15 @@ impl KnowledgeSeeker {
         let mut all_results = Vec::new();
 
         // Generate embedding for semantic search
-        let query_embedding = self.vector_search
+        let query_embedding = self
+            .vector_search
             .generate_embedding(&query.query)
             .await
             .context("Failed to generate query embedding")?;
 
         // Perform vector search
-        let vector_results = self.vector_search
+        let vector_results = self
+            .vector_search
             .search(&query_embedding, query.max_results, None)
             .await
             .context("Vector search failed")?;
@@ -317,8 +350,8 @@ impl KnowledgeSeeker {
                 source: entry.source.clone(),
                 title: entry.title.clone(),
                 content: entry.content.clone(),
-                summary: None, // TODO: Generate summary
-                relevance_score: 0.8, // TODO: Calculate actual relevance
+                summary: None,         // TODO: Generate summary
+                relevance_score: 0.8,  // TODO: Calculate actual relevance
                 confidence_score: 0.9, // TODO: Calculate actual confidence
                 extracted_at: chrono::Utc::now(),
                 url: entry.source_url.clone(),
@@ -353,7 +386,8 @@ impl KnowledgeSeeker {
                 if !url.is_empty() {
                     match self.web_scraper.scrape_url(url).await {
                         Ok(scraping_result) => {
-                            let processed_content = self.content_processor
+                            let processed_content = self
+                                .content_processor
                                 .process_content(&scraping_result.content)
                                 .await?;
 
@@ -371,7 +405,7 @@ impl KnowledgeSeeker {
                             };
 
                             web_results.push(result);
-                        },
+                        }
                         Err(e) => {
                             warn!("Failed to scrape URL {}: {}", url, e);
                         }
@@ -384,9 +418,14 @@ impl KnowledgeSeeker {
     }
 
     /// Update research metrics
-    async fn update_metrics(&self, success: bool, response_time_ms: u64, results: &[ResearchResult]) {
+    async fn update_metrics(
+        &self,
+        success: bool,
+        response_time_ms: u64,
+        results: &[ResearchResult],
+    ) {
         let mut metrics = self.metrics.write().await;
-        
+
         metrics.total_queries += 1;
         if success {
             metrics.successful_queries += 1;
@@ -396,17 +435,22 @@ impl KnowledgeSeeker {
 
         // Update running averages
         let total = metrics.total_queries;
-        metrics.average_response_time_ms = 
-            (metrics.average_response_time_ms * (total - 1) as f64 + response_time_ms as f64) / total as f64;
+        metrics.average_response_time_ms = (metrics.average_response_time_ms * (total - 1) as f64
+            + response_time_ms as f64)
+            / total as f64;
 
         if !results.is_empty() {
-            let avg_relevance: f32 = results.iter().map(|r| r.relevance_score).sum::<f32>() / results.len() as f32;
-            let avg_confidence: f32 = results.iter().map(|r| r.confidence_score).sum::<f32>() / results.len() as f32;
-            
-            metrics.average_relevance_score = 
-                (metrics.average_relevance_score * (total - 1) as f32 + avg_relevance) / total as f32;
-            metrics.average_confidence_score = 
-                (metrics.average_confidence_score * (total - 1) as f32 + avg_confidence) / total as f32;
+            let avg_relevance: f32 =
+                results.iter().map(|r| r.relevance_score).sum::<f32>() / results.len() as f32;
+            let avg_confidence: f32 =
+                results.iter().map(|r| r.confidence_score).sum::<f32>() / results.len() as f32;
+
+            metrics.average_relevance_score =
+                (metrics.average_relevance_score * (total - 1) as f32 + avg_relevance)
+                    / total as f32;
+            metrics.average_confidence_score =
+                (metrics.average_confidence_score * (total - 1) as f32 + avg_confidence)
+                    / total as f32;
         }
 
         metrics.last_updated = chrono::Utc::now();
@@ -417,13 +461,17 @@ impl KnowledgeSeeker {
 pub trait ResearchAgent: Send + Sync {
     /// Execute a research query
     async fn execute_query(&self, query: ResearchQuery) -> Result<Vec<ResearchResult>>;
-    
+
     /// Synthesize context from results
-    async fn synthesize_context(&self, query_id: Uuid, results: Vec<ResearchResult>) -> Result<SynthesizedContext>;
-    
+    async fn synthesize_context(
+        &self,
+        query_id: Uuid,
+        results: Vec<ResearchResult>,
+    ) -> Result<SynthesizedContext>;
+
     /// Get research capabilities
     async fn get_capabilities(&self) -> ResearchCapabilities;
-    
+
     /// Get current status
     async fn get_status(&self) -> ResearchAgentStatus;
 }
@@ -434,7 +482,11 @@ impl ResearchAgent for KnowledgeSeeker {
         self.execute_query(query).await
     }
 
-    async fn synthesize_context(&self, query_id: Uuid, results: Vec<ResearchResult>) -> Result<SynthesizedContext> {
+    async fn synthesize_context(
+        &self,
+        query_id: Uuid,
+        results: Vec<ResearchResult>,
+    ) -> Result<SynthesizedContext> {
         self.synthesize_context(query_id, results).await
     }
 
@@ -489,7 +541,7 @@ mod tests {
             },
         };
         let seeker = KnowledgeSeeker::new(config).await;
-        
+
         // In a real test, we'd assert successful creation
         // For now, we just ensure it compiles
         assert!(seeker.is_ok() || seeker.is_err());
@@ -537,9 +589,11 @@ mod tests {
             todo!("Create minimal seeker for testing")
         });
 
-        let session = seeker.create_session("test session".to_string(), None).await;
+        let session = seeker
+            .create_session("test session".to_string(), None)
+            .await;
         assert!(session.is_ok());
-        
+
         let session = session.unwrap();
         assert_eq!(session.session_name, "test session");
         assert!(session.is_active);

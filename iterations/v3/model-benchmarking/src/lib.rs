@@ -1,5 +1,5 @@
 //! Model Performance Benchmarking & Evaluation System
-//! 
+//!
 //! Implements continuous micro-benchmarks and multi-dimensional scoring
 //! system for model performance evaluation. Based on V2 ModelPerformanceBenchmarking
 //! with Rust adaptations and council integration for performance feedback.
@@ -12,26 +12,26 @@
 //! - Council-informed routing decisions
 
 pub mod benchmark_runner;
-pub mod scoring_system;
-pub mod performance_tracker;
-pub mod model_evaluator;
-pub mod regression_detector;
-pub mod types;
 pub mod metrics_collector;
+pub mod model_evaluator;
+pub mod performance_tracker;
+pub mod regression_detector;
+pub mod scoring_system;
+pub mod types;
 
 #[cfg(test)]
 mod tests;
 
-use tracing::{info, debug, warn, error};
+use tracing::{debug, error, info, warn};
 
 pub use benchmark_runner::BenchmarkRunner;
-pub use scoring_system::MultiDimensionalScoringSystem;
-pub use performance_tracker::PerformanceTracker;
 pub use model_evaluator::ModelEvaluator;
+pub use performance_tracker::PerformanceTracker;
+pub use scoring_system::MultiDimensionalScoringSystem;
 pub use types::*;
 
 /// Main benchmarking system coordinator
-/// 
+///
 /// Orchestrates all benchmarking activities and integrates with
 /// council for performance-informed routing decisions.
 pub struct ModelBenchmarkingSystem {
@@ -71,7 +71,7 @@ impl ModelBenchmarkingSystem {
 
         // Get active models from performance tracker
         let active_models = self.performance_tracker.get_active_models().await?;
-        
+
         let mut benchmark_results = Vec::new();
 
         // Run benchmarks for each active model
@@ -89,22 +89,35 @@ impl ModelBenchmarkingSystem {
             benchmark_results.push(quality_result);
 
             // Run performance benchmarks
-            let performance_result = self.benchmark_runner.run_performance_benchmark(&model).await?;
+            let performance_result = self
+                .benchmark_runner
+                .run_performance_benchmark(&model)
+                .await?;
             benchmark_results.push(performance_result);
 
             // Run compliance benchmarks
-            let compliance_result = self.benchmark_runner.run_compliance_benchmark(&model).await?;
+            let compliance_result = self
+                .benchmark_runner
+                .run_compliance_benchmark(&model)
+                .await?;
             benchmark_results.push(compliance_result);
         }
 
         // Calculate performance summary
-        let performance_summary = self.scoring_system.calculate_performance_summary(&benchmark_results).await?;
+        let performance_summary = self
+            .scoring_system
+            .calculate_performance_summary(&benchmark_results)
+            .await?;
 
         // Generate recommendations
-        let recommendations = self.generate_benchmark_recommendations(&benchmark_results, &performance_summary).await?;
+        let recommendations = self
+            .generate_benchmark_recommendations(&benchmark_results, &performance_summary)
+            .await?;
 
         // Check for performance regressions
-        self.regression_detector.check_for_regressions(&benchmark_results).await?;
+        self.regression_detector
+            .check_for_regressions(&benchmark_results)
+            .await?;
 
         let report = BenchmarkReport {
             report_id: uuid::Uuid::new_v4(),
@@ -116,9 +129,14 @@ impl ModelBenchmarkingSystem {
         };
 
         // Store report in performance tracker
-        self.performance_tracker.store_benchmark_report(&report).await?;
+        self.performance_tracker
+            .store_benchmark_report(&report)
+            .await?;
 
-        tracing::info!("Completed continuous benchmarking with {} results", report.benchmark_results.len());
+        tracing::info!(
+            "Completed continuous benchmarking with {} results",
+            report.benchmark_results.len()
+        );
         Ok(report)
     }
 
@@ -133,10 +151,16 @@ impl ModelBenchmarkingSystem {
         let evaluation_metrics = self.model_evaluator.evaluate_model(&model_spec).await?;
 
         // Compare against existing models
-        let comparison_results = self.model_evaluator.compare_against_baseline(&model_spec, &evaluation_metrics).await?;
+        let comparison_results = self
+            .model_evaluator
+            .compare_against_baseline(&model_spec, &evaluation_metrics)
+            .await?;
 
         // Generate recommendation
-        let recommendation = self.model_evaluator.generate_recommendation(&model_spec, &evaluation_metrics, &comparison_results).await?;
+        let recommendation = self
+            .model_evaluator
+            .generate_recommendation(&model_spec, &evaluation_metrics, &comparison_results)
+            .await?;
 
         let result = ModelEvaluationResult {
             evaluation_id: uuid::Uuid::new_v4(),
@@ -163,9 +187,14 @@ impl ModelBenchmarkingSystem {
         };
 
         // Store evaluation result
-        self.performance_tracker.store_evaluation_result(&result).await?;
+        self.performance_tracker
+            .store_evaluation_result(&result)
+            .await?;
 
-        tracing::info!("Completed model evaluation with overall score: {:.2}", result.evaluation_metrics.overall_score);
+        tracing::info!(
+            "Completed model evaluation with overall score: {:.2}",
+            result.evaluation_metrics.overall_score
+        );
         Ok(result)
     }
 
@@ -180,15 +209,25 @@ impl ModelBenchmarkingSystem {
         let model_performance = self.performance_tracker.get_model_performance().await?;
 
         // Filter models by task type and capabilities
-        let candidate_models = self.filter_models_by_task(&model_performance, &task_context).await?;
+        let candidate_models = self
+            .filter_models_by_task(&model_performance, &task_context)
+            .await?;
 
         // Score each candidate model for the specific task
         let mut recommendations = Vec::new();
         for model in candidate_models {
-            let confidence = self.calculate_routing_confidence(&model, &task_context).await?;
-            let expected_performance = self.predict_expected_performance(&model, &task_context).await?;
-            let resource_requirements = self.calculate_resource_requirements(&model, &task_context).await?;
-            let reasoning = self.generate_routing_reasoning(&model, &task_context).await?;
+            let confidence = self
+                .calculate_routing_confidence(&model, &task_context)
+                .await?;
+            let expected_performance = self
+                .predict_expected_performance(&model, &task_context)
+                .await?;
+            let resource_requirements = self
+                .calculate_resource_requirements(&model, &task_context)
+                .await?;
+            let reasoning = self
+                .generate_routing_reasoning(&model, &task_context)
+                .await?;
 
             recommendations.push(RoutingRecommendation {
                 recommended_model: model.id,
@@ -201,14 +240,21 @@ impl ModelBenchmarkingSystem {
 
         // Sort by confidence and expected performance
         recommendations.sort_by(|a, b| {
-            b.confidence.partial_cmp(&a.confidence).unwrap()
-                .then(b.expected_performance.success_probability.partial_cmp(&a.expected_performance.success_probability).unwrap())
+            b.confidence.partial_cmp(&a.confidence).unwrap().then(
+                b.expected_performance
+                    .success_probability
+                    .partial_cmp(&a.expected_performance.success_probability)
+                    .unwrap(),
+            )
         });
 
         // Limit to top recommendations
         recommendations.truncate(5);
 
-        tracing::info!("Generated {} routing recommendations", recommendations.len());
+        tracing::info!(
+            "Generated {} routing recommendations",
+            recommendations.len()
+        );
         Ok(recommendations)
     }
 
@@ -231,9 +277,11 @@ impl ModelBenchmarkingSystem {
         }
 
         // Quality-based recommendations
-        let avg_quality = benchmark_results.iter()
+        let avg_quality = benchmark_results
+            .iter()
             .map(|r| r.metrics.quality)
-            .sum::<f64>() / benchmark_results.len() as f64;
+            .sum::<f64>()
+            / benchmark_results.len() as f64;
 
         if avg_quality < 0.8 {
             recommendations.push(ModelRecommendation {
@@ -245,14 +293,17 @@ impl ModelBenchmarkingSystem {
         }
 
         // Compliance-based recommendations
-        let avg_compliance = benchmark_results.iter()
+        let avg_compliance = benchmark_results
+            .iter()
             .map(|r| r.metrics.compliance)
-            .sum::<f64>() / benchmark_results.len() as f64;
+            .sum::<f64>()
+            / benchmark_results.len() as f64;
 
         if avg_compliance < 0.9 {
             recommendations.push(ModelRecommendation {
                 recommendation: RecommendationDecision::Adopt,
-                reasoning: "Compliance scores below threshold, enhance compliance measures".to_string(),
+                reasoning: "Compliance scores below threshold, enhance compliance measures"
+                    .to_string(),
                 confidence: 0.4,
                 conditions: vec![],
             });
@@ -280,8 +331,11 @@ impl ModelBenchmarkingSystem {
     ) -> Result<f64, BenchmarkingError> {
         // Calculate confidence based on model capabilities and task requirements
         let capability_match = self.calculate_capability_match(model, task_context).await?;
-        let performance_confidence = self.performance_tracker.get_model_confidence(model.id).await?;
-        
+        let performance_confidence = self
+            .performance_tracker
+            .get_model_confidence(model.id)
+            .await?;
+
         Ok((capability_match + performance_confidence) / 2.0)
     }
 
@@ -303,7 +357,9 @@ impl ModelBenchmarkingSystem {
             TaskType::Refactoring => CapabilityType::Refactoring,
         };
 
-        let has_capability = model.capabilities.iter()
+        let has_capability = model
+            .capabilities
+            .iter()
             .any(|cap| cap.capability_type == required_capability);
 
         if has_capability {
@@ -320,13 +376,24 @@ impl ModelBenchmarkingSystem {
         task_context: &TaskContext,
     ) -> Result<ExpectedPerformance, BenchmarkingError> {
         // Get historical performance data
-        let historical_data = self.performance_tracker.get_historical_performance(model.id).await?;
-        
+        let historical_data = self
+            .performance_tracker
+            .get_historical_performance(model.id)
+            .await?;
+
         // Predict based on historical data and task complexity
-        let quality_score = self.predict_quality_score(&historical_data, task_context).await?;
-        let completion_time = self.predict_completion_time(&historical_data, task_context).await?;
-        let success_probability = self.predict_success_probability(&historical_data, task_context).await?;
-        let error_rate = self.predict_error_rate(&historical_data, task_context).await?;
+        let quality_score = self
+            .predict_quality_score(&historical_data, task_context)
+            .await?;
+        let completion_time = self
+            .predict_completion_time(&historical_data, task_context)
+            .await?;
+        let success_probability = self
+            .predict_success_probability(&historical_data, task_context)
+            .await?;
+        let error_rate = self
+            .predict_error_rate(&historical_data, task_context)
+            .await?;
 
         Ok(ExpectedPerformance {
             quality_score,
@@ -345,7 +412,7 @@ impl ModelBenchmarkingSystem {
         // Calculate based on model size and task complexity
         let base_cpu = (model.parameters.size / 1_000_000) as u32; // Simplified calculation
         let base_memory = model.parameters.size / 1024; // Convert to MB
-        
+
         let complexity_multiplier = match task_context.complexity {
             TaskComplexity::Simple => 1.0,
             TaskComplexity::Moderate => 1.5,
@@ -368,8 +435,11 @@ impl ModelBenchmarkingSystem {
         task_context: &TaskContext,
     ) -> Result<String, BenchmarkingError> {
         let capability_match = self.calculate_capability_match(model, task_context).await?;
-        let performance_confidence = self.performance_tracker.get_model_confidence(model.id).await?;
-        
+        let performance_confidence = self
+            .performance_tracker
+            .get_model_confidence(model.id)
+            .await?;
+
         Ok(format!(
             "Model {} selected based on {}% capability match and {}% performance confidence for {} task",
             model.name,
@@ -389,9 +459,11 @@ impl ModelBenchmarkingSystem {
             return Ok(0.7); // Default score
         }
 
-        let avg_quality = historical_data.iter()
+        let avg_quality = historical_data
+            .iter()
             .map(|r| r.metrics.quality)
-            .sum::<f64>() / historical_data.len() as f64;
+            .sum::<f64>()
+            / historical_data.len() as f64;
 
         // Adjust based on task complexity
         let complexity_adjustment = match task_context.complexity {
@@ -414,13 +486,12 @@ impl ModelBenchmarkingSystem {
             return Ok(chrono::Duration::minutes(5)); // Default time
         }
 
-        let avg_speed = historical_data.iter()
-            .map(|r| r.metrics.speed)
-            .sum::<f64>() / historical_data.len() as f64;
+        let avg_speed = historical_data.iter().map(|r| r.metrics.speed).sum::<f64>()
+            / historical_data.len() as f64;
 
         // Convert speed score to time (simplified)
         let base_time = chrono::Duration::seconds((100.0 / avg_speed) as i64);
-        
+
         // Adjust based on task complexity
         let complexity_multiplier = match task_context.complexity {
             TaskComplexity::Simple => 0.5,
@@ -442,9 +513,11 @@ impl ModelBenchmarkingSystem {
             return Ok(0.8); // Default probability
         }
 
-        let avg_accuracy = historical_data.iter()
+        let avg_accuracy = historical_data
+            .iter()
             .map(|r| r.metrics.accuracy)
-            .sum::<f64>() / historical_data.len() as f64;
+            .sum::<f64>()
+            / historical_data.len() as f64;
 
         // Adjust based on task complexity
         let complexity_adjustment = match task_context.complexity {
@@ -467,13 +540,15 @@ impl ModelBenchmarkingSystem {
             return Ok(0.05); // Default error rate
         }
 
-        let avg_quality = historical_data.iter()
+        let avg_quality = historical_data
+            .iter()
             .map(|r| r.metrics.quality)
-            .sum::<f64>() / historical_data.len() as f64;
+            .sum::<f64>()
+            / historical_data.len() as f64;
 
         // Convert quality to error rate (simplified)
         let base_error_rate = 1.0 - avg_quality;
-        
+
         // Adjust based on task complexity
         let complexity_adjustment = match task_context.complexity {
             TaskComplexity::Simple => -0.02,
@@ -485,4 +560,3 @@ impl ModelBenchmarkingSystem {
         Ok((base_error_rate + complexity_adjustment).max(0.0).min(1.0))
     }
 }
-

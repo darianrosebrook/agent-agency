@@ -1,8 +1,8 @@
 //! Types for model benchmarking system
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// Model specification for benchmarking
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -337,22 +337,22 @@ pub struct ResourceRequirements {
 pub enum BenchmarkingError {
     #[error("Benchmark execution failed: {0}")]
     BenchmarkExecutionFailed(String),
-    
+
     #[error("Model evaluation failed: {0}")]
     ModelEvaluationFailed(String),
-    
+
     #[error("Performance tracking failed: {0}")]
     PerformanceTrackingFailed(String),
-    
+
     #[error("Scoring system failed: {0}")]
     ScoringSystemFailed(String),
-    
+
     #[error("Regression detection failed: {0}")]
     RegressionDetectionFailed(String),
-    
+
     #[error("Metrics collection failed: {0}")]
     MetricsCollectionFailed(String),
-    
+
     #[error("General error: {0}")]
     GeneralError(String),
 }
@@ -418,4 +418,3 @@ pub enum ImplementationEffort {
     High,
     VeryHigh,
 }
-

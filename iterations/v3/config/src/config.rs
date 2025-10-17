@@ -1,33 +1,33 @@
 //! Core configuration structures and management
 
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use tracing::{error, info, warn};
 use validator::Validate;
-use anyhow::Result;
-use tracing::{info, warn, error};
 
 /// Main application configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct AppConfig {
     /// Application metadata
     pub app: AppMetadata,
-    
+
     /// Server configuration
     pub server: ServerConfig,
-    
+
     /// Database configuration
     pub database: DatabaseConfig,
-    
+
     /// Security configuration
     pub security: SecurityConfig,
-    
+
     /// Monitoring configuration
     pub monitoring: MonitoringConfig,
-    
+
     /// Component-specific configurations
     pub components: ComponentConfigs,
-    
+
     /// Environment-specific overrides
     pub environment: EnvironmentConfig,
 }
@@ -281,7 +281,9 @@ impl AppConfig {
                 staging: Some(EnvironmentOverrides {
                     debug: Some(false),
                     log_level: Some("info".to_string()),
-                    database_url: Some("postgresql://staging-db:5432/agent_agency_staging".to_string()),
+                    database_url: Some(
+                        "postgresql://staging-db:5432/agent_agency_staging".to_string(),
+                    ),
                     server_port: Some(8080),
                     enable_metrics: Some(true),
                 }),
@@ -299,22 +301,26 @@ impl AppConfig {
     /// Validate the configuration
     pub fn validate(&self) -> Result<()> {
         // Basic validation logic
-        
+
         // Additional custom validations
-        if self.security.jwt_secret == "default-secret-change-in-production" && 
-           self.app.environment == "production" {
+        if self.security.jwt_secret == "default-secret-change-in-production"
+            && self.app.environment == "production"
+        {
             return Err(anyhow::anyhow!("JWT secret must be changed in production"));
         }
-        
-        if self.security.encryption_key == "default-encryption-key-change-in-production" && 
-           self.app.environment == "production" {
-            return Err(anyhow::anyhow!("Encryption key must be changed in production"));
+
+        if self.security.encryption_key == "default-encryption-key-change-in-production"
+            && self.app.environment == "production"
+        {
+            return Err(anyhow::anyhow!(
+                "Encryption key must be changed in production"
+            ));
         }
-        
+
         if self.database.url.contains("localhost") && self.app.environment == "production" {
             warn!("Using localhost database in production environment");
         }
-        
+
         info!("Configuration validation passed");
         Ok(())
     }
@@ -326,7 +332,10 @@ impl AppConfig {
             "staging" => &self.environment.staging,
             "production" => &self.environment.production,
             _ => {
-                warn!("Unknown environment: {}, using defaults", self.app.environment);
+                warn!(
+                    "Unknown environment: {}, using defaults",
+                    self.app.environment
+                );
                 return Ok(());
             }
         };
@@ -348,8 +357,11 @@ impl AppConfig {
             if let Some(enable_metrics) = overrides.enable_metrics {
                 self.monitoring.metrics_enabled = enable_metrics;
             }
-            
-            info!("Applied environment overrides for: {}", self.app.environment);
+
+            info!(
+                "Applied environment overrides for: {}",
+                self.app.environment
+            );
         }
 
         Ok(())

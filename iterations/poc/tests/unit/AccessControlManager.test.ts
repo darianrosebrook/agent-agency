@@ -22,14 +22,14 @@ describe("AccessControlManager", () => {
       auditLogging: false, // Disable logging for tests
     });
 
-    // Add a policy for documents access
+    // Add a policy for documents access - only allow access to user's own documents
     accessControl.addPolicy({
       id: "documents-access",
       name: "User Access",
       description: "Allow users to access their own documents",
       effect: "allow",
       principals: ["*"],
-      resources: ["documents:user:*"],
+      resources: ["documents:user:${principal}"],
       actions: ["read", "write", "update"],
       priority: 60,
       enabled: true,

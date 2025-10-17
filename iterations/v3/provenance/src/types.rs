@@ -366,11 +366,11 @@ impl ProvenanceRecord {
     /// Calculate overall quality score
     pub fn overall_quality_score(&self) -> f32 {
         let mut scores = vec![self.consensus_score, self.caws_compliance.compliance_score];
-        
+
         if let Some(ref claim_verification) = self.claim_verification {
             scores.push(claim_verification.verification_quality);
         }
-        
+
         scores.iter().sum::<f32>() / scores.len() as f32
     }
 }
@@ -392,7 +392,7 @@ impl VerdictDecision {
             VerdictDecision::Accept { confidence, .. } => *confidence,
             VerdictDecision::Reject { .. } => 1.0, // Reject decisions are always confident
             VerdictDecision::RequireModification { .. } => 0.8, // High confidence in need for changes
-            VerdictDecision::NeedInvestigation { .. } => 0.5, // Medium confidence, need more info
+            VerdictDecision::NeedInvestigation { .. } => 0.5,   // Medium confidence, need more info
         }
     }
 }
@@ -510,4 +510,3 @@ mod tests {
         assert_eq!(record.overall_quality_score(), 0.85);
     }
 }
-

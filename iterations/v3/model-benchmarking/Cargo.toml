@@ -36,3 +36,6 @@ sqlx.workspace = true
 # Council integration
 agent-agency-council = { path = "../council" }
 
+# For examples
+tracing-subscriber = "0.3"
+

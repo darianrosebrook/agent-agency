@@ -1,0 +1,44 @@
+{
+  "outcomes": [
+    {
+      "scenario": "Baseline",
+      "summary": "Failure",
+      "log_path": "log/baseline.log",
+      "diff_path": null,
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 238.153230375,
+          "process_status": "Success",
+          "argv": [
+            "/usr/local/Cellar/rust/1.87.0/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=agent-agency-mcp@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.0611985,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/usr/local/Cellar/rust/1.87.0/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=agent-agency-mcp@0.1.0",
+            "-q"
+          ]
+        }
+      ]
+    }
+  ],
+  "total_mutants": 0,
+  "missed": 0,
+  "caught": 0,
+  "timeout": 0,
+  "unviable": 0,
+  "success": 0
+}

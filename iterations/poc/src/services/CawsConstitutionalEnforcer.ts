@@ -521,7 +521,7 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
   private async checkQualityGates(
     tenantId: string,
     tier: number,
-    context: Record<string, any>
+    _context: Record<string, any>
   ): Promise<{
     allowed: boolean;
     violations: string[];

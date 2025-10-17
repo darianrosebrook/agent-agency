@@ -4,15 +4,15 @@
 //! basic conflict resolution with predictive conflict resolution, learning-integrated
 //! pleading, and quality-weighted consensus building.
 
-use crate::types::*;
 use crate::models::TaskSpec;
+use crate::types::*;
 use anyhow::Result;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
 use uuid::Uuid;
-use serde::{Deserialize, Serialize};
 
 /// Advanced arbitration engine that surpasses V2's capabilities
 #[derive(Debug)]
@@ -273,42 +273,62 @@ impl AdvancedArbitrationEngine {
     }
 
     /// V3's superior conflict resolution that surpasses V2
-    pub async fn resolve_conflicts(&self, conflicting_outputs: Vec<WorkerOutput>) -> Result<ArbitrationResult> {
-        info!("Starting advanced arbitration for {} conflicting outputs", conflicting_outputs.len());
+    pub async fn resolve_conflicts(
+        &self,
+        conflicting_outputs: Vec<WorkerOutput>,
+    ) -> Result<ArbitrationResult> {
+        info!(
+            "Starting advanced arbitration for {} conflicting outputs",
+            conflicting_outputs.len()
+        );
 
         // 1. Multi-dimensional confidence scoring (V2 had basic scoring)
-        let confidence_scores = self.confidence_scorer.score_multi_dimensional(&conflicting_outputs).await?;
+        let confidence_scores = self
+            .confidence_scorer
+            .score_multi_dimensional(&conflicting_outputs)
+            .await?;
         debug!("Confidence scores calculated: {:?}", confidence_scores);
 
         // 2. Quality assessment with predictive capabilities (V2 had basic assessment)
-        let quality_assessment = self.quality_assessor.assess_quality(&conflicting_outputs).await?;
+        let quality_assessment = self
+            .quality_assessor
+            .assess_quality(&conflicting_outputs)
+            .await?;
         debug!("Quality assessment completed: {:?}", quality_assessment);
 
         // 3. Intelligent pleading workflow with learning integration (V2 had basic pleading)
-        let pleading_result = self.pleading_workflow.resolve_with_learning(
-            &conflicting_outputs, 
-            &confidence_scores,
-            &quality_assessment
-        ).await?;
+        let pleading_result = self
+            .pleading_workflow
+            .resolve_with_learning(
+                &conflicting_outputs,
+                &confidence_scores,
+                &quality_assessment,
+            )
+            .await?;
         debug!("Pleading workflow completed: {:?}", pleading_result);
 
         // 4. Quality-weighted consensus building (V2 had simple voting)
-        let consensus = self.consensus_builder.build_quality_weighted_consensus(
-            &pleading_result,
-            &confidence_scores,
-            &quality_assessment
-        ).await?;
+        let consensus = self
+            .consensus_builder
+            .build_quality_weighted_consensus(
+                &pleading_result,
+                &confidence_scores,
+                &quality_assessment,
+            )
+            .await?;
         debug!("Consensus building completed: {:?}", consensus);
 
         // 5. Learning integration for continuous improvement (V2 had no learning)
-        let learning_insights = self.learning_integrator.integrate_arbitration_learning(
-            &conflicting_outputs,
-            &consensus
-        ).await?;
+        let learning_insights = self
+            .learning_integrator
+            .integrate_arbitration_learning(&conflicting_outputs, &consensus)
+            .await?;
         debug!("Learning integration completed: {:?}", learning_insights);
 
         // 6. Performance tracking and prediction (V2 had basic tracking)
-        self.performance_tracker.track_arbitration_performance(&consensus).await?;
+        self.performance_tracker
+            .track_arbitration_performance(&consensus)
+            .await?;
 
         let result = ArbitrationResult {
             task_id: conflicting_outputs[0].task_id.clone(),
@@ -322,7 +342,10 @@ impl AdvancedArbitrationEngine {
             timestamp: chrono::Utc::now(),
         };
 
-        info!("Advanced arbitration completed with confidence: {:.2}", result.confidence);
+        info!(
+            "Advanced arbitration completed with confidence: {:.2}",
+            result.confidence
+        );
         Ok(result)
     }
 
@@ -332,12 +355,14 @@ impl AdvancedArbitrationEngine {
 
         // Analyze task characteristics for conflict potential
         let conflict_risk = self.analyze_conflict_risk(task_spec).await?;
-        
+
         // Predict likely conflict types
         let conflict_types = self.predict_conflict_types(task_spec).await?;
-        
+
         // Suggest preventive measures
-        let preventive_measures = self.suggest_preventive_measures(&conflict_risk, &conflict_types).await?;
+        let preventive_measures = self
+            .suggest_preventive_measures(&conflict_risk, &conflict_types)
+            .await?;
 
         Ok(ConflictPrediction {
             task_id: task_spec.id.clone(),
@@ -359,14 +384,24 @@ impl AdvancedArbitrationEngine {
     async fn predict_conflict_types(&self, task_spec: &TaskSpec) -> Result<Vec<String>> {
         // TODO: Implement conflict type prediction
         // This would predict based on task characteristics and historical patterns
-        Ok(vec!["quality_variation".to_string(), "scope_disagreement".to_string()])
+        Ok(vec![
+            "quality_variation".to_string(),
+            "scope_disagreement".to_string(),
+        ])
     }
 
     /// Suggest preventive measures
-    async fn suggest_preventive_measures(&self, risk: &f32, types: &[String]) -> Result<Vec<String>> {
+    async fn suggest_preventive_measures(
+        &self,
+        risk: &f32,
+        types: &[String],
+    ) -> Result<Vec<String>> {
         // TODO: Implement preventive measure suggestions
         // This would suggest measures based on risk level and conflict types
-        Ok(vec!["clarify_requirements".to_string(), "provide_examples".to_string()])
+        Ok(vec![
+            "clarify_requirements".to_string(),
+            "provide_examples".to_string(),
+        ])
     }
 }
 
@@ -401,27 +436,33 @@ impl ConfidenceScorer {
     }
 
     /// Score outputs using multi-dimensional analysis (V2 had basic scoring)
-    pub async fn score_multi_dimensional(&self, outputs: &[WorkerOutput]) -> Result<HashMap<String, f32>> {
+    pub async fn score_multi_dimensional(
+        &self,
+        outputs: &[WorkerOutput],
+    ) -> Result<HashMap<String, f32>> {
         let mut scores = HashMap::new();
 
         for output in outputs {
             // 1. Historical performance score
             let historical_score = self.calculate_historical_score(&output.worker_id).await?;
-            
+
             // 2. Quality consistency score
-            let consistency_score = self.consistency_analyzer.analyze_consistency(output).await?;
-            
+            let consistency_score = self
+                .consistency_analyzer
+                .analyze_consistency(output)
+                .await?;
+
             // 3. Response time score
             let response_time_score = self.calculate_response_time_score(output.response_time_ms);
-            
+
             // 4. Output quality score
             let output_quality_score = output.quality_score;
-            
+
             // 5. Combined multi-dimensional score
-            let combined_score = (historical_score * 0.3) + 
-                                (consistency_score * 0.25) + 
-                                (response_time_score * 0.2) + 
-                                (output_quality_score * 0.25);
+            let combined_score = (historical_score * 0.3)
+                + (consistency_score * 0.25)
+                + (response_time_score * 0.2)
+                + (output_quality_score * 0.25);
 
             scores.insert(output.worker_id.clone(), combined_score);
         }
@@ -514,25 +555,25 @@ impl PleadingWorkflow {
 
         // 1. Collect evidence for each output
         let evidence_collection = self.evidence_collector.collect_evidence(outputs).await?;
-        
+
         // 2. Run debate protocol with evidence (simplified for now)
         let debate_result = DebateResult {
             rounds: vec![],
             final_arguments: HashMap::new(),
             consensus_reached: true,
         };
-        
+
         // 3. Resolve conflicts using advanced algorithms
-        let conflict_resolution = self.conflict_resolver.resolve_conflicts(
-            &debate_result,
-            confidence_scores
-        ).await?;
-        
+        let conflict_resolution = self
+            .conflict_resolver
+            .resolve_conflicts(&debate_result, confidence_scores)
+            .await?;
+
         // 4. Integrate learning from the process
-        let learning_insights = self.learning_integrator.integrate_pleading_learning(
-            &debate_result,
-            &conflict_resolution
-        ).await?;
+        let learning_insights = self
+            .learning_integrator
+            .integrate_pleading_learning(&debate_result, &conflict_resolution)
+            .await?;
 
         Ok(PleadingResult {
             evidence_collection,
@@ -663,19 +704,34 @@ impl QualityAssessor {
         info!("Assessing quality for {} outputs", outputs.len());
 
         // 1. Check completeness
-        let completeness_scores = self.completeness_checker.check_completeness(outputs).await?;
-        
+        let completeness_scores = self
+            .completeness_checker
+            .check_completeness(outputs)
+            .await?;
+
         // 2. Validate correctness
-        let correctness_scores = self.correctness_validator.validate_correctness(outputs).await?;
-        
+        let correctness_scores = self
+            .correctness_validator
+            .validate_correctness(outputs)
+            .await?;
+
         // 3. Analyze consistency
-        let consistency_scores = self.consistency_analyzer.analyze_consistency_batch(outputs).await?;
-        
+        let consistency_scores = self
+            .consistency_analyzer
+            .analyze_consistency_batch(outputs)
+            .await?;
+
         // 4. Evaluate innovation
-        let innovation_scores = self.innovation_evaluator.evaluate_innovation(outputs).await?;
-        
+        let innovation_scores = self
+            .innovation_evaluator
+            .evaluate_innovation(outputs)
+            .await?;
+
         // 5. Predict quality trends
-        let quality_predictions = self.predictive_analyzer.predict_quality_trends(outputs).await?;
+        let quality_predictions = self
+            .predictive_analyzer
+            .predict_quality_trends(outputs)
+            .await?;
 
         Ok(QualityAssessment {
             completeness_scores: completeness_scores.clone(),
@@ -683,12 +739,17 @@ impl QualityAssessor {
             consistency_scores,
             innovation_scores,
             quality_predictions,
-            overall_quality: self.calculate_overall_quality(&completeness_scores, &correctness_scores),
+            overall_quality: self
+                .calculate_overall_quality(&completeness_scores, &correctness_scores),
         })
     }
 
     /// Calculate overall quality score
-    fn calculate_overall_quality(&self, completeness: &HashMap<String, f32>, correctness: &HashMap<String, f32>) -> f32 {
+    fn calculate_overall_quality(
+        &self,
+        completeness: &HashMap<String, f32>,
+        correctness: &HashMap<String, f32>,
+    ) -> f32 {
         let mut total_score = 0.0;
         let mut count = 0;
 
@@ -732,7 +793,10 @@ impl CompletenessChecker {
     }
 
     /// Check completeness of outputs
-    pub async fn check_completeness(&self, outputs: &[WorkerOutput]) -> Result<HashMap<String, f32>> {
+    pub async fn check_completeness(
+        &self,
+        outputs: &[WorkerOutput],
+    ) -> Result<HashMap<String, f32>> {
         // TODO: Implement completeness checking
         // This would check if outputs are complete according to requirements
         let mut scores = HashMap::new();
@@ -751,7 +815,10 @@ impl CorrectnessValidator {
     }
 
     /// Validate correctness of outputs
-    pub async fn validate_correctness(&self, outputs: &[WorkerOutput]) -> Result<HashMap<String, f32>> {
+    pub async fn validate_correctness(
+        &self,
+        outputs: &[WorkerOutput],
+    ) -> Result<HashMap<String, f32>> {
         // TODO: Implement correctness validation
         // This would validate if outputs are correct according to specifications
         let mut scores = HashMap::new();
@@ -766,7 +833,10 @@ impl CorrectnessValidator {
 
 impl ConsistencyAnalyzer {
     /// Analyze consistency across outputs
-    pub async fn analyze_consistency_batch(&self, outputs: &[WorkerOutput]) -> Result<HashMap<String, f32>> {
+    pub async fn analyze_consistency_batch(
+        &self,
+        outputs: &[WorkerOutput],
+    ) -> Result<HashMap<String, f32>> {
         // TODO: Implement batch consistency analysis
         // This would analyze consistency across multiple outputs
         let mut scores = HashMap::new();
@@ -785,7 +855,10 @@ impl InnovationEvaluator {
     }
 
     /// Evaluate innovation in outputs
-    pub async fn evaluate_innovation(&self, outputs: &[WorkerOutput]) -> Result<HashMap<String, f32>> {
+    pub async fn evaluate_innovation(
+        &self,
+        outputs: &[WorkerOutput],
+    ) -> Result<HashMap<String, f32>> {
         // TODO: Implement innovation evaluation
         // This would evaluate how innovative the outputs are
         let mut scores = HashMap::new();
@@ -804,7 +877,10 @@ impl PredictiveAnalyzer {
     }
 
     /// Predict quality trends
-    pub async fn predict_quality_trends(&self, outputs: &[WorkerOutput]) -> Result<QualityPredictions> {
+    pub async fn predict_quality_trends(
+        &self,
+        outputs: &[WorkerOutput],
+    ) -> Result<QualityPredictions> {
         // TODO: Implement quality trend prediction
         // This would predict future quality trends based on current outputs
         Ok(QualityPredictions {
@@ -834,15 +910,17 @@ impl ConsensusBuilder {
         info!("Building quality-weighted consensus");
 
         // 1. Weight outputs by quality
-        let quality_weights = self.quality_weighter.calculate_weights(quality_assessment).await?;
-        
+        let quality_weights = self
+            .quality_weighter
+            .calculate_weights(quality_assessment)
+            .await?;
+
         // 2. Apply consensus algorithm
-        let consensus = self.consensus_algorithm.build_consensus(
-            pleading_result,
-            confidence_scores,
-            &quality_weights
-        ).await?;
-        
+        let consensus = self
+            .consensus_algorithm
+            .build_consensus(pleading_result, confidence_scores, &quality_weights)
+            .await?;
+
         // 3. Handle ties if necessary
         let final_consensus = self.tie_breaker.break_ties(consensus).await?;
 
@@ -856,7 +934,10 @@ impl QualityWeighter {
     }
 
     /// Calculate quality weights
-    pub async fn calculate_weights(&self, assessment: &QualityAssessment) -> Result<HashMap<String, f32>> {
+    pub async fn calculate_weights(
+        &self,
+        assessment: &QualityAssessment,
+    ) -> Result<HashMap<String, f32>> {
         // TODO: Implement quality weighting
         // This would calculate weights based on quality assessment
         let mut weights = HashMap::new();
@@ -923,13 +1004,22 @@ impl LearningIntegrator {
         info!("Integrating arbitration learning");
 
         // 1. Process feedback from arbitration
-        let feedback = self.feedback_processor.process_arbitration_feedback(outputs, consensus).await?;
-        
+        let feedback = self
+            .feedback_processor
+            .process_arbitration_feedback(outputs, consensus)
+            .await?;
+
         // 2. Learn from the process
-        let learning_results = self.learning_engine.learn_from_arbitration(&feedback).await?;
-        
+        let learning_results = self
+            .learning_engine
+            .learn_from_arbitration(&feedback)
+            .await?;
+
         // 3. Track improvements
-        let improvements = self.improvement_tracker.track_improvements(&learning_results).await?;
+        let improvements = self
+            .improvement_tracker
+            .track_improvements(&learning_results)
+            .await?;
 
         Ok(LearningInsights {
             performance_improvements: improvements.performance_improvements,
@@ -962,7 +1052,10 @@ impl LearningEngine {
     }
 
     /// Learn from arbitration process
-    pub async fn learn_from_arbitration(&self, feedback: &ArbitrationFeedback) -> Result<LearningResults> {
+    pub async fn learn_from_arbitration(
+        &self,
+        feedback: &ArbitrationFeedback,
+    ) -> Result<LearningResults> {
         // TODO: Implement learning from arbitration
         // This would learn patterns and improve future arbitration
         Ok(LearningResults {
@@ -1018,7 +1111,10 @@ impl ImprovementTracker {
     }
 
     /// Track improvements
-    pub async fn track_improvements(&self, learning_results: &LearningResults) -> Result<ImprovementTracking> {
+    pub async fn track_improvements(
+        &self,
+        learning_results: &LearningResults,
+    ) -> Result<ImprovementTracking> {
         // TODO: Implement improvement tracking
         // This would track improvements over time
         Ok(ImprovementTracking {
@@ -1053,13 +1149,22 @@ impl PerformanceTracker {
         info!("Tracking arbitration performance");
 
         // 1. Collect metrics
-        let metrics = self.metrics_collector.collect_arbitration_metrics(consensus).await?;
-        
+        let metrics = self
+            .metrics_collector
+            .collect_arbitration_metrics(consensus)
+            .await?;
+
         // 2. Analyze trends
-        let trends = self.trend_analyzer.analyze_arbitration_trends(&metrics).await?;
-        
+        let trends = self
+            .trend_analyzer
+            .analyze_arbitration_trends(&metrics)
+            .await?;
+
         // 3. Predict future performance
-        let predictions = self.performance_predictor.predict_arbitration_performance(&trends).await?;
+        let predictions = self
+            .performance_predictor
+            .predict_arbitration_performance(&trends)
+            .await?;
 
         debug!("Arbitration performance tracked: {:?}", predictions);
         Ok(())
@@ -1072,7 +1177,10 @@ impl MetricsCollector {
     }
 
     /// Collect arbitration metrics
-    pub async fn collect_arbitration_metrics(&self, consensus: &ConsensusResult) -> Result<ArbitrationMetrics> {
+    pub async fn collect_arbitration_metrics(
+        &self,
+        consensus: &ConsensusResult,
+    ) -> Result<ArbitrationMetrics> {
         // TODO: Implement metrics collection
         // This would collect various metrics from the arbitration process
         Ok(ArbitrationMetrics {
@@ -1099,7 +1207,10 @@ impl TrendAnalyzer {
     }
 
     /// Analyze arbitration trends
-    pub async fn analyze_arbitration_trends(&self, metrics: &ArbitrationMetrics) -> Result<ArbitrationTrends> {
+    pub async fn analyze_arbitration_trends(
+        &self,
+        metrics: &ArbitrationMetrics,
+    ) -> Result<ArbitrationTrends> {
         // TODO: Implement trend analysis
         // This would analyze trends in arbitration performance
         Ok(ArbitrationTrends {
@@ -1124,7 +1235,10 @@ impl PerformancePredictor {
     }
 
     /// Predict arbitration performance
-    pub async fn predict_arbitration_performance(&self, trends: &ArbitrationTrends) -> Result<PerformancePrediction> {
+    pub async fn predict_arbitration_performance(
+        &self,
+        trends: &ArbitrationTrends,
+    ) -> Result<PerformancePrediction> {
         // TODO: Implement performance prediction
         // This would predict future arbitration performance
         Ok(PerformancePrediction {

@@ -7,38 +7,38 @@ use tracing::{debug, info};
 
 /// Wait for a condition to be true with timeout
 pub async fn wait_for_condition<F, Fut>(
-    condition: F,
+    mut condition: F,
     timeout: Duration,
     check_interval: Duration,
 ) -> Result<bool>
 where
-    F: Fn() -> Fut,
+    F: FnMut() -> Fut,
     Fut: std::future::Future<Output = bool>,
 {
     let start = std::time::Instant::now();
-    
+
     while start.elapsed() < timeout {
         if condition().await {
             return Ok(true);
         }
         sleep(check_interval).await;
     }
-    
+
     Ok(false)
 }
 
 /// Retry an operation with exponential backoff
 pub async fn retry_with_backoff<F, Fut, T>(
-    operation: F,
+    mut operation: F,
     max_retries: usize,
     initial_delay: Duration,
 ) -> Result<T>
 where
-    F: Fn() -> Fut,
+    F: FnMut() -> Fut,
     Fut: std::future::Future<Output = Result<T>>,
 {
     let mut delay = initial_delay;
-    
+
     for attempt in 0..=max_retries {
         match operation().await {
             Ok(result) => return Ok(result),
@@ -46,14 +46,19 @@ where
                 if attempt == max_retries {
                     return Err(e);
                 }
-                
-                debug!("Attempt {} failed: {}, retrying in {:?}", attempt + 1, e, delay);
+
+                debug!(
+                    "Attempt {} failed: {}, retrying in {:?}",
+                    attempt + 1,
+                    e,
+                    delay
+                );
                 sleep(delay).await;
                 delay *= 2; // Exponential backoff
             }
         }
     }
-    
+
     unreachable!()
 }
 
@@ -129,7 +134,7 @@ impl TestEnvironmentUtils {
     /// Check if test environment is properly configured
     pub async fn check_environment() -> Result<()> {
         info!("Checking test environment configuration");
-        
+
         // Check environment variables
         let required_vars = ["DATABASE_URL", "REDIS_URL"];
         for var in &required_vars {
@@ -137,10 +142,10 @@ impl TestEnvironmentUtils {
                 debug!("Environment variable {} not set, using default", var);
             }
         }
-        
+
         // Check network connectivity (if needed)
         // TODO: Add network connectivity checks
-        
+
         info!("✅ Test environment check completed");
         Ok(())
     }
@@ -148,12 +153,12 @@ impl TestEnvironmentUtils {
     /// Clean up test environment
     pub async fn cleanup_environment() -> Result<()> {
         info!("Cleaning up test environment");
-        
+
         // TODO: Add cleanup logic
         // - Clear test databases
         // - Remove test files
         // - Reset external services
-        
+
         info!("✅ Test environment cleanup completed");
         Ok(())
     }
@@ -161,12 +166,12 @@ impl TestEnvironmentUtils {
     /// Setup test environment
     pub async fn setup_environment() -> Result<()> {
         info!("Setting up test environment");
-        
+
         // TODO: Add setup logic
         // - Initialize test databases
         // - Create test directories
         // - Start external services
-        
+
         info!("✅ Test environment setup completed");
         Ok(())
     }
@@ -177,9 +182,7 @@ pub struct PerformanceTestUtils;
 
 impl PerformanceTestUtils {
     /// Measure execution time of an operation
-    pub async fn measure_execution_time<F, Fut, T>(
-        operation: F,
-    ) -> Result<(T, Duration)>
+    pub async fn measure_execution_time<F, Fut, T>(operation: F) -> Result<(T, Duration)>
     where
         F: Fn() -> Fut,
         Fut: std::future::Future<Output = Result<T>>,
@@ -187,7 +190,7 @@ impl PerformanceTestUtils {
         let start = std::time::Instant::now();
         let result = operation().await?;
         let duration = start.elapsed();
-        
+
         Ok((result, duration))
     }
 
@@ -204,24 +207,22 @@ impl PerformanceTestUtils {
     {
         let mut handles = Vec::new();
         let interval = Duration::from_secs_f64(1.0 / operations_per_second);
-        
+
         for _ in 0..concurrent_operations {
             let op = operation.clone();
-            let handle = tokio::spawn(async move {
-                Self::measure_execution_time(op).await
-            });
+            let handle = tokio::spawn(async move { Self::measure_execution_time(op).await });
             handles.push(handle);
-            
+
             // Rate limiting
             sleep(interval).await;
         }
-        
+
         let mut results = Vec::new();
         for handle in handles {
             let result = handle.await??;
             results.push(result);
         }
-        
+
         Ok(results)
     }
 
@@ -230,27 +231,27 @@ impl PerformanceTestUtils {
         if durations.is_empty() {
             return PerformanceStats::default();
         }
-        
+
         let mut sorted_durations: Vec<Duration> = durations.to_vec();
         sorted_durations.sort();
-        
+
         let total: Duration = durations.iter().sum();
         let count = durations.len();
         let average = total / count as u32;
-        
+
         let median = if count % 2 == 0 {
             let mid = count / 2;
             (sorted_durations[mid - 1] + sorted_durations[mid]) / 2
         } else {
             sorted_durations[count / 2]
         };
-        
+
         let p95_index = (count as f64 * 0.95) as usize;
         let p95 = sorted_durations[p95_index.min(count - 1)];
-        
+
         let p99_index = (count as f64 * 0.99) as usize;
         let p99 = sorted_durations[p99_index.min(count - 1)];
-        
+
         PerformanceStats {
             count,
             total,
@@ -325,7 +326,7 @@ impl TestAssertions {
                 requirements.max_average.as_millis()
             ));
         }
-        
+
         if stats.p95 > requirements.max_p95 {
             return Err(anyhow::anyhow!(
                 "P95 duration {} exceeded maximum {}",
@@ -333,7 +334,7 @@ impl TestAssertions {
                 requirements.max_p95.as_millis()
             ));
         }
-        
+
         if stats.p99 > requirements.max_p99 {
             return Err(anyhow::anyhow!(
                 "P99 duration {} exceeded maximum {}",
@@ -341,7 +342,7 @@ impl TestAssertions {
                 requirements.max_p99.as_millis()
             ));
         }
-        
+
         Ok(())
     }
 
@@ -396,8 +397,10 @@ mod tests {
             },
             Duration::from_secs(5),
             Duration::from_millis(10),
-        ).await.unwrap();
-        
+        )
+        .await
+        .unwrap();
+
         assert!(result);
         assert_eq!(counter, 3);
     }
@@ -408,8 +411,10 @@ mod tests {
             || async { false },
             Duration::from_millis(50),
             Duration::from_millis(10),
-        ).await.unwrap();
-        
+        )
+        .await
+        .unwrap();
+
         assert!(!result);
     }
 
@@ -427,20 +432,23 @@ mod tests {
             },
             5,
             Duration::from_millis(1),
-        ).await.unwrap();
-        
+        )
+        .await
+        .unwrap();
+
         assert_eq!(result, "success");
         assert_eq!(attempts, 3);
     }
 
     #[tokio::test]
     async fn test_retry_with_backoff_failure() {
-        let result = retry_with_backoff(
-            || async { Err(anyhow::anyhow!("Always fails")) },
+        let result: Result<(), _> = retry_with_backoff(
+            || async { Err::<(), _>(anyhow::anyhow!("Always fails")) },
             2,
             Duration::from_millis(1),
-        ).await;
-        
+        )
+        .await;
+
         assert!(result.is_err());
     }
 
@@ -463,8 +471,10 @@ mod tests {
         let (result, duration) = PerformanceTestUtils::measure_execution_time(|| async {
             sleep(Duration::from_millis(10)).await;
             Ok("test")
-        }).await.unwrap();
-        
+        })
+        .await
+        .unwrap();
+
         assert_eq!(result, "test");
         assert!(duration >= Duration::from_millis(10));
     }
@@ -478,7 +488,7 @@ mod tests {
             Duration::from_millis(40),
             Duration::from_millis(50),
         ];
-        
+
         let stats = PerformanceTestUtils::calculate_stats(&durations);
         assert_eq!(stats.count, 5);
         assert_eq!(stats.average, Duration::from_millis(30));
@@ -492,10 +502,14 @@ mod tests {
         let actual = Duration::from_millis(100);
         let expected_max = Duration::from_millis(150);
         let tolerance = Duration::from_millis(10);
-        
-        assert!(TestAssertions::assert_duration_within_bounds(actual, expected_max, tolerance).is_ok());
-        
+
+        assert!(
+            TestAssertions::assert_duration_within_bounds(actual, expected_max, tolerance).is_ok()
+        );
+
         let actual = Duration::from_millis(200);
-        assert!(TestAssertions::assert_duration_within_bounds(actual, expected_max, tolerance).is_err());
+        assert!(
+            TestAssertions::assert_duration_within_bounds(actual, expected_max, tolerance).is_err()
+        );
     }
 }

@@ -1,9 +1,9 @@
 //! Research agent types and data structures
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// Research query types
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

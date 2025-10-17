@@ -1,5 +1,5 @@
-use crate::types::*;
 use crate::secrets_detection::SecretsDetector;
+use crate::types::*;
 use anyhow::Result;
 use tracing::{debug, info};
 
@@ -66,7 +66,11 @@ impl SecurityPolicy {
 
         for rule in &self.validation_rules {
             if let Err(e) = (rule.validator)(&self.config) {
-                return Err(anyhow::anyhow!("Validation rule '{}' failed: {}", rule.name, e));
+                return Err(anyhow::anyhow!(
+                    "Validation rule '{}' failed: {}",
+                    rule.name,
+                    e
+                ));
             }
         }
 
@@ -152,7 +156,10 @@ impl SecurityPolicy {
                 return Err(anyhow::anyhow!("Empty secret pattern name found"));
             }
             if pattern.pattern.is_empty() {
-                return Err(anyhow::anyhow!("Empty secret pattern found for '{}'", pattern.name));
+                return Err(anyhow::anyhow!(
+                    "Empty secret pattern found for '{}'",
+                    pattern.name
+                ));
             }
         }
 

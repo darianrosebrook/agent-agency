@@ -3,26 +3,30 @@
 //! Provides intelligent knowledge gathering, context synthesis, and research capabilities
 //! for the Agent Agency system with vector search integration and web scraping.
 
-pub mod knowledge_seeker;
-pub mod vector_search;
-pub mod context_builder;
-pub mod web_scraper;
-pub mod content_processor;
-pub mod types;
-pub mod embeddings;
 pub mod confidence_manager;
-pub mod information_processor;
+pub mod content_processor;
+pub mod context_builder;
+pub mod embeddings;
 pub mod enhanced_knowledge_seeker;
+pub mod information_processor;
+pub mod knowledge_seeker;
+pub mod types;
+pub mod vector_search;
+pub mod web_scraper;
 
-pub use knowledge_seeker::KnowledgeSeeker;
-pub use vector_search::VectorSearchEngine;
-pub use context_builder::ContextBuilder;
-pub use web_scraper::WebScraper;
+pub use confidence_manager::{ConfidenceManager, ConfidenceManagerConfig, IConfidenceManager};
 pub use content_processor::ContentProcessor;
-pub use confidence_manager::{IConfidenceManager, ConfidenceManager, ConfidenceManagerConfig};
-pub use information_processor::{IInformationProcessor, InformationProcessor, InformationProcessorConfig};
-pub use enhanced_knowledge_seeker::{IEnhancedKnowledgeSeeker, EnhancedKnowledgeSeeker, EnhancedKnowledgeSeekerConfig};
+pub use context_builder::ContextBuilder;
+pub use enhanced_knowledge_seeker::{
+    EnhancedKnowledgeSeeker, EnhancedKnowledgeSeekerConfig, IEnhancedKnowledgeSeeker,
+};
+pub use information_processor::{
+    IInformationProcessor, InformationProcessor, InformationProcessorConfig,
+};
+pub use knowledge_seeker::KnowledgeSeeker;
 pub use types::*;
+pub use vector_search::VectorSearchEngine;
+pub use web_scraper::WebScraper;
 
 /// Research agent configuration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

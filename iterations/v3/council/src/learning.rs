@@ -23,12 +23,12 @@ pub struct LearningSignal {
     pub latency_ms: u64,
     pub quality_score: f32,
     pub timestamp: DateTime<Utc>,
-    
+
     // Performance metrics
     pub resource_usage: ResourceUsageMetrics,
     pub caws_compliance_score: f32,
     pub claim_verification_score: Option<f32>,
-    
+
     // Context for learning
     pub task_complexity: TaskComplexity,
     pub worker_performance: Option<WorkerPerformanceMetrics>,
@@ -100,10 +100,10 @@ pub struct JudgeDissent {
 /// Dissent severity levels
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DissentSeverity {
-    Minor,      // Minor disagreement, easily resolved
-    Moderate,   // Significant disagreement, requires discussion
-    Major,      // Fundamental disagreement, blocks consensus
-    Critical,   // Complete disagreement, system failure
+    Minor,    // Minor disagreement, easily resolved
+    Moderate, // Significant disagreement, requires discussion
+    Major,    // Fundamental disagreement, blocks consensus
+    Critical, // Complete disagreement, system failure
 }
 
 /// Resource usage metrics for learning
@@ -138,10 +138,10 @@ pub struct TaskComplexity {
 /// Effort levels for task complexity
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EffortLevel {
-    Trivial,    // < 5 minutes
-    Simple,     // 5-30 minutes
-    Moderate,   // 30 minutes - 2 hours
-    Complex,    // 2-8 hours
+    Trivial,     // < 5 minutes
+    Simple,      // 5-30 minutes
+    Moderate,    // 30 minutes - 2 hours
+    Complex,     // 2-8 hours
     VeryComplex, // > 8 hours
 }
 
@@ -173,20 +173,20 @@ pub struct WorkerPerformanceMetrics {
 pub trait LearningSignalStorage: Send + Sync {
     /// Store a learning signal
     async fn store_signal(&self, signal: LearningSignal) -> Result<()>;
-    
+
     /// Get learning signals for a task
     async fn get_signals_for_task(&self, task_id: TaskId) -> Result<Vec<LearningSignal>>;
-    
+
     /// Get learning signals for a judge
     async fn get_signals_for_judge(&self, judge_id: &JudgeId) -> Result<Vec<LearningSignal>>;
-    
+
     /// Get learning signals within time range
     async fn get_signals_by_time_range(
         &self,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Vec<LearningSignal>>;
-    
+
     /// Get aggregated performance metrics
     async fn get_performance_metrics(
         &self,
@@ -194,7 +194,7 @@ pub trait LearningSignalStorage: Send + Sync {
         entity_id: String,
         time_window: TimeWindow,
     ) -> Result<AggregatedMetrics>;
-    
+
     /// Get learning recommendations
     async fn get_learning_recommendations(&self) -> Result<Vec<LearningRecommendation>>;
 }
@@ -294,7 +294,7 @@ impl LearningSignalAnalyzer {
     pub fn new(storage: Box<dyn LearningSignalStorage>) -> Self {
         Self { storage }
     }
-    
+
     /// Analyze signals and generate routing recommendations
     pub async fn analyze_for_routing(
         &self,
@@ -302,23 +302,32 @@ impl LearningSignalAnalyzer {
     ) -> Result<RoutingRecommendation> {
         // Get historical signals for similar tasks
         let similar_signals = self.get_similar_task_signals(task_spec).await?;
-        
+
         // Analyze judge performance for this task type
         let judge_performance = self.analyze_judge_performance(task_spec).await?;
-        
+
         // Analyze resource requirements
         let resource_analysis = self.analyze_resource_requirements(task_spec).await?;
+
+        // Generate rationale before moving values
+        let rationale = self.generate_rationale(&judge_performance, &resource_analysis);
         
+        // Extract values after borrowing
+        let recommended_judges = judge_performance.recommended_judges;
+        let resource_allocation = resource_analysis.optimal_allocation;
+        let estimated_complexity = resource_analysis.estimated_complexity;
+        let confidence = self.calculate_recommendation_confidence(&similar_signals);
+
         // Generate routing recommendation
         Ok(RoutingRecommendation {
-            recommended_judges: judge_performance.recommended_judges,
-            resource_allocation: resource_analysis.optimal_allocation,
-            estimated_complexity: resource_analysis.estimated_complexity,
-            confidence: self.calculate_recommendation_confidence(&similar_signals),
-            rationale: self.generate_rationale(&judge_performance, &resource_analysis),
+            recommended_judges,
+            resource_allocation,
+            estimated_complexity,
+            confidence,
+            rationale,
         })
     }
-    
+
     /// Get learning signals for similar tasks
     async fn get_similar_task_signals(
         &self,
@@ -331,7 +340,7 @@ impl LearningSignalAnalyzer {
         // - Historical performance
         todo!("Implement similar task signal retrieval")
     }
-    
+
     /// Analyze judge performance for task type
     async fn analyze_judge_performance(
         &self,
@@ -340,7 +349,7 @@ impl LearningSignalAnalyzer {
         // Implementation would analyze historical judge performance
         todo!("Implement judge performance analysis")
     }
-    
+
     /// Analyze resource requirements
     async fn analyze_resource_requirements(
         &self,
@@ -352,26 +361,28 @@ impl LearningSignalAnalyzer {
         // - Current system state
         todo!("Implement resource requirement analysis")
     }
-    
+
     /// Calculate recommendation confidence
     fn calculate_recommendation_confidence(&self, signals: &[LearningSignal]) -> f32 {
         if signals.is_empty() {
             return 0.5; // Default confidence with no data
         }
-        
-        let success_rate: f32 = signals.iter()
+
+        let success_rate: f32 = signals
+            .iter()
             .map(|s| match s.outcome {
                 TaskOutcome::Success { .. } => 1.0,
                 TaskOutcome::PartialSuccess { .. } => 0.7,
                 _ => 0.0,
             })
-            .sum::<f32>() / signals.len() as f32;
-        
+            .sum::<f32>()
+            / signals.len() as f32;
+
         // Confidence based on success rate and sample size
         let sample_confidence = (signals.len() as f32 / 100.0).min(1.0);
         success_rate * 0.7 + sample_confidence * 0.3
     }
-    
+
     /// Generate recommendation rationale
     fn generate_rationale(
         &self,
@@ -380,8 +391,7 @@ impl LearningSignalAnalyzer {
     ) -> String {
         format!(
             "Based on historical performance: {} with {} resource allocation",
-            judge_analysis.summary,
-            resource_analysis.summary
+            judge_analysis.summary, resource_analysis.summary
         )
     }
 }
@@ -512,4 +522,3 @@ mod tests {
         }
     }
 }
-

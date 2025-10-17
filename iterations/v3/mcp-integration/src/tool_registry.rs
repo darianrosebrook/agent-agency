@@ -117,23 +117,33 @@ impl ToolRegistry {
 
     /// Get a registered tool
     pub async fn get_tool(&self, tool_id: Uuid) -> Option<MCPTool> {
-        self.registered_tools.get(&tool_id).map(|entry| entry.clone())
+        self.registered_tools
+            .get(&tool_id)
+            .map(|entry| entry.clone())
     }
 
     /// Get all registered tools
     pub async fn get_all_tools(&self) -> Vec<MCPTool> {
-        self.registered_tools.iter().map(|entry| entry.clone()).collect()
+        self.registered_tools
+            .iter()
+            .map(|entry| entry.clone())
+            .collect()
     }
 
     /// Execute a tool
     pub async fn execute_tool(&self, request: ToolExecutionRequest) -> Result<ToolExecutionResult> {
-        info!("Executing tool: {} (request: {})", request.tool_id, request.id);
+        info!(
+            "Executing tool: {} (request: {})",
+            request.tool_id, request.id
+        );
 
         let start_time = std::time::Instant::now();
         let started_at = chrono::Utc::now();
 
         // Get tool
-        let tool = self.registered_tools.get(&request.tool_id)
+        let tool = self
+            .registered_tools
+            .get(&request.tool_id)
             .ok_or_else(|| anyhow::anyhow!("Tool not found: {}", request.tool_id))?;
 
         // Simulated execution router: respect timeout and return structured result
@@ -147,7 +157,8 @@ impl ToolRegistry {
                 "echo": request.parameters,
             }))
         };
-        let output = tokio::time::timeout(std::time::Duration::from_secs(timeout as u64), simulated).await;
+        let output =
+            tokio::time::timeout(std::time::Duration::from_secs(timeout as u64), simulated).await;
 
         let completed_at = chrono::Utc::now();
         let duration_ms = start_time.elapsed().as_millis() as u64;
@@ -198,7 +209,7 @@ impl ToolRegistry {
         {
             let mut history = self.execution_history.write().await;
             history.push(result.clone());
-            
+
             // Keep only last 1000 executions
             if history.len() > 1000 {
                 history.remove(0);
@@ -216,21 +227,25 @@ impl ToolRegistry {
                     if stats.successful_executions == 1 {
                         stats.average_execution_time_ms = duration_ms as f64;
                     } else {
-                        stats.average_execution_time_ms = 
-                            (stats.average_execution_time_ms * (stats.successful_executions - 1) as f64 + duration_ms as f64) 
+                        stats.average_execution_time_ms = (stats.average_execution_time_ms
+                            * (stats.successful_executions - 1) as f64
+                            + duration_ms as f64)
                             / stats.successful_executions as f64;
                     }
-                },
+                }
                 ExecutionStatus::Failed | ExecutionStatus::Timeout => {
                     stats.failed_executions += 1;
                     // Failed/timeout executions are not included in average execution time
-                },
+                }
                 _ => {}
             }
             stats.last_updated = chrono::Utc::now();
         }
 
-        info!("Tool execution completed: {} in {}ms", request.tool_id, duration_ms);
+        info!(
+            "Tool execution completed: {} in {}ms",
+            request.tool_id, duration_ms
+        );
         Ok(result)
     }
 

@@ -1,17 +1,17 @@
-use crate::types::*;
-use crate::file_access::FileAccessController;
-use crate::command_execution::CommandExecutionController;
-use crate::secrets_detection::SecretsDetector;
 use crate::audit::SecurityAuditor;
+use crate::command_execution::CommandExecutionController;
+use crate::file_access::FileAccessController;
 use crate::policies::SecurityPolicy;
+use crate::secrets_detection::SecretsDetector;
+use crate::types::*;
 
 use anyhow::Result;
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use tracing::{info, warn, error, debug};
-use uuid::Uuid;
 use chrono::Utc;
+use std::sync::Arc;
 use std::time::Instant;
+use tokio::sync::RwLock;
+use tracing::{debug, error, info, warn};
+use uuid::Uuid;
 
 /// Main security policy enforcer
 pub struct SecurityPolicyEnforcer {
@@ -36,21 +36,16 @@ impl SecurityPolicyEnforcer {
     pub fn new(config: SecurityPolicyConfig) -> Result<Self> {
         info!("Initializing security policy enforcer");
 
-        let file_access_controller = Arc::new(FileAccessController::new(
-            config.file_access.clone(),
-        )?);
+        let file_access_controller =
+            Arc::new(FileAccessController::new(config.file_access.clone())?);
 
         let command_execution_controller = Arc::new(CommandExecutionController::new(
             config.command_execution.clone(),
         )?);
 
-        let secrets_detector = Arc::new(SecretsDetector::new(
-            config.secrets_detection.clone(),
-        )?);
+        let secrets_detector = Arc::new(SecretsDetector::new(config.secrets_detection.clone())?);
 
-        let security_auditor = Arc::new(SecurityAuditor::new(
-            config.audit.clone(),
-        )?);
+        let security_auditor = Arc::new(SecurityAuditor::new(config.audit.clone())?);
 
         let security_policy = Arc::new(SecurityPolicy::new(config.clone())?);
 
@@ -158,7 +153,10 @@ impl SecurityPolicyEnforcer {
                         id: Uuid::new_v4(),
                         violation_type: SecurityViolationType::SecretDetected,
                         severity: SecretSeverity::Critical,
-                        description: format!("{} secrets detected in file", scan_result.secrets_found.len()),
+                        description: format!(
+                            "{} secrets detected in file",
+                            scan_result.secrets_found.len()
+                        ),
                         resource: request.file_path.clone(),
                         actor: request.actor.clone(),
                         timestamp: Utc::now(),
@@ -185,7 +183,8 @@ impl SecurityPolicyEnforcer {
         let allowed = violations.iter().all(|v| !v.blocked);
 
         // Update statistics
-        self.update_stats(allowed, &violations, enforcement_time_ms).await;
+        self.update_stats(allowed, &violations, enforcement_time_ms)
+            .await;
 
         // Log audit events
         for event in &audit_events {
@@ -207,14 +206,21 @@ impl SecurityPolicyEnforcer {
         request: &CommandExecutionRequest,
     ) -> Result<SecurityEnforcementResult> {
         let start_time = Instant::now();
-        debug!("Enforcing command execution policy for: {}", request.command);
+        debug!(
+            "Enforcing command execution policy for: {}",
+            request.command
+        );
 
         let mut violations = Vec::new();
         let mut audit_events = Vec::new();
         let mut council_decision = None;
 
         // Check command execution policy
-        match self.command_execution_controller.check_execution(request).await {
+        match self
+            .command_execution_controller
+            .check_execution(request)
+            .await
+        {
             Ok(result) => {
                 if result.allowed {
                     debug!("Command execution allowed: {}", request.command);
@@ -276,7 +282,8 @@ impl SecurityPolicyEnforcer {
         let allowed = violations.iter().all(|v| !v.blocked);
 
         // Update statistics
-        self.update_stats(allowed, &violations, enforcement_time_ms).await;
+        self.update_stats(allowed, &violations, enforcement_time_ms)
+            .await;
 
         // Log audit events
         for event in &audit_events {
@@ -293,11 +300,7 @@ impl SecurityPolicyEnforcer {
     }
 
     /// Scan content for secrets
-    pub async fn scan_content(
-        &self,
-        content: &str,
-        context: &str,
-    ) -> Result<SecretsScanResult> {
+    pub async fn scan_content(&self, content: &str, context: &str) -> Result<SecretsScanResult> {
         let start_time = Instant::now();
         debug!("Scanning content for secrets");
 
@@ -352,7 +355,8 @@ impl SecurityPolicyEnforcer {
 
         // Update average enforcement time
         let total_time = stats.avg_enforcement_time_ms * (stats.total_operations - 1) as f64;
-        stats.avg_enforcement_time_ms = (total_time + enforcement_time_ms as f64) / stats.total_operations as f64;
+        stats.avg_enforcement_time_ms =
+            (total_time + enforcement_time_ms as f64) / stats.total_operations as f64;
         stats.last_updated = Utc::now();
     }
 

@@ -12,7 +12,10 @@ impl MultiDimensionalScoringSystem {
         Self {}
     }
 
-    pub async fn calculate_performance_summary(&self, _results: &[BenchmarkResult]) -> Result<PerformanceSummary> {
+    pub async fn calculate_performance_summary(
+        &self,
+        _results: &[BenchmarkResult],
+    ) -> Result<PerformanceSummary> {
         // TODO: Implement performance summary calculation
         Ok(PerformanceSummary {
             overall_performance: 0.0,
@@ -22,4 +25,3 @@ impl MultiDimensionalScoringSystem {
         })
     }
 }
-

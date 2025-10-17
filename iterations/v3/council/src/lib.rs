@@ -4,15 +4,29 @@
 //! implementing a specialized model-based judiciary for evaluating worker outputs
 //! against CAWS principles and quality standards.
 
-pub mod coordinator;
-pub mod models;
-pub mod types;
-pub mod semantic;
-pub mod evidence_enrichment;
-pub mod claim_extraction;
 pub mod advanced_arbitration;
+pub mod claim_extraction;
+pub mod coordinator;
+pub mod evidence_enrichment;
+pub mod learning;
+pub mod models;
+pub mod predictive_learning_system;
 pub mod predictive_quality_assessor;
+pub mod intelligent_edge_case_testing;
+pub mod semantic;
+pub mod types;
 pub use types::*;
+
+// Re-export key components
+pub use predictive_learning_system::{LearningInsights, PredictiveLearningSystem, TaskOutcome};
+pub use predictive_quality_assessor::{PredictiveQualityAssessor, QualityPrediction};
+pub use intelligent_edge_case_testing::{IntelligentEdgeCaseTesting, IntelligentTestInsights, TestSpecification};
+
+#[cfg(test)]
+mod predictive_learning_system_tests;
+
+#[cfg(test)]
+mod intelligent_edge_case_testing_tests;
 
 /// Council configuration for judge coordination
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -47,9 +61,9 @@ pub struct JudgeSpec {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum OptimizationTarget {
-    ANE,  // Apple Neural Engine
-    GPU,  // Metal GPU
-    CPU,  // CPU cores
+    ANE, // Apple Neural Engine
+    GPU, // Metal GPU
+    CPU, // CPU cores
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -62,9 +76,9 @@ pub struct DebateConfig {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ConsensusConfig {
-    pub tier1_threshold: f32,  // 0.8 for 80%
-    pub tier2_threshold: f32,  // 0.6 for 60%
-    pub tier3_threshold: f32,  // 0.5 for 50%
+    pub tier1_threshold: f32, // 0.8 for 80%
+    pub tier2_threshold: f32, // 0.6 for 60%
+    pub tier3_threshold: f32, // 0.5 for 50%
     pub constitutional_override: bool,
 }
 

@@ -631,7 +631,7 @@ export class ErrorPatternAnalyzer extends EventEmitter {
    */
   private determineSeverity(
     error: string,
-    context: Record<string, any>
+    _context: Record<string, any>
   ): "low" | "medium" | "high" | "critical" {
     const errorLower = error.toLowerCase();
 

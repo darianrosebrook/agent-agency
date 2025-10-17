@@ -38,9 +38,11 @@ impl PerformanceTracker {
         Ok(0.0)
     }
 
-    pub async fn get_historical_performance(&self, _model_id: Uuid) -> Result<Vec<BenchmarkResult>> {
+    pub async fn get_historical_performance(
+        &self,
+        _model_id: Uuid,
+    ) -> Result<Vec<BenchmarkResult>> {
         // TODO: Implement historical performance retrieval
         Ok(vec![])
     }
 }
-

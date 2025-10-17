@@ -1,5 +1,5 @@
 //! Reflexive Learning & Memory Integration
-//! 
+//!
 //! Implements the reflexive learning loop required by theory:
 //! - Progress tracking with turn-level monitoring
 //! - Credit assignment for long-horizon tasks
@@ -9,21 +9,26 @@
 //! Based on V2 MultiTurnLearningCoordinator (671 lines) with Rust adaptations
 //! and council integration for learning signals.
 
-pub mod coordinator;
-pub mod progress_tracker;
-pub mod credit_assigner;
 pub mod adaptive_allocator;
 pub mod context_preservation;
-pub mod types;
+pub mod coordinator;
+pub mod credit_assigner;
 pub mod learning_algorithms;
+pub mod predictive;
+pub mod progress_tracker;
+pub mod types;
 
 pub use coordinator::MultiTurnLearningCoordinator;
+pub use predictive::{
+    PerformancePredictor, PredictiveLearningConfig, PredictiveLearningSystem, ResourcePredictor,
+    StrategyOptimizer,
+};
 pub use types::*;
 
 use tracing::info;
 
 /// Main learning coordinator for reflexive learning loop
-/// 
+///
 /// Integrates with council for learning signals and orchestrates
 /// the complete learning pipeline from progress tracking to
 /// adaptive resource allocation.
@@ -62,18 +67,18 @@ impl ReflexiveLearningSystem {
         task: LearningTask,
     ) -> Result<LearningSession, LearningSystemError> {
         tracing::info!("Starting learning session for task: {}", task.id);
-        
+
         // Start session in coordinator
         let session = self.coordinator.start_session(task).await?;
-        
+
         // Initialize progress tracking
         // TODO: Add initialize_session method to ProgressTracker
         // self.progress_tracker.initialize_session(&session).await?;
-        
+
         // Initialize context preservation
         // TODO: Add initialize_session method to ContextPreservationEngine
         // self.context_preservation.initialize_session(&session).await?;
-        
+
         Ok(session)
     }
 
@@ -83,16 +88,17 @@ impl ReflexiveLearningSystem {
         signals: Vec<CouncilLearningSignal>,
     ) -> Result<LearningUpdate, LearningSystemError> {
         tracing::info!("Processing {} council learning signals", signals.len());
-        
+
         let mut changes = Vec::new();
-        
+
         for signal in signals {
             match signal.signal_type {
                 LearningSignalType::PerformanceFeedback => {
                     // Process performance feedback
                     changes.push(LearningChange {
                         change_type: ChangeType::LearningRate,
-                        description: "Adjusting learning rate based on performance feedback".to_string(),
+                        description: "Adjusting learning rate based on performance feedback"
+                            .to_string(),
                         magnitude: 0.1,
                         expected_impact: ExpectedImpact {
                             performance_impact: 0.15,
@@ -101,7 +107,7 @@ impl ReflexiveLearningSystem {
                             confidence: signal.confidence,
                         },
                     });
-                },
+                }
                 LearningSignalType::QualityAssessment => {
                     // Process quality assessment
                     changes.push(LearningChange {
@@ -115,7 +121,7 @@ impl ReflexiveLearningSystem {
                             confidence: signal.confidence,
                         },
                     });
-                },
+                }
                 LearningSignalType::ComplianceViolation => {
                     // Process compliance violation
                     changes.push(LearningChange {
@@ -129,7 +135,7 @@ impl ReflexiveLearningSystem {
                             confidence: signal.confidence,
                         },
                     });
-                },
+                }
                 LearningSignalType::ResourceRecommendation => {
                     // Process resource recommendation
                     changes.push(LearningChange {
@@ -143,7 +149,7 @@ impl ReflexiveLearningSystem {
                             confidence: signal.confidence,
                         },
                     });
-                },
+                }
                 LearningSignalType::StrategySuggestion => {
                     // Process strategy suggestion
                     changes.push(LearningChange {
@@ -157,27 +163,37 @@ impl ReflexiveLearningSystem {
                             confidence: signal.confidence,
                         },
                     });
-                },
+                }
             }
         }
-        
+
         let impact_assessment = ImpactAssessment {
-            overall_impact: changes.iter().map(|c| c.expected_impact.performance_impact).sum::<f64>() / changes.len() as f64,
-            risk_level: if changes.len() > 3 { RiskLevel::Medium } else { RiskLevel::Low },
-            implementation_effort: if changes.len() > 5 { ImplementationEffort::High } else { ImplementationEffort::Medium },
+            overall_impact: changes
+                .iter()
+                .map(|c| c.expected_impact.performance_impact)
+                .sum::<f64>()
+                / changes.len() as f64,
+            risk_level: if changes.len() > 3 {
+                RiskLevel::Medium
+            } else {
+                RiskLevel::Low
+            },
+            implementation_effort: if changes.len() > 5 {
+                ImplementationEffort::High
+            } else {
+                ImplementationEffort::Medium
+            },
             rollback_plan: Some(RollbackPlan {
-                rollback_steps: vec![
-                    RollbackStep {
-                        step_number: 1,
-                        description: "Revert learning rate changes".to_string(),
-                        estimated_time: chrono::Duration::seconds(30),
-                    },
-                ],
+                rollback_steps: vec![RollbackStep {
+                    step_number: 1,
+                    description: "Revert learning rate changes".to_string(),
+                    estimated_time: chrono::Duration::seconds(30),
+                }],
                 rollback_time_estimate: chrono::Duration::minutes(5),
                 rollback_risk: RiskLevel::Low,
             }),
         };
-        
+
         Ok(LearningUpdate {
             update_id: uuid::Uuid::new_v4(),
             session_id: uuid::Uuid::new_v4(), // This should come from the active session
@@ -187,4 +203,3 @@ impl ReflexiveLearningSystem {
         })
     }
 }
-

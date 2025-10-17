@@ -61,9 +61,9 @@ impl Default for CircuitBreakerConfig {
             name: None,
             failure_threshold: 5,
             success_threshold: 3,
-            timeout_ms: Some(30000), // 30 seconds
+            timeout_ms: Some(30000),        // 30 seconds
             failure_window_ms: Some(60000), // 1 minute
-            reset_timeout_ms: 60000, // 1 minute
+            reset_timeout_ms: 60000,        // 1 minute
         }
     }
 }
@@ -120,10 +120,18 @@ impl CircuitBreaker {
     pub async fn execute<F, T>(
         &self,
         operation: F,
-        fallback: Option<Box<dyn Fn() -> Result<T, Box<dyn std::error::Error + Send + Sync>> + Send + Sync>>,
+        fallback: Option<
+            Box<dyn Fn() -> Result<T, Box<dyn std::error::Error + Send + Sync>> + Send + Sync>,
+        >,
     ) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: FnOnce() -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>> + Send>>,
+        F: FnOnce() -> std::pin::Pin<
+            Box<
+                dyn std::future::Future<
+                        Output = Result<T, Box<dyn std::error::Error + Send + Sync>>,
+                    > + Send,
+            >,
+        >,
     {
         self.total_requests.fetch_add(1, Ordering::Relaxed);
 
@@ -142,7 +150,8 @@ impl CircuitBreaker {
                     ),
                     circuit_name: self.config.name.clone(),
                     stats: self.get_stats().await,
-                }) as Box<dyn std::error::Error + Send + Sync>);
+                })
+                    as Box<dyn std::error::Error + Send + Sync>);
             }
             // Try transitioning to half-open
             self.state.store(2, Ordering::Relaxed); // HalfOpen
@@ -177,10 +186,16 @@ impl CircuitBreaker {
         timeout_ms: u64,
     ) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: FnOnce() -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>> + Send>>,
+        F: FnOnce() -> std::pin::Pin<
+            Box<
+                dyn std::future::Future<
+                        Output = Result<T, Box<dyn std::error::Error + Send + Sync>>,
+                    > + Send,
+            >,
+        >,
     {
         let timeout_duration = Duration::from_millis(timeout_ms);
-        
+
         match tokio::time::timeout(timeout_duration, operation()).await {
             Ok(result) => result,
             Err(_) => Err(Box::new(std::io::Error::new(
@@ -215,13 +230,15 @@ impl CircuitBreaker {
         let failure_count = self.failure_count.fetch_add(1, Ordering::Relaxed) + 1;
         *self.last_failure.write().await = Some(SystemTime::now());
 
-        if self.get_state() == CircuitState::HalfOpen || failure_count >= self.config.failure_threshold {
+        if self.get_state() == CircuitState::HalfOpen
+            || failure_count >= self.config.failure_threshold
+        {
             // Open circuit
             self.state.store(1, Ordering::Relaxed); // Open
             let next_attempt = Instant::now() + Duration::from_millis(self.config.reset_timeout_ms);
             *self.next_attempt.write().await = next_attempt;
             self.success_count.store(0, Ordering::Relaxed);
-            
+
             warn!(
                 "Circuit breaker '{}' opened after {} failures",
                 self.config.name.as_deref().unwrap_or("unnamed"),
@@ -259,7 +276,7 @@ impl CircuitBreaker {
         self.success_count.store(0, Ordering::Relaxed);
         *self.last_failure.write().await = None;
         *self.last_success.write().await = None;
-        
+
         info!(
             "Circuit breaker '{}' reset to closed state",
             self.config.name.as_deref().unwrap_or("unnamed")
@@ -272,7 +289,7 @@ impl CircuitBreaker {
         let timeout = timeout_ms.unwrap_or(self.config.reset_timeout_ms);
         let next_attempt = Instant::now() + Duration::from_millis(timeout);
         *self.next_attempt.write().await = next_attempt;
-        
+
         warn!(
             "Circuit breaker '{}' forced open",
             self.config.name.as_deref().unwrap_or("unnamed")
@@ -284,7 +301,7 @@ impl CircuitBreaker {
         self.state.store(0, Ordering::Relaxed); // Closed
         self.failure_count.store(0, Ordering::Relaxed);
         self.success_count.store(0, Ordering::Relaxed);
-        
+
         info!(
             "Circuit breaker '{}' forced closed",
             self.config.name.as_deref().unwrap_or("unnamed")
@@ -299,7 +316,10 @@ impl std::fmt::Debug for CircuitBreaker {
             .field("state", &self.get_state())
             .field("failure_count", &self.failure_count.load(Ordering::Relaxed))
             .field("success_count", &self.success_count.load(Ordering::Relaxed))
-            .field("total_requests", &self.total_requests.load(Ordering::Relaxed))
+            .field(
+                "total_requests",
+                &self.total_requests.load(Ordering::Relaxed),
+            )
             .finish()
     }
 }
@@ -314,7 +334,7 @@ mod tests {
     async fn test_circuit_breaker_creation() {
         let config = CircuitBreakerConfig::default();
         let circuit_breaker = CircuitBreaker::new(config);
-        
+
         assert_eq!(circuit_breaker.get_state(), CircuitState::Closed);
     }
 
@@ -326,12 +346,14 @@ mod tests {
             ..Default::default()
         };
         let circuit_breaker = CircuitBreaker::new(config);
-        
-        let result = circuit_breaker.execute(
-            || Box::pin(async { Ok::<i32, Box<dyn std::error::Error + Send + Sync>>(42) }),
-            None,
-        ).await;
-        
+
+        let result = circuit_breaker
+            .execute(
+                || Box::pin(async { Ok::<i32, Box<dyn std::error::Error + Send + Sync>>(42) }),
+                None,
+            )
+            .await;
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 42);
         assert_eq!(circuit_breaker.get_state(), CircuitState::Closed);
@@ -345,22 +367,38 @@ mod tests {
             ..Default::default()
         };
         let circuit_breaker = CircuitBreaker::new(config);
-        
+
         // First failure
-        let result = circuit_breaker.execute(
-            || Box::pin(async { Err::<i32, Box<dyn std::error::Error + Send + Sync>>(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "test error"))) }),
-            None,
-        ).await;
-        
+        let result = circuit_breaker
+            .execute(
+                || {
+                    Box::pin(async {
+                        Err::<i32, Box<dyn std::error::Error + Send + Sync>>(Box::new(
+                            std::io::Error::new(std::io::ErrorKind::Other, "test error"),
+                        ))
+                    })
+                },
+                None,
+            )
+            .await;
+
         assert!(result.is_err());
         assert_eq!(circuit_breaker.get_state(), CircuitState::Closed);
-        
+
         // Second failure - should open circuit
-        let result = circuit_breaker.execute(
-            || Box::pin(async { Err::<i32, Box<dyn std::error::Error + Send + Sync>>(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "test error"))) }),
-            None,
-        ).await;
-        
+        let result = circuit_breaker
+            .execute(
+                || {
+                    Box::pin(async {
+                        Err::<i32, Box<dyn std::error::Error + Send + Sync>>(Box::new(
+                            std::io::Error::new(std::io::ErrorKind::Other, "test error"),
+                        ))
+                    })
+                },
+                None,
+            )
+            .await;
+
         assert!(result.is_err());
         assert_eq!(circuit_breaker.get_state(), CircuitState::Open);
     }
@@ -373,16 +411,24 @@ mod tests {
             ..Default::default()
         };
         let circuit_breaker = CircuitBreaker::new(config);
-        
+
         // Force circuit open
         circuit_breaker.force_open(None).await;
-        
+
         let fallback = Box::new(|| Ok::<i32, Box<dyn std::error::Error + Send + Sync>>(99));
-        let result = circuit_breaker.execute(
-            || Box::pin(async { Err::<i32, Box<dyn std::error::Error + Send + Sync>>(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "test error"))) }),
-            Some(fallback),
-        ).await;
-        
+        let result = circuit_breaker
+            .execute(
+                || {
+                    Box::pin(async {
+                        Err::<i32, Box<dyn std::error::Error + Send + Sync>>(Box::new(
+                            std::io::Error::new(std::io::ErrorKind::Other, "test error"),
+                        ))
+                    })
+                },
+                Some(fallback),
+            )
+            .await;
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 99);
     }
@@ -391,11 +437,11 @@ mod tests {
     async fn test_circuit_breaker_reset() {
         let config = CircuitBreakerConfig::default();
         let circuit_breaker = CircuitBreaker::new(config);
-        
+
         // Force circuit open
         circuit_breaker.force_open(None).await;
         assert_eq!(circuit_breaker.get_state(), CircuitState::Open);
-        
+
         // Reset circuit
         circuit_breaker.reset().await;
         assert_eq!(circuit_breaker.get_state(), CircuitState::Closed);

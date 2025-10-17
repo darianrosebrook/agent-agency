@@ -2,7 +2,6 @@
  * @fileoverview Core types for workspace state management
  * @author @darianrosebrook
  */
-
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -237,28 +236,28 @@ impl<T> WorkspaceResult<T> {
 pub enum WorkspaceError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    
+
     #[error("Git error: {0}")]
     Git(#[from] git2::Error),
-    
+
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
-    
+
     #[error("State not found: {0}")]
     StateNotFound(StateId),
-    
+
     #[error("Invalid workspace path: {0}")]
     InvalidWorkspacePath(PathBuf),
-    
+
     #[error("Configuration error: {0}")]
     Configuration(String),
-    
+
     #[error("Capture error: {0}")]
     Capture(String),
-    
+
     #[error("Storage error: {0}")]
     Storage(String),
-    
+
     #[error("Diff computation error: {0}")]
     DiffComputation(String),
 }
@@ -268,22 +267,22 @@ pub enum WorkspaceError {
 pub trait StateStorage: Send + Sync {
     /// Store a workspace state
     async fn store_state(&self, state: &WorkspaceState) -> Result<(), WorkspaceError>;
-    
+
     /// Retrieve a workspace state by ID
     async fn get_state(&self, id: StateId) -> Result<WorkspaceState, WorkspaceError>;
-    
+
     /// List all stored state IDs
     async fn list_states(&self) -> Result<Vec<StateId>, WorkspaceError>;
-    
+
     /// Delete a workspace state
     async fn delete_state(&self, id: StateId) -> Result<(), WorkspaceError>;
-    
+
     /// Store a workspace diff
     async fn store_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError>;
-    
+
     /// Retrieve a workspace diff
     async fn get_diff(&self, from: StateId, to: StateId) -> Result<WorkspaceDiff, WorkspaceError>;
-    
+
     /// Clean up old states based on retention policy
     async fn cleanup(&self, max_states: usize) -> Result<usize, WorkspaceError>;
 }

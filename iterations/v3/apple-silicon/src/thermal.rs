@@ -37,7 +37,7 @@ impl ThermalManager {
     pub async fn start_monitoring(&self) -> Result<()> {
         let mut active = self.monitoring_active.write().await;
         *active = true;
-        
+
         info!("Thermal monitoring started");
         Ok(())
     }
@@ -46,7 +46,7 @@ impl ThermalManager {
     pub async fn stop_monitoring(&self) -> Result<()> {
         let mut active = self.monitoring_active.write().await;
         *active = false;
-        
+
         info!("Thermal monitoring stopped");
         Ok(())
     }
@@ -78,15 +78,16 @@ impl ThermalManager {
 
         // Update throttle level
         if self.config.enable_thermal_throttling {
-            status.throttle_level = if temperature_c < self.config.thermal_throttle_threshold_celsius {
-                ThrottleLevel::None
-            } else if temperature_c < self.config.thermal_throttle_threshold_celsius + 5.0 {
-                ThrottleLevel::Light
-            } else if temperature_c < self.config.thermal_throttle_threshold_celsius + 10.0 {
-                ThrottleLevel::Medium
-            } else {
-                ThrottleLevel::Heavy
-            };
+            status.throttle_level =
+                if temperature_c < self.config.thermal_throttle_threshold_celsius {
+                    ThrottleLevel::None
+                } else if temperature_c < self.config.thermal_throttle_threshold_celsius + 5.0 {
+                    ThrottleLevel::Light
+                } else if temperature_c < self.config.thermal_throttle_threshold_celsius + 10.0 {
+                    ThrottleLevel::Medium
+                } else {
+                    ThrottleLevel::Heavy
+                };
         }
 
         // Activate cooling if needed
@@ -137,7 +138,7 @@ mod tests {
             auto_throttle: true,
             throttle_threshold_c: 80,
         };
-        
+
         let manager = ThermalManager::new(config);
         assert!(manager.is_within_thermal_limits().await);
     }
@@ -145,7 +146,7 @@ mod tests {
     #[tokio::test]
     async fn test_thermal_status_update() {
         let manager = ThermalManager::default();
-        
+
         manager.update_thermal_status(45.0).await.unwrap();
         let status = manager.get_thermal_status().await;
         assert_eq!(status.current_temperature_c, 45.0);
@@ -156,16 +157,16 @@ mod tests {
     #[tokio::test]
     async fn test_thermal_pressure_levels() {
         let manager = ThermalManager::default();
-        
+
         // Test different temperature levels
         manager.update_thermal_status(65.0).await.unwrap();
         let status = manager.get_thermal_status().await;
         assert_eq!(status.thermal_pressure, ThermalPressure::Nominal);
-        
+
         manager.update_thermal_status(75.0).await.unwrap();
         let status = manager.get_thermal_status().await;
         assert_eq!(status.thermal_pressure, ThermalPressure::Fair);
-        
+
         manager.update_thermal_status(90.0).await.unwrap();
         let status = manager.get_thermal_status().await;
         assert_eq!(status.thermal_pressure, ThermalPressure::Critical);
@@ -174,9 +175,9 @@ mod tests {
     #[tokio::test]
     async fn test_thermal_limits() {
         let manager = ThermalManager::default();
-        
+
         assert!(manager.is_within_thermal_limits().await);
-        
+
         manager.update_thermal_status(90.0).await.unwrap();
         assert!(!manager.is_within_thermal_limits().await);
     }

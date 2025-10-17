@@ -1,1206 +1,6 @@
 [
   {
     "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "HttpServerHandle::shutdown",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 24,
-          "column": 5
-        },
-        "end": {
-          "line": 41,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 26,
-        "column": 9
-      },
-      "end": {
-        "line": 40,
-        "column": 15
-      }
-    },
-    "replacement": "Ok(())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::start",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 68,
-          "column": 5
-        },
-        "end": {
-          "line": 110,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 70,
-        "column": 9
-      },
-      "end": {
-        "line": 109,
-        "column": 15
-      }
-    },
-    "replacement": "Ok(())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::start_http_with_readiness",
-      "return_type": "-> Result<(tokio::sync::oneshot::Receiver<()>, HttpServerHandle)>",
-      "span": {
-        "start": {
-          "line": 112,
-          "column": 5
-        },
-        "end": {
-          "line": 165,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 114,
-        "column": 9
-      },
-      "end": {
-        "line": 164,
-        "column": 30
-      }
-    },
-    "replacement": "Ok((Receiver::new(), Default::default()))",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::start_http_with_readiness",
-      "return_type": "-> Result<(tokio::sync::oneshot::Receiver<()>, HttpServerHandle)>",
-      "span": {
-        "start": {
-          "line": 112,
-          "column": 5
-        },
-        "end": {
-          "line": 165,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 114,
-        "column": 9
-      },
-      "end": {
-        "line": 164,
-        "column": 30
-      }
-    },
-    "replacement": "Ok((Receiver::from_iter([()]), Default::default()))",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::start_http_with_readiness",
-      "return_type": "-> Result<(tokio::sync::oneshot::Receiver<()>, HttpServerHandle)>",
-      "span": {
-        "start": {
-          "line": 112,
-          "column": 5
-        },
-        "end": {
-          "line": 165,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 114,
-        "column": 9
-      },
-      "end": {
-        "line": 164,
-        "column": 30
-      }
-    },
-    "replacement": "Ok((Receiver::new(()), Default::default()))",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::start_http_with_readiness",
-      "return_type": "-> Result<(tokio::sync::oneshot::Receiver<()>, HttpServerHandle)>",
-      "span": {
-        "start": {
-          "line": 112,
-          "column": 5
-        },
-        "end": {
-          "line": 165,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 114,
-        "column": 9
-      },
-      "end": {
-        "line": 164,
-        "column": 30
-      }
-    },
-    "replacement": "Ok((Receiver::from(()), Default::default()))",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::start_http_with_readiness",
-      "return_type": "-> Result<(tokio::sync::oneshot::Receiver<()>, HttpServerHandle)>",
-      "span": {
-        "start": {
-          "line": 112,
-          "column": 5
-        },
-        "end": {
-          "line": 165,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 114,
-        "column": 12
-      },
-      "end": {
-        "line": 114,
-        "column": 13
-      }
-    },
-    "replacement": "",
-    "genre": "UnaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::start_http_with_readiness",
-      "return_type": "-> Result<(tokio::sync::oneshot::Receiver<()>, HttpServerHandle)>",
-      "span": {
-        "start": {
-          "line": 112,
-          "column": 5
-        },
-        "end": {
-          "line": 165,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 156,
-        "column": 19
-      },
-      "end": {
-        "line": 156,
-        "column": 20
-      }
-    },
-    "replacement": "",
-    "genre": "UnaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::stop",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 167,
-          "column": 5
-        },
-        "end": {
-          "line": 203,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 169,
-        "column": 9
-      },
-      "end": {
-        "line": 202,
-        "column": 15
-      }
-    },
-    "replacement": "Ok(())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::get_status",
-      "return_type": "-> MCPServerStatus",
-      "span": {
-        "start": {
-          "line": 205,
-          "column": 5
-        },
-        "end": {
-          "line": 209,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 207,
-        "column": 9
-      },
-      "end": {
-        "line": 208,
-        "column": 23
-      }
-    },
-    "replacement": "Default::default()",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::get_connections",
-      "return_type": "-> Vec<MCPConnection>",
-      "span": {
-        "start": {
-          "line": 211,
-          "column": 5
-        },
-        "end": {
-          "line": 215,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 213,
-        "column": 9
-      },
-      "end": {
-        "line": 214,
-        "column": 28
-      }
-    },
-    "replacement": "vec![]",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::get_connections",
-      "return_type": "-> Vec<MCPConnection>",
-      "span": {
-        "start": {
-          "line": 211,
-          "column": 5
-        },
-        "end": {
-          "line": 215,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 213,
-        "column": 9
-      },
-      "end": {
-        "line": 214,
-        "column": 28
-      }
-    },
-    "replacement": "vec![Default::default()]",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 217,
-          "column": 5
-        },
-        "end": {
-          "line": 240,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 219,
-        "column": 9
-      },
-      "end": {
-        "line": 239,
-        "column": 19
-      }
-    },
-    "replacement": "Ok(Default::default())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::discover_tools",
-      "return_type": "-> Result<ToolDiscoveryResult>",
-      "span": {
-        "start": {
-          "line": 248,
-          "column": 5
-        },
-        "end": {
-          "line": 261,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 250,
-        "column": 9
-      },
-      "end": {
-        "line": 260,
-        "column": 19
-      }
-    },
-    "replacement": "Ok(Default::default())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::get_registry_stats",
-      "return_type": "-> ToolRegistryStats",
-      "span": {
-        "start": {
-          "line": 263,
-          "column": 5
-        },
-        "end": {
-          "line": 266,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 265,
-        "column": 9
-      },
-      "end": {
-        "line": 265,
-        "column": 50
-      }
-    },
-    "replacement": "Default::default()",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::register_tool_for_testing",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 272,
-          "column": 5
-        },
-        "end": {
-          "line": 277,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 275,
-        "column": 9
-      },
-      "end": {
-        "line": 276,
-        "column": 53
-      }
-    },
-    "replacement": "Ok(())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::start_http_server",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 279,
-          "column": 5
-        },
-        "end": {
-          "line": 351,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 281,
-        "column": 9
-      },
-      "end": {
-        "line": 350,
-        "column": 68
-      }
-    },
-    "replacement": "Ok(())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::start_http_server",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 279,
-          "column": 5
-        },
-        "end": {
-          "line": 351,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 281,
-        "column": 12
-      },
-      "end": {
-        "line": 281,
-        "column": 13
-      }
-    },
-    "replacement": "",
-    "genre": "UnaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::start_http_server",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 279,
-          "column": 5
-        },
-        "end": {
-          "line": 351,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 346,
-        "column": 31
-      },
-      "end": {
-        "line": 346,
-        "column": 32
-      }
-    },
-    "replacement": "==",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::start_http_server",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 279,
-          "column": 5
-        },
-        "end": {
-          "line": 351,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 346,
-        "column": 31
-      },
-      "end": {
-        "line": 346,
-        "column": 32
-      }
-    },
-    "replacement": ">",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::start_http_server",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 279,
-          "column": 5
-        },
-        "end": {
-          "line": 351,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 346,
-        "column": 31
-      },
-      "end": {
-        "line": 346,
-        "column": 32
-      }
-    },
-    "replacement": "<=",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::start_websocket_server",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 353,
-          "column": 5
-        },
-        "end": {
-          "line": 362,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 355,
-        "column": 9
-      },
-      "end": {
-        "line": 361,
-        "column": 15
-      }
-    },
-    "replacement": "Ok(())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/server.rs",
-    "function": {
-      "function_name": "MCPServer::start_websocket_server",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 353,
-          "column": 5
-        },
-        "end": {
-          "line": 362,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 355,
-        "column": 12
-      },
-      "end": {
-        "line": 355,
-        "column": 13
-      }
-    },
-    "replacement": "",
-    "genre": "UnaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_discovery.rs",
-    "function": {
-      "function_name": "ToolDiscovery::with_config",
-      "return_type": "-> Self",
-      "span": {
-        "start": {
-          "line": 27,
-          "column": 5
-        },
-        "end": {
-          "line": 35,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 29,
-        "column": 9
-      },
-      "end": {
-        "line": 34,
-        "column": 10
-      }
-    },
-    "replacement": "Default::default()",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_discovery.rs",
-    "function": {
-      "function_name": "ToolDiscovery::initialize",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 37,
-          "column": 5
-        },
-        "end": {
-          "line": 48,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 39,
-        "column": 9
-      },
-      "end": {
-        "line": 47,
-        "column": 15
-      }
-    },
-    "replacement": "Ok(())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_discovery.rs",
-    "function": {
-      "function_name": "ToolDiscovery::initialize",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 37,
-          "column": 5
-        },
-        "end": {
-          "line": 48,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 43,
-        "column": 16
-      },
-      "end": {
-        "line": 43,
-        "column": 17
-      }
-    },
-    "replacement": "",
-    "genre": "UnaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_discovery.rs",
-    "function": {
-      "function_name": "ToolDiscovery::start_auto_discovery",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 50,
-          "column": 5
-        },
-        "end": {
-          "line": 83,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 52,
-        "column": 9
-      },
-      "end": {
-        "line": 82,
-        "column": 15
-      }
-    },
-    "replacement": "Ok(())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_discovery.rs",
-    "function": {
-      "function_name": "ToolDiscovery::start_auto_discovery",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 50,
-          "column": 5
-        },
-        "end": {
-          "line": 83,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 72,
-        "column": 20
-      },
-      "end": {
-        "line": 72,
-        "column": 21
-      }
-    },
-    "replacement": "",
-    "genre": "UnaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_discovery.rs",
-    "function": {
-      "function_name": "ToolDiscovery::stop",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 85,
-          "column": 5
-        },
-        "end": {
-          "line": 99,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 87,
-        "column": 9
-      },
-      "end": {
-        "line": 98,
-        "column": 15
-      }
-    },
-    "replacement": "Ok(())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_discovery.rs",
-    "function": {
-      "function_name": "ToolDiscovery::discover_tools",
-      "return_type": "-> Result<ToolDiscoveryResult>",
-      "span": {
-        "start": {
-          "line": 101,
-          "column": 5
-        },
-        "end": {
-          "line": 215,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 103,
-        "column": 9
-      },
-      "end": {
-        "line": 214,
-        "column": 19
-      }
-    },
-    "replacement": "Ok(Default::default())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_discovery.rs",
-    "function": {
-      "function_name": "ToolDiscovery::discover_tools",
-      "return_type": "-> Result<ToolDiscoveryResult>",
-      "span": {
-        "start": {
-          "line": 101,
-          "column": 5
-        },
-        "end": {
-          "line": 215,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 127,
-        "column": 16
-      },
-      "end": {
-        "line": 127,
-        "column": 17
-      }
-    },
-    "replacement": "",
-    "genre": "UnaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_discovery.rs",
-    "function": {
-      "function_name": "ToolDiscovery::discover_tools",
-      "return_type": "-> Result<ToolDiscoveryResult>",
-      "span": {
-        "start": {
-          "line": 101,
-          "column": 5
-        },
-        "end": {
-          "line": 215,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 173,
-        "column": 28
-      },
-      "end": {
-        "line": 173,
-        "column": 29
-      }
-    },
-    "replacement": "",
-    "genre": "UnaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_discovery.rs",
-    "function": {
-      "function_name": "ToolDiscovery::validate_tool",
-      "return_type": "-> Result<ValidationResult>",
-      "span": {
-        "start": {
-          "line": 217,
-          "column": 5
-        },
-        "end": {
-          "line": 229,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 219,
-        "column": 9
-      },
-      "end": {
-        "line": 228,
-        "column": 79
-      }
-    },
-    "replacement": "Ok(Default::default())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_discovery.rs",
-    "function": {
-      "function_name": "ToolDiscovery::get_discovered_tools",
-      "return_type": "-> Vec<MCPTool>",
-      "span": {
-        "start": {
-          "line": 231,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 233,
-        "column": 9
-      },
-      "end": {
-        "line": 234,
-        "column": 22
-      }
-    },
-    "replacement": "vec![]",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_discovery.rs",
-    "function": {
-      "function_name": "ToolDiscovery::get_discovered_tools",
-      "return_type": "-> Vec<MCPTool>",
-      "span": {
-        "start": {
-          "line": 231,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 233,
-        "column": 9
-      },
-      "end": {
-        "line": 234,
-        "column": 22
-      }
-    },
-    "replacement": "vec![Default::default()]",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_discovery.rs",
-    "function": {
-      "function_name": "ToolDiscovery::clear_discovered_tools",
-      "return_type": "",
-      "span": {
-        "start": {
-          "line": 237,
-          "column": 5
-        },
-        "end": {
-          "line": 242,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 239,
-        "column": 9
-      },
-      "end": {
-        "line": 241,
-        "column": 43
-      }
-    },
-    "replacement": "()",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_discovery.rs",
-    "function": {
-      "function_name": "ToolDiscovery::clone_for_task",
-      "return_type": "-> Self",
-      "span": {
-        "start": {
-          "line": 246,
-          "column": 5
-        },
-        "end": {
-          "line": 253,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 247,
-        "column": 9
-      },
-      "end": {
-        "line": 252,
-        "column": 10
-      }
-    },
-    "replacement": "Default::default()",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_discovery.rs",
-    "function": {
-      "function_name": "ToolDiscovery::is_active",
-      "return_type": "-> bool",
-      "span": {
-        "start": {
-          "line": 254,
-          "column": 5
-        },
-        "end": {
-          "line": 254,
-          "column": 78
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 254,
-        "column": 41
-      },
-      "end": {
-        "line": 254,
-        "column": 76
-      }
-    },
-    "replacement": "true",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_discovery.rs",
-    "function": {
-      "function_name": "ToolDiscovery::is_active",
-      "return_type": "-> bool",
-      "span": {
-        "start": {
-          "line": 254,
-          "column": 5
-        },
-        "end": {
-          "line": 254,
-          "column": 78
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 254,
-        "column": 41
-      },
-      "end": {
-        "line": 254,
-        "column": 76
-      }
-    },
-    "replacement": "false",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_discovery.rs",
-    "function": {
-      "function_name": "ToolDiscovery::manifest_to_tool",
-      "return_type": "-> MCPTool",
-      "span": {
-        "start": {
-          "line": 255,
-          "column": 5
-        },
-        "end": {
-          "line": 272,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 256,
-        "column": 9
-      },
-      "end": {
-        "line": 271,
-        "column": 10
-      }
-    },
-    "replacement": "Default::default()",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
     "file": "mcp-integration/src/caws_integration.rs",
     "function": {
       "function_name": "CawsIntegration::initialize",
@@ -1211,7 +11,7 @@
           "column": 5
         },
         "end": {
-          "line": 90,
+          "line": 93,
           "column": 6
         }
       }
@@ -1222,7 +22,7 @@
         "column": 9
       },
       "end": {
-        "line": 89,
+        "line": 92,
         "column": 15
       }
     },
@@ -1237,22 +37,22 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 94,
+        "line": 101,
         "column": 9
       },
       "end": {
-        "line": 117,
+        "line": 131,
         "column": 41
       }
     },
@@ -1267,22 +67,22 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 94,
+        "line": 101,
         "column": 9
       },
       "end": {
-        "line": 117,
+        "line": 131,
         "column": 41
       }
     },
@@ -1297,22 +97,22 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 94,
+        "line": 101,
         "column": 9
       },
       "end": {
-        "line": 117,
+        "line": 131,
         "column": 41
       }
     },
@@ -1327,22 +127,22 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 94,
+        "line": 101,
         "column": 9
       },
       "end": {
-        "line": 117,
+        "line": 131,
         "column": 41
       }
     },
@@ -1357,22 +157,22 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 94,
+        "line": 101,
         "column": 9
       },
       "end": {
-        "line": 117,
+        "line": 131,
         "column": 41
       }
     },
@@ -1387,22 +187,22 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 94,
+        "line": 101,
         "column": 9
       },
       "end": {
-        "line": 117,
+        "line": 131,
         "column": 41
       }
     },
@@ -1417,22 +217,22 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 98,
+        "line": 108,
         "column": 21
       },
       "end": {
-        "line": 98,
+        "line": 108,
         "column": 23
       }
     },
@@ -1447,22 +247,22 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 98,
+        "line": 108,
         "column": 21
       },
       "end": {
-        "line": 98,
+        "line": 108,
         "column": 23
       }
     },
@@ -1477,23 +277,23 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 107,
-        "column": 97
+        "line": 120,
+        "column": 41
       },
       "end": {
-        "line": 107,
-        "column": 98
+        "line": 120,
+        "column": 42
       }
     },
     "replacement": "+",
@@ -1507,23 +307,23 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 107,
-        "column": 97
+        "line": 120,
+        "column": 41
       },
       "end": {
-        "line": 107,
-        "column": 98
+        "line": 120,
+        "column": 42
       }
     },
     "replacement": "/",
@@ -1537,22 +337,22 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 108,
+        "line": 122,
         "column": 37
       },
       "end": {
-        "line": 108,
+        "line": 122,
         "column": 38
       }
     },
@@ -1567,22 +367,22 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 108,
+        "line": 122,
         "column": 37
       },
       "end": {
-        "line": 108,
+        "line": 122,
         "column": 38
       }
     },
@@ -1597,22 +397,22 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 108,
+        "line": 122,
         "column": 48
       },
       "end": {
-        "line": 108,
+        "line": 122,
         "column": 49
       }
     },
@@ -1627,22 +427,22 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 108,
+        "line": 122,
         "column": 48
       },
       "end": {
-        "line": 108,
+        "line": 122,
         "column": 49
       }
     },
@@ -1657,22 +457,22 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 108,
+        "line": 122,
         "column": 55
       },
       "end": {
-        "line": 108,
+        "line": 122,
         "column": 56
       }
     },
@@ -1687,22 +487,22 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 108,
+        "line": 122,
         "column": 55
       },
       "end": {
-        "line": 108,
+        "line": 122,
         "column": 56
       }
     },
@@ -1717,22 +517,22 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 114,
+        "line": 128,
         "column": 30
       },
       "end": {
-        "line": 114,
+        "line": 128,
         "column": 31
       }
     },
@@ -1747,22 +547,22 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 114,
+        "line": 128,
         "column": 30
       },
       "end": {
-        "line": 114,
+        "line": 128,
         "column": 31
       }
     },
@@ -1777,22 +577,22 @@
       "return_type": "-> (f32, bool)",
       "span": {
         "start": {
-          "line": 92,
+          "line": 95,
           "column": 5
         },
         "end": {
-          "line": 118,
+          "line": 132,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 114,
+        "line": 128,
         "column": 30
       },
       "end": {
-        "line": 114,
+        "line": 128,
         "column": 31
       }
     },
@@ -1807,22 +607,22 @@
       "return_type": "-> Result<CawsComplianceResult>",
       "span": {
         "start": {
-          "line": 120,
+          "line": 134,
           "column": 5
         },
         "end": {
-          "line": 197,
+          "line": 213,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 122,
+        "line": 136,
         "column": 9
       },
       "end": {
-        "line": 196,
+        "line": 212,
         "column": 19
       }
     },
@@ -1837,22 +637,22 @@
       "return_type": "-> Result<CawsComplianceResult>",
       "span": {
         "start": {
-          "line": 199,
+          "line": 215,
           "column": 5
         },
         "end": {
-          "line": 235,
+          "line": 259,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 205,
+        "line": 221,
         "column": 9
       },
       "end": {
-        "line": 234,
+        "line": 258,
         "column": 11
       }
     },
@@ -1867,22 +667,22 @@
       "return_type": "-> Result<CawsComplianceResult>",
       "span": {
         "start": {
-          "line": 199,
+          "line": 215,
           "column": 5
         },
         "end": {
-          "line": 235,
+          "line": 259,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 211,
+        "line": 234,
         "column": 13
       },
       "end": {
-        "line": 211,
+        "line": 234,
         "column": 15
       }
     },
@@ -1897,22 +697,22 @@
       "return_type": "-> Result<CawsComplianceResult>",
       "span": {
         "start": {
-          "line": 199,
+          "line": 215,
           "column": 5
         },
         "end": {
-          "line": 235,
+          "line": 259,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 210,
+        "line": 231,
         "column": 13
       },
       "end": {
-        "line": 210,
+        "line": 231,
         "column": 15
       }
     },
@@ -1927,22 +727,22 @@
       "return_type": "-> Result<()>",
       "span": {
         "start": {
-          "line": 237,
+          "line": 261,
           "column": 5
         },
         "end": {
-          "line": 311,
+          "line": 335,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 239,
+        "line": 263,
         "column": 9
       },
       "end": {
-        "line": 310,
+        "line": 334,
         "column": 15
       }
     },
@@ -1957,22 +757,22 @@
       "return_type": "-> Result<()>",
       "span": {
         "start": {
-          "line": 237,
+          "line": 261,
           "column": 5
         },
         "end": {
-          "line": 311,
+          "line": 335,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 245,
+        "line": 269,
         "column": 12
       },
       "end": {
-        "line": 245,
+        "line": 269,
         "column": 13
       }
     },
@@ -1987,22 +787,22 @@
       "return_type": "-> crate::types::ViolationSeverity",
       "span": {
         "start": {
-          "line": 270,
+          "line": 294,
           "column": 9
         },
         "end": {
-          "line": 278,
+          "line": 302,
           "column": 10
         }
       }
     },
     "span": {
       "start": {
-        "line": 271,
+        "line": 295,
         "column": 13
       },
       "end": {
-        "line": 277,
+        "line": 301,
         "column": 14
       }
     },
@@ -2017,22 +817,22 @@
       "return_type": "-> crate::types::ViolationSeverity",
       "span": {
         "start": {
-          "line": 270,
+          "line": 294,
           "column": 9
         },
         "end": {
-          "line": 278,
+          "line": 302,
           "column": 10
         }
       }
     },
     "span": {
       "start": {
-        "line": 272,
+        "line": 296,
         "column": 17
       },
       "end": {
-        "line": 272,
+        "line": 296,
         "column": 65
       }
     },
@@ -2047,22 +847,22 @@
       "return_type": "-> crate::types::ViolationSeverity",
       "span": {
         "start": {
-          "line": 270,
+          "line": 294,
           "column": 9
         },
         "end": {
-          "line": 278,
+          "line": 302,
           "column": 10
         }
       }
     },
     "span": {
       "start": {
-        "line": 273,
+        "line": 297,
         "column": 17
       },
       "end": {
-        "line": 273,
+        "line": 297,
         "column": 80
       }
     },
@@ -2077,22 +877,22 @@
       "return_type": "-> crate::types::ViolationSeverity",
       "span": {
         "start": {
-          "line": 270,
+          "line": 294,
           "column": 9
         },
         "end": {
-          "line": 278,
+          "line": 302,
           "column": 10
         }
       }
     },
     "span": {
       "start": {
-        "line": 274,
+        "line": 298,
         "column": 17
       },
       "end": {
-        "line": 274,
+        "line": 298,
         "column": 67
       }
     },
@@ -2107,22 +907,22 @@
       "return_type": "-> crate::types::ViolationSeverity",
       "span": {
         "start": {
-          "line": 270,
+          "line": 294,
           "column": 9
         },
         "end": {
-          "line": 278,
+          "line": 302,
           "column": 10
         }
       }
     },
     "span": {
       "start": {
-        "line": 275,
+        "line": 299,
         "column": 17
       },
       "end": {
-        "line": 275,
+        "line": 299,
         "column": 73
       }
     },
@@ -2137,22 +937,22 @@
       "return_type": "-> RuleCategory",
       "span": {
         "start": {
-          "line": 279,
+          "line": 303,
           "column": 9
         },
         "end": {
-          "line": 289,
+          "line": 313,
           "column": 10
         }
       }
     },
     "span": {
       "start": {
-        "line": 280,
+        "line": 304,
         "column": 13
       },
       "end": {
-        "line": 288,
+        "line": 312,
         "column": 14
       }
     },
@@ -2167,22 +967,22 @@
       "return_type": "-> RuleCategory",
       "span": {
         "start": {
-          "line": 279,
+          "line": 303,
           "column": 9
         },
         "end": {
-          "line": 289,
+          "line": 313,
           "column": 10
         }
       }
     },
     "span": {
       "start": {
-        "line": 281,
+        "line": 305,
         "column": 17
       },
       "end": {
-        "line": 281,
+        "line": 305,
         "column": 54
       }
     },
@@ -2197,22 +997,22 @@
       "return_type": "-> RuleCategory",
       "span": {
         "start": {
-          "line": 279,
+          "line": 303,
           "column": 9
         },
         "end": {
-          "line": 289,
+          "line": 313,
           "column": 10
         }
       }
     },
     "span": {
       "start": {
-        "line": 282,
+        "line": 306,
         "column": 17
       },
       "end": {
-        "line": 282,
+        "line": 306,
         "column": 60
       }
     },
@@ -2227,22 +1027,22 @@
       "return_type": "-> RuleCategory",
       "span": {
         "start": {
-          "line": 279,
+          "line": 303,
           "column": 9
         },
         "end": {
-          "line": 289,
+          "line": 313,
           "column": 10
         }
       }
     },
     "span": {
       "start": {
-        "line": 283,
+        "line": 307,
         "column": 17
       },
       "end": {
-        "line": 283,
+        "line": 307,
         "column": 64
       }
     },
@@ -2257,22 +1057,22 @@
       "return_type": "-> RuleCategory",
       "span": {
         "start": {
-          "line": 279,
+          "line": 303,
           "column": 9
         },
         "end": {
-          "line": 289,
+          "line": 313,
           "column": 10
         }
       }
     },
     "span": {
       "start": {
-        "line": 284,
+        "line": 308,
         "column": 17
       },
       "end": {
-        "line": 284,
+        "line": 308,
         "column": 52
       }
     },
@@ -2287,22 +1087,22 @@
       "return_type": "-> RuleCategory",
       "span": {
         "start": {
-          "line": 279,
+          "line": 303,
           "column": 9
         },
         "end": {
-          "line": 289,
+          "line": 313,
           "column": 10
         }
       }
     },
     "span": {
       "start": {
-        "line": 285,
+        "line": 309,
         "column": 17
       },
       "end": {
-        "line": 285,
+        "line": 309,
         "column": 58
       }
     },
@@ -2317,22 +1117,22 @@
       "return_type": "-> RuleCategory",
       "span": {
         "start": {
-          "line": 279,
+          "line": 303,
           "column": 9
         },
         "end": {
-          "line": 289,
+          "line": 313,
           "column": 10
         }
       }
     },
     "span": {
       "start": {
-        "line": 286,
+        "line": 310,
         "column": 17
       },
       "end": {
-        "line": 286,
+        "line": 310,
         "column": 58
       }
     },
@@ -2347,22 +1147,22 @@
       "return_type": "-> CawsRulebook",
       "span": {
         "start": {
-          "line": 313,
+          "line": 337,
           "column": 5
         },
         "end": {
-          "line": 317,
+          "line": 341,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 315,
+        "line": 339,
         "column": 9
       },
       "end": {
-        "line": 316,
+        "line": 340,
         "column": 25
       }
     },
@@ -2377,22 +1177,22 @@
       "return_type": "",
       "span": {
         "start": {
-          "line": 319,
+          "line": 343,
           "column": 5
         },
         "end": {
-          "line": 324,
+          "line": 348,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 321,
+        "line": 345,
         "column": 9
       },
       "end": {
-        "line": 323,
+        "line": 347,
         "column": 48
       }
     },
@@ -2407,1192 +1207,22 @@
       "return_type": "-> Result<()>",
       "span": {
         "start": {
-          "line": 326,
+          "line": 350,
           "column": 5
         },
         "end": {
-          "line": 333,
+          "line": 357,
           "column": 6
         }
       }
     },
     "span": {
       "start": {
-        "line": 328,
+        "line": 352,
         "column": 9
       },
       "end": {
-        "line": 332,
-        "column": 15
-      }
-    },
-    "replacement": "Ok(())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::initialize",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 42,
-          "column": 5
-        },
-        "end": {
-          "line": 68,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 44,
-        "column": 9
-      },
-      "end": {
-        "line": 67,
-        "column": 15
-      }
-    },
-    "replacement": "Ok(())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::register_tool",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 70,
-          "column": 5
-        },
-        "end": {
-          "line": 96,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 72,
-        "column": 9
-      },
-      "end": {
-        "line": 95,
-        "column": 15
-      }
-    },
-    "replacement": "Ok(())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::register_tool",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 70,
-          "column": 5
-        },
-        "end": {
-          "line": 96,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 85,
-        "column": 31
-      },
-      "end": {
-        "line": 85,
-        "column": 33
-      }
-    },
-    "replacement": "-=",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::register_tool",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 70,
-          "column": 5
-        },
-        "end": {
-          "line": 96,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 85,
-        "column": 31
-      },
-      "end": {
-        "line": 85,
-        "column": 33
-      }
-    },
-    "replacement": "*=",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::register_tool",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 70,
-          "column": 5
-        },
-        "end": {
-          "line": 96,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 86,
-        "column": 32
-      },
-      "end": {
-        "line": 86,
-        "column": 34
-      }
-    },
-    "replacement": "-=",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::register_tool",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 70,
-          "column": 5
-        },
-        "end": {
-          "line": 96,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 86,
-        "column": 32
-      },
-      "end": {
-        "line": 86,
-        "column": 34
-      }
-    },
-    "replacement": "*=",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::unregister_tool",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 98,
-          "column": 5
-        },
-        "end": {
-          "line": 116,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 100,
-        "column": 9
-      },
-      "end": {
-        "line": 115,
-        "column": 15
-      }
-    },
-    "replacement": "Ok(())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::get_tool",
-      "return_type": "-> Option<MCPTool>",
-      "span": {
-        "start": {
-          "line": 118,
-          "column": 5
-        },
-        "end": {
-          "line": 121,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 120,
-        "column": 9
-      },
-      "end": {
-        "line": 120,
-        "column": 71
-      }
-    },
-    "replacement": "None",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::get_tool",
-      "return_type": "-> Option<MCPTool>",
-      "span": {
-        "start": {
-          "line": 118,
-          "column": 5
-        },
-        "end": {
-          "line": 121,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 120,
-        "column": 9
-      },
-      "end": {
-        "line": 120,
-        "column": 71
-      }
-    },
-    "replacement": "Some(Default::default())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::get_all_tools",
-      "return_type": "-> Vec<MCPTool>",
-      "span": {
-        "start": {
-          "line": 123,
-          "column": 5
-        },
-        "end": {
-          "line": 126,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 125,
-        "column": 9
-      },
-      "end": {
-        "line": 125,
-        "column": 74
-      }
-    },
-    "replacement": "vec![]",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::get_all_tools",
-      "return_type": "-> Vec<MCPTool>",
-      "span": {
-        "start": {
-          "line": 123,
-          "column": 5
-        },
-        "end": {
-          "line": 126,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 125,
-        "column": 9
-      },
-      "end": {
-        "line": 125,
-        "column": 74
-      }
-    },
-    "replacement": "vec![Default::default()]",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 130,
-        "column": 9
-      },
-      "end": {
-        "line": 234,
-        "column": 19
-      }
-    },
-    "replacement": "Ok(Default::default())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 203,
-        "column": 30
-      },
-      "end": {
-        "line": 203,
-        "column": 31
-      }
-    },
-    "replacement": "==",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 203,
-        "column": 30
-      },
-      "end": {
-        "line": 203,
-        "column": 31
-      }
-    },
-    "replacement": "<",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 203,
-        "column": 30
-      },
-      "end": {
-        "line": 203,
-        "column": 31
-      }
-    },
-    "replacement": ">=",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 211,
-        "column": 36
-      },
-      "end": {
-        "line": 211,
-        "column": 38
-      }
-    },
-    "replacement": "-=",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 211,
-        "column": 36
-      },
-      "end": {
-        "line": 211,
-        "column": 38
-      }
-    },
-    "replacement": "*=",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 213,
-        "column": 17
-      },
-      "end": {
-        "line": 223,
-        "column": 19
-      }
-    },
-    "replacement": "",
-    "genre": "MatchArm"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 224,
-        "column": 17
-      },
-      "end": {
-        "line": 227,
-        "column": 19
-      }
-    },
-    "replacement": "",
-    "genre": "MatchArm"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 214,
-        "column": 49
-      },
-      "end": {
-        "line": 214,
-        "column": 51
-      }
-    },
-    "replacement": "-=",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 214,
-        "column": 49
-      },
-      "end": {
-        "line": 214,
-        "column": 51
-      }
-    },
-    "replacement": "*=",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 216,
-        "column": 52
-      },
-      "end": {
-        "line": 216,
-        "column": 54
-      }
-    },
-    "replacement": "!=",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 221,
-        "column": 29
-      },
-      "end": {
-        "line": 221,
-        "column": 30
-      }
-    },
-    "replacement": "%",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 221,
-        "column": 29
-      },
-      "end": {
-        "line": 221,
-        "column": 30
-      }
-    },
-    "replacement": "*",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 220,
-        "column": 105
-      },
-      "end": {
-        "line": 220,
-        "column": 106
-      }
-    },
-    "replacement": "-",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 220,
-        "column": 105
-      },
-      "end": {
-        "line": 220,
-        "column": 106
-      }
-    },
-    "replacement": "*",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 220,
-        "column": 62
-      },
-      "end": {
-        "line": 220,
-        "column": 63
-      }
-    },
-    "replacement": "+",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 220,
-        "column": 62
-      },
-      "end": {
-        "line": 220,
-        "column": 63
-      }
-    },
-    "replacement": "/",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 220,
-        "column": 93
-      },
-      "end": {
-        "line": 220,
-        "column": 94
-      }
-    },
-    "replacement": "+",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 220,
-        "column": 93
-      },
-      "end": {
-        "line": 220,
-        "column": 94
-      }
-    },
-    "replacement": "/",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 225,
-        "column": 45
-      },
-      "end": {
-        "line": 225,
-        "column": 47
-      }
-    },
-    "replacement": "-=",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::execute_tool",
-      "return_type": "-> Result<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 128,
-          "column": 5
-        },
-        "end": {
-          "line": 235,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 225,
-        "column": 45
-      },
-      "end": {
-        "line": 225,
-        "column": 47
-      }
-    },
-    "replacement": "*=",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::update_tool_usage",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 237,
-          "column": 5
-        },
-        "end": {
-          "line": 245,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 239,
-        "column": 9
-      },
-      "end": {
-        "line": 244,
-        "column": 15
-      }
-    },
-    "replacement": "Ok(())",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::update_tool_usage",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 237,
-          "column": 5
-        },
-        "end": {
-          "line": 245,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 240,
-        "column": 30
-      },
-      "end": {
-        "line": 240,
-        "column": 32
-      }
-    },
-    "replacement": "-=",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::update_tool_usage",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 237,
-          "column": 5
-        },
-        "end": {
-          "line": 245,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 240,
-        "column": 30
-      },
-      "end": {
-        "line": 240,
-        "column": 32
-      }
-    },
-    "replacement": "*=",
-    "genre": "BinaryOperator"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::get_execution_history",
-      "return_type": "-> Vec<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 247,
-          "column": 5
-        },
-        "end": {
-          "line": 252,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 249,
-        "column": 9
-      },
-      "end": {
-        "line": 251,
-        "column": 60
-      }
-    },
-    "replacement": "vec![]",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::get_execution_history",
-      "return_type": "-> Vec<ToolExecutionResult>",
-      "span": {
-        "start": {
-          "line": 247,
-          "column": 5
-        },
-        "end": {
-          "line": 252,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 249,
-        "column": 9
-      },
-      "end": {
-        "line": 251,
-        "column": 60
-      }
-    },
-    "replacement": "vec![Default::default()]",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::get_statistics",
-      "return_type": "-> ToolRegistryStats",
-      "span": {
-        "start": {
-          "line": 254,
-          "column": 5
-        },
-        "end": {
-          "line": 258,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 256,
-        "column": 9
-      },
-      "end": {
-        "line": 257,
-        "column": 22
-      }
-    },
-    "replacement": "Default::default()",
-    "genre": "FnValue"
-  },
-  {
-    "package": "agent-agency-mcp",
-    "file": "mcp-integration/src/tool_registry.rs",
-    "function": {
-      "function_name": "ToolRegistry::shutdown",
-      "return_type": "-> Result<()>",
-      "span": {
-        "start": {
-          "line": 260,
-          "column": 5
-        },
-        "end": {
-          "line": 267,
-          "column": 6
-        }
-      }
-    },
-    "span": {
-      "start": {
-        "line": 262,
-        "column": 9
-      },
-      "end": {
-        "line": 266,
+        "line": 356,
         "column": 15
       }
     },

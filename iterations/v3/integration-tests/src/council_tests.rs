@@ -4,11 +4,11 @@ use anyhow::Result;
 use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, debug};
+use tracing::{debug, info};
 
+use crate::fixtures::{TestDataGenerator, TestFixtures};
+use crate::mocks::{MockDatabase, MockEventEmitter, MockFactory, MockMetricsCollector};
 use crate::test_utils::{TestExecutor, TestResult, DEFAULT_TEST_TIMEOUT};
-use crate::fixtures::{TestFixtures, TestDataGenerator};
-use crate::mocks::{MockFactory, MockDatabase, MockEventEmitter, MockMetricsCollector};
 
 /// Council integration test suite
 pub struct CouncilIntegrationTests {
@@ -44,7 +44,10 @@ impl CouncilIntegrationTests {
         // Test evidence enrichment
         results.push(
             self.executor
-                .execute("council_evidence_enrichment", self.test_evidence_enrichment())
+                .execute(
+                    "council_evidence_enrichment",
+                    self.test_evidence_enrichment(),
+                )
                 .await,
         );
 
@@ -102,14 +105,17 @@ impl CouncilIntegrationTests {
 
         // TODO: Test verdict generation
         // let verdict = council.generate_verdict(&task_context, &worker_output).await?;
-        
+
         // Assertions
         // assert_eq!(verdict.decision, "approved");
         // assert!(verdict.confidence > 0.8);
         // assert!(!verdict.reasoning.is_empty());
 
         // Verify events were emitted
-        let events = self.mock_events.get_events_by_type("verdict_generated").await;
+        let events = self
+            .mock_events
+            .get_events_by_type("verdict_generated")
+            .await;
         // assert_eq!(events.len(), 1);
 
         // Verify metrics were recorded
@@ -346,25 +352,29 @@ mod tests {
     #[tokio::test]
     async fn test_verdict_generation_mock_setup() {
         let tests = CouncilIntegrationTests::new();
-        
+
         let working_spec = TestFixtures::working_spec();
-        tests.mock_db.insert("task-123".to_string(), working_spec).await.unwrap();
-        
+        tests
+            .mock_db
+            .insert("task-123".to_string(), working_spec)
+            .await
+            .unwrap();
+
         assert_eq!(tests.mock_db.count().await, 1);
     }
 
     #[tokio::test]
     async fn test_evidence_enrichment_mock_setup() {
         let tests = CouncilIntegrationTests::new();
-        
+
         let evidence_items = TestDataGenerator::generate_evidence_items(3);
         assert_eq!(evidence_items.len(), 3);
-        
+
         for (i, evidence) in evidence_items.iter().enumerate() {
             let key = format!("evidence-{}", i);
             tests.mock_db.insert(key, evidence.clone()).await.unwrap();
         }
-        
+
         assert_eq!(tests.mock_db.count().await, 3);
     }
 }

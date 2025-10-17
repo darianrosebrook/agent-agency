@@ -1,11 +1,11 @@
 //! Main embedding service implementation
 
-use crate::types::*;
-use crate::provider::*;
 use crate::cache::*;
+use crate::provider::*;
 use crate::similarity::*;
-use async_trait::async_trait;
+use crate::types::*;
 use anyhow::Result;
+use async_trait::async_trait;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -86,7 +86,7 @@ impl EmbeddingService for EmbeddingServiceImpl {
         source: &str,
     ) -> Result<StoredEmbedding> {
         let cache_key = self.cache_key(text, &content_type, source);
-        
+
         // Check cache first
         if let Some(cached) = self.cache.get(&cache_key).await {
             return Ok(cached);
@@ -94,15 +94,20 @@ impl EmbeddingService for EmbeddingServiceImpl {
 
         // Generate new embedding
         let start_time = std::time::Instant::now();
-        let vectors = self.provider.generate_embeddings(&[text.to_string()]).await?;
+        let vectors = self
+            .provider
+            .generate_embeddings(&[text.to_string()])
+            .await?;
         let processing_time = start_time.elapsed().as_millis() as u64;
 
-        let vector = vectors.into_iter().next()
+        let vector = vectors
+            .into_iter()
+            .next()
             .ok_or_else(|| anyhow::anyhow!("No embedding generated"))?;
 
         let id = EmbeddingId::new(Uuid::new_v4().to_string());
         let metadata = self.create_metadata(text, content_type, source, vec![]);
-        
+
         let embedding = StoredEmbedding {
             id,
             vector,
@@ -117,7 +122,7 @@ impl EmbeddingService for EmbeddingServiceImpl {
 
     async fn generate_embeddings(&self, request: EmbeddingRequest) -> Result<EmbeddingResponse> {
         let start_time = std::time::Instant::now();
-        
+
         // Check cache for each text
         let mut cached_embeddings = Vec::new();
         let mut texts_to_generate = Vec::new();
@@ -126,7 +131,7 @@ impl EmbeddingService for EmbeddingServiceImpl {
         for text in &request.texts {
             let cache_key = self.cache_key(text, &request.content_type, &request.source);
             cache_keys.push(cache_key.clone());
-            
+
             if let Some(cached) = self.cache.get(&cache_key).await {
                 cached_embeddings.push(cached);
             } else {
@@ -137,8 +142,11 @@ impl EmbeddingService for EmbeddingServiceImpl {
         // Generate embeddings for uncached texts
         let mut new_embeddings = Vec::new();
         if !texts_to_generate.is_empty() {
-            let vectors = self.provider.generate_embeddings(&texts_to_generate).await?;
-            
+            let vectors = self
+                .provider
+                .generate_embeddings(&texts_to_generate)
+                .await?;
+
             for (i, vector) in vectors.into_iter().enumerate() {
                 let id = EmbeddingId::new(Uuid::new_v4().to_string());
                 let metadata = self.create_metadata(
@@ -147,7 +155,7 @@ impl EmbeddingService for EmbeddingServiceImpl {
                     &request.source,
                     request.tags.clone(),
                 );
-                
+
                 let embedding = StoredEmbedding {
                     id,
                     vector,
@@ -157,7 +165,7 @@ impl EmbeddingService for EmbeddingServiceImpl {
                 // Cache the result
                 let cache_key = &cache_keys[cached_embeddings.len() + i];
                 self.cache.put(cache_key.clone(), embedding.clone()).await;
-                
+
                 new_embeddings.push(embedding);
             }
         }
@@ -176,7 +184,7 @@ impl EmbeddingService for EmbeddingServiceImpl {
 
     async fn search_similar(&self, request: SimilarityRequest) -> Result<Vec<SimilarityResult>> {
         let all_embeddings = self.index.get_all();
-        
+
         find_similar_embeddings(
             &request.query_vector,
             &all_embeddings,
@@ -190,7 +198,7 @@ impl EmbeddingService for EmbeddingServiceImpl {
     async fn store_embedding(&self, embedding: StoredEmbedding) -> Result<()> {
         // Store in index
         self.index.insert(embedding.clone());
-        
+
         // Store in cache
         let cache_key = self.cache_key(
             &embedding.metadata.source,
@@ -198,7 +206,7 @@ impl EmbeddingService for EmbeddingServiceImpl {
             &embedding.metadata.source,
         );
         self.cache.put(cache_key, embedding).await;
-        
+
         Ok(())
     }
 

@@ -6,6 +6,7 @@ This directory contains the core architectural documentation for V3 - the mainta
 
 - **[architecture.md](./architecture.md)** - High-level system architecture and design principles
 - **[interaction-contracts.md](./interaction-contracts.md)** - API contracts and interaction patterns between components
+- **[agents.md](./agents.md)** - CAWS agent workflow guide and collaboration patterns
 
 ## Component Documentation
 

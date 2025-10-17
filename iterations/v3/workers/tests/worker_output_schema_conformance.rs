@@ -21,8 +21,9 @@ fn worker_output_conforms_to_schema() {
     let schema_json: serde_json::Value = serde_json::from_str(&schema_str).expect("schema json");
     let compiled = jsonschema::JSONSchema::compile(&schema_json).expect("compile schema");
     if let Err(errors) = compiled.validate(&output) {
-        for e in errors { eprintln!("Schema error: {} at {}", e, e.instance_path); }
+        for e in errors {
+            eprintln!("Schema error: {} at {}", e, e.instance_path);
+        }
         panic!("WorkerOutput JSON does not conform to schema");
     }
 }
-

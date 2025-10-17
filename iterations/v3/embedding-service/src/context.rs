@@ -1,7 +1,7 @@
 //! Semantic context generation for tasks and content
 
-use crate::types::*;
 use crate::similarity::*;
+use crate::types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 
@@ -13,14 +13,18 @@ pub async fn generate_semantic_context(
 ) -> Result<SemanticContext> {
     // Generate embedding for the task description
     let task_embedding = embedding_service
-        .generate_embedding(task_description, ContentType::TaskDescription, "semantic_context")
+        .generate_embedding(
+            task_description,
+            ContentType::TaskDescription,
+            "semantic_context",
+        )
         .await?;
 
     // Find related embeddings
     let related_embeddings = find_similar_embeddings(
         &task_embedding.vector,
         context_embeddings,
-        10, // limit
+        10,  // limit
         0.3, // threshold
         &[], // all content types
         &[], // all tags
@@ -62,7 +66,7 @@ impl ContextBuilder {
     /// Add embedding to context
     pub fn add_embedding(&mut self, embedding: StoredEmbedding) {
         self.embeddings.push(embedding.clone());
-        
+
         // Group by source
         let source = embedding.metadata.source.clone();
         self.context_map
@@ -73,10 +77,7 @@ impl ContextBuilder {
 
     /// Get embeddings by source
     pub fn get_by_source(&self, source: &str) -> Vec<StoredEmbedding> {
-        self.context_map
-            .get(source)
-            .cloned()
-            .unwrap_or_default()
+        self.context_map.get(source).cloned().unwrap_or_default()
     }
 
     /// Get embeddings by content type
@@ -125,7 +126,9 @@ impl ContextBuilder {
             *content_type_counts.entry(content_type).or_insert(0) += 1;
 
             // Count sources
-            *source_counts.entry(embedding.metadata.source.clone()).or_insert(0) += 1;
+            *source_counts
+                .entry(embedding.metadata.source.clone())
+                .or_insert(0) += 1;
 
             // Count tags
             for tag in &embedding.metadata.tags {
@@ -167,20 +170,22 @@ impl CouncilContextEnricher {
 
     /// Add evidence to context
     pub async fn add_evidence(&mut self, evidence: &str, source: &str) -> Result<()> {
-        let embedding = self.embedding_service
+        let embedding = self
+            .embedding_service
             .generate_embedding(evidence, ContentType::Evidence, source)
             .await?;
-        
+
         self.context_builder.add_embedding(embedding);
         Ok(())
     }
 
     /// Add knowledge to context
     pub async fn add_knowledge(&mut self, knowledge: &str, source: &str) -> Result<()> {
-        let embedding = self.embedding_service
+        let embedding = self
+            .embedding_service
             .generate_embedding(knowledge, ContentType::Knowledge, source)
             .await?;
-        
+
         self.context_builder.add_embedding(embedding);
         Ok(())
     }
@@ -194,16 +199,19 @@ impl CouncilContextEnricher {
 
     /// Get relevant evidence for a claim
     pub async fn get_relevant_evidence(&self, claim: &str) -> Result<Vec<SimilarityResult>> {
-        let claim_embedding = self.embedding_service
+        let claim_embedding = self
+            .embedding_service
             .generate_embedding(claim, ContentType::Evidence, "claim_verification")
             .await?;
 
-        let evidence_embeddings = self.context_builder.get_by_content_type(&ContentType::Evidence);
-        
+        let evidence_embeddings = self
+            .context_builder
+            .get_by_content_type(&ContentType::Evidence);
+
         find_similar_embeddings(
             &claim_embedding.vector,
             &evidence_embeddings,
-            5, // limit
+            5,   // limit
             0.5, // threshold
             &[ContentType::Evidence],
             &[],

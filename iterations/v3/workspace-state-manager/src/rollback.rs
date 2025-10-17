@@ -1,13 +1,13 @@
+use crate::manager::WorkspaceStateManager;
 /**
  * @fileoverview Rollback and view management for workspace state
  * @author @darianrosebrook
  */
-
 use crate::types::*;
-use crate::manager::WorkspaceStateManager;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use tracing::{debug, error, info, warn};
 
 /// Rollback operation result
@@ -34,14 +34,14 @@ pub struct RollbackResult {
 /// View management for workspace states
 pub struct WorkspaceViewManager {
     /// Base workspace state manager
-    manager: WorkspaceStateManager,
+    manager: Arc<WorkspaceStateManager>,
     /// Directory for storing workspace views
     views_dir: PathBuf,
 }
 
 impl WorkspaceViewManager {
     /// Create a new workspace view manager
-    pub fn new(manager: WorkspaceStateManager, views_dir: impl AsRef<Path>) -> Self {
+    pub fn new(manager: Arc<WorkspaceStateManager>, views_dir: impl AsRef<Path>) -> Self {
         Self {
             manager,
             views_dir: views_dir.as_ref().to_path_buf(),
@@ -49,7 +49,11 @@ impl WorkspaceViewManager {
     }
 
     /// Create a view of the workspace at a specific state
-    pub async fn create_view(&self, state_id: StateId, view_name: Option<String>) -> Result<WorkspaceResult<PathBuf>, WorkspaceError> {
+    pub async fn create_view(
+        &self,
+        state_id: StateId,
+        view_name: Option<String>,
+    ) -> Result<WorkspaceResult<PathBuf>, WorkspaceError> {
         let start_time = std::time::Instant::now();
         let mut warnings = Vec::new();
 
@@ -58,7 +62,8 @@ impl WorkspaceViewManager {
 
         // Generate view name if not provided
         let view_name = view_name.unwrap_or_else(|| {
-            format!("view-{}-{}", 
+            format!(
+                "view-{}-{}",
                 state_id.0.to_string()[..8].to_string(),
                 chrono::Utc::now().format("%Y%m%d-%H%M%S")
             )
@@ -66,36 +71,34 @@ impl WorkspaceViewManager {
 
         let view_path = self.views_dir.join(&view_name);
 
-        info!("Creating workspace view '{}' at state {:?}", view_name, state_id);
+        info!(
+            "Creating workspace view '{}' at state {:?}",
+            view_name, state_id
+        );
 
         // Ensure views directory exists
-        std::fs::create_dir_all(&self.views_dir)
-            .map_err(|e| WorkspaceError::Io(e))?;
+        std::fs::create_dir_all(&self.views_dir).map_err(|e| WorkspaceError::Io(e))?;
 
         // Create view directory
         if view_path.exists() {
-            std::fs::remove_dir_all(&view_path)
-                .map_err(|e| WorkspaceError::Io(e))?;
+            std::fs::remove_dir_all(&view_path).map_err(|e| WorkspaceError::Io(e))?;
         }
-        std::fs::create_dir_all(&view_path)
-            .map_err(|e| WorkspaceError::Io(e))?;
+        std::fs::create_dir_all(&view_path).map_err(|e| WorkspaceError::Io(e))?;
 
         // Restore files from state
         let mut files_restored = 0;
         for (relative_path, file_state) in &state.files {
             let target_path = view_path.join(relative_path);
-            
+
             // Create parent directories
             if let Some(parent) = target_path.parent() {
-                std::fs::create_dir_all(parent)
-                    .map_err(|e| WorkspaceError::Io(e))?;
+                std::fs::create_dir_all(parent).map_err(|e| WorkspaceError::Io(e))?;
             }
 
             // Copy file from workspace root
             let source_path = state.workspace_root.join(relative_path);
             if source_path.exists() {
-                std::fs::copy(&source_path, &target_path)
-                    .map_err(|e| WorkspaceError::Io(e))?;
+                std::fs::copy(&source_path, &target_path).map_err(|e| WorkspaceError::Io(e))?;
                 files_restored += 1;
             } else {
                 warnings.push(format!("Source file not found: {:?}", source_path));
@@ -115,11 +118,13 @@ impl WorkspaceViewManager {
         let metadata_path = view_path.join(".workspace-view.json");
         let metadata_json = serde_json::to_string_pretty(&view_metadata)
             .map_err(|e| WorkspaceError::Serialization(e))?;
-        std::fs::write(&metadata_path, metadata_json)
-            .map_err(|e| WorkspaceError::Io(e))?;
+        std::fs::write(&metadata_path, metadata_json).map_err(|e| WorkspaceError::Io(e))?;
 
         let duration = start_time.elapsed();
-        info!("Created workspace view '{}' with {} files", view_name, files_restored);
+        info!(
+            "Created workspace view '{}' with {} files",
+            view_name, files_restored
+        );
 
         Ok(WorkspaceResult::with_warnings(
             view_path,
@@ -136,9 +141,7 @@ impl WorkspaceViewManager {
             return Ok(views);
         }
 
-        for entry in std::fs::read_dir(&self.views_dir)
-            .map_err(|e| WorkspaceError::Io(e))?
-        {
+        for entry in std::fs::read_dir(&self.views_dir).map_err(|e| WorkspaceError::Io(e))? {
             let entry = entry.map_err(|e| WorkspaceError::Io(e))?;
             let path = entry.path();
 
@@ -147,7 +150,7 @@ impl WorkspaceViewManager {
                 if metadata_path.exists() {
                     let metadata_json = std::fs::read_to_string(&metadata_path)
                         .map_err(|e| WorkspaceError::Io(e))?;
-                    
+
                     if let Ok(metadata) = serde_json::from_str::<ViewMetadata>(&metadata_json) {
                         views.push(metadata);
                     }
@@ -164,10 +167,9 @@ impl WorkspaceViewManager {
     /// Delete a workspace view
     pub async fn delete_view(&self, view_name: &str) -> Result<(), WorkspaceError> {
         let view_path = self.views_dir.join(view_name);
-        
+
         if view_path.exists() {
-            std::fs::remove_dir_all(&view_path)
-                .map_err(|e| WorkspaceError::Io(e))?;
+            std::fs::remove_dir_all(&view_path).map_err(|e| WorkspaceError::Io(e))?;
             info!("Deleted workspace view '{}'", view_name);
         }
 
@@ -178,16 +180,19 @@ impl WorkspaceViewManager {
     pub async fn get_view_metadata(&self, view_name: &str) -> Result<ViewMetadata, WorkspaceError> {
         let view_path = self.views_dir.join(view_name);
         let metadata_path = view_path.join(".workspace-view.json");
-        
+
         if !metadata_path.exists() {
-            return Err(WorkspaceError::Storage(format!("View '{}' not found", view_name)));
+            return Err(WorkspaceError::Storage(format!(
+                "View '{}' not found",
+                view_name
+            )));
         }
 
-        let metadata_json = std::fs::read_to_string(&metadata_path)
-            .map_err(|e| WorkspaceError::Io(e))?;
-        
-        let metadata: ViewMetadata = serde_json::from_str(&metadata_json)
-            .map_err(|e| WorkspaceError::Serialization(e))?;
+        let metadata_json =
+            std::fs::read_to_string(&metadata_path).map_err(|e| WorkspaceError::Io(e))?;
+
+        let metadata: ViewMetadata =
+            serde_json::from_str(&metadata_json).map_err(|e| WorkspaceError::Serialization(e))?;
 
         Ok(metadata)
     }
@@ -213,14 +218,14 @@ pub struct ViewMetadata {
 /// Rollback manager for workspace states
 pub struct RollbackManager {
     /// Base workspace state manager
-    manager: WorkspaceStateManager,
+    manager: Arc<WorkspaceStateManager>,
     /// Backup directory for rollback operations
     backup_dir: PathBuf,
 }
 
 impl RollbackManager {
     /// Create a new rollback manager
-    pub fn new(manager: WorkspaceStateManager, backup_dir: impl AsRef<Path>) -> Self {
+    pub fn new(manager: Arc<WorkspaceStateManager>, backup_dir: impl AsRef<Path>) -> Self {
         Self {
             manager,
             backup_dir: backup_dir.as_ref().to_path_buf(),
@@ -228,7 +233,11 @@ impl RollbackManager {
     }
 
     /// Perform a rollback to a specific state
-    pub async fn rollback_to_state(&self, target_state: StateId, create_backup: bool) -> Result<RollbackResult, WorkspaceError> {
+    pub async fn rollback_to_state(
+        &self,
+        target_state: StateId,
+        create_backup: bool,
+    ) -> Result<RollbackResult, WorkspaceError> {
         let start_time = std::time::Instant::now();
         let mut warnings = Vec::new();
 
@@ -263,7 +272,9 @@ impl RollbackManager {
         };
 
         // Perform the rollback
-        let rollback_result = self.perform_rollback(&target_state_data, &current_state).await?;
+        let rollback_result = self
+            .perform_rollback(&target_state_data, &current_state)
+            .await?;
 
         let duration = start_time.elapsed();
         let result = RollbackResult {
@@ -298,7 +309,10 @@ impl RollbackManager {
     }
 
     /// Restore from a backup
-    pub async fn restore_from_backup(&self, backup_id: StateId) -> Result<RollbackResult, WorkspaceError> {
+    pub async fn restore_from_backup(
+        &self,
+        backup_id: StateId,
+    ) -> Result<RollbackResult, WorkspaceError> {
         self.rollback_to_state(backup_id, false).await
     }
 
@@ -314,8 +328,7 @@ impl RollbackManager {
         let mut size_delta = 0i64;
 
         // Ensure workspace root exists
-        std::fs::create_dir_all(&target_state.workspace_root)
-            .map_err(|e| WorkspaceError::Io(e))?;
+        std::fs::create_dir_all(&target_state.workspace_root).map_err(|e| WorkspaceError::Io(e))?;
 
         // Restore files from target state
         for (relative_path, file_state) in &target_state.files {
@@ -324,8 +337,7 @@ impl RollbackManager {
 
             // Create parent directories
             if let Some(parent) = target_path.parent() {
-                std::fs::create_dir_all(parent)
-                    .map_err(|e| WorkspaceError::Io(e))?;
+                std::fs::create_dir_all(parent).map_err(|e| WorkspaceError::Io(e))?;
             }
 
             // Check if file exists and is different
@@ -334,10 +346,13 @@ impl RollbackManager {
                 if let Ok(metadata) = std::fs::metadata(&target_path) {
                     let current_size = metadata.len();
                     let current_modified = metadata.modified()?;
-                    
-                    current_size != file_state.size || 
-                    current_modified.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() != 
-                    file_state.modified_at.timestamp() as u64
+
+                    current_size != file_state.size
+                        || current_modified
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs()
+                            != file_state.modified_at.timestamp() as u64
                 } else {
                     true
                 }
@@ -348,9 +363,8 @@ impl RollbackManager {
 
             if needs_restore {
                 if source_path.exists() {
-                    std::fs::copy(&source_path, &target_path)
-                        .map_err(|e| WorkspaceError::Io(e))?;
-                    
+                    std::fs::copy(&source_path, &target_path).map_err(|e| WorkspaceError::Io(e))?;
+
                     if target_path.exists() {
                         files_modified += 1;
                     } else {
@@ -366,8 +380,7 @@ impl RollbackManager {
                 if !target_state.files.contains_key(relative_path) {
                     let file_path = target_state.workspace_root.join(relative_path);
                     if file_path.exists() {
-                        std::fs::remove_file(&file_path)
-                            .map_err(|e| WorkspaceError::Io(e))?;
+                        std::fs::remove_file(&file_path).map_err(|e| WorkspaceError::Io(e))?;
                         files_removed += 1;
                     }
                 }

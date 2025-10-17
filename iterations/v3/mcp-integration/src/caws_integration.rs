@@ -4,12 +4,12 @@
 
 use crate::types::*;
 use anyhow::Result;
+use std::fs;
+use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
 use uuid::Uuid;
-use std::fs;
-use std::path::Path;
 
 /// CAWS integration service
 #[derive(Debug)]
@@ -67,16 +67,19 @@ impl CawsIntegration {
 
         // Clear compliance cache
         self.clear_compliance_cache().await;
-        
+
         // Load rulebook from configured path if it exists
         let path = self.config.caws_rulebook_path.clone();
         let path_exists = std::path::Path::new(&path).exists();
-        
+
         if path_exists {
             info!("Loading CAWS rulebook from: {}", path);
             self.load_rulebook(&path).await?;
         } else {
-            info!("CAWS rulebook path does not exist: {} - using default empty rulebook", path);
+            info!(
+                "CAWS rulebook path does not exist: {} - using default empty rulebook",
+                path
+            );
             // Initialize with empty rulebook - this is fine for testing/development
             let mut rb = self.rulebook.write().await;
             *rb = CawsRulebook {
@@ -85,14 +88,21 @@ impl CawsIntegration {
                 last_updated: chrono::Utc::now(),
             };
         }
-        
+
         Ok(())
     }
 
     /// Calculate compliance score from violations using consistent scoring logic
-    fn calculate_compliance_score(&self, violations: &[crate::types::CawsViolation], rulebook: &CawsRulebook) -> (f32, bool) {
-        let strict = matches!(self.config.validation_strictness, crate::types::ValidationStrictness::Strict);
-        
+    fn calculate_compliance_score(
+        &self,
+        violations: &[crate::types::CawsViolation],
+        rulebook: &CawsRulebook,
+    ) -> (f32, bool) {
+        let strict = matches!(
+            self.config.validation_strictness,
+            crate::types::ValidationStrictness::Strict
+        );
+
         let mut penalty: f32 = 0.0;
         for v in violations {
             penalty += match v.severity {
@@ -102,18 +112,22 @@ impl CawsIntegration {
                 crate::types::ViolationSeverity::Critical => 0.5,
             };
         }
-        
+
         // Consider rulebook size for normalization (avoid 0 rules edge case)
-        let base: f32 = if rulebook.rules.is_empty() { 1.0 } else { rulebook.rules.len() as f32 * 0.05 };
+        let base: f32 = if rulebook.rules.is_empty() {
+            1.0
+        } else {
+            rulebook.rules.len() as f32 * 0.05
+        };
         let compliance_score = (1.0 - (penalty / (1.0 + base))).clamp(0.0, 1.0);
-        
+
         let is_compliant = if strict {
             violations.is_empty()
         } else {
             // Moderate/Lenient allow warnings/errors depending on score
             compliance_score > 0.6
         };
-        
+
         (compliance_score, is_compliant)
     }
 
@@ -190,8 +204,10 @@ impl CawsIntegration {
             cache.insert(tool.id, result.clone());
         }
 
-        info!("CAWS validation completed for tool: {} (compliant: {})", 
-            tool.name, result.is_compliant);
+        info!(
+            "CAWS validation completed for tool: {} (compliant: {})",
+            tool.name, result.is_compliant
+        );
 
         Ok(result)
     }
@@ -202,12 +218,19 @@ impl CawsIntegration {
         tool: &MCPTool,
         request: &ToolExecutionRequest,
     ) -> Result<CawsComplianceResult> {
-        info!("Validating tool execution for CAWS compliance: {}", tool.name);
+        info!(
+            "Validating tool execution for CAWS compliance: {}",
+            tool.name
+        );
 
         // Execution-specific validation: timeout presence for network/command tools
         let mut exec_violations: Vec<crate::types::CawsViolation> = Vec::new();
-        if (tool.capabilities.contains(&crate::types::ToolCapability::NetworkAccess)
-            || tool.capabilities.contains(&crate::types::ToolCapability::CommandExecution))
+        if (tool
+            .capabilities
+            .contains(&crate::types::ToolCapability::NetworkAccess)
+            || tool
+                .capabilities
+                .contains(&crate::types::ToolCapability::CommandExecution))
             && request.timeout_seconds.is_none()
         {
             exec_violations.push(crate::types::CawsViolation {
@@ -223,7 +246,8 @@ impl CawsIntegration {
         }
         // Use shared scoring logic for consistency
         let rb = self.rulebook.read().await.clone();
-        let (compliance_score, is_compliant) = self.calculate_compliance_score(&exec_violations, &rb);
+        let (compliance_score, is_compliant) =
+            self.calculate_compliance_score(&exec_violations, &rb);
 
         Ok(CawsComplianceResult {
             is_compliant,

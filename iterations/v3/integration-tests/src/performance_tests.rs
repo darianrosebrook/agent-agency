@@ -2,12 +2,14 @@
 
 use anyhow::Result;
 use std::time::Duration;
-use tracing::{info, debug};
+use tracing::{debug, info};
 
+use crate::fixtures::{TestDataGenerator, TestFixtures};
+use crate::helpers::{
+    PerformanceRequirements, PerformanceStats, PerformanceTestUtils, TestAssertions,
+};
+use crate::mocks::{MockDatabase, MockEventEmitter, MockFactory, MockMetricsCollector};
 use crate::test_utils::{TestExecutor, TestResult, LONG_TEST_TIMEOUT};
-use crate::fixtures::{TestFixtures, TestDataGenerator};
-use crate::mocks::{MockFactory, MockDatabase, MockEventEmitter, MockMetricsCollector};
-use crate::helpers::{PerformanceTestUtils, PerformanceStats, PerformanceRequirements, TestAssertions};
 
 /// Performance test suite
 pub struct PerformanceTests {
@@ -36,14 +38,20 @@ impl PerformanceTests {
         // Test API response times
         results.push(
             self.executor
-                .execute("performance_api_response_times", self.test_api_response_times())
+                .execute(
+                    "performance_api_response_times",
+                    self.test_api_response_times(),
+                )
                 .await,
         );
 
         // Test database query performance
         results.push(
             self.executor
-                .execute("performance_database_queries", self.test_database_query_performance())
+                .execute(
+                    "performance_database_queries",
+                    self.test_database_query_performance(),
+                )
                 .await,
         );
 
@@ -57,7 +65,10 @@ impl PerformanceTests {
         // Test concurrent processing
         results.push(
             self.executor
-                .execute("performance_concurrent_processing", self.test_concurrent_processing())
+                .execute(
+                    "performance_concurrent_processing",
+                    self.test_concurrent_processing(),
+                )
                 .await,
         );
 
@@ -105,7 +116,7 @@ impl PerformanceTests {
 
         // Calculate performance statistics
         let stats = PerformanceTestUtils::calculate_stats(&response_times);
-        
+
         // Define performance requirements
         let requirements = PerformanceRequirements {
             max_average: Duration::from_millis(100),
@@ -117,8 +128,10 @@ impl PerformanceTests {
         // Assert performance requirements
         TestAssertions::assert_performance_requirements(&stats, &requirements)?;
 
-        info!("✅ API response times test completed - Average: {:?}, P95: {:?}, P99: {:?}", 
-              stats.average, stats.p95, stats.p99);
+        info!(
+            "✅ API response times test completed - Average: {:?}, P95: {:?}, P99: {:?}",
+            stats.average, stats.p95, stats.p99
+        );
         Ok(())
     }
 
@@ -156,7 +169,7 @@ impl PerformanceTests {
 
         // Calculate performance statistics
         let stats = PerformanceTestUtils::calculate_stats(&query_times);
-        
+
         // Define database performance requirements
         let requirements = PerformanceRequirements {
             max_average: Duration::from_millis(50),
@@ -168,8 +181,10 @@ impl PerformanceTests {
         // Assert performance requirements
         TestAssertions::assert_performance_requirements(&stats, &requirements)?;
 
-        info!("✅ Database query performance test completed - Average: {:?}, P95: {:?}, P99: {:?}", 
-              stats.average, stats.p95, stats.p99);
+        info!(
+            "✅ Database query performance test completed - Average: {:?}, P95: {:?}, P99: {:?}",
+            stats.average, stats.p95, stats.p99
+        );
         Ok(())
     }
 
@@ -189,7 +204,7 @@ impl PerformanceTests {
 
         // Process large amounts of data
         let large_dataset = TestDataGenerator::generate_working_specs(1000);
-        
+
         // TODO: Process large dataset
         // for data in &large_dataset {
         //     system.process_data(data).await?;
@@ -201,7 +216,7 @@ impl PerformanceTests {
 
         // Assert memory usage is within acceptable bounds
         // let max_memory_increase = 100 * 1024 * 1024; // 100MB
-        // assert!(memory_increase < max_memory_increase, 
+        // assert!(memory_increase < max_memory_increase,
         //         "Memory increase {} exceeded maximum {}", memory_increase, max_memory_increase);
 
         // Test memory cleanup
@@ -304,13 +319,21 @@ impl PerformanceTests {
 
         // Assert throughput requirements
         let min_throughput = target_throughput * 0.8; // 80% of target
-        assert!(actual_throughput >= min_throughput, 
-                "Throughput {} is below minimum {}", actual_throughput, min_throughput);
+        assert!(
+            actual_throughput >= min_throughput,
+            "Throughput {} is below minimum {}",
+            actual_throughput,
+            min_throughput
+        );
 
         // Assert error rate requirements
         let max_error_rate = 0.01; // 1%
-        assert!(error_rate <= max_error_rate, 
-                "Error rate {} exceeded maximum {}", error_rate, max_error_rate);
+        assert!(
+            error_rate <= max_error_rate,
+            "Error rate {} exceeded maximum {}",
+            error_rate,
+            max_error_rate
+        );
 
         info!("✅ Throughput test completed - Actual: {:.2} ops/sec, Target: {:.2} ops/sec, Error rate: {:.2}%", 
               actual_throughput, target_throughput, error_rate * 100.0);
@@ -361,14 +384,14 @@ impl PerformanceTests {
         // for i in 1..scalability_results.len() {
         //     let (prev_load, prev_throughput, _) = scalability_results[i - 1];
         //     let (curr_load, curr_throughput, _) = scalability_results[i];
-            
+
         //     let load_ratio = curr_load as f64 / prev_load as f64;
         //     let throughput_ratio = curr_throughput / prev_throughput;
-            
+
         //     // Throughput should scale reasonably with load
         //     let min_scaling_factor = 0.7; // 70% of linear scaling
         //     assert!(throughput_ratio >= load_ratio * min_scaling_factor,
-        //             "Throughput scaling {} is below expected {} for load increase from {} to {}", 
+        //             "Throughput scaling {} is below expected {} for load increase from {} to {}",
         //             throughput_ratio, load_ratio * min_scaling_factor, prev_load, curr_load);
         // }
 
@@ -403,7 +426,7 @@ mod tests {
             Duration::from_millis(40),
             Duration::from_millis(50),
         ];
-        
+
         let stats = PerformanceTestUtils::calculate_stats(&durations);
         assert_eq!(stats.count, 5);
         assert_eq!(stats.average, Duration::from_millis(30));

@@ -1,12 +1,12 @@
 use crate::types::*;
 use anyhow::Result;
-use tracing::{debug, warn, error, info};
-use uuid::Uuid;
-use serde::{Deserialize, Serialize};
 use chrono::Utc;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::Write;
+use tracing::{debug, error, info, warn};
+use uuid::Uuid;
 
 /// Security auditor
 #[derive(Debug)]
@@ -45,7 +45,7 @@ impl SecurityAuditor {
 
         // Format the event for logging
         let log_entry = self.format_log_entry(event);
-        
+
         // Write to log file
         self.write_to_log_file(&log_entry).await?;
 
@@ -79,7 +79,7 @@ impl SecurityAuditor {
         let timestamp = event.timestamp.format("%Y-%m-%d %H:%M:%S%.3f UTC");
         let event_type = format!("{:?}", event.event_type);
         let result = format!("{:?}", event.result);
-        
+
         // Create metadata string
         let metadata_str = if event.metadata.is_empty() {
             "{}".to_string()
@@ -133,15 +133,15 @@ impl SecurityAuditor {
     /// Rotate audit log file
     pub async fn rotate_log_file(&mut self) -> Result<()> {
         debug!("Rotating audit log file");
-        
+
         let new_log_file_path = format!("security_audit_{}.log", Utc::now().format("%Y%m%d"));
-        
+
         // In a real implementation, you would:
         // 1. Close the current log file
         // 2. Move it to an archive location
         // 3. Create a new log file
         // 4. Update the log_file_path
-        
+
         self.log_file_path = new_log_file_path;
         Ok(())
     }
@@ -150,7 +150,7 @@ impl SecurityAuditor {
     pub async fn get_audit_stats(&self) -> Result<AuditStats> {
         // In a real implementation, this would analyze the log files
         // and return statistics about audit events
-        
+
         Ok(AuditStats {
             total_events: 0,
             events_by_type: HashMap::new(),

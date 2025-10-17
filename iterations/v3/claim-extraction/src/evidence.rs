@@ -1,13 +1,13 @@
 //! Evidence Collection for Claim Verification
-//! 
+//!
 //! Based on V2's FactChecker, VerificationEngine, and CredibilityScorer patterns.
 //! Collects evidence from multiple sources and scores them for relevance and credibility.
 
 use crate::types::*;
 use anyhow::Result;
+use chrono::Utc;
 use tracing::{debug, info, warn};
 use uuid::Uuid;
-use chrono::Utc;
 
 /// Collects and scores evidence for atomic claims
 #[derive(Debug, Clone)]
@@ -57,13 +57,17 @@ impl EvidenceCollector {
 
         // Determine verification methods based on claim type
         let verification_methods = self.determine_verification_methods(claim);
-        
+
         let mut all_evidence = Vec::new();
 
         for method in verification_methods {
             match self.collect_by_method(&method, claim, context).await {
                 Ok(evidence) => {
-                    debug!("Collected {} evidence items via {:?}", evidence.len(), method);
+                    debug!(
+                        "Collected {} evidence items via {:?}",
+                        evidence.len(),
+                        method
+                    );
                     all_evidence.extend(evidence);
                 }
                 Err(e) => {
@@ -75,8 +79,11 @@ impl EvidenceCollector {
         // Filter and rank evidence
         let filtered_evidence = self.filter_and_rank_evidence(all_evidence, claim);
 
-        info!("Collected {} relevant evidence items for claim {}", 
-              filtered_evidence.len(), claim.id);
+        info!(
+            "Collected {} relevant evidence items for claim {}",
+            filtered_evidence.len(),
+            claim.id
+        );
 
         Ok(filtered_evidence)
     }
@@ -154,7 +161,7 @@ impl EvidenceCollector {
     ) -> Result<Vec<Evidence>> {
         // TODO: Integrate with actual code analysis tools
         // For now, return placeholder evidence structure
-        
+
         let evidence = Evidence {
             id: Uuid::new_v4(),
             claim_id: claim.id,
@@ -180,7 +187,7 @@ impl EvidenceCollector {
         _context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
         // TODO: Integrate with test runner
-        
+
         let evidence = Evidence {
             id: Uuid::new_v4(),
             claim_id: claim.id,
@@ -206,7 +213,7 @@ impl EvidenceCollector {
         _context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
         // TODO: Integrate with documentation search
-        
+
         let evidence = Evidence {
             id: Uuid::new_v4(),
             claim_id: claim.id,
@@ -232,7 +239,7 @@ impl EvidenceCollector {
         _context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
         // TODO: Integrate with performance monitoring
-        
+
         let evidence = Evidence {
             id: Uuid::new_v4(),
             claim_id: claim.id,
@@ -258,7 +265,7 @@ impl EvidenceCollector {
         _context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
         // TODO: Integrate with security scanning tools
-        
+
         let evidence = Evidence {
             id: Uuid::new_v4(),
             claim_id: claim.id,
@@ -284,12 +291,15 @@ impl EvidenceCollector {
         _context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
         // TODO: Integrate with CAWS validation
-        
+
         let evidence = Evidence {
             id: Uuid::new_v4(),
             claim_id: claim.id,
             evidence_type: EvidenceType::ConstitutionalReference,
-            content: format!("CAWS constitutional check evidence for: {}", claim.claim_text),
+            content: format!(
+                "CAWS constitutional check evidence for: {}",
+                claim.claim_text
+            ),
             source: EvidenceSource {
                 source_type: SourceType::FileSystem,
                 location: ".caws/".to_string(),
@@ -316,7 +326,9 @@ impl EvidenceCollector {
         evidence.sort_by(|a, b| {
             let score_a = self.compute_evidence_score(a, claim);
             let score_b = self.compute_evidence_score(b, claim);
-            score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
+            score_b
+                .partial_cmp(&score_a)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         // Limit to max evidence per claim

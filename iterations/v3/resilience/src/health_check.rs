@@ -40,7 +40,10 @@ impl HealthStatus {
 
     /// Check if this status indicates a problem
     pub fn is_problematic(&self) -> bool {
-        matches!(self, HealthStatus::Degraded | HealthStatus::Unhealthy | HealthStatus::Unknown)
+        matches!(
+            self,
+            HealthStatus::Degraded | HealthStatus::Unhealthy | HealthStatus::Unknown
+        )
     }
 }
 
@@ -89,10 +92,10 @@ impl Default for HealthCheckConfig {
 pub trait HealthCheck: Send + Sync {
     /// Perform the health check
     async fn check(&self) -> Result<HealthCheckResult>;
-    
+
     /// Get the health check name
     fn name(&self) -> &str;
-    
+
     /// Get the health check configuration
     fn config(&self) -> &HealthCheckConfig;
 }
@@ -150,12 +153,12 @@ impl HttpHealthCheck {
 impl HealthCheck for HttpHealthCheck {
     async fn check(&self) -> Result<HealthCheckResult> {
         let start_time = SystemTime::now();
-        
+
         let timeout = Duration::from_secs(self.config.timeout_seconds);
         let response = tokio::time::timeout(timeout, self.client.get(&self.url).send()).await;
-        
+
         let duration = start_time.elapsed().unwrap_or_default().as_millis() as u64;
-        
+
         match response {
             Ok(Ok(resp)) => {
                 let status = if resp.status().is_success() {
@@ -163,7 +166,7 @@ impl HealthCheck for HttpHealthCheck {
                 } else {
                     HealthStatus::Degraded
                 };
-                
+
                 Ok(HealthCheckResult {
                     status,
                     message: format!("HTTP check returned status {}", resp.status()),
@@ -177,34 +180,33 @@ impl HealthCheck for HttpHealthCheck {
                     },
                 })
             }
-            Ok(Err(e)) => {
-                Ok(HealthCheckResult {
-                    status: HealthStatus::Unhealthy,
-                    message: format!("HTTP check failed: {}", e),
-                    timestamp: SystemTime::now(),
-                    duration_ms: duration,
-                    metadata: {
-                        let mut metadata = HashMap::new();
-                        metadata.insert("url".to_string(), self.url.clone().into());
-                        metadata.insert("error".to_string(), e.to_string().into());
-                        metadata
-                    },
-                })
-            }
-            Err(_) => {
-                Ok(HealthCheckResult {
-                    status: HealthStatus::Unhealthy,
-                    message: "HTTP check timed out".to_string(),
-                    timestamp: SystemTime::now(),
-                    duration_ms: duration,
-                    metadata: {
-                        let mut metadata = HashMap::new();
-                        metadata.insert("url".to_string(), self.url.clone().into());
-                        metadata.insert("timeout_seconds".to_string(), self.config.timeout_seconds.into());
-                        metadata
-                    },
-                })
-            }
+            Ok(Err(e)) => Ok(HealthCheckResult {
+                status: HealthStatus::Unhealthy,
+                message: format!("HTTP check failed: {}", e),
+                timestamp: SystemTime::now(),
+                duration_ms: duration,
+                metadata: {
+                    let mut metadata = HashMap::new();
+                    metadata.insert("url".to_string(), self.url.clone().into());
+                    metadata.insert("error".to_string(), e.to_string().into());
+                    metadata
+                },
+            }),
+            Err(_) => Ok(HealthCheckResult {
+                status: HealthStatus::Unhealthy,
+                message: "HTTP check timed out".to_string(),
+                timestamp: SystemTime::now(),
+                duration_ms: duration,
+                metadata: {
+                    let mut metadata = HashMap::new();
+                    metadata.insert("url".to_string(), self.url.clone().into());
+                    metadata.insert(
+                        "timeout_seconds".to_string(),
+                        self.config.timeout_seconds.into(),
+                    );
+                    metadata
+                },
+            }),
         }
     }
 
@@ -240,13 +242,16 @@ impl HealthCheckManager {
     pub async fn add_check(&self, check: Arc<dyn HealthCheck>) {
         let name = check.name().to_string();
         self.checks.write().await.insert(name.clone(), check);
-        self.results.write().await.insert(name.clone(), HealthCheckResult {
-            status: HealthStatus::Unknown,
-            message: "Health check not yet run".to_string(),
-            timestamp: SystemTime::now(),
-            duration_ms: 0,
-            metadata: HashMap::new(),
-        });
+        self.results.write().await.insert(
+            name.clone(),
+            HealthCheckResult {
+                status: HealthStatus::Unknown,
+                message: "Health check not yet run".to_string(),
+                timestamp: SystemTime::now(),
+                duration_ms: 0,
+                metadata: HashMap::new(),
+            },
+        );
         self.failure_counts.write().await.insert(name.clone(), 0);
         self.success_counts.write().await.insert(name, 0);
     }
@@ -272,7 +277,7 @@ impl HealthCheckManager {
                 self.update_check_result(name, &result).await;
                 Ok(result)
             }
-            None => Err(anyhow::anyhow!("Health check '{}' not found", name))
+            None => Err(anyhow::anyhow!("Health check '{}' not found", name)),
         }
     }
 
@@ -284,7 +289,7 @@ impl HealthCheckManager {
         };
 
         let mut results = HashMap::new();
-        
+
         for (name, check) in checks {
             if check.config().enabled {
                 match check.check().await {
@@ -314,13 +319,13 @@ impl HealthCheckManager {
     /// Get the overall health status
     pub async fn get_overall_health(&self) -> HealthStatus {
         let results = self.results.read().await;
-        
+
         if results.is_empty() {
             return HealthStatus::Unknown;
         }
 
         let mut worst_status = HealthStatus::Healthy;
-        
+
         for result in results.values() {
             if result.status.priority() > worst_status.priority() {
                 worst_status = result.status.clone();
@@ -344,10 +349,10 @@ impl HealthCheckManager {
 
         tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(30)); // Default interval
-            
+
             loop {
                 interval.tick().await;
-                
+
                 let checks_to_run = {
                     let checks = checks.read().await;
                     checks.clone()
@@ -355,16 +360,17 @@ impl HealthCheckManager {
 
                 for (name, check) in checks_to_run {
                     if check.config().enabled {
-                        let interval_duration = Duration::from_secs(check.config().interval_seconds);
+                        let interval_duration =
+                            Duration::from_secs(check.config().interval_seconds);
                         sleep(interval_duration).await;
-                        
+
                         match check.check().await {
                             Ok(result) => {
                                 // Update failure/success counts
                                 {
                                     let mut failure_counts = failure_counts.write().await;
                                     let mut success_counts = success_counts.write().await;
-                                    
+
                                     if result.status.is_problematic() {
                                         *failure_counts.entry(name.clone()).or_insert(0) += 1;
                                         *success_counts.entry(name.clone()).or_insert(0) = 0;
@@ -373,7 +379,7 @@ impl HealthCheckManager {
                                         *failure_counts.entry(name.clone()).or_insert(0) = 0;
                                     }
                                 }
-                                
+
                                 // Update results
                                 {
                                     let mut results = results.write().await;
@@ -395,31 +401,39 @@ impl HealthCheckManager {
         let mut results = self.results.write().await;
         let mut failure_counts = self.failure_counts.write().await;
         let mut success_counts = self.success_counts.write().await;
-        
+
         let failure_count = failure_counts.entry(name.to_string()).or_insert(0);
         let success_count = success_counts.entry(name.to_string()).or_insert(0);
-        
+
         let mut final_result = result.clone();
-        
+
         // Apply failure threshold
         if result.status.is_problematic() {
             *failure_count += 1;
             *success_count = 0;
-            
-            if *failure_count >= 3 { // Default threshold
+
+            if *failure_count >= 3 {
+                // Default threshold
                 final_result.status = HealthStatus::Unhealthy;
-                final_result.message = format!("{} ({} consecutive failures)", result.message, failure_count);
+                final_result.message = format!(
+                    "{} ({} consecutive failures)",
+                    result.message, failure_count
+                );
             }
         } else {
             *success_count += 1;
             *failure_count = 0;
-            
-            if *success_count >= 2 { // Default threshold
+
+            if *success_count >= 2 {
+                // Default threshold
                 final_result.status = HealthStatus::Healthy;
-                final_result.message = format!("{} ({} consecutive successes)", result.message, success_count);
+                final_result.message = format!(
+                    "{} ({} consecutive successes)",
+                    result.message, success_count
+                );
             }
         }
-        
+
         results.insert(name.to_string(), final_result);
     }
 }
@@ -455,7 +469,7 @@ mod tests {
     async fn test_simple_health_check() {
         let config = HealthCheckConfig::default();
         let check = SimpleHealthCheck::new(config);
-        
+
         let result = check.check().await.unwrap();
         assert_eq!(result.status, HealthStatus::Healthy);
         assert_eq!(check.name(), "default");
@@ -464,18 +478,18 @@ mod tests {
     #[tokio::test]
     async fn test_health_check_manager() {
         let manager = HealthCheckManager::new();
-        
+
         let config = HealthCheckConfig {
             name: "test".to_string(),
             ..Default::default()
         };
         let check = Arc::new(SimpleHealthCheck::new(config));
-        
+
         manager.add_check(check).await;
-        
+
         let result = manager.run_check("test").await.unwrap();
         assert_eq!(result.status, HealthStatus::Healthy);
-        
+
         let overall_health = manager.get_overall_health().await;
         assert_eq!(overall_health, HealthStatus::Healthy);
     }
@@ -483,16 +497,16 @@ mod tests {
     #[tokio::test]
     async fn test_health_check_manager_remove() {
         let manager = HealthCheckManager::new();
-        
+
         let config = HealthCheckConfig {
             name: "test".to_string(),
             ..Default::default()
         };
         let check = Arc::new(SimpleHealthCheck::new(config));
-        
+
         manager.add_check(check).await;
         assert!(manager.run_check("test").await.is_ok());
-        
+
         manager.remove_check("test").await;
         assert!(manager.run_check("test").await.is_err());
     }

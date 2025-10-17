@@ -1106,7 +1106,7 @@ Return the response as a JSON object with this structure:
                     },
                   ],
                 };
-              } catch (error) {
+              } catch (_error) {
                 // Fallback: provide a basic decomposition
                 const fallbackPlan = {
                   steps: [

@@ -1,9 +1,9 @@
 //! Configuration validation and schema enforcement
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 use validator::{Validate, ValidationError as ValidatorError, ValidationErrors};
 
 /// Configuration validation result
@@ -35,14 +35,26 @@ pub struct ValidationRule {
 pub struct DatabaseConfigValidation {
     #[validate(length(min = 1, message = "Database URL cannot be empty"))]
     pub url: String,
-    
-    #[validate(range(min = 1, max = 100, message = "Connection pool size must be between 1 and 100"))]
+
+    #[validate(range(
+        min = 1,
+        max = 100,
+        message = "Connection pool size must be between 1 and 100"
+    ))]
     pub max_connections: u32,
-    
-    #[validate(range(min = 1, max = 3600, message = "Connection timeout must be between 1 and 3600 seconds"))]
+
+    #[validate(range(
+        min = 1,
+        max = 3600,
+        message = "Connection timeout must be between 1 and 3600 seconds"
+    ))]
     pub connection_timeout_secs: u64,
-    
-    #[validate(range(min = 1, max = 3600, message = "Idle timeout must be between 1 and 3600 seconds"))]
+
+    #[validate(range(
+        min = 1,
+        max = 3600,
+        message = "Idle timeout must be between 1 and 3600 seconds"
+    ))]
     pub idle_timeout_secs: u64,
 }
 
@@ -51,30 +63,54 @@ pub struct DatabaseConfigValidation {
 pub struct ServerConfigValidation {
     #[validate(range(min = 1, max = 65535, message = "Port must be between 1 and 65535"))]
     pub port: u16,
-    
+
     #[validate(length(min = 1, message = "Host cannot be empty"))]
     pub host: String,
-    
-    #[validate(range(min = 1, max = 3600, message = "Request timeout must be between 1 and 3600 seconds"))]
+
+    #[validate(range(
+        min = 1,
+        max = 3600,
+        message = "Request timeout must be between 1 and 3600 seconds"
+    ))]
     pub request_timeout_secs: u64,
-    
-    #[validate(range(min = 1, max = 1000, message = "Max request size must be between 1 and 1000 MB"))]
+
+    #[validate(range(
+        min = 1,
+        max = 1000,
+        message = "Max request size must be between 1 and 1000 MB"
+    ))]
     pub max_request_size_mb: u64,
 }
 
 /// Agent configuration validation
 #[derive(Debug, Clone, Validate)]
 pub struct AgentConfigValidation {
-    #[validate(range(min = 1, max = 100, message = "Max concurrent tasks must be between 1 and 100"))]
+    #[validate(range(
+        min = 1,
+        max = 100,
+        message = "Max concurrent tasks must be between 1 and 100"
+    ))]
     pub max_concurrent_tasks: u32,
-    
-    #[validate(range(min = 1, max = 3600, message = "Task timeout must be between 1 and 3600 seconds"))]
+
+    #[validate(range(
+        min = 1,
+        max = 3600,
+        message = "Task timeout must be between 1 and 3600 seconds"
+    ))]
     pub task_timeout_secs: u64,
-    
-    #[validate(range(min = 1, max = 100, message = "Retry attempts must be between 1 and 100"))]
+
+    #[validate(range(
+        min = 1,
+        max = 100,
+        message = "Retry attempts must be between 1 and 100"
+    ))]
     pub max_retry_attempts: u32,
-    
-    #[validate(range(min = 1, max = 60, message = "Retry delay must be between 1 and 60 seconds"))]
+
+    #[validate(range(
+        min = 1,
+        max = 60,
+        message = "Retry delay must be between 1 and 60 seconds"
+    ))]
     pub retry_delay_secs: u64,
 }
 
@@ -83,13 +119,17 @@ pub struct AgentConfigValidation {
 pub struct LoggingConfigValidation {
     // #[validate(custom = "validate_log_level")]
     pub level: String,
-    
+
     #[validate(length(min = 1, message = "Log format cannot be empty"))]
     pub format: String,
-    
-    #[validate(range(min = 1, max = 100, message = "Max file size must be between 1 and 100 MB"))]
+
+    #[validate(range(
+        min = 1,
+        max = 100,
+        message = "Max file size must be between 1 and 100 MB"
+    ))]
     pub max_file_size_mb: u64,
-    
+
     #[validate(range(min = 1, max = 30, message = "Max files must be between 1 and 30"))]
     pub max_files: u32,
 }
@@ -97,12 +137,20 @@ pub struct LoggingConfigValidation {
 /// Metrics configuration validation
 #[derive(Debug, Clone, Validate)]
 pub struct MetricsConfigValidation {
-    #[validate(range(min = 1, max = 3600, message = "Collection interval must be between 1 and 3600 seconds"))]
+    #[validate(range(
+        min = 1,
+        max = 3600,
+        message = "Collection interval must be between 1 and 3600 seconds"
+    ))]
     pub collection_interval_secs: u64,
-    
-    #[validate(range(min = 1, max = 1000, message = "Retention days must be between 1 and 1000"))]
+
+    #[validate(range(
+        min = 1,
+        max = 1000,
+        message = "Retention days must be between 1 and 1000"
+    ))]
     pub retention_days: u32,
-    
+
     #[validate(range(min = 1, max = 100, message = "Batch size must be between 1 and 100"))]
     pub batch_size: u32,
 }
@@ -112,43 +160,83 @@ pub struct MetricsConfigValidation {
 pub struct SecurityConfigValidation {
     #[validate(length(min = 32, message = "JWT secret must be at least 32 characters"))]
     pub jwt_secret: String,
-    
-    #[validate(range(min = 300, max = 86400, message = "JWT expiry must be between 300 and 86400 seconds"))]
+
+    #[validate(range(
+        min = 300,
+        max = 86400,
+        message = "JWT expiry must be between 300 and 86400 seconds"
+    ))]
     pub jwt_expiry_secs: u64,
-    
-    #[validate(range(min = 1, max = 100, message = "Rate limit must be between 1 and 100 requests per minute"))]
+
+    #[validate(range(
+        min = 1,
+        max = 100,
+        message = "Rate limit must be between 1 and 100 requests per minute"
+    ))]
     pub rate_limit_per_minute: u32,
-    
-    #[validate(range(min = 1, max = 1000, message = "Max login attempts must be between 1 and 1000"))]
+
+    #[validate(range(
+        min = 1,
+        max = 1000,
+        message = "Max login attempts must be between 1 and 1000"
+    ))]
     pub max_login_attempts: u32,
 }
 
 /// Cache configuration validation
 #[derive(Debug, Clone, Validate)]
 pub struct CacheConfigValidation {
-    #[validate(range(min = 1, max = 3600, message = "TTL must be between 1 and 3600 seconds"))]
+    #[validate(range(
+        min = 1,
+        max = 3600,
+        message = "TTL must be between 1 and 3600 seconds"
+    ))]
     pub default_ttl_secs: u64,
-    
-    #[validate(range(min = 1, max = 1000, message = "Max size must be between 1 and 1000 MB"))]
+
+    #[validate(range(
+        min = 1,
+        max = 1000,
+        message = "Max size must be between 1 and 1000 MB"
+    ))]
     pub max_size_mb: u64,
-    
-    #[validate(range(min = 1, max = 100, message = "Eviction threshold must be between 1 and 100 percent"))]
+
+    #[validate(range(
+        min = 1,
+        max = 100,
+        message = "Eviction threshold must be between 1 and 100 percent"
+    ))]
     pub eviction_threshold_percent: u8,
 }
 
 /// Resource configuration validation
 #[derive(Debug, Clone, Validate)]
 pub struct ResourceConfigValidation {
-    #[validate(range(min = 1, max = 100, message = "CPU limit must be between 1 and 100 percent"))]
+    #[validate(range(
+        min = 1,
+        max = 100,
+        message = "CPU limit must be between 1 and 100 percent"
+    ))]
     pub cpu_limit_percent: u8,
-    
-    #[validate(range(min = 1, max = 100, message = "Memory limit must be between 1 and 100 percent"))]
+
+    #[validate(range(
+        min = 1,
+        max = 100,
+        message = "Memory limit must be between 1 and 100 percent"
+    ))]
     pub memory_limit_percent: u8,
-    
-    #[validate(range(min = 1, max = 1000, message = "Disk limit must be between 1 and 1000 GB"))]
+
+    #[validate(range(
+        min = 1,
+        max = 1000,
+        message = "Disk limit must be between 1 and 1000 GB"
+    ))]
     pub disk_limit_gb: u64,
-    
-    #[validate(range(min = 1, max = 100, message = "Network limit must be between 1 and 100 Mbps"))]
+
+    #[validate(range(
+        min = 1,
+        max = 100,
+        message = "Network limit must be between 1 and 100 Mbps"
+    ))]
     pub network_limit_mbps: u32,
 }
 
@@ -157,11 +245,19 @@ pub struct ResourceConfigValidation {
 pub struct TracingConfigValidation {
     // #[validate(custom = "validate_trace_level")]
     pub level: String,
-    
-    #[validate(range(min = 1, max = 100, message = "Sampling rate must be between 1 and 100 percent"))]
+
+    #[validate(range(
+        min = 1,
+        max = 100,
+        message = "Sampling rate must be between 1 and 100 percent"
+    ))]
     pub sampling_rate_percent: u8,
-    
-    #[validate(range(min = 1, max = 3600, message = "Export interval must be between 1 and 3600 seconds"))]
+
+    #[validate(range(
+        min = 1,
+        max = 3600,
+        message = "Export interval must be between 1 and 3600 seconds"
+    ))]
     pub export_interval_secs: u64,
 }
 
@@ -170,13 +266,13 @@ pub struct TracingConfigValidation {
 pub struct DeploymentConfigValidation {
     // #[validate(custom = "validate_environment")]
     pub environment: String,
-    
+
     #[validate(length(min = 1, message = "Version cannot be empty"))]
     pub version: String,
-    
+
     // #[validate(custom = "validate_region")]
     pub region: String,
-    
+
     #[validate(range(min = 1, max = 10, message = "Replicas must be between 1 and 10"))]
     pub replicas: u32,
 }
@@ -204,21 +300,33 @@ impl ConfigValidator {
 
             if let Some(min_len) = rule.min_length {
                 if value.len() < min_len {
-                    return Err(anyhow!("Field '{}' must be at least {} characters", field_name, min_len));
+                    return Err(anyhow!(
+                        "Field '{}' must be at least {} characters",
+                        field_name,
+                        min_len
+                    ));
                 }
             }
 
             if let Some(max_len) = rule.max_length {
                 if value.len() > max_len {
-                    return Err(anyhow!("Field '{}' must be at most {} characters", field_name, max_len));
+                    return Err(anyhow!(
+                        "Field '{}' must be at most {} characters",
+                        field_name,
+                        max_len
+                    ));
                 }
             }
 
             if let Some(pattern) = &rule.pattern {
-                let regex = regex::Regex::new(pattern)
-                    .map_err(|e| anyhow!("Invalid regex pattern for field '{}': {}", field_name, e))?;
+                let regex = regex::Regex::new(pattern).map_err(|e| {
+                    anyhow!("Invalid regex pattern for field '{}': {}", field_name, e)
+                })?;
                 if !regex.is_match(value) {
-                    return Err(anyhow!("Field '{}' does not match required pattern", field_name));
+                    return Err(anyhow!(
+                        "Field '{}' does not match required pattern",
+                        field_name
+                    ));
                 }
             }
 
@@ -241,7 +349,10 @@ impl ConfigValidator {
                 for error in field_errors {
                     errors.push(ValidationError {
                         field: field.to_string(),
-                        message: error.message.clone().unwrap_or_else(|| "Validation failed".to_string().into()),
+                        message: error
+                            .message
+                            .clone()
+                            .unwrap_or_else(|| "Validation failed".to_string().into()),
                         code: error.code.clone(),
                     });
                 }
@@ -250,7 +361,8 @@ impl ConfigValidator {
 
         // Add custom validation logic here if needed
         if self.strict_mode && !errors.is_empty() {
-            warnings.push("Strict mode enabled - all validation errors must be resolved".to_string());
+            warnings
+                .push("Strict mode enabled - all validation errors must be resolved".to_string());
         }
 
         ValidationResult {
@@ -320,7 +432,12 @@ pub struct ValidationError {
 
 impl std::fmt::Display for ValidationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Validation error in field '{}': {}", self.field, self.message.as_ref())
+        write!(
+            f,
+            "Validation error in field '{}': {}",
+            self.field,
+            self.message.as_ref()
+        )
     }
 }
 
@@ -336,8 +453,13 @@ pub mod utils {
             return Err(anyhow!("Database URL cannot be empty"));
         }
 
-        if !url.starts_with("postgresql://") && !url.starts_with("mysql://") && !url.starts_with("sqlite://") {
-            return Err(anyhow!("Database URL must start with postgresql://, mysql://, or sqlite://"));
+        if !url.starts_with("postgresql://")
+            && !url.starts_with("mysql://")
+            && !url.starts_with("sqlite://")
+        {
+            return Err(anyhow!(
+                "Database URL must start with postgresql://, mysql://, or sqlite://"
+            ));
         }
 
         Ok(())
@@ -350,7 +472,9 @@ pub mod utils {
         }
 
         if secret.chars().all(|c| c.is_ascii_alphanumeric()) {
-            return Err(anyhow!("JWT secret should contain special characters for better security"));
+            return Err(anyhow!(
+                "JWT secret should contain special characters for better security"
+            ));
         }
 
         Ok(())
@@ -376,7 +500,9 @@ pub mod utils {
         }
 
         if path.contains("..") {
-            return Err(anyhow!("File path cannot contain '..' for security reasons"));
+            return Err(anyhow!(
+                "File path cannot contain '..' for security reasons"
+            ));
         }
 
         Ok(())

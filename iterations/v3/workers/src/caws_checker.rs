@@ -4,8 +4,11 @@
 //! Enhanced with AST-based diff sizing and violation code mapping.
 
 use crate::types::*;
-use agent_agency_council::models::RiskTier;
-use agent_agency_council::models::TaskSpec;
+use agent_agency_council::models::{
+    CouncilTaskContext as CouncilCouncilTaskContext,
+    CouncilWorkerOutput as CouncilCouncilWorkerOutput, Environment, FileModification,
+    FileOperation, RiskTier, SelfAssessment, TaskSpec,
+};
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use tracing::{debug, info, warn};
@@ -57,13 +60,20 @@ pub struct ConstitutionalReference {
 /// Language analyzer trait for language-specific analysis
 pub trait LanguageAnalyzer: Send + Sync + std::fmt::Debug {
     /// Analyze a file modification for language-specific issues
-    fn analyze_file_modification(&self, modification: &FileModification) -> Result<LanguageAnalysisResult>;
-    
+    fn analyze_file_modification(
+        &self,
+        modification: &FileModification,
+    ) -> Result<LanguageAnalysisResult>;
+
     /// Get the programming language this analyzer handles
     fn language(&self) -> ProgrammingLanguage;
-    
+
     /// Calculate change complexity for a diff
-    fn calculate_change_complexity(&self, diff: &str, content: Option<&str>) -> Result<ChangeComplexity>;
+    fn calculate_change_complexity(
+        &self,
+        diff: &str,
+        content: Option<&str>,
+    ) -> Result<ChangeComplexity>;
 }
 
 /// Language analysis result
@@ -171,13 +181,20 @@ impl CawsChecker {
 
     /// Create a new CAWS checker
     pub fn new() -> Self {
-        let mut language_analyzers: HashMap<ProgrammingLanguage, Box<dyn LanguageAnalyzer>> = HashMap::new();
-        
+        let mut language_analyzers: HashMap<ProgrammingLanguage, Box<dyn LanguageAnalyzer>> =
+            HashMap::new();
+
         // Register language analyzers
         language_analyzers.insert(ProgrammingLanguage::Rust, Box::new(RustAnalyzer::new()));
-        language_analyzers.insert(ProgrammingLanguage::TypeScript, Box::new(TypeScriptAnalyzer::new()));
-        language_analyzers.insert(ProgrammingLanguage::JavaScript, Box::new(JavaScriptAnalyzer::new()));
-        
+        language_analyzers.insert(
+            ProgrammingLanguage::TypeScript,
+            Box::new(TypeScriptAnalyzer::new()),
+        );
+        language_analyzers.insert(
+            ProgrammingLanguage::JavaScript,
+            Box::new(JavaScriptAnalyzer::new()),
+        );
+
         Self {
             diff_analyzer: DiffAnalyzer::new(),
             violation_mapper: ViolationCodeMapper::new(),
@@ -220,7 +237,11 @@ impl CawsChecker {
     }
 
     /// Check CAWS compliance for worker output
-    pub async fn validate_worker_output(&self, output: &WorkerOutput, task_spec: &TaskSpec) -> Result<CawsValidationResult> {
+    pub async fn validate_worker_output(
+        &self,
+        output: &CouncilWorkerOutput,
+        task_spec: &TaskSpec,
+    ) -> Result<CawsValidationResult> {
         info!("Validating CAWS compliance for worker output");
 
         let mut violations = Vec::new();
@@ -234,14 +255,25 @@ impl CawsChecker {
         self.check_quality_standards(output, task_spec, &mut violations, &mut warnings)?;
 
         // Check CAWS rule compliance
-        self.check_caws_rules(output, task_spec, &mut violations, &mut warnings, &mut suggestions)?;
+        self.check_caws_rules(
+            output,
+            task_spec,
+            &mut violations,
+            &mut warnings,
+            &mut suggestions,
+        )?;
 
         // Check provenance requirements
         self.check_provenance_requirements(output, &mut violations, &mut warnings)?;
 
         // NEW: AST-based diff analysis for surgical change scoring
         let diff_analysis = self.analyze_diff_complexity(output).await?;
-        self.process_diff_analysis(&diff_analysis, &mut violations, &mut warnings, &mut suggestions)?;
+        self.process_diff_analysis(
+            &diff_analysis,
+            &mut violations,
+            &mut warnings,
+            &mut suggestions,
+        )?;
 
         // Calculate compliance score
         let compliance_score = self.calculate_compliance_score(&violations, &warnings);
@@ -258,25 +290,30 @@ impl CawsChecker {
     }
 
     /// Analyze diff complexity using AST-based analysis
-    pub async fn analyze_diff_complexity(&self, output: &WorkerOutput) -> Result<Vec<DiffAnalysisResult>> {
+    pub async fn analyze_diff_complexity(
+        &self,
+        output: &CouncilWorkerOutput,
+    ) -> Result<Vec<DiffAnalysisResult>> {
         let mut results = Vec::new();
 
         for file_mod in &output.files_modified {
             let language = self.detect_programming_language(&file_mod.path);
-            
+
             if let Some(analyzer) = self.language_analyzers.get(&language) {
                 let analysis_result = analyzer.analyze_file_modification(file_mod)?;
-                
+
                 let diff_analysis = DiffAnalysisResult {
                     change_complexity: analysis_result.change_complexity.clone(),
                     language_violations: analysis_result.violations.clone(),
                     language_warnings: analysis_result.warnings.clone(),
-                    is_oversized: analysis_result.complexity_score > self.diff_analyzer.max_change_complexity,
-                    is_noisy: analysis_result.surgical_change_score < self.diff_analyzer.surgical_change_threshold,
+                    is_oversized: analysis_result.complexity_score
+                        > self.diff_analyzer.max_change_complexity,
+                    is_noisy: analysis_result.surgical_change_score
+                        < self.diff_analyzer.surgical_change_threshold,
                     surgical_change_score: analysis_result.surgical_change_score,
                     recommended_action: self.determine_recommended_action(&analysis_result),
                 };
-                
+
                 results.push(diff_analysis);
             }
         }
@@ -287,7 +324,7 @@ impl CawsChecker {
     /// Detect programming language from file path
     fn detect_programming_language(&self, file_path: &str) -> ProgrammingLanguage {
         let extension = file_path.split('.').last().unwrap_or("").to_lowercase();
-        
+
         match extension.as_str() {
             "rs" => ProgrammingLanguage::Rust,
             "ts" | "tsx" => ProgrammingLanguage::TypeScript,
@@ -320,10 +357,15 @@ impl CawsChecker {
                 violations.push(CawsViolation {
                     rule: "Change Size Limit".to_string(),
                     severity: ViolationSeverity::High,
-                    description: format!("Change complexity score {:.2} exceeds maximum allowed {:.2}",
-                        analysis.change_complexity.complexity_score, self.diff_analyzer.max_change_complexity),
+                    description: format!(
+                        "Change complexity score {:.2} exceeds maximum allowed {:.2}",
+                        analysis.change_complexity.complexity_score,
+                        self.diff_analyzer.max_change_complexity
+                    ),
                     location: None,
-                    suggestion: Some("Break changes into smaller, more focused modifications".to_string()),
+                    suggestion: Some(
+                        "Break changes into smaller, more focused modifications".to_string(),
+                    ),
                     constitutional_ref: None,
                 });
             }
@@ -333,10 +375,15 @@ impl CawsChecker {
                 violations.push(CawsViolation {
                     rule: "Surgical Change Requirement".to_string(),
                     severity: ViolationSeverity::Medium,
-                    description: format!("Surgical change score {:.2} below threshold {:.2}", 
-                        analysis.surgical_change_score, self.diff_analyzer.surgical_change_threshold),
+                    description: format!(
+                        "Surgical change score {:.2} below threshold {:.2}",
+                        analysis.surgical_change_score,
+                        self.diff_analyzer.surgical_change_threshold
+                    ),
                     location: None,
-                    suggestion: Some("Make more surgical changes with focused modifications".to_string()),
+                    suggestion: Some(
+                        "Make more surgical changes with focused modifications".to_string(),
+                    ),
                     constitutional_ref: Some("SURG-001".to_string()),
                 });
             }
@@ -347,7 +394,10 @@ impl CawsChecker {
                     rule: lang_violation.rule.clone(),
                     severity: lang_violation.severity.clone(),
                     description: lang_violation.description.clone(),
-                    location: lang_violation.location.as_ref().map(|loc| format!("{}:{}", loc.line, loc.column)),
+                    location: lang_violation
+                        .location
+                        .as_ref()
+                        .map(|loc| format!("{}:{}", loc.line, loc.column)),
                     suggestion: lang_violation.suggestion.clone(),
                     constitutional_ref: None,
                 });
@@ -355,22 +405,34 @@ impl CawsChecker {
 
             // Add language-specific warnings
             for lang_warning in &analysis.language_warnings {
-                warnings.push(format!("{}: {}", lang_warning.rule, lang_warning.description));
+                warnings.push(format!(
+                    "{}: {}",
+                    lang_warning.rule, lang_warning.description
+                ));
             }
 
             // Add recommendations based on analysis
             match analysis.recommended_action {
                 RecommendedAction::RequestSmallerChanges => {
-                    suggestions.push("Consider breaking this change into smaller, more focused modifications".to_string());
+                    suggestions.push(
+                        "Consider breaking this change into smaller, more focused modifications"
+                            .to_string(),
+                    );
                 }
                 RecommendedAction::SplitIntoMultiplePRs => {
-                    suggestions.push("This change may be too large for a single PR - consider splitting".to_string());
+                    suggestions.push(
+                        "This change may be too large for a single PR - consider splitting"
+                            .to_string(),
+                    );
                 }
                 RecommendedAction::AddMoreTests => {
-                    suggestions.push("Consider adding more comprehensive tests for this change".to_string());
+                    suggestions.push(
+                        "Consider adding more comprehensive tests for this change".to_string(),
+                    );
                 }
                 RecommendedAction::ImproveDocumentation => {
-                    suggestions.push("Consider improving documentation for this change".to_string());
+                    suggestions
+                        .push("Consider improving documentation for this change".to_string());
                 }
                 RecommendedAction::RequestReview => {
                     suggestions.push("This change may benefit from additional review".to_string());
@@ -505,25 +567,28 @@ impl CawsChecker {
         suggestions: &mut Vec<String>,
     ) -> Result<()> {
         // Check if risk tier matches task complexity
-        let has_auth_keywords = task_spec.description.to_lowercase().contains("auth") ||
-                               task_spec.description.to_lowercase().contains("login") ||
-                               task_spec.description.to_lowercase().contains("password");
-        
-        let has_billing_keywords = task_spec.description.to_lowercase().contains("billing") ||
-                                  task_spec.description.to_lowercase().contains("payment") ||
-                                  task_spec.description.to_lowercase().contains("money");
+        let has_auth_keywords = task_spec.description.to_lowercase().contains("auth")
+            || task_spec.description.to_lowercase().contains("login")
+            || task_spec.description.to_lowercase().contains("password");
 
-        let has_database_keywords = task_spec.description.to_lowercase().contains("database") ||
-                                   task_spec.description.to_lowercase().contains("migration") ||
-                                   task_spec.description.to_lowercase().contains("schema");
+        let has_billing_keywords = task_spec.description.to_lowercase().contains("billing")
+            || task_spec.description.to_lowercase().contains("payment")
+            || task_spec.description.to_lowercase().contains("money");
 
-        let is_high_risk_content = has_auth_keywords || has_billing_keywords || has_database_keywords;
+        let has_database_keywords = task_spec.description.to_lowercase().contains("database")
+            || task_spec.description.to_lowercase().contains("migration")
+            || task_spec.description.to_lowercase().contains("schema");
+
+        let is_high_risk_content =
+            has_auth_keywords || has_billing_keywords || has_database_keywords;
 
         match task_spec.risk_tier {
             RiskTier::Tier1 => {
                 // Tier 1 should be for critical systems
                 if !is_high_risk_content {
-                    suggestions.push("Task may not require Tier 1 risk level - consider Tier 2".to_string());
+                    suggestions.push(
+                        "Task may not require Tier 1 risk level - consider Tier 2".to_string(),
+                    );
                 }
             }
             RiskTier::Tier2 => {
@@ -536,7 +601,8 @@ impl CawsChecker {
                     violations.push(CawsViolation {
                         rule: "Risk Tier Classification".to_string(),
                         severity: ViolationSeverity::High,
-                        description: "High-risk content detected but task marked as Tier 3".to_string(),
+                        description: "High-risk content detected but task marked as Tier 3"
+                            .to_string(),
                         location: None,
                         suggestion: Some("Consider upgrading to Tier 1 or Tier 2".to_string()),
                         constitutional_ref: None,
@@ -551,14 +617,21 @@ impl CawsChecker {
     /// Check budget adherence in worker output
     fn check_budget_adherence(
         &self,
-        output: &WorkerOutput,
+        output: &CouncilWorkerOutput,
         task_spec: &TaskSpec,
         violations: &mut Vec<CawsViolation>,
         warnings: &mut Vec<String>,
     ) -> Result<()> {
         let files_used = output.files_modified.len() as u32;
-        let loc_used: u32 = output.files_modified.iter()
-            .map(|f| f.content.as_ref().map(|c| c.lines().count() as u32).unwrap_or(0))
+        let loc_used: u32 = output
+            .files_modified
+            .iter()
+            .map(|f| {
+                f.content
+                    .as_ref()
+                    .map(|c| c.lines().count() as u32)
+                    .unwrap_or(0)
+            })
             .sum();
 
         // Check file count
@@ -567,13 +640,19 @@ impl CawsChecker {
                 violations.push(CawsViolation {
                     rule: "File Count Budget".to_string(),
                     severity: ViolationSeverity::Critical,
-                    description: format!("Used {} files, exceeds limit of {}", files_used, max_files),
+                    description: format!(
+                        "Used {} files, exceeds limit of {}",
+                        files_used, max_files
+                    ),
                     location: None,
                     suggestion: Some("Reduce file count or request budget increase".to_string()),
                     constitutional_ref: None,
                 });
             } else if files_used as f32 / max_files as f32 > 0.8 {
-                warnings.push(format!("File count near limit: {}/{}", files_used, max_files));
+                warnings.push(format!(
+                    "File count near limit: {}/{}",
+                    files_used, max_files
+                ));
             }
         }
 
@@ -599,7 +678,7 @@ impl CawsChecker {
     /// Check quality standards
     fn check_quality_standards(
         &self,
-        output: &WorkerOutput,
+        output: &CouncilWorkerOutput,
         task_spec: &TaskSpec,
         violations: &mut Vec<CawsViolation>,
         warnings: &mut Vec<String>,
@@ -623,8 +702,10 @@ impl CawsChecker {
 
         // Check for concerns
         if !output.self_assessment.concerns.is_empty() {
-            warnings.push(format!("Worker raised {} concerns about the output", 
-                output.self_assessment.concerns.len()));
+            warnings.push(format!(
+                "Worker raised {} concerns about the output",
+                output.self_assessment.concerns.len()
+            ));
         }
 
         // Check rationale quality
@@ -645,7 +726,7 @@ impl CawsChecker {
     /// Check CAWS rules compliance
     fn check_caws_rules(
         &self,
-        output: &WorkerOutput,
+        output: &CouncilWorkerOutput,
         task_spec: &TaskSpec,
         violations: &mut Vec<CawsViolation>,
         warnings: &mut Vec<String>,
@@ -669,14 +750,16 @@ impl CawsChecker {
                 if content.contains("localhost") || content.contains("127.0.0.1") {
                     warnings.push(format!("Hardcoded localhost found in {}", file_mod.path));
                 }
-                
+
                 if content.contains("password") || content.contains("secret") {
                     violations.push(CawsViolation {
                         rule: "Security Best Practices".to_string(),
                         severity: ViolationSeverity::Critical,
                         description: "Potential hardcoded secrets detected".to_string(),
                         location: Some(file_mod.path.clone()),
-                        suggestion: Some("Use environment variables or secure configuration".to_string()),
+                        suggestion: Some(
+                            "Use environment variables or secure configuration".to_string(),
+                        ),
                         constitutional_ref: None,
                     });
                 }
@@ -689,7 +772,7 @@ impl CawsChecker {
     /// Check provenance requirements
     fn check_provenance_requirements(
         &self,
-        output: &WorkerOutput,
+        output: &CouncilWorkerOutput,
         violations: &mut Vec<CawsViolation>,
         warnings: &mut Vec<String>,
     ) -> Result<()> {
@@ -706,8 +789,13 @@ impl CawsChecker {
         }
 
         // Check if self-assessment is complete
-        if output.self_assessment.concerns.is_empty() && output.self_assessment.improvements.is_empty() {
-            warnings.push("Self-assessment appears incomplete - no concerns or improvements identified".to_string());
+        if output.self_assessment.concerns.is_empty()
+            && output.self_assessment.improvements.is_empty()
+        {
+            warnings.push(
+                "Self-assessment appears incomplete - no concerns or improvements identified"
+                    .to_string(),
+            );
         }
 
         // Check if file modifications are documented
@@ -720,7 +808,9 @@ impl CawsChecker {
                             severity: ViolationSeverity::Medium,
                             description: "File creation without content provided".to_string(),
                             location: Some(file_mod.path.clone()),
-                            suggestion: Some("Provide file content for creation operations".to_string()),
+                            suggestion: Some(
+                                "Provide file content for creation operations".to_string(),
+                            ),
                             constitutional_ref: None,
                         });
                     }
@@ -730,9 +820,12 @@ impl CawsChecker {
                         violations.push(CawsViolation {
                             rule: "File Modification Documentation".to_string(),
                             severity: ViolationSeverity::Medium,
-                            description: "File modification without diff or content provided".to_string(),
+                            description: "File modification without diff or content provided"
+                                .to_string(),
                             location: Some(file_mod.path.clone()),
-                            suggestion: Some("Provide diff or content for modification operations".to_string()),
+                            suggestion: Some(
+                                "Provide diff or content for modification operations".to_string(),
+                            ),
                             constitutional_ref: None,
                         });
                     }
@@ -742,7 +835,10 @@ impl CawsChecker {
                 }
                 FileOperation::Move { .. } => {
                     if file_mod.diff.is_none() {
-                        warnings.push(format!("File move operation without diff: {}", file_mod.path));
+                        warnings.push(format!(
+                            "File move operation without diff: {}",
+                            file_mod.path
+                        ));
                     }
                 }
             }
@@ -823,22 +919,28 @@ impl DiffAnalyzer {
 impl ViolationCodeMapper {
     pub fn new() -> Self {
         let mut code_mappings = HashMap::new();
-        
+
         // Add constitutional references for common violations
-        code_mappings.insert("CHANGE_SIZE_LIMIT".to_string(), ConstitutionalReference {
-            section: "Change Management".to_string(),
-            subsection: "Size Limits".to_string(),
-            description: "Changes must be surgical and focused".to_string(),
-            severity: ViolationSeverity::High,
-        });
-        
-        code_mappings.insert("SURGICAL_CHANGE_REQUIREMENT".to_string(), ConstitutionalReference {
-            section: "Change Management".to_string(),
-            subsection: "Surgical Changes".to_string(),
-            description: "Changes should be precise and minimal".to_string(),
-            severity: ViolationSeverity::Medium,
-        });
-        
+        code_mappings.insert(
+            "CHANGE_SIZE_LIMIT".to_string(),
+            ConstitutionalReference {
+                section: "Change Management".to_string(),
+                subsection: "Size Limits".to_string(),
+                description: "Changes must be surgical and focused".to_string(),
+                severity: ViolationSeverity::High,
+            },
+        );
+
+        code_mappings.insert(
+            "SURGICAL_CHANGE_REQUIREMENT".to_string(),
+            ConstitutionalReference {
+                section: "Change Management".to_string(),
+                subsection: "Surgical Changes".to_string(),
+                description: "Changes should be precise and minimal".to_string(),
+                severity: ViolationSeverity::Medium,
+            },
+        );
+
         Self { code_mappings }
     }
 }
@@ -854,10 +956,13 @@ impl RustAnalyzer {
 }
 
 impl LanguageAnalyzer for RustAnalyzer {
-    fn analyze_file_modification(&self, modification: &FileModification) -> Result<LanguageAnalysisResult> {
+    fn analyze_file_modification(
+        &self,
+        modification: &FileModification,
+    ) -> Result<LanguageAnalysisResult> {
         let mut violations = Vec::new();
         let mut warnings = Vec::new();
-        
+
         // Analyze Rust-specific issues
         if let Some(content) = &modification.content {
             // Check for unsafe code
@@ -867,11 +972,13 @@ impl LanguageAnalyzer for RustAnalyzer {
                     severity: ViolationSeverity::High,
                     description: "Unsafe code detected".to_string(),
                     location: None,
-                    suggestion: Some("Review unsafe code usage and ensure proper justification".to_string()),
+                    suggestion: Some(
+                        "Review unsafe code usage and ensure proper justification".to_string(),
+                    ),
                     constitutional_ref: None,
                 });
             }
-            
+
             // Check for unwrap() usage
             let unwrap_count = content.matches("unwrap()").count();
             if unwrap_count > 3 {
@@ -879,23 +986,37 @@ impl LanguageAnalyzer for RustAnalyzer {
                     rule: "Rust Error Handling".to_string(),
                     description: format!("{} unwrap() calls detected", unwrap_count),
                     location: None,
-                    suggestion: Some("Consider using proper error handling instead of unwrap()".to_string()),
+                    suggestion: Some(
+                        "Consider using proper error handling instead of unwrap()".to_string(),
+                    ),
                 });
             }
         }
-        
+
         // Calculate complexity score (simplified)
         let complexity_score = if let Some(content) = &modification.content {
             let lines = content.lines().count();
-            if lines > 100 { 0.8 } else if lines > 50 { 0.6 } else { 0.3 }
+            if lines > 100 {
+                0.8
+            } else if lines > 50 {
+                0.6
+            } else {
+                0.3
+            }
         } else {
             0.1
         };
-        
+
         // Calculate surgical change score (simplified)
         let surgical_change_score = if let Some(diff) = &modification.diff {
             let diff_lines = diff.lines().count();
-            if diff_lines > 50 { 0.3 } else if diff_lines > 20 { 0.6 } else { 0.9 }
+            if diff_lines > 50 {
+                0.3
+            } else if diff_lines > 20 {
+                0.6
+            } else {
+                0.9
+            }
         } else {
             0.5
         };
@@ -918,16 +1039,25 @@ impl LanguageAnalyzer for RustAnalyzer {
     fn language(&self) -> ProgrammingLanguage {
         ProgrammingLanguage::Rust
     }
-    
-    fn calculate_change_complexity(&self, diff: &str, _content: Option<&str>) -> Result<ChangeComplexity> {
+
+    fn calculate_change_complexity(
+        &self,
+        diff: &str,
+        _content: Option<&str>,
+    ) -> Result<ChangeComplexity> {
         let diff_lines = diff.lines().count() as u32;
-        let structural_changes = diff.matches("struct ").count() as u32 + diff.matches("impl ").count() as u32;
+        let structural_changes =
+            diff.matches("struct ").count() as u32 + diff.matches("impl ").count() as u32;
         let logical_changes = diff.matches("fn ").count() as u32;
-        let dependency_changes = diff.matches("use ").count() as u32 + diff.matches("mod ").count() as u32;
-        
-        let complexity_score = (structural_changes as f32 * 0.4 + logical_changes as f32 * 0.3 + dependency_changes as f32 * 0.3) / 10.0;
+        let dependency_changes =
+            diff.matches("use ").count() as u32 + diff.matches("mod ").count() as u32;
+
+        let complexity_score = (structural_changes as f32 * 0.4
+            + logical_changes as f32 * 0.3
+            + dependency_changes as f32 * 0.3)
+            / 10.0;
         let is_surgical = complexity_score < 0.5 && diff_lines < 30;
-        
+
         Ok(ChangeComplexity {
             structural_changes,
             logical_changes,
@@ -949,10 +1079,13 @@ impl TypeScriptAnalyzer {
 }
 
 impl LanguageAnalyzer for TypeScriptAnalyzer {
-    fn analyze_file_modification(&self, modification: &FileModification) -> Result<LanguageAnalysisResult> {
+    fn analyze_file_modification(
+        &self,
+        modification: &FileModification,
+    ) -> Result<LanguageAnalysisResult> {
         let violations = Vec::new();
         let mut warnings = Vec::new();
-        
+
         // Analyze TypeScript-specific issues
         if let Some(content) = &modification.content {
             // Check for any usage
@@ -964,7 +1097,7 @@ impl LanguageAnalyzer for TypeScriptAnalyzer {
                     suggestion: Some("Consider using specific types instead of any".to_string()),
                 });
             }
-            
+
             // Check for console.log
             if content.contains("console.log") {
                 warnings.push(LanguageWarning {
@@ -975,19 +1108,31 @@ impl LanguageAnalyzer for TypeScriptAnalyzer {
                 });
             }
         }
-        
+
         // Calculate complexity score (simplified)
         let complexity_score = if let Some(content) = &modification.content {
             let lines = content.lines().count();
-            if lines > 100 { 0.8 } else if lines > 50 { 0.6 } else { 0.3 }
+            if lines > 100 {
+                0.8
+            } else if lines > 50 {
+                0.6
+            } else {
+                0.3
+            }
         } else {
             0.1
         };
-        
+
         // Calculate surgical change score (simplified)
         let surgical_change_score = if let Some(diff) = &modification.diff {
             let diff_lines = diff.lines().count();
-            if diff_lines > 50 { 0.3 } else if diff_lines > 20 { 0.6 } else { 0.9 }
+            if diff_lines > 50 {
+                0.3
+            } else if diff_lines > 20 {
+                0.6
+            } else {
+                0.9
+            }
         } else {
             0.5
         };
@@ -1010,16 +1155,26 @@ impl LanguageAnalyzer for TypeScriptAnalyzer {
     fn language(&self) -> ProgrammingLanguage {
         ProgrammingLanguage::TypeScript
     }
-    
-    fn calculate_change_complexity(&self, diff: &str, _content: Option<&str>) -> Result<ChangeComplexity> {
+
+    fn calculate_change_complexity(
+        &self,
+        diff: &str,
+        _content: Option<&str>,
+    ) -> Result<ChangeComplexity> {
         let diff_lines = diff.lines().count() as u32;
-        let structural_changes = diff.matches("interface ").count() as u32 + diff.matches("class ").count() as u32;
-        let logical_changes = diff.matches("function ").count() as u32 + diff.matches("const ").count() as u32;
-        let dependency_changes = diff.matches("import ").count() as u32 + diff.matches("export ").count() as u32;
-        
-        let complexity_score = (structural_changes as f32 * 0.4 + logical_changes as f32 * 0.3 + dependency_changes as f32 * 0.3) / 10.0;
+        let structural_changes =
+            diff.matches("interface ").count() as u32 + diff.matches("class ").count() as u32;
+        let logical_changes =
+            diff.matches("function ").count() as u32 + diff.matches("const ").count() as u32;
+        let dependency_changes =
+            diff.matches("import ").count() as u32 + diff.matches("export ").count() as u32;
+
+        let complexity_score = (structural_changes as f32 * 0.4
+            + logical_changes as f32 * 0.3
+            + dependency_changes as f32 * 0.3)
+            / 10.0;
         let is_surgical = complexity_score < 0.5 && diff_lines < 30;
-        
+
         Ok(ChangeComplexity {
             structural_changes,
             logical_changes,
@@ -1041,10 +1196,13 @@ impl JavaScriptAnalyzer {
 }
 
 impl LanguageAnalyzer for JavaScriptAnalyzer {
-    fn analyze_file_modification(&self, modification: &FileModification) -> Result<LanguageAnalysisResult> {
+    fn analyze_file_modification(
+        &self,
+        modification: &FileModification,
+    ) -> Result<LanguageAnalysisResult> {
         let mut violations = Vec::new();
         let mut warnings = Vec::new();
-        
+
         // Analyze JavaScript-specific issues
         if let Some(content) = &modification.content {
             // Check for eval usage
@@ -1058,12 +1216,13 @@ impl LanguageAnalyzer for JavaScriptAnalyzer {
                     constitutional_ref: Some(ConstitutionalReference {
                         section: "Security".to_string(),
                         subsection: "Code Injection".to_string(),
-                        description: "eval() can lead to code injection vulnerabilities".to_string(),
+                        description: "eval() can lead to code injection vulnerabilities"
+                            .to_string(),
                         severity: ViolationSeverity::Critical,
                     }),
                 });
             }
-            
+
             // Check for var usage
             if content.contains("var ") {
                 warnings.push(LanguageWarning {
@@ -1074,19 +1233,31 @@ impl LanguageAnalyzer for JavaScriptAnalyzer {
                 });
             }
         }
-        
+
         // Calculate complexity score (simplified)
         let complexity_score = if let Some(content) = &modification.content {
             let lines = content.lines().count();
-            if lines > 100 { 0.8 } else if lines > 50 { 0.6 } else { 0.3 }
+            if lines > 100 {
+                0.8
+            } else if lines > 50 {
+                0.6
+            } else {
+                0.3
+            }
         } else {
             0.1
         };
-        
+
         // Calculate surgical change score (simplified)
         let surgical_change_score = if let Some(diff) = &modification.diff {
             let diff_lines = diff.lines().count();
-            if diff_lines > 50 { 0.3 } else if diff_lines > 20 { 0.6 } else { 0.9 }
+            if diff_lines > 50 {
+                0.3
+            } else if diff_lines > 20 {
+                0.6
+            } else {
+                0.9
+            }
         } else {
             0.5
         };
@@ -1109,16 +1280,26 @@ impl LanguageAnalyzer for JavaScriptAnalyzer {
     fn language(&self) -> ProgrammingLanguage {
         ProgrammingLanguage::JavaScript
     }
-    
-    fn calculate_change_complexity(&self, diff: &str, _content: Option<&str>) -> Result<ChangeComplexity> {
+
+    fn calculate_change_complexity(
+        &self,
+        diff: &str,
+        _content: Option<&str>,
+    ) -> Result<ChangeComplexity> {
         let diff_lines = diff.lines().count() as u32;
-        let structural_changes = diff.matches("class ").count() as u32 + diff.matches("function ").count() as u32;
-        let logical_changes = diff.matches("const ").count() as u32 + diff.matches("let ").count() as u32;
-        let dependency_changes = diff.matches("require(").count() as u32 + diff.matches("import ").count() as u32;
-        
-        let complexity_score = (structural_changes as f32 * 0.4 + logical_changes as f32 * 0.3 + dependency_changes as f32 * 0.3) / 10.0;
+        let structural_changes =
+            diff.matches("class ").count() as u32 + diff.matches("function ").count() as u32;
+        let logical_changes =
+            diff.matches("const ").count() as u32 + diff.matches("let ").count() as u32;
+        let dependency_changes =
+            diff.matches("require(").count() as u32 + diff.matches("import ").count() as u32;
+
+        let complexity_score = (structural_changes as f32 * 0.4
+            + logical_changes as f32 * 0.3
+            + dependency_changes as f32 * 0.3)
+            / 10.0;
         let is_surgical = complexity_score < 0.5 && diff_lines < 30;
-        
+
         Ok(ChangeComplexity {
             structural_changes,
             logical_changes,
@@ -1164,7 +1345,7 @@ mod tests {
     #[tokio::test]
     async fn test_validate_task_spec() {
         let checker = CawsChecker::new();
-        
+
         let task_spec = TaskSpec {
             id: Uuid::new_v4(),
             title: "Test Task".to_string(),
@@ -1177,14 +1358,14 @@ mod tests {
                 domains: vec!["backend".to_string()],
             },
             acceptance_criteria: vec![],
-            context: TaskContext {
+            context: CouncilTaskContext {
                 workspace_root: "/workspace".to_string(),
                 git_branch: "main".to_string(),
                 recent_changes: vec![],
                 dependencies: std::collections::HashMap::new(),
                 environment: Environment::Development,
             },
-            worker_output: WorkerOutput {
+            worker_output: CouncilWorkerOutput {
                 content: "".to_string(),
                 files_modified: vec![],
                 rationale: "".to_string(),
@@ -1210,7 +1391,7 @@ mod tests {
     #[tokio::test]
     async fn test_validate_worker_output() {
         let checker = CawsChecker::new();
-        
+
         let task_spec = TaskSpec {
             id: Uuid::new_v4(),
             title: "Test Task".to_string(),
@@ -1223,14 +1404,14 @@ mod tests {
                 domains: vec!["backend".to_string()],
             },
             acceptance_criteria: vec![],
-            context: TaskContext {
+            context: CouncilTaskContext {
                 workspace_root: "/workspace".to_string(),
                 git_branch: "main".to_string(),
                 recent_changes: vec![],
                 dependencies: std::collections::HashMap::new(),
                 environment: Environment::Development,
             },
-            worker_output: WorkerOutput {
+            worker_output: CouncilCouncilWorkerOutput {
                 content: "Test implementation".to_string(),
                 files_modified: vec![
                     FileModification {
@@ -1239,6 +1420,7 @@ mod tests {
                         content: Some("fn main() {\n    println!(\"test\");\n}".to_string()),
                         diff: None,
                         size_bytes: 50,
+                        checksum: "abc123".to_string(),
                     },
                     FileModification {
                         path: "test2.rs".to_string(),
@@ -1246,6 +1428,7 @@ mod tests {
                         content: Some("fn helper() {\n    // helper function\n}".to_string()),
                         diff: None,
                         size_bytes: 40,
+                        checksum: "def456".to_string(),
                     },
                     FileModification {
                         path: "test3.rs".to_string(),
@@ -1253,6 +1436,7 @@ mod tests {
                         content: Some("fn extra() {\n    // extra function\n}".to_string()),
                         diff: None,
                         size_bytes: 40,
+                        checksum: "def456".to_string(),
                     },
                 ],
                 rationale: "Created three files for the implementation".to_string(),
@@ -1269,7 +1453,10 @@ mod tests {
             caws_spec: None,
         };
 
-        let result = checker.validate_worker_output(&task_spec.worker_output, &task_spec).await.unwrap();
+        let result = checker
+            .validate_worker_output(&task_spec.worker_output, &task_spec)
+            .await
+            .unwrap();
         assert!(!result.is_compliant); // Should fail due to file count exceeding limit
         assert!(result.compliance_score < 1.0);
         assert!(!result.violations.is_empty());
@@ -1278,11 +1465,12 @@ mod tests {
     #[tokio::test]
     async fn test_validate_waiver() {
         let checker = CawsChecker::new();
-        
+
         let valid_waiver = CawsWaiver {
             id: "waiver-001".to_string(),
             reason: "Technical complexity".to_string(),
-            justification: "This is a detailed justification for why the waiver is needed".to_string(),
+            justification: "This is a detailed justification for why the waiver is needed"
+                .to_string(),
             time_bounded: true,
             expires_at: Some(chrono::Utc::now() + chrono::Duration::days(30)),
         };
@@ -1302,17 +1490,16 @@ mod tests {
     #[test]
     fn test_calculate_compliance_score() {
         let checker = CawsChecker::new();
-        
-        let violations = vec![
-            CawsViolation {
-                rule: "Test Rule".to_string(),
-                severity: ViolationSeverity::High,
-                description: "Test violation".to_string(),
-                location: None,
-                suggestion: None,
-            }
-        ];
-        
+
+        let violations = vec![CawsViolation {
+            rule: "Test Rule".to_string(),
+            severity: ViolationSeverity::High,
+            description: "Test violation".to_string(),
+            location: None,
+            suggestion: None,
+            constitutional_ref: Some("Section 2.1".to_string()),
+        }];
+
         let warnings = vec!["Test warning".to_string()];
 
         let score = checker.calculate_compliance_score(&violations, &warnings);

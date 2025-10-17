@@ -3,16 +3,16 @@
 //! This module implements V3's superior quality assessment capabilities that surpass V2's
 //! basic quality checking with predictive quality analysis, trend detection, and regression prevention.
 
-use crate::types::*;
 use crate::models::TaskSpec;
+use crate::types::*;
 use anyhow::Result;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
 use uuid::Uuid;
-use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
 
 /// Predictive Quality Assessor that surpasses V2's basic quality checking
 #[derive(Debug)]
@@ -229,16 +229,24 @@ impl PredictiveQualityAssessor {
     }
 
     /// Predict quality performance for workers (V2 had no prediction)
-    pub async fn predict_quality_performance(&self, workers: &[String], horizon_days: u32) -> Result<Vec<QualityPrediction>> {
-        info!("Predicting quality performance for {} workers over {} days", workers.len(), horizon_days);
-        
+    pub async fn predict_quality_performance(
+        &self,
+        workers: &[String],
+        horizon_days: u32,
+    ) -> Result<Vec<QualityPrediction>> {
+        info!(
+            "Predicting quality performance for {} workers over {} days",
+            workers.len(),
+            horizon_days
+        );
+
         let mut predictions = Vec::new();
-        
+
         for worker_id in workers {
             let prediction = self.predict_worker_quality(worker_id, horizon_days).await?;
             predictions.push(prediction);
         }
-        
+
         debug!("Generated {} quality predictions", predictions.len());
         Ok(predictions)
     }
@@ -246,27 +254,33 @@ impl PredictiveQualityAssessor {
     /// Analyze quality trends across workers (V2 had basic trend analysis)
     pub async fn analyze_quality_trends(&self, workers: &[String]) -> Result<QualityTrendAnalysis> {
         info!("Analyzing quality trends for {} workers", workers.len());
-        
+
         let mut all_trends = Vec::new();
         let mut all_volatilities = Vec::new();
         let mut all_anomalies = Vec::new();
-        
+
         for worker_id in workers {
             let history = self.get_quality_history(worker_id).await?;
-            let trend = self.quality_trend_analyzer.analyze_worker_trend(&history).await?;
+            let trend = self
+                .quality_trend_analyzer
+                .analyze_worker_trend(&history)
+                .await?;
             all_trends.push(trend);
-            
+
             let volatility = self.calculate_volatility(&history.quality_scores);
             all_volatilities.push(volatility);
-            
-            let anomalies = self.quality_trend_analyzer.detect_anomalies(&history).await?;
+
+            let anomalies = self
+                .quality_trend_analyzer
+                .detect_anomalies(&history)
+                .await?;
             all_anomalies.extend(anomalies);
         }
-        
+
         let overall_trend = self.determine_overall_trend(&all_trends);
         let trend_strength = self.calculate_trend_strength(&all_trends);
         let avg_volatility = all_volatilities.iter().sum::<f32>() / all_volatilities.len() as f32;
-        
+
         Ok(QualityTrendAnalysis {
             overall_trend,
             trend_strength,
@@ -278,32 +292,47 @@ impl PredictiveQualityAssessor {
     }
 
     /// Detect quality regressions (V2 had no regression detection)
-    pub async fn detect_quality_regressions(&self, workers: &[String]) -> Result<RegressionDetection> {
-        info!("Detecting quality regressions for {} workers", workers.len());
-        
+    pub async fn detect_quality_regressions(
+        &self,
+        workers: &[String],
+    ) -> Result<RegressionDetection> {
+        info!(
+            "Detecting quality regressions for {} workers",
+            workers.len()
+        );
+
         let mut affected_workers = Vec::new();
         let mut regression_severity: f32 = 0.0;
         let mut potential_causes = Vec::new();
-        
+
         for worker_id in workers {
             let history = self.get_quality_history(worker_id).await?;
-            let regression = self.regression_detector.detect_worker_regression(worker_id, &history).await?;
-            
+            let regression = self
+                .regression_detector
+                .detect_worker_regression(worker_id, &history)
+                .await?;
+
             if regression.regression_detected {
                 affected_workers.push(worker_id.clone());
                 regression_severity = regression_severity.max(regression.regression_severity);
                 potential_causes.extend(regression.potential_causes);
             }
         }
-        
+
         let regression_detected = !affected_workers.is_empty();
-        let mitigation_suggestions = self.generate_mitigation_suggestions(&affected_workers).await?;
-        
+        let mitigation_suggestions = self
+            .generate_mitigation_suggestions(&affected_workers)
+            .await?;
+
         Ok(RegressionDetection {
             regression_detected,
             regression_severity,
             affected_workers,
-            regression_type: if regression_detected { "Quality Decline".to_string() } else { "None".to_string() },
+            regression_type: if regression_detected {
+                "Quality Decline".to_string()
+            } else {
+                "None".to_string()
+            },
             potential_causes,
             mitigation_suggestions,
             detected_at: Utc::now(),
@@ -311,16 +340,24 @@ impl PredictiveQualityAssessor {
     }
 
     /// Generate quality forecast (V2 had no forecasting)
-    pub async fn generate_quality_forecast(&self, workers: &[String], horizon_days: u32) -> Result<QualityForecast> {
-        info!("Generating quality forecast for {} workers over {} days", workers.len(), horizon_days);
-        
+    pub async fn generate_quality_forecast(
+        &self,
+        workers: &[String],
+        horizon_days: u32,
+    ) -> Result<QualityForecast> {
+        info!(
+            "Generating quality forecast for {} workers over {} days",
+            workers.len(),
+            horizon_days
+        );
+
         let mut predicted_quality = HashMap::new();
         let mut confidence_intervals = HashMap::new();
-        
+
         for worker_id in workers {
             let prediction = self.predict_worker_quality(worker_id, horizon_days).await?;
             predicted_quality.insert(worker_id.clone(), prediction.predicted_quality);
-            
+
             let confidence_interval = ConfidenceInterval {
                 lower_bound: prediction.predicted_quality - (prediction.confidence * 0.1),
                 upper_bound: prediction.predicted_quality + (prediction.confidence * 0.1),
@@ -329,9 +366,11 @@ impl PredictiveQualityAssessor {
             };
             confidence_intervals.insert(worker_id.clone(), confidence_interval);
         }
-        
-        let risk_assessment = self.assess_forecast_risk(&predicted_quality, &confidence_intervals).await?;
-        
+
+        let risk_assessment = self
+            .assess_forecast_risk(&predicted_quality, &confidence_intervals)
+            .await?;
+
         Ok(QualityForecast {
             forecast_horizon: horizon_days,
             predicted_quality,
@@ -342,45 +381,72 @@ impl PredictiveQualityAssessor {
     }
 
     /// Update adaptive quality thresholds (V2 had fixed thresholds)
-    pub async fn update_adaptive_thresholds(&self, performance_data: &HashMap<String, f32>) -> Result<()> {
-        info!("Updating adaptive quality thresholds for {} workers", performance_data.len());
-        
+    pub async fn update_adaptive_thresholds(
+        &self,
+        performance_data: &HashMap<String, f32>,
+    ) -> Result<()> {
+        info!(
+            "Updating adaptive quality thresholds for {} workers",
+            performance_data.len()
+        );
+
         for (worker_id, performance) in performance_data {
-            let new_threshold = self.adaptive_thresholds.calculate_adaptive_threshold(worker_id, *performance).await?;
-            self.adaptive_thresholds.set_threshold(worker_id, new_threshold).await?;
+            let new_threshold = self
+                .adaptive_thresholds
+                .calculate_adaptive_threshold(worker_id, *performance)
+                .await?;
+            self.adaptive_thresholds
+                .set_threshold(worker_id, new_threshold)
+                .await?;
         }
-        
-        debug!("Updated adaptive thresholds for {} workers", performance_data.len());
+
+        debug!(
+            "Updated adaptive thresholds for {} workers",
+            performance_data.len()
+        );
         Ok(())
     }
 
     // Private helper methods
-    async fn predict_worker_quality(&self, worker_id: &str, horizon_days: u32) -> Result<QualityPrediction> {
+    async fn predict_worker_quality(
+        &self,
+        worker_id: &str,
+        horizon_days: u32,
+    ) -> Result<QualityPrediction> {
         let history = self.get_quality_history(worker_id).await?;
-        let trend = self.quality_trend_analyzer.analyze_worker_trend(&history).await?;
-        
+        let trend = self
+            .quality_trend_analyzer
+            .analyze_worker_trend(&history)
+            .await?;
+
         // Simple prediction based on trend and recent performance
         let recent_avg = if history.quality_scores.is_empty() {
             0.7
         } else {
-            let recent_scores: Vec<f32> = history.quality_scores.iter().rev().take(5).cloned().collect();
+            let recent_scores: Vec<f32> = history
+                .quality_scores
+                .iter()
+                .rev()
+                .take(5)
+                .cloned()
+                .collect();
             if recent_scores.is_empty() {
                 0.7
             } else {
                 recent_scores.iter().sum::<f32>() / recent_scores.len() as f32
             }
         };
-        
+
         let trend_adjustment = match trend {
             TrendDirection::Improving => 0.05 * (horizon_days as f32 / 30.0),
             TrendDirection::Declining => -0.05 * (horizon_days as f32 / 30.0),
             TrendDirection::Stable => 0.0,
             TrendDirection::Volatile => 0.0, // Volatile trends are hard to predict
         };
-        
+
         let predicted_quality = (recent_avg + trend_adjustment).clamp(0.0, 1.0);
         let confidence = (1.0 - history.volatility).clamp(0.1, 0.95);
-        
+
         Ok(QualityPrediction {
             worker_id: worker_id.to_string(),
             predicted_quality,
@@ -403,7 +469,11 @@ impl PredictiveQualityAssessor {
                 worker_id: worker_id.to_string(),
                 task_type: "general".to_string(),
                 quality_scores: vec![0.7, 0.75, 0.8], // Default progression
-                timestamps: vec![Utc::now() - chrono::Duration::days(2), Utc::now() - chrono::Duration::days(1), Utc::now()],
+                timestamps: vec![
+                    Utc::now() - chrono::Duration::days(2),
+                    Utc::now() - chrono::Duration::days(1),
+                    Utc::now(),
+                ],
                 trend_direction: TrendDirection::Improving,
                 volatility: 0.1,
                 last_updated: Utc::now(),
@@ -415,9 +485,10 @@ impl PredictiveQualityAssessor {
         if scores.len() < 2 {
             return 0.0;
         }
-        
+
         let mean = scores.iter().sum::<f32>() / scores.len() as f32;
-        let variance = scores.iter().map(|&x| (x - mean).powi(2)).sum::<f32>() / scores.len() as f32;
+        let variance =
+            scores.iter().map(|&x| (x - mean).powi(2)).sum::<f32>() / scores.len() as f32;
         variance.sqrt()
     }
 
@@ -426,7 +497,7 @@ impl PredictiveQualityAssessor {
         let mut declining_count = 0;
         let mut stable_count = 0;
         let mut volatile_count = 0;
-        
+
         for trend in trends {
             match trend {
                 TrendDirection::Improving => improving_count += 1,
@@ -435,7 +506,7 @@ impl PredictiveQualityAssessor {
                 TrendDirection::Volatile => volatile_count += 1,
             }
         }
-        
+
         let total = trends.len();
         if improving_count as f32 / total as f32 > 0.5 {
             TrendDirection::Improving
@@ -454,95 +525,128 @@ impl PredictiveQualityAssessor {
         if total == 0 {
             return 0.0;
         }
-        
+
         let dominant_trend = self.determine_overall_trend(trends);
-        let matching_count = trends.iter().filter(|&t| std::mem::discriminant(t) == std::mem::discriminant(&dominant_trend)).count();
-        
+        let matching_count = trends
+            .iter()
+            .filter(|&t| std::mem::discriminant(t) == std::mem::discriminant(&dominant_trend))
+            .count();
+
         matching_count as f32 / total as f32
     }
 
     async fn identify_risk_factors(&self, history: &QualityHistory) -> Result<Vec<String>> {
         let mut risk_factors = Vec::new();
-        
+
         if history.volatility > 0.2 {
             risk_factors.push("High quality volatility".to_string());
         }
-        
+
         if history.quality_scores.len() > 3 {
             let recent_avg = history.quality_scores.iter().rev().take(3).sum::<f32>() / 3.0;
-            let older_avg = history.quality_scores.iter().rev().skip(3).take(3).sum::<f32>() / 3.0;
-            
+            let older_avg = history
+                .quality_scores
+                .iter()
+                .rev()
+                .skip(3)
+                .take(3)
+                .sum::<f32>()
+                / 3.0;
+
             if recent_avg < older_avg - 0.1 {
                 risk_factors.push("Recent quality decline".to_string());
             }
         }
-        
+
         match history.trend_direction {
             TrendDirection::Declining => risk_factors.push("Declining quality trend".to_string()),
             TrendDirection::Volatile => risk_factors.push("Unstable quality pattern".to_string()),
             _ => {}
         }
-        
+
         Ok(risk_factors)
     }
 
-    async fn generate_improvement_suggestions(&self, history: &QualityHistory) -> Result<Vec<String>> {
+    async fn generate_improvement_suggestions(
+        &self,
+        history: &QualityHistory,
+    ) -> Result<Vec<String>> {
         let mut suggestions = Vec::new();
-        
+
         if history.volatility > 0.15 {
             suggestions.push("Focus on consistency training".to_string());
         }
-        
+
         if history.quality_scores.iter().any(|&score| score < 0.7) {
             suggestions.push("Review quality standards and training materials".to_string());
         }
-        
+
         match history.trend_direction {
-            TrendDirection::Declining => suggestions.push("Implement quality improvement plan".to_string()),
-            TrendDirection::Stable => suggestions.push("Consider advanced training opportunities".to_string()),
+            TrendDirection::Declining => {
+                suggestions.push("Implement quality improvement plan".to_string())
+            }
+            TrendDirection::Stable => {
+                suggestions.push("Consider advanced training opportunities".to_string())
+            }
             _ => {}
         }
-        
+
         Ok(suggestions)
     }
 
-    async fn generate_mitigation_suggestions(&self, affected_workers: &[String]) -> Result<Vec<String>> {
+    async fn generate_mitigation_suggestions(
+        &self,
+        affected_workers: &[String],
+    ) -> Result<Vec<String>> {
         let mut suggestions = Vec::new();
-        
+
         if !affected_workers.is_empty() {
             suggestions.push("Implement targeted quality improvement training".to_string());
             suggestions.push("Increase monitoring frequency for affected workers".to_string());
             suggestions.push("Review and update quality standards".to_string());
             suggestions.push("Consider peer mentoring programs".to_string());
         }
-        
+
         Ok(suggestions)
     }
 
-    async fn assess_forecast_risk(&self, predicted_quality: &HashMap<String, f32>, confidence_intervals: &HashMap<String, ConfidenceInterval>) -> Result<RiskAssessment> {
+    async fn assess_forecast_risk(
+        &self,
+        predicted_quality: &HashMap<String, f32>,
+        confidence_intervals: &HashMap<String, ConfidenceInterval>,
+    ) -> Result<RiskAssessment> {
         let mut risk_factors = Vec::new();
         let mut overall_risk: f32 = 0.0;
-        
+
         for (worker_id, quality) in predicted_quality {
             if let Some(interval) = confidence_intervals.get(worker_id) {
-                let risk_level = if *quality < 0.7 { 0.8 } else if *quality < 0.8 { 0.5 } else { 0.2 };
+                let risk_level = if *quality < 0.7 {
+                    0.8
+                } else if *quality < 0.8 {
+                    0.5
+                } else {
+                    0.2
+                };
                 let confidence_risk = 1.0 - interval.confidence_level;
                 let combined_risk = (risk_level + confidence_risk) / 2.0;
-                
+
                 overall_risk = overall_risk.max(combined_risk);
-                
+
                 if combined_risk > 0.6 {
                     risk_factors.push(RiskFactor {
                         factor_name: format!("Low predicted quality for {}", worker_id),
                         risk_level: combined_risk,
                         impact: 0.7,
                         probability: 0.8,
-                        description: format!("Worker {} has low predicted quality with high uncertainty", worker_id),
+                        description: format!(
+                            "Worker {} has low predicted quality with high uncertainty",
+                            worker_id
+                        ),
                     });
                 }
             }
         }
-        
+
         let mitigation_strategies = if overall_risk > 0.6 {
             vec![
                 "Implement proactive quality monitoring".to_string(),
@@ -552,13 +656,13 @@ impl PredictiveQualityAssessor {
         } else {
             vec!["Continue current quality monitoring".to_string()]
         };
-        
+
         let monitoring_recommendations = vec![
             "Daily quality checks for high-risk workers".to_string(),
             "Weekly trend analysis".to_string(),
             "Monthly forecast accuracy review".to_string(),
         ];
-        
+
         Ok(RiskAssessment {
             overall_risk,
             risk_factors,
@@ -592,12 +696,19 @@ impl QualityTrendAnalyzer {
         if history.quality_scores.len() < 3 {
             return Ok(TrendDirection::Stable);
         }
-        
+
         let recent_avg = history.quality_scores.iter().rev().take(3).sum::<f32>() / 3.0;
-        let older_avg = history.quality_scores.iter().rev().skip(3).take(3).sum::<f32>() / 3.0;
-        
+        let older_avg = history
+            .quality_scores
+            .iter()
+            .rev()
+            .skip(3)
+            .take(3)
+            .sum::<f32>()
+            / 3.0;
+
         let difference = recent_avg - older_avg;
-        
+
         if difference > 0.05 {
             Ok(TrendDirection::Improving)
         } else if difference < -0.05 {
@@ -611,31 +722,38 @@ impl QualityTrendAnalyzer {
 
     pub async fn detect_anomalies(&self, history: &QualityHistory) -> Result<Vec<QualityAnomaly>> {
         let mut anomalies = Vec::new();
-        
+
         if history.quality_scores.len() < 3 {
             return Ok(anomalies);
         }
-        
+
         let mean = history.quality_scores.iter().sum::<f32>() / history.quality_scores.len() as f32;
         let std_dev = self.calculate_standard_deviation(&history.quality_scores, mean);
-        
+
         for (i, &score) in history.quality_scores.iter().enumerate() {
             if (score - mean).abs() > 2.0 * std_dev {
                 anomalies.push(QualityAnomaly {
                     timestamp: history.timestamps.get(i).copied().unwrap_or(Utc::now()),
                     anomaly_type: "Quality Outlier".to_string(),
                     severity: ((score - mean).abs() / std_dev).min(3.0),
-                    description: format!("Quality score {} deviates significantly from mean {}", score, mean),
-                    potential_causes: vec!["Unusual task complexity".to_string(), "External factors".to_string()],
+                    description: format!(
+                        "Quality score {} deviates significantly from mean {}",
+                        score, mean
+                    ),
+                    potential_causes: vec![
+                        "Unusual task complexity".to_string(),
+                        "External factors".to_string(),
+                    ],
                 });
             }
         }
-        
+
         Ok(anomalies)
     }
 
     fn calculate_standard_deviation(&self, scores: &[f32], mean: f32) -> f32 {
-        let variance = scores.iter().map(|&x| (x - mean).powi(2)).sum::<f32>() / scores.len() as f32;
+        let variance =
+            scores.iter().map(|&x| (x - mean).powi(2)).sum::<f32>() / scores.len() as f32;
         variance.sqrt()
     }
 }
@@ -649,29 +767,53 @@ impl RegressionDetector {
         }
     }
 
-    pub async fn detect_worker_regression(&self, worker_id: &str, history: &QualityHistory) -> Result<RegressionDetection> {
+    pub async fn detect_worker_regression(
+        &self,
+        worker_id: &str,
+        history: &QualityHistory,
+    ) -> Result<RegressionDetection> {
         let baseline = self.get_baseline_quality(worker_id).await?;
         let recent_avg = if history.quality_scores.is_empty() {
             0.7
         } else {
             history.quality_scores.iter().rev().take(3).sum::<f32>() / 3.0
         };
-        
+
         let quality_drop = baseline - recent_avg;
         let regression_detected = quality_drop > self.regression_threshold;
-        
+
         Ok(RegressionDetection {
             regression_detected,
-            regression_severity: if regression_detected { quality_drop } else { 0.0 },
-            affected_workers: if regression_detected { vec![worker_id.to_string()] } else { vec![] },
-            regression_type: if regression_detected { "Quality Decline".to_string() } else { "None".to_string() },
+            regression_severity: if regression_detected {
+                quality_drop
+            } else {
+                0.0
+            },
+            affected_workers: if regression_detected {
+                vec![worker_id.to_string()]
+            } else {
+                vec![]
+            },
+            regression_type: if regression_detected {
+                "Quality Decline".to_string()
+            } else {
+                "None".to_string()
+            },
             potential_causes: if regression_detected {
-                vec!["Training gap".to_string(), "Task complexity increase".to_string(), "External factors".to_string()]
+                vec![
+                    "Training gap".to_string(),
+                    "Task complexity increase".to_string(),
+                    "External factors".to_string(),
+                ]
             } else {
                 vec![]
             },
             mitigation_suggestions: if regression_detected {
-                vec!["Additional training".to_string(), "Mentoring".to_string(), "Task simplification".to_string()]
+                vec![
+                    "Additional training".to_string(),
+                    "Mentoring".to_string(),
+                    "Task simplification".to_string(),
+                ]
             } else {
                 vec![]
             },
@@ -702,7 +844,11 @@ impl AdaptiveThresholds {
         }
     }
 
-    pub async fn calculate_adaptive_threshold(&self, worker_id: &str, performance: f32) -> Result<f32> {
+    pub async fn calculate_adaptive_threshold(
+        &self,
+        worker_id: &str,
+        performance: f32,
+    ) -> Result<f32> {
         // Adaptive threshold based on historical performance
         let base_threshold = 0.7;
         let performance_adjustment = (performance - 0.8) * 0.1; // Adjust based on performance

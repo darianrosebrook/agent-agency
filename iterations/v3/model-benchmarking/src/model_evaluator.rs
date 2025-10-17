@@ -28,7 +28,11 @@ impl ModelEvaluator {
         })
     }
 
-    pub async fn compare_against_baseline(&self, _model: &ModelSpecification, _metrics: &EvaluationMetrics) -> Result<ComparisonResult> {
+    pub async fn compare_against_baseline(
+        &self,
+        _model: &ModelSpecification,
+        _metrics: &EvaluationMetrics,
+    ) -> Result<ComparisonResult> {
         // TODO: Implement baseline comparison
         Ok(ComparisonResult {
             improvement_percentage: 0.0,
@@ -38,7 +42,12 @@ impl ModelEvaluator {
         })
     }
 
-    pub async fn generate_recommendation(&self, _model: &ModelSpecification, _metrics: &EvaluationMetrics, _comparison: &ComparisonResult) -> Result<ModelRecommendation> {
+    pub async fn generate_recommendation(
+        &self,
+        _model: &ModelSpecification,
+        _metrics: &EvaluationMetrics,
+        _comparison: &ComparisonResult,
+    ) -> Result<ModelRecommendation> {
         // TODO: Implement recommendation generation
         Ok(ModelRecommendation {
             recommendation: RecommendationDecision::Adopt,
@@ -48,4 +57,3 @@ impl ModelEvaluator {
         })
     }
 }
-

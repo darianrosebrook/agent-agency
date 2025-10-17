@@ -26,11 +26,7 @@ pub fn euclidean_distance(a: &[f32], b: &[f32]) -> Result<f32> {
         return Err(anyhow::anyhow!("Vector dimensions must match"));
     }
 
-    let sum_squared_diff: f32 = a
-        .iter()
-        .zip(b.iter())
-        .map(|(x, y)| (x - y).powi(2))
-        .sum();
+    let sum_squared_diff: f32 = a.iter().zip(b.iter()).map(|(x, y)| (x - y).powi(2)).sum();
 
     Ok(sum_squared_diff.sqrt())
 }
@@ -38,7 +34,7 @@ pub fn euclidean_distance(a: &[f32], b: &[f32]) -> Result<f32> {
 /// Normalize a vector to unit length
 pub fn normalize_vector(vector: &mut [f32]) -> Result<()> {
     let norm: f32 = vector.iter().map(|x| x * x).sum::<f32>().sqrt();
-    
+
     if norm == 0.0 {
         return Err(anyhow::anyhow!("Cannot normalize zero vector"));
     }
@@ -77,7 +73,7 @@ pub fn find_similar_embeddings(
 
         // Calculate similarity
         let similarity = cosine_similarity(query_vector, &embedding.vector)?;
-        
+
         if similarity >= threshold {
             results.push(SimilarityResult {
                 embedding: embedding.clone(),
@@ -102,16 +98,18 @@ pub fn average_embedding(embeddings: &[EmbeddingVector]) -> Result<EmbeddingVect
     }
 
     let dimension = embeddings[0].len();
-    
+
     // Verify all embeddings have the same dimension
     for embedding in embeddings {
         if embedding.len() != dimension {
-            return Err(anyhow::anyhow!("All embeddings must have the same dimension"));
+            return Err(anyhow::anyhow!(
+                "All embeddings must have the same dimension"
+            ));
         }
     }
 
     let mut average = vec![0.0; dimension];
-    
+
     for embedding in embeddings {
         for (i, value) in embedding.iter().enumerate() {
             average[i] += value;
@@ -157,18 +155,15 @@ mod tests {
     fn test_normalize_vector() {
         let mut vector = vec![3.0, 4.0, 0.0];
         normalize_vector(&mut vector).unwrap();
-        
+
         let expected_norm: f32 = vector.iter().map(|x| x * x).sum::<f32>().sqrt();
         assert!((expected_norm - 1.0).abs() < 0.001);
     }
 
     #[test]
     fn test_average_embedding() {
-        let embeddings = vec![
-            vec![1.0, 2.0, 3.0],
-            vec![3.0, 4.0, 5.0],
-        ];
-        
+        let embeddings = vec![vec![1.0, 2.0, 3.0], vec![3.0, 4.0, 5.0]];
+
         let average = average_embedding(&embeddings).unwrap();
         assert_eq!(average, vec![2.0, 3.0, 4.0]);
     }

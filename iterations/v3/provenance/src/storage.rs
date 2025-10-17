@@ -114,56 +114,57 @@ impl super::service::ProvenanceStorage for InMemoryProvenanceStorage {
 
     async fn query_records(&self, query: &ProvenanceQuery) -> Result<Vec<ProvenanceRecord>> {
         tracing::info!("Querying provenance records from memory");
-        
+
         let mut results = Vec::new();
-        
+
         for record in self.records.values() {
             let mut matches = true;
-            
+
             if let Some(task_id) = query.task_id {
                 if record.task_id != task_id {
                     matches = false;
                 }
             }
-            
+
             if let Some(verdict_id) = query.verdict_id {
                 if record.verdict_id != verdict_id {
                     matches = false;
                 }
             }
-            
+
             if let Some(ref time_range) = query.time_range {
                 if record.timestamp < time_range.start || record.timestamp > time_range.end {
                     matches = false;
                 }
             }
-            
+
             if matches {
                 results.push(record.clone());
             }
         }
-        
+
         // Apply limit and offset
         let offset = query.offset.unwrap_or(0) as usize;
         let limit = query.limit.unwrap_or(1000) as usize;
-        
+
         results.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
-        
+
         let start = offset;
         let end = std::cmp::min(start + limit, results.len());
-        
+
         Ok(results[start..end].to_vec())
     }
 
     async fn get_statistics(&self, time_range: Option<TimeRange>) -> Result<ProvenanceStats> {
         let records: Vec<&ProvenanceRecord> = if let Some(ref range) = time_range {
-            self.records.values()
+            self.records
+                .values()
                 .filter(|record| record.timestamp >= range.start && record.timestamp <= range.end)
                 .collect()
         } else {
             self.records.values().collect()
         };
-        
+
         if records.is_empty() {
             return Ok(ProvenanceStats {
                 total_records: 0,
@@ -180,28 +181,32 @@ impl super::service::ProvenanceStorage for InMemoryProvenanceStorage {
                 }),
             });
         }
-        
+
         let total_records = records.len() as u64;
         let total_verdicts = records.len() as u64;
-        
-        let accepted_count = records.iter()
-            .filter(|r| r.is_accepted())
-            .count();
+
+        let accepted_count = records.iter().filter(|r| r.is_accepted()).count();
         let acceptance_rate = accepted_count as f32 / total_records as f32;
-        
-        let average_consensus_score = records.iter()
-            .map(|r| r.consensus_score)
-            .sum::<f32>() / total_records as f32;
-        
-        let average_compliance_score = records.iter()
+
+        let average_consensus_score =
+            records.iter().map(|r| r.consensus_score).sum::<f32>() / total_records as f32;
+
+        let average_compliance_score = records
+            .iter()
             .map(|r| r.caws_compliance.compliance_score)
-            .sum::<f32>() / total_records as f32;
-        
-        let average_verification_quality = records.iter()
+            .sum::<f32>()
+            / total_records as f32;
+
+        let average_verification_quality = records
+            .iter()
             .filter_map(|r| r.claim_verification.as_ref())
             .map(|v| v.verification_quality)
-            .sum::<f32>() / records.iter().filter(|r| r.claim_verification.is_some()).count() as f32;
-        
+            .sum::<f32>()
+            / records
+                .iter()
+                .filter(|r| r.claim_verification.is_some())
+                .count() as f32;
+
         // Find most active judge
         let mut judge_counts: HashMap<String, u32> = HashMap::new();
         for record in &records {
@@ -209,12 +214,13 @@ impl super::service::ProvenanceStorage for InMemoryProvenanceStorage {
                 *judge_counts.entry(judge_id.clone()).or_insert(0) += 1;
             }
         }
-        
-        let most_active_judge = judge_counts.iter()
+
+        let most_active_judge = judge_counts
+            .iter()
             .max_by_key(|(_, count)| *count)
             .map(|(judge_id, _)| judge_id.clone())
             .unwrap_or_else(|| "Unknown".to_string());
-        
+
         // Calculate common violations
         let mut violation_counts: HashMap<String, u32> = HashMap::new();
         for record in &records {
@@ -222,8 +228,9 @@ impl super::service::ProvenanceStorage for InMemoryProvenanceStorage {
                 *violation_counts.entry(violation.rule.clone()).or_insert(0) += 1;
             }
         }
-        
-        let mut common_violations = violation_counts.iter()
+
+        let mut common_violations = violation_counts
+            .iter()
             .map(|(rule, count)| ViolationStats {
                 rule: rule.clone(),
                 count: *count as u64,
@@ -231,10 +238,10 @@ impl super::service::ProvenanceStorage for InMemoryProvenanceStorage {
                 average_resolution_time_ms: 0.0,
             })
             .collect::<Vec<_>>();
-        
+
         common_violations.sort_by(|a, b| b.count.cmp(&a.count));
         common_violations.truncate(10); // Top 10 violations
-        
+
         Ok(ProvenanceStats {
             total_records,
             total_verdicts,
@@ -266,13 +273,13 @@ mod tests {
     #[tokio::test]
     async fn test_in_memory_storage() {
         let storage = InMemoryProvenanceStorage::new();
-        
+
         let record = create_test_provenance_record();
         storage.store_record(&record).await.unwrap();
-        
+
         let retrieved = storage.get_record(record.id).await.unwrap();
         assert!(retrieved.is_some());
-        
+
         let query = ProvenanceQuery {
             task_id: Some(record.task_id),
             verdict_id: None,
@@ -283,7 +290,7 @@ mod tests {
             limit: None,
             offset: None,
         };
-        
+
         let results = storage.query_records(&query).await.unwrap();
         assert!(!results.is_empty());
     }
@@ -291,7 +298,7 @@ mod tests {
     #[tokio::test]
     async fn test_in_memory_statistics() {
         let storage = InMemoryProvenanceStorage::new();
-        
+
         let stats = storage.get_statistics(None).await.unwrap();
         assert_eq!(stats.total_records, 0);
         assert_eq!(stats.acceptance_rate, 0.0);
@@ -332,4 +339,3 @@ mod tests {
         }
     }
 }
-

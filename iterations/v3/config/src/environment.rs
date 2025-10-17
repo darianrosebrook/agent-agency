@@ -1,9 +1,9 @@
 //! Environment-specific configuration management
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{info, warn, error, debug};
+use tracing::{debug, error, info, warn};
 
 /// Environment types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -101,13 +101,17 @@ impl EnvironmentManager {
     }
 
     /// Load environment-specific configuration
-    pub fn load_environment_config(&mut self, environment: Environment, config: HashMap<String, serde_json::Value>) {
+    pub fn load_environment_config(
+        &mut self,
+        environment: Environment,
+        config: HashMap<String, serde_json::Value>,
+    ) {
         let env_config = EnvironmentConfig {
             environment,
             config: config.clone(),
             overrides: HashMap::new(),
         };
-        
+
         self.configs.insert(environment, env_config);
         info!("Loaded configuration for environment: {}", environment);
     }
@@ -121,38 +125,41 @@ impl EnvironmentManager {
     /// Get configuration for current environment
     pub fn get_current_config(&self) -> HashMap<String, serde_json::Value> {
         let mut config = self.default_config.clone();
-        
+
         if let Some(env_config) = self.configs.get(&self.current_environment) {
             // Merge environment-specific config
             for (key, value) in &env_config.config {
                 config.insert(key.clone(), value.clone());
             }
-            
+
             // Apply overrides
             for (key, value) in &env_config.overrides {
                 config.insert(key.clone(), value.clone());
             }
         }
-        
+
         config
     }
 
     /// Get configuration for specific environment
-    pub fn get_environment_config(&self, environment: Environment) -> HashMap<String, serde_json::Value> {
+    pub fn get_environment_config(
+        &self,
+        environment: Environment,
+    ) -> HashMap<String, serde_json::Value> {
         let mut config = self.default_config.clone();
-        
+
         if let Some(env_config) = self.configs.get(&environment) {
             // Merge environment-specific config
             for (key, value) in &env_config.config {
                 config.insert(key.clone(), value.clone());
             }
-            
+
             // Apply overrides
             for (key, value) in &env_config.overrides {
                 config.insert(key.clone(), value.clone());
             }
         }
-        
+
         config
     }
 
@@ -160,7 +167,10 @@ impl EnvironmentManager {
     pub fn override_config(&mut self, key: String, value: serde_json::Value) {
         if let Some(env_config) = self.configs.get_mut(&self.current_environment) {
             env_config.overrides.insert(key.clone(), value.clone());
-            info!("Overridden configuration for {}: {}", self.current_environment, key);
+            info!(
+                "Overridden configuration for {}: {}",
+                self.current_environment, key
+            );
         } else {
             // Create new environment config if it doesn't exist
             let mut env_config = EnvironmentConfig {
@@ -179,7 +189,10 @@ impl EnvironmentManager {
         if let Some(env_config) = self.configs.get_mut(&self.current_environment) {
             let removed = env_config.overrides.remove(key).is_some();
             if removed {
-                info!("Removed configuration override for {}: {}", self.current_environment, key);
+                info!(
+                    "Removed configuration override for {}: {}",
+                    self.current_environment, key
+                );
             }
             removed
         } else {
@@ -220,7 +233,8 @@ impl EnvironmentManager {
     /// Get environment-specific database URL
     pub fn get_database_url(&self) -> String {
         let config = self.get_current_config();
-        config.get("database.url")
+        config
+            .get("database.url")
             .and_then(|v| v.as_str())
             .unwrap_or("postgresql://localhost:5432/agent_agency")
             .to_string()
@@ -229,7 +243,8 @@ impl EnvironmentManager {
     /// Get environment-specific server port
     pub fn get_server_port(&self) -> u16 {
         let config = self.get_current_config();
-        config.get("server.port")
+        config
+            .get("server.port")
             .and_then(|v| v.as_u64())
             .unwrap_or(8080) as u16
     }
@@ -237,7 +252,8 @@ impl EnvironmentManager {
     /// Get environment-specific JWT secret
     pub fn get_jwt_secret(&self) -> String {
         let config = self.get_current_config();
-        config.get("security.jwt_secret")
+        config
+            .get("security.jwt_secret")
             .and_then(|v| v.as_str())
             .unwrap_or("change-me-in-production")
             .to_string()
@@ -262,26 +278,28 @@ impl EnvironmentManager {
     /// Get environment-specific cache TTL
     pub fn get_cache_ttl(&self) -> u64 {
         let config = self.get_current_config();
-        config.get("cache.default_ttl_secs")
+        config
+            .get("cache.default_ttl_secs")
             .and_then(|v| v.as_u64())
             .unwrap_or(match self.current_environment {
-                Environment::Development => 60,   // 1 minute
-                Environment::Staging => 300,      // 5 minutes
-                Environment::Production => 3600,  // 1 hour
-                Environment::Test => 0,           // No cache
+                Environment::Development => 60,  // 1 minute
+                Environment::Staging => 300,     // 5 minutes
+                Environment::Production => 3600, // 1 hour
+                Environment::Test => 0,          // No cache
             })
     }
 
     /// Get environment-specific metrics collection interval
     pub fn get_metrics_interval(&self) -> u64 {
         let config = self.get_current_config();
-        config.get("metrics.collection_interval_secs")
+        config
+            .get("metrics.collection_interval_secs")
             .and_then(|v| v.as_u64())
             .unwrap_or(match self.current_environment {
-                Environment::Development => 30,   // 30 seconds
-                Environment::Staging => 60,       // 1 minute
-                Environment::Production => 300,   // 5 minutes
-                Environment::Test => 10,          // 10 seconds
+                Environment::Development => 30, // 30 seconds
+                Environment::Staging => 60,     // 1 minute
+                Environment::Production => 300, // 5 minutes
+                Environment::Test => 10,        // 10 seconds
             })
     }
 }
@@ -296,7 +314,7 @@ pub mod detection {
             .or_else(|_| std::env::var("NODE_ENV"))
             .or_else(|_| std::env::var("ENVIRONMENT"))
             .unwrap_or_else(|_| "development".to_string());
-        
+
         Environment::from_str(&env_str)
     }
 
@@ -309,10 +327,8 @@ pub mod detection {
 
     /// Detect environment from hostname
     pub fn detect_from_hostname() -> Result<Environment> {
-        let hostname = hostname::get()?
-            .to_string_lossy()
-            .to_lowercase();
-        
+        let hostname = hostname::get()?.to_string_lossy().to_lowercase();
+
         if hostname.contains("prod") || hostname.contains("production") {
             Ok(Environment::Production)
         } else if hostname.contains("staging") || hostname.contains("stage") {
@@ -330,12 +346,12 @@ pub mod detection {
         if let Ok(env) = detect_from_env() {
             return Ok(env);
         }
-        
+
         // Try file detection
         if let Ok(env) = detect_from_file(".env") {
             return Ok(env);
         }
-        
+
         // Fallback to hostname detection
         detect_from_hostname()
     }
@@ -348,145 +364,276 @@ pub mod presets {
     /// Get development configuration preset
     pub fn development_config() -> HashMap<String, serde_json::Value> {
         let mut config = HashMap::new();
-        
+
         // Database
-        config.insert("database.url".to_string(), serde_json::Value::String("postgresql://localhost:5432/agent_agency_dev".to_string()));
-        config.insert("database.max_connections".to_string(), serde_json::Value::Number(5.into()));
-        
+        config.insert(
+            "database.url".to_string(),
+            serde_json::Value::String("postgresql://localhost:5432/agent_agency_dev".to_string()),
+        );
+        config.insert(
+            "database.max_connections".to_string(),
+            serde_json::Value::Number(5.into()),
+        );
+
         // Server
-        config.insert("server.port".to_string(), serde_json::Value::Number(3000.into()));
-        config.insert("server.host".to_string(), serde_json::Value::String("localhost".to_string()));
-        
+        config.insert(
+            "server.port".to_string(),
+            serde_json::Value::Number(3000.into()),
+        );
+        config.insert(
+            "server.host".to_string(),
+            serde_json::Value::String("localhost".to_string()),
+        );
+
         // Logging
-        config.insert("logging.level".to_string(), serde_json::Value::String("debug".to_string()));
-        config.insert("logging.format".to_string(), serde_json::Value::String("pretty".to_string()));
-        
+        config.insert(
+            "logging.level".to_string(),
+            serde_json::Value::String("debug".to_string()),
+        );
+        config.insert(
+            "logging.format".to_string(),
+            serde_json::Value::String("pretty".to_string()),
+        );
+
         // Security
-        config.insert("security.jwt_secret".to_string(), serde_json::Value::String("dev-secret-key".to_string()));
-        config.insert("security.rate_limit_per_minute".to_string(), serde_json::Value::Number(1000.into()));
-        
+        config.insert(
+            "security.jwt_secret".to_string(),
+            serde_json::Value::String("dev-secret-key".to_string()),
+        );
+        config.insert(
+            "security.rate_limit_per_minute".to_string(),
+            serde_json::Value::Number(1000.into()),
+        );
+
         // Cache
-        config.insert("cache.default_ttl_secs".to_string(), serde_json::Value::Number(60.into()));
-        
+        config.insert(
+            "cache.default_ttl_secs".to_string(),
+            serde_json::Value::Number(60.into()),
+        );
+
         // Metrics
-        config.insert("metrics.collection_interval_secs".to_string(), serde_json::Value::Number(30.into()));
-        
+        config.insert(
+            "metrics.collection_interval_secs".to_string(),
+            serde_json::Value::Number(30.into()),
+        );
+
         config
     }
 
     /// Get staging configuration preset
     pub fn staging_config() -> HashMap<String, serde_json::Value> {
         let mut config = HashMap::new();
-        
+
         // Database
-        config.insert("database.url".to_string(), serde_json::Value::String("postgresql://staging-db:5432/agent_agency_staging".to_string()));
-        config.insert("database.max_connections".to_string(), serde_json::Value::Number(20.into()));
-        
+        config.insert(
+            "database.url".to_string(),
+            serde_json::Value::String(
+                "postgresql://staging-db:5432/agent_agency_staging".to_string(),
+            ),
+        );
+        config.insert(
+            "database.max_connections".to_string(),
+            serde_json::Value::Number(20.into()),
+        );
+
         // Server
-        config.insert("server.port".to_string(), serde_json::Value::Number(8080.into()));
-        config.insert("server.host".to_string(), serde_json::Value::String("0.0.0.0".to_string()));
-        
+        config.insert(
+            "server.port".to_string(),
+            serde_json::Value::Number(8080.into()),
+        );
+        config.insert(
+            "server.host".to_string(),
+            serde_json::Value::String("0.0.0.0".to_string()),
+        );
+
         // Logging
-        config.insert("logging.level".to_string(), serde_json::Value::String("info".to_string()));
-        config.insert("logging.format".to_string(), serde_json::Value::String("json".to_string()));
-        
+        config.insert(
+            "logging.level".to_string(),
+            serde_json::Value::String("info".to_string()),
+        );
+        config.insert(
+            "logging.format".to_string(),
+            serde_json::Value::String("json".to_string()),
+        );
+
         // Security
-        config.insert("security.jwt_secret".to_string(), serde_json::Value::String("staging-secret-key".to_string()));
-        config.insert("security.rate_limit_per_minute".to_string(), serde_json::Value::Number(500.into()));
-        
+        config.insert(
+            "security.jwt_secret".to_string(),
+            serde_json::Value::String("staging-secret-key".to_string()),
+        );
+        config.insert(
+            "security.rate_limit_per_minute".to_string(),
+            serde_json::Value::Number(500.into()),
+        );
+
         // Cache
-        config.insert("cache.default_ttl_secs".to_string(), serde_json::Value::Number(300.into()));
-        
+        config.insert(
+            "cache.default_ttl_secs".to_string(),
+            serde_json::Value::Number(300.into()),
+        );
+
         // Metrics
-        config.insert("metrics.collection_interval_secs".to_string(), serde_json::Value::Number(60.into()));
-        
+        config.insert(
+            "metrics.collection_interval_secs".to_string(),
+            serde_json::Value::Number(60.into()),
+        );
+
         config
     }
 
     /// Get production configuration preset
     pub fn production_config() -> HashMap<String, serde_json::Value> {
         let mut config = HashMap::new();
-        
+
         // Database
-        config.insert("database.url".to_string(), serde_json::Value::String("postgresql://prod-db:5432/agent_agency_prod".to_string()));
-        config.insert("database.max_connections".to_string(), serde_json::Value::Number(50.into()));
-        
+        config.insert(
+            "database.url".to_string(),
+            serde_json::Value::String("postgresql://prod-db:5432/agent_agency_prod".to_string()),
+        );
+        config.insert(
+            "database.max_connections".to_string(),
+            serde_json::Value::Number(50.into()),
+        );
+
         // Server
-        config.insert("server.port".to_string(), serde_json::Value::Number(8080.into()));
-        config.insert("server.host".to_string(), serde_json::Value::String("0.0.0.0".to_string()));
-        
+        config.insert(
+            "server.port".to_string(),
+            serde_json::Value::Number(8080.into()),
+        );
+        config.insert(
+            "server.host".to_string(),
+            serde_json::Value::String("0.0.0.0".to_string()),
+        );
+
         // Logging
-        config.insert("logging.level".to_string(), serde_json::Value::String("warn".to_string()));
-        config.insert("logging.format".to_string(), serde_json::Value::String("json".to_string()));
-        
+        config.insert(
+            "logging.level".to_string(),
+            serde_json::Value::String("warn".to_string()),
+        );
+        config.insert(
+            "logging.format".to_string(),
+            serde_json::Value::String("json".to_string()),
+        );
+
         // Security
-        config.insert("security.jwt_secret".to_string(), serde_json::Value::String("production-secret-key".to_string()));
-        config.insert("security.rate_limit_per_minute".to_string(), serde_json::Value::Number(100.into()));
-        
+        config.insert(
+            "security.jwt_secret".to_string(),
+            serde_json::Value::String("production-secret-key".to_string()),
+        );
+        config.insert(
+            "security.rate_limit_per_minute".to_string(),
+            serde_json::Value::Number(100.into()),
+        );
+
         // Cache
-        config.insert("cache.default_ttl_secs".to_string(), serde_json::Value::Number(3600.into()));
-        
+        config.insert(
+            "cache.default_ttl_secs".to_string(),
+            serde_json::Value::Number(3600.into()),
+        );
+
         // Metrics
-        config.insert("metrics.collection_interval_secs".to_string(), serde_json::Value::Number(300.into()));
-        
+        config.insert(
+            "metrics.collection_interval_secs".to_string(),
+            serde_json::Value::Number(300.into()),
+        );
+
         config
     }
 
     /// Get test configuration preset
     pub fn test_config() -> HashMap<String, serde_json::Value> {
         let mut config = HashMap::new();
-        
+
         // Database
-        config.insert("database.url".to_string(), serde_json::Value::String("postgresql://localhost:5432/agent_agency_test".to_string()));
-        config.insert("database.max_connections".to_string(), serde_json::Value::Number(2.into()));
-        
+        config.insert(
+            "database.url".to_string(),
+            serde_json::Value::String("postgresql://localhost:5432/agent_agency_test".to_string()),
+        );
+        config.insert(
+            "database.max_connections".to_string(),
+            serde_json::Value::Number(2.into()),
+        );
+
         // Server
-        config.insert("server.port".to_string(), serde_json::Value::Number(0.into())); // Random port
-        config.insert("server.host".to_string(), serde_json::Value::String("localhost".to_string()));
-        
+        config.insert(
+            "server.port".to_string(),
+            serde_json::Value::Number(0.into()),
+        ); // Random port
+        config.insert(
+            "server.host".to_string(),
+            serde_json::Value::String("localhost".to_string()),
+        );
+
         // Logging
-        config.insert("logging.level".to_string(), serde_json::Value::String("error".to_string()));
-        config.insert("logging.format".to_string(), serde_json::Value::String("json".to_string()));
-        
+        config.insert(
+            "logging.level".to_string(),
+            serde_json::Value::String("error".to_string()),
+        );
+        config.insert(
+            "logging.format".to_string(),
+            serde_json::Value::String("json".to_string()),
+        );
+
         // Security
-        config.insert("security.jwt_secret".to_string(), serde_json::Value::String("test-secret-key".to_string()));
-        config.insert("security.rate_limit_per_minute".to_string(), serde_json::Value::Number(10000.into()));
-        
+        config.insert(
+            "security.jwt_secret".to_string(),
+            serde_json::Value::String("test-secret-key".to_string()),
+        );
+        config.insert(
+            "security.rate_limit_per_minute".to_string(),
+            serde_json::Value::Number(10000.into()),
+        );
+
         // Cache
-        config.insert("cache.default_ttl_secs".to_string(), serde_json::Value::Number(0.into())); // No cache
-        
+        config.insert(
+            "cache.default_ttl_secs".to_string(),
+            serde_json::Value::Number(0.into()),
+        ); // No cache
+
         // Metrics
-        config.insert("metrics.collection_interval_secs".to_string(), serde_json::Value::Number(10.into()));
-        
+        config.insert(
+            "metrics.collection_interval_secs".to_string(),
+            serde_json::Value::Number(10.into()),
+        );
+
         config
     }
 }
 
 /// Global environment manager instance
-static ENVIRONMENT_MANAGER: once_cell::sync::OnceCell<EnvironmentManager> = once_cell::sync::OnceCell::new();
+static ENVIRONMENT_MANAGER: once_cell::sync::OnceCell<EnvironmentManager> =
+    once_cell::sync::OnceCell::new();
 
 /// Initialize the global environment manager
 pub fn init_environment_manager(environment: Environment) -> Result<()> {
     let mut manager = EnvironmentManager::new(environment);
-    
+
     // Load environment-specific presets
     match environment {
-        Environment::Development => manager.load_environment_config(environment, presets::development_config()),
-        Environment::Staging => manager.load_environment_config(environment, presets::staging_config()),
-        Environment::Production => manager.load_environment_config(environment, presets::production_config()),
+        Environment::Development => {
+            manager.load_environment_config(environment, presets::development_config())
+        }
+        Environment::Staging => {
+            manager.load_environment_config(environment, presets::staging_config())
+        }
+        Environment::Production => {
+            manager.load_environment_config(environment, presets::production_config())
+        }
         Environment::Test => manager.load_environment_config(environment, presets::test_config()),
     }
-    
-    ENVIRONMENT_MANAGER.set(manager)
+
+    ENVIRONMENT_MANAGER
+        .set(manager)
         .map_err(|_| anyhow!("Environment manager already initialized"))?;
-    
+
     info!("Environment manager initialized for: {}", environment);
     Ok(())
 }
 
 /// Get the global environment manager
 pub fn get_environment_manager() -> Result<&'static EnvironmentManager> {
-    ENVIRONMENT_MANAGER.get()
+    ENVIRONMENT_MANAGER
+        .get()
         .ok_or_else(|| anyhow!("Environment manager not initialized"))
 }
 

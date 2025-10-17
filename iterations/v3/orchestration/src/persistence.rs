@@ -1,5 +1,5 @@
-use anyhow::Result;
 use agent_agency_council::types::*;
+use anyhow::Result;
 
 /// Placeholder trait for verdict persistence
 #[async_trait::async_trait]
@@ -13,7 +13,10 @@ pub struct InMemoryWriter;
 
 #[async_trait::async_trait]
 impl VerdictWriter for InMemoryWriter {
-    async fn persist_verdict(&self, _task_id: &str, _verdict: &FinalVerdict) -> Result<()> { Ok(()) }
-    async fn persist_waivers(&self, _task_id: &str, _waivers: &[CawsWaiver]) -> Result<()> { Ok(()) }
+    async fn persist_verdict(&self, _task_id: &str, _verdict: &FinalVerdict) -> Result<()> {
+        Ok(())
+    }
+    async fn persist_waivers(&self, _task_id: &str, _waivers: &[CawsWaiver]) -> Result<()> {
+        Ok(())
+    }
 }
-

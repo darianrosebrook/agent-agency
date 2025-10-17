@@ -13,7 +13,7 @@ pub type VerdictId = Uuid;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RiskTier {
     Tier1, // Critical - Auth, billing, migrations
-    Tier2, // Standard - Features, APIs, data writes  
+    Tier2, // Standard - Features, APIs, data writes
     Tier3, // Low risk - UI, internal tools
 }
 
@@ -49,10 +49,10 @@ pub struct Violation {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ViolationSeverity {
-    Critical,    // Blocking violation
-    Major,       // Significant issue
-    Minor,       // Minor issue
-    Warning,     // Best practice violation
+    Critical, // Blocking violation
+    Major,    // Significant issue
+    Minor,    // Minor issue
+    Warning,  // Best practice violation
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -133,9 +133,9 @@ pub struct AcceptanceCriterion {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VerificationMethod {
-    Automated,  // Tests, lints, etc.
-    Manual,     // Human review
-    Hybrid,     // Automated + manual
+    Automated, // Tests, lints, etc.
+    Manual,    // Human review
+    Hybrid,    // Automated + manual
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -309,9 +309,9 @@ pub struct DebateArgument {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ArgumentPosition {
-    Support,    // Supporting the verdict
-    Oppose,     // Opposing the verdict
-    Neutral,    // Neutral or seeking clarification
+    Support, // Supporting the verdict
+    Oppose,  // Opposing the verdict
+    Neutral, // Neutral or seeking clarification
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

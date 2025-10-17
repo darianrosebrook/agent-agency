@@ -28,25 +28,21 @@ pub struct CommitInfo {
 #[async_trait]
 pub trait GitIntegration: Send + Sync {
     /// Add a git trailer to a commit
-    async fn add_trailer_to_commit(
-        &self,
-        commit_hash: &str,
-        trailer: &str,
-    ) -> Result<String>;
-    
+    async fn add_trailer_to_commit(&self, commit_hash: &str, trailer: &str) -> Result<String>;
+
     /// Create a new commit with provenance trailer
     async fn create_provenance_commit(
         &self,
         message: &str,
         provenance_record: &ProvenanceRecord,
     ) -> Result<String>;
-    
+
     /// Verify git trailer exists
     async fn verify_trailer(&self, commit_hash: &str, trailer: &str) -> Result<bool>;
-    
+
     /// Get commit information by trailer
     async fn get_commit_by_trailer(&self, trailer: &str) -> Result<Option<CommitInfo>>;
-    
+
     /// List commits with provenance trailers
     async fn list_provenance_commits(&self) -> Result<Vec<CommitInfo>>;
 }
@@ -67,8 +63,7 @@ impl GitTrailerManager {
         auto_commit: bool,
         commit_message_template: String,
     ) -> Result<Self> {
-        let repository = Repository::open(repo_path)
-            .context("Failed to open git repository")?;
+        let repository = Repository::open(repo_path).context("Failed to open git repository")?;
 
         Ok(Self {
             repository: Mutex::new(repository),
@@ -83,7 +78,10 @@ impl GitTrailerManager {
         self.commit_message_template
             .replace("{verdict_id}", &provenance_record.verdict_id.to_string())
             .replace("{decision}", &provenance_record.decision.decision_type())
-            .replace("{consensus_score}", &provenance_record.consensus_score.to_string())
+            .replace(
+                "{consensus_score}",
+                &provenance_record.consensus_score.to_string(),
+            )
             .replace("{timestamp}", &provenance_record.timestamp.to_rfc3339())
     }
 
@@ -91,11 +89,14 @@ impl GitTrailerManager {
     fn create_signature(&self) -> Result<Signature> {
         let repo = self.repository.lock().unwrap();
         let config = repo.config()?;
-        let name = config.get_string("user.name").unwrap_or_else(|_| "Agent Agency V3".to_string());
-        let email = config.get_string("user.email").unwrap_or_else(|_| "agent-agency@localhost".to_string());
-        
-        Signature::now(&name, &email)
-            .context("Failed to create git signature")
+        let name = config
+            .get_string("user.name")
+            .unwrap_or_else(|_| "Agent Agency V3".to_string());
+        let email = config
+            .get_string("user.email")
+            .unwrap_or_else(|_| "agent-agency@localhost".to_string());
+
+        Signature::now(&name, &email).context("Failed to create git signature")
     }
 
     /// Get current branch reference (simplified for now)
@@ -127,26 +128,26 @@ impl GitIntegration for GitTrailerManager {
         // 1. Finding the commit
         // 2. Creating a new commit with the trailer added to the message
         // 3. Updating the branch reference
-        
+
         let commit = self.repository.find_commit(
             git2::Oid::from_str(commit_hash)
                 .context("Invalid commit hash")?
         )?;
-        
+
         // Get the current commit message
         let mut message = commit.message()
             .context("Commit has no message")?
             .to_string();
-        
+
         // Add the trailer if not already present
         if !message.contains(trailer) {
             message.push_str(&format!("\n\n{}", trailer));
         }
-        
+
         // Create new commit with trailer
         let signature = self.create_signature()?;
         let tree = commit.tree()?;
-        
+
         let new_commit_id = self.repository.commit(
             Some(&format!("refs/heads/{}", self.branch)),
             &signature,
@@ -155,7 +156,7 @@ impl GitIntegration for GitTrailerManager {
             &tree,
             &[&commit],
         )?;
-        
+
         Ok(new_commit_id.to_string())
     }
 
@@ -171,14 +172,14 @@ impl GitIntegration for GitTrailerManager {
         let signature = self.create_signature()?;
         let head_commit = self.get_head_commit()?;
         let tree = head_commit.tree()?;
-        
+
         // Generate commit message with trailer
         let commit_message = format!(
             "{}\n\n{}",
             message,
             provenance_record.git_trailer
         );
-        
+
         let new_commit_id = self.repository.commit(
             Some(&format!("refs/heads/{}", self.branch)),
             &signature,
@@ -187,7 +188,7 @@ impl GitIntegration for GitTrailerManager {
             &tree,
             &[&head_commit],
         )?;
-        
+
         Ok(new_commit_id.to_string())
     }
 
@@ -196,21 +197,21 @@ impl GitIntegration for GitTrailerManager {
             git2::Oid::from_str(commit_hash)
                 .context("Invalid commit hash")?
         )?;
-        
+
         let message = commit.message()
             .context("Commit has no message")?;
-        
+
         Ok(message.contains(trailer))
     }
 
     async fn get_commit_by_trailer(&self, trailer: &str) -> Result<Option<CommitInfo>> {
         let mut revwalk = self.repository.revwalk()?;
         revwalk.push_head()?;
-        
+
         for commit_id in revwalk {
             let commit_id = commit_id?;
             let commit = self.repository.find_commit(commit_id)?;
-            
+
             if let Some(message) = commit.message() {
                 if message.contains(trailer) {
                     return Ok(Some(CommitInfo {
@@ -226,7 +227,7 @@ impl GitIntegration for GitTrailerManager {
                 }
             }
         }
-        
+
         Ok(None)
     }
 
@@ -234,17 +235,17 @@ impl GitIntegration for GitTrailerManager {
         let mut commits = Vec::new();
         let mut revwalk = self.repository.revwalk()?;
         revwalk.push_head()?;
-        
+
         for commit_id in revwalk {
             let commit_id = commit_id?;
             let commit = self.repository.find_commit(commit_id)?;
-            
+
             if let Some(message) = commit.message() {
                 if message.contains("CAWS-VERDICT-ID:") {
                     if let Some(trailer_start) = message.find("CAWS-VERDICT-ID:") {
                         let trailer_line = &message[trailer_start..];
                         let trailer = trailer_line.lines().next().unwrap_or("").to_string();
-                        
+
                         commits.push(CommitInfo {
                             hash: commit_id.to_string(),
                             message: message.to_string(),
@@ -259,7 +260,7 @@ impl GitIntegration for GitTrailerManager {
                 }
             }
         }
-        
+
         Ok(commits)
     }
 }
@@ -294,21 +295,21 @@ impl GitUtils {
     pub fn get_repository_status(repo: &Repository) -> Result<RepositoryStatus> {
         let head = repo.head()?;
         let current_branch = head.shorthand().unwrap_or("HEAD").to_string();
-        
+
         let mut status_options = git2::StatusOptions::new();
         status_options.include_untracked(true);
         status_options.include_ignored(false);
-        
+
         let statuses = repo.statuses(Some(&mut status_options))?;
         let is_clean = statuses.is_empty();
-        
+
         let mut uncommitted_changes = Vec::new();
         for entry in statuses.iter() {
             if let Some(path) = entry.path() {
                 uncommitted_changes.push(path.to_string());
             }
         }
-        
+
         let last_commit = if let Ok(commit) = repo.head()?.peel_to_commit() {
             Some(CommitInfo {
                 hash: commit.id().to_string(),
@@ -323,10 +324,10 @@ impl GitUtils {
         } else {
             None
         };
-        
+
         // Count provenance commits
         let provenance_commits_count = Self::count_provenance_commits(repo)?;
-        
+
         Ok(RepositoryStatus {
             is_clean,
             current_branch,
@@ -341,18 +342,18 @@ impl GitUtils {
         let mut count = 0;
         let mut revwalk = repo.revwalk()?;
         revwalk.push_head()?;
-        
+
         for commit_id in revwalk {
             let commit_id = commit_id?;
             let commit = repo.find_commit(commit_id)?;
-            
+
             if let Some(message) = commit.message() {
                 if message.contains("CAWS-VERDICT-ID:") {
                     count += 1;
                 }
             }
         }
-        
+
         Ok(count)
     }
 
@@ -361,7 +362,7 @@ impl GitUtils {
         if let Some(start) = trailer.find("CAWS-VERDICT-ID:") {
             let verdict_part = &trailer[start + 16..]; // Length of "CAWS-VERDICT-ID:"
             let verdict_id = verdict_part.trim();
-            
+
             Uuid::parse_str(verdict_id)
                 .context("Invalid verdict ID in git trailer")
         } else {
@@ -384,10 +385,10 @@ mod tests {
     fn test_git_utils_trailer_creation_and_extraction() {
         let verdict_id = Uuid::new_v4();
         let trailer = GitUtils::create_trailer_from_verdict_id(verdict_id);
-        
+
         assert!(trailer.contains("CAWS-VERDICT-ID:"));
         assert!(trailer.contains(&verdict_id.to_string()));
-        
+
         let extracted_id = GitUtils::extract_verdict_id_from_trailer(&trailer).unwrap();
         assert_eq!(extracted_id, verdict_id);
     }
@@ -402,10 +403,10 @@ mod tests {
     async fn test_git_trailer_manager_creation() {
         let temp_dir = TempDir::new().unwrap();
         let repo_path = temp_dir.path();
-        
+
         // Initialize a git repository
         let _repo = GitUtils::init_repository(repo_path).unwrap();
-        
+
         // Create trailer manager
         let manager = GitTrailerManager::new(
             repo_path,
@@ -413,11 +414,11 @@ mod tests {
             true,
             "Test commit: {verdict_id}".to_string(),
         ).unwrap();
-        
+
         // Test commit message generation
         let provenance_record = create_test_provenance_record();
         let message = manager.generate_commit_message(&provenance_record);
-        
+
         assert!(message.contains(&provenance_record.verdict_id.to_string()));
     }
 
@@ -460,5 +461,3 @@ mod tests {
     }
 }
 */
-
-

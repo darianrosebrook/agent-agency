@@ -2,11 +2,13 @@
 
 use anyhow::Result;
 use std::sync::Arc;
-use tracing::{info, debug};
+use tracing::{debug, info};
 
+use crate::fixtures::{TestDataGenerator, TestFixtures};
+use crate::mocks::{
+    MockDatabase, MockEventEmitter, MockFactory, MockHttpClient, MockMetricsCollector,
+};
 use crate::test_utils::{TestExecutor, TestResult, DEFAULT_TEST_TIMEOUT};
-use crate::fixtures::{TestFixtures, TestDataGenerator};
-use crate::mocks::{MockFactory, MockDatabase, MockEventEmitter, MockMetricsCollector, MockHttpClient};
 
 /// Cross-component integration test suite
 pub struct CrossComponentIntegrationTests {
@@ -37,28 +39,40 @@ impl CrossComponentIntegrationTests {
         // Test Council ↔ Claim Extraction integration
         results.push(
             self.executor
-                .execute("council_claim_extraction_integration", self.test_council_claim_extraction_integration())
+                .execute(
+                    "council_claim_extraction_integration",
+                    self.test_council_claim_extraction_integration(),
+                )
                 .await,
         );
 
         // Test Research ↔ Knowledge Base integration
         results.push(
             self.executor
-                .execute("research_knowledge_integration", self.test_research_knowledge_integration())
+                .execute(
+                    "research_knowledge_integration",
+                    self.test_research_knowledge_integration(),
+                )
                 .await,
         );
 
         // Test Orchestration ↔ Council integration
         results.push(
             self.executor
-                .execute("orchestration_council_integration", self.test_orchestration_council_integration())
+                .execute(
+                    "orchestration_council_integration",
+                    self.test_orchestration_council_integration(),
+                )
                 .await,
         );
 
         // Test Workers ↔ CAWS Compliance integration
         results.push(
             self.executor
-                .execute("workers_caws_integration", self.test_workers_caws_integration())
+                .execute(
+                    "workers_caws_integration",
+                    self.test_workers_caws_integration(),
+                )
                 .await,
         );
 
@@ -406,22 +420,37 @@ mod tests {
     #[tokio::test]
     async fn test_mock_data_setup() {
         let tests = CrossComponentIntegrationTests::new();
-        
+
         let working_spec = TestFixtures::working_spec();
         let task_context = TestFixtures::task_context();
-        
-        tests.mock_db.insert("spec-123".to_string(), working_spec).await.unwrap();
-        tests.mock_db.insert("context-123".to_string(), task_context).await.unwrap();
-        
+
+        tests
+            .mock_db
+            .insert("spec-123".to_string(), working_spec)
+            .await
+            .unwrap();
+        tests
+            .mock_db
+            .insert("context-123".to_string(), task_context)
+            .await
+            .unwrap();
+
         assert_eq!(tests.mock_db.count().await, 2);
     }
 
     #[tokio::test]
     async fn test_event_emission() {
         let tests = CrossComponentIntegrationTests::new();
-        
-        tests.mock_events.emit("test_event".to_string(), serde_json::json!({"test": "data"})).await.unwrap();
-        
+
+        tests
+            .mock_events
+            .emit(
+                "test_event".to_string(),
+                serde_json::json!({"test": "data"}),
+            )
+            .await
+            .unwrap();
+
         let events = tests.mock_events.get_events_by_type("test_event").await;
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].event_type, "test_event");

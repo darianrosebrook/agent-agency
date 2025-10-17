@@ -1,9 +1,9 @@
 //! Worker pool types and data structures
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// Worker types in the pool
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -48,8 +48,8 @@ pub struct WorkerCapabilities {
     pub max_output_length: u32,
     pub supported_formats: Vec<String>,
     pub caws_awareness: f32, // 0.0 to 1.0
-    pub quality_score: f32, // 0.0 to 1.0
-    pub speed_score: f32, // 0.0 to 1.0
+    pub quality_score: f32,  // 0.0 to 1.0
+    pub speed_score: f32,    // 0.0 to 1.0
 }
 
 /// Worker performance metrics
@@ -281,14 +281,41 @@ pub struct WorkerAssignment {
 /// Worker pool events for monitoring
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum WorkerPoolEvent {
-    WorkerRegistered { worker: Worker },
-    WorkerDeregistered { worker_id: Uuid },
-    WorkerStatusChanged { worker_id: Uuid, old_status: WorkerStatus, new_status: WorkerStatus },
-    TaskAssigned { task_id: Uuid, worker_id: Uuid },
-    TaskCompleted { task_id: Uuid, worker_id: Uuid, result: TaskExecutionResult },
-    TaskFailed { task_id: Uuid, worker_id: Uuid, error: String },
-    HealthCheckFailed { worker_id: Uuid, error: String },
-    PerformanceThresholdExceeded { worker_id: Uuid, metric: String, value: f64, threshold: f64 },
+    WorkerRegistered {
+        worker: Worker,
+    },
+    WorkerDeregistered {
+        worker_id: Uuid,
+    },
+    WorkerStatusChanged {
+        worker_id: Uuid,
+        old_status: WorkerStatus,
+        new_status: WorkerStatus,
+    },
+    TaskAssigned {
+        task_id: Uuid,
+        worker_id: Uuid,
+    },
+    TaskCompleted {
+        task_id: Uuid,
+        worker_id: Uuid,
+        result: TaskExecutionResult,
+    },
+    TaskFailed {
+        task_id: Uuid,
+        worker_id: Uuid,
+        error: String,
+    },
+    HealthCheckFailed {
+        worker_id: Uuid,
+        error: String,
+    },
+    PerformanceThresholdExceeded {
+        worker_id: Uuid,
+        metric: String,
+        value: f64,
+        threshold: f64,
+    },
 }
 
 /// Worker configuration for registration
@@ -391,7 +418,9 @@ impl Worker {
         let language_score = if requirements.required_languages.is_empty() {
             1.0
         } else {
-            let matches = requirements.required_languages.iter()
+            let matches = requirements
+                .required_languages
+                .iter()
                 .filter(|lang| self.capabilities.languages.contains(lang))
                 .count();
             matches as f32 / requirements.required_languages.len() as f32
@@ -403,7 +432,9 @@ impl Worker {
         let framework_score = if requirements.required_frameworks.is_empty() {
             1.0
         } else {
-            let matches = requirements.required_frameworks.iter()
+            let matches = requirements
+                .required_frameworks
+                .iter()
                 .filter(|framework| self.capabilities.frameworks.contains(framework))
                 .count();
             matches as f32 / requirements.required_frameworks.len() as f32
@@ -415,7 +446,9 @@ impl Worker {
         let domain_score = if requirements.required_domains.is_empty() {
             1.0
         } else {
-            let matches = requirements.required_domains.iter()
+            let matches = requirements
+                .required_domains
+                .iter()
                 .filter(|domain| self.capabilities.domains.contains(domain))
                 .count();
             matches as f32 / requirements.required_domains.len() as f32
@@ -455,18 +488,27 @@ impl Worker {
         }
 
         // Update average execution time
-        let total_time = self.performance_metrics.average_execution_time_ms * (self.performance_metrics.total_tasks - 1) as f64;
-        self.performance_metrics.average_execution_time_ms = (total_time + result.execution_time_ms as f64) / self.performance_metrics.total_tasks as f64;
+        let total_time = self.performance_metrics.average_execution_time_ms
+            * (self.performance_metrics.total_tasks - 1) as f64;
+        self.performance_metrics.average_execution_time_ms = (total_time
+            + result.execution_time_ms as f64)
+            / self.performance_metrics.total_tasks as f64;
 
         // Update average quality score
         if let Some(output) = &result.output {
-            let total_quality = self.performance_metrics.average_quality_score * (self.performance_metrics.total_tasks - 1) as f32;
-            self.performance_metrics.average_quality_score = (total_quality + output.self_assessment.quality_score) / self.performance_metrics.total_tasks as f32;
+            let total_quality = self.performance_metrics.average_quality_score
+                * (self.performance_metrics.total_tasks - 1) as f32;
+            self.performance_metrics.average_quality_score = (total_quality
+                + output.self_assessment.quality_score)
+                / self.performance_metrics.total_tasks as f32;
         }
 
         // Update average CAWS compliance
-        let total_compliance = self.performance_metrics.average_caws_compliance * (self.performance_metrics.total_tasks - 1) as f32;
-        self.performance_metrics.average_caws_compliance = (total_compliance + result.caws_compliance.compliance_score) / self.performance_metrics.total_tasks as f32;
+        let total_compliance = self.performance_metrics.average_caws_compliance
+            * (self.performance_metrics.total_tasks - 1) as f32;
+        self.performance_metrics.average_caws_compliance = (total_compliance
+            + result.caws_compliance.compliance_score)
+            / self.performance_metrics.total_tasks as f32;
 
         self.performance_metrics.last_task_at = Some(result.completed_at);
     }
@@ -593,7 +635,7 @@ mod tests {
         };
 
         assert!(worker.can_handle_task(&requirements));
-        
+
         let capability_score = worker.calculate_capability_score(&requirements);
         assert!(capability_score > 0.8); // Should be high for good match
     }

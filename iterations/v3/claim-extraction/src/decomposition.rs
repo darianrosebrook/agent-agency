@@ -1,11 +1,11 @@
 //! Stage 3: Atomic Claim Decomposition
-//! 
+//!
 //! Breaks down sentences into atomic, verifiable claims and adds
 //! contextual brackets for proper scope. Based on V2 decomposition logic.
 
 use crate::types::*;
 use anyhow::Result;
-use tracing::{info, warn, debug};
+use tracing::{debug, info, warn};
 
 /// Stage 3: Decomposition into atomic claims
 #[derive(Debug)]
@@ -32,12 +32,13 @@ impl DecompositionStage {
 
         // Extract atomic claims
         let atomic_claims = self.extract_atomic_claims(sentence, context).await?;
-        
+
         // Add contextual brackets to each claim
         let mut enhanced_claims = Vec::new();
         for mut claim in atomic_claims {
             let implied_context = self.build_implied_context(context);
-            self.add_contextual_brackets(&mut claim, &implied_context).await?;
+            self.add_contextual_brackets(&mut claim, &implied_context)
+                .await?;
             enhanced_claims.push(claim);
         }
 
@@ -58,10 +59,22 @@ impl DecompositionStage {
         let mut claims = Vec::new();
 
         // Extract different types of claims
-        claims.extend(self.claim_extractor.extract_factual_claims(disambiguated_sentence)?);
-        claims.extend(self.claim_extractor.extract_procedural_claims(disambiguated_sentence)?);
-        claims.extend(self.claim_extractor.extract_technical_claims(disambiguated_sentence, context)?);
-        claims.extend(self.claim_extractor.extract_constitutional_claims(disambiguated_sentence)?);
+        claims.extend(
+            self.claim_extractor
+                .extract_factual_claims(disambiguated_sentence)?,
+        );
+        claims.extend(
+            self.claim_extractor
+                .extract_procedural_claims(disambiguated_sentence)?,
+        );
+        claims.extend(
+            self.claim_extractor
+                .extract_technical_claims(disambiguated_sentence, context)?,
+        );
+        claims.extend(
+            self.claim_extractor
+                .extract_constitutional_claims(disambiguated_sentence)?,
+        );
 
         Ok(claims)
     }
@@ -74,23 +87,32 @@ impl DecompositionStage {
     ) -> Result<()> {
         // Add domain context brackets
         for domain in &implied_context.domain_context {
-            claim.contextual_brackets.push(format!("[domain: {}]", domain));
+            claim
+                .contextual_brackets
+                .push(format!("[domain: {}]", domain));
         }
 
         // Add scope context brackets
         claim.contextual_brackets.push(format!(
             "[scope: {}]",
-            implied_context.scope_context.component_boundaries.join(", ")
+            implied_context
+                .scope_context
+                .component_boundaries
+                .join(", ")
         ));
 
         // Add verification context brackets
         for method in &implied_context.verification_context.verification_methods {
-            claim.contextual_brackets.push(format!("[verification: {:?}]", method));
+            claim
+                .contextual_brackets
+                .push(format!("[verification: {:?}]", method));
         }
 
         // Add temporal context if available
         if let Some(temporal) = &implied_context.temporal_context {
-            claim.contextual_brackets.push(format!("[timeframe: {}]", temporal.timeframe));
+            claim
+                .contextual_brackets
+                .push(format!("[timeframe: {}]", temporal.timeframe));
         }
 
         Ok(())
@@ -145,11 +167,14 @@ impl DecompositionStage {
 
         let total_confidence: f64 = claims.iter().map(|claim| claim.confidence).sum();
         let average_confidence = total_confidence / claims.len() as f64;
-        
+
         // Boost confidence for claims with contextual brackets
-        let contextual_boost = claims.iter()
+        let contextual_boost = claims
+            .iter()
             .filter(|claim| !claim.contextual_brackets.is_empty())
-            .count() as f64 / claims.len() as f64 * 0.2;
+            .count() as f64
+            / claims.len() as f64
+            * 0.2;
 
         (average_confidence + contextual_boost).min(1.0)
     }
@@ -169,18 +194,28 @@ impl ClaimExtractor {
         Self {
             factual_patterns: vec![
                 regex::Regex::new(r"\b(is|are|was|were|has|have|had)\s+([^.!?]+)").unwrap(),
-                regex::Regex::new(r"\b(contains|includes|excludes|equals|matches|differs)\s+([^.!?]+)").unwrap(),
+                regex::Regex::new(
+                    r"\b(contains|includes|excludes|equals|matches|differs)\s+([^.!?]+)",
+                )
+                .unwrap(),
             ],
             procedural_patterns: vec![
                 regex::Regex::new(r"\b(should|must|can|cannot|will|shall)\s+([^.!?]+)").unwrap(),
-                regex::Regex::new(r"\b(processes|handles|manages|creates|updates|deletes)\s+([^.!?]+)").unwrap(),
+                regex::Regex::new(
+                    r"\b(processes|handles|manages|creates|updates|deletes)\s+([^.!?]+)",
+                )
+                .unwrap(),
             ],
             technical_patterns: vec![
                 regex::Regex::new(r"\b(function|method|class|interface|type)\s+([^.!?]+)").unwrap(),
-                regex::Regex::new(r"\b(implements|extends|inherits|overrides|calls|returns)\s+([^.!?]+)").unwrap(),
+                regex::Regex::new(
+                    r"\b(implements|extends|inherits|overrides|calls|returns)\s+([^.!?]+)",
+                )
+                .unwrap(),
             ],
             constitutional_patterns: vec![
-                regex::Regex::new(r"\b(CAWS|constitutional|compliance|validation)\s+([^.!?]+)").unwrap(),
+                regex::Regex::new(r"\b(CAWS|constitutional|compliance|validation)\s+([^.!?]+)")
+                    .unwrap(),
                 regex::Regex::new(r"\b(working spec|risk tier|change budget)\s+([^.!?]+)").unwrap(),
             ],
         }
@@ -188,7 +223,7 @@ impl ClaimExtractor {
 
     fn extract_factual_claims(&self, sentence: &str) -> Result<Vec<AtomicClaim>> {
         let mut claims = Vec::new();
-        
+
         for pattern in &self.factual_patterns {
             for mat in pattern.find_iter(sentence) {
                 let claim_text = mat.as_str().to_string();
@@ -207,13 +242,13 @@ impl ClaimExtractor {
                 });
             }
         }
-        
+
         Ok(claims)
     }
 
     fn extract_procedural_claims(&self, sentence: &str) -> Result<Vec<AtomicClaim>> {
         let mut claims = Vec::new();
-        
+
         for pattern in &self.procedural_patterns {
             for mat in pattern.find_iter(sentence) {
                 let claim_text = mat.as_str().to_string();
@@ -232,13 +267,17 @@ impl ClaimExtractor {
                 });
             }
         }
-        
+
         Ok(claims)
     }
 
-    fn extract_technical_claims(&self, sentence: &str, context: &ProcessingContext) -> Result<Vec<AtomicClaim>> {
+    fn extract_technical_claims(
+        &self,
+        sentence: &str,
+        context: &ProcessingContext,
+    ) -> Result<Vec<AtomicClaim>> {
         let mut claims = Vec::new();
-        
+
         for pattern in &self.technical_patterns {
             for mat in pattern.find_iter(sentence) {
                 let claim_text = mat.as_str().to_string();
@@ -257,13 +296,13 @@ impl ClaimExtractor {
                 });
             }
         }
-        
+
         Ok(claims)
     }
 
     fn extract_constitutional_claims(&self, sentence: &str) -> Result<Vec<AtomicClaim>> {
         let mut claims = Vec::new();
-        
+
         for pattern in &self.constitutional_patterns {
             for mat in pattern.find_iter(sentence) {
                 let claim_text = mat.as_str().to_string();
@@ -282,7 +321,7 @@ impl ClaimExtractor {
                 });
             }
         }
-        
+
         Ok(claims)
     }
 }

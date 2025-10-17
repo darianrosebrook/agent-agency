@@ -12,4 +12,3 @@ impl ProgressTracker {
         Self {}
     }
 }
-

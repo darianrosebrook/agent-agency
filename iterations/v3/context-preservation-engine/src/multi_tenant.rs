@@ -1,7 +1,7 @@
 use crate::types::*;
 use anyhow::Result;
-use tracing::{debug, warn, error};
 use std::collections::HashMap;
+use tracing::{debug, error, warn};
 
 /// Multi-tenant manager for managing tenant-specific context operations
 #[derive(Debug)]
@@ -22,17 +22,20 @@ impl MultiTenantManager {
         // Initialize default tenant if configured
         if !config.multi_tenant.default_tenant_id.is_empty() {
             let default_tenant_id = config.multi_tenant.default_tenant_id.clone();
-            tenant_cache.insert(default_tenant_id.clone(), TenantInfo {
-                tenant_id: default_tenant_id.clone(),
-                limits: TenantLimits {
-                    max_contexts: 1000,
-                    max_context_size: 1024 * 1024, // 1MB
-                    retention_hours: 24,
-                    max_concurrent_operations: 10,
+            tenant_cache.insert(
+                default_tenant_id.clone(),
+                TenantInfo {
+                    tenant_id: default_tenant_id.clone(),
+                    limits: TenantLimits {
+                        max_contexts: 1000,
+                        max_context_size: 1024 * 1024, // 1MB
+                        retention_hours: 24,
+                        max_concurrent_operations: 10,
+                    },
+                    isolation_level: config.multi_tenant.isolation_level.clone(),
+                    allow_cross_tenant_sharing: config.multi_tenant.allow_cross_tenant_sharing,
                 },
-                isolation_level: config.multi_tenant.isolation_level.clone(),
-                allow_cross_tenant_sharing: config.multi_tenant.allow_cross_tenant_sharing,
-            });
+            );
         }
 
         Ok(Self {
@@ -68,7 +71,9 @@ impl MultiTenantManager {
         debug!("Checking tenant limits for: {}", tenant_id);
 
         // Get tenant info
-        let tenant_info = self.tenant_cache.get(tenant_id)
+        let tenant_info = self
+            .tenant_cache
+            .get(tenant_id)
             .ok_or_else(|| anyhow::anyhow!("Tenant not found: {}", tenant_id))?;
 
         // Check context size limit

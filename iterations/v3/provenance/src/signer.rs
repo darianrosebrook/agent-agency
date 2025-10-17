@@ -20,13 +20,13 @@ use crate::types::ProvenanceRecord;
 pub trait SignerTrait: Send + Sync {
     /// Sign a provenance record
     async fn sign(&self, record: &ProvenanceRecord) -> Result<String>;
-    
+
     /// Verify a provenance record signature
     async fn verify(&self, record: &ProvenanceRecord, signature: &str) -> Result<bool>;
-    
+
     /// Get the signer's key ID
     fn key_id(&self) -> &str;
-    
+
     /// Get the signing algorithm
     fn algorithm(&self) -> SigningAlgorithm;
 }
@@ -85,10 +85,10 @@ impl JwsSigner {
         key_id: String,
         algorithm: SigningAlgorithm,
     ) -> Result<Self> {
-        let encoding_key = EncodingKey::from_rsa_pem(key_data)
-            .context("Failed to parse encoding key from PEM")?;
-        let decoding_key = DecodingKey::from_rsa_pem(key_data)
-            .context("Failed to parse decoding key from PEM")?;
+        let encoding_key =
+            EncodingKey::from_rsa_pem(key_data).context("Failed to parse encoding key from PEM")?;
+        let decoding_key =
+            DecodingKey::from_rsa_pem(key_data).context("Failed to parse decoding key from PEM")?;
 
         Ok(Self {
             key_id,
@@ -126,20 +126,19 @@ impl SignerTrait for JwsSigner {
     async fn sign(&self, record: &ProvenanceRecord) -> Result<String> {
         let header = Header::new(self.algorithm.to_jwt_algorithm());
         let claims = self.create_claims(record);
-        
-        encode(&header, &claims, &self.encoding_key)
-            .context("Failed to encode JWT")
+
+        encode(&header, &claims, &self.encoding_key).context("Failed to encode JWT")
     }
 
     async fn verify(&self, record: &ProvenanceRecord, signature: &str) -> Result<bool> {
         let validation = Validation::new(self.algorithm.to_jwt_algorithm());
-        
+
         match decode::<JwtClaims>(signature, &self.decoding_key, &validation) {
             Ok(token) => {
                 let claims = token.claims;
-                Ok(claims.provenance.verdict_id == record.verdict_id &&
-                   claims.provenance.task_id == record.task_id &&
-                   claims.provenance.timestamp == record.timestamp)
+                Ok(claims.provenance.verdict_id == record.verdict_id
+                    && claims.provenance.task_id == record.task_id
+                    && claims.provenance.timestamp == record.timestamp)
             }
             Err(_) => Ok(false),
         }
@@ -157,13 +156,13 @@ impl SignerTrait for JwsSigner {
 /// JWT claims structure
 #[derive(Debug, Serialize, Deserialize)]
 struct JwtClaims {
-    iss: String,  // Issuer
-    sub: String,  // Subject (verdict ID)
-    aud: String,  // Audience
-    exp: usize,   // Expiration time
-    nbf: usize,   // Not before
-    iat: usize,   // Issued at
-    jti: String,  // JWT ID (provenance record ID)
+    iss: String, // Issuer
+    sub: String, // Subject (verdict ID)
+    aud: String, // Audience
+    exp: usize,  // Expiration time
+    nbf: usize,  // Not before
+    iat: usize,  // Issued at
+    jti: String, // JWT ID (provenance record ID)
     provenance: ProvenancePayload,
 }
 
@@ -189,8 +188,8 @@ impl LocalKeySigner {
     /// Create a new local key signer
     pub fn new(key_id: String) -> Result<Self> {
         let rng = ring::rand::SystemRandom::new();
-        let pkcs8_bytes = Ed25519KeyPair::generate_pkcs8(&rng)
-            .context("Failed to generate Ed25519 key pair")?;
+        let pkcs8_bytes =
+            Ed25519KeyPair::generate_pkcs8(&rng).context("Failed to generate Ed25519 key pair")?;
         let key_pair = Ed25519KeyPair::from_pkcs8(pkcs8_bytes.as_ref())
             .context("Failed to create Ed25519 key pair from PKCS8")?;
 
@@ -228,10 +227,10 @@ impl SignerTrait for LocalKeySigner {
     async fn sign(&self, record: &ProvenanceRecord) -> Result<String> {
         // Create signing data from record
         let signing_data = self.create_signing_data(record)?;
-        
+
         // Sign the data
         let signature = self.sign_data(&signing_data)?;
-        
+
         // Encode as base64
         Ok(general_purpose::STANDARD.encode(signature))
     }
@@ -241,10 +240,10 @@ impl SignerTrait for LocalKeySigner {
         let signature_bytes = general_purpose::STANDARD
             .decode(signature)
             .context("Failed to decode signature")?;
-        
+
         // Create signing data from record
         let signing_data = self.create_signing_data(record)?;
-        
+
         // Verify signature
         Ok(self.verify_signature(&signing_data, &signature_bytes))
     }
@@ -272,8 +271,7 @@ impl LocalKeySigner {
             key_id: self.key_id.clone(),
         };
 
-        serde_json::to_vec(&signing_payload)
-            .context("Failed to serialize signing payload")
+        serde_json::to_vec(&signing_payload).context("Failed to serialize signing payload")
     }
 }
 
@@ -331,27 +329,27 @@ impl SignerFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
     use std::fs;
+    use tempfile::TempDir;
 
     #[tokio::test]
     async fn test_local_key_signer_sign_and_verify() {
         let signer = LocalKeySigner::new("test-key".to_string()).unwrap();
-        
+
         let record = create_test_provenance_record();
-        
+
         // Sign the record
         let signature = signer.sign(&record).await.unwrap();
         assert!(!signature.is_empty());
-        
+
         // Verify the signature
         let is_valid = signer.verify(&record, &signature).await.unwrap();
         assert!(is_valid);
-        
+
         // Test with modified record (should fail)
         let mut modified_record = record.clone();
         modified_record.consensus_score = 0.5; // Change the score
-        
+
         let is_valid_modified = signer.verify(&modified_record, &signature).await.unwrap();
         assert!(!is_valid_modified);
     }
@@ -359,7 +357,7 @@ mod tests {
     #[tokio::test]
     async fn test_signer_key_id_and_algorithm() {
         let signer = LocalKeySigner::new("test-key".to_string()).unwrap();
-        
+
         assert_eq!(signer.key_id(), "test-key");
         assert_eq!(signer.algorithm(), SigningAlgorithm::EdDSA);
     }
@@ -409,4 +407,3 @@ mod tests {
         }
     }
 }
-

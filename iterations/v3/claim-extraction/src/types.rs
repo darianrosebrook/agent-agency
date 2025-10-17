@@ -1,8 +1,8 @@
 //! Types for claim extraction and verification pipeline
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// Context for claim processing operations
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -193,19 +193,19 @@ pub struct VerificationResult {
 pub enum ClaimExtractionError {
     #[error("Disambiguation failed: {0}")]
     DisambiguationFailed(String),
-    
+
     #[error("Qualification failed: {0}")]
     QualificationFailed(String),
-    
+
     #[error("Decomposition failed: {0}")]
     DecompositionFailed(String),
-    
+
     #[error("Verification failed: {0}")]
     VerificationFailed(String),
-    
+
     #[error("Evidence collection failed: {0}")]
     EvidenceCollectionFailed(String),
-    
+
     #[error("Council integration failed: {0}")]
     CouncilIntegrationFailed(String),
 }
@@ -289,9 +289,9 @@ pub struct SourceRequirement {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum AuthorityLevel {
-    Primary,    // Direct source
-    Secondary,  // Referenced source
-    Tertiary,   // Background context
+    Primary,   // Direct source
+    Secondary, // Referenced source
+    Tertiary,  // Background context
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

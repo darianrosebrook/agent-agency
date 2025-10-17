@@ -2,7 +2,6 @@
  * @fileoverview Core workspace state manager implementation
  * @author @darianrosebrook
  */
-
 use crate::types::*;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
@@ -40,15 +39,22 @@ impl WorkspaceStateManager {
         let start_time = Instant::now();
         let mut warnings = Vec::new();
 
-        info!("Starting workspace state capture for {:?}", self.workspace_root);
+        info!(
+            "Starting workspace state capture for {:?}",
+            self.workspace_root
+        );
 
         // Validate workspace path
         if !self.workspace_root.exists() {
-            return Err(WorkspaceError::InvalidWorkspacePath(self.workspace_root.clone()));
+            return Err(WorkspaceError::InvalidWorkspacePath(
+                self.workspace_root.clone(),
+            ));
         }
 
         if !self.workspace_root.is_dir() {
-            return Err(WorkspaceError::InvalidWorkspacePath(self.workspace_root.clone()));
+            return Err(WorkspaceError::InvalidWorkspacePath(
+                self.workspace_root.clone(),
+            ));
         }
 
         // Create new state ID
@@ -110,7 +116,10 @@ impl WorkspaceStateManager {
 
         info!(
             "Successfully captured workspace state {:?} with {} files, {} directories, {} bytes",
-            state_id, total_files, state.directories.len(), total_size
+            state_id,
+            total_files,
+            state.directories.len(),
+            total_size
         );
 
         Ok(WorkspaceResult::with_warnings(
@@ -139,7 +148,10 @@ impl WorkspaceStateManager {
         let start_time = Instant::now();
         let mut warnings = Vec::new();
 
-        debug!("Computing diff between states {:?} and {:?}", from_state, to_state);
+        debug!(
+            "Computing diff between states {:?} and {:?}",
+            from_state, to_state
+        );
 
         // Get both states
         let from = self.storage.get_state(from_state).await?;
@@ -266,7 +278,7 @@ impl WorkspaceStateManager {
         use git2::Repository;
 
         let repo = Repository::open(&self.workspace_root)?;
-        
+
         // Get current commit
         let head = repo.head()?;
         let commit = head.peel_to_commit()?;
@@ -287,9 +299,17 @@ impl WorkspaceStateManager {
     }
 
     /// Capture workspace state using full filesystem scan
-    async fn capture_full_scan(&self) -> Result<(HashMap<PathBuf, FileState>, HashMap<PathBuf, DirectoryState>), WorkspaceError> {
-        use walkdir::WalkDir;
+    async fn capture_full_scan(
+        &self,
+    ) -> Result<
+        (
+            HashMap<PathBuf, FileState>,
+            HashMap<PathBuf, DirectoryState>,
+        ),
+        WorkspaceError,
+    > {
         use std::fs;
+        use walkdir::WalkDir;
 
         let mut files = HashMap::new();
         let mut directories = HashMap::new();
@@ -299,8 +319,12 @@ impl WorkspaceStateManager {
             .filter_entry(|e| !self.should_ignore_path(e.path()))
         {
             let entry = entry.map_err(|e| WorkspaceError::Io(e.into()))?;
-            let path = entry.path().strip_prefix(&self.workspace_root)
-                .map_err(|e| WorkspaceError::Configuration(format!("Failed to strip prefix: {}", e)))?
+            let path = entry
+                .path()
+                .strip_prefix(&self.workspace_root)
+                .map_err(|e| {
+                    WorkspaceError::Configuration(format!("Failed to strip prefix: {}", e))
+                })?
                 .to_path_buf();
 
             if entry.file_type().is_file() {
@@ -318,7 +342,15 @@ impl WorkspaceStateManager {
     }
 
     /// Capture workspace state using git-based approach
-    async fn capture_git_based(&self) -> Result<(HashMap<PathBuf, FileState>, HashMap<PathBuf, DirectoryState>), WorkspaceError> {
+    async fn capture_git_based(
+        &self,
+    ) -> Result<
+        (
+            HashMap<PathBuf, FileState>,
+            HashMap<PathBuf, DirectoryState>,
+        ),
+        WorkspaceError,
+    > {
         use git2::Repository;
 
         let repo = Repository::open(&self.workspace_root)?;
@@ -328,9 +360,10 @@ impl WorkspaceStateManager {
         // Get all tracked files from git
         let mut index = repo.index()?;
         for entry in index.iter() {
-            let path = PathBuf::from(std::str::from_utf8(&entry.path)
-                .map_err(|e| WorkspaceError::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, e)))?);
-            
+            let path = PathBuf::from(std::str::from_utf8(&entry.path).map_err(|e| {
+                WorkspaceError::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+            })?);
+
             let full_path = self.workspace_root.join(&path);
             if full_path.exists() {
                 if let Some(file_state) = self.capture_file_state(&full_path, &path).await? {
@@ -345,10 +378,10 @@ impl WorkspaceStateManager {
                 let mut current = parent.to_path_buf();
                 while !current.as_os_str().is_empty() {
                     if !directories.contains_key(&current) {
-                        if let Some(dir_state) = self.capture_directory_state(
-                            &self.workspace_root.join(&current),
-                            &current
-                        ).await? {
+                        if let Some(dir_state) = self
+                            .capture_directory_state(&self.workspace_root.join(&current), &current)
+                            .await?
+                        {
                             directories.insert(current.clone(), dir_state);
                         }
                     }
@@ -361,14 +394,30 @@ impl WorkspaceStateManager {
     }
 
     /// Capture workspace state using incremental approach
-    async fn capture_incremental(&self) -> Result<(HashMap<PathBuf, FileState>, HashMap<PathBuf, DirectoryState>), WorkspaceError> {
+    async fn capture_incremental(
+        &self,
+    ) -> Result<
+        (
+            HashMap<PathBuf, FileState>,
+            HashMap<PathBuf, DirectoryState>,
+        ),
+        WorkspaceError,
+    > {
         // For now, fall back to git-based approach
         // TODO: Implement proper incremental capture using git diff
         self.capture_git_based().await
     }
 
     /// Capture workspace state using hybrid approach
-    async fn capture_hybrid(&self) -> Result<(HashMap<PathBuf, FileState>, HashMap<PathBuf, DirectoryState>), WorkspaceError> {
+    async fn capture_hybrid(
+        &self,
+    ) -> Result<
+        (
+            HashMap<PathBuf, FileState>,
+            HashMap<PathBuf, DirectoryState>,
+        ),
+        WorkspaceError,
+    > {
         // Start with git-based approach for tracked files
         let (mut files, mut directories) = self.capture_git_based().await?;
 
@@ -379,8 +428,12 @@ impl WorkspaceStateManager {
             .filter_entry(|e| !self.should_ignore_path(e.path()))
         {
             let entry = entry.map_err(|e| WorkspaceError::Io(e.into()))?;
-            let path = entry.path().strip_prefix(&self.workspace_root)
-                .map_err(|e| WorkspaceError::Configuration(format!("Failed to strip prefix: {}", e)))?
+            let path = entry
+                .path()
+                .strip_prefix(&self.workspace_root)
+                .map_err(|e| {
+                    WorkspaceError::Configuration(format!("Failed to strip prefix: {}", e))
+                })?
                 .to_path_buf();
 
             if entry.file_type().is_file() && !files.contains_key(&path) {
@@ -394,15 +447,23 @@ impl WorkspaceStateManager {
     }
 
     /// Capture state for a single file
-    async fn capture_file_state(&self, full_path: &Path, relative_path: &Path) -> Result<Option<FileState>, WorkspaceError> {
+    async fn capture_file_state(
+        &self,
+        full_path: &Path,
+        relative_path: &Path,
+    ) -> Result<Option<FileState>, WorkspaceError> {
+        use sha2::{Digest, Sha256};
         use std::fs;
-        use sha2::{Sha256, Digest};
 
         let metadata = fs::metadata(full_path)?;
-        
+
         // Check file size limit
         if metadata.len() > self.config.max_file_size {
-            warn!("Skipping large file: {:?} ({} bytes)", relative_path, metadata.len());
+            warn!(
+                "Skipping large file: {:?} ({} bytes)",
+                relative_path,
+                metadata.len()
+            );
             return Ok(None);
         }
 
@@ -418,7 +479,9 @@ impl WorkspaceStateManager {
 
         // Get git information if available
         let (git_tracked, git_commit) = if self.config.track_git {
-            self.get_file_git_info(full_path).await.unwrap_or((false, None))
+            self.get_file_git_info(full_path)
+                .await
+                .unwrap_or((false, None))
         } else {
             (false, None)
         };
@@ -435,7 +498,11 @@ impl WorkspaceStateManager {
     }
 
     /// Capture state for a single directory
-    async fn capture_directory_state(&self, full_path: &Path, relative_path: &Path) -> Result<Option<DirectoryState>, WorkspaceError> {
+    async fn capture_directory_state(
+        &self,
+        full_path: &Path,
+        relative_path: &Path,
+    ) -> Result<Option<DirectoryState>, WorkspaceError> {
         use std::fs;
 
         let mut file_count = 0;
@@ -446,7 +513,7 @@ impl WorkspaceStateManager {
         for entry in fs::read_dir(full_path)? {
             let entry = entry?;
             let metadata = entry.metadata()?;
-            
+
             if metadata.is_file() {
                 file_count += 1;
                 total_size += metadata.len();
@@ -471,7 +538,7 @@ impl WorkspaceStateManager {
     /// Check if a path should be ignored
     fn should_ignore_path(&self, path: &Path) -> bool {
         let path_str = path.to_string_lossy();
-        
+
         for pattern in &self.config.ignore_patterns {
             if glob::Pattern::new(pattern)
                 .map(|p| p.matches(&path_str))
@@ -480,16 +547,20 @@ impl WorkspaceStateManager {
                 return true;
             }
         }
-        
+
         false
     }
 
     /// Get git information for a specific file
-    async fn get_file_git_info(&self, file_path: &Path) -> Result<(bool, Option<String>), WorkspaceError> {
+    async fn get_file_git_info(
+        &self,
+        file_path: &Path,
+    ) -> Result<(bool, Option<String>), WorkspaceError> {
         use git2::Repository;
 
         let repo = Repository::open(&self.workspace_root)?;
-        let relative_path = file_path.strip_prefix(&self.workspace_root)
+        let relative_path = file_path
+            .strip_prefix(&self.workspace_root)
             .map_err(|e| WorkspaceError::Configuration(format!("Failed to strip prefix: {}", e)))?;
 
         // Check if file is tracked

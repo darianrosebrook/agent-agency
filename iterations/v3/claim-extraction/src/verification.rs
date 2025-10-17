@@ -1,13 +1,13 @@
 //! Stage 4: CAWS-Compliant Verification
-//! 
+//!
 //! Collects evidence for atomic claims and integrates with council
 //! for verification. Based on V2 verification logic with council integration.
 
 use crate::types::*;
 use anyhow::Result;
-use tracing::{info, warn, debug};
-use uuid::Uuid;
 use chrono::Utc;
+use tracing::{debug, info, warn};
+use uuid::Uuid;
 
 /// Stage 4: Verification with evidence collection
 #[derive(Debug)]
@@ -36,12 +36,18 @@ impl VerificationStage {
 
         for claim in claims {
             // Collect evidence for each claim
-            let claim_evidence = self.evidence_collector.collect_evidence(claim, context).await?;
+            let claim_evidence = self
+                .evidence_collector
+                .collect_evidence(claim, context)
+                .await?;
             evidence.extend(claim_evidence);
 
             // Integrate with council for complex verification
             if self.requires_council_verification(claim) {
-                let council_evidence = self.council_integrator.verify_with_council(claim, context).await?;
+                let council_evidence = self
+                    .council_integrator
+                    .verify_with_council(claim, context)
+                    .await?;
                 evidence.extend(council_evidence);
             }
         }
@@ -75,9 +81,9 @@ impl VerificationStage {
         let average_confidence = total_confidence / evidence.len() as f64;
 
         // Boost confidence for high-quality evidence sources
-        let quality_boost = evidence.iter()
-            .filter(|e| e.confidence > 0.9)
-            .count() as f64 / evidence.len() as f64 * 0.2;
+        let quality_boost = evidence.iter().filter(|e| e.confidence > 0.9).count() as f64
+            / evidence.len() as f64
+            * 0.2;
 
         (average_confidence + quality_boost).min(1.0)
     }
@@ -104,7 +110,11 @@ impl EvidenceCollector {
         }
     }
 
-    async fn collect_evidence(&self, claim: &AtomicClaim, context: &ProcessingContext) -> Result<Vec<Evidence>> {
+    async fn collect_evidence(
+        &self,
+        claim: &AtomicClaim,
+        context: &ProcessingContext,
+    ) -> Result<Vec<Evidence>> {
         let mut evidence = Vec::new();
 
         match claim.claim_type {
@@ -115,17 +125,29 @@ impl EvidenceCollector {
                 evidence.extend(self.test_runner.test_claim(claim, context).await?);
             }
             ClaimType::Factual => {
-                evidence.extend(self.documentation_reviewer.review_claim(claim, context).await?);
+                evidence.extend(
+                    self.documentation_reviewer
+                        .review_claim(claim, context)
+                        .await?,
+                );
             }
             ClaimType::Performance => {
-                evidence.extend(self.performance_measurer.measure_claim(claim, context).await?);
+                evidence.extend(
+                    self.performance_measurer
+                        .measure_claim(claim, context)
+                        .await?,
+                );
             }
             ClaimType::Security => {
                 evidence.extend(self.security_scanner.scan_claim(claim, context).await?);
             }
             ClaimType::Constitutional => {
                 // Constitutional claims are handled by council integrator
-                evidence.extend(self.documentation_reviewer.review_claim(claim, context).await?);
+                evidence.extend(
+                    self.documentation_reviewer
+                        .review_claim(claim, context)
+                        .await?,
+                );
             }
         }
 
@@ -144,14 +166,18 @@ impl CouncilIntegrator {
         Self {}
     }
 
-    async fn verify_with_council(&self, claim: &AtomicClaim, context: &ProcessingContext) -> Result<Vec<Evidence>> {
+    async fn verify_with_council(
+        &self,
+        claim: &AtomicClaim,
+        context: &ProcessingContext,
+    ) -> Result<Vec<Evidence>> {
         // TODO: Implement council integration
         // - Submit claim to council for evaluation
         // - Collect council verdict as evidence
         // - Handle council dissent and debate
-        
+
         debug!("Verifying claim with council: {}", claim.claim_text);
-        
+
         // For now, create a placeholder evidence item
         let evidence = Evidence {
             id: Uuid::new_v4(),
@@ -176,8 +202,14 @@ impl CouncilIntegrator {
 #[derive(Debug)]
 struct CodeAnalyzer;
 impl CodeAnalyzer {
-    fn new() -> Self { Self }
-    async fn analyze_claim(&self, claim: &AtomicClaim, _context: &ProcessingContext) -> Result<Vec<Evidence>> {
+    fn new() -> Self {
+        Self
+    }
+    async fn analyze_claim(
+        &self,
+        claim: &AtomicClaim,
+        _context: &ProcessingContext,
+    ) -> Result<Vec<Evidence>> {
         let evidence = Evidence {
             id: Uuid::new_v4(),
             claim_id: claim.id,
@@ -199,8 +231,14 @@ impl CodeAnalyzer {
 #[derive(Debug)]
 struct TestRunner;
 impl TestRunner {
-    fn new() -> Self { Self }
-    async fn test_claim(&self, claim: &AtomicClaim, _context: &ProcessingContext) -> Result<Vec<Evidence>> {
+    fn new() -> Self {
+        Self
+    }
+    async fn test_claim(
+        &self,
+        claim: &AtomicClaim,
+        _context: &ProcessingContext,
+    ) -> Result<Vec<Evidence>> {
         let evidence = Evidence {
             id: Uuid::new_v4(),
             claim_id: claim.id,
@@ -222,8 +260,14 @@ impl TestRunner {
 #[derive(Debug)]
 struct DocumentationReviewer;
 impl DocumentationReviewer {
-    fn new() -> Self { Self }
-    async fn review_claim(&self, claim: &AtomicClaim, _context: &ProcessingContext) -> Result<Vec<Evidence>> {
+    fn new() -> Self {
+        Self
+    }
+    async fn review_claim(
+        &self,
+        claim: &AtomicClaim,
+        _context: &ProcessingContext,
+    ) -> Result<Vec<Evidence>> {
         let evidence = Evidence {
             id: Uuid::new_v4(),
             claim_id: claim.id,
@@ -245,8 +289,14 @@ impl DocumentationReviewer {
 #[derive(Debug)]
 struct PerformanceMeasurer;
 impl PerformanceMeasurer {
-    fn new() -> Self { Self }
-    async fn measure_claim(&self, claim: &AtomicClaim, _context: &ProcessingContext) -> Result<Vec<Evidence>> {
+    fn new() -> Self {
+        Self
+    }
+    async fn measure_claim(
+        &self,
+        claim: &AtomicClaim,
+        _context: &ProcessingContext,
+    ) -> Result<Vec<Evidence>> {
         let evidence = Evidence {
             id: Uuid::new_v4(),
             claim_id: claim.id,
@@ -268,8 +318,14 @@ impl PerformanceMeasurer {
 #[derive(Debug)]
 struct SecurityScanner;
 impl SecurityScanner {
-    fn new() -> Self { Self }
-    async fn scan_claim(&self, claim: &AtomicClaim, _context: &ProcessingContext) -> Result<Vec<Evidence>> {
+    fn new() -> Self {
+        Self
+    }
+    async fn scan_claim(
+        &self,
+        claim: &AtomicClaim,
+        _context: &ProcessingContext,
+    ) -> Result<Vec<Evidence>> {
         let evidence = Evidence {
             id: Uuid::new_v4(),
             claim_id: claim.id,
@@ -287,4 +343,3 @@ impl SecurityScanner {
         Ok(vec![evidence])
     }
 }
-

@@ -1,6 +1,6 @@
 use crate::types::*;
 use anyhow::Result;
-use tracing::{debug, warn, error};
+use tracing::{debug, error, warn};
 use uuid::Uuid;
 
 /// Context synthesizer for creating cross-references and synthesis
@@ -25,7 +25,10 @@ impl ContextSynthesizer {
         context_data: &ContextData,
         metadata: &ContextMetadata,
     ) -> Result<Vec<SynthesisResult>> {
-        debug!("Synthesizing context: {} for tenant: {}", context_id, tenant_id);
+        debug!(
+            "Synthesizing context: {} for tenant: {}",
+            context_id, tenant_id
+        );
 
         // For now, return empty synthesis results
         // In a real implementation, this would:
@@ -45,7 +48,10 @@ impl ContextSynthesizer {
         context_data: &ContextData,
         metadata: &ContextMetadata,
     ) -> Result<Vec<CrossReference>> {
-        debug!("Creating cross-references for context: {} for tenant: {}", context_id, tenant_id);
+        debug!(
+            "Creating cross-references for context: {} for tenant: {}",
+            context_id, tenant_id
+        );
 
         // For now, return empty cross-references
         // In a real implementation, this would:

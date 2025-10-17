@@ -2,267 +2,125 @@
 
 ## Overview
 
-V3 reimagines agent orchestration as a **constitutional council system** where specialized judge models work together to audit, evaluate, and accept worker outputs. Built ground-up for Apple Silicon with Core ML optimization, this system combines model-native CAWS understanding with runtime enforcement for maximum efficiency.
+Agent Agency V3 implements a constitutional council of specialist judge models that supervise asynchronous worker agents. The workspace is built in Rust with nine coordinated crates, integrates CAWS compliance at runtime, and is optimized for Apple Silicon execution through Core ML, ANE, GPU, and CPU orchestration.
 
-## Architecture
+The release bundles council governance, worker execution, research assistance, benchmarking, and provenance into a single workspace. PostgreSQL with pgvector supplies persistence, while MCP integration and Apple Silicon tooling supply execution flexibility.
 
-### Core Components
+## Implemented Capabilities
 
-1. **Council of Judges** - 4 specialized models for evaluation:
+- **Council governance** – consensus coordinator, debate protocol, verdict storage, and learning signals housed in `council/`.
+- **Worker services** – task routing, lifecycle management, and compliance checks within `workers/`.
+- **Research and context** – dedicated retrieval, vector search, and context synthesis in `research/`.
+- **Theory-critical pipelines** – claim extraction, reflexive learning, and benchmarking crates ported from V2 and reimplemented in Rust.
+- **Compliance and provenance** – CAWS runtime validator, JWS signing, and Git-backed audit trails across `orchestration/` and `provenance/`.
+- **Platform foundations** – Apple Silicon optimized inference layers, database access, and MCP tooling.
 
-   - Constitutional Judge (CAWS compliance)
-   - Technical Auditor (code quality & security)
-   - Quality Evaluator (acceptance criteria)
-   - Integration Validator (system coherence)
+## Differentiation from V2
 
-2. **Worker Pool** - Task execution models with CAWS awareness
-3. **Research Agent** - Dedicated knowledge gathering and context building
-4. **Apple Silicon Native** - Core ML optimized inference pipeline
-5. **Hybrid CAWS** - Models trained on CAWS principles + runtime validation
+- Council-based oversight replaces the single-orchestrator design, separating constitutional review, technical auditing, quality evaluation, and integration validation.
+- CAWS principles are embedded in both model training pipelines and runtime validators, reducing the need for manual remediation.
+- Apple Silicon support is first-class with Core ML integration, unified memory planning, and thermal management.
+- Research responsibilities are isolated to a dedicated agent, improving worker throughput and token efficiency.
+- V3 consolidates the component count into nine focused crates, simplifying maintenance and deployment.
 
-## Current Implementation Status
+## Delivery Status
 
-### ✅ Completed Core Architecture
+### Completed
 
-- **Rust Workspace** - 9 crates with proper dependencies and workspace configuration
-- **Council System** - Complete consensus coordinator, debate protocol, verdict storage, learning integration
-- **Worker Pool** - Task routing, CAWS compliance checking, worker lifecycle management
-- **Database Layer** - PostgreSQL schema with pgvector, connection pooling, learning signals
-- **Apple Silicon** - Core ML infrastructure, ANE/GPU/CPU routing, thermal management
-- **Research Agent** - Vector search, context synthesis, cross-reference detection
-- **MCP Integration** - Tool discovery, registry, CAWS integration
-- **Provenance** - Git integration, JWS signing, immutable audit trails
+- Rust workspace configuration with nine crates and shared tooling.
+- Council system with consensus coordination, debate flow, verdict persistence, and learning integration.
+- Worker pool with routing, lifecycle management, and CAWS compliance checks.
+- Research agent delivering retrieval, vector search, and context building.
+- PostgreSQL/pgvector data layer, including schema and migrations.
+- MCP integration for tool discovery and registration.
+- Provenance subsystem with Git integration and JWS signing.
+- Apple Silicon execution path covering Core ML models, ANE/GPU/CPU routing, and thermal management.
 
-### ✅ Completed Theory-Critical Components
+### In Progress
 
-- **Claim Extraction Pipeline** - 4-stage processing (disambiguation → qualification → decomposition → verification)
-- **Reflexive Learning** - Progress tracking, adaptive allocation, context preservation
-- **Model Benchmarking** - Performance tracking, scoring system, regression detection
+- Model fine-tuning assets and LoRA scripts in `training/`.
+- Observer bridge for deliberation visualization.
+- Comprehensive automated testing across unit, integration, and end-to-end suites.
 
-### 🚧 In Progress
+### Planned Next
 
-- **Model Fine-tuning** - CAWS training datasets and LoRA fine-tuning scripts
-- **Observer Bridge** - Council deliberation visualization and monitoring
-- **Comprehensive Testing** - E2E tests, integration tests, performance benchmarks
+- Production hardening: benchmarking, monitoring, alerting, and error recovery.
+- Model performance tuning and regression tracking.
+- Expanded documentation for deployment and operations.
 
-### 📋 Planned
+## Workspace Layout
 
-- **Production Hardening** - Error handling, monitoring, alerting
-- **Documentation** - API docs, user guides, deployment guides
-
-## 🎉 Major Achievement: Theory Compliance Achieved
-
-V3 has successfully implemented **all critical theory requirements** that were identified as missing in our comprehensive gap analysis:
-
-### ✅ Critical Theory Components Implemented
-
-1. **Claim Extraction & Verification Pipeline** (`claim-extraction/`)
-
-   - Complete 4-stage processing: Disambiguation → Qualification → Decomposition → Verification
-   - Based on V2's 1677-line ClaimExtractor.ts with Rust adaptations
-   - Council integration for evidence collection in debate protocol
-
-2. **Reflexive Learning Loop** (`reflexive-learning/`)
-
-   - Progress tracking with turn-level monitoring
-   - Adaptive resource allocation based on performance
-   - Context preservation for multi-tenant learning
-   - Based on V2's MultiTurnLearningCoordinator (671 lines, production-ready)
-
-3. **Model Performance Benchmarking** (`model-benchmarking/`)
-   - Continuous micro/macro benchmarks with performance tracking
-   - Multi-dimensional scoring system for task-specific metrics
-   - Regression detection for performance monitoring
-   - Based on V2's ModelPerformanceBenchmarking component
-
-### 🏗️ Architecture Excellence
-
-- **9 Focused Crates**: Reduced from V2's 29 components to 9 modular crates
-- **Council-Based Governance**: 4 specialized judges vs V2's single arbiter
-- **Apple Silicon Native**: Core ML optimization with ANE/GPU/CPU routing
-- **Modular Design**: All components designed for future model/architecture upgrades
-
-## Key Innovations from V2
-
-### 1. Council > Single Arbiter
-
-- **Problem**: V2's single orchestrator had too many responsibilities
-- **Solution**: Specialized judge models with clear domains
-- **Benefit**: Parallel evaluation, faster decisions, better quality
-
-### 2. Model-Native CAWS
-
-- **Problem**: Runtime-only enforcement is slow and repetitive
-- **Solution**: Fine-tune models on CAWS principles with runtime validation
-- **Benefit**: Workers self-correct, fewer violations, faster iteration
-
-### 3. Apple Silicon Native
-
-- **Problem**: V2 treated hardware as generic compute
-- **Solution**: Core ML pipeline with ANE/GPU/CPU orchestration
-- **Benefit**: 3-5x faster inference, lower power, better thermals
-
-### 4. Research Agent Separation
-
-- **Problem**: Workers spent tokens on information gathering
-- **Solution**: Dedicated research model with vector search
-- **Benefit**: Workers focus on execution, better token efficiency
-
-### 5. Simplified Component Count
-
-- **Problem**: 29 v2 components created integration complexity
-- **Solution**: 9 focused v3 crates with clear boundaries and modular design
-- **Benefit**: Easier maintenance, faster development, clearer testing, future-proof architecture
-
-## Directory Structure
-
-```
+```text
 iterations/v3/
-├── council/                    # ✅ Council of judges implementation
-│   ├── models/                 # ✅ Fine-tuned model definitions
-│   │   ├── constitutional.yaml
-│   │   ├── technical.yaml
-│   │   ├── quality.yaml
-│   │   └── integration.yaml
-│   ├── src/                    # ✅ Complete Rust implementation
-│   │   ├── coordinator.rs      # ✅ Consensus coordination service
-│   │   ├── debate.rs          # ✅ Adversarial debate protocol
-│   │   ├── verdicts.rs        # ✅ Verdict generation and storage
-│   │   ├── contracts.rs       # ✅ Contract definitions
-│   │   ├── learning.rs        # ✅ Learning signal integration
-│   │   ├── types.rs           # ✅ Core types and data structures
-│   │   └── lib.rs             # ✅ Public API
-│   └── Cargo.toml             # ✅ Council crate configuration
-├── workers/                    # ✅ Worker pool implementation
-│   ├── src/                    # ✅ Complete worker system
-│   │   ├── manager.rs         # ✅ Worker lifecycle management
-│   │   ├── router.rs          # ✅ Intelligent task routing
-│   │   ├── executor.rs        # ✅ Task execution engine
-│   │   ├── caws_checker.rs    # ✅ CAWS compliance checking
-│   │   └── types.rs           # ✅ Worker types and configs
-│   └── Cargo.toml             # ✅ Worker crate configuration
-├── research/                   # ✅ Research agent implementation
-│   ├── src/                    # ✅ Complete research system
-│   │   ├── knowledge_seeker.rs # ✅ Knowledge gathering
-│   │   ├── vector_search.rs   # ✅ Vector search engine
-│   │   ├── context_builder.rs # ✅ Context synthesis
-│   │   └── web_scraper.rs     # ✅ Web scraping capabilities
-│   └── Cargo.toml             # ✅ Research crate configuration
-├── apple-silicon/              # ✅ Apple Silicon optimization
-│   ├── src/                    # ✅ Core ML integration
-│   │   ├── core_ml.rs         # ✅ Core ML model management
-│   │   ├── ane.rs             # ✅ Apple Neural Engine routing
-│   │   ├── metal_gpu.rs       # ✅ Metal GPU acceleration
-│   │   ├── thermal.rs         # ✅ Thermal management
-│   │   └── quantization.rs    # ✅ Model quantization
-│   └── Cargo.toml             # ✅ Apple Silicon crate configuration
-├── claim-extraction/           # ✅ Theory-critical component
-│   ├── src/                    # ✅ 4-stage claim pipeline
-│   │   ├── processor.rs       # ✅ Main processor
-│   │   ├── disambiguation.rs  # ✅ Stage 1: Disambiguation
-│   │   ├── qualification.rs   # ✅ Stage 2: Qualification
-│   │   ├── decomposition.rs   # ✅ Stage 3: Decomposition
-│   │   └── verification.rs    # ✅ Stage 4: Verification
-│   └── Cargo.toml             # ✅ Claim extraction configuration
-├── reflexive-learning/         # ✅ Theory-critical component
-│   ├── src/                    # ✅ Learning coordination
-│   │   ├── coordinator.rs     # ✅ Learning session management
-│   │   ├── progress_tracker.rs # ✅ Turn-level monitoring
-│   │   ├── adaptive_allocator.rs # ✅ Resource allocation
-│   │   └── context_preservation.rs # ✅ Context management
-│   └── Cargo.toml             # ✅ Learning crate configuration
-├── model-benchmarking/         # ✅ Theory-critical component
-│   ├── src/                    # ✅ Performance tracking
-│   │   ├── benchmark_runner.rs # ✅ Benchmark execution
-│   │   ├── performance_tracker.rs # ✅ Performance monitoring
-│   │   ├── scoring_system.rs  # ✅ Multi-dimensional scoring
-│   │   └── regression_detector.rs # ✅ Performance regression detection
-│   └── Cargo.toml             # ✅ Benchmarking configuration
-├── mcp-integration/            # ✅ MCP server integration
-│   ├── src/                    # ✅ Tool discovery and registry
-│   │   ├── server.rs          # ✅ MCP server implementation
-│   │   ├── tool_discovery.rs  # ✅ Dynamic tool discovery
-│   │   ├── tool_registry.rs   # ✅ Tool registration
-│   │   └── caws_integration.rs # ✅ CAWS compliance integration
-│   └── Cargo.toml             # ✅ MCP integration configuration
-├── provenance/                 # ✅ Provenance tracking
-│   ├── src/                    # ✅ Immutable audit trails
-│   │   ├── service.rs         # ✅ Provenance service
-│   │   ├── signer.rs          # ✅ JWS signing
-│   │   ├── git_integration.rs # ✅ Git trailer integration
-│   │   └── storage.rs         # ✅ Storage backends
-│   └── Cargo.toml             # ✅ Provenance configuration
-├── database/                   # ✅ PostgreSQL + pgvector
-│   ├── schema.sql             # ✅ Complete database schema
-│   ├── migrations/            # ✅ Database migrations
-│   ├── src/                   # ✅ Database client implementation
-│   │   ├── client.rs          # ✅ Connection pooling and operations
-│   │   ├── models.rs          # ✅ Database models and types
-│   │   └── lib.rs             # ✅ Public API
-│   └── Cargo.toml             # ✅ Database crate configuration
-├── orchestration/              # ✅ Core coordination
-│   ├── src/                    # ✅ Orchestration engine
-│   │   ├── orchestrate.rs     # ✅ Main orchestration logic
-│   │   ├── caws_runtime.rs    # ✅ CAWS runtime validator
-│   │   └── persistence.rs     # ✅ Data persistence
-│   └── Cargo.toml             # ✅ Orchestration configuration
-├── docs/                       # ✅ Core architectural documentation
-│   ├── README.md              # ✅ Documentation index and organization
-│   ├── architecture.md        # ✅ System architecture and design principles
-│   ├── interaction-contracts.md # ✅ API contracts and interaction patterns
-│   ├── INTEGRATION_PATTERNS.md # ✅ Component integration patterns
-│   ├── components/            # ✅ Component-specific documentation
-│   ├── contracts/             # ✅ API contracts and JSON schemas
-│   ├── adr/                   # ✅ Architectural Decision Records
-│   └── database/              # ✅ Database design documentation
-├── training/                   # 🚧 Model fine-tuning (in progress)
-│   ├── caws-dataset/          # 🚧 CAWS training datasets
-│   ├── fine-tune-scripts/     # 🚧 LoRA fine-tuning scripts
-│   └── rl-pipeline/           # 🚧 Reinforcement learning pipeline
-├── tests/                      # 🚧 Comprehensive testing (in progress)
-│   ├── unit/                  # 🚧 Unit tests
-│   ├── integration/           # 🚧 Integration tests
-│   └── e2e/                   # 🚧 End-to-end tests
-├── observer/                   # 🚧 Monitoring and visualization (in progress)
-├── Cargo.toml                  # ✅ Workspace configuration (9 crates)
-└── README.md                   # ✅ This file
+├── Cargo.toml                    # Workspace configuration
+├── council/                      # Council of judges system
+│   ├── src/                     # (coordinator, debate, verdicts, learning)
+│   ├── models/                  # Judge model configurations
+│   └── Cargo.toml
+├── workers/                      # Worker pool management
+│   ├── src/                     # (manager, router, executor, compliance)
+│   └── Cargo.toml
+├── research/                     # Research agent system
+│   └── src/                     # (knowledge seeker, vector search, context)
+├── apple-silicon/                # Apple Silicon optimization
+│   └── src/                     # (Core ML, ANE, GPU, thermal, quantization)
+├── claim-extraction/             # V2 claim extraction pipeline
+├── reflexive-learning/           # Multi-turn learning coordination
+├── model-benchmarking/           # Performance evaluation system
+├── mcp-integration/              # Model Context Protocol integration
+├── provenance/                   # Git-backed audit trails
+├── database/                     # PostgreSQL/pgvector persistence
+│   ├── schema.sql
+│   ├── migrations/
+│   └── src/
+├── orchestration/                # Core orchestration logic
+├── caws/                         # CAWS runtime validation
+├── config/                       # Configuration management
+├── context-preservation-engine/  # Multi-tenant context management
+├── embedding-service/            # Vector embedding service
+├── integration-tests/            # Cross-component integration tests
+├── minimal-diff-evaluator/       # AST-based change assessment
+├── observer/                     # Deliberation visualization
+├── resilience/                   # Production resilience patterns
+├── scripts/                      # Build and utility scripts
+├── security-policy-enforcer/     # Security controls and audit logging
+├── system-health-monitor/        # Health assessment and monitoring
+├── workspace-state-manager/      # Repository state management
+├── docs/                         # Architectural documentation
+├── docs-status/                  # Implementation status (git-ignored)
+├── tests/                        # Test suites (unit, integration, e2e)
+├── training/                     # Model fine-tuning assets
+└── apps/                         # Application binaries
 ```
 
-## Getting Started
+## Setup
 
 ### Prerequisites
 
-- Rust 1.70+ with cargo
-- PostgreSQL 15+ with pgvector extension
-- Ollama (for local model serving)
-- Apple Silicon Mac (for optimal performance)
+- Rust 1.70+ with `cargo`
+- PostgreSQL 15+ with the pgvector extension
+- Ollama for local model serving
+- Apple Silicon hardware (recommended for target performance)
 
-### Setup
+### Initialization
 
-1. **Clone and navigate to V3**:
+1. Navigate into the V3 workspace:
 
    ```bash
    cd iterations/v3
    ```
 
-2. **Set up database**:
+2. Provision PostgreSQL and pgvector, then create the project database:
 
    ```bash
-   # Install PostgreSQL and pgvector
-   brew install postgresql
-   brew install pgvector
-
-   # Create database
+   brew install postgresql pgvector
    createdb agent_agency_v3
-
-   # Run schema
    psql agent_agency_v3 < database/schema.sql
    ```
 
-3. **Install models with Ollama**:
+3. Pull required baseline models via Ollama (fine-tuning happens later):
 
    ```bash
-   # Install base models (these will be fine-tuned later)
    ollama pull llama3.3:3b
    ollama pull codellama:7b
    ollama pull gemma3n:e2b
@@ -271,240 +129,114 @@ iterations/v3/
    ollama pull mistral:3b
    ```
 
-4. **Build the project**:
+4. Build and test the workspace:
 
    ```bash
    cargo build
-   ```
-
-5. **Run tests**:
-   ```bash
    cargo test
    ```
 
-## Council System Usage
+## Usage Examples
 
-### Basic Consensus Coordination
+### Council Coordination
 
 ```rust
 use agent_agency_council::{ConsensusCoordinator, CouncilConfig, TaskSpec, RiskTier};
 
-// Create coordinator with default configuration
 let config = CouncilConfig::default();
 let coordinator = ConsensusCoordinator::new(config);
 
-// Create task specification
 let task_spec = TaskSpec {
     id: Uuid::new_v4(),
-    title: "Implement user authentication".to_string(),
-    description: "Add JWT-based authentication system".to_string(),
+    title: "Implement user authentication".into(),
+    description: "Add JWT-based authentication system".into(),
     risk_tier: RiskTier::Tier1,
     scope: TaskScope {
-        files_affected: vec!["src/auth/".to_string()],
+        files_affected: vec!["src/auth/".into()],
         max_files: Some(5),
         max_loc: Some(1000),
-        domains: vec!["authentication".to_string()],
+        domains: vec!["authentication".into()],
     },
     acceptance_criteria: vec![],
-    context: TaskContext {
-        workspace_root: "/workspace".to_string(),
-        git_branch: "main".to_string(),
-        recent_changes: vec![],
-        dependencies: std::collections::HashMap::new(),
-        environment: Environment::Development,
-    },
-    worker_output: WorkerOutput {
-        content: "Authentication implementation".to_string(),
-        files_modified: vec![],
-        rationale: "JWT-based auth with proper validation".to_string(),
-        self_assessment: SelfAssessment {
-            caws_compliance: 0.95,
-            quality_score: 0.9,
-            confidence: 0.85,
-            concerns: vec![],
-            improvements: vec![],
-        },
-        metadata: std::collections::HashMap::new(),
-    },
+    context: TaskContext::development("/workspace", "main"),
+    worker_output: WorkerOutput::default(),
     caws_spec: None,
 };
 
-// Evaluate task with council
 let result = coordinator.evaluate_task(task_spec).await?;
-
 println!("Consensus result: {:?}", result.final_verdict);
 ```
 
 ### Database Operations
 
 ```rust
-use agent_agency_database::{DatabaseClient, DatabaseConfig, CreateJudge};
+use agent_agency_database::{CreateJudge, DatabaseClient, DatabaseConfig};
 
-// Create database client
-let config = DatabaseConfig::default();
-let db = DatabaseClient::new(config).await?;
+let db = DatabaseClient::new(DatabaseConfig::default()).await?;
 
-// Create a new judge
 let judge = db.create_judge(CreateJudge {
-    name: "Custom Judge".to_string(),
-    model_name: "custom-model".to_string(),
-    endpoint: "http://localhost:11434".to_string(),
+    name: "Custom Judge".into(),
+    model_name: "custom-model".into(),
+    endpoint: "http://localhost:11434".into(),
     weight: 0.3,
     timeout_ms: 300,
-    optimization_target: "CPU".to_string(),
+    optimization_target: "CPU".into(),
 }).await?;
 
 println!("Created judge: {:?}", judge);
 ```
 
-## Performance Targets
+## Operational Targets
 
-### Inference Latency
+### Performance
 
-- Constitutional Judge: <100ms (ANE-optimized)
-- Technical Auditor: <500ms (GPU-accelerated)
-- Quality Evaluator: <200ms (balanced)
-- Integration Validator: <150ms (CPU-optimized)
-- Worker Models: <2s per task (parallel execution)
+- Constitutional judge inference: <100 ms (ANE-optimized)
+- Technical auditor inference: <500 ms (GPU-accelerated)
+- Quality evaluator inference: <200 ms
+- Integration validator inference: <150 ms
+- Worker task execution: <2 s per request with parallel workers
 
 ### Throughput
 
-- 10+ concurrent workers on M3 Max (64GB)
-- 5+ concurrent workers on M3 Pro (32GB)
-- Council evaluation: <1s for Tier 2/3, <3s for Tier 1
+- 10+ concurrent workers on M3 Max (64 GB)
+- 5+ concurrent workers on M3 Pro (32 GB)
+- Council evaluation: <1 s for Tier 2/3 tasks, <3 s for Tier 1 tasks
 
-### Resource Usage
+### Resource Utilization
 
-- Peak memory: 48GB for full system (M3 Max)
-- Idle memory: 12GB (base models loaded)
-- Thermal: <80°C sustained load
-- Power: <30W average (M3 efficiency cores + ANE)
+- Peak memory budget: 48 GB on M3 Max
+- Idle footprint: ~12 GB with base models loaded
+- Sustained thermal envelope: <80 °C
+- Average power draw: <30 W under mixed ANE/CPU load
 
-## Development Roadmap
+### Quality Gates
 
-### ✅ Phase 1: Foundation (COMPLETED)
+- CAWS compliance rate ≥95%
+- Branch coverage ≥85% across crates
+- Mutation testing thresholds and security scanning enforced before release
+- Immutable provenance stored for each council decision
 
-- [x] Rust workspace with 9 crates
-- [x] Database schema with pgvector support
-- [x] Core council system with consensus coordination
-- [x] Debate protocol implementation
-- [x] Worker pool management system
-- [x] Research agent with vector search
-- [x] Apple Silicon Core ML integration
-- [x] MCP server integration
-- [x] Provenance tracking system
+## Roadmap
 
-### ✅ Phase 2: Theory-Critical Components (COMPLETED)
+- Finalize comprehensive automated testing and benchmarking suites.
+- Complete production monitoring, alerting, and error-recovery paths.
+- Deliver fine-tuned model artifacts and integration playbooks.
+- Expand observer tooling for real-time deliberation visibility.
 
-- [x] Claim Extraction Pipeline (4-stage processing)
-- [x] Reflexive Learning Loop (progress tracking, adaptive allocation)
-- [x] Model Performance Benchmarking (scoring system, regression detection)
-- [x] Council learning integration
-- [x] Advanced CAWS compliance checking
-- [x] Context preservation engine
+## Documentation
 
-### ✅ Phase 3: Apple Silicon Optimization (COMPLETED)
-
-- [x] Core ML integration layer
-- [x] ANE/GPU/CPU routing infrastructure
-- [x] Thermal management system
-- [x] Quantization pipeline framework
-- [x] Unified memory management
-
-### ✅ Phase 4: CAWS Integration (COMPLETED)
-
-- [x] Runtime validator integration
-- [x] Provenance tracking with git integration
-- [x] JWS signing for immutable audit trails
-- [x] Advanced compliance checking with AST analysis
-
-### ✅ Phase 5: Research Agent (COMPLETED)
-
-- [x] Knowledge seeker implementation
-- [x] Vector search integration
-- [x] Web scraping capabilities
-- [x] Context synthesis with cross-reference detection
-- [x] Research-worker coordination
-
-### 🚧 Phase 6: Production Hardening (IN PROGRESS)
-
-- [x] Comprehensive documentation and gap analysis
-- [x] Implementation roadmap and integration patterns
-- [x] API contracts and schemas
-- [ ] Comprehensive test suite (unit, integration, e2e)
-- [ ] Performance benchmarking and optimization
-- [ ] Error handling and recovery
-- [ ] Monitoring and alerting
-- [ ] Model fine-tuning pipeline
-- [ ] Observer bridge visualization
-
-## Success Criteria
-
-### ✅ Architecture Goals (ACHIEVED)
-
-- [x] **Council-based governance** - 4 specialized judges with consensus coordination
-- [x] **Theory compliance** - All critical theory requirements implemented
-- [x] **Modular design** - 9 focused crates with clear boundaries
-- [x] **Apple Silicon optimization** - Core ML integration with ANE/GPU/CPU routing
-- [x] **V2 component parity** - All production-ready V2 components ported with enhancements
-
-### 🎯 Performance Targets (TO BE VALIDATED)
-
-- [ ] Council reaches consensus on 95%+ of decisions
-- [ ] Debate protocol resolves conflicts in <5s
-- [ ] Workers self-correct CAWS violations 80%+ of time
-- [ ] Research agent reduces worker token usage by 40%+
-- [ ] System handles 10+ concurrent tasks on M3 Max
-- [ ] Council evaluation <1s for Tier 2/3 tasks
-- [ ] ANE utilization >60% for constitutional judge
-- [ ] Memory usage <50GB on M3 Max under full load
-- [ ] Sustained operation <80°C thermal
-- [ ] 3-5x faster inference vs generic CPU execution
-
-### 🎯 Quality Gates (TO BE ACHIEVED)
-
-- [ ] CAWS compliance rate >95%
-- [ ] Test coverage >85% across all components
-- [ ] Zero critical security vulnerabilities
-- [ ] Complete audit trail for all decisions
-- [ ] 99%+ uptime in continuous operation
-
-## Documentation Organization
-
-### Core Architecture Documentation (`/docs`)
-
-Contains maintainable, long-term architectural documentation:
-
-- **System Architecture** - Design principles and component relationships
-- **API Contracts** - JSON schemas and interaction patterns
-- **Component Documentation** - Detailed component specifications
-- **Architectural Decision Records (ADRs)** - Key design decisions
-- **Integration Patterns** - How components communicate
-
-### Implementation Status (`/docs-status`) - Git Ignored
-
-Contains temporal documentation for project management:
-
-- Progress summaries and status reports
-- Gap analyses and theory compliance tracking
-- Implementation roadmaps and planning documents
-
-### Archive (`/archive`) - Git Ignored
-
-Contains superseded documentation for historical reference:
-
-- Early research questions and lessons learned
-- Documents superseded by comprehensive analysis
+- `/docs` contains persistent architecture references, contracts, ADRs, and integration guidance.
+- `/docs-status` tracks implementation progress, gap analyses, and project status (git-ignored).
+- `/archive` retains superseded research material for historical reference.
 
 ## Contributing
 
-1. Follow the existing code structure and patterns
-2. Add comprehensive tests for new functionality
-3. Update documentation for any API changes
-4. Ensure all tests pass before submitting PRs
-5. Follow the CAWS quality standards
-6. Keep architectural docs in `/docs`, temporal docs in `/docs-status`
+1. Follow existing module boundaries and code patterns.
+2. Add or update tests alongside any behavior change.
+3. Refresh relevant documentation when APIs or workflows shift.
+4. Ensure `cargo fmt`, `cargo clippy`, and `cargo test` pass before submitting.
+5. Maintain CAWS compliance and update provenance records through the provided tooling.
 
 ## License
 
-MIT License - see LICENSE file for details.
+MIT License – see `LICENSE` for details.

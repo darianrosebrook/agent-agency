@@ -11,7 +11,11 @@ fn sample_tool() -> MCPTool {
         author: "ai".into(),
         tool_type: ToolType::Utility,
         capabilities: vec![ToolCapability::TextProcessing],
-        parameters: ToolParameters { required: vec![], optional: vec![], constraints: vec![] },
+        parameters: ToolParameters {
+            required: vec![],
+            optional: vec![],
+            constraints: vec![],
+        },
         output_schema: serde_json::json!({}),
         caws_compliance: CawsComplianceStatus::Unknown,
         registration_time: chrono::Utc::now(),
@@ -121,10 +125,9 @@ async fn registry_averages_only_successful_executions() {
     assert_eq!(stats.total_executions, 3);
     assert_eq!(stats.successful_executions, 2);
     assert_eq!(stats.failed_executions, 1);
-    
+
     // Average should only include successful executions (res1 and res3)
     // Both should have similar execution times, so average should be reasonable
     assert!(stats.average_execution_time_ms > 0.0);
     assert!(stats.average_execution_time_ms < 1000.0); // Should be less than 1 second
 }
-

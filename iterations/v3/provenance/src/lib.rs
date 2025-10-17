@@ -4,15 +4,15 @@
 //! per ADR-003 requirements. This service ensures all arbitration decisions and
 //! worker outputs are tracked with cryptographic integrity.
 
+pub mod git_integration;
 pub mod service;
 pub mod signer;
-pub mod git_integration;
-pub mod types;
 pub mod storage;
+pub mod types;
 
-pub use service::ProvenanceService;
-pub use signer::{SignerTrait, JwsSigner, LocalKeySigner};
 pub use git_integration::{GitIntegration, GitTrailerManager};
+pub use service::ProvenanceService;
+pub use signer::{JwsSigner, LocalKeySigner, SignerTrait};
 pub use types::*;
 
 /// Provenance service configuration
@@ -20,13 +20,13 @@ pub use types::*;
 pub struct ProvenanceConfig {
     /// Database connection configuration
     pub database: DatabaseConfig,
-    
+
     /// Git repository configuration
     pub git: GitConfig,
-    
+
     /// Signing configuration
     pub signing: SigningConfig,
-    
+
     /// Storage configuration
     pub storage: StorageConfig,
 }
@@ -94,4 +94,3 @@ impl Default for ProvenanceConfig {
         }
     }
 }
-

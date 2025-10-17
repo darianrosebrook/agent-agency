@@ -1,11 +1,11 @@
 //! Integration tests for the Claim Extraction system
 
 use anyhow::Result;
-use tracing::{info, debug};
+use tracing::{debug, info};
 
+use crate::fixtures::{TestDataGenerator, TestFixtures};
+use crate::mocks::{MockDatabase, MockEventEmitter, MockFactory, MockMetricsCollector};
 use crate::test_utils::{TestExecutor, TestResult, DEFAULT_TEST_TIMEOUT};
-use crate::fixtures::{TestFixtures, TestDataGenerator};
-use crate::mocks::{MockFactory, MockDatabase, MockEventEmitter, MockMetricsCollector};
 
 /// Claim Extraction integration test suite
 pub struct ClaimExtractionIntegrationTests {
@@ -34,28 +34,40 @@ impl ClaimExtractionIntegrationTests {
         // Test disambiguation stage
         results.push(
             self.executor
-                .execute("claim_extraction_disambiguation", self.test_disambiguation_stage())
+                .execute(
+                    "claim_extraction_disambiguation",
+                    self.test_disambiguation_stage(),
+                )
                 .await,
         );
 
         // Test qualification stage
         results.push(
             self.executor
-                .execute("claim_extraction_qualification", self.test_qualification_stage())
+                .execute(
+                    "claim_extraction_qualification",
+                    self.test_qualification_stage(),
+                )
                 .await,
         );
 
         // Test decomposition stage
         results.push(
             self.executor
-                .execute("claim_extraction_decomposition", self.test_decomposition_stage())
+                .execute(
+                    "claim_extraction_decomposition",
+                    self.test_decomposition_stage(),
+                )
                 .await,
         );
 
         // Test verification stage
         results.push(
             self.executor
-                .execute("claim_extraction_verification", self.test_verification_stage())
+                .execute(
+                    "claim_extraction_verification",
+                    self.test_verification_stage(),
+                )
                 .await,
         );
 
@@ -69,7 +81,10 @@ impl ClaimExtractionIntegrationTests {
         // Test error handling
         results.push(
             self.executor
-                .execute("claim_extraction_error_handling", self.test_error_handling())
+                .execute(
+                    "claim_extraction_error_handling",
+                    self.test_error_handling(),
+                )
                 .await,
         );
 
@@ -321,10 +336,14 @@ mod tests {
     #[tokio::test]
     async fn test_claim_extraction_mock_setup() {
         let tests = ClaimExtractionIntegrationTests::new();
-        
+
         let claim_input = TestFixtures::claim_extraction_input();
-        tests.mock_db.insert("claim-input-123".to_string(), claim_input).await.unwrap();
-        
+        tests
+            .mock_db
+            .insert("claim-input-123".to_string(), claim_input)
+            .await
+            .unwrap();
+
         assert_eq!(tests.mock_db.count().await, 1);
     }
 }

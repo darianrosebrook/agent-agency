@@ -3,8 +3,8 @@
 use crate::types::*;
 use dashmap::DashMap;
 use lru::LruCache;
-use std::sync::Arc;
 use std::num::NonZeroUsize;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// LRU cache for embeddings
@@ -84,16 +84,16 @@ impl EmbeddingIndex {
     /// Insert embedding into index
     pub fn insert(&self, embedding: StoredEmbedding) {
         let id = embedding.id.as_str().to_string();
-        
+
         // Index by ID
         self.by_id.insert(id.clone(), embedding.clone());
-        
+
         // Index by content type
         self.by_content_type
             .entry(embedding.metadata.content_type.clone())
             .or_insert_with(Vec::new)
             .push(id.clone());
-        
+
         // Index by tags
         for tag in &embedding.metadata.tags {
             self.by_tag
@@ -140,17 +140,20 @@ impl EmbeddingIndex {
     pub fn remove(&self, id: &str) -> Option<StoredEmbedding> {
         if let Some((_, embedding)) = self.by_id.remove(id) {
             // Remove from content type index
-            if let Some(mut entry) = self.by_content_type.get_mut(&embedding.metadata.content_type) {
+            if let Some(mut entry) = self
+                .by_content_type
+                .get_mut(&embedding.metadata.content_type)
+            {
                 entry.retain(|stored_id| stored_id != id);
             }
-            
+
             // Remove from tag indices
             for tag in &embedding.metadata.tags {
                 if let Some(mut entry) = self.by_tag.get_mut(tag) {
                     entry.retain(|stored_id| stored_id != id);
                 }
             }
-            
+
             Some(embedding)
         } else {
             None
@@ -159,7 +162,10 @@ impl EmbeddingIndex {
 
     /// Get all embeddings
     pub fn get_all(&self) -> Vec<StoredEmbedding> {
-        self.by_id.iter().map(|entry| entry.value().clone()).collect()
+        self.by_id
+            .iter()
+            .map(|entry| entry.value().clone())
+            .collect()
     }
 
     /// Get index statistics

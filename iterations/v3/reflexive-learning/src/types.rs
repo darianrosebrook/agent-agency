@@ -1,9 +1,10 @@
 //! Types for reflexive learning system
 
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+use agent_agency_council::learning::TaskOutcome;
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use uuid::Uuid;
 
 /// Learning task for the system
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -113,7 +114,7 @@ pub struct LearningState {
     pub resource_utilization: ResourceUtilization,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum LearningStrategy {
     Conservative,
     Balanced,
@@ -339,7 +340,7 @@ pub struct ImpactAssessment {
     pub rollback_plan: Option<RollbackPlan>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum RiskLevel {
     Low,
     Medium,
@@ -366,6 +367,117 @@ pub struct RollbackStep {
     pub step_number: u32,
     pub description: String,
     pub estimated_time: chrono::Duration,
+}
+
+/// Snapshot of the learning context for predictive analytics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskLearningSnapshot {
+    pub outcome: TaskOutcome,
+    pub progress_metrics: Option<ProgressMetrics>,
+    pub historical_performance: Option<HistoricalPerformance>,
+    pub recent_resource_usage: Option<ResourceUtilization>,
+    pub turn_count: u32,
+    pub timestamp: DateTime<Utc>,
+}
+
+impl TaskLearningSnapshot {
+    pub fn from_outcome(outcome: TaskOutcome) -> Self {
+        Self {
+            outcome,
+            progress_metrics: None,
+            historical_performance: None,
+            recent_resource_usage: None,
+            turn_count: 0,
+            timestamp: chrono::Utc::now(),
+        }
+    }
+
+    pub fn with_progress(mut self, metrics: ProgressMetrics) -> Self {
+        self.progress_metrics = Some(metrics);
+        self
+    }
+
+    pub fn with_history(mut self, history: HistoricalPerformance) -> Self {
+        self.historical_performance = Some(history);
+        self
+    }
+
+    pub fn with_resources(mut self, utilization: ResourceUtilization) -> Self {
+        self.recent_resource_usage = Some(utilization);
+        self
+    }
+
+    pub fn with_turn_count(mut self, turn_count: u32) -> Self {
+        self.turn_count = turn_count;
+        self
+    }
+}
+
+/// Prediction of future task performance
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformancePrediction {
+    pub expected_quality_score: f64,
+    pub success_probability: f64,
+    pub predicted_completion_time_ms: u64,
+    pub risk_level: RiskLevel,
+    pub confidence: f64,
+    pub supporting_factors: Vec<String>,
+}
+
+/// Recommendation for strategy adjustments
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StrategyOptimizationPlan {
+    pub recommended_strategy: LearningStrategy,
+    pub adjustments: Vec<StrategyAdjustmentSuggestion>,
+    pub expected_quality_gain: f64,
+    pub expected_efficiency_gain: f64,
+    pub confidence: f64,
+    pub rationale: Vec<String>,
+}
+
+/// Suggested adjustment with focus area and magnitude
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StrategyAdjustmentSuggestion {
+    pub focus: StrategyAdjustmentFocus,
+    pub magnitude: f64,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum StrategyAdjustmentFocus {
+    Quality,
+    Efficiency,
+    Resource,
+    Context,
+    Exploration,
+}
+
+/// Prediction of future resource requirements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourcePrediction {
+    pub expected_cpu_usage: f64,
+    pub expected_memory_mb: f64,
+    pub expected_token_usage: f64,
+    pub expected_duration_ms: u64,
+    pub pressure_level: ResourcePressureLevel,
+    pub confidence: f64,
+    pub bottlenecks: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ResourcePressureLevel {
+    Low,
+    Moderate,
+    High,
+    Critical,
+}
+
+/// Aggregated predictive learning insights
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PredictiveLearningInsights {
+    pub performance: PerformancePrediction,
+    pub strategy: StrategyOptimizationPlan,
+    pub resources: ResourcePrediction,
 }
 
 /// Historical performance data
@@ -400,23 +512,22 @@ pub enum FailureType {
 pub enum LearningSystemError {
     #[error("Session management failed: {0}")]
     SessionManagementFailed(String),
-    
+
     #[error("Progress tracking failed: {0}")]
     ProgressTrackingFailed(String),
-    
+
     #[error("Credit assignment failed: {0}")]
     CreditAssignmentFailed(String),
-    
+
     #[error("Resource allocation failed: {0}")]
     ResourceAllocationFailed(String),
-    
+
     #[error("Context preservation failed: {0}")]
     ContextPreservationFailed(String),
-    
+
     #[error("Council integration failed: {0}")]
     CouncilIntegrationFailed(String),
-    
+
     #[error("Learning algorithm failed: {0}")]
     LearningAlgorithmFailed(String),
 }
-

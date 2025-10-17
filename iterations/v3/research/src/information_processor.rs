@@ -106,16 +106,16 @@ pub trait IInformationProcessor: Send + Sync {
         query: &KnowledgeQuery,
         results: Vec<SearchResult>,
     ) -> Result<Vec<ProcessedSearchResult>>;
-    
+
     /// Score relevance of a result for a given query
     fn score_relevance(&self, query: &KnowledgeQuery, result: &SearchResult) -> f64;
-    
+
     /// Assess credibility of a result
     fn assess_credibility(&self, result: &SearchResult) -> f64;
-    
+
     /// Determine quality level based on scores
     fn determine_quality(&self, relevance: f64, credibility: f64) -> QualityLevel;
-    
+
     /// Calculate combined score for ranking
     fn calculate_combined_score(&self, result: &ProcessedSearchResult) -> f64;
 }
@@ -183,14 +183,17 @@ impl InformationProcessor {
     fn content_hash(&self, content: &str) -> String {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
-        
+
         let mut hasher = DefaultHasher::new();
         content.hash(&mut hasher);
         format!("{:x}", hasher.finish())
     }
 
     /// Apply diversity constraints to results
-    fn apply_diversity_constraints(&self, results: Vec<ProcessedSearchResult>) -> Vec<ProcessedSearchResult> {
+    fn apply_diversity_constraints(
+        &self,
+        results: Vec<ProcessedSearchResult>,
+    ) -> Vec<ProcessedSearchResult> {
         if !self.config.enable_diversity_constraints {
             return results;
         }
@@ -218,7 +221,11 @@ impl InformationProcessor {
     }
 
     /// Calculate diversity score for a result
-    fn calculate_diversity_score(&self, result: &SearchResult, other_results: &[SearchResult]) -> f64 {
+    fn calculate_diversity_score(
+        &self,
+        result: &SearchResult,
+        other_results: &[SearchResult],
+    ) -> f64 {
         if other_results.is_empty() {
             return 1.0; // First result is maximally diverse
         }
@@ -245,7 +252,7 @@ impl InformationProcessor {
     fn calculate_content_similarity(&self, content1: &str, content2: &str) -> f64 {
         let content1_lower = content1.to_lowercase();
         let content2_lower = content2.to_lowercase();
-        
+
         let words1: HashSet<&str> = content1_lower.split_whitespace().collect();
         let words2: HashSet<&str> = content2_lower.split_whitespace().collect();
 
@@ -263,8 +270,9 @@ impl InformationProcessor {
     async fn update_stats(&self, processing_time_ms: u64, filters_applied: &[String]) {
         let mut stats = self.processing_stats.write().await;
         stats.total_processed += 1;
-        stats.average_processing_time_ms = 
-            (stats.average_processing_time_ms * (stats.total_processed - 1) as f64 + processing_time_ms as f64) 
+        stats.average_processing_time_ms = (stats.average_processing_time_ms
+            * (stats.total_processed - 1) as f64
+            + processing_time_ms as f64)
             / stats.total_processed as f64;
 
         for filter in filters_applied {
@@ -371,7 +379,8 @@ impl IInformationProcessor for InformationProcessor {
         processed.truncate(self.config.max_results_to_process);
 
         let processing_time_ms = start_time.elapsed().as_millis() as u64;
-        self.update_stats(processing_time_ms, &filters_applied).await;
+        self.update_stats(processing_time_ms, &filters_applied)
+            .await;
 
         info!(
             "Processed {} results in {}ms, {} filters applied",
@@ -516,7 +525,11 @@ mod tests {
 
         let query = create_test_query();
         let results = vec![
-            create_test_result("1", "This is about artificial intelligence and machine learning", "academic"),
+            create_test_result(
+                "1",
+                "This is about artificial intelligence and machine learning",
+                "academic",
+            ),
             create_test_result("2", "AI is transforming the world", "news"),
         ];
 

@@ -4,12 +4,12 @@
 
 use crate::types::*;
 use anyhow::Result;
+use glob;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, warn, error};
-use uuid::Uuid;
-use glob;
 use tokio_util::sync::CancellationToken;
+use tracing::{error, info, warn};
+use uuid::Uuid;
 
 /// Tool discovery service
 #[derive(Debug)]
@@ -22,7 +22,9 @@ pub struct ToolDiscovery {
 
 impl ToolDiscovery {
     /// Create a new tool discovery service
-    pub fn new() -> Self { Self::with_config(ToolDiscoveryConfig::default()) }
+    pub fn new() -> Self {
+        Self::with_config(ToolDiscoveryConfig::default())
+    }
 
     /// Create with explicit config (useful for tests)
     pub fn with_config(config: ToolDiscoveryConfig) -> Self {
@@ -50,7 +52,7 @@ impl ToolDiscovery {
     /// Start automatic tool discovery
     pub async fn start_auto_discovery(&self) -> Result<()> {
         info!("Starting automatic tool discovery");
-        
+
         {
             let mut active = self.discovery_active.write().await;
             *active = true;
@@ -64,16 +66,22 @@ impl ToolDiscovery {
             let mut ticker = tokio::time::interval(std::time::Duration::from_secs(interval as u64));
             loop {
                 // Check for cancellation before each tick
-                if token.is_cancelled() { break; }
-                
+                if token.is_cancelled() {
+                    break;
+                }
+
                 ticker.tick().await;
-                
+
                 // stop if deactivated
-                if !this.is_active().await { break; }
-                
+                if !this.is_active().await {
+                    break;
+                }
+
                 // Check for cancellation before discovery
-                if token.is_cancelled() { break; }
-                
+                if token.is_cancelled() {
+                    break;
+                }
+
                 if let Err(e) = this.discover_tools().await {
                     error!("Auto discovery error: {e:?}");
                 }
@@ -85,10 +93,10 @@ impl ToolDiscovery {
     /// Stop automatic tool discovery
     pub async fn stop(&self) -> Result<()> {
         info!("Stopping tool discovery");
-        
+
         // Cancel the cancellation token for immediate shutdown
         self.cancellation_token.cancel();
-        
+
         {
             let mut active = self.discovery_active.write().await;
             *active = false;
@@ -100,7 +108,10 @@ impl ToolDiscovery {
 
     /// Discover tools from configured paths
     pub async fn discover_tools(&self) -> Result<ToolDiscoveryResult> {
-        info!("Discovering tools from paths: {:?}", self.config.discovery_paths);
+        info!(
+            "Discovering tools from paths: {:?}",
+            self.config.discovery_paths
+        );
 
         // Check for cancellation before starting
         if self.cancellation_token.is_cancelled() {
@@ -124,7 +135,9 @@ impl ToolDiscovery {
         // Scan filesystem paths for manifests and parse them
         let mut set = std::collections::HashSet::new();
         for base in &self.config.discovery_paths {
-            if !std::path::Path::new(base).exists() { continue; }
+            if !std::path::Path::new(base).exists() {
+                continue;
+            }
             // simple glob over manifest patterns
             for pattern in &self.config.manifest_patterns {
                 let full = format!("{}/{}", base.trim_end_matches('/'), pattern);
@@ -152,7 +165,8 @@ impl ToolDiscovery {
             match std::fs::read_to_string(&path) {
                 Ok(content) => {
                     // Try JSON, then YAML
-                    let manifest: Result<crate::types::ToolManifest, _> = serde_json::from_str(&content);
+                    let manifest: Result<crate::types::ToolManifest, _> =
+                        serde_json::from_str(&content);
                     let manifest = match manifest.or_else(|_| serde_yaml::from_str(&content)) {
                         Ok(m) => m,
                         Err(e) => {
@@ -171,7 +185,7 @@ impl ToolDiscovery {
                     if self.config.enable_validation {
                         let v = self.validate_tool(&tool).await?;
                         if !v.is_valid {
-                            errors.push(DiscoveryError{
+                            errors.push(DiscoveryError {
                                 path: path.clone(),
                                 error_type: DiscoveryErrorType::ValidationError,
                                 message: format!("validation errors: {:?}", v.errors),
@@ -208,8 +222,11 @@ impl ToolDiscovery {
             discovered_at: chrono::Utc::now(),
         };
 
-        info!("Tool discovery completed: {} tools, {} errors", 
-            result.discovered_tools.len(), result.errors.len());
+        info!(
+            "Tool discovery completed: {} tools, {} errors",
+            result.discovered_tools.len(),
+            result.errors.len()
+        );
 
         Ok(result)
     }
@@ -220,12 +237,25 @@ impl ToolDiscovery {
 
         let mut errors = Vec::new();
         let mut warnings = Vec::new();
-        if tool.name.trim().is_empty() { errors.push("name is required".into()); }
-        if tool.version.trim().is_empty() { warnings.push("version missing".into()); }
-        if tool.parameters.required.iter().any(|p| p.name.trim().is_empty()) {
+        if tool.name.trim().is_empty() {
+            errors.push("name is required".into());
+        }
+        if tool.version.trim().is_empty() {
+            warnings.push("version missing".into());
+        }
+        if tool
+            .parameters
+            .required
+            .iter()
+            .any(|p| p.name.trim().is_empty())
+        {
             errors.push("parameter with empty name".into());
         }
-        Ok(ValidationResult { is_valid: errors.is_empty(), errors, warnings })
+        Ok(ValidationResult {
+            is_valid: errors.is_empty(),
+            errors,
+            warnings,
+        })
     }
 
     /// Get discovered tools
@@ -243,15 +273,17 @@ impl ToolDiscovery {
 }
 
 impl ToolDiscovery {
-    fn clone_for_task(&self) -> Self { 
-        Self { 
-            config: self.config.clone(), 
-            discovered_tools: self.discovered_tools.clone(), 
+    fn clone_for_task(&self) -> Self {
+        Self {
+            config: self.config.clone(),
+            discovered_tools: self.discovered_tools.clone(),
             discovery_active: self.discovery_active.clone(),
             cancellation_token: self.cancellation_token.clone(),
-        } 
+        }
     }
-    async fn is_active(&self) -> bool { *self.discovery_active.read().await }
+    async fn is_active(&self) -> bool {
+        *self.discovery_active.read().await
+    }
     fn manifest_to_tool(&self, m: &crate::types::ToolManifest) -> MCPTool {
         MCPTool {
             id: Uuid::new_v4(),
