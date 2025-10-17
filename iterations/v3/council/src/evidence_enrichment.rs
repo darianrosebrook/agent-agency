@@ -129,7 +129,7 @@ impl EvidenceEnrichmentCoordinator {
         ProcessingContext {
             task_id: task_spec.id,
             working_spec_id: task_spec.caws_spec.as_ref()
-                .map(|spec| spec.working_spec_path.clone())
+                .map(|spec| format!("{:?}", spec))
                 .unwrap_or_else(|| "unknown".to_string()),
             source_file: task_spec.scope.files_affected.first().cloned(),
             line_number: None,

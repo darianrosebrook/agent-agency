@@ -13,8 +13,9 @@ members = [
     "security-policy-enforcer",
     "minimal-diff-evaluator",
     "context-preservation-engine",
-    "embedding-service"
-]
+    "embedding-service",
+    "system-health-monitor"
+, "workspace-state-manager"]
 
 [workspace.package]
 version = "0.1.0"

@@ -47,6 +47,48 @@ pub trait ModelRegistry: Send + Sync {
     fn supports(&self, model: &str, device: DeviceKind, precision: Precision) -> bool;
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct StaticModelRegistry {
+    pub entries: std::collections::HashMap<String, std::collections::HashMap<DeviceKind, Vec<Precision>>>,
+}
+
+impl StaticModelRegistry {
+    pub fn with_entry(mut self, model: &str, device: DeviceKind, precs: Vec<Precision>) -> Self {
+        let devs = self.entries.entry(model.to_string()).or_default();
+        devs.insert(device, precs);
+        self
+    }
+}
+
+impl ModelRegistry for StaticModelRegistry {
+    fn supports(&self, model: &str, device: DeviceKind, precision: Precision) -> bool {
+        self.entries
+            .get(model)
+            .and_then(|m| m.get(&device))
+            .map(|v| v.contains(&precision))
+            .unwrap_or(false)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct StaticSensors {
+    pub ane: ThermalState,
+    pub gpu: ThermalState,
+    pub cpu: ThermalState,
+    pub mem: MemoryState,
+}
+
+impl DeviceSensors for StaticSensors {
+    fn thermal(&self, device: DeviceKind) -> ThermalState {
+        match device {
+            DeviceKind::Ane => self.ane,
+            DeviceKind::Gpu => self.gpu,
+            DeviceKind::Cpu => self.cpu,
+        }
+    }
+    fn memory(&self) -> MemoryState { self.mem }
+}
+
 pub trait AllocationPlanner: Send + Sync {
     fn plan(&self, req: &AllocationRequest) -> AllocationPlan;
 }
@@ -135,19 +177,18 @@ impl<S: DeviceSensors, R: ModelRegistry> AllocationPlanner for SimplePlanner<S, 
 mod tests {
     use super::*;
 
-    struct MockSensors { pub ane_throttled: bool }
-    impl DeviceSensors for MockSensors {
-        fn thermal(&self, d: DeviceKind) -> ThermalState { match d { DeviceKind::Ane => ThermalState{ throttled: self.ane_throttled, headroom_pct: 10 }, _ => ThermalState{ throttled: false, headroom_pct: 60 } } }
-        fn memory(&self) -> MemoryState { MemoryState{ used_gb: 8.0, total_gb: 32.0 } }
-    }
-    struct MockRegistry;
-    impl ModelRegistry for MockRegistry {
-        fn supports(&self, _model: &str, _device: DeviceKind, _precision: Precision) -> bool { true }
+    fn open_registry() -> StaticModelRegistry {
+        StaticModelRegistry::default()
+            .with_entry("judge", DeviceKind::Ane, vec![Precision::Int8, Precision::Fp16])
+            .with_entry("judge", DeviceKind::Gpu, vec![Precision::Fp16, Precision::Int8])
+            .with_entry("worker", DeviceKind::Gpu, vec![Precision::Int4, Precision::Int8, Precision::Fp16])
+            .with_entry("worker", DeviceKind::Cpu, vec![Precision::Fp32])
     }
 
     #[test]
     fn prefers_ane_when_not_throttled() {
-        let planner = SimplePlanner::new(MockSensors{ ane_throttled: false }, MockRegistry);
+        let sensors = StaticSensors{ ane: ThermalState{ throttled: false, headroom_pct: 80}, gpu: ThermalState{ throttled: false, headroom_pct: 70}, cpu: ThermalState{ throttled: false, headroom_pct: 90}, mem: MemoryState{ used_gb: 8.0, total_gb: 32.0 } };
+        let planner = SimplePlanner::new(sensors, open_registry());
         let req = AllocationRequest { model: "judge".into(), supported_precisions: vec![Precision::Int8, Precision::Fp16], preferred_devices: vec![], tier: Tier::T1, latency_slo_ms: 20, max_batch_size: 8, workload_hint: WorkloadHint::JudgeLatencySensitive };
         let plan = planner.plan(&req);
         assert_eq!(plan.device, DeviceKind::Ane);
@@ -156,7 +197,8 @@ mod tests {
 
     #[test]
     fn falls_back_when_throttled() {
-        let planner = SimplePlanner::new(MockSensors{ ane_throttled: true }, MockRegistry);
+        let sensors = StaticSensors{ ane: ThermalState{ throttled: true, headroom_pct: 5}, gpu: ThermalState{ throttled: false, headroom_pct: 60}, cpu: ThermalState{ throttled: false, headroom_pct: 90}, mem: MemoryState{ used_gb: 8.0, total_gb: 32.0 } };
+        let planner = SimplePlanner::new(sensors, open_registry());
         let req = AllocationRequest { model: "judge".into(), supported_precisions: vec![Precision::Int8, Precision::Fp16], preferred_devices: vec![DeviceKind::Ane], tier: Tier::T1, latency_slo_ms: 15, max_batch_size: 8, workload_hint: WorkloadHint::JudgeLatencySensitive };
         let plan = planner.plan(&req);
         assert!(plan.device == DeviceKind::Gpu || plan.device == DeviceKind::Cpu);
@@ -164,11 +206,11 @@ mod tests {
 
     #[test]
     fn throughput_prefers_low_precision() {
-        let planner = SimplePlanner::new(MockSensors{ ane_throttled: false }, MockRegistry);
+        let sensors = StaticSensors{ ane: ThermalState{ throttled: false, headroom_pct: 80}, gpu: ThermalState{ throttled: false, headroom_pct: 60}, cpu: ThermalState{ throttled: false, headroom_pct: 90}, mem: MemoryState{ used_gb: 8.0, total_gb: 32.0 } };
+        let planner = SimplePlanner::new(sensors, open_registry());
         let req = AllocationRequest { model: "worker".into(), supported_precisions: vec![Precision::Int4, Precision::Int8, Precision::Fp16], preferred_devices: vec![DeviceKind::Gpu], tier: Tier::T2, latency_slo_ms: 100, max_batch_size: 32, workload_hint: WorkloadHint::WorkerThroughput };
         let plan = planner.plan(&req);
         assert_eq!(plan.precision, Precision::Int4);
         assert!(plan.batch_size >= 1);
     }
 }
-

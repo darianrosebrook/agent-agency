@@ -1,0 +1,46 @@
+[package]
+name = "workspace-state-manager"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Core async runtime
+tokio.workspace = true
+async-trait.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Database
+sqlx.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+
+# Error handling
+anyhow.workspace = true
+thiserror.workspace = true
+
+# Logging
+tracing.workspace = true
+
+# Git operations
+git2 = "0.19"
+# gitoxide = "0.37"  # Conflicts with sqlx SQLite versions, using git2 instead
+
+# File system operations
+walkdir = "2.4"
+ignore = "0.4"
+
+# Hashing and checksums
+sha2 = "0.10"
+blake3 = "1.5"
+
+# Compression
+flate2 = "1.0"
+tar = "0.4"
+
+# Path handling
+pathdiff = "0.2"

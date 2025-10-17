@@ -18,7 +18,7 @@ Purpose: Track critical TODOs blocking or sequencing integration. Keep entries c
 ### 🚧 **Remaining Components (2/10)**
 
 - 🚧 **Workspace State Manager**: Repository state management with rollbacks
-- 🚧 **Adaptive Resource Manager**: Apple Silicon optimization
+- 🚧 **Adaptive Resource Manager**: Apple Silicon optimization (scaffolded; scheduler + sensors/registry config pending)
 
 ### 🔗 **Integration Status**
 
@@ -180,12 +180,13 @@ Moved to `v3/docs-status/IMPLEMENTATION_STATUS.md` under "Embedding Infrastructu
   - V2 Foundation: V2 ContextPreservationEngine (production-ready) ✅
   - **Features**: Gzip compression, SHA256 checksums, diff-based storage, size limits, LRU caching ✅
 
-### 7. System Health Monitor (Medium Value)
+### 8. System Health Monitor ✅ IMPLEMENTED
 
-- [ ] **Health Monitoring**: Implement comprehensive system monitoring
-  - Implementation: New component `v3/system-health-monitor/`
-  - Integration: Apple Silicon thermal/performance tracking, council health metrics
-  - V2 Foundation: V2 SystemHealthMonitor (production-ready)
+- [x] **Production-Ready Health Monitoring**: Complete system health assessment with agent monitoring
+  - Implementation: `v3/system-health-monitor/` ✅
+  - Integration: Circuit breaker, alerts, metrics collection, Apple Silicon thermal/performance tracking
+  - V2 Foundation: V2 SystemHealthMonitor (production-ready) ✅
+  - **Features**: CPU/memory/disk monitoring, agent health scoring, alert system, circuit breaker, Prometheus metrics
 
 ## V3 In-Flight Completion
 
