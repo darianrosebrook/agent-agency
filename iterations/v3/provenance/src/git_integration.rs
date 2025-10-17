@@ -14,6 +14,15 @@ use uuid::Uuid;
 
 use crate::types::ProvenanceRecord;
 
+/// Git commit information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommitInfo {
+    pub hash: String,
+    pub message: String,
+    pub author: String,
+    pub timestamp: DateTime<Utc>,
+    pub trailer: String,
+}
 
 /// Git integration trait
 #[async_trait]
@@ -257,15 +266,6 @@ impl GitIntegration for GitTrailerManager {
     }
 }
 
-/// Commit information with provenance trailer
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CommitInfo {
-    pub hash: String,
-    pub message: String,
-    pub author: String,
-    pub timestamp: DateTime<Utc>,
-    pub trailer: String,
-}
 
 /// Git repository status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -462,4 +462,5 @@ mod tests {
     }
 }
 */
+
 

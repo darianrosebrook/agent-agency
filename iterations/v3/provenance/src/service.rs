@@ -62,7 +62,7 @@ impl ProvenanceService {
             config.signing.algorithm.clone(),
         )?;
 
-        let git_integration = if GitUtils::is_git_repository(&config.git.repository_path) {
+        let git_integration = if std::path::Path::new(&config.git.repository_path).join(".git").exists() {
             Some(Box::new(GitTrailerManager::new(
                 &config.git.repository_path,
                 config.git.branch.clone(),
@@ -310,19 +310,39 @@ impl ProvenanceService {
     pub async fn append_event(&self, event_type: &str, payload: serde_json::Value) -> Result<()> {
         // Build a minimal ProvenanceRecord-like entry for storage
         let rec = ProvenanceRecord {
-            id: Uuid::new_v4().to_string(),
-            verdict_id: "telemetry".into(),
+            id: Uuid::new_v4(),
+            verdict_id: Uuid::new_v4(),
+            task_id: Uuid::new_v4(),
             timestamp: Utc::now(),
-            caws_compliance: CawsComplianceProvenance { compliance_score: 0.0, issues: vec![] },
+            caws_compliance: CawsComplianceProvenance { 
+                is_compliant: true,
+                compliance_score: 0.0, 
+                violations: vec![], 
+                waivers_used: vec![], 
+                budget_adherence: BudgetAdherence {
+                    max_files: 0,
+                    actual_files: 0,
+                    max_loc: 0,
+                    actual_loc: 0,
+                    max_time_minutes: None,
+                    actual_time_minutes: None,
+                    within_budget: true,
+                },
+            },
             consensus_score: 0.0,
-            decision: Decision::Info,
-            details: Some(payload),
-            git_trailer: None,
+            decision: VerdictDecision::Accept {
+                confidence: 0.5,
+                summary: "Telemetry event".to_string(),
+            },
+            judge_verdicts: HashMap::new(),
+            claim_verification: None,
+            git_trailer: "telemetry".to_string(),
             git_commit_hash: None,
-            signature: vec![],
-            metadata: Some(HashMap::from([
+            signature: "unsigned".to_string(),
+            metadata: HashMap::from([
                 ("event_type".into(), event_type.into()),
-            ])),
+                ("payload".into(), payload),
+            ]),
         };
         // Store without signing to keep it lightweight
         self.storage.store_record(&rec).await

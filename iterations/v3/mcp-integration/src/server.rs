@@ -9,6 +9,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn, error};
 use uuid::Uuid;
+use jsonrpc_core::{IoHandler, Params, Value, Error as JsonRpcError, Result as JsonRpcResult};
+use jsonrpc_http_server::{ServerBuilder};
 
 /// Main MCP server
 #[derive(Debug)]
@@ -163,10 +165,52 @@ impl MCPServer {
         }
 
         info!("Starting HTTP server on port {}", self.config.server.port);
-        
-        // TODO: Implement HTTP server
-        // This would use jsonrpc-http-server to handle HTTP requests
-        
+
+        let addr = format!("{}:{}", self.config.server.host, self.config.server.port);
+        let registry = self.tool_registry.clone();
+        let discovery = self.tool_discovery.clone();
+        let caws = self.caws_integration.clone();
+
+        tokio::task::spawn_blocking(move || {
+            let mut io = IoHandler::default();
+
+            // /health equivalent
+            io.add_sync_method("health", move |_| {
+                Ok(Value::String("ok".into()))
+            });
+
+            // /tools - list tools
+            let registry_list = registry.clone();
+            io.add_method("tools", move |_| {
+                let registry_list = registry_list.clone();
+                async move {
+                    let tools = registry_list.get_all_tools().await;
+                    Ok(serde_json::to_value(&tools).unwrap())
+                }
+            });
+
+            // /validate - CAWS validate a pseudo tool manifest (expects an MCPTool)
+            let caws_validate = caws.clone();
+            io.add_method("validate", move |params: Params| {
+                let caws_validate = caws_validate.clone();
+                async move {
+                    let v: Value = params.parse().unwrap_or(Value::Null);
+                    let tool: crate::types::MCPTool = serde_json::from_value(v)
+                        .map_err(|e| JsonRpcError::invalid_params(format!("invalid tool: {e}")))?;
+                    let res = caws_validate.validate_tool(&tool).await
+                        .map_err(|e| JsonRpcError::internal_error())?;
+                    Ok(serde_json::to_value(&res).unwrap())
+                }
+            });
+
+            let server = ServerBuilder::new(io)
+                .threads(1)
+                .start_http(&addr.parse().expect("valid addr"))
+                .expect("start http");
+            // Keep server running until process end in this background thread
+            server.wait();
+        });
+
         Ok(())
     }
 
@@ -177,10 +221,7 @@ impl MCPServer {
         }
 
         info!("Starting WebSocket server on port {}", self.config.server.port + 1);
-        
-        // TODO: Implement WebSocket server
-        // This would use jsonrpc-ws-server to handle WebSocket connections
-        
+        // Minimal stub: not implementing bidirectional streaming in this step
         Ok(())
     }
 }

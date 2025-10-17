@@ -6294,5 +6294,113 @@
     },
     "previous_hash": "3798feb801f4f3d241c3cfe14048ec069c1953340b58afa2335901231398183c",
     "hash": "8707c313918d58c37331f469dc5d191e5a039210878b255567a91b6b0b1d45de"
+  },
+  {
+    "id": "prov-1760684350739",
+    "timestamp": "2025-10-17T06:59:10.739Z",
+    "commit": {
+      "hash": "72a1f3b86e257bf4211ce8b828fcf7783fb91b5d",
+      "message": "🎉 Apple Silicon Crate: PRODUCTION-READY",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-17T06:59:10.740Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "8707c313918d58c37331f469dc5d191e5a039210878b255567a91b6b0b1d45de",
+    "hash": "d5d2d785d20c7cc6b530b613f503cad78de589f3c302fd0423a8540e31eca45a"
+  },
+  {
+    "id": "prov-1760684730188",
+    "timestamp": "2025-10-17T07:05:30.188Z",
+    "commit": {
+      "hash": "b05a660cc23429e2e333b895c95c326778a4b988",
+      "message": "feat: Complete V2 Knowledge Graph Integration and V2 Production Resilience",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-17T07:05:30.188Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "d5d2d785d20c7cc6b530b613f503cad78de589f3c302fd0423a8540e31eca45a",
+    "hash": "9a04aab644d5505eee91bcfc65d94ecdbf0e35aec3b54e4b45625cf53a7419f0"
+  },
+  {
+    "id": "prov-1760686937616",
+    "timestamp": "2025-10-17T07:42:17.616Z",
+    "commit": {
+      "hash": "b82916522cf3d5bc7f016222c4157d3ccf59b924",
+      "message": "feat: Complete V2 Council Evidence Enrichment",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-17T07:42:17.617Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "9a04aab644d5505eee91bcfc65d94ecdbf0e35aec3b54e4b45625cf53a7419f0",
+    "hash": "8996499ae17213468673e970af8b192b74f578c9cbbebff4ab0bfe4edbbb95eb"
   }
 ]

@@ -42,10 +42,28 @@ impl ToolRegistry {
     /// Initialize tool registry
     pub async fn initialize(&self) -> Result<()> {
         info!("Initializing tool registry");
-        
-        // TODO: Implement initialization
-        // This would load persisted tools, restore execution history, etc.
-        
+        // Reset statistics and ensure clean queues
+        {
+            let mut q = self.execution_queue.write().await;
+            q.clear();
+        }
+        {
+            let mut h = self.execution_history.write().await;
+            h.clear();
+        }
+        {
+            let mut stats = self.statistics.write().await;
+            *stats = ToolRegistryStats {
+                total_tools: self.registered_tools.len() as u64,
+                active_tools: self.registered_tools.len() as u64,
+                total_executions: 0,
+                successful_executions: 0,
+                failed_executions: 0,
+                average_execution_time_ms: 0.0,
+                most_used_tools: Vec::new(),
+                last_updated: chrono::Utc::now(),
+            };
+        }
         Ok(())
     }
 
@@ -108,17 +126,27 @@ impl ToolRegistry {
         let tool = self.registered_tools.get(&request.tool_id)
             .ok_or_else(|| anyhow::anyhow!("Tool not found: {}", request.tool_id))?;
 
-        // TODO: Implement actual tool execution
-        // This would run the tool's entry point with the provided parameters
+        // Simulated execution router: respect timeout and return structured result
+        let timeout = request.timeout_seconds.unwrap_or(30);
+        let simulated = async {
+            // placeholder for execution; sleep a tiny amount to simulate work
+            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+            Ok::<serde_json::Value, anyhow::Error>(serde_json::json!({
+                "tool": tool.name,
+                "version": tool.version,
+                "echo": request.parameters,
+            }))
+        };
+        let output = tokio::time::timeout(std::time::Duration::from_secs(timeout as u64), simulated).await;
 
         let completed_at = chrono::Utc::now();
         let duration_ms = start_time.elapsed().as_millis() as u64;
 
-        let result = ToolExecutionResult {
+        let mut result = ToolExecutionResult {
             request_id: request.id,
             tool_id: request.tool_id,
             status: ExecutionStatus::Completed,
-            output: Some(serde_json::json!({"message": "Tool executed successfully"})),
+            output: None,
             error: None,
             logs: vec![LogEntry {
                 timestamp: completed_at,
@@ -141,6 +169,21 @@ impl ToolRegistry {
             duration_ms: Some(duration_ms),
         };
 
+        match output {
+            Ok(Ok(val)) => {
+                result.output = Some(val);
+                result.status = ExecutionStatus::Completed;
+            }
+            Ok(Err(e)) => {
+                result.error = Some(format!("execution error: {e}"));
+                result.status = ExecutionStatus::Failed;
+            }
+            Err(_) => {
+                result.error = Some("execution timed out".into());
+                result.status = ExecutionStatus::Timeout;
+            }
+        }
+
         // Store execution result
         {
             let mut history = self.execution_history.write().await;
@@ -156,7 +199,11 @@ impl ToolRegistry {
         {
             let mut stats = self.statistics.write().await;
             stats.total_executions += 1;
-            stats.successful_executions += 1;
+            match result.status {
+                ExecutionStatus::Completed => stats.successful_executions += 1,
+                ExecutionStatus::Failed | ExecutionStatus::Timeout => stats.failed_executions += 1,
+                _ => {}
+            }
             stats.average_execution_time_ms = 
                 (stats.average_execution_time_ms * (stats.total_executions - 1) as f64 + duration_ms as f64) 
                 / stats.total_executions as f64;
@@ -193,10 +240,9 @@ impl ToolRegistry {
     /// Shutdown tool registry
     pub async fn shutdown(&self) -> Result<()> {
         info!("Shutting down tool registry");
-        
-        // TODO: Implement shutdown
-        // This would save state, cleanup resources, etc.
-        
+        // Clean queues/history; idempotent
+        self.execution_queue.write().await.clear();
+        self.execution_history.write().await.clear();
         Ok(())
     }
 }

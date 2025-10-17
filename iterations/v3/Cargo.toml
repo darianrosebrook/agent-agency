@@ -16,7 +16,8 @@ members = [
     "embedding-service",
     "system-health-monitor",
     "workspace-state-manager",
-    "resilience"
+    "resilience",
+    "config"
 ]
 
 [workspace.package]

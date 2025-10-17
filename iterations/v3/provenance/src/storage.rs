@@ -41,7 +41,7 @@ impl super::service::ProvenanceStorage for DatabaseProvenanceStorage {
         Ok(())
     }
 
-    async fn get_record(&self, id: Uuid) -> Result<Option<ProvenanceRecord>> {
+    async fn get_record(&self, id: &str) -> Result<Option<ProvenanceRecord>> {
         // TODO: Implement database retrieval
         tracing::info!("Getting provenance record: {}", id);
         Ok(None)
@@ -71,7 +71,7 @@ impl super::service::ProvenanceStorage for DatabaseProvenanceStorage {
         })
     }
 
-    async fn delete_record(&self, id: Uuid) -> Result<()> {
+    async fn delete_record(&self, id: &str) -> Result<()> {
         // TODO: Implement database deletion
         tracing::info!("Deleting provenance record: {}", id);
         Ok(())
@@ -106,7 +106,7 @@ impl super::service::ProvenanceStorage for InMemoryProvenanceStorage {
         Ok(())
     }
 
-    async fn get_record(&self, id: Uuid) -> Result<Option<ProvenanceRecord>> {
+    async fn get_record(&self, id: &str) -> Result<Option<ProvenanceRecord>> {
         tracing::info!("Getting provenance record from memory: {}", id);
         Ok(self.records.get(&id).cloned())
     }
@@ -250,7 +250,7 @@ impl super::service::ProvenanceStorage for InMemoryProvenanceStorage {
         })
     }
 
-    async fn delete_record(&self, id: Uuid) -> Result<()> {
+    async fn delete_record(&self, id: &str) -> Result<()> {
         tracing::info!("Deleting provenance record from memory: {}", id);
         Ok(())
     }
