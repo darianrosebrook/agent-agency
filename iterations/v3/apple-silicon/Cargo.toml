@@ -19,7 +19,7 @@ tracing.workspace = true
 core-foundation = "0.9"
 objc = "0.2"
 metal = "0.29"
-metal-performance-shaders = "0.1"
+# metal-performance-shaders = "0.1"  # This crate doesn't exist, will use Metal directly
 
 # Core ML integration
 # Removed placeholder crate; actual Core ML bindings will be integrated later via Swift/FFI.

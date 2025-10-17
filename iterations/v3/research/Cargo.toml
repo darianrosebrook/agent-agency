@@ -26,8 +26,8 @@ parking_lot = "0.12"
 
 # Vector search and embeddings
 qdrant-client = "1.7"
-openai-rs = "0.1"  # For embeddings
-text-embeddings-rs = "0.1"
+# openai-rs = "0.1"  # For embeddings - doesn't exist
+# text-embeddings-rs = "0.1"  # Doesn't exist, will use alternative
 
 # Database integration
 sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls", "chrono", "uuid"] }

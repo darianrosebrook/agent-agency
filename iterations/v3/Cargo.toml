@@ -6,7 +6,11 @@ members = [
     "apple-silicon",
     "research",
     "mcp-integration",
-    "provenance"
+    "provenance",
+    "claim-extraction",
+    "reflexive-learning",
+    "model-benchmarking",
+    "security-policy-enforcer"
 ]
 
 [workspace.package]
@@ -62,8 +66,8 @@ candle-transformers = "0.3"
 # Vector operations for embeddings
 ndarray = "0.15"
 
-# CAWS integration
-caws-core = { path = "../../apps/tools/caws" }
+# CAWS integration (using Node.js tools, not Rust crate)
+# caws-core = { path = "../../apps/tools/caws" }
 
 [profile.release]
 opt-level = 3

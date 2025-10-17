@@ -1,5 +1,5 @@
 [package]
-name = "claim-extraction"
+name = "reflexive-learning"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -17,14 +17,14 @@ tracing.workspace = true
 uuid.workspace = true
 chrono.workspace = true
 
-# Claim extraction specific
-regex = "1.10"
-nom = "7.1"  # Parser combinators for claim parsing
-petgraph = "0.6"  # Graph algorithms for claim relationships
+# Learning and optimization
+ndarray.workspace = true
+petgraph = "0.6"  # For learning graph structures
+rayon = "1.8"     # For parallel learning computations
 
 # Council integration
 agent-agency-council = { path = "../council" }
 
-# Research integration for evidence gathering
-agent-agency-research = { path = "../research" }
+# Database for learning persistence
+sqlx.workspace = true
 
