@@ -3,6 +3,7 @@
 //! Provides semantic search capabilities using vector embeddings and Qdrant database.
 
 use crate::types::*;
+use uuid::Uuid;
 use anyhow::{Context, Result};
 use qdrant_client::{
     prelude::*,

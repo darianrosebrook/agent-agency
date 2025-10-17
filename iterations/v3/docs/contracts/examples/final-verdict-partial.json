@@ -1,0 +1,13 @@
+{
+  "decision": "modify",
+  "votes": [
+    {"judge_id": "constitutional", "weight": 0.4, "verdict": "pass"},
+    {"judge_id": "technical", "weight": 0.2, "verdict": "uncertain"},
+    {"judge_id": "quality", "weight": 0.2, "verdict": "pass"},
+    {"judge_id": "integration", "weight": 0.2, "verdict": "uncertain"}
+  ],
+  "dissent": "Technical and Integration request additional tests",
+  "remediation": ["Add edge-case tests for error branch"],
+  "constitutional_refs": ["CAWS:Tests"],
+  "verification_summary": {"claims_total": 3, "claims_verified": 2, "coverage_pct": 0.6667}
+}

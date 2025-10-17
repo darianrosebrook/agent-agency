@@ -104,11 +104,69 @@ pub trait ConsensusService: Send + Sync {
     /// Evaluate a task with the council
     async fn evaluate_task(&self, task_spec: TaskSpec) -> Result<ConsensusResult>;
     
+    /// Evaluate a task with validation artifacts and research evidence
+    async fn evaluate_task_with_artifacts(
+        &self,
+        task_spec: TaskSpec,
+        validation_result: CawsValidationResult,
+        research_bundle: Option<ResearchEvidenceBundle>,
+    ) -> Result<ConsensusResult>;
+    
     /// Get current council metrics
     async fn get_metrics(&self) -> Result<CouncilMetrics>;
     
     /// Check council health
     async fn health_check(&self) -> Result<bool>;
+}
+
+// NEW: Research evidence bundle for claim verification
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ResearchEvidenceBundle {
+    pub query_id: uuid::Uuid,
+    pub evidence_items: Vec<EvidenceItem>,
+    pub synthesis_quality: f32,
+    pub cross_references: Vec<CrossReference>,
+    pub collection_time_ms: u64,
+    pub claim_coverage_pct: f32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EvidenceItem {
+    pub id: uuid::Uuid,
+    pub claim_id: Option<String>,
+    pub content: String,
+    pub source: KnowledgeSource,
+    pub quality_score: f32,
+    pub verification_status: VerificationStatus,
+    pub relevance_score: f32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CrossReference {
+    pub source_id: uuid::Uuid,
+    pub target_id: uuid::Uuid,
+    pub relationship: CrossReferenceType,
+    pub strength: f32,
+    pub context: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum CrossReferenceType {
+    Supports,
+    Contradicts,
+    BuildsUpon,
+    References,
+    Similar,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum KnowledgeSource {
+    WebSearch,
+    CodeAnalysis,
+    Documentation,
+    VectorDatabase,
+    ExpertKnowledge,
+    HistoricalData,
 }
 
 /// Contract for task routing services
@@ -264,6 +322,18 @@ pub struct WorkerOutput {
     pub self_assessment: SelfAssessment,
     #[serde(default)]
     pub waivers: Vec<Waiver>,
+    #[serde(default)]
+    pub claims: Vec<Claim>,
+    #[serde(default)]
+    pub evidence_refs: Vec<EvidenceLink>,
+    
+    // NEW: Claim verification support
+    #[serde(default)]
+    pub claim_references: Option<Vec<ClaimReference>>,
+    #[serde(default)]
+    pub evidence_references: Option<Vec<EvidenceReference>>,
+    #[serde(default)]
+    pub verification_artifacts: Option<VerificationArtifacts>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
@@ -313,6 +383,114 @@ pub struct FinalVerdict {
     pub remediation: Vec<String>,
     #[serde(default)]
     pub constitutional_refs: Vec<String>,
+    #[serde(default)]
+    pub verification_summary: Option<VerificationSummary>,
+    
+    // NEW: Orchestration metrics for comprehensive tracking
+    #[serde(default)]
+    pub orchestration_metrics: OrchestrationMetrics,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum ThermalStatus {
+    Normal,
+    Warning,
+    Throttling,
+    Critical,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Claim {
+    pub id: String,
+    pub title: String,
+    #[serde(default)]
+    pub summary: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EvidenceLink {
+    pub claim_id: String,
+    pub ref_: String,
+    #[serde(default)]
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VerificationSummary {
+    pub claims_total: u32,
+    pub claims_verified: u32,
+    pub coverage_pct: f32,
+    
+    // NEW: Enhanced verification metrics
+    pub claim_coverage_pct: f32,
+    pub evidence_quality_avg: f32,
+    pub factual_consistency_score: f32,
+}
+
+// NEW: Claim verification support structures
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ClaimReference {
+    pub id: String,
+    pub statement: String,
+    pub confidence: f32,
+    pub source_context: String,
+    pub verification_requirements: Vec<VerificationCriteria>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EvidenceReference {
+    pub claim_id: String,
+    pub evidence_type: EvidenceType,
+    pub source: String,
+    pub quality_score: f32,
+    pub verification_status: VerificationStatus,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VerificationArtifacts {
+    pub claims_extracted: u32,
+    pub claims_verified: u32,
+    pub verification_quality: f32,
+    pub ambiguities_resolved: u32,
+    pub extraction_time_ms: u64,
+    pub verification_time_ms: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VerificationCriteria {
+    pub criterion_type: String,
+    pub description: String,
+    pub required: bool,
+    pub verification_method: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum VerificationStatus {
+    Verified,
+    Unverified,
+    InsufficientEvidence,
+    Pending,
+    Failed,
+}
+
+// NEW: Orchestration metrics for comprehensive tracking
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OrchestrationMetrics {
+    pub debate_rounds: u32,
+    pub consensus_score: f32,
+    pub dissent_rate: f32,
+    pub claim_coverage_pct: f32,
+    pub context_reuse_pct: f32,
+    pub evaluation_time_ms: u64,
+    pub resource_usage: ResourceUsage,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ResourceUsage {
+    pub cpu_usage_percent: f32,
+    pub memory_usage_mb: u64,
+    pub thermal_status: ThermalStatus,
+    pub ane_utilization: Option<f32>,
 }
 
 /// Model inference result

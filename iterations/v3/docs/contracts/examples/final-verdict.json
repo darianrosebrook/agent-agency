@@ -8,5 +8,6 @@
   ],
   "dissent": "",
   "remediation": [],
-  "constitutional_refs": ["CAWS:Section4.2", "CAWS:Section5.1"]
+  "constitutional_refs": ["CAWS:Section4.2", "CAWS:Section5.1"],
+  "verification_summary": {"claims_total": 1, "claims_verified": 1, "coverage_pct": 1.0}
 }

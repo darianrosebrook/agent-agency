@@ -22,7 +22,7 @@ metal = "0.29"
 metal-performance-shaders = "0.1"
 
 # Core ML integration
-coreml = "0.1"  # Placeholder - would use actual Core ML bindings
+# Removed placeholder crate; actual Core ML bindings will be integrated later via Swift/FFI.
 
 # ML/AI integration
 candle-core = "0.3"

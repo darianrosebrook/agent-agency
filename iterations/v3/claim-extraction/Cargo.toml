@@ -1,0 +1,32 @@
+[package]
+name = "claim-extraction"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace dependencies
+tokio.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+
+# Claim extraction specific
+regex = "1.10"
+nom = "7.1"  # Parser combinators for claim parsing
+petgraph = "0.6"  # Graph algorithms for claim relationships
+
+# Council integration
+council = { path = "../council" }
+
+# Research integration for evidence gathering
+research = { path = "../research" }
+
+# CAWS integration
+caws-core.workspace = true

@@ -267,3 +267,44 @@ pub struct ResearchCapabilities {
     pub context_synthesis_enabled: bool,
     pub real_time_updates: bool,
 }
+
+/// Research agent configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResearchAgentConfig {
+    pub vector_search: VectorSearchConfig,
+    pub web_scraping: WebScrapingConfig,
+    pub context_synthesis: ContextSynthesisConfig,
+}
+
+/// Vector search configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VectorSearchConfig {
+    pub enabled: bool,
+    pub model: String,
+    pub dimension: u32,
+    pub similarity_threshold: f32,
+    pub max_results: u32,
+    pub batch_size: u32,
+}
+
+/// Web scraping configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebScrapingConfig {
+    pub enabled: bool,
+    pub max_depth: u32,
+    pub max_pages: u32,
+    pub timeout_ms: u64,
+    pub user_agent: String,
+    pub respect_robots_txt: bool,
+    pub allowed_domains: Vec<String>,
+}
+
+/// Context synthesis configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextSynthesisConfig {
+    pub enabled: bool,
+    pub similarity_threshold: f32,
+    pub max_cross_references: usize,
+    pub max_context_size: usize,
+    pub synthesis_timeout_ms: u64,
+}

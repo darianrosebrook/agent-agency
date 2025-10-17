@@ -10,6 +10,7 @@ pub mod models;
 pub mod verdicts;
 pub mod types;
 pub mod contracts;
+pub mod learning;
 // Note: Coordinator currently uses internal JudgeVerdict; migration to contracts types pending.
 
 pub use coordinator::ConsensusCoordinator;

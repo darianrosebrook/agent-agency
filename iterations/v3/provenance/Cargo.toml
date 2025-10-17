@@ -1,0 +1,46 @@
+[package]
+name = "agent-agency-provenance"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "provenance"
+path = "src/lib.rs"
+
+[dependencies]
+# Core dependencies
+anyhow = "1.0"
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# Database dependencies
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
+deadpool = "0.10"
+deadpool-postgres = "0.12"
+
+# Git integration
+git2 = { version = "0.18", features = ["vendored-openssl"] }
+gitoxide = "0.37"
+
+# JWS signing
+jsonwebtoken = "9.3"
+ring = "0.17"
+base64 = "0.22"
+
+# Workspace dependencies
+agent-agency-database = { path = "../database" }
+agent-agency-council = { path = "../council" }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.8"

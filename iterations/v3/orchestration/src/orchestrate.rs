@@ -34,7 +34,7 @@ pub async fn orchestrate_task(
 ) -> Result<api::FinalVerdict> {
     let validator = DefaultValidator;
     let validation = validator
-        .validate(spec, desc, diff, tests_added, deterministic, vec![])
+        .validate(spec, desc, diff, &[], &[], tests_added, deterministic, vec![])
         .await
         .expect("validation failed");
 

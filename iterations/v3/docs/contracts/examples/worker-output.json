@@ -13,5 +13,11 @@
     "caws_checklist": {"within_scope": true, "within_budget": true, "tests_added": true, "deterministic": true},
     "notes": "All gates satisfied"
   },
-  "waivers": []
+  "waivers": [],
+  "claims": [
+    {"id": "C1", "title": "Implements acceptance A1", "summary": "Meets login redirect requirement"}
+  ],
+  "evidence_refs": [
+    {"claim_id": "C1", "ref": "tests/unit/auth.test.ts#L42", "note": "New test covers A1"}
+  ]
 }

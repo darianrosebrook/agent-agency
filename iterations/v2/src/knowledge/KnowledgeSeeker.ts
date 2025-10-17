@@ -195,7 +195,7 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
         try {
           semanticResults = await this.performSemanticSearch(query);
           console.log(
-            `Semantic search found ${semanticResults.length} results for query: ${query.text}`
+            `Semantic search found ${semanticResults.length} results for query: ${query.query}`
           );
         } catch (error) {
           console.warn(`Semantic search failed: ${error.message}`);
@@ -821,9 +821,9 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
   private isSemanticSearchSupported(query: KnowledgeQuery): boolean {
     // Support semantic search for knowledge and general queries
     return (
-      query.queryType === QueryType.KNOWLEDGE ||
-      query.queryType === QueryType.GENERAL ||
-      query.queryType === QueryType.FACTUAL
+      query.queryType === QueryType.FACTUAL ||
+      query.queryType === QueryType.EXPLANATORY ||
+      query.queryType === QueryType.TECHNICAL
     );
   }
 
@@ -837,7 +837,7 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
 
     // Generate embedding for the query
     const queryEmbedding = await this.embeddingService.generateEmbedding(
-      query.text
+      query.query
     );
 
     // Determine entity types based on query type
@@ -858,10 +858,10 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
     `,
       [
         `[${queryEmbedding.join(",")}]`,
-        query.text,
+        query.query,
         Math.min(query.maxResults || 10, 50), // Limit for semantic search
         entityTypes,
-        query.metadata?.tenantId || null,
+        null, // tenantId not available in current interface
       ]
     );
 
@@ -876,11 +876,11 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
    */
   private getEntityTypesForSemanticSearch(query: KnowledgeQuery): string[] {
     switch (query.queryType) {
-      case QueryType.KNOWLEDGE:
+      case QueryType.TECHNICAL:
         return ["external_knowledge", "agent_capability"];
       case QueryType.FACTUAL:
         return ["external_knowledge"];
-      case QueryType.GENERAL:
+      case QueryType.EXPLANATORY:
         return ["workspace_file", "agent_capability", "external_knowledge"];
       default:
         return ["external_knowledge"];

@@ -387,6 +387,8 @@ export class ArbiterOrchestrator {
     knowledgeSeeker: any; // KnowledgeSeeker
     workspaceManager?: WorkspaceStateManager; // WorkspaceStateManager
     systemHealthMonitor?: SystemHealthMonitor; // SystemHealthMonitor
+    contextManager?: any; // ContextManager
+    embeddingService?: any; // EmbeddingService
     promptingEngine?: any; // PromptingEngine
     performanceTracker?: any; // PerformanceTracker
     // CAWS Integration components
@@ -1250,7 +1252,7 @@ export class ArbiterOrchestrator {
     // Factor 1: Capability matching with semantic context
     const contextCapabilities =
       this.extractCapabilitiesFromSemanticContext(semanticContext);
-    const agentCapabilities = new Set(agent.capabilities || []);
+    const agentCapabilities = new Set((agent as any).capabilities || []);
 
     let capabilityMatches = 0;
     for (const capability of contextCapabilities) {
@@ -1280,15 +1282,16 @@ export class ArbiterOrchestrator {
     );
 
     // Factor 3: Current load (prefer less loaded agents)
+    const agentAny = agent as any;
     const loadFactor =
-      1 - (agent.currentLoad || 0) / Math.max(agent.maxLoad || 10, 1);
+      1 - (agentAny.currentLoad || 0) / Math.max(agentAny.maxLoad || 10, 1);
     score += loadFactor * 0.2; // 20% weight
     reasoning.push(
       `Load factor: ${(loadFactor * 100).toFixed(0)}% available capacity`
     );
 
     // Factor 4: Performance history
-    const performanceScore = this.calculatePerformanceScore(agent);
+    const performanceScore = this.calculatePerformanceScore(agentAny);
     score += performanceScore * 0.1; // 10% weight
     reasoning.push(
       `Performance score: ${(performanceScore * 100).toFixed(0)}%`
@@ -1368,10 +1371,11 @@ export class ArbiterOrchestrator {
   /**
    * Calculate performance score from agent profile
    */
-  private calculatePerformanceScore(agent: AgentProfile): number {
-    if (!agent.performance) return 0.5;
+  private calculatePerformanceScore(agent: any): number {
+    if (!agent.performance && !agent.performanceHistory) return 0.5;
 
-    const { quality = 0.5, speed = 0.5, reliability = 0.5 } = agent.performance;
+    const perf = agent.performance || agent.performanceHistory || {};
+    const { quality = 0.5, speed = 0.5, reliability = 0.5 } = perf;
     return (quality + speed + reliability) / 3;
   }
 

@@ -22,6 +22,16 @@
     "votes": {"type": "array", "items": {"$ref": "#/$defs/VoteEntry"}},
     "dissent": {"type": "string"},
     "remediation": {"type": "array", "items": {"type": "string"}, "default": []},
-    "constitutional_refs": {"type": "array", "items": {"type": "string"}, "default": []}
+    "constitutional_refs": {"type": "array", "items": {"type": "string"}, "default": []},
+    "verification_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "claims_total": {"type": "integer", "minimum": 0},
+        "claims_verified": {"type": "integer", "minimum": 0},
+        "coverage_pct": {"type": "number", "minimum": 0, "maximum": 1}
+      },
+      "required": ["claims_total", "claims_verified", "coverage_pct"]
+    }
   }
 }

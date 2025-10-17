@@ -5,7 +5,8 @@ members = [
     "workers",
     "apple-silicon",
     "research",
-    "mcp-integration"
+    "mcp-integration",
+    "provenance"
 ]
 
 [workspace.package]
