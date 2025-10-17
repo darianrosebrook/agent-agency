@@ -12,13 +12,13 @@ pub async fn generate_semantic_context(
     context_embeddings: &[StoredEmbedding],
 ) -> Result<SemanticContext> {
     // Generate embedding for the task description
-    let task_vector = embedding_service
+    let task_embedding = embedding_service
         .generate_embedding(task_description, ContentType::TaskDescription, "semantic_context")
         .await?;
 
     // Find related embeddings
     let related_embeddings = find_similar_embeddings(
-        &task_vector,
+        &task_embedding.vector,
         context_embeddings,
         10, // limit
         0.3, // threshold
@@ -39,7 +39,7 @@ pub async fn generate_semantic_context(
 
     Ok(SemanticContext {
         task_description: task_description.to_string(),
-        context_vector: task_vector,
+        context_vector: task_embedding.vector,
         related_embeddings,
         confidence,
     })
@@ -102,8 +102,8 @@ impl ContextBuilder {
         &self,
         query: &str,
         embedding_service: &dyn crate::service::EmbeddingService,
-        limit: usize,
-        threshold: f32,
+        _limit: usize,
+        _threshold: f32,
     ) -> Result<SemanticContext> {
         generate_semantic_context(query, embedding_service, &self.embeddings).await
     }
@@ -194,14 +194,14 @@ impl CouncilContextEnricher {
 
     /// Get relevant evidence for a claim
     pub async fn get_relevant_evidence(&self, claim: &str) -> Result<Vec<SimilarityResult>> {
-        let claim_vector = self.embedding_service
+        let claim_embedding = self.embedding_service
             .generate_embedding(claim, ContentType::Evidence, "claim_verification")
             .await?;
 
         let evidence_embeddings = self.context_builder.get_by_content_type(&ContentType::Evidence);
         
         find_similar_embeddings(
-            &claim_vector,
+            &claim_embedding.vector,
             &evidence_embeddings,
             5, // limit
             0.5, // threshold

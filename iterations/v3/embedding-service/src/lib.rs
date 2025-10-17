@@ -10,6 +10,9 @@ pub mod context;
 pub mod types;
 pub mod cache;
 
+#[cfg(test)]
+mod tests;
+
 pub use provider::*;
 pub use service::*;
 pub use similarity::*;

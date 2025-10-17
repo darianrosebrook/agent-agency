@@ -31,7 +31,7 @@ pub struct EmbeddingMetadata {
 }
 
 /// Type of content being embedded
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum ContentType {
     Text,
     Code,

@@ -4,8 +4,8 @@ use crate::types::*;
 use dashmap::DashMap;
 use lru::LruCache;
 use std::sync::Arc;
+use std::num::NonZeroUsize;
 use tokio::sync::RwLock;
-use anyhow::Result;
 
 /// LRU cache for embeddings
 pub struct EmbeddingCache {
@@ -15,8 +15,9 @@ pub struct EmbeddingCache {
 
 impl EmbeddingCache {
     pub fn new(max_size: usize) -> Self {
+        let non_zero_size = NonZeroUsize::new(max_size.max(1)).unwrap();
         Self {
-            cache: Arc::new(RwLock::new(LruCache::new(max_size))),
+            cache: Arc::new(RwLock::new(LruCache::new(non_zero_size))),
             max_size,
         }
     }

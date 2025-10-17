@@ -14,12 +14,31 @@ use anyhow::Result;
 #[derive(Debug)]
 pub struct ConsensusCoordinator {
     config: CouncilConfig,
+    emitter: std::sync::Arc<dyn ProvenanceEmitter>,
+}
+
+/// Provenance emission interface for council events
+pub trait ProvenanceEmitter: Send + Sync {
+    fn on_judge_verdict(&self, task_id: uuid::Uuid, judge: &str, weight: f32, decision: &str, score: f32);
+    fn on_final_verdict(&self, task_id: uuid::Uuid, verdict: &FinalVerdict);
+}
+
+/// No-op emitter for tests/defaults
+pub struct NoopEmitter;
+impl ProvenanceEmitter for NoopEmitter {
+    fn on_judge_verdict(&self, _task_id: uuid::Uuid, _judge: &str, _weight: f32, _decision: &str, _score: f32) {}
+    fn on_final_verdict(&self, _task_id: uuid::Uuid, _verdict: &FinalVerdict) {}
 }
 
 impl ConsensusCoordinator {
     /// Create a new consensus coordinator
     pub fn new(config: CouncilConfig) -> Self {
-        Self { config }
+        Self { config, emitter: std::sync::Arc::new(NoopEmitter) }
+    }
+
+    /// Inject a provenance emitter
+    pub fn with_emitter(mut self, emitter: std::sync::Arc<dyn ProvenanceEmitter>) -> Self {
+        self.emitter = emitter; self
     }
 
     /// Start evaluation of a task by the council
@@ -46,6 +65,8 @@ impl ConsensusCoordinator {
             timestamp: chrono::Utc::now(),
         };
 
+        // Emit final verdict provenance
+        self.emitter.on_final_verdict(task_id, &result.final_verdict);
         println!("Completed council evaluation for task {}", task_id);
         Ok(result)
     }

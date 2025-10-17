@@ -49,9 +49,10 @@ impl SemanticEvaluator {
     /// Generate semantic context for a task
     pub async fn generate_task_context(&mut self, task_spec: &TaskSpec) -> Result<JudgeSemanticContext> {
         let task_description = format!("{}: {}", task_spec.title, task_spec.description);
+        let task_id = task_spec.id.to_string();
         
         // Check cache first
-        if let Some(cached) = self.context_cache.get(&task_spec.id) {
+        if let Some(cached) = self.context_cache.get(&task_id) {
             return Ok(cached.clone());
         }
 
@@ -74,7 +75,7 @@ impl SemanticEvaluator {
         };
 
         // Cache the context
-        self.context_cache.insert(task_spec.id.clone(), context.clone());
+        self.context_cache.insert(task_id, context.clone());
 
         Ok(context)
     }
@@ -110,7 +111,35 @@ impl SemanticEvaluator {
         // Update context
         if let Some(context) = self.context_cache.get_mut(task_id) {
             context.evidence_embeddings.push(evidence_emb);
-            context.confidence = self.calculate_context_confidence(context);
+            // Calculate confidence after adding evidence
+            let evidence_count = context.evidence_embeddings.len();
+            let knowledge_count = context.knowledge_embeddings.len();
+            
+            if evidence_count > 0 || knowledge_count > 0 {
+                let evidence_confidence = if evidence_count > 0 {
+                    let avg_relevance: f32 = context.evidence_embeddings
+                        .iter()
+                        .map(|e| e.relevance_score)
+                        .sum::<f32>() / evidence_count as f32;
+                    avg_relevance
+                } else {
+                    0.0
+                };
+
+                let knowledge_confidence = if knowledge_count > 0 {
+                    let avg_confidence: f32 = context.knowledge_embeddings
+                        .iter()
+                        .map(|k| k.confidence)
+                        .sum::<f32>() / knowledge_count as f32;
+                    avg_confidence
+                } else {
+                    0.0
+                };
+
+                let total_items = evidence_count + knowledge_count;
+                context.confidence = (evidence_confidence * evidence_count as f32 + knowledge_confidence * knowledge_count as f32)
+                    / total_items as f32;
+            }
         }
 
         Ok(())
@@ -141,7 +170,35 @@ impl SemanticEvaluator {
         // Update context
         if let Some(context) = self.context_cache.get_mut(task_id) {
             context.knowledge_embeddings.push(knowledge_emb);
-            context.confidence = self.calculate_context_confidence(context);
+            // Calculate confidence after adding knowledge
+            let evidence_count = context.evidence_embeddings.len();
+            let knowledge_count = context.knowledge_embeddings.len();
+            
+            if evidence_count > 0 || knowledge_count > 0 {
+                let evidence_confidence = if evidence_count > 0 {
+                    let avg_relevance: f32 = context.evidence_embeddings
+                        .iter()
+                        .map(|e| e.relevance_score)
+                        .sum::<f32>() / evidence_count as f32;
+                    avg_relevance
+                } else {
+                    0.0
+                };
+
+                let knowledge_confidence = if knowledge_count > 0 {
+                    let avg_confidence: f32 = context.knowledge_embeddings
+                        .iter()
+                        .map(|k| k.confidence)
+                        .sum::<f32>() / knowledge_count as f32;
+                    avg_confidence
+                } else {
+                    0.0
+                };
+
+                let total_items = evidence_count + knowledge_count;
+                context.confidence = (evidence_confidence * evidence_count as f32 + knowledge_confidence * knowledge_count as f32)
+                    / total_items as f32;
+            }
         }
 
         Ok(())
@@ -228,8 +285,8 @@ impl SemanticVerdictEnhancer {
         task_id: &str,
     ) -> Result<()> {
         if let Some(context) = self.evaluator.get_context(task_id) {
-            // Add semantic confidence to verdict
-            verdict.confidence = Some(context.confidence);
+            // Add semantic context to verdict reasoning
+            let mut additional_reasoning = String::new();
             
             // Add evidence relevance scores
             if !context.evidence_embeddings.is_empty() {
@@ -239,7 +296,7 @@ impl SemanticVerdictEnhancer {
                     .collect::<Vec<_>>()
                     .join(", ");
                 
-                verdict.reasoning = format!("{} Evidence: {}", verdict.reasoning, evidence_summary);
+                additional_reasoning.push_str(&format!(" Evidence: {}", evidence_summary));
             }
 
             // Add knowledge context
@@ -250,7 +307,23 @@ impl SemanticVerdictEnhancer {
                     .collect::<Vec<_>>()
                     .join(", ");
                 
-                verdict.reasoning = format!("{} Knowledge: {}", verdict.reasoning, knowledge_sources);
+                additional_reasoning.push_str(&format!(" Knowledge: {}", knowledge_sources));
+            }
+
+            // Add semantic confidence
+            additional_reasoning.push_str(&format!(" Semantic confidence: {:.2}", context.confidence));
+
+            // Update verdict reasoning based on variant
+            match verdict {
+                JudgeVerdict::Pass { reasoning, .. } => {
+                    *reasoning = format!("{}{}", reasoning, additional_reasoning);
+                }
+                JudgeVerdict::Fail { reasoning, .. } => {
+                    *reasoning = format!("{}{}", reasoning, additional_reasoning);
+                }
+                JudgeVerdict::Uncertain { reasoning, .. } => {
+                    *reasoning = format!("{}{}", reasoning, additional_reasoning);
+                }
             }
         }
 

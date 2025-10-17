@@ -14,6 +14,7 @@ pub struct TaskExecutor {
     // TODO: Add HTTP client for model communication
     // client: reqwest::Client,
     clock: Box<dyn Clock + Send + Sync>,
+    id_gen: Box<dyn IdGenerator + Send + Sync>,
 }
 
 impl TaskExecutor {
@@ -22,6 +23,7 @@ impl TaskExecutor {
         Self {
             // client: reqwest::Client::new(),
             clock: Box::new(SystemClock),
+            id_gen: Box::new(SequentialId::default()),
         }
     }
 
@@ -399,6 +401,24 @@ impl Clock for FixedClock {
     fn now(&self) -> chrono::DateTime<chrono::Utc> { self.0 }
 }
 
+// Deterministic ID generation abstraction
+pub trait IdGenerator {
+    fn next(&mut self) -> uuid::Uuid;
+}
+
+#[derive(Default)]
+pub struct SequentialId {
+    counter: u128,
+}
+impl IdGenerator for SequentialId {
+    fn next(&mut self) -> uuid::Uuid {
+        self.counter = self.counter.wrapping_add(1);
+        let mut bytes = [0u8; 16];
+        bytes.copy_from_slice(&self.counter.to_be_bytes());
+        uuid::Uuid::from_bytes(bytes)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -531,10 +551,34 @@ mod tests {
         let fixed = FixedClock(chrono::DateTime::parse_from_rfc3339("2025-01-01T00:00:00Z").unwrap().with_timezone(&chrono::Utc));
         // Replace clock using ptr trick since field is private; instead, create a new struct in place
         // For simplicity in tests, we reconstruct via struct update syntax is not possible; use a helper impl
-        struct TestableExecutor { clock: Box<dyn super::Clock + Send + Sync> }
-        let mut_ref: &mut TaskExecutor = &mut exec;
-        // Assign fixed clock via shadowing unsafe block to access private field is not allowed; simulate by using methods
-        // Instead, assert that two now() calls are equal from FixedClock trait directly
+        // Validate fixed clock behavior directly
+        assert_eq!(fixed.now(), fixed.now());
+    }
+
+    #[tokio::test]
+    async fn test_sequential_id_generator_is_deterministic() {
+        let mut gen = super::SequentialId::default();
+        let a = gen.next();
+        let b = gen.next();
+        // With a fresh generator, sequence should restart
+        let mut gen2 = super::SequentialId::default();
+        let a2 = gen2.next();
+        assert_eq!(a, a2);
+        assert_ne!(a, b);
+    }
+
+    #[tokio::test]
+    async fn test_identical_results_with_same_seeds() {
+        // This test demonstrates the principle: with same seeds (time + id),
+        // components using them should behave deterministically. Here we verify
+        // our deterministic generators themselves.
+        let mut gen1 = super::SequentialId::default();
+        let mut gen2 = super::SequentialId::default();
+        for _ in 0..10 {
+            assert_eq!(gen1.next(), gen2.next());
+        }
+
+        let fixed = FixedClock(chrono::DateTime::parse_from_rfc3339("2025-01-01T00:00:00Z").unwrap().with_timezone(&chrono::Utc));
         assert_eq!(fixed.now(), fixed.now());
     }
 }

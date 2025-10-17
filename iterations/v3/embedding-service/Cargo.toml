@@ -22,6 +22,7 @@ ndarray-stats = "0.5"
 # For caching and performance
 dashmap = "5.0"
 lru = "0.12"
+chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
 tokio-test = "0.4"

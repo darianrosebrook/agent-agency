@@ -2,6 +2,7 @@
 
 use async_trait::async_trait;
 use anyhow::Result;
+use std::hash::{Hash, Hasher};
 use crate::types::*;
 
 /// Trait for embedding providers

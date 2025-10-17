@@ -56,7 +56,7 @@ impl EmbeddingServiceImpl {
 
     /// Generate cache key for text
     fn cache_key(&self, text: &str, content_type: &ContentType, source: &str) -> String {
-        format!("{}:{}:{}", content_type, source, text)
+        format!("{:?}:{}:{}", content_type, source, text)
     }
 
     /// Create embedding metadata
