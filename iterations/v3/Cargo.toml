@@ -10,7 +10,9 @@ members = [
     "claim-extraction",
     "reflexive-learning",
     "model-benchmarking",
-    "security-policy-enforcer"
+    "security-policy-enforcer",
+    "minimal-diff-evaluator",
+    "context-preservation-engine"
 ]
 
 [workspace.package]

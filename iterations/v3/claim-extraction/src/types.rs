@@ -128,6 +128,19 @@ pub struct ProcessingMetadata {
     pub errors: Vec<ProcessingError>,
 }
 
+impl Default for ProcessingMetadata {
+    fn default() -> Self {
+        Self {
+            processing_time_ms: 0,
+            stages_completed: Vec::new(),
+            ambiguities_resolved: 0,
+            claims_extracted: 0,
+            evidence_collected: 0,
+            errors: Vec::new(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ProcessingStage {
     Disambiguation,
@@ -142,6 +155,37 @@ pub struct ProcessingError {
     pub error_type: String,
     pub message: String,
     pub recoverable: bool,
+}
+
+/// Result of disambiguation stage
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DisambiguationResult {
+    pub original_sentence: String,
+    pub disambiguated_sentence: String,
+    pub ambiguities_resolved: u32,
+    pub unresolvable_ambiguities: Vec<UnresolvableAmbiguity>,
+}
+
+/// Result of qualification stage
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QualificationResult {
+    pub verifiable_parts: Vec<VerifiableContent>,
+    pub unverifiable_parts: Vec<UnverifiableContent>,
+    pub overall_verifiability: VerifiabilityLevel,
+}
+
+/// Result of decomposition stage
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DecompositionResult {
+    pub atomic_claims: Vec<AtomicClaim>,
+    pub decomposition_confidence: f64,
+}
+
+/// Result of verification stage
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerificationResult {
+    pub evidence: Vec<Evidence>,
+    pub verification_confidence: f64,
 }
 
 /// Errors that can occur during claim extraction
@@ -164,4 +208,107 @@ pub enum ClaimExtractionError {
     
     #[error("Council integration failed: {0}")]
     CouncilIntegrationFailed(String),
+}
+
+/// Represents an ambiguity found in text
+#[derive(Debug, Clone)]
+pub struct Ambiguity {
+    pub ambiguity_type: AmbiguityType,
+    pub position: (usize, usize), // Start and end character positions
+    pub original_text: String,
+    pub possible_resolutions: Vec<String>,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone)]
+pub enum AmbiguityType {
+    Pronoun,
+    TechnicalTerm,
+    ScopeBoundary,
+    TemporalReference,
+    Quantifier,
+}
+
+/// Ambiguity that cannot be resolved with available context
+#[derive(Debug, Clone)]
+pub struct UnresolvableAmbiguity {
+    pub ambiguity: Ambiguity,
+    pub reason: UnresolvableReason,
+    pub suggested_context: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub enum UnresolvableReason {
+    InsufficientContext,
+    MultipleValidInterpretations,
+    DomainSpecificUnknown,
+    TemporalUncertainty,
+}
+
+/// Content that can be verified
+#[derive(Debug, Clone)]
+pub struct VerifiableContent {
+    pub position: (usize, usize),
+    pub content: String,
+    pub verification_method: VerificationMethod,
+    pub evidence_requirements: Vec<EvidenceRequirement>,
+}
+
+/// Content that cannot be verified
+#[derive(Debug, Clone)]
+pub struct UnverifiableContent {
+    pub position: (usize, usize),
+    pub content: String,
+    pub reason: UnverifiableReason,
+    pub suggested_rewrite: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub enum VerificationMethod {
+    CodeAnalysis,
+    TestExecution,
+    DocumentationReview,
+    PerformanceMeasurement,
+    SecurityScan,
+    ConstitutionalCheck, // CAWS compliance
+}
+
+#[derive(Debug, Clone)]
+pub struct EvidenceRequirement {
+    pub evidence_type: EvidenceType,
+    pub minimum_confidence: f64,
+    pub source_requirements: Vec<SourceRequirement>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SourceRequirement {
+    pub source_type: SourceType,
+    pub authority_level: AuthorityLevel,
+    pub freshness_requirement: Option<chrono::Duration>,
+}
+
+#[derive(Debug, Clone)]
+pub enum AuthorityLevel {
+    Primary,    // Direct source
+    Secondary,  // Referenced source
+    Tertiary,   // Background context
+}
+
+#[derive(Debug, Clone)]
+pub enum UnverifiableReason {
+    SubjectiveLanguage,
+    VagueCriteria,
+    MissingContext,
+    OpinionBased,
+    FuturePrediction,
+    EmotionalContent,
+}
+
+/// Assessment of content verifiability
+#[derive(Debug, Clone)]
+pub struct VerifiabilityAssessment {
+    pub overall_verifiability: VerifiabilityLevel,
+    pub verifiable_parts: Vec<VerifiableContent>,
+    pub unverifiable_parts: Vec<UnverifiableContent>,
+    pub confidence: f64,
 }

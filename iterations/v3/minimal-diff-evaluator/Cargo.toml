@@ -1,0 +1,37 @@
+[package]
+name = "agent-agency-minimal-diff-evaluator"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace dependencies
+tokio.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+
+# Diff evaluation specific
+diff = "0.1"
+similar = "2.4"
+walkdir = "2.4"
+regex = "1.10"
+
+# AST parsing for language-specific analysis
+syn = "2.0"
+quote = "1.0"
+proc-macro2 = "1.0"
+
+# Graph algorithms for change impact analysis
+petgraph = "0.6"
+
+# Integration with existing V3 components
+council = { path = "../council" }
+workers = { path = "../workers" }
+security-policy-enforcer = { path = "../security-policy-enforcer" }

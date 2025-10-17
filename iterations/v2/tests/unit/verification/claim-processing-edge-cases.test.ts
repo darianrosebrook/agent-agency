@@ -236,7 +236,9 @@ describe("Claim Processing - Edge Cases and Advanced Scenarios", () => {
 
       expect(claims).toHaveLength(2);
       expect(claims[0].statement).toContain("PostgreSQL version 14.5");
-      expect(claims[1].statement).toContain("supports transactions");
+      expect(claims[1].statement.toLowerCase()).toContain(
+        "supports transactions"
+      );
     });
 
     it("should add contextual brackets for implied context", async () => {

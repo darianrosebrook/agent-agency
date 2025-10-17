@@ -510,3 +510,4 @@ mod tests {
         assert_eq!(record.overall_quality_score(), 0.85);
     }
 }
+

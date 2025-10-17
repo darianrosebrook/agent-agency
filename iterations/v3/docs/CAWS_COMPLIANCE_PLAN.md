@@ -9,16 +9,19 @@
 ## Current Status
 
 ### ✅ Completed
+
 - **Working Spec**: Valid with 9 acceptance criteria (exceeds Tier 1 requirement of 5+)
 - **CAWS Tools**: Available in `apps/tools/caws/` with 74% test pass rate
 - **Architecture**: All 9 crates implemented with comprehensive functionality
 
 ### 🚧 In Progress
+
 - **Compilation Issues**: Multiple crates have compilation errors that need fixing
 - **Test Coverage**: No comprehensive test suite yet implemented
 - **Mutation Testing**: Not yet set up for Rust crates
 
 ### ❌ Missing
+
 - **Contract Tests**: Required for Tier 1 compliance
 - **CI/CD Pipeline**: With CAWS gates integration
 - **Performance Benchmarking**: Validation of Apple Silicon targets
@@ -30,15 +33,15 @@
 
 Based on CAWS gate checker, Tier 1 requires:
 
-| Requirement | Target | Current Status |
-|-------------|--------|----------------|
-| **Branch Coverage** | ≥90% | ❌ No tests implemented |
-| **Mutation Score** | ≥70% | ❌ Not set up |
-| **Max Files** | 40 | ✅ Within budget (9 crates) |
-| **Max LOC** | 1500 | ✅ Within budget |
-| **Trust Score** | ≥85 | ❌ Not measured |
-| **Contracts** | Required | ❌ Not implemented |
-| **Manual Review** | Required | ✅ Available |
+| Requirement         | Target   | Current Status              |
+| ------------------- | -------- | --------------------------- |
+| **Branch Coverage** | ≥90%     | ❌ No tests implemented     |
+| **Mutation Score**  | ≥70%     | ❌ Not set up               |
+| **Max Files**       | 40       | ✅ Within budget (9 crates) |
+| **Max LOC**         | 1500     | ✅ Within budget            |
+| **Trust Score**     | ≥85      | ❌ Not measured             |
+| **Contracts**       | Required | ❌ Not implemented          |
+| **Manual Review**   | Required | ✅ Available                |
 
 ---
 
@@ -49,7 +52,9 @@ Based on CAWS gate checker, Tier 1 requires:
 **Goal**: Get all crates compiling successfully
 
 **Tasks**:
+
 1. **Fix Council Crate** (97 compilation errors)
+
    - Add missing imports (`async_trait`, `futures`, `uuid`, `HashMap`)
    - Create missing `models.rs` module
    - Fix trait object issues with async traits
@@ -57,6 +62,7 @@ Based on CAWS gate checker, Tier 1 requires:
    - Fix type mismatches and dyn compatibility issues
 
 2. **Fix Other Crates** (dependency issues)
+
    - Resolve cross-crate dependency references
    - Fix non-existent crate dependencies
    - Ensure workspace dependencies are properly configured
@@ -70,12 +76,15 @@ Based on CAWS gate checker, Tier 1 requires:
 **Goal**: Achieve minimum test coverage for CAWS compliance
 
 **Tasks**:
+
 1. **Unit Tests** (Target: 90% branch coverage)
+
    - Add tests for each crate's core functionality
    - Test all public APIs and critical paths
    - Use `cargo test --workspace` with coverage reporting
 
 2. **Integration Tests**
+
    - Test inter-crate communication
    - Test database operations
    - Test CAWS compliance checking
@@ -90,7 +99,9 @@ Based on CAWS gate checker, Tier 1 requires:
 **Goal**: Achieve 70%+ mutation score
 
 **Tasks**:
+
 1. **Install Mutation Testing Tool**
+
    - Use `cargo-mutants` or similar for Rust
    - Configure mutation testing in CI/CD
 
@@ -104,12 +115,15 @@ Based on CAWS gate checker, Tier 1 requires:
 **Goal**: Automated compliance checking
 
 **Tasks**:
+
 1. **CI/CD Pipeline**
+
    - Set up GitHub Actions or similar
    - Integrate CAWS gates checking
    - Automated compliance validation
 
 2. **Performance Benchmarking**
+
    - Validate Apple Silicon optimization targets
    - Measure and track performance metrics
    - Set up performance regression detection
@@ -128,6 +142,7 @@ Based on CAWS gate checker, Tier 1 requires:
 The council crate has 97 compilation errors that need immediate attention:
 
 **Critical Issues**:
+
 - Missing `async_trait` import in multiple files
 - Missing `futures` crate for `join_all`
 - Missing `uuid` and `HashMap` imports
@@ -136,6 +151,7 @@ The council crate has 97 compilation errors that need immediate attention:
 - Missing derive implementations
 
 **Fix Strategy**:
+
 1. Add missing imports to all files
 2. Create `council/src/models.rs` module
 3. Fix trait object issues by making traits dyn-compatible
@@ -145,6 +161,7 @@ The council crate has 97 compilation errors that need immediate attention:
 ### Step 2: Set Up Basic Testing Infrastructure
 
 **Minimum Viable Test Suite**:
+
 1. **Unit Tests** for each crate
 2. **Integration Tests** for cross-crate functionality
 3. **Contract Tests** for public APIs
@@ -153,6 +170,7 @@ The council crate has 97 compilation errors that need immediate attention:
 ### Step 3: Implement CAWS Runtime Validation
 
 **Core Requirements**:
+
 1. **CAWS Compliance Checking** in worker pool
 2. **Budget Validation** against working spec
 3. **Scope Enforcement** for file changes
@@ -184,18 +202,22 @@ The council crate has 97 compilation errors that need immediate attention:
 ## Risk Mitigation
 
 ### Compilation Issues
+
 - **Risk**: Complex trait object issues may require architectural changes
 - **Mitigation**: Start with simple fixes, use enum dispatch for trait objects if needed
 
 ### Test Coverage
+
 - **Risk**: 90% branch coverage may be challenging for complex async code
 - **Mitigation**: Focus on critical paths first, use integration tests for complex flows
 
 ### Mutation Testing
+
 - **Risk**: 70% mutation score requires very strong test suite
 - **Mitigation**: Use property-based testing, focus on business logic coverage
 
 ### Time Constraints
+
 - **Risk**: Full compliance may take significant time
 - **Mitigation**: Prioritize compilation fixes first, then incremental compliance improvements
 
@@ -204,6 +226,7 @@ The council crate has 97 compilation errors that need immediate attention:
 ## Tools and Commands
 
 ### Development Commands
+
 ```bash
 # Build all crates
 cargo build --workspace
@@ -220,6 +243,7 @@ npx tsx ../../apps/tools/caws/validate.ts spec .caws/working-spec.yaml
 ```
 
 ### Coverage Commands
+
 ```bash
 # Install coverage tool
 cargo install cargo-tarpaulin
@@ -229,6 +253,7 @@ cargo tarpaulin --workspace --out Html
 ```
 
 ### Mutation Testing Commands
+
 ```bash
 # Install mutation testing tool
 cargo install cargo-mutants
@@ -242,21 +267,25 @@ cargo mutants --workspace
 ## Timeline
 
 ### Week 1: Compilation Fixes
+
 - Fix all 97 compilation errors in council crate
 - Resolve dependency issues in other crates
 - Achieve successful `cargo build --workspace`
 
 ### Week 2: Basic Testing
+
 - Implement unit tests for core functionality
 - Set up coverage reporting
 - Achieve >50% branch coverage
 
 ### Week 3: Advanced Testing
+
 - Implement contract tests
 - Set up mutation testing
 - Achieve >70% mutation score
 
 ### Week 4: CAWS Integration
+
 - Set up CI/CD pipeline
 - Implement CAWS gates integration
 - Achieve Tier 1 compliance

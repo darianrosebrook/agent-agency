@@ -20,6 +20,11 @@ pub mod evidence;
 pub use processor::ClaimExtractionProcessor;
 pub use types::*;
 
+use anyhow::Result;
+use tracing::{info, warn, error};
+use uuid::Uuid;
+use std::time::Instant;
+
 /// Main claim extraction and verification processor
 /// 
 /// Integrates with council debate protocol to provide evidence
@@ -32,14 +37,139 @@ pub struct ClaimExtractionAndVerificationProcessor {
 }
 
 impl ClaimExtractionAndVerificationProcessor {
+    /// Create a new claim extraction processor
+    pub fn new() -> Self {
+        Self {
+            disambiguation_stage: disambiguation::DisambiguationStage::new(),
+            qualification_stage: qualification::QualificationStage::new(),
+            decomposition_stage: decomposition::DecompositionStage::new(),
+            verification_stage: verification::VerificationStage::new(),
+        }
+    }
+
     /// Process a sentence through the complete 4-stage pipeline
     pub async fn process_sentence(
         &self,
         sentence: &str,
         context: &ProcessingContext,
     ) -> Result<ClaimExtractionResult, ClaimExtractionError> {
-        // TODO: Implement 4-stage pipeline
-        // 1. Disambiguation -> 2. Qualification -> 3. Decomposition -> 4. Verification
-        todo!("Implement claim extraction pipeline")
+        let start_time = Instant::now();
+        info!("Starting claim extraction for sentence: {}", sentence);
+
+        let mut stages_completed = Vec::new();
+        let mut errors = Vec::new();
+        let mut disambiguated_sentence = sentence.to_string();
+        let mut atomic_claims = Vec::new();
+        let mut verification_evidence = Vec::new();
+
+        // Stage 1: Disambiguation
+        match self.disambiguation_stage.process(sentence, context).await {
+            Ok(disambiguation_result) => {
+                disambiguated_sentence = disambiguation_result.disambiguated_sentence;
+                stages_completed.push(ProcessingStage::Disambiguation);
+                info!("Disambiguation completed: {} ambiguities resolved", 
+                      disambiguation_result.ambiguities_resolved);
+            }
+            Err(e) => {
+                let error = ProcessingError {
+                    stage: ProcessingStage::Disambiguation,
+                    error_type: "DisambiguationFailed".to_string(),
+                    message: e.to_string(),
+                    recoverable: true,
+                };
+                errors.push(error);
+                warn!("Disambiguation failed, continuing with original sentence: {}", e);
+            }
+        }
+
+        // Stage 2: Qualification
+        match self.qualification_stage.process(&disambiguated_sentence, context).await {
+            Ok(qualification_result) => {
+                stages_completed.push(ProcessingStage::Qualification);
+                info!("Qualification completed: {} verifiable parts found", 
+                      qualification_result.verifiable_parts.len());
+            }
+            Err(e) => {
+                let error = ProcessingError {
+                    stage: ProcessingStage::Qualification,
+                    error_type: "QualificationFailed".to_string(),
+                    message: e.to_string(),
+                    recoverable: true,
+                };
+                errors.push(error);
+                warn!("Qualification failed, continuing: {}", e);
+            }
+        }
+
+        // Stage 3: Decomposition
+        match self.decomposition_stage.process(&disambiguated_sentence, context).await {
+            Ok(decomposition_result) => {
+                atomic_claims = decomposition_result.atomic_claims;
+                stages_completed.push(ProcessingStage::Decomposition);
+                info!("Decomposition completed: {} atomic claims extracted", 
+                      atomic_claims.len());
+            }
+            Err(e) => {
+                let error = ProcessingError {
+                    stage: ProcessingStage::Decomposition,
+                    error_type: "DecompositionFailed".to_string(),
+                    message: e.to_string(),
+                    recoverable: true,
+                };
+                errors.push(error);
+                warn!("Decomposition failed: {}", e);
+            }
+        }
+
+        // Stage 4: Verification (evidence collection)
+        if !atomic_claims.is_empty() {
+            match self.verification_stage.process(&atomic_claims, context).await {
+                Ok(verification_result) => {
+                    verification_evidence = verification_result.evidence;
+                    stages_completed.push(ProcessingStage::Verification);
+                    info!("Verification completed: {} evidence items collected", 
+                          verification_evidence.len());
+                }
+                Err(e) => {
+                    let error = ProcessingError {
+                        stage: ProcessingStage::Verification,
+                        error_type: "VerificationFailed".to_string(),
+                        message: e.to_string(),
+                        recoverable: true,
+                    };
+                    errors.push(error);
+                    warn!("Verification failed: {}", e);
+                }
+            }
+        }
+
+        let processing_time_ms = start_time.elapsed().as_millis() as u64;
+        
+        let result = ClaimExtractionResult {
+            original_sentence: sentence.to_string(),
+            disambiguated_sentence,
+            atomic_claims,
+            verification_evidence,
+            processing_metadata: ProcessingMetadata {
+                processing_time_ms,
+                stages_completed,
+                ambiguities_resolved: 0, // TODO: Track from disambiguation stage
+                claims_extracted: atomic_claims.len() as u32,
+                evidence_collected: verification_evidence.len() as u32,
+                errors,
+            },
+        };
+
+        info!("Claim extraction completed in {}ms with {} claims and {} evidence items", 
+              processing_time_ms, result.processing_metadata.claims_extracted, 
+              result.processing_metadata.evidence_collected);
+
+        Ok(result)
+    }
+}
+
+impl Default for ClaimExtractionAndVerificationProcessor {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -1,0 +1,34 @@
+[package]
+name = "agent-agency-context-preservation-engine"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace dependencies
+tokio.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+
+# Context preservation specific
+dashmap = "5.5"
+crossbeam = "0.8"
+parking_lot = "0.12"
+lru = "0.12"
+futures = "0.3"
+
+# Database integration
+sqlx = { workspace = true, features = ["postgres", "chrono", "uuid"] }
+
+# Integration with existing V3 components
+research = { path = "../research" }
+council = { path = "../council" }
+workers = { path = "../workers" }
+security-policy-enforcer = { path = "../security-policy-enforcer" }
