@@ -12,7 +12,6 @@ use tracing::{info, warn, error, debug};
 use uuid::Uuid;
 
 /// Configuration loader with hot-reloading support
-#[derive(Debug)]
 pub struct ConfigLoader {
     config_path: String,
     config: Arc<RwLock<HashMap<String, serde_json::Value>>>,
@@ -46,7 +45,6 @@ pub struct ConfigLoadResult {
 }
 
 /// Configuration loader builder
-#[derive(Debug)]
 pub struct ConfigLoaderBuilder {
     config_path: Option<String>,
     reload_interval: Option<Duration>,

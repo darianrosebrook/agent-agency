@@ -298,7 +298,7 @@ impl AppConfig {
 
     /// Validate the configuration
     pub fn validate(&self) -> Result<()> {
-        self.validate()?;
+        // Basic validation logic
         
         // Additional custom validations
         if self.security.jwt_secret == "default-secret-change-in-production" && 

@@ -3,6 +3,7 @@
 use anyhow::Result;
 use base64::{Engine as _, engine::general_purpose};
 use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
+use ring::rand::SecureRandom;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -57,7 +58,7 @@ impl SecretValue {
     }
 
     pub fn into_string(self) -> String {
-        self.inner
+        self.inner.clone()
     }
 }
 
@@ -173,8 +174,10 @@ impl SecretsManager {
     /// Encrypt a secret value
     fn encrypt_secret(&self, value: &str) -> Result<EncryptedSecret> {
         let mut nonce_bytes = [0u8; 12];
-        ring::rand::generate(&ring::rand::SystemRandom::new(), &mut nonce_bytes)
+        ring::rand::SystemRandom::new()
+            .fill(&mut nonce_bytes)
             .map_err(|_| anyhow::anyhow!("Failed to generate nonce"))?;
+        
         let nonce = Nonce::try_assume_unique_for_key(&nonce_bytes)
             .map_err(|_| anyhow::anyhow!("Invalid nonce"))?;
 
@@ -211,7 +214,8 @@ impl SecretsManager {
     pub async fn load_from_env(&self, prefix: &str) -> Result<()> {
         let mut loaded_count = 0;
         
-        for (key, value) in std::env::vars() {
+        let env_vars: Vec<(String, String)> = std::env::vars().collect();
+        for (key, value) in env_vars {
             if key.starts_with(prefix) {
                 let secret_name = key.strip_prefix(prefix).unwrap_or(&key);
                 self.store_secret(secret_name, &value, None, vec![]).await?;
@@ -235,11 +239,12 @@ impl SecretsManager {
         let imported_secrets: HashMap<String, EncryptedSecret> = serde_json::from_slice(data)?;
         let mut secrets = self.secrets.write().await;
         
+        let count = imported_secrets.len();
         for (name, encrypted_secret) in imported_secrets {
             secrets.insert(name.clone(), encrypted_secret);
         }
         
-        info!("Imported {} secrets", imported_secrets.len());
+        info!("Imported {} secrets", count);
         Ok(())
     }
 }
