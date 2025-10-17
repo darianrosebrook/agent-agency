@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Optimization targets for Apple Silicon
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OptimizationTarget {
     /// Apple Neural Engine
     ANE,
@@ -243,6 +243,27 @@ pub struct ThermalConfig {
     pub cooling_down_period_ms: u64,
     pub monitoring_interval_ms: u64,
     pub enable_thermal_throttling: bool,
+}
+
+/// Routing configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RoutingConfig {
+    pub enable_routing: bool,
+    pub routing_algorithm: RoutingAlgorithm,
+    pub load_balancing_strategy: LoadBalancingStrategy,
+    pub max_concurrent_requests: u32,
+    pub request_timeout_ms: u64,
+    pub enable_performance_monitoring: bool,
+}
+
+/// Memory management configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MemoryConfig {
+    pub max_memory_usage_mb: u32,
+    pub enable_memory_tracking: bool,
+    pub memory_cleanup_interval_ms: u64,
+    pub enable_memory_pool: bool,
+    pub memory_pool_size_mb: u32,
 }
 
 /// Inference routing decision

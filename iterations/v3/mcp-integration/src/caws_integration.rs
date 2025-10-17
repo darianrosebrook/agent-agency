@@ -7,6 +7,7 @@ use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn, error};
+use uuid::Uuid;
 
 /// CAWS integration service
 #[derive(Debug)]

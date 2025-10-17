@@ -163,7 +163,7 @@ pub enum CawsComplianceStatus {
 }
 
 /// CAWS violation details
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CawsViolation {
     pub rule_id: String,
     pub rule_name: String,
@@ -427,4 +427,59 @@ pub struct ToolUsageStats {
     pub success_rate: f32,
     pub average_execution_time_ms: f64,
     pub last_used: Option<DateTime<Utc>>,
+}
+
+/// MCP server configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MCPConfig {
+    pub server: ServerConfig,
+    pub tool_discovery: ToolDiscoveryConfig,
+    pub caws_integration: CawsIntegrationConfig,
+}
+
+/// Server configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServerConfig {
+    pub server_name: String,
+    pub version: String,
+    pub host: String,
+    pub port: u16,
+    pub enable_tls: bool,
+    pub enable_http: bool,
+    pub enable_websocket: bool,
+    pub max_connections: u32,
+    pub connection_timeout_ms: u64,
+    pub enable_compression: bool,
+    pub log_level: String,
+}
+
+/// Tool discovery configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolDiscoveryConfig {
+    pub enable_auto_discovery: bool,
+    pub discovery_paths: Vec<String>,
+    pub manifest_patterns: Vec<String>,
+    pub discovery_interval_seconds: u32,
+    pub enable_validation: bool,
+}
+
+/// CAWS integration configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CawsIntegrationConfig {
+    pub enable_caws_checking: bool,
+    pub caws_rulebook_path: String,
+    pub enable_provenance: bool,
+    pub enable_quality_gates: bool,
+    pub validation_strictness: ValidationStrictness,
+}
+
+/// Validation strictness levels
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ValidationStrictness {
+    /// Strict validation - fail on any violation
+    Strict,
+    /// Moderate validation - warn on minor violations
+    Moderate,
+    /// Lenient validation - log violations but allow execution
+    Lenient,
 }

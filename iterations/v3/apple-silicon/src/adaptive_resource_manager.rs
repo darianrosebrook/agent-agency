@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DeviceKind { Cpu, Gpu, Ane }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Precision { Int4, Int8, Fp16, Fp32 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -70,6 +71,52 @@ impl ModelRegistry for StaticModelRegistry {
     }
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
+pub struct AppleModelRegistryConfig {
+    pub models: std::collections::HashMap<String, std::collections::HashMap<String, Vec<String>>>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct AppleModelRegistry { inner: StaticModelRegistry }
+
+impl AppleModelRegistry {
+    pub fn from_config(cfg: AppleModelRegistryConfig) -> Self {
+        let mut reg = StaticModelRegistry::default();
+        for (model, devs) in cfg.models {
+            for (dev_s, precs_s) in devs {
+                let device = match dev_s.as_str() {
+                    "Ane"|"ANE"|"ane" => DeviceKind::Ane,
+                    "Gpu"|"GPU"|"gpu" => DeviceKind::Gpu,
+                    _ => DeviceKind::Cpu,
+                };
+                let precs = precs_s.into_iter().filter_map(|p| match p.as_str() {
+                    "Int4"|"INT4"|"int4" => Some(Precision::Int4),
+                    "Int8"|"INT8"|"int8" => Some(Precision::Int8),
+                    "Fp16"|"FP16"|"fp16" => Some(Precision::Fp16),
+                    "Fp32"|"FP32"|"fp32" => Some(Precision::Fp32),
+                    _ => None,
+                }).collect::<Vec<_>>();
+                if !precs.is_empty() { reg = reg.with_entry(&model, device, precs); }
+            }
+        }
+        Self { inner: reg }
+    }
+
+    pub fn from_json_str(s: &str) -> Option<Self> {
+        serde_json::from_str::<AppleModelRegistryConfig>(s).ok().map(Self::from_config)
+    }
+
+    pub fn from_path(path: &std::path::Path) -> Option<Self> {
+        std::fs::read_to_string(path).ok().and_then(|c| Self::from_json_str(&c))
+    }
+}
+
+impl ModelRegistry for AppleModelRegistry {
+    fn supports(&self, model: &str, device: DeviceKind, precision: Precision) -> bool {
+        self.inner.supports(model, device, precision)
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct StaticSensors {
     pub ane: ThermalState,
@@ -87,6 +134,88 @@ impl DeviceSensors for StaticSensors {
         }
     }
     fn memory(&self) -> MemoryState { self.mem }
+}
+
+/// Heuristic system sensors backed by OS where available. Safe fallbacks otherwise.
+pub struct SystemSensors {
+    ane_env: Option<bool>,
+    gpu_env: Option<bool>,
+    cpu_env: Option<bool>,
+    ane_head: Option<u8>,
+    gpu_head: Option<u8>,
+    cpu_head: Option<u8>,
+}
+
+impl SystemSensors {
+    pub fn detect() -> Self {
+        Self {
+            ane_env: std::env::var("ARM_FORCE_THROTTLE_ANE").ok().and_then(|v| v.parse().ok()),
+            gpu_env: std::env::var("ARM_FORCE_THROTTLE_GPU").ok().and_then(|v| v.parse().ok()),
+            cpu_env: std::env::var("ARM_FORCE_THROTTLE_CPU").ok().and_then(|v| v.parse().ok()),
+            ane_head: std::env::var("ARM_HEADROOM_ANE").ok().and_then(|v| v.parse().ok()),
+            gpu_head: std::env::var("ARM_HEADROOM_GPU").ok().and_then(|v| v.parse().ok()),
+            cpu_head: std::env::var("ARM_HEADROOM_CPU").ok().and_then(|v| v.parse().ok()),
+        }
+    }
+
+    fn macos_memory_state() -> Option<MemoryState> {
+        #[cfg(target_os = "macos")]
+        {
+            use std::process::Command;
+            let out = Command::new("vm_stat").output().ok()?;
+            let s = String::from_utf8_lossy(&out.stdout);
+            let mut page_size = 4096.0;
+            let mut free = 0.0;
+            let mut active = 0.0;
+            let mut wired = 0.0;
+            for line in s.lines() {
+                if line.contains("page size of") {
+                    if let Some(ps) = line.split_whitespace().filter_map(|t| t.replace(",","" ).parse::<f64>().ok()).last() { page_size = ps; }
+                } else if line.starts_with("Pages free:") {
+                    free = line.split_whitespace().filter_map(|t| t.replace(",","" ).parse::<f64>().ok()).last().unwrap_or(0.0);
+                } else if line.starts_with("Pages active:") {
+                    active = line.split_whitespace().filter_map(|t| t.replace(",","" ).parse::<f64>().ok()).last().unwrap_or(0.0);
+                } else if line.starts_with("Pages wired down:") {
+                    wired = line.split_whitespace().filter_map(|t| t.replace(",","" ).parse::<f64>().ok()).last().unwrap_or(0.0);
+                }
+            }
+            let used_bytes = (active + wired) * page_size;
+            // Get total via sysctl hw.memsize
+            let total_bytes = Command::new("sysctl").arg("-n").arg("hw.memsize").output().ok()
+                .and_then(|o| String::from_utf8(o.stdout).ok())
+                .and_then(|s| s.trim().parse::<f64>().ok())
+                .unwrap_or(32.0 * 1024.0 * 1024.0 * 1024.0);
+            return Some(MemoryState { used_gb: (used_bytes / (1024.0*1024.0*1024.0)) as f32, total_gb: (total_bytes / (1024.0*1024.0*1024.0)) as f32 });
+        }
+        #[allow(unreachable_code)] None
+    }
+
+    fn default_headroom(mem: &MemoryState) -> u8 {
+        let usage = mem.used_gb / mem.total_gb;
+        if usage > 0.9 { 10 } else if usage > 0.8 { 20 } else if usage > 0.7 { 30 } else { 60 }
+    }
+}
+
+impl DeviceSensors for SystemSensors {
+    fn thermal(&self, device: DeviceKind) -> ThermalState {
+        let mem = self.memory();
+        let head_env = match device {
+            DeviceKind::Ane => self.ane_head,
+            DeviceKind::Gpu => self.gpu_head,
+            DeviceKind::Cpu => self.cpu_head,
+        };
+        let thr_env = match device {
+            DeviceKind::Ane => self.ane_env,
+            DeviceKind::Gpu => self.gpu_env,
+            DeviceKind::Cpu => self.cpu_env,
+        };
+        let head = head_env.unwrap_or_else(|| Self::default_headroom(&mem));
+        let throttled = thr_env.unwrap_or(false) || head < 15;
+        ThermalState { throttled, headroom_pct: head }
+    }
+    fn memory(&self) -> MemoryState {
+        Self::macos_memory_state().unwrap_or(MemoryState { used_gb: 8.0, total_gb: 32.0 })
+    }
 }
 
 pub trait AllocationPlanner: Send + Sync {

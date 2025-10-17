@@ -8,6 +8,7 @@ use dashmap::DashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn, error};
+use uuid::Uuid;
 
 /// Tool registry for managing MCP tools
 #[derive(Debug)]
