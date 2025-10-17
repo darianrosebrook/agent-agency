@@ -215,7 +215,7 @@ impl WorkerPoolManager {
         // Send completion event
         let event = match result.status {
             ExecutionStatus::Completed | ExecutionStatus::Partial => {
-                WorkerPoolEvent::TaskCompleted { task_id, worker_id, result }
+                WorkerPoolEvent::TaskCompleted { task_id, worker_id, result: result.clone() }
             }
             ExecutionStatus::Failed | ExecutionStatus::Timeout | ExecutionStatus::Cancelled => {
                 WorkerPoolEvent::TaskFailed { 

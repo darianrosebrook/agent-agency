@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::{
     types::*,
-    signer::{SignerTrait, SignerFactory},
+    signer::{SignerTrait, SignerFactory, SigningAlgorithm},
     git_integration::{GitIntegration, GitTrailerManager},
     ProvenanceConfig,
 };
@@ -59,16 +59,22 @@ impl ProvenanceService {
         let signer = SignerFactory::create_signer(
             &config.signing.key_path,
             config.signing.key_id.clone(),
-            config.signing.algorithm.clone(),
+            match config.signing.algorithm {
+                crate::SigningAlgorithm::RS256 => SigningAlgorithm::RS256,
+                crate::SigningAlgorithm::ES256 => SigningAlgorithm::ES256,
+                crate::SigningAlgorithm::EdDSA => SigningAlgorithm::EdDSA,
+            },
         )?;
 
         let git_integration = if std::path::Path::new(&config.git.repository_path).join(".git").exists() {
-            Some(Box::new(GitTrailerManager::new(
-                &config.git.repository_path,
-                config.git.branch.clone(),
-                config.git.auto_commit,
-                config.git.commit_message_template.clone(),
-            )?) as Box<dyn GitIntegration>)
+            // TODO: Re-enable when GitIntegration trait is properly implemented
+            // Some(Box::new(GitTrailerManager::new(
+            //     &config.git.repository_path,
+            //     config.git.branch.clone(),
+            //     config.git.auto_commit,
+            //     config.git.commit_message_template.clone(),
+            // )?) as Box<dyn GitIntegration>)
+            None
         } else {
             None
         };

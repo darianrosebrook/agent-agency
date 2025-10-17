@@ -55,7 +55,7 @@ pub struct ConstitutionalReference {
 }
 
 /// Language analyzer trait for language-specific analysis
-pub trait LanguageAnalyzer: Send + Sync {
+pub trait LanguageAnalyzer: Send + Sync + std::fmt::Debug {
     /// Analyze a file modification for language-specific issues
     fn analyze_file_modification(&self, modification: &FileModification) -> Result<LanguageAnalysisResult>;
     
@@ -250,8 +250,8 @@ impl CawsChecker {
                 
                 let diff_analysis = DiffAnalysisResult {
                     change_complexity: analysis_result.change_complexity.clone(),
-                    language_violations: analysis_result.violations,
-                    language_warnings: analysis_result.warnings,
+                    language_violations: analysis_result.violations.clone(),
+                    language_warnings: analysis_result.warnings.clone(),
                     is_oversized: analysis_result.complexity_score > self.diff_analyzer.max_change_complexity,
                     is_noisy: analysis_result.surgical_change_score < self.diff_analyzer.surgical_change_threshold,
                     surgical_change_score: analysis_result.surgical_change_score,
@@ -301,10 +301,11 @@ impl CawsChecker {
                 violations.push(CawsViolation {
                     rule: "Change Size Limit".to_string(),
                     severity: ViolationSeverity::High,
-                    description: format!("Change complexity score {:.2} exceeds maximum allowed {:.2}", 
+                    description: format!("Change complexity score {:.2} exceeds maximum allowed {:.2}",
                         analysis.change_complexity.complexity_score, self.diff_analyzer.max_change_complexity),
                     location: None,
                     suggestion: Some("Break changes into smaller, more focused modifications".to_string()),
+                    constitutional_ref: None,
                 });
             }
 

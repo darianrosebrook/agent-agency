@@ -17,7 +17,8 @@ members = [
     "system-health-monitor",
     "workspace-state-manager",
     "resilience",
-    "config"
+    "config",
+    "integration-tests"
 ]
 
 [workspace.package]

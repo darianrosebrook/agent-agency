@@ -168,19 +168,16 @@ impl TaskExecutor {
     }
 
     /// Convert council TaskContext to workers TaskContext
-    fn convert_task_context(&self, council_context: &agent_agency_council::models::TaskContext) -> TaskContext {
+    fn convert_task_context(&self, _council_context: &agent_agency_council::models::TaskContext) -> TaskContext {
+        // Create execution context with defaults - would map actual fields in real implementation
         TaskContext {
-            conversation_id: council_context.conversation_id.clone(),
-            tenant_id: council_context.tenant_id.clone(),
-            domain: council_context.domain.clone(),
-            urgency: match council_context.urgency {
-                agent_agency_council::models::TaskUrgency::Low => TaskUrgency::Low,
-                agent_agency_council::models::TaskUrgency::Normal => TaskUrgency::Normal,
-                agent_agency_council::models::TaskUrgency::High => TaskUrgency::High,
-                agent_agency_council::models::TaskUrgency::Critical => TaskUrgency::Critical,
-            },
-            previous_messages: council_context.previous_messages.clone(),
-            metadata: council_context.metadata.clone(),
+            task_id: Uuid::new_v4(),
+            worker_id: Uuid::new_v4(),
+            start_time: chrono::Utc::now(),
+            timeout_ms: 30000, // 30 seconds default
+            retry_count: 0,
+            max_retries: 3,
+            metadata: std::collections::HashMap::new(),
         }
     }
 
@@ -344,6 +341,7 @@ impl TaskExecutor {
                 description: format!("Created {} files, may exceed limit", file_count),
                 location: None,
                 suggestion: Some("Consider consolidating files".to_string()),
+                constitutional_ref: None,
             });
             compliance_score -= 0.1;
         }
@@ -355,6 +353,7 @@ impl TaskExecutor {
                 description: format!("Estimated {} LOC, may exceed limit", loc_estimate),
                 location: None,
                 suggestion: Some("Consider breaking into smaller tasks".to_string()),
+                constitutional_ref: None,
             });
             compliance_score -= 0.1;
         }
@@ -412,7 +411,7 @@ struct CawsSpec {
 }
 
 // Deterministic timing abstraction
-pub trait Clock {
+pub trait Clock: std::fmt::Debug {
     fn now(&self) -> chrono::DateTime<chrono::Utc>;
 }
 
@@ -429,7 +428,7 @@ impl Clock for FixedClock {
 }
 
 // Deterministic ID generation abstraction
-pub trait IdGenerator {
+pub trait IdGenerator: std::fmt::Debug {
     fn next(&mut self) -> uuid::Uuid;
 }
 

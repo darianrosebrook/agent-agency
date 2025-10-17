@@ -1,0 +1,58 @@
+[package]
+name = "integration-tests"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Core V3 crates
+agent-agency-council = { path = "../council" }
+agent-agency-research = { path = "../research" }
+agent-agency-orchestration = { path = "../orchestration" }
+claim-extraction = { path = "../claim-extraction" }
+embedding-service = { path = "../embedding-service" }
+agent-agency-apple-silicon = { path = "../apple-silicon" }
+agent-agency-resilience = { path = "../resilience" }
+agent-agency-config = { path = "../config" }
+
+# Test framework and utilities
+tokio = { version = "1.0", features = ["full"] }
+tokio-test = "0.4"
+anyhow = "1.0"
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+tempfile = "3.0"
+assert_matches = "1.5"
+proptest = "1.0"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+# Database and storage
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "sqlite", "chrono", "uuid"] }
+redis = { version = "0.24", features = ["tokio-comp"] }
+
+# HTTP and networking
+reqwest = { version = "0.11", features = ["json"] }
+warp = "0.3"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Async utilities
+futures = "0.3"
+async-trait = "0.1"
+dashmap = "5.0"
+parking_lot = "0.12"
+
+# Test data generation
+fake = { version = "2.9", features = ["derive"] }
+rand = "0.8"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+# [[bench]]
+# name = "integration_benchmarks"
+# harness = false

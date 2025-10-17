@@ -15,20 +15,12 @@ async fn http_health_endpoint_works() {
     let srv = std::sync::Arc::new(MCPServer::new(test_config(port)));
     // Start server in background
     let srv_run = srv.clone();
-    tokio::spawn(async move { let _ = srv_run.start().await; });
-    // Wait for server to be ready with simple retry loop
+    // Start HTTP with readiness for deterministic test
+    let (ready, _handle) = srv.start_http_with_readiness().await.unwrap();
+    let _ = ready.await;
     let client = reqwest::Client::new();
     let url = format!("http://127.0.0.1:{port}");
-    let mut ok = false;
-    for _ in 0..20 { // up to ~2s
-        let res = client.post(&url).json(&serde_json::json!({
-            "jsonrpc":"2.0","id":1,"method":"health","params":null
-        })).send().await;
-        if let Ok(r) = res { if r.status().is_success() { ok = true; break; } }
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    }
     // JSON-RPC call: {"method":"health","params":null,"id":1,"jsonrpc":"2.0"}
-    assert!(ok, "server did not become ready in time");
     let resp = client.post(&url).json(&serde_json::json!({
         "jsonrpc":"2.0","id":1,"method":"health","params":null
     })).send().await.unwrap();

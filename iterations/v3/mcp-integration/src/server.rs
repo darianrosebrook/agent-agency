@@ -11,6 +11,7 @@ use tracing::{debug, info, warn, error};
 use uuid::Uuid;
 use jsonrpc_core::{IoHandler, Params, Value, Error as JsonRpcError, Result as JsonRpcResult};
 use jsonrpc_http_server::{ServerBuilder};
+use tokio::task::JoinHandle;
 
 /// Main MCP server
 #[derive(Debug)]
@@ -68,6 +69,43 @@ impl MCPServer {
 
         info!("MCP server started successfully");
         Ok(())
+    }
+
+    /// Start the MCP HTTP server and return a readiness receiver and join handle for tests
+    pub async fn start_http_with_readiness(&self) -> Result<(tokio::sync::oneshot::Receiver<()>, JoinHandle<()>)> {
+        if !self.config.server.enable_http { anyhow::bail!("HTTP disabled"); }
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let addr = format!("{}:{}", self.config.server.host, self.config.server.port);
+        let registry = self.tool_registry.clone();
+        let caws = self.caws_integration.clone();
+        let handle = tokio::task::spawn_blocking(move || {
+            let mut io = IoHandler::default();
+            io.add_sync_method("health", move |_| Ok(Value::String("ok".into())));
+            let registry_list = registry.clone();
+            io.add_method("tools", move |_| {
+                let registry_list = registry_list.clone();
+                async move { Ok(serde_json::to_value(&registry_list.get_all_tools().await).unwrap()) }
+            });
+            let caws_validate = caws.clone();
+            io.add_method("validate", move |params: Params| {
+                let caws_validate = caws_validate.clone();
+                async move {
+                    let v: Value = params.parse().unwrap_or(Value::Null);
+                    let tool: crate::types::MCPTool = serde_json::from_value(v)
+                        .map_err(|_| JsonRpcError::invalid_params("invalid tool"))?;
+                    let res = caws_validate.validate_tool(&tool).await
+                        .map_err(|_| JsonRpcError::internal_error())?;
+                    Ok(serde_json::to_value(&res).unwrap())
+                }
+            });
+            let server = ServerBuilder::new(io)
+                .threads(1)
+                .start_http(&addr.parse().expect("valid addr"))
+                .expect("start http");
+            let _ = tx.send(());
+            server.wait();
+        });
+        Ok((rx, handle))
     }
 
     /// Stop the MCP server
@@ -168,8 +206,11 @@ impl MCPServer {
 
         let addr = format!("{}:{}", self.config.server.host, self.config.server.port);
         let registry = self.tool_registry.clone();
-        let discovery = self.tool_discovery.clone();
+        let _discovery = self.tool_discovery.clone();
         let caws = self.caws_integration.clone();
+
+        // Readiness channel
+        let (ready_tx, ready_rx) = std::sync::mpsc::sync_channel::<()>(1);
 
         tokio::task::spawn_blocking(move || {
             let mut io = IoHandler::default();
@@ -207,11 +248,18 @@ impl MCPServer {
                 .threads(1)
                 .start_http(&addr.parse().expect("valid addr"))
                 .expect("start http");
+            // signal readiness
+            let _ = ready_tx.send(());
             // Keep server running until process end in this background thread
             server.wait();
         });
-
-        Ok(())
+        // Wait for readiness (with timeout safeguard)
+        let start = std::time::Instant::now();
+        while start.elapsed() < std::time::Duration::from_secs(3) {
+            if let Ok(_) = ready_rx.try_recv() { return Ok(()); }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+        anyhow::bail!("HTTP server failed to become ready in time")
     }
 
     /// Start WebSocket server

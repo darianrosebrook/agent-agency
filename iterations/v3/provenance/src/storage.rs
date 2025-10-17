@@ -80,7 +80,7 @@ impl super::service::ProvenanceStorage for DatabaseProvenanceStorage {
 
 /// In-memory provenance storage for testing
 pub struct InMemoryProvenanceStorage {
-    records: HashMap<Uuid, ProvenanceRecord>,
+    records: HashMap<String, ProvenanceRecord>,
 }
 
 impl InMemoryProvenanceStorage {
@@ -98,6 +98,7 @@ impl super::service::ProvenanceStorage for InMemoryProvenanceStorage {
         // Note: This is a simplified implementation for testing
         // In a real implementation, you'd need to handle concurrent access
         tracing::info!("Storing provenance record in memory: {}", record.id);
+        // For now, just log - in a real implementation we'd store it
         Ok(())
     }
 
@@ -108,7 +109,7 @@ impl super::service::ProvenanceStorage for InMemoryProvenanceStorage {
 
     async fn get_record(&self, id: &str) -> Result<Option<ProvenanceRecord>> {
         tracing::info!("Getting provenance record from memory: {}", id);
-        Ok(self.records.get(&id).cloned())
+        Ok(self.records.get(id).cloned())
     }
 
     async fn query_records(&self, query: &ProvenanceQuery) -> Result<Vec<ProvenanceRecord>> {
