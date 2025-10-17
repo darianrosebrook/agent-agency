@@ -8,6 +8,7 @@
 ### **Compilation Errors (Must Fix First)**
 
 #### **1. Provenance Crate (17 errors)**
+
 ```bash
 # Current errors:
 - JWT signing method calls (from_pem → from_rsa_pem) ✅ FIXED
@@ -19,6 +20,7 @@
 **Status**: 80% fixed, remaining issues with git integration async trait
 
 #### **2. Workers Crate (58 errors)**
+
 ```bash
 # Current errors:
 - Import paths (council types, TaskSpec) ✅ FIXED
@@ -30,6 +32,7 @@
 **Status**: 30% fixed, major type system issues remain
 
 #### **3. Research Crate (5 errors)**
+
 ```bash
 # Current errors:
 - Missing Hash trait on QueryType enum ❌ PENDING
@@ -40,6 +43,7 @@
 **Status**: 0% fixed
 
 #### **4. Workspace State Manager (44 errors)**
+
 ```bash
 # Current errors:
 - Dependency conflicts (libgit2-sys, libsqlite3-sys) ❌ PENDING
@@ -51,6 +55,7 @@
 ## 🎯 **Immediate Actions (Next 2 Hours)**
 
 ### **Step 1: Fix Research Crate (Easiest)**
+
 ```rust
 // File: research/src/types.rs
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -66,6 +71,7 @@ let score = result.score * self.config.hybrid_search.vector_weight;
 ```
 
 ### **Step 2: Fix Workers Crate Type Issues**
+
 ```rust
 // File: workers/src/types.rs
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -84,6 +90,7 @@ let busy_factor = if recent_tasks > 0.0 {
 ```
 
 ### **Step 3: Fix Workspace State Manager Dependencies**
+
 ```toml
 # File: workspace-state-manager/Cargo.toml
 [dependencies]
@@ -92,6 +99,7 @@ git2 = "0.19"  # Align with other crates
 ```
 
 ### **Step 4: Complete Provenance Git Integration**
+
 ```rust
 // File: provenance/src/git_integration.rs
 // Implement proper thread-safe git operations
@@ -103,12 +111,14 @@ git2 = "0.19"  # Align with other crates
 ### **Phase 1: Unit Tests for Working Components**
 
 #### **Claim Extraction Pipeline (Already 80% Complete)**
+
 ```bash
 # Current status: 9/11 tests passing
 # Remaining: Fix 2 failing tests due to stub implementations
 ```
 
 #### **Council System (Basic Tests Exist)**
+
 ```bash
 # Add comprehensive unit tests for:
 - Judge verdict reasoning
@@ -117,6 +127,7 @@ git2 = "0.19"  # Align with other crates
 ```
 
 #### **Embedding Service (Basic Tests Exist)**
+
 ```bash
 # Add comprehensive unit tests for:
 - Vector similarity calculations
@@ -127,6 +138,7 @@ git2 = "0.19"  # Align with other crates
 ### **Phase 2: Integration Tests**
 
 #### **Council ↔ Claim Extraction Integration**
+
 ```rust
 #[tokio::test]
 async fn test_evidence_enrichment_flow() {
@@ -135,6 +147,7 @@ async fn test_evidence_enrichment_flow() {
 ```
 
 #### **Orchestration ↔ Council Integration**
+
 ```rust
 #[tokio::test]
 async fn test_task_evaluation_flow() {
@@ -145,16 +158,19 @@ async fn test_task_evaluation_flow() {
 ## 📊 **Success Criteria**
 
 ### **Compilation Success**
+
 - [ ] All crates compile without errors
 - [ ] All crates compile without warnings
 - [ ] `cargo test --workspace --all-features` runs successfully
 
 ### **Test Coverage Targets**
+
 - [ ] 80%+ line coverage on working components
 - [ ] 90%+ branch coverage on critical paths
 - [ ] All integration tests pass
 
 ### **Performance Benchmarks**
+
 - [ ] Unit tests complete in < 30 seconds
 - [ ] Integration tests complete in < 2 minutes
 - [ ] No memory leaks in test suite
@@ -162,16 +178,19 @@ async fn test_task_evaluation_flow() {
 ## 🚀 **Execution Plan**
 
 ### **Hour 1: Fix Compilation Errors**
+
 1. Fix Research crate (5 errors) - 15 minutes
 2. Fix Workers crate type issues (20 errors) - 30 minutes
 3. Fix Workspace State Manager dependencies (15 minutes)
 
 ### **Hour 2: Verify Compilation & Start Testing**
+
 1. Run full compilation check - 10 minutes
 2. Implement unit tests for working components - 40 minutes
 3. Set up test infrastructure - 10 minutes
 
 ### **Next Session: Integration Testing**
+
 1. Implement cross-component integration tests
 2. Add performance benchmarks
 3. Set up CI/CD pipeline
@@ -179,6 +198,7 @@ async fn test_task_evaluation_flow() {
 ## 🔧 **Tools & Commands**
 
 ### **Compilation Verification**
+
 ```bash
 # Check all crates compile
 cargo check --workspace --all-features
@@ -192,6 +212,7 @@ grcov . -s . -t lcov --llvm --branch --ignore-not-existing -o target/coverage/lc
 ```
 
 ### **Test Execution**
+
 ```bash
 # Run specific crate tests
 cargo test -p claim-extraction
@@ -207,6 +228,7 @@ cargo test --workspace --all-features --test '*integration*'
 ## 📋 **Checklist**
 
 ### **Compilation Fixes**
+
 - [ ] Research crate compiles
 - [ ] Workers crate compiles
 - [ ] Workspace State Manager compiles
@@ -214,6 +236,7 @@ cargo test --workspace --all-features --test '*integration*'
 - [ ] All crates compile without warnings
 
 ### **Test Implementation**
+
 - [ ] Unit tests for claim extraction (complete existing)
 - [ ] Unit tests for council system
 - [ ] Unit tests for embedding service
@@ -221,6 +244,7 @@ cargo test --workspace --all-features --test '*integration*'
 - [ ] Integration tests for orchestration ↔ council
 
 ### **Infrastructure**
+
 - [ ] Test data factories
 - [ ] Coverage reporting setup
 - [ ] CI/CD pipeline configuration

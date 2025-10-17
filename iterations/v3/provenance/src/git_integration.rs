@@ -14,6 +14,7 @@ use uuid::Uuid;
 
 use crate::types::ProvenanceRecord;
 
+
 /// Git integration trait
 #[async_trait]
 pub trait GitIntegration: Send + Sync {

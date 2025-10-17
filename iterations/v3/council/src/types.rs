@@ -384,6 +384,293 @@ impl JudgeVerdict {
     }
 }
 
+// ============================================================================
+// Claim Extraction and Verification Types (V2 Integration)
+// ============================================================================
+
+/// Conversation context for claim extraction
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConversationContext {
+    pub conversation_id: String,
+    pub tenant_id: String,
+    pub previous_messages: Vec<String>,
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+/// Ambiguity analysis result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AmbiguityAnalysis {
+    pub referential_ambiguities: Vec<String>,
+    pub structural_ambiguities: Vec<String>,
+    pub temporal_ambiguities: Vec<String>,
+    pub resolution_confidence: f64,
+}
+
+/// Disambiguation result from stage 1
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DisambiguationResult {
+    pub original_text: String,
+    pub resolved_text: String,
+    pub resolved_ambiguities: Vec<ResolutionAttempt>,
+    pub unresolved_ambiguities: Vec<UnresolvableAmbiguity>,
+    pub resolution_confidence: f64,
+    pub timestamp: String,
+}
+
+/// Resolution attempt for an ambiguity
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResolutionAttempt {
+    pub ambiguity_type: String,
+    pub original_text: String,
+    pub resolved_text: String,
+    pub confidence: f64,
+    pub resolution_method: String,
+    pub timestamp: String,
+}
+
+/// Unresolvable ambiguity
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UnresolvableAmbiguity {
+    pub ambiguity_type: String,
+    pub ambiguous_text: String,
+    pub reason: String,
+    pub timestamp: String,
+}
+
+/// Verifiable content result from stage 2
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerifiableContentResult {
+    pub verifiable_segments: Vec<String>,
+    pub non_verifiable_segments: Vec<String>,
+    pub qualification_confidence: f64,
+    pub timestamp: String,
+}
+
+/// Atomic claim from stage 3
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AtomicClaim {
+    pub id: String,
+    pub statement: String,
+    pub confidence: f64,
+    pub source_context: String,
+    pub verification_requirements: Vec<VerificationCriteria>,
+}
+
+/// Verification criteria for a claim
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerificationCriteria {
+    pub criterion_type: String,
+    pub description: String,
+    pub required_evidence: Vec<String>,
+    pub priority: Priority,
+}
+
+/// Extracted claim with metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtractedClaim {
+    pub id: String,
+    pub statement: String,
+    pub confidence: f64,
+    pub source_context: String,
+    pub verification_requirements: Vec<VerificationCriteria>,
+}
+
+/// Evidence manifest for verification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceManifest {
+    pub evidence: Vec<EvidenceItem>,
+    pub quality: Option<f64>,
+    pub caws_compliant: bool,
+    pub timestamp: String,
+}
+
+/// Evidence item
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceItem {
+    pub source: String,
+    pub content: String,
+    pub relevance: f64,
+    pub credibility: f64,
+}
+
+/// Verification result from stage 4
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerificationResult {
+    pub status: VerificationStatus,
+    pub evidence_quality: f64,
+    pub caws_compliance: bool,
+    pub verification_trail: Vec<VerificationStep>,
+}
+
+/// Verification status
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum VerificationStatus {
+    Verified,
+    Unverified,
+    InsufficientEvidence,
+}
+
+/// Verification step in the trail
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerificationStep {
+    pub step_type: String,
+    pub description: String,
+    pub outcome: String,
+    pub timestamp: String,
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+/// Scope validation result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScopeValidation {
+    pub within_scope: bool,
+    pub violations: Vec<String>,
+    pub waiver_required: bool,
+    pub waiver_justification: Option<String>,
+}
+
+/// Working spec for CAWS compliance
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkingSpec {
+    pub id: String,
+    pub title: String,
+    pub scope: Option<WorkingSpecScope>,
+    pub risk_tier: RiskTier,
+    pub acceptance_criteria: Vec<AcceptanceCriterion>,
+}
+
+/// Working spec scope
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkingSpecScope {
+    pub r#in: Option<Vec<String>>,
+    pub out: Option<Vec<String>>,
+}
+
+/// Claim-based evaluation result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimBasedEvaluation {
+    pub id: String,
+    pub timestamp: String,
+    pub disambiguation_result: DisambiguationResult,
+    pub qualification_result: VerifiableContentResult,
+    pub decomposition_result: ClaimDecompositionResult,
+    pub verification_results: Vec<VerificationResult>,
+    pub overall_confidence: f64,
+    pub caws_compliance: bool,
+}
+
+/// Claim decomposition result from stage 3
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimDecompositionResult {
+    pub atomic_claims: Vec<AtomicClaim>,
+    pub decomposition_confidence: f64,
+    pub timestamp: String,
+}
+
+/// Learning update for pattern improvement
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LearningUpdate {
+    pub pattern_id: String,
+    pub update_type: String,
+    pub success: bool,
+    pub feedback: String,
+    pub timestamp: String,
+}
+
+/// Pattern update for learning system
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatternUpdate {
+    pub pattern_id: String,
+    pub pattern_type: String,
+    pub pattern_data: serde_json::Value,
+    pub success_count: u32,
+    pub failure_count: u32,
+    pub last_updated: String,
+}
+
+/// Arbitration decision
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArbitrationDecision {
+    pub decision_id: String,
+    pub claim_id: String,
+    pub decision: String,
+    pub confidence: f64,
+    pub reasoning: String,
+    pub timestamp: String,
+}
+
+// ============================================================================
+// Trait Definitions for Claim Extraction System
+// ============================================================================
+
+use async_trait::async_trait;
+
+/// Main claim extraction and verification processor trait
+#[async_trait]
+pub trait ClaimExtractionAndVerificationProcessor {
+    async fn process_claim_extraction_and_verification(
+        &self,
+        worker_output: serde_json::Value,
+        task_context: serde_json::Value,
+        conversation_context: Option<ConversationContext>,
+    ) -> Result<ClaimBasedEvaluation, Box<dyn std::error::Error + Send + Sync>>;
+}
+
+/// Ambiguity handler trait
+#[async_trait]
+pub trait AmbiguityHandler {
+    async fn disambiguation_stage(
+        &self,
+        text: &str,
+        context: &ConversationContext,
+    ) -> Result<DisambiguationResult, Box<dyn std::error::Error + Send + Sync>>;
+
+    async fn resolve_referential_ambiguities(
+        &self,
+        text: &str,
+        patterns: &[regex::Regex],
+        context: &ConversationContext,
+    ) -> (Vec<ResolutionAttempt>, Vec<UnresolvableAmbiguity>, String);
+
+    async fn resolve_structural_ambiguities(
+        &self,
+        text: &str,
+        patterns: &[regex::Regex],
+        context: &ConversationContext,
+    ) -> (Vec<ResolutionAttempt>, Vec<UnresolvableAmbiguity>, String);
+
+    async fn resolve_temporal_ambiguities(
+        &self,
+        text: &str,
+        patterns: &[regex::Regex],
+        context: &ConversationContext,
+    ) -> (Vec<ResolutionAttempt>, Vec<UnresolvableAmbiguity>, String);
+}
+
+/// Claim-based arbiter trait
+#[async_trait]
+pub trait ClaimBasedArbiter {
+    async fn arbitrate_claims(
+        &self,
+        claims: Vec<AtomicClaim>,
+        context: &ConversationContext,
+    ) -> Result<Vec<ArbitrationDecision>, Box<dyn std::error::Error + Send + Sync>>;
+}
+
+/// Claim learning system trait
+#[async_trait]
+pub trait ClaimLearningSystem {
+    async fn update_patterns(
+        &self,
+        update: LearningUpdate,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
+    async fn get_pattern_performance(
+        &self,
+        pattern_id: &str,
+    ) -> Result<PatternUpdate, Box<dyn std::error::Error + Send + Sync>>;
+}
+
 impl TaskSpec {
     /// Check if this task requires unanimous approval
     pub fn requires_unanimous_approval(&self) -> bool {

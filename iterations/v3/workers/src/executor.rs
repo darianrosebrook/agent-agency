@@ -3,7 +3,7 @@
 //! Executes tasks by communicating with worker models and handling the execution lifecycle.
 
 use crate::types::*;
-use agent_agency_council::types::RiskTier;
+use agent_agency_council::models::RiskTier;
 use agent_agency_council::models::TaskSpec;
 use anyhow::{Context, Result};
 use std::sync::Arc;
@@ -64,9 +64,9 @@ impl TaskExecutor {
         Ok(ExecutionInput {
             prompt,
             task_id: task_spec.id,
-            context: task_spec.context.clone(),
+            context: self.convert_task_context(&task_spec.context),
             requirements: self.extract_requirements(task_spec),
-            caws_spec: task_spec.caws_spec.clone(),
+            caws_spec: task_spec.caws_spec.as_ref().map(|spec| self.convert_caws_spec(spec)),
         })
     }
 
@@ -164,6 +164,30 @@ impl TaskExecutor {
             max_execution_time_ms: task_spec.scope.max_loc.map(|loc| loc as u64 * 100),
             preferred_worker_type: None,
             context_length_estimate: 4000, // Would be calculated more precisely
+        }
+    }
+
+    /// Convert council TaskContext to workers TaskContext
+    fn convert_task_context(&self, council_context: &agent_agency_council::models::TaskContext) -> TaskContext {
+        TaskContext {
+            conversation_id: council_context.conversation_id.clone(),
+            tenant_id: council_context.tenant_id.clone(),
+            domain: council_context.domain.clone(),
+            urgency: match council_context.urgency {
+                agent_agency_council::models::TaskUrgency::Low => TaskUrgency::Low,
+                agent_agency_council::models::TaskUrgency::Normal => TaskUrgency::Normal,
+                agent_agency_council::models::TaskUrgency::High => TaskUrgency::High,
+                agent_agency_council::models::TaskUrgency::Critical => TaskUrgency::Critical,
+            },
+            previous_messages: council_context.previous_messages.clone(),
+            metadata: council_context.metadata.clone(),
+        }
+    }
+
+    /// Convert council CawsSpec to workers CawsSpec
+    fn convert_caws_spec(&self, _council_spec: &agent_agency_council::models::CawsSpec) -> CawsSpec {
+        CawsSpec {
+            // Simplified conversion - would map actual fields in real implementation
         }
     }
 
@@ -300,7 +324,7 @@ impl TaskExecutor {
     /// Check CAWS compliance for worker output
     fn check_caws_compliance(&self, output: &WorkerOutput) -> CawsComplianceResult {
         let mut violations = Vec::new();
-        let mut compliance_score = 1.0;
+        let mut compliance_score: f32 = 1.0;
 
         // Check file count
         let file_count = output.files_modified.len() as u32;
@@ -335,9 +359,10 @@ impl TaskExecutor {
             compliance_score -= 0.1;
         }
 
+        let is_compliant = violations.is_empty();
         CawsComplianceResult {
-            is_compliant: violations.is_empty(),
-            compliance_score: compliance_score.max(0.0),
+            is_compliant,
+            compliance_score: compliance_score.max(0.0f32),
             violations,
             budget_adherence: BudgetAdherence {
                 files_used: file_count,
@@ -346,7 +371,7 @@ impl TaskExecutor {
                 loc_limit: 2000, // Example limit
                 time_used_ms: 0, // Would be set by caller
                 time_limit_ms: None,
-                within_budget: violations.is_empty(),
+                within_budget: is_compliant,
             },
             provenance_complete: !output.rationale.is_empty(),
         }

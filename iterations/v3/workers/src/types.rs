@@ -64,6 +64,7 @@ pub struct WorkerPerformanceMetrics {
     pub uptime_percentage: f32,
     pub last_task_at: Option<DateTime<Utc>>,
     pub current_load: f32, // 0.0 to 1.0
+    pub busy_workers: u32,
 }
 
 /// Task assignment to worker
@@ -123,6 +124,18 @@ pub enum ExecutionStatus {
     Timeout,
     Cancelled,
     Partial, // Partially completed but needs more work
+}
+
+impl std::fmt::Display for ExecutionStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ExecutionStatus::Completed => write!(f, "Completed"),
+            ExecutionStatus::Failed => write!(f, "Failed"),
+            ExecutionStatus::Timeout => write!(f, "Timeout"),
+            ExecutionStatus::Cancelled => write!(f, "Cancelled"),
+            ExecutionStatus::Partial => write!(f, "Partial"),
+        }
+    }
 }
 
 /// Worker output
@@ -194,6 +207,7 @@ pub struct CawsViolation {
     pub description: String,
     pub location: Option<String>,
     pub suggestion: Option<String>,
+    pub constitutional_ref: Option<String>,
 }
 
 /// Violation severity
@@ -470,6 +484,7 @@ impl Default for WorkerPerformanceMetrics {
             uptime_percentage: 100.0,
             last_task_at: None,
             current_load: 0.0,
+            busy_workers: 0,
         }
     }
 }

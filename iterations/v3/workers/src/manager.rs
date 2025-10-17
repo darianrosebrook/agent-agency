@@ -191,13 +191,14 @@ impl WorkerPoolManager {
 
         // Execute task
         let result = self.task_executor.execute_task(task_spec, worker_id).await?;
+        let result_status = result.status.clone();
 
         // Update worker performance metrics
         if let Some(mut worker) = self.workers.get_mut(&worker_id) {
             worker.update_performance_metrics(&result);
             
             // Reset status based on result
-            worker.status = match result.status {
+            worker.status = match result_status {
                 ExecutionStatus::Completed | ExecutionStatus::Partial => WorkerStatus::Available,
                 ExecutionStatus::Failed | ExecutionStatus::Timeout | ExecutionStatus::Cancelled => {
                     // Keep busy if failed to allow retry logic
@@ -226,7 +227,7 @@ impl WorkerPoolManager {
         };
         let _ = self.event_sender.send(event);
 
-        info!("Completed task: {} ({})", task_id, result.status);
+        info!("Completed task: {} ({})", task_id, result_status);
         Ok(result)
     }
 

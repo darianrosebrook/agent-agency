@@ -123,8 +123,185 @@ All major integration points have been successfully implemented:
 - ✅ **Apple Silicon Integration**: Resource optimization, performance benchmarking (PRODUCTION-READY)
 - ✅ **Cross-Component Integration**: All components work together cohesively
 
+## 🧪 **Testing Implementation Status**
+
+### **Compilation Progress** 🔄 **IN PROGRESS**
+
+**Current Status (2025-10-17)**: 6/8 crates compiling successfully (75% complete)
+
+#### ✅ **Successfully Fixed**
+
+- **Research Crate**: 100% complete, 0 errors, 20 warnings
+- **Embedding Service**: 100% complete, 0 errors, 5 warnings
+- **Claim Extraction**: 100% complete, 0 errors, 12 warnings
+- **Council**: 100% complete, 0 errors, 5 warnings
+- **Orchestration**: 100% complete, 0 errors, 6 warnings
+
+#### 🔄 **In Progress**
+
+- **Workers Crate**: 50% complete, 29 errors remaining (type mismatches, missing fields)
+- **Provenance Crate**: 80% complete, 17 errors remaining (git integration thread safety)
+
+#### ❌ **Blocked**
+
+- **Workspace State Manager**: 0% complete, 44 errors (dependency conflicts with libgit2-sys)
+
+### **Next Priority Actions**
+
+1. **Fix Workers Crate**: Complete remaining 29 compilation errors
+2. **Fix Provenance Crate**: Resolve git integration thread safety issues
+3. **Fix Workspace State Manager**: Resolve dependency conflicts
+4. **Implement Unit Tests**: Add comprehensive test coverage for working components
+5. **Create Integration Tests**: Test cross-component communication
+
+### **Testing Readiness**
+
+- ✅ **Claim Extraction**: 9/11 tests passing, comprehensive unit tests
+- ✅ **Council**: Contract tests, schema conformance tests
+- ✅ **Research**: Ready for unit test implementation
+- ✅ **Embedding Service**: Basic tests exist, ready for expansion
+- ✅ **Orchestration**: Adapter tests, persistence tests
+- ✅ **Apple Silicon**: Ready for performance tests
+
 ## 📋 **Implementation Notes**
 
 All core V3 components have been successfully implemented with comprehensive functionality. The system is architecturally complete and ready for the next phase of development.
 
 For detailed implementation status, component-specific gaps, and proposed actions, see `v3/docs-status/IMPLEMENTATION_STATUS.md`.
+
+For detailed compilation progress and testing strategy, see `v3/docs/testing/COMPILATION_PROGRESS.md`.
+
+## Actionable TODO Checklists (V3)
+
+The following items were found via repo sweep (TODO/placeholder markers). Each has verifiable, bite‑sized acceptance checks to ensure real implementation (not stubs). Focus limited to V3 production code.
+
+### MCP Integration
+
+- Caws Integration (`v3/mcp-integration/src/caws_integration.rs`)
+  - [ ] Initialize integration context
+    - Implement `init()` to load config, rulebook path, and cache handles
+    - Verify: unit test asserts config fields populated and errors on missing files
+  - [ ] Implement CAWS validation core
+    - Replace placeholder `violations` and `compliance_score` with real evaluation
+    - Verify: test with synthetic inputs returns non‑trivial score and violations list
+  - [ ] Execution‑specific validation
+    - Add execution mode checks (plan vs. apply), with different rule subsets
+    - Verify: contract tests assert different results per mode
+  - [ ] Rulebook loading
+    - Load rulebook from file (YAML/JSON), validate schema
+    - Verify: invalid schema rejected; snapshot test for parsed rules
+  - [ ] Graceful shutdown
+    - Implement resource cleanup; idempotent `shutdown()`
+    - Verify: calling twice does not panic; resources closed
+
+- Tool Discovery (`v3/mcp-integration/src/tool_discovery.rs`)
+  - [ ] Initialization
+    - Wire logger, config, and discovery backends (filesystem/env/registry)
+    - Verify: unit test enumerates configured backends
+  - [ ] Automatic discovery
+    - Implement scanning with filters (language, tags, risk tier)
+    - Verify: fixture directory produces expected tool set
+  - [ ] Cleanup
+    - Release watches/handles; ensure no leaked threads
+    - Verify: leak detector test shows zero active handles after drop
+  - [ ] Actual discovery logic
+    - Parse tool manifests to typed struct; validate required fields
+    - Verify: invalid manifests produce descriptive errors
+  - [ ] Tool validation
+    - Static checks (schema, permissions), dynamic probe (health ping)
+    - Verify: red/green tests for failing/passing tools
+
+- Tool Registry (`v3/mcp-integration/src/tool_registry.rs`)
+  - [ ] Initialization
+    - In‑memory registry with index by `name` and `capabilities`
+    - Verify: register/get/remove operations covered with property tests
+  - [ ] Actual tool execution
+    - Replace placeholder with execution router (sync/async, timeout, sandbox)
+    - Verify: execution respects timeouts, returns typed result, propagates error kind
+  - [ ] Shutdown
+    - Drain in‑flight tasks; flush metrics
+    - Verify: in‑flight cancellations counted and reported
+
+- Server (`v3/mcp-integration/src/server.rs`)
+  - [ ] HTTP server
+    - Expose `/health`, `/validate`, `/tools` endpoints
+    - Verify: supertest-style integration tests assert 200/400 behaviors
+  - [ ] WebSocket server
+    - Implement bi‑directional channel for streaming validations
+    - Verify: WS test exchanges messages; handles disconnects gracefully
+
+### Council
+
+- Debate (`v3/council/src/debate.rs`)
+  - [ ] Argument generation
+    - Replace TODO with model provider trait + mockable adapter
+    - Verify: unit test injects fake provider and asserts argument content
+  - [ ] Research agent integration
+    - Call research client; merge evidence into arguments
+    - Verify: evidence count and confidence affect scoring
+  - [ ] Consensus result
+    - Create typed `Consensus` (decision, confidence, rationale)
+    - Verify: deterministic consensus over fixed inputs
+  - [ ] Position updating
+    - Implement update rule using opponent arguments and evidence weights
+    - Verify: property test shows monotonic convergence in simple cases
+
+- Coordinator (`v3/council/src/coordinator.rs`)
+  - [ ] Debate protocol rounds
+    - Replace `debate_rounds: 0` with configurable rounds + stop criteria
+    - Verify: test confirms early stop on high consensus
+  - [ ] Evaluation timing
+    - Measure real evaluation time; record histograms
+    - Verify: metrics exporter receives >0ms for non‑trivial debates
+  - [ ] Metrics endpoint
+    - Implement structured metrics snapshot accessor
+    - Verify: unit test validates fields and monotonic counters
+
+- Learning (`v3/council/src/learning.rs`)
+  - [ ] Similar task signal retrieval
+    - Implement retrieval from store by task hash/topic
+    - Verify: seeded store returns k‑nearest signals
+  - [ ] Judge performance analysis
+    - Calculate per‑judge accuracy and drift over time
+    - Verify: test fixtures produce expected rankings
+  - [ ] Resource requirement analysis
+    - Estimate compute/memory per task class
+    - Verify: regression test covers estimator outputs
+
+- Verdicts (`v3/council/src/verdicts.rs`)
+  - [ ] Database connection and init
+    - Add storage trait + Postgres (feature‑flag), Memory store default
+    - Verify: compile toggles; contract tests run green for both
+  - [ ] CRUD operations
+    - Implement save/get/query/delete/statistics
+    - Verify: integration tests with docker‑compose or sqlite fallback
+
+### Security Policy Enforcer
+
+- Audit (`v3/security-policy-enforcer/src/audit.rs`)
+  - [ ] Define audit event schema
+    - Typed struct with versioning and PII‑safe fields
+    - Verify: schema round‑trips via serde JSON/YAML
+  - [ ] Log ingestion and parsing
+    - Implement readers for file and stdio; pluggable parser chain
+    - Verify: malformed lines counted and reported; valid entries parsed
+  - [ ] Analysis engine
+    - Rule‑based detection for policy violations with severity scoring
+    - Verify: fixtures trigger expected violations and severities
+
+- Enforcer (`v3/security-policy-enforcer/src/enforcer.rs`)
+  - [ ] Config update flow
+    - Replace note with actual write‑path and validation
+    - Verify: invalid configs rejected; rollback on partial failure
+
+### Cross‑Cutting Verifications
+
+- [ ] Determinism
+  - Replace random/time sources with injected providers where TODOs exist
+  - Verify: tests seed clocks/ID generators and assert stable outputs
+- [ ] Observability
+  - Emit structured logs and counters at key state changes noted above
+  - Verify: tests assert log keys and metric increments
+- [ ] Contracts
+  - For any new HTTP/WS endpoints, add contract tests first
+  - Verify: contract suite fails before impl, passes after

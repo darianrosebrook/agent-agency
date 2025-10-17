@@ -4,7 +4,7 @@
 
 use crate::types::*;
 use crate::{RoutingAlgorithm, LoadBalancingStrategy};
-use agent_agency_council::types::RiskTier;
+use agent_agency_council::models::RiskTier;
 use agent_agency_council::models::TaskSpec;
 use anyhow::{Context, Result};
 use dashmap::DashMap;
@@ -381,7 +381,7 @@ impl TaskRouter {
         let complexity_factor = 1.0 + (requirements.required_languages.len() + 
                                       requirements.required_frameworks.len()) as f64 * 0.1;
 
-        (base_time as f64 * speed_factor * context_factor * complexity_factor) as u64
+        (base_time as f64 * speed_factor as f64 * context_factor as f64 * complexity_factor as f64) as u64
     }
 
     /// Calculate load factor for a worker
@@ -389,8 +389,8 @@ impl TaskRouter {
         // Combine current load with historical performance
         let current_load = worker.performance_metrics.current_load;
         let recent_tasks = worker.performance_metrics.total_tasks.min(10) as f32;
-        let busy_factor = if recent_tasks > 0 {
-            worker.performance_metrics.busy_workers as f32 / recent_tasks
+        let busy_factor = if recent_tasks > 0.0 {
+            worker.performance_metrics.total_tasks as f32 / recent_tasks
         } else {
             0.0
         };

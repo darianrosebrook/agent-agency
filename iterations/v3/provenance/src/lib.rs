@@ -12,7 +12,7 @@ pub mod storage;
 
 pub use service::ProvenanceService;
 pub use signer::{SignerTrait, JwsSigner, LocalKeySigner};
-pub use git_integration::{GitIntegration, GitTrailerManager};
+pub use git_integration::{GitIntegration, GitTrailerManager, GitUtils};
 pub use types::*;
 
 /// Provenance service configuration

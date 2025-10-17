@@ -8,13 +8,15 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn, error};
 use uuid::Uuid;
+use std::fs;
+use std::path::Path;
 
 /// CAWS integration service
 #[derive(Debug)]
 pub struct CawsIntegration {
-    config: CawsIntegrationConfig,
-    rulebook: Arc<RwLock<CawsRulebook>>,
-    compliance_cache: Arc<RwLock<std::collections::HashMap<Uuid, CawsComplianceResult>>>,
+    pub(crate) config: CawsIntegrationConfig,
+    pub(crate) rulebook: Arc<RwLock<CawsRulebook>>,
+    pub(crate) compliance_cache: Arc<RwLock<std::collections::HashMap<Uuid, CawsComplianceResult>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -63,9 +65,10 @@ impl CawsIntegration {
     pub async fn initialize(&self) -> Result<()> {
         info!("Initializing CAWS integration");
 
-        // TODO: Implement initialization
-        // This would load the CAWS rulebook, initialize validation functions, etc.
-
+        // Load rulebook from configured path and clear caches
+        self.clear_compliance_cache().await;
+        let path = self.config.caws_rulebook_path.clone();
+        self.load_rulebook(&path).await?;
         Ok(())
     }
 
@@ -82,18 +85,69 @@ impl CawsIntegration {
             }
         }
 
-        // TODO: Implement actual CAWS validation
-        // This would check the tool against all applicable CAWS rules
+        // Basic CAWS validation based on rulebook + tool manifest metadata
+        let rb = self.rulebook.read().await.clone();
+        let mut violations: Vec<crate::types::CawsViolation> = Vec::new();
 
-        let violations = Vec::new(); // Placeholder
-        let compliance_score = 1.0; // Placeholder
+        // Simple static checks derived from CAWS invariants
+        if tool.name.trim().is_empty() {
+            violations.push(crate::types::CawsViolation {
+                rule_id: "NAMING-001".into(),
+                rule_name: "Tool must have non-empty name".into(),
+                severity: crate::types::ViolationSeverity::Error,
+                description: "Tool name is empty".into(),
+                suggestion: Some("Provide a descriptive name".into()),
+                line_number: None,
+                column_number: None,
+                file_path: None,
+            });
+        }
+        if tool.version.trim().is_empty() {
+            violations.push(crate::types::CawsViolation {
+                rule_id: "VERSION-001".into(),
+                rule_name: "Tool must declare version".into(),
+                severity: crate::types::ViolationSeverity::Warning,
+                description: "Version is missing".into(),
+                suggestion: Some("Set semantic version like 1.0.0".into()),
+                line_number: None,
+                column_number: None,
+                file_path: None,
+            });
+        }
+        // Example governance: require output schema
+        if tool.output_schema.is_null() {
+            violations.push(crate::types::CawsViolation {
+                rule_id: "CONTRACT-001".into(),
+                rule_name: "Tool must declare output schema".into(),
+                severity: crate::types::ViolationSeverity::Error,
+                description: "Missing output schema".into(),
+                suggestion: Some("Provide JSON schema for outputs".into()),
+                line_number: None,
+                column_number: None,
+                file_path: None,
+            });
+        }
+
+        // Score is simple function of violations count and severities, normalized
+        let mut penalty: f32 = 0.0;
+        for v in &violations {
+            penalty += match v.severity {
+                crate::types::ViolationSeverity::Info => 0.05,
+                crate::types::ViolationSeverity::Warning => 0.1,
+                crate::types::ViolationSeverity::Error => 0.3,
+                crate::types::ViolationSeverity::Critical => 0.6,
+            };
+        }
+        // Consider rulebook size for normalization (avoid 0 rules edge case)
+        let base: f32 = if rb.rules.is_empty() { 1.0 } else { rb.rules.len() as f32 * 0.05 };
+        let compliance_score = (1.0 - (penalty / (1.0 + base))).clamp(0.0, 1.0);
 
         let result = CawsComplianceResult {
             is_compliant: violations.is_empty(),
             violations,
             compliance_score,
             checked_at: chrono::Utc::now(),
-            rulebook_version: "1.0.0".to_string(),
+            rulebook_version: rb.version,
         };
 
         // Cache result
@@ -116,27 +170,126 @@ impl CawsIntegration {
     ) -> Result<CawsComplianceResult> {
         info!("Validating tool execution for CAWS compliance: {}", tool.name);
 
-        // TODO: Implement execution-specific CAWS validation
-        // This would check execution parameters, context, and runtime behavior
-
-        let result = CawsComplianceResult {
-            is_compliant: true, // Placeholder
-            violations: Vec::new(),
-            compliance_score: 1.0,
-            checked_at: chrono::Utc::now(),
-            rulebook_version: "1.0.0".to_string(),
+        // Execution-specific validation: timeout presence for network/command tools
+        let mut exec_violations: Vec<crate::types::CawsViolation> = Vec::new();
+        if (tool.capabilities.contains(&crate::types::ToolCapability::NetworkAccess)
+            || tool.capabilities.contains(&crate::types::ToolCapability::CommandExecution))
+            && request.timeout_seconds.is_none()
+        {
+            exec_violations.push(crate::types::CawsViolation {
+                rule_id: "RUNTIME-001".into(),
+                rule_name: "Dangerous capability requires timeout".into(),
+                severity: crate::types::ViolationSeverity::Error,
+                description: "Execution missing timeout for network/command tool".into(),
+                suggestion: Some("Set an appropriate timeout_seconds".into()),
+                line_number: None,
+                column_number: None,
+                file_path: None,
+            });
+        }
+        // Strictness handling
+        let strict = matches!(self.config.validation_strictness, crate::types::ValidationStrictness::Strict);
+        let rb = self.rulebook.read().await.clone();
+        let mut penalty = 0.0f32;
+        for v in &exec_violations {
+            penalty += match v.severity {
+                crate::types::ViolationSeverity::Info => 0.02,
+                crate::types::ViolationSeverity::Warning => 0.05,
+                crate::types::ViolationSeverity::Error => 0.2,
+                crate::types::ViolationSeverity::Critical => 0.5,
+            };
+        }
+        let base: f32 = if rb.rules.is_empty() { 1.0 } else { rb.rules.len() as f32 * 0.05 };
+        let compliance_score = (1.0 - (penalty / (1.0 + base))).clamp(0.0, 1.0);
+        let is_compliant = if strict {
+            exec_violations.is_empty()
+        } else {
+            // Moderate/Lenient allow warnings/errors depending on score
+            compliance_score > 0.6
         };
 
-        Ok(result)
+        Ok(CawsComplianceResult {
+            is_compliant,
+            violations: exec_violations,
+            compliance_score,
+            checked_at: chrono::Utc::now(),
+            rulebook_version: rb.version,
+        })
     }
 
     /// Load CAWS rulebook
     pub async fn load_rulebook(&self, rulebook_path: &str) -> Result<()> {
         info!("Loading CAWS rulebook from: {}", rulebook_path);
 
-        // TODO: Implement rulebook loading
-        // This would parse CAWS rulebook files and load validation functions
+        // Load a minimal rulebook from a JSON or YAML file.
+        // Supported minimal schema: { version: string, rules: [{id,name,description,severity,category}] }
 
+        let p = Path::new(rulebook_path);
+        if !p.exists() {
+            anyhow::bail!("Rulebook path does not exist: {}", rulebook_path);
+        }
+        let content = fs::read_to_string(p)?;
+        // Try JSON first, then YAML
+        #[derive(serde::Deserialize)]
+        struct RawRulebook {
+            version: String,
+            rules: Vec<RawRule>,
+        }
+        #[derive(serde::Deserialize)]
+        struct RawRule {
+            id: String,
+            name: String,
+            description: String,
+            severity: String,
+            category: String,
+        }
+
+        let parsed: RawRulebook = if let Ok(j) = serde_json::from_str(&content) {
+            j
+        } else {
+            serde_yaml::from_str(&content)?
+        };
+
+        fn map_sev(s: &str) -> crate::types::ViolationSeverity {
+            match s.to_lowercase().as_str() {
+                "info" => crate::types::ViolationSeverity::Info,
+                "warning" | "warn" => crate::types::ViolationSeverity::Warning,
+                "error" => crate::types::ViolationSeverity::Error,
+                "critical" => crate::types::ViolationSeverity::Critical,
+                _ => crate::types::ViolationSeverity::Warning,
+            }
+        }
+        fn map_cat(s: &str) -> RuleCategory {
+            match s.to_lowercase().as_str() {
+                "security" => RuleCategory::Security,
+                "performance" => RuleCategory::Performance,
+                "documentation" => RuleCategory::Documentation,
+                "testing" => RuleCategory::Testing,
+                "deployment" => RuleCategory::Deployment,
+                "governance" => RuleCategory::Governance,
+                _ => RuleCategory::CodeQuality,
+            }
+        }
+
+        let rules = parsed
+            .rules
+            .into_iter()
+            .map(|r| CawsRule {
+                id: r.id,
+                name: r.name,
+                description: r.description,
+                severity: map_sev(&r.severity),
+                category: map_cat(&r.category),
+                validation_function: String::new(),
+            })
+            .collect::<Vec<_>>();
+
+        let mut rb = self.rulebook.write().await;
+        *rb = CawsRulebook {
+            version: parsed.version,
+            rules,
+            last_updated: chrono::Utc::now(),
+        };
         Ok(())
     }
 
@@ -156,10 +309,9 @@ impl CawsIntegration {
     /// Shutdown CAWS integration
     pub async fn shutdown(&self) -> Result<()> {
         info!("Shutting down CAWS integration");
-        
-        // TODO: Implement shutdown
-        // This would save cache, cleanup resources, etc.
-        
+
+        // Idempotent: just clear caches and leave
+        self.clear_compliance_cache().await;
         Ok(())
     }
 }

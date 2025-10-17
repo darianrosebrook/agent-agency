@@ -12,7 +12,8 @@ use uuid::Uuid;
 use crate::{
     types::*,
     signer::{SignerTrait, SignerFactory},
-    git_integration::{GitIntegration, GitTrailerManager, GitUtils},
+    git_integration::{GitIntegration, GitTrailerManager},
+    ProvenanceConfig,
 };
 
 /// Storage trait for provenance records
@@ -23,6 +24,7 @@ pub trait ProvenanceStorage: Send + Sync {
     async fn query_records(&self, query: &ProvenanceQuery) -> Result<Vec<ProvenanceRecord>>;
     async fn update_record(&self, record: &ProvenanceRecord) -> Result<()>;
     async fn delete_record(&self, id: &str) -> Result<()>;
+    async fn get_statistics(&self, time_range: Option<TimeRange>) -> Result<ProvenanceStats>;
 }
 
 /// Main provenance service
@@ -311,7 +313,7 @@ impl ProvenanceService {
             id: Uuid::new_v4().to_string(),
             verdict_id: "telemetry".into(),
             timestamp: Utc::now(),
-            caws_compliance: CawsCompliance { compliance_score: 0.0, issues: vec![] },
+            caws_compliance: CawsComplianceProvenance { compliance_score: 0.0, issues: vec![] },
             consensus_score: 0.0,
             decision: Decision::Info,
             details: Some(payload),

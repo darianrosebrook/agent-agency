@@ -4,7 +4,7 @@
 //! Enhanced with AST-based diff sizing and violation code mapping.
 
 use crate::types::*;
-use agent_agency_council::types::RiskTier;
+use agent_agency_council::models::RiskTier;
 use agent_agency_council::models::TaskSpec;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
@@ -73,6 +73,7 @@ pub struct LanguageAnalysisResult {
     pub warnings: Vec<LanguageWarning>,
     pub complexity_score: f32,
     pub surgical_change_score: f32,
+    pub change_complexity: ChangeComplexity,
 }
 
 /// Language-specific violation
@@ -248,7 +249,7 @@ impl CawsChecker {
                 let analysis_result = analyzer.analyze_file_modification(file_mod)?;
                 
                 let diff_analysis = DiffAnalysisResult {
-                    change_complexity: analysis_result.complexity_score,
+                    change_complexity: analysis_result.change_complexity.clone(),
                     language_violations: analysis_result.violations,
                     language_warnings: analysis_result.warnings,
                     is_oversized: analysis_result.complexity_score > self.diff_analyzer.max_change_complexity,
@@ -304,12 +305,6 @@ impl CawsChecker {
                         analysis.change_complexity.complexity_score, self.diff_analyzer.max_change_complexity),
                     location: None,
                     suggestion: Some("Break changes into smaller, more focused modifications".to_string()),
-                    constitutional_ref: Some(ConstitutionalReference {
-                        section: "Change Management".to_string(),
-                        subsection: "Size Limits".to_string(),
-                        description: "Changes must be surgical and focused".to_string(),
-                        severity: ViolationSeverity::High,
-                    }),
                 });
             }
 
@@ -322,12 +317,6 @@ impl CawsChecker {
                         analysis.surgical_change_score, self.diff_analyzer.surgical_change_threshold),
                     location: None,
                     suggestion: Some("Make more surgical changes with focused modifications".to_string()),
-                    constitutional_ref: Some(ConstitutionalReference {
-                        section: "Change Management".to_string(),
-                        subsection: "Surgical Changes".to_string(),
-                        description: "Changes should be precise and minimal".to_string(),
-                        severity: ViolationSeverity::Medium,
-                    }),
                 });
             }
 
@@ -339,7 +328,6 @@ impl CawsChecker {
                     description: lang_violation.description.clone(),
                     location: lang_violation.location.as_ref().map(|loc| format!("{}:{}", loc.line, loc.column)),
                     suggestion: lang_violation.suggestion.clone(),
-                    constitutional_ref: lang_violation.constitutional_ref.clone(),
                 });
             }
 
@@ -844,12 +832,6 @@ impl LanguageAnalyzer for RustAnalyzer {
                     description: "Unsafe code detected".to_string(),
                     location: None,
                     suggestion: Some("Review unsafe code usage and ensure proper justification".to_string()),
-                    constitutional_ref: Some(ConstitutionalReference {
-                        section: "Code Quality".to_string(),
-                        subsection: "Safety".to_string(),
-                        description: "Unsafe code requires special justification".to_string(),
-                        severity: ViolationSeverity::High,
-                    }),
                 });
             }
             
@@ -880,15 +862,22 @@ impl LanguageAnalyzer for RustAnalyzer {
         } else {
             0.5
         };
-        
+
+        // Calculate change complexity
+        let change_complexity = self.calculate_change_complexity(
+            modification.diff.as_deref().unwrap_or(""),
+            modification.content.as_deref(),
+        )?;
+
         Ok(LanguageAnalysisResult {
             violations,
             warnings,
             complexity_score,
             surgical_change_score,
+            change_complexity,
         })
     }
-    
+
     fn language(&self) -> ProgrammingLanguage {
         ProgrammingLanguage::Rust
     }
@@ -964,15 +953,22 @@ impl LanguageAnalyzer for TypeScriptAnalyzer {
         } else {
             0.5
         };
-        
+
+        // Calculate change complexity
+        let change_complexity = self.calculate_change_complexity(
+            modification.diff.as_deref().unwrap_or(""),
+            modification.content.as_deref(),
+        )?;
+
         Ok(LanguageAnalysisResult {
             violations,
             warnings,
             complexity_score,
             surgical_change_score,
+            change_complexity,
         })
     }
-    
+
     fn language(&self) -> ProgrammingLanguage {
         ProgrammingLanguage::TypeScript
     }
@@ -1055,15 +1051,22 @@ impl LanguageAnalyzer for JavaScriptAnalyzer {
         } else {
             0.5
         };
-        
+
+        // Calculate change complexity
+        let change_complexity = self.calculate_change_complexity(
+            modification.diff.as_deref().unwrap_or(""),
+            modification.content.as_deref(),
+        )?;
+
         Ok(LanguageAnalysisResult {
             violations,
             warnings,
             complexity_score,
             surgical_change_score,
+            change_complexity,
         })
     }
-    
+
     fn language(&self) -> ProgrammingLanguage {
         ProgrammingLanguage::JavaScript
     }

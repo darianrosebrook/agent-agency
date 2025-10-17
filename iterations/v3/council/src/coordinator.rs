@@ -12,7 +12,6 @@ use std::collections::HashMap;
 use anyhow::Result;
 
 /// Main coordinator for council consensus building
-#[derive(Debug)]
 pub struct ConsensusCoordinator {
     config: CouncilConfig,
     emitter: std::sync::Arc<dyn ProvenanceEmitter>,
