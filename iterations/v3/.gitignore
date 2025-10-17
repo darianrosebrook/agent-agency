@@ -42,3 +42,46 @@ Thumbs.db
 *.tmp
 *.temp
 /tmp/
+
+# Analysis and report artifacts (temporary development files)
+*_analysis*.json
+*_analysis*.md
+*analysis*.json
+*analysis*.md
+current_*.json
+current_*.md
+final_*.json
+final_*.md
+format_*.json
+format_*.md
+hidden_todos*.json
+hidden_todos*.md
+HIDDEN_TODOS*.md
+HIDDEN_TODO*.md
+todos*.json
+todos*.md
+TODO_ANALYSIS*.md
+PROVENANCE_STORAGE_IMPLEMENTATION_COMPLETE.md
+*_status*.json
+*_status*.md
+*_progress*.json
+*_progress*.md
+*_completion*.json
+*_completion*.md
+*_format_check*.json
+*_format_check*.md
+exhaustive_analysis*.json
+exhaustive_analysis*.md
+
+# Backup files
+*.bak
+
+# Mutation testing artifacts
+mutants.out/
+mutants.out.old/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
