@@ -18,6 +18,44 @@ pub trait EmbeddingProvider: Send + Sync {
     async fn embed(&self, inputs: &[String]) -> Result<Vec<EmbeddingVector>>;
 }
 
+/// Adapter to integrate embedding-service with research agent
+pub struct EmbeddingServiceAdapter {
+    service: Box<dyn embedding_service::EmbeddingService>,
+}
+
+impl EmbeddingServiceAdapter {
+    pub fn new(service: Box<dyn embedding_service::EmbeddingService>) -> Self {
+        Self { service }
+    }
+}
+
+#[async_trait]
+impl EmbeddingProvider for EmbeddingServiceAdapter {
+    fn dimension(&self) -> usize {
+        768 // embeddinggemma dimension
+    }
+
+    async fn embed(&self, inputs: &[String]) -> Result<Vec<EmbeddingVector>> {
+        let mut vectors = Vec::new();
+        
+        for input in inputs {
+            let embedding = self.service
+                .generate_embedding(
+                    input,
+                    embedding_service::ContentType::Knowledge,
+                    "research_agent",
+                )
+                .await?;
+            
+            vectors.push(EmbeddingVector {
+                values: embedding.vector,
+            });
+        }
+        
+        Ok(vectors)
+    }
+}
+
 /// Deterministic dummy provider for testing and plumbing.
 pub struct DummyEmbeddingProvider {
     dim: usize,

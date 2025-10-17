@@ -7,6 +7,7 @@
 pub mod coordinator;
 pub mod models;
 pub mod types;
+pub mod semantic;
 pub use types::*;
 
 /// Council configuration for judge coordination

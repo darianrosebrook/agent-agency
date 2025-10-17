@@ -32,4 +32,6 @@ tokio-stream = "0.1"  # Stream processing
 bytes = "1.5"  # Byte buffer handling
 
 [dev-dependencies]
+jsonschema = "0.17"
+serde_json = "1"
 tokio-test = "0.4"

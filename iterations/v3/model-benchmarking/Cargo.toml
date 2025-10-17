@@ -23,9 +23,11 @@ prometheus = "0.13"  # For metrics collection
 statistical = "0.1"  # For statistical analysis
 
 # ML/AI integration
-candle-core.workspace = true
-candle-nn.workspace = true
-candle-transformers.workspace = true
+# ML/AI integration (temporarily disabled due to rand version conflicts)
+# TODO: Re-enable when rand version conflicts are resolved
+# candle-core = "0.6"
+# candle-nn = "0.6"
+# candle-transformers = "0.6"
 
 # Database for benchmark storage
 sqlx.workspace = true
