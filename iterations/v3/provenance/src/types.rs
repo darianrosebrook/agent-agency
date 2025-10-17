@@ -98,7 +98,7 @@ pub struct ViolationProvenance {
 }
 
 /// Violation severity levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum ViolationSeverity {
     Critical,
     Major,

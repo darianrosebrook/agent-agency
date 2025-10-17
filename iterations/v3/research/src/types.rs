@@ -6,7 +6,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 /// Research query types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum QueryType {
     /// General knowledge search
     Knowledge,
@@ -20,6 +20,8 @@ pub enum QueryType {
     Troubleshooting,
     /// Best practices research
     BestPractices,
+    /// Technical research
+    Technical,
 }
 
 /// Research priority levels
@@ -29,6 +31,31 @@ pub enum ResearchPriority {
     Normal = 2,
     High = 3,
     Critical = 4,
+}
+
+/// Knowledge query for research
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KnowledgeQuery {
+    pub id: Uuid,
+    pub query: String,
+    pub query_type: QueryType,
+    pub max_results: Option<usize>,
+    pub context: Option<String>,
+    pub filters: HashMap<String, serde_json::Value>,
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+/// Search result from various sources
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchResult {
+    pub id: Uuid,
+    pub title: String,
+    pub content: String,
+    pub url: Option<String>,
+    pub source: String,
+    pub relevance_score: f64,
+    pub credibility_score: f64,
+    pub metadata: HashMap<String, serde_json::Value>,
 }
 
 /// Knowledge source types

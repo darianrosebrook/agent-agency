@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt::Display;
 use uuid::Uuid;
 
 /// Optimization targets for Apple Silicon
@@ -75,6 +76,17 @@ pub enum InferencePriority {
     Normal = 2,
     High = 3,
     Critical = 4,
+}
+
+impl Display for InferencePriority {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InferencePriority::Low => write!(f, "Low"),
+            InferencePriority::Normal => write!(f, "Normal"),
+            InferencePriority::High => write!(f, "High"),
+            InferencePriority::Critical => write!(f, "Critical"),
+        }
+    }
 }
 
 /// Model inference result
@@ -245,6 +257,30 @@ pub struct ThermalConfig {
     pub enable_thermal_throttling: bool,
 }
 
+/// Routing algorithms
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RoutingAlgorithm {
+    /// Performance-based routing
+    PerformanceBased,
+    /// Load-balanced routing
+    LoadBalanced,
+    /// Round-robin routing
+    RoundRobin,
+    /// Least busy routing
+    LeastBusy,
+}
+
+/// Load balancing strategies
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LoadBalancingStrategy {
+    /// Resource-based balancing
+    ResourceBased,
+    /// Request count based
+    RequestCount,
+    /// Performance-based
+    PerformanceBased,
+}
+
 /// Routing configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoutingConfig {
@@ -254,6 +290,9 @@ pub struct RoutingConfig {
     pub max_concurrent_requests: u32,
     pub request_timeout_ms: u64,
     pub enable_performance_monitoring: bool,
+    pub model_preferences: HashMap<String, OptimizationTarget>,
+    pub load_balancing: bool,
+    pub performance_monitoring: bool,
 }
 
 /// Memory management configuration
@@ -264,6 +303,10 @@ pub struct MemoryConfig {
     pub memory_cleanup_interval_ms: u64,
     pub enable_memory_pool: bool,
     pub memory_pool_size_mb: u32,
+    pub max_memory_mb: u32,
+    pub check_interval_ms: u64,
+    pub pressure_monitoring: bool,
+    pub cleanup_threshold_percent: u32,
 }
 
 /// Inference routing decision
@@ -380,7 +423,7 @@ impl Default for ResourceRequirements {
             estimated_gpu_percent: 20.0,
             estimated_ane_percent: 30.0,
             estimated_thermal_impact: 5.0,
-            estimated_power_w: 10.0,
+            estimated_power_watts: 10.0,
         }
     }
 }

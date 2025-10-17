@@ -13,8 +13,17 @@ use crate::{
     types::*,
     signer::{SignerTrait, SignerFactory},
     git_integration::{GitIntegration, GitTrailerManager, GitUtils},
-    storage::ProvenanceStorage,
 };
+
+/// Storage trait for provenance records
+#[async_trait]
+pub trait ProvenanceStorage: Send + Sync {
+    async fn store_record(&self, record: &ProvenanceRecord) -> Result<()>;
+    async fn get_record(&self, id: &str) -> Result<Option<ProvenanceRecord>>;
+    async fn query_records(&self, query: &ProvenanceQuery) -> Result<Vec<ProvenanceRecord>>;
+    async fn update_record(&self, record: &ProvenanceRecord) -> Result<()>;
+    async fn delete_record(&self, id: &str) -> Result<()>;
+}
 
 /// Main provenance service
 pub struct ProvenanceService {
@@ -279,38 +288,22 @@ impl ProvenanceService {
             }
         }
 
+        // Capture values before moving sorted_records
+        let chain_length = sorted_records.len() as u32;
+        let created_at = sorted_records.first().map(|r| r.timestamp).unwrap_or_else(Utc::now);
+        let last_updated = sorted_records.last().map(|r| r.timestamp).unwrap_or_else(Utc::now);
+
         Ok(ProvenanceChain {
             chain_id: Uuid::new_v4(),
             entries: sorted_records,
             integrity_verified,
-            chain_length: sorted_records.len() as u32,
-            created_at: sorted_records.first().map(|r| r.timestamp).unwrap_or_else(Utc::now),
-            last_updated: sorted_records.last().map(|r| r.timestamp).unwrap_or_else(Utc::now),
+            chain_length,
+            created_at,
+            last_updated,
         })
     }
 }
 
-/// Provenance storage trait
-#[async_trait]
-pub trait ProvenanceStorage: Send + Sync {
-    /// Store a provenance record
-    async fn store_record(&self, record: &ProvenanceRecord) -> Result<()>;
-    
-    /// Update a provenance record
-    async fn update_record(&self, record: &ProvenanceRecord) -> Result<()>;
-    
-    /// Get a provenance record by ID
-    async fn get_record(&self, id: Uuid) -> Result<Option<ProvenanceRecord>>;
-    
-    /// Query provenance records
-    async fn query_records(&self, query: &ProvenanceQuery) -> Result<Vec<ProvenanceRecord>>;
-    
-    /// Get provenance statistics
-    async fn get_statistics(&self, time_range: Option<TimeRange>) -> Result<ProvenanceStats>;
-    
-    /// Delete a provenance record (for cleanup)
-    async fn delete_record(&self, id: Uuid) -> Result<()>;
-}
 
 #[cfg(test)]
 mod tests {

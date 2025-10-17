@@ -4,7 +4,8 @@
 //! health checking, load balancing, and performance monitoring.
 
 use crate::types::*;
-use crate::{TaskRouter, TaskExecutor, CawsChecker};
+use crate::{TaskRouter, TaskExecutor, CawsChecker, WorkerPoolConfig};
+use agent_agency_council::models::TaskSpec;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use dashmap::DashMap;
@@ -12,6 +13,7 @@ use std::sync::Arc;
 use tokio::sync::{RwLock, mpsc};
 use tokio::time::{Duration, Instant};
 use tracing::{debug, error, info, warn};
+use uuid::Uuid;
 
 /// Main worker pool manager
 #[derive(Debug)]

@@ -66,7 +66,8 @@ impl InferenceRouter {
             
             // Keep only last 1000 decisions
             if history.len() > 1000 {
-                history.drain(0..history.len() - 1000);
+                let drain_count = history.len() - 1000;
+                history.drain(0..drain_count);
             }
         }
 
@@ -131,7 +132,7 @@ impl InferenceRouter {
                 resource_usage,
             ).await;
 
-            target_scores.insert(*target, score);
+            target_scores.insert(target.clone(), score);
         }
 
         // Select the best target
@@ -141,7 +142,7 @@ impl InferenceRouter {
 
         // Generate reasoning
         let reasoning = self.generate_routing_reasoning(
-            *selected_target,
+            selected_target.clone(),
             *score,
             &target_scores,
             request,
@@ -150,7 +151,7 @@ impl InferenceRouter {
 
         // Estimate execution time
         let estimated_time = self.estimate_execution_time(
-            *selected_target,
+            selected_target.clone(),
             request,
             model_performance,
         ).await;
@@ -164,18 +165,18 @@ impl InferenceRouter {
 
         // Get alternatives (other available targets)
         let mut alternatives = available_targets.to_vec();
-        alternatives.retain(|&t| t != *selected_target);
+        alternatives.retain(|t| t != selected_target);
 
         // Estimate resource requirements
         let resource_requirements = self.estimate_resource_requirements(
-            *selected_target,
+            selected_target.clone(),
             request,
             model_performance,
         ).await;
 
         Ok(RoutingDecision {
             request_id: request.id,
-            selected_target: *selected_target,
+            selected_target: selected_target.clone(),
             reasoning,
             estimated_time_ms: estimated_time,
             confidence,
@@ -396,7 +397,7 @@ impl InferenceRouter {
                 OptimizationTarget::Auto => 0.8,
             };
             
-            (base_time as f64 / efficiency) as u64
+            (base_time as f64 / efficiency as f64) as u64
         } else {
             base_time
         }
@@ -442,19 +443,19 @@ impl InferenceRouter {
                 requirements.estimated_ane_percent = 30.0;
                 requirements.estimated_memory_mb = 500;
                 requirements.estimated_thermal_impact = 3.0;
-                requirements.estimated_power_w = 8.0;
+                requirements.estimated_power_watts = 8.0;
             }
             OptimizationTarget::GPU => {
                 requirements.estimated_gpu_percent = 40.0;
                 requirements.estimated_memory_mb = 1000;
                 requirements.estimated_thermal_impact = 8.0;
-                requirements.estimated_power_w = 15.0;
+                requirements.estimated_power_watts = 15.0;
             }
             OptimizationTarget::CPU => {
                 requirements.estimated_cpu_percent = 60.0;
                 requirements.estimated_memory_mb = 200;
                 requirements.estimated_thermal_impact = 12.0;
-                requirements.estimated_power_w = 20.0;
+                requirements.estimated_power_watts = 20.0;
             }
             OptimizationTarget::Auto => {
                 // Conservative estimates for auto
@@ -463,7 +464,7 @@ impl InferenceRouter {
                 requirements.estimated_ane_percent = 15.0;
                 requirements.estimated_memory_mb = 600;
                 requirements.estimated_thermal_impact = 6.0;
-                requirements.estimated_power_w = 12.0;
+                requirements.estimated_power_watts = 12.0;
             }
         }
 
@@ -506,7 +507,7 @@ impl InferenceRouter {
         let mut total_confidence = 0.0;
 
         for decision in history.iter() {
-            *target_counts.entry(decision.selected_target).or_insert(0) += 1;
+            *target_counts.entry(decision.selected_target.clone()).or_insert(0) += 1;
             total_requests += 1;
             total_confidence += decision.confidence;
         }
@@ -545,6 +546,12 @@ impl InferenceRouter {
 impl Default for InferenceRouter {
     fn default() -> Self {
         Self::new(RoutingConfig {
+            enable_routing: true,
+            routing_algorithm: crate::types::RoutingAlgorithm::PerformanceBased,
+            load_balancing_strategy: crate::types::LoadBalancingStrategy::ResourceBased,
+            max_concurrent_requests: 10,
+            request_timeout_ms: 30000,
+            enable_performance_monitoring: true,
             model_preferences: HashMap::new(),
             load_balancing: true,
             performance_monitoring: true,

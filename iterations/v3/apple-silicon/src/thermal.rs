@@ -77,12 +77,12 @@ impl ThermalManager {
         };
 
         // Update throttle level
-        if self.config.auto_throttle {
-            status.throttle_level = if temperature_c < self.config.throttle_threshold_c as f32 {
+        if self.config.enable_thermal_throttling {
+            status.throttle_level = if temperature_c < self.config.thermal_throttle_threshold_celsius {
                 ThrottleLevel::None
-            } else if temperature_c < self.config.throttle_threshold_c as f32 + 5.0 {
+            } else if temperature_c < self.config.thermal_throttle_threshold_celsius + 5.0 {
                 ThrottleLevel::Light
-            } else if temperature_c < self.config.throttle_threshold_c as f32 + 10.0 {
+            } else if temperature_c < self.config.thermal_throttle_threshold_celsius + 10.0 {
                 ThrottleLevel::Medium
             } else {
                 ThrottleLevel::Heavy
@@ -92,7 +92,7 @@ impl ThermalManager {
         // Activate cooling if needed
         status.cooling_active = temperature_c > 75.0;
 
-        if temperature_c > self.config.max_temperature_c as f32 {
+        if temperature_c > self.config.max_temperature_celsius {
             warn!("Critical temperature reached: {:.1}°C", temperature_c);
         }
 
@@ -102,23 +102,25 @@ impl ThermalManager {
     /// Check if system is within thermal limits
     pub async fn is_within_thermal_limits(&self) -> bool {
         let status = self.current_status.read().await;
-        status.current_temperature_c < self.config.max_temperature_c as f32
+        status.current_temperature_c < self.config.max_temperature_celsius
     }
 
     /// Get recommended throttle level
     pub async fn get_recommended_throttle_level(&self) -> ThrottleLevel {
         let status = self.current_status.read().await;
-        status.throttle_level
+        status.throttle_level.clone()
     }
 }
 
 impl Default for ThermalManager {
     fn default() -> Self {
         Self::new(ThermalConfig {
-            max_temperature_c: 85,
-            check_interval_ms: 5000,
-            auto_throttle: true,
-            throttle_threshold_c: 80,
+            enable_thermal_monitoring: true,
+            thermal_throttle_threshold_celsius: 80.0,
+            max_temperature_celsius: 85.0,
+            cooling_down_period_ms: 10000,
+            monitoring_interval_ms: 5000,
+            enable_thermal_throttling: true,
         })
     }
 }

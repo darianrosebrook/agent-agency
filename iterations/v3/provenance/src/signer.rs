@@ -66,9 +66,9 @@ impl JwsSigner {
         algorithm: SigningAlgorithm,
     ) -> Result<Self> {
         let key_data = fs::read(key_path).context("Failed to read key file")?;
-        let encoding_key = EncodingKey::from_pem(&key_data)
+        let encoding_key = EncodingKey::from_rsa_pem(&key_data)
             .context("Failed to parse encoding key from PEM")?;
-        let decoding_key = DecodingKey::from_pem(&key_data)
+        let decoding_key = DecodingKey::from_rsa_pem(&key_data)
             .context("Failed to parse decoding key from PEM")?;
 
         Ok(Self {
@@ -85,9 +85,9 @@ impl JwsSigner {
         key_id: String,
         algorithm: SigningAlgorithm,
     ) -> Result<Self> {
-        let encoding_key = EncodingKey::from_pem(key_data)
+        let encoding_key = EncodingKey::from_rsa_pem(key_data)
             .context("Failed to parse encoding key from PEM")?;
-        let decoding_key = DecodingKey::from_pem(key_data)
+        let decoding_key = DecodingKey::from_rsa_pem(key_data)
             .context("Failed to parse decoding key from PEM")?;
 
         Ok(Self {

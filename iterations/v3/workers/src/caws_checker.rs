@@ -4,10 +4,12 @@
 //! Enhanced with AST-based diff sizing and violation code mapping.
 
 use crate::types::*;
-use crate::council::types::{TaskSpec, RiskTier};
+use agent_agency_council::types::RiskTier;
+use agent_agency_council::models::TaskSpec;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use tracing::{debug, info, warn};
+use uuid::Uuid;
 
 /// Programming language types for AST analysis
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

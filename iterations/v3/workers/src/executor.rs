@@ -3,10 +3,12 @@
 //! Executes tasks by communicating with worker models and handling the execution lifecycle.
 
 use crate::types::*;
-use crate::council::types::{TaskSpec, RiskTier};
+use agent_agency_council::types::RiskTier;
+use agent_agency_council::models::TaskSpec;
 use anyhow::{Context, Result};
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};
+use uuid::Uuid;
 
 /// Task executor for running tasks with workers
 #[derive(Debug)]

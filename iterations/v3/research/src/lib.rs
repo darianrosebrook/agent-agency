@@ -10,12 +10,18 @@ pub mod web_scraper;
 pub mod content_processor;
 pub mod types;
 pub mod embeddings;
+pub mod confidence_manager;
+pub mod information_processor;
+pub mod enhanced_knowledge_seeker;
 
 pub use knowledge_seeker::KnowledgeSeeker;
 pub use vector_search::VectorSearchEngine;
 pub use context_builder::ContextBuilder;
 pub use web_scraper::WebScraper;
 pub use content_processor::ContentProcessor;
+pub use confidence_manager::{IConfidenceManager, ConfidenceManager, ConfidenceManagerConfig};
+pub use information_processor::{IInformationProcessor, InformationProcessor, InformationProcessorConfig};
+pub use enhanced_knowledge_seeker::{IEnhancedKnowledgeSeeker, EnhancedKnowledgeSeeker, EnhancedKnowledgeSeekerConfig};
 pub use types::*;
 
 /// Research agent configuration

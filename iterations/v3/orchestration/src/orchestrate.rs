@@ -4,6 +4,7 @@ use anyhow::Result;
 use council::contracts as api;
 use council::ConsensusCoordinator;
 use crate::persistence::VerdictWriter;
+use apple_silicon as silicon;
 use council::coordinator::ProvenanceEmitter;
 use crate::provenance::OrchestrationProvenanceEmitter;
 
@@ -47,6 +48,26 @@ pub async fn orchestrate_task(
     emitter: &dyn ProvenanceEmitter,
     orch_emitter: &OrchestrationProvenanceEmitter,
 ) -> Result<api::FinalVerdict> {
+    // Plan resource allocation (heuristic) for council evaluation
+    let tier = match desc.risk_tier { 1 => silicon::Tier::T1, 2 => silicon::Tier::T2, _ => silicon::Tier::T3 };
+    let sensors = silicon::adaptive_resource_manager::SystemSensors::detect();
+    let registry = silicon::adaptive_resource_manager::AppleModelRegistry::from_path(std::path::Path::new(
+        std::env::var("ARM_MODEL_REGISTRY_JSON").unwrap_or_default().as_str(),
+    )).unwrap_or_else(|| silicon::adaptive_resource_manager::AppleModelRegistry::from_config(
+        silicon::adaptive_resource_manager::AppleModelRegistryConfig { models: std::collections::HashMap::new() }
+    ));
+    let planner = silicon::adaptive_resource_manager::SimplePlanner::new(sensors, registry);
+    let req = silicon::adaptive_resource_manager::AllocationRequest {
+        model: "gemma-3n-judge".to_string(),
+        supported_precisions: vec![silicon::Precision::Int8, silicon::Precision::Fp16],
+        preferred_devices: vec![],
+        tier,
+        latency_slo_ms: if matches!(tier, silicon::Tier::T1) { 30 } else if matches!(tier, silicon::Tier::T2) { 100 } else { 200 },
+        max_batch_size: if matches!(tier, silicon::Tier::T1) { 2 } else { 16 },
+        workload_hint: silicon::WorkloadHint::JudgeLatencySensitive,
+    };
+    let allocation = planner.plan(&req);
+    tracing::info!(target: "arm", device = ?allocation.device, precision = ?allocation.precision, batch = allocation.batch_size, est_ms = allocation.expected_latency_ms, "ARM plan created for council evaluation");
     // Lifecycle enter provenance
     orch_emitter.orchestrate_enter(&desc.task_id, &desc.scope_in, deterministic);
     let validator = DefaultValidator;

@@ -19,12 +19,13 @@ pub struct MemoryManager {
 impl MemoryManager {
     /// Create a new memory manager
     pub fn new(config: MemoryConfig) -> Self {
+        let total_memory = config.max_memory_mb as u64;
         Self {
             config,
             current_status: Arc::new(RwLock::new(MemoryStatus {
-                total_memory_mb: config.max_memory_mb,
+                total_memory_mb: total_memory,
                 used_memory_mb: 0,
-                available_memory_mb: config.max_memory_mb,
+                available_memory_mb: total_memory,
                 memory_pressure: MemoryPressure::Normal,
                 cache_size_mb: 0,
                 model_memory_mb: 0,
@@ -113,6 +114,11 @@ impl MemoryManager {
 impl Default for MemoryManager {
     fn default() -> Self {
         Self::new(MemoryConfig {
+            max_memory_usage_mb: 32768,
+            enable_memory_tracking: true,
+            memory_cleanup_interval_ms: 10000,
+            enable_memory_pool: true,
+            memory_pool_size_mb: 8192,
             max_memory_mb: 32768,
             check_interval_ms: 10000,
             pressure_monitoring: true,

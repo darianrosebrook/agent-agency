@@ -49,7 +49,7 @@ impl CoreMLManager {
             supported_targets: vec![OptimizationTarget::ANE, OptimizationTarget::GPU, OptimizationTarget::CPU],
             performance_metrics: ModelPerformanceMetrics::default(),
             is_loaded: true,
-            loaded_target: Some(optimization_target),
+            loaded_target: Some(optimization_target.clone()),
         };
 
         // Store model info
@@ -133,7 +133,7 @@ impl CoreMLManager {
             inference_time_ms: inference_time,
             tokens_generated,
             tokens_per_second,
-            optimization_target_used: request.optimization_target,
+            optimization_target_used: request.optimization_target.clone(),
             resource_usage: resource_usage.clone(),
             quality_metrics: self.calculate_quality_metrics(&request, &resource_usage).await,
             error: None,
@@ -202,7 +202,7 @@ impl CoreMLManager {
         
         // Update supported targets if needed
         if !model_info.supported_targets.contains(&target) {
-            model_info.supported_targets.push(target);
+            model_info.supported_targets.push(target.clone());
         }
 
         // Update cache
@@ -231,7 +231,7 @@ impl CoreMLManager {
                 id: uuid::Uuid::new_v4(),
                 model_name: model_name.to_string(),
                 input: format!("Benchmark input {}", i),
-                optimization_target: target,
+                optimization_target: target.clone(),
                 max_tokens: Some(100),
                 temperature: Some(0.7),
                 timeout_ms: Some(10000),
@@ -245,7 +245,7 @@ impl CoreMLManager {
 
             let benchmark_result = BenchmarkResult {
                 model_name: model_name.to_string(),
-                optimization_target: target,
+                optimization_target: target.clone(),
                 quantization: QuantizationMethod::INT8, // Would get from model info
                 inference_time_ms: result.inference_time_ms,
                 tokens_per_second: result.tokens_per_second,

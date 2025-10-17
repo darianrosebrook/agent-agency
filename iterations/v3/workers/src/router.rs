@@ -3,11 +3,13 @@
 //! Routes tasks to appropriate workers based on capabilities, load, and other factors.
 
 use crate::types::*;
-use crate::council::types::RiskTier;
+use agent_agency_council::types::RiskTier;
+use agent_agency_council::models::TaskSpec;
 use anyhow::{Context, Result};
 use dashmap::DashMap;
 use std::sync::Arc;
 use tracing::{debug, info, warn};
+use uuid::Uuid;
 
 /// Task router implementation
 #[derive(Debug)]

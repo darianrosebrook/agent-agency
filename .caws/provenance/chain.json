@@ -6258,5 +6258,41 @@
     },
     "previous_hash": "2e348b3df8c6c450120204f3f606e77c4c0c9f5837afe87cf72c4a18616e692f",
     "hash": "3798feb801f4f3d241c3cfe14048ec069c1953340b58afa2335901231398183c"
+  },
+  {
+    "id": "prov-1760683232773",
+    "timestamp": "2025-10-17T06:40:32.773Z",
+    "commit": {
+      "hash": "55c03867dd586ae4d617bc8967b9425674863f58",
+      "message": "feat: Complete claim extraction pipeline integration with council evidence enrichment",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-17T06:40:32.774Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "3798feb801f4f3d241c3cfe14048ec069c1953340b58afa2335901231398183c",
+    "hash": "8707c313918d58c37331f469dc5d191e5a039210878b255567a91b6b0b1d45de"
   }
 ]
