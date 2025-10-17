@@ -1,0 +1,139 @@
+id: PROJ-001
+title: "Agent Agency V3 - Advanced Multi-Agent System"
+risk_tier: 1
+mode: feature
+change_budget:
+  max_files: 50
+  max_loc: 2000
+blast_radius:
+  modules:
+    - council/
+    - orchestration/
+    - claim-extraction/
+    - reflexive-learning/
+    - model-benchmarking/
+    - mcp-integration/
+    - provenance/
+    - research/
+    - workers/
+    - apple-silicon/
+  data_migration: true
+operational_rollback_slo: 10m
+threats: []
+scope:
+  in:
+    - council/
+    - orchestration/
+    - claim-extraction/
+    - reflexive-learning/
+    - model-benchmarking/
+    - mcp-integration/
+    - provenance/
+    - research/
+    - workers/
+    - apple-silicon/
+    - database/
+    - docs/
+    - tests/
+  out:
+    - target/
+    - node_modules/
+    - dist/
+    - build/
+invariants:
+  - "Council-based governance maintains constitutional authority"
+  - "Apple Silicon optimization preserves thermal management"
+  - "All agent decisions are auditable through provenance ledger"
+  - "Multi-agent coordination preserves system consistency"
+  - "CAWS compliance enforced at all decision points"
+acceptance:
+  - id: A1
+    given: "Council system is operational"
+    when: "Task is submitted for evaluation"
+    then: "Consensus is reached within 5 seconds"
+  - id: A2
+    given: "Claim extraction pipeline is active"
+    when: "Worker output contains verifiable claims"
+    then: "Claims are validated against evidence sources"
+  - id: A3
+    given: "Reflexive learning coordinator is running"
+    when: "Agent performance feedback is received"
+    then: "Learning algorithms adapt routing decisions"
+  - id: A4
+    given: "Apple Silicon optimization is enabled"
+    when: "Model inference is requested"
+    then: "Workload is distributed across ANE/GPU/CPU optimally"
+  - id: A5
+    given: "MCP integration is configured"
+    when: "Worker requests tool discovery"
+    then: "Available tools are discovered and registered with CAWS compliance"
+  - id: A6
+    given: "Model benchmarking system is active"
+    when: "Agent performance metrics are collected"
+    then: "Performance scores are calculated and regression detection triggers alerts"
+  - id: A7
+    given: "Provenance tracking is enabled"
+    when: "Council makes a decision"
+    then: "Decision is signed with JWS and stored in immutable audit trail"
+  - id: A8
+    given: "Research agent has vector search capability"
+    when: "Worker requests context information"
+    then: "Relevant knowledge is retrieved and synthesized for worker context"
+  - id: A9
+    given: "CAWS runtime validator is active"
+    when: "Worker output is submitted for evaluation"
+    then: "CAWS compliance violations are detected and reported with specific rule references"
+non_functional:
+  a11y: []
+  perf:
+    api_p95_ms: 1000
+    council_consensus_ms: 5000
+    ane_utilization_percent: 60
+    memory_usage_gb: 50
+  security:
+    - "constitutional-compliance"
+    - "provenance-verification"
+    - "multi-tenant-isolation"
+    - "input-validation"
+contracts:
+  - type: "openapi"
+    path: "docs/contracts/"
+  - type: "json-schema"
+    path: "docs/contracts/"
+observability:
+  logs:
+    - "council-decisions"
+    - "agent-performance"
+    - "resource-utilization"
+    - "security-events"
+  metrics:
+    - "consensus-time"
+    - "agent-success-rate"
+    - "apple-silicon-efficiency"
+    - "learning-improvement"
+  traces:
+    - "multi-agent-coordination"
+    - "claim-verification-pipeline"
+    - "reflexive-learning-loops"
+migrations:
+  - "database-schema-updates"
+  - "model-architecture-changes"
+  - "council-consensus-algorithm-updates"
+rollback:
+  - "database-transaction-rollback"
+  - "model-version-reversion"
+  - "council-decision-reversal"
+ai_assessment:
+  confidence_level: 0.85
+  uncertainty_areas:
+    - "Apple Silicon optimization effectiveness"
+    - "Multi-agent coordination scalability"
+    - "Reflexive learning convergence rates"
+  complexity_factors:
+    - "Council consensus algorithm complexity"
+    - "Multi-tenant context management"
+    - "Real-time claim verification"
+  risk_factors:
+    - "High risk tier due to multi-agent coordination"
+    - "Apple Silicon thermal management requirements"
+    - "Constitutional compliance enforcement"
