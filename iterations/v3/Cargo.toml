@@ -14,8 +14,10 @@ members = [
     "minimal-diff-evaluator",
     "context-preservation-engine",
     "embedding-service",
-    "system-health-monitor"
-, "workspace-state-manager"]
+    "system-health-monitor",
+    "workspace-state-manager",
+    "resilience"
+]
 
 [workspace.package]
 version = "0.1.0"

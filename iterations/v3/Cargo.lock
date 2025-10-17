@@ -192,6 +192,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "agent-agency-resilience"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "rand 0.8.5",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-test",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "agent-agency-security-policy-enforcer"
 version = "0.1.0"
 dependencies = [

@@ -12,7 +12,7 @@ pub mod types;
 pub use manager::WorkerPoolManager;
 pub use router::TaskRouter;
 pub use executor::TaskExecutor;
-pub use caws_checker::CawsChecker;
+pub use caws_checker::{CawsChecker, ChangeComplexity};
 pub use types::*;
 
 /// Worker pool configuration

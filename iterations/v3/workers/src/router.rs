@@ -3,6 +3,7 @@
 //! Routes tasks to appropriate workers based on capabilities, load, and other factors.
 
 use crate::types::*;
+use crate::{RoutingAlgorithm, LoadBalancingStrategy};
 use agent_agency_council::types::RiskTier;
 use agent_agency_council::models::TaskSpec;
 use anyhow::{Context, Result};

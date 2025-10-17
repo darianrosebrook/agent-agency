@@ -9,6 +9,7 @@
 use crate::types::*;
 use crate::confidence_manager::{IConfidenceManager, ConfidenceManager, KnowledgeUpdateRequest};
 use crate::information_processor::{IInformationProcessor, InformationProcessor, ProcessedSearchResult};
+use crate::knowledge_seeker::ResearchEvent;
 use crate::{VectorSearchEngine, ContextBuilder, WebScraper, ContentProcessor};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
@@ -239,7 +240,7 @@ pub struct EnhancedKnowledgeSeeker {
     active_queries: Arc<DashMap<Uuid, tokio::task::JoinHandle<Result<EnhancedKnowledgeResponse>>>>,
     
     // Event channel for research events
-    event_sender: mpsc::UnboundedSender<ResearchEvent>,
+    event_sender: mpsc::UnboundedSender<ResearchQuery>,
     
     // Status tracking
     status: Arc<RwLock<EnhancedKnowledgeSeekerStatus>>,
@@ -255,7 +256,7 @@ impl EnhancedKnowledgeSeeker {
         content_processor: Arc<ContentProcessor>,
         confidence_manager: Arc<dyn IConfidenceManager>,
         information_processor: Arc<dyn IInformationProcessor>,
-        event_sender: mpsc::UnboundedSender<ResearchEvent>,
+        event_sender: mpsc::UnboundedSender<ResearchQuery>,
     ) -> Self {
         let status = EnhancedKnowledgeSeekerStatus {
             enabled: config.enabled,
@@ -565,6 +566,10 @@ impl IEnhancedKnowledgeSeeker for EnhancedKnowledgeSeeker {
         let confidence_scores = self.update_confidence_scores(&processed_results).await;
 
         // Create response
+        let semantic_count = semantic_results.len();
+        let hybrid_count = hybrid_results.len();
+        let confidence_count = confidence_scores.len();
+        
         let response = EnhancedKnowledgeResponse {
             query_id: query.id,
             results: processed_results,
@@ -575,13 +580,13 @@ impl IEnhancedKnowledgeSeeker for EnhancedKnowledgeSeeker {
                 processing_time_ms: start_time.elapsed().as_millis() as u64,
                 providers_used: vec!["web_scraper".to_string(), "vector_search".to_string()],
                 cache_hits: 0,
-                semantic_results_count: semantic_results.len(),
-                hybrid_results_count: hybrid_results.len(),
-                confidence_updates: confidence_scores.len() as u32,
+                semantic_results_count: semantic_count,
+                hybrid_results_count: hybrid_count,
+                confidence_updates: confidence_count as u32,
             },
             cache_used: false,
-            semantic_search_used: !semantic_results.is_empty(),
-            hybrid_search_used: !hybrid_results.is_empty(),
+            semantic_search_used: semantic_count > 0,
+            hybrid_search_used: hybrid_count > 0,
         };
 
         // Store in cache

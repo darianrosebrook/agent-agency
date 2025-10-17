@@ -302,6 +302,29 @@ impl ProvenanceService {
             last_updated,
         })
     }
+
+    /// Lightweight generic event append for telemetry (e.g., ARM planning).
+    /// NOTE: For Tier 1 scenarios, promote these to signed records.
+    pub async fn append_event(&self, event_type: &str, payload: serde_json::Value) -> Result<()> {
+        // Build a minimal ProvenanceRecord-like entry for storage
+        let rec = ProvenanceRecord {
+            id: Uuid::new_v4().to_string(),
+            verdict_id: "telemetry".into(),
+            timestamp: Utc::now(),
+            caws_compliance: CawsCompliance { compliance_score: 0.0, issues: vec![] },
+            consensus_score: 0.0,
+            decision: Decision::Info,
+            details: Some(payload),
+            git_trailer: None,
+            git_commit_hash: None,
+            signature: vec![],
+            metadata: Some(HashMap::from([
+                ("event_type".into(), event_type.into()),
+            ])),
+        };
+        // Store without signing to keep it lightweight
+        self.storage.store_record(&rec).await
+    }
 }
 
 
@@ -437,4 +460,3 @@ mod tests {
         }
     }
 }
-

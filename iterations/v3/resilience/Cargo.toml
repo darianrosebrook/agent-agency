@@ -1,0 +1,26 @@
+[package]
+name = "agent-agency-resilience"
+version = "0.1.0"
+edition = "2021"
+authors = ["Agent Agency Team"]
+description = "V3 Resilience module with circuit breakers, retry logic, health checks, and structured logging"
+license = "MIT"
+repository = "https://github.com/agent-agency/agent-agency"
+keywords = ["resilience", "circuit-breaker", "retry", "health-check", "logging"]
+categories = ["development-tools", "web-programming"]
+
+[dependencies]
+anyhow = "1.0"
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+rand = "0.8"
+reqwest = { version = "0.11", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+tracing = "0.1"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+[dev-dependencies]
+tokio-test = "0.4"

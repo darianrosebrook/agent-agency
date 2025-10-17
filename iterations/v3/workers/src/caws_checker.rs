@@ -214,7 +214,7 @@ impl CawsChecker {
         self.check_quality_standards(output, task_spec, &mut violations, &mut warnings)?;
 
         // Check CAWS rule compliance
-        self.check_caws_rules(output, task_spec, &mut violations, &mut suggestions)?;
+        self.check_caws_rules(output, task_spec, &mut violations, &mut warnings, &mut suggestions)?;
 
         // Check provenance requirements
         self.check_provenance_requirements(output, &mut violations, &mut warnings)?;
@@ -630,6 +630,7 @@ impl CawsChecker {
         output: &WorkerOutput,
         task_spec: &TaskSpec,
         violations: &mut Vec<CawsViolation>,
+        warnings: &mut Vec<String>,
         suggestions: &mut Vec<String>,
     ) -> Result<()> {
         // Check CAWS compliance score from self-assessment
