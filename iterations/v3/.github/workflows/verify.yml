@@ -1,0 +1,62 @@
+name: Verify
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  verify:
+    runs-on: macos-latest
+    # matrix example for CAWS tiers (disabled for now)
+    # strategy:
+    #   matrix:
+    #     tier: [t1, t2, t3]
+    #   fail-fast: false
+    # env:
+    #   COVERAGE_MIN: ${{ matrix.tier == 't1' && '0.90' || matrix.tier == 't2' && '0.80' || '0.70' }}
+    defaults:
+      run:
+        working-directory: iterations/v3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      - name: Install grcov and lcov
+        run: |
+          brew update
+          brew install grcov lcov
+
+      - name: Install Node (for AJV)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run verify
+        run: |
+          COVERAGE_MIN=0.80 make verify
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            iterations/v3/target/coverage/lcov.info
+            iterations/v3/target/coverage/html
+
+      - name: Upload provenance report
+        uses: actions/upload-artifact@v4
+        with:
+          name: provenance-report
+          path: iterations/v3/target/provenance/report.json
+
+      # - name: Mutation testing (disabled)
+      #   run: |
+      #     echo "TODO: Enable mutation testing with cargo-mutants (Rust) or Stryker (JS/TS)"
+      #     # cargo mutants --threshold 70 # example for Tier 1

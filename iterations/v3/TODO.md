@@ -4,66 +4,9 @@ Purpose: Track critical TODOs blocking or sequencing integration. Keep entries c
 
 ## Existing V3 Components (In-Flight)
 
-- [ ] Orchestration: pass real patches/language hints to validator
+All items in this section were migrated into `v3/docs-status/IMPLEMENTATION_STATUS.md` under Proposed Actions. See that doc for ownership and tracking. This section intentionally left minimal.
 
-  - File: `v3/orchestration/src/orchestrate.rs:~36`
-  - Note: Replace empty slices with data from worker artifacts (patch diffs + file extensions)
-
-- [ ] Orchestration: map full TaskSpec fields
-
-  - File: `v3/orchestration/src/orchestrate.rs:~10`
-  - Note: Populate acceptance_criteria and description from WorkingSpec/TaskDescriptor once available
-
-- [ ] Validator: replace NoopMde with real MDE
-
-  - File: `v3/orchestration/src/caws_runtime.rs:~95`
-  - Note: Implement MinimalDiffEvaluator and calibrate thresholds per tier/language
-
-- [ ] Validator: expand MDE violation mapping
-
-  - File: `v3/orchestration/src/caws_runtime.rs:~132`
-  - Note: Map risky_patterns to specific violation codes (e.g., LargeRefactor, GeneratedCodeDump)
-
-- [ ] Persistence: persist waivers alongside verdicts
-
-  - File: `v3/orchestration/src/persistence_postgres.rs:~37`
-  - Note: Call persist_waivers() after final decision; consider FK to verdict_id
-
-- [ ] Persistence: add signing + hash chain per ADR-003
-
-  - File: `v3/orchestration/src/persistence_postgres.rs:~20`
-  - Note: Introduce signer trait, store signature/hash_chain into verdicts table
-
-- [ ] Coordinator: accept validator + research context
-
-  - File: `v3/council/src/coordinator.rs:~60`
-  - Note: Extend evaluation context to include ValidationResult and research evidence bundle
-
-- [ ] Coordinator: populate remediation and constitutional_refs from inputs
-
-  - File: `v3/council/src/coordinator.rs:~130`
-  - Note: Merge validator remediation and refs into FinalVerdict consistently
-
-- [ ] Coordinator: compute verification_summary when claims present
-
-  - File: `v3/council/src/coordinator.rs:~150`
-  - Note: Use WorkerOutput.claims/evidence_refs to build coverage stats
-
-- [ ] DB: tune pool and retries per environment
-
-  - File: `v3/orchestration/src/db.rs:~8`
-  - Note: Configurable timeouts, retries, and backoff
-
-- [ ] Docs: link MDE implementation doc when created
-
-  - File: `v3/docs/caws-runtime-validator.md:~28`
-  - Note: Add link once MDE module exists
-
-- [ ] Docs: signer and git trailer integration guide
-  - File: `v3/docs/database/provenance.md:~20`
-  - Note: Document signer trait usage and git trailer workflow
-
-## Critical Theory Gaps (Phase 1 - Weeks 1-4)
+## Critical Theory Gaps
 
 ### 1. Claim Extraction & Verification Pipeline (Critical)
 
@@ -104,35 +47,7 @@ Purpose: Track critical TODOs blocking or sequencing integration. Keep entries c
 
 ### 2. Embedding Infrastructure (Critical)
 
-- [ ] **Embedding Service**: Implement Ollama embeddinggemma integration
-
-  - Implementation: `v3/embedding-service/src/lib.rs`
-  - Integration: Council semantic context, research agent knowledge retrieval
-  - V2 Foundation: `iterations/v2/src/embeddings/EmbeddingService.ts` (473 lines)
-
-- [ ] **Semantic Context Generation**: Implement context-aware embedding generation
-
-  - Implementation: `v3/embedding-service/src/context.rs`
-  - Integration: Council coordinator for semantic task understanding
-  - V2 Foundation: `iterations/v2/src/context/ContextManager.ts` (semantic context generation)
-
-- [ ] **Vector Similarity Search**: Implement embedding-based similarity matching
-
-  - Implementation: `v3/embedding-service/src/similarity.rs`
-  - Integration: Research agent for evidence correlation
-  - V2 Foundation: `iterations/v2/src/embeddings/EmbeddingService.ts` (similarity functions)
-
-- [ ] **Council Semantic Integration**: Implement semantic evaluation in council judges
-
-  - Implementation: `v3/council/src/semantic.rs`
-  - Integration: All council judges for context-aware decision making
-  - V2 Foundation: `iterations/v2/src/orchestrator/ArbiterOrchestrator.ts` (semantic agent selection)
-
-- [ ] **Research Agent Embeddings**: Implement knowledge base embedding integration
-
-  - Implementation: `v3/research/src/embeddings.rs`
-  - Integration: Research agent for semantic knowledge retrieval
-  - V2 Foundation: `iterations/v2/src/embeddings/EmbeddingService.ts` (knowledge base integration)
+Moved to `v3/docs-status/IMPLEMENTATION_STATUS.md` under “Embedding Infrastructure” with concrete Proposed Actions (EmbeddingProvider trait, vector store abstraction, determinism/tests, and Research wiring). See also existing work: `v3/research/src/vector_search.rs`, `v3/research/src/knowledge_seeker.rs`.
 
 ### 3. Reflexive Learning Loop (High Priority)
 
@@ -208,7 +123,7 @@ Purpose: Track critical TODOs blocking or sequencing integration. Keep entries c
   - Integration: Prometheus metrics, council observability
   - V2 Foundation: V2 metrics collection
 
-## High-Value V2 Ports (Phase 2 - Weeks 5-8)
+## High-Value V2 Ports
 
 ### 4. Context Preservation Engine (High Value)
 
@@ -238,7 +153,7 @@ Purpose: Track critical TODOs blocking or sequencing integration. Keep entries c
   - Integration: Apple Silicon thermal/performance tracking, council health metrics
   - V2 Foundation: V2 SystemHealthMonitor (production-ready)
 
-## V3 In-Flight Completion (Phase 3 - Weeks 9-12)
+## V3 In-Flight Completion
 
 ### 8. MCP Server Integration (70% → 100%)
 

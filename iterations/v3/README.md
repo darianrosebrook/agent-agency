@@ -265,7 +265,9 @@ iterations/v3/
    # Install base models (these will be fine-tuned later)
    ollama pull llama3.3:3b
    ollama pull codellama:7b
-   ollama pull gemma2:3b
+   ollama pull gemma3n:e2b
+   ollama pull gemma3n:e4b
+   ollama pull embeddinggemma
    ollama pull mistral:3b
    ```
 

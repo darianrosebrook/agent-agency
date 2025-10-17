@@ -88,14 +88,14 @@ impl CrossReferenceDetector {
     /// Calculate similarity between two research results
     fn calculate_similarity(&self, result1: &ResearchResult, result2: &ResearchResult) -> f32 {
         // Simple keyword-based similarity calculation
-        let keywords1: std::collections::HashSet<&str> = result1.content
+        let keywords1: std::collections::HashSet<String> = result1.content
             .split_whitespace()
-            .map(|w| w.to_lowercase().as_str())
+            .map(|w| w.to_lowercase())
             .collect();
-        
-        let keywords2: std::collections::HashSet<&str> = result2.content
+
+        let keywords2: std::collections::HashSet<String> = result2.content
             .split_whitespace()
-            .map(|w| w.to_lowercase().as_str())
+            .map(|w| w.to_lowercase())
             .collect();
         
         let intersection = keywords1.intersection(&keywords2).count();

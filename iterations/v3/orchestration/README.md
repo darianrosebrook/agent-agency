@@ -36,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
     let writer = PostgresVerdictWriter::new(db.pool.clone());
 
     let spec = WorkingSpec { risk_tier: 2, scope_in: vec!["src/".into()], change_budget_max_files: 10, change_budget_max_loc: 400 };
-    let desc = TaskDescriptor { task_id: "T-123".into(), scope_in: vec!["src/".into()], risk_tier: 2 };
+    let desc = TaskDescriptor { task_id: "T-123".into(), scope_in: vec!["src/".into()], risk_tier: 2, acceptance: None, metadata: None };
     let diff = DiffStats { files_changed: 1, lines_changed: 5, touched_paths: vec!["src/lib.rs".into()] };
 
     let coord = ConsensusCoordinator::new(CouncilConfig::default());
@@ -53,4 +53,3 @@ Environment:
 Integration tests:
 - See `tests/orchestrate_tests.rs` (short-circuit path) and `tests/adapter_tests.rs`
 - You can add a DB integration test gated by `DATABASE_URL` to exercise Postgres persistence
-

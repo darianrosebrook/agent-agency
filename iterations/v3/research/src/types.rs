@@ -268,18 +268,28 @@ pub struct ResearchCapabilities {
     pub real_time_updates: bool,
 }
 
+/// Performance configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceConfig {
+    pub max_concurrent_requests: usize,
+    pub request_timeout_ms: u64,
+}
+
 /// Research agent configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResearchAgentConfig {
     pub vector_search: VectorSearchConfig,
     pub web_scraping: WebScrapingConfig,
     pub context_synthesis: ContextSynthesisConfig,
+    pub performance: PerformanceConfig,
 }
 
 /// Vector search configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VectorSearchConfig {
     pub enabled: bool,
+    pub qdrant_url: String,
+    pub collection_name: String,
     pub model: String,
     pub dimension: u32,
     pub similarity_threshold: f32,
@@ -294,9 +304,11 @@ pub struct WebScrapingConfig {
     pub max_depth: u32,
     pub max_pages: u32,
     pub timeout_ms: u64,
+    pub timeout_seconds: u64,
     pub user_agent: String,
     pub respect_robots_txt: bool,
     pub allowed_domains: Vec<String>,
+    pub rate_limit_per_minute: u32,
 }
 
 /// Context synthesis configuration

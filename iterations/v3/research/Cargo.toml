@@ -25,7 +25,8 @@ dashmap = "5.5"
 parking_lot = "0.12"
 
 # Vector search and embeddings
-qdrant-client = "1.7"
+qdrant-client = "1.10"
+fxhash = "0.2"
 # openai-rs = "0.1"  # For embeddings - doesn't exist
 # text-embeddings-rs = "0.1"  # Doesn't exist, will use alternative
 

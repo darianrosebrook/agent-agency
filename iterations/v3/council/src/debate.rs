@@ -4,6 +4,10 @@
 //! when consensus cannot be reached through simple voting.
 
 use crate::types::*;
+use crate::models::*;
+use crate::{DebateConfig, JudgeSpec};
+use uuid::Uuid;
+use async_trait::async_trait;
 use anyhow::{Context, Result};
 use std::sync::Arc;
 use tokio::sync::RwLock;

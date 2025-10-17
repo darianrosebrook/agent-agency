@@ -20,6 +20,9 @@ thiserror.workspace = true
 tracing.workspace = true
 config.workspace = true
 
+# Internal crate dependencies
+agent-agency-council = { path = "../council" }
+
 # Worker-specific dependencies
 dashmap = "5.5"  # Concurrent hashmap for worker registry
 crossbeam = "0.8"  # Lock-free data structures

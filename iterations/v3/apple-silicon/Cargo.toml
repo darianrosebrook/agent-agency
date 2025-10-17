@@ -25,9 +25,9 @@ metal = "0.29"
 # Removed placeholder crate; actual Core ML bindings will be integrated later via Swift/FFI.
 
 # ML/AI integration
-candle-core = "0.3"
-candle-nn = "0.3"
-candle-transformers = "0.3"
+candle-core.workspace = true
+candle-nn.workspace = true
+candle-transformers.workspace = true
 
 # System monitoring
 sysinfo = "0.30"

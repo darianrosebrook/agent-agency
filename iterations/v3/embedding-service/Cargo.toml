@@ -1,0 +1,27 @@
+[package]
+name = "embedding-service"
+version = "0.1.0"
+edition = "2021"
+authors = ["@darianrosebrook"]
+
+[dependencies]
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = { version = "0.11", features = ["json"] }
+anyhow = "1.0"
+thiserror = "1.0"
+uuid = { version = "1.0", features = ["v4"] }
+async-trait = "0.1"
+tracing = "0.1"
+
+# For vector operations
+ndarray = "0.15"
+ndarray-stats = "0.5"
+
+# For caching and performance
+dashmap = "5.0"
+lru = "0.12"
+
+[dev-dependencies]
+tokio-test = "0.4"

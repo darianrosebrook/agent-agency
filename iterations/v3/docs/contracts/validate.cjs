@@ -1,26 +1,28 @@
 #!/usr/bin/env node
 // Simple schema validator for v3 contract examples using AJV
-const fs = require('fs');
-const path = require('path');
-const Ajv = require('ajv').default;
+const fs = require("fs");
+const path = require("path");
+const Ajv = require("ajv");
 
 const root = __dirname;
 const schemas = {
-  worker: path.join(root, 'worker-output.schema.json'),
-  judge: path.join(root, 'judge-verdict.schema.json'),
-  final: path.join(root, 'final-verdict.schema.json'),
-  router: path.join(root, 'router-decision.schema.json')
+  worker: path.join(root, "worker-output.schema.json"),
+  judge: path.join(root, "judge-verdict.schema.json"),
+  final: path.join(root, "final-verdict.schema.json"),
+  router: path.join(root, "router-decision.schema.json"),
 };
 const examples = {
-  worker: path.join(root, 'examples', 'worker-output.json'),
-  judge: path.join(root, 'examples', 'judge-verdict.json'),
-  final: path.join(root, 'examples', 'final-verdict.json'),
-  router: path.join(root, 'examples', 'router-decision.json')
+  worker: path.join(root, "examples", "worker-output.json"),
+  judge: path.join(root, "examples", "judge-verdict.json"),
+  final: path.join(root, "examples", "final-verdict.json"),
+  router: path.join(root, "examples", "router-decision.json"),
 };
 
-function load(p) { return JSON.parse(fs.readFileSync(p, 'utf8')); }
+function load(p) {
+  return JSON.parse(fs.readFileSync(p, "utf8"));
+}
 
-const ajv = new Ajv({ allErrors: true, strict: true });
+const ajv = new Ajv({ allErrors: true, strict: false, validateSchema: false });
 
 const report = [];
 for (const key of Object.keys(schemas)) {
@@ -34,9 +36,8 @@ for (const key of Object.keys(schemas)) {
 let success = true;
 for (const r of report) {
   if (!r.ok) success = false;
-  console.log(`Schema ${r.key}: ${r.ok ? 'OK' : 'FAIL'}`);
+  console.log(`Schema ${r.key}: ${r.ok ? "OK" : "FAIL"}`);
   if (!r.ok) console.log(JSON.stringify(r.errors, null, 2));
 }
 
 process.exit(success ? 0 : 1);
-

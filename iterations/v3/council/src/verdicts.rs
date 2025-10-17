@@ -52,18 +52,17 @@ pub struct VerdictRecord {
 }
 
 /// Storage backend trait for verdict persistence
-#[async_trait]
-pub trait VerdictStorage: Send + Sync {
-    async fn store_verdict(&self, record: &VerdictRecord) -> Result<()>;
-    async fn load_verdict(&self, verdict_id: VerdictId) -> Result<Option<VerdictRecord>>;
-    async fn load_verdicts_by_task(&self, task_id: TaskId) -> Result<Vec<VerdictRecord>>;
-    async fn load_verdicts_by_time_range(
+pub trait VerdictStorage: Send + Sync + std::fmt::Debug {
+    fn store_verdict(&self, record: &VerdictRecord) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>>;
+    fn load_verdict(&self, verdict_id: VerdictId) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<VerdictRecord>>> + Send>>;
+    fn load_verdicts_by_task(&self, task_id: TaskId) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<VerdictRecord>>> + Send>>;
+    fn load_verdicts_by_time_range(
         &self,
         start: chrono::DateTime<chrono::Utc>,
         end: chrono::DateTime<chrono::Utc>,
-    ) -> Result<Vec<VerdictRecord>>;
-    async fn delete_verdict(&self, verdict_id: VerdictId) -> Result<()>;
-    async fn get_storage_stats(&self) -> Result<StorageStats>;
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<VerdictRecord>>> + Send>>;
+    fn delete_verdict(&self, verdict_id: VerdictId) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>>;
+    fn get_storage_stats(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<StorageStats>> + Send>>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -276,68 +275,85 @@ impl MemoryVerdictStorage {
     }
 }
 
-#[async_trait]
 impl VerdictStorage for MemoryVerdictStorage {
-    async fn store_verdict(&self, record: &VerdictRecord) -> Result<()> {
-        let mut verdicts = self.verdicts.write().await;
-        verdicts.insert(record.verdict_id, record.clone());
-        Ok(())
+    fn store_verdict(&self, record: &VerdictRecord) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>> {
+        let verdicts = self.verdicts.clone();
+        Box::pin(async move {
+            let mut verdicts = verdicts.write().await;
+            verdicts.insert(record.verdict_id, record.clone());
+            Ok(())
+        })
     }
 
-    async fn load_verdict(&self, verdict_id: VerdictId) -> Result<Option<VerdictRecord>> {
-        let verdicts = self.verdicts.read().await;
-        Ok(verdicts.get(&verdict_id).cloned())
+    fn load_verdict(&self, verdict_id: VerdictId) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<VerdictRecord>>> + Send>> {
+        let verdicts = self.verdicts.clone();
+        Box::pin(async move {
+            let verdicts = verdicts.read().await;
+            Ok(verdicts.get(&verdict_id).cloned())
+        })
     }
 
-    async fn load_verdicts_by_task(&self, task_id: TaskId) -> Result<Vec<VerdictRecord>> {
-        let verdicts = self.verdicts.read().await;
-        Ok(verdicts
-            .values()
-            .filter(|record| record.consensus_result.task_id == task_id)
-            .cloned()
-            .collect())
+    fn load_verdicts_by_task(&self, task_id: TaskId) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<VerdictRecord>>> + Send>> {
+        let verdicts = self.verdicts.clone();
+        Box::pin(async move {
+            let verdicts = verdicts.read().await;
+            Ok(verdicts
+                .values()
+                .filter(|record| record.consensus_result.task_id == task_id)
+                .cloned()
+                .collect())
+        })
     }
 
-    async fn load_verdicts_by_time_range(
+    fn load_verdicts_by_time_range(
         &self,
         start: chrono::DateTime<chrono::Utc>,
         end: chrono::DateTime<chrono::Utc>,
-    ) -> Result<Vec<VerdictRecord>> {
-        let verdicts = self.verdicts.read().await;
-        Ok(verdicts
-            .values()
-            .filter(|record| {
-                let created_at = record.created_at;
-                created_at >= start && created_at <= end
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<VerdictRecord>>> + Send>> {
+        let verdicts = self.verdicts.clone();
+        Box::pin(async move {
+            let verdicts = verdicts.read().await;
+            Ok(verdicts
+                .values()
+                .filter(|record| {
+                    let created_at = record.created_at;
+                    created_at >= start && created_at <= end
+                })
+                .cloned()
+                .collect())
+        })
+    }
+
+    fn delete_verdict(&self, verdict_id: VerdictId) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>> {
+        let verdicts = self.verdicts.clone();
+        Box::pin(async move {
+            let mut verdicts = verdicts.write().await;
+            verdicts.remove(&verdict_id);
+            Ok(())
+        })
+    }
+
+    fn get_storage_stats(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<StorageStats>> + Send>> {
+        let verdicts = self.verdicts.clone();
+        Box::pin(async move {
+            let verdicts = verdicts.read().await;
+            let total_verdicts = verdicts.len() as u64;
+
+            let (oldest, newest) = if total_verdicts > 0 {
+                let mut timestamps: Vec<_> = verdicts.values().map(|r| r.created_at).collect();
+                timestamps.sort();
+                (Some(timestamps[0]), Some(timestamps[timestamps.len() - 1]))
+            } else {
+                (None, None)
+            };
+
+            Ok(StorageStats {
+                total_verdicts,
+                total_debates: verdicts.values().filter(|r| r.debate_session.is_some()).count() as u64,
+                storage_size_bytes: total_verdicts * 1024, // Rough estimate
+                oldest_verdict: oldest,
+                newest_verdict: newest,
             })
-            .cloned()
-            .collect())
-    }
-
-    async fn delete_verdict(&self, verdict_id: VerdictId) -> Result<()> {
-        let mut verdicts = self.verdicts.write().await;
-        verdicts.remove(&verdict_id);
-        Ok(())
-    }
-
-    async fn get_storage_stats(&self) -> Result<StorageStats> {
-        let verdicts = self.verdicts.read().await;
-        let total_verdicts = verdicts.len() as u64;
-        
-        let (oldest, newest) = if total_verdicts > 0 {
-            let mut timestamps: Vec<_> = verdicts.values().map(|r| r.created_at).collect();
-            timestamps.sort();
-            (Some(timestamps[0]), Some(timestamps[timestamps.len() - 1]))
-        } else {
-            (None, None)
-        };
-
-        Ok(StorageStats {
-            total_verdicts,
-            total_debates: verdicts.values().filter(|r| r.debate_session.is_some()).count() as u64,
-            storage_size_bytes: total_verdicts * 1024, // Rough estimate
-            oldest_verdict: oldest,
-            newest_verdict: newest,
         })
     }
 }

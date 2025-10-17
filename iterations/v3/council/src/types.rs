@@ -38,7 +38,7 @@ pub enum JudgeVerdict {
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Violation {
     pub rule: String,
     pub severity: ViolationSeverity,
@@ -47,7 +47,7 @@ pub struct Violation {
     pub suggestion: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ViolationSeverity {
     Critical,    // Blocking violation
     Major,       // Significant issue
@@ -55,7 +55,7 @@ pub enum ViolationSeverity {
     Warning,     // Best practice violation
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Concern {
     pub area: String,
     pub description: String,
@@ -63,7 +63,7 @@ pub struct Concern {
     pub mitigation: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Recommendation {
     Accept,      // Accept despite concerns
     Reject,      // Reject due to concerns
@@ -71,7 +71,7 @@ pub enum Recommendation {
     Investigate, // Need more information
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Evidence {
     pub source: EvidenceSource,
     pub content: String,
@@ -79,7 +79,7 @@ pub struct Evidence {
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum EvidenceSource {
     CodeAnalysis,
     TestResults,

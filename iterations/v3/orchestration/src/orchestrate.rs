@@ -6,15 +6,26 @@ use council::ConsensusCoordinator;
 use crate::persistence::VerdictWriter;
 
 fn to_task_spec(desc: &TaskDescriptor) -> council::types::TaskSpec {
-    // Minimal mapping stub; extend as TaskSpec evolves
+    // Expanded mapping to include id/name/risk_tier/scope and deterministic seeds placeholder
+    let now = chrono::Utc::now();
     council::types::TaskSpec {
         id: uuid::Uuid::new_v4(),
         name: Some(format!("task-{}", desc.task_id)),
-        description: None,
+        description: Some("Orchestrated task".to_string()),
         risk_tier: desc.risk_tier as u8,
         scope: desc.scope_in.clone(),
-        acceptance_criteria: vec![],
-        created_at: chrono::Utc::now(),
+        acceptance_criteria: desc
+            .acceptance
+            .clone()
+            .unwrap_or_default(),
+        seeds: Some(council::types::Seeds {
+            // Use fixed defaults; orchestration should override per-call for determinism in tests
+            time_seed: Some(now.timestamp_millis() as u64),
+            uuid_seed: Some(0),
+            random_seed: Some(42),
+        }),
+        created_at: now,
+        metadata: desc.metadata.clone().unwrap_or_default(),
         ..Default::default()
     }
 }

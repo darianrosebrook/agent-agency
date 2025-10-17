@@ -3,7 +3,7 @@
 //! Executes tasks by communicating with worker models and handling the execution lifecycle.
 
 use crate::types::*;
-use crate::council::types::TaskSpec;
+use crate::council::types::{TaskSpec, RiskTier};
 use anyhow::{Context, Result};
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};

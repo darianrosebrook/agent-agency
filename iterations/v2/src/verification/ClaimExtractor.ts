@@ -108,12 +108,27 @@ export class ClaimExtractor
       /\b(this|that|these|those)\b/gi,
     ];
 
-    // Extract pronouns from the sentence
+    // Extract pronouns from the sentence, filtering out conjunctions
     const referentialAmbiguities: string[] = [];
     for (const pattern of pronounPatterns) {
       const matches = sentence.match(pattern);
       if (matches) {
-        referentialAmbiguities.push(...matches);
+        for (const match of matches) {
+          // Filter out "that" when it's used as a conjunction (followed by a verb)
+          if (match.toLowerCase() === "that") {
+            const index = sentence.toLowerCase().indexOf("that");
+            const afterThat = sentence.slice(index + 4).trim();
+            // If followed by a verb or another pronoun, it's likely a conjunction
+            if (
+              /\b(is|are|was|were|has|have|will|shall|did|does|can|could|should|would|may|might|it|they|he|she|we)\b/i.test(
+                afterThat
+              )
+            ) {
+              continue; // Skip this "that" as it's a conjunction
+            }
+          }
+          referentialAmbiguities.push(match);
+        }
       }
     }
 
@@ -558,13 +573,25 @@ export class ClaimExtractor
     const temporalPatterns =
       /\b(next|last|previous|upcoming|recent|soon|recently|tomorrow|yesterday|today|now|then)\b/gi;
 
-    if (referentialPatterns.test(sentence) && contextEntities.length === 0) {
-      ambiguities.push({
-        type: "referential",
-        phrase: "pronoun reference",
-        reason: "Pronoun used without clear antecedent in conversation context",
-        confidence: 0.8,
-      });
+    // Check for specific unresolvable pronouns
+    const pronounMatches = sentence.match(referentialPatterns);
+    if (pronounMatches) {
+      for (const pronoun of pronounMatches) {
+        // Try to find if there's a reasonable referent for this pronoun
+        const hasReferent = this.hasReferentForPronoun(
+          pronoun.toLowerCase(),
+          context,
+          contextEntities
+        );
+        if (!hasReferent) {
+          ambiguities.push({
+            type: "referential",
+            phrase: pronoun.toLowerCase(),
+            reason: "insufficient_context",
+            confidence: 0.8,
+          });
+        }
+      }
     }
 
     const temporalMatches = sentence.match(temporalPatterns) || [];
@@ -693,9 +720,6 @@ export class ClaimExtractor
     const normalized = sentence.trim();
     const allIndicators = this.collectQualificationIndicators(normalized);
 
-    console.log(`DEBUG: detectVerifiableContent input: "${normalized}"`);
-    console.log(`DEBUG: allIndicators:`, allIndicators);
-
     // Separate objective and subjective indicators
     const objectiveIndicators = allIndicators.filter(
       (ind) => !ind.startsWith("subjective:")
@@ -724,7 +748,7 @@ export class ClaimExtractor
     let rewrittenSentence = normalized;
     let finalIndicators = allIndicators;
 
-    // If we have subjective content, try to rewrite it
+    // If we have subjective content, try to rewrite it to remove subjective elements
     if (subjectiveIndicators.length > 0) {
       const rewritten = await this.rewriteUnverifiableContent(
         normalized,
@@ -736,13 +760,19 @@ export class ClaimExtractor
           this.collectQualificationIndicators(rewrittenSentence);
         finalIndicators = rewrittenIndicators;
 
-        // Check if rewriting successfully removed subjective content
+        // Check remaining indicators after rewriting
         const remainingSubjective = rewrittenIndicators.filter((ind) =>
           ind.startsWith("subjective:")
         );
+        const remainingObjective = rewrittenIndicators.filter(
+          (ind) => !ind.startsWith("subjective:")
+        );
 
-        // If we still have subjective content after rewriting, it's not fully verifiable
-        if (remainingSubjective.length > 0) {
+        // If this was purely subjective content and rewriting didn't help, reject it
+        if (
+          objectiveIndicators.length === 0 &&
+          remainingSubjective.length > 0
+        ) {
           return {
             hasVerifiableContent: false,
             rewrittenSentence: undefined,
@@ -750,15 +780,14 @@ export class ClaimExtractor
             confidence: 0.1,
           };
         }
-      } else {
-        // Could not rewrite, so it's unverifiable
-        return {
-          hasVerifiableContent: false,
-          rewrittenSentence: undefined,
-          indicators: subjectiveWords,
-          confidence: 0.1,
-        };
+
+        // For mixed content, we keep the rewritten version even if some subjective elements remain
+        // as long as there's still objective content
+        if (remainingObjective.length > 0) {
+          finalIndicators = rewrittenIndicators;
+        }
       }
+      // If rewriting fails for mixed content, we still consider it verifiable if it has objective indicators
     }
 
     // Content is verifiable if it has objective indicators and no remaining subjective content
@@ -1472,6 +1501,52 @@ export class ClaimExtractor
     return Math.max(0.1, Math.min(1.0, confidence));
   }
 
+  /**
+   * Check if there's a reasonable referent for a pronoun in the conversation context
+   */
+  private hasReferentForPronoun(
+    pronoun: string,
+    context: ConversationContext,
+    contextEntities: string[]
+  ): boolean {
+    // For "it", look for technical/system entities
+    if (pronoun === "it") {
+      // Check if any context entities could be technical/system references
+      return contextEntities.some((entity) =>
+        /\b(system|database|api|server|service|application|component|module|process|query|request|response|data|file)\b/i.test(
+          entity
+        )
+      );
+    }
+
+    // For "they"/"them", look for plural entities or groups
+    if (pronoun === "they" || pronoun === "them") {
+      return contextEntities.some(
+        (entity) =>
+          /\b(team|users|developers|people|systems|apis|services|components|modules)\b/i.test(
+            entity
+          ) || contextEntities.length > 1 // Multiple entities could be "they"
+      );
+    }
+
+    // For "he"/"she", look for person names
+    if (pronoun === "he" || pronoun === "she") {
+      return contextEntities.some(
+        (entity) =>
+          // Person-like entities (not technical terms)
+          /^[A-Z][a-z]+(?: [A-Z][a-z]+)?$/.test(entity) &&
+          !/\b(system|database|api|server|service)\b/i.test(entity)
+      );
+    }
+
+    // For "this"/"that", we need some noun to refer to
+    if (pronoun === "this" || pronoun === "that") {
+      return contextEntities.length > 0;
+    }
+
+    return false;
+  }
+
   private collectQualificationIndicators(sentence: string): string[] {
     const indicators: string[] = [];
 
@@ -1504,7 +1579,11 @@ export class ClaimExtractor
     if (quantityMatches) {
       for (const qty of quantityMatches) {
         // Only include quantities that look like measurements
-        if (qty.match(/\b\d+(?:\.\d+)?\s+(?:requests?|responses?|calls?|operations?|per\s+second|per\s+minute|per\s+hour|per\s+day)/i)) {
+        if (
+          qty.match(
+            /\b\d+(?:\.\d+)?\s+(?:requests?|responses?|calls?|operations?|per\s+second|per\s+minute|per\s+hour|per\s+day)/i
+          )
+        ) {
           indicators.push(`quantity:${qty.toLowerCase()}`);
         }
       }

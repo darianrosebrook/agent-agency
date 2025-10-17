@@ -4,6 +4,9 @@
 //! and research capabilities for the Agent Agency system.
 
 use crate::types::*;
+use crate::ContentProcessingConfig;
+use uuid::Uuid;
+use std::collections::HashMap;
 use crate::{VectorSearchEngine, ContextBuilder, WebScraper, ContentProcessor};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
@@ -15,7 +18,7 @@ use tracing::{debug, error, info, warn};
 /// Main knowledge seeker for research coordination
 #[derive(Debug)]
 pub struct KnowledgeSeeker {
-    config: ResearchConfig,
+    config: ResearchAgentConfig,
     vector_search: Arc<VectorSearchEngine>,
     context_builder: Arc<ContextBuilder>,
     web_scraper: Arc<WebScraper>,
@@ -35,10 +38,11 @@ pub struct KnowledgeSeeker {
 }
 
 /// Research events for monitoring and debugging
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum ResearchEvent {
     QueryStarted(Uuid),
-    QueryCompleted(Uuid, Result<Vec<ResearchResult>>),
+    QueryCompleted(Uuid, Vec<ResearchResult>),
+    QueryFailed(Uuid, String),
     ContextSynthesized(Uuid, SynthesizedContext),
     SessionCreated(Uuid),
     SessionCompleted(Uuid),
@@ -47,24 +51,30 @@ pub enum ResearchEvent {
 
 impl KnowledgeSeeker {
     /// Create a new knowledge seeker
-    pub async fn new(config: ResearchConfig) -> Result<Self> {
+    pub async fn new(config: ResearchAgentConfig) -> Result<Self> {
         info!("Initializing knowledge seeker");
 
         let (event_sender, _event_receiver) = mpsc::unbounded_channel();
 
         // Initialize vector search engine
         let vector_search = Arc::new(VectorSearchEngine::new(
-            &config.vector_db.qdrant_url,
-            &config.vector_db.collection_name,
-            config.vector_db.vector_size,
-            config.vector_db.similarity_threshold,
-            config.vector_db.max_results,
+            &config.vector_search.qdrant_url,
+            &config.vector_search.collection_name,
+            config.vector_search.dimension as u32,
+            config.vector_search.similarity_threshold,
+            config.vector_search.max_results,
         ).await.context("Failed to initialize vector search engine")?);
 
         // Initialize other components
         let context_builder = Arc::new(ContextBuilder::new(config.context_synthesis.clone()));
         let web_scraper = Arc::new(WebScraper::new(config.web_scraping.clone()));
-        let content_processor = Arc::new(ContentProcessor::new(config.content_processing.clone()));
+        let content_processor = Arc::new(ContentProcessor::new(ContentProcessingConfig {
+            enable_cleaning: true,
+            enable_markdown: true,
+            enable_text_extraction: true,
+            max_content_length: 1000000,
+            enable_summarization: false,
+        }));
 
         let seeker = Self {
             config,
@@ -134,7 +144,7 @@ impl KnowledgeSeeker {
         }
 
         // Emit query completed event
-        let _ = self.event_sender.send(ResearchEvent::QueryCompleted(query.id, Ok(results.clone())));
+        let _ = self.event_sender.send(ResearchEvent::QueryCompleted(query.id, results.clone()));
 
         // Update metrics
         self.update_metrics(true, start_time.elapsed().as_millis() as u64, &results).await;
@@ -150,7 +160,7 @@ impl KnowledgeSeeker {
     ) -> Result<SynthesizedContext> {
         info!("Synthesizing context for query: {}", query_id);
 
-        let synthesized_context = self.context_builder
+        let (synthesized_context, _metrics) = self.context_builder
             .synthesize_context(query_id, results)
             .await
             .context("Context synthesis failed")?;
@@ -252,7 +262,7 @@ impl KnowledgeSeeker {
                 KnowledgeSource::AcademicPaper("".to_string()),
                 KnowledgeSource::InternalKnowledgeBase("".to_string()),
             ],
-            max_concurrent_queries: self.config.performance.max_concurrent_requests,
+            max_concurrent_queries: self.config.performance.max_concurrent_requests as u32,
             max_context_size: self.config.context_synthesis.max_context_size,
             vector_search_enabled: true,
             web_scraping_enabled: true,
@@ -443,7 +453,41 @@ mod tests {
 
     #[tokio::test]
     async fn test_knowledge_seeker_creation() {
-        let config = ResearchConfig::default();
+        let config = ResearchAgentConfig {
+            vector_search: VectorSearchConfig {
+                enabled: true,
+                qdrant_url: "http://localhost:6333".to_string(),
+                collection_name: "test".to_string(),
+                model: "test".to_string(),
+                dimension: 768,
+                similarity_threshold: 0.7,
+                max_results: 10,
+                batch_size: 32,
+            },
+            web_scraping: crate::WebScrapingConfig {
+                enabled: true,
+                max_depth: 3,
+                max_pages: 10,
+                timeout_ms: 30000,
+                timeout_seconds: 30,
+                user_agent: "test".to_string(),
+                respect_robots_txt: false,
+                allowed_domains: vec![],
+                rate_limit_per_minute: 60,
+            },
+            context_synthesis: crate::ContextSynthesisConfig {
+                enabled: true,
+                max_context_size: 50000,
+                context_overlap_percent: 0.1,
+                enable_semantic_chunking: true,
+                chunk_size: 1000,
+                enable_cross_references: true,
+            },
+            performance: crate::PerformanceConfig {
+                max_concurrent_requests: 10,
+                request_timeout_ms: 30000,
+            },
+        };
         let seeker = KnowledgeSeeker::new(config).await;
         
         // In a real test, we'd assert successful creation
@@ -453,7 +497,41 @@ mod tests {
 
     #[tokio::test]
     async fn test_research_session_creation() {
-        let config = ResearchConfig::default();
+        let config = ResearchAgentConfig {
+            vector_search: VectorSearchConfig {
+                enabled: true,
+                qdrant_url: "http://localhost:6333".to_string(),
+                collection_name: "test".to_string(),
+                model: "test".to_string(),
+                dimension: 768,
+                similarity_threshold: 0.7,
+                max_results: 10,
+                batch_size: 32,
+            },
+            web_scraping: crate::WebScrapingConfig {
+                enabled: true,
+                max_depth: 3,
+                max_pages: 10,
+                timeout_ms: 30000,
+                timeout_seconds: 30,
+                user_agent: "test".to_string(),
+                respect_robots_txt: false,
+                allowed_domains: vec![],
+                rate_limit_per_minute: 60,
+            },
+            context_synthesis: crate::ContextSynthesisConfig {
+                enabled: true,
+                max_context_size: 50000,
+                context_overlap_percent: 0.1,
+                enable_semantic_chunking: true,
+                chunk_size: 1000,
+                enable_cross_references: true,
+            },
+            performance: crate::PerformanceConfig {
+                max_concurrent_requests: 10,
+                request_timeout_ms: 30000,
+            },
+        };
         let seeker = KnowledgeSeeker::new(config).await.unwrap_or_else(|_| {
             // Create a minimal seeker for testing
             todo!("Create minimal seeker for testing")

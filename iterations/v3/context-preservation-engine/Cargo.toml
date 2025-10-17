@@ -28,7 +28,7 @@ futures = "0.3"
 sqlx = { workspace = true, features = ["postgres", "chrono", "uuid"] }
 
 # Integration with existing V3 components
-research = { path = "../research" }
-council = { path = "../council" }
-workers = { path = "../workers" }
-security-policy-enforcer = { path = "../security-policy-enforcer" }
+agent-agency-research = { path = "../research" }
+agent-agency-council = { path = "../council" }
+agent-agency-workers = { path = "../workers" }
+agent-agency-security-policy-enforcer = { path = "../security-policy-enforcer" }

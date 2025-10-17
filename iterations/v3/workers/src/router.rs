@@ -3,6 +3,7 @@
 //! Routes tasks to appropriate workers based on capabilities, load, and other factors.
 
 use crate::types::*;
+use crate::council::types::RiskTier;
 use anyhow::{Context, Result};
 use dashmap::DashMap;
 use std::sync::Arc;

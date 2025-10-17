@@ -9,6 +9,7 @@ pub mod context_builder;
 pub mod web_scraper;
 pub mod content_processor;
 pub mod types;
+pub mod embeddings;
 
 pub use knowledge_seeker::KnowledgeSeeker;
 pub use vector_search::VectorSearchEngine;

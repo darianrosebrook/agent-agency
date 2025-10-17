@@ -12,7 +12,8 @@ members = [
     "model-benchmarking",
     "security-policy-enforcer",
     "minimal-diff-evaluator",
-    "context-preservation-engine"
+    "context-preservation-engine",
+    "embedding-service"
 ]
 
 [workspace.package]
@@ -60,10 +61,11 @@ clap = { version = "4.0", features = ["derive"] }
 core-foundation = "0.9"
 objc = "0.2"
 
-# ML/AI integration
-candle-core = "0.3"
-candle-nn = "0.3"
-candle-transformers = "0.3"
+# ML/AI integration (temporarily disabled due to rand version conflicts)
+# TODO: Re-enable when rand version conflicts are resolved
+# candle-core = "0.6"
+# candle-nn = "0.6"
+# candle-transformers = "0.6"
 
 # Vector operations for embeddings
 ndarray = "0.15"
