@@ -1,0 +1,36 @@
+[package]
+name = "agent-agency-apple-silicon"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace dependencies
+tokio.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+# Apple Silicon specific dependencies
+core-foundation = "0.9"
+objc = "0.2"
+metal = "0.29"
+metal-performance-shaders = "0.1"
+
+# Core ML integration
+coreml = "0.1"  # Placeholder - would use actual Core ML bindings
+
+# ML/AI integration
+candle-core = "0.3"
+candle-nn = "0.3"
+candle-transformers = "0.3"
+
+# System monitoring
+sysinfo = "0.30"
+
+[dev-dependencies]
+tokio-test = "0.4"

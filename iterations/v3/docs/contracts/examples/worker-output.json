@@ -1,0 +1,17 @@
+{
+  "metadata": {
+    "task_id": "T-123",
+    "risk_tier": 2,
+    "seeds": {"time_seed": "2025-01-01T00:00:00Z", "uuid_seed": "0000-0000", "random_seed": 42}
+  },
+  "artifacts": {
+    "patches": [{"path": "src/app.ts", "diff": "@@\n+console.log('hi')\n"}],
+    "commands": []
+  },
+  "rationale": "Applied fix per acceptance A1",
+  "self_assessment": {
+    "caws_checklist": {"within_scope": true, "within_budget": true, "tests_added": true, "deterministic": true},
+    "notes": "All gates satisfied"
+  },
+  "waivers": []
+}

@@ -8,6 +8,7 @@
  */
 
 import { KnowledgeDatabaseClient } from "../database/KnowledgeDatabaseClient";
+import { EmbeddingService } from "../embeddings/EmbeddingService";
 import { events } from "../orchestrator/EventEmitter";
 import { EventTypes } from "../orchestrator/OrchestratorEvents";
 import {
@@ -20,12 +21,13 @@ import {
   KnowledgeSeekerStatus,
   QueryType,
 } from "../types/knowledge";
-import { InformationProcessor } from "./InformationProcessor";
-import { SearchProviderFactory } from "./SearchProvider";
 import type {
   ConversationContext,
   EvidenceManifest,
 } from "../verification/types";
+import { ConfidenceManager } from "./ConfidenceManager";
+import { InformationProcessor } from "./InformationProcessor";
+import { SearchProviderFactory } from "./SearchProvider";
 
 /**
  * Knowledge Seeker implementation
@@ -39,16 +41,22 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
   private resultCache: Map<string, any[]> = new Map();
   private dbClient: KnowledgeDatabaseClient | null = null;
   private verificationEngine: any = null; // VerificationEngineImpl
+  private embeddingService: EmbeddingService | null = null;
+  private confidenceManager: ConfidenceManager | null = null;
 
   constructor(
     config: KnowledgeSeekerConfig,
     dbClient?: KnowledgeDatabaseClient,
-    verificationEngine?: any // VerificationEngineImpl - using any to avoid circular dependency
+    verificationEngine?: any, // VerificationEngineImpl - using any to avoid circular dependency
+    embeddingService?: EmbeddingService,
+    confidenceManager?: ConfidenceManager
   ) {
     this.config = config;
     this.processor = new InformationProcessor(config.processor);
     this.dbClient = dbClient || null;
     this.verificationEngine = verificationEngine || null;
+    this.embeddingService = embeddingService || null;
+    this.confidenceManager = confidenceManager || null;
     this.initializeProviders();
   }
 
@@ -177,6 +185,24 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
         },
       });
 
+      // Try semantic search first if available and query type supports it
+      let semanticResults: any[] = [];
+      if (
+        this.embeddingService &&
+        this.dbClient &&
+        this.isSemanticSearchSupported(query)
+      ) {
+        try {
+          semanticResults = await this.performSemanticSearch(query);
+          console.log(
+            `Semantic search found ${semanticResults.length} results for query: ${query.text}`
+          );
+        } catch (error) {
+          console.warn(`Semantic search failed: ${error.message}`);
+          // Continue with traditional search
+        }
+      }
+
       // Select appropriate providers
       const selectedProviders = this.selectProviders(query);
 
@@ -192,8 +218,9 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
       const searchResults = await Promise.allSettled(searchPromises);
 
       // Collect successful results
-      const allResults: any[] = [];
-      const providersQueried: string[] = [];
+      const allResults: any[] = [...semanticResults]; // Start with semantic results
+      const providersQueried: string[] =
+        semanticResults.length > 0 ? ["semantic_search"] : [];
 
       searchResults.forEach((result, index) => {
         const provider = selectedProviders[index];
@@ -785,6 +812,162 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
       evidence,
       quality: reliability,
       cawsCompliant: false,
+    };
+  }
+
+  /**
+   * Check if semantic search is supported for this query type
+   */
+  private isSemanticSearchSupported(query: KnowledgeQuery): boolean {
+    // Support semantic search for knowledge and general queries
+    return (
+      query.queryType === QueryType.KNOWLEDGE ||
+      query.queryType === QueryType.GENERAL ||
+      query.queryType === QueryType.FACTUAL
+    );
+  }
+
+  /**
+   * Perform semantic search using embeddings and hybrid search
+   */
+  private async performSemanticSearch(query: KnowledgeQuery): Promise<any[]> {
+    if (!this.embeddingService || !this.dbClient) {
+      return [];
+    }
+
+    // Generate embedding for the query
+    const queryEmbedding = await this.embeddingService.generateEmbedding(
+      query.text
+    );
+
+    // Determine entity types based on query type
+    const entityTypes = this.getEntityTypesForSemanticSearch(query);
+
+    // Use existing hybrid_search function from migration 008
+    const results = await this.dbClient.query(
+      `
+      SELECT * FROM hybrid_search(
+        $1::vector(768),
+        $2,
+        $3,
+        2, -- include graph hops for related capabilities
+        $4::VARCHAR(50)[],
+        $5,
+        0.7 -- minimum confidence
+      )
+    `,
+      [
+        `[${queryEmbedding.join(",")}]`,
+        query.text,
+        Math.min(query.maxResults || 10, 50), // Limit for semantic search
+        entityTypes,
+        query.metadata?.tenantId || null,
+      ]
+    );
+
+    // Convert database results to knowledge results format
+    return results.rows.map((row) =>
+      this.convertSemanticResultToKnowledgeResult(row)
+    );
+  }
+
+  /**
+   * Get entity types for semantic search based on query type
+   */
+  private getEntityTypesForSemanticSearch(query: KnowledgeQuery): string[] {
+    switch (query.queryType) {
+      case QueryType.KNOWLEDGE:
+        return ["external_knowledge", "agent_capability"];
+      case QueryType.FACTUAL:
+        return ["external_knowledge"];
+      case QueryType.GENERAL:
+        return ["workspace_file", "agent_capability", "external_knowledge"];
+      default:
+        return ["external_knowledge"];
+    }
+  }
+
+  /**
+   * Convert semantic search result to knowledge result format
+   */
+  private convertSemanticResultToKnowledgeResult(row: any): any {
+    // Extract metadata
+    const metadata = row.metadata || {};
+    const source = metadata.source || "unknown";
+
+    let content = "";
+    let title = row.name || "Unknown";
+
+    // Generate content based on entity type and source
+    switch (row.entity_type) {
+      case "workspace_file":
+        content = `Workspace file: ${row.name}`;
+        if (metadata.file_type) {
+          content += ` (${metadata.file_type})`;
+        }
+        break;
+      case "agent_capability":
+        content = `Agent capability: ${row.capability_name || row.name}`;
+        break;
+      case "external_knowledge":
+        content = row.capability_name || row.name;
+        if (source === "wikidata") {
+          title = `Wikidata: ${metadata.lemma || "Unknown"}`;
+        } else if (source === "wordnet") {
+          title = `WordNet: ${metadata.lemmas?.join(", ") || "Unknown"}`;
+        }
+        break;
+      default:
+        content = row.name || "Unknown content";
+    }
+
+    return {
+      title,
+      content,
+      url: `semantic://${row.entity_type}/${row.entity_id}`,
+      snippet: content.substring(0, 200) + (content.length > 200 ? "..." : ""),
+      provider: "semantic_search",
+      credibilityScore: row.confidence || 0.5,
+      retrievedAt: new Date(),
+      sourceType: row.entity_type,
+      metadata: {
+        entityId: row.entity_id,
+        entityType: row.entity_type,
+        source,
+        confidence: row.confidence,
+        relevanceScore: row.relevance_score,
+        semanticSimilarity: row.relevance_score,
+      },
+    };
+  }
+
+  /**
+   * Get semantic search statistics
+   */
+  async getSemanticSearchStats(): Promise<{
+    embeddingServiceAvailable: boolean;
+    confidenceManagerAvailable: boolean;
+    knowledgeHealth: any;
+  }> {
+    const embeddingServiceAvailable = this.embeddingService
+      ? await this.embeddingService.isAvailable()
+      : false;
+
+    const confidenceManagerAvailable = !!this.confidenceManager;
+
+    let knowledgeHealth = null;
+    if (this.confidenceManager) {
+      try {
+        knowledgeHealth = await this.confidenceManager.getKnowledgeHealth();
+      } catch (error) {
+        console.warn("Failed to get knowledge health:", error);
+      }
+    }
+
+    return {
+      embeddingServiceAvailable,
+      confidenceManagerAvailable,
+      knowledgeHealth,
     };
   }
 }

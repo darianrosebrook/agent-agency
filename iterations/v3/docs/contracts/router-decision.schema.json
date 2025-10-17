@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-agency/v3/contracts/router-decision.schema.json",
+  "title": "RouterDecision",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "Assignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "worker_type": {"type": "string", "enum": ["generalist", "specialist"]},
+        "model": {"type": "string"},
+        "reason": {"type": "string"}
+      },
+      "required": ["worker_type", "model", "reason"]
+    }
+  },
+  "required": ["task_id", "assignments"],
+  "properties": {
+    "task_id": {"type": "string"},
+    "assignments": {"type": "array", "items": {"$ref": "#/$defs/Assignment"}}
+  }
+}

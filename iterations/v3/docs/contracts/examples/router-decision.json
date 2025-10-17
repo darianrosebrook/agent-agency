@@ -1,0 +1,6 @@
+{
+  "task_id": "T-123",
+  "assignments": [
+    {"worker_type": "specialist", "model": "codellama:7b-ts", "reason": "TS/React feature"}
+  ]
+}

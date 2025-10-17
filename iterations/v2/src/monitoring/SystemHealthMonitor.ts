@@ -8,6 +8,10 @@
  */
 
 import { EventEmitter } from "events";
+import {
+  EmbeddingMetrics,
+  EmbeddingMonitor,
+} from "../embeddings/EmbeddingMonitor.js";
 import { MetricsCollector } from "./MetricsCollector.js";
 import {
   AgentHealthMetrics,
@@ -21,6 +25,7 @@ export class SystemHealthMonitor extends EventEmitter {
   private config: SystemHealthMonitorConfig;
   private metricsCollector: MetricsCollector;
   private databaseClient?: any; // PerformanceTrackerDatabaseClient
+  private embeddingMonitor?: EmbeddingMonitor;
   private metricsHistory: SystemMetrics[] = [];
   private agentHealthMetrics: Map<string, AgentHealthMetrics> = new Map();
   private alerts: HealthAlert[] = [];
@@ -104,6 +109,14 @@ export class SystemHealthMonitor extends EventEmitter {
   }
 
   /**
+   * Register embedding monitor for integrated health monitoring
+   */
+  registerEmbeddingMonitor(monitor: EmbeddingMonitor): void {
+    this.embeddingMonitor = monitor;
+    console.log("✅ Embedding monitor registered with System Health Monitor");
+  }
+
+  /**
    * Get comprehensive health metrics
    */
   async getHealthMetrics(): Promise<HealthMetrics> {
@@ -118,6 +131,16 @@ export class SystemHealthMonitor extends EventEmitter {
     const errorRate = this.calculateSystemErrorRate();
     const queueDepth = this.getEstimatedQueueDepth();
 
+    // Get embedding metrics if monitor is available
+    let embeddingMetrics: EmbeddingMetrics | undefined;
+    if (this.embeddingMonitor) {
+      try {
+        embeddingMetrics = await this.embeddingMonitor.collectMetrics();
+      } catch (error) {
+        console.warn("Failed to collect embedding metrics:", error);
+      }
+    }
+
     return {
       overallHealth,
       system: systemMetrics,
@@ -125,6 +148,7 @@ export class SystemHealthMonitor extends EventEmitter {
       errorRate,
       queueDepth,
       circuitBreakerOpen: this.circuitBreakerState === "open",
+      embedding: embeddingMetrics,
       timestamp: new Date(),
     };
   }

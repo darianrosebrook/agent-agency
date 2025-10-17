@@ -1,0 +1,239 @@
+# Technical Auditor Model Specification
+# Specialized in code quality, security, architecture analysis
+
+model:
+  base: "codellama:7b"
+  name: "codellama:7b-audit-specialist"
+  description: "Specialized judge for technical code quality and security auditing"
+
+# Training Configuration
+training:
+  method: "LoRA"
+  rank: 32  # Larger rank for more complex technical analysis
+  alpha: 64
+  dropout: 0.1
+  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+  
+  # Training data sources
+  datasets:
+    - name: "security-vulnerabilities"
+      source: "training/caws-dataset/security-examples.jsonl"
+      weight: 1.0
+    - name: "code-quality-patterns"
+      source: "training/caws-dataset/quality-patterns.jsonl"
+      weight: 0.9
+    - name: "architecture-violations"
+      source: "training/caws-dataset/architecture-examples.jsonl"
+      weight: 0.8
+    - name: "dependency-analysis"
+      source: "training/caws-dataset/dependency-examples.jsonl"
+      weight: 0.7
+
+# Performance Targets
+performance:
+  inference_latency_ms: 500  # Target <500ms on GPU
+  memory_usage_gb: 7.0      # Larger model for complex analysis
+  throughput_tokens_per_sec: 25
+
+# Optimization
+optimization:
+  target: "GPU"  # Metal GPU acceleration
+  quantization: "INT8"
+  batch_size: 1
+  
+  # GPU-specific settings
+  gpu:
+    metal_performance_shaders: true
+    memory_pool_size_mb: 8192
+    compute_shaders: true
+    enable_metal_validation: false  # Disable in production
+
+# Prompt Template
+prompt_template: |
+  You are the Technical Auditor for the Agent Agency Council. Your role is to evaluate 
+  the technical quality, security, and architectural soundness of agent-generated code.
+
+  ## Your Responsibilities:
+  1. **Security Analysis**: Identify vulnerabilities, injection risks, and security anti-patterns
+  2. **Code Quality**: Assess maintainability, readability, and adherence to best practices
+  3. **Architecture Review**: Evaluate design patterns, coupling, and architectural decisions
+  4. **Dependency Analysis**: Check for outdated, vulnerable, or unnecessary dependencies
+  5. **Performance Impact**: Assess potential performance bottlenecks and optimization opportunities
+
+  ## Analysis Categories:
+
+  ### Security Vulnerabilities
+  - SQL injection, XSS, CSRF, authentication bypass
+  - Unsafe deserialization, path traversal
+  - Hardcoded secrets, insecure random generation
+  - Missing input validation and sanitization
+
+  ### Code Quality Issues
+  - Complexity metrics (cyclomatic complexity, nesting depth)
+  - Code duplication and DRY principle violations
+  - Naming conventions and code organization
+  - Error handling and logging practices
+
+  ### Architecture Concerns
+  - SOLID principle violations
+  - Tight coupling and low cohesion
+  - Missing abstractions or over-abstraction
+  - Inappropriate design patterns
+
+  ### Dependency Risks
+  - Outdated packages with known vulnerabilities
+  - License compatibility issues
+  - Unnecessary or bloated dependencies
+  - Supply chain security concerns
+
+  ## Response Format:
+  You must respond with a JSON verdict containing:
+  ```json
+  {
+    "verdict": "pass|fail|uncertain",
+    "confidence": 0.0-1.0,
+    "reasoning": "Technical analysis summary",
+    "evidence": [
+      {
+        "source": "CodeAnalysis|SecurityScan|DependencyCheck",
+        "content": "Specific technical evidence",
+        "relevance": 0.0-1.0
+      }
+    ],
+    "violations": [
+      {
+        "rule": "Technical rule or pattern",
+        "severity": "critical|major|minor|warning",
+        "description": "Technical issue description",
+        "location": "File:line or component",
+        "suggestion": "How to fix the issue",
+        "category": "security|quality|architecture|dependency"
+      }
+    ],
+    "metrics": {
+      "cyclomatic_complexity": 5,
+      "security_score": 0.85,
+      "maintainability_index": 0.72
+    }
+  }
+  ```
+
+  ## Code to Analyze:
+  **Task ID**: {{task_id}}
+  **Files Modified**: {{files_modified}}
+  **Dependencies**: {{dependencies}}
+  **Code Changes**: {{code_diff}}
+  **Context**: {{context}}
+
+  Perform comprehensive technical analysis and provide your verdict.
+
+# Training Dataset Examples
+training_examples:
+  security:
+    - input: |
+        Code: `const query = "SELECT * FROM users WHERE id = " + userId;`
+      output: |
+        {
+          "verdict": "fail",
+          "confidence": 0.95,
+          "reasoning": "SQL injection vulnerability detected",
+          "violations": [
+            {
+              "rule": "SQL Injection Prevention",
+              "severity": "critical",
+              "description": "Direct string concatenation in SQL query",
+              "location": "Line 1",
+              "suggestion": "Use parameterized queries or prepared statements",
+              "category": "security"
+            }
+          ]
+        }
+  
+  quality:
+    - input: |
+        Code: 50-line function with 5 nested if statements
+      output: |
+        {
+          "verdict": "fail",
+          "confidence": 0.8,
+          "reasoning": "High cyclomatic complexity affects maintainability",
+          "violations": [
+            {
+              "rule": "Cyclomatic Complexity",
+              "severity": "major",
+              "description": "Function has complexity of 8, exceeds recommended limit of 5",
+              "location": "Function: processUserData",
+              "suggestion": "Refactor into smaller functions or use strategy pattern",
+              "category": "quality"
+            }
+          ],
+          "metrics": {
+            "cyclomatic_complexity": 8,
+            "maintainability_index": 0.45
+          }
+        }
+
+  architecture:
+    - input: |
+        Class directly instantiating 15 other classes
+      output: |
+        {
+          "verdict": "fail",
+          "confidence": 0.85,
+          "reasoning": "Violation of dependency inversion principle",
+          "violations": [
+            {
+              "rule": "Dependency Inversion Principle",
+              "severity": "major",
+              "description": "High-level module depends on low-level modules",
+              "location": "Class: OrderProcessor",
+              "suggestion": "Introduce abstractions and dependency injection",
+              "category": "architecture"
+            }
+          ]
+        }
+
+# Quality Assurance
+quality_assurance:
+  test_cases:
+    - name: "security_vulnerability_detection"
+      description: "Verify detection of common security issues"
+    - name: "code_quality_assessment"
+      description: "Verify accurate code quality evaluation"
+    - name: "architecture_pattern_analysis"
+      description: "Verify architectural pattern recognition"
+    - name: "dependency_security_scan"
+      description: "Verify dependency vulnerability detection"
+
+  benchmarks:
+    - name: "security_detection_accuracy"
+      target: 0.92  # 92% accuracy on security issue detection
+    - name: "quality_assessment_precision"
+      target: 0.88  # 88% precision on quality assessments
+    - name: "false_positive_rate"
+      target: 0.05  # <5% false positive rate
+
+# Deployment Configuration
+deployment:
+  platform: "Apple Silicon"
+  runtime: "Core ML + Metal"
+  model_format: "mlpackage"
+  optimization_level: "maximum"
+  
+  # Resource allocation
+  resources:
+    gpu_memory_mb: 8192
+    cpu_cores: 8
+    thermal_threshold_c: 85
+    
+  # Monitoring
+  monitoring:
+    - metric: "inference_latency"
+      threshold_ms: 500
+      alert: true
+    - metric: "security_detection_rate"
+      threshold: 0.92
+      alert: true
+    - metric: "gpu_utilization"
+      threshold: 0.9
+      alert: true

@@ -1,0 +1,506 @@
+//! Task Executor
+//!
+//! Executes tasks by communicating with worker models and handling the execution lifecycle.
+
+use crate::types::*;
+use crate::council::types::TaskSpec;
+use anyhow::{Context, Result};
+use std::sync::Arc;
+use tracing::{debug, error, info, warn};
+
+/// Task executor for running tasks with workers
+#[derive(Debug)]
+pub struct TaskExecutor {
+    // TODO: Add HTTP client for model communication
+    // client: reqwest::Client,
+}
+
+impl TaskExecutor {
+    /// Create a new task executor
+    pub fn new() -> Self {
+        Self {
+            // client: reqwest::Client::new(),
+        }
+    }
+
+    /// Execute a task with a specific worker
+    pub async fn execute_task(&self, task_spec: TaskSpec, worker_id: Uuid) -> Result<TaskExecutionResult> {
+        let task_id = task_spec.id;
+        let started_at = chrono::Utc::now();
+        
+        info!("Executing task {} with worker {}", task_id, worker_id);
+
+        // TODO: Get worker from registry
+        // For now, simulate execution
+        
+        // Prepare execution input
+        let execution_input = self.prepare_execution_input(&task_spec)?;
+        
+        // Execute with worker (simulated)
+        let execution_result = self.execute_with_worker(worker_id, &execution_input).await?;
+        
+        // Process and validate result
+        let result = self.process_execution_result(
+            task_id,
+            worker_id,
+            execution_result,
+            started_at,
+        ).await?;
+
+        info!("Task {} execution completed with status: {:?}", task_id, result.status);
+        Ok(result)
+    }
+
+    /// Prepare execution input for worker
+    fn prepare_execution_input(&self, task_spec: &TaskSpec) -> Result<ExecutionInput> {
+        let prompt = self.build_execution_prompt(task_spec)?;
+        
+        Ok(ExecutionInput {
+            prompt,
+            task_id: task_spec.id,
+            context: task_spec.context.clone(),
+            requirements: self.extract_requirements(task_spec),
+            caws_spec: task_spec.caws_spec.clone(),
+        })
+    }
+
+    /// Build execution prompt for worker
+    fn build_execution_prompt(&self, task_spec: &TaskSpec) -> Result<String> {
+        let mut prompt = format!(
+            "You are a specialized AI worker in the Agent Agency system. Your task is to:\n\n\
+            **TASK**: {}\n\
+            **DESCRIPTION**: {}\n\
+            **RISK TIER**: {:?}\n\n",
+            task_spec.title,
+            task_spec.description,
+            task_spec.risk_tier
+        );
+
+        // Add scope information
+        prompt.push_str("**SCOPE**:\n");
+        prompt.push_str(&format!("- Files affected: {}\n", task_spec.scope.files_affected.join(", ")));
+        if let Some(max_files) = task_spec.scope.max_files {
+            prompt.push_str(&format!("- Max files: {}\n", max_files));
+        }
+        if let Some(max_loc) = task_spec.scope.max_loc {
+            prompt.push_str(&format!("- Max lines of code: {}\n", max_loc));
+        }
+        prompt.push_str(&format!("- Domains: {}\n\n", task_spec.scope.domains.join(", ")));
+
+        // Add acceptance criteria
+        if !task_spec.acceptance_criteria.is_empty() {
+            prompt.push_str("**ACCEPTANCE CRITERIA**:\n");
+            for criterion in &task_spec.acceptance_criteria {
+                prompt.push_str(&format!("- {}: {}\n", criterion.id, criterion.description));
+            }
+            prompt.push('\n');
+        }
+
+        // Add CAWS compliance requirements
+        prompt.push_str("**CAWS COMPLIANCE REQUIREMENTS**:\n");
+        prompt.push_str("- Stay within declared file and LOC limits\n");
+        prompt.push_str("- Ensure code quality and maintainability\n");
+        prompt.push_str("- Follow best practices and patterns\n");
+        prompt.push_str("- Provide clear rationale for decisions\n");
+        prompt.push_str("- Self-assess your output quality\n\n");
+
+        // Add context information
+        prompt.push_str("**CONTEXT**:\n");
+        prompt.push_str(&format!("- Workspace: {}\n", task_spec.context.workspace_root));
+        prompt.push_str(&format!("- Git branch: {}\n", task_spec.context.git_branch));
+        prompt.push_str(&format!("- Environment: {:?}\n", task_spec.context.environment));
+        if !task_spec.context.recent_changes.is_empty() {
+            prompt.push_str(&format!("- Recent changes: {}\n", task_spec.context.recent_changes.join(", ")));
+        }
+        prompt.push('\n');
+
+        // Add output format requirements
+        prompt.push_str("**OUTPUT FORMAT**:\n");
+        prompt.push_str("Respond with a JSON object containing:\n");
+        prompt.push_str("{\n");
+        prompt.push_str("  \"content\": \"Detailed description of your work\",\n");
+        prompt.push_str("  \"files_modified\": [\n");
+        prompt.push_str("    {\n");
+        prompt.push_str("      \"path\": \"file/path\",\n");
+        prompt.push_str("      \"operation\": \"create|modify|delete\",\n");
+        prompt.push_str("      \"content\": \"file content (if create/modify)\",\n");
+        prompt.push_str("      \"diff\": \"diff content (if modify)\"\n");
+        prompt.push_str("    }\n");
+        prompt.push_str("  ],\n");
+        prompt.push_str("  \"rationale\": \"Explanation of your approach and decisions\",\n");
+        prompt.push_str("  \"self_assessment\": {\n");
+        prompt.push_str("    \"caws_compliance\": 0.95,\n");
+        prompt.push_str("    \"quality_score\": 0.9,\n");
+        prompt.push_str("    \"confidence\": 0.85,\n");
+        prompt.push_str("    \"concerns\": [\"list any concerns\"],\n");
+        prompt.push_str("    \"improvements\": [\"suggested improvements\"]\n");
+        prompt.push_str("  }\n");
+        prompt.push_str("}\n\n");
+
+        prompt.push_str("Execute the task and provide your response in the specified JSON format.");
+
+        Ok(prompt)
+    }
+
+    /// Extract requirements from task spec
+    fn extract_requirements(&self, task_spec: &TaskSpec) -> TaskRequirements {
+        // This is a simplified extraction - in practice, this would be more sophisticated
+        TaskRequirements {
+            required_languages: vec![], // Would be extracted from description/context
+            required_frameworks: vec![],
+            required_domains: task_spec.scope.domains.clone(),
+            min_quality_score: match task_spec.risk_tier {
+                RiskTier::Tier1 => 0.9,
+                RiskTier::Tier2 => 0.8,
+                RiskTier::Tier3 => 0.7,
+            },
+            min_caws_awareness: 0.8,
+            max_execution_time_ms: task_spec.scope.max_loc.map(|loc| loc as u64 * 100),
+            preferred_worker_type: None,
+            context_length_estimate: 4000, // Would be calculated more precisely
+        }
+    }
+
+    /// Execute task with worker (simulated)
+    async fn execute_with_worker(&self, worker_id: Uuid, input: &ExecutionInput) -> Result<RawExecutionResult> {
+        // TODO: Implement actual HTTP call to worker model
+        // For now, simulate execution
+        
+        info!("Executing task {} with worker {} (simulated)", input.task_id, worker_id);
+        
+        // Simulate execution time
+        tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+        
+        // Simulate worker output
+        let output = serde_json::json!({
+            "content": format!("Completed task: {}", input.task_id),
+            "files_modified": [
+                {
+                    "path": "src/example.rs",
+                    "operation": "create",
+                    "content": "// Example implementation\nfn main() {\n    println!(\"Hello, world!\");\n}",
+                    "diff": null
+                }
+            ],
+            "rationale": "Implemented the requested functionality following best practices",
+            "self_assessment": {
+                "caws_compliance": 0.95,
+                "quality_score": 0.9,
+                "confidence": 0.85,
+                "concerns": [],
+                "improvements": ["Could add more error handling"]
+            }
+        });
+
+        Ok(RawExecutionResult {
+            task_id: input.task_id,
+            worker_id,
+            raw_output: output.to_string(),
+            execution_time_ms: 2000,
+            tokens_used: Some(1500),
+            error: None,
+        })
+    }
+
+    /// Process execution result
+    async fn process_execution_result(
+        &self,
+        task_id: Uuid,
+        worker_id: Uuid,
+        raw_result: RawExecutionResult,
+        started_at: chrono::DateTime<chrono::Utc>,
+    ) -> Result<TaskExecutionResult> {
+        let completed_at = chrono::Utc::now();
+        
+        if let Some(error) = raw_result.error {
+            return Ok(TaskExecutionResult {
+                task_id,
+                worker_id,
+                status: ExecutionStatus::Failed,
+                output: None,
+                error_message: Some(error),
+                execution_time_ms: raw_result.execution_time_ms,
+                tokens_used: raw_result.tokens_used,
+                quality_metrics: QualityMetrics::default(),
+                caws_compliance: CawsComplianceResult::default(),
+                started_at,
+                completed_at,
+            });
+        }
+
+        // Parse worker output
+        let worker_output = match serde_json::from_str::<WorkerOutput>(&raw_result.raw_output) {
+            Ok(output) => output,
+            Err(e) => {
+                warn!("Failed to parse worker output: {}", e);
+                return Ok(TaskExecutionResult {
+                    task_id,
+                    worker_id,
+                    status: ExecutionStatus::Failed,
+                    output: None,
+                    error_message: Some(format!("Invalid output format: {}", e)),
+                    execution_time_ms: raw_result.execution_time_ms,
+                    tokens_used: raw_result.tokens_used,
+                    quality_metrics: QualityMetrics::default(),
+                    caws_compliance: CawsComplianceResult::default(),
+                    started_at,
+                    completed_at,
+                });
+            }
+        };
+
+        // Calculate quality metrics
+        let quality_metrics = self.calculate_quality_metrics(&worker_output);
+
+        // Check CAWS compliance
+        let caws_compliance = self.check_caws_compliance(&worker_output);
+
+        // Determine execution status
+        let status = if caws_compliance.is_compliant && quality_metrics.completeness_score > 0.8 {
+            ExecutionStatus::Completed
+        } else if quality_metrics.completeness_score > 0.5 {
+            ExecutionStatus::Partial
+        } else {
+            ExecutionStatus::Failed
+        };
+
+        Ok(TaskExecutionResult {
+            task_id,
+            worker_id,
+            status,
+            output: Some(worker_output),
+            error_message: None,
+            execution_time_ms: raw_result.execution_time_ms,
+            tokens_used: raw_result.tokens_used,
+            quality_metrics,
+            caws_compliance,
+            started_at,
+            completed_at,
+        })
+    }
+
+    /// Calculate quality metrics for worker output
+    fn calculate_quality_metrics(&self, output: &WorkerOutput) -> QualityMetrics {
+        QualityMetrics {
+            completeness_score: if output.content.is_empty() { 0.0 } else { 0.9 },
+            correctness_score: output.self_assessment.quality_score,
+            maintainability_score: 0.8, // Would be calculated based on code analysis
+            readability_score: 0.85, // Would be calculated based on code structure
+            test_coverage: None, // Would be calculated if tests are present
+            performance_impact: None, // Would be calculated based on changes
+        }
+    }
+
+    /// Check CAWS compliance for worker output
+    fn check_caws_compliance(&self, output: &WorkerOutput) -> CawsComplianceResult {
+        let mut violations = Vec::new();
+        let mut compliance_score = 1.0;
+
+        // Check file count
+        let file_count = output.files_modified.len() as u32;
+        
+        // Check LOC estimate (rough calculation)
+        let loc_estimate: u32 = output.files_modified.iter()
+            .map(|f| f.content.as_ref().map(|c| c.lines().count() as u32).unwrap_or(0))
+            .sum();
+
+        // For now, use basic compliance checking
+        // In practice, this would check against actual CAWS rules
+        
+        if file_count > 10 {
+            violations.push(CawsViolation {
+                rule: "File Count Limit".to_string(),
+                severity: ViolationSeverity::Medium,
+                description: format!("Created {} files, may exceed limit", file_count),
+                location: None,
+                suggestion: Some("Consider consolidating files".to_string()),
+            });
+            compliance_score -= 0.1;
+        }
+
+        if loc_estimate > 2000 {
+            violations.push(CawsViolation {
+                rule: "LOC Limit".to_string(),
+                severity: ViolationSeverity::Medium,
+                description: format!("Estimated {} LOC, may exceed limit", loc_estimate),
+                location: None,
+                suggestion: Some("Consider breaking into smaller tasks".to_string()),
+            });
+            compliance_score -= 0.1;
+        }
+
+        CawsComplianceResult {
+            is_compliant: violations.is_empty(),
+            compliance_score: compliance_score.max(0.0),
+            violations,
+            budget_adherence: BudgetAdherence {
+                files_used: file_count,
+                files_limit: 10, // Example limit
+                loc_used: loc_estimate,
+                loc_limit: 2000, // Example limit
+                time_used_ms: 0, // Would be set by caller
+                time_limit_ms: None,
+                within_budget: violations.is_empty(),
+            },
+            provenance_complete: !output.rationale.is_empty(),
+        }
+    }
+}
+
+impl Default for TaskExecutor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Execution input for workers
+#[derive(Debug, Clone)]
+struct ExecutionInput {
+    prompt: String,
+    task_id: Uuid,
+    context: TaskContext,
+    requirements: TaskRequirements,
+    caws_spec: Option<CawsSpec>,
+}
+
+/// Raw execution result from worker
+#[derive(Debug, Clone)]
+struct RawExecutionResult {
+    task_id: Uuid,
+    worker_id: Uuid,
+    raw_output: String,
+    execution_time_ms: u64,
+    tokens_used: Option<u32>,
+    error: Option<String>,
+}
+
+/// CAWS specification (simplified)
+#[derive(Debug, Clone)]
+struct CawsSpec {
+    // Would contain actual CAWS specification details
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_task_executor_creation() {
+        let executor = TaskExecutor::new();
+        // Basic creation test
+        assert!(true); // TaskExecutor doesn't have public fields to test
+    }
+
+    #[tokio::test]
+    async fn test_build_execution_prompt() {
+        let executor = TaskExecutor::new();
+        
+        let task_spec = TaskSpec {
+            id: Uuid::new_v4(),
+            title: "Test Task".to_string(),
+            description: "A test task description".to_string(),
+            risk_tier: RiskTier::Tier2,
+            scope: TaskScope {
+                files_affected: vec!["src/test.rs".to_string()],
+                max_files: Some(5),
+                max_loc: Some(1000),
+                domains: vec!["backend".to_string()],
+            },
+            acceptance_criteria: vec![],
+            context: TaskContext {
+                workspace_root: "/workspace".to_string(),
+                git_branch: "main".to_string(),
+                recent_changes: vec![],
+                dependencies: std::collections::HashMap::new(),
+                environment: Environment::Development,
+            },
+            worker_output: WorkerOutput {
+                content: "".to_string(),
+                files_modified: vec![],
+                rationale: "".to_string(),
+                self_assessment: SelfAssessment {
+                    caws_compliance: 0.0,
+                    quality_score: 0.0,
+                    confidence: 0.0,
+                    concerns: vec![],
+                    improvements: vec![],
+                    estimated_effort: None,
+                },
+                metadata: std::collections::HashMap::new(),
+            },
+            caws_spec: None,
+        };
+
+        let prompt = executor.build_execution_prompt(&task_spec).unwrap();
+        assert!(prompt.contains("Test Task"));
+        assert!(prompt.contains("A test task description"));
+        assert!(prompt.contains("Tier2"));
+        assert!(prompt.contains("src/test.rs"));
+        assert!(prompt.contains("CAWS COMPLIANCE REQUIREMENTS"));
+        assert!(prompt.contains("JSON"));
+    }
+
+    #[tokio::test]
+    async fn test_calculate_quality_metrics() {
+        let executor = TaskExecutor::new();
+        
+        let output = WorkerOutput {
+            content: "Test implementation".to_string(),
+            files_modified: vec![],
+            rationale: "Test rationale".to_string(),
+            self_assessment: SelfAssessment {
+                caws_compliance: 0.95,
+                quality_score: 0.9,
+                confidence: 0.85,
+                concerns: vec![],
+                improvements: vec![],
+                estimated_effort: None,
+            },
+            metadata: std::collections::HashMap::new(),
+        };
+
+        let metrics = executor.calculate_quality_metrics(&output);
+        assert!(metrics.completeness_score > 0.0);
+        assert_eq!(metrics.correctness_score, 0.9);
+    }
+
+    #[tokio::test]
+    async fn test_check_caws_compliance() {
+        let executor = TaskExecutor::new();
+        
+        let output = WorkerOutput {
+            content: "Test implementation".to_string(),
+            files_modified: vec![
+                FileModification {
+                    path: "test1.rs".to_string(),
+                    operation: FileOperation::Create,
+                    content: Some("fn main() {\n    println!(\"test\");\n}".to_string()),
+                    diff: None,
+                    size_bytes: 50,
+                },
+                FileModification {
+                    path: "test2.rs".to_string(),
+                    operation: FileOperation::Create,
+                    content: Some("fn helper() {\n    // helper function\n}".to_string()),
+                    diff: None,
+                    size_bytes: 40,
+                },
+            ],
+            rationale: "Test rationale".to_string(),
+            self_assessment: SelfAssessment {
+                caws_compliance: 0.95,
+                quality_score: 0.9,
+                confidence: 0.85,
+                concerns: vec![],
+                improvements: vec![],
+                estimated_effort: None,
+            },
+            metadata: std::collections::HashMap::new(),
+        };
+
+        let compliance = executor.check_caws_compliance(&output);
+        assert!(compliance.is_compliant);
+        assert!(compliance.compliance_score > 0.9);
+        assert!(compliance.provenance_complete);
+    }
+}

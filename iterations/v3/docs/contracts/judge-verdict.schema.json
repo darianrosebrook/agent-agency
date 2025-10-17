@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-agency/v3/contracts/judge-verdict.schema.json",
+  "title": "JudgeVerdict",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "Evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {"type": "string", "enum": ["research", "static_check", "test"]},
+        "ref": {"type": "string"},
+        "summary": {"type": "string"}
+      },
+      "required": ["type", "ref"]
+    }
+  },
+  "required": ["judge_id", "version", "verdict", "reasons"],
+  "properties": {
+    "judge_id": {"type": "string"},
+    "version": {"type": "string"},
+    "verdict": {"type": "string", "enum": ["pass", "fail", "uncertain"]},
+    "reasons": {"type": "array", "items": {"type": "string"}},
+    "evidence": {"type": "array", "items": {"$ref": "#/$defs/Evidence"}, "default": []}
+  }
+}

@@ -8,6 +8,8 @@
  * @author @darianrosebrook
  */
 
+import { KnowledgeDatabaseClient } from "../database/KnowledgeDatabaseClient.js";
+import { EmbeddingService } from "../embeddings/EmbeddingService.js";
 import {
   ContextCriteria,
   FileMetadata,
@@ -30,6 +32,51 @@ export class ContextManager {
       recencyWeight: 0.3,
       ...defaultCriteria,
     };
+  }
+
+  /**
+   * Generate semantic context for an agent using vector similarity
+   */
+  async generateSemanticContext(
+    taskDescription: string,
+    criteria: Partial<ContextCriteria> = {},
+    embeddingService?: EmbeddingService,
+    dbClient?: KnowledgeDatabaseClient
+  ): Promise<WorkspaceContext> {
+    if (!embeddingService || !dbClient) {
+      // Fall back to traditional context generation if semantic search not available
+      throw new Error(
+        "Semantic search requires embedding service and database client"
+      );
+    }
+
+    // Generate embedding for task description
+    const taskEmbedding = await embeddingService.generateEmbedding(
+      taskDescription
+    );
+
+    // Query for semantically similar workspace files
+    const results = await dbClient.query(
+      `
+      SELECT * FROM hybrid_search(
+        $1::vector(768),
+        $2,
+        $3,
+        0, -- no graph hops for workspace files
+        ARRAY['workspace_file']::VARCHAR(50)[],
+        NULL,
+        0.7
+      )
+    `,
+      [`[${taskEmbedding.join(",")}]`, taskDescription, criteria.maxFiles || 20]
+    );
+
+    // Convert database results to workspace context
+    return this.buildContextFromSemanticResults(
+      results.rows,
+      criteria,
+      taskDescription
+    );
   }
 
   /**
@@ -365,6 +412,59 @@ export class ContextManager {
       averageRelevance: totalRelevance / Math.max(1, totalFiles),
       sizeEfficiency: context.totalSize / context.criteria.maxSizeBytes,
       extensionDistribution,
+    };
+  }
+
+  /**
+   * Build workspace context from semantic search results
+   */
+  private buildContextFromSemanticResults(
+    semanticResults: any[],
+    criteria: Partial<ContextCriteria>,
+    taskDescription: string
+  ): WorkspaceContext {
+    const mergedCriteria = { ...this.defaultCriteria, ...criteria };
+    const relevanceScores = new Map<string, number>();
+
+    // Convert semantic results to file metadata
+    const files: FileMetadata[] = [];
+    let totalSize = 0;
+
+    for (const result of semanticResults) {
+      // Extract file path from result metadata
+      const filePath = result.metadata?.file_path || result.name;
+      const fileType =
+        result.metadata?.file_type || filePath.split(".").pop() || "";
+
+      // Create file metadata (we don't have full file info from semantic search)
+      const fileMetadata: FileMetadata = {
+        path: filePath,
+        name: filePath.split("/").pop() || filePath,
+        extension: fileType,
+        size: result.metadata?.size || 0,
+        lastModified: new Date(result.metadata?.last_modified || Date.now()),
+        hash: result.metadata?.hash || "",
+        isBinary: false, // Assume text files for semantic search
+      };
+
+      files.push(fileMetadata);
+      totalSize += fileMetadata.size;
+
+      // Use similarity score as relevance
+      relevanceScores.set(
+        filePath,
+        result.relevance_score || result.similarity_score || 0.5
+      );
+    }
+
+    return {
+      files,
+      criteria: mergedCriteria,
+      totalSize,
+      relevanceScores,
+      generatedAt: new Date(),
+      taskDescription,
+      searchType: "semantic",
     };
   }
 }

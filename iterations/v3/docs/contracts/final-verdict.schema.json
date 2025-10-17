@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-agency/v3/contracts/final-verdict.schema.json",
+  "title": "FinalVerdict",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "VoteEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "judge_id": {"type": "string"},
+        "weight": {"type": "number", "minimum": 0, "maximum": 1},
+        "verdict": {"type": "string", "enum": ["pass", "fail", "uncertain"]}
+      },
+      "required": ["judge_id", "weight", "verdict"]
+    }
+  },
+  "required": ["decision", "votes", "dissent"],
+  "properties": {
+    "decision": {"type": "string", "enum": ["accept", "reject", "modify"]},
+    "votes": {"type": "array", "items": {"$ref": "#/$defs/VoteEntry"}},
+    "dissent": {"type": "string"},
+    "remediation": {"type": "array", "items": {"type": "string"}, "default": []},
+    "constitutional_refs": {"type": "array", "items": {"type": "string"}, "default": []}
+  }
+}

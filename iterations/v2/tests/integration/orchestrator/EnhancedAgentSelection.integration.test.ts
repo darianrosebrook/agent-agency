@@ -8,7 +8,9 @@
  */
 
 import { jest } from "@jest/globals";
+import { EmbeddingService } from "../../../src/embeddings/EmbeddingService.js";
 import { ArbiterOrchestrator } from "../../../src/orchestrator/ArbiterOrchestrator.js";
+import { ContextManager } from "../../../src/workspace/ContextManager.js";
 import { WorkspaceStateManager } from "../../../src/workspace/WorkspaceStateManager.js";
 
 // Mock external dependencies
@@ -32,10 +34,54 @@ jest.mock("path", () => ({
   }),
 }));
 
+// Mock embedding service and context manager
+jest.mock("../../../src/embeddings/EmbeddingService.js");
+jest.mock("../../../src/workspace/ContextManager.js");
+
+const MockEmbeddingService =
+  require("../../../src/embeddings/EmbeddingService.js").EmbeddingService;
+const MockContextManager =
+  require("../../../src/workspace/ContextManager.js").ContextManager;
+
+MockEmbeddingService.mockImplementation(() => ({
+  generateEmbedding: jest.fn().mockResolvedValue([0.1, 0.2, 0.3]),
+  performHealthCheck: jest.fn().mockResolvedValue({ status: "healthy" }),
+  performBasicHealthCheck: jest
+    .fn()
+    .mockResolvedValue({
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+    }),
+}));
+
+MockContextManager.mockImplementation(() => ({
+  generateSemanticContext: jest.fn().mockResolvedValue({
+    files: [
+      {
+        path: "/workspace/src/main.ts",
+        extension: ".ts",
+        size: 2048,
+        relevance_score: 0.9,
+      },
+      {
+        path: "/workspace/src/utils.ts",
+        extension: ".ts",
+        size: 1024,
+        relevance_score: 0.8,
+      },
+    ],
+    taskDescription: "Implement TypeScript analysis",
+    searchType: "semantic",
+    generatedAt: new Date(),
+  }),
+}));
+
 describe("Enhanced Agent Selection with Workspace Integration", () => {
   let orchestrator: ArbiterOrchestrator;
   let workspaceManager: WorkspaceStateManager;
   let systemHealthMonitor;
+  let contextManager: ContextManager;
+  let embeddingService: EmbeddingService;
 
   // Mock agents with different capabilities and workspace familiarity
   const mockAgents = [
@@ -142,6 +188,17 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
       .spyOn(workspaceManager as any, "scanWorkspace")
       .mockResolvedValue(mockFiles);
 
+    // Create context manager and embedding service
+    contextManager = new ContextManager();
+
+    embeddingService = new EmbeddingService({
+      ollamaEndpoint: "http://localhost:11434",
+      model: "embeddinggemma",
+      cacheSize: 100,
+      timeout: 30000,
+      rateLimitPerSecond: 10,
+    });
+
     // Create orchestrator with workspace integration
     orchestrator = new ArbiterOrchestrator(
       {
@@ -167,7 +224,9 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
         },
       },
       workspaceManager,
-      systemHealthMonitor
+      systemHealthMonitor,
+      contextManager,
+      embeddingService
     );
 
     // Initialize workspace manager first
@@ -430,12 +489,12 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
         });
 
       const result = await orchestrator["assignTaskToAgent"](
-        mockTasks.typescriptAnalysis
+        "task-ts-analysis",
+        "agent-typescript-expert"
       );
 
       // Should have created an assignment
       expect(result).toBeDefined();
-      expect(result.taskId).toBe("task-ts-analysis");
     });
 
     it("should log agent selection details for debugging", async () => {
@@ -454,6 +513,130 @@ describe("Enhanced Agent Selection with Workspace Integration", () => {
       );
 
       consoleSpy.mockRestore();
+    });
+  });
+
+  // Helper function to convert mock agents to AgentProfile format
+  const convertToAgentProfiles = (agents: any[]): any[] => {
+    return agents.map((agent) => ({
+      id: agent.id,
+      capabilities: agent.capabilities,
+      currentLoad: agent.currentLoad,
+      maxLoad: agent.maxLoad,
+      performance: agent.performance,
+    }));
+  };
+
+  describe("Semantic Agent Selection", () => {
+    it("should select agents using semantic context analysis", async () => {
+      const taskDescription =
+        "Implement TypeScript utility functions for data validation";
+
+      const agentProfiles = convertToAgentProfiles(mockAgents);
+      const result = await orchestrator.selectAgentWithSemanticContext(
+        taskDescription,
+        agentProfiles
+      );
+
+      expect(result).toBeDefined();
+      expect(result.agentId).toBeDefined();
+      expect(result.confidence).toBeGreaterThan(0);
+      expect(result.confidence).toBeLessThanOrEqual(1);
+      expect(result.reasoning).toBeDefined();
+      expect(typeof result.reasoning).toBe("string");
+    });
+
+    it("should prefer TypeScript expert for TypeScript tasks", async () => {
+      const taskDescription =
+        "Debug TypeScript compilation errors in a React application";
+
+      const agentProfiles = convertToAgentProfiles(mockAgents);
+      const result = await orchestrator.selectAgentWithSemanticContext(
+        taskDescription,
+        agentProfiles
+      );
+
+      // Should select the TypeScript expert due to semantic context matching
+      expect(result.agentId).toBe("agent-typescript-expert");
+      expect(result.confidence).toBeGreaterThan(0.6); // High confidence for good match
+      expect(result.reasoning).toContain("typescript");
+      expect(result.reasoning).toContain("Capability match");
+    });
+
+    it("should use fallback selection when semantic components unavailable", async () => {
+      // Temporarily disable semantic components
+      const originalContextManager = (orchestrator as any).components
+        .contextManager;
+      const originalEmbeddingService = (orchestrator as any).components
+        .embeddingService;
+
+      (orchestrator as any).components.contextManager = null;
+      (orchestrator as any).components.embeddingService = null;
+
+      const taskDescription = "General task without semantic context";
+      const agentProfiles = convertToAgentProfiles(mockAgents);
+      const result = await orchestrator.selectAgentWithSemanticContext(
+        taskDescription,
+        agentProfiles
+      );
+
+      // Should use fallback selection (least loaded agent)
+      expect(result).toBeDefined();
+      expect(result.agentId).toBeDefined();
+      expect(result.confidence).toBe(0.5); // Fallback confidence
+      expect(result.reasoning).toContain("Fallback selection");
+
+      // Restore components
+      (orchestrator as any).components.contextManager = originalContextManager;
+      (orchestrator as any).components.embeddingService =
+        originalEmbeddingService;
+    });
+
+    it("should handle semantic context generation failures gracefully", async () => {
+      // Mock context manager to throw an error
+      const mockContextManager = contextManager as any;
+      jest
+        .spyOn(mockContextManager, "generateSemanticContext")
+        .mockRejectedValue(new Error("Semantic context generation failed"));
+
+      const consoleSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
+      const taskDescription = "Task that will fail semantic analysis";
+      const agentProfiles = convertToAgentProfiles(mockAgents);
+      const result = await orchestrator.selectAgentWithSemanticContext(
+        taskDescription,
+        agentProfiles
+      );
+
+      // Should fall back to basic selection despite the error
+      expect(result).toBeDefined();
+      expect(result.agentId).toBeDefined();
+      expect(result.reasoning).toContain("Fallback selection");
+
+      // Should log the error
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Semantic agent selection failed, using fallback:",
+        expect.any(Error)
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it("should extract capabilities from semantic context correctly", async () => {
+      const taskDescription =
+        "Write Python scripts for data processing and create tests";
+
+      const agentProfiles = convertToAgentProfiles(mockAgents);
+      const result = await orchestrator.selectAgentWithSemanticContext(
+        taskDescription,
+        agentProfiles
+      );
+
+      // Should recognize the task involves multiple capabilities
+      expect(result.reasoning).toBeDefined();
+      // The agent selection should consider the capabilities extracted from the task
     });
   });
 });

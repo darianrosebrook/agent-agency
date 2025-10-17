@@ -1,0 +1,187 @@
+# Constitutional Judge Model Specification
+# Fine-tuned on CAWS rulebook and constitutional principles
+
+model:
+  base: "llama3.3:3b"
+  name: "llama3.3:3b-constitutional-caws"
+  description: "Specialized judge for CAWS constitutional compliance evaluation"
+
+# Training Configuration
+training:
+  method: "LoRA"  # Low-Rank Adaptation for efficient fine-tuning
+  rank: 16
+  alpha: 32
+  dropout: 0.1
+  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj"]
+  
+  # Training data sources
+  datasets:
+    - name: "caws-rulebook"
+      source: "docs/caws-rulebook.md"
+      weight: 1.0
+    - name: "caws-violations"
+      source: "training/caws-dataset/violations.jsonl"
+      weight: 0.8
+    - name: "constitutional-principles"
+      source: "training/caws-dataset/constitutional-examples.jsonl"
+      weight: 0.9
+
+# Performance Targets
+performance:
+  inference_latency_ms: 100  # Target <100ms on ANE
+  memory_usage_gb: 3.0      # Fits in ANE with room for other models
+  throughput_tokens_per_sec: 50
+
+# Optimization
+optimization:
+  target: "ANE"  # Apple Neural Engine
+  quantization: "INT4"
+  batch_size: 1  # Single request optimization
+  
+  # ANE-specific settings
+  ane:
+    compute_units: 16
+    memory_pool_size_mb: 2048
+    enable_metal_performance_shaders: true
+
+# Prompt Template
+prompt_template: |
+  You are the Constitutional Judge for the Agent Agency Council. Your role is to evaluate 
+  all agent work against the Coding-Agent Working Standard (CAWS) constitutional requirements.
+
+  ## Your Responsibilities:
+  1. **Budget Compliance**: Verify work stays within declared max_files and max_loc limits
+  2. **Waiver Validity**: Validate any waiver requests against CAWS policies
+  3. **Provenance Requirements**: Ensure all work includes proper audit trails
+  4. **Constitutional Authority**: Enforce CAWS as the governing framework
+
+  ## Evaluation Criteria:
+  - CAWS Section 4 (Budgets): Work must not exceed declared limits without valid waiver
+  - CAWS Section 5 (Waivers): All exceptions must be time-bounded and properly justified
+  - CAWS Section 6 (Proof): All claims must be substantiated by verifiable evidence
+  - CAWS Section 7 (Provenance): Complete audit trail required for all decisions
+
+  ## Response Format:
+  You must respond with a JSON verdict containing:
+  ```json
+  {
+    "verdict": "pass|fail|uncertain",
+    "confidence": 0.0-1.0,
+    "reasoning": "Detailed explanation of your decision",
+    "evidence": [
+      {
+        "source": "CAWSRules|CodeAnalysis|Documentation",
+        "content": "Specific evidence supporting your verdict",
+        "relevance": 0.0-1.0
+      }
+    ],
+    "violations": [
+      {
+        "rule": "CAWS section reference",
+        "severity": "critical|major|minor|warning",
+        "description": "What was violated",
+        "location": "Where the violation occurred",
+        "suggestion": "How to fix it"
+      }
+    ],
+    "caws_citations": ["Section 4.2", "Section 5.1", etc.]
+  }
+  ```
+
+  ## Task to Evaluate:
+  **Task ID**: {{task_id}}
+  **Risk Tier**: {{risk_tier}}
+  **CAWS Working Spec**: {{caws_spec}}
+  **Worker Output**: {{worker_output}}
+  **Context**: {{context}}
+
+  Evaluate this work against CAWS constitutional requirements and provide your verdict.
+
+# CAWS Training Dataset
+caws_dataset:
+  # Constitutional principles examples
+  examples:
+    - input: |
+        Task: Implement user authentication
+        Budget: max_files=5, max_loc=500
+        Output: Created 8 files, 1200 LOC
+      output: |
+        {
+          "verdict": "fail",
+          "confidence": 1.0,
+          "reasoning": "Task exceeds declared budget limits without valid waiver",
+          "violations": [
+            {
+              "rule": "CAWS Section 4.2 - Budget Immutability",
+              "severity": "critical",
+              "description": "Created 8 files exceeds max_files=5, 1200 LOC exceeds max_loc=500",
+              "location": "Task execution",
+              "suggestion": "Reduce scope or request CAWS waiver"
+            }
+          ],
+          "caws_citations": ["Section 4.2"]
+        }
+    
+    - input: |
+        Task: Fix typo in README
+        Budget: max_files=1, max_loc=10
+        Output: Modified README.md (5 lines changed)
+      output: |
+        {
+          "verdict": "pass",
+          "confidence": 0.95,
+          "reasoning": "Task stays within budget limits and addresses stated requirements",
+          "evidence": [
+            {
+              "source": "CAWSRules",
+              "content": "Task within declared budget: 1 file (≤1), 5 LOC (≤10)",
+              "relevance": 1.0
+            }
+          ],
+          "caws_citations": ["Section 4.2"]
+        }
+
+# Quality Assurance
+quality_assurance:
+  test_cases:
+    - name: "budget_compliance_pass"
+      description: "Verify correct pass for within-budget work"
+    - name: "budget_violation_fail"
+      description: "Verify correct fail for over-budget work"
+    - name: "waiver_validation"
+      description: "Verify proper waiver evaluation"
+    - name: "provenance_requirement"
+      description: "Verify provenance compliance checking"
+
+  benchmarks:
+    - name: "caws_compliance_accuracy"
+      target: 0.95  # 95% accuracy on CAWS rule interpretation
+    - name: "constitutional_authority"
+      target: 0.98  # 98% correct constitutional decisions
+    - name: "budget_validation_speed"
+      target: 100   # <100ms inference time
+
+# Deployment Configuration
+deployment:
+  platform: "Apple Silicon"
+  runtime: "Core ML"
+  model_format: "mlpackage"
+  optimization_level: "maximum"
+  
+  # Resource allocation
+  resources:
+    ane_compute_units: 16
+    memory_limit_mb: 3072
+    thermal_threshold_c: 85
+    
+  # Monitoring
+  monitoring:
+    - metric: "inference_latency"
+      threshold_ms: 100
+      alert: true
+    - metric: "caws_compliance_rate"
+      threshold: 0.95
+      alert: true
+    - metric: "constitutional_accuracy"
+      threshold: 0.98
+      alert: true

@@ -449,4 +449,46 @@ export class KnowledgeDatabaseClient {
       return { totalEntries: 0, totalSizeBytes: 0, hitRate: 0 };
     }
   }
+
+  /**
+   * Execute raw SQL query (for embedding operations)
+   */
+  async query(sql: string, params: any[] = []): Promise<{ rows: any[] }> {
+    if (!this.available) {
+      throw new Error("Database client not initialized");
+    }
+
+    const client = await this.poolManager.getPool().connect();
+    try {
+      const result = await client.query(sql, params);
+      return { rows: result.rows };
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Execute bulk insert operation
+   */
+  async bulkInsert(sql: string, data: any[][]): Promise<void> {
+    if (!this.available) {
+      throw new Error("Database client not initialized");
+    }
+
+    const client = await this.poolManager.getPool().connect();
+    try {
+      await client.query("BEGIN");
+
+      for (const row of data) {
+        await client.query(sql, row);
+      }
+
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 }

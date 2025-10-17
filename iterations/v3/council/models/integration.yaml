@@ -1,0 +1,242 @@
+# Integration Validator Model Specification
+# Validates cross-file consistency, API contracts, system coherence
+
+model:
+  base: "mistral:3b"
+  name: "mistral:3b-integration-checker"
+  description: "Specialized judge for integration validation and system coherence"
+
+# Training Configuration
+training:
+  method: "LoRA"
+  rank: 16
+  alpha: 32
+  dropout: 0.1
+  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj"]
+  
+  # Training data sources
+  datasets:
+    - name: "api-contract-violations"
+      source: "training/caws-dataset/api-examples.jsonl"
+      weight: 1.0
+    - name: "integration-patterns"
+      source: "training/caws-dataset/integration-examples.jsonl"
+      weight: 0.9
+    - name: "breaking-changes"
+      source: "training/caws-dataset/breaking-changes.jsonl"
+      weight: 0.8
+    - name: "database-migrations"
+      source: "training/caws-dataset/migration-examples.jsonl"
+      weight: 0.7
+
+# Performance Targets
+performance:
+  inference_latency_ms: 150  # Target <150ms on CPU
+  memory_usage_gb: 3.0
+  throughput_tokens_per_sec: 45
+
+# Optimization
+optimization:
+  target: "CPU"  # CPU-optimized for fast validation
+  quantization: "INT8"
+  batch_size: 1
+
+# Prompt Template
+prompt_template: |
+  You are the Integration Validator for the Agent Agency Council. Your role is to ensure 
+  system-wide coherence and validate that changes maintain integration integrity.
+
+  ## Your Responsibilities:
+  1. **API Contract Validation**: Verify API changes don't break existing contracts
+  2. **Cross-File Consistency**: Check for consistency across multiple files
+  3. **Database Migration Safety**: Validate database changes for safety and rollback capability
+  4. **Breaking Change Detection**: Identify changes that could break dependent systems
+  5. **System Coherence**: Ensure overall system architecture remains coherent
+
+  ## Validation Categories:
+
+  ### API Contract Integrity
+  - Parameter changes and type modifications
+  - Return value changes and error handling
+  - Endpoint deprecation and versioning
+  - Authentication and authorization changes
+
+  ### Cross-File Dependencies
+  - Import/export consistency
+  - Interface implementation compliance
+  - Configuration file synchronization
+  - Shared type definition alignment
+
+  ### Database Schema Changes
+  - Migration safety and rollback capability
+  - Data type changes and constraints
+  - Index modifications and performance impact
+  - Foreign key and relationship integrity
+
+  ### System Integration Points
+  - Service communication protocols
+  - Event schema compatibility
+  - Configuration consistency
+  - Environment variable alignment
+
+  ## Response Format:
+  You must respond with a JSON verdict containing:
+  ```json
+  {
+    "verdict": "pass|fail|uncertain",
+    "confidence": 0.0-1.0,
+    "reasoning": "Integration validation summary",
+    "evidence": [
+      {
+        "source": "ApiAnalysis|DatabaseCheck|DependencyScan",
+        "content": "Specific integration evidence",
+        "relevance": 0.0-1.0
+      }
+    ],
+    "violations": [
+      {
+        "rule": "Integration rule or contract",
+        "severity": "critical|major|minor|warning",
+        "description": "Integration issue description",
+        "location": "File or component",
+        "suggestion": "How to fix integration issue",
+        "category": "api|database|dependency|system"
+      }
+    ],
+    "integration_metrics": {
+      "api_compatibility": 0.95,
+      "database_safety": 0.88,
+      "system_coherence": 0.92,
+      "breaking_changes": 0
+    }
+  }
+  ```
+
+  ## Changes to Validate:
+  **Task ID**: {{task_id}}
+  **Files Modified**: {{files_modified}}
+  **API Changes**: {{api_changes}}
+  **Database Changes**: {{database_changes}}
+  **Dependencies**: {{dependencies}}
+  **Context**: {{context}}
+
+  Validate the integration integrity of these changes.
+
+# Training Dataset Examples
+training_examples:
+  api_contracts:
+    - input: |
+        API Change: Changed user endpoint from POST /users to POST /api/v2/users
+        Existing consumers: 15 services using old endpoint
+      output: |
+        {
+          "verdict": "fail",
+          "confidence": 0.95,
+          "reasoning": "Breaking change without proper versioning strategy",
+          "violations": [
+            {
+              "rule": "API Versioning Strategy",
+              "severity": "critical",
+              "description": "Endpoint change breaks existing consumers",
+              "location": "User API endpoint",
+              "suggestion": "Maintain backward compatibility or implement proper deprecation",
+              "category": "api"
+            }
+          ],
+          "integration_metrics": {
+            "api_compatibility": 0.0,
+            "breaking_changes": 1
+          }
+        }
+  
+  database_migrations:
+    - input: |
+        Migration: DROP COLUMN user_email from users table
+        Existing data: 100,000 user records with email data
+      output: |
+        {
+          "verdict": "fail",
+          "confidence": 0.9,
+          "reasoning": "Data loss migration without proper backup strategy",
+          "violations": [
+            {
+              "rule": "Database Migration Safety",
+              "severity": "critical",
+              "description": "Dropping column will cause permanent data loss",
+              "location": "users table migration",
+              "suggestion": "Add data export step before dropping column",
+              "category": "database"
+            }
+          ],
+          "integration_metrics": {
+            "database_safety": 0.1,
+            "breaking_changes": 1
+          }
+        }
+
+  system_coherence:
+    - input: |
+        Changes: Updated authentication service but not authorization service
+        Result: Mismatched token formats between services
+      output: |
+        {
+          "verdict": "fail",
+          "confidence": 0.85,
+          "reasoning": "Inconsistent token format between authentication and authorization",
+          "violations": [
+            {
+              "rule": "System Coherence",
+              "severity": "major",
+              "description": "Authentication and authorization services have mismatched token formats",
+              "location": "Authentication service",
+              "suggestion": "Update authorization service to handle new token format",
+              "category": "system"
+            }
+          ],
+          "integration_metrics": {
+            "system_coherence": 0.3,
+            "breaking_changes": 1
+          }
+        }
+
+# Quality Assurance
+quality_assurance:
+  test_cases:
+    - name: "api_contract_validation"
+      description: "Verify accurate API contract validation"
+    - name: "database_migration_safety"
+      description: "Verify database migration safety checks"
+    - name: "breaking_change_detection"
+      description: "Verify breaking change identification"
+    - name: "system_coherence_analysis"
+      description: "Verify system coherence evaluation"
+
+  benchmarks:
+    - name: "integration_validation_accuracy"
+      target: 0.92  # 92% accuracy on integration validation
+    - name: "breaking_change_detection_rate"
+      target: 0.95  # 95% detection rate for breaking changes
+    - name: "false_positive_rate"
+      target: 0.03  # <3% false positive rate
+
+# Deployment Configuration
+deployment:
+  platform: "Apple Silicon"
+  runtime: "Core ML"
+  model_format: "mlpackage"
+  optimization_level: "maximum"
+  
+  # Resource allocation
+  resources:
+    cpu_cores: 4
+    memory_limit_mb: 3072
+    thermal_threshold_c: 85
+    
+  # Monitoring
+  monitoring:
+    - metric: "inference_latency"
+      threshold_ms: 150
+      alert: true
+    - metric: "integration_validation_accuracy"
+      threshold: 0.92
+      alert: true

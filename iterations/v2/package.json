@@ -46,7 +46,8 @@
     "minimal-diff:analyze": "node scripts/analyze-minimal-diff.js",
     "tool-learning:eval": "node scripts/evaluate-tool-learning.js",
     "benchmark:v2": "node scripts/benchmark-v2-features.js",
-    "ab:test": "node scripts/run-ab-tests.js"
+    "ab:test": "node scripts/run-ab-tests.js",
+    "index:knowledge": "tsx scripts/index-knowledge.ts"
   },
   "repository": {
     "type": "git",

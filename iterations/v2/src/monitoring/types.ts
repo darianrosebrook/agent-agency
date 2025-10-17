@@ -67,6 +67,8 @@ export interface HealthMetrics {
   queueDepth: number;
   /** Circuit breaker status for the system */
   circuitBreakerOpen: boolean;
+  /** Embedding infrastructure metrics */
+  embedding?: import("../embeddings/EmbeddingMonitor.js").EmbeddingMetrics;
   /** Timestamp of health assessment */
   timestamp: Date;
 }

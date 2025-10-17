@@ -112,11 +112,17 @@ export interface WorkspaceContext {
   /** Relevance scores for each file (0-1) */
   relevanceScores: Map<string, number>;
   /** Timestamp when context was generated */
-  timestamp: Date;
+  timestamp?: Date;
   /** Agent requesting context */
   agentId?: string;
   /** Task context */
   taskId?: string;
+  /** Task description (for semantic search) */
+  taskDescription?: string;
+  /** Search method used */
+  searchType?: "traditional" | "semantic";
+  /** When context was generated */
+  generatedAt?: Date;
 }
 
 /**
@@ -155,6 +161,17 @@ export interface WorkspaceStateConfig {
   enablePersistence: boolean;
   /** State compression level (0-9) */
   compressionLevel: number;
+  /** Semantic search configuration */
+  semanticSearch?: {
+    /** Whether to enable semantic search */
+    enabled: boolean;
+    /** Ollama endpoint for embeddings */
+    ollamaEndpoint?: string;
+    /** Embedding cache size */
+    cacheSize?: number;
+    /** Debounce time for embedding updates (ms) */
+    debounceMs?: number;
+  };
 }
 
 /**

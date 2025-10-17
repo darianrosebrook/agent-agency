@@ -30,8 +30,10 @@ import {
 } from "../observability/AuditLogger";
 
 // Workspace and Health Integration imports
+import { EmbeddingService } from "../embeddings/EmbeddingService.js";
 import { SystemHealthMonitor } from "../monitoring/SystemHealthMonitor.js";
 import { AgentProfile } from "../types/agent-registry";
+import { ContextManager } from "../workspace/ContextManager.js";
 import { WorkspaceStateManager } from "../workspace/WorkspaceStateManager.js";
 
 // Re-export commonly used types
@@ -411,13 +413,17 @@ export class ArbiterOrchestrator {
   constructor(
     config: ArbiterOrchestratorConfig,
     workspaceManager?: WorkspaceStateManager,
-    systemHealthMonitor?: SystemHealthMonitor
+    systemHealthMonitor?: SystemHealthMonitor,
+    contextManager?: ContextManager,
+    embeddingService?: EmbeddingService
   ) {
     this.config = config;
     this.startTime = Date.now();
     this.components = {} as any;
     this.components.workspaceManager = workspaceManager;
     this.components.systemHealthMonitor = systemHealthMonitor;
+    this.components.contextManager = contextManager;
+    this.components.embeddingService = embeddingService;
   }
 
   /**
@@ -1166,6 +1172,233 @@ export class ArbiterOrchestrator {
       approvedBy: "system-admin",
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
       decisionId: decision.id,
+    };
+  }
+
+  /**
+   * Select the best agent for a task using semantic context analysis
+   */
+  async selectAgentWithSemanticContext(
+    taskDescription: string,
+    availableAgents: AgentProfile[]
+  ): Promise<{ agentId: string; confidence: number; reasoning: string }> {
+    if (!this.components.contextManager || !this.components.embeddingService) {
+      // Fallback to basic agent selection if semantic components not available
+      console.warn(
+        "Semantic context components not available, using fallback selection"
+      );
+      return this.fallbackAgentSelection(taskDescription, availableAgents);
+    }
+
+    try {
+      // Generate semantic context for the task
+      const semanticContext =
+        await this.components.contextManager.generateSemanticContext({
+          taskDescription,
+          searchType: "semantic",
+          maxFiles: 20,
+          criteria: {
+            maxFiles: 20,
+            maxSizeBytes: 1024 * 1024, // 1MB
+            priorityExtensions: [".ts", ".js", ".md", ".json"],
+            excludeExtensions: [".log", ".tmp"],
+            excludeDirectories: ["node_modules", "dist", ".git"],
+            includeBinaryFiles: false,
+          },
+        });
+
+      // Calculate semantic relevance scores for each agent
+      const agentScores = await Promise.all(
+        availableAgents.map(async (agent) => {
+          const relevanceScore = await this.calculateSemanticAgentRelevance(
+            agent,
+            semanticContext
+          );
+          return {
+            agentId: agent.id,
+            score: relevanceScore.score,
+            reasoning: relevanceScore.reasoning,
+          };
+        })
+      );
+
+      // Sort by score (highest first)
+      agentScores.sort((a, b) => b.score - a.score);
+
+      const bestAgent = agentScores[0];
+      return {
+        agentId: bestAgent.agentId,
+        confidence: bestAgent.score,
+        reasoning: bestAgent.reasoning,
+      };
+    } catch (error) {
+      console.error("Semantic agent selection failed, using fallback:", error);
+      return this.fallbackAgentSelection(taskDescription, availableAgents);
+    }
+  }
+
+  /**
+   * Calculate semantic relevance score for an agent given task context
+   */
+  private async calculateSemanticAgentRelevance(
+    agent: AgentProfile,
+    semanticContext: any
+  ): Promise<{ score: number; reasoning: string }> {
+    let score = 0.5; // Base score
+    const reasoning: string[] = [];
+
+    // Factor 1: Capability matching with semantic context
+    const contextCapabilities =
+      this.extractCapabilitiesFromSemanticContext(semanticContext);
+    const agentCapabilities = new Set(agent.capabilities || []);
+
+    let capabilityMatches = 0;
+    for (const capability of contextCapabilities) {
+      if (agentCapabilities.has(capability)) {
+        capabilityMatches++;
+      }
+    }
+
+    const capabilityScore =
+      capabilityMatches / Math.max(contextCapabilities.length, 1);
+    score += capabilityScore * 0.3; // 30% weight
+    reasoning.push(
+      `Capability match: ${capabilityMatches}/${contextCapabilities.length} (${(
+        capabilityScore * 100
+      ).toFixed(0)}%)`
+    );
+
+    // Factor 2: File familiarity based on semantic context
+    const relevantFiles = semanticContext.files || [];
+    const agentFamiliarityScore = this.calculateFileFamiliarityScore(
+      agent,
+      relevantFiles
+    );
+    score += agentFamiliarityScore * 0.4; // 40% weight
+    reasoning.push(
+      `File familiarity: ${(agentFamiliarityScore * 100).toFixed(0)}%`
+    );
+
+    // Factor 3: Current load (prefer less loaded agents)
+    const loadFactor =
+      1 - (agent.currentLoad || 0) / Math.max(agent.maxLoad || 10, 1);
+    score += loadFactor * 0.2; // 20% weight
+    reasoning.push(
+      `Load factor: ${(loadFactor * 100).toFixed(0)}% available capacity`
+    );
+
+    // Factor 4: Performance history
+    const performanceScore = this.calculatePerformanceScore(agent);
+    score += performanceScore * 0.1; // 10% weight
+    reasoning.push(
+      `Performance score: ${(performanceScore * 100).toFixed(0)}%`
+    );
+
+    // Normalize score to 0-1 range
+    score = Math.max(0, Math.min(1, score));
+
+    return {
+      score,
+      reasoning: reasoning.join(", "),
+    };
+  }
+
+  /**
+   * Extract capabilities from semantic context
+   */
+  private extractCapabilitiesFromSemanticContext(
+    semanticContext: any
+  ): string[] {
+    const capabilities = new Set<string>();
+
+    // Extract from file types
+    const files = semanticContext.files || [];
+    for (const file of files) {
+      if (file.extension === ".ts" || file.extension === ".js") {
+        capabilities.add("typescript");
+        capabilities.add("javascript");
+      }
+      if (file.extension === ".py") {
+        capabilities.add("python");
+      }
+      if (file.extension === ".md") {
+        capabilities.add("documentation");
+      }
+      if (file.extension === ".json") {
+        capabilities.add("configuration");
+      }
+    }
+
+    // Extract from task description keywords
+    const taskDesc = semanticContext.taskDescription || "";
+    const keywords = taskDesc.toLowerCase();
+
+    if (keywords.includes("test") || keywords.includes("testing")) {
+      capabilities.add("testing");
+    }
+    if (keywords.includes("analysis") || keywords.includes("analyze")) {
+      capabilities.add("analysis");
+    }
+    if (keywords.includes("debug") || keywords.includes("fix")) {
+      capabilities.add("debugging");
+    }
+    if (keywords.includes("performance") || keywords.includes("optimize")) {
+      capabilities.add("performance");
+    }
+
+    return Array.from(capabilities);
+  }
+
+  /**
+   * Calculate file familiarity score based on semantic context
+   */
+  private calculateFileFamiliarityScore(
+    agent: AgentProfile,
+    relevantFiles: any[]
+  ): number {
+    // This is a simplified scoring - in practice, this would be based on
+    // agent's historical interactions with these files
+    if (!relevantFiles.length) return 0.5;
+
+    // For now, assume agents have some baseline familiarity
+    // In production, this would query agent performance history
+    return 0.7; // Placeholder - would be calculated from agent history
+  }
+
+  /**
+   * Calculate performance score from agent profile
+   */
+  private calculatePerformanceScore(agent: AgentProfile): number {
+    if (!agent.performance) return 0.5;
+
+    const { quality = 0.5, speed = 0.5, reliability = 0.5 } = agent.performance;
+    return (quality + speed + reliability) / 3;
+  }
+
+  /**
+   * Fallback agent selection when semantic context is unavailable
+   */
+  private fallbackAgentSelection(
+    taskDescription: string,
+    availableAgents: AgentProfile[]
+  ): { agentId: string; confidence: number; reasoning: string } {
+    // Simple fallback: pick least loaded agent
+    let bestAgent = availableAgents[0];
+    let lowestLoad = bestAgent.currentLoad || 0;
+
+    for (const agent of availableAgents.slice(1)) {
+      const load = agent.currentLoad || 0;
+      if (load < lowestLoad) {
+        lowestLoad = load;
+        bestAgent = agent;
+      }
+    }
+
+    return {
+      agentId: bestAgent.id,
+      confidence: 0.5,
+      reasoning:
+        "Fallback selection: least loaded agent (semantic context unavailable)",
     };
   }
 

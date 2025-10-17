@@ -1,0 +1,29 @@
+[package]
+name = "agent-agency-council"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace dependencies
+tokio.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+reqwest.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+config.workspace = true
+
+# Council-specific dependencies
+dashmap = "5.5"  # Concurrent hashmap for verdict storage
+crossbeam = "0.8"  # Lock-free data structures
+parking_lot = "0.12"  # Fast mutexes for coordination
+
+[dev-dependencies]
+tokio-test = "0.4"

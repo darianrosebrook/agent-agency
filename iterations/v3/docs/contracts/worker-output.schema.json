@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-agency/v3/contracts/worker-output.schema.json",
+  "title": "WorkerOutput",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "Seeds": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "time_seed": {"type": "string"},
+        "uuid_seed": {"type": "string"},
+        "random_seed": {"type": "integer"}
+      },
+      "required": ["time_seed", "uuid_seed", "random_seed"]
+    },
+    "PatchArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {"type": "string"},
+        "diff": {"type": "string"}
+      },
+      "required": ["path", "diff"]
+    },
+    "CommandArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cmd": {"type": "string"},
+        "dry_run": {"type": "boolean"}
+      },
+      "required": ["cmd", "dry_run"]
+    }
+  },
+  "required": ["metadata", "artifacts", "rationale", "self_assessment"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_id", "risk_tier", "seeds"],
+      "properties": {
+        "task_id": {"type": "string"},
+        "risk_tier": {"type": "integer", "minimum": 1, "maximum": 3},
+        "seeds": {"$ref": "#/$defs/Seeds"}
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "required": ["patches"],
+      "properties": {
+        "patches": {"type": "array", "items": {"$ref": "#/$defs/PatchArtifact"}},
+        "commands": {"type": "array", "items": {"$ref": "#/$defs/CommandArtifact"}, "default": []}
+      }
+    },
+    "rationale": {"type": "string"},
+    "self_assessment": {
+      "type": "object",
+      "required": ["caws_checklist", "notes"],
+      "properties": {
+        "caws_checklist": {
+          "type": "object",
+          "properties": {
+            "within_scope": {"type": "boolean"},
+            "within_budget": {"type": "boolean"},
+            "tests_added": {"type": "boolean"},
+            "deterministic": {"type": "boolean"}
+          },
+          "required": ["within_scope", "within_budget", "tests_added", "deterministic"]
+        },
+        "notes": {"type": "string"}
+      }
+    }
+    ,
+    "waivers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string"},
+          "reason": {"type": "string"},
+          "scope": {"type": "string"}
+        },
+        "required": ["id", "reason"]
+      },
+      "default": []
+    }
+  }
+}

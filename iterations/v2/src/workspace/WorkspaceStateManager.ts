@@ -8,6 +8,9 @@
  */
 
 import { EventEmitter } from "events";
+import { KnowledgeDatabaseClient } from "../database/KnowledgeDatabaseClient.js";
+import { EmbeddingService } from "../embeddings/EmbeddingService.js";
+import { LoggerFactory } from "../logging/StructuredLogger.js";
 import { ContextManager } from "./ContextManager.js";
 import { FileWatcher } from "./FileWatcher.js";
 import { FileStatePersistence } from "./StatePersistence.js";
@@ -28,9 +31,13 @@ export class WorkspaceStateManager extends EventEmitter {
   private stateSnapshot: StateSnapshot;
   private contextManager: ContextManager;
   private persistence?: StatePersistence;
+  private embeddingService?: EmbeddingService;
+  private dbClient?: KnowledgeDatabaseClient;
   private isInitialized = false;
   private metrics: WorkspaceMetrics;
   private metricsTimer: ReturnType<typeof setInterval> | null = null;
+  private embeddingDebounceTimer?: ReturnType<typeof setTimeout>;
+  private logger = LoggerFactory.createWorkspaceLogger();
 
   constructor(config: WorkspaceStateConfig, persistence?: StatePersistence) {
     super();
@@ -60,6 +67,20 @@ export class WorkspaceStateManager extends EventEmitter {
     this.contextManager = new ContextManager(
       this.config.defaultContextCriteria
     );
+
+    // Initialize semantic search components if enabled
+    if (this.config.semanticSearch?.enabled) {
+      this.embeddingService = new EmbeddingService({
+        ollamaEndpoint:
+          this.config.semanticSearch.ollamaEndpoint || "http://localhost:11434",
+        cacheSize: this.config.semanticSearch.cacheSize || 1000,
+      });
+
+      // Initialize database client for embedding storage
+      // Note: This assumes KnowledgeDatabaseClient can be instantiated with default config
+      // In a real implementation, this would be passed in or configured properly
+      this.dbClient = new KnowledgeDatabaseClient(/* config */);
+    }
 
     // Initialize metrics
     this.metrics = {
@@ -134,6 +155,12 @@ export class WorkspaceStateManager extends EventEmitter {
         this.metricsTimer = null;
       }
 
+      // Clear embedding debounce timer
+      if (this.embeddingDebounceTimer) {
+        clearTimeout(this.embeddingDebounceTimer);
+        this.embeddingDebounceTimer = undefined;
+      }
+
       // Persist current state if enabled
       if (this.persistence && this.config.enablePersistence) {
         await this.persistCurrentState();
@@ -142,9 +169,17 @@ export class WorkspaceStateManager extends EventEmitter {
       // Stop file watcher
       await this.fileWatcher.stop();
 
+      // Shutdown embedding service
+      if (this.embeddingService) {
+        await this.embeddingService.shutdown();
+      }
+
       this.isInitialized = false;
     } catch (error) {
-      console.error("Error during workspace state manager shutdown:", error);
+      this.logger.error("Error during workspace state manager shutdown", {
+        operation: "shutdown",
+        error: error as Error,
+      });
     }
   }
 
@@ -360,7 +395,11 @@ export class WorkspaceStateManager extends EventEmitter {
     // In a full implementation, this would query the file watcher's change history
     // and filter based on the provided options
 
-    const { maxAge: _maxAge = 24 * 60 * 60 * 1000, maxCount: _maxCount = 100, agentId: _agentId } = options;
+    const {
+      maxAge: _maxAge = 24 * 60 * 60 * 1000,
+      maxCount: _maxCount = 100,
+      agentId: _agentId,
+    } = options;
 
     // This is a placeholder - in a real implementation, we'd:
     // 1. Get changes from the file watcher
@@ -416,8 +455,186 @@ export class WorkspaceStateManager extends EventEmitter {
       this.emit("persistence-error", error);
     }
 
+    // Handle embedding updates for semantic search
+    if (
+      this.config.semanticSearch?.enabled &&
+      this.embeddingService &&
+      this.dbClient
+    ) {
+      await this.handleEmbeddingUpdates(changes);
+    }
+
     // Forward to listeners
     this.emit("files-changed", changes);
+  }
+
+  /**
+   * Handle embedding updates for changed files
+   */
+  private async handleEmbeddingUpdates(changes: FileChange[]): Promise<void> {
+    if (!this.embeddingService || !this.dbClient) {
+      return;
+    }
+
+    // Debounce embedding updates to avoid excessive API calls
+    const debounceMs = this.config.semanticSearch?.debounceMs || 1000;
+
+    if (this.embeddingDebounceTimer) {
+      clearTimeout(this.embeddingDebounceTimer);
+    }
+
+    this.embeddingDebounceTimer = setTimeout(async () => {
+      try {
+        // Filter changes to files we want to embed
+        const relevantChanges = changes.filter((change) =>
+          this.shouldGenerateEmbedding(change)
+        );
+
+        if (relevantChanges.length === 0) {
+          return;
+        }
+
+        // Process embedding updates
+        await Promise.all(
+          relevantChanges.map((change) => this.updateFileEmbedding(change))
+        );
+
+        this.emit("embeddings-updated", relevantChanges.length);
+      } catch (error) {
+        this.emit("embedding-error", error);
+      }
+    }, debounceMs);
+  }
+
+  /**
+   * Determine if a file change should trigger embedding generation
+   */
+  private shouldGenerateEmbedding(change: FileChange): boolean {
+    // Only process added/modified files (not deleted)
+    if (change.type === "deleted") {
+      return false;
+    }
+
+    // Check file extension
+    const ext = change.path.split(".").pop()?.toLowerCase();
+    const supportedExtensions = [
+      "ts",
+      "js",
+      "tsx",
+      "jsx",
+      "py",
+      "java",
+      "cpp",
+      "c",
+      "h",
+      "hpp",
+      "md",
+      "txt",
+      "json",
+      "yaml",
+      "yml",
+    ];
+
+    return ext ? supportedExtensions.includes(ext) : false;
+  }
+
+  /**
+   * Update embedding for a single file
+   */
+  private async updateFileEmbedding(change: FileChange): Promise<void> {
+    if (!this.embeddingService || !this.dbClient) {
+      return;
+    }
+
+    try {
+      // Read file content
+      const fs = await import("fs/promises");
+      const content = await fs.readFile(change.path, "utf-8");
+
+      // Prepare text for embedding
+      const textForEmbedding = this.prepareFileTextForEmbedding(
+        change.path,
+        content
+      );
+
+      // Generate embedding
+      const embedding = await this.embeddingService.generateEmbedding(
+        textForEmbedding
+      );
+
+      // Store in database using existing agent_capabilities_graph table
+      await this.dbClient.query(
+        `
+        INSERT INTO agent_capabilities_graph (
+          agent_id, capability_type, capability_name, canonical_name,
+          embedding, confidence, metadata
+        ) VALUES ($1, 'TECHNOLOGY', $2, $2, $3, 1.0, $4)
+        ON CONFLICT (agent_id, canonical_name)
+        DO UPDATE SET embedding = EXCLUDED.embedding, last_updated = NOW()
+      `,
+        [
+          "system",
+          change.path,
+          `[${embedding.join(",")}]`,
+          JSON.stringify({
+            source: "workspace_file",
+            file_type: change.path.split(".").pop(),
+            last_modified: change.timestamp || new Date().toISOString(),
+          }),
+        ]
+      );
+    } catch (error) {
+      // Log error but don't throw - embedding failures shouldn't break file watching
+      console.error(`Failed to update embedding for ${change.path}:`, error);
+    }
+  }
+
+  /**
+   * Prepare file text for embedding generation
+   */
+  private prepareFileTextForEmbedding(
+    filePath: string,
+    content: string
+  ): string {
+    const fileName = filePath.split("/").pop() || filePath;
+    const extension = filePath.split(".").pop() || "";
+
+    // Add context about file type
+    const context = this.getFileTypeContext(extension);
+
+    // Limit content size to avoid token limits
+    const maxContentLength = 8000; // Leave room for context
+    const truncatedContent =
+      content.length > maxContentLength
+        ? content.substring(0, maxContentLength) + "..."
+        : content;
+
+    return `${context}\n\nFile: ${fileName}\nPath: ${filePath}\n\nContent:\n${truncatedContent}`;
+  }
+
+  /**
+   * Get context string based on file type
+   */
+  private getFileTypeContext(extension: string): string {
+    const contexts: Record<string, string> = {
+      ts: "TypeScript source code file",
+      js: "JavaScript source code file",
+      tsx: "TypeScript React component file",
+      jsx: "JavaScript React component file",
+      py: "Python source code file",
+      java: "Java source code file",
+      cpp: "C++ source code file",
+      c: "C source code file",
+      h: "C/C++ header file",
+      hpp: "C++ header file",
+      md: "Markdown documentation file",
+      txt: "Plain text file",
+      json: "JSON data file",
+      yaml: "YAML configuration file",
+      yml: "YAML configuration file",
+    };
+
+    return contexts[extension] || "Source code file";
   }
 
   /**
