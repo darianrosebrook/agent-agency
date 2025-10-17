@@ -11,12 +11,12 @@ fn test_config(port: u16) -> MCPConfig {
 
 #[tokio::test]
 async fn http_health_endpoint_works() {
-    let port = 18080;
+    let port = 18090;
     let srv = std::sync::Arc::new(MCPServer::new(test_config(port)));
     // Start server in background
-    let srv_run = srv.clone();
+    let _srv_run = srv.clone();
     // Start HTTP with readiness for deterministic test
-    let (ready, _handle) = srv.start_http_with_readiness().await.unwrap();
+    let (ready, handle) = srv.start_http_with_readiness().await.unwrap();
     let _ = ready.await;
     let client = reqwest::Client::new();
     let url = format!("http://127.0.0.1:{port}");
@@ -25,11 +25,14 @@ async fn http_health_endpoint_works() {
         "jsonrpc":"2.0","id":1,"method":"health","params":null
     })).send().await.unwrap();
     assert!(resp.status().is_success());
+    
+    // Clean shutdown
+    let _ = handle.shutdown().await;
 }
 
 #[tokio::test]
 async fn http_tools_and_validate_methods_work() {
-    let port = 18081;
+    let port = 18091;
     let srv = std::sync::Arc::new(MCPServer::new(test_config(port)));
     // Register a tool so tools list is non-empty
     let tool = agent_agency_mcp::types::MCPTool {
@@ -48,32 +51,37 @@ async fn http_tools_and_validate_methods_work() {
         usage_count: 0,
         metadata: std::collections::HashMap::new(),
     };
-    // Register the tool using test helper on server
-    // The helper is defined on MCPServer but not available through Arc due to cfg(test); borrow the inner via Arc::clone and spawn a task that uses &MCPServer
-    let srv_ref = srv.clone();
-    // Use a small block to register before starting HTTP
-    let server_ref = srv_ref;
-    // SAFETY: we only use &MCPServer methods here synchronously before server starts serving
-    let _ = agent_agency_mcp::ToolRegistry::new(); // keep imports
-    // Workaround: call into registry through a temporary async block using private path via public execute_tool()? Not suitable.
-    // Simplify: skip tools assertion if registration is cumbersome; still test validate.
+    // Register the tool using the feature-gated test utility method
+    #[cfg(feature = "test-utils")]
+    srv.register_tool_for_testing(tool.clone()).await.unwrap();
 
     // Start HTTP and wait readiness
-    let (ready, _handle) = srv.start_http_with_readiness().await.unwrap();
+    let (ready, handle) = srv.start_http_with_readiness().await.unwrap();
     let _ = ready.await;
 
     let client = reqwest::Client::new();
     let url = format!("http://127.0.0.1:{port}");
 
-    // Call tools (should be empty/default ok)
+    // Call tools (should contain the registered tool when test-utils feature is enabled)
     let resp = client.post(&url).json(&serde_json::json!({
         "jsonrpc":"2.0","id":1,"method":"tools","params":null
     })).send().await.unwrap();
     assert!(resp.status().is_success());
+    
+    #[cfg(feature = "test-utils")]
+    {
+        let tools_response: serde_json::Value = resp.json().await.unwrap();
+        let tools = tools_response["result"].as_array().unwrap();
+        assert!(!tools.is_empty(), "Tools list should contain the registered tool");
+        assert_eq!(tools[0]["name"], "validator");
+    }
 
     // Call validate with the same tool JSON
     let resp = client.post(&url).json(&serde_json::json!({
         "jsonrpc":"2.0","id":2,"method":"validate","params": serde_json::to_value(&tool).unwrap()
     })).send().await.unwrap();
     assert!(resp.status().is_success());
+    
+    // Clean shutdown
+    let _ = handle.shutdown().await;
 }

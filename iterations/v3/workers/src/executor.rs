@@ -434,6 +434,7 @@ pub trait IdGenerator: std::fmt::Debug {
 }
 
 #[derive(Default)]
+#[derive(Debug)]
 pub struct SequentialId {
     counter: u128,
 }

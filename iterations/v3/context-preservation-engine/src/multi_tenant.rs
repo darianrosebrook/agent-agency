@@ -20,7 +20,8 @@ impl MultiTenantManager {
         let mut tenant_cache = HashMap::new();
 
         // Initialize default tenant if configured
-        if let Some(default_tenant_id) = config.multi_tenant.default_tenant_id.as_ref() {
+        if !config.multi_tenant.default_tenant_id.is_empty() {
+            let default_tenant_id = config.multi_tenant.default_tenant_id.clone();
             tenant_cache.insert(default_tenant_id.clone(), TenantInfo {
                 tenant_id: default_tenant_id.clone(),
                 limits: TenantLimits {

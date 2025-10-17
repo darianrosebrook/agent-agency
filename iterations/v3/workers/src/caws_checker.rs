@@ -150,6 +150,25 @@ pub struct CawsChecker {
 }
 
 impl CawsChecker {
+    /// Helper function to create a CawsViolation with constitutional_ref
+    fn create_violation(
+        rule: &str,
+        severity: ViolationSeverity,
+        description: String,
+        location: Option<String>,
+        suggestion: Option<String>,
+        constitutional_ref: &str,
+    ) -> CawsViolation {
+        CawsViolation {
+            rule: rule.to_string(),
+            severity,
+            description,
+            location,
+            suggestion,
+            constitutional_ref: Some(constitutional_ref.to_string()),
+        }
+    }
+
     /// Create a new CAWS checker
     pub fn new() -> Self {
         let mut language_analyzers: HashMap<ProgrammingLanguage, Box<dyn LanguageAnalyzer>> = HashMap::new();
@@ -318,6 +337,7 @@ impl CawsChecker {
                         analysis.surgical_change_score, self.diff_analyzer.surgical_change_threshold),
                     location: None,
                     suggestion: Some("Make more surgical changes with focused modifications".to_string()),
+                    constitutional_ref: Some("SURG-001".to_string()),
                 });
             }
 
@@ -329,6 +349,7 @@ impl CawsChecker {
                     description: lang_violation.description.clone(),
                     location: lang_violation.location.as_ref().map(|loc| format!("{}:{}", loc.line, loc.column)),
                     suggestion: lang_violation.suggestion.clone(),
+                    constitutional_ref: None,
                 });
             }
 
@@ -394,6 +415,7 @@ impl CawsChecker {
                     description: "Max files cannot be zero".to_string(),
                     location: Some("task_spec.scope.max_files".to_string()),
                     suggestion: Some("Set max_files to at least 1".to_string()),
+                    constitutional_ref: None,
                 });
             } else if max_files > 50 {
                 warnings.push(format!("Large file count limit: {} files", max_files));
@@ -408,6 +430,7 @@ impl CawsChecker {
                     description: "Max LOC cannot be zero".to_string(),
                     location: Some("task_spec.scope.max_loc".to_string()),
                     suggestion: Some("Set max_loc to at least 1".to_string()),
+                    constitutional_ref: None,
                 });
             } else if max_loc > 10000 {
                 warnings.push(format!("Large LOC limit: {} lines", max_loc));
@@ -421,7 +444,7 @@ impl CawsChecker {
     fn check_scope_compliance(
         &self,
         task_spec: &TaskSpec,
-        violations: &mut Vec<CawsViolation>,
+        _violations: &mut Vec<CawsViolation>,
         warnings: &mut Vec<String>,
     ) -> Result<()> {
         // Check if scope is well-defined
@@ -457,6 +480,7 @@ impl CawsChecker {
                 description: "No acceptance criteria defined".to_string(),
                 location: None,
                 suggestion: Some("Define clear acceptance criteria for the task".to_string()),
+                constitutional_ref: None,
             });
         } else {
             // Check quality of acceptance criteria
@@ -515,6 +539,7 @@ impl CawsChecker {
                         description: "High-risk content detected but task marked as Tier 3".to_string(),
                         location: None,
                         suggestion: Some("Consider upgrading to Tier 1 or Tier 2".to_string()),
+                        constitutional_ref: None,
                     });
                 }
             }
@@ -545,6 +570,7 @@ impl CawsChecker {
                     description: format!("Used {} files, exceeds limit of {}", files_used, max_files),
                     location: None,
                     suggestion: Some("Reduce file count or request budget increase".to_string()),
+                    constitutional_ref: None,
                 });
             } else if files_used as f32 / max_files as f32 > 0.8 {
                 warnings.push(format!("File count near limit: {}/{}", files_used, max_files));
@@ -560,6 +586,7 @@ impl CawsChecker {
                     description: format!("Used {} LOC, exceeds limit of {}", loc_used, max_loc),
                     location: None,
                     suggestion: Some("Reduce LOC or request budget increase".to_string()),
+                    constitutional_ref: None,
                 });
             } else if loc_used as f32 / max_loc as f32 > 0.8 {
                 warnings.push(format!("LOC near limit: {}/{}", loc_used, max_loc));
@@ -585,6 +612,7 @@ impl CawsChecker {
                 description: "Worker self-assessment indicates low quality".to_string(),
                 location: None,
                 suggestion: Some("Review and improve output quality".to_string()),
+                constitutional_ref: None,
             });
         }
 
@@ -607,6 +635,7 @@ impl CawsChecker {
                 description: "Rationale is too brief".to_string(),
                 location: None,
                 suggestion: Some("Provide more detailed rationale for decisions".to_string()),
+                constitutional_ref: None,
             });
         }
 
@@ -630,6 +659,7 @@ impl CawsChecker {
                 description: "Worker self-assessment indicates CAWS compliance issues".to_string(),
                 location: None,
                 suggestion: Some("Review CAWS requirements and improve compliance".to_string()),
+                constitutional_ref: None,
             });
         }
 
@@ -647,6 +677,7 @@ impl CawsChecker {
                         description: "Potential hardcoded secrets detected".to_string(),
                         location: Some(file_mod.path.clone()),
                         suggestion: Some("Use environment variables or secure configuration".to_string()),
+                        constitutional_ref: None,
                     });
                 }
             }
@@ -670,6 +701,7 @@ impl CawsChecker {
                 description: "No rationale provided for decisions".to_string(),
                 location: None,
                 suggestion: Some("Provide detailed rationale for all decisions".to_string()),
+                constitutional_ref: None,
             });
         }
 
@@ -689,6 +721,7 @@ impl CawsChecker {
                             description: "File creation without content provided".to_string(),
                             location: Some(file_mod.path.clone()),
                             suggestion: Some("Provide file content for creation operations".to_string()),
+                            constitutional_ref: None,
                         });
                     }
                 }
@@ -700,6 +733,7 @@ impl CawsChecker {
                             description: "File modification without diff or content provided".to_string(),
                             location: Some(file_mod.path.clone()),
                             suggestion: Some("Provide diff or content for modification operations".to_string()),
+                            constitutional_ref: None,
                         });
                     }
                 }
@@ -719,7 +753,7 @@ impl CawsChecker {
 
     /// Calculate compliance score
     fn calculate_compliance_score(&self, violations: &[CawsViolation], warnings: &[String]) -> f32 {
-        let mut score = 1.0;
+        let mut score: f32 = 1.0;
 
         // Deduct points for violations
         for violation in violations {
@@ -741,7 +775,7 @@ impl CawsChecker {
     }
 
     /// Get CAWS rule violations for a task
-    pub async fn get_violations(&self, task_id: Uuid) -> Result<Vec<CawsViolation>> {
+    pub async fn get_violations(&self, _task_id: Uuid) -> Result<Vec<CawsViolation>> {
         // TODO: Implement database lookup for violations
         // For now, return empty list
         Ok(Vec::new())
@@ -810,6 +844,7 @@ impl ViolationCodeMapper {
 }
 
 // Rust language analyzer implementation
+#[derive(Debug)]
 pub struct RustAnalyzer;
 
 impl RustAnalyzer {
@@ -833,6 +868,7 @@ impl LanguageAnalyzer for RustAnalyzer {
                     description: "Unsafe code detected".to_string(),
                     location: None,
                     suggestion: Some("Review unsafe code usage and ensure proper justification".to_string()),
+                    constitutional_ref: None,
                 });
             }
             
@@ -903,6 +939,7 @@ impl LanguageAnalyzer for RustAnalyzer {
 }
 
 // TypeScript language analyzer implementation
+#[derive(Debug)]
 pub struct TypeScriptAnalyzer;
 
 impl TypeScriptAnalyzer {
@@ -913,7 +950,7 @@ impl TypeScriptAnalyzer {
 
 impl LanguageAnalyzer for TypeScriptAnalyzer {
     fn analyze_file_modification(&self, modification: &FileModification) -> Result<LanguageAnalysisResult> {
-        let mut violations = Vec::new();
+        let violations = Vec::new();
         let mut warnings = Vec::new();
         
         // Analyze TypeScript-specific issues
@@ -994,6 +1031,7 @@ impl LanguageAnalyzer for TypeScriptAnalyzer {
 }
 
 // JavaScript language analyzer implementation
+#[derive(Debug)]
 pub struct JavaScriptAnalyzer;
 
 impl JavaScriptAnalyzer {

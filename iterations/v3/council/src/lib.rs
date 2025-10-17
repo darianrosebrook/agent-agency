@@ -10,6 +10,7 @@ pub mod types;
 pub mod semantic;
 pub mod evidence_enrichment;
 pub mod claim_extraction;
+pub mod advanced_arbitration;
 pub use types::*;
 
 /// Council configuration for judge coordination

@@ -6,9 +6,10 @@ use crate::types::*;
 use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn, error};
+use tracing::{info, warn, error};
 use uuid::Uuid;
 use glob;
+use tokio_util::sync::CancellationToken;
 
 /// Tool discovery service
 #[derive(Debug)]
@@ -16,6 +17,7 @@ pub struct ToolDiscovery {
     pub(crate) config: ToolDiscoveryConfig,
     pub(crate) discovered_tools: Arc<RwLock<Vec<MCPTool>>>,
     pub(crate) discovery_active: Arc<RwLock<bool>>,
+    pub(crate) cancellation_token: Arc<CancellationToken>,
 }
 
 impl ToolDiscovery {
@@ -28,6 +30,7 @@ impl ToolDiscovery {
             config,
             discovered_tools: Arc::new(RwLock::new(Vec::new())),
             discovery_active: Arc::new(RwLock::new(false)),
+            cancellation_token: Arc::new(CancellationToken::new()),
         }
     }
 
@@ -56,12 +59,21 @@ impl ToolDiscovery {
         // Spawn a lightweight background task that periodically scans
         let interval = self.config.discovery_interval_seconds;
         let this = self.clone_for_task();
+        let token = self.cancellation_token.clone();
         tokio::spawn(async move {
             let mut ticker = tokio::time::interval(std::time::Duration::from_secs(interval as u64));
             loop {
+                // Check for cancellation before each tick
+                if token.is_cancelled() { break; }
+                
                 ticker.tick().await;
+                
                 // stop if deactivated
                 if !this.is_active().await { break; }
+                
+                // Check for cancellation before discovery
+                if token.is_cancelled() { break; }
+                
                 if let Err(e) = this.discover_tools().await {
                     error!("Auto discovery error: {e:?}");
                 }
@@ -74,18 +86,36 @@ impl ToolDiscovery {
     pub async fn stop(&self) -> Result<()> {
         info!("Stopping tool discovery");
         
+        // Cancel the cancellation token for immediate shutdown
+        self.cancellation_token.cancel();
+        
         {
             let mut active = self.discovery_active.write().await;
             *active = false;
         }
 
-        // Background task loop exits when inactive flag is false
+        // Background task loop exits when inactive flag is false or token is cancelled
         Ok(())
     }
 
     /// Discover tools from configured paths
     pub async fn discover_tools(&self) -> Result<ToolDiscoveryResult> {
         info!("Discovering tools from paths: {:?}", self.config.discovery_paths);
+
+        // Check for cancellation before starting
+        if self.cancellation_token.is_cancelled() {
+            return Ok(ToolDiscoveryResult {
+                discovered_tools: Vec::new(),
+                errors: vec![DiscoveryError {
+                    path: "discovery".to_string(),
+                    error_type: DiscoveryErrorType::Unknown,
+                    message: "Discovery cancelled".to_string(),
+                    details: None,
+                }],
+                discovery_time_ms: 0,
+                discovered_at: chrono::Utc::now(),
+            });
+        }
 
         let start_time = std::time::Instant::now();
         let mut discovered_tools = Vec::new();
@@ -213,7 +243,14 @@ impl ToolDiscovery {
 }
 
 impl ToolDiscovery {
-    fn clone_for_task(&self) -> Self { Self { config: self.config.clone(), discovered_tools: self.discovered_tools.clone(), discovery_active: self.discovery_active.clone() } }
+    fn clone_for_task(&self) -> Self { 
+        Self { 
+            config: self.config.clone(), 
+            discovered_tools: self.discovered_tools.clone(), 
+            discovery_active: self.discovery_active.clone(),
+            cancellation_token: self.cancellation_token.clone(),
+        } 
+    }
     async fn is_active(&self) -> bool { *self.discovery_active.read().await }
     fn manifest_to_tool(&self, m: &crate::types::ToolManifest) -> MCPTool {
         MCPTool {

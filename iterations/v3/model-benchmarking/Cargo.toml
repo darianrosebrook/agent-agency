@@ -21,6 +21,7 @@ chrono.workspace = true
 criterion = "0.5"  # For micro-benchmarks
 prometheus = "0.13"  # For metrics collection
 statistical = "0.1"  # For statistical analysis
+rand = "0.8"  # For random number generation in benchmarks
 
 # ML/AI integration
 # ML/AI integration (temporarily disabled due to rand version conflicts)

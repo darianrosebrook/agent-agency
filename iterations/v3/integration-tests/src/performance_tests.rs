@@ -323,7 +323,7 @@ impl PerformanceTests {
 
         // Test different load levels
         let load_levels = vec![10, 50, 100, 200];
-        let mut scalability_results = Vec::new();
+        let mut scalability_results: Vec<String> = Vec::new();
 
         // TODO: Initialize system
         // let system = AgentAgencySystem::new()

@@ -7,11 +7,39 @@ use crate::{ToolRegistry, ToolDiscovery, CawsIntegration};
 use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn, error};
-use uuid::Uuid;
-use jsonrpc_core::{IoHandler, Params, Value, Error as JsonRpcError, Result as JsonRpcResult};
-use jsonrpc_http_server::{ServerBuilder};
+use tracing::info;
+use jsonrpc_core::{IoHandler, Params, Value, Error as JsonRpcError};
+use jsonrpc_http_server::{ServerBuilder, Server};
 use tokio::task::JoinHandle;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// HTTP server handle with graceful shutdown capability
+pub struct HttpServerHandle {
+    server: Option<Server>,
+    join_handle: JoinHandle<()>,
+    shutdown_signal: Arc<AtomicBool>,
+}
+
+impl HttpServerHandle {
+    /// Gracefully shutdown the HTTP server
+    pub async fn shutdown(self) -> Result<()> {
+        info!("Shutting down HTTP server");
+        
+        // Signal shutdown
+        self.shutdown_signal.store(true, Ordering::SeqCst);
+        
+        // Close the server if it exists
+        if let Some(server) = self.server {
+            server.close();
+        }
+        
+        // Wait for the join handle to complete
+        self.join_handle.await?;
+        
+        info!("HTTP server shutdown complete");
+        Ok(())
+    }
+}
 
 /// Main MCP server
 #[derive(Debug)]
@@ -39,7 +67,13 @@ impl MCPServer {
 
     /// Start the MCP server
     pub async fn start(&self) -> Result<()> {
-        info!("Starting MCP server on {}:{}", self.config.server.host, self.config.server.port);
+        info!(
+            server_name = %self.config.server.server_name,
+            version = %self.config.server.version,
+            host = %self.config.server.host,
+            port = %self.config.server.port,
+            "Starting MCP server"
+        );
 
         // Update status
         {
@@ -67,17 +101,24 @@ impl MCPServer {
             *status = MCPServerStatus::Running;
         }
 
-        info!("MCP server started successfully");
+        info!(
+            server_name = %self.config.server.server_name,
+            status = "running",
+            "MCP server started successfully"
+        );
         Ok(())
     }
 
-    /// Start the MCP HTTP server and return a readiness receiver and join handle for tests
-    pub async fn start_http_with_readiness(&self) -> Result<(tokio::sync::oneshot::Receiver<()>, JoinHandle<()>)> {
+    /// Start the MCP HTTP server and return a readiness receiver and structured handle for tests
+    pub async fn start_http_with_readiness(&self) -> Result<(tokio::sync::oneshot::Receiver<()>, HttpServerHandle)> {
         if !self.config.server.enable_http { anyhow::bail!("HTTP disabled"); }
         let (tx, rx) = tokio::sync::oneshot::channel();
         let addr = format!("{}:{}", self.config.server.host, self.config.server.port);
         let registry = self.tool_registry.clone();
         let caws = self.caws_integration.clone();
+        let shutdown_signal = Arc::new(AtomicBool::new(false));
+        let shutdown_signal_clone = shutdown_signal.clone();
+        
         let handle = tokio::task::spawn_blocking(move || {
             let mut io = IoHandler::default();
             io.add_sync_method("health", move |_| Ok(Value::String("ok".into())));
@@ -92,9 +133,17 @@ impl MCPServer {
                 async move {
                     let v: Value = params.parse().unwrap_or(Value::Null);
                     let tool: crate::types::MCPTool = serde_json::from_value(v)
-                        .map_err(|_| JsonRpcError::invalid_params("invalid tool"))?;
+                        .map_err(|e| JsonRpcError {
+                            code: jsonrpc_core::ErrorCode::InvalidParams,
+                            message: "Invalid tool format".to_string(),
+                            data: Some(serde_json::Value::String(e.to_string())),
+                        })?;
                     let res = caws_validate.validate_tool(&tool).await
-                        .map_err(|_| JsonRpcError::internal_error())?;
+                        .map_err(|e| JsonRpcError {
+                            code: jsonrpc_core::ErrorCode::InternalError,
+                            message: "Tool validation failed".to_string(),
+                            data: Some(serde_json::Value::String(e.to_string())),
+                        })?;
                     Ok(serde_json::to_value(&res).unwrap())
                 }
             });
@@ -103,14 +152,24 @@ impl MCPServer {
                 .start_http(&addr.parse().expect("valid addr"))
                 .expect("start http");
             let _ = tx.send(());
-            server.wait();
+            // Busy-wait until shutdown then close
+            while !shutdown_signal_clone.load(Ordering::SeqCst) {
+                std::thread::sleep(std::time::Duration::from_millis(50));
+            }
+            server.close();
         });
-        Ok((rx, handle))
+        
+        let http_handle = HttpServerHandle { server: None, join_handle: handle, shutdown_signal };
+        
+        Ok((rx, http_handle))
     }
 
     /// Stop the MCP server
     pub async fn stop(&self) -> Result<()> {
-        info!("Stopping MCP server");
+        info!(
+            server_name = %self.config.server.server_name,
+            "Stopping MCP server"
+        );
 
         // Update status
         {
@@ -135,7 +194,11 @@ impl MCPServer {
             *status = MCPServerStatus::Stopped;
         }
 
-        info!("MCP server stopped successfully");
+        info!(
+            server_name = %self.config.server.server_name,
+            status = "stopped",
+            "MCP server stopped successfully"
+        );
         Ok(())
     }
 
@@ -160,7 +223,7 @@ impl MCPServer {
             .ok_or_else(|| anyhow::anyhow!("Tool not found: {}", request.tool_id))?;
 
         // Check CAWS compliance if enabled
-        let caws_result = if self.config.caws_integration.enable_caws_checking {
+        let _caws_result = if self.config.caws_integration.enable_caws_checking {
             Some(self.caws_integration.validate_tool_execution(&tool, &request).await?)
         } else {
             None
@@ -206,6 +269,13 @@ impl MCPServer {
     #[cfg(test)]
     pub async fn test_register_tool(&self, tool: MCPTool) -> Result<()> { self.tool_registry.register_tool(tool).await }
 
+    /// Register tool for testing purposes (feature-gated for test utilities)
+    #[cfg(feature = "test-utils")]
+    pub async fn register_tool_for_testing(&self, tool: MCPTool) -> Result<()> {
+        info!("Registering tool for testing: {}", tool.name);
+        self.tool_registry.register_tool(tool).await
+    }
+
     /// Start HTTP server
     async fn start_http_server(&self) -> Result<()> {
         if !self.config.server.enable_http {
@@ -247,9 +317,17 @@ impl MCPServer {
                 async move {
                     let v: Value = params.parse().unwrap_or(Value::Null);
                     let tool: crate::types::MCPTool = serde_json::from_value(v)
-                        .map_err(|e| JsonRpcError::invalid_params(format!("invalid tool: {e}")))?;
+                        .map_err(|e| JsonRpcError {
+                            code: jsonrpc_core::ErrorCode::InvalidParams,
+                            message: "Invalid tool format".to_string(),
+                            data: Some(serde_json::Value::String(e.to_string())),
+                        })?;
                     let res = caws_validate.validate_tool(&tool).await
-                        .map_err(|e| JsonRpcError::internal_error())?;
+                        .map_err(|e| JsonRpcError {
+                            code: jsonrpc_core::ErrorCode::InternalError,
+                            message: "Tool validation failed".to_string(),
+                            data: Some(serde_json::Value::String(e.to_string())),
+                        })?;
                     Ok(serde_json::to_value(&res).unwrap())
                 }
             });

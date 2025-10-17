@@ -277,7 +277,7 @@ impl PerformanceMeasurer {
     pub fn get_duration_between_checkpoints(&self, from: &str, to: &str) -> Option<Duration> {
         let from_time = self.checkpoints.iter().find(|(n, _)| n == from)?.1;
         let to_time = self.checkpoints.iter().find(|(n, _)| n == to)?.1;
-        Some(to_time.duration_since(*from_time))
+        Some(to_time.duration_since(from_time))
     }
 
     pub fn generate_report(&self) -> String {

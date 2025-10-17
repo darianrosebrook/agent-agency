@@ -19,6 +19,9 @@ pub mod regression_detector;
 pub mod types;
 pub mod metrics_collector;
 
+#[cfg(test)]
+mod tests;
+
 use tracing::{info, debug, warn, error};
 
 pub use benchmark_runner::BenchmarkRunner;

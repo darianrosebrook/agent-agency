@@ -250,7 +250,7 @@ pub struct ChangeClassification {
 }
 
 /// Change type
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum ChangeType {
     /// Bug fix
     BugFix,
@@ -296,7 +296,7 @@ pub enum ChangeCategory {
 }
 
 /// Risk level
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum RiskLevel {
     /// Very low risk
     VeryLow,

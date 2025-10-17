@@ -34,7 +34,7 @@ async fn initialization_warns_on_missing_paths() {
 async fn discovery_parses_and_validates_manifest() {
     let tmp = tempfile::TempDir::new().unwrap();
     let manifest = sample_manifest();
-    let path = write_manifest(&tmp, "tool.json", manifest);
+    let _path = write_manifest(&tmp, "tool.json", manifest);
 
     let mut cfg = ToolDiscoveryConfig::default();
     cfg.discovery_paths = vec![tmp.path().to_str().unwrap().to_string()];

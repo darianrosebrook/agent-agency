@@ -94,7 +94,7 @@ pub struct BenchmarkResult {
     pub ranking: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum BenchmarkType {
     MicroBenchmark,
     MacroBenchmark,
@@ -120,7 +120,7 @@ pub struct PerformanceSummary {
     pub improvement_areas: Vec<ImprovementArea>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PerformanceTrend {
     Improving,
     Declining,

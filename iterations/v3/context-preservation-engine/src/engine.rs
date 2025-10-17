@@ -376,6 +376,7 @@ impl ContextPreservationEngine {
             is_diff: compressed_data.1,
             based_on_snapshot_id: compressed_data.2,
             checksum,
+            compressed_data: compressed_data.0,
             metadata: HashMap::new(),
         };
 
@@ -595,16 +596,17 @@ impl ContextPreservationEngine {
     }
 
     /// Internal snapshot restoration (without public API wrapper)
-    async fn restore_snapshot_internal(&self, snapshot: &ContextSnapshot) -> Result<serde_json::Value> {
-        let compressed_data = &snapshot.compressed_data;
-        let decompressed = self.decompress_data(compressed_data)?;
+    fn restore_snapshot_internal<'a>(&'a self, snapshot: &'a ContextSnapshot) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<serde_json::Value>> + Send + 'a>> {
+        Box::pin(async move {
+            let compressed_data = &snapshot.compressed_data;
+            let decompressed = self.decompress_data(compressed_data)?;
 
-        if snapshot.is_diff {
-            if let Some(base_snapshot_id) = &snapshot.based_on_snapshot_id {
-                // This is a diff, need to restore base and apply diff
-                let cache = self.snapshot_cache.read().await;
-                if let Some(base_snapshot) = cache.get(base_snapshot_id) {
-                    let base_context = self.restore_snapshot_internal(base_snapshot).await?;
+            if snapshot.is_diff {
+                if let Some(base_snapshot_id) = &snapshot.based_on_snapshot_id {
+                    // This is a diff, need to restore base and apply diff
+                    let cache = self.snapshot_cache.read().await;
+                    if let Some(base_snapshot) = cache.get(base_snapshot_id) {
+                        let base_context = self.restore_snapshot_internal(base_snapshot).await?;
                     let diff_string = String::from_utf8(decompressed)?;
                     let diff: serde_json::Value = serde_json::from_str(&diff_string)?;
                     self.apply_diff(&base_context, &diff)
@@ -633,6 +635,7 @@ impl ContextPreservationEngine {
             }
 
             Ok(context)
-        }
+            }
+        })
     }
 }

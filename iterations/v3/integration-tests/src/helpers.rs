@@ -198,9 +198,9 @@ impl PerformanceTestUtils {
         operations_per_second: f64,
     ) -> Result<Vec<(T, Duration)>>
     where
-        F: Fn() -> Fut + Send + Sync + Clone,
-        Fut: std::future::Future<Output = Result<T>> + Send,
-        T: Send,
+        F: Fn() -> Fut + Send + Sync + Clone + 'static,
+        Fut: std::future::Future<Output = Result<T>> + Send + 'static,
+        T: Send + 'static,
     {
         let mut handles = Vec::new();
         let interval = Duration::from_secs_f64(1.0 / operations_per_second);

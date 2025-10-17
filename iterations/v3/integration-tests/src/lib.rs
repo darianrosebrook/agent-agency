@@ -162,11 +162,11 @@ impl IntegrationTestRunner {
 
 /// Initialize tracing for integration tests
 pub fn init_test_logging() {
-    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
     
     tracing_subscriber::registry()
         .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
+            EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| "integration_tests=debug,agent_agency=debug".into()),
         )
         .with(tracing_subscriber::fmt::layer())

@@ -7,7 +7,7 @@ use anyhow::Result;
 use dashmap::DashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn, error};
+use tracing::{info, warn};
 use uuid::Uuid;
 
 /// Tool registry for managing MCP tools
@@ -69,7 +69,13 @@ impl ToolRegistry {
 
     /// Register a new tool
     pub async fn register_tool(&self, tool: MCPTool) -> Result<()> {
-        info!("Registering tool: {} (v{})", tool.name, tool.version);
+        info!(
+            tool_id = %tool.id,
+            tool_name = %tool.name,
+            version = %tool.version,
+            tool_type = ?tool.tool_type,
+            "Registering tool"
+        );
 
         self.registered_tools.insert(tool.id, tool.clone());
 
@@ -81,7 +87,11 @@ impl ToolRegistry {
             stats.last_updated = chrono::Utc::now();
         }
 
-        info!("Tool registered successfully: {}", tool.id);
+        info!(
+            tool_id = %tool.id,
+            tool_name = %tool.name,
+            "Tool registered successfully"
+        );
         Ok(())
     }
 
@@ -200,13 +210,23 @@ impl ToolRegistry {
             let mut stats = self.statistics.write().await;
             stats.total_executions += 1;
             match result.status {
-                ExecutionStatus::Completed => stats.successful_executions += 1,
-                ExecutionStatus::Failed | ExecutionStatus::Timeout => stats.failed_executions += 1,
+                ExecutionStatus::Completed => {
+                    stats.successful_executions += 1;
+                    // Only include successful executions in average time calculation
+                    if stats.successful_executions == 1 {
+                        stats.average_execution_time_ms = duration_ms as f64;
+                    } else {
+                        stats.average_execution_time_ms = 
+                            (stats.average_execution_time_ms * (stats.successful_executions - 1) as f64 + duration_ms as f64) 
+                            / stats.successful_executions as f64;
+                    }
+                },
+                ExecutionStatus::Failed | ExecutionStatus::Timeout => {
+                    stats.failed_executions += 1;
+                    // Failed/timeout executions are not included in average execution time
+                },
                 _ => {}
             }
-            stats.average_execution_time_ms = 
-                (stats.average_execution_time_ms * (stats.total_executions - 1) as f64 + duration_ms as f64) 
-                / stats.total_executions as f64;
             stats.last_updated = chrono::Utc::now();
         }
 

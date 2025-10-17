@@ -12,6 +12,7 @@ use uuid::Uuid;
 use chrono::Utc;
 use std::time::Instant;
 use std::collections::HashMap;
+use serde::{Serialize, Deserialize};
 
 /// Minimal diff evaluator
 #[derive(Debug)]
@@ -196,7 +197,7 @@ impl MinimalDiffEvaluator {
         change_classification: &ChangeClassification,
         impact_analysis: &ImpactAnalysis,
     ) -> f64 {
-        let mut score = 1.0;
+        let mut score: f64 = 1.0;
 
         // Penalize high complexity changes
         if language_analysis.complexity_metrics.overall_complexity > 0.7 {
