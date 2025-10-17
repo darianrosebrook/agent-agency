@@ -144,7 +144,6 @@ pub struct WorkersConfig {
     pub worker_timeout_seconds: u64,
     pub enable_auto_scaling: bool,
     pub min_workers: u32,
-    pub max_workers: u32,
 }
 
 /// Provenance configuration
@@ -256,7 +255,6 @@ impl AppConfig {
                     worker_timeout_seconds: 60,
                     enable_auto_scaling: true,
                     min_workers: 2,
-                    max_workers: 20,
                 },
                 provenance: ProvenanceConfig {
                     enable_git_integration: true,

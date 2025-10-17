@@ -42,7 +42,7 @@ pub struct Secret {
 }
 
 /// Secret value wrapper for secure handling
-#[derive(Clone, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct SecretValue {
     inner: String,
 }
@@ -64,6 +64,12 @@ impl SecretValue {
 impl std::fmt::Debug for SecretValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("SecretValue(***)")
+    }
+}
+
+impl Drop for SecretValue {
+    fn drop(&mut self) {
+        self.inner.zeroize();
     }
 }
 
@@ -166,7 +172,8 @@ impl SecretsManager {
 
     /// Encrypt a secret value
     fn encrypt_secret(&self, value: &str) -> Result<EncryptedSecret> {
-        let nonce_bytes = ring::rand::generate(&ring::rand::SystemRandom::new())
+        let mut nonce_bytes = [0u8; 12];
+        ring::rand::generate(&ring::rand::SystemRandom::new(), &mut nonce_bytes)
             .map_err(|_| anyhow::anyhow!("Failed to generate nonce"))?;
         let nonce = Nonce::try_assume_unique_for_key(&nonce_bytes)
             .map_err(|_| anyhow::anyhow!("Invalid nonce"))?;
@@ -175,12 +182,12 @@ impl SecretsManager {
         let aad = Aad::empty();
         
         self.encryption_key
-            .seal_in_place(nonce, aad, &mut data)
+            .seal_in_place_append_tag(nonce, aad, &mut data)
             .map_err(|_| anyhow::anyhow!("Encryption failed"))?;
 
         Ok(EncryptedSecret {
             encrypted_data: data,
-            nonce: nonce_bytes.as_ref().to_vec(),
+            nonce: nonce_bytes.to_vec(),
         })
     }
 

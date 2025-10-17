@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use tracing::{info, warn, error, debug};
 
 /// Environment types
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Environment {
     Development,
     Staging,

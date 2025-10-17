@@ -22,7 +22,6 @@ pub struct ConfigLoader {
 }
 
 /// Configuration watcher for change notifications
-#[derive(Debug, Clone)]
 pub struct ConfigWatcher {
     pub id: Uuid,
     pub callback: Arc<dyn Fn(&HashMap<String, serde_json::Value>) -> Result<()> + Send + Sync>,
@@ -47,7 +46,7 @@ pub struct ConfigLoadResult {
 }
 
 /// Configuration loader builder
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ConfigLoaderBuilder {
     config_path: Option<String>,
     reload_interval: Option<Duration>,
@@ -387,7 +386,13 @@ impl ConfigLoader {
 impl ConfigLoaderBuilder {
     /// Create a new builder
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            config_path: None,
+            reload_interval: None,
+            auto_reload: false,
+            validate_on_load: false,
+            merge_strategy: MergeStrategy::Override,
+        }
     }
 
     /// Set the configuration file path
@@ -439,7 +444,7 @@ impl ConfigLoaderBuilder {
 static CONFIG_LOADER: once_cell::sync::OnceCell<Arc<ConfigLoader>> = once_cell::sync::OnceCell::new();
 
 /// Initialize the global configuration loader
-pub fn init_config_loader(config_path: &str) -> Result<Arc<ConfigLoader>> {
+pub async fn init_config_loader(config_path: &str) -> Result<Arc<ConfigLoader>> {
     let loader = Arc::new(ConfigLoader::new(config_path));
     loader.load().await?;
     

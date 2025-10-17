@@ -3,14 +3,9 @@
 //! Integrates claim extraction pipeline with council evaluation process to provide
 //! evidence-backed judge verdicts. Based on V2's verification engine patterns.
 
-use crate::types::{JudgeVerdict, Evidence as CouncilEvidence, EvidenceSource as CouncilEvidenceSource};
+use crate::types::{JudgeVerdict, Evidence as CouncilEvidence, EvidenceSource as CouncilEvidenceSource, ClaimExtractionAndVerificationProcessor, EvidenceItem};
 use crate::models::TaskSpec;
-use crate::types::{
-    ClaimExtractionAndVerificationProcessor,
-    AtomicClaim, 
-    EvidenceItem as ClaimEvidence,
-    ConversationContext,
-};
+use crate::claim_extraction::ClaimExtractor;
 use anyhow::Result;
 use tracing::{info, debug, warn};
 use uuid::Uuid;
@@ -19,14 +14,14 @@ use std::collections::HashMap;
 
 /// Evidence enrichment coordinator for council evaluations
 pub struct EvidenceEnrichmentCoordinator {
-    claim_processor: Box<dyn ClaimExtractionAndVerificationProcessor + Send + Sync>,
+    claim_processor: ClaimExtractor,
     evidence_cache: HashMap<String, Vec<CouncilEvidence>>,
 }
 
 impl EvidenceEnrichmentCoordinator {
     pub fn new() -> Self {
         Self {
-            claim_processor: Box::new(crate::claim_extraction::ClaimExtractor::new()),
+            claim_processor: ClaimExtractor::new(),
             evidence_cache: HashMap::new(),
         }
     }
@@ -165,7 +160,7 @@ impl EvidenceEnrichmentCoordinator {
     /// Convert claim extraction evidence to council evidence format
     fn convert_claim_evidence_to_council_evidence(
         &self,
-        claim_evidence: &[ClaimEvidence],
+        claim_evidence: &[EvidenceItem],
         _source_context: &str,
     ) -> Vec<CouncilEvidence> {
         claim_evidence

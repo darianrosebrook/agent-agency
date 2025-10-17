@@ -4,7 +4,7 @@ use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{info, warn, error};
-use validator::{Validate, ValidationError, ValidationErrors};
+use validator::{Validate, ValidationError as ValidatorError, ValidationErrors};
 
 /// Configuration validation result
 #[derive(Debug, Clone)]
@@ -22,7 +22,7 @@ pub struct ConfigValidator {
 }
 
 /// Validation rule for a configuration field
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ValidationRule {
     pub field_name: String,
     pub required: bool,
@@ -243,8 +243,8 @@ impl ConfigValidator {
                 for error in field_errors {
                     errors.push(ValidationError {
                         field: field.to_string(),
-                        message: error.message.clone().unwrap_or_else(|| "Validation failed".to_string()),
-                        code: error.code.to_string(),
+                        message: error.message.clone().unwrap_or_else(|| "Validation failed".to_string().into()),
+                        code: error.code.clone(),
                     });
                 }
             }
@@ -300,13 +300,13 @@ fn validate_region(region: &str) -> Result<(), ValidationError> {
 #[derive(Debug, Clone)]
 pub struct ValidationError {
     pub field: String,
-    pub message: String,
-    pub code: String,
+    pub message: std::borrow::Cow<'static, str>,
+    pub code: std::borrow::Cow<'static, str>,
 }
 
 impl std::fmt::Display for ValidationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Validation error in field '{}': {}", self.field, self.message)
+        write!(f, "Validation error in field '{}': {}", self.field, self.message.as_ref())
     }
 }
 

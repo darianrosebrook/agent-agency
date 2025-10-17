@@ -12,6 +12,9 @@ pub mod validation;
 pub mod loader;
 pub mod environment;
 
+#[cfg(test)]
+mod tests;
+
 pub use config::*;
 pub use secrets::*;
 pub use validation::*;

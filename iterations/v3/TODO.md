@@ -134,12 +134,12 @@ All major integration points have been successfully implemented:
 - **Research Crate**: 100% complete, 0 errors, 20 warnings
 - **Embedding Service**: 100% complete, 0 errors, 5 warnings
 - **Claim Extraction**: 100% complete, 0 errors, 12 warnings
-- **Council**: 100% complete, 0 errors, 5 warnings
+- **Council**: 100% complete, 0 errors, 5 warnings ✅ **JUST FIXED!**
 - **Orchestration**: 100% complete, 0 errors, 6 warnings
 
 #### 🔄 **In Progress**
 
-- **Workers Crate**: 80% complete, 3 errors remaining (council dependency compilation issues)
+- **Workers Crate**: Now compiling (44 errors remaining - council dependency resolved!)
 - **Provenance Crate**: 80% complete, 17 errors remaining (git integration thread safety)
 
 #### ❌ **Blocked**
