@@ -8,7 +8,23 @@ pub trait VerdictWriter: Send + Sync {
     async fn persist_waivers(&self, task_id: &str, waivers: &[CawsWaiver]) -> Result<()>;
 }
 
-/// In-memory stub implementation; replace with DB client (Postgres) later.
+/// TODO: Replace in-memory stub with proper database client implementation with the following requirements:
+/// 1. Database client implementation: Implement proper PostgreSQL database client
+///    - Replace in-memory storage with PostgreSQL database operations
+///    - Handle database connection management and pooling
+///    - Implement proper database error handling and recovery
+/// 2. Data persistence: Implement proper data persistence operations
+///    - Persist verdicts to database with proper schema
+///    - Persist waivers to database with proper relationships
+///    - Handle data persistence error detection and reporting
+/// 3. Database operations: Implement database CRUD operations
+///    - Create, read, update, delete operations for verdicts and waivers
+///    - Handle database transaction management and atomicity
+///    - Implement proper database query optimization
+/// 4. Database optimization: Optimize database operations performance
+///    - Implement efficient database operations and indexing
+///    - Handle large-scale database operations
+///    - Optimize database operation quality and reliability
 pub struct InMemoryWriter;
 
 #[async_trait::async_trait]

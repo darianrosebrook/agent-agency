@@ -3,10 +3,13 @@
 //! Provides persistent storage and retrieval of council verdicts, consensus results,
 //! and debate sessions for audit trails and performance analysis.
 
+use crate::database::DatabaseClient;
 use crate::types::*;
 use anyhow::{Context, Result};
+use chrono;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
+use serde_json;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
@@ -358,111 +361,135 @@ impl VerdictStorage for MemoryVerdictStorage {
     }
 }
 
-/// Database storage implementation (placeholder for future implementation)
+/// Database storage implementation for verdict records
 #[derive(Debug)]
 pub struct DatabaseVerdictStorage {
-    // TODO: Add database connection with the following requirements:
-    // 1. Database connection management: Implement robust database connection handling
-    //    - Use connection pooling for efficient database access
-    //    - Handle connection failures and retry logic
-    //    - Implement proper connection lifecycle management
-    // 2. Database configuration: Configure database connection parameters
-    //    - Set up database connection strings and credentials
-    //    - Configure connection timeouts and retry policies
-    //    - Handle database-specific configuration options
-    // 3. Database security: Implement secure database access
-    //    - Use encrypted connections and secure authentication
-    //    - Implement proper access control and permissions
-    //    - Handle sensitive data protection and compliance
-    // 4. Database monitoring: Monitor database performance and health
-    //    - Track database connection health and performance
-    //    - Monitor query performance and optimization
-    //    - Handle database maintenance and updates
+    /// Database client for executing queries
+    db_client: Arc<DatabaseClient>,
 }
 
 impl DatabaseVerdictStorage {
-    pub fn new() -> Self {
-        Self {
-            // TODO: Initialize database connection with the following requirements:
-            // 1. Connection establishment: Establish database connection with proper configuration
-            //    - Initialize connection pool with appropriate settings
-            //    - Configure connection parameters and timeouts
-            //    - Handle connection validation and health checks
-            // 2. Connection testing: Test database connection functionality
-            //    - Verify database connectivity and accessibility
-            //    - Test database permissions and access rights
-            //    - Validate database schema and table structure
-            // 3. Error handling: Handle database connection initialization errors
-            //    - Provide meaningful error messages for connection failures
-            //    - Implement retry logic for transient connection issues
-            //    - Handle database configuration and setup errors
-        }
+    /// Create new database verdict storage with existing database client
+    pub fn new(db_client: Arc<DatabaseClient>) -> Self {
+        Self { db_client }
     }
 }
 
 #[async_trait]
 impl VerdictStorage for DatabaseVerdictStorage {
-    async fn store_verdict(&self, _record: &VerdictRecord) -> Result<()> {
-        // TODO: Implement database storage with the following requirements:
-        // 1. Data serialization: Serialize verdict records for database storage
-        //    - Convert verdict records to database-compatible format
-        //    - Handle data type conversions and validation
-        //    - Implement proper data encoding and compression
-        // 2. Database operations: Perform database storage operations
-        //    - Insert verdict records into appropriate database tables
-        //    - Handle database transactions and atomicity
-        //    - Implement proper error handling and rollback
-        // 3. Data validation: Validate data before database storage
-        //    - Verify data integrity and completeness
-        //    - Check data constraints and business rules
-        //    - Handle data validation errors and corrections
-        // 4. Performance optimization: Optimize database storage performance
-        //    - Use batch operations for multiple records
-        //    - Implement proper indexing and query optimization
-        //    - Handle large data volumes efficiently
+    async fn store_verdict(&self, record: &VerdictRecord) -> Result<()> {
+        // Serialize the verdict record to JSON
+        let consensus_json = serde_json::to_string(&record.consensus_result)
+            .context("Failed to serialize consensus result")?;
+        let debate_json = record.debate_session.as_ref()
+            .map(|ds| serde_json::to_string(ds))
+            .transpose()
+            .context("Failed to serialize debate session")?;
+
+        let storage_location = record.storage_location.clone()
+            .unwrap_or_else(|| format!("verdict_{}", record.verdict_id.0));
+
+        // Prepare parameters for database insertion
+        let params = vec![
+            serde_json::Value::String(record.verdict_id.0.to_string()),
+            serde_json::Value::String(record.consensus_result.task_id.0.to_string()),
+            serde_json::Value::String(consensus_json),
+            debate_json.map(serde_json::Value::String).unwrap_or(serde_json::Value::Null),
+            serde_json::Value::String(record.created_at.to_rfc3339()),
+            serde_json::Value::String(record.accessed_at.to_rfc3339()),
+            serde_json::Value::Number(record.access_count.into()),
+            serde_json::Value::String(storage_location),
+        ];
+
+        // Insert into database using parameterized query
+        let query = r#"
+            INSERT INTO council_verdicts (
+                verdict_id, task_id, consensus_result, debate_session,
+                created_at, accessed_at, access_count, storage_location
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ON CONFLICT (verdict_id) DO UPDATE SET
+                accessed_at = EXCLUDED.accessed_at,
+                access_count = EXCLUDED.access_count
+        "#;
+
+        self.db_client.execute_parameterized_query(query, params).await
+            .context("Failed to store verdict in database")?;
+
+        info!("Stored verdict {} in database", record.verdict_id.0);
         Ok(())
     }
 
-    async fn load_verdict(&self, _verdict_id: VerdictId) -> Result<Option<VerdictRecord>> {
-        // TODO: Implement database retrieval with the following requirements:
-        // 1. Query construction: Construct database queries for verdict retrieval
-        //    - Build SQL queries with proper parameters and conditions
-        //    - Handle query optimization and performance
-        //    - Implement proper query security and injection prevention
-        // 2. Data retrieval: Retrieve verdict records from database
-        //    - Execute database queries and fetch results
-        //    - Handle database connection and transaction management
-        //    - Implement proper error handling and timeout management
-        // 3. Data deserialization: Deserialize database results to verdict records
-        //    - Convert database rows to verdict record structures
-        //    - Handle data type conversions and validation
-        //    - Implement proper data decoding and decompression
-        // 4. Result processing: Process and validate retrieved data
-        //    - Validate data integrity and completeness
-        //    - Handle missing or corrupted data
-        //    - Implement proper result formatting and return
+    async fn load_verdict(&self, verdict_id: VerdictId) -> Result<Option<VerdictRecord>> {
+        let params = vec![serde_json::Value::String(verdict_id.0.to_string())];
+
+        let query = r#"
+            SELECT verdict_id, task_id, consensus_result, debate_session,
+                   created_at, accessed_at, access_count, storage_location
+            FROM council_verdicts
+            WHERE verdict_id = $1
+        "#;
+
+        // For now, we'll use a simpler approach since we need to handle the result
+        // TODO: Implement comprehensive database verdict loading with the following requirements:
+        // 1. SQL query optimization: Use optimized SQL queries for verdict retrieval
+        //    - Implement sqlx::query_as! macros for type-safe query execution
+        //    - Use prepared statements and parameterized queries for security
+        //    - Optimize query performance with proper indexing strategies
+        //    - Handle query result mapping and type conversion efficiently
+        // 2. Verdict data retrieval: Retrieve complete verdict data from database
+        //    - Load verdict records with all associated metadata and evidence
+        //    - Handle verdict relationships and foreign key constraints
+        //    - Support verdict versioning and historical data retrieval
+        //    - Implement verdict data validation and integrity checks
+        // 3. Error handling and recovery: Implement robust error handling for database operations
+        //    - Handle database connection failures and retry logic
+        //    - Implement proper transaction management and rollback
+        //    - Provide meaningful error messages and logging for debugging
+        //    - Support database migration and schema evolution
+        // 4. Performance optimization: Optimize verdict loading performance and scalability
+        //    - Implement caching strategies for frequently accessed verdicts
+        //    - Use connection pooling and database resource management
+        //    - Support batch loading and lazy loading of verdict data
+        //    - Monitor query performance and implement query optimization
+        // For this placeholder, we'll return None to indicate not implemented
+        warn!("Database verdict loading not fully implemented yet - returning None for {}", verdict_id.0);
         Ok(None)
     }
 
-    async fn load_verdicts_by_task(&self, _task_id: TaskId) -> Result<Vec<VerdictRecord>> {
-        // TODO: Implement database query with the following requirements:
-        // 1. Query construction: Construct database queries for task-based verdict retrieval
-        //    - Build SQL queries to fetch verdicts by task ID
-        //    - Handle query optimization and performance
-        //    - Implement proper query security and injection prevention
-        // 2. Data retrieval: Retrieve verdict records for specific tasks
-        //    - Execute database queries and fetch multiple results
-        //    - Handle database connection and transaction management
-        //    - Implement proper error handling and timeout management
-        // 3. Data processing: Process and validate retrieved verdict data
-        //    - Convert database rows to verdict record structures
-        //    - Handle data type conversions and validation
-        //    - Implement proper data decoding and decompression
-        // 4. Result formatting: Format and return retrieved verdict records
-        //    - Validate data integrity and completeness
-        //    - Handle missing or corrupted data
-        //    - Implement proper result formatting and return
-        Ok(Vec::new())
+    async fn load_verdicts_by_task(&self, task_id: TaskId) -> Result<Vec<VerdictRecord>> {
+        let params = vec![serde_json::Value::String(task_id.0.to_string())];
+
+        let query = r#"
+            SELECT verdict_id, task_id, consensus_result, debate_session,
+                   created_at, accessed_at, access_count, storage_location
+            FROM council_verdicts
+            WHERE task_id = $1
+            ORDER BY created_at DESC
+        "#;
+
+        // TODO: Implement comprehensive task-based verdict loading with the following requirements:
+        // 1. Task-verdict relationship mapping: Map verdicts to their associated tasks
+        //    - Query verdict records by task ID with proper indexing
+        //    - Handle one-to-many relationships between tasks and verdicts
+        //    - Support verdict ordering and prioritization by task
+        //    - Implement efficient task-verdict lookup and retrieval
+        // 2. Verdict aggregation and filtering: Aggregate verdicts by task criteria
+        //    - Filter verdicts by task status, priority, and completion state
+        //    - Aggregate verdict statistics and metrics per task
+        //    - Support verdict sorting and pagination for large task sets
+        //    - Handle verdict conflicts and resolution within tasks
+        // 3. Performance optimization: Optimize task-based verdict queries
+        //    - Implement database indexing for task-verdict relationships
+        //    - Use query optimization and result caching strategies
+        //    - Support batch loading and lazy loading of task verdicts
+        //    - Monitor query performance and implement optimizations
+        // 4. Data integrity validation: Ensure data consistency for task verdicts
+        //    - Validate task-verdict relationships and referential integrity
+        //    - Handle orphaned verdicts and missing task references
+        //    - Implement data cleanup and maintenance procedures
+        //    - Support audit trails for verdict-task associations
+        warn!("Database task-based verdict loading not fully implemented yet - returning empty for {}", task_id.0);
+        Ok(vec![])
     }
 
     async fn load_verdicts_by_time_range(
@@ -490,13 +517,56 @@ impl VerdictStorage for DatabaseVerdictStorage {
         Ok(Vec::new())
     }
 
-    async fn delete_verdict(&self, _verdict_id: VerdictId) -> Result<()> {
-        // TODO: Implement database deletion
+    async fn delete_verdict(&self, verdict_id: VerdictId) -> Result<()> {
+        let params = vec![serde_json::Value::String(verdict_id.0.to_string())];
+
+        let query = "DELETE FROM council_verdicts WHERE verdict_id = $1";
+
+        let result = self.db_client.execute_parameterized_query(query, params).await
+            .context("Failed to delete verdict from database")?;
+
+        if result.rows_affected() == 0 {
+            warn!("No verdict found with ID {} to delete", verdict_id.0);
+        } else {
+            info!("Deleted verdict {} from database", verdict_id.0);
+        }
+
         Ok(())
     }
 
     async fn get_storage_stats(&self) -> Result<StorageStats> {
-        // TODO: Implement database statistics
+        let query = r#"
+            SELECT
+                COUNT(*) as total_verdicts,
+                COUNT(debate_session) FILTER (WHERE debate_session IS NOT NULL) as total_debates,
+                COALESCE(SUM(pg_column_size(consensus_result) + pg_column_size(debate_session)), 0) as storage_size,
+                MIN(created_at) as oldest_verdict,
+                MAX(created_at) as newest_verdict
+            FROM council_verdicts
+        "#;
+
+        // TODO: Implement comprehensive storage statistics collection with the following requirements:
+        // 1. Statistics aggregation: Aggregate verdict storage statistics from database
+        //    - Query total verdict counts and storage metrics from database
+        //    - Calculate storage size, access patterns, and usage statistics
+        //    - Aggregate debate session counts and performance metrics
+        //    - Handle statistics calculation for large datasets efficiently
+        // 2. Historical data analysis: Analyze historical verdict and debate data
+        //    - Track verdict creation dates and identify oldest/newest records
+        //    - Calculate verdict lifecycle statistics and retention metrics
+        //    - Analyze debate session durations and outcome distributions
+        //    - Implement time-based statistics and trending analysis
+        // 3. Performance metrics: Calculate storage and access performance metrics
+        //    - Measure query performance and response times for verdict operations
+        //    - Track storage utilization and efficiency metrics
+        //    - Monitor database performance and optimization opportunities
+        //    - Implement performance benchmarking and alerting
+        // 4. Data quality monitoring: Monitor verdict data quality and integrity
+        //    - Validate verdict data completeness and consistency
+        //    - Detect data anomalies and quality issues in storage
+        //    - Implement data cleanup and maintenance procedures
+        //    - Provide data quality metrics and health monitoring
+        warn!("Database storage statistics not fully implemented yet - returning defaults");
         Ok(StorageStats {
             total_verdicts: 0,
             total_debates: 0,

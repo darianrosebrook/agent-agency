@@ -1,6 +1,5 @@
 //! Learning algorithms for reflexive learning
 
-
 pub struct LearningAlgorithms {
     // TODO: Implement learning algorithms with the following requirements:
     // 1. Algorithm implementation: Implement various learning algorithms

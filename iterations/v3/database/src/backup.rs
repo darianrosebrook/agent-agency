@@ -84,13 +84,18 @@ impl BackupManager {
 
         let backup_id = Uuid::new_v4().to_string();
         let timestamp = Utc::now();
-        let file_name = format!("backup_{}_{}.sql.gz", timestamp.format("%Y%m%d_%H%M%S"), backup_id);
+        let file_name = format!(
+            "backup_{}_{}.sql.gz",
+            timestamp.format("%Y%m%d_%H%M%S"),
+            backup_id
+        );
         let file_path = self.backup_dir.join(&file_name);
 
         info!("Creating database backup: {}", file_name);
 
         // Ensure backup directory exists
-        fs::create_dir_all(&self.backup_dir).await
+        fs::create_dir_all(&self.backup_dir)
+            .await
             .context("Failed to create backup directory")?;
 
         // Create the backup using pg_dump
@@ -130,20 +135,26 @@ impl BackupManager {
         let mut backups = Vec::new();
 
         // Read backup directory
-        let mut entries = fs::read_dir(&self.backup_dir).await
+        let mut entries = fs::read_dir(&self.backup_dir)
+            .await
             .context("Failed to read backup directory")?;
 
-        while let Some(entry) = entries.next_entry().await
-            .context("Failed to read backup entry")? {
-
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .context("Failed to read backup entry")?
+        {
             if let Some(file_name) = entry.file_name().to_str() {
                 if file_name.starts_with("backup_") && file_name.ends_with(".sql.gz") {
-                    let metadata = entry.metadata().await
+                    let metadata = entry
+                        .metadata()
+                        .await
                         .context("Failed to get backup file metadata")?;
 
                     // Parse backup information from filename
                     // Format: backup_YYYYMMDD_HHMMSS_UUID.sql.gz
-                    let parts: Vec<&str> = file_name.strip_suffix(".sql.gz")
+                    let parts: Vec<&str> = file_name
+                        .strip_suffix(".sql.gz")
                         .unwrap_or(file_name)
                         .split('_')
                         .collect();
@@ -151,7 +162,7 @@ impl BackupManager {
                     if parts.len() >= 4 {
                         let timestamp_str = format!("{}_{}", parts[1], parts[2]);
                         let timestamp = DateTime::parse_from_str(&timestamp_str, "%Y%m%d_%H%M%S")
-                            .unwrap_or_else(|_| Utc::now())
+                            .unwrap_or_else(|_| Utc::now().into())
                             .with_timezone(&Utc);
 
                         backups.push(BackupResult {
@@ -179,7 +190,8 @@ impl BackupManager {
     pub async fn restore_backup(&self, backup_id: &str) -> Result<()> {
         // Find the backup file
         let backups = self.list_backups().await?;
-        let backup = backups.iter()
+        let backup = backups
+            .iter()
             .find(|b| b.backup_id == backup_id)
             .ok_or_else(|| anyhow::anyhow!("Backup not found: {}", backup_id))?;
 
@@ -205,7 +217,11 @@ impl BackupManager {
 
         for backup in to_delete {
             if let Err(e) = fs::remove_file(&backup.file_path).await {
-                warn!("Failed to delete old backup {}: {}", backup.file_path.display(), e);
+                warn!(
+                    "Failed to delete old backup {}: {}",
+                    backup.file_path.display(),
+                    e
+                );
             } else {
                 deleted_count += 1;
                 info!("Deleted old backup: {}", backup.file_path.display());
@@ -235,8 +251,7 @@ impl BackupManager {
 
         debug!("Executing pg_dump command: {:?}", cmd);
 
-        let output = cmd.output().await
-            .context("Failed to execute pg_dump")?;
+        let output = cmd.output().await.context("Failed to execute pg_dump")?;
 
         if !output.status.success() {
             let error = String::from_utf8_lossy(&output.stderr);
@@ -248,7 +263,8 @@ impl BackupManager {
         }
 
         // Get file size
-        let metadata = fs::metadata(&compressed_path).await
+        let metadata = fs::metadata(&compressed_path)
+            .await
             .context("Failed to get backup file metadata")?;
 
         Ok(BackupInternalResult {
@@ -264,12 +280,9 @@ impl BackupManager {
 
         // Use pg_restore with --list to verify the backup
         let mut cmd = Command::new("pg_restore");
-        cmd.arg("--list")
-            .arg(file_path)
-            .arg("--verbose");
+        cmd.arg("--list").arg(file_path).arg("--verbose");
 
-        let output = cmd.output().await
-            .context("Failed to verify backup")?;
+        let output = cmd.output().await.context("Failed to verify backup")?;
 
         if output.status.success() {
             info!("Backup verification successful");
@@ -293,8 +306,7 @@ impl BackupManager {
             .arg("--if-exists")
             .arg(file_path);
 
-        let output = cmd.output().await
-            .context("Failed to test restore")?;
+        let output = cmd.output().await.context("Failed to test restore")?;
 
         if output.status.success() {
             info!("Restore test successful");
@@ -322,8 +334,7 @@ impl BackupManager {
 
         debug!("Executing pg_restore command: {:?}", cmd);
 
-        let output = cmd.output().await
-            .context("Failed to execute pg_restore")?;
+        let output = cmd.output().await.context("Failed to execute pg_restore")?;
 
         if !output.status.success() {
             let error = String::from_utf8_lossy(&output.stderr);
@@ -366,5 +377,3 @@ mod tests {
         assert_eq!(backup_manager.backup_config.retention_count, 7);
     }
 }
-
-

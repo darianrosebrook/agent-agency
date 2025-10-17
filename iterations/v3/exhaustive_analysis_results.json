@@ -1,0 +1,4473 @@
+{
+  "analysis_metadata": {
+    "start_time": "2025-10-17 14:30:05",
+    "duration_seconds": 14.59,
+    "root_directory": ".",
+    "min_confidence_threshold": 0.5
+  },
+  "file_statistics": {
+    "total_files_found": 5337,
+    "non_ignored_files": 251,
+    "ignored_files": 5086,
+    "files_with_todos": 71,
+    "language_breakdown": {
+      "rust": 146,
+      "javascript": 16,
+      "typescript": 19,
+      "python": 2,
+      "shell": 2,
+      "yaml": 7,
+      "toml": 21,
+      "json": 11,
+      "markdown": 22,
+      "sql": 5
+    }
+  },
+  "comment_statistics": {
+    "total_comments_analyzed": 9098,
+    "total_todos_found": 221,
+    "todos_by_confidence": {
+      "high_confidence_90_plus": 0,
+      "medium_confidence_70_89": 0,
+      "low_confidence_50_69": 0
+    },
+    "todos_by_type": {
+      "explicit_todos": 0,
+      "hidden_todos": 0,
+      "placeholder_code": 0,
+      "temporary_solutions": 0,
+      "incomplete_implementations": 0,
+      "technical_debt": 0
+    },
+    "pattern_statistics": {
+      "\\bTODO\\b.*?:": 186,
+      "\\bauthentication\\b.*?(implement|add|fix)": 1,
+      "\\bNOTE\\b.*?:.*?(fix|implement|complete|add|replace)": 1,
+      "\\bplaceholder\\s+(code|implementation|function|value|data|content)\\b": 5,
+      "\\bmock\\s+(implementation|function|data|value|content)\\b": 6,
+      "\\bdefault\\s+(implementation|function|data|value|content)\\b": 2,
+      "\\bcleanup\\b.*?(needed|required|should)": 1,
+      "\\bupdate\\b.*?(needed|required|should)": 1,
+      "\\befficiency\\b.*?(improve|optimize|fix)": 2,
+      "\\bvalidation\\b.*?(missing|incomplete|needed|required)": 2,
+      "\\btest\\s+(implementation|function|data|value|content)\\b": 2,
+      "\\bwill\\s+be\\s+implemented\\b": 4,
+      "\\bwill\\s+be\\b.*?(implemented|added|fixed|completed)": 4,
+      "\\bstub\\s+(implementation|function|method|class)\\b": 2,
+      "\\bwould\\s+be\\b.*?(implemented|added|fixed|completed)": 1,
+      "\\bsimple\\s+(implementation|function|data|value|content)\\b": 1,
+      "\\bin\\s+a\\s+real\\s+implementation\\b": 2,
+      "\\bbasic\\s+(implementation|function|data|value|content)\\b": 2
+    }
+  },
+  "files": {
+    "workers/src/caws_checker.rs": {
+      "language": "rust",
+      "total_comments": 135,
+      "todos": [
+        {
+          "file_path": "workers/src/caws_checker.rs",
+          "line_number": 871,
+          "language": "rust",
+          "comment_text": "TODO: Implement database lookup for violations with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "workers/src/manager.rs": {
+      "language": "rust",
+      "total_comments": 122,
+      "todos": [
+        {
+          "file_path": "workers/src/manager.rs",
+          "line_number": 302,
+          "language": "rust",
+          "comment_text": "TODO: Implement actual health check with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "workers/src/manager.rs",
+          "line_number": 355,
+          "language": "rust",
+          "comment_text": "TODO: Implement actual health check with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "workers/src/manager.rs",
+          "line_number": 390,
+          "language": "rust",
+          "comment_text": "TODO: Implement actual worker discovery with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "workers/src/manager.rs",
+          "line_number": 407,
+          "language": "rust",
+          "comment_text": "TODO: Implement actual worker discovery with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "workers/src/executor.rs": {
+      "language": "rust",
+      "total_comments": 146,
+      "todos": [
+        {
+          "file_path": "workers/src/executor.rs",
+          "line_number": 15,
+          "language": "rust",
+          "comment_text": "TODO: Add HTTP client for model communication with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "workers/src/executor.rs",
+          "line_number": 20,
+          "language": "rust",
+          "comment_text": "2. Authentication and security: Implement secure communication with workers",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "security_concerns",
+          "matched_patterns": [
+            "\\bauthentication\\b.*?(implement|add|fix)"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": true
+        },
+        {
+          "file_path": "workers/src/executor.rs",
+          "line_number": 62,
+          "language": "rust",
+          "comment_text": "TODO: Get worker from registry with the following requirements:",
+          "confidence_score": 1.0,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "workers/src/executor.rs",
+          "line_number": 213,
+          "language": "rust",
+          "comment_text": "TODO: Implement sophisticated requirement extraction with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "workers/src/executor.rs",
+          "line_number": 279,
+          "language": "rust",
+          "comment_text": "TODO: Implement actual HTTP call to worker model with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "workers/src/executor.rs",
+          "line_number": 523,
+          "language": "rust",
+          "comment_text": "TODO: Implement actual CAWS specification details with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "workers/src/router.rs": {
+      "language": "rust",
+      "total_comments": 71,
+      "todos": [
+        {
+          "file_path": "workers/src/router.rs",
+          "line_number": 286,
+          "language": "rust",
+          "comment_text": "TODO: Implement actual round robin with persistent state with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "workspace-state-manager/src/manager.rs": {
+      "language": "rust",
+      "total_comments": 55,
+      "todos": [
+        {
+          "file_path": "workspace-state-manager/src/manager.rs",
+          "line_number": 407,
+          "language": "rust",
+          "comment_text": "TODO: Implement proper incremental capture using git diff",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "workspace-state-manager/src/storage.rs": {
+      "language": "rust",
+      "total_comments": 70,
+      "todos": [
+        {
+          "file_path": "workspace-state-manager/src/storage.rs",
+          "line_number": 253,
+          "language": "rust",
+          "comment_text": "TODO: Implement proper concurrent storage with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "workspace-state-manager/src/storage.rs",
+          "line_number": 286,
+          "language": "rust",
+          "comment_text": "TODO: Implement state deletion with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "workspace-state-manager/src/storage.rs",
+          "line_number": 308,
+          "language": "rust",
+          "comment_text": "TODO: Implement diff storage with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "orchestration/src/orchestrate.rs": {
+      "language": "rust",
+      "total_comments": 13,
+      "todos": [
+        {
+          "file_path": "orchestration/src/orchestrate.rs",
+          "line_number": 133,
+          "language": "rust",
+          "comment_text": "TODO: Wire a shared ProvenanceService into orchestrate context instead of ad-hoc creation",
+          "confidence_score": 1.0,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "orchestration/src/orchestrate.rs",
+          "line_number": 148,
+          "language": "rust",
+          "comment_text": "NOTE: This assumes a ProvenanceService available; replace with actual instance in real wiring",
+          "confidence_score": 1.0,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bNOTE\\b.*?:.*?(fix|implement|complete|add|replace)"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "orchestration/src/persistence.rs": {
+      "language": "rust",
+      "total_comments": 18,
+      "todos": [
+        {
+          "file_path": "orchestration/src/persistence.rs",
+          "line_number": 11,
+          "language": "rust",
+          "comment_text": "/ TODO: Replace in-memory stub with proper database client implementation with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "orchestration/src/persistence_postgres.rs": {
+      "language": "rust",
+      "total_comments": 26,
+      "todos": [
+        {
+          "file_path": "orchestration/src/persistence_postgres.rs",
+          "line_number": 26,
+          "language": "rust",
+          "comment_text": "TODO: Handle votes, remediation, and constitutional_refs when FinalVerdict structure is finalized",
+          "confidence_score": 1.0,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "orchestration/src/persistence_postgres.rs",
+          "line_number": 30,
+          "language": "rust",
+          "comment_text": "TODO: Fix SQLx query macros - need DATABASE_URL or prepare offline",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "orchestration/src/persistence_postgres.rs",
+          "line_number": 49,
+          "language": "rust",
+          "comment_text": "TODO: Fix SQLx query macros - need DATABASE_URL or prepare offline",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "orchestration/src/provenance.rs": {
+      "language": "rust",
+      "total_comments": 37,
+      "todos": [
+        {
+          "file_path": "orchestration/src/provenance.rs",
+          "line_number": 13,
+          "language": "rust",
+          "comment_text": "TODO: Implement event emission with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "orchestration/src/provenance.rs",
+          "line_number": 34,
+          "language": "rust",
+          "comment_text": "TODO: Implement orchestration entry tracking with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "orchestration/src/provenance.rs",
+          "line_number": 54,
+          "language": "rust",
+          "comment_text": "Placeholder implementation",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\bplaceholder\\s+(code|implementation|function|value|data|content)\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "orchestration/src/provenance.rs",
+          "line_number": 58,
+          "language": "rust",
+          "comment_text": "Placeholder implementation",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\bplaceholder\\s+(code|implementation|function|value|data|content)\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "orchestration/src/provenance_adapter.rs": {
+      "language": "rust",
+      "total_comments": 19,
+      "todos": [
+        {
+          "file_path": "orchestration/src/provenance_adapter.rs",
+          "line_number": 38,
+          "language": "rust",
+          "comment_text": "/ TODO: Implement comprehensive provenance client trait with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "provenance/src/git_integration.rs": {
+      "language": "rust",
+      "total_comments": 70,
+      "todos": [
+        {
+          "file_path": "provenance/src/git_integration.rs",
+          "line_number": 105,
+          "language": "rust",
+          "comment_text": "TODO: Implement proper reference handling without lifetime issues with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "provenance/src/git_integration.rs",
+          "line_number": 127,
+          "language": "rust",
+          "comment_text": "TODO: Implement proper commit handling without lifetime issues with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "provenance/src/git_integration.rs",
+          "line_number": 149,
+          "language": "rust",
+          "comment_text": "TODO: Implement proper thread-safe git integration with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "provenance/src/service.rs": {
+      "language": "rust",
+      "total_comments": 77,
+      "todos": [
+        {
+          "file_path": "provenance/src/service.rs",
+          "line_number": 72,
+          "language": "rust",
+          "comment_text": "TODO: Re-enable when GitIntegration trait is properly implemented with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "provenance/src/service.rs",
+          "line_number": 481,
+          "language": "rust",
+          "comment_text": "Mock implementation - in real implementation, this would store to database",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\bmock\\s+(implementation|function|data|value|content)\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "provenance/src/service.rs",
+          "line_number": 486,
+          "language": "rust",
+          "comment_text": "Mock implementation",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\bmock\\s+(implementation|function|data|value|content)\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "provenance/src/service.rs",
+          "line_number": 491,
+          "language": "rust",
+          "comment_text": "Mock implementation",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\bmock\\s+(implementation|function|data|value|content)\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "provenance/src/service.rs",
+          "line_number": 496,
+          "language": "rust",
+          "comment_text": "Mock implementation",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\bmock\\s+(implementation|function|data|value|content)\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "provenance/src/service.rs",
+          "line_number": 501,
+          "language": "rust",
+          "comment_text": "Mock implementation",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\bmock\\s+(implementation|function|data|value|content)\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "provenance/src/service.rs",
+          "line_number": 519,
+          "language": "rust",
+          "comment_text": "Mock implementation",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\bmock\\s+(implementation|function|data|value|content)\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "provenance/src/signer.rs": {
+      "language": "rust",
+      "total_comments": 55,
+      "todos": [
+        {
+          "file_path": "provenance/src/signer.rs",
+          "line_number": 310,
+          "language": "rust",
+          "comment_text": "TODO: Implement key file saving with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "model-benchmarking/src/scoring_system.rs": {
+      "language": "rust",
+      "total_comments": 35,
+      "todos": [
+        {
+          "file_path": "model-benchmarking/src/scoring_system.rs",
+          "line_number": 7,
+          "language": "rust",
+          "comment_text": "TODO: Implement scoring system with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "model-benchmarking/src/scoring_system.rs",
+          "line_number": 35,
+          "language": "rust",
+          "comment_text": "TODO: Implement performance summary calculation with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "model-benchmarking/src/model_evaluator.rs": {
+      "language": "rust",
+      "total_comments": 69,
+      "todos": [
+        {
+          "file_path": "model-benchmarking/src/model_evaluator.rs",
+          "line_number": 7,
+          "language": "rust",
+          "comment_text": "TODO: Implement model evaluator with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "model-benchmarking/src/model_evaluator.rs",
+          "line_number": 32,
+          "language": "rust",
+          "comment_text": "TODO: Implement model evaluation with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "model-benchmarking/src/model_evaluator.rs",
+          "line_number": 68,
+          "language": "rust",
+          "comment_text": "TODO: Implement baseline comparison with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "model-benchmarking/src/model_evaluator.rs",
+          "line_number": 99,
+          "language": "rust",
+          "comment_text": "TODO: Implement recommendation generation with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "model-benchmarking/src/lib.rs": {
+      "language": "rust",
+      "total_comments": 82,
+      "todos": [
+        {
+          "file_path": "model-benchmarking/src/lib.rs",
+          "line_number": 325,
+          "language": "rust",
+          "comment_text": "TODO: Implement model filtering with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "model-benchmarking/src/regression_detector.rs": {
+      "language": "rust",
+      "total_comments": 35,
+      "todos": [
+        {
+          "file_path": "model-benchmarking/src/regression_detector.rs",
+          "line_number": 7,
+          "language": "rust",
+          "comment_text": "TODO: Implement regression detector with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "model-benchmarking/src/regression_detector.rs",
+          "line_number": 35,
+          "language": "rust",
+          "comment_text": "TODO: Implement regression detection with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "model-benchmarking/src/benchmark_runner.rs": {
+      "language": "rust",
+      "total_comments": 206,
+      "todos": [
+        {
+          "file_path": "model-benchmarking/src/benchmark_runner.rs",
+          "line_number": 133,
+          "language": "rust",
+          "comment_text": "TODO: Implement macro benchmark with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "model-benchmarking/src/benchmark_runner.rs",
+          "line_number": 170,
+          "language": "rust",
+          "comment_text": "TODO: Implement quality benchmark with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "model-benchmarking/src/benchmark_runner.rs",
+          "line_number": 330,
+          "language": "rust",
+          "comment_text": "TODO: Add macro and other benchmark types when implemented with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "model-benchmarking/src/benchmark_runner.rs",
+          "line_number": 481,
+          "language": "rust",
+          "comment_text": "TODO: Implement actual model execution with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "model-benchmarking/src/benchmark_runner.rs",
+          "line_number": 655,
+          "language": "rust",
+          "comment_text": "Add default implementation for BenchmarkMetrics",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\bdefault\\s+(implementation|function|data|value|content)\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "model-benchmarking/src/performance_tracker.rs": {
+      "language": "rust",
+      "total_comments": 120,
+      "todos": [
+        {
+          "file_path": "model-benchmarking/src/performance_tracker.rs",
+          "line_number": 8,
+          "language": "rust",
+          "comment_text": "TODO: Implement performance tracker with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "model-benchmarking/src/performance_tracker.rs",
+          "line_number": 33,
+          "language": "rust",
+          "comment_text": "TODO: Implement active models retrieval with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "model-benchmarking/src/performance_tracker.rs",
+          "line_number": 54,
+          "language": "rust",
+          "comment_text": "TODO: Implement benchmark report storage with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "model-benchmarking/src/performance_tracker.rs",
+          "line_number": 75,
+          "language": "rust",
+          "comment_text": "TODO: Implement evaluation result storage with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "model-benchmarking/src/performance_tracker.rs",
+          "line_number": 96,
+          "language": "rust",
+          "comment_text": "TODO: Implement model performance retrieval with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "model-benchmarking/src/performance_tracker.rs",
+          "line_number": 117,
+          "language": "rust",
+          "comment_text": "TODO: Implement model confidence retrieval with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "model-benchmarking/src/performance_tracker.rs",
+          "line_number": 141,
+          "language": "rust",
+          "comment_text": "TODO: Implement historical performance retrieval with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "apple-silicon/src/quantization.rs": {
+      "language": "rust",
+      "total_comments": 40,
+      "todos": [
+        {
+          "file_path": "apple-silicon/src/quantization.rs",
+          "line_number": 11,
+          "language": "rust",
+          "comment_text": "TODO: Add quantization implementation with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "apple-silicon/src/quantization.rs",
+          "line_number": 42,
+          "language": "rust",
+          "comment_text": "TODO: Implement model quantization with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "apple-silicon/src/memory.rs": {
+      "language": "rust",
+      "total_comments": 32,
+      "todos": [
+        {
+          "file_path": "apple-silicon/src/memory.rs",
+          "line_number": 96,
+          "language": "rust",
+          "comment_text": "/ Check if memory cleanup is needed",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "refactoring_debt",
+          "matched_patterns": [
+            "\\bcleanup\\b.*?(needed|required|should)"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": true
+        },
+        {
+          "file_path": "apple-silicon/src/memory.rs",
+          "line_number": 105,
+          "language": "rust",
+          "comment_text": "TODO: Implement actual memory cleanup with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "apple-silicon/src/core_ml.rs": {
+      "language": "rust",
+      "total_comments": 120,
+      "todos": [
+        {
+          "file_path": "apple-silicon/src/core_ml.rs",
+          "line_number": 41,
+          "language": "rust",
+          "comment_text": "TODO: Implement actual Core ML model loading with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "apple-silicon/src/core_ml.rs",
+          "line_number": 148,
+          "language": "rust",
+          "comment_text": "TODO: Implement actual Core ML inference with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "apple-silicon/src/core_ml.rs",
+          "line_number": 240,
+          "language": "rust",
+          "comment_text": "TODO: Implement actual model optimization with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "apple-silicon/src/core_ml.rs",
+          "line_number": 273,
+          "language": "rust",
+          "comment_text": "Update supported targets if needed",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "refactoring_debt",
+          "matched_patterns": [
+            "\\bupdate\\b.*?(needed|required|should)"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": true
+        },
+        {
+          "file_path": "apple-silicon/src/core_ml.rs",
+          "line_number": 374,
+          "language": "rust",
+          "comment_text": "TODO: Implement actual system monitoring with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "apple-silicon/src/core_ml.rs",
+          "line_number": 409,
+          "language": "rust",
+          "comment_text": "TODO: Implement actual quality assessment with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "apple-silicon/src/ane.rs": {
+      "language": "rust",
+      "total_comments": 58,
+      "todos": [
+        {
+          "file_path": "apple-silicon/src/ane.rs",
+          "line_number": 11,
+          "language": "rust",
+          "comment_text": "TODO: Add ANE implementation with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "apple-silicon/src/ane.rs",
+          "line_number": 38,
+          "language": "rust",
+          "comment_text": "TODO: Implement ANE initialization with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "apple-silicon/src/ane.rs",
+          "line_number": 60,
+          "language": "rust",
+          "comment_text": "TODO: Implement ANE inference with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "apple-silicon/src/metal_gpu.rs": {
+      "language": "rust",
+      "total_comments": 58,
+      "todos": [
+        {
+          "file_path": "apple-silicon/src/metal_gpu.rs",
+          "line_number": 11,
+          "language": "rust",
+          "comment_text": "TODO: Add Metal GPU implementation with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "apple-silicon/src/metal_gpu.rs",
+          "line_number": 38,
+          "language": "rust",
+          "comment_text": "TODO: Implement Metal GPU initialization with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "apple-silicon/src/metal_gpu.rs",
+          "line_number": 60,
+          "language": "rust",
+          "comment_text": "TODO: Implement Metal GPU inference with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "minimal-diff-evaluator/src/change_classifier.rs": {
+      "language": "rust",
+      "total_comments": 22,
+      "todos": [
+        {
+          "file_path": "minimal-diff-evaluator/src/change_classifier.rs",
+          "line_number": 30,
+          "language": "rust",
+          "comment_text": "TODO: Implement change classification with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "minimal-diff-evaluator/src/impact_analyzer.rs": {
+      "language": "rust",
+      "total_comments": 22,
+      "todos": [
+        {
+          "file_path": "minimal-diff-evaluator/src/impact_analyzer.rs",
+          "line_number": 31,
+          "language": "rust",
+          "comment_text": "TODO: Implement impact analysis with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "minimal-diff-evaluator/src/evaluator.rs": {
+      "language": "rust",
+      "total_comments": 68,
+      "todos": [
+        {
+          "file_path": "minimal-diff-evaluator/src/evaluator.rs",
+          "line_number": 408,
+          "language": "rust",
+          "comment_text": "TODO: Implement configuration update with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "minimal-diff-evaluator/src/ast_analyzer.rs": {
+      "language": "rust",
+      "total_comments": 22,
+      "todos": [
+        {
+          "file_path": "minimal-diff-evaluator/src/ast_analyzer.rs",
+          "line_number": 29,
+          "language": "rust",
+          "comment_text": "TODO: Implement AST analysis with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "security-policy-enforcer/src/enforcer.rs": {
+      "language": "rust",
+      "total_comments": 51,
+      "todos": [
+        {
+          "file_path": "security-policy-enforcer/src/enforcer.rs",
+          "line_number": 449,
+          "language": "rust",
+          "comment_text": "TODO: Implement comprehensive path resolution with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "security-policy-enforcer/src/audit.rs": {
+      "language": "rust",
+      "total_comments": 82,
+      "todos": [
+        {
+          "file_path": "security-policy-enforcer/src/audit.rs",
+          "line_number": 122,
+          "language": "rust",
+          "comment_text": "TODO: Implement policy update with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "security-policy-enforcer/src/audit.rs",
+          "line_number": 197,
+          "language": "rust",
+          "comment_text": "TODO: Implement log file rotation with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "security-policy-enforcer/src/audit.rs",
+          "line_number": 222,
+          "language": "rust",
+          "comment_text": "TODO: Implement audit statistics analysis with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "system-health-monitor/src/lib.rs": {
+      "language": "rust",
+      "total_comments": 59,
+      "todos": [
+        {
+          "file_path": "system-health-monitor/src/lib.rs",
+          "line_number": 420,
+          "language": "rust",
+          "comment_text": "TODO: Implement comprehensive health checks",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "reflexive-learning/src/credit_assigner.rs": {
+      "language": "rust",
+      "total_comments": 22,
+      "todos": [
+        {
+          "file_path": "reflexive-learning/src/credit_assigner.rs",
+          "line_number": 4,
+          "language": "rust",
+          "comment_text": "TODO: Implement credit assignment with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "reflexive-learning/src/progress_tracker.rs": {
+      "language": "rust",
+      "total_comments": 22,
+      "todos": [
+        {
+          "file_path": "reflexive-learning/src/progress_tracker.rs",
+          "line_number": 5,
+          "language": "rust",
+          "comment_text": "TODO: Implement progress tracking with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "reflexive-learning/src/lib.rs": {
+      "language": "rust",
+      "total_comments": 54,
+      "todos": [
+        {
+          "file_path": "reflexive-learning/src/lib.rs",
+          "line_number": 74,
+          "language": "rust",
+          "comment_text": "TODO: Add initialize_session method to ProgressTracker with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "reflexive-learning/src/lib.rs",
+          "line_number": 90,
+          "language": "rust",
+          "comment_text": "TODO: Add initialize_session method to ContextPreservationEngine with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "reflexive-learning/src/learning_algorithms.rs": {
+      "language": "rust",
+      "total_comments": 22,
+      "todos": [
+        {
+          "file_path": "reflexive-learning/src/learning_algorithms.rs",
+          "line_number": 5,
+          "language": "rust",
+          "comment_text": "TODO: Implement learning algorithms with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "reflexive-learning/src/coordinator.rs": {
+      "language": "rust",
+      "total_comments": 164,
+      "todos": [
+        {
+          "file_path": "reflexive-learning/src/coordinator.rs",
+          "line_number": 488,
+          "language": "rust",
+          "comment_text": "TODO: Update progress metrics based on performance trends with the following requirements:",
+          "confidence_score": 1.0,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "reflexive-learning/src/coordinator.rs",
+          "line_number": 1311,
+          "language": "rust",
+          "comment_text": "TODO: Implement proper historical performance update with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "reflexive-learning/src/coordinator.rs",
+          "line_number": 1328,
+          "language": "rust",
+          "comment_text": "TODO: Implement proper historical performance update with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "reflexive-learning/src/context_preservation.rs": {
+      "language": "rust",
+      "total_comments": 22,
+      "todos": [
+        {
+          "file_path": "reflexive-learning/src/context_preservation.rs",
+          "line_number": 5,
+          "language": "rust",
+          "comment_text": "TODO: Implement context preservation with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "reflexive-learning/src/adaptive_allocator.rs": {
+      "language": "rust",
+      "total_comments": 22,
+      "todos": [
+        {
+          "file_path": "reflexive-learning/src/adaptive_allocator.rs",
+          "line_number": 5,
+          "language": "rust",
+          "comment_text": "TODO: Implement adaptive resource allocation with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "reflexive-learning/src/adaptive_allocator.rs",
+          "line_number": 17,
+          "language": "rust",
+          "comment_text": "- Handle resource optimization and efficiency improvements",
+          "confidence_score": 0.8,
+          "pattern_category": "performance_issues",
+          "matched_patterns": [
+            "\\befficiency\\b.*?(improve|optimize|fix)"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": true
+        }
+      ]
+    },
+    "config/src/validation.rs": {
+      "language": "rust",
+      "total_comments": 31,
+      "todos": [
+        {
+          "file_path": "config/src/validation.rs",
+          "line_number": 360,
+          "language": "rust",
+          "comment_text": "Add custom validation logic here if needed",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "testing_debt",
+          "matched_patterns": [
+            "\\bvalidation\\b.*?(missing|incomplete|needed|required)"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": true,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "council/src/debate.rs": {
+      "language": "rust",
+      "total_comments": 45,
+      "todos": [
+        {
+          "file_path": "council/src/debate.rs",
+          "line_number": 164,
+          "language": "rust",
+          "comment_text": "TODO: Implement actual model inference to generate arguments",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/debate.rs",
+          "line_number": 223,
+          "language": "rust",
+          "comment_text": "TODO: Implement actual research agent integration",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/debate.rs",
+          "line_number": 270,
+          "language": "rust",
+          "comment_text": "TODO: Create proper consensus result",
+          "confidence_score": 1.0,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/debate.rs",
+          "line_number": 279,
+          "language": "rust",
+          "comment_text": "TODO: Implement sophisticated position updating based on arguments and evidence",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "council/src/intelligent_edge_case_testing.rs": {
+      "language": "rust",
+      "total_comments": 128,
+      "todos": [
+        {
+          "file_path": "council/src/intelligent_edge_case_testing.rs",
+          "line_number": 40,
+          "language": "rust",
+          "comment_text": "/ Test optimizer for test efficiency improvement",
+          "confidence_score": 0.8,
+          "pattern_category": "performance_issues",
+          "matched_patterns": [
+            "\\befficiency\\b.*?(improve|optimize|fix)"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": true
+        },
+        {
+          "file_path": "council/src/intelligent_edge_case_testing.rs",
+          "line_number": 773,
+          "language": "rust",
+          "comment_text": "TODO: Implement dynamic test generation logic with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/intelligent_edge_case_testing.rs",
+          "line_number": 777,
+          "language": "rust",
+          "comment_text": "- Create test data and input variations",
+          "confidence_score": 0.8,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\btest\\s+(implementation|function|data|value|content)\\b"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/intelligent_edge_case_testing.rs",
+          "line_number": 784,
+          "language": "rust",
+          "comment_text": "- Validate test data and input parameters",
+          "confidence_score": 0.8,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\btest\\s+(implementation|function|data|value|content)\\b"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/intelligent_edge_case_testing.rs",
+          "line_number": 847,
+          "language": "rust",
+          "comment_text": "TODO: Implement edge case analysis logic with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/intelligent_edge_case_testing.rs",
+          "line_number": 914,
+          "language": "rust",
+          "comment_text": "TODO: Implement test optimization logic with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/intelligent_edge_case_testing.rs",
+          "line_number": 968,
+          "language": "rust",
+          "comment_text": "TODO: Implement coverage analysis logic with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/intelligent_edge_case_testing.rs",
+          "line_number": 1017,
+          "language": "rust",
+          "comment_text": "These will be implemented with full functionality",
+          "confidence_score": 0.8,
+          "pattern_category": "incomplete_implementation",
+          "matched_patterns": [
+            "\\bwill\\s+be\\s+implemented\\b",
+            "\\bwill\\s+be\\b.*?(implemented|added|fixed|completed)"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": false,
+          "is_temporary": true,
+          "is_incomplete": true,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "council/src/predictive_learning_system.rs": {
+      "language": "rust",
+      "total_comments": 59,
+      "todos": [
+        {
+          "file_path": "council/src/predictive_learning_system.rs",
+          "line_number": 570,
+          "language": "rust",
+          "comment_text": "TODO: Implement performance prediction logic",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/predictive_learning_system.rs",
+          "line_number": 610,
+          "language": "rust",
+          "comment_text": "TODO: Implement strategy optimization logic",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/predictive_learning_system.rs",
+          "line_number": 654,
+          "language": "rust",
+          "comment_text": "TODO: Implement resource prediction logic",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/predictive_learning_system.rs",
+          "line_number": 702,
+          "language": "rust",
+          "comment_text": "TODO: Implement outcome prediction logic",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/predictive_learning_system.rs",
+          "line_number": 744,
+          "language": "rust",
+          "comment_text": "TODO: Implement learning acceleration logic",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/predictive_learning_system.rs",
+          "line_number": 767,
+          "language": "rust",
+          "comment_text": "These will be implemented with full functionality",
+          "confidence_score": 0.8,
+          "pattern_category": "incomplete_implementation",
+          "matched_patterns": [
+            "\\bwill\\s+be\\s+implemented\\b",
+            "\\bwill\\s+be\\b.*?(implemented|added|fixed|completed)"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": false,
+          "is_temporary": true,
+          "is_incomplete": true,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "council/src/coordinator.rs": {
+      "language": "rust",
+      "total_comments": 66,
+      "todos": [
+        {
+          "file_path": "council/src/coordinator.rs",
+          "line_number": 282,
+          "language": "rust",
+          "comment_text": "/ Get current council metrics (placeholder implementation)",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\bplaceholder\\s+(code|implementation|function|value|data|content)\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/coordinator.rs",
+          "line_number": 307,
+          "language": "rust",
+          "comment_text": "TODO: Implement comprehensive evidence enrichment health check with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "council/src/claim_extraction.rs": {
+      "language": "rust",
+      "total_comments": 71,
+      "todos": [
+        {
+          "file_path": "council/src/claim_extraction.rs",
+          "line_number": 50,
+          "language": "rust",
+          "comment_text": "TODO: Implement default pattern initialization with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/claim_extraction.rs",
+          "line_number": 762,
+          "language": "rust",
+          "comment_text": "TODO: Implement comprehensive temporal resolution with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "council/src/learning.rs": {
+      "language": "rust",
+      "total_comments": 108,
+      "todos": [
+        {
+          "file_path": "council/src/learning.rs",
+          "line_number": 336,
+          "language": "rust",
+          "comment_text": "TODO: Implement similar task signal retrieval with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/learning.rs",
+          "line_number": 386,
+          "language": "rust",
+          "comment_text": "TODO: Implement resource requirement analysis with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "council/src/advanced_arbitration.rs": {
+      "language": "rust",
+      "total_comments": 412,
+      "todos": [
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 193,
+          "language": "rust",
+          "comment_text": "Stub implementation - would integrate learning from arbitration outcomes",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\bstub\\s+(implementation|function|method|class)\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 203,
+          "language": "rust",
+          "comment_text": "Stub implementation - would integrate learning from pleading outcomes",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\bstub\\s+(implementation|function|method|class)\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 448,
+          "language": "rust",
+          "comment_text": "TODO: Implement conflict risk analysis when TaskSpec has required fields",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 496,
+          "language": "rust",
+          "comment_text": "TODO: Implement preventive measures suggestion",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 497,
+          "language": "rust",
+          "comment_text": "TODO: Implement preventive measures suggestion with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 732,
+          "language": "rust",
+          "comment_text": "TODO: Implement pattern detection with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 742,
+          "language": "rust",
+          "comment_text": "Placeholder implementation - analyze output content for patterns",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\bplaceholder\\s+(code|implementation|function|value|data|content)\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 774,
+          "language": "rust",
+          "comment_text": "TODO: Implement deviation calculation with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 784,
+          "language": "rust",
+          "comment_text": "Placeholder implementation - calculate deviation based on output characteristics",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\bplaceholder\\s+(code|implementation|function|value|data|content)\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 925,
+          "language": "rust",
+          "comment_text": "TODO: Implement evidence collection with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 945,
+          "language": "rust",
+          "comment_text": "TODO: Implement evidence synthesis with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 958,
+          "language": "rust",
+          "comment_text": "TODO: Implement credibility assessment with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 971,
+          "language": "rust",
+          "comment_text": "TODO: Implement source validation with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 990,
+          "language": "rust",
+          "comment_text": "TODO: Implement conflict resolution algorithms with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 1132,
+          "language": "rust",
+          "comment_text": "TODO: Implement completeness checking with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 1161,
+          "language": "rust",
+          "comment_text": "TODO: Implement correctness validation with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 1187,
+          "language": "rust",
+          "comment_text": "TODO: Implement batch consistency analysis with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 1217,
+          "language": "rust",
+          "comment_text": "TODO: Implement innovation evaluation with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 1247,
+          "language": "rust",
+          "comment_text": "TODO: Implement quality trend prediction with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 1318,
+          "language": "rust",
+          "comment_text": "TODO: Implement quality weighting with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 1344,
+          "language": "rust",
+          "comment_text": "TODO: Implement consensus building algorithm with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 1375,
+          "language": "rust",
+          "comment_text": "TODO: Implement tie breaking with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 1398,
+          "language": "rust",
+          "comment_text": "TODO: Implement pleading learning integration",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 1432,
+          "language": "rust",
+          "comment_text": "TODO: Implement feedback processing with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 1454,
+          "language": "rust",
+          "comment_text": "TODO: Implement improvement tracking",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 1455,
+          "language": "rust",
+          "comment_text": "TODO: Implement improvement tracking with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 1536,
+          "language": "rust",
+          "comment_text": "TODO: Implement metrics collection",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 1537,
+          "language": "rust",
+          "comment_text": "TODO: Implement metrics collection with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 1582,
+          "language": "rust",
+          "comment_text": "TODO: Implement trend analysis",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/advanced_arbitration.rs",
+          "line_number": 1610,
+          "language": "rust",
+          "comment_text": "TODO: Implement performance prediction",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "council/src/verdicts.rs": {
+      "language": "rust",
+      "total_comments": 168,
+      "todos": [
+        {
+          "file_path": "council/src/verdicts.rs",
+          "line_number": 364,
+          "language": "rust",
+          "comment_text": "TODO: Add database connection with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/verdicts.rs",
+          "line_number": 386,
+          "language": "rust",
+          "comment_text": "TODO: Initialize database connection with the following requirements:",
+          "confidence_score": 1.0,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/verdicts.rs",
+          "line_number": 406,
+          "language": "rust",
+          "comment_text": "TODO: Implement database storage with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/verdicts.rs",
+          "line_number": 427,
+          "language": "rust",
+          "comment_text": "TODO: Implement database retrieval with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/verdicts.rs",
+          "line_number": 448,
+          "language": "rust",
+          "comment_text": "TODO: Implement database query with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/verdicts.rs",
+          "line_number": 473,
+          "language": "rust",
+          "comment_text": "TODO: Implement database query with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/verdicts.rs",
+          "line_number": 494,
+          "language": "rust",
+          "comment_text": "TODO: Implement database deletion with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "council/src/verdicts.rs",
+          "line_number": 515,
+          "language": "rust",
+          "comment_text": "TODO: Implement database statistics with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "context-preservation-engine/src/context_manager.rs": {
+      "language": "rust",
+      "total_comments": 23,
+      "todos": [
+        {
+          "file_path": "context-preservation-engine/src/context_manager.rs",
+          "line_number": 24,
+          "language": "rust",
+          "comment_text": "TODO: Implement context data processing with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "context-preservation-engine/src/context_synthesizer.rs": {
+      "language": "rust",
+      "total_comments": 59,
+      "todos": [
+        {
+          "file_path": "context-preservation-engine/src/context_synthesizer.rs",
+          "line_number": 33,
+          "language": "rust",
+          "comment_text": "TODO: Implement context synthesis with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "context-preservation-engine/src/context_synthesizer.rs",
+          "line_number": 68,
+          "language": "rust",
+          "comment_text": "TODO: Implement cross-reference creation with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "context-preservation-engine/src/context_synthesizer.rs",
+          "line_number": 94,
+          "language": "rust",
+          "comment_text": "TODO: Implement context synthesizer health check with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "context-preservation-engine/src/context_store.rs": {
+      "language": "rust",
+      "total_comments": 117,
+      "todos": [
+        {
+          "file_path": "context-preservation-engine/src/context_store.rs",
+          "line_number": 31,
+          "language": "rust",
+          "comment_text": "TODO: Implement context storage with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "context-preservation-engine/src/context_store.rs",
+          "line_number": 68,
+          "language": "rust",
+          "comment_text": "TODO: Implement context retrieval with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "context-preservation-engine/src/context_store.rs",
+          "line_number": 97,
+          "language": "rust",
+          "comment_text": "TODO: Implement relationship retrieval with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "context-preservation-engine/src/context_store.rs",
+          "line_number": 125,
+          "language": "rust",
+          "comment_text": "TODO: Implement cross-reference retrieval with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "context-preservation-engine/src/context_store.rs",
+          "line_number": 153,
+          "language": "rust",
+          "comment_text": "TODO: Implement synthesis result retrieval with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "context-preservation-engine/src/context_store.rs",
+          "line_number": 178,
+          "language": "rust",
+          "comment_text": "TODO: Implement health check with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "context-preservation-engine/src/multi_tenant.rs": {
+      "language": "rust",
+      "total_comments": 67,
+      "todos": [
+        {
+          "file_path": "context-preservation-engine/src/multi_tenant.rs",
+          "line_number": 56,
+          "language": "rust",
+          "comment_text": "TODO: Implement tenant access validation with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "context-preservation-engine/src/multi_tenant.rs",
+          "line_number": 97,
+          "language": "rust",
+          "comment_text": "TODO: Implement operation validation with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "context-preservation-engine/src/multi_tenant.rs",
+          "line_number": 122,
+          "language": "rust",
+          "comment_text": "TODO: Implement multi-tenant health check with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "context-preservation-engine/src/engine.rs": {
+      "language": "rust",
+      "total_comments": 77,
+      "todos": [
+        {
+          "file_path": "context-preservation-engine/src/engine.rs",
+          "line_number": 538,
+          "language": "rust",
+          "comment_text": "TODO: Implement configuration update with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "database/src/health.rs": {
+      "language": "rust",
+      "total_comments": 139,
+      "todos": [
+        {
+          "file_path": "database/src/health.rs",
+          "line_number": 327,
+          "language": "rust",
+          "comment_text": "TODO: Implement comprehensive connection statistics with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "database/src/health.rs",
+          "line_number": 350,
+          "language": "rust",
+          "comment_text": "TODO: Implement index usage statistics with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "database/src/health.rs",
+          "line_number": 369,
+          "language": "rust",
+          "comment_text": "TODO: Implement table size statistics with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "database/src/health.rs",
+          "line_number": 388,
+          "language": "rust",
+          "comment_text": "TODO: Implement slow query statistics with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "database/src/client.rs": {
+      "language": "rust",
+      "total_comments": 234,
+      "todos": [
+        {
+          "file_path": "database/src/client.rs",
+          "line_number": 398,
+          "language": "rust",
+          "comment_text": "TODO: Implement parameterized query execution with input sanitization",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "database/src/client.rs",
+          "line_number": 399,
+          "language": "rust",
+          "comment_text": "TODO: Implement parameterized query execution with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "database/src/client.rs",
+          "line_number": 737,
+          "language": "rust",
+          "comment_text": "In a full implementation, these would be properly implemented",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "future_improvements",
+          "matched_patterns": [
+            "\\bwould\\s+be\\b.*?(implemented|added|fixed|completed)"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": false,
+          "is_temporary": true,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "database/src/client.rs",
+          "line_number": 774,
+          "language": "rust",
+          "comment_text": "TODO: Implement get_workers with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "database/src/client.rs",
+          "line_number": 803,
+          "language": "rust",
+          "comment_text": "TODO: Implement get_workers_by_type with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "database/src/client.rs",
+          "line_number": 833,
+          "language": "rust",
+          "comment_text": "TODO: Implement update_worker with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "database/src/client.rs",
+          "line_number": 854,
+          "language": "rust",
+          "comment_text": "TODO: Implement delete_worker with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "database/src/client.rs",
+          "line_number": 875,
+          "language": "rust",
+          "comment_text": "TODO: Implement create_task with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "database/src/client.rs",
+          "line_number": 896,
+          "language": "rust",
+          "comment_text": "TODO: Implement get_task with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "database/src/client.rs",
+          "line_number": 986,
+          "language": "rust",
+          "comment_text": "TODO: Implement create_council_verdict with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "database/src/migrations.rs": {
+      "language": "rust",
+      "total_comments": 82,
+      "todos": [
+        {
+          "file_path": "database/src/migrations.rs",
+          "line_number": 387,
+          "language": "rust",
+          "comment_text": "Simple implementation - look for -- ROLLBACK section",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\bsimple\\s+(implementation|function|data|value|content)\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "database/src/migrations.rs",
+          "line_number": 398,
+          "language": "rust",
+          "comment_text": "TODO: Implement configurable rollback policy with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "research/src/knowledge_seeker.rs": {
+      "language": "rust",
+      "total_comments": 168,
+      "todos": [
+        {
+          "file_path": "research/src/knowledge_seeker.rs",
+          "line_number": 322,
+          "language": "rust",
+          "comment_text": "TODO: Implement configuration updates with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "research/src/knowledge_seeker.rs",
+          "line_number": 459,
+          "language": "rust",
+          "comment_text": "TODO: Implement proper keyword search with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "research/src/knowledge_seeker.rs",
+          "line_number": 859,
+          "language": "rust",
+          "comment_text": "TODO: Create minimal seeker for testing with the following requirements:",
+          "confidence_score": 1.0,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "research/src/vector_search.rs": {
+      "language": "rust",
+      "total_comments": 49,
+      "todos": [
+        {
+          "file_path": "research/src/vector_search.rs",
+          "line_number": 671,
+          "language": "rust",
+          "comment_text": "In a real implementation, this would call an actual embedding model",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "future_improvements",
+          "matched_patterns": [
+            "\\bin\\s+a\\s+real\\s+implementation\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": false,
+          "is_temporary": true,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "claim-extraction/src/multi_modal_verification.rs": {
+      "language": "rust",
+      "total_comments": 197,
+      "todos": [
+        {
+          "file_path": "claim-extraction/src/multi_modal_verification.rs",
+          "line_number": 489,
+          "language": "rust",
+          "comment_text": "These will be implemented with full functionality",
+          "confidence_score": 0.8,
+          "pattern_category": "incomplete_implementation",
+          "matched_patterns": [
+            "\\bwill\\s+be\\s+implemented\\b",
+            "\\bwill\\s+be\\b.*?(implemented|added|fixed|completed)"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": false,
+          "is_temporary": true,
+          "is_incomplete": true,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "claim-extraction/src/multi_modal_verification.rs",
+          "line_number": 598,
+          "language": "rust",
+          "comment_text": "TODO: Implement mathematical validation logic with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "claim-extraction/src/multi_modal_verification.rs",
+          "line_number": 646,
+          "language": "rust",
+          "comment_text": "TODO: Implement code behavior analysis logic with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "claim-extraction/src/multi_modal_verification.rs",
+          "line_number": 713,
+          "language": "rust",
+          "comment_text": "TODO: Implement authority attribution checking logic with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "claim-extraction/src/multi_modal_verification.rs",
+          "line_number": 766,
+          "language": "rust",
+          "comment_text": "TODO: Implement context dependency resolution logic with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "claim-extraction/src/multi_modal_verification.rs",
+          "line_number": 775,
+          "language": "rust",
+          "comment_text": "3. Context validation: Verify that required context is available and accurate",
+          "confidence_score": 0.8,
+          "pattern_category": "testing_debt",
+          "matched_patterns": [
+            "\\bvalidation\\b.*?(missing|incomplete|needed|required)"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": true,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "claim-extraction/src/multi_modal_verification.rs",
+          "line_number": 813,
+          "language": "rust",
+          "comment_text": "TODO: Implement semantic analysis logic with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "claim-extraction/src/multi_modal_verification.rs",
+          "line_number": 871,
+          "language": "rust",
+          "comment_text": "TODO: Implement cross-reference validation logic with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "claim-extraction/src/multi_modal_verification.rs",
+          "line_number": 909,
+          "language": "rust",
+          "comment_text": "These will be implemented with full functionality",
+          "confidence_score": 0.8,
+          "pattern_category": "incomplete_implementation",
+          "matched_patterns": [
+            "\\bwill\\s+be\\s+implemented\\b",
+            "\\bwill\\s+be\\b.*?(implemented|added|fixed|completed)"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": false,
+          "is_temporary": true,
+          "is_incomplete": true,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "claim-extraction/src/disambiguation.rs": {
+      "language": "rust",
+      "total_comments": 76,
+      "todos": [
+        {
+          "file_path": "claim-extraction/src/disambiguation.rs",
+          "line_number": 58,
+          "language": "rust",
+          "comment_text": "/ Identify ambiguities in a sentence given context (Basic implementation - V2 port pending)",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\bbasic\\s+(implementation|function|data|value|content)\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "claim-extraction/src/disambiguation.rs",
+          "line_number": 66,
+          "language": "rust",
+          "comment_text": "TODO: Implement comprehensive pronoun detection with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "claim-extraction/src/verification.rs": {
+      "language": "rust",
+      "total_comments": 60,
+      "todos": [
+        {
+          "file_path": "claim-extraction/src/verification.rs",
+          "line_number": 161,
+          "language": "rust",
+          "comment_text": "TODO: Add council integration logic with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "claim-extraction/src/verification.rs",
+          "line_number": 194,
+          "language": "rust",
+          "comment_text": "TODO: Implement council integration with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "claim-extraction/src/evidence.rs": {
+      "language": "rust",
+      "total_comments": 120,
+      "todos": [
+        {
+          "file_path": "claim-extraction/src/evidence.rs",
+          "line_number": 162,
+          "language": "rust",
+          "comment_text": "TODO: Integrate with actual code analysis tools with the following requirements:",
+          "confidence_score": 1.0,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "claim-extraction/src/evidence.rs",
+          "line_number": 206,
+          "language": "rust",
+          "comment_text": "TODO: Integrate with test runner with the following requirements:",
+          "confidence_score": 1.0,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "claim-extraction/src/evidence.rs",
+          "line_number": 246,
+          "language": "rust",
+          "comment_text": "TODO: Integrate with documentation search with the following requirements:",
+          "confidence_score": 1.0,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "claim-extraction/src/evidence.rs",
+          "line_number": 326,
+          "language": "rust",
+          "comment_text": "TODO: Integrate with security scanning tools with the following requirements:",
+          "confidence_score": 1.0,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "claim-extraction/src/evidence.rs",
+          "line_number": 366,
+          "language": "rust",
+          "comment_text": "TODO: Integrate with CAWS validation with the following requirements:",
+          "confidence_score": 1.0,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "claim-extraction/src/decomposition.rs": {
+      "language": "rust",
+      "total_comments": 98,
+      "todos": [
+        {
+          "file_path": "claim-extraction/src/decomposition.rs",
+          "line_number": 373,
+          "language": "rust",
+          "comment_text": "TODO: Add context bracket logic with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "claim-extraction/src/decomposition.rs",
+          "line_number": 516,
+          "language": "rust",
+          "comment_text": "TODO: Implement complex clause splitting with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        },
+        {
+          "file_path": "claim-extraction/src/decomposition.rs",
+          "line_number": 616,
+          "language": "rust",
+          "comment_text": "Add technical term disambiguation (basic implementation)",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\bbasic\\s+(implementation|function|data|value|content)\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "claim-extraction/src/qualification.rs": {
+      "language": "rust",
+      "total_comments": 39,
+      "todos": [
+        {
+          "file_path": "claim-extraction/src/qualification.rs",
+          "line_number": 267,
+          "language": "rust",
+          "comment_text": "TODO: Add content rewriting logic with the following requirements:",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "apps/tools/caws/mutant-analyzer.js": {
+      "language": "javascript",
+      "total_comments": 58,
+      "todos": [
+        {
+          "file_path": "apps/tools/caws/mutant-analyzer.js",
+          "line_number": 551,
+          "language": "javascript",
+          "comment_text": "Return realistic default data based on current project state",
+          "confidence_score": 0.8,
+          "pattern_category": "placeholder_code",
+          "matched_patterns": [
+            "\\bdefault\\s+(implementation|function|data|value|content)\\b"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": true,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "apps/tools/caws/flake-detector.ts": {
+      "language": "typescript",
+      "total_comments": 14,
+      "todos": [
+        {
+          "file_path": "apps/tools/caws/flake-detector.ts",
+          "line_number": 294,
+          "language": "typescript",
+          "comment_text": "In a real implementation, you'd read test results from files",
+          "confidence_score": 0.8400000000000001,
+          "pattern_category": "future_improvements",
+          "matched_patterns": [
+            "\\bin\\s+a\\s+real\\s+implementation\\b"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": false,
+          "is_hidden_todo": true,
+          "is_placeholder": false,
+          "is_temporary": true,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "scripts/verify.sh": {
+      "language": "shell",
+      "total_comments": 3,
+      "todos": [
+        {
+          "file_path": "scripts/verify.sh",
+          "line_number": 34,
+          "language": "shell",
+          "comment_text": "TODO: Add mutation testing when available",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "claim-extraction/Cargo.toml": {
+      "language": "toml",
+      "total_comments": 4,
+      "todos": [
+        {
+          "file_path": "claim-extraction/Cargo.toml",
+          "line_number": 25,
+          "language": "toml",
+          "comment_text": "Research integration for evidence gathering - TODO: Add back when cycle resolved",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "context-preservation-engine/Cargo.toml": {
+      "language": "toml",
+      "total_comments": 5,
+      "todos": [
+        {
+          "file_path": "context-preservation-engine/Cargo.toml",
+          "line_number": 34,
+          "language": "toml",
+          "comment_text": "agent-agency-council = { path = \"../council\" }  # TODO: Remove if not needed",
+          "confidence_score": 1.06,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.2,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "apple-silicon/Cargo.toml": {
+      "language": "toml",
+      "total_comments": 11,
+      "todos": [
+        {
+          "file_path": "apple-silicon/Cargo.toml",
+          "line_number": 30,
+          "language": "toml",
+          "comment_text": "TODO: Re-enable when rand version conflicts are resolved",
+          "confidence_score": 1.0,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    },
+    "model-benchmarking/Cargo.toml": {
+      "language": "toml",
+      "total_comments": 12,
+      "todos": [
+        {
+          "file_path": "model-benchmarking/Cargo.toml",
+          "line_number": 28,
+          "language": "toml",
+          "comment_text": "TODO: Re-enable when rand version conflicts are resolved",
+          "confidence_score": 1.0,
+          "pattern_category": "explicit_todos",
+          "matched_patterns": [
+            "\\bTODO\\b.*?:"
+          ],
+          "context_score": 0.0,
+          "is_explicit_todo": true,
+          "is_hidden_todo": false,
+          "is_placeholder": false,
+          "is_temporary": false,
+          "is_incomplete": false,
+          "is_technical_debt": false
+        }
+      ]
+    }
+  }
+}

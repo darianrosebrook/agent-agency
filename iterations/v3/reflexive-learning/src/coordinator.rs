@@ -21,8 +21,14 @@ const RESOURCE_MEMORY_HIGH_BYTES: u64 = 14_000;
 const RESOURCE_TOKENS_HIGH: u64 = 15_000;
 
 const KEYWORDS_TIMEOUT: &[&str] = &["timeout", "time out", "deadline", "expired"];
-const KEYWORDS_REMEDIATION: &[&str] =
-    &["remediation", "follow-up", "fix", "patch", "address", "revisit"];
+const KEYWORDS_REMEDIATION: &[&str] = &[
+    "remediation",
+    "follow-up",
+    "fix",
+    "patch",
+    "address",
+    "revisit",
+];
 const KEYWORDS_COMPLIANCE: &[&str] = &["caws", "compliance", "policy", "constitutional", "charter"];
 const KEYWORDS_CONSENSUS: &[&str] = &["consensus", "dissent", "disagree", "deadlock", "stalemate"];
 const KEYWORDS_CLAIM: &[&str] = &["claim", "verification", "evidence", "proof", "reference"];
@@ -211,21 +217,64 @@ impl MultiTurnLearningCoordinator {
             },
             quality_patterns: QualityPatterns {
                 positive_indicators: vec![
-                    "excellent", "outstanding", "perfect", "flawless", "exceptional",
-                    "comprehensive", "thorough", "complete", "robust", "solid"
-                ].into_iter().map(|s| s.to_string()).collect(),
+                    "excellent",
+                    "outstanding",
+                    "perfect",
+                    "flawless",
+                    "exceptional",
+                    "comprehensive",
+                    "thorough",
+                    "complete",
+                    "robust",
+                    "solid",
+                ]
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
                 negative_indicators: vec![
-                    "poor", "inadequate", "insufficient", "substandard", "unacceptable",
-                    "flawed", "defective", "incomplete", "missing", "incorrect"
-                ].into_iter().map(|s| s.to_string()).collect(),
+                    "poor",
+                    "inadequate",
+                    "insufficient",
+                    "substandard",
+                    "unacceptable",
+                    "flawed",
+                    "defective",
+                    "incomplete",
+                    "missing",
+                    "incorrect",
+                ]
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
                 compliance_indicators: vec![
-                    "caws", "compliance", "constitutional", "policy", "standard",
-                    "guideline", "requirement", "specification", "protocol"
-                ].into_iter().map(|s| s.to_string()).collect(),
+                    "caws",
+                    "compliance",
+                    "constitutional",
+                    "policy",
+                    "standard",
+                    "guideline",
+                    "requirement",
+                    "specification",
+                    "protocol",
+                ]
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
                 evidence_indicators: vec![
-                    "evidence", "proof", "demonstration", "verification", "validation",
-                    "confirmation", "support", "documentation", "reference", "citation"
-                ].into_iter().map(|s| s.to_string()).collect(),
+                    "evidence",
+                    "proof",
+                    "demonstration",
+                    "verification",
+                    "validation",
+                    "confirmation",
+                    "support",
+                    "documentation",
+                    "reference",
+                    "citation",
+                ]
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
             },
         }
     }
@@ -267,79 +316,157 @@ impl MultiTurnLearningCoordinator {
         let mut recovery_weights = std::collections::HashMap::new();
 
         // CAWS Violation patterns
-        failure_patterns.insert(FailureCategory::CAWSViolation, FailurePattern {
-            keywords: vec![
-                "caws", "compliance", "violation", "breach", "non-compliant",
-                "policy", "constitutional", "charter", "requirement", "standard"
-            ].into_iter().map(|s| s.to_string()).collect(),
-            severity_indicators: vec![
-                "critical", "severe", "major", "significant", "serious"
-            ].into_iter().map(|s| s.to_string()).collect(),
-            recovery_probability: 0.7,
-            common_causes: vec![
-                "Insufficient evidence provided",
-                "Missing verification steps",
-                "Incomplete compliance checks",
-                "Policy misunderstanding"
-            ].into_iter().map(|s| s.to_string()).collect(),
-        });
+        failure_patterns.insert(
+            FailureCategory::CAWSViolation,
+            FailurePattern {
+                keywords: vec![
+                    "caws",
+                    "compliance",
+                    "violation",
+                    "breach",
+                    "non-compliant",
+                    "policy",
+                    "constitutional",
+                    "charter",
+                    "requirement",
+                    "standard",
+                ]
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
+                severity_indicators: vec!["critical", "severe", "major", "significant", "serious"]
+                    .into_iter()
+                    .map(|s| s.to_string())
+                    .collect(),
+                recovery_probability: 0.7,
+                common_causes: vec![
+                    "Insufficient evidence provided",
+                    "Missing verification steps",
+                    "Incomplete compliance checks",
+                    "Policy misunderstanding",
+                ]
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
+            },
+        );
 
-        remediation_strategies.insert(FailureCategory::CAWSViolation, vec![
-            "Review CAWS requirements",
-            "Add evidence verification",
-            "Implement compliance checks",
-            "Consult policy documentation"
-        ].into_iter().map(|s| s.to_string()).collect());
+        remediation_strategies.insert(
+            FailureCategory::CAWSViolation,
+            vec![
+                "Review CAWS requirements",
+                "Add evidence verification",
+                "Implement compliance checks",
+                "Consult policy documentation",
+            ]
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect(),
+        );
 
         // Resource Exhaustion patterns
-        failure_patterns.insert(FailureCategory::ResourceExhaustion, FailurePattern {
-            keywords: vec![
-                "resource", "memory", "cpu", "exhaust", "limit", "capacity",
-                "overload", "insufficient", "deplete", "consume"
-            ].into_iter().map(|s| s.to_string()).collect(),
-            severity_indicators: vec![
-                "critical", "severe", "high", "extreme", "maximum"
-            ].into_iter().map(|s| s.to_string()).collect(),
-            recovery_probability: 0.4,
-            common_causes: vec![
-                "Inefficient algorithm usage",
-                "Memory leaks",
-                "Excessive token consumption",
-                "Poor resource allocation"
-            ].into_iter().map(|s| s.to_string()).collect(),
-        });
+        failure_patterns.insert(
+            FailureCategory::ResourceExhaustion,
+            FailurePattern {
+                keywords: vec![
+                    "resource",
+                    "memory",
+                    "cpu",
+                    "exhaust",
+                    "limit",
+                    "capacity",
+                    "overload",
+                    "insufficient",
+                    "deplete",
+                    "consume",
+                ]
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
+                severity_indicators: vec!["critical", "severe", "high", "extreme", "maximum"]
+                    .into_iter()
+                    .map(|s| s.to_string())
+                    .collect(),
+                recovery_probability: 0.4,
+                common_causes: vec![
+                    "Inefficient algorithm usage",
+                    "Memory leaks",
+                    "Excessive token consumption",
+                    "Poor resource allocation",
+                ]
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
+            },
+        );
 
-        remediation_strategies.insert(FailureCategory::ResourceExhaustion, vec![
-            "Optimize resource allocation",
-            "Implement resource pooling",
-            "Add resource monitoring",
-            "Scale resource limits"
-        ].into_iter().map(|s| s.to_string()).collect());
+        remediation_strategies.insert(
+            FailureCategory::ResourceExhaustion,
+            vec![
+                "Optimize resource allocation",
+                "Implement resource pooling",
+                "Add resource monitoring",
+                "Scale resource limits",
+            ]
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect(),
+        );
 
         // Consensus Failure patterns
-        failure_patterns.insert(FailureCategory::ConsensusFailure, FailurePattern {
-            keywords: vec![
-                "consensus", "dissent", "disagree", "conflict", "stalemate",
-                "deadlock", "impasse", "division", "split", "discord"
-            ].into_iter().map(|s| s.to_string()).collect(),
-            severity_indicators: vec![
-                "strong", "significant", "major", "fundamental", "irreconcilable"
-            ].into_iter().map(|s| s.to_string()).collect(),
-            recovery_probability: 0.6,
-            common_causes: vec![
-                "Conflicting evidence interpretation",
-                "Different quality standards",
-                "Miscommunication",
-                "Incomplete information"
-            ].into_iter().map(|s| s.to_string()).collect(),
-        });
+        failure_patterns.insert(
+            FailureCategory::ConsensusFailure,
+            FailurePattern {
+                keywords: vec![
+                    "consensus",
+                    "dissent",
+                    "disagree",
+                    "conflict",
+                    "stalemate",
+                    "deadlock",
+                    "impasse",
+                    "division",
+                    "split",
+                    "discord",
+                ]
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
+                severity_indicators: vec![
+                    "strong",
+                    "significant",
+                    "major",
+                    "fundamental",
+                    "irreconcilable",
+                ]
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
+                recovery_probability: 0.6,
+                common_causes: vec![
+                    "Conflicting evidence interpretation",
+                    "Different quality standards",
+                    "Miscommunication",
+                    "Incomplete information",
+                ]
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
+            },
+        );
 
-        remediation_strategies.insert(FailureCategory::ConsensusFailure, vec![
-            "Facilitate discussion",
-            "Present additional evidence",
-            "Clarify requirements",
-            "Seek mediation"
-        ].into_iter().map(|s| s.to_string()).collect());
+        remediation_strategies.insert(
+            FailureCategory::ConsensusFailure,
+            vec![
+                "Facilitate discussion",
+                "Present additional evidence",
+                "Clarify requirements",
+                "Seek mediation",
+            ]
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect(),
+        );
 
         // Set recovery weights
         recovery_weights.insert(FailureCategory::CAWSViolation, 0.8);
@@ -833,7 +960,9 @@ impl MultiTurnLearningCoordinator {
         let feedback_text = Self::extract_feedback_text(&turn_data.outcome.feedback);
 
         // High confidence indicator
-        if turn_data.outcome.quality_score >= self.quality_heuristics.quality_thresholds.excellent_min {
+        if turn_data.outcome.quality_score
+            >= self.quality_heuristics.quality_thresholds.excellent_min
+        {
             indicators.insert(QualityIndicator::HighConfidence);
         }
 
@@ -843,24 +972,44 @@ impl MultiTurnLearningCoordinator {
         }
 
         // Efficient execution indicator
-        if turn_data.outcome.efficiency_score >= self.quality_heuristics.quality_thresholds.good_min {
+        if turn_data.outcome.efficiency_score >= self.quality_heuristics.quality_thresholds.good_min
+        {
             indicators.insert(QualityIndicator::EfficientExecution);
         }
 
         // Strong CAWS compliance indicator
-        if turn_data.outcome.quality_score >= self.quality_heuristics.quality_thresholds.excellent_min
-            || self.feedback_contains_any(&feedback_text, &self.quality_heuristics.quality_patterns.compliance_indicators) {
+        if turn_data.outcome.quality_score
+            >= self.quality_heuristics.quality_thresholds.excellent_min
+            || self.feedback_contains_any(
+                &feedback_text,
+                &self
+                    .quality_heuristics
+                    .quality_patterns
+                    .compliance_indicators,
+            )
+        {
             indicators.insert(QualityIndicator::StrongCAWSCompliance);
         }
 
         // Comprehensive evidence indicator
-        if self.feedback_contains_any(&feedback_text, &self.quality_heuristics.quality_patterns.evidence_indicators) {
+        if self.feedback_contains_any(
+            &feedback_text,
+            &self.quality_heuristics.quality_patterns.evidence_indicators,
+        ) {
             indicators.insert(QualityIndicator::ComprehensiveEvidence);
         }
 
         // Complete claim verification indicator
         if turn_data.outcome.error_count == 0
-            && self.feedback_contains_any(&feedback_text, &[KEYWORDS_CLAIM.iter().map(|s| s.to_string()).collect::<Vec<_>>()].concat()) {
+            && self.feedback_contains_any(
+                &feedback_text,
+                &[KEYWORDS_CLAIM
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()]
+                .concat(),
+            )
+        {
             indicators.insert(QualityIndicator::CompleteClaimVerification);
         }
 
@@ -878,14 +1027,20 @@ impl MultiTurnLearningCoordinator {
         let mut score = turn_data.outcome.quality_score;
 
         // Positive indicators boost score
-        let positive_matches = self.quality_heuristics.quality_patterns.positive_indicators
+        let positive_matches = self
+            .quality_heuristics
+            .quality_patterns
+            .positive_indicators
             .iter()
             .filter(|keyword| feedback_text.to_lowercase().contains(&**keyword))
             .count();
         score += positive_matches as f64 * 0.05;
 
         // Negative indicators reduce score
-        let negative_matches = self.quality_heuristics.quality_patterns.negative_indicators
+        let negative_matches = self
+            .quality_heuristics
+            .quality_patterns
+            .negative_indicators
             .iter()
             .filter(|keyword| feedback_text.to_lowercase().contains(&**keyword))
             .count();
@@ -904,14 +1059,24 @@ impl MultiTurnLearningCoordinator {
     /// Check if specific indicators are present in feedback
     fn indicators_present(&self, feedback: &[Feedback], indicators: &[QualityIndicator]) -> bool {
         let feedback_text = Self::extract_feedback_text(feedback);
-        indicators.iter().any(|indicator| {
-            match indicator {
-                QualityIndicator::HighConfidence => feedback_text.contains("confidence") || feedback_text.contains("confident"),
-                QualityIndicator::ComprehensiveEvidence => feedback_text.contains("evidence") || feedback_text.contains("proof"),
-                QualityIndicator::MinimalDissent => !feedback_text.contains("disagree") && !feedback_text.contains("dissent"),
-                QualityIndicator::EfficientExecution => feedback_text.contains("efficient") || feedback_text.contains("fast"),
-                QualityIndicator::StrongCAWSCompliance => feedback_text.contains("caws") || feedback_text.contains("compliance"),
-                QualityIndicator::CompleteClaimVerification => feedback_text.contains("claim") || feedback_text.contains("verification"),
+        indicators.iter().any(|indicator| match indicator {
+            QualityIndicator::HighConfidence => {
+                feedback_text.contains("confidence") || feedback_text.contains("confident")
+            }
+            QualityIndicator::ComprehensiveEvidence => {
+                feedback_text.contains("evidence") || feedback_text.contains("proof")
+            }
+            QualityIndicator::MinimalDissent => {
+                !feedback_text.contains("disagree") && !feedback_text.contains("dissent")
+            }
+            QualityIndicator::EfficientExecution => {
+                feedback_text.contains("efficient") || feedback_text.contains("fast")
+            }
+            QualityIndicator::StrongCAWSCompliance => {
+                feedback_text.contains("caws") || feedback_text.contains("compliance")
+            }
+            QualityIndicator::CompleteClaimVerification => {
+                feedback_text.contains("claim") || feedback_text.contains("verification")
             }
         })
     }
@@ -1018,10 +1183,10 @@ impl MultiTurnLearningCoordinator {
 
         // Weighted average of resource scores
         let weights = &self.resource_heuristics.efficiency_weights;
-        cpu_score * weights.cpu_efficiency +
-         memory_score * weights.memory_efficiency +
-         token_score * weights.token_efficiency +
-         efficiency_score * weights.time_efficiency
+        cpu_score * weights.cpu_efficiency
+            + memory_score * weights.memory_efficiency
+            + token_score * weights.token_efficiency
+            + efficiency_score * weights.time_efficiency
     }
 
     /// Classify resource usage based on thresholds
@@ -1044,15 +1209,24 @@ impl MultiTurnLearningCoordinator {
         let feedback_text = Self::extract_feedback_text(&turn_data.outcome.feedback);
         let failure_category = self.infer_failure_category(turn_data);
 
-        if let Some(pattern) = self.failure_heuristics.failure_patterns.get(&failure_category) {
+        if let Some(pattern) = self
+            .failure_heuristics
+            .failure_patterns
+            .get(&failure_category)
+        {
             let severity = self.calculate_failure_severity(&feedback_text, pattern);
-            let recovery_probability = self.failure_heuristics.recovery_weights.get(&failure_category).unwrap_or(&0.5);
+            let recovery_probability = self
+                .failure_heuristics
+                .recovery_weights
+                .get(&failure_category)
+                .unwrap_or(&0.5);
 
             FailureAnalysis {
                 category: failure_category.clone(),
                 severity,
                 recovery_probability: *recovery_probability,
-                remediation_suggestions: self.failure_heuristics
+                remediation_suggestions: self
+                    .failure_heuristics
                     .remediation_strategies
                     .get(&failure_category)
                     .cloned()
@@ -1071,8 +1245,13 @@ impl MultiTurnLearningCoordinator {
     }
 
     /// Calculate failure severity based on feedback patterns
-    fn calculate_failure_severity(&self, feedback_text: &str, pattern: &FailurePattern) -> FailureSeverity {
-        let severity_matches = pattern.severity_indicators
+    fn calculate_failure_severity(
+        &self,
+        feedback_text: &str,
+        pattern: &FailurePattern,
+    ) -> FailureSeverity {
+        let severity_matches = pattern
+            .severity_indicators
             .iter()
             .filter(|keyword| feedback_text.contains(&**keyword))
             .count();
@@ -1308,9 +1487,41 @@ impl MultiTurnLearningCoordinator {
         session: &LearningSession,
         final_metrics: &FinalMetrics,
     ) -> Result<HistoricalUpdate, LearningSystemError> {
-        // This would update the historical performance data
-        // For now, we'll implement a simplified version
-
+        // TODO: Implement proper historical performance update with the following requirements:
+        // 1. Historical data collection: Collect historical performance data
+        //    - Gather performance metrics from various sources
+        //    - Aggregate performance data over time periods
+        //    - Handle historical data collection error detection and reporting
+        // 2. Performance analysis: Analyze historical performance trends
+        //    - Calculate performance trends and patterns
+        //    - Identify performance improvements and degradations
+        //    - Handle performance analysis error detection and reporting
+        // 3. Data persistence: Persist historical performance data
+        //    - Store performance data in persistent storage
+        //    - Handle data persistence error detection and recovery
+        //    - Implement proper data backup and rollback mechanisms
+        // 4. Performance optimization: Optimize historical performance update operations
+        //    - Implement efficient data processing algorithms
+        //    - Handle large-scale performance data operations
+        //    - Optimize performance update quality and reliability
+        // TODO: Implement proper historical performance update with the following requirements:
+        // 1. Update operations: Implement database update operations
+        //    - Update historical performance data in database
+        //    - Handle partial updates and field modifications
+        //    - Implement proper update validation and constraints
+        // 2. Data validation: Validate updated data before database operations
+        //    - Verify data integrity and completeness
+        //    - Check data constraints and business rules
+        //    - Handle data validation errors and corrections
+        // 3. Transaction management: Handle database transactions for updates
+        //    - Implement proper transaction management and atomicity
+        //    - Handle update failures and rollback operations
+        //    - Ensure data consistency during updates
+        // 4. Performance optimization: Optimize database update performance
+        //    - Use efficient update operations and queries
+        //    - Implement proper indexing for update operations
+        //    - Handle large update operations efficiently
+        tracing::info!("Updating historical performance data");
         let performance_update = PerformanceUpdate {
             average_completion_time: final_metrics.completion_time,
             average_quality_score: final_metrics.final_quality_score,
@@ -1379,7 +1590,11 @@ impl MultiTurnLearningCoordinator {
         let mut score: f64 = 0.0;
 
         // Check for CAWS compliance keywords
-        for keyword in &self.quality_heuristics.quality_patterns.compliance_indicators {
+        for keyword in &self
+            .quality_heuristics
+            .quality_patterns
+            .compliance_indicators
+        {
             if feedback_text.contains(keyword) {
                 score += 0.2;
             }
@@ -1408,7 +1623,13 @@ impl MultiTurnLearningCoordinator {
         let mut score: f64 = 0.5; // Default neutral score
 
         // Positive consensus indicators
-        let positive_keywords = ["consensus", "agreement", "unanimous", "consistent", "aligned"];
+        let positive_keywords = [
+            "consensus",
+            "agreement",
+            "unanimous",
+            "consistent",
+            "aligned",
+        ];
         for keyword in &positive_keywords {
             if feedback_text.contains(keyword) {
                 score += 0.2;
@@ -1416,7 +1637,13 @@ impl MultiTurnLearningCoordinator {
         }
 
         // Negative consensus indicators
-        let negative_keywords = ["dissent", "disagreement", "conflict", "stalemate", "deadlock"];
+        let negative_keywords = [
+            "dissent",
+            "disagreement",
+            "conflict",
+            "stalemate",
+            "deadlock",
+        ];
         for keyword in &negative_keywords {
             if feedback_text.contains(keyword) {
                 score -= 0.2;
@@ -1440,15 +1667,18 @@ impl MultiTurnLearningCoordinator {
             &turn_data.action_taken.resource_usage.clone().into(),
         );
 
-        let feedback_confidence = turn_data.outcome.feedback
+        let feedback_confidence = turn_data
+            .outcome
+            .feedback
             .iter()
             .map(|f| f.confidence)
-            .sum::<f64>() / turn_data.outcome.feedback.len().max(1) as f64;
+            .sum::<f64>()
+            / turn_data.outcome.feedback.len().max(1) as f64;
 
-        quality_confidence * quality_weight +
-         efficiency_confidence * efficiency_weight +
-         resource_confidence * resource_weight +
-         feedback_confidence * feedback_weight
+        quality_confidence * quality_weight
+            + efficiency_confidence * efficiency_weight
+            + resource_confidence * resource_weight
+            + feedback_confidence * feedback_weight
     }
 }
 
@@ -1547,7 +1777,7 @@ impl From<ResourceUsage> for ResourceUtilization {
         ResourceUtilization {
             cpu_usage: (usage.cpu_time.num_milliseconds() as f64 / 60_000.0).min(1.0), // Convert to usage ratio
             memory_usage: (usage.memory_usage as f64 / 16_384.0).min(1.0), // Normalize to 0-1 range
-            token_usage: (usage.token_usage as f64 / 20_000.0).min(1.0), // Normalize to 0-1 range
+            token_usage: (usage.token_usage as f64 / 20_000.0).min(1.0),   // Normalize to 0-1 range
             time_usage: (usage.cpu_time.num_seconds() as f64 / 300.0).min(1.0), // Normalize to 0-1 range
             efficiency_ratio: 0.5, // Default efficiency, will be calculated based on context
         }

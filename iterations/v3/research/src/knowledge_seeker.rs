@@ -360,7 +360,11 @@ impl KnowledgeSeeker {
 
         let vector_results = self
             .vector_search
-            .search(&query_embedding, Some(query.max_results.map(|x| x * 2).unwrap_or(20)), None)
+            .search(
+                &query_embedding,
+                Some(query.max_results.map(|x| x * 2).unwrap_or(20)),
+                None,
+            )
             .await
             .context("Vector search failed")?;
 
@@ -382,7 +386,10 @@ impl KnowledgeSeeker {
         }
 
         // V2 Integration: Add keyword-based search for hybrid approach
-        if matches!(query.query_type, QueryType::Knowledge | QueryType::Code | QueryType::Documentation) {
+        if matches!(
+            query.query_type,
+            QueryType::Knowledge | QueryType::Code | QueryType::Documentation
+        ) {
             let keyword_results = self.perform_keyword_search(&query).await?;
             all_results.extend(keyword_results);
         }
@@ -409,7 +416,11 @@ impl KnowledgeSeeker {
     }
 
     /// V2 Integration: Calculate confidence score using V2's sophisticated algorithm
-    fn calculate_v2_confidence_score(&self, entry: &crate::KnowledgeEntry, query: &ResearchQuery) -> f32 {
+    fn calculate_v2_confidence_score(
+        &self,
+        entry: &crate::KnowledgeEntry,
+        query: &ResearchQuery,
+    ) -> f32 {
         let mut confidence: f32 = 0.8; // Base confidence from vector search
 
         // V2 Factor 1: Source credibility boost
@@ -417,8 +428,12 @@ impl KnowledgeSeeker {
             crate::KnowledgeSource::ApiDocumentation(_) => confidence += 0.1,
             crate::KnowledgeSource::CodeRepository(_) => confidence += 0.05,
             crate::KnowledgeSource::Documentation(_) => confidence += 0.08,
-            crate::KnowledgeSource::WebPage(url) if url.contains("github.com") => confidence += 0.05,
-            crate::KnowledgeSource::WebPage(url) if url.contains("stackoverflow.com") => confidence += 0.05,
+            crate::KnowledgeSource::WebPage(url) if url.contains("github.com") => {
+                confidence += 0.05
+            }
+            crate::KnowledgeSource::WebPage(url) if url.contains("stackoverflow.com") => {
+                confidence += 0.05
+            }
             crate::KnowledgeSource::CommunityPost(_) => confidence += 0.02,
             _ => {}
         }
@@ -456,12 +471,29 @@ impl KnowledgeSeeker {
 
     /// V2 Integration: Perform keyword-based search for hybrid results
     async fn perform_keyword_search(&self, query: &ResearchQuery) -> Result<Vec<ResearchResult>> {
-        // Simple keyword search implementation - in V2 this would use inverted indexes
-        // For now, we'll do a basic text search on vector results as a placeholder
+        // TODO: Implement proper keyword search with the following requirements:
+        // 1. Inverted index implementation: Implement inverted indexes for efficient keyword search
+        //    - Build and maintain inverted indexes for text content
+        //    - Implement efficient keyword indexing and retrieval
+        //    - Handle inverted index maintenance and optimization
+        // 2. Advanced text search: Implement advanced text search capabilities
+        //    - Support full-text search with ranking and relevance
+        //    - Implement fuzzy matching and typo tolerance
+        //    - Handle advanced search features and operators
+        // 3. Search optimization: Optimize search performance and accuracy
+        //    - Implement efficient search algorithms and data structures
+        //    - Handle large-scale search operations and indexing
+        //    - Optimize search result quality and relevance
+        // 4. Search integration: Integrate keyword search with vector search
+        //    - Combine keyword and vector search results effectively
+        //    - Implement hybrid search ranking and fusion
+        //    - Handle search result integration and optimization
         let mut keyword_results = Vec::new();
 
         // Extract keywords from query (simple tokenization)
-        let keywords: Vec<&str> = query.query.split_whitespace()
+        let keywords: Vec<&str> = query
+            .query
+            .split_whitespace()
             .filter(|word| word.len() > 3) // Skip short words
             .collect();
 
@@ -471,7 +503,10 @@ impl KnowledgeSeeker {
 
         // Generate embedding for broader search
         let query_embedding = self.vector_search.generate_embedding(&query.query).await?;
-        let vector_results = self.vector_search.search(&query_embedding, Some(10), None).await?;
+        let vector_results = self
+            .vector_search
+            .search(&query_embedding, Some(10), None)
+            .await?;
 
         // Score results based on keyword matches (V2-style keyword scoring)
         for entry in vector_results {
@@ -480,8 +515,9 @@ impl KnowledgeSeeker {
 
             let mut keyword_matches = 0;
             for keyword in &keywords {
-                if content_lower.contains(&keyword.to_lowercase()) ||
-                   title_lower.contains(&keyword.to_lowercase()) {
+                if content_lower.contains(&keyword.to_lowercase())
+                    || title_lower.contains(&keyword.to_lowercase())
+                {
                     keyword_matches += 1;
                 }
             }
@@ -524,7 +560,10 @@ impl KnowledgeSeeker {
                 crate::KnowledgeSource::InternalKnowledgeBase(kb) => format!("internal:{}", kb),
             };
             let full_key = format!("{}:{}", source_key, result.url.as_deref().unwrap_or(""));
-            source_groups.entry(full_key).or_insert_with(Vec::new).push(idx);
+            source_groups
+                .entry(full_key)
+                .or_insert_with(Vec::new)
+                .push(idx);
         }
 
         // Apply RRF scoring (V2's fusion algorithm)
@@ -568,7 +607,7 @@ impl KnowledgeSeeker {
                 source: entry.source.clone(),
                 title: entry.title.clone(),
                 content: entry.content.clone(),
-                summary: None,         // TODO: Generate summary with the following requirements:
+                summary: None, // TODO: Generate summary with the following requirements:
                 // 1. Content summarization: Generate concise summaries of research content
                 //    - Use extractive or abstractive summarization techniques
                 //    - Identify key points, main arguments, and important details
@@ -577,7 +616,7 @@ impl KnowledgeSeeker {
                 //    - Keep summaries concise but informative
                 //    - Focus on content most relevant to research queries
                 //    - Maintain readability and clarity
-                relevance_score: 0.8,  // TODO: Calculate actual relevance with the following requirements:
+                relevance_score: 0.8, // TODO: Calculate actual relevance with the following requirements:
                 // 1. Relevance scoring: Calculate relevance scores for research content
                 //    - Use semantic similarity and keyword matching
                 //    - Consider query intent and context
@@ -841,7 +880,23 @@ mod tests {
             },
         };
         let seeker = KnowledgeSeeker::new(config).await.unwrap_or_else(|_| {
-            // Create a minimal seeker for testing
+            // TODO: Create minimal seeker for testing with the following requirements:
+            // 1. Minimal seeker creation: Create a minimal knowledge seeker for testing
+            //    - Initialize basic knowledge seeker with minimal configuration
+            //    - Handle minimal seeker creation error handling and recovery
+            //    - Implement proper fallback mechanisms for testing
+            // 2. Testing configuration: Configure minimal seeker for testing
+            //    - Set up basic testing configuration and parameters
+            //    - Handle testing-specific settings and options
+            //    - Implement proper testing environment setup
+            // 3. Minimal functionality: Implement minimal seeker functionality
+            //    - Provide basic knowledge seeking capabilities for testing
+            //    - Handle minimal functionality validation and verification
+            //    - Implement proper testing support and utilities
+            // 4. Testing integration: Integrate minimal seeker with testing framework
+            //    - Ensure compatibility with testing infrastructure
+            //    - Handle testing integration validation and verification
+            //    - Implement proper testing lifecycle management
             todo!("Create minimal seeker for testing")
         });
 

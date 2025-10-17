@@ -151,6 +151,11 @@ mod tests {
     #[tokio::test]
     async fn test_memory_manager_creation() {
         let config = MemoryConfig {
+            max_memory_usage_mb: 16384,
+            enable_memory_tracking: true,
+            memory_cleanup_interval_ms: 10000,
+            enable_memory_pool: true,
+            memory_pool_size_mb: 8192,
             max_memory_mb: 16384,
             check_interval_ms: 5000,
             pressure_monitoring: true,

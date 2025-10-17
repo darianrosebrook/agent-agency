@@ -244,6 +244,7 @@ export class ArbiterController {
               "research",
               "computation",
               "writing",
+              "file_editing",
             ],
             workerTimeout: 300000, // 5 minutes
             artifactConfig: {
@@ -291,10 +292,13 @@ export class ArbiterController {
       );
       console.log("✅ Task orchestrator initialized");
 
-      // Initialize arbiter runtime
-      this.runtime = new ArbiterRuntime({
-        outputDir: this.config.runtime.outputDir,
-      });
+      // Initialize arbiter runtime with the task orchestrator
+      this.runtime = new ArbiterRuntime(
+        {
+          outputDir: this.config.runtime.outputDir,
+        },
+        this.taskOrchestrator
+      );
       await this.runtime.start();
       console.log("✅ Arbiter runtime initialized");
 

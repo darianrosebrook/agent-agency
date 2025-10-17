@@ -4,7 +4,10 @@
 
 use crate::types::*;
 use crate::{LoadBalancingStrategy, RoutingAlgorithm};
-use agent_agency_council::models::{RiskTier, TaskSpec, TaskContext as CouncilTaskContext, WorkerOutput as CouncilWorkerOutput, Environment as ConfigEnvironment};
+use agent_agency_council::models::{
+    Environment as ConfigEnvironment, RiskTier, SelfAssessment, TaskContext as CouncilTaskContext,
+    TaskScope, TaskSpec, WorkerOutput as CouncilWorkerOutput,
+};
 use anyhow::{Context, Result};
 use dashmap::DashMap;
 use tracing::{debug, info};
@@ -534,21 +537,21 @@ mod tests {
             title: "Implement Rust API".to_string(),
             description: "Create a REST API in Rust with tokio".to_string(),
             risk_tier: RiskTier::Tier2,
-            scope: TaskSpec {
+            scope: TaskScope {
                 files_affected: vec!["src/api.rs".to_string()],
                 max_files: Some(5),
                 max_loc: Some(1000),
                 domains: vec!["backend".to_string()],
             },
             acceptance_criteria: vec![],
-              context: CouncilTaskContext {
+            context: CouncilTaskContext {
                 workspace_root: "/workspace".to_string(),
                 git_branch: "main".to_string(),
                 recent_changes: vec![],
                 dependencies: std::collections::HashMap::new(),
                 environment: ConfigEnvironment::Development,
             },
-              worker_output: CouncilWorkerOutput {
+            worker_output: CouncilWorkerOutput {
                 content: "".to_string(),
                 files_modified: vec![],
                 rationale: "".to_string(),
@@ -586,21 +589,21 @@ mod tests {
             title: "Test task".to_string(),
             description: "A simple test task".to_string(),
             risk_tier: RiskTier::Tier2,
-            scope: TaskSpec {
+            scope: TaskScope {
                 files_affected: vec!["file1.rs".to_string(), "file2.rs".to_string()],
                 max_files: Some(5),
                 max_loc: Some(1000),
                 domains: vec!["backend".to_string()],
             },
             acceptance_criteria: vec![],
-              context: CouncilTaskContext {
+            context: CouncilTaskContext {
                 workspace_root: "/workspace".to_string(),
                 git_branch: "main".to_string(),
                 recent_changes: vec![],
                 dependencies: std::collections::HashMap::new(),
                 environment: ConfigEnvironment::Development,
             },
-              worker_output: CouncilWorkerOutput {
+            worker_output: CouncilWorkerOutput {
                 content: "".to_string(),
                 files_modified: vec![],
                 rationale: "".to_string(),

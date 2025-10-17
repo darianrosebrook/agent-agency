@@ -37,7 +37,9 @@ impl DisambiguationStage {
         debug!("Identified {} ambiguities", ambiguities.len());
 
         // V2-style pronoun resolution using conversation context
-        let disambiguated_sentence = self.resolve_referential_ambiguities_v2(sentence, &ambiguities, context).await?;
+        let disambiguated_sentence = self
+            .resolve_referential_ambiguities_v2(sentence, &ambiguities, context)
+            .await?;
 
         // Count resolved ambiguities
         let ambiguities_resolved = ambiguities.len() as u32;
@@ -63,7 +65,23 @@ impl DisambiguationStage {
     ) -> Result<Vec<Ambiguity>> {
         let mut ambiguities = Vec::new();
 
-        // Basic pronoun detection for now - V2 complex logic will be added later
+        // TODO: Implement comprehensive pronoun detection with the following requirements:
+        // 1. Pronoun detection: Implement advanced pronoun detection algorithms
+        //    - Use NLP techniques for accurate pronoun identification
+        //    - Handle complex pronoun patterns and edge cases
+        //    - Implement proper pronoun detection error handling and validation
+        // 2. Context analysis: Analyze context for pronoun resolution
+        //    - Implement context-aware pronoun resolution
+        //    - Handle ambiguous pronoun references and disambiguation
+        //    - Implement proper context analysis error handling and validation
+        // 3. V2 complex logic: Integrate V2 complex logic for pronoun handling
+        //    - Implement sophisticated pronoun resolution algorithms
+        //    - Handle complex grammatical structures and dependencies
+        //    - Implement proper V2 logic integration and error handling
+        // 4. Pronoun optimization: Optimize pronoun detection performance and accuracy
+        //    - Implement efficient pronoun detection algorithms
+        //    - Handle large-scale pronoun detection operations
+        //    - Optimize pronoun detection quality and reliability
         let pronoun_regex = Regex::new(r"\b(it|this|that|they|them|their|these|those)\b").unwrap();
 
         for mat in pronoun_regex.find_iter(sentence) {
@@ -97,17 +115,24 @@ impl DisambiguationStage {
             .filter(|a| a.ambiguity_type == AmbiguityType::Pronoun)
             .collect();
 
-           for ambiguity in pronoun_ambiguities {
-               let pronoun = ambiguity.original_text.to_lowercase();
-               let referent_opt = self.context_resolver.find_referent_for_pronoun(&pronoun, &context_map);
+        for ambiguity in pronoun_ambiguities {
+            let pronoun = ambiguity.original_text.to_lowercase();
+            let referent_opt = self
+                .context_resolver
+                .find_referent_for_pronoun(&pronoun, &context_map);
 
-               if let Some(referent) = referent_opt {
+            if let Some(referent) = referent_opt {
                 // Replace pronoun with referent in the sentence
-                let pronoun_regex = regex::Regex::new(&format!(r"\b{}\b", regex::escape(&pronoun))).unwrap();
-                resolved_sentence = pronoun_regex.replace_all(&resolved_sentence, &referent.entity).to_string();
+                let pronoun_regex =
+                    regex::Regex::new(&format!(r"\b{}\b", regex::escape(&pronoun))).unwrap();
+                resolved_sentence = pronoun_regex
+                    .replace_all(&resolved_sentence, &referent.entity)
+                    .to_string();
 
-                debug!("Resolved pronoun '{}' to '{}' with confidence {:.2}",
-                       pronoun, referent.entity, referent.confidence);
+                debug!(
+                    "Resolved pronoun '{}' to '{}' with confidence {:.2}",
+                    pronoun, referent.entity, referent.confidence
+                );
             } else {
                 debug!("Could not resolve pronoun '{}'", pronoun);
             }
@@ -162,26 +187,28 @@ impl DisambiguationStage {
                 AmbiguityType::Pronoun => {
                     let pronoun = ambiguity.original_text.to_lowercase();
                     let context_map = HashMap::new(); // TODO: Implement extract_context_map
-                    let referent_opt = self.context_resolver.find_referent_for_pronoun(&pronoun, &context_map);
+                    let referent_opt = self
+                        .context_resolver
+                        .find_referent_for_pronoun(&pronoun, &context_map);
                     // If no referent or low confidence, mark as unresolvable
-                    referent_opt.is_none() || referent_opt.as_ref().map_or(true, |r| r.confidence < 0.75)
-                },
+                    referent_opt.is_none()
+                        || referent_opt.as_ref().map_or(true, |r| r.confidence < 0.75)
+                }
                 // Technical term ambiguity is unresolvable if technical term resolution fails
-                AmbiguityType::TechnicalTerm => {
-                    self.context_resolver.resolve_ambiguity(&ambiguity, context).unwrap_or(None).is_none()
-                },
+                AmbiguityType::TechnicalTerm => self
+                    .context_resolver
+                    .resolve_ambiguity(&ambiguity, context)
+                    .unwrap_or(None)
+                    .is_none(),
                 // Scope boundary ambiguity depends on explicit scope info
-                AmbiguityType::ScopeBoundary => {
-                    context.surrounding_context.is_empty()
-                },
+                AmbiguityType::ScopeBoundary => context.surrounding_context.is_empty(),
                 // Temporal ambiguity is unresolvable if no clear temporal reference in context
                 AmbiguityType::TemporalReference => {
-                    !context.surrounding_context.contains("time") && !context.surrounding_context.contains("when")
-                },
-                // Quantifier ambiguity is unresolvable if context doesn't clarify scope
-                AmbiguityType::Quantifier => {
-                    context.surrounding_context.is_empty()
+                    !context.surrounding_context.contains("time")
+                        && !context.surrounding_context.contains("when")
                 }
+                // Quantifier ambiguity is unresolvable if context doesn't clarify scope
+                AmbiguityType::Quantifier => context.surrounding_context.is_empty(),
             };
 
             if is_unresolvable {
@@ -333,7 +360,11 @@ impl AmbiguityDetector {
         Ok(ambiguities)
     }
 
-    fn find_referent_for_pronoun(&self, pronoun: &str, context_map: &HashMap<String, ReferentInfo>) -> Option<ReferentInfo> {
+    fn find_referent_for_pronoun(
+        &self,
+        pronoun: &str,
+        _context_map: &HashMap<String, ReferentInfo>,
+    ) -> Option<ReferentInfo> {
         // Simplified implementation - in real code this would use the context map
         match pronoun {
             "it" | "this" | "that" => Some(ReferentInfo {
@@ -374,7 +405,11 @@ impl ContextResolver {
     }
 
     /// Find referent for a pronoun using context map (V2 port)
-    fn find_referent_for_pronoun(&self, pronoun: &str, context_map: &HashMap<String, ReferentInfo>) -> Option<ReferentInfo> {
+    fn find_referent_for_pronoun(
+        &self,
+        pronoun: &str,
+        context_map: &HashMap<String, ReferentInfo>,
+    ) -> Option<ReferentInfo> {
         context_map.get(pronoun).cloned()
     }
 
@@ -428,7 +463,11 @@ impl ContextResolver {
             }
         }
         // Remove duplicates
-        matches.into_iter().collect::<std::collections::HashSet<_>>().into_iter().collect()
+        matches
+            .into_iter()
+            .collect::<std::collections::HashSet<_>>()
+            .into_iter()
+            .collect()
     }
 
     /// Extract context entities from processing context (ported from V2)
@@ -448,7 +487,11 @@ impl ContextResolver {
             }
         }
 
-        entities.into_iter().collect::<std::collections::HashSet<_>>().into_iter().collect()
+        entities
+            .into_iter()
+            .collect::<std::collections::HashSet<_>>()
+            .into_iter()
+            .collect()
     }
 
     /// Extract conversation entities (stub - would need conversation history)
@@ -462,7 +505,9 @@ impl ContextResolver {
     fn has_timeline_context(&self, context: &ProcessingContext) -> bool {
         // Basic check for temporal context in surrounding text
         let temporal_words = ["before", "after", "during", "while", "when", "then", "now"];
-        temporal_words.iter().any(|&word| context.surrounding_context.contains(word))
+        temporal_words
+            .iter()
+            .any(|&word| context.surrounding_context.contains(word))
     }
 
     /// Compute resolution confidence based on ambiguity factors (ported from V2)
@@ -506,11 +551,16 @@ impl ContextResolver {
 
             if let Some(referent) = referent {
                 // Replace pronoun with referent in the sentence
-                let pronoun_regex = Regex::new(&format!(r"\b{}\b", regex::escape(pronoun))).unwrap();
-                resolved_sentence = pronoun_regex.replace_all(&resolved_sentence, &referent.entity).to_string();
+                let pronoun_regex =
+                    Regex::new(&format!(r"\b{}\b", regex::escape(pronoun))).unwrap();
+                resolved_sentence = pronoun_regex
+                    .replace_all(&resolved_sentence, &referent.entity)
+                    .to_string();
 
-                debug!("Resolved pronoun '{}' to '{}' with confidence {:.2}",
-                       pronoun, referent.entity, referent.confidence);
+                debug!(
+                    "Resolved pronoun '{}' to '{}' with confidence {:.2}",
+                    pronoun, referent.entity, referent.confidence
+                );
             } else {
                 debug!("Could not resolve pronoun '{}'", pronoun);
             }
@@ -525,11 +575,14 @@ impl ContextResolver {
 
         // Extract from domain hints first (highest priority)
         for hint in &context.domain_hints {
-            referent_map.insert("it".to_string(), ReferentInfo {
-                entity: hint.clone(),
-                confidence: 0.9,
-                source: "domain_hint".to_string(),
-            });
+            referent_map.insert(
+                "it".to_string(),
+                ReferentInfo {
+                    entity: hint.clone(),
+                    confidence: 0.9,
+                    source: "domain_hint".to_string(),
+                },
+            );
         }
 
         // Extract entities from surrounding context
@@ -538,17 +591,23 @@ impl ContextResolver {
             for mat in entity_pattern.find_iter(&context.surrounding_context) {
                 let entity = mat.as_str().to_string();
                 // Set as potential referent for "it" (system/component references)
-                referent_map.insert("it".to_string(), ReferentInfo {
-                    entity: entity.clone(),
-                    confidence: 0.8,
-                    source: "surrounding_context".to_string(),
-                });
+                referent_map.insert(
+                    "it".to_string(),
+                    ReferentInfo {
+                        entity: entity.clone(),
+                        confidence: 0.8,
+                        source: "surrounding_context".to_string(),
+                    },
+                );
                 // Also set for "this" and "that"
-                referent_map.insert("this".to_string(), ReferentInfo {
-                    entity,
-                    confidence: 0.7,
-                    source: "surrounding_context".to_string(),
-                });
+                referent_map.insert(
+                    "this".to_string(),
+                    ReferentInfo {
+                        entity,
+                        confidence: 0.7,
+                        source: "surrounding_context".to_string(),
+                    },
+                );
             }
         }
 
@@ -556,27 +615,39 @@ impl ContextResolver {
     }
 
     /// Build a referent map using V2's sophisticated context analysis (ported from V2)
-    pub fn build_v2_referent_map(&self, context: &ProcessingContext) -> HashMap<String, ReferentInfo> {
+    pub fn build_v2_referent_map(
+        &self,
+        context: &ProcessingContext,
+    ) -> HashMap<String, ReferentInfo> {
         let mut referent_map = HashMap::new();
 
         // Extract from domain hints first (highest priority) - V2 style
         for hint in &context.domain_hints {
-            referent_map.insert("it".to_string(), ReferentInfo {
-                entity: hint.clone(),
-                confidence: 0.9,
-                source: "domain_hint".to_string(),
-            });
+            referent_map.insert(
+                "it".to_string(),
+                ReferentInfo {
+                    entity: hint.clone(),
+                    confidence: 0.9,
+                    source: "domain_hint".to_string(),
+                },
+            );
             // Also set for "this" and "that"
-            referent_map.insert("this".to_string(), ReferentInfo {
-                entity: hint.clone(),
-                confidence: 0.7,
-                source: "domain_hint".to_string(),
-            });
-            referent_map.insert("that".to_string(), ReferentInfo {
-                entity: hint.clone(),
-                confidence: 0.6,
-                source: "domain_hint".to_string(),
-            });
+            referent_map.insert(
+                "this".to_string(),
+                ReferentInfo {
+                    entity: hint.clone(),
+                    confidence: 0.7,
+                    source: "domain_hint".to_string(),
+                },
+            );
+            referent_map.insert(
+                "that".to_string(),
+                ReferentInfo {
+                    entity: hint.clone(),
+                    confidence: 0.6,
+                    source: "domain_hint".to_string(),
+                },
+            );
         }
 
         // Extract entities from surrounding context (V2-style entity detection)
@@ -585,22 +656,31 @@ impl ContextResolver {
             for mat in entity_pattern.find_iter(&context.surrounding_context) {
                 let entity = mat.as_str().to_string();
                 // Set as potential referent for "it" (system/component references)
-                referent_map.insert("it".to_string(), ReferentInfo {
-                    entity: entity.clone(),
-                    confidence: 0.8,
-                    source: "surrounding_context".to_string(),
-                });
+                referent_map.insert(
+                    "it".to_string(),
+                    ReferentInfo {
+                        entity: entity.clone(),
+                        confidence: 0.8,
+                        source: "surrounding_context".to_string(),
+                    },
+                );
                 // Also set for "this" and "that"
-                referent_map.insert("this".to_string(), ReferentInfo {
-                    entity: entity.clone(),
-                    confidence: 0.6,
-                    source: "surrounding_context".to_string(),
-                });
-                referent_map.insert("that".to_string(), ReferentInfo {
-                    entity,
-                    confidence: 0.5,
-                    source: "surrounding_context".to_string(),
-                });
+                referent_map.insert(
+                    "this".to_string(),
+                    ReferentInfo {
+                        entity: entity.clone(),
+                        confidence: 0.6,
+                        source: "surrounding_context".to_string(),
+                    },
+                );
+                referent_map.insert(
+                    "that".to_string(),
+                    ReferentInfo {
+                        entity,
+                        confidence: 0.5,
+                        source: "surrounding_context".to_string(),
+                    },
+                );
             }
         }
 

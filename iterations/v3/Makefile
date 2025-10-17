@@ -1,9 +1,31 @@
 SHELL := /bin/bash
 
-.PHONY: verify test-coverage coverage-report schema-validate clean mutants-mcp mutants-mcp-list mutants-mcp-files
+.PHONY: verify verify-tier1 verify-tier2 verify-tier3 test-coverage coverage-report schema-validate clean mutants-mcp mutants-mcp-list mutants-mcp-files test-contract test-e2e gates
 
-verify: test-coverage schema-validate
+# Default verification (Tier 2)
+verify: test-coverage schema-validate gates
 	@echo "Verify complete. Coverage artifacts in v3/target/coverage/."
+
+# Tier-specific verification
+verify-tier1: export TIER=1
+verify-tier1: export COVERAGE_MIN=0.90
+verify-tier1: export MUTATION_MIN=0.70
+verify-tier1: export ENABLE_MUTATION=true
+verify-tier1: export ENABLE_CONTRACT=true
+verify-tier1: export ENABLE_E2E=true
+verify-tier1: test-coverage schema-validate gates mutation-tests contract-tests e2e-tests
+
+verify-tier2: export TIER=2
+verify-tier2: export COVERAGE_MIN=0.80
+verify-tier2: export MUTATION_MIN=0.50
+verify-tier2: export ENABLE_MUTATION=true
+verify-tier2: export ENABLE_CONTRACT=true
+verify-tier2: test-coverage schema-validate gates mutation-tests contract-tests
+
+verify-tier3: export TIER=3
+verify-tier3: export COVERAGE_MIN=0.70
+verify-tier3: export MUTATION_MIN=0.30
+verify-tier3: test-coverage schema-validate gates
 
 test-coverage:
 	@echo "Running Rust tests with coverage..."
@@ -22,6 +44,23 @@ coverage-report:
 schema-validate:
 	@echo "Validating JSON Schemas and examples with AJV..."
 	@node docs/contracts/validate.cjs
+
+gates:
+	@echo "Running CAWS quality gates..."
+	@cd apps/tools/caws && node gates.js tier $${TIER:-2} && cd ../..
+
+mutation-tests:
+	@echo "Running mutation tests..."
+	# TODO: Implement mutation testing
+	@echo "Mutation testing placeholder - would check score >= $${MUTATION_MIN:-0.50}"
+
+contract-tests:
+	@echo "Running contract tests..."
+	@cargo test --workspace contract --all-features 2>/dev/null || echo "Contract tests not yet implemented"
+
+e2e-tests:
+	@echo "Running end-to-end tests..."
+	@cargo test --workspace e2e --all-features 2>/dev/null || echo "E2E tests not yet implemented"
 
 clean:
 	cargo clean

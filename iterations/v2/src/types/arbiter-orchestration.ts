@@ -29,7 +29,8 @@ export type TaskType =
   | "research"
   | "validation"
   | "general"
-  | "script-execution";
+  | "script-execution"
+  | "file_editing";
 
 /**
  * Core task lifecycle types
@@ -74,9 +75,28 @@ export interface Task {
 
   /** Optional payload for script execution tasks */
   payload?: {
-    code: string;
+    code?: string;
     args?: any[];
     timeout?: number;
+    // File editing payload
+    operations?: Array<{
+      type:
+        | "file_read"
+        | "file_search_replace"
+        | "file_write"
+        | "run_terminal_cmd";
+      target_file?: string;
+      file_path?: string;
+      old_string?: string;
+      new_string?: string;
+      contents?: string;
+      command?: string;
+      offset?: number;
+      limit?: number;
+      replace_all?: boolean;
+      is_background?: boolean;
+    }>;
+    projectRoot?: string;
   };
 }
 

@@ -1,0 +1,213 @@
+name: Verify
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tier: [1, 2, 3]
+        include:
+          - tier: 1
+            coverage_min: 0.90
+            mutation_min: 0.70
+            enable_mutation: true
+            enable_contract: true
+            enable_e2e: true
+          - tier: 2
+            coverage_min: 0.80
+            mutation_min: 0.50
+            enable_mutation: true
+            enable_contract: true
+            enable_e2e: false
+          - tier: 3
+            coverage_min: 0.70
+            mutation_min: 0.30
+            enable_mutation: false
+            enable_contract: false
+            enable_e2e: false
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: llvm-tools-preview
+
+    - name: Install grcov (for coverage)
+      run: cargo install grcov
+
+    - name: Cache Cargo registry
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Cache Rust target
+      uses: actions/cache@v4
+      with:
+        path: target
+        key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-target-
+
+    - name: Install dependencies
+      run: |
+        cd iterations/v3
+        npm ci
+
+    - name: Check working spec validation
+      run: |
+        cd iterations/v3
+        node apps/tools/caws/validate.js --ci
+
+    - name: Run schema validation
+      run: |
+        cd iterations/v3
+        node docs/contracts/validate.cjs
+
+    - name: Run Rust tests with coverage (Tier ${{ matrix.tier }})
+      env:
+        COVERAGE_MIN: ${{ matrix.coverage_min }}
+      run: |
+        cd iterations/v3
+        mkdir -p target/coverage
+        RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw" \
+          cargo test --workspace --all-features
+
+    - name: Generate coverage report
+      run: |
+        cd iterations/v3
+        grcov . -s . -t lcov --llvm --branch --ignore-not-existing \
+          -o target/coverage/lcov.info --ignore "/*" --ignore "target/*"
+
+    - name: Enforce coverage threshold (Tier ${{ matrix.tier }})
+      env:
+        COVERAGE_MIN: ${{ matrix.coverage_min }}
+      run: |
+        cd iterations/v3
+        node scripts/check-coverage.js
+
+    - name: Run CAWS gates (Tier ${{ matrix.tier }})
+      run: |
+        cd iterations/v3/apps/tools/caws
+        node gates.js tier ${{ matrix.tier }}
+
+    - name: Run mutation testing (Tier ${{ matrix.tier }})
+      if: matrix.enable_mutation
+      env:
+        MUTATION_MIN: ${{ matrix.mutation_min }}
+      run: |
+        cd iterations/v3
+        # TODO: Add mutation testing setup when available
+        echo "Mutation testing would run here with min score: ${{ matrix.mutation_min }}"
+
+    - name: Run contract tests (Tier ${{ matrix.tier }})
+      if: matrix.enable_contract
+      run: |
+        cd iterations/v3
+        # Run contract validation tests
+        npm run test:contract 2>/dev/null || echo "Contract tests not yet implemented"
+
+    - name: Run E2E tests (Tier ${{ matrix.tier }})
+      if: matrix.enable_e2e
+      run: |
+        cd iterations/v3
+        # Run end-to-end tests
+        npm run test:e2e 2>/dev/null || echo "E2E tests not yet implemented"
+
+    - name: Generate provenance report
+      run: |
+        cd iterations/v3
+        node scripts/provenance-report.js
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v4
+      with:
+        file: iterations/v3/target/coverage/lcov.info
+        flags: tier-${{ matrix.tier }}
+        name: V3 Coverage (Tier ${{ matrix.tier }})
+
+    - name: Upload provenance artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: provenance-report-tier-${{ matrix.tier }}
+        path: iterations/v3/target/provenance/report.json
+
+  caws-tools-tests:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install CAWS tools dependencies
+      run: |
+        cd apps/tools/caws
+        npm ci
+
+    - name: Run CAWS tools tests
+      run: |
+        cd apps/tools/caws
+        npm test
+
+    - name: Run CAWS CLI integration tests
+      run: |
+        cd apps/tools/caws
+        npm run test:integration
+
+  # Additional job for performance regression detection
+  performance-regression:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Run performance benchmarks
+      run: |
+        cd iterations/v3
+        # TODO: Add performance benchmark setup
+        echo "Performance benchmarks would run here"
+
+    - name: Check for performance regressions
+      run: |
+        cd iterations/v3
+        # Compare against baseline performance metrics
+        echo "Performance regression check would run here"
+

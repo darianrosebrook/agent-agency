@@ -191,8 +191,12 @@ export class ArbiterRuntime {
   private cumulativeDuration = 0;
   private lastDuration?: number;
 
-  constructor(options: ArbiterRuntimeOptions) {
+  constructor(
+    options: ArbiterRuntimeOptions,
+    taskOrchestrator?: TaskOrchestrator
+  ) {
     this.options = options;
+    this.taskOrchestrator = taskOrchestrator || null;
     this.cawsValidator = new CAWSValidator({
       performanceTracker: this.performanceTracker,
     });
@@ -280,7 +284,10 @@ export class ArbiterRuntime {
       );
       this.routingManager.setPerformanceTracker(this.performanceTracker);
 
-      await this.initializeTaskOrchestrator(realRegistry);
+      // Initialize task orchestrator (only if not provided)
+      if (!this.taskOrchestrator) {
+        await this.initializeTaskOrchestrator(realRegistry);
+      }
 
       // Wait for ready event
       await readyPromise;
@@ -318,7 +325,7 @@ export class ArbiterRuntime {
       workerPool: {
         minPoolSize: 1,
         maxPoolSize: 1,
-        workerCapabilities: ["script"],
+        workerCapabilities: ["script", "file_editing"],
         workerTimeout: 60_000,
         artifactConfig: {
           rootPath: artifactsRoot,
@@ -472,9 +479,11 @@ export class ArbiterRuntime {
     // Check for script task payload in metadata
     const scriptTaskPayload = options.metadata?.task?.payload;
     const hasScriptPayload = options.task?.payload || scriptTaskPayload;
+    const isFileEditingTask =
+      options.task?.type === "file_editing" || options.type === "file_editing";
 
-    // Only attempt routing for agent-based tasks, not direct script execution
-    if (!hasScriptPayload) {
+    // Only attempt routing for agent-based tasks, not direct script execution or file editing
+    if (!hasScriptPayload && !isFileEditingTask) {
       try {
         const routingDecision = await this.routingManager.routeTask({
           id: taskId,
@@ -511,11 +520,13 @@ export class ArbiterRuntime {
         );
       }
     } else {
-      // Script execution tasks don't need routing
+      // Script execution and file editing tasks don't need routing
       this.emitEvent(EventTypes.TASK_ASSIGNED, {
         taskId,
         agentId: fallbackAssignmentId,
-        strategy: "direct-execution",
+        strategy: isFileEditingTask
+          ? "file-editing-execution"
+          : "direct-execution",
       });
     }
 
@@ -537,6 +548,9 @@ export class ArbiterRuntime {
       maxAttempts: options.task?.maxAttempts ?? 1,
       ...(hasScriptPayload && {
         payload: options.task?.payload || scriptTaskPayload,
+      }),
+      ...(isFileEditingTask && {
+        payload: options.task?.payload || options.metadata?.payload,
       }),
     };
 

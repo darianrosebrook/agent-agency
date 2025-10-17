@@ -1,7 +1,7 @@
 //! Semantic evaluation integration for council judges
 
-use crate::types::*;
 use crate::resilience::{CircuitBreakerConfig, ResilienceManager}; // V2 resilience patterns
+use crate::types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::Arc;

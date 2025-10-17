@@ -4,7 +4,11 @@
 //! Enhanced with AST-based diff sizing and violation code mapping.
 
 use crate::types::*;
-use agent_agency_council::models::{RiskTier, TaskSpec, TaskContext as CouncilTaskContext, WorkerOutput as CouncilWorkerOutput, Environment as ConfigEnvironment, FileModification as CouncilFileModification, FileOperation as CouncilFileOperation};
+use agent_agency_council::models::{
+    Environment as ConfigEnvironment, FileModification as CouncilFileModification,
+    FileOperation as CouncilFileOperation, RiskTier, SelfAssessment,
+    TaskContext as CouncilTaskContext, TaskScope, TaskSpec, WorkerOutput as CouncilWorkerOutput,
+};
 use anyhow::Result;
 use std::collections::HashMap;
 use tracing::info;
@@ -1364,14 +1368,14 @@ mod tests {
             title: "Test Task".to_string(),
             description: "A test task description".to_string(),
             risk_tier: RiskTier::Tier2,
-            scope: TaskSpec {
+            scope: TaskScope {
                 files_affected: vec!["src/test.rs".to_string()],
                 max_files: Some(5),
                 max_loc: Some(1000),
                 domains: vec!["backend".to_string()],
             },
             acceptance_criteria: vec![],
-            context: TaskContext {
+            context: CouncilTaskContext {
                 workspace_root: "/workspace".to_string(),
                 git_branch: "main".to_string(),
                 recent_changes: vec![],
@@ -1410,14 +1414,14 @@ mod tests {
             title: "Test Task".to_string(),
             description: "A test task description".to_string(),
             risk_tier: RiskTier::Tier2,
-            scope: TaskSpec {
+            scope: TaskScope {
                 files_affected: vec!["src/test.rs".to_string()],
                 max_files: Some(2),
                 max_loc: Some(100),
                 domains: vec!["backend".to_string()],
             },
             acceptance_criteria: vec![],
-            context: TaskContext {
+            context: CouncilTaskContext {
                 workspace_root: "/workspace".to_string(),
                 git_branch: "main".to_string(),
                 recent_changes: vec![],
@@ -1427,23 +1431,23 @@ mod tests {
             worker_output: CouncilWorkerOutput {
                 content: "Test implementation".to_string(),
                 files_modified: vec![
-                    FileModification {
+                    CouncilFileModification {
                         path: "test1.rs".to_string(),
-                        operation: FileOperation::Create,
+                        operation: CouncilFileOperation::Create,
                         content: Some("fn main() {\n    println!(\"test\");\n}".to_string()),
                         diff: None,
                         size_bytes: 50,
                     },
-                    FileModification {
+                    CouncilFileModification {
                         path: "test2.rs".to_string(),
-                        operation: FileOperation::Create,
+                        operation: CouncilFileOperation::Create,
                         content: Some("fn helper() {\n    // helper function\n}".to_string()),
                         diff: None,
                         size_bytes: 40,
                     },
-                    FileModification {
+                    CouncilFileModification {
                         path: "test3.rs".to_string(),
-                        operation: FileOperation::Create,
+                        operation: CouncilFileOperation::Create,
                         content: Some("fn extra() {\n    // extra function\n}".to_string()),
                         diff: None,
                         size_bytes: 40,

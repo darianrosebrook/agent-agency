@@ -571,9 +571,16 @@ export class TaskOrchestrator extends EventEmitter {
     // Validate task (additional validation beyond intake)
     this.validateTask(sanitizedTask);
 
-    // Route task to appropriate agent
-    const routingDecision = await this.routingManager.routeTask(sanitizedTask);
-    (sanitizedTask as any).assignedAgent = routingDecision.selectedAgent.id;
+    // Route task to appropriate agent (skip for file editing tasks)
+    if (sanitizedTask.type === "file_editing") {
+      // File editing tasks are executed directly in workers
+      (sanitizedTask as any).assignedAgent = "worker-pool";
+    } else {
+      const routingDecision = await this.routingManager.routeTask(
+        sanitizedTask
+      );
+      (sanitizedTask as any).assignedAgent = routingDecision.selectedAgent.id;
+    }
 
     // Add to queue
     this.taskQueue.enqueue(sanitizedTask);
@@ -940,6 +947,7 @@ export class TaskOrchestrator extends EventEmitter {
         "api_call",
         "data_processing",
         "ai_inference",
+        "file_editing",
       ],
       pleadingSupport: true,
       retrySupport: true,

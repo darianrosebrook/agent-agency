@@ -106,8 +106,10 @@ impl SecurityPolicyEnforcer {
             } else {
                 stats.operations_denied += 1;
             }
-            stats.avg_enforcement_time_ms = (stats.avg_enforcement_time_ms * (stats.total_operations - 1) as f64 +
-                start_time.elapsed().as_millis() as f64) / stats.total_operations as f64;
+            stats.avg_enforcement_time_ms = (stats.avg_enforcement_time_ms
+                * (stats.total_operations - 1) as f64
+                + start_time.elapsed().as_millis() as f64)
+                / stats.total_operations as f64;
             stats.last_updated = Utc::now();
         }
 
@@ -129,7 +131,10 @@ impl SecurityPolicyEnforcer {
                 metadata: {
                     let mut metadata = std::collections::HashMap::new();
                     metadata.insert("allowed".to_string(), result.allowed.to_string());
-                    metadata.insert("current_count".to_string(), result.current_count.to_string());
+                    metadata.insert(
+                        "current_count".to_string(),
+                        result.current_count.to_string(),
+                    );
                     if let Some(retry_after) = result.retry_after_seconds {
                         metadata.insert("retry_after_seconds".to_string(), retry_after.to_string());
                     }
@@ -446,7 +451,23 @@ impl SecurityPolicyEnforcer {
 
     /// Check if a path is within allowed workspace
     pub fn is_within_workspace(&self, path: &str, workspace_root: &str) -> bool {
-        // Simple implementation - in production, use proper path resolution
+        // TODO: Implement comprehensive path resolution with the following requirements:
+        // 1. Path resolution: Implement proper path resolution and validation
+        //    - Use proper path resolution algorithms for cross-platform compatibility
+        //    - Handle path resolution error detection and reporting
+        //    - Implement proper path validation and verification
+        // 2. Workspace validation: Implement comprehensive workspace validation
+        //    - Validate workspace boundaries and constraints
+        //    - Handle workspace validation error detection and reporting
+        //    - Implement proper workspace security validation
+        // 3. Security checks: Implement security-focused path checks
+        //    - Check for path traversal attacks and security vulnerabilities
+        //    - Handle security check error detection and reporting
+        //    - Implement proper security validation and verification
+        // 4. Path optimization: Optimize path resolution performance
+        //    - Implement efficient path resolution algorithms
+        //    - Handle large-scale path resolution operations
+        //    - Optimize path resolution quality and reliability
         path.starts_with(workspace_root)
     }
 

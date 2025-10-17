@@ -31,6 +31,7 @@ const taskExecutors = {
   api_call: executeApiCallTask,
   data_processing: executeDataProcessingTask,
   ai_inference: executeAIInferenceTask,
+  file_editing: executeFileEditingTask,
 };
 
 async function executeScriptTask(task) {
@@ -357,6 +358,197 @@ async function executeAIInferenceTask(task) {
         cpuUsage: process.cpuUsage().user / 1000,
         memoryUsage: process.memoryUsage().heapUsed,
       },
+    };
+  }
+}
+
+async function executeFileEditingTask(task) {
+  const { operations, projectRoot, timeout = 60000 } = task.payload;
+
+  const logs = [];
+  const startTime = performance.now();
+
+  try {
+    // Import required modules
+    const fs = await import("fs/promises");
+    const path = await import("path");
+    const { exec } = await import("child_process");
+    const util = await import("util");
+    const execAsync = util.promisify(exec);
+
+    // Set project root (default to current working directory)
+    const workingDir = projectRoot || process.cwd();
+
+    // Create file editing context
+    const context = {
+      console: {
+        log: (...args) => logs.push(`[LOG] ${args.join(" ")}`),
+        error: (...args) => logs.push(`[ERROR] ${args.join(" ")}`),
+        warn: (...args) => logs.push(`[WARN] ${args.join(" ")}`),
+      },
+      projectRoot: workingDir,
+      operations: operations || [],
+      results: [],
+
+      // File editing tools
+      tools: {
+        file_read: async (targetFile, offset, limit) => {
+          const fullPath = path.resolve(workingDir, targetFile);
+          let content = await fs.readFile(fullPath, "utf-8");
+
+          if (offset !== undefined || limit !== undefined) {
+            const lines = content.split("\n");
+            const start = offset ? offset - 1 : 0;
+            const end = limit ? start + limit : lines.length;
+            content = lines.slice(start, end).join("\n");
+          }
+
+          return content;
+        },
+
+        file_search_replace: async (
+          filePath,
+          oldString,
+          newString,
+          replaceAll = false
+        ) => {
+          const fullPath = path.resolve(workingDir, filePath);
+          let content = await fs.readFile(fullPath, "utf-8");
+
+          if (replaceAll) {
+            content = content.replaceAll(oldString, newString);
+          } else {
+            content = content.replace(oldString, newString);
+          }
+
+          await fs.writeFile(fullPath, content, "utf-8");
+          return `Successfully updated file: ${filePath}`;
+        },
+
+        file_write: async (filePath, contents) => {
+          const fullPath = path.resolve(workingDir, filePath);
+          await fs.writeFile(fullPath, contents, "utf-8");
+          return `Successfully wrote file: ${filePath}`;
+        },
+
+        run_terminal_cmd: async (command, isBackground = false) => {
+          // Basic security checks
+          const dangerousPatterns = [
+            /rm\s+-rf\s+\//,
+            />/,
+            /sudo/,
+            /chmod\s+777/,
+            /dd\s+if=/,
+          ];
+
+          if (dangerousPatterns.some((pattern) => pattern.test(command))) {
+            throw new Error(
+              "Command contains potentially dangerous operations"
+            );
+          }
+
+          if (isBackground) {
+            // Run in background
+            const child = exec(command, { cwd: workingDir });
+            return `Command started in background: ${command}`;
+          } else {
+            // Run synchronously
+            const { stdout, stderr } = await execAsync(command, {
+              cwd: workingDir,
+            });
+            return `Command: ${command}\nOutput:\n${stdout}${
+              stderr ? `\nErrors:\n${stderr}` : ""
+            }`;
+          }
+        },
+      },
+    };
+
+    // Execute operations
+    for (const operation of operations) {
+      try {
+        let result;
+
+        switch (operation.type) {
+          case "file_read":
+            result = await context.tools.file_read(
+              operation.target_file,
+              operation.offset,
+              operation.limit
+            );
+            break;
+
+          case "file_search_replace":
+            result = await context.tools.file_search_replace(
+              operation.file_path,
+              operation.old_string,
+              operation.new_string,
+              operation.replace_all
+            );
+            break;
+
+          case "file_write":
+            result = await context.tools.file_write(
+              operation.file_path,
+              operation.contents
+            );
+            break;
+
+          case "run_terminal_cmd":
+            result = await context.tools.run_terminal_cmd(
+              operation.command,
+              operation.is_background
+            );
+            break;
+
+          default:
+            throw new Error(`Unknown operation type: ${operation.type}`);
+        }
+
+        context.results.push({
+          operation: operation.type,
+          success: true,
+          result: result,
+        });
+
+        context.console.log(
+          `Operation ${operation.type} completed successfully`
+        );
+      } catch (error) {
+        context.results.push({
+          operation: operation.type,
+          success: false,
+          error: error.message,
+        });
+
+        context.console.error(
+          `Operation ${operation.type} failed: ${error.message}`
+        );
+      }
+    }
+
+    const executionTime = performance.now() - startTime;
+
+    return {
+      success: true,
+      executionTime,
+      logs,
+      results: context.results,
+      summary: {
+        totalOperations: operations.length,
+        successfulOperations: context.results.filter((r) => r.success).length,
+        failedOperations: context.results.filter((r) => !r.success).length,
+      },
+    };
+  } catch (error) {
+    const executionTime = performance.now() - startTime;
+
+    return {
+      success: false,
+      executionTime,
+      logs,
+      error: error.message,
+      results: [],
     };
   }
 }

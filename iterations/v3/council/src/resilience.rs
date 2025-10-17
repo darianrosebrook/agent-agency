@@ -25,10 +25,10 @@ pub enum CircuitState {
 /// Circuit breaker configuration (V2-style)
 #[derive(Debug, Clone)]
 pub struct CircuitBreakerConfig {
-    pub failure_threshold: u32,        // Failures before opening
-    pub recovery_timeout_ms: u64,      // Time before trying recovery
-    pub success_threshold: u32,        // Successes needed to close
-    pub monitoring_window_ms: u64,     // Window for failure tracking
+    pub failure_threshold: u32,    // Failures before opening
+    pub recovery_timeout_ms: u64,  // Time before trying recovery
+    pub success_threshold: u32,    // Successes needed to close
+    pub monitoring_window_ms: u64, // Window for failure tracking
 }
 
 /// Circuit breaker implementation (V2 pattern)
@@ -64,7 +64,9 @@ impl CircuitBreaker {
             CircuitState::Open => {
                 // Check if we should try recovery
                 if let Some(last_failure) = *self.last_failure_time.read().await {
-                    if last_failure.elapsed() > Duration::from_millis(self.config.recovery_timeout_ms) {
+                    if last_failure.elapsed()
+                        > Duration::from_millis(self.config.recovery_timeout_ms)
+                    {
                         *self.state.write().await = CircuitState::HalfOpen;
                         info!("Circuit breaker transitioning to HalfOpen for recovery attempt");
                     } else {
@@ -108,7 +110,10 @@ impl CircuitBreaker {
         if state == CircuitState::HalfOpen && *successes >= self.config.success_threshold {
             *self.state.write().await = CircuitState::Closed;
             *successes = 0;
-            info!("Circuit breaker CLOSED after {} successes", self.config.success_threshold);
+            info!(
+                "Circuit breaker CLOSED after {} successes",
+                self.config.success_threshold
+            );
         }
     }
 
@@ -126,7 +131,10 @@ impl CircuitBreaker {
 
         if failures.len() >= self.config.failure_threshold as usize {
             *self.state.write().await = CircuitState::Open;
-            warn!("Circuit breaker OPENED after {} failures in window", failures.len());
+            warn!(
+                "Circuit breaker OPENED after {} failures in window",
+                failures.len()
+            );
         }
     }
 
@@ -206,15 +214,13 @@ impl RetryExecutor {
                     delay = (backoff_delay as u64).min(self.config.max_delay_ms);
 
                     // Add jitter to prevent thundering herd
-                    let jitter = (delay as f64 * self.config.jitter_factor * rand::random::<f64>()) as u64;
+                    let jitter =
+                        (delay as f64 * self.config.jitter_factor * rand::random::<f64>()) as u64;
                     let total_delay = delay + jitter;
 
                     warn!(
                         "Operation failed (attempt {}/{}): {}. Retrying in {}ms",
-                        attempt,
-                        self.config.max_attempts,
-                        e,
-                        total_delay
+                        attempt, self.config.max_attempts, e, total_delay
                     );
 
                     sleep(Duration::from_millis(total_delay)).await;
@@ -225,9 +231,19 @@ impl RetryExecutor {
 }
 
 /// Health check system (V2 pattern)
-#[derive(Debug)]
 pub struct HealthChecker {
     checks: Arc<RwLock<HashMap<String, Box<dyn HealthCheck>>>>,
+}
+
+impl std::fmt::Debug for HealthChecker {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HealthChecker")
+            .field(
+                "checks_count",
+                &self.checks.try_read().map(|r| r.len()).unwrap_or(0),
+            )
+            .finish()
+    }
 }
 
 impl HealthChecker {
@@ -346,7 +362,10 @@ impl ResilienceManager {
         };
 
         let breaker = Arc::new(CircuitBreaker::new(config));
-        self.circuit_breakers.write().await.insert(service_name.to_string(), breaker.clone());
+        self.circuit_breakers
+            .write()
+            .await
+            .insert(service_name.to_string(), breaker.clone());
         breaker
     }
 
@@ -429,7 +448,9 @@ mod tests {
 
         // Fail operations to open circuit
         for _ in 0..2 {
-            let result: Result<i32> = breaker.execute(|| async { Err(anyhow::anyhow!("test error")) }).await;
+            let result: Result<i32> = breaker
+                .execute(|| async { Err(anyhow::anyhow!("test error")) })
+                .await;
             assert!(result.is_err());
         }
 
@@ -469,5 +490,3 @@ mod tests {
         assert_eq!(counter.load(Ordering::SeqCst), 3); // Should have tried 3 times
     }
 }
-
-

@@ -1,8 +1,8 @@
 //! Database models and types for Agent Agency V3
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// Judge model from database
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]

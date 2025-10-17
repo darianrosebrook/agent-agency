@@ -1,6 +1,5 @@
 //! Progress tracking for learning sessions
 
-
 pub struct ProgressTracker {
     // TODO: Implement progress tracking with the following requirements:
     // 1. Progress monitoring: Monitor learning progress and milestones

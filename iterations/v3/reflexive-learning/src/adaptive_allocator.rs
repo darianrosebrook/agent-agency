@@ -1,6 +1,5 @@
 //! Adaptive resource allocation
 
-
 pub struct AdaptiveResourceAllocator {
     // TODO: Implement adaptive resource allocation with the following requirements:
     // 1. Resource monitoring: Monitor system resources and usage

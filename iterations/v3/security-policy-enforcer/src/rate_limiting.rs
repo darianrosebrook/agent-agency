@@ -53,13 +53,15 @@ impl RateLimiter {
 
         let mut counters = self.counters.write().await;
 
-        let entry = counters.entry(key.clone()).or_insert_with(|| RateLimitEntry {
-            client_id: request.client_id.clone(),
-            operation: request.operation.clone(),
-            count: 0,
-            window_start: now,
-            last_request: now,
-        });
+        let entry = counters
+            .entry(key.clone())
+            .or_insert_with(|| RateLimitEntry {
+                client_id: request.client_id.clone(),
+                operation: request.operation.clone(),
+                count: 0,
+                window_start: now,
+                last_request: now,
+            });
 
         // Reset window if expired
         if now - entry.window_start > Duration::seconds(self.config.window_seconds as i64) {
@@ -73,7 +75,8 @@ impl RateLimiter {
             return Ok(RateLimitResult {
                 allowed: false,
                 current_count: entry.count,
-                reset_time: entry.window_start + Duration::seconds(self.config.window_seconds as i64),
+                reset_time: entry.window_start
+                    + Duration::seconds(self.config.window_seconds as i64),
                 retry_after_seconds: Some(retry_after),
             });
         }
@@ -93,13 +96,18 @@ impl RateLimiter {
     }
 
     /// Get current rate limit status for a client/operation pair
-    pub async fn get_rate_limit_status(&self, client_id: &str, operation: &str) -> Result<Option<RateLimitResult>> {
+    pub async fn get_rate_limit_status(
+        &self,
+        client_id: &str,
+        operation: &str,
+    ) -> Result<Option<RateLimitResult>> {
         let key = self.generate_key(client_id, operation);
         let counters = self.counters.read().await;
 
         if let Some(entry) = counters.get(&key) {
             let now = Utc::now();
-            let reset_time = entry.window_start + Duration::seconds(self.config.window_seconds as i64);
+            let reset_time =
+                entry.window_start + Duration::seconds(self.config.window_seconds as i64);
 
             Ok(Some(RateLimitResult {
                 allowed: entry.count < self.config.requests_per_window,
@@ -143,9 +151,7 @@ impl RateLimiter {
             let mut counters = self.counters.write().await;
             let window_duration = Duration::seconds(self.config.window_seconds as i64);
 
-            counters.retain(|_, entry| {
-                *now - entry.window_start <= window_duration
-            });
+            counters.retain(|_, entry| *now - entry.window_start <= window_duration);
 
             *last_cleanup = *now;
             debug!("Cleaned up {} expired rate limit entries", counters.len());
@@ -222,5 +228,3 @@ mod tests {
         assert_eq!(result.current_count, 0);
     }
 }
-
-

@@ -307,8 +307,23 @@ impl SignerFactory {
                 } else {
                     // Generate new key and save it
                     let signer = LocalKeySigner::new(key_id.clone())?;
-                    // Save key to file (implementation depends on key format)
-                    // For now, just return the signer
+                    // TODO: Implement key file saving with the following requirements:
+                    // 1. Key format handling: Handle different key formats for file saving
+                    //    - Support various key formats (PEM, DER, JWK, etc.)
+                    //    - Implement key format conversion and validation
+                    //    - Handle key format error detection and reporting
+                    // 2. Key file management: Implement secure key file management
+                    //    - Save keys to appropriate file locations with proper permissions
+                    //    - Implement key file encryption and security
+                    //    - Handle key file management error detection and reporting
+                    // 3. Key persistence: Implement key persistence and storage
+                    //    - Persist keys to secure storage locations
+                    //    - Implement key backup and recovery mechanisms
+                    //    - Handle key persistence error detection and reporting
+                    // 4. Key optimization: Optimize key file operations performance
+                    //    - Implement efficient key file operations
+                    //    - Handle large-scale key file operations
+                    //    - Optimize key file operation quality and reliability
                     Ok(Box::new(signer))
                 }
             }

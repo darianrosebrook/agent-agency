@@ -33,7 +33,6 @@ impl EvidenceEnrichmentCoordinator {
     ) -> Result<Vec<CouncilEvidence>> {
         info!("Starting evidence enrichment for task {}", task_spec.id);
 
-
         // Extract claims from task description and worker output
         let mut all_evidence = Vec::new();
 
@@ -133,8 +132,6 @@ impl EvidenceEnrichmentCoordinator {
 
         Ok(())
     }
-
-
 
     /// Calculate overall evidence confidence score
     fn calculate_evidence_confidence(&self, evidence: &[CouncilEvidence]) -> f32 {

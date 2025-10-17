@@ -99,8 +99,8 @@ export class ArbiterMCPServer extends Server {
       cacheTTL: 300000, // 5 minutes
     });
 
-    // Initialize tools array with arbiter and terminal tools
-    this.tools = [...ARBITER_TOOLS, ...TERMINAL_TOOLS];
+    // Initialize tools array with arbiter, terminal, and file editing tools
+    this.tools = [...ARBITER_TOOLS, ...TERMINAL_TOOLS, ...FILE_EDITING_TOOLS];
 
     // Setup will be called after construction
 
@@ -278,6 +278,10 @@ export class ArbiterMCPServer extends Server {
           | "knowledge_search"
           | "knowledge_status"
           | TerminalToolName
+          | "file_read"
+          | "file_search_replace"
+          | "file_write"
+          | "run_terminal_cmd"
       ) {
         case "arbiter_validate":
           return await this.handleValidate(toolArgs);
@@ -313,6 +317,16 @@ export class ArbiterMCPServer extends Server {
             this.terminalManager,
             toolArgs as any // MCPGetStatusArgs
           );
+
+        // File editing tools
+        case "file_read":
+          return await this.handleFileRead(toolArgs);
+        case "file_search_replace":
+          return await this.handleFileSearchReplace(toolArgs);
+        case "file_write":
+          return await this.handleFileWrite(toolArgs);
+        case "run_terminal_cmd":
+          return await this.handleTerminalCmd(toolArgs);
 
         default:
           throw new Error(`Unknown tool: ${name}`);
@@ -1112,6 +1126,234 @@ export class ArbiterMCPServer extends Server {
 
     return Math.round(hours * 10) / 10; // Round to 1 decimal
   }
+
+  /**
+   * Handle file_read tool call
+   */
+  private async handleFileRead(args: Record<string, any>): Promise<{
+    content: Array<{ type: string; text: string }>;
+    isError?: boolean;
+  }> {
+    try {
+      const fs = await import("fs/promises");
+      const path = await import("path");
+
+      const targetFile = args.target_file;
+      const offset = args.offset;
+      const limit = args.limit;
+
+      if (!targetFile) {
+        throw new Error("target_file is required");
+      }
+
+      const fullPath = path.resolve(this.projectRoot, targetFile);
+      let content = await fs.readFile(fullPath, "utf-8");
+
+      if (offset !== undefined || limit !== undefined) {
+        const lines = content.split("\n");
+        const start = offset ? offset - 1 : 0;
+        const end = limit ? start + limit : lines.length;
+        content = lines.slice(start, end).join("\n");
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: content,
+          },
+        ],
+      };
+    } catch (error) {
+      console.error("[Arbiter MCP] File read error:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error reading file: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+
+  /**
+   * Handle file_search_replace tool call
+   */
+  private async handleFileSearchReplace(args: Record<string, any>): Promise<{
+    content: Array<{ type: string; text: string }>;
+    isError?: boolean;
+  }> {
+    try {
+      const fs = await import("fs/promises");
+      const path = await import("path");
+
+      const filePath = args.file_path;
+      const oldString = args.old_string;
+      const newString = args.new_string;
+      const replaceAll = args.replace_all || false;
+
+      if (!filePath || !oldString || newString === undefined) {
+        throw new Error("file_path, old_string, and new_string are required");
+      }
+
+      const fullPath = path.resolve(this.projectRoot, filePath);
+      let content = await fs.readFile(fullPath, "utf-8");
+
+      if (replaceAll) {
+        content = content.replaceAll(oldString, newString);
+      } else {
+        content = content.replace(oldString, newString);
+      }
+
+      await fs.writeFile(fullPath, content, "utf-8");
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Successfully updated file: ${filePath}`,
+          },
+        ],
+      };
+    } catch (error) {
+      console.error("[Arbiter MCP] File search replace error:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error updating file: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+
+  /**
+   * Handle file_write tool call
+   */
+  private async handleFileWrite(args: Record<string, any>): Promise<{
+    content: Array<{ type: string; text: string }>;
+    isError?: boolean;
+  }> {
+    try {
+      const fs = await import("fs/promises");
+      const path = await import("path");
+
+      const filePath = args.file_path;
+      const contents = args.contents;
+
+      if (!filePath || contents === undefined) {
+        throw new Error("file_path and contents are required");
+      }
+
+      const fullPath = path.resolve(this.projectRoot, filePath);
+      await fs.writeFile(fullPath, contents, "utf-8");
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Successfully wrote file: ${filePath}`,
+          },
+        ],
+      };
+    } catch (error) {
+      console.error("[Arbiter MCP] File write error:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error writing file: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+
+  /**
+   * Handle run_terminal_cmd tool call
+   */
+  private async handleTerminalCmd(args: Record<string, any>): Promise<{
+    content: Array<{ type: string; text: string }>;
+    isError?: boolean;
+  }> {
+    try {
+      const { exec } = await import("child_process");
+      const util = await import("util");
+      const execAsync = util.promisify(exec);
+
+      const command = args.command;
+      const isBackground = args.is_background || false;
+
+      if (!command) {
+        throw new Error("command is required");
+      }
+
+      // Basic security checks
+      const dangerousPatterns = [
+        /rm\s+-rf\s+\//,
+        />/,
+        /sudo/,
+        /chmod\s+777/,
+        /dd\s+if=/,
+      ];
+
+      if (dangerousPatterns.some((pattern) => pattern.test(command))) {
+        throw new Error("Command contains potentially dangerous operations");
+      }
+
+      if (isBackground) {
+        // Run in background
+        const child = exec(command, { cwd: this.projectRoot });
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Command started in background: ${command}`,
+            },
+          ],
+        };
+      } else {
+        // Run synchronously
+        const { stdout, stderr } = await execAsync(command, {
+          cwd: this.projectRoot,
+        });
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Command: ${command}\nOutput:\n${stdout}${
+                stderr ? `\nErrors:\n${stderr}` : ""
+              }`,
+            },
+          ],
+        };
+      }
+    } catch (error) {
+      console.error("[Arbiter MCP] Terminal command error:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error executing command: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
 }
 
 /**
@@ -1277,6 +1519,102 @@ const ARBITER_TOOLS = [
         },
       },
       required: ["taskId", "spec"],
+    },
+  },
+];
+
+/**
+ * File editing tools for code modification
+ */
+const FILE_EDITING_TOOLS = [
+  {
+    name: "file_read",
+    description: "Read the contents of a file",
+    inputSchema: {
+      type: "object",
+      properties: {
+        target_file: {
+          type: "string",
+          description: "Path to the file to read, relative to workspace root",
+        },
+        offset: {
+          type: "number",
+          description: "Optional line number to start reading from",
+        },
+        limit: {
+          type: "number",
+          description: "Optional number of lines to read",
+        },
+      },
+      required: ["target_file"],
+    },
+  },
+  {
+    name: "file_search_replace",
+    description: "Search and replace text in a file",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file_path: {
+          type: "string",
+          description: "Path to the file to modify, relative to workspace root",
+        },
+        old_string: {
+          type: "string",
+          description: "Text to replace",
+        },
+        new_string: {
+          type: "string",
+          description: "Replacement text",
+        },
+        replace_all: {
+          type: "boolean",
+          description: "Whether to replace all occurrences",
+          default: false,
+        },
+      },
+      required: ["file_path", "old_string", "new_string"],
+    },
+  },
+  {
+    name: "file_write",
+    description: "Write content to a file (overwrites existing file)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file_path: {
+          type: "string",
+          description: "Path to the file to write, relative to workspace root",
+        },
+        contents: {
+          type: "string",
+          description: "Content to write to the file",
+        },
+      },
+      required: ["file_path", "contents"],
+    },
+  },
+  {
+    name: "run_terminal_cmd",
+    description: "Execute a terminal command",
+    inputSchema: {
+      type: "object",
+      properties: {
+        command: {
+          type: "string",
+          description: "Terminal command to execute",
+        },
+        is_background: {
+          type: "boolean",
+          description: "Whether to run in background",
+          default: false,
+        },
+        explanation: {
+          type: "string",
+          description: "Explanation of why this command is needed",
+        },
+      },
+      required: ["command"],
     },
   },
 ];

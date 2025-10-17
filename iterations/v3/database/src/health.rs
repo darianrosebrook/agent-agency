@@ -59,7 +59,7 @@ pub struct HealthCheckResult {
 }
 
 /// Database diagnostics information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DatabaseDiagnostics {
     /// Pool statistics
     pub pool_stats: PoolStats,
@@ -76,7 +76,7 @@ pub struct DatabaseDiagnostics {
 }
 
 /// Pool statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PoolStats {
     /// Active connections
     pub active_connections: u32,
@@ -89,7 +89,7 @@ pub struct PoolStats {
 }
 
 /// Query performance metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct QueryMetrics {
     /// Average query time (ms)
     pub avg_query_time_ms: f64,
@@ -102,7 +102,7 @@ pub struct QueryMetrics {
 }
 
 /// Connection statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ConnectionStats {
     /// Total connections created
     pub total_connections: u64,
@@ -216,10 +216,15 @@ impl DatabaseHealthChecker {
 
         match tokio::time::timeout(
             Duration::from_secs(self.config.query_timeout_seconds),
-            self.client.health_check(),
-        ).await {
+            self.client.test_connectivity(),
+        )
+        .await
+        {
             Ok(Ok(true)) => {
-                debug!("Database connectivity test passed in {:?}", start_time.elapsed());
+                debug!(
+                    "Database connectivity test passed in {:?}",
+                    start_time.elapsed()
+                );
                 Ok(true)
             }
             Ok(Ok(false)) => {
@@ -242,7 +247,8 @@ impl DatabaseHealthChecker {
         let pool_size = self.client.pool().size();
         let idle_connections = self.client.pool().num_idle();
         let utilization = if pool_size > 0 {
-            (pool_size - idle_connections) as f64 / pool_size as f64 * 100.0
+            let idle_connections_u32 = idle_connections.try_into().unwrap_or(0);
+            (pool_size - idle_connections_u32) as f64 / pool_size as f64 * 100.0
         } else {
             0.0
         };
@@ -265,7 +271,8 @@ impl DatabaseHealthChecker {
     async fn check_query_performance(&self) -> Result<bool> {
         let health_status = self.client.get_health_status().await?;
 
-        let performance_ok = health_status.avg_execution_time_ms <= self.config.performance_threshold_ms;
+        let performance_ok =
+            health_status.avg_execution_time_ms <= self.config.performance_threshold_ms;
 
         if !performance_ok {
             warn!(
@@ -273,14 +280,22 @@ impl DatabaseHealthChecker {
                 health_status.avg_execution_time_ms, self.config.performance_threshold_ms
             );
         } else {
-            debug!("Query performance OK: avg {}ms", health_status.avg_execution_time_ms);
+            debug!(
+                "Query performance OK: avg {}ms",
+                health_status.avg_execution_time_ms
+            );
         }
 
         Ok(performance_ok)
     }
 
     /// Generate error message for unhealthy state
-    fn generate_error_message(&self, connection_ok: bool, pool_ok: bool, performance_ok: bool) -> String {
+    fn generate_error_message(
+        &self,
+        connection_ok: bool,
+        pool_ok: bool,
+        performance_ok: bool,
+    ) -> String {
         let mut issues = Vec::new();
 
         if !connection_ok {
@@ -302,12 +317,13 @@ impl DatabaseHealthChecker {
         let idle_connections = self.client.pool().num_idle();
 
         // Pool statistics
+        let idle_connections_u32 = idle_connections.try_into().unwrap_or(0);
         let pool_stats = PoolStats {
-            active_connections: pool_size - idle_connections,
-            idle_connections,
+            active_connections: pool_size - idle_connections_u32,
+            idle_connections: idle_connections_u32,
             max_size: self.client.config().pool_max,
             utilization_percent: if pool_size > 0 {
-                (pool_size - idle_connections) as f64 / pool_size as f64 * 100.0
+                (pool_size - idle_connections_u32) as f64 / pool_size as f64 * 100.0
             } else {
                 0.0
             },
@@ -322,20 +338,84 @@ impl DatabaseHealthChecker {
             success_rate: health_status.success_rate,
         };
 
-        // Connection statistics (simplified)
+        // TODO: Implement comprehensive connection statistics with the following requirements:
+        // 1. Connection tracking: Track connection statistics and metrics
+        //    - Monitor connection creation rates and lifetimes
+        //    - Track connection usage patterns and performance
+        //    - Handle connection tracking error detection and reporting
+        // 2. Statistics calculation: Calculate connection statistics
+        //    - Compute connection creation rates per minute
+        //    - Calculate average connection lifetimes
+        //    - Handle statistics calculation error detection and reporting
+        // 3. Statistics validation: Validate connection statistics
+        //    - Verify statistics accuracy and consistency
+        //    - Check statistics completeness and reliability
+        //    - Handle statistics validation error detection and reporting
+        // 4. Statistics optimization: Optimize connection statistics performance
+        //    - Implement efficient statistics collection algorithms
+        //    - Handle large-scale connection statistics operations
+        //    - Optimize statistics collection quality and reliability
         let connection_stats = ConnectionStats {
             total_connections: pool_size as u64,
-            creation_rate_per_minute: 0.0, // Would need more detailed tracking
-            avg_lifetime_seconds: 0.0,    // Would need connection tracking
+            creation_rate_per_minute: 0.0, // TODO: Implement detailed tracking
+            avg_lifetime_seconds: 0.0,     // TODO: Implement connection tracking
         };
 
-        // Index usage (simplified - would need pg_stat_user_indexes query)
+        // TODO: Implement index usage statistics with the following requirements:
+        // 1. Index statistics collection: Collect index usage statistics
+        //    - Query pg_stat_user_indexes for index usage data
+        //    - Track index hit rates and usage patterns
+        //    - Handle index statistics collection error detection and reporting
+        // 2. Index statistics processing: Process index usage data
+        //    - Analyze index performance and efficiency
+        //    - Identify unused or inefficient indexes
+        //    - Handle index statistics processing error detection and reporting
+        // 3. Index statistics validation: Validate index statistics
+        //    - Verify index statistics accuracy and consistency
+        //    - Check index statistics completeness and reliability
+        //    - Handle index statistics validation error detection and reporting
+        // 4. Index statistics optimization: Optimize index statistics collection
+        //    - Implement efficient index statistics algorithms
+        //    - Handle large-scale index statistics operations
+        //    - Optimize index statistics quality and reliability
         let index_stats = Vec::new();
 
-        // Table sizes (simplified - would need pg_table_size queries)
+        // TODO: Implement table size statistics with the following requirements:
+        // 1. Table size collection: Collect table size statistics
+        //    - Query pg_table_size for table size data
+        //    - Track table growth and storage usage
+        //    - Handle table size collection error detection and reporting
+        // 2. Table size processing: Process table size data
+        //    - Analyze table storage patterns and trends
+        //    - Identify large tables and storage optimization opportunities
+        //    - Handle table size processing error detection and reporting
+        // 3. Table size validation: Validate table size statistics
+        //    - Verify table size accuracy and consistency
+        //    - Check table size completeness and reliability
+        //    - Handle table size validation error detection and reporting
+        // 4. Table size optimization: Optimize table size statistics collection
+        //    - Implement efficient table size algorithms
+        //    - Handle large-scale table size operations
+        //    - Optimize table size statistics quality and reliability
         let table_sizes = Vec::new();
 
-        // Slow queries (simplified - would need pg_stat_statements)
+        // TODO: Implement slow query statistics with the following requirements:
+        // 1. Slow query collection: Collect slow query statistics
+        //    - Query pg_stat_statements for slow query data
+        //    - Track query performance and execution times
+        //    - Handle slow query collection error detection and reporting
+        // 2. Slow query processing: Process slow query data
+        //    - Analyze query performance patterns and bottlenecks
+        //    - Identify optimization opportunities and slow queries
+        //    - Handle slow query processing error detection and reporting
+        // 3. Slow query validation: Validate slow query statistics
+        //    - Verify slow query accuracy and consistency
+        //    - Check slow query completeness and reliability
+        //    - Handle slow query validation error detection and reporting
+        // 4. Slow query optimization: Optimize slow query statistics collection
+        //    - Implement efficient slow query algorithms
+        //    - Handle large-scale slow query operations
+        //    - Optimize slow query statistics quality and reliability
         let slow_queries = Vec::new();
 
         Ok(DatabaseDiagnostics {
@@ -355,11 +435,9 @@ impl Default for HealthCheckConfig {
             enabled: true,
             check_interval_seconds: 60,
             query_timeout_seconds: 5,
-            pool_health_threshold: 80.0, // 80% utilization threshold
+            pool_health_threshold: 80.0,   // 80% utilization threshold
             performance_threshold_ms: 100, // 100ms query threshold
             enable_diagnostics: true,
         }
     }
 }
-
-

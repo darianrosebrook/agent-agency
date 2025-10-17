@@ -14,6 +14,7 @@ pub mod predictive_learning_system;
 pub mod predictive_quality_assessor;
 pub mod resilience; // V2 Production Resilience
 pub mod semantic;
+pub mod todo_analyzer;
 pub mod types;
 pub use types::*;
 
@@ -23,6 +24,10 @@ pub use intelligent_edge_case_testing::{
 };
 pub use predictive_learning_system::{LearningInsights, PredictiveLearningSystem, TaskOutcome};
 pub use predictive_quality_assessor::{PredictiveQualityAssessor, QualityPrediction};
+pub use todo_analyzer::{
+    CouncilTodoAnalyzer, TodoAnalysisConfig, TodoAnalysisResult, TodoCategory, TodoDetection,
+    TodoSeverity, TrendAnalysis, TrendDirection,
+};
 
 #[cfg(test)]
 mod advanced_arbitration_tests;

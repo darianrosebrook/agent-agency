@@ -1,6 +1,5 @@
 //! Context preservation engine
 
-
 pub struct ContextPreservationEngine {
     // TODO: Implement context preservation with the following requirements:
     // 1. Context capture: Capture and store learning context

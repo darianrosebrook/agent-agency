@@ -250,8 +250,23 @@ impl Default for MemoryStorage {
 #[async_trait::async_trait]
 impl StateStorage for MemoryStorage {
     async fn store_state(&self, state: &WorkspaceState) -> Result<(), WorkspaceError> {
-        // Note: This is a simplified implementation for testing
-        // In a real implementation, you'd need to handle concurrent access
+        // TODO: Implement proper concurrent storage with the following requirements:
+        // 1. Concurrent access handling: Implement thread-safe storage operations
+        //    - Use proper synchronization primitives (Mutex, RwLock, etc.)
+        //    - Handle concurrent read/write operations safely
+        //    - Implement proper locking strategies and deadlock prevention
+        // 2. Data persistence: Implement actual data storage and retrieval
+        //    - Store workspace state in persistent storage (database, file system)
+        //    - Handle data serialization and deserialization
+        //    - Implement proper data validation and integrity checks
+        // 3. Error handling: Implement robust error handling for storage operations
+        //    - Handle storage failures and recovery mechanisms
+        //    - Implement proper error propagation and logging
+        //    - Handle storage capacity and resource management
+        // 4. Performance optimization: Optimize storage performance and scalability
+        //    - Implement efficient storage algorithms and data structures
+        //    - Handle large-scale data operations and batch processing
+        //    - Optimize storage access patterns and caching strategies
         debug!("Stored workspace state {:?} in memory", state.id);
         Ok(())
     }
@@ -268,11 +283,45 @@ impl StateStorage for MemoryStorage {
     }
 
     async fn delete_state(&self, id: StateId) -> Result<(), WorkspaceError> {
+        // TODO: Implement state deletion with the following requirements:
+        // 1. State validation: Validate state exists before deletion
+        //    - Check if state exists in memory storage
+        //    - Validate state ID format and structure
+        //    - Handle state validation error detection and reporting
+        // 2. State deletion: Delete state from memory storage
+        //    - Remove state from memory storage
+        //    - Handle state deletion atomicity and consistency
+        //    - Implement proper state deletion error handling
+        // 3. Deletion verification: Verify state deletion success
+        //    - Verify state was deleted correctly
+        //    - Check storage consistency after deletion
+        //    - Handle deletion verification error detection and reporting
+        // 4. Deletion optimization: Optimize state deletion performance
+        //    - Implement efficient state deletion algorithms
+        //    - Handle large-scale state deletion operations
+        //    - Optimize state deletion quality and reliability
         debug!("Deleted workspace state {:?} from memory", id);
         Ok(())
     }
 
     async fn store_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
+        // TODO: Implement diff storage with the following requirements:
+        // 1. Diff validation: Validate diff data before storage
+        //    - Validate diff format and data integrity
+        //    - Check diff constraints and business rules
+        //    - Handle diff validation error detection and reporting
+        // 2. Diff storage: Store diff in memory storage
+        //    - Store diff data in memory storage
+        //    - Handle diff storage atomicity and consistency
+        //    - Implement proper diff storage error handling
+        // 3. Storage verification: Verify diff storage success
+        //    - Verify diff was stored correctly
+        //    - Check storage consistency after storage
+        //    - Handle storage verification error detection and reporting
+        // 4. Storage optimization: Optimize diff storage performance
+        //    - Implement efficient diff storage algorithms
+        //    - Handle large-scale diff storage operations
+        //    - Optimize diff storage quality and reliability
         debug!(
             "Stored workspace diff {:?} -> {:?} in memory",
             diff.from_state, diff.to_state

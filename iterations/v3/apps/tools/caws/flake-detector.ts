@@ -9,21 +9,21 @@
  * @author @darianrosebrook
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, writeFileSync, existsSync } from "fs";
+import { dirname } from "path";
+import { fileURLToPath } from "url";
 
 interface TestResult {
   title: string;
   fullName: string;
-  status: 'passed' | 'failed' | 'pending' | 'skipped';
+  status: "passed" | "failed" | "pending" | "skipped";
   duration: number;
   failureMessages: string[];
 }
 
 interface TestSuiteResult {
   name: string;
-  status: 'passed' | 'failed';
+  status: "passed" | "failed";
   testResults: TestResult[];
   startTime: number;
   endTime: number;
@@ -53,8 +53,8 @@ interface TestRun {
  * Analyzes test run variance and identifies flaky tests
  */
 class FlakeDetectionService {
-  private readonly HISTORY_FILE = '.caws/flake-history.json';
-  private readonly QUARANTINE_FILE = '.caws/quarantined-tests.json';
+  private readonly HISTORY_FILE = ".caws/flake-history.json";
+  private readonly QUARANTINE_FILE = ".caws/quarantined-tests.json";
   private readonly VARIANCE_THRESHOLD = 0.05; // 5% variance threshold
   private readonly MIN_RUNS_FOR_ANALYSIS = 3;
   private readonly QUARANTINE_THRESHOLD = 0.15; // 15% flake rate triggers quarantine
@@ -62,7 +62,9 @@ class FlakeDetectionService {
   /**
    * Analyze test variance and detect flaky tests
    */
-  async detectFlakes(currentResults: TestSuiteResult[]): Promise<FlakeDetectionResult> {
+  async detectFlakes(
+    currentResults: TestSuiteResult[]
+  ): Promise<FlakeDetectionResult> {
     const history = this.loadHistory();
     const currentRun = this.createCurrentRun(currentResults);
 
@@ -75,7 +77,9 @@ class FlakeDetectionService {
         varianceScore: 0,
         totalRuns: history.runs.length,
         recommendations: [
-          `Need ${this.MIN_RUNS_FOR_ANALYSIS - history.runs.length} more test runs for analysis`,
+          `Need ${
+            this.MIN_RUNS_FOR_ANALYSIS - history.runs.length
+          } more test runs for analysis`,
         ],
       };
     }
@@ -83,7 +87,10 @@ class FlakeDetectionService {
     const flakyTests = this.identifyFlakyTests(history);
     const varianceScore = this.calculateVarianceScore(history);
 
-    const recommendations = this.generateRecommendations(flakyTests, varianceScore);
+    const recommendations = this.generateRecommendations(
+      flakyTests,
+      varianceScore
+    );
 
     return {
       flakyTests,
@@ -106,10 +113,13 @@ class FlakeDetectionService {
     const quarantinedData = {
       quarantined: Array.from(history.quarantined),
       quarantinedAt: history.lastUpdated,
-      reason: 'Automated flake detection',
+      reason: "Automated flake detection",
     };
 
-    writeFileSync(this.QUARANTINE_FILE, JSON.stringify(quarantinedData, null, 2));
+    writeFileSync(
+      this.QUARANTINE_FILE,
+      JSON.stringify(quarantinedData, null, 2)
+    );
     console.log(`🚫 Quarantined ${testNames.length} flaky tests`);
   }
 
@@ -142,7 +152,7 @@ class FlakeDetectionService {
     }
 
     try {
-      const data = JSON.parse(readFileSync(this.HISTORY_FILE, 'utf-8'));
+      const data = JSON.parse(readFileSync(this.HISTORY_FILE, "utf-8"));
       return {
         runs: data.runs || [],
         quarantined: new Set(data.quarantined || []),
@@ -195,11 +205,11 @@ class FlakeDetectionService {
     // Find tests that have inconsistent results
     for (const run of recentRuns) {
       for (const [testName, result] of run.results) {
-        if (result.status !== 'passed') {
+        if (result.status !== "passed") {
           // Check if this test has passed in other recent runs
           const passedInOtherRuns = recentRuns
             .filter((r) => r !== run)
-            .some((r) => r.results.get(testName)?.status === 'passed');
+            .some((r) => r.results.get(testName)?.status === "passed");
 
           if (passedInOtherRuns) {
             flakyTests.add(testName);
@@ -220,8 +230,10 @@ class FlakeDetectionService {
   }
 
   private calculateFlakeRate(testName: string, runs: TestRun[]): number {
-    const results = runs.map((run) => run.results.get(testName)?.status).filter(Boolean);
-    const failures = results.filter((status) => status !== 'passed').length;
+    const results = runs
+      .map((run) => run.results.get(testName)?.status)
+      .filter(Boolean);
+    const failures = results.filter((status) => status !== "passed").length;
     return failures / results.length;
   }
 
@@ -238,23 +250,32 @@ class FlakeDetectionService {
     _suites: TestSuiteResult[]
   ): number {
     const totalTests = testMap.size;
-    const failedTests = Array.from(testMap.values()).filter((t) => t.status !== 'passed').length;
+    const failedTests = Array.from(testMap.values()).filter(
+      (t) => t.status !== "passed"
+    ).length;
     return totalTests > 0 ? failedTests / totalTests : 0;
   }
 
-  private generateRecommendations(flakyTests: string[], varianceScore: number): string[] {
+  private generateRecommendations(
+    flakyTests: string[],
+    varianceScore: number
+  ): string[] {
     const recommendations: string[] = [];
 
     if (flakyTests.length > 0) {
-      recommendations.push(`Quarantine ${flakyTests.length} flaky tests for investigation`);
+      recommendations.push(
+        `Quarantine ${flakyTests.length} flaky tests for investigation`
+      );
     }
 
     if (varianceScore > this.VARIANCE_THRESHOLD) {
-      recommendations.push('High test variance detected - consider test environment stability');
+      recommendations.push(
+        "High test variance detected - consider test environment stability"
+      );
     }
 
     if (varianceScore === 0) {
-      recommendations.push('Excellent test stability - no flakes detected');
+      recommendations.push("Excellent test stability - no flakes detected");
     }
 
     return recommendations;
@@ -268,17 +289,17 @@ async function main() {
   const args = process.argv.slice(2);
 
   if (args.length === 0) {
-    console.log('🔍 CAWS Flake Detection Tool');
-    console.log('Usage: flake-detector.ts <command> [options]');
-    console.log('');
-    console.log('Commands:');
-    console.log('  detect     - Analyze test variance and detect flaky tests');
-    console.log('  quarantine - Quarantine specified flaky tests');
-    console.log('  release    - Release tests from quarantine');
-    console.log('  status     - Show current flake detection status');
-    console.log('');
-    console.log('Examples:');
-    console.log('  flake-detector.ts detect');
+    console.log("🔍 CAWS Flake Detection Tool");
+    console.log("Usage: flake-detector.ts <command> [options]");
+    console.log("");
+    console.log("Commands:");
+    console.log("  detect     - Analyze test variance and detect flaky tests");
+    console.log("  quarantine - Quarantine specified flaky tests");
+    console.log("  release    - Release tests from quarantine");
+    console.log("  status     - Show current flake detection status");
+    console.log("");
+    console.log("Examples:");
+    console.log("  flake-detector.ts detect");
     console.log('  flake-detector.ts quarantine "test name"');
     console.log('  flake-detector.ts release "test name"');
     return;
@@ -289,20 +310,42 @@ async function main() {
 
   try {
     switch (command) {
-      case 'detect': {
-        console.log('🔍 Analyzing test variance...');
-        // In a real implementation, you'd read test results from files
+      case "detect": {
+        console.log("🔍 Analyzing test variance...");
+        // TODO: Implement test result file reading and parsing with the following requirements:
+        // 1. Test result file format support: Support multiple test result file formats
+        //    - Parse JUnit XML test result files
+        //    - Handle JSON test result formats (Jest, Mocha, etc.)
+        //    - Support TAP (Test Anything Protocol) format parsing
+        //    - Implement extensible parser architecture for new formats
+        // 2. File system integration: Integrate with file system for test result discovery
+        //    - Implement recursive directory scanning for test results
+        //    - Support glob patterns for test result file matching
+        //    - Handle file access permissions and error handling
+        //    - Implement file watching for real-time result processing
+        // 3. Test result data extraction: Extract comprehensive test data from files
+        //    - Parse test execution times, pass/fail status, and error messages
+        //    - Extract test metadata (suite names, test names, categories)
+        //    - Handle test result aggregation and statistical analysis
+        //    - Support historical test result tracking and comparison
+        // 4. Data validation and quality assurance: Validate test result data quality
+        //    - Implement data validation for parsed test results
+        //    - Handle malformed or corrupted test result files
+        //    - Provide data quality metrics and error reporting
+        //    - Support test result data cleansing and normalization
         // For now, we'll simulate with mock data
         const mockResults: TestSuiteResult[] = [];
         const result = await detector.detectFlakes(mockResults);
 
         console.log(`📊 Flake Detection Results:`);
-        console.log(`   Variance Score: ${(result.varianceScore * 100).toFixed(2)}%`);
+        console.log(
+          `   Variance Score: ${(result.varianceScore * 100).toFixed(2)}%`
+        );
         console.log(`   Total Runs Analyzed: ${result.totalRuns}`);
         console.log(`   Flaky Tests Found: ${result.flakyTests.length}`);
 
         if (result.flakyTests.length > 0) {
-          console.log('\n🚨 Flaky Tests:');
+          console.log("\n🚨 Flaky Tests:");
           result.flakyTests.forEach((test) => console.log(`   - ${test}`));
         }
 
@@ -310,31 +353,31 @@ async function main() {
         break;
       }
 
-      case 'quarantine': {
+      case "quarantine": {
         const testNames = args.slice(1);
         if (testNames.length === 0) {
-          console.log('❌ Please specify test names to quarantine');
+          console.log("❌ Please specify test names to quarantine");
           return;
         }
         detector.quarantineTests(testNames);
         break;
       }
 
-      case 'release': {
+      case "release": {
         const testNames = args.slice(1);
         if (testNames.length === 0) {
-          console.log('❌ Please specify test names to release');
+          console.log("❌ Please specify test names to release");
           return;
         }
         detector.releaseFromQuarantine(testNames);
         break;
       }
 
-      case 'status': {
+      case "status": {
         const quarantined = detector.getQuarantinedTests();
-        console.log('🚫 Currently Quarantined Tests:');
+        console.log("🚫 Currently Quarantined Tests:");
         if (quarantined.length === 0) {
-          console.log('   None - all tests are active');
+          console.log("   None - all tests are active");
         } else {
           quarantined.forEach((test) => console.log(`   - ${test}`));
         }
@@ -346,7 +389,7 @@ async function main() {
         process.exit(1);
     }
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error("❌ Error:", error);
     process.exit(1);
   }
 }

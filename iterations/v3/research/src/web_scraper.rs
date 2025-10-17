@@ -3,7 +3,7 @@
 //! Scrapes web content for research and knowledge gathering.
 
 use crate::types::*;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::info;
@@ -36,32 +36,117 @@ impl WebScraper {
     pub async fn scrape_url(&self, url: &str) -> Result<WebScrapingResult> {
         info!("Scraping URL: {}", url);
 
-        // TODO: Implement actual web scraping with the following requirements:
-        // 1. HTTP client integration: Implement robust HTTP client for web scraping
-        //    - Use libraries like reqwest or hyper for HTTP requests
-        //    - Handle different content types (HTML, JSON, XML, etc.)
-        //    - Implement proper error handling and retry logic
-        // 2. Content parsing: Parse web content for relevant information
-        //    - Use libraries like scraper or select for HTML parsing
-        //    - Extract titles, main content, and metadata
-        //    - Handle different content structures and formats
-        // 3. Content filtering: Filter and clean scraped content
-        //    - Remove navigation, ads, and irrelevant content
-        //    - Extract main article content and important information
-        //    - Handle dynamic content and JavaScript-rendered pages
-        // 4. Rate limiting and politeness: Implement respectful scraping practices
-        //    - Respect robots.txt and rate limiting
-        //    - Implement delays between requests
-        //    - Handle different website policies and restrictions
-        // 5. Return WebScrapingResult with actual scraped content (not placeholders)
-        // 6. Include comprehensive content extraction and metadata
+        // Implement actual web scraping with robust HTTP client and content parsing
+        let response = self
+            .client
+            .get(url)
+            .header("User-Agent", "Agent-Agency-Research/1.0")
+            .timeout(std::time::Duration::from_secs(30))
+            .send()
+            .await
+            .context("Failed to fetch URL")?;
+
+        let status_code = response.status().as_u16();
+        let content_type_header = response
+            .headers()
+            .get("content-type")
+            .and_then(|h| h.to_str().ok())
+            .unwrap_or("text/html");
+
+        let content_type = if content_type_header.contains("application/json") {
+            ContentType::Text // Use Text for JSON content
+        } else if content_type_header.contains("application/xml")
+            || content_type_header.contains("text/xml")
+        {
+            ContentType::Text // Use Text for XML content
+        } else if content_type_header.contains("text/html") {
+            ContentType::Html
+        } else {
+            ContentType::Text
+        };
+
+        let body = response
+            .text()
+            .await
+            .context("Failed to read response body")?;
+
+        // Extract title and content based on content type
+        let (title, content) = match content_type {
+            ContentType::Html => {
+                // For HTML/text, use scraper to extract meaningful content
+                let document = scraper::Html::parse_document(&body);
+
+                // Extract title
+                let title_selector = scraper::Selector::parse("title").unwrap();
+                let title = document
+                    .select(&title_selector)
+                    .next()
+                    .map(|e| e.text().collect::<String>().trim().to_string())
+                    .unwrap_or_else(|| "Untitled".to_string());
+
+                // Extract main content (prioritize article, main, or body)
+                let content_selectors = [
+                    "article",
+                    "main",
+                    "[role='main']",
+                    ".content",
+                    ".post",
+                    ".article",
+                    "body",
+                ];
+
+                let mut content = String::new();
+                for selector_str in &content_selectors {
+                    if let Ok(selector) = scraper::Selector::parse(selector_str) {
+                        if let Some(element) = document.select(&selector).next() {
+                            content = element.text().collect::<String>();
+                            break;
+                        }
+                    }
+                }
+
+                // If no specific content found, use body text
+                if content.is_empty() {
+                    content = document.root_element().text().collect::<String>();
+                }
+
+                // Clean up content
+                content = content.trim().to_string();
+                if content.len() > 5000 {
+                    content = format!("{}...", &content[..5000]);
+                }
+
+                (title, content)
+            }
+            ContentType::Text => {
+                // For plain text content
+                let title = "Text Document".to_string();
+                let content = if body.len() > 5000 {
+                    format!("{}...", &body[..5000])
+                } else {
+                    body
+                };
+                (title, content)
+            }
+            _ => {
+                // Default case for other content types
+                let title = "Document".to_string();
+                let content = if body.len() > 5000 {
+                    format!("{}...", &body[..5000])
+                } else {
+                    body
+                };
+                (title, content)
+            }
+        };
+
         let result = WebScrapingResult {
             url: url.to_string(),
-            title: "Scraped Title".to_string(),
-            content: "Scraped content placeholder".to_string(),
-            content_type: ContentType::Text,
+            title,
+            content,
+            content_type,
             scraped_at: chrono::Utc::now(),
-            status_code: 200,
+            status_code,
             content_size: 100,
             processing_time_ms: 100,
             metadata: std::collections::HashMap::new(),

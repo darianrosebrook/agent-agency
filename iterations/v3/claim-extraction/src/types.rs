@@ -249,8 +249,7 @@ pub struct Ambiguity {
     pub confidence: f64,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-#[derive(PartialEq)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub enum AmbiguityType {
     Pronoun,
     TechnicalTerm,

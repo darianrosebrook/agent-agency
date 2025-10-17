@@ -7,6 +7,7 @@ use crate::{DatabaseClient, DatabaseConfig};
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::Row;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tokio::fs;
@@ -102,7 +103,10 @@ impl MigrationManager {
         // Find pending migrations
         let mut pending_migrations = Vec::new();
         for migration in available_migrations {
-            if !applied_migrations.iter().any(|applied| applied.migration_id == migration.id) {
+            if !applied_migrations
+                .iter()
+                .any(|applied| applied.migration_id == migration.id.to_string())
+            {
                 pending_migrations.push(migration);
             }
         }
@@ -119,10 +123,11 @@ impl MigrationManager {
         // Apply migrations in order
         for migration in pending_migrations {
             let result = self.apply_migration(&migration).await?;
+            let success = result.success;
             results.push(result);
 
             // Stop on first failure if rollback is enabled
-            if !result.success && self.should_rollback_on_failure().await {
+            if !success && self.should_rollback_on_failure().await {
                 warn!("Migration failed and rollback is enabled, stopping migration process");
                 break;
             }
@@ -139,14 +144,18 @@ impl MigrationManager {
         let migration_file = self.find_migration_file(migration_id).await?;
 
         // Read migration content
-        let content = fs::read_to_string(&migration_file).await
+        let content = fs::read_to_string(&migration_file)
+            .await
             .context("Failed to read migration file")?;
 
         // Extract rollback SQL (if present)
         let rollback_sql = self.extract_rollback_sql(&content)?;
 
         if rollback_sql.is_empty() {
-            return Err(anyhow::anyhow!("No rollback SQL found for migration: {}", migration_id));
+            return Err(anyhow::anyhow!(
+                "No rollback SQL found for migration: {}",
+                migration_id
+            ));
         }
 
         // Execute rollback
@@ -191,12 +200,15 @@ impl MigrationManager {
         let mut migrations = Vec::new();
 
         // Read migration directory
-        let mut entries = fs::read_dir(&self.migration_dir).await
+        let mut entries = fs::read_dir(&self.migration_dir)
+            .await
             .context("Failed to read migration directory")?;
 
-        while let Some(entry) = entries.next_entry().await
-            .context("Failed to read migration entry")? {
-
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .context("Failed to read migration entry")?
+        {
             if let Some(file_name) = entry.file_name().to_str() {
                 if file_name.ends_with(".sql") {
                     // Parse migration ID from filename (format: 001_description.sql)
@@ -233,19 +245,21 @@ impl MigrationManager {
             self.tracking_table
         );
 
-        let rows = self.client.execute_safe_query(&query).await?;
+        let rows = sqlx::query(&query)
+            .fetch_all(self.client.pool())
+            .await
+            .context("Failed to fetch applied migrations")?;
 
         let mut applied = Vec::new();
-        for row in rows.rows() {
-            if let Ok(migration) = AppliedMigration {
-                migration_id: row.get("migration_id"),
-                name: row.get("name"),
-                applied_at: row.get("applied_at"),
-                checksum: row.get("checksum"),
-                success: row.get("success"),
-            } {
-                applied.push(migration);
-            }
+        for row in rows {
+            let migration = AppliedMigration {
+                migration_id: row.get::<String, _>("migration_id"),
+                name: row.get::<String, _>("name"),
+                applied_at: row.get::<DateTime<Utc>, _>("applied_at"),
+                checksum: row.get::<String, _>("checksum"),
+                success: row.get::<bool, _>("success"),
+            };
+            applied.push(migration);
         }
 
         Ok(applied)
@@ -256,7 +270,8 @@ impl MigrationManager {
         info!("Applying migration: {} - {}", migration.id, migration.name);
 
         // Read migration content
-        let content = fs::read_to_string(&migration.file_path).await
+        let content = fs::read_to_string(&migration.file_path)
+            .await
             .context("Failed to read migration file")?;
 
         // Calculate checksum for integrity verification
@@ -271,7 +286,8 @@ impl MigrationManager {
         match result {
             Ok(_) => {
                 // Record successful migration
-                self.record_applied_migration(&migration, &checksum, true).await?;
+                self.record_applied_migration(&migration, &checksum, true)
+                    .await?;
 
                 info!("Migration applied successfully: {}", migration.name);
                 Ok(MigrationResult {
@@ -288,7 +304,8 @@ impl MigrationManager {
                 error!("Migration failed: {}", e);
 
                 // Record failed migration
-                self.record_applied_migration(&migration, &checksum, false).await?;
+                self.record_applied_migration(&migration, &checksum, false)
+                    .await?;
 
                 Ok(MigrationResult {
                     migration_id: migration.id.to_string(),
@@ -334,27 +351,31 @@ impl MigrationManager {
             self.tracking_table
         );
 
-        self.client.execute_parameterized_query(
-            &query,
-            vec![
-                Box::new(migration.id.to_string()),
-                Box::new(migration.name.clone()),
-                Box::new(checksum.to_string()),
-                Box::new(success),
-            ],
-        ).await?;
+        self.client
+            .execute_parameterized_query(
+                &query,
+                vec![
+                    migration.id.to_string(),
+                    migration.name.clone(),
+                    checksum.to_string(),
+                    success.to_string(),
+                ],
+            )
+            .await?;
 
         Ok(())
     }
 
     /// Remove an applied migration record (for rollbacks)
     async fn remove_applied_migration(&self, migration_id: &str) -> Result<()> {
-        let query = format!("DELETE FROM {} WHERE migration_id = $1", self.tracking_table);
+        let query = format!(
+            "DELETE FROM {} WHERE migration_id = $1",
+            self.tracking_table
+        );
 
-        self.client.execute_parameterized_query(
-            &query,
-            vec![Box::new(migration_id.to_string())],
-        ).await?;
+        self.client
+            .execute_parameterized_query(&query, vec![migration_id.to_string()])
+            .await?;
 
         Ok(())
     }
@@ -391,8 +412,23 @@ impl MigrationManager {
 
     /// Check if rollback should be performed on failure
     async fn should_rollback_on_failure(&self) -> bool {
-        // For now, always rollback on failure
-        // In production, this might be configurable
+        // TODO: Implement configurable rollback policy with the following requirements:
+        // 1. Rollback configuration: Implement configurable rollback policy
+        //    - Read rollback configuration from environment or config files
+        //    - Support different rollback policies for different environments
+        //    - Handle rollback configuration validation and error handling
+        // 2. Rollback decision logic: Implement intelligent rollback decision logic
+        //    - Consider migration type and complexity for rollback decisions
+        //    - Implement rollback risk assessment and evaluation
+        //    - Handle rollback decision validation and verification
+        // 3. Rollback policy management: Manage rollback policies and settings
+        //    - Support dynamic rollback policy updates
+        //    - Implement rollback policy persistence and storage
+        //    - Handle rollback policy management error detection and reporting
+        // 4. Rollback optimization: Optimize rollback decision performance
+        //    - Implement efficient rollback decision algorithms
+        //    - Handle large-scale rollback decision operations
+        //    - Optimize rollback decision quality and reliability
         true
     }
 }
@@ -419,5 +455,3 @@ impl Default for MigrationConfig {
         }
     }
 }
-
-

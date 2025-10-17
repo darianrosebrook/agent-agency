@@ -47,8 +47,23 @@ impl ClaimExtractor {
     }
 
     fn initialize_default_patterns(&self) {
-        // This would be called in a blocking context during construction
-        // For now, we'll initialize patterns lazily when needed
+        // TODO: Implement default pattern initialization with the following requirements:
+        // 1. Pattern loading: Load default ambiguity patterns from configuration
+        //    - Load patterns from configuration files or built-in defaults
+        //    - Initialize pattern data structures and indexes
+        //    - Handle pattern loading error detection and reporting
+        // 2. Pattern validation: Validate loaded patterns for correctness
+        //    - Validate pattern format and structure
+        //    - Check pattern compatibility and consistency
+        //    - Handle pattern validation error detection and reporting
+        // 3. Pattern initialization: Initialize patterns in blocking context
+        //    - Initialize patterns during construction phase
+        //    - Handle pattern initialization error detection and recovery
+        //    - Implement proper pattern initialization lifecycle management
+        // 4. Pattern optimization: Optimize pattern initialization performance
+        //    - Implement efficient pattern loading and initialization
+        //    - Handle large-scale pattern initialization operations
+        //    - Optimize pattern initialization quality and reliability
     }
 
     async fn initialize_patterns_if_needed(&self) {
@@ -744,8 +759,23 @@ impl ClaimExtractor {
         expression: &str,
         _context: &ConversationContext,
     ) -> String {
-        // Simple temporal resolution - in a real implementation, this would use
-        // the context timeline to resolve relative dates
+        // TODO: Implement comprehensive temporal resolution with the following requirements:
+        // 1. Context timeline integration: Integrate with context timeline for temporal resolution
+        //    - Use context timeline to resolve relative dates accurately
+        //    - Handle temporal resolution error detection and reporting
+        //    - Implement proper temporal validation and verification
+        // 2. Temporal parsing: Implement advanced temporal parsing
+        //    - Parse complex temporal expressions and relative dates
+        //    - Handle temporal parsing error detection and reporting
+        //    - Implement proper temporal parsing validation and verification
+        // 3. Context awareness: Implement context-aware temporal resolution
+        //    - Use conversation context for temporal reference resolution
+        //    - Handle context-aware resolution error detection and reporting
+        //    - Implement proper context integration and verification
+        // 4. Temporal optimization: Optimize temporal resolution performance
+        //    - Implement efficient temporal resolution algorithms
+        //    - Handle large-scale temporal resolution operations
+        //    - Optimize temporal resolution quality and reliability
         match expression.to_lowercase().as_str() {
             "yesterday" => "2024-01-16".to_string(),
             "today" => "2024-01-17".to_string(),

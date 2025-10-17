@@ -722,33 +722,33 @@ impl IntelligentEdgeCaseTesting {
 
         // Calculate resource efficiency (placeholder)
         history.performance_metrics.resource_efficiency = 0.8; // TODO: Implement actual calculation with the following requirements:
-        // 1. Resource usage tracking: Track resource usage during test execution
-        //    - Monitor CPU, memory, and I/O usage during tests
-        //    - Measure resource consumption per test case
-        //    - Track resource efficiency over time
-        // 2. Efficiency calculation: Calculate resource efficiency metrics
-        //    - Compare resource usage against expected baselines
-        //    - Calculate efficiency ratios and percentages
-        //    - Identify resource optimization opportunities
-        // 3. Performance analysis: Analyze resource efficiency patterns
-        //    - Identify resource-intensive test cases
-        //    - Analyze resource usage trends and patterns
-        //    - Optimize resource allocation and usage
+                                                               // 1. Resource usage tracking: Track resource usage during test execution
+                                                               //    - Monitor CPU, memory, and I/O usage during tests
+                                                               //    - Measure resource consumption per test case
+                                                               //    - Track resource efficiency over time
+                                                               // 2. Efficiency calculation: Calculate resource efficiency metrics
+                                                               //    - Compare resource usage against expected baselines
+                                                               //    - Calculate efficiency ratios and percentages
+                                                               //    - Identify resource optimization opportunities
+                                                               // 3. Performance analysis: Analyze resource efficiency patterns
+                                                               //    - Identify resource-intensive test cases
+                                                               //    - Analyze resource usage trends and patterns
+                                                               //    - Optimize resource allocation and usage
 
         // Calculate stability score (placeholder)
         history.performance_metrics.stability_score = 0.9; // TODO: Implement actual calculation with the following requirements:
-        // 1. Stability measurement: Measure test stability and reliability
-        //    - Track test execution consistency and repeatability
-        //    - Measure test result stability over multiple runs
-        //    - Identify flaky tests and unstable test cases
-        // 2. Stability analysis: Analyze stability patterns and trends
-        //    - Calculate stability scores based on execution history
-        //    - Identify factors affecting test stability
-        //    - Analyze stability improvements and degradations
-        // 3. Stability optimization: Optimize test stability and reliability
-        //    - Implement stability improvement strategies
-        //    - Fix flaky tests and improve test reliability
-        //    - Monitor stability improvements over time
+                                                           // 1. Stability measurement: Measure test stability and reliability
+                                                           //    - Track test execution consistency and repeatability
+                                                           //    - Measure test result stability over multiple runs
+                                                           //    - Identify flaky tests and unstable test cases
+                                                           // 2. Stability analysis: Analyze stability patterns and trends
+                                                           //    - Calculate stability scores based on execution history
+                                                           //    - Identify factors affecting test stability
+                                                           //    - Analyze stability improvements and degradations
+                                                           // 3. Stability optimization: Optimize test stability and reliability
+                                                           //    - Implement stability improvement strategies
+                                                           //    - Fix flaky tests and improve test reliability
+                                                           //    - Monitor stability improvements over time
 
         Ok(())
     }

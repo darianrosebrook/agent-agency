@@ -130,7 +130,27 @@ pub async fn orchestrate_task(
     };
     let allocation = planner.plan(&req);
     tracing::info!(target: "arm", device = ?allocation.device, precision = ?allocation.precision, batch = allocation.batch_size, est_ms = allocation.expected_latency_ms, "ARM plan created for council evaluation");
-    // TODO: Wire a shared ProvenanceService into orchestrate context instead of ad-hoc creation
+    // TODO: Implement shared ProvenanceService integration with the following requirements:
+    // 1. ProvenanceService architecture: Design shared provenance service architecture
+    //    - Define ProvenanceService interface and contract
+    //    - Implement service lifecycle management and initialization
+    //    - Support multiple provenance backend implementations
+    //    - Handle service configuration and environment setup
+    // 2. Orchestration context integration: Integrate provenance service into orchestration context
+    //    - Add ProvenanceService to orchestration context structure
+    //    - Implement context-aware provenance service injection
+    //    - Handle service dependency injection and lifecycle
+    //    - Support context-specific provenance configuration
+    // 3. Service sharing and reuse: Implement service sharing across orchestration components
+    //    - Create singleton or shared service instances
+    //    - Implement service connection pooling and reuse
+    //    - Handle concurrent access and thread safety
+    //    - Support service health monitoring and failover
+    // 4. Provenance event management: Manage provenance events through shared service
+    //    - Implement event queuing and batch processing
+    //    - Handle event deduplication and filtering
+    //    - Support event persistence and retrieval
+    //    - Implement event analytics and reporting capabilities
     if let Ok(cfg_json) = std::env::var("PROVENANCE_CONFIG_JSON") {
         if let Ok(_cfg) = serde_json::from_str::<serde_json::Value>(&cfg_json) {
             // Minimal in-memory or existing storage init would go here; using a no-op on error

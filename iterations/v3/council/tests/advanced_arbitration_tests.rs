@@ -562,31 +562,31 @@ async fn test_comprehensive_v3_superiority() {
     println!("=" * 60);
 
     // Test 1: Multi-dimensional confidence scoring
-    test_multi_dimensional_confidence_scoring().await;
+    test_multi_dimensional_confidence_scoring();
 
     // Test 2: Predictive conflict resolution
-    test_predictive_conflict_resolution().await;
+    test_predictive_conflict_resolution();
 
     // Test 3: Advanced arbitration
-    test_advanced_arbitration_conflict_resolution().await;
+    test_advanced_arbitration_conflict_resolution();
 
     // Test 4: Predictive quality assessment
-    test_predictive_quality_assessment().await;
+    test_predictive_quality_assessment();
 
     // Test 5: Learning integration
-    test_learning_integration().await;
+    test_learning_integration();
 
     // Test 6: Performance tracking
-    test_performance_tracking_and_prediction().await;
+    test_performance_tracking_and_prediction();
 
     // Test 7: V3 superiority over V2
-    test_v3_superiority_over_v2().await;
+    test_v3_superiority_over_v2();
 
     // Test 8: Edge case handling
-    test_v3_edge_case_handling_superiority().await;
+    test_v3_edge_case_handling_superiority();
 
     // Test 9: Predictive capabilities
-    test_v3_predictive_capabilities().await;
+    test_v3_predictive_capabilities();
 
     println!("\n🎉 V3 Superiority Demonstration Complete!");
     println!("=" * 60);

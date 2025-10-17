@@ -333,11 +333,23 @@ impl LearningSignalAnalyzer {
         &self,
         task_spec: &crate::types::TaskSpec,
     ) -> Result<Vec<LearningSignal>> {
-        // Implementation would query storage for similar tasks based on:
-        // - Risk tier
-        // - Domain overlap
-        // - Complexity indicators
-        // - Historical performance
+        // TODO: Implement similar task signal retrieval with the following requirements:
+        // 1. Signal retrieval: Retrieve similar task signals from historical data
+        //    - Query historical task execution data and performance metrics
+        //    - Identify similar tasks based on type, complexity, and context
+        //    - Handle signal retrieval error handling and recovery
+        // 2. Similarity analysis: Analyze task similarity and relevance
+        //    - Calculate task similarity scores and metrics
+        //    - Identify relevant historical patterns and trends
+        //    - Handle similarity analysis validation and verification
+        // 3. Signal processing: Process and format retrieved signals
+        //    - Convert historical data to learning signals
+        //    - Filter and prioritize relevant signals
+        //    - Handle signal processing optimization and performance
+        // 4. Signal validation: Validate retrieved signals for quality
+        //    - Verify signal accuracy and relevance
+        //    - Check signal completeness and consistency
+        //    - Handle signal validation errors and corrections
         todo!("Implement similar task signal retrieval")
     }
 
@@ -346,7 +358,23 @@ impl LearningSignalAnalyzer {
         &self,
         task_spec: &crate::types::TaskSpec,
     ) -> Result<JudgePerformanceAnalysis> {
-        // Implementation would analyze historical judge performance
+        // TODO: Implement judge performance analysis with the following requirements:
+        // 1. Performance analysis: Analyze historical judge performance data
+        //    - Query historical judge evaluation data and metrics
+        //    - Calculate judge performance scores and trends
+        //    - Handle performance analysis error handling and recovery
+        // 2. Performance metrics: Calculate comprehensive performance metrics
+        //    - Measure accuracy, consistency, and reliability scores
+        //    - Calculate performance trends and improvements over time
+        //    - Handle performance metric validation and verification
+        // 3. Performance insights: Generate performance insights and recommendations
+        //    - Identify judge strengths and areas for improvement
+        //    - Generate performance-based recommendations and guidance
+        //    - Handle performance insight validation and quality assurance
+        // 4. Performance reporting: Format and return performance analysis
+        //    - Convert analysis results to JudgePerformanceAnalysis format
+        //    - Include performance metrics, insights, and recommendations
+        //    - Handle performance reporting optimization and presentation
         todo!("Implement judge performance analysis")
     }
 
@@ -355,10 +383,23 @@ impl LearningSignalAnalyzer {
         &self,
         task_spec: &crate::types::TaskSpec,
     ) -> Result<ResourceRequirementAnalysis> {
-        // Implementation would analyze resource needs based on:
-        // - Task complexity
-        // - Historical resource usage
-        // - Current system state
+        // TODO: Implement resource requirement analysis with the following requirements:
+        // 1. Resource analysis: Analyze resource requirements for task execution
+        //    - Calculate CPU, memory, and I/O requirements based on task complexity
+        //    - Analyze historical resource usage patterns and trends
+        //    - Handle resource analysis error handling and recovery
+        // 2. Resource prediction: Predict resource needs for optimal performance
+        //    - Use machine learning models to predict resource requirements
+        //    - Consider task complexity, historical data, and system state
+        //    - Handle resource prediction validation and accuracy
+        // 3. Resource optimization: Optimize resource allocation and usage
+        //    - Identify optimal resource allocation strategies
+        //    - Recommend resource optimization techniques and approaches
+        //    - Handle resource optimization validation and effectiveness
+        // 4. Resource reporting: Format and return resource analysis
+        //    - Convert analysis results to ResourceRequirementAnalysis format
+        //    - Include resource predictions, optimizations, and recommendations
+        //    - Handle resource reporting optimization and presentation
         todo!("Implement resource requirement analysis")
     }
 

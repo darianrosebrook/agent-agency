@@ -56,7 +56,8 @@ impl DecompositionStage {
         for (sentence_index, sentence) in sentences.iter().enumerate() {
             // First, decompose compound sentences (ported from V2)
             let compound_claims = self.decompose_compound_sentence(sentence);
-            let last_subject = self.extract_fallback_subject(context)
+            let mut last_subject = self
+                .extract_fallback_subject(context)
                 .or_else(|| self.extract_context_entities(context).first().cloned())
                 .unwrap_or_default();
 
@@ -69,13 +70,15 @@ impl DecompositionStage {
 
                     // Extract or propagate subject (ported from V2 logic)
                     let subject_candidate = self.extract_subject_candidate(&normalized_clause);
-                    let last_subject = if let Some(subject) = subject_candidate {
+                    last_subject = if let Some(subject) = subject_candidate {
                         if !self.is_verb(subject) {
                             subject.to_string()
                         } else {
                             last_subject.clone()
                         }
-                    } else if !normalized_clause.is_empty() && !normalized_clause.chars().next().unwrap().is_uppercase() {
+                    } else if !normalized_clause.is_empty()
+                        && !normalized_clause.chars().next().unwrap().is_uppercase()
+                    {
                         // Prepend subject if clause doesn't start with one
                         format!("{} {}", last_subject, normalized_clause)
                     } else {
@@ -86,15 +89,23 @@ impl DecompositionStage {
                         continue;
                     }
 
-                    let claim_id = self.generate_claim_id(context.task_id, sentence_index, compound_index * 100 + clause_offset);
+                    let claim_id = self.generate_claim_id(
+                        context.task_id,
+                        sentence_index,
+                        compound_index * 100 + clause_offset,
+                    );
 
                     // Extract contextual brackets (ported from V2)
-                    let contextual_brackets = self.extract_contextual_brackets(&normalized_clause, context).await?;
+                    let contextual_brackets = self
+                        .extract_contextual_brackets(&normalized_clause, context)
+                        .await?;
 
                     // Apply contextual brackets to the statement
-                    let bracketed_statement = self.apply_contextual_brackets(&normalized_clause, &contextual_brackets);
+                    let bracketed_statement =
+                        self.apply_contextual_brackets(&normalized_clause, &contextual_brackets);
 
-                    let verification_requirements = self.derive_verification_requirements(&normalized_clause, &contextual_brackets);
+                    let _verification_requirements = self
+                        .derive_verification_requirements(&normalized_clause, &contextual_brackets);
                     let confidence = self.calculate_claim_confidence(&normalized_clause);
 
                     let claim = AtomicClaim {
@@ -492,7 +503,8 @@ impl DecompositionStage {
 
             if all_have_verbs && all_long_enough && reasonable_split {
                 // Additional check: each part should have a clear subject-predicate structure
-                let valid_parts: Vec<String> = clean_parts.into_iter()
+                let valid_parts: Vec<String> = clean_parts
+                    .into_iter()
                     .filter(|part| {
                         let has_verb = verb_pattern.is_match(part);
                         let words: Vec<&str> = part.split_whitespace().collect();
@@ -513,8 +525,23 @@ impl DecompositionStage {
 
     /// Split a compound claim into clauses
     fn split_into_clauses(&self, claim: &str) -> Vec<String> {
-        // For now, treat each compound claim as a single clause
-        // In V2 this would handle more complex clause splitting
+        // TODO: Implement complex clause splitting with the following requirements:
+        // 1. Clause identification: Identify and extract individual clauses from compound claims
+        //    - Parse compound claims to identify clause boundaries
+        //    - Handle different clause types and structures
+        //    - Implement proper clause identification algorithms
+        // 2. Clause splitting: Split compound claims into individual clauses
+        //    - Implement sophisticated clause splitting algorithms
+        //    - Handle complex grammatical structures and dependencies
+        //    - Implement proper clause splitting validation and verification
+        // 3. Clause normalization: Normalize and standardize individual clauses
+        //    - Normalize clause format and structure
+        //    - Handle clause standardization and consistency
+        //    - Implement proper clause normalization validation
+        // 4. Clause optimization: Optimize clause splitting performance and accuracy
+        //    - Implement efficient clause splitting algorithms
+        //    - Handle large-scale clause splitting operations
+        //    - Optimize clause splitting quality and reliability
         vec![claim.to_string()]
     }
 
@@ -545,7 +572,11 @@ impl DecompositionStage {
             }
         }
 
-        entities.into_iter().collect::<std::collections::HashSet<_>>().into_iter().collect()
+        entities
+            .into_iter()
+            .collect::<std::collections::HashSet<_>>()
+            .into_iter()
+            .collect()
     }
 
     /// Extract subject candidate from clause
@@ -565,8 +596,23 @@ impl DecompositionStage {
     /// Check if a word is a verb
     fn is_verb(&self, word: &str) -> bool {
         let verbs = [
-            "is", "are", "was", "were", "has", "have", "will", "shall", "did", "does",
-            "announced", "promised", "reported", "expects", "pledged", "committed", "approved"
+            "is",
+            "are",
+            "was",
+            "were",
+            "has",
+            "have",
+            "will",
+            "shall",
+            "did",
+            "does",
+            "announced",
+            "promised",
+            "reported",
+            "expects",
+            "pledged",
+            "committed",
+            "approved",
         ];
         verbs.contains(&word.to_lowercase().as_str())
     }
@@ -587,7 +633,11 @@ impl DecompositionStage {
     }
 
     /// Extract contextual brackets for a claim (ported from V2)
-    async fn extract_contextual_brackets(&self, claim: &str, context: &ProcessingContext) -> Result<Vec<String>> {
+    async fn extract_contextual_brackets(
+        &self,
+        claim: &str,
+        context: &ProcessingContext,
+    ) -> Result<Vec<String>> {
         let mut brackets = Vec::new();
 
         // Add working spec context
@@ -626,7 +676,8 @@ impl DecompositionStage {
             if bracket.contains(" [") && bracket.contains("]") {
                 if let Some(term_end) = bracket.find(" [") {
                     let term = &bracket[..term_end];
-                    let regex = regex::Regex::new(&format!(r"\b{}\b", regex::escape(term))).unwrap();
+                    let regex =
+                        regex::Regex::new(&format!(r"\b{}\b", regex::escape(term))).unwrap();
                     bracketed = regex.replace_all(&bracketed, bracket).to_string();
                 }
             }
@@ -691,13 +742,15 @@ impl DecompositionStage {
     fn infer_claim_type(&self, claim: &str) -> ClaimType {
         if claim.contains("security") || claim.contains("auth") || claim.contains("permission") {
             ClaimType::Security
-        } else if claim.contains("performance") || claim.contains("speed") || claim.contains("time") {
+        } else if claim.contains("performance") || claim.contains("speed") || claim.contains("time")
+        {
             ClaimType::Performance
         } else if claim.contains("API") || claim.contains("function") || claim.contains("method") {
             ClaimType::Technical
         } else if claim.contains("CAWS") || claim.contains("constitutional") {
             ClaimType::Constitutional
-        } else if claim.contains("step") || claim.contains("process") || claim.contains("procedure") {
+        } else if claim.contains("step") || claim.contains("process") || claim.contains("procedure")
+        {
             ClaimType::Procedural
         } else {
             ClaimType::Factual
@@ -710,11 +763,13 @@ impl DecompositionStage {
             VerifiabilityLevel::DirectlyVerifiable
         } else if claim.contains("should") || claim.contains("must") || claim.contains("requires") {
             VerifiabilityLevel::IndirectlyVerifiable
-        } else if claim.contains("better") || claim.contains("improved") || claim.contains("enhanced") {
+        } else if claim.contains("better")
+            || claim.contains("improved")
+            || claim.contains("enhanced")
+        {
             VerifiabilityLevel::RequiresContext
         } else {
             VerifiabilityLevel::Unverifiable
         }
     }
-
 }

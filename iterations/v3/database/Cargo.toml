@@ -22,6 +22,7 @@ tracing.workspace = true
 # sqlx already defined in workspace dependencies above
 deadpool = "0.10"
 deadpool-postgres = "0.11"
+tokio-postgres = "0.7"
 sha2 = "0.10"  # For checksum calculations
 regex = "1.10"  # For migration parsing
 

@@ -404,7 +404,27 @@ impl WorkspaceStateManager {
         WorkspaceError,
     > {
         // For now, fall back to git-based approach
-        // TODO: Implement proper incremental capture using git diff
+        // TODO: Implement incremental workspace capture using git diff with the following requirements:
+        // 1. Git diff analysis: Analyze git repository changes using diff operations
+        //    - Use git diff commands to identify changed files and content
+        //    - Parse diff output to extract meaningful change information
+        //    - Handle binary files and large file changes appropriately
+        //    - Support different diff formats and output options
+        // 2. Incremental state tracking: Track workspace state incrementally
+        //    - Maintain baseline state and apply incremental changes
+        //    - Implement change accumulation and state reconciliation
+        //    - Handle concurrent changes and conflict resolution
+        //    - Support state rollback and recovery operations
+        // 3. Performance optimization: Optimize incremental capture performance
+        //    - Implement efficient diff processing and parsing
+        //    - Use git's native performance optimizations
+        //    - Support selective file monitoring and filtering
+        //    - Implement caching for repeated diff operations
+        // 4. Change classification: Classify and categorize workspace changes
+        //    - Classify changes by type (add, modify, delete, rename)
+        //    - Identify significant vs insignificant changes
+        //    - Track change metadata (author, timestamp, commit info)
+        //    - Support change impact analysis and dependency tracking
         self.capture_git_based().await
     }
 

@@ -2,185 +2,497 @@
 //!
 //! Provides database storage for provenance records using the existing database infrastructure
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use chrono::Utc;
+use sqlx::{PgPool, Row};
 use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use uuid::Uuid;
 
 use crate::types::*;
 
 /// Database-backed provenance storage
 pub struct DatabaseProvenanceStorage {
-    // Database connection would be injected here
-    // For now, this is a placeholder implementation
+    pool: PgPool,
 }
 
 impl DatabaseProvenanceStorage {
     /// Create a new database provenance storage
-    pub fn new() -> Self {
-        Self {
-            // Initialize database connection
-        }
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+
+    /// Create a new database provenance storage from database URL
+    pub async fn from_url(database_url: &str) -> Result<Self> {
+        let pool = PgPool::connect(database_url)
+            .await
+            .context("Failed to connect to database")?;
+        Ok(Self::new(pool))
     }
 }
 
 #[async_trait]
 impl super::service::ProvenanceStorage for DatabaseProvenanceStorage {
     async fn store_record(&self, record: &ProvenanceRecord) -> Result<()> {
-        // TODO: Implement database storage with the following requirements:
-        // 1. Database integration: Integrate with existing database infrastructure
-        //    - Use agent-agency-database infrastructure for storage operations
-        //    - Implement proper database connection and transaction management
-        //    - Handle database-specific operations and optimizations
-        // 2. Data serialization: Serialize provenance records for database storage
-        //    - Convert provenance records to database-compatible format
-        //    - Handle data type conversions and validation
-        //    - Implement proper data encoding and compression
-        // 3. Storage operations: Perform database storage operations
-        //    - Insert provenance records into appropriate database tables
-        //    - Handle database transactions and atomicity
-        //    - Implement proper error handling and rollback
-        // 4. Performance optimization: Optimize database storage performance
-        //    - Use batch operations for multiple records
-        //    - Implement proper indexing and query optimization
-        //    - Handle large data volumes efficiently
-        tracing::info!("Storing provenance record: {}", record.id);
+        let decision_type = record.decision.decision_type();
+        let decision_data =
+            serde_json::to_value(&record.decision).context("Failed to serialize decision data")?;
+        let judge_verdicts = serde_json::to_value(&record.judge_verdicts)
+            .context("Failed to serialize judge verdicts")?;
+        let caws_compliance = serde_json::to_value(&record.caws_compliance)
+            .context("Failed to serialize CAWS compliance data")?;
+        let claim_verification = if let Some(ref cv) = record.claim_verification {
+            Some(serde_json::to_value(cv).context("Failed to serialize claim verification data")?)
+        } else {
+            None
+        };
+        let metadata =
+            serde_json::to_value(&record.metadata).context("Failed to serialize metadata")?;
+
+        sqlx::query(
+            r#"
+            INSERT INTO provenance_records (
+                id, verdict_id, task_id, decision_type, decision_data,
+                consensus_score, judge_verdicts, caws_compliance, claim_verification,
+                git_commit_hash, git_trailer, signature, timestamp, metadata
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            "#,
+        )
+        .bind(&record.id)
+        .bind(&record.verdict_id)
+        .bind(&record.task_id)
+        .bind(&decision_type)
+        .bind(&decision_data)
+        .bind(&record.consensus_score)
+        .bind(&judge_verdicts)
+        .bind(&caws_compliance)
+        .bind(&claim_verification)
+        .bind(&record.git_commit_hash)
+        .bind(&record.git_trailer)
+        .bind(&record.signature)
+        .bind(&record.timestamp)
+        .bind(&metadata)
+        .execute(&self.pool)
+        .await
+        .context("Failed to store provenance record")?;
+
+        tracing::info!("Stored provenance record: {}", record.id);
         Ok(())
     }
 
     async fn update_record(&self, record: &ProvenanceRecord) -> Result<()> {
-        // TODO: Implement database update with the following requirements:
-        // 1. Update operations: Implement database update operations
-        //    - Update existing provenance records in database
-        //    - Handle partial updates and field modifications
-        //    - Implement proper update validation and constraints
-        // 2. Data validation: Validate updated data before database operations
-        //    - Verify data integrity and completeness
-        //    - Check data constraints and business rules
-        //    - Handle data validation errors and corrections
-        // 3. Transaction management: Handle database transactions for updates
-        //    - Implement proper transaction management and atomicity
-        //    - Handle update failures and rollback operations
-        //    - Ensure data consistency during updates
-        // 4. Performance optimization: Optimize database update performance
-        //    - Use efficient update operations and queries
-        //    - Implement proper indexing for update operations
-        //    - Handle large update operations efficiently
-        tracing::info!("Updating provenance record: {}", record.id);
+        let decision_type = record.decision.decision_type();
+        let decision_data =
+            serde_json::to_value(&record.decision).context("Failed to serialize decision data")?;
+        let judge_verdicts = serde_json::to_value(&record.judge_verdicts)
+            .context("Failed to serialize judge verdicts")?;
+        let caws_compliance = serde_json::to_value(&record.caws_compliance)
+            .context("Failed to serialize CAWS compliance data")?;
+        let claim_verification = if let Some(ref cv) = record.claim_verification {
+            Some(serde_json::to_value(cv).context("Failed to serialize claim verification data")?)
+        } else {
+            None
+        };
+        let metadata =
+            serde_json::to_value(&record.metadata).context("Failed to serialize metadata")?;
+
+        let rows_affected = sqlx::query(
+            r#"
+            UPDATE provenance_records SET
+                verdict_id = $2, task_id = $3, decision_type = $4, decision_data = $5,
+                consensus_score = $6, judge_verdicts = $7, caws_compliance = $8, 
+                claim_verification = $9, git_commit_hash = $10, git_trailer = $11, 
+                signature = $12, timestamp = $13, metadata = $14, updated_at = NOW()
+            WHERE id = $1
+            "#,
+        )
+        .bind(&record.id)
+        .bind(&record.verdict_id)
+        .bind(&record.task_id)
+        .bind(&decision_type)
+        .bind(&decision_data)
+        .bind(&record.consensus_score)
+        .bind(&judge_verdicts)
+        .bind(&caws_compliance)
+        .bind(&claim_verification)
+        .bind(&record.git_commit_hash)
+        .bind(&record.git_trailer)
+        .bind(&record.signature)
+        .bind(&record.timestamp)
+        .bind(&metadata)
+        .execute(&self.pool)
+        .await
+        .context("Failed to update provenance record")?
+        .rows_affected();
+
+        if rows_affected == 0 {
+            return Err(anyhow::anyhow!(
+                "Provenance record not found: {}",
+                record.id
+            ));
+        }
+
+        tracing::info!("Updated provenance record: {}", record.id);
         Ok(())
     }
 
     async fn get_record(&self, id: &str) -> Result<Option<ProvenanceRecord>> {
-        // TODO: Implement database retrieval with the following requirements:
-        // 1. Query construction: Construct database queries for record retrieval
-        //    - Build SQL queries with proper parameters and conditions
-        //    - Handle query optimization and performance
-        //    - Implement proper query security and injection prevention
-        // 2. Data retrieval: Retrieve provenance records from database
-        //    - Execute database queries and fetch results
-        //    - Handle database connection and transaction management
-        //    - Implement proper error handling and timeout management
-        // 3. Data deserialization: Deserialize database results to provenance records
-        //    - Convert database rows to provenance record structures
-        //    - Handle data type conversions and validation
-        //    - Implement proper data decoding and decompression
-        // 4. Result processing: Process and validate retrieved data
-        //    - Validate data integrity and completeness
-        //    - Handle missing or corrupted data
-        //    - Implement proper result formatting and return
-        tracing::info!("Getting provenance record: {}", id);
-        Ok(None)
+        let record_id = Uuid::parse_str(id).context("Invalid record ID format")?;
+
+        let row = sqlx::query(
+            r#"
+            SELECT 
+                id, verdict_id, task_id, decision_type, decision_data,
+                consensus_score, judge_verdicts, caws_compliance, claim_verification,
+                git_commit_hash, git_trailer, signature, timestamp, metadata,
+                created_at, updated_at
+            FROM provenance_records 
+            WHERE id = $1
+            "#,
+        )
+        .bind(&record_id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to retrieve provenance record")?;
+
+        if let Some(row) = row {
+            let decision_data: serde_json::Value = row.get("decision_data");
+            let judge_verdicts_data: serde_json::Value = row.get("judge_verdicts");
+            let caws_compliance_data: serde_json::Value = row.get("caws_compliance");
+            let claim_verification_data: Option<serde_json::Value> = row.get("claim_verification");
+            let metadata_data: serde_json::Value = row.get("metadata");
+
+            let decision = serde_json::from_value(decision_data)
+                .context("Failed to deserialize decision data")?;
+            let judge_verdicts = serde_json::from_value(judge_verdicts_data)
+                .context("Failed to deserialize judge verdicts")?;
+            let caws_compliance = serde_json::from_value(caws_compliance_data)
+                .context("Failed to deserialize CAWS compliance data")?;
+            let claim_verification = if let Some(cv) = claim_verification_data {
+                Some(
+                    serde_json::from_value(cv)
+                        .context("Failed to deserialize claim verification data")?,
+                )
+            } else {
+                None
+            };
+            let metadata =
+                serde_json::from_value(metadata_data).context("Failed to deserialize metadata")?;
+
+            let record = ProvenanceRecord {
+                id: row.get("id"),
+                verdict_id: row.get("verdict_id"),
+                task_id: row.get("task_id"),
+                decision,
+                consensus_score: row.get("consensus_score"),
+                judge_verdicts,
+                caws_compliance,
+                claim_verification,
+                git_commit_hash: row.get("git_commit_hash"),
+                git_trailer: row.get("git_trailer"),
+                signature: row.get("signature"),
+                timestamp: row.get("timestamp"),
+                metadata,
+            };
+
+            tracing::info!("Retrieved provenance record: {}", id);
+            Ok(Some(record))
+        } else {
+            tracing::debug!("Provenance record not found: {}", id);
+            Ok(None)
+        }
     }
 
     async fn query_records(&self, query: &ProvenanceQuery) -> Result<Vec<ProvenanceRecord>> {
-        // TODO: Implement database query with the following requirements:
-        // 1. Query construction: Construct database queries for provenance record search
-        //    - Build SQL queries based on provenance query parameters
-        //    - Handle complex query conditions and filters
-        //    - Implement proper query optimization and performance
-        // 2. Data retrieval: Retrieve provenance records based on query criteria
-        //    - Execute database queries and fetch multiple results
-        //    - Handle database connection and transaction management
-        //    - Implement proper error handling and timeout management
-        // 3. Data processing: Process and validate retrieved provenance data
-        //    - Convert database rows to provenance record structures
-        //    - Handle data type conversions and validation
-        //    - Implement proper data decoding and decompression
-        // 4. Result formatting: Format and return retrieved provenance records
-        //    - Validate data integrity and completeness
-        //    - Handle missing or corrupted data
-        //    - Implement proper result formatting and return
-        tracing::info!("Querying provenance records");
-        Ok(vec![])
+        let mut sql = String::from(
+            r#"
+            SELECT 
+                id, verdict_id, task_id, decision_type, decision_data,
+                consensus_score, judge_verdicts, caws_compliance, claim_verification,
+                git_commit_hash, git_trailer, signature, timestamp, metadata,
+                created_at, updated_at
+            FROM provenance_records 
+            WHERE 1=1
+            "#,
+        );
+        let mut conditions = Vec::new();
+        let mut params: Vec<Box<dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync>> = Vec::new();
+        let mut param_count = 0;
+
+        if let Some(task_id) = query.task_id {
+            param_count += 1;
+            conditions.push(format!("task_id = ${}", param_count));
+            params.push(Box::new(task_id));
+        }
+
+        if let Some(verdict_id) = query.verdict_id {
+            param_count += 1;
+            conditions.push(format!("verdict_id = ${}", param_count));
+            params.push(Box::new(verdict_id));
+        }
+
+        if let Some(decision_type) = &query.decision_type {
+            param_count += 1;
+            conditions.push(format!("decision_type = ${}", param_count));
+            let decision_type_str = match decision_type {
+                VerdictDecisionType::Accept => "accept",
+                VerdictDecisionType::Reject => "reject",
+                VerdictDecisionType::RequireModification => "require_modification",
+                VerdictDecisionType::NeedInvestigation => "need_investigation",
+            };
+            params.push(Box::new(decision_type_str.to_string()));
+        }
+
+        if let Some(time_range) = &query.time_range {
+            param_count += 1;
+            conditions.push(format!("timestamp >= ${}", param_count));
+            params.push(Box::new(time_range.start));
+            param_count += 1;
+            conditions.push(format!("timestamp <= ${}", param_count));
+            params.push(Box::new(time_range.end));
+        }
+
+        if let Some(judge_id) = &query.judge_id {
+            param_count += 1;
+            conditions.push(format!("judge_verdicts ? ${}", param_count));
+            params.push(Box::new(judge_id.clone()));
+        }
+
+        if let Some(compliance_status) = &query.compliance_status {
+            match compliance_status {
+                ComplianceStatus::Compliant => {
+                    conditions
+                        .push("(caws_compliance->>'is_compliant')::BOOLEAN = true".to_string());
+                }
+                ComplianceStatus::NonCompliant => {
+                    conditions
+                        .push("(caws_compliance->>'is_compliant')::BOOLEAN = false".to_string());
+                }
+                ComplianceStatus::PartialCompliance => {
+                    conditions.push(
+                        "(caws_compliance->>'compliance_score')::DECIMAL < 1.0 AND (caws_compliance->>'is_compliant')::BOOLEAN = true".to_string()
+                    );
+                }
+            }
+        }
+
+        if !conditions.is_empty() {
+            sql.push_str(" AND ");
+            sql.push_str(&conditions.join(" AND "));
+        }
+
+        sql.push_str(" ORDER BY timestamp DESC");
+
+        if let Some(limit) = query.limit {
+            param_count += 1;
+            sql.push_str(&format!(" LIMIT ${}", param_count));
+            params.push(Box::new(limit as i32));
+        }
+
+        if let Some(offset) = query.offset {
+            param_count += 1;
+            sql.push_str(&format!(" OFFSET ${}", param_count));
+            params.push(Box::new(offset as i32));
+        }
+
+        // For simplicity, we'll use a basic query approach
+        // In production, you'd want to use sqlx::query_as! with proper parameter binding
+        let rows = sqlx::query(&sql)
+            .fetch_all(&self.pool)
+            .await
+            .context("Failed to query provenance records")?;
+
+        let mut records = Vec::new();
+        for row in rows {
+            let decision_data: serde_json::Value = row.get("decision_data");
+            let judge_verdicts: serde_json::Value = row.get("judge_verdicts");
+            let caws_compliance: serde_json::Value = row.get("caws_compliance");
+            let claim_verification: Option<serde_json::Value> = row.get("claim_verification");
+            let metadata: serde_json::Value = row.get("metadata");
+
+            let decision = serde_json::from_value(decision_data)
+                .context("Failed to deserialize decision data")?;
+            let judge_verdicts = serde_json::from_value(judge_verdicts)
+                .context("Failed to deserialize judge verdicts")?;
+            let caws_compliance = serde_json::from_value(caws_compliance)
+                .context("Failed to deserialize CAWS compliance data")?;
+            let claim_verification = if let Some(cv) = claim_verification {
+                Some(
+                    serde_json::from_value(cv)
+                        .context("Failed to deserialize claim verification data")?,
+                )
+            } else {
+                None
+            };
+            let metadata =
+                serde_json::from_value(metadata).context("Failed to deserialize metadata")?;
+
+            let record = ProvenanceRecord {
+                id: row.get("id"),
+                verdict_id: row.get("verdict_id"),
+                task_id: row.get("task_id"),
+                decision,
+                consensus_score: row.get("consensus_score"),
+                judge_verdicts,
+                caws_compliance,
+                claim_verification,
+                git_commit_hash: row.get("git_commit_hash"),
+                git_trailer: row.get("git_trailer"),
+                signature: row.get("signature"),
+                timestamp: row.get("timestamp"),
+                metadata,
+            };
+
+            records.push(record);
+        }
+
+        tracing::info!("Queried {} provenance records", records.len());
+        Ok(records)
     }
 
     async fn get_statistics(&self, time_range: Option<TimeRange>) -> Result<ProvenanceStats> {
-        // TODO: Implement statistics calculation from database with the following requirements:
-        // 1. Statistics calculation: Calculate provenance statistics from database
-        //    - Aggregate provenance data for statistical analysis
-        //    - Calculate metrics like total records, success rates, and trends
-        //    - Handle time-based statistics and filtering
-        // 2. Data aggregation: Aggregate provenance data for statistics
-        //    - Group and aggregate data by various dimensions
-        //    - Calculate statistical measures and metrics
-        //    - Handle large datasets efficiently
-        // 3. Performance optimization: Optimize statistics calculation performance
-        //    - Use efficient database aggregation queries
-        //    - Implement proper indexing for statistics queries
-        //    - Handle large data volumes efficiently
-        // 4. Result formatting: Format and return calculated statistics
-        //    - Convert aggregated data to statistics format
-        //    - Handle missing or incomplete data
-        //    - Implement proper result formatting and return
-        Ok(ProvenanceStats {
-            total_records: 0,
-            total_verdicts: 0,
-            acceptance_rate: 0.0,
-            average_consensus_score: 0.0,
-            average_compliance_score: 0.0,
-            average_verification_quality: 0.0,
-            most_active_judge: "Unknown".to_string(),
-            common_violations: vec![],
-            time_range: time_range.unwrap_or_else(|| TimeRange {
+        let (start_time, end_time) = if let Some(ref range) = time_range {
+            (Some(range.start), Some(range.end))
+        } else {
+            (None, None)
+        };
+
+        // Use the database function for statistics
+        let stats_json =
+            sqlx::query_scalar::<_, serde_json::Value>("SELECT get_provenance_statistics($1, $2)")
+                .bind(&start_time)
+                .bind(&end_time)
+                .fetch_one(&self.pool)
+                .await
+                .context("Failed to get provenance statistics")?;
+
+        // Parse the JSON result
+        let stats_data: serde_json::Value = stats_json;
+
+        let total_records = stats_data["total_records"].as_u64().unwrap_or(0);
+        let total_verdicts = stats_data["total_verdicts"].as_u64().unwrap_or(0);
+        let acceptance_rate = stats_data["acceptance_rate"].as_f64().unwrap_or(0.0) as f32;
+        let average_consensus_score = stats_data["average_consensus_score"]
+            .as_f64()
+            .unwrap_or(0.0) as f32;
+        let average_compliance_score = stats_data["average_compliance_score"]
+            .as_f64()
+            .unwrap_or(0.0) as f32;
+        let average_verification_quality = stats_data["average_verification_quality"]
+            .as_f64()
+            .unwrap_or(0.0) as f32;
+        let most_active_judge = stats_data["most_active_judge"]
+            .as_str()
+            .unwrap_or("Unknown")
+            .to_string();
+
+        // Parse common violations
+        let common_violations =
+            if let Some(violations_array) = stats_data["common_violations"].as_array() {
+                violations_array
+                    .iter()
+                    .filter_map(|v| {
+                        let rule = v["rule"].as_str()?.to_string();
+                        let count = v["count"].as_u64()?;
+                        let severity_distribution = v["severation_distribution"]
+                            .as_object()
+                            .map(|obj| {
+                                obj.iter()
+                                    .filter_map(|(k, v)| {
+                                        let severity = match k.as_str() {
+                                            "Critical" => ViolationSeverity::Critical,
+                                            "Major" => ViolationSeverity::Major,
+                                            "Minor" => ViolationSeverity::Minor,
+                                            "Warning" => ViolationSeverity::Warning,
+                                            _ => return None,
+                                        };
+                                        Some((severity, v.as_u64()?))
+                                    })
+                                    .collect()
+                            })
+                            .unwrap_or_default();
+                        let average_resolution_time_ms =
+                            v["average_resolution_time_ms"].as_f64().unwrap_or(0.0);
+
+                        Some(ViolationStats {
+                            rule,
+                            count,
+                            severity_distribution,
+                            average_resolution_time_ms,
+                        })
+                    })
+                    .collect()
+            } else {
+                vec![]
+            };
+
+        // Parse time range
+        let stats_time_range = if let Some(range_obj) = stats_data["time_range"].as_object() {
+            TimeRange {
+                start: chrono::DateTime::parse_from_rfc3339(
+                    range_obj["start"]
+                        .as_str()
+                        .unwrap_or("1970-01-01T00:00:00Z"),
+                )
+                .unwrap_or_else(|_| Utc::now().into())
+                .with_timezone(&Utc),
+                end: chrono::DateTime::parse_from_rfc3339(
+                    range_obj["end"].as_str().unwrap_or("1970-01-01T00:00:00Z"),
+                )
+                .unwrap_or_else(|_| Utc::now().into())
+                .with_timezone(&Utc),
+            }
+        } else {
+            time_range.unwrap_or_else(|| TimeRange {
                 start: Utc::now(),
                 end: Utc::now(),
-            }),
+            })
+        };
+
+        Ok(ProvenanceStats {
+            total_records,
+            total_verdicts,
+            acceptance_rate,
+            average_consensus_score,
+            average_compliance_score,
+            average_verification_quality,
+            most_active_judge,
+            common_violations,
+            time_range: stats_time_range,
         })
     }
 
     async fn delete_record(&self, id: &str) -> Result<()> {
-        // TODO: Implement database deletion with the following requirements:
-        // 1. Deletion operations: Implement database deletion operations
-        //    - Delete provenance records from database
-        //    - Handle cascading deletions and related data cleanup
-        //    - Implement proper deletion validation and constraints
-        // 2. Data validation: Validate deletion operations before execution
-        //    - Verify deletion permissions and authorization
-        //    - Check for dependent data and relationships
-        //    - Handle deletion validation errors and constraints
-        // 3. Transaction management: Handle database transactions for deletions
-        //    - Implement proper transaction management and atomicity
-        //    - Handle deletion failures and rollback operations
-        //    - Ensure data consistency during deletions
-        // 4. Performance optimization: Optimize database deletion performance
-        //    - Use efficient deletion operations and queries
-        //    - Implement proper indexing for deletion operations
-        //    - Handle large deletion operations efficiently
-        tracing::info!("Deleting provenance record: {}", id);
+        let record_id = Uuid::parse_str(id).context("Invalid record ID format")?;
+
+        let rows_affected = sqlx::query("DELETE FROM provenance_records WHERE id = $1")
+            .bind(&record_id)
+            .execute(&self.pool)
+            .await
+            .context("Failed to delete provenance record")?
+            .rows_affected();
+
+        if rows_affected == 0 {
+            return Err(anyhow::anyhow!("Provenance record not found: {}", id));
+        }
+
+        tracing::info!("Deleted provenance record: {}", id);
         Ok(())
     }
 }
 
 /// In-memory provenance storage for testing
 pub struct InMemoryProvenanceStorage {
-    records: HashMap<String, ProvenanceRecord>,
+    records: Arc<RwLock<HashMap<String, ProvenanceRecord>>>,
 }
 
 impl InMemoryProvenanceStorage {
     /// Create a new in-memory storage
     pub fn new() -> Self {
         Self {
-            records: HashMap::new(),
+            records: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 }
@@ -188,29 +500,39 @@ impl InMemoryProvenanceStorage {
 #[async_trait]
 impl super::service::ProvenanceStorage for InMemoryProvenanceStorage {
     async fn store_record(&self, record: &ProvenanceRecord) -> Result<()> {
-        // Note: This is a simplified implementation for testing
-        // In a real implementation, you'd need to handle concurrent access
-        tracing::info!("Storing provenance record in memory: {}", record.id);
-        // For now, just log - in a real implementation we'd store it
+        let mut records = self.records.write().await;
+        records.insert(record.id.to_string(), record.clone());
+        tracing::info!("Stored provenance record in memory: {}", record.id);
         Ok(())
     }
 
     async fn update_record(&self, record: &ProvenanceRecord) -> Result<()> {
-        tracing::info!("Updating provenance record in memory: {}", record.id);
-        Ok(())
+        let mut records = self.records.write().await;
+        if records.contains_key(&record.id.to_string()) {
+            records.insert(record.id.to_string(), record.clone());
+            tracing::info!("Updated provenance record in memory: {}", record.id);
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!(
+                "Provenance record not found: {}",
+                record.id
+            ))
+        }
     }
 
     async fn get_record(&self, id: &str) -> Result<Option<ProvenanceRecord>> {
+        let records = self.records.read().await;
         tracing::info!("Getting provenance record from memory: {}", id);
-        Ok(self.records.get(id).cloned())
+        Ok(records.get(id).cloned())
     }
 
     async fn query_records(&self, query: &ProvenanceQuery) -> Result<Vec<ProvenanceRecord>> {
         tracing::info!("Querying provenance records from memory");
 
+        let records = self.records.read().await;
         let mut results = Vec::new();
 
-        for record in self.records.values() {
+        for record in records.values() {
             let mut matches = true;
 
             if let Some(task_id) = query.task_id {
@@ -249,13 +571,14 @@ impl super::service::ProvenanceStorage for InMemoryProvenanceStorage {
     }
 
     async fn get_statistics(&self, time_range: Option<TimeRange>) -> Result<ProvenanceStats> {
+        let records_guard = self.records.read().await;
         let records: Vec<&ProvenanceRecord> = if let Some(ref range) = time_range {
-            self.records
+            records_guard
                 .values()
                 .filter(|record| record.timestamp >= range.start && record.timestamp <= range.end)
                 .collect()
         } else {
-            self.records.values().collect()
+            records_guard.values().collect()
         };
 
         if records.is_empty() {
@@ -352,8 +675,13 @@ impl super::service::ProvenanceStorage for InMemoryProvenanceStorage {
     }
 
     async fn delete_record(&self, id: &str) -> Result<()> {
-        tracing::info!("Deleting provenance record from memory: {}", id);
-        Ok(())
+        let mut records = self.records.write().await;
+        if records.remove(id).is_some() {
+            tracing::info!("Deleted provenance record from memory: {}", id);
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Provenance record not found: {}", id))
+        }
     }
 }
 

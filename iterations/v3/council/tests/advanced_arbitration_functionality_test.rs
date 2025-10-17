@@ -284,16 +284,16 @@ async fn test_comprehensive_arbitration_functionality() {
     println!("{}", "=".repeat(80));
 
     // Test 1: Multi-dimensional confidence scoring
-    test_multi_dimensional_confidence_scoring().await;
+    test_multi_dimensional_confidence_scoring();
 
     // Test 2: Quality assessment
-    test_quality_assessment().await;
+    test_quality_assessment();
 
     // Test 3: Conflict resolution
-    test_conflict_resolution().await;
+    test_conflict_resolution();
 
     // Test 4: Learning integration
-    test_learning_integration().await;
+    test_learning_integration();
 
     println!("\n🎉 All Advanced Arbitration Engine Functionality Tests Passed!");
     println!("{}", "=".repeat(80));

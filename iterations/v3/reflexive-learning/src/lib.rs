@@ -25,7 +25,6 @@ pub use predictive::{
 };
 pub use types::*;
 
-
 /// Main learning coordinator for reflexive learning loop
 ///
 /// Integrates with council for learning signals and orchestrates

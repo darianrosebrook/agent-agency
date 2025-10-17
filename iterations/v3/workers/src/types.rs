@@ -707,7 +707,7 @@ impl Default for WorkerCapabilities {
 }
 
 /// Task execution context for workers
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskContext {
     pub task_id: uuid::Uuid,
     pub worker_id: uuid::Uuid,
