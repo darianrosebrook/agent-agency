@@ -6,52 +6,40 @@
 
 module.exports = {
   root: true,
-  parser: '@typescript-eslint/parser',
+  parser: "@typescript-eslint/parser",
   parserOptions: {
     ecmaVersion: 2022,
-    sourceType: 'module',
+    sourceType: "module",
   },
-  plugins: ['@typescript-eslint'],
+  plugins: ["@typescript-eslint"],
   env: {
     node: true,
     es2022: true,
     jest: true, // Enable Jest globals
   },
   globals: {
-    console: 'readonly',
-    process: 'readonly',
-    Buffer: 'readonly',
-    __dirname: 'readonly',
-    __filename: 'readonly',
+    console: "readonly",
+    process: "readonly",
+    Buffer: "readonly",
+    __dirname: "readonly",
+    __filename: "readonly",
   },
   rules: {
-    // Allow unused vars starting with underscore
-    'no-unused-vars': [
-      'warn', // Downgrade to warning for type definitions
+    // Disable base rule for TypeScript files (use @typescript-eslint/no-unused-vars instead)
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": [
+      "warn", // Downgrade to warning for type definitions
       {
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_',
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
         ignoreRestSiblings: true,
+        caughtErrors: "none",
       },
     ],
-    '@typescript-eslint/no-unused-vars': [
-      'warn', // Downgrade to warning for type definitions
-      {
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_',
-        ignoreRestSiblings: true,
-      },
-    ],
-    'no-undef': 'error',
-    'no-console': 'off', // Allow console for logging
-    'prefer-const': 'error',
-    'no-var': 'error',
+    "no-undef": "error",
+    "no-console": "off", // Allow console for logging
+    "prefer-const": "error",
+    "no-var": "error",
   },
-  ignorePatterns: [
-    'dist/',
-    'node_modules/',
-    'coverage/',
-    '*.js',
-    '*.d.ts',
-  ],
+  ignorePatterns: ["dist/", "node_modules/", "coverage/", "*.js", "*.d.ts"],
 };

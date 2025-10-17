@@ -80,7 +80,7 @@ describe("Performance Tracking E2E Integration", () => {
       const agentId = "agent-1";
 
       // Record task start through PerformanceTracker (which integrates DataCollector)
-      performanceTracker.startTaskExecution(
+      await performanceTracker.startTaskExecution(
         taskId,
         agentId,
         createMockRoutingDecision(taskId, agentId)
@@ -165,7 +165,7 @@ describe("Performance Tracking E2E Integration", () => {
       const agentId = "agent-2";
 
       // Create a scenario with poor performance
-      performanceTracker.startTaskExecution(
+      await performanceTracker.startTaskExecution(
         taskId,
         agentId,
         createMockRoutingDecision(taskId, agentId)
@@ -212,7 +212,7 @@ describe("Performance Tracking E2E Integration", () => {
 
       // Execute tasks
       for (const task of tasks) {
-        performanceTracker.startTaskExecution(
+        await performanceTracker.startTaskExecution(
           task.id,
           task.agent,
           createMockRoutingDecision(task.id, task.agent)
@@ -266,7 +266,7 @@ describe("Performance Tracking E2E Integration", () => {
 
       // Execute concurrently
       const promises = concurrentTasks.map(async (task) => {
-        performanceTracker.startTaskExecution(
+        await performanceTracker.startTaskExecution(
           task.id,
           task.agent,
           createMockRoutingDecision(task.id, task.agent)
@@ -320,7 +320,7 @@ describe("Performance Tracking E2E Integration", () => {
       try {
         // Performance tracker should handle this gracefully
         const taskId = "failure-test-task";
-        performanceTracker.startTaskExecution(
+        await performanceTracker.startTaskExecution(
           taskId,
           "agent-6",
           createMockRoutingDecision(taskId, "agent-6")
@@ -353,7 +353,7 @@ describe("Performance Tracking E2E Integration", () => {
 
       // Execute high volume of tasks
       for (const task of loadTasks) {
-        performanceTracker.startTaskExecution(
+        await performanceTracker.startTaskExecution(
           task.id,
           task.agent,
           createMockRoutingDecision(task.id, task.agent)
@@ -422,7 +422,7 @@ describe("Performance Tracking E2E Integration", () => {
     it("should maintain data quality through the pipeline", async () => {
       // Create high-quality data
       const qualityTaskId = "quality-task";
-      performanceTracker.startTaskExecution(
+      await performanceTracker.startTaskExecution(
         qualityTaskId,
         "agent-8",
         createMockRoutingDecision(qualityTaskId, "agent-8")

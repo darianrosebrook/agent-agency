@@ -458,7 +458,7 @@ describe("RL Pipeline Integration", () => {
     });
 
     it("should maintain performance metrics correctly", async () => {
-      const executionId = tracker.startTaskExecution(
+      const executionId = await tracker.startTaskExecution(
         "perf-task-001",
         "agent-001",
         {

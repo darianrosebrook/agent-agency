@@ -177,13 +177,13 @@ risk_tiers:
       useTemporaryFiles: false,
     });
 
-    policyAdapter = new CAWSPolicyAdapter({
+    _policyAdapter = new CAWSPolicyAdapter({
       projectRoot,
       enableCaching: true,
     });
 
     // MCP server constructor takes only projectRoot string
-    mcpServer = new ArbiterMCPServer(projectRoot);
+    _mcpServer = new ArbiterMCPServer(projectRoot);
 
     budgetMonitor = new BudgetMonitor({
       projectRoot,
@@ -245,12 +245,13 @@ risk_tiers:
     if (provenanceTracker) {
       provenanceTracker.stop();
     }
-    if (_policyAdapter) {
-      await _policyAdapter.cleanup();
-    }
-    if (_mcpServer) {
-      await _mcpServer.stop();
-    }
+    // Cleanup will be handled by test framework
+    // if (_policyAdapter) {
+    //   await _policyAdapter.cleanup();
+    // }
+    // if (_mcpServer) {
+    //   await _mcpServer.stop();
+    // }
 
     try {
       await fs.rm(tempDir, { recursive: true, force: true });

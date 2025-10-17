@@ -19,7 +19,10 @@ import {
   it,
 } from "@jest/globals";
 import { ConnectionPoolManager } from "../../src/database/ConnectionPoolManager";
-import { TaskOrchestrator } from "../../src/orchestrator/TaskOrchestrator";
+import {
+  TaskOrchestrator,
+  TaskPriority,
+} from "../../src/orchestrator/TaskOrchestrator";
 import { TaskRoutingManager } from "../../src/orchestrator/TaskRoutingManager";
 import { ArbitrationBoardCoordinator } from "../../src/orchestrator/arbitration/ArbitrationBoardCoordinator";
 import { ConfidenceScorer } from "../../src/orchestrator/arbitration/ConfidenceScorer";
@@ -42,7 +45,7 @@ import { VerificationType } from "../../src/types/verification";
 import { VerificationEngineImpl } from "../../src/verification/VerificationEngine";
 
 // Test database setup
-let dbPool; // Using centralized ConnectionPoolManager
+let dbPool: any; // Using centralized ConnectionPoolManager
 let orchestrator: TaskOrchestrator;
 let intakeProcessor: TaskIntakeProcessor;
 let _routingManager: TaskRoutingManager;
@@ -84,7 +87,7 @@ describe("Arbiter Edge Case Pipeline Integration Tests", () => {
 
     creditLedger = new CreditLedgerImpl(creditRepo);
     confidenceScorer = new ConfidenceScorer();
-    adaptiveEngine = new AdaptivePolicyEngineImpl(creditLedger, {
+    _adaptiveEngine = new AdaptivePolicyEngineImpl(creditLedger, {
       policies: {
         taskAssignment: {
           enabled: true,
@@ -99,25 +102,22 @@ describe("Arbiter Edge Case Pipeline Integration Tests", () => {
           maxWeight: 1.0,
         },
         timeoutBudgets: {
-          taskSubmission: 5000,
-          taskExecution: 60000,
-          taskVerification: 30000,
-        },
-        retryCaps: {
-          maxRetries: 3,
-          backoffMs: 1000,
-          maxBackoffMs: 10000,
-        },
-        resourceAllocation: {
-          maxConcurrentTasks: 10,
-          maxMemoryMB: 512,
-          maxCpuPercent: 80,
+          enabled: true,
+          multipliers: {
+            excellent: 0.1,
+            good: 0.05,
+            average: 0,
+            poor: -0.05,
+            critical: -0.1,
+          },
+          minMultiplier: 0.1,
+          maxMultiplier: 1.0,
         },
       },
     });
     injectionDetector = new PromptInjectionDetectorImpl();
     policyEnforcer = new CAWSPolicyEnforcerImpl();
-    auditManager = new PolicyAuditManagerImpl();
+    _auditManager = new PolicyAuditManagerImpl();
 
     intakeProcessor = new TaskIntakeProcessor({
       chunkSizeBytes: 1024 * 1024, // 1MB
@@ -151,26 +151,45 @@ describe("Arbiter Edge Case Pipeline Integration Tests", () => {
       getProfile: () => null,
     };
 
-    routingManager = new TaskRoutingManager(mockAgentRegistry, {
+    const _routingManager = new TaskRoutingManager(mockAgentRegistry, {
       enableBandit: true,
       minAgentsRequired: 1,
     });
 
-    verificationEngine = new VerificationEngineImpl({
+    const _verificationEngine = new VerificationEngineImpl({
+      defaultTimeoutMs: 30000,
+      minConfidenceThreshold: 0.7,
+      maxEvidencePerMethod: 10,
+      methods: [
+        {
+          type: VerificationType.FACT_CHECKING,
+          enabled: true,
+          priority: 1,
+          timeoutMs: 30000,
+          config: {},
+        },
+      ],
       maxConcurrentVerifications: 10,
+      cacheEnabled: true,
+      cacheTtlMs: 3600000, // 1 hour
+      retryAttempts: 3,
+      retryDelayMs: 1000,
     });
 
-    arbitrationBoard = new ArbitrationBoardCoordinator(confidenceScorer, {
-      minParticipants: 3,
-      confidenceThreshold: 0.7,
-      escalationThreshold: 0.8,
-      consensusWeights: {
-        unanimous: 1.0,
-        strong: 0.8,
-        weak: 0.6,
-        contested: 0.4,
-      },
-    });
+    const _arbitrationBoard = new ArbitrationBoardCoordinator(
+      confidenceScorer,
+      {
+        minParticipants: 3,
+        confidenceThreshold: 0.7,
+        escalationThreshold: 0.8,
+        consensusWeights: {
+          unanimous: 1.0,
+          strong: 0.8,
+          weak: 0.6,
+          contested: 0.4,
+        },
+      }
+    );
 
     orchestrator = new TaskOrchestrator(
       {
@@ -182,7 +201,12 @@ describe("Arbiter Edge Case Pipeline Integration Tests", () => {
         },
         queue: {
           maxSize: 1000,
-          priorityLevels: ["low", "normal", "high", "critical"],
+          priorityLevels: [
+            TaskPriority.LOW as unknown as TaskPriority,
+            TaskPriority.MEDIUM as unknown as TaskPriority,
+            TaskPriority.HIGH as unknown as TaskPriority,
+            TaskPriority.CRITICAL as unknown as TaskPriority,
+          ],
           persistenceEnabled: true,
         },
         retry: {
@@ -193,7 +217,6 @@ describe("Arbiter Edge Case Pipeline Integration Tests", () => {
         },
         routing: {
           strategy: "load_balanced",
-          fallbackStrategy: "round_robin",
         },
         performance: {
           trackingEnabled: true,
@@ -212,12 +235,12 @@ describe("Arbiter Edge Case Pipeline Integration Tests", () => {
 
     // Initialize testing harnesses
     chaosHarness = new ChaosTestingHarness(12345);
-    adversarialSuite = new AdversarialTestSuiteImpl(
+    _adversarialSuite = new AdversarialTestSuiteImpl(
       injectionDetector,
       policyEnforcer,
       intakeProcessor
     );
-    propertySuite = new PropertyBasedTestSuiteImpl(
+    _propertySuite = new PropertyBasedTestSuiteImpl(
       {
         maxIterations: 100,
         timeoutMs: 30000,

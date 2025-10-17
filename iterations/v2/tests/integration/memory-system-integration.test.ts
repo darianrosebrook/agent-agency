@@ -301,15 +301,15 @@ describe("Memory System Integration", () => {
       const auditLog = await tenantIsolator.getTenantAuditLog(tenant.id);
 
       expect(auditLog.length).toBeGreaterThan(0);
-      expect(auditLog.some((entry) => entry.operation === "store_event")).toBe(
+      expect(auditLog.some((entry: any) => entry.operation === "store_event")).toBe(
         true
       );
       expect(
-        auditLog.some((entry) => entry.operation === "retrieve_events")
+        auditLog.some((entry: any) => entry.operation === "retrieve_events")
       ).toBe(true);
 
       // All audit entries should be for the correct tenant
-      expect(auditLog.every((entry) => entry.tenantId === tenant.id)).toBe(
+      expect(auditLog.every((entry: any) => entry.tenantId === tenant.id)).toBe(
         true
       );
     });
@@ -604,11 +604,11 @@ describe("Memory System Integration", () => {
       const auditLog = await tenantIsolator.getTenantAuditLog(auditedTenant.id);
 
       expect(auditLog.length).toBeGreaterThan(2); // At least registration + 2 stores + 1 retrieval
-      expect(auditLog.every((entry) => entry.timestamp instanceof Date)).toBe(
+      expect(auditLog.every((entry: any) => entry.timestamp instanceof Date)).toBe(
         true
       );
       expect(
-        auditLog.every((entry) => entry.tenantId === auditedTenant.id)
+        auditLog.every((entry: any) => entry.tenantId === auditedTenant.id)
       ).toBe(true);
     });
 

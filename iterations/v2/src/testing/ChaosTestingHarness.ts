@@ -19,10 +19,16 @@ export interface ChaosScenario {
   targetWorkers?: string[]; // specific workers to target
   targetCapabilities?: string[]; // capabilities to target
   conditions?: ChaosCondition[];
+  severity?: "low" | "medium" | "high" | "critical";
 }
 
 export interface ChaosCondition {
-  type: "worker_saturation" | "task_load" | "time_of_day" | "resource_usage";
+  type:
+    | "worker_saturation"
+    | "task_load"
+    | "time_of_day"
+    | "resource_usage"
+    | "system_load";
   operator: ">" | "<" | "=" | ">=" | "<=";
   value: number;
   field?: string; // specific field to check
@@ -66,6 +72,7 @@ export interface DeterministicPRNG {
  */
 export class SeededPRNG implements DeterministicPRNG {
   private currentSeed: number;
+  public seed: number;
 
   constructor(seed: number = 12345) {
     this.currentSeed = seed;

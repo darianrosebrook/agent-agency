@@ -360,11 +360,7 @@ export class WorkspaceStateManager extends EventEmitter {
     // In a full implementation, this would query the file watcher's change history
     // and filter based on the provided options
 
-    const {
-      _maxAge = 24 * 60 * 60 * 1000,
-      _maxCount = 100,
-      _agentId,
-    } = options;
+    const { maxAge: _maxAge = 24 * 60 * 60 * 1000, maxCount: _maxCount = 100, agentId: _agentId } = options;
 
     // This is a placeholder - in a real implementation, we'd:
     // 1. Get changes from the file watcher

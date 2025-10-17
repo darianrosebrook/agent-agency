@@ -96,7 +96,7 @@ describe("Performance Tracker - Integration Tests (ARBITER-004)", () => {
       await tracker.recordRoutingDecision(routingDecision);
 
       // Step 3: Start task execution
-      const executionId = tracker.startTaskExecution(
+      const executionId = await tracker.startTaskExecution(
         taskId,
         agentId,
         routingDecision,
@@ -164,7 +164,7 @@ describe("Performance Tracker - Integration Tests (ARBITER-004)", () => {
       routingDecision.selectedAgent = agentId;
       await tracker.recordRoutingDecision(routingDecision);
 
-      const executionId = tracker.startTaskExecution(
+      const executionId = await tracker.startTaskExecution(
         taskId,
         agentId,
         routingDecision
@@ -268,7 +268,7 @@ describe("Performance Tracker - Integration Tests (ARBITER-004)", () => {
 
           await tracker.recordRoutingDecision(routingDecision);
 
-          const executionId = tracker.startTaskExecution(
+          const executionId = await tracker.startTaskExecution(
             taskId,
             agent.id,
             routingDecision
@@ -316,7 +316,7 @@ describe("Performance Tracker - Integration Tests (ARBITER-004)", () => {
           (async () => {
             await tracker.recordRoutingDecision(createRoutingDecision(taskId));
 
-            const executionId = tracker.startTaskExecution(
+            const executionId = await tracker.startTaskExecution(
               taskId,
               agentId,
               createRoutingDecision(taskId)
@@ -436,7 +436,7 @@ describe("Performance Tracker - Integration Tests (ARBITER-004)", () => {
         });
 
         // Execution
-        const executionId = tracker.startTaskExecution(
+        const executionId = await tracker.startTaskExecution(
           taskId,
           agentId,
           routingDecision

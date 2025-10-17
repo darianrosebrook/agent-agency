@@ -16,7 +16,7 @@ import type { WorkingSpec } from "../../../src/types/caws-types.js";
 
 describe("ProvenanceTracker Unit Tests", () => {
   let tracker: ProvenanceTracker;
-  let mockStorage;
+  let mockStorage: any;
 
   const validSpec: WorkingSpec = {
     id: "UNIT-001",

@@ -602,7 +602,7 @@ export interface SecurityPolicyConfig {
  * Security error
  */
 export class SecurityError extends Error {
-  constructor(message: string, public _code: string, public _details?: any) {
+  constructor(message: string, public code: string, public details?: any) {
     super(message);
     this.name = "SecurityError";
   }

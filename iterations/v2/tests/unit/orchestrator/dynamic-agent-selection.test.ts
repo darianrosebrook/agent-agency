@@ -9,7 +9,7 @@ import {
 
 describe("Dynamic Agent Selection", () => {
   let orchestrator: ArbiterOrchestrator;
-  let mockAgentRegistry;
+  let mockAgentRegistry: any;
 
   beforeEach(async () => {
     // Create mock agent registry

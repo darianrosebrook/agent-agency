@@ -22,6 +22,7 @@ export interface TaskIntakeIssue {
 export interface TaskIntakeResult {
   status: "accepted" | "rejected";
   sanitizedTask?: Task;
+  reason?: string;
   chunks: string[];
   errors: TaskIntakeIssue[];
   warnings: TaskIntakeIssue[];

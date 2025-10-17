@@ -20,7 +20,7 @@ import type { ModelRegistry } from "./ModelRegistry";
  * Model selector error
  */
 export class ModelSelectorError extends Error {
-  constructor(message: string, public _code: string) {
+  constructor(message: string, public code: string) {
     super(message);
     this.name = "ModelSelectorError";
   }

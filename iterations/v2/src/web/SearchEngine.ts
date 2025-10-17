@@ -94,7 +94,7 @@ export class SearchEngine {
   constructor(
     private readonly _knowledgeSeeker: KnowledgeSeeker,
     private readonly _contentExtractor: ContentExtractor,
-    private readonly _config: SearchEngineConfig
+    private readonly config: SearchEngineConfig
   ) {
     this.cache = new Map();
   }
@@ -151,7 +151,7 @@ export class SearchEngine {
       },
     };
 
-    const knowledgeResponse = await this.knowledgeSeeker.processQuery(
+    const knowledgeResponse = await this._knowledgeSeeker.processQuery(
       knowledgeQuery
     );
 
@@ -169,7 +169,7 @@ export class SearchEngine {
         enrichedResults.length < this.config.autoExtractCount
       ) {
         try {
-          const fullContent = await this.contentExtractor.extractContent(
+          const fullContent = await this._contentExtractor.extractContent(
             result.url,
             this.config.extractionConfig
           );
@@ -222,7 +222,7 @@ export class SearchEngine {
       // Extract full content for top results
       if (i < maxToEnrich) {
         try {
-          const fullContent = await this.contentExtractor.extractContent(
+          const fullContent = await this._contentExtractor.extractContent(
             result.url,
             this.config.extractionConfig
           );

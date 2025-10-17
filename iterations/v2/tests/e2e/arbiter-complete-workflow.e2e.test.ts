@@ -137,8 +137,8 @@ describe("Complete Arbiter Workflow E2E Test", () => {
   // Test components
   let specManager: SpecFileManager;
   let validationAdapter: CAWSValidationAdapter;
-  let _policyAdapter: CAWSPolicyAdapter;
-  let _mcpServer: ArbiterMCPServer;
+  let policyAdapter: CAWSPolicyAdapter;
+  let mcpServer: ArbiterMCPServer;
   let budgetMonitor: BudgetMonitor;
   let guidance: IterativeGuidance;
   let provenanceTracker: ProvenanceTracker;
@@ -311,11 +311,11 @@ risk_tiers:
     if (provenanceTracker) {
       provenanceTracker.stop();
     }
-    if (_policyAdapter) {
-      await _policyAdapter.cleanup();
+    if (policyAdapter) {
+      await policyAdapter.clearCache();
     }
-    if (_mcpServer) {
-      await _mcpServer.stop();
+    if (mcpServer) {
+      await mcpServer.close();
     }
 
     try {

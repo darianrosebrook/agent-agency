@@ -158,7 +158,7 @@ describe("ARBITER-004 Performance Benchmarks", () => {
   let performanceTracker: PerformanceTracker;
 
   // Test data generators
-  const generateTaskOutcome = (index: number): TaskOutcome => ({
+  const generateTaskOutcome = (_index: number): TaskOutcome => ({
     success: Math.random() > 0.1, // 90% success rate
     qualityScore: 0.7 + Math.random() * 0.3,
     efficiencyScore: 0.75 + Math.random() * 0.25,
@@ -357,7 +357,7 @@ describe("ARBITER-004 Performance Benchmarks", () => {
           const agentId = `agent-${taskCounter % 10}`;
           const routingDecision = generateRoutingDecision(taskId, agentId);
 
-          performanceTracker.startTaskExecution(
+          await performanceTracker.startTaskExecution(
             taskId,
             agentId,
             routingDecision

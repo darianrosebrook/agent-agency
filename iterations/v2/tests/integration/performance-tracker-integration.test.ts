@@ -83,7 +83,7 @@ describe("Performance Tracker Integration", () => {
       };
 
       // Start task execution
-      const executionId = performanceTracker.startTaskExecution(
+      const executionId = await performanceTracker.startTaskExecution(
         taskId,
         agentId,
         routingDecision,
@@ -130,7 +130,7 @@ describe("Performance Tracker Integration", () => {
         budget: 500,
       };
 
-      const executionId = performanceTracker.startTaskExecution(
+      const executionId = await performanceTracker.startTaskExecution(
         taskId,
         agentId,
         routingDecision,
@@ -230,7 +230,7 @@ describe("Performance Tracker Integration", () => {
       });
 
       // Start and complete a task
-      const executionId = performanceTracker.startTaskExecution(
+      const executionId = await performanceTracker.startTaskExecution(
         "task-1",
         "agent-1",
         {
@@ -282,7 +282,7 @@ describe("Performance Tracker Integration", () => {
       });
 
       // Start and complete a task
-      const executionId = performanceTracker.startTaskExecution(
+      const executionId = await performanceTracker.startTaskExecution(
         "task-1",
         "agent-1",
         {

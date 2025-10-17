@@ -13,5 +13,5 @@
     }
   },
   "include": ["src/**/*", "apps/**/*", "tests/**/*", "scripts/**/*", "src/mcp"],
-  "exclude": ["node_modules", "dist", "coverage"]
+  "exclude": ["node_modules", "dist", "coverage", "apps/web-observer"]
 }

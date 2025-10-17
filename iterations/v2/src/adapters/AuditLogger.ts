@@ -89,6 +89,7 @@ export interface AuditStorageProvider {
   query(_query: AuditQuery): Promise<AuditEvent[]>;
   delete(_olderThan: Date): Promise<number>;
   healthCheck(): Promise<{ healthy: boolean; error?: string }>;
+  shutdown?(): Promise<void>;
 }
 
 /**
@@ -544,6 +545,23 @@ export class AuditLogger {
         error: error instanceof Error ? error.message : String(error),
       });
       return { healthy: false, storage: false };
+    }
+  }
+
+  /**
+   * Shutdown the audit logger
+   */
+  async shutdown(): Promise<void> {
+    try {
+      if (this.storage && typeof this.storage.shutdown === "function") {
+        await this.storage.shutdown();
+      }
+      this.logger.info("Audit logger shutdown completed");
+    } catch (error) {
+      this.logger.error("Failed to shutdown audit logger", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
     }
   }
 

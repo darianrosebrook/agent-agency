@@ -57,6 +57,13 @@ export class HealthMonitor {
   }
 
   /**
+   * Get system health status
+   */
+  async getSystemHealth(): Promise<SystemHealth> {
+    return this.checkHealth();
+  }
+
+  /**
    * Run all health checks and aggregate results
    */
   async checkHealth(): Promise<SystemHealth> {
@@ -161,7 +168,7 @@ export class HealthMonitor {
         status: HealthStatus.UNHEALTHY,
         message: `Component '${name}' not registered`,
         lastCheck: new Date(),
-        responseTime: 0,
+        details: { responseTime: 0 },
       };
     }
 
@@ -175,8 +182,10 @@ export class HealthMonitor {
         status: result.status,
         message: result.message,
         lastCheck: new Date(),
-        responseTime,
-        details: result.details,
+        details: {
+          ...result.details,
+          responseTime,
+        },
       };
 
       // Cache the result
@@ -189,7 +198,7 @@ export class HealthMonitor {
         status: HealthStatus.UNHEALTHY,
         message: error instanceof Error ? error.message : String(error),
         lastCheck: new Date(),
-        responseTime: 0,
+        details: { responseTime: 0 },
       };
 
       this.lastResults.set(name, componentHealth);

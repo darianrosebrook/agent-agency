@@ -210,6 +210,31 @@ export class ConfigManager {
   }
 
   /**
+   * Check if user has access to a configuration section
+   */
+  private checkAccess(_section: string, _user: string): boolean {
+    // TODO: Implement proper access control logic
+    // For now, allow all access
+    return true;
+  }
+
+  /**
+   * Get a specific configuration section with access control
+   */
+  public async getConfigurationSection(
+    section: string,
+    user?: string
+  ): Promise<any> {
+    // Check access control if user is provided
+    if (user && !this.checkAccess(section, user)) {
+      throw new Error("Access denied");
+    }
+
+    const sectionConfig = this.config[section];
+    return sectionConfig ? { ...sectionConfig } : {};
+  }
+
+  /**
    * Update configuration
    */
   public updateConfiguration(updates: Record<string, any>): void {

@@ -6,7 +6,7 @@
  * @author @darianrosebrook
  */
 
-import { describe, expect, fail, it } from "@jest/globals";
+import { describe, expect, it } from "@jest/globals";
 import {
   AuthCredentials,
   SecurityContext,
@@ -389,7 +389,7 @@ describe("Penetration Testing - Injection Attacks", () => {
 
       try {
         securityManager.sanitizeInput(context, "test", longInput);
-        fail("Should have thrown for oversized input");
+        throw new Error("Should have thrown for oversized input");
       } catch (error) {
         expect(error).toBeInstanceOf(SecurityError);
       }

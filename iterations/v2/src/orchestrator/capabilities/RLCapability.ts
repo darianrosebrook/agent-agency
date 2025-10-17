@@ -266,7 +266,7 @@ export class RLCapability {
         }
 
         const executionId =
-          this.components.performanceTracker.startTaskExecution(
+          await this.components.performanceTracker.startTaskExecution(
             taskId,
             agentId,
             {} as any

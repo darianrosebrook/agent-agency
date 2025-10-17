@@ -114,7 +114,7 @@ export class PropertyBasedTestSuiteImpl implements PropertyBasedTestSuite {
 
         try {
           const result = await this.testProperty(propertyName, input, i);
-          if (!result.passed) {
+          if (result) {
             failures.push(result);
           }
         } catch (error) {
@@ -502,11 +502,11 @@ export class PropertyBasedTestSuiteImpl implements PropertyBasedTestSuite {
     iteration: number
   ): Promise<PropertyTestFailure | null> {
     try {
-      const detectionResult = this.injectionDetector.detect(
+      const detectionResult = await this.injectionDetector.detect(
         JSON.stringify(input)
       );
 
-      if (!detectionResult.isDetected) {
+      if (!detectionResult.detected) {
         return {
           iteration,
           input,
@@ -972,9 +972,3 @@ class DeterministicGenerator {
     return array;
   }
 }
-
-
-
-
-
-

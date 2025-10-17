@@ -11,14 +11,15 @@
  * @author @darianrosebrook
  */
 
-import { AppConfig } from "../../src/config/AppConfig";
-import { ConfigManager } from "../../src/config/ConfigManager";
-import { PerformanceConfigManager } from "../../src/config/performance-config";
-import { ValidationError } from "../../src/types/config";
+import type { AppConfig } from "@/config/AppConfig";
+import { ConfigManager } from "@/config/ConfigManager";
+import { PerformanceConfigManager } from "@/config/performance-config";
+import { ValidationError } from "@/config/validation/ConfigValidationError";
 
 describe("Configuration Management Integration", () => {
   let configManager: ConfigManager;
-  let performanceConfig: PerformanceConfigManager;
+  let performanceConfig: PerformanceConfigManager =
+    new PerformanceConfigManager();
 
   // Test configuration fixtures
   const createBaseConfig = (): Partial<AppConfig> => ({
@@ -744,4 +745,3 @@ describe("Configuration Management Integration", () => {
     });
   });
 });
-

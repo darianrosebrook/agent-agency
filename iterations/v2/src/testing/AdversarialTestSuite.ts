@@ -245,11 +245,11 @@ export class AdversarialTestSuiteImpl implements AdversarialTestSuite {
   }
 
   private async testPromptInjection(payload: any): Promise<string> {
-    const detectionResult = this.injectionDetector.detect(
+    const detectionResult = await this.injectionDetector.detect(
       JSON.stringify(payload)
     );
 
-    if (detectionResult.isDetected) {
+    if (detectionResult.detected) {
       return "blocked";
     }
 
@@ -598,9 +598,3 @@ export class AdversarialTestSuiteImpl implements AdversarialTestSuite {
     console.log("===============================\n");
   }
 }
-
-
-
-
-
-

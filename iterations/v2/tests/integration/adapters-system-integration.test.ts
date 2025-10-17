@@ -11,19 +11,19 @@
  * @author @darianrosebrook
  */
 
-import { AuditLogger } from "../../src/adapters/AuditLogger";
-import { DistributedCacheClient } from "../../src/adapters/DistributedCacheClient";
+import { AuditEvent, AuditLogger } from "../../src/adapters/AuditLogger";
+import {
+  CacheEntry,
+  DistributedCacheClient,
+} from "../../src/adapters/DistributedCacheClient";
 import { IncidentNotifier } from "../../src/adapters/IncidentNotifier";
 import { InfrastructureController } from "../../src/adapters/InfrastructureController";
-import { NotificationAdapter } from "../../src/adapters/NotificationAdapter";
-import { Logger } from "../../src/observability/Logger";
 import {
-  AuditEvent,
-  AuditEventType,
-  CacheEntry,
-  NotificationChannel,
+  NotificationAdapter,
   NotificationPriority,
-} from "../../src/types/adapters";
+} from "../../src/adapters/NotificationAdapter";
+import { AuditEventType } from "../../src/observability/AuditLogger";
+import { LogLevel, Logger } from "../../src/observability/Logger";
 
 describe("Adapters System Integration", () => {
   let auditLogger: AuditLogger;
@@ -34,63 +34,95 @@ describe("Adapters System Integration", () => {
 
   // Test data fixtures
   const createAuditEvent = (
-    eventType: AuditEventType = AuditEventType.USER_ACTION,
+    eventTypes: AuditEventType = AuditEventType.TASK_SUBMISSION,
     details: any = {}
   ): Omit<AuditEvent, "id" | "timestamp"> => ({
-    eventType,
-    actor: "test-user",
-    resource: "test-resource",
+    eventType: eventTypes,
+    actor: {
+      id: "test-user",
+      type: "user" as const,
+      name: "test-user",
+    },
+    resource: {
+      type: "test",
+      id: "test-resource",
+    },
     action: "test-action",
     outcome: "success",
     details,
-    ipAddress: "127.0.0.1",
-    userAgent: "test-agent",
+    metadata: {
+      ipAddress: "127.0.0.1",
+      userAgent: "test-agent",
+    },
   });
 
   const createCacheEntry = (
     key: string,
-    data: any = { test: "data" },
+    value: any = { test: "data" },
     ttl = 3600000
   ): CacheEntry => ({
     key,
-    data,
+    value,
     ttl,
-    createdAt: new Date(),
-    lastAccessed: new Date(),
-    accessCount: 0,
+    metadata: {
+      createdAt: new Date(),
+      lastAccessed: new Date(),
+      accessCount: 0,
+    },
   });
 
   const createNotification = (
     title: string = "Test Notification",
     message: string = "Test message",
-    priority: NotificationPriority = NotificationPriority._MEDIUM
+    priority: NotificationPriority = NotificationPriority.MEDIUM
   ) => ({
     title,
     message,
     priority,
-    channels: [NotificationChannel.EMAIL, NotificationChannel.SLACK],
+    channels: [
+      { type: "email" as const, enabled: true, config: {} },
+      { type: "slack" as const, enabled: true, config: {} },
+    ],
     metadata: { test: true },
   });
 
   beforeEach(async () => {
     // Initialize adapters
-    const logger = new Logger({
-      level: "info",
-      outputs: ["memory"],
-    });
+    const logger = new Logger("test-logger", LogLevel._INFO);
 
     auditLogger = new AuditLogger(
       {
-        level: "info",
-        outputs: ["memory"], // Use memory for testing
-        maxEntries: 1000,
+        enabled: true,
+        storage: {
+          type: "mock",
+          config: {},
+        },
+        retention: {
+          defaultDays: 30,
+          byEventType: {},
+          bySeverity: {},
+        },
+        encryption: {
+          enabled: false,
+        },
       },
       logger
     );
 
     cacheClient = new DistributedCacheClient(
       {
-        nodes: ["localhost:6379"],
+        enabled: true,
+        provider: {
+          type: "mock",
+          redis: {
+            host: "localhost",
+            port: 6379,
+          },
+        },
+        retry: {
+          maxAttempts: 3,
+          backoffMs: 1000,
+        },
         ttl: 3600000,
         maxMemory: "100mb",
       },
@@ -99,27 +131,56 @@ describe("Adapters System Integration", () => {
 
     incidentNotifier = new IncidentNotifier({
       enabled: true,
-      channels: [NotificationChannel.EMAIL, NotificationChannel.SLACK],
-      escalationPolicy: {
-        thresholds: {
-          critical: 1,
-          high: 5,
-          medium: 10,
-        },
+      incidentSystem: {
+        type: "mock",
+      },
+      notifications: {
+        enabled: true,
+        targets: [
+          { type: "email" as const, enabled: true, config: {} },
+          { type: "slack" as const, enabled: true, config: {} },
+        ],
+        escalationDelayMs: 300000,
+      },
+      retry: {
+        maxAttempts: 3,
+        backoffMs: 1000,
       },
     });
 
     infraController = new InfrastructureController({
-      monitoringEnabled: true,
-      autoScaling: true,
-      healthCheckInterval: 30000,
+      enabled: true,
+      providers: {
+        docker: {
+          enabled: true,
+          socketPath: "/var/run/docker.sock",
+        },
+      },
     });
 
     notificationAdapter = new NotificationAdapter(
       {
-        providers: {
-          email: { enabled: true, smtp: { host: "localhost", port: 587 } },
-          slack: { enabled: true, webhookUrl: "https://hooks.slack.com/test" },
+        channels: [
+          {
+            type: "email" as const,
+            enabled: true,
+            config: { smtp: { host: "localhost", port: 587 } },
+          },
+          {
+            type: "slack" as const,
+            enabled: true,
+            config: { webhookUrl: "https://hooks.slack.com/test" },
+          },
+        ],
+        defaultRecipients: [],
+        retry: {
+          maxAttempts: 3,
+          delayMs: 1000,
+          backoffMultiplier: 2,
+        },
+        rateLimit: {
+          maxPerMinute: 60,
+          maxPerHour: 1000,
         },
       },
       logger
@@ -174,7 +235,7 @@ describe("Adapters System Integration", () => {
 
       // This should generate audit events
       const auditEvents = await auditLogger.queryEvents({
-        resource: "cache",
+        resources: "cache",
         limit: 10,
       });
 
@@ -198,7 +259,7 @@ describe("Adapters System Integration", () => {
 
       // All events should be logged
       const loggedEvents = await auditLogger.queryEvents({
-        eventType: AuditEventType.SYSTEM_EVENT,
+        eventTypes: AuditEventType.SYSTEM_EVENT,
         limit: eventCount + 10,
       });
 
@@ -324,8 +385,8 @@ describe("Adapters System Integration", () => {
       const result = await notificationAdapter.send(notification);
 
       expect(result.success).toBe(true);
-      expect(result.channels).toContain(NotificationChannel.EMAIL);
-      expect(result.channels).toContain(NotificationChannel.SLACK);
+      expect(result.channels).toContain("email");
+      expect(result.channels).toContain("slack");
     });
 
     it("should integrate notifications with incident management", async () => {
@@ -369,7 +430,7 @@ describe("Adapters System Integration", () => {
           accountType: "premium",
         },
         priority: NotificationPriority._LOW,
-        channels: [NotificationChannel.EMAIL],
+        channels: ["email"],
       };
 
       const result = await notificationAdapter.send(
@@ -424,7 +485,7 @@ describe("Adapters System Integration", () => {
 
       // Check audit log for infrastructure events
       const auditEvents = await auditLogger.queryEvents({
-        resource: "infrastructure",
+        resources: "infrastructure",
         limit: 10,
       });
 
@@ -444,7 +505,7 @@ describe("Adapters System Integration", () => {
       // 2. Audit the caching operation
       await auditLogger.logEvent({
         ...createAuditEvent(AuditEventType.DATA_ACCESS),
-        resource: "cache",
+        resources: "cache",
         action: "set",
         details: { key: cacheKey },
       });
@@ -453,7 +514,7 @@ describe("Adapters System Integration", () => {
       const notification = createNotification(
         "Workflow Started",
         `Workflow ${workflowData.workflowId} has started processing`,
-        NotificationPriority._MEDIUM
+        NotificationPriority.MEDIUM
       );
       await notificationAdapter.send(notification);
 
@@ -462,7 +523,7 @@ describe("Adapters System Integration", () => {
       expect(cachedData?.data).toEqual(workflowData);
 
       const auditEvents = await auditLogger.queryEvents({
-        resource: "cache",
+        resources: "cache",
         limit: 5,
       });
       expect(auditEvents.length).toBeGreaterThan(0);
@@ -484,7 +545,7 @@ describe("Adapters System Integration", () => {
         // Error should be logged and notified
         await auditLogger.logEvent({
           ...createAuditEvent(AuditEventType.SYSTEM_ERROR),
-          resource: "cache",
+          resources: "cache",
           action: "operation_failed",
           outcome: "failure",
           details: { error: error.message },
@@ -503,7 +564,7 @@ describe("Adapters System Integration", () => {
 
       // Verify error was logged
       const errorEvents = await auditLogger.queryEvents({
-        eventType: AuditEventType.SYSTEM_ERROR,
+        eventTypes: AuditEventType.SYSTEM_ERROR,
         limit: 5,
       });
 
@@ -593,7 +654,7 @@ describe("Adapters System Integration", () => {
 
       // Verify operations completed
       const auditEvents = await auditLogger.queryEvents({
-        eventType: AuditEventType.SYSTEM_EVENT,
+        eventTypes: AuditEventType.SYSTEM_EVENT,
         limit: operationCount + 10,
       });
 
@@ -647,7 +708,7 @@ describe("Adapters System Integration", () => {
 
       // Should be retrievable
       const events = await auditLogger.queryEvents({
-        eventType: AuditEventType.DATA_EXPORT,
+        eventTypes: AuditEventType.DATA_EXPORT,
         limit: 1,
       });
 
@@ -680,7 +741,7 @@ describe("Adapters System Integration", () => {
 
       // Verify security context is preserved
       const auditEvents = await auditLogger.queryEvents({
-        eventType: AuditEventType.SECURITY_EVENT,
+        eventTypes: AuditEventType.SECURITY_EVENT,
         limit: 5,
       });
 
@@ -730,7 +791,7 @@ describe("Adapters System Integration", () => {
       // Audit access attempts
       await auditLogger.logEvent({
         ...createAuditEvent(AuditEventType.ACCESS_DENIED),
-        resource: "restricted-data",
+        resources: "restricted-data",
         action: "read",
         outcome: "denied",
         details: { reason: "insufficient_permissions" },
@@ -738,7 +799,7 @@ describe("Adapters System Integration", () => {
 
       // Verify access was denied and logged
       const accessEvents = await auditLogger.queryEvents({
-        eventType: AuditEventType.ACCESS_DENIED,
+        eventTypes: AuditEventType.ACCESS_DENIED,
         limit: 5,
       });
 

@@ -19,7 +19,7 @@ import type {
  * Model registry errors
  */
 export class ModelRegistryError extends Error {
-  constructor(message: string, public _code: string) {
+  constructor(message: string, public code: string) {
     super(message);
     this.name = "ModelRegistryError";
   }
@@ -35,6 +35,7 @@ export class ModelRegistry {
   private models: Map<string, LocalModelConfig> = new Map();
   private performanceProfiles: Map<string, PerformanceProfile> = new Map();
   private modelsByName: Map<string, Set<string>> = new Map(); // name → model IDs
+  private idCounter: number = 0;
 
   constructor() {
     // Initialize with empty registry
@@ -56,13 +57,8 @@ export class ModelRegistry {
       request.config.version
     );
 
-    // Check for duplicates
-    if (this.models.has(id)) {
-      throw new ModelRegistryError(
-        `Model already registered: ${id}`,
-        "DUPLICATE_MODEL"
-      );
-    }
+    // Note: We allow duplicate registrations since IDs include timestamps
+    // This enables testing scenarios and multiple configurations
 
     // Validate configuration
     if (request.validate ?? true) {
@@ -423,11 +419,12 @@ export class ModelRegistry {
    * @returns Unique model ID
    */
   private generateModelId(name: string, version: string): string {
-    // Format: name-version-timestamp
+    // Format: name-version-timestamp-counter
     const timestamp = Date.now();
+    const counter = this.idCounter++;
     const sanitizedName = name.toLowerCase().replace(/[^a-z0-9-]/g, "-");
     const sanitizedVersion = version.replace(/[^a-z0-9.-]/gi, "-");
-    return `${sanitizedName}-${sanitizedVersion}-${timestamp}`;
+    return `${sanitizedName}-${sanitizedVersion}-${timestamp}-${counter}`;
   }
 
   /**

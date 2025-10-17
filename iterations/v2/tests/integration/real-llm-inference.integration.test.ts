@@ -102,7 +102,7 @@ describe("Real LLM Inference Integration Tests", () => {
     });
 
     // Initialize trackers
-    performanceTracker = new PerformanceTracker();
+    _performanceTracker = new PerformanceTracker();
     costTracker = new ComputeCostTracker();
 
     console.log("✅ Real LLM Integration Tests Ready\n");

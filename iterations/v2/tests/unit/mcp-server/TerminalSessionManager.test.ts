@@ -596,7 +596,7 @@ describe("TerminalSessionManager", () => {
 
   describe("event emission", () => {
     it("should emit events with correct structure", async () => {
-      const events = [];
+      const events: any[] = [];
       const eventHandler = (event: any) => events.push(event);
 
       manager.on(TerminalEventType.SESSION_CREATED, eventHandler);

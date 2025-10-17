@@ -24,6 +24,18 @@ const configSchema = z.object({
     host: z.string().default("localhost"),
   }),
 
+  // Database
+  database: z.object({
+    host: z.string().default("localhost"),
+    port: z.number().min(1).max(65535).default(5432),
+    database: z.string().default("agent_agency"),
+    username: z.string().optional(),
+    password: z.string().optional(),
+    maxConnections: z.number().min(1).default(20),
+    connectionTimeout: z.number().min(1000).default(10000),
+    queryTimeout: z.number().min(1000).default(30000),
+  }),
+
   // Agent Registry
   registry: z.object({
     maxAgents: z.number().min(1).default(1000),

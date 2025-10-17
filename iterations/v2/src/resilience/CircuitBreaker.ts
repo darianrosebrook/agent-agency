@@ -76,7 +76,7 @@ export class CircuitBreaker {
   private lastFailure: Date | null = null;
   private lastSuccess: Date | null = null;
 
-  constructor(private _config: CircuitBreakerConfig) {}
+  constructor(private config: CircuitBreakerConfig) {}
 
   /**
    * Execute an operation with circuit breaker protection

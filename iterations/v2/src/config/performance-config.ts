@@ -438,19 +438,25 @@ export class PerformanceConfigManager {
       };
     }
 
-    // Test overrides
-    if (process.env.NODE_ENV === "test") {
-      overrides.collection = {
-        ...PERFORMANCE_CONFIG.collection,
-        enabled: false, // Disable by default in tests
-      };
-      overrides.features = {
-        ...PERFORMANCE_CONFIG.features,
-        alerting: false, // Disable alerts in tests
-      };
-    }
-
     return overrides;
+  }
+
+  // Instance methods
+  private config: any = {};
+
+  /**
+   * Load configuration
+   */
+  async loadConfiguration(config: any): Promise<void> {
+    this.config = { ...config };
+  }
+
+  /**
+   * Record a performance metric
+   */
+  async recordMetric(name: string, value: number): Promise<void> {
+    // Mock implementation for tests
+    console.log(`Recording metric ${name}: ${value}`);
   }
 
   /**

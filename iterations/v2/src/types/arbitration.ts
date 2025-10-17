@@ -518,9 +518,9 @@ export interface ArbitrationProtocolConfig {
 export class ArbitrationError extends Error {
   constructor(
     message: string,
-    public _code: string,
-    public _sessionId?: string,
-    public _ruleId?: string
+    public code: string,
+    public sessionId?: string,
+    public ruleId?: string
   ) {
     super(message);
     this.name = "ArbitrationError";

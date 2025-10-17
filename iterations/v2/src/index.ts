@@ -7,6 +7,10 @@
  * @author @darianrosebrook
  */
 
+// Load environment variables from .env.local
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
+
 import { ConnectionPoolManager } from "@/database/ConnectionPoolManager";
 import { PerformanceTrackerDatabaseClient } from "@/database/PerformanceTrackerDatabaseClient";
 import { ArbiterMCPServer } from "@/mcp-server/ArbiterMCPServer";
@@ -29,6 +33,7 @@ import { LearningIntegration } from "@/orchestrator/LearningIntegration";
 import { TerminalSessionManager } from "@/orchestrator/TerminalSessionManager";
 import { ArbiterRuntime } from "@/orchestrator/runtime/ArbiterRuntime";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { spawn } from "child_process";
 import * as path from "path";
 
 // Initialize logger
@@ -40,6 +45,7 @@ let httpServer: ObserverHttpServer | null = null;
 let mcpServer: ArbiterMCPServer | null = null;
 let orchestrator: ArbiterOrchestrator | null = null;
 let arbiterController: ArbiterController | null = null;
+let webServerProcess: import("child_process").ChildProcess | null = null;
 
 /**
  * Initialize application services
@@ -233,6 +239,25 @@ async function shutdown(signal: string): Promise<void> {
       logger.info("MCP server stopped");
     }
 
+    // Shutdown web interface
+    if (webServerProcess) {
+      webServerProcess.kill("SIGTERM");
+      // Give it a moment to shutdown gracefully
+      await new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          webServerProcess?.kill("SIGKILL");
+          resolve(void 0);
+        }, 5000);
+
+        webServerProcess.on("exit", () => {
+          clearTimeout(timeout);
+          resolve(void 0);
+        });
+      });
+      webServerProcess = null;
+      logger.info("Web interface stopped");
+    }
+
     // Shutdown orchestrator
     if (arbiterController) {
       await arbiterController.requestArbiterStop();
@@ -359,6 +384,61 @@ async function startTaskProcessing(): Promise<void> {
 }
 
 /**
+ * Start Next.js web interface for human users
+ */
+async function startWebInterface(): Promise<void> {
+  try {
+    logger.info("Starting Next.js web interface...");
+
+    const webObserverPath = path.resolve(process.cwd(), "apps/web-observer");
+
+    // Check if the web-observer directory exists
+    const fs = await import("fs");
+    if (!fs.existsSync(webObserverPath)) {
+      logger.warn(
+        "Web observer directory not found, skipping web interface startup"
+      );
+      return;
+    }
+
+    // Check if package.json exists
+    const packageJsonPath = path.join(webObserverPath, "package.json");
+    if (!fs.existsSync(packageJsonPath)) {
+      logger.warn(
+        "Web observer package.json not found, skipping web interface startup"
+      );
+      return;
+    }
+
+    // Start the Next.js development server
+    webServerProcess = spawn("npm", ["run", "dev"], {
+      cwd: webObserverPath,
+      stdio: "inherit",
+      detached: false,
+    });
+
+    // Handle process events
+    webServerProcess.on("error", (error) => {
+      logger.error("Failed to start web interface process", { error });
+    });
+
+    webServerProcess.on("exit", (code, signal) => {
+      logger.info("Web interface process exited", { code, signal });
+    });
+
+    // Give the server a moment to start
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    logger.info(
+      "Next.js web interface started successfully on http://localhost:3000"
+    );
+  } catch (error) {
+    logger.error("Failed to start web interface", { error });
+    throw error;
+  }
+}
+
+/**
  * Main application entry point
  */
 async function main(): Promise<void> {
@@ -374,6 +454,7 @@ async function main(): Promise<void> {
     // await startHttpServer(); // ObserverBridge already provides HTTP server
     await startMcpServer();
     await startTaskProcessing();
+    await startWebInterface();
 
     logger.info("V2 Arbiter running with all services started");
   } catch (error) {

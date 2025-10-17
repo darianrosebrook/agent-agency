@@ -71,7 +71,7 @@ describe("Performance Tracker - Production Hardening (ARBITER-004)", () => {
       // Test all major operations
       await tracker.recordRoutingDecision(createMockRoutingDecision());
 
-      const executionId = tracker.startTaskExecution(
+      const executionId = await tracker.startTaskExecution(
         "task-1",
         "agent-1",
         createMockRoutingDecision("task-1")
@@ -500,7 +500,7 @@ describe("Performance Tracker - Production Hardening (ARBITER-004)", () => {
       const executions = [];
 
       for (let i = 0; i < 10; i++) {
-        const executionId = tracker.startTaskExecution(
+        const executionId = await tracker.startTaskExecution(
           `task-${i}`,
           "agent-1",
           createMockRoutingDecision(`task-${i}`)
@@ -522,7 +522,7 @@ describe("Performance Tracker - Production Hardening (ARBITER-004)", () => {
 
       // Record tasks with increasing completion times
       for (let i = 0; i < 5; i++) {
-        const executionId = tracker.startTaskExecution(
+        const executionId = await tracker.startTaskExecution(
           `task-${i}`,
           "agent-1",
           createMockRoutingDecision(`task-${i}`)
@@ -554,7 +554,7 @@ describe("Performance Tracker - Production Hardening (ARBITER-004)", () => {
       // Record multiple metrics for correlation analysis
       await tracker.recordRoutingDecision(createMockRoutingDecision("task-1"));
 
-      const executionId = tracker.startTaskExecution(
+      const executionId = await tracker.startTaskExecution(
         "task-1",
         "agent-1",
         createMockRoutingDecision("task-1")
@@ -582,7 +582,7 @@ describe("Performance Tracker - Production Hardening (ARBITER-004)", () => {
     it("should compute accurate statistics", async () => {
       // Record varied data with delays to ensure proper timestamp ordering
       for (let i = 0; i < 20; i++) {
-        const executionId = tracker.startTaskExecution(
+        const executionId = await tracker.startTaskExecution(
           `task-${i}`,
           `agent-${i % 3}`,
           createMockRoutingDecision(`task-${i}`)
@@ -626,7 +626,7 @@ describe("Performance Tracker - Production Hardening (ARBITER-004)", () => {
     it("should highlight anomalies in data", async () => {
       // Record normal performance with delays
       for (let i = 0; i < 5; i++) {
-        const executionId = tracker.startTaskExecution(
+        const executionId = await tracker.startTaskExecution(
           `task-${i}`,
           "agent-1",
           createMockRoutingDecision(`task-${i}`)
@@ -641,7 +641,7 @@ describe("Performance Tracker - Production Hardening (ARBITER-004)", () => {
       }
 
       // Record anomaly (very long completion time)
-      const anomalyId = tracker.startTaskExecution(
+      const anomalyId = await tracker.startTaskExecution(
         "task-anomaly",
         "agent-1",
         createMockRoutingDecision("task-anomaly")
@@ -799,7 +799,7 @@ describe("Performance Tracker - Production Hardening (ARBITER-004)", () => {
 
     it("should cleanup old incomplete task executions", () => {
       // Start task but never complete
-      const executionId = tracker.startTaskExecution(
+      const executionId = await tracker.startTaskExecution(
         "task-incomplete",
         "agent-1",
         createMockRoutingDecision()

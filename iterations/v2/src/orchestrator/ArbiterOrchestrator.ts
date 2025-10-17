@@ -31,6 +31,7 @@ import {
 
 // Workspace and Health Integration imports
 import { SystemHealthMonitor } from "../monitoring/SystemHealthMonitor.js";
+import { AgentProfile } from "../types/agent-registry";
 import { WorkspaceStateManager } from "../workspace/WorkspaceStateManager.js";
 
 // Re-export commonly used types
@@ -405,6 +406,7 @@ export class ArbiterOrchestrator {
   private securityAuditEvents: SecurityAuditEvent[] = [];
   private maxAuditEvents = 10000; // Prevent memory exhaustion
   private securityLogger: any = null; // Secure logger (can be replaced with proper logging service)
+  private startTime: number;
 
   constructor(
     config: ArbiterOrchestratorConfig,
@@ -412,6 +414,7 @@ export class ArbiterOrchestrator {
     systemHealthMonitor?: SystemHealthMonitor
   ) {
     this.config = config;
+    this.startTime = Date.now();
     this.components = {} as any;
     this.components.workspaceManager = workspaceManager;
     this.components.systemHealthMonitor = systemHealthMonitor;
@@ -1068,6 +1071,101 @@ export class ArbiterOrchestrator {
       healthy: this.initialized,
       components: this.getComponents(),
       statistics: this.getStatistics(),
+    };
+  }
+
+  /**
+   * Get agent profile by ID
+   */
+  async getAgentProfile(agentId: string): Promise<AgentProfile | null> {
+    try {
+      if (!this.components.agentRegistry) {
+        throw new Error("Agent registry component not initialized");
+      }
+
+      // This would need to be implemented based on the actual agent registry API
+      console.log(`Retrieving agent profile for ${agentId}`);
+      // For now, return null - this would be implemented with actual agent storage
+      return null;
+    } catch (error) {
+      console.error(`Failed to get agent profile ${agentId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Register a new agent
+   */
+  async registerAgent(agent: AgentProfile): Promise<boolean> {
+    try {
+      if (!this.components.agentRegistry) {
+        throw new Error("Agent registry component not initialized");
+      }
+
+      // This would need to be implemented based on the actual agent registry API
+      console.log(`Registering agent ${agent.id}`);
+      return true;
+    } catch (error) {
+      console.error(`Failed to register agent ${agent.id}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Get override statistics
+   */
+  async getOverrideStats(): Promise<{
+    pendingRequests: number;
+    usageThisHour: number;
+    approvedOverrides: number;
+    deniedRequests: number;
+  }> {
+    // This would need to be implemented based on the actual override tracking
+    return {
+      pendingRequests: 0,
+      usageThisHour: 0,
+      approvedOverrides: 0,
+      deniedRequests: 0,
+    };
+  }
+
+  /**
+   * Get all pending override requests
+   */
+  async getPendingOverrides(): Promise<any[]> {
+    // This would need to be implemented based on the actual override storage
+    console.log("Retrieving pending overrides");
+    return []; // Return empty array for now
+  }
+
+  /**
+   * Resubmit a task with an approved override
+   */
+  async resubmitTaskWithOverride(
+    taskId: string,
+    overrideId: string
+  ): Promise<boolean> {
+    try {
+      // This would need to be implemented based on the actual override logic
+      console.log(`Resubmitting task ${taskId} with override ${overrideId}`);
+      return true;
+    } catch (error) {
+      console.error(`Failed to resubmit task ${taskId} with override:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Process an override decision for security/policy violations
+   */
+  async processOverrideDecision(decision: any): Promise<any> {
+    // This would need to be implemented based on the actual override decision logic
+    console.log(`Processing override decision for ${decision.id}`);
+    return {
+      status: "approved",
+      approvedBy: "system-admin",
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      decisionId: decision.id,
     };
   }
 

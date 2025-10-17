@@ -296,9 +296,9 @@ export interface EngineHealth {
 export class VerificationError extends Error {
   constructor(
     message: string,
-    public _code: VerificationErrorCode,
-    public _requestId?: string,
-    public _method?: VerificationType
+    public code: VerificationErrorCode,
+    public requestId?: string,
+    public method?: VerificationType
   ) {
     super(message);
     this.name = "VerificationError";

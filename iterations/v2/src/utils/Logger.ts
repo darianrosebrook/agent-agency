@@ -7,10 +7,10 @@
  */
 
 export enum LogLevel {
-  _DEBUG = 0,
-  _INFO = 1,
-  _WARN = 2,
-  _ERROR = 3,
+  DEBUG = 0,
+  INFO = 1,
+  WARN = 2,
+  ERROR = 3,
 }
 
 export class Logger {

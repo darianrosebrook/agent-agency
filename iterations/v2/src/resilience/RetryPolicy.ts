@@ -146,7 +146,7 @@ export class RetryPolicy {
  * Error thrown when all retry attempts are exhausted
  */
 export class RetryExhaustedError extends Error {
-  constructor(message: string, public _stats: RetryStats) {
+  constructor(message: string, public stats: RetryStats) {
     super(message);
     this.name = "RetryExhaustedError";
   }

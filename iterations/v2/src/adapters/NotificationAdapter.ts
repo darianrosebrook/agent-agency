@@ -9,6 +9,13 @@
 
 import { Logger } from "../observability/Logger.js";
 
+export enum NotificationPriority {
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
+  CRITICAL = "critical",
+}
+
 export interface NotificationChannel {
   type: "email" | "slack" | "webhook" | "sms" | "teams";
   enabled: boolean;
@@ -415,6 +422,45 @@ export class NotificationAdapter {
     }
 
     return results;
+  }
+
+  /**
+   * Send a notification (alias for sendNotification with default recipient)
+   */
+  async send(notification: {
+    title: string;
+    message: string;
+    priority: NotificationPriority;
+    channels: NotificationChannel[];
+    metadata?: Record<string, any>;
+  }): Promise<NotificationResult> {
+    // Create a default recipient for system notifications
+    const recipient: NotificationRecipient = {
+      id: "system",
+      name: "System",
+      channels: {
+        email: "system@example.com",
+        slack: "#system-notifications",
+      },
+    };
+
+    const message: NotificationMessage = {
+      title: notification.title,
+      body: notification.message,
+      priority: notification.priority as "low" | "normal" | "high" | "urgent",
+      metadata: notification.metadata,
+    };
+
+    const results = await this.sendNotification([recipient], message);
+    return (
+      results[0] || {
+        success: false,
+        channel: "unknown",
+        recipientId: recipient.id,
+        error: "No results returned",
+        timestamp: new Date(),
+      }
+    );
   }
 
   /**

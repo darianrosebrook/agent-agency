@@ -20,7 +20,7 @@ import type { ModelRegistry } from "./ModelRegistry";
  * Arbiter model manager error
  */
 export class ArbiterModelManagerError extends Error {
-  constructor(message: string, public _code: string) {
+  constructor(message: string, public code: string) {
     super(message);
     this.name = "ArbiterModelManagerError";
   }

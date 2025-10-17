@@ -84,7 +84,7 @@ export class TenantIsolator {
       case "read":
         return { allowed: true };
       case "write":
-        return { allowed: config.isolationLevel !== "isolated" };
+        return { allowed: config.isolationLevel !== "strict" };
       case "federate":
         return { allowed: config.isolationLevel === "federated" };
       case "submit-update":
@@ -121,5 +121,25 @@ export class TenantIsolator {
   getTenantEvents(tenantId: string, limit: number = 50): any[] {
     const events = this.tenantEvents.get(tenantId) || [];
     return events.slice(-limit);
+  }
+
+  canParticipateInAggregation(tenantId: string): boolean {
+    const config = this.tenantConfigs.get(tenantId);
+    if (!config) {
+      return false;
+    }
+
+    // Allow aggregation for low and medium isolation levels, block for strict
+    return config.isolationLevel !== "strict";
+  }
+
+  canShareModel(tenantId: string): boolean {
+    const config = this.tenantConfigs.get(tenantId);
+    if (!config) {
+      return false;
+    }
+
+    // Allow sharing for low and medium privacy levels, block for high
+    return config.privacyLevel !== "high";
   }
 }

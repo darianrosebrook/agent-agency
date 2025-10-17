@@ -527,12 +527,12 @@ export class PerformanceTracker {
    * @param context - Additional context data.
    * @returns Execution tracking ID.
    */
-  startTaskExecution(
+  async startTaskExecution(
     taskId: string,
     agentId: string,
     routingDecision: RoutingDecision,
     context?: Record<string, unknown>
-  ): string {
+  ): Promise<string> {
     if (!this.isCollecting || !this.config.enabled) {
       return "";
     }
@@ -554,6 +554,9 @@ export class PerformanceTracker {
 
     this.taskExecutions.push(execution);
     this.cleanupOldExecutions();
+
+    // Record the routing decision
+    await this.recordRoutingDecision(routingDecision);
 
     // Also record in new benchmarking system
     if (this.dataCollector) {

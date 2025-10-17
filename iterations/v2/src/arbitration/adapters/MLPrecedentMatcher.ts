@@ -477,7 +477,7 @@ export class MLPrecedentMatcher {
     factors: any,
     entities: ExtractedEntity[],
     intent: IntentClassification | null,
-    semantic: SemanticSimilarity | null
+    _semantic: SemanticSimilarity | null
   ): string {
     const reasons: string[] = [];
 

@@ -669,7 +669,7 @@ export class ArbiterRuntime {
       timestamp: new Date().toISOString(),
     };
 
-    const executionId = this.performanceTracker.startTaskExecution(
+    const executionId = await this.performanceTracker.startTaskExecution(
       task.id,
       assignedAgentId,
       routingDecision,

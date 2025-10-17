@@ -43,6 +43,7 @@ export interface TenantConfig {
   maxMemorySize: number;
   allowFederation: boolean;
   auditLogging?: boolean;
+  privacyLevel?: "low" | "medium" | "high";
 }
 
 export interface TenantAccessResult {

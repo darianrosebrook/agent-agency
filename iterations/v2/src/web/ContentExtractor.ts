@@ -21,7 +21,7 @@ import {
 } from "../types/web";
 
 type CheerioInstance = ReturnType<typeof cheerio.load>;
-type CheerioElement = cheerio.Element;
+type CheerioElement = any; // Cheerio element type
 
 /**
  * Content Extractor

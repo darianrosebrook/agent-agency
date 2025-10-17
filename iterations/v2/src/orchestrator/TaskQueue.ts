@@ -400,7 +400,7 @@ export class SecureTaskQueue {
         }
       );
     } catch (error) {
-      if (error instanceof SecurityError && error._code === "RATE_LIMITED") {
+      if (error instanceof SecurityError && error.code === "RATE_LIMITED") {
         await this.recordAudit("rate_limited", baseClone, undefined, {
           error: error.message,
           actor: credentials.agentId,

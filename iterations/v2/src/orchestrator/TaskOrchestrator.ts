@@ -603,7 +603,7 @@ export class TaskOrchestrator extends EventEmitter {
       timestamp: new Date().toISOString(),
     };
 
-    const _executionId = this.performanceTracker.startTaskExecution(
+    const _executionId = await this.performanceTracker.startTaskExecution(
       sanitizedTask.id,
       routingDecision.selectedAgent.id,
       performanceRoutingDecision,

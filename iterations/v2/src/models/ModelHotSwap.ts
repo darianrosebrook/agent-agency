@@ -29,7 +29,7 @@ import type { LocalModelProvider } from "./providers/LocalModelProvider";
  * Hot-swap error
  */
 export class HotSwapError extends Error {
-  constructor(message: string, public _code: string) {
+  constructor(message: string, public code: string) {
     super(message);
     this.name = "HotSwapError";
   }
