@@ -5,7 +5,9 @@
 
 use crate::types::*;
 use anyhow::Result;
-use std::path::Path;
+use chrono::{DateTime, Utc};
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tracing::{debug, error, info, warn};
 
@@ -193,6 +195,11 @@ impl WorkspaceStateManager {
         // Calculate size delta
         let size_delta = to.total_size as i64 - from.total_size as i64;
 
+        // Capture lengths before moving vectors
+        let files_added_count = added_files.len();
+        let files_removed_count = removed_files.len();
+        let files_modified_count = modified_files.len();
+
         // Create diff
         let diff = WorkspaceDiff {
             from_state,
@@ -203,9 +210,9 @@ impl WorkspaceStateManager {
             added_directories,
             removed_directories,
             size_delta,
-            files_added: added_files.len(),
-            files_removed: removed_files.len(),
-            files_modified: modified_files.len(),
+            files_added: files_added_count,
+            files_removed: files_removed_count,
+            files_modified: files_modified_count,
             computed_at: chrono::Utc::now(),
         };
 
@@ -293,7 +300,7 @@ impl WorkspaceStateManager {
         {
             let entry = entry.map_err(|e| WorkspaceError::Io(e.into()))?;
             let path = entry.path().strip_prefix(&self.workspace_root)
-                .map_err(|e| WorkspaceError::Io(e.into()))?
+                .map_err(|e| WorkspaceError::Configuration(format!("Failed to strip prefix: {}", e)))?
                 .to_path_buf();
 
             if entry.file_type().is_file() {
@@ -373,7 +380,7 @@ impl WorkspaceStateManager {
         {
             let entry = entry.map_err(|e| WorkspaceError::Io(e.into()))?;
             let path = entry.path().strip_prefix(&self.workspace_root)
-                .map_err(|e| WorkspaceError::Io(e.into()))?
+                .map_err(|e| WorkspaceError::Configuration(format!("Failed to strip prefix: {}", e)))?
                 .to_path_buf();
 
             if entry.file_type().is_file() && !files.contains_key(&path) {
@@ -421,7 +428,7 @@ impl WorkspaceStateManager {
             size: metadata.len(),
             content_hash,
             modified_at: metadata.modified()?.into(),
-            permissions: metadata.permissions().mode(),
+            permissions: 0o644, // Default permissions for cross-platform compatibility
             git_tracked,
             git_commit,
         }))
@@ -483,7 +490,7 @@ impl WorkspaceStateManager {
 
         let repo = Repository::open(&self.workspace_root)?;
         let relative_path = file_path.strip_prefix(&self.workspace_root)
-            .map_err(|e| WorkspaceError::Io(e.into()))?;
+            .map_err(|e| WorkspaceError::Configuration(format!("Failed to strip prefix: {}", e)))?;
 
         // Check if file is tracked
         let mut index = repo.index()?;

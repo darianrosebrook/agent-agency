@@ -6,6 +6,7 @@
 use crate::types::*;
 use crate::manager::WorkspaceStateManager;
 use anyhow::Result;
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tracing::{debug, error, info, warn};
 

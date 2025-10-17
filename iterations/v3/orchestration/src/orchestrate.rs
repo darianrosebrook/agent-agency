@@ -1,35 +1,64 @@
 use crate::caws_runtime::{CawsRuntimeValidator, DefaultValidator, DiffStats, TaskDescriptor, WorkingSpec};
 use crate::adapter::build_short_circuit_verdict;
 use anyhow::Result;
-use council::contracts as api;
-use council::ConsensusCoordinator;
+use agent_agency_council::types::*;
+use agent_agency_council::coordinator::ConsensusCoordinator;
 use crate::persistence::VerdictWriter;
-use apple_silicon as silicon;
-use council::coordinator::ProvenanceEmitter;
+use agent_agency_apple_silicon::AllocationPlanner;
+use agent_agency_council::coordinator::ProvenanceEmitter;
 use crate::provenance::OrchestrationProvenanceEmitter;
+use std::collections::HashMap;
 
-fn to_task_spec(desc: &TaskDescriptor) -> council::types::TaskSpec {
+fn to_task_spec(desc: &TaskDescriptor) -> TaskSpec {
     // Expanded mapping to include id/name/risk_tier/scope and deterministic seeds placeholder
     let now = chrono::Utc::now();
-    council::types::TaskSpec {
+    TaskSpec {
         id: uuid::Uuid::new_v4(),
-        name: Some(format!("task-{}", desc.task_id)),
-        description: Some("Orchestrated task".to_string()),
-        risk_tier: desc.risk_tier as u8,
-        scope: desc.scope_in.clone(),
+        title: format!("task-{}", desc.task_id),
+        description: "Orchestrated task".to_string(),
+        risk_tier: match desc.risk_tier {
+            1 => RiskTier::Tier1,
+            2 => RiskTier::Tier2,
+            3 => RiskTier::Tier3,
+            _ => RiskTier::Tier3,
+        },
+        scope: TaskScope {
+            files_affected: desc.scope_in.clone(),
+            max_files: None,
+            max_loc: None,
+            domains: vec![],
+        },
         acceptance_criteria: desc
             .acceptance
             .clone()
-            .unwrap_or_default(),
-        seeds: Some(council::types::Seeds {
-            // Use fixed defaults; orchestration should override per-call for determinism in tests
-            time_seed: Some(now.timestamp_millis() as u64),
-            uuid_seed: Some(0),
-            random_seed: Some(42),
-        }),
-        created_at: now,
-        metadata: desc.metadata.clone().unwrap_or_default(),
-        ..Default::default()
+            .unwrap_or_default()
+            .into_iter()
+            .map(|criterion| AcceptanceCriterion {
+                id: uuid::Uuid::new_v4().to_string(),
+                description: criterion,
+                verification_method: VerificationMethod::Automated,
+                priority: Priority::High,
+            })
+            .collect(),
+        context: TaskContext {
+            workspace_root: ".".to_string(),
+            git_branch: "main".to_string(),
+            recent_changes: vec![],
+            dependencies: HashMap::new(),
+            environment: Environment::Development,
+        },
+        worker_output: WorkerOutput {
+            content: "".to_string(),
+            files_modified: vec![],
+            rationale: "".to_string(),
+            self_assessment: SelfAssessment {
+                confidence: 0.0,
+                concerns: vec![],
+                improvements: vec![],
+            },
+            metadata: HashMap::new(),
+        },
+        caws_spec: None,
     }
 }
 
@@ -47,30 +76,34 @@ pub async fn orchestrate_task(
     writer: &dyn VerdictWriter,
     emitter: &dyn ProvenanceEmitter,
     orch_emitter: &OrchestrationProvenanceEmitter,
-) -> Result<api::FinalVerdict> {
+) -> Result<FinalVerdict> {
     // Plan resource allocation (heuristic) for council evaluation
-    let tier = match desc.risk_tier { 1 => silicon::Tier::T1, 2 => silicon::Tier::T2, _ => silicon::Tier::T3 };
-    let sensors = silicon::adaptive_resource_manager::SystemSensors::detect();
-    let registry = silicon::adaptive_resource_manager::AppleModelRegistry::from_path(std::path::Path::new(
+    let tier = match desc.risk_tier { 
+        1 => agent_agency_apple_silicon::Tier::T1, 
+        2 => agent_agency_apple_silicon::Tier::T2, 
+        _ => agent_agency_apple_silicon::Tier::T3 
+    };
+    let sensors = agent_agency_apple_silicon::SystemSensors::detect();
+    let registry = agent_agency_apple_silicon::AppleModelRegistry::from_path(std::path::Path::new(
         std::env::var("ARM_MODEL_REGISTRY_JSON").unwrap_or_default().as_str(),
-    )).unwrap_or_else(|| silicon::adaptive_resource_manager::AppleModelRegistry::from_config(
-        silicon::adaptive_resource_manager::AppleModelRegistryConfig { models: std::collections::HashMap::new() }
+    )).unwrap_or_else(|| agent_agency_apple_silicon::AppleModelRegistry::from_config(
+        agent_agency_apple_silicon::AppleModelRegistryConfig { models: std::collections::HashMap::new() }
     ));
-    let planner = silicon::adaptive_resource_manager::SimplePlanner::new(sensors, registry);
-    let req = silicon::adaptive_resource_manager::AllocationRequest {
+    let planner = agent_agency_apple_silicon::SimplePlanner::new(sensors, registry);
+    let req = agent_agency_apple_silicon::AllocationRequest {
         model: "gemma-3n-judge".to_string(),
-        supported_precisions: vec![silicon::Precision::Int8, silicon::Precision::Fp16],
+        supported_precisions: vec![agent_agency_apple_silicon::Precision::Int8, agent_agency_apple_silicon::Precision::Fp16],
         preferred_devices: vec![],
         tier,
-        latency_slo_ms: if matches!(tier, silicon::Tier::T1) { 30 } else if matches!(tier, silicon::Tier::T2) { 100 } else { 200 },
-        max_batch_size: if matches!(tier, silicon::Tier::T1) { 2 } else { 16 },
-        workload_hint: silicon::WorkloadHint::JudgeLatencySensitive,
+        latency_slo_ms: if matches!(tier, agent_agency_apple_silicon::Tier::T1) { 30 } else if matches!(tier, agent_agency_apple_silicon::Tier::T2) { 100 } else { 200 },
+        max_batch_size: if matches!(tier, agent_agency_apple_silicon::Tier::T1) { 2 } else { 16 },
+        workload_hint: agent_agency_apple_silicon::WorkloadHint::JudgeLatencySensitive,
     };
     let allocation = planner.plan(&req);
     tracing::info!(target: "arm", device = ?allocation.device, precision = ?allocation.precision, batch = allocation.batch_size, est_ms = allocation.expected_latency_ms, "ARM plan created for council evaluation");
     // TODO: Wire a shared ProvenanceService into orchestrate context instead of ad-hoc creation
     if let Ok(cfg_json) = std::env::var("PROVENANCE_CONFIG_JSON") {
-        if let Ok(cfg) = serde_json::from_str::<provenance::types::ProvenanceConfig>(&cfg_json) {
+        if let Ok(_cfg) = serde_json::from_str::<serde_json::Value>(&cfg_json) {
             // Minimal in-memory or existing storage init would go here; using a no-op on error
             // Append telemetry event for ARM plan
             let payload = serde_json::json!({

@@ -11,7 +11,7 @@ pub mod rollback;
 // Re-export main types and functionality
 pub use types::*;
 pub use manager::WorkspaceStateManager;
-pub use storage::{FileStorage, MemoryStorage, DatabaseStorage, StateStorage};
+pub use storage::{FileStorage, MemoryStorage, DatabaseStorage};
 pub use rollback::{RollbackManager, WorkspaceViewManager, ViewMetadata, RollbackResult};
 
 /// Create a new workspace state manager with file-based storage

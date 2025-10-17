@@ -1,5 +1,5 @@
 use crate::caws_runtime::{ValidationResult, ViolationCode};
-use council::contracts as api;
+use agent_agency_council::types::*;
 
 fn code_to_ref(code: &ViolationCode) -> &'static str {
     match code {
