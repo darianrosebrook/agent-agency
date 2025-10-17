@@ -415,6 +415,7 @@ pub trait Clock: std::fmt::Debug {
     fn now(&self) -> chrono::DateTime<chrono::Utc>;
 }
 
+#[derive(Debug)]
 pub struct SystemClock;
 impl Clock for SystemClock {
     fn now(&self) -> chrono::DateTime<chrono::Utc> { chrono::Utc::now() }

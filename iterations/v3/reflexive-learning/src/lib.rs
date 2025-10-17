@@ -20,6 +20,8 @@ pub mod learning_algorithms;
 pub use coordinator::MultiTurnLearningCoordinator;
 pub use types::*;
 
+use tracing::info;
+
 /// Main learning coordinator for reflexive learning loop
 /// 
 /// Integrates with council for learning signals and orchestrates
@@ -36,14 +38,14 @@ pub struct ReflexiveLearningSystem {
 impl ReflexiveLearningSystem {
     /// Initialize the reflexive learning system
     pub async fn new() -> Result<Self, LearningSystemError> {
-        info!("Initializing reflexive learning system");
+        tracing::info!("Initializing reflexive learning system");
 
         let config = coordinator::LearningConfig::default();
         let coordinator = MultiTurnLearningCoordinator::new(config);
-        let progress_tracker = progress_tracker::ProgressTracker::new().await?;
-        let credit_assigner = credit_assigner::CreditAssigner::new().await?;
-        let adaptive_allocator = adaptive_allocator::AdaptiveResourceAllocator::new().await?;
-        let context_preservation = context_preservation::ContextPreservationEngine::new().await?;
+        let progress_tracker = progress_tracker::ProgressTracker::new();
+        let credit_assigner = credit_assigner::CreditAssigner::new();
+        let adaptive_allocator = adaptive_allocator::AdaptiveResourceAllocator::new();
+        let context_preservation = context_preservation::ContextPreservationEngine::new();
 
         Ok(Self {
             coordinator,
@@ -59,16 +61,18 @@ impl ReflexiveLearningSystem {
         &mut self,
         task: LearningTask,
     ) -> Result<LearningSession, LearningSystemError> {
-        info!("Starting learning session for task: {}", task.id);
+        tracing::info!("Starting learning session for task: {}", task.id);
         
         // Start session in coordinator
         let session = self.coordinator.start_session(task).await?;
         
         // Initialize progress tracking
-        self.progress_tracker.initialize_session(&session).await?;
+        // TODO: Add initialize_session method to ProgressTracker
+        // self.progress_tracker.initialize_session(&session).await?;
         
         // Initialize context preservation
-        self.context_preservation.initialize_session(&session).await?;
+        // TODO: Add initialize_session method to ContextPreservationEngine
+        // self.context_preservation.initialize_session(&session).await?;
         
         Ok(session)
     }
@@ -78,7 +82,7 @@ impl ReflexiveLearningSystem {
         &mut self,
         signals: Vec<CouncilLearningSignal>,
     ) -> Result<LearningUpdate, LearningSystemError> {
-        info!("Processing {} council learning signals", signals.len());
+        tracing::info!("Processing {} council learning signals", signals.len());
         
         let mut changes = Vec::new();
         

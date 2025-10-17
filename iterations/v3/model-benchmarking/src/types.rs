@@ -40,7 +40,7 @@ pub struct Capability {
     pub supported_domains: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CapabilityType {
     CodeGeneration,
     CodeReview,
@@ -352,6 +352,15 @@ pub enum BenchmarkingError {
     
     #[error("Metrics collection failed: {0}")]
     MetricsCollectionFailed(String),
+    
+    #[error("General error: {0}")]
+    GeneralError(String),
+}
+
+impl From<anyhow::Error> for BenchmarkingError {
+    fn from(err: anyhow::Error) -> Self {
+        BenchmarkingError::GeneralError(err.to_string())
+    }
 }
 
 /// Alert for performance regressions

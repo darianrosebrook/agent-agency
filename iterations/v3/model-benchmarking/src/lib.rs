@@ -19,7 +19,7 @@ pub mod regression_detector;
 pub mod types;
 pub mod metrics_collector;
 
-use tracing::info;
+use tracing::{info, debug, warn, error};
 
 pub use benchmark_runner::BenchmarkRunner;
 pub use scoring_system::MultiDimensionalScoringSystem;
@@ -63,8 +63,8 @@ impl ModelBenchmarkingSystem {
     }
 
     /// Run continuous benchmarking for all active models
-    pub async fn run_continuous_benchmarks(&self) -> Result<BenchmarkingReport, BenchmarkingError> {
-        info!("Running continuous benchmarks for all active models");
+    pub async fn run_continuous_benchmarks(&self) -> Result<BenchmarkReport, BenchmarkingError> {
+        tracing::info!("Running continuous benchmarks for all active models");
 
         // Get active models from performance tracker
         let active_models = self.performance_tracker.get_active_models().await?;
@@ -103,18 +103,19 @@ impl ModelBenchmarkingSystem {
         // Check for performance regressions
         self.regression_detector.check_for_regressions(&benchmark_results).await?;
 
-        let report = BenchmarkingReport {
+        let report = BenchmarkReport {
             report_id: uuid::Uuid::new_v4(),
             timestamp: chrono::Utc::now(),
             benchmark_results,
             performance_summary,
+            regression_alerts: vec![],
             recommendations,
         };
 
         // Store report in performance tracker
         self.performance_tracker.store_benchmark_report(&report).await?;
 
-        info!("Completed continuous benchmarking with {} results", report.benchmark_results.len());
+        tracing::info!("Completed continuous benchmarking with {} results", report.benchmark_results.len());
         Ok(report)
     }
 
@@ -123,7 +124,7 @@ impl ModelBenchmarkingSystem {
         &self,
         model_spec: ModelSpecification,
     ) -> Result<ModelEvaluationResult, BenchmarkingError> {
-        info!("Evaluating new model: {}", model_spec.name);
+        tracing::info!("Evaluating new model: {}", model_spec.name);
 
         // Run comprehensive evaluation
         let evaluation_metrics = self.model_evaluator.evaluate_model(&model_spec).await?;
@@ -138,14 +139,30 @@ impl ModelBenchmarkingSystem {
             evaluation_id: uuid::Uuid::new_v4(),
             model_spec,
             evaluation_metrics,
-            comparison_results,
+            comparison_results: ComparisonResults {
+                baseline_comparison: BaselineComparison {
+                    baseline_model: "default".to_string(),
+                    performance_delta: 0.0,
+                    improvement_areas: vec![],
+                },
+                peer_comparison: PeerComparison {
+                    peer_models: vec![],
+                    ranking: 0,
+                    percentile: 0.0,
+                },
+                historical_comparison: HistoricalComparison {
+                    historical_average: 0.0,
+                    trend_direction: PerformanceTrend::Stable,
+                    improvement_rate: 0.0,
+                },
+            },
             recommendation,
         };
 
         // Store evaluation result
         self.performance_tracker.store_evaluation_result(&result).await?;
 
-        info!("Completed model evaluation with overall score: {:.2}", result.evaluation_metrics.overall_score);
+        tracing::info!("Completed model evaluation with overall score: {:.2}", result.evaluation_metrics.overall_score);
         Ok(result)
     }
 
@@ -154,7 +171,7 @@ impl ModelBenchmarkingSystem {
         &self,
         task_context: TaskContext,
     ) -> Result<Vec<RoutingRecommendation>, BenchmarkingError> {
-        info!("Generating routing recommendations for task context");
+        tracing::info!("Generating routing recommendations for task context");
 
         // Get model performance data
         let model_performance = self.performance_tracker.get_model_performance().await?;
@@ -188,7 +205,7 @@ impl ModelBenchmarkingSystem {
         // Limit to top recommendations
         recommendations.truncate(5);
 
-        info!("Generated {} routing recommendations", recommendations.len());
+        tracing::info!("Generated {} routing recommendations", recommendations.len());
         Ok(recommendations)
     }
 
@@ -197,16 +214,16 @@ impl ModelBenchmarkingSystem {
         &self,
         benchmark_results: &[BenchmarkResult],
         performance_summary: &PerformanceSummary,
-    ) -> Result<Vec<Recommendation>, BenchmarkingError> {
+    ) -> Result<Vec<ModelRecommendation>, BenchmarkingError> {
         let mut recommendations = Vec::new();
 
         // Performance-based recommendations
         if performance_summary.overall_performance < 0.7 {
-            recommendations.push(Recommendation {
-                recommendation_type: RecommendationType::PerformanceOptimization,
-                description: "Overall performance below threshold, consider optimization".to_string(),
-                priority: Priority::High,
-                expected_impact: 0.3,
+            recommendations.push(ModelRecommendation {
+                recommendation: RecommendationDecision::Adopt,
+                reasoning: "Overall performance below threshold, consider optimization".to_string(),
+                confidence: 0.3,
+                conditions: vec![],
             });
         }
 
@@ -216,11 +233,11 @@ impl ModelBenchmarkingSystem {
             .sum::<f64>() / benchmark_results.len() as f64;
 
         if avg_quality < 0.8 {
-            recommendations.push(Recommendation {
-                recommendation_type: RecommendationType::QualityImprovement,
-                description: "Quality scores below target, focus on quality improvements".to_string(),
-                priority: Priority::Medium,
-                expected_impact: 0.25,
+            recommendations.push(ModelRecommendation {
+                recommendation: RecommendationDecision::Adopt,
+                reasoning: "Quality scores below target, focus on quality improvements".to_string(),
+                confidence: 0.25,
+                conditions: vec![],
             });
         }
 
@@ -230,11 +247,11 @@ impl ModelBenchmarkingSystem {
             .sum::<f64>() / benchmark_results.len() as f64;
 
         if avg_compliance < 0.9 {
-            recommendations.push(Recommendation {
-                recommendation_type: RecommendationType::ComplianceEnhancement,
-                description: "Compliance scores below threshold, enhance compliance measures".to_string(),
-                priority: Priority::Critical,
-                expected_impact: 0.4,
+            recommendations.push(ModelRecommendation {
+                recommendation: RecommendationDecision::Adopt,
+                reasoning: "Compliance scores below threshold, enhance compliance measures".to_string(),
+                confidence: 0.4,
+                conditions: vec![],
             });
         }
 

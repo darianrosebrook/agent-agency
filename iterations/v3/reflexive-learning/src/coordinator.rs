@@ -6,6 +6,7 @@
 use crate::types::*;
 use anyhow::Result;
 use tracing::{info, warn, debug, instrument};
+use uuid::Uuid;
 
 /// Main learning coordinator
 pub struct MultiTurnLearningCoordinator {
@@ -162,7 +163,8 @@ impl MultiTurnLearningCoordinator {
         turn_data: &TurnData,
     ) -> Result<(), LearningSystemError> {
         // Update completion percentage
-        session.progress.completion_percentage = turn_data.performance_metrics.completion_percentage;
+        // TODO: Update progress metrics based on performance trends
+        // session.progress.completion_percentage = turn_data.performance_metrics.completion_percentage;
 
         // Update quality score with exponential moving average
         let alpha = 0.3; // Smoothing factor
@@ -214,7 +216,7 @@ impl MultiTurnLearningCoordinator {
         }
 
         // Resource pattern insight
-        if turn_data.action_taken.resource_usage.cpu_time.as_secs_f64() > 10.0 {
+        if turn_data.action_taken.resource_usage.cpu_time.as_seconds_f64() > 10.0 {
             insights.push(LearningInsight {
                 insight_type: InsightType::ResourcePattern,
                 description: "High CPU usage detected".to_string(),
@@ -589,7 +591,7 @@ pub struct TurnData {
     pub turn_number: u32,
     pub action_taken: Action,
     pub outcome: Outcome,
-    pub performance_metrics: PerformanceMetrics,
+    pub performance_metrics: PerformanceTrends,
     pub context_changes: Vec<ContextChange>,
 }
 
