@@ -234,6 +234,17 @@ pub enum CPUOptimizationLevel {
     Aggressive,
 }
 
+/// Thermal management configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThermalConfig {
+    pub enable_thermal_monitoring: bool,
+    pub thermal_throttle_threshold_celsius: f32,
+    pub max_temperature_celsius: f32,
+    pub cooling_down_period_ms: u64,
+    pub monitoring_interval_ms: u64,
+    pub enable_thermal_throttling: bool,
+}
+
 /// Inference routing decision
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoutingDecision {

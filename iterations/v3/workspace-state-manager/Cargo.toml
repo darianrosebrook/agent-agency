@@ -44,3 +44,9 @@ tar = "0.4"
 
 # Path handling
 pathdiff = "0.2"
+
+# Testing
+tempfile = "3.8"
+
+# Pattern matching
+glob = "0.3"

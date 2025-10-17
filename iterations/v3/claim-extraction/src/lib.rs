@@ -17,6 +17,9 @@ pub mod processor;
 pub mod types;
 pub mod evidence;
 
+#[cfg(test)]
+mod tests;
+
 pub use processor::ClaimExtractionProcessor;
 pub use types::*;
 
