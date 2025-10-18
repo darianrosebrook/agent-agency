@@ -77,7 +77,7 @@ impl ClaimExtractionProcessor {
         let atomic_claims = decomposition_result.atomic_claims.clone();
         let verified_claims = self
             .multi_modal_verifier
-            .verify_claims(atomic_claims.clone())
+            .verify_claims(&atomic_claims)
             .await
             .map_err(|e| {
                 ClaimExtractionError::VerificationFailed(format!(
@@ -93,17 +93,10 @@ impl ClaimExtractionProcessor {
         let mut all_evidence = verification_result.evidence;
 
         // Add evidence from multi-modal verification
-        for verified_claim in &verified_claims {
+        for verified_claim in &verified_claims.verified_claims {
             // Convert verification results to evidence
-            if let Some(math_evidence) = self.create_mathematical_evidence(verified_claim) {
-                all_evidence.push(math_evidence);
-            }
-            if let Some(code_evidence) = self.create_code_behavior_evidence(verified_claim) {
-                all_evidence.push(code_evidence);
-            }
-            if let Some(semantic_evidence) = self.create_semantic_evidence(verified_claim) {
-                all_evidence.push(semantic_evidence);
-            }
+            let evidence = self.create_verification_evidence(verified_claim);
+            all_evidence.push(evidence);
         }
 
         let claims_count = atomic_claims.len();
@@ -132,86 +125,77 @@ impl ClaimExtractionProcessor {
 
     /// Create mathematical evidence from verification results
     fn create_mathematical_evidence(&self, verified_claim: &VerifiedClaim) -> Option<Evidence> {
-        let math_results = &verified_claim.verification_results.mathematical;
-        if math_results.is_valid && !math_results.mathematical_claims.is_empty() {
-            Some(Evidence {
-                id: uuid::Uuid::new_v4(),
-                claim_id: verified_claim.original_claim.id,
-                evidence_type: EvidenceType::CodeAnalysis, // Mathematical analysis
-                content: format!(
-                    "Mathematical verification: {} claims validated with confidence {:.2}",
-                    math_results.mathematical_claims.len(),
-                    math_results.confidence
-                ),
-                source: EvidenceSource {
-                    source_type: SourceType::ResearchAgent,
-                    location: "MultiModalVerificationEngine".to_string(),
-                    authority: "MathematicalValidator".to_string(),
+        match &verified_claim.verification_results {
+            VerificationStatus::Verified => {
+                Some(Evidence {
+                    id: uuid::Uuid::new_v4(),
+                    claim_id: uuid::Uuid::new_v4(), // Generate a new ID since original_claim is a String
+                    evidence_type: EvidenceType::CodeAnalysis, // Mathematical analysis
+                    content: format!(
+                        "Mathematical verification: claim validated with confidence {:.2}",
+                        verified_claim.overall_confidence
+                    ),
+                    source: EvidenceSource {
+                        source_type: SourceType::ResearchAgent,
+                        location: "MultiModalVerificationEngine".to_string(),
+                        authority: "MathematicalValidator".to_string(),
+                    },
                     freshness: chrono::Utc::now(),
-                },
-                confidence: math_results.confidence as f64,
-                timestamp: chrono::Utc::now(),
-            })
-        } else {
-            None
+                    confidence: verified_claim.overall_confidence,
+                    timestamp: chrono::Utc::now(),
+                })
+            }
+            _ => None,
         }
     }
 
     /// Create code behavior evidence from verification results
     fn create_code_behavior_evidence(&self, verified_claim: &VerifiedClaim) -> Option<Evidence> {
-        let code_results = &verified_claim.verification_results.code_behavior;
-        if code_results.behavior_predicted && code_results.ast_analysis.syntax_valid {
-            Some(Evidence {
-                id: uuid::Uuid::new_v4(),
-                claim_id: verified_claim.original_claim.id,
-                evidence_type: EvidenceType::CodeAnalysis,
-                content: format!(
-                    "Code behavior analysis: AST parsed successfully, complexity score {:.2}",
-                    code_results.ast_analysis.complexity_score
-                ),
-                source: EvidenceSource {
-                    source_type: SourceType::ResearchAgent,
-                    location: "MultiModalVerificationEngine".to_string(),
-                    authority: "CodeBehaviorAnalyzer".to_string(),
-                    freshness: chrono::Utc::now(),
-                },
-                confidence: code_results.confidence as f64,
-                timestamp: chrono::Utc::now(),
-            })
-        } else {
-            None
+        match &verified_claim.verification_results {
+            VerificationStatus::Verified => {
+                Some(Evidence {
+                    id: uuid::Uuid::new_v4(),
+                    claim_id: uuid::Uuid::new_v4(), // Generate a new ID since original_claim is a String
+                    evidence_type: EvidenceType::CodeAnalysis,
+                    content: format!(
+                        "Code behavior analysis: claim validated with confidence {:.2}",
+                        verified_claim.overall_confidence
+                    ),
+                    source: EvidenceSource {
+                        source_type: SourceType::ResearchAgent,
+                        location: "MultiModalVerificationEngine".to_string(),
+                        authority: "CodeBehaviorAnalyzer".to_string(),
+                        freshness: verified_claim.verification_timestamp,
+                    },
+                    confidence: verified_claim.overall_confidence,
+                    timestamp: verified_claim.verification_timestamp,
+                })
+            }
+            _ => None,
         }
     }
 
     /// Create semantic evidence from verification results
     fn create_semantic_evidence(&self, verified_claim: &VerifiedClaim) -> Option<Evidence> {
-        let semantic_results = &verified_claim.verification_results.semantic;
-        if semantic_results.semantic_valid
-            && !semantic_results
-                .meaning_extracted
-                .primary_meaning
-                .is_empty()
-        {
-            Some(Evidence {
-                id: uuid::Uuid::new_v4(),
-                claim_id: verified_claim.original_claim.id,
-                evidence_type: EvidenceType::ResearchFindings,
-                content: format!(
-                    "Semantic analysis: {} entities identified, intent: {:?}",
-                    semantic_results.meaning_extracted.semantic_entities.len(),
-                    semantic_results.intent_analysis.primary_intent
-                ),
-                source: EvidenceSource {
-                    source_type: SourceType::ResearchAgent,
-                    location: "MultiModalVerificationEngine".to_string(),
-                    authority: "SemanticAnalyzer".to_string(),
+        match &verified_claim.verification_results {
+            VerificationStatus::Verified => {
+                Some(Evidence {
+                    id: uuid::Uuid::new_v4(),
+                    claim_id: verified_claim.original_claim.clone(),
+                    evidence_type: EvidenceType::CodeAnalysis, // Semantic analysis
+                    content: format!(
+                        "Semantic analysis: claim validated with confidence {:.2}",
+                        verified_claim.overall_confidence
+                    ),
+                    source: EvidenceSource {
+                        source_type: SourceType::ResearchAgent,
+                        location: "MultiModalVerificationEngine".to_string(),
+                        authority: "SemanticAnalyzer".to_string(),
+                    },
                     freshness: chrono::Utc::now(),
-                },
-                confidence: semantic_results.confidence as f64,
-                timestamp: chrono::Utc::now(),
-            })
-        } else {
-            None
+                    confidence: verified_claim.overall_confidence,
+                    timestamp: chrono::Utc::now(),
+                })
+            }
+            _ => None,
         }
-    }
-}

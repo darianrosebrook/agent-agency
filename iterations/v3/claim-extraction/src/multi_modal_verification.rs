@@ -5,11 +5,8 @@
 
 use crate::types::*;
 use anyhow::Result;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use chrono::Utc;
 use tracing::{debug, info, warn};
-use uuid::Uuid;
 
 /// Multi-Modal Verification Engine for claim validation
 #[derive(Debug)]
@@ -554,7 +551,7 @@ impl MultiModalVerificationEngine {
         for pattern in &patterns {
             if pattern.starts_with("README") || pattern.contains("docs/") {
                 // Simulate finding common documentation files
-                if pattern == "README.md" {
+                if *pattern == "README.md" {
                     doc_files.push("README.md".to_string());
                 } else if pattern.contains("docs/") {
                     // Add some common doc files

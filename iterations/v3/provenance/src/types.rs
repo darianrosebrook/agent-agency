@@ -186,6 +186,14 @@ pub struct ProvenanceQuery {
     pub compliance_status: Option<ComplianceStatus>,
     pub limit: Option<u32>,
     pub offset: Option<u32>,
+    // Additional filter fields
+    pub entity_types: Option<Vec<String>>,
+    pub entity_ids: Option<Vec<Uuid>>,
+    pub activity_types: Option<Vec<String>>,
+    pub activity_ids: Option<Vec<Uuid>>,
+    pub agent_types: Option<Vec<String>>,
+    pub agent_ids: Option<Vec<String>>,
+    pub custom_filters: Option<Vec<ProvenanceFilter>>,
 }
 
 /// Verdict decision type filter
@@ -508,4 +516,33 @@ mod tests {
         // Expected: (0.8 + 0.9 + 0.85) / 3 = 0.85
         assert_eq!(record.overall_quality_score(), 0.85);
     }
+}
+
+/// Types of provenance filters
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum FilterType {
+    TimeRange,
+    EntityType,
+    EntityId,
+    ActivityType,
+    ActivityId,
+    AgentType,
+    AgentId,
+    Custom,
+}
+
+/// Filter operators for provenance queries
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum FilterOperator {
+    Equals,
+    In,
+    Between,
+}
+
+/// Individual filter condition for provenance queries
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProvenanceFilter {
+    pub filter_type: FilterType,
+    pub operator: FilterOperator,
+    pub value: serde_json::Value,
 }

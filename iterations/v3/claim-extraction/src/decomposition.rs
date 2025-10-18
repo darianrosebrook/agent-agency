@@ -585,8 +585,8 @@ impl ContextBracketAdder {
         ];
 
         for (term, expansion) in terms {
-            let regex =
-                regex::Regex::new(&format!(r"\b{}\b", regex::escape(term))).unwrap_or_default();
+            let regex = regex::Regex::new(&format!(r"\b{}\b", regex::escape(term)))
+                .unwrap_or_else(|_| regex::Regex::new(r".*").unwrap());
             if regex.is_match(claim) {
                 brackets.push(format!("{term} [{expansion}]"));
             }

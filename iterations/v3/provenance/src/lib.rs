@@ -60,12 +60,6 @@ pub struct StorageConfig {
     pub retention_days: u32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub enum SigningAlgorithm {
-    RS256,
-    ES256,
-    EdDSA,
-}
 
 impl Default for ProvenanceConfig {
     fn default() -> Self {
@@ -96,4 +90,4 @@ impl Default for ProvenanceConfig {
 }
 
 // Re-export types for external use
-pub use SigningAlgorithm;
+pub use signer::SigningAlgorithm;

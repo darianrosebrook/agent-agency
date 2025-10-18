@@ -13,11 +13,11 @@ use crate::{
     signer::{SignerFactory, SignerTrait},
     types::{
         BudgetAdherence, CawsComplianceProvenance, ExportFormat, ExportMetadata,
-        IntegrityCheckResult, IntegrityIssue, IntegrityIssueType, IntegritySeverity,
-        ProvenanceChain, ProvenanceExport, ProvenanceQuery, ProvenanceRecord, ProvenanceStats,
+        FilterOperator, FilterType, IntegrityCheckResult, IntegrityIssue, IntegrityIssueType, IntegritySeverity,
+        ProvenanceChain, ProvenanceExport, ProvenanceFilter, ProvenanceQuery, ProvenanceRecord, ProvenanceStats,
         TimeRange, VerdictDecision,
     },
-    ProvenanceConfig, SigningAlgorithm,
+    ProvenanceConfig,
 };
 
 /// Storage trait for provenance records

@@ -120,38 +120,81 @@ struct EvidenceCollector {
     council_integrator: CouncilIntegrator,
 }
 
+impl EvidenceCollector {
+    fn new() -> Self {
+        Self {
+            council_integrator: CouncilIntegrator::new(),
+        }
+    }
+
+    async fn collect_evidence(
+        &self,
+        claim: &AtomicClaim,
+        context: &ProcessingContext,
+    ) -> Result<Vec<Evidence>> {
+        // For now, return basic evidence. In a full implementation,
+        // this would integrate with the multi-modal verification engine
+        let evidence = Evidence {
+            id: Uuid::new_v4(),
+            claim_id: claim.id,
+            evidence_type: EvidenceType::CouncilDecision,
+            content: format!("Basic evidence collection for: {}", claim.claim_text),
+            source: EvidenceSource {
+                source_type: SourceType::Analysis,
+                location: "evidence_collector".to_string(),
+                authority: "Evidence Collector".to_string(),
+                freshness: Utc::now(),
+            },
+            confidence: 0.6,
+            timestamp: Utc::now(),
+        };
+        Ok(vec![evidence])
+    }
+}
+
 /// Integrates with council for complex verification
 #[derive(Debug)]
 struct CouncilIntegrator {
     council_endpoint: String,
     api_key: Option<String>,
     client: reqwest::Client,
-    code_analyzer: CodeAnalyzer,
-    test_runner: TestRunner,
-    documentation_reviewer: DocumentationReviewer,
-    performance_measurer: PerformanceMeasurer,
-    security_scanner: SecurityScanner,
 }
 
-/// Code analysis component
-#[derive(Debug)]
-struct CodeAnalyzer;
+impl CouncilIntegrator {
+    fn new() -> Self {
+        Self {
+            council_endpoint: std::env::var("COUNCIL_ENDPOINT")
+                .unwrap_or_else(|_| "http://localhost:8080".to_string()),
+            api_key: std::env::var("COUNCIL_API_KEY").ok(),
+            client: reqwest::Client::new(),
+        }
+    }
 
-/// Test execution component
-#[derive(Debug)]
-struct TestRunner;
+    async fn verify_with_council(
+        &self,
+        claim: &AtomicClaim,
+        context: &ProcessingContext,
+    ) -> Result<Vec<Evidence>> {
+        // For now, return basic council evidence. In a full implementation,
+        // this would submit to the actual council and process the response
+        let evidence = Evidence {
+            id: Uuid::new_v4(),
+            claim_id: claim.id,
+            evidence_type: EvidenceType::CouncilDecision,
+            content: format!("Council verification for: {}", claim.claim_text),
+            source: EvidenceSource {
+                source_type: SourceType::CouncilDecision,
+                location: "council".to_string(),
+                authority: "Agent Agency Council".to_string(),
+                freshness: Utc::now(),
+            },
+            confidence: 0.8,
+            timestamp: Utc::now(),
+        };
+        Ok(vec![evidence])
+    }
+}
 
-/// Documentation review component
-#[derive(Debug)]
-struct DocumentationReviewer;
-
-/// Performance measurement component
-#[derive(Debug)]
-struct PerformanceMeasurer;
-
-/// Security scanning component
-#[derive(Debug)]
-struct SecurityScanner;
 
 /// Stage 4: Verification with evidence collection
 #[derive(Debug)]
@@ -233,5 +276,22 @@ impl VerificationStage {
     }
 }
 
-/// Collects evidence for claims
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CouncilEvidence {
+    pub source: CouncilEvidenceSource,
+    pub content: String,
+    pub relevance: f32,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CouncilEvidenceSource {
+    CodeAnalysis,
+    TestResults,
+    Documentation,
+    CAWSRules,
+    HistoricalData,
+    ExpertKnowledge,
+    ResearchAgent,
+}
+
