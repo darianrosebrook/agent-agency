@@ -146,29 +146,28 @@ impl ToolRegistry {
             .get(&request.tool_id)
             .ok_or_else(|| anyhow::anyhow!("Tool not found: {}", request.tool_id))?;
 
-        // Simulated execution router: respect timeout and return structured result
+        // Execution router: route based on tool capabilities and type
         let timeout = request.timeout_seconds.unwrap_or(30);
-        let simulated = async {
-            // placeholder for execution; sleep a tiny amount to simulate work
-            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
-            Ok::<serde_json::Value, anyhow::Error>(serde_json::json!({
-                "tool": tool.name,
-                "version": tool.version,
-                "echo": request.parameters,
-            }))
-        };
-        let output =
-            tokio::time::timeout(std::time::Duration::from_secs(timeout as u64), simulated).await;
+        let execution_result = tokio::time::timeout(
+            std::time::Duration::from_secs(timeout as u64),
+            self.route_execution(&tool, &request)
+        ).await;
 
         let completed_at = chrono::Utc::now();
         let duration_ms = start_time.elapsed().as_millis() as u64;
 
-        let mut result = ToolExecutionResult {
+        let (status, output, error) = match execution_result {
+            Ok(Ok(output)) => (ExecutionStatus::Completed, Some(output), None),
+            Ok(Err(e)) => (ExecutionStatus::Failed, None, Some(format!("execution error: {e}"))),
+            Err(_) => (ExecutionStatus::Timeout, None, Some("execution timed out".into())),
+        };
+
+        let result = ToolExecutionResult {
             request_id: request.id,
             tool_id: request.tool_id,
-            status: ExecutionStatus::Completed,
-            output: None,
-            error: None,
+            status,
+            output,
+            error,
             logs: vec![LogEntry {
                 timestamp: completed_at,
                 level: LogLevel::Info,
@@ -189,21 +188,6 @@ impl ToolRegistry {
             completed_at: Some(completed_at),
             duration_ms: Some(duration_ms),
         };
-
-        match output {
-            Ok(Ok(val)) => {
-                result.output = Some(val);
-                result.status = ExecutionStatus::Completed;
-            }
-            Ok(Err(e)) => {
-                result.error = Some(format!("execution error: {e}"));
-                result.status = ExecutionStatus::Failed;
-            }
-            Err(_) => {
-                result.error = Some("execution timed out".into());
-                result.status = ExecutionStatus::Timeout;
-            }
-        }
 
         // Store execution result
         {
@@ -235,7 +219,6 @@ impl ToolRegistry {
                 }
                 ExecutionStatus::Failed | ExecutionStatus::Timeout => {
                     stats.failed_executions += 1;
-                    // Failed/timeout executions are not included in average execution time
                 }
                 _ => {}
             }
@@ -247,6 +230,155 @@ impl ToolRegistry {
             request.tool_id, duration_ms
         );
         Ok(result)
+    }
+
+    /// Route execution based on tool capabilities and type
+    async fn route_execution(
+        &self,
+        tool: &MCPTool,
+        request: &ToolExecutionRequest,
+    ) -> Result<serde_json::Value> {
+        // Route based on tool capabilities
+        if tool.capabilities.contains(&ToolCapability::CommandExecution) {
+            self.execute_command_tool(tool, request).await
+        } else if tool.capabilities.contains(&ToolCapability::NetworkAccess) {
+            self.execute_network_tool(tool, request).await
+        } else if tool.capabilities.contains(&ToolCapability::FileSystemAccess) {
+            self.execute_filesystem_tool(tool, request).await
+        } else {
+            // Default to sandboxed execution for general tools
+            self.execute_sandboxed_tool(tool, request).await
+        }
+    }
+
+    /// Execute a command-based tool with sandboxing
+    async fn execute_command_tool(
+        &self,
+        tool: &MCPTool,
+        request: &ToolExecutionRequest,
+    ) -> Result<serde_json::Value> {
+        // Check if tool is marked as sandboxed
+        let sandboxed = tool.metadata
+            .get("sandboxed")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        if !sandboxed {
+            return Err(anyhow::anyhow!("Command execution requires sandboxed=true in tool metadata"));
+        }
+
+        // For now, simulate command execution
+        // In production, this would use a proper sandboxing mechanism
+        info!("Executing command tool: {} (sandboxed: {})", tool.name, sandboxed);
+
+        // Simulate execution time based on tool complexity
+        let execution_time_ms = tool.metadata
+            .get("estimated_execution_time_ms")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(100);
+
+        tokio::time::sleep(std::time::Duration::from_millis(execution_time_ms.min(5000))).await;
+
+        Ok(serde_json::json!({
+            "tool": tool.name,
+            "type": "command",
+            "sandboxed": sandboxed,
+            "parameters": request.parameters,
+            "execution_time_ms": execution_time_ms,
+            "status": "completed"
+        }))
+    }
+
+    /// Execute a network-based tool
+    async fn execute_network_tool(
+        &self,
+        tool: &MCPTool,
+        request: &ToolExecutionRequest,
+    ) -> Result<serde_json::Value> {
+        info!("Executing network tool: {}", tool.name);
+
+        // For HTTP-based tools, validate URL safety
+        if let Some(url_param) = request.parameters.get("url") {
+            if let Some(url_str) = url_param.as_str() {
+                // Basic URL validation
+                if !url_str.starts_with("http://") && !url_str.starts_with("https://") {
+                    return Err(anyhow::anyhow!("Invalid URL scheme: {}", url_str));
+                }
+
+                // Check for localhost/private IPs in production
+                if url_str.contains("localhost") || url_str.contains("127.0.0.1") {
+                    warn!("Network tool accessing localhost: {}", url_str);
+                }
+            }
+        }
+
+        // Simulate network call
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        Ok(serde_json::json!({
+            "tool": tool.name,
+            "type": "network",
+            "parameters": request.parameters,
+            "status": "completed"
+        }))
+    }
+
+    /// Execute a filesystem-based tool with path restrictions
+    async fn execute_filesystem_tool(
+        &self,
+        tool: &MCPTool,
+        request: &ToolExecutionRequest,
+    ) -> Result<serde_json::Value> {
+        info!("Executing filesystem tool: {}", tool.name);
+
+        // Check allowed paths from tool metadata
+        let allowed_paths: Vec<String> = tool.metadata
+            .get("allowed_paths")
+            .and_then(|p| serde_json::from_value(p.clone()).ok())
+            .unwrap_or_default();
+
+        // Validate any path parameters against allowed paths
+        if let Some(path_param) = request.parameters.get("path") {
+            if let Some(path_str) = path_param.as_str() {
+                let is_allowed = allowed_paths.is_empty() || allowed_paths.iter().any(|allowed| {
+                    std::path::Path::new(path_str).starts_with(allowed)
+                });
+
+                if !is_allowed {
+                    return Err(anyhow::anyhow!("Path not in allowed list: {}", path_str));
+                }
+            }
+        }
+
+        // Simulate filesystem operation
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+
+        Ok(serde_json::json!({
+            "tool": tool.name,
+            "type": "filesystem",
+            "parameters": request.parameters,
+            "allowed_paths": allowed_paths,
+            "status": "completed"
+        }))
+    }
+
+    /// Execute a general tool in sandboxed environment
+    async fn execute_sandboxed_tool(
+        &self,
+        tool: &MCPTool,
+        request: &ToolExecutionRequest,
+    ) -> Result<serde_json::Value> {
+        info!("Executing sandboxed tool: {}", tool.name);
+
+        // Simulate sandboxed execution
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+
+        Ok(serde_json::json!({
+            "tool": tool.name,
+            "type": "sandboxed",
+            "parameters": request.parameters,
+            "status": "completed"
+        }))
     }
 
     /// Update tool usage statistics

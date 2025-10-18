@@ -237,6 +237,8 @@ impl ToolDiscovery {
 
         let mut errors = Vec::new();
         let mut warnings = Vec::new();
+
+        // Static checks: basic schema validation
         if tool.name.trim().is_empty() {
             errors.push("name is required".into());
         }
@@ -251,11 +253,189 @@ impl ToolDiscovery {
         {
             errors.push("parameter with empty name".into());
         }
+
+        // Schema validation: check output schema is valid JSON
+        if let Err(e) = serde_json::from_value::<serde_json::Value>(tool.output_schema.clone()) {
+            errors.push(format!("invalid output schema JSON: {}", e));
+        }
+
+        // Permission validation: check for dangerous capability combinations
+        let has_network = tool.capabilities.contains(&ToolCapability::NetworkAccess);
+        let has_command = tool.capabilities.contains(&ToolCapability::CommandExecution);
+        let has_file_system = tool.capabilities.contains(&ToolCapability::FileSystemAccess);
+
+        if has_network && has_command {
+            warnings.push("tool has both network and command execution capabilities - ensure proper sandboxing".into());
+        }
+
+        if has_command && !tool.metadata.get("sandboxed").map_or(false, |v| v.as_bool().unwrap_or(false)) {
+            errors.push("command execution capability requires sandboxed=true in metadata".into());
+        }
+
+        if has_file_system {
+            let allowed_paths: Vec<String> = tool.metadata.get("allowed_paths")
+                .and_then(|p| serde_json::from_value(p.clone()).ok())
+                .unwrap_or_default();
+
+            if allowed_paths.is_empty() {
+                warnings.push("filesystem access without restricted paths - consider limiting scope".into());
+            }
+        }
+
+        // Dynamic probe: health ping (if endpoint is configured)
+        if self.config.enable_health_checks && !tool.endpoint.is_empty() {
+            match self.perform_health_ping(tool).await {
+                Ok(healthy) => {
+                    if !healthy {
+                        errors.push("health check failed - tool endpoint not responding".into());
+                    }
+                }
+                Err(e) => {
+                    warnings.push(format!("health check error: {} - may indicate connectivity issues", e));
+                }
+            }
+        }
+
         Ok(ValidationResult {
             is_valid: errors.is_empty(),
             errors,
             warnings,
         })
+    }
+
+    /// Perform a health ping on the tool endpoint
+    async fn perform_health_ping(&self, tool: &MCPTool) -> Result<bool> {
+        use std::time::Duration;
+        use tokio::time::timeout;
+
+        // Simple health check - try to connect to the endpoint
+        // In a real implementation, this might make an actual API call
+        let endpoint = &tool.endpoint;
+
+        // For HTTP endpoints, try a HEAD request
+        if endpoint.starts_with("http") {
+            match timeout(
+                Duration::from_secs(self.config.health_check_timeout_seconds as u64),
+                reqwest::get(endpoint)
+            ).await {
+                Ok(Ok(response)) => {
+                    return Ok(response.status().is_success());
+                }
+                Ok(Err(_)) | Err(_) => {
+                    return Ok(false);
+                }
+            }
+        }
+
+        // For other endpoints (like Unix sockets or local processes),
+        // we could implement additional health checks here
+        // For now, assume they're healthy if they have an endpoint configured
+        Ok(!endpoint.is_empty())
+    }
+
+    /// Discover tools with filtering options
+    pub async fn discover_tools_filtered(
+        &self,
+        language_filter: Option<&str>,
+        tag_filters: Option<&[String]>,
+        risk_tier_filter: Option<RiskTier>,
+    ) -> Result<ToolDiscoveryResult> {
+        let all_results = self.discover_tools().await?;
+        let mut filtered_tools = Vec::new();
+
+        for tool in all_results.discovered_tools {
+            // Apply language filter
+            if let Some(lang) = language_filter {
+                if !tool.metadata.get("language").map_or(false, |l| l == lang) {
+                    continue;
+                }
+            }
+
+            // Apply tag filters (tool must have ALL specified tags)
+            if let Some(tags) = tag_filters {
+                let tool_tags: Vec<String> = tool.metadata.get("tags")
+                    .and_then(|t| serde_json::from_value(t.clone()).ok())
+                    .unwrap_or_default();
+
+                let has_all_tags = tags.iter().all(|required_tag| {
+                    tool_tags.contains(required_tag)
+                });
+
+                if !has_all_tags {
+                    continue;
+                }
+            }
+
+            // Apply risk tier filter
+            if let Some(required_tier) = &risk_tier_filter {
+                let tool_tier: RiskTier = tool.metadata.get("risk_tier")
+                    .and_then(|t| serde_json::from_value(t.clone()).ok())
+                    .unwrap_or(RiskTier::Medium);
+
+                if tool_tier != *required_tier {
+                    continue;
+                }
+            }
+
+            filtered_tools.push(tool);
+        }
+
+        Ok(ToolDiscoveryResult {
+            discovered_tools: filtered_tools,
+            errors: all_results.errors,
+            discovery_time_ms: all_results.discovery_time_ms,
+            discovered_at: all_results.discovered_at,
+        })
+    }
+
+    /// Get discovered tools with optional filtering
+    pub async fn get_discovered_tools_filtered(
+        &self,
+        language_filter: Option<&str>,
+        tag_filters: Option<&[String]>,
+        risk_tier_filter: Option<RiskTier>,
+    ) -> Vec<MCPTool> {
+        let all_tools = self.get_discovered_tools().await;
+        if language_filter.is_none() && tag_filters.is_none() && risk_tier_filter.is_none() {
+            return all_tools;
+        }
+
+        all_tools.into_iter().filter(|tool| {
+            // Apply language filter
+            if let Some(lang) = language_filter {
+                if !tool.metadata.get("language").map_or(false, |l| l == lang) {
+                    return false;
+                }
+            }
+
+            // Apply tag filters
+            if let Some(tags) = tag_filters {
+                let tool_tags: Vec<String> = tool.metadata.get("tags")
+                    .and_then(|t| serde_json::from_value(t.clone()).ok())
+                    .unwrap_or_default();
+
+                let has_all_tags = tags.iter().all(|required_tag| {
+                    tool_tags.contains(required_tag)
+                });
+
+                if !has_all_tags {
+                    return false;
+                }
+            }
+
+            // Apply risk tier filter
+            if let Some(required_tier) = &risk_tier_filter {
+                let tool_tier: RiskTier = tool.metadata.get("risk_tier")
+                    .and_then(|t| serde_json::from_value(t.clone()).ok())
+                    .unwrap_or(RiskTier::Medium);
+
+                if tool_tier != *required_tier {
+                    return false;
+                }
+            }
+
+            true
+        }).collect()
     }
 
     /// Get discovered tools
@@ -295,6 +475,7 @@ impl ToolDiscovery {
             capabilities: m.capabilities.clone(),
             parameters: m.parameters.clone(),
             output_schema: m.output_schema.clone(),
+            endpoint: m.endpoint.clone().unwrap_or_default(),
             caws_compliance: crate::types::CawsComplianceStatus::Unknown,
             registration_time: chrono::Utc::now(),
             last_updated: chrono::Utc::now(),
@@ -319,6 +500,8 @@ impl Default for ToolDiscoveryConfig {
             manifest_patterns: vec!["**/tool.json".to_string()],
             discovery_interval_seconds: 60,
             enable_validation: true,
+            enable_health_checks: false,
+            health_check_timeout_seconds: 10,
         }
     }
 }

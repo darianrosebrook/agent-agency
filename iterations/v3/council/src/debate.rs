@@ -13,10 +13,87 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
+/// Trait for generating debate arguments
+#[async_trait]
+pub trait ArgumentGenerator: Send + Sync {
+    /// Generate an argument for a judge in a debate
+    async fn generate_argument(
+        &self,
+        judge_id: &JudgeId,
+        position: ArgumentPosition,
+        round_number: u32,
+        context: &DebateContext,
+    ) -> Result<DebateArgument>;
+}
+
+/// Debate context information for argument generation
+#[derive(Debug, Clone)]
+pub struct DebateContext {
+    pub task_description: String,
+    pub acceptance_criteria: Vec<String>,
+    pub evidence_available: Vec<Evidence>,
+    pub previous_rounds: Vec<DebateRound>,
+}
+
+/// Mock argument generator for testing and fallback
+pub struct MockArgumentGenerator;
+
+#[async_trait]
+impl ArgumentGenerator for MockArgumentGenerator {
+    async fn generate_argument(
+        &self,
+        judge_id: &JudgeId,
+        position: ArgumentPosition,
+        round_number: u32,
+        context: &DebateContext,
+    ) -> Result<DebateArgument> {
+        // Use the existing template-based logic as fallback
+        let (reasoning, evidence_cited, counter_arguments) = match position {
+            ArgumentPosition::Support => (
+                format!("Judge {} supports the proposal based on technical merit and compliance with established standards", judge_id),
+                vec![Evidence {
+                    source: EvidenceSource::ExpertKnowledge,
+                    content: "Technical analysis confirms quality standards met".to_string(),
+                    relevance: 0.9,
+                    timestamp: chrono::Utc::now(),
+                }],
+                vec!["Addresses all acceptance criteria".to_string()],
+            ),
+            ArgumentPosition::Oppose => (
+                format!("Judge {} opposes the proposal due to identified risks and quality concerns", judge_id),
+                vec![Evidence {
+                    source: EvidenceSource::CodeAnalysis,
+                    content: "Code review revealed potential issues".to_string(),
+                    relevance: 0.8,
+                    timestamp: chrono::Utc::now(),
+                }],
+                vec!["Risk assessment indicates potential problems".to_string()],
+            ),
+            ArgumentPosition::Neutral => (
+                format!("Judge {} seeks additional clarification before making a decision", judge_id),
+                vec![],
+                vec!["Need more information to make informed decision".to_string()],
+            ),
+        };
+
+        Ok(DebateArgument {
+            judge_id: judge_id.clone(),
+            position,
+            round_number,
+            reasoning,
+            evidence_cited,
+            counter_arguments,
+            confidence: 0.7,
+            timestamp: chrono::Utc::now(),
+        })
+    }
+}
+
 /// Debate protocol implementation for resolving judge conflicts
 #[derive(Debug)]
 pub struct DebateProtocol {
     config: DebateConfig,
+    argument_generator: Arc<dyn ArgumentGenerator>,
     active_debates: Arc<RwLock<std::collections::HashMap<Uuid, DebateSession>>>,
 }
 
@@ -24,7 +101,20 @@ impl DebateProtocol {
     /// Create a new debate protocol instance
     pub fn new(config: DebateConfig) -> Self {
         Self {
+            config: config.clone(),
+            argument_generator: Arc::new(MockArgumentGenerator),
+            active_debates: Arc::new(RwLock::new(std::collections::HashMap::new())),
+        }
+    }
+
+    /// Create a debate protocol with a custom argument generator
+    pub fn with_argument_generator(
+        config: DebateConfig,
+        argument_generator: Arc<dyn ArgumentGenerator>,
+    ) -> Self {
+        Self {
             config,
+            argument_generator,
             active_debates: Arc::new(RwLock::new(std::collections::HashMap::new())),
         }
     }
@@ -161,48 +251,18 @@ impl DebateProtocol {
         position: ArgumentPosition,
         round_number: u32,
     ) -> Result<DebateArgument> {
-        // NOTE: Current implementation uses template-based argument generation
-        // Future enhancement: Integrate with language models for more sophisticated argument generation
-        // - Model-based argument generation with context awareness
-        // - Evidence-driven reasoning and citation integration
-        // - Quality validation and iterative refinement
-        // - Multi-turn conversation and rebuttal capabilities
-        // For now, simulate argument generation
-        let (reasoning, evidence_cited, counter_arguments) = match position {
-            ArgumentPosition::Support => (
-                format!("Judge {} supports the proposal based on technical merit and compliance with established standards", judge_id),
-                vec![Evidence {
-                    source: EvidenceSource::ExpertKnowledge,
-                    content: "Technical analysis confirms quality standards met".to_string(),
-                    relevance: 0.9,
-                    timestamp: chrono::Utc::now(),
-                }],
-                vec!["Addresses all acceptance criteria".to_string()],
-            ),
-            ArgumentPosition::Oppose => (
-                format!("Judge {} opposes the proposal due to identified risks and quality concerns", judge_id),
-                vec![Evidence {
-                    source: EvidenceSource::CodeAnalysis,
-                    content: "Code review revealed potential issues".to_string(),
-                    relevance: 0.8,
-                    timestamp: chrono::Utc::now(),
-                }],
-                vec!["Risk assessment indicates potential problems".to_string()],
-            ),
-            ArgumentPosition::Neutral => (
-                format!("Judge {} seeks additional clarification before making a decision", judge_id),
-                vec![],
-                vec!["Need more information to make informed decision".to_string()],
-            ),
+        // Create debate context for argument generation
+        let context = DebateContext {
+            task_description: self.get_task_description_from_session().await,
+            acceptance_criteria: self.get_acceptance_criteria_from_session().await,
+            evidence_available: self.get_evidence_from_session().await,
+            previous_rounds: self.get_previous_rounds_from_session().await,
         };
 
-        Ok(DebateArgument {
-            judge_id: judge_id.clone(),
-            position,
-            reasoning,
-            evidence_cited,
-            counter_arguments,
-        })
+        // Use the argument generator to create the argument
+        self.argument_generator
+            .generate_argument(judge_id, position, round_number, &context)
+            .await
     }
 
     /// Generate evidence requests based on arguments presented
@@ -394,6 +454,58 @@ impl DebateProtocol {
     pub async fn get_active_debates(&self) -> Vec<DebateSession> {
         let debates = self.active_debates.read().await;
         debates.values().filter(|s| matches!(s.status, DebateStatus::Active)).cloned().collect()
+    }
+
+    // Session data retrieval methods
+    async fn get_task_description_from_session(&self) -> String {
+        // Simulate getting task description from session
+        tracing::debug!("Getting task description from session");
+        "Generate argument for debate position".to_string()
+    }
+
+    async fn get_acceptance_criteria_from_session(&self) -> Vec<String> {
+        // Simulate getting acceptance criteria from session
+        tracing::debug!("Getting acceptance criteria from session");
+        vec![
+            "Argument must be logically sound".to_string(),
+            "Evidence must be relevant".to_string(),
+            "Position must be clearly stated".to_string(),
+        ]
+    }
+
+    async fn get_evidence_from_session(&self) -> Vec<Evidence> {
+        // Simulate getting evidence from session
+        tracing::debug!("Getting evidence from session");
+        vec![
+            Evidence {
+                id: uuid::Uuid::new_v4(),
+                content: "Historical precedent supports this position".to_string(),
+                source: "Historical records".to_string(),
+                reliability_score: 0.8,
+                relevance_score: 0.9,
+            },
+            Evidence {
+                id: uuid::Uuid::new_v4(),
+                content: "Statistical analysis confirms the trend".to_string(),
+                source: "Research data".to_string(),
+                reliability_score: 0.9,
+                relevance_score: 0.8,
+            },
+        ]
+    }
+
+    async fn get_previous_rounds_from_session(&self) -> Vec<DebateRound> {
+        // Simulate getting previous rounds from session
+        tracing::debug!("Getting previous rounds from session");
+        vec![
+            DebateRound {
+                round_number: 1,
+                arguments: std::collections::HashMap::new(),
+                evidence_requests: vec![],
+                consensus_reached: false,
+                timestamp: chrono::Utc::now(),
+            },
+        ]
     }
 }
 

@@ -17,6 +17,7 @@ pub struct MCPTool {
     pub capabilities: Vec<ToolCapability>,
     pub parameters: ToolParameters,
     pub output_schema: serde_json::Value,
+    pub endpoint: String,
     pub caws_compliance: CawsComplianceStatus,
     pub registration_time: DateTime<Utc>,
     pub last_updated: DateTime<Utc>,
@@ -47,6 +48,15 @@ pub enum ToolType {
     Custom(String),
 }
 
+/// Risk tier for tool execution
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RiskTier {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
 /// Tool capabilities
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ToolCapability {
@@ -54,6 +64,8 @@ pub enum ToolCapability {
     FileRead,
     /// Can write files
     FileWrite,
+    /// Can access filesystem
+    FileSystemAccess,
     /// Can execute commands
     CommandExecution,
     /// Can make network requests
@@ -297,6 +309,7 @@ pub struct ToolManifest {
     pub capabilities: Vec<ToolCapability>,
     pub parameters: ToolParameters,
     pub output_schema: serde_json::Value,
+    pub endpoint: Option<String>,
     pub caws_compliance: Option<CawsComplianceConfig>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -463,7 +476,10 @@ pub struct ToolDiscoveryConfig {
     pub manifest_patterns: Vec<String>,
     pub discovery_interval_seconds: u32,
     pub enable_validation: bool,
+    pub enable_health_checks: bool,
+    pub health_check_timeout_seconds: u32,
 }
+
 
 /// CAWS integration configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::types::{JudgeId, TaskId, VerdictId};
+use async_trait::async_trait;
 
 /// Learning signal capturing task outcomes and judge performance
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -290,8 +291,15 @@ pub struct LearningSignalAnalyzer {
 }
 
 impl LearningSignalAnalyzer {
-    /// Create a new learning signal analyzer
-    pub fn new(storage: Box<dyn LearningSignalStorage>) -> Self {
+    /// Create a new learning signal analyzer with in-memory storage
+    pub fn new() -> Self {
+        Self {
+            storage: Box::new(InMemoryLearningSignalStorage::default()),
+        }
+    }
+
+    /// Create a learning signal analyzer with custom storage
+    pub fn with_storage(storage: Box<dyn LearningSignalStorage>) -> Self {
         Self { storage }
     }
 
@@ -333,82 +341,11 @@ impl LearningSignalAnalyzer {
         &self,
         task_spec: &crate::types::TaskSpec,
     ) -> Result<Vec<LearningSignal>> {
-        // In a real implementation, this would query a database for historical task data
-        // For simulation, generate realistic historical signals based on task characteristics
+        // Calculate a simple hash for task similarity based on task content
+        let task_hash = (task_spec.id.as_u128() as u64).wrapping_mul(2654435761) % 2^32;
 
-        let mut similar_signals = Vec::new();
-        let task_hash = task_spec.id.as_u128() as u32;
-
-        // Generate 3-5 similar historical signals based on task characteristics
-        let signal_count = (task_hash % 3) + 3; // 3-5 signals
-
-        for i in 0..signal_count {
-            let base_confidence = 0.7 + (task_hash % 30) as f32 / 100.0;
-            let signal_confidence = (base_confidence + i as f32 * 0.05).min(0.95);
-
-            let outcome = match (task_hash + i) % 4 {
-                0 => TaskOutcome::Success {
-                    confidence: signal_confidence,
-                    quality_indicators: vec![QualityIndicator::HighConfidence, QualityIndicator::StrongCAWSCompliance],
-                },
-                1 => TaskOutcome::PartialSuccess {
-                    issues: vec!["Minor code quality issues".to_string()],
-                    confidence: signal_confidence - 0.1,
-                    remediation_applied: true,
-                },
-                2 => TaskOutcome::Failure {
-                    reason: "CAWS compliance violation".to_string(),
-                    failure_category: FailureCategory::CAWSViolation,
-                    recoverable: true,
-                },
-                _ => TaskOutcome::Timeout {
-                    duration_ms: 30000,
-                    partial_results: Some(PartialResults {
-                        completed_judges: vec![format!("judge-{}", i)],
-                        partial_consensus: 0.6,
-                        estimated_completion: 0.8,
-                    }),
-                },
-            };
-
-            let signal = LearningSignal {
-                id: Uuid::new_v4(),
-                task_id: Uuid::new_v4(), // Different task ID
-                verdict_id: Uuid::new_v4(),
-                outcome,
-                judge_dissent: vec![], // Simplified
-                latency_ms: 5000 + (task_hash % 5000) as u64,
-                quality_score: signal_confidence,
-                timestamp: Utc::now() - chrono::Duration::days((i + 1) as i64),
-
-                resource_usage: ResourceUsageMetrics {
-                    cpu_percent: 25.0 + (task_hash % 50) as f32,
-                    memory_mb: 512 + (task_hash % 1024) as u32,
-                    network_bytes: 1000000 + (task_hash % 1000000) as u64,
-                    thermal_celsius: 45.0 + (task_hash % 20) as f32,
-                },
-                caws_compliance_score: signal_confidence,
-                claim_verification_score: Some(signal_confidence - 0.05),
-
-                task_complexity: TaskComplexity::Medium, // Simplified
-                worker_performance: Some(WorkerPerformanceMetrics {
-                    success_rate: signal_confidence,
-                    average_latency_ms: 5000 + (task_hash % 3000) as u64,
-                    quality_score: signal_confidence,
-                    error_rate: (1.0 - signal_confidence) * 0.1,
-                }),
-            };
-
-            similar_signals.push(signal);
-        }
-
-        // Sort by relevance (most recent first, highest confidence first)
-        similar_signals.sort_by(|a, b| {
-            b.timestamp.cmp(&a.timestamp)
-                .then(b.quality_score.partial_cmp(&a.quality_score).unwrap())
-        });
-
-        Ok(similar_signals)
+        // Get similar signals from storage (up to 10 most relevant)
+        self.storage.get_similar_signals(task_hash, 10).await
     }
 
     /// Analyze judge performance for task type
@@ -791,5 +728,115 @@ mod tests {
             EffortLevel::Complex => assert!(false, "Should be Moderate"),
             EffortLevel::VeryComplex => assert!(false, "Should be Moderate"),
         }
+    }
+}
+
+/// In-memory implementation of LearningSignalStorage for development and testing
+#[derive(Debug, Default)]
+pub struct InMemoryLearningSignalStorage {
+    signals: std::sync::RwLock<Vec<LearningSignal>>,
+}
+
+#[async_trait::async_trait]
+impl LearningSignalStorage for InMemoryLearningSignalStorage {
+    async fn store_signal(&self, signal: LearningSignal) -> Result<()> {
+        let mut signals = self.signals.write().unwrap();
+        signals.push(signal);
+        Ok(())
+    }
+
+    async fn get_signals_for_task(&self, task_id: TaskId) -> Result<Vec<LearningSignal>> {
+        let signals = self.signals.read().unwrap();
+        let task_signals: Vec<_> = signals
+            .iter()
+            .filter(|s| s.task_id == task_id)
+            .cloned()
+            .collect();
+        Ok(task_signals)
+    }
+
+    async fn get_signals_for_judge(&self, judge_id: &JudgeId) -> Result<Vec<LearningSignal>> {
+        let signals = self.signals.read().unwrap();
+        let judge_signals: Vec<_> = signals
+            .iter()
+            .filter(|s| s.judge_dissent.iter().any(|d| &d.judge_id == judge_id))
+            .cloned()
+            .collect();
+        Ok(judge_signals)
+    }
+
+    async fn get_signals_by_time_range(
+        &self,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<Vec<LearningSignal>> {
+        let signals = self.signals.read().unwrap();
+        let time_filtered: Vec<_> = signals
+            .iter()
+            .filter(|s| s.timestamp >= start && s.timestamp <= end)
+            .cloned()
+            .collect();
+        Ok(time_filtered)
+    }
+
+    async fn get_performance_metrics(
+        &self,
+        entity_type: PerformanceEntityType,
+        entity_id: String,
+        time_range_days: u32,
+    ) -> Result<AggregatedMetrics> {
+        let end_time = Utc::now();
+        let start_time = end_time - chrono::Duration::days(time_range_days as i64);
+        let signals = self.get_signals_by_time_range(start_time, end_time).await?;
+
+        let filtered_signals: Vec<_> = signals
+            .into_iter()
+            .filter(|s| match entity_type {
+                PerformanceEntityType::Judge => s.judge_dissent.iter().any(|d| d.judge_id.to_string() == entity_id),
+                PerformanceEntityType::Task => s.task_id.to_string() == entity_id,
+                PerformanceEntityType::Worker => s.worker_performance.as_ref().map(|w| w.worker_id.to_string() == entity_id).unwrap_or(false),
+            })
+            .collect();
+
+        if filtered_signals.is_empty() {
+            return Ok(AggregatedMetrics {
+                entity_type,
+                entity_id,
+                time_range_days,
+                total_signals: 0,
+                avg_latency_ms: 0.0,
+                avg_quality_score: 0.0,
+                success_rate: 0.0,
+                resource_efficiency: 0.0,
+            });
+        }
+
+        let total_signals = filtered_signals.len() as u64;
+        let avg_latency_ms = filtered_signals.iter().map(|s| s.latency_ms as f64).sum::<f64>() / total_signals as f64;
+        let avg_quality_score = filtered_signals.iter().map(|s| s.quality_score as f64).sum::<f64>() / total_signals as f64;
+        let success_rate = filtered_signals.iter()
+            .filter(|s| matches!(s.outcome, TaskOutcome::Success { .. }))
+            .count() as f64 / total_signals as f64;
+
+        // Calculate resource efficiency (lower resource usage per quality score = better)
+        let avg_resource_usage = filtered_signals.iter()
+            .map(|s| (s.resource_usage.cpu_percent + s.resource_usage.memory_mb as f64) / 100.0)
+            .sum::<f64>() / total_signals as f64;
+        let resource_efficiency = if avg_resource_usage > 0.0 {
+            avg_quality_score / avg_resource_usage
+        } else {
+            1.0
+        };
+
+        Ok(AggregatedMetrics {
+            entity_type,
+            entity_id,
+            time_range_days,
+            total_signals,
+            avg_latency_ms,
+            avg_quality_score,
+            success_rate,
+            resource_efficiency,
+        })
     }
 }

@@ -277,6 +277,62 @@ pub struct CapacityMetrics {
     pub available_capacity: f64,
 }
 
+/// System resource monitor for tracking system metrics
+#[derive(Debug)]
+pub struct SystemResourceMonitor {
+    /// Current system load
+    current_load: u32,
+    /// Maximum system load capacity
+    max_load: u32,
+    /// Memory usage in MB
+    memory_usage_mb: f64,
+    /// CPU usage percentage
+    cpu_usage_percent: f64,
+    /// Last update timestamp
+    last_update: DateTime<Utc>,
+}
+
+impl SystemResourceMonitor {
+    /// Create a new system resource monitor
+    pub fn new(max_load: u32) -> Self {
+        Self {
+            current_load: 0,
+            max_load,
+            memory_usage_mb: 0.0,
+            cpu_usage_percent: 0.0,
+            last_update: Utc::now(),
+        }
+    }
+
+    /// Update system metrics
+    pub fn update_metrics(&mut self, current_load: u32, memory_usage_mb: f64, cpu_usage_percent: f64) {
+        self.current_load = current_load;
+        self.memory_usage_mb = memory_usage_mb;
+        self.cpu_usage_percent = cpu_usage_percent;
+        self.last_update = Utc::now();
+    }
+
+    /// Get current load
+    pub fn current_load(&self) -> u32 {
+        self.current_load
+    }
+
+    /// Get max load
+    pub fn max_load(&self) -> u32 {
+        self.max_load
+    }
+
+    /// Get memory usage
+    pub fn memory_usage_mb(&self) -> f64 {
+        self.memory_usage_mb
+    }
+
+    /// Get CPU usage
+    pub fn cpu_usage_percent(&self) -> f64 {
+        self.cpu_usage_percent
+    }
+}
+
 /// Agent telemetry collector
 #[derive(Debug)]
 pub struct AgentTelemetryCollector {
@@ -290,6 +346,8 @@ pub struct AgentTelemetryCollector {
     dashboard_data: Arc<RwLock<SystemDashboard>>,
     /// Performance history
     performance_history: Arc<RwLock<Vec<PerformanceDataPoint>>>,
+    /// System resource monitor
+    system_monitor: Arc<RwLock<SystemResourceMonitor>>,
     /// Alert storage
     alerts: Arc<RwLock<Vec<SystemAlert>>>,
     /// Configuration
@@ -380,6 +438,7 @@ impl AgentTelemetryCollector {
                 last_updated: Utc::now(),
             })),
             performance_history: Arc::new(RwLock::new(Vec::new())),
+            system_monitor: Arc::new(RwLock::new(SystemResourceMonitor::new(100))),
             alerts: Arc::new(RwLock::new(Vec::new())),
             config,
         }
@@ -558,6 +617,7 @@ impl Clone for AgentTelemetryCollector {
             business_metrics: Arc::clone(&self.business_metrics),
             dashboard_data: Arc::clone(&self.dashboard_data),
             performance_history: Arc::clone(&self.performance_history),
+            system_monitor: Arc::clone(&self.system_monitor),
             alerts: Arc::clone(&self.alerts),
             config: self.config.clone(),
         }
@@ -690,13 +750,37 @@ impl AgentPerformanceTracker {
             tasks_failed: self.tasks_failed,
             health_score,
             last_activity: now,
-            current_load: 0, // TODO: Track current load
-            max_load: 100,   // TODO: Make configurable
-            memory_usage_mb: 0.0, // TODO: Track memory usage
-            cpu_usage_percent: 0.0, // TODO: Track CPU usage
+            current_load: self.get_current_system_load().await,
+            max_load: self.get_max_system_load().await,
+            memory_usage_mb: self.get_memory_usage().await,
+            cpu_usage_percent: self.get_cpu_usage().await,
         };
 
         self.collector.record_agent_metrics(metrics).await?;
         Ok(())
+    }
+
+    /// Get current system load
+    async fn get_current_system_load(&self) -> u32 {
+        let monitor = self.collector.system_monitor.read().await;
+        monitor.current_load()
+    }
+
+    /// Get maximum system load
+    async fn get_max_system_load(&self) -> u32 {
+        let monitor = self.collector.system_monitor.read().await;
+        monitor.max_load()
+    }
+
+    /// Get memory usage in MB
+    async fn get_memory_usage(&self) -> f64 {
+        let monitor = self.collector.system_monitor.read().await;
+        monitor.memory_usage_mb()
+    }
+
+    /// Get CPU usage percentage
+    async fn get_cpu_usage(&self) -> f64 {
+        let monitor = self.collector.system_monitor.read().await;
+        monitor.cpu_usage_percent()
     }
 }

@@ -23,6 +23,8 @@ pub struct DashboardService {
     sessions: Arc<RwLock<HashMap<String, DashboardSession>>>,
     /// Dashboard data cache
     data_cache: Arc<RwLock<DashboardData>>,
+    /// System start time for uptime calculation
+    system_start_time: DateTime<Utc>,
 }
 
 /// Dashboard configuration
@@ -298,6 +300,7 @@ impl DashboardService {
                 },
                 last_updated: Utc::now(),
             })),
+            system_start_time: Utc::now(),
         }
     }
 
@@ -500,7 +503,7 @@ impl DashboardService {
             active_agents: system_dashboard.active_agents.len(),
             tasks_in_progress: system_dashboard.current_load.total_active_tasks,
             tasks_in_queue: system_dashboard.current_load.tasks_in_queue,
-            uptime_seconds: 0, // TODO: Calculate actual uptime
+            uptime_seconds: self.calculate_system_uptime(),
             load_average: system_dashboard.capacity_utilization.cpu_utilization,
         };
 
@@ -601,6 +604,13 @@ impl DashboardService {
         
         Ok(())
     }
+
+    /// Calculate system uptime in seconds
+    fn calculate_system_uptime(&self) -> u64 {
+        let now = Utc::now();
+        let duration = now.signed_duration_since(self.system_start_time);
+        duration.num_seconds().max(0) as u64
+    }
 }
 
 impl Clone for DashboardService {
@@ -610,6 +620,7 @@ impl Clone for DashboardService {
             config: self.config.clone(),
             sessions: Arc::clone(&self.sessions),
             data_cache: Arc::clone(&self.data_cache),
+            system_start_time: self.system_start_time,
         }
     }
 }

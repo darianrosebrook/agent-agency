@@ -676,6 +676,111 @@ impl ConsensusCoordinator {
             },
         }
     }
+
+    /// Get comprehensive metrics snapshot for monitoring and dashboards
+    pub fn get_metrics_snapshot(&self) -> CoordinatorMetricsSnapshot {
+        let metrics = self.metrics.read().unwrap();
+        let timing = self.get_timing_metrics();
+
+        CoordinatorMetricsSnapshot {
+            timestamp: chrono::Utc::now(),
+            uptime_seconds: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+
+            // Core evaluation metrics
+            evaluations: EvaluationMetrics {
+                total: metrics.total_evaluations,
+                successful: metrics.successful_evaluations,
+                failed: metrics.failed_evaluations,
+                success_rate: if metrics.total_evaluations > 0 {
+                    metrics.successful_evaluations as f64 / metrics.total_evaluations as f64
+                } else {
+                    0.0
+                },
+            },
+
+            // Timing metrics
+            timing,
+
+            // SLA compliance
+            sla: SLAMetrics {
+                violations: metrics.sla_violations,
+                violation_rate: if metrics.total_evaluations > 0 {
+                    metrics.sla_violations as f64 / metrics.total_evaluations as f64
+                } else {
+                    0.0
+                },
+                threshold_ms: 5000, // 5 second SLA
+            },
+
+            // Judge performance metrics
+            judge_performance: JudgePerformanceSnapshot {
+                judge_stats: metrics.judge_performance.clone(),
+                total_judges: metrics.judge_performance.len() as u64,
+                average_confidence: metrics.judge_performance.values()
+                    .map(|stats| stats.average_confidence)
+                    .sum::<f32>() / metrics.judge_performance.len() as f32,
+            },
+
+            // System health indicators
+            health: HealthIndicators {
+                active_evaluations: 0, // TODO: track active evaluations
+                queue_depth: 0, // TODO: track evaluation queue
+                error_rate: if metrics.total_evaluations > 0 {
+                    metrics.failed_evaluations as f64 / metrics.total_evaluations as f64
+                } else {
+                    0.0
+                },
+            },
+        }
+    }
+}
+
+/// Comprehensive metrics snapshot for monitoring and dashboards
+#[derive(Debug, Clone)]
+pub struct CoordinatorMetricsSnapshot {
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub uptime_seconds: u64,
+    pub evaluations: EvaluationMetrics,
+    pub timing: TimingMetrics,
+    pub sla: SLAMetrics,
+    pub judge_performance: JudgePerformanceSnapshot,
+    pub health: HealthIndicators,
+}
+
+/// Core evaluation metrics
+#[derive(Debug, Clone)]
+pub struct EvaluationMetrics {
+    pub total: u64,
+    pub successful: u64,
+    pub failed: u64,
+    pub success_rate: f64,
+}
+
+/// SLA compliance metrics
+#[derive(Debug, Clone)]
+pub struct SLAMetrics {
+    pub violations: u64,
+    pub violation_rate: f64,
+    pub threshold_ms: u64,
+}
+
+/// Judge performance snapshot
+#[derive(Debug, Clone)]
+pub struct JudgePerformanceSnapshot {
+    pub judge_stats: HashMap<String, JudgePerformanceStats>,
+    pub total_judges: u64,
+    pub average_confidence: f32,
+}
+
+/// Health indicators for system monitoring
+#[derive(Debug, Clone)]
+pub struct HealthIndicators {
+    pub active_evaluations: u64,
+    pub queue_depth: u64,
+    pub error_rate: f64,
 }
 
 /// Detailed timing metrics for SLA verification and testing

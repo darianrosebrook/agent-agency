@@ -7,6 +7,7 @@
 pub mod advanced_arbitration;
 // pub mod claim_extraction;  // Temporarily commented to resolve circular dependency
 pub mod coordinator;
+pub mod debate;
 pub mod evidence_enrichment;
 pub mod intelligent_edge_case_testing;
 pub mod models;
@@ -19,6 +20,7 @@ pub mod types;
 pub use types::*;
 
 // Re-export key components
+pub use debate::{ArgumentGenerator, DebateContext, DebateProtocol, MockArgumentGenerator};
 pub use intelligent_edge_case_testing::{
     IntelligentEdgeCaseTesting, IntelligentTestInsights, TestSpecification,
 };
