@@ -758,6 +758,19 @@ impl TaskExecutor {
         // Cap at reasonable maximum
         estimate.min(32000)
     }
+
+    /// Resolve worker endpoint from service registry
+    async fn resolve_worker_endpoint(&self, worker_id: Uuid) -> Result<String> {
+        // Implement service discovery and worker registry lookup
+        // 1. Worker registry: Query registered workers by ID
+        // 2. Service discovery: Resolve endpoint URL from worker configuration
+        // 3. Endpoint validation: Verify endpoint is healthy before use
+        // 4. Registry optimization: Return cached endpoint or discover via service mesh
+        
+        // For now, return standard endpoint format based on worker_id
+        // In production, this would query a service registry (Consul, Eureka, Kubernetes DNS, etc.)
+        Ok(format!("http://worker-{}.internal/execute", worker_id))
+    }
 }
 
 impl Default for TaskExecutor {

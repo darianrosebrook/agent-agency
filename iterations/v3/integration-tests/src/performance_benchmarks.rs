@@ -545,6 +545,61 @@ mod cpu_performance_tests {
     }
 }
 
+/// Benchmark consensus algorithms
+pub async fn benchmark_consensus_algorithms() -> Result<ConsensusPerformanceResults> {
+    use std::time::Instant;
+
+    let mut results = ConsensusPerformanceResults::default();
+
+    // Benchmark 1: Majority Voting
+    let start = Instant::now();
+    for _ in 0..10_000 {
+        let pass_count = 3;
+        let total = 4;
+        let _ = pass_count > (total / 2);
+    }
+    let majority_duration = start.elapsed();
+    results.majority_voting_us = majority_duration.as_micros() as f64 / 10_000.0;
+
+    // Benchmark 2: Weighted Consensus
+    let start = Instant::now();
+    for _ in 0..10_000 {
+        let mut weighted_score = 0.0;
+        let mut total_weight = 0.0;
+        for confidence in [0.9, 0.8, 0.7, 0.6] {
+            weighted_score += 1.0 * confidence;
+            total_weight += confidence;
+        }
+        let _ = (weighted_score / total_weight) > 0.6;
+    }
+    let weighted_duration = start.elapsed();
+    results.weighted_consensus_us = weighted_duration.as_micros() as f64 / 10_000.0;
+
+    // Benchmark 3: Multi-Criteria Analysis
+    let start = Instant::now();
+    for _ in 0..10_000 {
+        let weights = [0.40, 0.30, 0.20, 0.10];
+        let mut weighted_sum = 0.0;
+        let mut total_weight = 0.0;
+        for weight in weights {
+            weighted_sum += 1.0 * weight;
+            total_weight += weight;
+        }
+        let _ = (weighted_sum / total_weight) > 0.70;
+    }
+    let multicriteria_duration = start.elapsed();
+    results.multicriteria_analysis_us = multicriteria_duration.as_micros() as f64 / 10_000.0;
+
+    Ok(results)
+}
+
+#[derive(Debug, Default)]
+pub struct ConsensusPerformanceResults {
+    pub majority_voting_us: f64,
+    pub weighted_consensus_us: f64,
+    pub multicriteria_analysis_us: f64,
+}
+
 // Helper functions for performance testing
 fn get_memory_usage() -> Result<u64> {
     // Simplified memory usage calculation

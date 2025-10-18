@@ -1194,14 +1194,12 @@ impl SystemHealthMonitor {
         //    - Implement embedding service validation and quality assurance
         //    - Ensure embedding service querying meets performance and reliability standards
         EmbeddingMetrics {
-            embedding_generation_rate: 150.0,      // embeddings per second
-            embedding_cache_hit_rate: 0.85,        // 85% cache hit rate
-            embedding_quality_score: 0.92,         // 92% quality score
-            embedding_latency_ms: 45.0,            // 45ms average latency
-            embedding_throughput_mb_per_sec: 12.5, // 12.5 MB/s throughput
-            embedding_error_rate: 0.02,            // 2% error rate
-            embedding_queue_depth: 5,              // 5 items in queue
-            embedding_active_models: 3,            // 3 active models
+            total_requests: 1_500,
+            successful_generations: 1_470,
+            failed_generations: 30,
+            avg_generation_time_ms: 45.0,
+            cache_hit_rate: 0.85,
+            model_health_status: "healthy".to_string(),
         }
     }
 }

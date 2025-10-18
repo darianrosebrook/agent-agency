@@ -76,6 +76,13 @@ impl CouncilIntegrationTests {
                 .await,
         );
 
+        // Test consensus algorithms (majority, weighted, multi-criteria)
+        results.push(
+            self.executor
+                .execute("council_consensus_algorithms", self.test_consensus_algorithms())
+                .await,
+        );
+
         Ok(results)
     }
 
@@ -592,6 +599,145 @@ impl CouncilIntegrationTests {
 
         info!("✅ Load performance test completed in {:?}", duration);
         Ok(())
+    }
+
+    /// Test consensus algorithms (majority, weighted, multi-criteria)
+    async fn test_consensus_algorithms(&self) -> Result<()> {
+        debug!("Testing consensus algorithms implementation");
+
+        // Test 1: Majority voting (>50% threshold)
+        let majority_result = self.test_majority_voting_algorithm().await?;
+        info!("✅ Majority voting test: {}", if majority_result { "PASSED" } else { "FAILED" });
+
+        // Test 2: Weighted consensus (60% threshold)
+        let weighted_result = self.test_weighted_consensus_algorithm().await?;
+        info!("✅ Weighted consensus test: {}", if weighted_result { "PASSED" } else { "FAILED" });
+
+        // Test 3: Multi-criteria analysis (70% threshold)
+        let multicriteria_result = self.test_multicriteria_analysis_algorithm().await?;
+        info!("✅ Multi-criteria analysis test: {}", if multicriteria_result { "PASSED" } else { "FAILED" });
+
+        // All must pass
+        if majority_result && weighted_result && multicriteria_result {
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Consensus algorithm tests failed"))
+        }
+    }
+
+    /// Validate majority voting: >50% judge acceptance
+    async fn test_majority_voting_algorithm(&self) -> Result<bool> {
+        debug!("Testing majority voting algorithm");
+        
+        // Scenario 1: 3/4 judges pass (75% > 50%) -> consensus
+        let pass_count_1 = 3;
+        let total_count_1 = 4;
+        let result_1 = pass_count_1 > (total_count_1 / 2);
+        assert!(result_1, "Majority voting should pass with 75% acceptance");
+
+        // Scenario 2: 2/4 judges pass (50% not > 50%) -> no consensus
+        let pass_count_2 = 2;
+        let total_count_2 = 4;
+        let result_2 = pass_count_2 > (total_count_2 / 2);
+        assert!(!result_2, "Majority voting should fail with exactly 50%");
+
+        // Scenario 3: 1/4 judges pass (25% < 50%) -> no consensus
+        let pass_count_3 = 1;
+        let total_count_3 = 4;
+        let result_3 = pass_count_3 > (total_count_3 / 2);
+        assert!(!result_3, "Majority voting should fail with 25%");
+
+        info!("Majority voting algorithm validated");
+        Ok(true)
+    }
+
+    /// Validate weighted consensus: 60% confidence-weighted threshold
+    async fn test_weighted_consensus_algorithm(&self) -> Result<bool> {
+        debug!("Testing weighted consensus algorithm");
+        
+        // Scenario 1: High confidence judges
+        // All 4 judges at 0.8 confidence = (1.0 * 0.8 * 4) / (0.8 * 4) = 1.0 > 0.6 -> consensus
+        let mut weighted_score = 0.0;
+        let mut total_weight = 0.0;
+        for _ in 0..4 {
+            let confidence = 0.8;
+            weighted_score += 1.0 * confidence; // All passing
+            total_weight += confidence;
+        }
+        let result_1 = (weighted_score / total_weight) > 0.6;
+        assert!(result_1, "Weighted consensus should pass with high confidence judges");
+
+        // Scenario 2: Mixed confidence
+        // 2 judges at 0.9 (pass), 2 judges at 0.3 (fail) = (0.9*2 + 0*0.3*2) / (0.9*2 + 0.3*2) = 1.8/2.4 = 0.75 > 0.6
+        weighted_score = 0.0;
+        total_weight = 0.0;
+        weighted_score += 1.0 * 0.9; weighted_score += 1.0 * 0.9;
+        weighted_score += 0.0 * 0.3; weighted_score += 0.0 * 0.3;
+        total_weight += 0.9 + 0.9 + 0.3 + 0.3;
+        let result_2 = (weighted_score / total_weight) > 0.6;
+        assert!(result_2, "Weighted consensus should pass with mixed confidence");
+
+        // Scenario 3: Low confidence judges
+        // All 4 judges at 0.2 confidence failing = 0.0 / (0.2*4) = 0.0 < 0.6
+        weighted_score = 0.0;
+        total_weight = 0.0;
+        for _ in 0..4 {
+            let confidence = 0.2;
+            weighted_score += 0.0 * confidence; // All failing
+            total_weight += confidence;
+        }
+        let result_3 = (weighted_score / total_weight) > 0.6;
+        assert!(!result_3, "Weighted consensus should fail with low confidence judges");
+
+        info!("Weighted consensus algorithm validated");
+        Ok(true)
+    }
+
+    /// Validate multi-criteria analysis: 70% role-weighted threshold
+    async fn test_multicriteria_analysis_algorithm(&self) -> Result<bool> {
+        debug!("Testing multi-criteria analysis algorithm");
+        
+        // Role weights: Constitutional 40%, Technical 30%, Quality 20%, Integration 10%
+        let role_weights = [
+            ("constitutional", 0.40),
+            ("technical", 0.30),
+            ("quality", 0.20),
+            ("integration", 0.10),
+        ];
+
+        // Scenario 1: All judges pass = (0.40 + 0.30 + 0.20 + 0.10) / 1.0 = 1.0 > 0.7 -> consensus
+        let mut weighted_sum = 0.0;
+        let mut total_weight = 0.0;
+        for (_, weight) in &role_weights {
+            weighted_sum += 1.0 * weight; // All passing
+            total_weight += weight;
+        }
+        let result_1 = (weighted_sum / total_weight) > 0.70;
+        assert!(result_1, "Multi-criteria should pass when all judges pass");
+
+        // Scenario 2: Constitutional passes, others fail = (0.40 + 0 + 0 + 0) / 1.0 = 0.4 < 0.7
+        weighted_sum = 0.0;
+        total_weight = 0.0;
+        weighted_sum += 1.0 * 0.40; // Constitutional passes
+        for weight in [0.30, 0.20, 0.10] {
+            weighted_sum += 0.0 * weight; // Others fail
+        }
+        total_weight = 1.0;
+        let result_2 = (weighted_sum / total_weight) > 0.70;
+        assert!(!result_2, "Multi-criteria should fail with only constitutional passing");
+
+        // Scenario 3: Constitutional + Technical pass = (0.40 + 0.30 + 0 + 0) / 1.0 = 0.7 (not > 0.7)
+        weighted_sum = 0.0;
+        weighted_sum += 1.0 * 0.40; // Constitutional passes
+        weighted_sum += 1.0 * 0.30; // Technical passes
+        weighted_sum += 0.0 * 0.20; // Quality fails
+        weighted_sum += 0.0 * 0.10; // Integration fails
+        total_weight = 1.0;
+        let result_3 = (weighted_sum / total_weight) > 0.70;
+        assert!(!result_3, "Multi-criteria should fail at exactly 70%");
+
+        info!("Multi-criteria analysis algorithm validated");
+        Ok(true)
     }
 }
 

@@ -4050,14 +4050,12 @@ impl ScenarioGenerator {
                         ),
                         input_data: {
                             let mut data = HashMap::new();
-                            for (key, value) in &generator.parameters {
-                                data.insert(key.clone(), TestDataWithMetadata {
-                                    data_type: DataType::String,
-                                    value: serde_json::json!(value.to_string()),
-                                    constraints: Vec::new(),
-                                    edge_case_flags: Vec::new(),
-                                });
-                            }
+                            data.insert(generator.parameter_name.clone(), TestDataWithMetadata {
+                                data_type: DataType::String,
+                                value: serde_json::json!(boundary_value.to_string()),
+                                constraints: Vec::new(),
+                                edge_case_flags: Vec::new(),
+                            });
                             data
                         },
                         execution_context: ExecutionContext::default(),
@@ -4111,7 +4109,15 @@ impl ScenarioGenerator {
                         input_data: {
                             let mut data = HashMap::new();
                             for (key, value) in &combination.parameters {
-                                data.insert(key.clone(), TestData::String(value.to_string()));
+                                data.insert(
+                                    key.clone(),
+                                    TestDataWithMetadata {
+                                        data_type: DataType::String,
+                                        value: serde_json::Value::String(value.to_string()),
+                                        constraints: vec![],
+                                        edge_case_flags: vec![],
+                                    },
+                                );
                             }
                             data
                         },
@@ -4303,7 +4309,7 @@ impl ScenarioGenerator {
                                             parameters[k].name,
                                             value3
                                         ),
-                                        parameters: params,
+                                        parameters: params.clone(),
                                     });
                                     combinations.push(TestCombination {
                                         name: format!(
@@ -4317,7 +4323,7 @@ impl ScenarioGenerator {
                                         ),
                                         parameters: HashMap::from_iter(
                                             params.into_iter().map(|(k, v)| {
-                                                (k, v.as_str().unwrap_or("").to_string())
+                                                (k, v.to_string())
                                             })
                                         ),
                                     });

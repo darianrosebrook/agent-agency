@@ -299,6 +299,13 @@ impl TelemetryCollector {
         }
     }
 
+    /// Record a failure mode (safe for concurrent use)
+    pub fn record_failure(&self, mode: FailureMode) {
+        if let Ok(mut m) = self.metrics.lock() {
+            m.record_failure(mode);
+        }
+    }
+
     /// Check if should fallback to CPU
     pub fn should_fallback_to_cpu(&self) -> bool {
         if let Ok(m) = self.metrics.lock() {

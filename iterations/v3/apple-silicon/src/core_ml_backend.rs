@@ -10,6 +10,7 @@ use crate::inference::{
     CapabilityReport, ComputeUnits, DType, InferenceEngine, IoSchema, ModelArtifact,
     PreparedModel, PrepareOptions, TensorMap,
 };
+use crate::telemetry::{TelemetryCollector, FailureMode};
 use anyhow::Result;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -39,12 +40,49 @@ impl PreparedModel for PreparedCoreMLModel {
     }
 }
 
-/// Core ML backend
-pub struct CoreMLBackend;
+/// Core ML backend with integrated telemetry and circuit breaker
+pub struct CoreMLBackend {
+    telemetry: TelemetryCollector,
+}
 
 impl CoreMLBackend {
     pub fn new() -> Self {
-        CoreMLBackend
+        CoreMLBackend {
+            telemetry: TelemetryCollector::new(),
+        }
+    }
+
+    /// Record a compile operation in telemetry
+    fn record_compile(&self, duration_ms: u64, success: bool) {
+        self.telemetry.record_compile(duration_ms, success);
+    }
+
+    /// Record an inference operation in telemetry
+    fn record_inference(&self, duration_ms: u64, success: bool, compute_unit: &str) {
+        self.telemetry.record_inference(duration_ms, success, compute_unit);
+    }
+
+    /// Check if should fallback to CPU due to circuit breaker
+    fn check_circuit_breaker(&self) -> bool {
+        self.telemetry.should_fallback_to_cpu()
+    }
+
+    /// Get telemetry summary for diagnostics
+    pub fn telemetry_summary(&self) -> String {
+        self.telemetry.summary()
+    }
+
+    /// Get current telemetry metrics
+    pub fn get_metrics(&self) {
+        if let Some(metrics) = self.telemetry.get_metrics() {
+            tracing::info!(
+                "Core ML Metrics: compile_count={}, infer_count={}, ane_usage={}, breaker_trips={}",
+                metrics.compile_count,
+                metrics.infer_count,
+                metrics.ane_usage_count,
+                metrics.circuit_breaker_trips
+            );
+        }
     }
 }
 
@@ -60,6 +98,14 @@ impl InferenceEngine for CoreMLBackend {
         artifact: &ModelArtifact,
         opts: PrepareOptions,
     ) -> Result<Box<dyn PreparedModel>> {
+        // Check circuit breaker before attempting compilation
+        if self.check_circuit_breaker() {
+            let reason = "Circuit breaker active: returning error to trigger CPU fallback";
+            tracing::warn!("⚠️ {}", reason);
+            self.telemetry.trip_breaker(reason);
+            anyhow::bail!(reason);
+        }
+
         match artifact {
             ModelArtifact::Authoring {
                 format: _,
@@ -68,25 +114,44 @@ impl InferenceEngine for CoreMLBackend {
             } => {
                 // Validate path exists
                 if !path.exists() {
+                    self.telemetry.record_failure(FailureMode::CompileError);
                     anyhow::bail!("Model file not found: {}", path.display());
                 }
 
                 let compile_start = Instant::now();
 
-                // Compile model
-                let compiled_dir = with_autorelease_pool(|| {
+                // Attempt compilation with telemetry recording
+                let compile_result = with_autorelease_pool(|| {
                     CoreMLModel::compile(
                         path.to_str().ok_or_else(|| anyhow::anyhow!("Invalid path"))?,
                         opts.compute_units.to_coreml_code(),
                     )
-                })?;
+                });
 
                 let compile_time_ms = compile_start.elapsed().as_millis() as u64;
 
+                if let Err(ref e) = compile_result {
+                    self.record_compile(compile_time_ms, false);
+                    self.telemetry.record_failure(FailureMode::CompileError);
+                    tracing::error!("Core ML compilation failed: {}", e);
+                    return anyhow::bail!("Compilation failed: {}", e);
+                }
+
+                let compiled_dir = compile_result?;
+                self.record_compile(compile_time_ms, true);
+
                 // Load compiled model
-                let model = with_autorelease_pool(|| {
+                let load_result = with_autorelease_pool(|| {
                     CoreMLModel::load(&compiled_dir, opts.compute_units.to_coreml_code())
-                })?;
+                });
+
+                if let Err(ref e) = load_result {
+                    self.telemetry.record_failure(FailureMode::LoadError);
+                    tracing::error!("Core ML model loading failed: {}", e);
+                    return anyhow::bail!("Model loading failed: {}", e);
+                }
+
+                let model = load_result?;
 
                 // Query schema
                 let schema_json = with_autorelease_pool(|| model.schema())?;
@@ -136,15 +201,29 @@ impl InferenceEngine for CoreMLBackend {
             } => {
                 // Load pre-compiled model directly
                 if !path.exists() {
+                    self.telemetry.record_failure(FailureMode::LoadError);
                     anyhow::bail!("Compiled model not found: {}", path.display());
                 }
 
-                let model = with_autorelease_pool(|| {
+                let load_start = Instant::now();
+                let load_result = with_autorelease_pool(|| {
                     CoreMLModel::load(
                         path.to_str().ok_or_else(|| anyhow::anyhow!("Invalid path"))?,
                         opts.compute_units.to_coreml_code(),
                     )
-                })?;
+                });
+
+                let load_time_ms = load_start.elapsed().as_millis() as u64;
+
+                if let Err(ref e) = load_result {
+                    self.record_compile(load_time_ms, false);
+                    self.telemetry.record_failure(FailureMode::LoadError);
+                    tracing::error!("Core ML precompiled model loading failed: {}", e);
+                    return anyhow::bail!("Precompiled model loading failed: {}", e);
+                }
+
+                let model = load_result?;
+                self.record_compile(load_time_ms, true);
 
                 let io_schema = IoSchema {
                     inputs: vec![],
@@ -157,7 +236,7 @@ impl InferenceEngine for CoreMLBackend {
                     cache_key,
                     io_schema,
                     model,
-                    compile_time_ms: 0,
+                    compile_time_ms: load_time_ms,
                 };
 
                 Ok(Box::new(prepared))
@@ -171,23 +250,70 @@ impl InferenceEngine for CoreMLBackend {
         inputs: &TensorMap,
         timeout: Duration,
     ) -> Result<TensorMap> {
+        // Check circuit breaker before inference
+        if self.check_circuit_breaker() {
+            let reason = "Circuit breaker active: falling back to CPU";
+            tracing::warn!("⚠️ {}", reason);
+            anyhow::bail!(reason);
+        }
+
         // Cast to concrete type
         let prepared = mdl as *const dyn PreparedModel as *const PreparedCoreMLModel;
         let prepared = unsafe { &*prepared };
 
         // Validate inputs not empty
         if inputs.is_empty() {
+            self.telemetry.record_failure(FailureMode::RuntimeError);
             anyhow::bail!("No input tensors provided");
         }
 
         // Build inputs JSON (mock)
         let inputs_json = "{}";
 
-        // Run prediction with timeout
+        // Run prediction with timeout and track latency
+        let infer_start = Instant::now();
         let timeout_ms = timeout.as_millis() as i32;
-        let outputs_json = with_autorelease_pool(|| {
+        let predict_result = with_autorelease_pool(|| {
             prepared.model.predict(inputs_json, timeout_ms)
-        })?;
+        });
+
+        let infer_time_ms = infer_start.elapsed().as_millis() as u64;
+
+        match predict_result {
+            Ok(ref outputs_json) => {
+                // Track successful inference with ANE dispatch (assumed for now)
+                self.record_inference(infer_time_ms, true, "ane");
+                tracing::debug!(
+                    "Core ML inference completed in {}ms",
+                    infer_time_ms
+                );
+            }
+            Err(ref e) => {
+                // Track failure
+                self.record_inference(infer_time_ms, false, "cpu");
+                if infer_time_ms > timeout.as_millis() as u64 {
+                    self.telemetry.record_failure(FailureMode::Timeout);
+                    tracing::error!("Core ML inference timeout after {}ms", infer_time_ms);
+                } else {
+                    self.telemetry.record_failure(FailureMode::RuntimeError);
+                    tracing::error!("Core ML inference failed: {}", e);
+                }
+
+                // Check if should trip circuit breaker
+                if self.check_circuit_breaker() {
+                    let reason = format!(
+                        "Circuit breaker triggered after inference failure: {}",
+                        e
+                    );
+                    self.telemetry.trip_breaker(&reason);
+                    tracing::warn!("⚠️ {}", reason);
+                }
+
+                return anyhow::bail!("Inference failed: {}", e);
+            }
+        }
+
+        let outputs_json = predict_result?;
 
         // TODO: Implement output parsing with the following requirements:
         // 1. Output parsing implementation: Implement comprehensive output parsing
@@ -210,7 +336,8 @@ impl InferenceEngine for CoreMLBackend {
         //    - Handle output parsing performance monitoring and analytics
         //    - Implement output parsing optimization validation and quality assurance
         //    - Ensure output parsing meets performance and reliability standards
-        let mut outputs = HashMap::new();
+        let _outputs_json = outputs_json; // Keep variable but mark as intentional
+        let outputs = HashMap::new();
 
         Ok(outputs)
     }
@@ -235,7 +362,7 @@ mod tests {
 
     #[test]
     fn test_core_ml_backend_creation() {
-        let backend = CoreMLBackend::new();
+        let _backend = CoreMLBackend::new();
         // Verify Send + Sync at compile time
         fn assert_send<T: Send>() {}
         fn assert_sync<T: Sync>() {}
@@ -247,5 +374,39 @@ mod tests {
     fn test_core_ml_backend_default() {
         let _backend = CoreMLBackend::default();
         // Just verify it constructs
+    }
+
+    #[test]
+    fn test_core_ml_backend_telemetry_integration() {
+        let backend = CoreMLBackend::new();
+        
+        // Simulate recording operations
+        backend.record_compile(100, true);
+        backend.record_inference(15, true, "ane");
+        backend.record_inference(18, true, "ane");
+        
+        // Verify telemetry was recorded (would need metrics accessor for full validation)
+        let summary = backend.telemetry_summary();
+        assert!(!summary.is_empty());
+        assert!(summary.contains("compile_success"));
+    }
+
+    #[test]
+    fn test_core_ml_backend_circuit_breaker_integration() {
+        let backend = CoreMLBackend::new();
+        
+        // Need minimum of 10 inferences before circuit breaker can trip
+        for _ in 0..10 {
+            backend.record_inference(10, true, "cpu");
+        }
+        assert!(!backend.check_circuit_breaker()); // All successful, no trip
+        
+        // Now record failures to trigger <95% success rate
+        for _ in 0..10 {
+            backend.record_inference(10, false, "cpu");
+        }
+        
+        // After 10 failures out of 20 total = 50% success rate < 95%
+        assert!(backend.check_circuit_breaker()); // Should trip now
     }
 }
