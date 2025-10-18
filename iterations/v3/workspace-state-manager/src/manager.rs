@@ -402,29 +402,8 @@ impl WorkspaceStateManager {
         ),
         WorkspaceError,
     > {
-        // For now, fall back to git-based approach
-        // TODO: Implement incremental workspace capture using git diff with the following requirements:
-        // 1. Git diff analysis: Analyze git repository changes using diff operations
-        //    - Use git diff commands to identify changed files and content
-        //    - Parse diff output to extract meaningful change information
-        //    - Handle binary files and large file changes appropriately
-        //    - Support different diff formats and output options
-        // 2. Incremental state tracking: Track workspace state incrementally
-        //    - Maintain baseline state and apply incremental changes
-        //    - Implement change accumulation and state reconciliation
-        //    - Handle concurrent changes and conflict resolution
-        //    - Support state rollback and recovery operations
-        // 3. Performance optimization: Optimize incremental capture performance
-        //    - Implement efficient diff processing and parsing
-        //    - Use git's native performance optimizations
-        //    - Support selective file monitoring and filtering
-        //    - Implement caching for repeated diff operations
-        // 4. Change classification: Classify and categorize workspace changes
-        //    - Classify changes by type (add, modify, delete, rename)
-        //    - Identify significant vs insignificant changes
-        //    - Track change metadata (author, timestamp, commit info)
-        //    - Support change impact analysis and dependency tracking
-        self.capture_git_based().await
+        // Implement incremental workspace capture using git diff
+        self.capture_incremental_git_diff().await
     }
 
     /// Capture workspace state using hybrid approach
@@ -595,4 +574,290 @@ impl WorkspaceStateManager {
             Ok((false, None))
         }
     }
+
+    /// Capture incremental workspace state using git diff analysis
+    async fn capture_incremental_git_diff(
+        &self,
+    ) -> Result<
+        (
+            HashMap<PathBuf, FileState>,
+            HashMap<PathBuf, DirectoryState>,
+        ),
+        WorkspaceError,
+    > {
+        let mut file_states = HashMap::new();
+        let mut directory_states = HashMap::new();
+
+        // Get the current git repository
+        let repo = match git2::Repository::open(&self.workspace_root) {
+            Ok(repo) => repo,
+            Err(_) => {
+                // Fall back to git-based approach if not a git repo
+                return self.capture_git_based().await;
+            }
+        };
+
+        // Get the current HEAD commit
+        let head = match repo.head() {
+            Ok(head) => head,
+            Err(_) => {
+                // No HEAD, fall back to git-based approach
+                return self.capture_git_based().await;
+            }
+        };
+
+        let current_commit = match head.peel_to_commit() {
+            Ok(commit) => commit,
+            Err(_) => {
+                return self.capture_git_based().await;
+            }
+        };
+
+        // Get the previous commit for diff comparison
+        let previous_commit = match current_commit.parent(0) {
+            Ok(commit) => Some(commit),
+            Err(_) => None, // First commit, no previous commit to compare
+        };
+
+        // Analyze git diff to identify changes
+        let changes = if let Some(prev_commit) = previous_commit {
+            self.analyze_git_diff(&repo, &prev_commit, &current_commit).await?
+        } else {
+            // First commit - capture all files
+            self.capture_all_files_in_commit(&repo, &current_commit).await?
+        };
+
+        // Process changes and build state
+        for change in changes {
+            match change.change_type {
+                ChangeType::Added | ChangeType::Modified => {
+                    let file_path = change.file_path.clone();
+                    let file_state = self.build_file_state_from_change(&change, &repo).await?;
+                    file_states.insert(file_path, file_state);
+                }
+                ChangeType::Deleted => {
+                    // Mark file as deleted in state
+                    let file_path = change.file_path.clone();
+                    let file_state = FileState {
+                        path: file_path.clone(),
+                        size: 0,
+                        content_hash: "deleted".to_string(),
+                        modified_at: DateTime::from_timestamp(change.timestamp as i64, 0).unwrap_or_default(),
+                        permissions: 0,
+                        git_tracked: true,
+                        git_commit: Some(change.commit_hash.clone()),
+                    };
+                    file_states.insert(file_path, file_state);
+                }
+                ChangeType::Renamed => {
+                    // Handle renamed files
+                    if let Some(old_path) = change.old_path {
+                        // Mark old path as deleted
+                        let old_file_state = FileState {
+                            path: old_path.clone(),
+                            size: 0,
+                            content_hash: "deleted".to_string(),
+                            modified_at: DateTime::from_timestamp(change.timestamp as i64, 0).unwrap_or_default(),
+                            permissions: 0,
+                            git_tracked: true,
+                            git_commit: Some(change.commit_hash.clone()),
+                        };
+                        file_states.insert(old_path, old_file_state);
+                    }
+                    
+                    // Add new path
+                    let file_path = change.file_path.clone();
+                    let file_state = self.build_file_state_from_change(&change, &repo).await?;
+                    file_states.insert(file_path, file_state);
+                }
+            }
+        }
+
+        // Build directory states from file states
+        self.build_directory_states_from_files(&file_states, &mut directory_states);
+
+        Ok((file_states, directory_states))
+    }
+
+    /// Analyze git diff between two commits
+    async fn analyze_git_diff(
+        &self,
+        repo: &git2::Repository,
+        from_commit: &git2::Commit<'_>,
+        to_commit: &git2::Commit<'_>,
+    ) -> Result<Vec<FileChange>, WorkspaceError> {
+        let mut changes = Vec::new();
+
+        // Get diff between commits
+        let diff = repo.diff_tree_to_tree(
+            Some(&from_commit.tree()?),
+            Some(&to_commit.tree()?),
+            None,
+        )?;
+
+        // Process each delta in the diff
+        diff.foreach(
+            &mut |delta, _| {
+                let change_type = match delta.status() {
+                    git2::Delta::Added => ChangeType::Added,
+                    git2::Delta::Modified => ChangeType::Modified,
+                    git2::Delta::Deleted => ChangeType::Deleted,
+                    git2::Delta::Renamed => ChangeType::Renamed,
+                    git2::Delta::Copied => ChangeType::Added, // Treat as added
+                    git2::Delta::Ignored => return true, // Skip ignored files
+                    git2::Delta::Untracked => return true, // Skip untracked files
+                    git2::Delta::Typechange => ChangeType::Modified,
+                    _ => return true, // Skip other types
+                };
+
+                let new_file_path = delta.new_file().path()
+                    .map(|p| p.to_path_buf())
+                    .unwrap_or_else(|| PathBuf::from("unknown"));
+                
+                let old_file_path = delta.old_file().path()
+                    .map(|p| p.to_path_buf());
+
+                let change = FileChange {
+                    file_path: new_file_path,
+                    old_path: old_file_path,
+                    change_type,
+                    timestamp: to_commit.time().seconds() as u64,
+                    author: to_commit.author().name().unwrap_or("unknown").to_string(),
+                    commit_hash: to_commit.id().to_string(),
+                    size_delta: delta.new_file().size() as i64 - delta.old_file().size() as i64,
+                    is_binary: delta.new_file().is_binary() || delta.old_file().is_binary(),
+                };
+
+                changes.push(change);
+                true
+            },
+            None,
+            None,
+            None,
+        )?;
+
+        Ok(changes)
+    }
+
+    /// Capture all files in a commit (for first commit scenario)
+    async fn capture_all_files_in_commit(
+        &self,
+        repo: &git2::Repository,
+        commit: &git2::Commit<'_>,
+    ) -> Result<Vec<FileChange>, WorkspaceError> {
+        let mut changes = Vec::new();
+        let tree = commit.tree()?;
+
+        // Walk the tree to find all files
+        tree.walk(git2::TreeWalkMode::PreOrder, |root, entry| {
+            if let Some(path) = entry.to_object(repo).ok().and_then(|obj| obj.as_blob()) {
+                let file_path = PathBuf::from(root).join(entry.name().unwrap_or(""));
+                
+                let change = FileChange {
+                    file_path,
+                    old_path: None,
+                    change_type: ChangeType::Added,
+                    timestamp: commit.time().seconds() as u64,
+                    author: commit.author().name().unwrap_or("unknown").to_string(),
+                    commit_hash: commit.id().to_string(),
+                    size_delta: path.size() as i64,
+                    is_binary: path.is_binary(),
+                };
+
+                changes.push(change);
+            }
+            git2::TreeWalkResult::Ok
+        })?;
+
+        Ok(changes)
+    }
+
+    /// Build file state from a file change
+    async fn build_file_state_from_change(
+        &self,
+        change: &FileChange,
+        _repo: &git2::Repository,
+    ) -> Result<FileState, WorkspaceError> {
+        let full_path = self.workspace_root.join(&change.file_path);
+        
+        // Get file metadata
+        let metadata = std::fs::metadata(&full_path).map_err(WorkspaceError::from)?;
+        let size = metadata.len();
+        let modified_time = metadata.modified()
+            .map_err(WorkspaceError::from)?
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|e| WorkspaceError::from(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+
+        // Calculate file hash
+        let content_hash = if !change.is_binary && size < 1024 * 1024 { // Only hash files < 1MB
+            self.calculate_file_hash(&full_path).await?
+        } else {
+            format!("binary_{}", size) // Use size as hash for binary files
+        };
+
+        // Get file permissions
+        let permissions = metadata.permissions().mode();
+
+        Ok(FileState {
+            path: change.file_path.clone(),
+            size,
+            content_hash,
+            modified_at: DateTime::from_timestamp(modified_time.as_secs() as i64, 0)
+                .unwrap_or_default(),
+            permissions,
+            git_tracked: true,
+            git_commit: Some(change.commit_hash.clone()),
+        })
+    }
+
+    /// Build directory states from file states
+    fn build_directory_states_from_files(
+        &self,
+        file_states: &HashMap<PathBuf, FileState>,
+        directory_states: &mut HashMap<PathBuf, DirectoryState>,
+    ) {
+        for file_state in file_states.values() {
+            if let Some(parent) = file_state.path.parent() {
+                let dir_path = parent.to_path_buf();
+                
+                let dir_state = directory_states.entry(dir_path.clone()).or_insert_with(|| DirectoryState {
+                    path: dir_path,
+                    exists: true,
+                    file_count: 0,
+                    total_size: 0,
+                    modified_time: file_state.modified_time,
+                    subdirectories: Vec::new(),
+                    files: Vec::new(),
+                });
+
+                if file_state.exists {
+                    dir_state.file_count += 1;
+                    dir_state.total_size += file_state.size;
+                    dir_state.files.push(file_state.path.clone());
+                }
+            }
+        }
+    }
+}
+
+/// Represents a change to a file in the workspace
+#[derive(Debug, Clone)]
+struct FileChange {
+    file_path: PathBuf,
+    old_path: Option<PathBuf>,
+    change_type: ChangeType,
+    timestamp: u64,
+    author: String,
+    commit_hash: String,
+    size_delta: i64,
+    is_binary: bool,
+}
+
+/// Types of file changes
+#[derive(Debug, Clone)]
+enum ChangeType {
+    Added,
+    Modified,
+    Deleted,
+    Renamed,
 }

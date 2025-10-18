@@ -1913,6 +1913,8 @@ impl SemanticAnalyzer {
         relationships: &[SemanticRelationship],
     ) -> Result<ConsistencyAnalysis> {
         let mut conflicts = Vec::new();
+        let mut gaps = Vec::new();
+        let mut supporting_evidence = Vec::new();
         let mut consistency_score: f64 = 1.0;
 
         for relationship in relationships {
@@ -1934,11 +1936,21 @@ impl SemanticAnalyzer {
             consistency_score -= 0.15;
         }
 
+        // Check for logical gaps in the structure
+        if let Some(missing_elements) = self.assess_semantic_completeness(structure, entities.len(), relationships.len()) {
+            if missing_elements < 0.8 {
+                gaps.push("Structure has significant logical gaps".to_string());
+                consistency_score -= 0.1;
+            }
+        }
+
         consistency_score = consistency_score.max(0.0).min(1.0);
 
         Ok(ConsistencyAnalysis {
             consistency_score,
             conflicts,
+            gaps,
+            supporting_evidence,
         })
     }
 
@@ -2422,12 +2434,10 @@ impl CrossReferenceValidator {
         
         for conflict in &analysis.conflicts {
             contradictions.push(Contradiction {
-                id: uuid::Uuid::new_v4(),
-                reference1: conflict.reference1.clone(),
-                reference2: conflict.reference2.clone(),
-                conflict_type: conflict.conflict_type.clone(),
-                severity: conflict.severity,
-                description: conflict.description.clone(),
+                contradiction_type: ContradictionType::LogicalInconsistency,
+                conflicting_claim_id: uuid::Uuid::new_v4(),
+                contradiction_severity: ErrorSeverity::Medium,
+                resolution_suggestions: vec!["Review conflicting references".to_string()],
             });
         }
         
@@ -4730,6 +4740,15 @@ struct MeaningRepresentation {
 }
 
 
+/// Consistency analysis results
+#[derive(Debug, Clone)]
+struct ConsistencyAnalysis {
+    consistency_score: f64,
+    conflicts: Vec<String>,
+    gaps: Vec<String>,
+    supporting_evidence: Vec<String>,
+}
+
 /// Coherence analysis results
 #[derive(Debug, Clone)]
 struct CoherenceAnalysis {
@@ -4764,6 +4783,22 @@ enum SemanticRole {
 /// Domain mapping for concepts
 #[derive(Debug, Clone)]
 struct DomainMapping {
+    concept: String,
+    domain: String,
+    confidence: f64,
+}
+
+/// Semantic graph representation
+#[derive(Debug, Clone)]
+struct SemanticGraph {
+    nodes: Vec<SemanticEntity>,
+    edges: Vec<SemanticRelationship>,
+}
+
+
+
+
+
     concept: String,
     domain: String,
     confidence: f64,
