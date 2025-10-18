@@ -3,7 +3,7 @@
 //! Manages Metal GPU acceleration for Apple Silicon inference.
 
 use crate::types::*;
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{Result, anyhow, bail};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;

@@ -2363,7 +2363,7 @@ impl CrossReferenceValidator {
     }
     
     /// Check consistency across references
-    async fn check_consistency(&self, references: &[ValidatedReference]) -> Result<ConsistencyAnalysis> {
+    async fn check_consistency(&self, references: &[ValidatedReference]) -> Result<CoherenceAnalysis> {
         let mut conflicts = Vec::new();
         let mut gaps = Vec::new();
         let mut supporting_evidence = Vec::new();
@@ -2386,11 +2386,17 @@ impl CrossReferenceValidator {
             }
         }
         
+        // Calculate consistency score
+        let conflict_penalty = conflicts.len() as f64 * 0.2;
+        let gap_penalty = gaps.len() as f64 * 0.1;
+        let evidence_bonus = supporting_evidence.len() as f64 * 0.05;
+        let consistency_score = (1.0 - conflict_penalty - gap_penalty + evidence_bonus).max(0.0).min(1.0);
+
         Ok(ConsistencyAnalysis {
-            consistency_score: 0.8,
             conflicts,
             gaps,
             supporting_evidence,
+            consistency_score,
         })
     }
     
@@ -2419,7 +2425,7 @@ impl CrossReferenceValidator {
     }
     
     /// Identify contradictions in references
-    async fn identify_contradictions(&self, analysis: &ConsistencyAnalysis) -> Result<Vec<Contradiction>> {
+    async fn identify_contradictions(&self, analysis: &CoherenceAnalysis) -> Result<Vec<Contradiction>> {
         let mut contradictions = Vec::new();
         
         // Create contradictions based on gaps in coherence
@@ -2586,6 +2592,14 @@ pub struct Conflict {
     pub conflict_type: String,
     pub severity: f64,
     pub description: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConsistencyAnalysis {
+    pub conflicts: Vec<Conflict>,
+    pub gaps: Vec<String>,
+    pub supporting_evidence: Vec<String>,
+    pub consistency_score: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

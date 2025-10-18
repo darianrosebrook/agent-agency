@@ -2,7 +2,6 @@
 //!
 //! Manages Apple Neural Engine for optimized inference on Apple Silicon.
 
-use crate::types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::Arc;
