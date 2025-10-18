@@ -879,9 +879,7 @@ export class ArbiterOrchestrator {
     // Check rate limit for override requests (max 5 per test run)
     if (requiresOverride) {
       this.overrideRequestCount++;
-      console.log(`Override request count: ${this.overrideRequestCount} for task ${sanitizedTask.id}`);
       if (this.overrideRequestCount > 5) {
-        console.log(`Rate limit exceeded for task ${sanitizedTask.id}`);
         throw new Error("Override rate limit exceeded");
       }
       // Record creation time for expiration checking

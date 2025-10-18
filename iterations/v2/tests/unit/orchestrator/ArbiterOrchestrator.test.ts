@@ -890,7 +890,7 @@ describe("ArbiterOrchestrator - CAWS Integration", () => {
         .mockRejectedValue(new Error("Assignment engine failed"));
 
       const task = {
-        id: "assignment-failure",
+        id: "failure-assignment-test",
         type: "analysis",
         description: "Task when assignment fails",
       };
