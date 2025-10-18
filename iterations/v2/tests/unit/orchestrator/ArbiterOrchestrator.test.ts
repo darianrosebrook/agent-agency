@@ -542,9 +542,9 @@ describe("ArbiterOrchestrator - CAWS Integration", () => {
 
     test("should retrieve pending override requests", async () => {
       const violatingTask = {
-        id: "task-pending-list",
+        id: "violation-pending-list",
         type: "computation",
-        description: "Task for pending list test",
+        description: "Task that violates rules for pending list test",
       };
 
       await orchestrator.submitTask(violatingTask);

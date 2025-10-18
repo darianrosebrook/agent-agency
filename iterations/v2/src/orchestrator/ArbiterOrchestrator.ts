@@ -1331,7 +1331,7 @@ export class ArbiterOrchestrator {
     console.log(`Processing override decision for ${decision.id}`);
 
     // Use the decision status from the input, default to "approved" if not specified
-    const status = decision.status || "approved";
+    const status = decision.status || decision.decision || "approved";
 
     return {
       status,
