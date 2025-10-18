@@ -16,6 +16,23 @@ use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 use uuid::Uuid;
 
+/// Helper function to extract worker_id from WorkerOutput
+fn get_worker_id(output: &WorkerOutput) -> &str {
+    output
+        .metadata
+        .get("worker_id")
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown_worker")
+}
+
+/// Helper function to extract response_time_ms from WorkerOutput
+fn get_response_time_ms(output: &WorkerOutput) -> Option<u64> {
+    output
+        .metadata
+        .get("response_time_ms")
+        .and_then(|v| v.as_u64())
+}
+
 /// Advanced arbitration engine that surpasses V2's capabilities
 #[derive(Debug)]
 pub struct AdvancedArbitrationEngine {
@@ -26,23 +43,6 @@ pub struct AdvancedArbitrationEngine {
     learning_integrator: Arc<LearningIntegrator>,
     performance_tracker: Arc<PerformanceTracker>,
     database_client: Option<Arc<DatabaseClient>>,
-    }
-
-    /// Helper function to extract worker_id from WorkerOutput
-    fn get_worker_id(&self, output: &WorkerOutput) -> &str {
-        output
-            .metadata
-            .get("worker_id")
-            .and_then(|v| v.as_str())
-            .unwrap_or("unknown_worker")
-    }
-
-    /// Helper function to extract response_time_ms from WorkerOutput
-    fn get_response_time_ms(&self, output: &WorkerOutput) -> Option<u64> {
-        output
-            .metadata
-            .get("response_time_ms")
-            .and_then(|v| v.as_u64())
     }
 
     /// Multi-dimensional confidence scoring system
@@ -967,6 +967,7 @@ impl ConfidenceScorer {
         }
     }
 
+
     /// Score outputs using multi-dimensional analysis (V2 had basic scoring)
     pub async fn score_multi_dimensional(
         &self,
@@ -976,7 +977,7 @@ impl ConfidenceScorer {
 
         for output in outputs {
             // 1. Historical performance score
-            let worker_id = self.get_worker_id(output);
+            let worker_id = get_worker_id(output);
             let historical_score = self.calculate_historical_score(worker_id).await?;
 
             // 2. Quality consistency score
@@ -1081,7 +1082,7 @@ impl PatternDetector {
 
     /// Detect patterns in worker output using advanced multi-dimensional analysis
     pub async fn detect_patterns(&self, output: &WorkerOutput) -> Result<f32> {
-        info!("Detecting patterns in worker output: {}", self.get_worker_id(output));
+        info!("Detecting patterns in worker output: {}", get_worker_id(output));
 
         // Use the advanced TODO analyzer for comprehensive pattern detection
         let todo_analysis = self
@@ -1124,7 +1125,7 @@ impl PatternDetector {
         // Log detailed analysis for debugging
         debug!(
             "Advanced pattern analysis for worker {}: code_quality={:.2}, completeness={:.2}, resilience={:.2}, performance={:.2}, security={:.2}, confidence={:.2}, final_score={:.2}",
-            self.get_worker_id(output),
+            get_worker_id(output),
             code_quality_score,
             completeness_score,
             resilience_score,
@@ -1726,7 +1727,7 @@ impl EvidenceSynthesizer {
         let mut evidence_list = Vec::new();
 
         // Extract source identifier
-        let source = self.get_worker_id(output).clone();
+        let source = get_worker_id(output).clone();
 
         // Extract factual evidence from output
         if !output.content.is_empty() {
@@ -2575,7 +2576,7 @@ impl CompletenessChecker {
 
         for output in outputs {
             let completeness_score = self.analyze_output_completeness(output).await?;
-            scores.insert(self.get_worker_id(output).clone(), completeness_score);
+            scores.insert(get_worker_id(output).clone(), completeness_score);
         }
 
         Ok(scores)
@@ -2631,7 +2632,7 @@ impl CompletenessChecker {
 
         debug!(
             "Completeness score for worker {}: {:.3}",
-            self.get_worker_id(output), final_score
+            get_worker_id(output), final_score
         );
         Ok(final_score)
     }
@@ -2749,7 +2750,7 @@ impl CorrectnessValidator {
 
         for output in outputs {
             let correctness_score = self.validate_single_output_correctness(output).await?;
-            scores.insert(self.get_worker_id(output).clone(), correctness_score);
+            scores.insert(get_worker_id(output).clone(), correctness_score);
         }
 
         Ok(scores)
@@ -2789,7 +2790,7 @@ impl CorrectnessValidator {
 
         debug!(
             "Correctness validation for worker {}: static={:.2}, tests={:.2}, reference={:.2}, security={:.2}, final={:.2}",
-            self.get_worker_id(output), static_analysis_score, test_execution_score, reference_comparison_score, security_score, final_score
+            get_worker_id(output), static_analysis_score, test_execution_score, reference_comparison_score, security_score, final_score
         );
 
         Ok(final_score.max(0.0_f32).min(1.0_f32))
@@ -3029,7 +3030,7 @@ impl ConsistencyAnalyzer {
             let consistency_score = self
                 .analyze_output_consistency(output, &group_stats, outputs)
                 .await?;
-            scores.insert(self.get_worker_id(output).clone(), consistency_score);
+            scores.insert(get_worker_id(output).clone(), consistency_score);
         }
 
         Ok(scores)
@@ -3060,7 +3061,7 @@ impl ConsistencyAnalyzer {
 
         // Calculate median response time
         let mut response_times: Vec<u64> = outputs.iter()
-            .filter_map(|o| self.get_response_time_ms(o))
+            .filter_map(|o| get_response_time_ms(o))
             .collect();
         response_times.sort();
         let median_response_time = if response_times.len() % 2 == 0 {
@@ -3198,7 +3199,7 @@ impl ConsistencyAnalyzer {
 
         debug!(
             "Consistency analysis for worker {}: quality={:.2}, time={:.2}, confidence={:.2}, patterns={:.2}, outliers={:.2}, final={:.2}",
-            self.get_worker_id(output), quality_consistency, time_consistency, confidence_consistency, pattern_consistency, outlier_penalty, final_score
+            get_worker_id(output), quality_consistency, time_consistency, confidence_consistency, pattern_consistency, outlier_penalty, final_score
         );
 
         Ok(final_score.max(0.0_f32).min(1.0_f32))
@@ -3419,7 +3420,7 @@ impl InnovationEvaluator {
             let innovation_score = self
                 .evaluate_single_output_innovation(output, &baseline_patterns)
                 .await?;
-            scores.insert(self.get_worker_id(output).clone(), innovation_score);
+            scores.insert(get_worker_id(output).clone(), innovation_score);
         }
 
         Ok(scores)
@@ -3534,7 +3535,7 @@ impl InnovationEvaluator {
 
         debug!(
             "Innovation evaluation for worker {}: techniques={:.2}, features={:.2}, creative={:.2}, emerging={:.2}, balance={:.2}, final={:.2}",
-            self.get_worker_id(output), technique_score, feature_score, creative_score, emerging_score, balance_score, final_score
+            get_worker_id(output), technique_score, feature_score, creative_score, emerging_score, balance_score, final_score
         );
 
         Ok(final_score.max(0.0_f32).min(1.0_f32))

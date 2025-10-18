@@ -557,7 +557,7 @@ impl CouncilTodoAnalyzer {
     /// Extract content from worker output
     fn extract_content_from_output(&self, output: &WorkerOutput) -> Result<String> {
         // The Council's WorkerOutput has an output field which contains the actual output
-        Ok(output.output.clone())
+        Ok(output.content.clone())
     }
 
     /// Detect language from content

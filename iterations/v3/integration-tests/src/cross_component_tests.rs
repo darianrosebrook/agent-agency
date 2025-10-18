@@ -1,13 +1,12 @@
-//! Cross-component integration tests
+//! Cross-Component Integration Tests
+//! 
+//! Tests communication and data flow between different system components
 
+use crate::test_utils::*;
 use anyhow::Result;
-use tracing::{debug, info};
-
-use crate::fixtures::{TestDataGenerator, TestFixtures};
-use crate::mocks::{
-    MockDatabase, MockEventEmitter, MockFactory, MockHttpClient, MockMetricsCollector,
-};
-use crate::test_utils::{TestExecutor, TestResult, DEFAULT_TEST_TIMEOUT};
+use std::collections::HashMap;
+use uuid::Uuid;
+use serde_json::json;
 
 /// Cross-component integration test suite
 pub struct CrossComponentIntegrationTests {

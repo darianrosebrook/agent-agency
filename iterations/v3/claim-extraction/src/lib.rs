@@ -70,6 +70,7 @@ impl ClaimExtractionAndVerificationProcessor {
         let mut atomic_claims = Vec::new();
         let mut verification_evidence = Vec::new();
         let mut ambiguities_resolved = 0u32;
+        let mut rewrite_suggestions = 0u32;
 
         // Stage 1: Disambiguation
         match self.disambiguation_stage.process(sentence, context).await {
@@ -104,10 +105,16 @@ impl ClaimExtractionAndVerificationProcessor {
             .await
         {
             Ok(qualification_result) => {
+                rewrite_suggestions = qualification_result
+                    .unverifiable_parts
+                    .iter()
+                    .filter(|part| part.suggested_rewrite.is_some())
+                    .count() as u32;
                 stages_completed.push(ProcessingStage::Qualification);
                 info!(
-                    "Qualification completed: {} verifiable parts found",
-                    qualification_result.verifiable_parts.len()
+                    "Qualification completed: {} verifiable parts found ({} rewrite suggestions)",
+                    qualification_result.verifiable_parts.len(),
+                    rewrite_suggestions
                 );
             }
             Err(e) => {
@@ -193,7 +200,7 @@ impl ClaimExtractionAndVerificationProcessor {
                 ambiguities_resolved,
                 claims_extracted: claims_count,
                 evidence_collected: evidence_count,
-                rewrite_suggestions: 0, // TODO: Track rewrite suggestions
+                rewrite_suggestions,
                 errors,
             },
         };
