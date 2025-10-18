@@ -206,7 +206,7 @@ impl DatabaseClient {
             ..Default::default()
         });
 
-        let pool = pg_config
+        let _pool = pg_config
             .create_pool(Some(Runtime::Tokio1), tokio_postgres::NoTls)
             .context("Failed to create deadpool connection pool")?;
 
@@ -908,28 +908,7 @@ impl DatabaseOperations for DatabaseClient {
         Ok(())
     }
 
-    // Placeholder implementations for other operations
-    // TODO: Implement comprehensive database operations with the following requirements:
-    // 1. Database schema completion: Complete database schema and table definitions
-    //    - Define all required tables with proper constraints and relationships
-    //    - Implement database migrations and schema versioning
-    //    - Set up proper indexing for query performance
-    //    - Handle schema evolution and backward compatibility
-    // 2. CRUD operations implementation: Implement full CRUD operations for all entities
-    //    - Implement create, read, update, delete operations for all data types
-    //    - Handle data validation and business rule enforcement
-    //    - Support bulk operations and batch processing
-    //    - Implement optimistic locking and conflict resolution
-    // 3. Query optimization: Optimize database queries and access patterns
-    //    - Implement efficient query patterns and result pagination
-    //    - Use prepared statements and parameterized queries
-    //    - Optimize database indexes and query execution plans
-    //    - Implement query result caching and memoization
-    // 4. Error handling and recovery: Implement comprehensive error handling
-    //    - Handle database connection failures and retry logic
-    //    - Implement transaction management and rollback procedures
-    //    - Provide meaningful error messages and debugging information
-    //    - Support database backup and recovery operations
+    // Worker operations implementation
     async fn create_worker(&self, worker: CreateWorker) -> Result<Worker, Self::Error> {
         let created_worker = sqlx::query_as::<_, Worker>(
             "INSERT INTO workers (name, worker_type, specialty, model_name, endpoint, capabilities) 
@@ -1103,67 +1082,158 @@ impl DatabaseOperations for DatabaseClient {
         Ok(())
     }
 
-    async fn delete_worker(&self, _id: Uuid) -> Result<(), Self::Error> {
-        // TODO: Implement delete_worker with the following requirements:
-        // 1. Worker deletion: Delete worker records from database
-        //    - Remove worker data from appropriate database tables
-        //    - Handle worker deletion validation and constraints
-        //    - Implement proper error handling and rollback
-        // 2. Data validation: Validate worker deletion operation
-        //    - Verify worker deletion permissions and authorization
-        //    - Check for dependent data and relationships
-        //    - Handle validation errors and constraints
-        // 3. Database operations: Perform database operations for worker deletion
-        //    - Use proper database transactions and atomicity
-        //    - Handle database connection and error management
-        //    - Implement proper indexing and performance optimization
-        // 4. Result processing: Process and return deletion result
-        //    - Handle deletion result validation and formatting
-        //    - Implement proper error propagation and handling
-        //    - Ensure data consistency after deletion
-        todo!("Implement delete_worker")
+
+    async fn delete_worker(&self, id: Uuid) -> Result<(), Self::Error> {
+        // First, check if worker exists and get basic info
+        let worker = self.get_worker(id).await?
+            .ok_or_else(|| anyhow::anyhow!("Worker with ID {} not found", id))?;
+
+        // Validate worker deletion operation
+        self.validate_worker_deletion(id).await?;
+
+        // Use database transaction for atomicity
+        let mut tx = self.pool.begin().await
+            .context("Failed to begin database transaction")?;
+
+        // Create audit trail entry before deletion
+        let audit_entry = CreateAuditTrailEntry {
+            entity_type: "worker".to_string(),
+            entity_id: id,
+            action: "delete".to_string(),
+            details: serde_json::json!({
+                "worker_name": worker.name,
+                "worker_type": worker.worker_type,
+                "deleted_at": chrono::Utc::now()
+            }),
+            user_id: None,
+            ip_address: None,
+        };
+
+        // Insert audit trail (within transaction)
+        sqlx::query(
+            "INSERT INTO audit_trail (entity_type, entity_id, action, details, user_id, ip_address)
+             VALUES ($1, $2, $3, $4, $5, $6)"
+        )
+        .bind(&audit_entry.entity_type)
+        .bind(audit_entry.entity_id)
+        .bind(&audit_entry.action)
+        .bind(&audit_entry.details)
+        .bind(&audit_entry.user_id)
+        .bind(&audit_entry.ip_address.map(|ip| ip.to_string()))
+        .execute(&mut *tx)
+        .await
+        .context("Failed to create audit trail entry")?;
+
+        // Delete associated task executions first (due to foreign key constraints)
+        sqlx::query("DELETE FROM task_executions WHERE worker_id = $1")
+            .bind(id)
+            .execute(&mut *tx)
+            .await
+            .context("Failed to delete associated task executions")?;
+
+        // Unassign worker from any assigned tasks
+        sqlx::query("UPDATE tasks SET assigned_worker_id = NULL WHERE assigned_worker_id = $1")
+            .bind(id)
+            .execute(&mut *tx)
+            .await
+            .context("Failed to unassign worker from tasks")?;
+
+        // Finally delete the worker
+        let result = sqlx::query("DELETE FROM workers WHERE id = $1")
+            .bind(id)
+            .execute(&mut *tx)
+            .await
+            .context("Failed to delete worker")?;
+
+        if result.rows_affected() == 0 {
+            return Err(anyhow::anyhow!("Worker with ID {} not found during deletion", id).into());
+        }
+
+        // Commit transaction
+        tx.commit().await
+            .context("Failed to commit worker deletion transaction")?;
+
+        info!("Successfully deleted worker: {} with ID: {}", worker.name, id);
+        Ok(())
     }
 
-    async fn create_task(&self, _task: CreateTask) -> Result<Task, Self::Error> {
-        // TODO: Implement create_task with the following requirements:
-        // 1. Task creation: Create new task records in database
-        //    - Insert task data into appropriate database tables
-        //    - Handle task creation validation and constraints
-        //    - Implement proper error handling and rollback
-        // 2. Data validation: Validate task data before creation
-        //    - Verify task data completeness and accuracy
-        //    - Check task data constraints and business rules
-        //    - Handle validation errors and corrections
-        // 3. Database operations: Perform database operations for task creation
-        //    - Use proper database transactions and atomicity
-        //    - Handle database connection and error management
-        //    - Implement proper indexing and performance optimization
-        // 4. Result processing: Process and return created task
-        //    - Convert database result to Task struct
-        //    - Handle result validation and formatting
-        //    - Implement proper error propagation and handling
-        todo!("Implement create_task")
+    async fn create_task(&self, task: CreateTask) -> Result<Task, Self::Error> {
+        // Validate task data before creation
+        self.validate_task_creation(&task).await?;
+
+        // Use database transaction for atomicity
+        let mut tx = self.pool.begin().await
+            .context("Failed to begin database transaction")?;
+
+        // Insert task record
+        let created_task = sqlx::query_as::<_, Task>(
+            "INSERT INTO tasks (title, description, risk_tier, scope, acceptance_criteria, context, caws_spec, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
+             RETURNING *"
+        )
+        .bind(&task.title)
+        .bind(&task.description)
+        .bind(&task.risk_tier)
+        .bind(&task.scope)
+        .bind(&task.acceptance_criteria)
+        .bind(&task.context)
+        .bind(&task.caws_spec)
+        .fetch_one(&mut *tx)
+        .await
+        .context("Failed to create task")?;
+
+        // Create audit trail entry
+        let audit_entry = CreateAuditTrailEntry {
+            entity_type: "task".to_string(),
+            entity_id: created_task.id,
+            action: "create".to_string(),
+            details: serde_json::json!({
+                "title": task.title,
+                "risk_tier": task.risk_tier,
+                "created_at": chrono::Utc::now()
+            }),
+            user_id: None,
+            ip_address: None,
+        };
+
+        // Insert audit trail (within transaction)
+        sqlx::query(
+            "INSERT INTO audit_trail (entity_type, entity_id, action, details, user_id, ip_address)
+             VALUES ($1, $2, $3, $4, $5, $6)"
+        )
+        .bind(&audit_entry.entity_type)
+        .bind(audit_entry.entity_id)
+        .bind(&audit_entry.action)
+        .bind(&audit_entry.details)
+        .bind(&audit_entry.user_id)
+        .bind(&audit_entry.ip_address.map(|ip| ip.to_string()))
+        .execute(&mut *tx)
+        .await
+        .context("Failed to create audit trail entry")?;
+
+        // Commit transaction
+        tx.commit().await
+            .context("Failed to commit task creation transaction")?;
+
+        info!("Created task: {} with ID: {}", created_task.title, created_task.id);
+        Ok(created_task)
     }
 
-    async fn get_task(&self, _id: Uuid) -> Result<Option<Task>, Self::Error> {
-        // TODO: Implement get_task with the following requirements:
-        // 1. Task retrieval: Retrieve task records from database
-        //    - Query task data from appropriate database tables
-        //    - Handle task retrieval validation and constraints
-        //    - Implement proper error handling and recovery
-        // 2. Data validation: Validate retrieved task data
-        //    - Verify task data completeness and accuracy
-        //    - Check task data integrity and consistency
-        //    - Handle validation errors and corrections
-        // 3. Database operations: Perform database operations for task retrieval
-        //    - Use proper database queries and indexing
-        //    - Handle database connection and error management
-        //    - Implement proper performance optimization
-        // 4. Result processing: Process and return retrieved task
-        //    - Convert database result to Task struct
-        //    - Handle result validation and formatting
-        //    - Implement proper error propagation and handling
-        todo!("Implement get_task")
+    async fn get_task(&self, id: Uuid) -> Result<Option<Task>, Self::Error> {
+        // Query task data from database
+        let task = sqlx::query_as::<_, Task>("SELECT * FROM tasks WHERE id = $1")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await
+            .context("Failed to retrieve task")?;
+
+        // Validate retrieved task data if found
+        if let Some(ref task) = task {
+            self.validate_task_data(task)?;
+            debug!("Retrieved task: {} with ID: {}", task.title, task.id);
+        }
+
+        Ok(task)
     }
 
     async fn get_tasks(
@@ -1251,26 +1321,70 @@ impl DatabaseOperations for DatabaseClient {
 
     async fn create_council_verdict(
         &self,
-        _verdict: CreateCouncilVerdict,
+        verdict: CreateCouncilVerdict,
     ) -> Result<CouncilVerdict, Self::Error> {
-        // TODO: Implement create_council_verdict with the following requirements:
-        // 1. Verdict creation: Create new council verdict records in database
-        //    - Insert verdict data into appropriate database tables
-        //    - Handle verdict creation validation and constraints
-        //    - Implement proper error handling and rollback
-        // 2. Data validation: Validate verdict data before creation
-        //    - Verify verdict data completeness and accuracy
-        //    - Check verdict data constraints and business rules
-        //    - Handle validation errors and corrections
-        // 3. Database operations: Perform database operations for verdict creation
-        //    - Use proper database transactions and atomicity
-        //    - Handle database connection and error management
-        //    - Implement proper indexing and performance optimization
-        // 4. Result processing: Process and return created verdict
-        //    - Convert database result to CouncilVerdict struct
-        //    - Handle result validation and formatting
-        //    - Implement proper error propagation and handling
-        todo!("Implement create_council_verdict")
+        // Validate verdict data before creation
+        self.validate_council_verdict_creation(&verdict).await?;
+
+        // Use database transaction for atomicity
+        let mut tx = self.pool.begin().await
+            .context("Failed to begin database transaction")?;
+
+        // Insert council verdict record
+        let created_verdict = sqlx::query_as::<_, CouncilVerdict>(
+            "INSERT INTO council_verdicts (task_id, verdict_id, consensus_score, final_verdict, individual_verdicts, debate_rounds, evaluation_time_ms)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             RETURNING *"
+        )
+        .bind(verdict.task_id)
+        .bind(&verdict.verdict_id)
+        .bind(verdict.consensus_score)
+        .bind(&verdict.final_verdict)
+        .bind(&verdict.individual_verdicts)
+        .bind(verdict.debate_rounds)
+        .bind(verdict.evaluation_time_ms)
+        .fetch_one(&mut *tx)
+        .await
+        .context("Failed to create council verdict")?;
+
+        // Create audit trail entry
+        let audit_entry = CreateAuditTrailEntry {
+            entity_type: "council_verdict".to_string(),
+            entity_id: created_verdict.id,
+            action: "create".to_string(),
+            details: serde_json::json!({
+                "task_id": verdict.task_id,
+                "verdict_id": verdict.verdict_id,
+                "consensus_score": verdict.consensus_score,
+                "debate_rounds": verdict.debate_rounds,
+                "evaluation_time_ms": verdict.evaluation_time_ms,
+                "created_at": chrono::Utc::now()
+            }),
+            user_id: None,
+            ip_address: None,
+        };
+
+        // Insert audit trail (within transaction)
+        sqlx::query(
+            "INSERT INTO audit_trail (entity_type, entity_id, action, details, user_id, ip_address)
+             VALUES ($1, $2, $3, $4, $5, $6)"
+        )
+        .bind(&audit_entry.entity_type)
+        .bind(audit_entry.entity_id)
+        .bind(&audit_entry.action)
+        .bind(&audit_entry.details)
+        .bind(&audit_entry.user_id)
+        .bind(&audit_entry.ip_address.map(|ip| ip.to_string()))
+        .execute(&mut *tx)
+        .await
+        .context("Failed to create audit trail entry")?;
+
+        // Commit transaction
+        tx.commit().await
+            .context("Failed to commit council verdict creation transaction")?;
+
+        info!("Created council verdict: {} for task: {}", created_verdict.verdict_id, created_verdict.task_id);
+        Ok(created_verdict)
     }
 
     async fn get_council_verdict(
@@ -1386,6 +1500,178 @@ impl DatabaseOperations for DatabaseClient {
         _task_id: Uuid,
     ) -> Result<Option<TaskExecutionSummary>, Self::Error> {
         todo!("Implement get_task_execution_summary")
+    }
+}
+
+impl DatabaseClient {
+    /// Validate worker deletion operation
+    async fn validate_worker_deletion(&self, id: Uuid) -> Result<()> {
+        // Check if worker has any active tasks
+        let active_tasks: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM tasks WHERE assigned_worker_id = $1 AND status IN ('pending', 'in_progress')"
+        )
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to check for active tasks")?;
+
+        if active_tasks > 0 {
+            return Err(anyhow::anyhow!(
+                "Cannot delete worker: {} active tasks still assigned",
+                active_tasks
+            ));
+        }
+
+        // Check if worker has any running task executions
+        let running_executions: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM task_executions WHERE worker_id = $1 AND status = 'running'"
+        )
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to check for running executions")?;
+
+        if running_executions > 0 {
+            return Err(anyhow::anyhow!(
+                "Cannot delete worker: {} running task executions still active",
+                running_executions
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// Validate task creation data
+    async fn validate_task_creation(&self, task: &CreateTask) -> Result<()> {
+        // Validate required fields
+        if task.title.trim().is_empty() {
+            return Err(anyhow::anyhow!("Task title cannot be empty"));
+        }
+        if task.title.len() > 500 {
+            return Err(anyhow::anyhow!("Task title too long (max 500 characters)"));
+        }
+
+        if task.description.trim().is_empty() {
+            return Err(anyhow::anyhow!("Task description cannot be empty"));
+        }
+
+        // Validate risk tier
+        let valid_risk_tiers = ["Tier1", "Tier2", "Tier3"];
+        if !valid_risk_tiers.contains(&task.risk_tier.as_str()) {
+            return Err(anyhow::anyhow!("Invalid risk tier: {}", task.risk_tier));
+        }
+
+        // Validate JSON fields
+        serde_json::from_value::<serde_json::Value>(task.scope.clone())
+            .map_err(|e| anyhow::anyhow!("Invalid scope JSON: {}", e))?;
+
+        serde_json::from_value::<serde_json::Value>(task.acceptance_criteria.clone())
+            .map_err(|e| anyhow::anyhow!("Invalid acceptance_criteria JSON: {}", e))?;
+
+        serde_json::from_value::<serde_json::Value>(task.context.clone())
+            .map_err(|e| anyhow::anyhow!("Invalid context JSON: {}", e))?;
+
+        // Validate CAWS spec if provided
+        if let Some(ref caws_spec) = task.caws_spec {
+            serde_json::from_value::<serde_json::Value>(caws_spec.clone())
+                .map_err(|e| anyhow::anyhow!("Invalid caws_spec JSON: {}", e))?;
+        }
+
+        Ok(())
+    }
+
+    /// Validate task data integrity
+    fn validate_task_data(&self, task: &Task) -> Result<()> {
+        // Basic field validation
+        if task.title.trim().is_empty() {
+            return Err(anyhow::anyhow!("Task title is empty"));
+        }
+        if task.description.trim().is_empty() {
+            return Err(anyhow::anyhow!("Task description is empty"));
+        }
+
+        // Validate risk tier
+        let valid_risk_tiers = ["Tier1", "Tier2", "Tier3"];
+        if !valid_risk_tiers.contains(&task.risk_tier.as_str()) {
+            return Err(anyhow::anyhow!("Invalid risk tier: {}", task.risk_tier));
+        }
+
+        // Validate status
+        let valid_statuses = ["pending", "in_progress", "completed", "failed", "cancelled"];
+        if !valid_statuses.contains(&task.status.as_str()) {
+            return Err(anyhow::anyhow!("Invalid task status: {}", task.status));
+        }
+
+        // Validate JSON fields
+        serde_json::from_value::<serde_json::Value>(task.scope.clone())
+            .map_err(|e| anyhow::anyhow!("Invalid scope JSON: {}", e))?;
+
+        serde_json::from_value::<serde_json::Value>(task.acceptance_criteria.clone())
+            .map_err(|e| anyhow::anyhow!("Invalid acceptance_criteria JSON: {}", e))?;
+
+        serde_json::from_value::<serde_json::Value>(task.context.clone())
+            .map_err(|e| anyhow::anyhow!("Invalid context JSON: {}", e))?;
+
+        // Validate CAWS spec if provided
+        if let Some(ref caws_spec) = task.caws_spec {
+            serde_json::from_value::<serde_json::Value>(caws_spec.clone())
+                .map_err(|e| anyhow::anyhow!("Invalid caws_spec JSON: {}", e))?;
+        }
+
+        Ok(())
+    }
+
+    /// Validate council verdict creation data
+    async fn validate_council_verdict_creation(&self, verdict: &CreateCouncilVerdict) -> Result<()> {
+        // Validate consensus score range
+        if verdict.consensus_score < 0.0 || verdict.consensus_score > 1.0 {
+            return Err(anyhow::anyhow!("Consensus score must be between 0.0 and 1.0"));
+        }
+
+        // Validate verdict_id uniqueness
+        let existing: Option<String> = sqlx::query_scalar(
+            "SELECT verdict_id FROM council_verdicts WHERE verdict_id = $1"
+        )
+        .bind(&verdict.verdict_id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to check verdict_id uniqueness")?;
+
+        if existing.is_some() {
+            return Err(anyhow::anyhow!("Verdict ID already exists: {}", verdict.verdict_id));
+        }
+
+        // Validate task exists
+        let task_exists: Option<Uuid> = sqlx::query_scalar(
+            "SELECT id FROM tasks WHERE id = $1"
+        )
+        .bind(verdict.task_id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to validate task existence")?;
+
+        if task_exists.is_none() {
+            return Err(anyhow::anyhow!("Task with ID {} does not exist", verdict.task_id));
+        }
+
+        // Validate debate rounds (must be non-negative)
+        if verdict.debate_rounds < 0 {
+            return Err(anyhow::anyhow!("Debate rounds cannot be negative"));
+        }
+
+        // Validate evaluation time (must be positive)
+        if verdict.evaluation_time_ms <= 0 {
+            return Err(anyhow::anyhow!("Evaluation time must be positive"));
+        }
+
+        // Validate JSON fields
+        serde_json::from_value::<serde_json::Value>(verdict.final_verdict.clone())
+            .map_err(|e| anyhow::anyhow!("Invalid final_verdict JSON: {}", e))?;
+
+        serde_json::from_value::<serde_json::Value>(verdict.individual_verdicts.clone())
+            .map_err(|e| anyhow::anyhow!("Invalid individual_verdicts JSON: {}", e))?;
+
+        Ok(())
     }
 }
 

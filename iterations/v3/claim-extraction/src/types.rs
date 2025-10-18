@@ -144,6 +144,8 @@ pub enum SourceType {
     ResearchAgent,
     CouncilDecision,
     TestSuite,
+    ToolOutput,
+    Analysis,
 }
 
 /// Metadata about the processing operation

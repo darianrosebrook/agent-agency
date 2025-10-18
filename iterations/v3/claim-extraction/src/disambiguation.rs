@@ -57,41 +57,93 @@ impl DisambiguationStage {
         })
     }
 
-    /// Identify ambiguities in a sentence given context (Basic implementation - V2 port pending)
+    /// Identify ambiguities in a sentence given context (ported from V2 ClaimExtractor)
     pub async fn identify_ambiguities(
         &self,
         sentence: &str,
-        _context: &ProcessingContext,
+        context: &ProcessingContext,
     ) -> Result<Vec<Ambiguity>> {
         let mut ambiguities = Vec::new();
 
-        // TODO: Implement comprehensive pronoun detection with the following requirements:
-        // 1. Pronoun detection: Implement advanced pronoun detection algorithms
-        //    - Use NLP techniques for accurate pronoun identification
-        //    - Handle complex pronoun patterns and edge cases
-        //    - Implement proper pronoun detection error handling and validation
-        // 2. Context analysis: Analyze context for pronoun resolution
-        //    - Implement context-aware pronoun resolution
-        //    - Handle ambiguous pronoun references and disambiguation
-        //    - Implement proper context analysis error handling and validation
-        // 3. V2 complex logic: Integrate V2 complex logic for pronoun handling
-        //    - Implement sophisticated pronoun resolution algorithms
-        //    - Handle complex grammatical structures and dependencies
-        //    - Implement proper V2 logic integration and error handling
-        // 4. Pronoun optimization: Optimize pronoun detection performance and accuracy
-        //    - Implement efficient pronoun detection algorithms
-        //    - Handle large-scale pronoun detection operations
-        //    - Optimize pronoun detection quality and reliability
-        let pronoun_regex = Regex::new(r"\b(it|this|that|they|them|their|these|those)\b").unwrap();
+        // Enhanced pronoun and reference detection (ported from V2)
+        let pronoun_patterns = vec![
+            Regex::new(r"\b(he|she|it|they|we|us|them|him|her)\b").unwrap(),
+            Regex::new(r"\b(this|that|these|those)\b").unwrap(),
+        ];
 
-        for mat in pronoun_regex.find_iter(sentence) {
-            ambiguities.push(Ambiguity {
-                ambiguity_type: AmbiguityType::Pronoun,
-                position: (mat.start(), mat.end()),
-                original_text: mat.as_str().to_string(),
-                possible_resolutions: vec!["the system".to_string(), "the component".to_string()],
-                confidence: 0.8,
-            });
+        let mut referential_ambiguities = Vec::new();
+        for pattern in &pronoun_patterns {
+            for mat in pattern.find_iter(sentence) {
+                let pronoun_match = mat.as_str().to_lowercase();
+
+                // Filter out "that" when it's used as a conjunction (followed by a verb)
+                if pronoun_match == "that" {
+                    let index = sentence.to_lowercase().find("that").unwrap();
+                    let after_that = &sentence[index + 4..].trim_start();
+
+                    // If followed by a verb or another pronoun, it's likely a conjunction
+                    let conjunction_pattern = Regex::new(r"\b(is|are|was|were|has|have|will|shall|did|does|can|could|should|would|may|might|it|they|he|she|we)\b").unwrap();
+                    if conjunction_pattern.is_match(after_that) {
+                        continue; // Skip this "that" as it's a conjunction
+                    }
+                }
+
+                referential_ambiguities.push(pronoun_match);
+            }
+        }
+
+        // Remove duplicates and create Ambiguity structs
+        let unique_referential: std::collections::HashSet<String> = referential_ambiguities.into_iter().collect();
+
+        for pronoun in unique_referential {
+            // Find all occurrences of this pronoun
+            let pronoun_pattern = Regex::new(&format!(r"\b{}\b", regex::escape(&pronoun))).unwrap();
+            for mat in pronoun_pattern.find_iter(sentence) {
+                ambiguities.push(Ambiguity {
+                    ambiguity_type: AmbiguityType::Pronoun,
+                    position: (mat.start(), mat.end()),
+                    original_text: pronoun.clone(),
+                    possible_resolutions: self.context_resolver.get_pronoun_resolutions(&pronoun, context),
+                    confidence: 0.8, // Base confidence, will be adjusted based on context
+                });
+            }
+        }
+
+        // Basic structural ambiguities (ported from V2)
+        let structural_patterns = vec![
+            Regex::new(r"\b[A-Z][a-z]+ (is|are|was|were) [a-z]+ (and|or) [a-z]+\b").unwrap(),
+            Regex::new(r"\b[A-Z][a-z]+ (called|named|known as) [A-Z][a-z]+\b").unwrap(),
+            Regex::new(r"\b(before|after|during|while) [a-z]+ (and|or) [a-z]+\b").unwrap(),
+        ];
+
+        for pattern in &structural_patterns {
+            for mat in pattern.find_iter(sentence) {
+                ambiguities.push(Ambiguity {
+                    ambiguity_type: AmbiguityType::ScopeBoundary,
+                    position: (mat.start(), mat.end()),
+                    original_text: mat.as_str().to_string(),
+                    possible_resolutions: vec!["clarify scope".to_string()],
+                    confidence: 0.6,
+                });
+            }
+        }
+
+        // Temporal patterns (ported from V2)
+        let temporal_patterns = vec![
+            Regex::new(r"\b(next|last|previous|upcoming|recent|soon|recently)\b").unwrap(),
+            Regex::new(r"\b(tomorrow|yesterday|today|now|then)\b").unwrap(),
+        ];
+
+        for pattern in &temporal_patterns {
+            for mat in pattern.find_iter(sentence) {
+                ambiguities.push(Ambiguity {
+                    ambiguity_type: AmbiguityType::TemporalReference,
+                    position: (mat.start(), mat.end()),
+                    original_text: mat.as_str().to_string(),
+                    possible_resolutions: vec!["specify timeframe".to_string()],
+                    confidence: 0.7,
+                });
+            }
         }
 
         Ok(ambiguities)
@@ -102,7 +154,7 @@ impl DisambiguationStage {
         &self,
         sentence: &str,
         ambiguities: &[Ambiguity],
-        context: &ProcessingContext,
+        _context: &ProcessingContext,
     ) -> Result<String> {
         let mut resolved_sentence = sentence.to_string();
 
@@ -413,6 +465,51 @@ impl ContextResolver {
         context_map.get(pronoun).cloned()
     }
 
+    /// Get possible resolutions for a pronoun based on context (ported from V2)
+    fn get_pronoun_resolutions(&self, pronoun: &str, context: &ProcessingContext) -> Vec<String> {
+        let mut resolutions = Vec::new();
+
+        // Use domain hints from context
+        for hint in &context.domain_hints {
+            resolutions.push(hint.clone());
+        }
+
+        // Add default system-level resolutions
+        match pronoun.to_lowercase().as_str() {
+            "it" | "this" | "that" => {
+                resolutions.extend(vec![
+                    "the system".to_string(),
+                    "the component".to_string(),
+                    "the function".to_string(),
+                    "the process".to_string(),
+                ]);
+            }
+            "they" | "them" | "these" | "those" => {
+                resolutions.extend(vec![
+                    "the components".to_string(),
+                    "the systems".to_string(),
+                    "the processes".to_string(),
+                ]);
+            }
+            "we" | "us" => {
+                resolutions.extend(vec![
+                    "the development team".to_string(),
+                    "the system architects".to_string(),
+                ]);
+            }
+            _ => {
+                resolutions.push("the system".to_string());
+            }
+        }
+
+        // Add context from surrounding text if available
+        if !context.surrounding_context.is_empty() {
+            resolutions.push(format!("context: {}", context.surrounding_context));
+        }
+
+        resolutions
+    }
+
     fn resolve_ambiguity(
         &self,
         ambiguity: &Ambiguity,
@@ -430,7 +527,6 @@ impl ContextResolver {
             AmbiguityType::TechnicalTerm => Ok(ambiguity.possible_resolutions.first().cloned()),
             AmbiguityType::ScopeBoundary => Ok(Some(format!("in {}", context.working_spec_id))),
             AmbiguityType::TemporalReference => Ok(Some("during execution".to_string())),
-            AmbiguityType::Quantifier => Ok(Some("all instances".to_string())),
             AmbiguityType::Quantifier => Ok(Some("all instances".to_string())),
         }
     }
@@ -539,7 +635,7 @@ impl ContextResolver {
         &self,
         sentence: &str,
         pronouns: &[String],
-        context: &ProcessingContext,
+        _context: &ProcessingContext,
     ) -> Result<String> {
         let mut resolved_sentence = sentence.to_string();
 

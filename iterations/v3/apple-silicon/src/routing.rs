@@ -636,7 +636,7 @@ mod tests {
         let config = RoutingConfig {
             enable_routing: true,
             routing_algorithm: RoutingAlgorithm::PerformanceBased,
-            load_balancing_strategy: LoadBalancingStrategy::RoundRobin,
+            load_balancing_strategy: LoadBalancingStrategy::ResourceBased,
             max_concurrent_requests: 10,
             request_timeout_ms: 5000,
             enable_performance_monitoring: true,
@@ -654,7 +654,7 @@ mod tests {
         let router = InferenceRouter::new(RoutingConfig {
             enable_routing: true,
             routing_algorithm: RoutingAlgorithm::PerformanceBased,
-            load_balancing_strategy: LoadBalancingStrategy::RoundRobin,
+            load_balancing_strategy: LoadBalancingStrategy::ResourceBased,
             max_concurrent_requests: 10,
             request_timeout_ms: 5000,
             enable_performance_monitoring: true,
@@ -680,7 +680,7 @@ mod tests {
         let router = InferenceRouter::new(RoutingConfig {
             enable_routing: true,
             routing_algorithm: RoutingAlgorithm::PerformanceBased,
-            load_balancing_strategy: LoadBalancingStrategy::RoundRobin,
+            load_balancing_strategy: LoadBalancingStrategy::ResourceBased,
             max_concurrent_requests: 10,
             request_timeout_ms: 5000,
             enable_performance_monitoring: true,
@@ -715,7 +715,7 @@ mod tests {
         let router = InferenceRouter::new(RoutingConfig {
             enable_routing: true,
             routing_algorithm: RoutingAlgorithm::PerformanceBased,
-            load_balancing_strategy: LoadBalancingStrategy::RoundRobin,
+            load_balancing_strategy: LoadBalancingStrategy::ResourceBased,
             max_concurrent_requests: 10,
             request_timeout_ms: 5000,
             enable_performance_monitoring: true,
@@ -752,7 +752,7 @@ mod tests {
         let router = InferenceRouter::new(RoutingConfig {
             enable_routing: true,
             routing_algorithm: RoutingAlgorithm::PerformanceBased,
-            load_balancing_strategy: LoadBalancingStrategy::RoundRobin,
+            load_balancing_strategy: LoadBalancingStrategy::ResourceBased,
             max_concurrent_requests: 10,
             request_timeout_ms: 5000,
             enable_performance_monitoring: true,
@@ -773,7 +773,7 @@ mod tests {
             metadata: HashMap::new(),
         };
 
-        let decision = router.route_inference(request).await.unwrap();
+        let decision = router.route_inference(request.clone()).await.unwrap();
         assert_eq!(decision.request_id, request.id);
         assert!(decision.confidence > 0.0);
         assert!(decision.estimated_time_ms > 0);

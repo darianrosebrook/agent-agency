@@ -449,26 +449,147 @@ impl SecurityPolicyEnforcer {
         stats.last_updated = Utc::now();
     }
 
-    /// Check if a path is within allowed workspace
+    /// Check if a path is within allowed workspace with comprehensive security validation
     pub fn is_within_workspace(&self, path: &str, workspace_root: &str) -> bool {
-        // TODO: Implement comprehensive path resolution with the following requirements:
+        use std::path::{Path, PathBuf};
+
         // 1. Path resolution: Implement proper path resolution and validation
-        //    - Use proper path resolution algorithms for cross-platform compatibility
-        //    - Handle path resolution error detection and reporting
-        //    - Implement proper path validation and verification
+        let resolved_path = match self.resolve_path_safely(path) {
+            Ok(p) => p,
+            Err(_) => {
+                warn!("Failed to resolve path safely: {}", path);
+                return false;
+            }
+        };
+
+        let resolved_workspace = match self.resolve_path_safely(workspace_root) {
+            Ok(p) => p,
+            Err(_) => {
+                warn!("Failed to resolve workspace root safely: {}", workspace_root);
+                return false;
+            }
+        };
+
         // 2. Workspace validation: Implement comprehensive workspace validation
-        //    - Validate workspace boundaries and constraints
-        //    - Handle workspace validation error detection and reporting
-        //    - Implement proper workspace security validation
+        if !self.is_valid_workspace_boundary(&resolved_workspace) {
+            warn!("Invalid workspace boundary: {}", workspace_root);
+            return false;
+        }
+
         // 3. Security checks: Implement security-focused path checks
-        //    - Check for path traversal attacks and security vulnerabilities
-        //    - Handle security check error detection and reporting
-        //    - Implement proper security validation and verification
-        // 4. Path optimization: Optimize path resolution performance
-        //    - Implement efficient path resolution algorithms
-        //    - Handle large-scale path resolution operations
-        //    - Optimize path resolution quality and reliability
-        path.starts_with(workspace_root)
+        if !self.check_path_security(&resolved_path, &resolved_workspace) {
+            warn!("Path security check failed for: {} within workspace: {}", path, workspace_root);
+            return false;
+        }
+
+        // 4. Final containment check with canonical paths
+        resolved_path.starts_with(&resolved_workspace)
+    }
+
+    /// Resolve a path safely with security checks and cross-platform compatibility
+    fn resolve_path_safely(&self, path: &str) -> Result<PathBuf, &'static str> {
+        use std::path::Path;
+
+        let path_obj = Path::new(path);
+
+        // Handle empty or invalid paths
+        if path.is_empty() {
+            return Err("Empty path provided");
+        }
+
+        // Canonicalize the path to resolve any .. or . components and symlinks
+        match path_obj.canonicalize() {
+            Ok(canonical) => Ok(canonical),
+            Err(_) => {
+                // If canonicalization fails, try to handle relative paths
+                if path_obj.is_relative() {
+                    match std::env::current_dir() {
+                        Ok(cwd) => {
+                            let joined = cwd.join(path_obj);
+                            joined.canonicalize().map_err(|_| "Failed to canonicalize relative path")
+                        }
+                        Err(_) => Err("Cannot get current directory for relative path resolution"),
+                    }
+                } else {
+                    Err("Failed to canonicalize absolute path")
+                }
+            }
+        }
+    }
+
+    /// Validate workspace boundary constraints
+    fn is_valid_workspace_boundary(&self, workspace_path: &Path) -> bool {
+        use std::path::Path;
+
+        // Check if workspace path exists and is a directory
+        if !workspace_path.exists() || !workspace_path.is_dir() {
+            return false;
+        }
+
+        // Check for restricted system paths (basic protection)
+        let workspace_str = workspace_path.to_string_lossy();
+
+        // Prevent workspace in system directories
+        let restricted_paths = [
+            "/System", "/usr", "/bin", "/sbin", "/private",
+            "/Library/Frameworks", "/System/Library",
+            "C:\\Windows", "C:\\Program Files", "C:\\System32",  // Windows
+        ];
+
+        for restricted in &restricted_paths {
+            if workspace_str.starts_with(restricted) {
+                return false;
+            }
+        }
+
+        // Additional validation could be added here for specific requirements
+        true
+    }
+
+    /// Perform security checks on path resolution
+    fn check_path_security(&self, resolved_path: &Path, workspace_root: &Path) -> bool {
+        use std::path::Path;
+
+        // Check for path traversal attacks (.. components)
+        if let Some(path_str) = resolved_path.to_str() {
+            if path_str.contains("..") {
+                // Even after canonicalization, check for remaining .. (shouldn't happen but safety check)
+                return false;
+            }
+
+            // Check for null bytes or other injection attempts
+            if path_str.chars().any(|c| c == '\0') {
+                return false;
+            }
+
+            // Check for extremely long paths (potential DoS)
+            if path_str.len() > 4096 {
+                return false;
+            }
+        }
+
+        // Ensure the resolved path is still within the workspace after canonicalization
+        if !resolved_path.starts_with(workspace_root) {
+            return false;
+        }
+
+        // Check that we're not accessing hidden/system files inappropriately
+        if let Some(filename) = resolved_path.file_name() {
+            let filename_str = filename.to_string_lossy();
+
+            // Block access to common system/hidden files
+            let blocked_files = [
+                ".DS_Store", "Thumbs.db", "desktop.ini",
+                ".bashrc", ".bash_profile", ".zshrc",
+                "passwd", "shadow", "sudoers",
+            ];
+
+            if blocked_files.contains(&filename_str.as_ref()) {
+                return false;
+            }
+        }
+
+        true
     }
 
     /// Get security policy configuration snapshot

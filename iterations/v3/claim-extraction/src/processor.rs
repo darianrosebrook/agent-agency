@@ -32,7 +32,7 @@ impl ClaimExtractionProcessor {
     /// Run the complete claim extraction and verification pipeline
     /// Implements the four-stage Claimify pipeline with V3 multi-modal verification
     pub async fn run(
-        &self,
+        &mut self,
         input: &str,
         ctx: &ProcessingContext,
     ) -> Result<ClaimExtractionResult, ClaimExtractionError> {

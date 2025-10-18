@@ -20,7 +20,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
-const DEFAULT_BASE_URL = process.env.OBSERVER_URL ?? "http://127.0.0.1:4387";
+const DEFAULT_BASE_URL = process.env.OBSERVER_URL ?? "http://127.0.0.1:4389";
 const AUTH_TOKEN = process.env.OBSERVER_AUTH_TOKEN;
 
 class HttpClient {

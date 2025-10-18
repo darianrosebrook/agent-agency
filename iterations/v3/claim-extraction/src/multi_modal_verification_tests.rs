@@ -51,7 +51,7 @@ mod tests {
     /// Test code behavior analyzer with technical claims
     #[tokio::test]
     async fn test_code_behavior_analyzer() {
-        let analyzer = CodeBehaviorAnalyzer::new();
+        let mut analyzer = CodeBehaviorAnalyzer::new();
 
         // Test with code-related claim
         let code_claim =
@@ -143,7 +143,7 @@ mod tests {
     /// Test complete multi-modal verification engine
     #[tokio::test]
     async fn test_multi_modal_verification_engine() {
-        let engine = MultiModalVerificationEngine::new();
+        let mut engine = MultiModalVerificationEngine::new();
 
         // Create multiple test claims
         let claims = vec![
@@ -194,7 +194,7 @@ mod tests {
     /// Test overall confidence calculation
     #[tokio::test]
     async fn test_overall_confidence_calculation() {
-        let engine = MultiModalVerificationEngine::new();
+        let mut engine = MultiModalVerificationEngine::new();
 
         let claim = create_test_claim(
             "Test claim for confidence calculation",
@@ -226,7 +226,7 @@ mod tests {
     /// Test verification with different claim types
     #[tokio::test]
     async fn test_verification_with_different_claim_types() {
-        let engine = MultiModalVerificationEngine::new();
+        let mut engine = MultiModalVerificationEngine::new();
 
         let claims = vec![
             create_test_claim("Factual statement", ClaimType::Factual),
@@ -268,7 +268,7 @@ mod tests {
     /// Test verification results structure
     #[tokio::test]
     async fn test_verification_results_structure() {
-        let engine = MultiModalVerificationEngine::new();
+        let mut engine = MultiModalVerificationEngine::new();
 
         let claim = create_test_claim(
             "The function processes data efficiently",
@@ -311,7 +311,7 @@ mod tests {
     /// Test edge cases and error handling
     #[tokio::test]
     async fn test_edge_cases_and_error_handling() {
-        let engine = MultiModalVerificationEngine::new();
+        let mut engine = MultiModalVerificationEngine::new();
 
         // Test with empty claims list
         let empty_results = engine.verify_claims(vec![]).await.unwrap();
@@ -338,7 +338,7 @@ mod tests {
     /// Test serialization and deserialization of verification results
     #[tokio::test]
     async fn test_verification_results_serialization() {
-        let engine = MultiModalVerificationEngine::new();
+        let mut engine = MultiModalVerificationEngine::new();
 
         let claim = create_test_claim("Test claim for serialization", ClaimType::Technical);
 
