@@ -33,6 +33,7 @@ pub trait SignerTrait: Send + Sync {
 
 /// Signing algorithm types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum SigningAlgorithm {
     RS256,
     ES256,

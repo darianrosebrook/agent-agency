@@ -357,3 +357,5 @@ impl ConsensusCoordinator {
 
 
 }
+
+    /// Calculate consensus score from individual verdicts
