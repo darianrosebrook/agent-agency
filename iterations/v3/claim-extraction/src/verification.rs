@@ -6,11 +6,152 @@
 use crate::types::*;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::time::{timeout, Duration};
 use tracing::debug;
 use uuid::Uuid;
+
+/// Council task specification for claim verification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CouncilTaskSpec {
+    pub id: Uuid,
+    pub task_type: String,
+    pub description: String,
+    pub risk_tier: CouncilRiskTier,
+    pub scope: CouncilTaskScope,
+    pub acceptance_criteria: Vec<CouncilAcceptanceCriterion>,
+    pub context: CouncilTaskContext,
+    pub environment: CouncilEnvironment,
+    pub timeout_seconds: u64,
+}
+
+/// Council risk tier levels
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CouncilRiskTier {
+    Tier1, // Critical - requires manual review
+    Tier2, // Standard - automated with oversight
+    Tier3, // Low risk - fully automated
+}
+
+/// Task scope boundaries
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CouncilTaskScope {
+    pub components: Vec<String>,
+    pub data_impact: String,
+    pub external_dependencies: Vec<String>,
+}
+
+/// Acceptance criteria for council verification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CouncilAcceptanceCriterion {
+    pub id: String,
+    pub description: String,
+    pub priority: String,
+    pub verification_method: String,
+}
+
+/// Task context information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CouncilTaskContext {
+    pub workspace_root: String,
+    pub git_commit: Option<String>,
+    pub git_branch: String,
+    pub recent_changes: Vec<String>,
+    pub dependencies: std::collections::HashMap<String, String>,
+}
+
+/// Council environment settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CouncilEnvironment {
+    Development,
+    Staging,
+    Production,
+}
+
+/// Worker output specification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CouncilWorkerOutput {
+    pub worker_id: String,
+    pub output: String,
+    pub confidence: f64,
+    pub processing_time_ms: u64,
+}
+
+/// Self-assessment for council submission
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CouncilSelfAssessment {
+    pub confidence_score: f64,
+    pub risk_assessment: String,
+    pub quality_indicators: Vec<String>,
+}
+
+/// Council submission result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CouncilSubmissionResult {
+    pub task_id: Uuid,
+    pub verdict: CouncilVerdict,
+    pub processing_time_ms: u64,
+    pub retry_count: u32,
+    pub timestamp: DateTime<Utc>,
+}
+
+/// Council verdict types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CouncilVerdict {
+    Accepted {
+        confidence: f64,
+        summary: String,
+    },
+    Rejected {
+        primary_reasons: Vec<String>,
+        summary: String,
+    },
+    NeedsInvestigation {
+        questions: Vec<String>,
+        summary: String,
+    },
+}
+
+/// Evidence collection for claim verification
+#[derive(Debug)]
+struct EvidenceCollector {
+    council_integrator: CouncilIntegrator,
+}
+
+/// Integrates with council for complex verification
+#[derive(Debug)]
+struct CouncilIntegrator {
+    council_endpoint: String,
+    api_key: Option<String>,
+    client: reqwest::Client,
+    code_analyzer: CodeAnalyzer,
+    test_runner: TestRunner,
+    documentation_reviewer: DocumentationReviewer,
+    performance_measurer: PerformanceMeasurer,
+    security_scanner: SecurityScanner,
+}
+
+/// Code analysis component
+#[derive(Debug)]
+struct CodeAnalyzer;
+
+/// Test execution component
+#[derive(Debug)]
+struct TestRunner;
+
+/// Documentation review component
+#[derive(Debug)]
+struct DocumentationReviewer;
+
+/// Performance measurement component
+#[derive(Debug)]
+struct PerformanceMeasurer;
+
+/// Security scanning component
+#[derive(Debug)]
+struct SecurityScanner;
 
 /// Stage 4: Verification with evidence collection
 #[derive(Debug)]
@@ -163,7 +304,7 @@ impl EvidenceCollector {
 struct CouncilIntegrator {
     council_endpoint: String,
     api_key: Option<String>,
-    client: reqwest::Client,
+    client: Client,
     retry_config: RetryConfig,
 }
 
@@ -191,7 +332,7 @@ impl CouncilIntegrator {
             council_endpoint: std::env::var("COUNCIL_ENDPOINT")
                 .unwrap_or_else(|_| "http://localhost:8080".to_string()),
             api_key: std::env::var("COUNCIL_API_KEY").ok(),
-            client: reqwest::Client::new(),
+            client: Client::new(),
             retry_config: RetryConfig::default(),
         }
     }
@@ -646,89 +787,38 @@ impl CouncilIntegrator {
                     timestamp: Utc::now(),
                 });
             }
-            CouncilVerdict::Fail {
-                evidence: council_evidence,
-                violations,
-                ..
-            } => {
+            CouncilVerdict::Rejected { .. } => {
                 // Include evidence even for failures
-                for council_ev in council_evidence {
-                    evidence.push(Evidence {
-                        id: Uuid::new_v4(),
-                        claim_id: claim.id,
-                        evidence_type: EvidenceType::ConstitutionalReference,
-                        content: format!("Council evaluation for: {}", claim.claim_text),
-                        source: EvidenceSource {
-                            source_type: SourceType::CouncilDecision,
-                            location: "council_verdict".to_string(),
-                            authority: "Agent Agency Council".to_string(),
-                            freshness: Utc::now(),
-                        },
-                        confidence: 0.7, // Lower confidence for failures
-                        timestamp: Utc::now(),
-                    });
-                }
-
-                // Add violation evidence
-                for violation in violations {
-                    evidence.push(Evidence {
-                        id: Uuid::new_v4(),
-                        claim_id: claim.id,
-                        evidence_type: EvidenceType::ConstitutionalReference,
-                        content: format!(
-                            "Violation: {} - {}",
-                            violation.rule, violation.description
-                        ),
-                        source: EvidenceSource {
-                            source_type: SourceType::CouncilDecision,
-                            location: "council_violation".to_string(),
-                            authority: "Agent Agency Council".to_string(),
-                            freshness: Utc::now(),
-                        },
-                        confidence: 0.8,
-                        timestamp: Utc::now(),
-                    });
-                }
+                evidence.push(Evidence {
+                    id: Uuid::new_v4(),
+                    claim_id: claim.id,
+                    evidence_type: EvidenceType::ConstitutionalReference,
+                    content: format!("Council rejection for: {}", claim.claim_text),
+                    source: EvidenceSource {
+                        source_type: SourceType::CouncilDecision,
+                        location: "council_verdict".to_string(),
+                        authority: "Agent Agency Council".to_string(),
+                        freshness: Utc::now(),
+                    },
+                    confidence: 0.1, // Low confidence for rejections
+                    timestamp: Utc::now(),
+                });
             }
-            CouncilVerdict::Uncertain {
-                evidence: council_evidence,
-                concerns,
-                ..
-            } => {
-                for council_ev in council_evidence {
-                    evidence.push(Evidence {
-                        id: Uuid::new_v4(),
-                        claim_id: claim.id,
-                        evidence_type: EvidenceType::ConstitutionalReference,
-                        content: format!("Council evaluation for: {}", claim.claim_text),
-                        source: EvidenceSource {
-                            source_type: SourceType::CouncilDecision,
-                            location: "council_verdict".to_string(),
-                            authority: "Agent Agency Council".to_string(),
-                            freshness: Utc::now(),
-                        },
-                        confidence: 0.6, // Lower confidence for uncertain verdicts
-                        timestamp: Utc::now(),
-                    });
-                }
-
-                // Add concern evidence
-                for concern in concerns {
-                    evidence.push(Evidence {
-                        id: Uuid::new_v4(),
-                        claim_id: claim.id,
-                        evidence_type: EvidenceType::ConstitutionalReference,
-                        content: format!("Concern: {} - {}", concern.area, concern.description),
-                        source: EvidenceSource {
-                            source_type: SourceType::CouncilDecision,
-                            location: "council_concern".to_string(),
-                            authority: "Agent Agency Council".to_string(),
-                            freshness: Utc::now(),
-                        },
-                        confidence: 0.6,
-                        timestamp: Utc::now(),
-                    });
-                }
+            CouncilVerdict::NeedsInvestigation { .. } => {
+                evidence.push(Evidence {
+                    id: Uuid::new_v4(),
+                    claim_id: claim.id,
+                    evidence_type: EvidenceType::ConstitutionalReference,
+                    content: format!("Council uncertainty for: {}", claim.claim_text),
+                    source: EvidenceSource {
+                        source_type: SourceType::CouncilDecision,
+                        location: "council_verdict".to_string(),
+                        authority: "Agent Agency Council".to_string(),
+                        freshness: Utc::now(),
+                    },
+                    confidence: 0.5, // Moderate confidence for uncertain verdicts
+                    timestamp: Utc::now(),
+                });
             }
         }
 
@@ -902,51 +992,6 @@ impl SecurityScanner {
         Ok(vec![evidence])
     }
 }
-
-// Council-specific types for bridge implementation
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CouncilTaskSpec {
-    pub id: Uuid,
-    pub title: String,
-    pub description: String,
-    pub risk_tier: CouncilRiskTier,
-    pub scope: CouncilTaskScope,
-    pub acceptance_criteria: Vec<CouncilAcceptanceCriterion>,
-    pub context: CouncilTaskContext,
-    pub worker_output: CouncilWorkerOutput,
-    pub caws_spec: Option<String>,
-    pub timestamp: chrono::DateTime<chrono::Utc>,
-    pub evidence_digest: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum CouncilRiskTier {
-    Tier1,
-    Tier2,
-    Tier3,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CouncilTaskScope {
-    pub files_affected: Vec<String>,
-    pub max_files: Option<u32>,
-    pub max_loc: Option<u32>,
-    pub domains: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CouncilAcceptanceCriterion {
-    pub id: String,
-    pub description: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CouncilTaskContext {
-    pub workspace_root: String,
-    pub git_branch: String,
-    pub recent_changes: Vec<String>,
-    pub dependencies: std::collections::HashMap<String, serde_json::Value>,
-    pub environment: CouncilEnvironment,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
