@@ -1,3 +1,4 @@
+use agent_agency_council::types::FinalVerdict;
 use council::{ConsensusCoordinator, CouncilConfig, NoopEmitter};
 use orchestration::caws_runtime::*;
 use orchestration::orchestrate::orchestrate_task;
@@ -24,25 +25,23 @@ async fn short_circuit_reject_path() {
         lines_changed: 100,
         touched_paths: vec!["outside/file.rs".into()],
     };
-    let coord = ConsensusCoordinator::new(CouncilConfig::default());
+    let mut coord = ConsensusCoordinator::new(CouncilConfig::default());
     let writer = InMemoryWriter;
+    let emitter = OrchestrationProvenanceEmitter::default();
     let verdict = orchestrate_task(
         &spec,
         &desc,
         &diff,
         false,
         false,
-        &coord,
+        &mut coord,
         &writer,
         &NoopEmitter,
-        &OrchestrationProvenanceEmitter::default(),
+        &emitter,
         None,
         None,
     )
     .await
     .unwrap();
-    assert!(matches!(
-        verdict.decision,
-        council::contracts::FinalDecision::Reject
-    ));
+    assert!(matches!(verdict, FinalVerdict::Rejected { .. }));
 }

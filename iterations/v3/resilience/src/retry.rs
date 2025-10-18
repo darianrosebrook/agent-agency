@@ -117,7 +117,7 @@ impl RetryExecutor {
     {
         let mut attempt = 0;
         let mut total_delay_ms = 0;
-        let start_time = Instant::now();
+        let _start_time = Instant::now();
 
         loop {
             attempt += 1;

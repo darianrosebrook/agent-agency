@@ -511,22 +511,6 @@ impl MetalGPUManager {
         }
     }
 
-    /// Detect unified memory size for Apple Silicon
-    async fn detect_unified_memory_size(&self) -> Result<u32> {
-        // Use system_profiler to get total system memory
-        let output = std::process::Command::new("system_profiler")
-            .args(&["SPHardwareDataType"])
-            .output()
-            .map_err(|e| anyhow::anyhow!("Failed to query hardware info: {}", e))?;
-
-        if !output.status.success() {
-            return Ok(8192); // Default fallback
-        }
-
-        let output_str = String::from_utf8_lossy(&output.stdout);
-
-        // Look for memory information
-        for line in output_str.lines() {
             if line.contains("Memory:") {
                 if let Some(memory_mb) = self.parse_memory_size(line) {
                     return Ok(memory_mb);

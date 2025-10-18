@@ -165,29 +165,165 @@ impl ANEManager {
 
     /// Get macOS version
     fn get_macos_version(&self) -> (u32, u32) {
-        // In a real implementation, this would use sysctl or uname
-        // For simulation, assume macOS 13.0 (Ventura) which supports ANE
-        (13, 0)
+        // Use sysctl to get the actual macOS version
+        use std::process::Command;
+
+        let output = Command::new("sw_vers")
+            .arg("-productVersion")
+            .output();
+
+        match output {
+            Ok(output) if output.status.success() => {
+                let version_str = String::from_utf8_lossy(&output.stdout);
+                let version_str = version_str.trim();
+
+                // Parse version string like "13.5.1" or "14.0"
+                let parts: Vec<&str> = version_str.split('.').collect();
+                if parts.len() >= 2 {
+                    let major = parts[0].parse().unwrap_or(13);
+                    let minor = parts[1].parse().unwrap_or(0);
+                    (major, minor)
+                } else {
+                    (13, 0) // fallback
+                }
+            }
+            _ => {
+                // Fallback: try uname approach
+                let output = Command::new("uname")
+                    .arg("-r")
+                    .output();
+
+                match output {
+                    Ok(output) if output.status.success() => {
+                        let release = String::from_utf8_lossy(&output.stdout);
+                        let release = release.trim();
+
+                        // macOS kernel release format: e.g., "22.5.0" for macOS 13.4
+                        let parts: Vec<&str> = release.split('.').collect();
+                        if parts.len() >= 1 {
+                            let kernel_major: u32 = parts[0].parse().unwrap_or(22);
+                            // Convert Darwin kernel version to macOS version
+                            // Darwin 22 = macOS 13, Darwin 23 = macOS 14, etc.
+                            let macos_major = kernel_major - 9; // Approximation
+                            (macos_major, 0)
+                        } else {
+                            (13, 0)
+                        }
+                    }
+                    _ => (13, 0), // Default fallback
+                }
+            }
+        }
     }
 
     /// Check if running on Apple Silicon
     fn is_apple_silicon(&self) -> bool {
-        // In a real implementation, this would check the CPU architecture
-        // via sysctl or uname -m
-        // For simulation, assume Apple Silicon
-        true
+        // Check CPU architecture via sysctl
+        use std::process::Command;
+
+        let output = Command::new("sysctl")
+            .arg("-n")
+            .arg("machdep.cpu.brand_string")
+            .output();
+
+        match output {
+            Ok(output) if output.status.success() => {
+                let brand_string = String::from_utf8_lossy(&output.stdout);
+                let brand_string = brand_string.trim();
+
+                // Check for Apple Silicon indicators
+                brand_string.contains("Apple")
+                    || brand_string.contains("M1")
+                    || brand_string.contains("M2")
+                    || brand_string.contains("M3")
+            }
+            _ => {
+                // Fallback: try uname -m
+                let output = Command::new("uname")
+                    .arg("-m")
+                    .output();
+
+                match output {
+                    Ok(output) if output.status.success() => {
+                        let arch = String::from_utf8_lossy(&output.stdout);
+                        let arch = arch.trim();
+
+                        // Apple Silicon uses arm64 architecture
+                        arch == "arm64"
+                    }
+                    _ => false,
+                }
+            }
+        }
     }
 
     /// Check ANE hardware availability
     fn check_ane_hardware_availability(&self) -> bool {
-        // In a real implementation, this would:
-        // - Check if ANE coprocessor is available via IOKit
-        // - Verify ANE firmware is loaded
-        // - Test basic ANE functionality
+        // Check ANE availability through system information
+        use std::process::Command;
 
-        // For simulation, assume ANE is available on supported hardware
-        debug!("ANE hardware check passed");
-        true
+        // Method 1: Check if ANE kext is loaded
+        let kext_check = Command::new("kextstat")
+            .arg("-b")
+            .arg("com.apple.driver.AppleNeuralEngine")
+            .output();
+
+        if let Ok(output) = kext_check {
+            if output.status.success() {
+                debug!("ANE kernel extension is loaded");
+                return true;
+            }
+        }
+
+        // Method 2: Check for ANE devices via ioreg
+        let ioreg_check = Command::new("ioreg")
+            .arg("-c")
+            .arg("AppleNeuralEngine")
+            .output();
+
+        if let Ok(output) = ioreg_check {
+            if output.status.success() {
+                let output_str = String::from_utf8_lossy(&output.stdout);
+                if output_str.contains("AppleNeuralEngine") {
+                    debug!("ANE device found in IORegistry");
+                    return true;
+                }
+            }
+        }
+
+        // Method 3: Check system profiler for Neural Engine
+        let profiler_check = Command::new("system_profiler")
+            .arg("SPHardwareDataType")
+            .output();
+
+        if let Ok(output) = profiler_check {
+            if output.status.success() {
+                let output_str = String::from_utf8_lossy(&output.stdout);
+                if output_str.contains("Neural Engine") {
+                    debug!("Neural Engine detected in system profiler");
+                    return true;
+                }
+            }
+        }
+
+        // Method 4: Check powermetrics for ANE activity (if available)
+        let powermetrics_check = Command::new("powermetrics")
+            .arg("--samplers")
+            .arg("ane")
+            .arg("--count")
+            .arg("1")
+            .output();
+
+        if let Ok(output) = powermetrics_check {
+            if output.status.success() {
+                debug!("ANE power metrics available");
+                return true;
+            }
+        }
+
+        // If all checks fail, assume ANE is not available
+        debug!("ANE hardware not detected through available system checks");
+        false
     }
 
     /// Initialize ANE device
@@ -215,42 +351,204 @@ impl ANEManager {
 
     /// Load ANE framework
     async fn load_ane_framework(&self) -> Result<()> {
-        // In a real implementation, this would load the ANE framework via dlopen
-        // or use Objective-C runtime to access ANE APIs
-        debug!("ANE framework loaded");
-        Ok(())
+        // Check if ANE framework exists on the system
+        use std::path::Path;
+
+        let framework_paths = [
+            "/System/Library/PrivateFrameworks/AppleNeuralEngine.framework",
+            "/System/Library/Frameworks/AppleNeuralEngine.framework",
+        ];
+
+        for path in &framework_paths {
+            if Path::new(path).exists() {
+                debug!("ANE framework found at: {}", path);
+
+                // In a real implementation with proper permissions and bindings,
+                // this would load the framework using dlopen or Objective-C runtime
+                // For now, we just verify the framework exists
+                return Ok(());
+            }
+        }
+
+        // Check for CoreML framework as fallback (ANE is often accessed through CoreML)
+        let coreml_paths = [
+            "/System/Library/Frameworks/CoreML.framework",
+            "/System/Library/PrivateFrameworks/CoreML.framework",
+        ];
+
+        for path in &coreml_paths {
+            if Path::new(path).exists() {
+                debug!("CoreML framework found at: {} (ANE may be accessible through CoreML)", path);
+                return Ok(());
+            }
+        }
+
+        warn!("Neither ANE nor CoreML framework found on system");
+        Err(anyhow::anyhow!("ANE framework not available on this system"))
     }
 
     /// Initialize device context
     async fn initialize_device_context(&self) -> Result<()> {
+        // Query ANE device capabilities and create context
+        use std::process::Command;
+
+        // Check ANE device information via system_profiler
+        let profiler_output = Command::new("system_profiler")
+            .arg("SPHardwareDataType")
+            .output();
+
+        if let Ok(output) = profiler_output {
+            if output.status.success() {
+                let info = String::from_utf8_lossy(&output.stdout);
+
+                // Parse chip information to determine ANE capabilities
+                if info.contains("M1") {
+                    debug!("Detected M1 chip - ANE with 16 compute units");
+                } else if info.contains("M2") {
+                    debug!("Detected M2 chip - Enhanced ANE with improved performance");
+                } else if info.contains("M3") {
+                    debug!("Detected M3 chip - Latest ANE architecture");
+                } else if info.contains("M4") {
+                    debug!("Detected M4 chip - Next-generation ANE");
+                } else {
+                    debug!("Apple Silicon chip detected - ANE capabilities assumed");
+                }
+            }
+        }
+
         // In a real implementation, this would:
-        // - Create ANE device context
-        // - Configure device parameters
-        // - Set up memory regions
-        debug!("ANE device context initialized");
+        // - Create ANE device context using framework APIs
+        // - Configure device parameters (precision, memory layout)
+        // - Set up memory regions and DMA buffers
+        // - Initialize command queues and synchronization primitives
+
+        debug!("ANE device context initialized with detected capabilities");
         Ok(())
     }
 
     /// Set up compute pipelines
     async fn setup_compute_pipelines(&self) -> Result<()> {
-        // In a real implementation, this would:
-        // - Create compute pipelines for different operations
-        // - Configure pipeline states
-        // - Set up command queues
+        // Determine optimal pipeline configuration based on chip type
+        use std::process::Command;
+
+        let compute_units = self.device_capabilities.compute_units;
+        let mut pipeline_config = Vec::new();
+
+        // Check chip type to determine optimal configuration
+        let chip_info = Command::new("sysctl")
+            .arg("-n")
+            .arg("machdep.cpu.brand_string")
+            .output();
+
+        let is_m1_or_m2 = if let Ok(output) = chip_info {
+            if output.status.success() {
+                let brand = String::from_utf8_lossy(&output.stdout);
+                brand.contains("M1") || brand.contains("M2")
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
+        // Configure pipelines based on chip capabilities
+        if is_m1_or_m2 {
+            // M1/M2 chips have specific pipeline optimizations
+            pipeline_config.push(("convolution".to_string(), compute_units / 2));
+            pipeline_config.push(("matrix_multiplication".to_string(), compute_units / 2));
+            pipeline_config.push(("pooling".to_string(), compute_units / 4));
+            pipeline_config.push(("activation".to_string(), compute_units / 4));
+        } else {
+            // M3/M4 and newer chips
+            pipeline_config.push(("convolution".to_string(), compute_units / 2));
+            pipeline_config.push(("attention".to_string(), compute_units / 3));
+            pipeline_config.push(("matrix_ops".to_string(), compute_units / 6));
+            pipeline_config.push(("memory_ops".to_string(), compute_units / 6));
+        }
+
         debug!(
-            "ANE compute pipelines configured for {} compute units",
-            self.device_capabilities.compute_units
+            "ANE compute pipelines configured for {} compute units: {:?}",
+            compute_units, pipeline_config
         );
+
+        // In a real implementation, this would:
+        // - Create Metal compute pipelines for each operation type
+        // - Configure pipeline states and shader variants
+        // - Set up command queues with appropriate priorities
+        // - Initialize synchronization primitives
+
         Ok(())
     }
 
     /// Initialize model compilation cache
     async fn initialize_model_cache(&self) -> Result<()> {
-        // In a real implementation, this would:
-        // - Create cache directory for compiled models
-        // - Set up model compilation cache
-        // - Configure cache size limits
-        debug!("ANE model compilation cache initialized");
+        use std::fs;
+
+        // Create cache directory for compiled ANE models
+        let cache_dir = dirs::cache_dir()
+            .map(|p| p.join("agent-agency").join("ane-models"))
+            .unwrap_or_else(|| std::env::temp_dir().join("agent-agency-ane-cache"));
+
+        if !cache_dir.exists() {
+            fs::create_dir_all(&cache_dir)?;
+            debug!("Created ANE model cache directory: {:?}", cache_dir);
+        }
+
+        // Check available disk space for cache
+        let available_space = fs::metadata(&cache_dir)
+            .and_then(|metadata| {
+                // This is a simplified check - in real implementation would use statvfs
+                Ok(metadata.len())
+            })
+            .unwrap_or(1024 * 1024 * 1024); // Assume 1GB available
+
+        let max_cache_size = std::cmp::min(
+            available_space / 4, // Use up to 25% of available space
+            2 * 1024 * 1024 * 1024, // But no more than 2GB
+        );
+
+        // Clean up old cache entries if cache is too large
+        if let Ok(entries) = fs::read_dir(&cache_dir) {
+            let mut cache_files: Vec<_> = entries
+                .filter_map(|entry| entry.ok())
+                .filter(|entry| entry.path().extension()
+                    .map(|ext| ext == "ane" || ext == "mlmodelc")
+                    .unwrap_or(false))
+                .collect();
+
+            // Sort by modification time (oldest first)
+            cache_files.sort_by_key(|entry| {
+                entry.metadata()
+                    .and_then(|m| m.modified())
+                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+            });
+
+            let mut total_size = 0u64;
+            let mut files_to_remove = Vec::new();
+
+            for entry in cache_files.iter().rev() {
+                if let Ok(metadata) = entry.metadata() {
+                    total_size += metadata.len();
+
+                    if total_size > max_cache_size {
+                        files_to_remove.push(entry.path().clone());
+                    }
+                }
+            }
+
+            for file_path in files_to_remove {
+                if fs::remove_file(&file_path).is_ok() {
+                    debug!("Removed old cache file: {:?}", file_path);
+                }
+            }
+        }
+
+        debug!(
+            "ANE model compilation cache initialized at {:?} (max size: {} MB)",
+            cache_dir,
+            max_cache_size / (1024 * 1024)
+        );
+
         Ok(())
     }
 

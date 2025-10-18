@@ -295,23 +295,23 @@ impl IntegrationTestRunner {
 
     async fn run_performance_tests(&mut self) -> Result<(), anyhow::Error> {
         tracing::info!("Running performance tests");
-        // TODO: Implement performance tests with the following requirements:
-        // 1. Performance integration tests: Implement comprehensive performance integration tests
-        //    - Test system performance under various load conditions
-        //    - Test performance metrics and benchmarks
-        //    - Handle performance test validation and verification
-        // 2. Performance functionality tests: Test performance functionality and features
-        //    - Test performance optimization and tuning
-        //    - Test performance monitoring and reporting
-        //    - Handle performance functionality test validation
-        // 3. Performance scalability tests: Test performance scalability and capacity
-        //    - Test performance under increasing load
-        //    - Test performance resource utilization
-        //    - Handle performance scalability test validation
-        // 4. Performance error handling tests: Test performance error handling and recovery
-        //    - Test performance error scenarios and edge cases
-        //    - Test performance error recovery and resilience
-        //    - Handle performance error handling test validation
+        
+        // Test 1: System performance under various load conditions
+        self.test_system_performance_under_load().await?;
+        
+        // Test 2: Performance metrics and benchmarks
+        self.test_performance_metrics_benchmarks().await?;
+        
+        // Test 3: Performance optimization and tuning
+        self.test_performance_optimization_tuning().await?;
+        
+        // Test 4: Performance scalability and capacity
+        self.test_performance_scalability_capacity().await?;
+        
+        // Test 5: Performance error handling and recovery
+        self.test_performance_error_handling().await?;
+        
+        tracing::info!("Performance tests completed successfully");
         Ok(())
     }
 
@@ -3309,6 +3309,741 @@ mod tests {
         
         tracing::info!("End-to-end error handling test passed - Successful: {}, Errors: {}, Recovery: {:?}", 
                       successful_workflows, error_workflows, recovery_time);
+        Ok(())
+    }
+
+    /// Test system performance under various load conditions
+    async fn test_system_performance_under_load(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing system performance under various load conditions");
+        
+        // Initialize components for performance testing
+        let orchestration_config = agent_agency_orchestration::OrchestrationConfig {
+            max_concurrent_tasks: 50,
+            task_timeout_ms: 60000,
+            worker_pool_size: 20,
+            enable_retry: true,
+            max_retries: 3,
+            debug_mode: false,
+        };
+        
+        let orchestration_engine = agent_agency_orchestration::OrchestrationEngine::new(orchestration_config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize orchestration engine: {:?}", e))?;
+        
+        let research_config = agent_agency_research::ResearchConfig {
+            max_concurrent_queries: 20,
+            query_timeout_ms: 30000,
+            enable_caching: true,
+            cache_ttl_seconds: 3600,
+            debug_mode: false,
+        };
+        
+        let research_engine = agent_agency_research::ResearchEngine::new(research_config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize research engine: {:?}", e))?;
+        
+        // Test performance under different load levels
+        let load_levels = vec![10, 25, 50, 75, 100];
+        let mut performance_results = Vec::new();
+        
+        for load_level in load_levels {
+            tracing::info!("Testing performance under load level: {}", load_level);
+            
+            let start_time = std::time::Instant::now();
+            let mut task_handles = Vec::new();
+            let mut research_handles = Vec::new();
+            
+            // Create tasks and research queries for this load level
+            for i in 0..load_level {
+                let orchestration_clone = orchestration_engine.clone();
+                let research_clone = research_engine.clone();
+                
+                // Create task
+                let task = agent_agency_orchestration::types::Task {
+                    id: uuid::Uuid::new_v4(),
+                    title: format!("Load Test Task {} - Level {}", i, load_level),
+                    description: format!("Performance test task under load level {}", load_level),
+                    priority: agent_agency_orchestration::types::TaskPriority::Medium,
+                    complexity: agent_agency_orchestration::types::TaskComplexity::Medium,
+                    estimated_duration_ms: 2000,
+                    required_skills: vec!["performance_testing".to_string()],
+                    dependencies: vec![],
+                    metadata: std::collections::HashMap::new(),
+                };
+                
+                let task_handle = tokio::spawn(async move {
+                    orchestration_clone.submit_task(task).await
+                });
+                task_handles.push(task_handle);
+                
+                // Create research query
+                let query = agent_agency_research::types::ResearchQuery {
+                    id: uuid::Uuid::new_v4(),
+                    query: format!("Load test research query {} - Level {}", i, load_level),
+                    query_type: agent_agency_research::types::QueryType::General,
+                    priority: agent_agency_research::types::ResearchPriority::Medium,
+                    context: Some(format!("Performance test under load level {}", load_level)),
+                    max_results: Some(5),
+                    sources: vec![],
+                    created_at: chrono::Utc::now(),
+                    deadline: None,
+                    metadata: std::collections::HashMap::new(),
+                };
+                
+                let research_handle = tokio::spawn(async move {
+                    research_clone.execute_query(query).await
+                });
+                research_handles.push(research_handle);
+            }
+            
+            // Wait for all operations to complete
+            let mut successful_tasks = 0;
+            let mut successful_research = 0;
+            
+            for handle in task_handles {
+                match handle.await {
+                    Ok(Ok(_)) => successful_tasks += 1,
+                    Ok(Err(e)) => tracing::warn!("Task submission failed: {:?}", e),
+                    Err(e) => tracing::warn!("Task submission task failed: {:?}", e),
+                }
+            }
+            
+            for handle in research_handles {
+                match handle.await {
+                    Ok(Ok(_)) => successful_research += 1,
+                    Ok(Err(e)) => tracing::warn!("Research query failed: {:?}", e),
+                    Err(e) => tracing::warn!("Research query task failed: {:?}", e),
+                }
+            }
+            
+            let elapsed = start_time.elapsed();
+            let total_operations = successful_tasks + successful_research;
+            let throughput = total_operations as f32 / elapsed.as_secs_f32();
+            let success_rate = total_operations as f32 / (load_level * 2) as f32;
+            
+            performance_results.push(serde_json::json!({
+                "load_level": load_level,
+                "total_operations": total_operations,
+                "successful_tasks": successful_tasks,
+                "successful_research": successful_research,
+                "elapsed_ms": elapsed.as_millis(),
+                "throughput_ops_per_sec": throughput,
+                "success_rate": success_rate
+            }));
+            
+            // Performance assertions
+            assert!(elapsed.as_millis() < 60000, "Load level {} should complete within 60 seconds", load_level);
+            assert!(success_rate >= 0.7, "Success rate should be at least 70% for load level {}", load_level);
+            assert!(throughput > 0.5, "Throughput should be at least 0.5 ops/sec for load level {}", load_level);
+            
+            tracing::info!("Load level {} completed - Operations: {}, Throughput: {:.2} ops/sec, Success rate: {:.2}%", 
+                          load_level, total_operations, throughput, success_rate * 100.0);
+        }
+        
+        // Analyze performance scaling
+        let mut throughput_trend = Vec::new();
+        for result in &performance_results {
+            throughput_trend.push(result["throughput_ops_per_sec"].as_f64().unwrap());
+        }
+        
+        // Check if throughput scales reasonably (should not degrade significantly)
+        let max_throughput = throughput_trend.iter().fold(0.0, |a, &b| a.max(b));
+        let min_throughput = throughput_trend.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+        let throughput_ratio = min_throughput / max_throughput;
+        
+        assert!(throughput_ratio >= 0.5, "Throughput should not degrade more than 50% under high load");
+        
+        tracing::info!("System performance under load test passed - Max throughput: {:.2}, Min throughput: {:.2}, Ratio: {:.2}", 
+                      max_throughput, min_throughput, throughput_ratio);
+        Ok(())
+    }
+
+    /// Test performance metrics and benchmarks
+    async fn test_performance_metrics_benchmarks(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing performance metrics and benchmarks");
+        
+        // Initialize components for metrics testing
+        let orchestration_config = agent_agency_orchestration::OrchestrationConfig {
+            max_concurrent_tasks: 30,
+            task_timeout_ms: 30000,
+            worker_pool_size: 15,
+            enable_retry: true,
+            max_retries: 3,
+            debug_mode: false,
+        };
+        
+        let orchestration_engine = agent_agency_orchestration::OrchestrationEngine::new(orchestration_config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize orchestration engine: {:?}", e))?;
+        
+        let research_config = agent_agency_research::ResearchConfig {
+            max_concurrent_queries: 15,
+            query_timeout_ms: 20000,
+            enable_caching: true,
+            cache_ttl_seconds: 3600,
+            debug_mode: false,
+        };
+        
+        let research_engine = agent_agency_research::ResearchEngine::new(research_config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize research engine: {:?}", e))?;
+        
+        // Run benchmark operations
+        let benchmark_start = std::time::Instant::now();
+        let mut operation_times = Vec::new();
+        
+        // Benchmark task submission
+        for i in 0..20 {
+            let task_start = std::time::Instant::now();
+            
+            let task = agent_agency_orchestration::types::Task {
+                id: uuid::Uuid::new_v4(),
+                title: format!("Benchmark Task {}", i),
+                description: "Performance benchmark task".to_string(),
+                priority: agent_agency_orchestration::types::TaskPriority::Medium,
+                complexity: agent_agency_orchestration::types::TaskComplexity::Low,
+                estimated_duration_ms: 1000,
+                required_skills: vec!["benchmarking".to_string()],
+                dependencies: vec![],
+                metadata: std::collections::HashMap::new(),
+            };
+            
+            let result = orchestration_engine.submit_task(task).await;
+            let task_elapsed = task_start.elapsed();
+            
+            match result {
+                Ok(_) => {
+                    operation_times.push(("task_submission", task_elapsed.as_millis()));
+                }
+                Err(e) => {
+                    tracing::warn!("Benchmark task submission failed: {:?}", e);
+                }
+            }
+        }
+        
+        // Benchmark research query execution
+        for i in 0..15 {
+            let query_start = std::time::Instant::now();
+            
+            let query = agent_agency_research::types::ResearchQuery {
+                id: uuid::Uuid::new_v4(),
+                query: format!("Benchmark research query {}", i),
+                query_type: agent_agency_research::types::QueryType::General,
+                priority: agent_agency_research::types::ResearchPriority::Medium,
+                context: Some("Performance benchmark research".to_string()),
+                max_results: Some(3),
+                sources: vec![],
+                created_at: chrono::Utc::now(),
+                deadline: None,
+                metadata: std::collections::HashMap::new(),
+            };
+            
+            let result = research_engine.execute_query(query).await;
+            let query_elapsed = query_start.elapsed();
+            
+            match result {
+                Ok(_) => {
+                    operation_times.push(("research_query", query_elapsed.as_millis()));
+                }
+                Err(e) => {
+                    tracing::warn!("Benchmark research query failed: {:?}", e);
+                }
+            }
+        }
+        
+        let benchmark_elapsed = benchmark_start.elapsed();
+        
+        // Calculate performance metrics
+        let task_times: Vec<u128> = operation_times.iter()
+            .filter(|(op_type, _)| *op_type == "task_submission")
+            .map(|(_, time)| *time)
+            .collect();
+        
+        let research_times: Vec<u128> = operation_times.iter()
+            .filter(|(op_type, _)| *op_type == "research_query")
+            .map(|(_, time)| *time)
+            .collect();
+        
+        let avg_task_time = if !task_times.is_empty() {
+            task_times.iter().sum::<u128>() as f32 / task_times.len() as f32
+        } else {
+            0.0
+        };
+        
+        let avg_research_time = if !research_times.is_empty() {
+            research_times.iter().sum::<u128>() as f32 / research_times.len() as f32
+        } else {
+            0.0
+        };
+        
+        let max_task_time = task_times.iter().max().copied().unwrap_or(0);
+        let max_research_time = research_times.iter().max().copied().unwrap_or(0);
+        
+        let total_operations = operation_times.len();
+        let overall_throughput = total_operations as f32 / benchmark_elapsed.as_secs_f32();
+        
+        // Performance benchmarks
+        let benchmarks = serde_json::json!({
+            "total_operations": total_operations,
+            "benchmark_duration_ms": benchmark_elapsed.as_millis(),
+            "overall_throughput_ops_per_sec": overall_throughput,
+            "task_submission": {
+                "count": task_times.len(),
+                "avg_time_ms": avg_task_time,
+                "max_time_ms": max_task_time,
+                "throughput_ops_per_sec": task_times.len() as f32 / benchmark_elapsed.as_secs_f32()
+            },
+            "research_query": {
+                "count": research_times.len(),
+                "avg_time_ms": avg_research_time,
+                "max_time_ms": max_research_time,
+                "throughput_ops_per_sec": research_times.len() as f32 / benchmark_elapsed.as_secs_f32()
+            }
+        });
+        
+        // Performance assertions
+        assert!(overall_throughput > 1.0, "Overall throughput should be at least 1 ops/sec");
+        assert!(avg_task_time < 5000.0, "Average task submission time should be under 5 seconds");
+        assert!(avg_research_time < 10000.0, "Average research query time should be under 10 seconds");
+        assert!(max_task_time < 15000, "Max task submission time should be under 15 seconds");
+        assert!(max_research_time < 20000, "Max research query time should be under 20 seconds");
+        
+        tracing::info!("Performance metrics and benchmarks test passed - Overall throughput: {:.2} ops/sec, Task avg: {:.1}ms, Research avg: {:.1}ms", 
+                      overall_throughput, avg_task_time, avg_research_time);
+        Ok(())
+    }
+
+    /// Test performance optimization and tuning
+    async fn test_performance_optimization_tuning(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing performance optimization and tuning");
+        
+        // Test different configuration optimizations
+        let configs = vec![
+            ("default", agent_agency_orchestration::OrchestrationConfig {
+                max_concurrent_tasks: 10,
+                task_timeout_ms: 30000,
+                worker_pool_size: 5,
+                enable_retry: true,
+                max_retries: 3,
+                debug_mode: false,
+            }),
+            ("optimized", agent_agency_orchestration::OrchestrationConfig {
+                max_concurrent_tasks: 25,
+                task_timeout_ms: 20000,
+                worker_pool_size: 12,
+                enable_retry: true,
+                max_retries: 2,
+                debug_mode: false,
+            }),
+            ("high_performance", agent_agency_orchestration::OrchestrationConfig {
+                max_concurrent_tasks: 50,
+                task_timeout_ms: 15000,
+                worker_pool_size: 25,
+                enable_retry: true,
+                max_retries: 1,
+                debug_mode: false,
+            }),
+        ];
+        
+        let mut optimization_results = Vec::new();
+        
+        for (config_name, config) in configs {
+            tracing::info!("Testing configuration: {}", config_name);
+            
+            let orchestration_engine = agent_agency_orchestration::OrchestrationEngine::new(config)
+                .map_err(|e| anyhow::anyhow!("Failed to initialize orchestration engine: {:?}", e))?;
+            
+            // Run performance test with this configuration
+            let start_time = std::time::Instant::now();
+            let mut task_handles = Vec::new();
+            
+            for i in 0..20 {
+                let engine_clone = orchestration_engine.clone();
+                let task = agent_agency_orchestration::types::Task {
+                    id: uuid::Uuid::new_v4(),
+                    title: format!("Optimization Test Task {} - {}", i, config_name),
+                    description: format!("Performance optimization test with {} configuration", config_name),
+                    priority: agent_agency_orchestration::types::TaskPriority::Medium,
+                    complexity: agent_agency_orchestration::types::TaskComplexity::Low,
+                    estimated_duration_ms: 1000,
+                    required_skills: vec!["optimization_testing".to_string()],
+                    dependencies: vec![],
+                    metadata: std::collections::HashMap::new(),
+                };
+                
+                let handle = tokio::spawn(async move {
+                    engine_clone.submit_task(task).await
+                });
+                task_handles.push(handle);
+            }
+            
+            // Wait for all tasks to complete
+            let mut successful_tasks = 0;
+            for handle in task_handles {
+                match handle.await {
+                    Ok(Ok(_)) => successful_tasks += 1,
+                    Ok(Err(e)) => tracing::warn!("Task submission failed: {:?}", e),
+                    Err(e) => tracing::warn!("Task submission task failed: {:?}", e),
+                }
+            }
+            
+            let elapsed = start_time.elapsed();
+            let throughput = successful_tasks as f32 / elapsed.as_secs_f32();
+            let success_rate = successful_tasks as f32 / 20.0;
+            
+            optimization_results.push(serde_json::json!({
+                "config_name": config_name,
+                "successful_tasks": successful_tasks,
+                "elapsed_ms": elapsed.as_millis(),
+                "throughput_ops_per_sec": throughput,
+                "success_rate": success_rate
+            }));
+            
+            tracing::info!("Configuration {} completed - Tasks: {}, Throughput: {:.2} ops/sec, Success rate: {:.2}%", 
+                          config_name, successful_tasks, throughput, success_rate * 100.0);
+        }
+        
+        // Analyze optimization effectiveness
+        let default_throughput = optimization_results[0]["throughput_ops_per_sec"].as_f64().unwrap();
+        let optimized_throughput = optimization_results[1]["throughput_ops_per_sec"].as_f64().unwrap();
+        let high_perf_throughput = optimization_results[2]["throughput_ops_per_sec"].as_f64().unwrap();
+        
+        let optimization_improvement = (optimized_throughput - default_throughput) / default_throughput;
+        let high_perf_improvement = (high_perf_throughput - default_throughput) / default_throughput;
+        
+        // Performance optimization assertions
+        assert!(optimization_improvement >= 0.0, "Optimized configuration should not be worse than default");
+        assert!(high_perf_improvement >= 0.0, "High performance configuration should not be worse than default");
+        
+        // Check if optimizations provide meaningful improvements
+        if optimization_improvement > 0.1 {
+            tracing::info!("Optimized configuration provides {:.1}% improvement", optimization_improvement * 100.0);
+        }
+        
+        if high_perf_improvement > 0.2 {
+            tracing::info!("High performance configuration provides {:.1}% improvement", high_perf_improvement * 100.0);
+        }
+        
+        // Test resource utilization optimization
+        let resource_metrics = serde_json::json!({
+            "configurations_tested": 3,
+            "default_throughput": default_throughput,
+            "optimized_throughput": optimized_throughput,
+            "high_performance_throughput": high_perf_throughput,
+            "optimization_improvement": optimization_improvement,
+            "high_performance_improvement": high_perf_improvement,
+            "optimization_effective": optimization_improvement > 0.0 || high_perf_improvement > 0.0
+        });
+        
+        assert!(resource_metrics["optimization_effective"].as_bool().unwrap(), "At least one optimization should be effective");
+        
+        tracing::info!("Performance optimization and tuning test passed - Default: {:.2}, Optimized: {:.2}, High-perf: {:.2} ops/sec", 
+                      default_throughput, optimized_throughput, high_perf_throughput);
+        Ok(())
+    }
+
+    /// Test performance scalability and capacity
+    async fn test_performance_scalability_capacity(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing performance scalability and capacity");
+        
+        // Test scalability with increasing resource allocation
+        let scalability_configs = vec![
+            (5, 2, "small"),
+            (15, 8, "medium"),
+            (30, 15, "large"),
+            (50, 25, "xlarge"),
+        ];
+        
+        let mut scalability_results = Vec::new();
+        
+        for (max_tasks, worker_pool_size, size_name) in scalability_configs {
+            tracing::info!("Testing scalability with {} configuration", size_name);
+            
+            let config = agent_agency_orchestration::OrchestrationConfig {
+                max_concurrent_tasks: max_tasks,
+                task_timeout_ms: 30000,
+                worker_pool_size,
+                enable_retry: true,
+                max_retries: 3,
+                debug_mode: false,
+            };
+            
+            let orchestration_engine = agent_agency_orchestration::OrchestrationEngine::new(config)
+                .map_err(|e| anyhow::anyhow!("Failed to initialize orchestration engine: {:?}", e))?;
+            
+            // Test capacity with this configuration
+            let capacity_test_size = max_tasks;
+            let start_time = std::time::Instant::now();
+            let mut task_handles = Vec::new();
+            
+            for i in 0..capacity_test_size {
+                let engine_clone = orchestration_engine.clone();
+                let task = agent_agency_orchestration::types::Task {
+                    id: uuid::Uuid::new_v4(),
+                    title: format!("Scalability Test Task {} - {}", i, size_name),
+                    description: format!("Scalability test with {} configuration", size_name),
+                    priority: agent_agency_orchestration::types::TaskPriority::Medium,
+                    complexity: agent_agency_orchestration::types::TaskComplexity::Low,
+                    estimated_duration_ms: 1000,
+                    required_skills: vec!["scalability_testing".to_string()],
+                    dependencies: vec![],
+                    metadata: std::collections::HashMap::new(),
+                };
+                
+                let handle = tokio::spawn(async move {
+                    engine_clone.submit_task(task).await
+                });
+                task_handles.push(handle);
+            }
+            
+            // Wait for all tasks to complete
+            let mut successful_tasks = 0;
+            for handle in task_handles {
+                match handle.await {
+                    Ok(Ok(_)) => successful_tasks += 1,
+                    Ok(Err(e)) => tracing::warn!("Task submission failed: {:?}", e),
+                    Err(e) => tracing::warn!("Task submission task failed: {:?}", e),
+                }
+            }
+            
+            let elapsed = start_time.elapsed();
+            let throughput = successful_tasks as f32 / elapsed.as_secs_f32();
+            let capacity_utilization = successful_tasks as f32 / capacity_test_size as f32;
+            
+            scalability_results.push(serde_json::json!({
+                "size_name": size_name,
+                "max_tasks": max_tasks,
+                "worker_pool_size": worker_pool_size,
+                "capacity_test_size": capacity_test_size,
+                "successful_tasks": successful_tasks,
+                "elapsed_ms": elapsed.as_millis(),
+                "throughput_ops_per_sec": throughput,
+                "capacity_utilization": capacity_utilization
+            }));
+            
+            tracing::info!("Scalability test {} completed - Tasks: {}/{}, Throughput: {:.2} ops/sec, Utilization: {:.1}%", 
+                          size_name, successful_tasks, capacity_test_size, throughput, capacity_utilization * 100.0);
+        }
+        
+        // Analyze scalability characteristics
+        let mut throughput_scaling = Vec::new();
+        let mut utilization_scaling = Vec::new();
+        
+        for result in &scalability_results {
+            throughput_scaling.push(result["throughput_ops_per_sec"].as_f64().unwrap());
+            utilization_scaling.push(result["capacity_utilization"].as_f64().unwrap());
+        }
+        
+        // Check if throughput scales with capacity
+        let small_throughput = throughput_scaling[0];
+        let xlarge_throughput = throughput_scaling[3];
+        let throughput_scaling_ratio = xlarge_throughput / small_throughput;
+        
+        // Check if utilization remains reasonable
+        let avg_utilization: f64 = utilization_scaling.iter().sum::<f64>() / utilization_scaling.len() as f64;
+        
+        // Scalability assertions
+        assert!(throughput_scaling_ratio >= 1.5, "Throughput should scale with capacity (ratio: {:.2})", throughput_scaling_ratio);
+        assert!(avg_utilization >= 0.7, "Average capacity utilization should be at least 70%");
+        
+        // Test capacity limits
+        let capacity_metrics = serde_json::json!({
+            "configurations_tested": 4,
+            "small_throughput": small_throughput,
+            "xlarge_throughput": xlarge_throughput,
+            "throughput_scaling_ratio": throughput_scaling_ratio,
+            "average_utilization": avg_utilization,
+            "scales_effectively": throughput_scaling_ratio >= 1.5,
+            "maintains_utilization": avg_utilization >= 0.7
+        });
+        
+        assert!(capacity_metrics["scales_effectively"].as_bool().unwrap(), "System should scale effectively with capacity");
+        assert!(capacity_metrics["maintains_utilization"].as_bool().unwrap(), "System should maintain good utilization");
+        
+        tracing::info!("Performance scalability and capacity test passed - Scaling ratio: {:.2}, Avg utilization: {:.1}%", 
+                      throughput_scaling_ratio, avg_utilization * 100.0);
+        Ok(())
+    }
+
+    /// Test performance error handling and recovery
+    async fn test_performance_error_handling(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing performance error handling and recovery");
+        
+        // Initialize components with error-prone configuration
+        let orchestration_config = agent_agency_orchestration::OrchestrationConfig {
+            max_concurrent_tasks: 20,
+            task_timeout_ms: 5000, // Short timeout to trigger errors
+            worker_pool_size: 5,
+            enable_retry: true,
+            max_retries: 2,
+            debug_mode: false,
+        };
+        
+        let orchestration_engine = agent_agency_orchestration::OrchestrationEngine::new(orchestration_config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize orchestration engine: {:?}", e))?;
+        
+        let research_config = agent_agency_research::ResearchConfig {
+            max_concurrent_queries: 10,
+            query_timeout_ms: 3000, // Short timeout to trigger errors
+            enable_caching: true,
+            cache_ttl_seconds: 3600,
+            debug_mode: false,
+        };
+        
+        let research_engine = agent_agency_research::ResearchEngine::new(research_config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize research engine: {:?}", e))?;
+        
+        // Test performance under error conditions
+        let error_test_start = std::time::Instant::now();
+        let mut error_scenarios = Vec::new();
+        
+        // Scenario 1: Valid tasks (should succeed)
+        for i in 0..10 {
+            let task = agent_agency_orchestration::types::Task {
+                id: uuid::Uuid::new_v4(),
+                title: format!("Valid Performance Task {}", i),
+                description: "Valid task for performance error testing".to_string(),
+                priority: agent_agency_orchestration::types::TaskPriority::Medium,
+                complexity: agent_agency_orchestration::types::TaskComplexity::Low,
+                estimated_duration_ms: 1000, // Short duration
+                required_skills: vec!["error_testing".to_string()],
+                dependencies: vec![],
+                metadata: std::collections::HashMap::new(),
+            };
+            
+            error_scenarios.push(("valid_task", task));
+        }
+        
+        // Scenario 2: Timeout-prone tasks (may fail)
+        for i in 0..5 {
+            let task = agent_agency_orchestration::types::Task {
+                id: uuid::Uuid::new_v4(),
+                title: format!("Timeout Task {}", i),
+                description: "Task designed to timeout".to_string(),
+                priority: agent_agency_orchestration::types::TaskPriority::Medium,
+                complexity: agent_agency_orchestration::types::TaskComplexity::High,
+                estimated_duration_ms: 10000, // Longer than timeout
+                required_skills: vec!["timeout_testing".to_string()],
+                dependencies: vec![],
+                metadata: std::collections::HashMap::new(),
+            };
+            
+            error_scenarios.push(("timeout_task", task));
+        }
+        
+        // Scenario 3: Invalid tasks (should fail)
+        for i in 0..3 {
+            let task = agent_agency_orchestration::types::Task {
+                id: uuid::Uuid::new_v4(),
+                title: "".to_string(), // Invalid empty title
+                description: "Invalid task for performance error testing".to_string(),
+                priority: agent_agency_orchestration::types::TaskPriority::Medium,
+                complexity: agent_agency_orchestration::types::TaskComplexity::Medium,
+                estimated_duration_ms: 0, // Invalid zero duration
+                required_skills: vec![],
+                dependencies: vec![],
+                metadata: std::collections::HashMap::new(),
+            };
+            
+            error_scenarios.push(("invalid_task", task));
+        }
+        
+        // Execute error scenarios
+        let mut successful_operations = 0;
+        let mut failed_operations = 0;
+        let mut operation_times = Vec::new();
+        
+        for (scenario_type, task) in error_scenarios {
+            let operation_start = std::time::Instant::now();
+            
+            let result = orchestration_engine.submit_task(task).await;
+            let operation_elapsed = operation_start.elapsed();
+            
+            match result {
+                Ok(_) => {
+                    successful_operations += 1;
+                    operation_times.push(operation_elapsed.as_millis());
+                }
+                Err(e) => {
+                    failed_operations += 1;
+                    tracing::info!("Expected error for {}: {:?}", scenario_type, e);
+                }
+            }
+        }
+        
+        // Test research error handling
+        let mut research_successes = 0;
+        let mut research_failures = 0;
+        
+        for i in 0..8 {
+            let query = agent_agency_research::types::ResearchQuery {
+                id: uuid::Uuid::new_v4(),
+                query: format!("Performance error test query {}", i),
+                query_type: agent_agency_research::types::QueryType::General,
+                priority: agent_agency_research::types::ResearchPriority::Medium,
+                context: Some("Performance error testing".to_string()),
+                max_results: Some(3),
+                sources: vec![],
+                created_at: chrono::Utc::now(),
+                deadline: None,
+                metadata: std::collections::HashMap::new(),
+            };
+            
+            let result = research_engine.execute_query(query).await;
+            match result {
+                Ok(_) => research_successes += 1,
+                Err(e) => {
+                    research_failures += 1;
+                    tracing::info!("Research error (expected): {:?}", e);
+                }
+            }
+        }
+        
+        let error_test_elapsed = error_test_start.elapsed();
+        
+        // Calculate error handling metrics
+        let total_operations = successful_operations + failed_operations + research_successes + research_failures;
+        let success_rate = (successful_operations + research_successes) as f32 / total_operations as f32;
+        let error_recovery_rate = successful_operations as f32 / (successful_operations + failed_operations) as f32;
+        
+        let avg_operation_time = if !operation_times.is_empty() {
+            operation_times.iter().sum::<u128>() as f32 / operation_times.len() as f32
+        } else {
+            0.0
+        };
+        
+        // Error handling performance assertions
+        assert!(success_rate >= 0.5, "Success rate should be at least 50% even with errors");
+        assert!(error_recovery_rate >= 0.4, "Error recovery rate should be at least 40%");
+        assert!(avg_operation_time < 10000.0, "Average operation time should be under 10 seconds");
+        assert!(error_test_elapsed.as_millis() < 30000, "Error handling test should complete within 30 seconds");
+        
+        // Test system resilience after errors
+        let resilience_start = std::time::Instant::now();
+        
+        // Try to get metrics after error conditions
+        let orchestration_metrics = orchestration_engine.get_metrics().await;
+        let research_metrics = research_engine.get_metrics().await;
+        
+        let resilience_elapsed = resilience_start.elapsed();
+        
+        // System should remain functional after errors
+        assert!(resilience_elapsed.as_millis() < 5000, "System should recover quickly from errors");
+        
+        let error_handling_metrics = serde_json::json!({
+            "total_operations": total_operations,
+            "successful_operations": successful_operations + research_successes,
+            "failed_operations": failed_operations + research_failures,
+            "success_rate": success_rate,
+            "error_recovery_rate": error_recovery_rate,
+            "avg_operation_time_ms": avg_operation_time,
+            "error_test_duration_ms": error_test_elapsed.as_millis(),
+            "resilience_time_ms": resilience_elapsed.as_millis(),
+            "system_resilient": resilience_elapsed.as_millis() < 5000,
+            "handles_errors_gracefully": success_rate >= 0.5
+        });
+        
+        assert!(error_handling_metrics["system_resilient"].as_bool().unwrap(), "System should be resilient to errors");
+        assert!(error_handling_metrics["handles_errors_gracefully"].as_bool().unwrap(), "System should handle errors gracefully");
+        
+        tracing::info!("Performance error handling test passed - Success rate: {:.1}%, Recovery rate: {:.1}%, Resilience: {:?}", 
+                      success_rate * 100.0, error_recovery_rate * 100.0, resilience_elapsed);
         Ok(())
     }
 }

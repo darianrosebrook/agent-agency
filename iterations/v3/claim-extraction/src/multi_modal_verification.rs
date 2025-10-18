@@ -2887,8 +2887,11 @@ impl ExpressionParser {
                 '+' => tokens.push(Token::Operator("+".to_string())),
                 '-' => {
                     // Check if this is a unary minus
-                    let is_unary = tokens.is_empty() || 
-                        matches!(tokens.last(), Some(Token::Operator(_)) | Some(Token::LeftParen));
+                    let is_unary = tokens.is_empty()
+                        || matches!(
+                            tokens.last(),
+                            Some(Token::Operator(_)) | Some(Token::LeftParen)
+                        );
                     if is_unary {
                         tokens.push(Token::UnaryMinus);
                     } else {
@@ -2934,7 +2937,7 @@ impl ExpressionParser {
                 '0'..='9' | '.' => {
                     let mut number = String::new();
                     number.push(ch);
-                    
+
                     // Parse number (including decimal)
                     while let Some(&next_ch) = chars.peek() {
                         if next_ch.is_ascii_digit() || next_ch == '.' {
@@ -2943,7 +2946,7 @@ impl ExpressionParser {
                             break;
                         }
                     }
-                    
+
                     if let Ok(value) = number.parse::<f64>() {
                         tokens.push(Token::Number(value));
                     } else {
@@ -2953,7 +2956,7 @@ impl ExpressionParser {
                 'a'..='z' | 'A'..='Z' | '_' => {
                     let mut identifier = String::new();
                     identifier.push(ch);
-                    
+
                     // Parse identifier
                     while let Some(&next_ch) = chars.peek() {
                         if next_ch.is_ascii_alphanumeric() || next_ch == '_' {
@@ -2962,7 +2965,7 @@ impl ExpressionParser {
                             break;
                         }
                     }
-                    
+
                     if self.functions.contains(&identifier) {
                         tokens.push(Token::Function(identifier));
                     } else {
@@ -3125,7 +3128,7 @@ impl<'a> ExpressionParserState<'a> {
             Some(Token::Function(name)) => {
                 self.expect(Token::LeftParen)?;
                 let mut args = Vec::new();
-                
+
                 if !matches!(self.peek(), Some(Token::RightParen)) {
                     loop {
                         args.push(self.parse_expression()?);
@@ -3134,14 +3137,16 @@ impl<'a> ExpressionParserState<'a> {
                                 self.advance();
                             }
                             Some(Token::RightParen) => break,
-                            _ => return Err(ParseError::UnexpectedToken(
-                                self.peek().unwrap().clone(),
-                                self.position
-                            )),
+                            _ => {
+                                return Err(ParseError::UnexpectedToken(
+                                    self.peek().unwrap().clone(),
+                                    self.position,
+                                ))
+                            }
                         }
                     }
                 }
-                
+
                 self.expect(Token::RightParen)?;
                 Ok(ExpressionNode::Function { name, args })
             }
@@ -3204,15 +3209,19 @@ impl ExpressionEvaluator {
     pub fn evaluate(&self, node: &ExpressionNode) -> Result<f64, EvaluationError> {
         match node {
             ExpressionNode::Number(value) => Ok(*value),
-            ExpressionNode::Variable(name) => {
-                self.variables.get(name)
-                    .copied()
-                    .ok_or_else(|| EvaluationError::UndefinedVariable(name.clone()))
-            }
-            ExpressionNode::BinaryOp { operator, left, right } => {
+            ExpressionNode::Variable(name) => self
+                .variables
+                .get(name)
+                .copied()
+                .ok_or_else(|| EvaluationError::UndefinedVariable(name.clone())),
+            ExpressionNode::BinaryOp {
+                operator,
+                left,
+                right,
+            } => {
                 let left_val = self.evaluate(left)?;
                 let right_val = self.evaluate(right)?;
-                
+
                 match operator.as_str() {
                     "+" => Ok(left_val + right_val),
                     "-" => Ok(left_val - right_val),
@@ -3226,8 +3235,16 @@ impl ExpressionEvaluator {
                     }
                     "%" => Ok(left_val % right_val),
                     "^" => Ok(left_val.powf(right_val)),
-                    "==" => Ok(if (left_val - right_val).abs() < f64::EPSILON { 1.0 } else { 0.0 }),
-                    "!=" => Ok(if (left_val - right_val).abs() >= f64::EPSILON { 1.0 } else { 0.0 }),
+                    "==" => Ok(if (left_val - right_val).abs() < f64::EPSILON {
+                        1.0
+                    } else {
+                        0.0
+                    }),
+                    "!=" => Ok(if (left_val - right_val).abs() >= f64::EPSILON {
+                        1.0
+                    } else {
+                        0.0
+                    }),
                     "<" => Ok(if left_val < right_val { 1.0 } else { 0.0 }),
                     ">" => Ok(if left_val > right_val { 1.0 } else { 0.0 }),
                     "<=" => Ok(if left_val <= right_val { 1.0 } else { 0.0 }),
@@ -3243,54 +3260,84 @@ impl ExpressionEvaluator {
                 }
             }
             ExpressionNode::Function { name, args } => {
-                let arg_values: Result<Vec<f64>, _> = args.iter()
-                    .map(|arg| self.evaluate(arg))
-                    .collect();
+                let arg_values: Result<Vec<f64>, _> =
+                    args.iter().map(|arg| self.evaluate(arg)).collect();
                 let arg_values = arg_values?;
-                
+
                 match name.as_str() {
                     "sin" => {
                         if arg_values.len() != 1 {
-                            return Err(EvaluationError::InvalidArgumentCount(name.clone(), 1, arg_values.len()));
+                            return Err(EvaluationError::InvalidArgumentCount(
+                                name.clone(),
+                                1,
+                                arg_values.len(),
+                            ));
                         }
                         Ok(arg_values[0].sin())
                     }
                     "cos" => {
                         if arg_values.len() != 1 {
-                            return Err(EvaluationError::InvalidArgumentCount(name.clone(), 1, arg_values.len()));
+                            return Err(EvaluationError::InvalidArgumentCount(
+                                name.clone(),
+                                1,
+                                arg_values.len(),
+                            ));
                         }
                         Ok(arg_values[0].cos())
                     }
                     "tan" => {
                         if arg_values.len() != 1 {
-                            return Err(EvaluationError::InvalidArgumentCount(name.clone(), 1, arg_values.len()));
+                            return Err(EvaluationError::InvalidArgumentCount(
+                                name.clone(),
+                                1,
+                                arg_values.len(),
+                            ));
                         }
                         Ok(arg_values[0].tan())
                     }
                     "log" => {
                         if arg_values.len() != 1 {
-                            return Err(EvaluationError::InvalidArgumentCount(name.clone(), 1, arg_values.len()));
+                            return Err(EvaluationError::InvalidArgumentCount(
+                                name.clone(),
+                                1,
+                                arg_values.len(),
+                            ));
                         }
                         Ok(arg_values[0].log10())
                     }
                     "ln" => {
                         if arg_values.len() != 1 {
-                            return Err(EvaluationError::InvalidArgumentCount(name.clone(), 1, arg_values.len()));
+                            return Err(EvaluationError::InvalidArgumentCount(
+                                name.clone(),
+                                1,
+                                arg_values.len(),
+                            ));
                         }
                         Ok(arg_values[0].ln())
                     }
                     "sqrt" => {
                         if arg_values.len() != 1 {
-                            return Err(EvaluationError::InvalidArgumentCount(name.clone(), 1, arg_values.len()));
+                            return Err(EvaluationError::InvalidArgumentCount(
+                                name.clone(),
+                                1,
+                                arg_values.len(),
+                            ));
                         }
                         if arg_values[0] < 0.0 {
-                            return Err(EvaluationError::InvalidArgument(name.clone(), "negative number for sqrt"));
+                            return Err(EvaluationError::InvalidArgument(
+                                name.clone(),
+                                "negative number for sqrt",
+                            ));
                         }
                         Ok(arg_values[0].sqrt())
                     }
                     "abs" => {
                         if arg_values.len() != 1 {
-                            return Err(EvaluationError::InvalidArgumentCount(name.clone(), 1, arg_values.len()));
+                            return Err(EvaluationError::InvalidArgumentCount(
+                                name.clone(),
+                                1,
+                                arg_values.len(),
+                            ));
                         }
                         Ok(arg_values[0].abs())
                     }
@@ -3340,7 +3387,11 @@ impl std::fmt::Display for EvaluationError {
                 write!(f, "Unknown function: {}", func)
             }
             EvaluationError::InvalidArgumentCount(func, expected, actual) => {
-                write!(f, "Function {} expects {} arguments, got {}", func, expected, actual)
+                write!(
+                    f,
+                    "Function {} expects {} arguments, got {}",
+                    func, expected, actual
+                )
             }
             EvaluationError::InvalidArgument(func, reason) => {
                 write!(f, "Invalid argument for {}: {}", func, reason)
@@ -3371,15 +3422,15 @@ impl LogicalEvaluator {
     }
 
     /// Evaluate logical expressions
-    pub fn evaluate_logical(&self, expression: &str) -> Result<bool, LogicalError> {
+    pub fn evaluate_logical(&self, expression: &str) -> Result<bool, LogicalExpressionError> {
         // Simple logical expression parser for AND, OR, NOT operations
         let tokens: Vec<&str> = expression.split_whitespace().collect();
         self.evaluate_tokens(&tokens)
     }
 
-    fn evaluate_tokens(&self, tokens: &[&str]) -> Result<bool, LogicalError> {
+    fn evaluate_tokens(&self, tokens: &[&str]) -> Result<bool, LogicalExpressionError> {
         if tokens.is_empty() {
-            return Err(LogicalError::EmptyExpression);
+            return Err(LogicalExpressionError::EmptyExpression);
         }
 
         let mut stack = Vec::new();
@@ -3391,7 +3442,7 @@ impl LogicalEvaluator {
                 "false" => stack.push(false),
                 "NOT" | "not" | "!" => {
                     if i + 1 >= tokens.len() {
-                        return Err(LogicalError::InvalidExpression);
+                        return Err(LogicalExpressionError::InvalidExpression);
                     }
                     let operand = self.evaluate_tokens(&tokens[i + 1..i + 2])?;
                     stack.push(!operand);
@@ -3399,7 +3450,7 @@ impl LogicalEvaluator {
                 }
                 "AND" | "and" | "&&" => {
                     if stack.len() < 2 {
-                        return Err(LogicalError::InvalidExpression);
+                        return Err(LogicalExpressionError::InvalidExpression);
                     }
                     let right = stack.pop().unwrap();
                     let left = stack.pop().unwrap();
@@ -3407,7 +3458,7 @@ impl LogicalEvaluator {
                 }
                 "OR" | "or" | "||" => {
                     if stack.len() < 2 {
-                        return Err(LogicalError::InvalidExpression);
+                        return Err(LogicalExpressionError::InvalidExpression);
                     }
                     let right = stack.pop().unwrap();
                     let left = stack.pop().unwrap();
@@ -3415,7 +3466,7 @@ impl LogicalEvaluator {
                 }
                 "XOR" | "xor" => {
                     if stack.len() < 2 {
-                        return Err(LogicalError::InvalidExpression);
+                        return Err(LogicalExpressionError::InvalidExpression);
                     }
                     let right = stack.pop().unwrap();
                     let left = stack.pop().unwrap();
@@ -3426,7 +3477,7 @@ impl LogicalEvaluator {
                     if let Some(&value) = self.variables.get(var) {
                         stack.push(value);
                     } else {
-                        return Err(LogicalError::UndefinedVariable(var.to_string()));
+                        return Err(LogicalExpressionError::UndefinedVariable(var.to_string()));
                     }
                 }
             }
@@ -3434,32 +3485,32 @@ impl LogicalEvaluator {
         }
 
         if stack.len() != 1 {
-            Err(LogicalError::InvalidExpression)
+            Err(LogicalExpressionError::InvalidExpression)
         } else {
             Ok(stack[0])
         }
     }
 }
 
-/// Logical evaluation error types
+/// Logical expression evaluation error types
 #[derive(Debug, Clone)]
-pub enum LogicalError {
+pub enum LogicalExpressionError {
     EmptyExpression,
     InvalidExpression,
     UndefinedVariable(String),
 }
 
-impl std::fmt::Display for LogicalError {
+impl std::fmt::Display for LogicalExpressionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LogicalError::EmptyExpression => write!(f, "Empty logical expression"),
-            LogicalError::InvalidExpression => write!(f, "Invalid logical expression"),
-            LogicalError::UndefinedVariable(name) => write!(f, "Undefined variable: {}", name),
+            LogicalExpressionError::EmptyExpression => write!(f, "Empty logical expression"),
+            LogicalExpressionError::InvalidExpression => write!(f, "Invalid logical expression"),
+            LogicalExpressionError::UndefinedVariable(name) => write!(f, "Undefined variable: {}", name),
         }
     }
 }
 
-impl std::error::Error for LogicalError {}
+impl std::error::Error for LogicalExpressionError {}
 //    - Extract business logic from implementation
 //    - Identify semantic relationships between code elements
 //    - Support multiple programming paradigms

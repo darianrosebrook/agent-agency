@@ -8526,5 +8526,113 @@
     },
     "previous_hash": "b01fbf90f6351f099142fabc61b2feb1e9087d33bdb00272e3266d4bb0b6cfaa",
     "hash": "fb45be63957c60dfb2738a0e2cdc53a3942dcad534b200656ba41196a97d7a21"
+  },
+  {
+    "id": "prov-1760768928415",
+    "timestamp": "2025-10-18T06:28:48.415Z",
+    "commit": {
+      "hash": "7ae491e673fa7891e8c349806f8d7eaf11b60ef5",
+      "message": "Update CAWS provenance chain and orchestration persistence tests",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T06:28:48.416Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "fb45be63957c60dfb2738a0e2cdc53a3942dcad534b200656ba41196a97d7a21",
+    "hash": "5ae9171c4b3d0e4af569574c764563f73126f9ce4348550fe71db89ae6e24add"
+  },
+  {
+    "id": "prov-1760769127975",
+    "timestamp": "2025-10-18T06:32:07.975Z",
+    "commit": {
+      "hash": "ec429be956124ed0043467e330bdc9d154404828",
+      "message": "feat: implement high-impact integration tests for CAWS compliance",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T06:32:07.977Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "5ae9171c4b3d0e4af569574c764563f73126f9ce4348550fe71db89ae6e24add",
+    "hash": "7526deca1a96e880ccedae9662f572f7ec12533b410a533b844eb74fb427e63f"
+  },
+  {
+    "id": "prov-1760769182243",
+    "timestamp": "2025-10-18T06:33:02.243Z",
+    "commit": {
+      "hash": "7d0361d3f11545a483650531e1899990341195f5",
+      "message": "feat: enhance V2 arbiter with production-grade resilience and monitoring",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T06:33:02.245Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "7526deca1a96e880ccedae9662f572f7ec12533b410a533b844eb74fb427e63f",
+    "hash": "fbade370e3e92b76f9de174efcbbf016e7764ef14f2ece435ff20f1d9de9a5a3"
   }
 ]

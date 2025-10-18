@@ -160,33 +160,232 @@ impl EvidenceCollector {
 /// Integrates with council for complex verification
 #[derive(Debug)]
 struct CouncilIntegrator {
-    // TODO: Add council integration logic with the following requirements:
-    // 1. Council communication: Establish communication channels with council system
-    //    - Implement API clients for council submission and response handling
-    //    - Handle authentication and authorization for council access
-    //    - Manage connection pooling and retry logic for council interactions
-    // 2. Claim submission: Submit claims to council for evaluation and arbitration
-    //    - Format claims according to council input specifications
-    //    - Include relevant context and supporting evidence
-    //    - Handle submission validation and error responses
-    // 3. Verdict collection: Collect and process council verdicts and decisions
-    //    - Parse council responses and extract verdict information
-    //    - Handle different verdict types (approval, rejection, modification)
-    //    - Process dissenting opinions and minority reports
-    // 4. Evidence integration: Integrate council verdicts as evidence for claims
-    //    - Convert council decisions into evidence format
-    //    - Weight evidence based on council confidence and consensus
-    //    - Handle conflicting verdicts and resolution strategies
-    // 5. Debate handling: Manage council debate and deliberation processes
-    //    - Track debate progress and participant contributions
-    //    - Handle consensus building and conflict resolution
-    //    - Process final decisions and reasoning explanations
+    council_endpoint: String,
+    api_key: Option<String>,
+    client: reqwest::Client,
+    retry_config: RetryConfig,
+}
+
+/// Configuration for retry logic
+#[derive(Debug, Clone)]
+struct RetryConfig {
+    max_attempts: u32,
+    base_delay_ms: u64,
+    max_delay_ms: u64,
+}
+
+impl Default for RetryConfig {
+    fn default() -> Self {
+        Self {
+            max_attempts: 3,
+            base_delay_ms: 1000,
+            max_delay_ms: 10000,
+        }
+    }
 }
 
 impl CouncilIntegrator {
     fn new() -> Self {
-        Self {}
+        Self {
+            council_endpoint: std::env::var("COUNCIL_ENDPOINT")
+                .unwrap_or_else(|_| "http://localhost:8080".to_string()),
+            api_key: std::env::var("COUNCIL_API_KEY").ok(),
+            client: reqwest::Client::new(),
+            retry_config: RetryConfig::default(),
+        }
     }
+
+    /// Submit a claim to the council for evaluation
+    async fn submit_claim(&self, claim: &AtomicClaim, context: &ProcessingContext) -> Result<CouncilSubmissionResult> {
+        let task_spec = self.format_claim_for_council(claim, context).await?;
+
+        let mut attempt = 0;
+        loop {
+            attempt += 1;
+
+            match self.submit_to_council(&task_spec).await {
+                Ok(result) => return Ok(result),
+                Err(e) => {
+                    if attempt >= self.retry_config.max_attempts {
+                        return Err(anyhow::anyhow!("Council submission failed after {} attempts: {}", attempt, e));
+                    }
+
+                    let delay = std::cmp::min(
+                        self.retry_config.base_delay_ms * 2u64.pow(attempt - 1),
+                        self.retry_config.max_delay_ms
+                    );
+
+                    tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
+                }
+            }
+        }
+    }
+
+    /// Format a claim for council submission
+    async fn format_claim_for_council(&self, claim: &AtomicClaim, context: &ProcessingContext) -> Result<CouncilTaskSpec> {
+        let task_spec = CouncilTaskSpec {
+            id: Uuid::new_v4(),
+            title: format!("Claim Verification: {}", claim.claim_text.chars().take(50).collect::<String>()),
+            description: claim.claim_text.clone(),
+            risk_tier: self.determine_risk_tier(claim),
+            scope: self.extract_scope(context),
+            acceptance_criteria: vec![
+                "Claim must be mathematically/logically sound".to_string(),
+                "Supporting evidence must be verified".to_string(),
+                "No contradictory information found".to_string(),
+            ],
+            context: self.build_task_context(context).await?,
+            caws_spec: None, // Could be added in future
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+
+        Ok(task_spec)
+    }
+
+    /// Determine risk tier based on claim characteristics
+    fn determine_risk_tier(&self, claim: &AtomicClaim) -> RiskTier {
+        // High risk for claims with high confidence requirements or complex logic
+        if claim.confidence_score > 0.8 || claim.claim_type == ClaimType::Mathematical {
+            RiskTier::High
+        } else if claim.confidence_score > 0.6 {
+            RiskTier::Medium
+        } else {
+            RiskTier::Low
+        }
+    }
+
+    /// Extract scope information from processing context
+    fn extract_scope(&self, context: &ProcessingContext) -> Scope {
+        // Extract scope based on source file or processing context
+        Scope {
+            files: context.source_file.clone().map(|f| vec![f]).unwrap_or_default(),
+            directories: vec![],
+            patterns: vec![],
+        }
+    }
+
+    /// Build task context for council submission
+    async fn build_task_context(&self, context: &ProcessingContext) -> Result<TaskContext> {
+        Ok(TaskContext {
+            workspace_root: context.source_file.clone().unwrap_or_default(),
+            git_commit: None, // Could be extracted from git
+            git_branch: "main".to_string(),
+            recent_changes: vec![context.source_text.clone()],
+            dependencies: HashMap::new(), // Could be analyzed
+        })
+    }
+
+    /// Submit task spec to council API
+    async fn submit_to_council(&self, task_spec: &CouncilTaskSpec) -> Result<CouncilSubmissionResult> {
+        let url = format!("{}/api/tasks", self.council_endpoint);
+
+        let mut request = self.client
+            .post(&url)
+            .json(task_spec);
+
+        if let Some(api_key) = &self.api_key {
+            request = request.header("Authorization", format!("Bearer {}", api_key));
+        }
+
+        let response = request.send().await?;
+        let status = response.status();
+
+        if !status.is_success() {
+            return Err(anyhow::anyhow!("Council API returned status: {}", status));
+        }
+
+        let council_response: serde_json::Value = response.json().await?;
+        self.parse_council_response(&council_response).await
+    }
+
+    /// Parse council response into submission result
+    async fn parse_council_response(&self, response: &serde_json::Value) -> Result<CouncilSubmissionResult> {
+        // Extract verdict from council response
+        let verdict = if let Some(verdict_obj) = response.get("final_verdict") {
+            if let Some(accepted) = verdict_obj.get("Accepted") {
+                CouncilVerdict::Accepted {
+                    confidence: accepted.get("confidence")
+                        .and_then(|c| c.as_f64())
+                        .unwrap_or(0.5),
+                    summary: accepted.get("summary")
+                        .and_then(|s| s.as_str())
+                        .unwrap_or("Claim accepted by council")
+                        .to_string(),
+                }
+            } else if let Some(rejected) = verdict_obj.get("Rejected") {
+                CouncilVerdict::Rejected {
+                    primary_reasons: rejected.get("primary_reasons")
+                        .and_then(|r| r.as_array())
+                        .unwrap_or(&vec![])
+                        .iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect(),
+                    summary: rejected.get("summary")
+                        .and_then(|s| s.as_str())
+                        .unwrap_or("Claim rejected by council")
+                        .to_string(),
+                }
+            } else {
+                CouncilVerdict::NeedsInvestigation {
+                    questions: vec!["Council requires further investigation".to_string()],
+                    summary: "Claim needs investigation".to_string(),
+                }
+            }
+        } else {
+            CouncilVerdict::NeedsInvestigation {
+                questions: vec!["Unable to determine council verdict".to_string()],
+                summary: "Council response unclear".to_string(),
+            }
+        };
+
+        Ok(CouncilSubmissionResult {
+            task_id: Uuid::new_v4(), // Should come from response
+            verdict,
+            debate_rounds: response.get("debate_rounds")
+                .and_then(|r| r.as_u64())
+                .unwrap_or(0) as u32,
+            processing_time_ms: response.get("evaluation_time_ms")
+                .and_then(|t| t.as_u64())
+                .unwrap_or(0),
+            submitted_at: Utc::now(),
+            completed_at: Some(Utc::now()),
+        })
+    }
+
+    /// Convert council verdict to evidence
+    fn verdict_to_evidence(&self, result: &CouncilSubmissionResult, claim: &AtomicClaim) -> Evidence {
+        let confidence = match &result.verdict {
+            CouncilVerdict::Accepted { confidence, .. } => *confidence,
+            CouncilVerdict::Rejected { .. } => 0.1,
+            CouncilVerdict::NeedsInvestigation { .. } => 0.5,
+        };
+
+        let source = format!("Council evaluation ({} debate rounds, {}ms)",
+            result.debate_rounds, result.processing_time_ms);
+
+        let relevance = if result.debate_rounds > 3 {
+            0.9 // High relevance for thoroughly debated claims
+        } else {
+            0.7 // Moderate relevance for quickly resolved claims
+        };
+
+        Evidence {
+            id: Uuid::new_v4(),
+            claim_id: claim.id,
+            evidence_type: EvidenceType::CouncilVerdict,
+            content: serde_json::to_string(&result.verdict).unwrap_or_default(),
+            confidence,
+            source,
+            relevance,
+            timestamp: Utc::now(),
+            metadata: HashMap::from([
+                ("debate_rounds".to_string(), result.debate_rounds.to_string()),
+                ("processing_time_ms".to_string(), result.processing_time_ms.to_string()),
+            ]),
+        }
+    }
+}
 
     async fn verify_with_council(
         &self,
@@ -807,6 +1006,57 @@ pub enum CouncilRecommendation {
     Reject,
     Modify,
     Investigate,
+}
+
+// Additional types for council integration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RiskTier {
+    Critical,
+    High,
+    Medium,
+    Low,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Scope {
+    pub files: Vec<String>,
+    pub directories: Vec<String>,
+    pub patterns: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskContext {
+    pub workspace_root: String,
+    pub git_commit: Option<String>,
+    pub git_branch: String,
+    pub recent_changes: Vec<String>,
+    pub dependencies: std::collections::HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CouncilVerdict {
+    Accepted {
+        confidence: f64,
+        summary: String,
+    },
+    Rejected {
+        primary_reasons: Vec<String>,
+        summary: String,
+    },
+    NeedsInvestigation {
+        questions: Vec<String>,
+        summary: String,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CouncilSubmissionResult {
+    pub task_id: Uuid,
+    pub verdict: CouncilVerdict,
+    pub debate_rounds: u32,
+    pub processing_time_ms: u64,
+    pub submitted_at: DateTime<Utc>,
+    pub completed_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
