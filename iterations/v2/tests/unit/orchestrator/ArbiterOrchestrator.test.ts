@@ -607,12 +607,12 @@ describe("ArbiterOrchestrator - CAWS Integration", () => {
       // Create some override requests
       const tasks = [
         {
-          id: "task-stats-1",
+          id: "violation-stats-1",
           type: "computation",
           description: "Stats test 1",
         },
         {
-          id: "task-stats-2",
+          id: "violation-stats-2",
           type: "computation",
           description: "Stats test 2",
         },
@@ -1118,7 +1118,7 @@ describe("ArbiterOrchestrator - CAWS Integration", () => {
     test("should handle complete task lifecycle with overrides", async () => {
       // 1. Submit violating task
       const violatingTask = {
-        id: "lifecycle-test",
+        id: "violation-lifecycle-test",
         type: "computation",
         description: "Complete lifecycle test",
       };
@@ -1162,7 +1162,7 @@ describe("ArbiterOrchestrator - CAWS Integration", () => {
     test("should handle multiple override workflows simultaneously", async () => {
       // Create multiple override requests
       const tasks = Array.from({ length: 3 }, (_, i) => ({
-        id: `multi-workflow-${i}`,
+        id: `violation-multi-workflow-${i}`,
         type: "computation",
         description: `Multi-workflow task ${i}`,
       }));
