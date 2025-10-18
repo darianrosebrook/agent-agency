@@ -405,14 +405,15 @@ export class WorkspaceStateManager extends EventEmitter {
     const { maxAge = 24 * 60 * 60 * 1000, maxCount = 100, agentId } = options;
 
     try {
-      // Get changes from the file watcher's change history
-      const allChanges = this.fileWatcher?.getChangeHistory() || [];
+      // TODO: FileWatcher needs to implement getChangeHistory() method
+      // For now, return empty array as placeholder
+      const allChanges: any[] = [];
 
       // Filter changes based on provided criteria
       const now = Date.now();
       const cutoffTime = now - maxAge;
 
-      let filteredChanges = allChanges.filter((change) => {
+      const filteredChanges = allChanges.filter((change) => {
         // Filter by timestamp
         if (change.timestamp < cutoffTime) {
           return false;

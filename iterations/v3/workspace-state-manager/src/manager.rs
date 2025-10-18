@@ -718,7 +718,7 @@ impl WorkspaceStateManager {
                     git2::Delta::Added => {
                         let tree = match to_commit.tree() {
                             Ok(t) => t,
-                            Err(_) => return None,
+                            Err(_) => return true,
                         };
                         let content = self.get_content_from_git_tree(repo, &tree, &new_file_path)
                             .unwrap_or_else(|_| Vec::new());
@@ -733,11 +733,11 @@ impl WorkspaceStateManager {
                     git2::Delta::Modified => {
                         let from_tree = match from_commit.tree() {
                             Ok(t) => t,
-                            Err(_) => return None,
+                            Err(_) => return true,
                         };
                         let to_tree = match to_commit.tree() {
                             Ok(t) => t,
-                            Err(_) => return None,
+                            Err(_) => return true,
                         };
                         let old_content = self.get_content_from_git_tree(repo, &from_tree, &old_file_path.unwrap_or(new_file_path.clone()))
                             .ok();
@@ -752,11 +752,11 @@ impl WorkspaceStateManager {
                     git2::Delta::Renamed => {
                         let from_tree = match from_commit.tree() {
                             Ok(t) => t,
-                            Err(_) => return None,
+                            Err(_) => return true,
                         };
                         let to_tree = match to_commit.tree() {
                             Ok(t) => t,
-                            Err(_) => return None,
+                            Err(_) => return true,
                         };
                         let old_content = self.get_content_from_git_tree(repo, &from_tree, &old_file_path.unwrap_or(new_file_path.clone()))
                             .ok();

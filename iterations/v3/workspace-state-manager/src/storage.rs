@@ -499,7 +499,7 @@ impl MemoryStorage {
             let total_size: u64 = state
                 .files
                 .values()
-                .map(|file| file.content.len() as u64)
+                .map(|file| file.content.as_ref().map(|c| c.len()).unwrap_or(0) as u64)
                 .sum();
 
             // Check if state exceeds 10MB threshold
@@ -514,10 +514,12 @@ impl MemoryStorage {
             if let Some(state) = self.states.write().await.get_mut(&id) {
                 // Compress file contents
                 for file in state.files.values_mut() {
-                    if !file.content.is_empty() {
-                        let compressed = self.compress_data(&file.content)?;
-                        file.content = compressed;
-                        file.compressed = true;
+                    if let Some(ref content) = file.content {
+                        if !content.is_empty() {
+                            let compressed = self.compress_data(content)?;
+                            file.content = Some(compressed);
+                            file.compressed = true;
+                        }
                     }
                 }
                 debug!(
@@ -553,7 +555,7 @@ impl MemoryStorage {
                 state
                     .files
                     .values()
-                    .map(|file| file.content.len() as u64)
+                    .map(|file| file.content.as_ref().map(|c| c.len()).unwrap_or(0) as u64)
                     .sum::<u64>()
             })
             .sum();
@@ -646,38 +648,19 @@ impl MemoryStorage {
 
     async fn cleanup_old_diffs(&self) -> Result<(), WorkspaceError> {
         let cutoff_time = chrono::Utc::now() - chrono::Duration::hours(24);
-        let diff_dir = self.base_path.join("diffs");
-
-        if !diff_dir.exists() {
-            return Ok(());
+        
+        // For MemoryStorage, we don't have a base_path, so we'll clean up old diffs from memory
+        let mut diffs = self.diffs.write().await;
+        let old_diffs: Vec<_> = diffs.iter()
+            .filter(|(_, diff)| diff.computed_at < cutoff_time)
+            .map(|(key, _)| key.clone())
+            .collect();
+        
+        for key in old_diffs {
+            diffs.remove(&key);
         }
 
-        let mut removed_count = 0;
-        for entry in fs::read_dir(&diff_dir).map_err(|e| WorkspaceError::Io(e))? {
-            let entry = entry.map_err(|e| WorkspaceError::Io(e))?;
-            let path = entry.path();
-
-            if path.extension().and_then(|s| s.to_str()) == Some("diff") {
-                // Try to extract timestamp from filename or check file metadata
-                if let Ok(metadata) = entry.metadata() {
-                    if let Ok(modified) = metadata.modified() {
-                        let modified_time = chrono::DateTime::<chrono::Utc>::from(modified);
-                        if modified_time < cutoff_time {
-                            fs::remove_file(&path).map_err(|e| WorkspaceError::Io(e))?;
-                            removed_count += 1;
-                        }
-                    }
-                }
-            }
-        }
-
-        if removed_count > 0 {
-            debug!(
-                "Cleaned up {} old diff files from file storage",
-                removed_count
-            );
-        }
-
+        debug!("Cleaned up old diffs from memory storage");
         Ok(())
     }
 }
@@ -764,7 +747,7 @@ impl StateStorage for MemoryStorage {
 
     async fn store_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
         // 1. Diff validation: Validate diff data before storage
-        self.validate_diff(diff)?;
+        self.validate_diff(diff).await?;
 
         // 2. Diff storage: Store diff in memory storage with atomicity
         let diff_key = (diff.from_state.clone(), diff.to_state.clone());
@@ -806,7 +789,7 @@ impl StateStorage for MemoryStorage {
     async fn get_diff(&self, from: StateId, to: StateId) -> Result<WorkspaceDiff, WorkspaceError> {
         self.diffs
             .read()
-            .unwrap()
+            .await
             .get(&(from, to))
             .cloned()
             .ok_or_else(|| {

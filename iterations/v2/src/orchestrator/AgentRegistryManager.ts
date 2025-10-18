@@ -446,15 +446,18 @@ export class AgentRegistryManager {
       try {
         await this.databaseClient.updateAgentStatus(agentId, newStatus, {
           timestamp: new Date(),
-          reason: reason || 'Status update',
-          metadata: metadata || {}
+          reason: reason || "Status update",
+          metadata: metadata || {},
         });
-        this.logger.debug('Agent status persisted to database', { agentId, newStatus });
+        this.logger.debug("Agent status persisted to database", {
+          agentId,
+          newStatus,
+        });
       } catch (error) {
-        this.logger.error('Failed to persist agent status to database', { 
-          agentId, 
-          newStatus, 
-          error: error instanceof Error ? error.message : String(error) 
+        this.logger.error("Failed to persist agent status to database", {
+          agentId,
+          newStatus,
+          error: error instanceof Error ? error.message : String(error),
         });
         // Don't throw - status update should succeed even if persistence fails
       }

@@ -9,7 +9,7 @@
 import { performance } from "perf_hooks";
 import { parentPort, workerData } from "worker_threads";
 // Import will be handled dynamically since we can't import TS directly in JS worker
-// const { ArtifactSandbox } = require("./workers/ArtifactSandbox.js");
+// We'll create a proper sandbox implementation below
 
 const {
   workerId,
@@ -26,6 +26,249 @@ let isRunning = true;
 let currentTask = null;
 let currentSandbox = null;
 
+/**
+ * Create a proper artifact sandbox for task execution.
+ * This implements the same interface as ArtifactSandbox but in JavaScript.
+ */
+async function createArtifactSandbox(taskId, config) {
+  const fs = await import("fs/promises");
+  const path = await import("path");
+  const crypto = await import("crypto");
+
+  const artifactDir = path.resolve(config.rootPath, taskId);
+  const files = new Map();
+  let totalSize = 0;
+
+  return {
+    rootPath: config.rootPath,
+    taskId: taskId,
+    artifactDir: artifactDir,
+
+    async initialize() {
+      try {
+        await fs.mkdir(artifactDir, { recursive: true });
+      } catch (error) {
+        throw new Error(
+          `Failed to create artifact directory: ${error.message}`
+        );
+      }
+    },
+
+    async writeFile(relativePath, content) {
+      // Validate path
+      if (!relativePath || relativePath.trim() === "") {
+        throw new Error("Path cannot be empty");
+      }
+
+      // Check for path traversal
+      if (relativePath.includes("..") || path.isAbsolute(relativePath)) {
+        throw new Error(
+          "Invalid path: path traversal or absolute path not allowed"
+        );
+      }
+
+      const fullPath = path.join(artifactDir, relativePath);
+      const contentBuffer = Buffer.isBuffer(content)
+        ? content
+        : Buffer.from(content, "utf8");
+
+      // Check file size quota
+      if (contentBuffer.length > config.maxFileSizeBytes) {
+        throw new Error(
+          `File size ${contentBuffer.length} bytes exceeds limit of ${config.maxFileSizeBytes} bytes`
+        );
+      }
+
+      // Check total size quota
+      const newTotalSize = totalSize + contentBuffer.length;
+      const maxTotalSize = config.maxFileSizeBytes * config.maxTotalFiles;
+      if (newTotalSize > maxTotalSize) {
+        throw new Error(
+          `Total artifact size would exceed quota (${newTotalSize} > ${maxTotalSize})`
+        );
+      }
+
+      // Check file count quota
+      if (files.size >= config.maxTotalFiles) {
+        throw new Error(
+          `File count ${files.size} exceeds limit of ${config.maxTotalFiles} files`
+        );
+      }
+
+      // Ensure directory exists
+      const dir = path.dirname(fullPath);
+      if (dir !== artifactDir) {
+        await fs.mkdir(dir, { recursive: true });
+      }
+
+      // Write file
+      await fs.writeFile(fullPath, contentBuffer);
+
+      // Generate SHA256 digest
+      const sha256 = crypto
+        .createHash("sha256")
+        .update(contentBuffer)
+        .digest("hex");
+
+      // Detect MIME type (basic)
+      const ext = path.extname(relativePath).toLowerCase();
+      const mimeTypes = {
+        ".json": "application/json",
+        ".js": "application/javascript",
+        ".ts": "application/typescript",
+        ".html": "text/html",
+        ".css": "text/css",
+        ".md": "text/markdown",
+        ".txt": "text/plain",
+        ".yml": "text/yaml",
+        ".yaml": "text/yaml",
+        ".xml": "text/xml",
+        ".csv": "text/csv",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".gif": "image/gif",
+        ".svg": "image/svg+xml",
+        ".pdf": "application/pdf",
+      };
+      const mimeType = mimeTypes[ext];
+
+      // Track file metadata
+      const fileEntry = {
+        path: relativePath,
+        size: contentBuffer.length,
+        sha256: sha256,
+        mimeType: mimeType,
+        createdAt: new Date().toISOString(),
+      };
+
+      files.set(relativePath, fileEntry);
+      totalSize += contentBuffer.length;
+
+      console.log(
+        `Artifact written: ${relativePath} (${contentBuffer.length} bytes)`
+      );
+      return { success: true, path: relativePath };
+    },
+
+    async mkdir(relativePath) {
+      // Validate path
+      if (!relativePath || relativePath.trim() === "") {
+        throw new Error("Path cannot be empty");
+      }
+
+      if (relativePath.includes("..") || path.isAbsolute(relativePath)) {
+        throw new Error(
+          "Invalid path: path traversal or absolute path not allowed"
+        );
+      }
+
+      const fullPath = path.join(artifactDir, relativePath);
+      await fs.mkdir(fullPath, { recursive: true });
+      console.log(`Artifact directory created: ${relativePath}`);
+    },
+
+    async readdir(relativePath) {
+      // Validate path
+      if (
+        relativePath &&
+        (relativePath.includes("..") || path.isAbsolute(relativePath))
+      ) {
+        throw new Error(
+          "Invalid path: path traversal or absolute path not allowed"
+        );
+      }
+
+      const fullPath = relativePath
+        ? path.join(artifactDir, relativePath)
+        : artifactDir;
+      return await fs.readdir(fullPath);
+    },
+
+    async stat(relativePath) {
+      // Validate path
+      if (!relativePath || relativePath.trim() === "") {
+        throw new Error("Path cannot be empty");
+      }
+
+      if (relativePath.includes("..") || path.isAbsolute(relativePath)) {
+        throw new Error(
+          "Invalid path: path traversal or absolute path not allowed"
+        );
+      }
+
+      const fullPath = path.join(artifactDir, relativePath);
+      const stats = await fs.stat(fullPath);
+
+      return {
+        size: stats.size,
+        isFile: stats.isFile(),
+        isDirectory: stats.isDirectory(),
+      };
+    },
+
+    async rename(oldPath, newPath) {
+      // Validate both paths
+      if (
+        !oldPath ||
+        !newPath ||
+        oldPath.trim() === "" ||
+        newPath.trim() === ""
+      ) {
+        throw new Error("Paths cannot be empty");
+      }
+
+      if (
+        oldPath.includes("..") ||
+        newPath.includes("..") ||
+        path.isAbsolute(oldPath) ||
+        path.isAbsolute(newPath)
+      ) {
+        throw new Error(
+          "Invalid path: path traversal or absolute path not allowed"
+        );
+      }
+
+      const oldFullPath = path.join(artifactDir, oldPath);
+      const newFullPath = path.join(artifactDir, newPath);
+
+      await fs.rename(oldFullPath, newFullPath);
+
+      // Update tracking if this was a tracked file
+      if (files.has(oldPath)) {
+        const fileEntry = files.get(oldPath);
+        fileEntry.path = newPath;
+        files.delete(oldPath);
+        files.set(newPath, fileEntry);
+      }
+
+      console.log(`Artifact renamed: ${oldPath} -> ${newPath}`);
+    },
+
+    generateManifest() {
+      return {
+        taskId: taskId,
+        files: Array.from(files.values()),
+        totalSize: totalSize,
+        createdAt: new Date().toISOString(),
+      };
+    },
+
+    getRootPath() {
+      return artifactDir;
+    },
+
+    getManifest() {
+      return {
+        taskId: taskId,
+        files: Array.from(files.values()),
+        totalSize: totalSize,
+        createdAt: new Date().toISOString(),
+      };
+    },
+  };
+}
+
 // Task execution functions
 const taskExecutors = {
   script: executeScriptTask,
@@ -38,16 +281,9 @@ const taskExecutors = {
 async function executeScriptTask(task) {
   const { code, args = [], timeout = 30000 } = task.payload;
 
-  // Simple mock sandbox for now - workers will be fixed in proper implementation
+  // Initialize proper sandbox for this task
   if (!currentSandbox) {
-    currentSandbox = {
-      rootPath: artifactConfig.rootPath,
-      taskId: task.id,
-      initialize: async () => {},
-      writeFile: async (path, content) => ({ success: true, path }),
-      readFile: async (path) => ({ success: true, content: "" }),
-      cleanup: async () => {},
-    };
+    currentSandbox = await createArtifactSandbox(task.id, artifactConfig);
     await currentSandbox.initialize();
   }
 
@@ -61,11 +297,13 @@ async function executeScriptTask(task) {
     args,
     result: null,
     artifacts: {
-      writeFile: (path, content) => currentSandbox.writeFile(path, content),
-      mkdir: (path) => currentSandbox.mkdir(path),
-      readdir: (path) => currentSandbox.readdir(path),
-      stat: (path) => currentSandbox.stat(path),
-      rename: (oldPath, newPath) => currentSandbox.rename(oldPath, newPath),
+      writeFile: async (path, content) =>
+        await currentSandbox.writeFile(path, content),
+      mkdir: async (path) => await currentSandbox.mkdir(path),
+      readdir: async (path) => await currentSandbox.readdir(path),
+      stat: async (path) => await currentSandbox.stat(path),
+      rename: async (oldPath, newPath) =>
+        await currentSandbox.rename(oldPath, newPath),
     },
   };
 
