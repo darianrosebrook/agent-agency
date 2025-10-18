@@ -21,6 +21,7 @@ chrono.workspace = true
 ndarray.workspace = true
 petgraph = "0.6"  # For learning graph structures
 rayon = "1.8"     # For parallel learning computations
+rand = "0.8"      # For random number generation in algorithms
 
 # Council integration
 agent-agency-council = { path = "../council" }

@@ -576,11 +576,16 @@ impl PerformancePredictor {
 
         // 1. Performance analysis: Analyze historical task performance data
         let historical_performance = self.analyze_historical_performance(task_outcome).await?;
-        let trend_direction = self.trend_analyzer.analyze_trends(&historical_performance)?;
-        let baseline_performance = self.baseline_calculator.calculate_baseline(&historical_performance)?;
+        let trend_direction = self
+            .trend_analyzer
+            .analyze_trends(&historical_performance)?;
+        let baseline_performance = self
+            .baseline_calculator
+            .calculate_baseline(&historical_performance)?;
 
         // 2. Predictive modeling: Build predictive models for task outcomes
-        let performance_factors = self.analyze_performance_factors(task_outcome, &historical_performance)?;
+        let performance_factors =
+            self.analyze_performance_factors(task_outcome, &historical_performance)?;
         let predicted_performance = self.performance_model.predict_performance(
             task_outcome,
             &historical_performance,
@@ -588,8 +593,10 @@ impl PerformancePredictor {
         )?;
 
         // 3. Prediction calculation: Calculate performance predictions with confidence
-        let confidence = self.calculate_prediction_confidence(&historical_performance, &performance_factors);
-        let improvement_suggestions = self.generate_improvement_suggestions(&performance_factors)?;
+        let confidence =
+            self.calculate_prediction_confidence(&historical_performance, &performance_factors);
+        let improvement_suggestions =
+            self.generate_improvement_suggestions(&performance_factors)?;
 
         // 4. Prediction validation: Log prediction quality metrics
         debug!(
@@ -607,7 +614,10 @@ impl PerformancePredictor {
     }
 
     /// Analyze historical performance data for trend identification
-    async fn analyze_historical_performance(&self, task_outcome: &TaskOutcome) -> Result<Vec<PerformanceSnapshot>> {
+    async fn analyze_historical_performance(
+        &self,
+        task_outcome: &TaskOutcome,
+    ) -> Result<Vec<PerformanceSnapshot>> {
         // Retrieve historical performance data from learning history
         // In a real implementation, this would query a database or cache
         let mut historical_data = Vec::new();
@@ -635,7 +645,8 @@ impl PerformancePredictor {
         let avg_cpu_usage = historical_data
             .iter()
             .filter_map(|snapshot| snapshot.metrics.get("cpu").cloned())
-            .sum::<f64>() / historical_data.len().max(1) as f64;
+            .sum::<f64>()
+            / historical_data.len().max(1) as f64;
 
         factors.push(PerformanceFactor {
             factor_name: "Resource utilization".to_string(),
@@ -685,14 +696,18 @@ impl PerformancePredictor {
         factors: &[PerformanceFactor],
     ) -> f64 {
         let data_quality = historical_data.len().min(10) as f64 / 10.0; // More data = higher confidence
-        let factor_consistency = factors.iter().map(|f| f.impact_score).sum::<f64>() / factors.len() as f64;
+        let factor_consistency =
+            factors.iter().map(|f| f.impact_score).sum::<f64>() / factors.len() as f64;
         let base_confidence = 0.7; // Base confidence level
 
         (data_quality * 0.3 + factor_consistency * 0.4 + base_confidence * 0.3).min(0.95)
     }
 
     /// Generate improvement suggestions based on performance factors
-    fn generate_improvement_suggestions(&self, factors: &[PerformanceFactor]) -> Result<Vec<ImprovementSuggestion>> {
+    fn generate_improvement_suggestions(
+        &self,
+        factors: &[PerformanceFactor],
+    ) -> Result<Vec<ImprovementSuggestion>> {
         let mut suggestions = Vec::new();
 
         for factor in factors {
@@ -700,28 +715,40 @@ impl PerformancePredictor {
                 let suggestion = match factor.factor_type {
                     PerformanceFactorType::Resource => ImprovementSuggestion {
                         suggestion_type: SuggestionType::Resource,
-                        description: format!("Optimize {} allocation", factor.factor_name.to_lowercase()),
+                        description: format!(
+                            "Optimize {} allocation",
+                            factor.factor_name.to_lowercase()
+                        ),
                         expected_impact: factor.impact_score * 0.8,
                         implementation_effort: ImplementationEffort::Medium,
                         priority: Priority::High,
                     },
                     PerformanceFactorType::Technical => ImprovementSuggestion {
                         suggestion_type: SuggestionType::Technical,
-                        description: format!("Address {} complexity issues", factor.factor_name.to_lowercase()),
+                        description: format!(
+                            "Address {} complexity issues",
+                            factor.factor_name.to_lowercase()
+                        ),
                         expected_impact: factor.impact_score * 0.7,
                         implementation_effort: ImplementationEffort::High,
                         priority: Priority::Medium,
                     },
                     PerformanceFactorType::Process => ImprovementSuggestion {
                         suggestion_type: SuggestionType::Process,
-                        description: format!("Improve {} processes", factor.factor_name.to_lowercase()),
+                        description: format!(
+                            "Improve {} processes",
+                            factor.factor_name.to_lowercase()
+                        ),
                         expected_impact: factor.impact_score * 0.6,
                         implementation_effort: ImplementationEffort::Low,
                         priority: Priority::High,
                     },
                     _ => ImprovementSuggestion {
                         suggestion_type: SuggestionType::Training,
-                        description: format!("Review {} effectiveness", factor.factor_name.to_lowercase()),
+                        description: format!(
+                            "Review {} effectiveness",
+                            factor.factor_name.to_lowercase()
+                        ),
                         expected_impact: factor.impact_score * 0.5,
                         implementation_effort: ImplementationEffort::Low,
                         priority: Priority::Low,
@@ -752,19 +779,28 @@ impl StrategyOptimizer {
 
         // 1. Strategy analysis: Analyze current strategy effectiveness
         let strategy_performance = self.analyze_strategy_performance(task_outcome)?;
-        let successful_patterns = self.success_pattern_detector.detect_patterns(&strategy_performance)?;
+        let successful_patterns = self
+            .success_pattern_detector
+            .detect_patterns(&strategy_performance)?;
 
         // 2. Optimization modeling: Build optimization models for strategies
-        let optimization_model = self.optimization_engine.build_model(&strategy_performance, &successful_patterns)?;
-        let strategy_candidates = self.generate_strategy_candidates(task_outcome, &successful_patterns)?;
+        let optimization_model = self
+            .optimization_engine
+            .build_model(&strategy_performance, &successful_patterns)?;
+        let strategy_candidates =
+            self.generate_strategy_candidates(task_outcome, &successful_patterns)?;
 
         // 3. Strategy optimization: Optimize strategy selection and parameters
-        let optimized_strategies = self.optimize_strategy_selection(&strategy_candidates, &optimization_model)?;
-        let optimization_confidence = self.calculate_optimization_confidence(&strategy_candidates, &optimized_strategies);
+        let optimized_strategies =
+            self.optimize_strategy_selection(&strategy_candidates, &optimization_model)?;
+        let optimization_confidence =
+            self.calculate_optimization_confidence(&strategy_candidates, &optimized_strategies);
 
         // 4. Optimization validation: Validate optimization effectiveness
-        let expected_improvement = self.validate_optimization_impact(&optimized_strategies, task_outcome)?;
-        let strategy_recommendations = self.generate_strategy_recommendations(&optimized_strategies)?;
+        let expected_improvement =
+            self.validate_optimization_impact(&optimized_strategies, task_outcome)?;
+        let strategy_recommendations =
+            self.generate_strategy_recommendations(&optimized_strategies)?;
 
         debug!(
             "Strategy optimization completed: {} strategies optimized, expected improvement: {:.1}%",
@@ -781,7 +817,10 @@ impl StrategyOptimizer {
     }
 
     /// Analyze current strategy performance effectiveness
-    fn analyze_strategy_performance(&self, task_outcome: &TaskOutcome) -> Result<HashMap<String, f64>> {
+    fn analyze_strategy_performance(
+        &self,
+        task_outcome: &TaskOutcome,
+    ) -> Result<HashMap<String, f64>> {
         let mut strategy_scores = HashMap::new();
 
         // Analyze strategies used in this task
@@ -794,9 +833,8 @@ impl StrategyOptimizer {
             };
 
             // Adjust based on resource efficiency
-            let resource_efficiency = task_outcome.resource_usage
-                .values()
-                .sum::<f64>() / task_outcome.resource_usage.len().max(1) as f64;
+            let resource_efficiency = task_outcome.resource_usage.values().sum::<f64>()
+                / task_outcome.resource_usage.len().max(1) as f64;
 
             let adjusted_score = base_score * (1.0 - resource_efficiency * 0.2); // Penalize high resource usage
             strategy_scores.insert(strategy.clone(), adjusted_score);
@@ -902,7 +940,11 @@ impl StrategyOptimizer {
         let mut optimized = candidates.to_vec();
 
         // Sort by optimization score and select top performers
-        optimized.sort_by(|a, b| b.optimization_score.partial_cmp(&a.optimization_score).unwrap());
+        optimized.sort_by(|a, b| {
+            b.optimization_score
+                .partial_cmp(&a.optimization_score)
+                .unwrap()
+        });
 
         // Limit to top 3 strategies to avoid overwhelming recommendations
         optimized.truncate(3);
@@ -926,8 +968,10 @@ impl StrategyOptimizer {
             return 0.5;
         }
 
-        let avg_candidate_score = candidates.iter().map(|c| c.optimization_score).sum::<f64>() / candidates.len() as f64;
-        let avg_optimized_score = optimized.iter().map(|o| o.optimization_score).sum::<f64>() / optimized.len().max(1) as f64;
+        let avg_candidate_score =
+            candidates.iter().map(|c| c.optimization_score).sum::<f64>() / candidates.len() as f64;
+        let avg_optimized_score = optimized.iter().map(|o| o.optimization_score).sum::<f64>()
+            / optimized.len().max(1) as f64;
 
         let improvement_ratio = if avg_candidate_score > 0.0 {
             avg_optimized_score / avg_candidate_score
@@ -947,11 +991,14 @@ impl StrategyOptimizer {
         let total_expected_improvement = optimized_strategies
             .iter()
             .map(|strategy| {
-                strategy.success_metrics.iter()
+                strategy
+                    .success_metrics
+                    .iter()
                     .map(|metric| metric.improvement_potential)
                     .sum::<f64>()
             })
-            .sum::<f64>() / optimized_strategies.len().max(1) as f64;
+            .sum::<f64>()
+            / optimized_strategies.len().max(1) as f64;
 
         Ok(total_expected_improvement.min(0.5)) // Cap at 50% improvement
     }
@@ -974,12 +1021,17 @@ impl StrategyOptimizer {
 
             recommendations.push(StrategyRecommendation {
                 recommendation_type,
-                description: format!("{} - expected improvement: {:.1}%",
+                description: format!(
+                    "{} - expected improvement: {:.1}%",
                     strategy.strategy_name,
-                    strategy.expected_performance * 100.0),
+                    strategy.expected_performance * 100.0
+                ),
                 confidence: strategy.optimization_score,
-                expected_benefit: strategy.success_metrics.iter()
-                    .map(|m| m.improvement_potential).sum::<f64>(),
+                expected_benefit: strategy
+                    .success_metrics
+                    .iter()
+                    .map(|m| m.improvement_potential)
+                    .sum::<f64>(),
             });
         }
 
@@ -1004,15 +1056,22 @@ impl ResourcePredictor {
 
         // 1. Resource analysis: Analyze historical resource utilization
         let resource_patterns = self.analyze_resource_patterns(task_outcome)?;
-        let utilization_trends = self.capacity_planner.analyze_capacity_trends(&resource_patterns)?;
+        let utilization_trends = self
+            .capacity_planner
+            .analyze_capacity_trends(&resource_patterns)?;
 
         // 2. Prediction modeling: Build predictive models for resource needs
-        let predicted_needs = self.demand_forecaster.forecast_demand(task_outcome, &resource_patterns)?;
-        let prediction_confidence = self.calculate_resource_prediction_confidence(&predicted_needs, &resource_patterns);
+        let predicted_needs = self
+            .demand_forecaster
+            .forecast_demand(task_outcome, &resource_patterns)?;
+        let prediction_confidence =
+            self.calculate_resource_prediction_confidence(&predicted_needs, &resource_patterns);
 
         // 3. Resource optimization: Optimize resource allocation predictions
-        let optimized_needs = self.optimize_resource_allocation(&predicted_needs, &utilization_trends)?;
-        let scaling_recommendations = self.generate_scaling_recommendations(&optimized_needs, &utilization_trends)?;
+        let optimized_needs =
+            self.optimize_resource_allocation(&predicted_needs, &utilization_trends)?;
+        let scaling_recommendations =
+            self.generate_scaling_recommendations(&optimized_needs, &utilization_trends)?;
 
         // 4. Prediction monitoring: Monitor prediction accuracy and quality
         debug!(
@@ -1052,9 +1111,8 @@ impl ResourcePredictor {
         }
 
         // Calculate patterns
-        let current_avg_utilization = resource_data.values()
-            .flat_map(|v| v.iter())
-            .sum::<f64>() / resource_data.len().max(1) as f64;
+        let current_avg_utilization = resource_data.values().flat_map(|v| v.iter()).sum::<f64>()
+            / resource_data.len().max(1) as f64;
 
         // Predict future utilization based on task characteristics
         let complexity_factor = if task_outcome.duration_ms > 10000 {
@@ -1170,7 +1228,8 @@ impl ResourcePredictor {
         let complexity_penalty = (patterns.task_complexity - 1.0).abs() * 0.1; // Penalize extreme complexity
 
         let base_confidence = 0.75;
-        (base_confidence + data_quality * 0.15 + efficiency_factor * 0.1 - complexity_penalty).min(0.95)
+        (base_confidence + data_quality * 0.15 + efficiency_factor * 0.1 - complexity_penalty)
+            .min(0.95)
     }
 }
 
@@ -1188,14 +1247,17 @@ impl OutcomePredictor {
 
         // 1. Outcome analysis: Analyze historical task outcomes and patterns
         let outcome_patterns = self.analyze_outcome_patterns(task_outcome)?;
-        let risk_assessment = self.risk_assessor.assess_risks(task_outcome, &outcome_patterns)?;
+        let risk_assessment = self
+            .risk_assessor
+            .assess_risks(task_outcome, &outcome_patterns)?;
 
         // 2. Prediction modeling: Build predictive models for task outcomes
-        let success_probability = self.success_probability_calculator.calculate_probability(
-            task_outcome,
-            &outcome_patterns,
-        )?;
-        let predicted_outcomes = self.outcome_analyzer.predict_outcome_distribution(success_probability)?;
+        let success_probability = self
+            .success_probability_calculator
+            .calculate_probability(task_outcome, &outcome_patterns)?;
+        let predicted_outcomes = self
+            .outcome_analyzer
+            .predict_outcome_distribution(success_probability)?;
 
         // 3. Outcome forecasting: Forecast task success and failure probabilities
         let confidence = self.calculate_outcome_confidence(&outcome_patterns, &risk_assessment);
@@ -1236,8 +1298,8 @@ impl OutcomePredictor {
         };
 
         // Analyze resource impact on outcomes
-        let resource_pressure = task_outcome.resource_usage.values()
-            .sum::<f64>() / task_outcome.resource_usage.len().max(1) as f64;
+        let resource_pressure = task_outcome.resource_usage.values().sum::<f64>()
+            / task_outcome.resource_usage.len().max(1) as f64;
 
         Ok(OutcomePatterns {
             success_rate,
@@ -1259,7 +1321,9 @@ impl OutcomePredictor {
         let risk_penalty = risk_assessment.overall_risk_score * 0.2;
         let pattern_stability = (1.0 - patterns.failure_rate) * 0.8;
 
-        (data_quality + pattern_stability - risk_penalty).max(0.5).min(0.95)
+        (data_quality + pattern_stability - risk_penalty)
+            .max(0.5)
+            .min(0.95)
     }
 
     /// Extract risk factors from risk assessment
@@ -1307,7 +1371,10 @@ impl OutcomePredictor {
     }
 
     /// Generate mitigation strategies for identified risks
-    fn generate_mitigation_strategies(&self, risk_factors: &[RiskFactor]) -> Result<Vec<MitigationStrategy>> {
+    fn generate_mitigation_strategies(
+        &self,
+        risk_factors: &[RiskFactor],
+    ) -> Result<Vec<MitigationStrategy>> {
         let mut strategies = Vec::new();
 
         for risk in risk_factors {
@@ -1316,7 +1383,8 @@ impl OutcomePredictor {
                     strategy_name: "Resource pre-allocation".to_string(),
                     effectiveness: 0.8,
                     implementation_cost: 0.2,
-                    description: "Pre-allocate required resources before task execution".to_string(),
+                    description: "Pre-allocate required resources before task execution"
+                        .to_string(),
                 },
                 "Timeout risk" => MitigationStrategy {
                     strategy_name: "Timeout protection".to_string(),
@@ -1361,22 +1429,33 @@ impl LearningAccelerator {
 
         // 1. Learning analysis: Analyze current learning effectiveness and bottlenecks
         let learning_analysis = self.analyze_learning_effectiveness(task_outcome)?;
-        let transfer_patterns = self.knowledge_transfer_optimizer.analyze_transfer_patterns(&learning_analysis)?;
+        let transfer_patterns = self
+            .knowledge_transfer_optimizer
+            .analyze_transfer_patterns(&learning_analysis)?;
 
         // 2. Acceleration modeling: Build models for learning acceleration optimization
-        let acceleration_model = self.meta_learning_engine.build_acceleration_model(&learning_analysis, &transfer_patterns)?;
-        let learning_methods = self.adaptive_learning_rate.recommend_methods(&learning_analysis)?;
+        let acceleration_model = self
+            .meta_learning_engine
+            .build_acceleration_model(&learning_analysis, &transfer_patterns)?;
+        let learning_methods = self
+            .adaptive_learning_rate
+            .recommend_methods(&learning_analysis)?;
 
         // 3. Learning optimization: Optimize learning processes and strategies
-        let acceleration_factor = self.calculate_acceleration_factor(&acceleration_model, &learning_analysis);
+        let acceleration_factor =
+            self.calculate_acceleration_factor(&acceleration_model, &learning_analysis);
         let knowledge_transfer_efficiency = transfer_patterns.efficiency_score;
-        let meta_learning_insights = self.extract_meta_insights(&learning_analysis, &transfer_patterns)?;
-        let learning_optimization = self.optimize_learning_parameters(&learning_methods, &acceleration_model)?;
+        let meta_learning_insights =
+            self.extract_meta_insights(&learning_analysis, &transfer_patterns)?;
+        let learning_optimization =
+            self.optimize_learning_parameters(&learning_methods, &acceleration_model)?;
 
         // 4. Acceleration validation: Validate learning acceleration effectiveness
         debug!(
             "Learning acceleration: factor {:.2}, transfer efficiency {:.2}, {} insights generated",
-            acceleration_factor, knowledge_transfer_efficiency, meta_learning_insights.len()
+            acceleration_factor,
+            knowledge_transfer_efficiency,
+            meta_learning_insights.len()
         );
 
         Ok(LearningAcceleration {
@@ -1388,7 +1467,10 @@ impl LearningAccelerator {
     }
 
     /// Analyze current learning effectiveness and identify bottlenecks
-    fn analyze_learning_effectiveness(&self, task_outcome: &TaskOutcome) -> Result<LearningAnalysis> {
+    fn analyze_learning_effectiveness(
+        &self,
+        task_outcome: &TaskOutcome,
+    ) -> Result<LearningAnalysis> {
         // Analyze learning patterns based on task outcome
         let learning_rate = task_outcome.strategies_used.len() as f64 * 0.1; // Strategies indicate learning
         let knowledge_retention = match task_outcome.outcome_type {
@@ -1412,7 +1494,11 @@ impl LearningAccelerator {
             knowledge_retention,
             bottleneck_factor,
             transfer_efficiency,
-            task_complexity: if task_outcome.duration_ms > 10000 { 0.8 } else { 0.4 },
+            task_complexity: if task_outcome.duration_ms > 10000 {
+                0.8
+            } else {
+                0.4
+            },
             strategy_diversity: task_outcome.strategies_used.len() as f64,
         })
     }
@@ -1457,7 +1543,8 @@ impl LearningAccelerator {
         if transfer_patterns.efficiency_score > 0.7 {
             insights.push(MetaLearningInsight {
                 insight_type: InsightType::Transfer,
-                description: "Knowledge transfer between similar tasks is highly effective".to_string(),
+                description: "Knowledge transfer between similar tasks is highly effective"
+                    .to_string(),
                 applicability_score: transfer_patterns.efficiency_score,
                 learning_pattern: "Cross-task transfer pattern".to_string(),
             });
@@ -1500,7 +1587,8 @@ impl LearningAccelerator {
         let knowledge_retention_score = acceleration_model.conservation_factor * 0.9;
 
         // Calculate transfer efficiency
-        let transfer_efficiency = learning_methods.iter()
+        let transfer_efficiency = learning_methods
+            .iter()
             .map(|method| match method {
                 LearningMethod::Transfer => 0.9,
                 LearningMethod::Meta => 0.8,
@@ -1508,7 +1596,8 @@ impl LearningAccelerator {
                 LearningMethod::Unsupervised => 0.6,
                 LearningMethod::Reinforcement => 0.75,
             })
-            .sum::<f64>() / learning_methods.len() as f64;
+            .sum::<f64>()
+            / learning_methods.len() as f64;
 
         Ok(LearningOptimization {
             optimized_learning_rate: optimized_learning_rate.min(0.5), // Cap at 50%
@@ -1518,7 +1607,6 @@ impl LearningAccelerator {
         })
     }
 }
-
 
 #[derive(Debug)]
 struct TrendAnalyzer;
@@ -1543,9 +1631,16 @@ impl TrendAnalyzer {
             return Ok(TrendDirection::Stable);
         }
 
-        let first_half_avg = recent_scores.iter().take(recent_scores.len() / 2).sum::<f64>()
+        let first_half_avg = recent_scores
+            .iter()
+            .take(recent_scores.len() / 2)
+            .sum::<f64>()
             / (recent_scores.len() / 2) as f64;
-        let second_half_avg = recent_scores.iter().rev().take(recent_scores.len() / 2).sum::<f64>()
+        let second_half_avg = recent_scores
+            .iter()
+            .rev()
+            .take(recent_scores.len() / 2)
+            .sum::<f64>()
             / (recent_scores.len() / 2) as f64;
 
         let trend_threshold = 0.05; // 5% change threshold
@@ -1554,7 +1649,10 @@ impl TrendAnalyzer {
             Ok(TrendDirection::Improving)
         } else if first_half_avg - second_half_avg > trend_threshold {
             Ok(TrendDirection::Declining)
-        } else if recent_scores.iter().any(|&score| (score - first_half_avg).abs() > trend_threshold * 2.0) {
+        } else if recent_scores
+            .iter()
+            .any(|&score| (score - first_half_avg).abs() > trend_threshold * 2.0)
+        {
             Ok(TrendDirection::Volatile)
         } else {
             Ok(TrendDirection::Stable)
@@ -1579,7 +1677,8 @@ impl PerformanceModel {
         let base_performance = historical_data
             .iter()
             .map(|snapshot| snapshot.performance_score)
-            .sum::<f64>() / historical_data.len().max(1) as f64;
+            .sum::<f64>()
+            / historical_data.len().max(1) as f64;
 
         // Calculate weighted adjustment based on factors
         let total_weight = factors.iter().map(|f| f.impact_score).sum::<f64>();
@@ -1614,7 +1713,10 @@ impl BaselineCalculator {
             return Ok(0.5); // Default baseline
         }
 
-        let sum: f64 = historical_data.iter().map(|snapshot| snapshot.performance_score).sum();
+        let sum: f64 = historical_data
+            .iter()
+            .map(|snapshot| snapshot.performance_score)
+            .sum();
         let baseline = sum / historical_data.len() as f64;
 
         debug!("Calculated baseline performance: {:.3}", baseline);
@@ -1649,7 +1751,8 @@ impl OptimizationEngine {
         strategy_performance: &HashMap<String, f64>,
         successful_patterns: &[String],
     ) -> Result<OptimizationModel> {
-        let avg_performance = strategy_performance.values().sum::<f64>() / strategy_performance.len().max(1) as f64;
+        let avg_performance =
+            strategy_performance.values().sum::<f64>() / strategy_performance.len().max(1) as f64;
         let pattern_bonus = successful_patterns.len() as f64 * 0.05; // 5% bonus per pattern
 
         let adjustment_factor = (avg_performance + pattern_bonus).min(1.2); // Cap at 20% improvement
@@ -1736,32 +1839,40 @@ impl DemandForecaster {
         let mut predicted_needs = HashMap::new();
 
         // Forecast CPU needs
-        let cpu_quantity = patterns.resource_data.get("cpu")
+        let cpu_quantity = patterns
+            .resource_data
+            .get("cpu")
             .and_then(|v| v.last().cloned())
-            .unwrap_or(0.6) * patterns.task_complexity;
+            .unwrap_or(0.6)
+            * patterns.task_complexity;
 
         predicted_needs.insert(
             "cpu".to_string(),
             ResourceNeed {
                 resource_type: ResourceType::Cpu,
                 predicted_quantity: cpu_quantity.min(1.0),
-                predicted_duration: (task_outcome.duration_ms as f64 * patterns.task_complexity) as u64,
+                predicted_duration: (task_outcome.duration_ms as f64 * patterns.task_complexity)
+                    as u64,
                 confidence: 0.8,
                 peak_usage_time: Some(task_outcome.timestamp),
             },
         );
 
         // Forecast memory needs
-        let memory_quantity = patterns.resource_data.get("memory")
+        let memory_quantity = patterns
+            .resource_data
+            .get("memory")
             .and_then(|v| v.last().cloned())
-            .unwrap_or(0.5) * patterns.task_complexity;
+            .unwrap_or(0.5)
+            * patterns.task_complexity;
 
         predicted_needs.insert(
             "memory".to_string(),
             ResourceNeed {
                 resource_type: ResourceType::Memory,
                 predicted_quantity: memory_quantity.min(1.0),
-                predicted_duration: (task_outcome.duration_ms as f64 * patterns.task_complexity) as u64,
+                predicted_duration: (task_outcome.duration_ms as f64 * patterns.task_complexity)
+                    as u64,
                 confidence: 0.75,
                 peak_usage_time: Some(task_outcome.timestamp),
             },
@@ -1800,8 +1911,12 @@ impl CapacityPlanner {
         // Analyze trends for each resource
         for (resource_name, usage_history) in &patterns.resource_data {
             let trend = if usage_history.len() >= 2 {
-                let recent_avg = usage_history.iter().rev().take(3).sum::<f64>() / usage_history.iter().rev().take(3).count() as f64;
-                let older_avg = usage_history.iter().take(usage_history.len().saturating_sub(3)).sum::<f64>()
+                let recent_avg = usage_history.iter().rev().take(3).sum::<f64>()
+                    / usage_history.iter().rev().take(3).count() as f64;
+                let older_avg = usage_history
+                    .iter()
+                    .take(usage_history.len().saturating_sub(3))
+                    .sum::<f64>()
                     / usage_history.len().saturating_sub(3).max(1) as f64;
 
                 if recent_avg > older_avg + 0.1 {
@@ -1828,11 +1943,20 @@ impl CapacityPlanner {
         }
 
         // Determine overall trend
-        let overall_trend = if resource_trends.values().any(|t| matches!(t, TrendDirection::Declining)) {
+        let overall_trend = if resource_trends
+            .values()
+            .any(|t| matches!(t, TrendDirection::Declining))
+        {
             TrendDirection::Declining
-        } else if resource_trends.values().all(|t| matches!(t, TrendDirection::Improving)) {
+        } else if resource_trends
+            .values()
+            .all(|t| matches!(t, TrendDirection::Improving))
+        {
             TrendDirection::Improving
-        } else if resource_trends.values().any(|t| matches!(t, TrendDirection::Volatile)) {
+        } else if resource_trends
+            .values()
+            .any(|t| matches!(t, TrendDirection::Volatile))
+        {
             TrendDirection::Volatile
         } else {
             TrendDirection::Stable
@@ -1871,14 +1995,20 @@ impl OutcomeAnalyzer {
         Self
     }
 
-    fn predict_outcome_distribution(&self, success_probability: f64) -> Result<Vec<PredictedOutcome>> {
+    fn predict_outcome_distribution(
+        &self,
+        success_probability: f64,
+    ) -> Result<Vec<PredictedOutcome>> {
         let mut outcomes = Vec::new();
 
         // Primary success outcome
         outcomes.push(PredictedOutcome {
             outcome_type: OutcomeType::Success,
             probability: success_probability,
-            description: format!("Task completes successfully with {:.1}% confidence", success_probability * 100.0),
+            description: format!(
+                "Task completes successfully with {:.1}% confidence",
+                success_probability * 100.0
+            ),
             impact_score: success_probability * 0.9,
         });
 
@@ -1990,7 +2120,8 @@ impl RiskAssessor {
         let strategy_risk = (1.0 - patterns.strategy_effectiveness).min(0.8);
 
         // Calculate overall risk score
-        let overall_risk_score = (resource_risk * 0.4 + timeout_risk * 0.3 + strategy_risk * 0.3).min(0.9);
+        let overall_risk_score =
+            (resource_risk * 0.4 + timeout_risk * 0.3 + strategy_risk * 0.3).min(0.9);
 
         Ok(RiskAssessment {
             overall_risk_score,
@@ -2038,19 +2169,19 @@ impl MetaLearningEngine {
         transfer_patterns: &TransferPatterns,
     ) -> Result<AccelerationModel> {
         // Calculate base acceleration factor
-        let base_acceleration = 1.0 +
-            (learning_analysis.learning_rate * 0.5) +
-            (transfer_patterns.efficiency_score * 0.3) +
-            ((1.0 - learning_analysis.task_complexity) * 0.2);
+        let base_acceleration = 1.0
+            + (learning_analysis.learning_rate * 0.5)
+            + (transfer_patterns.efficiency_score * 0.3)
+            + ((1.0 - learning_analysis.task_complexity) * 0.2);
 
         // Calculate conservation factor (how well knowledge is preserved)
-        let conservation_factor = learning_analysis.knowledge_retention *
-            learning_analysis.bottleneck_factor *
-            transfer_patterns.efficiency_score;
+        let conservation_factor = learning_analysis.knowledge_retention
+            * learning_analysis.bottleneck_factor
+            * transfer_patterns.efficiency_score;
 
         // Calculate stability score
-        let stability_score = (learning_analysis.strategy_diversity / 5.0).min(1.0) *
-            learning_analysis.bottleneck_factor;
+        let stability_score = (learning_analysis.strategy_diversity / 5.0).min(1.0)
+            * learning_analysis.bottleneck_factor;
 
         Ok(AccelerationModel {
             base_acceleration: base_acceleration.min(2.5), // Cap at 2.5x
@@ -2067,7 +2198,10 @@ impl KnowledgeTransferOptimizer {
         Self
     }
 
-    fn analyze_transfer_patterns(&self, learning_analysis: &LearningAnalysis) -> Result<TransferPatterns> {
+    fn analyze_transfer_patterns(
+        &self,
+        learning_analysis: &LearningAnalysis,
+    ) -> Result<TransferPatterns> {
         let mut pattern_types = Vec::new();
         let mut transfer_opportunities = Vec::new();
 
@@ -2107,7 +2241,10 @@ impl AdaptiveLearningRate {
         Self
     }
 
-    fn recommend_methods(&self, learning_analysis: &LearningAnalysis) -> Result<Vec<LearningMethod>> {
+    fn recommend_methods(
+        &self,
+        learning_analysis: &LearningAnalysis,
+    ) -> Result<Vec<LearningMethod>> {
         let mut methods = Vec::new();
 
         // Always include transfer learning if transfer efficiency is good

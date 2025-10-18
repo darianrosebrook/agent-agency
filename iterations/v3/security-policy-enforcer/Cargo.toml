@@ -29,6 +29,9 @@ git2 = "0.19"
 libc = "0.2"
 nix = "0.28"
 
+# Compression for log archiving
+flate2 = "1.0"
+
 # Cryptographic dependencies
 ring = "0.17"
 base64 = "0.22"

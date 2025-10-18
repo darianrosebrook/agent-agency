@@ -186,28 +186,41 @@ impl ConsensusCoordinator {
             final_verdict,
             individual_verdicts: individual_verdicts.clone(),
             consensus_score,
-            debate_rounds: 0, // TODO: Implement debate protocol with the following requirements:
-            // 1. Debate initiation: Initiate debate when consensus cannot be reached
-            //    - Identify conflicting positions and arguments
-            //    - Set up debate structure and rules
-            //    - Assign debate participants and moderators
-            // 2. Debate management: Manage debate process and flow
-            //    - Track debate rounds and participant contributions
-            //    - Enforce debate rules and time limits
-            //    - Handle debate interruptions and conflicts
-            // 3. Debate resolution: Resolve debates and reach consensus
-            //    - Evaluate debate arguments and evidence
-            //    - Apply debate resolution algorithms
-            //    - Generate final debate outcomes and decisions
-            evaluation_time_ms: 100, // TODO: Measure actual evaluation time with the following requirements:
-            // 1. Time measurement: Measure actual evaluation time accurately
-            //    - Track evaluation start and end times
-            //    - Measure individual component evaluation times
-            //    - Calculate total evaluation duration
-            // 2. Performance monitoring: Monitor evaluation performance
-            //    - Track evaluation speed and efficiency
-            //    - Identify performance bottlenecks
-            //    - Optimize evaluation performance
+            debate_rounds: 0, // TODO[critical-debate-engine]: Implement debate orchestration and telemetry.
+            // Requirements:
+            // 1. Debate initiation:
+            //    - Trigger when consensus score falls below tier thresholds or judges disagree.
+            //    - Select participants, moderators, and evidence packets deterministically.
+            //    - Emit structured events for audit/provenance.
+            // 2. Debate management:
+            //    - Track per-round contributions, enforce time limits, and surface judge rationale.
+            //    - Integrate research agent lookups and claim extraction evidence enrichment.
+            //    - Support early termination when supermajority is reached.
+            // 3. Debate resolution:
+            //    - Apply tie-break and override policies with explicit CAWS rule references.
+            //    - Produce a signed debate transcript for provenance and downstream audits.
+            //
+            // Acceptance Criteria:
+            // - Integration tests can mock judge verdict divergence, run the debate flow, and
+            //   assert the resulting ConsensusResult includes populated debate metadata
+            //   (round count, transcript pointers, override rationale).
+            // - Observability: metrics/logs capture per-round latency and participant scores.
+            // - Failure paths (timeout, moderator error) raise typed errors and mark the result
+            //   for escalation without panicking.
+            evaluation_time_ms: 100, // TODO[consensus-latency-instrumentation]: Replace constant latency with real measurements.
+            // Requirements:
+            // 1. Instrumentation:
+            //    - Track wall-clock duration for enrichment, judge inference, debate, and finalization.
+            //    - Capture percentile aggregates for Tier 1 SLA verification.
+            // 2. Deterministic testing:
+            //    - Provide hooks to inject synthetic timing in integration tests for SLA enforcement.
+            // 3. Reporting:
+            //    - Persist evaluation timing into CouncilMetrics and provenance audit trails.
+            //
+            // Acceptance Criteria:
+            // - Integration tests can assert evaluation_time_ms reflects summed stage timings and
+            //   that the coordinator respects the 5s SLA in simulated environments.
+            // - Metrics exporters expose consensus latency histograms keyed by risk tier.
             timestamp: chrono::Utc::now(),
         };
 

@@ -69,7 +69,7 @@ impl ProvenanceService {
             .join(".git")
             .exists()
         {
-            // TODO: Re-enable when GitIntegration trait is properly implemented with the following requirements:
+            // TODO[provenance-git-bridge]: Re-enable GitIntegration once implementation satisfies:
             // 1. Git integration implementation: Implement proper GitIntegration trait
             //    - Complete GitIntegration trait implementation with all required methods
             //    - Handle Git operations with proper error handling and validation
@@ -86,6 +86,12 @@ impl ProvenanceService {
             //    - Implement efficient Git operation caching and batching
             //    - Minimize Git repository access and operations
             //    - Handle large repositories and operations efficiently
+            // Acceptance Criteria:
+            // - Integration tests can run against a temp git repo, capture provenance commits with
+            //   CAWS trailers, and verify trailer presence plus JWS hashes.
+            // - Concurrent provenance writes are serialized without deadlocks or data loss.
+            // - Misconfigured repos return typed errors before any commit attempt, preventing
+            //   silent provenance gaps.
             // Some(Box::new(GitTrailerManager::new(
             //     &config.git.repository_path,
             //     config.git.branch.clone(),
@@ -409,7 +415,10 @@ mod tests {
         let service = ProvenanceService::with_defaults(Box::new(storage), config).unwrap();
 
         // Service should be created successfully
-        assert_eq!(service.config.signing.algorithm, signer::SigningAlgorithm::EdDSA);
+        assert_eq!(
+            service.config.signing.algorithm,
+            signer::SigningAlgorithm::EdDSA
+        );
     }
 
     #[tokio::test]

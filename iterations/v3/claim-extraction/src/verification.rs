@@ -191,29 +191,32 @@ impl CouncilIntegrator {
         claim: &AtomicClaim,
         context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
-        // TODO: Implement council integration with the following requirements:
-        // 1. Claim preparation: Prepare claim for council submission
-        //    - Format claim according to council input specifications
-        //    - Include relevant context, evidence, and supporting information
-        //    - Validate claim completeness and submission requirements
-        // 2. Council submission: Submit claim to council for evaluation
-        //    - Send claim to council arbitration system
-        //    - Handle submission errors and retry logic
-        //    - Track submission status and processing progress
-        // 3. Verdict collection: Collect council verdicts and decisions
-        //    - Poll for council decisions and verdict updates
-        //    - Parse verdict responses and extract decision information
-        //    - Handle different verdict types and confidence levels
-        // 4. Evidence conversion: Convert council verdicts to evidence format
-        //    - Transform council decisions into standardized evidence structures
-        //    - Weight evidence based on council confidence and consensus
-        //    - Include reasoning and justification from council deliberations
-        // 5. Dissent handling: Process dissenting opinions and minority reports
-        //    - Extract and analyze dissenting viewpoints
-        //    - Weight minority opinions appropriately
-        //    - Include alternative perspectives in evidence collection
-        // 6. Return Vec<Evidence> with actual council verdicts (not placeholders)
-        // 7. Include comprehensive evidence from council deliberations and decisions
+        // TODO: [critical-council-bridge]: Implement production council verification bridge.
+        // Requirements:
+        // 1. Claim preparation:
+        //    - Format council submission payloads using TaskSpec-compatible schemas.
+        //    - Attach deterministic identifiers/timestamps and any upstream evidence digests.
+        //    - Validate payload completeness and emit structured validation errors.
+        // 2. Submission + retry strategy:
+        //    - Stream requests through the council async client with backoff/retry hooks.
+        //    - Surface circuit-breaker state so integration tests can assert failure handling.
+        //    - Record round-trip telemetry (latency, retry counts) for observability.
+        // 3. Verdict ingestion:
+        //    - Parse debate transcripts, dissent notes, and consensus metrics from council.
+        //    - Map verdict data into Evidence items with provenance links back to the council JWS.
+        //    - Propagate CAWS rule references for any constitutional/security findings.
+        // 4. Error + timeout handling:
+        //    - Distinguish hard failures (reject) vs. recoverable issues (fallback/local checks).
+        //    - Provide deterministic fallback evidence for offline/local test scenarios.
+        //
+        // Acceptance Criteria:
+        // - Integration tests can drive a full claim verification cycle using test doubles for
+        //   the council client and assert that evidence counts, confidence scores, and rule
+        //   references match expectations.
+        // - Telemetry hooks emit structured spans/metrics that record submission latency,
+        //   retries, and verdict confidence, and tests can assert those values.
+        // - Failures bubble up typed errors with actionable context (HTTP status, council code,
+        //   violated CAWS rule) that downstream components can branch on.
 
         debug!("Verifying claim with council: {}", claim.claim_text);
 

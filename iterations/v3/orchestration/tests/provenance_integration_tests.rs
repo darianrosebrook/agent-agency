@@ -49,6 +49,8 @@ async fn provenance_events_emitted_on_short_circuit() {
         &writer,
         &council_emitter,
         &orch_emitter,
+        None,
+        None,
     )
     .await
     .unwrap();
@@ -112,6 +114,8 @@ async fn provenance_events_emitted_on_normal_completion() {
         &writer,
         &council_emitter,
         &orch_emitter,
+        None,
+        None,
     )
     .await
     .unwrap();

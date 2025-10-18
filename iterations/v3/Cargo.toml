@@ -17,6 +17,7 @@ members = [
     "system-health-monitor",
     "workspace-state-manager",
     "resilience",
+    "observability",
     "config",
     "database",
     "integration-tests"

@@ -1,7 +1,8 @@
-use council::{ConsensusCoordinator, CouncilConfig};
+use council::{ConsensusCoordinator, CouncilConfig, NoopEmitter};
 use orchestration::caws_runtime::*;
 use orchestration::orchestrate::orchestrate_task;
 use orchestration::persistence::InMemoryWriter;
+use orchestration::provenance::OrchestrationProvenanceEmitter;
 
 #[tokio::test]
 async fn short_circuit_reject_path() {
@@ -25,9 +26,21 @@ async fn short_circuit_reject_path() {
     };
     let coord = ConsensusCoordinator::new(CouncilConfig::default());
     let writer = InMemoryWriter;
-    let verdict = orchestrate_task(&spec, &desc, &diff, false, false, &coord, &writer)
-        .await
-        .unwrap();
+    let verdict = orchestrate_task(
+        &spec,
+        &desc,
+        &diff,
+        false,
+        false,
+        &coord,
+        &writer,
+        &NoopEmitter,
+        &OrchestrationProvenanceEmitter::default(),
+        None,
+        None,
+    )
+    .await
+    .unwrap();
     assert!(matches!(
         verdict.decision,
         council::contracts::FinalDecision::Reject

@@ -14,8 +14,12 @@ use agent_agency_council::coordinator::ConsensusCoordinator;
 use agent_agency_council::coordinator::ProvenanceEmitter;
 use agent_agency_council::models::TaskSpec as CouncilTaskSpec;
 use agent_agency_council::types::*;
+use agent_agency_resilience::{
+    retry_with_backoff, CircuitBreaker, CircuitBreakerConfig, RetryConfig,
+};
 use anyhow::Result;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 fn to_task_spec(desc: &TaskDescriptor) -> CouncilTaskSpec {
     // Expanded mapping to include id/name/risk_tier/scope and deterministic seeds placeholder
@@ -87,6 +91,8 @@ pub async fn orchestrate_task(
     writer: &dyn VerdictWriter,
     emitter: &dyn ProvenanceEmitter,
     orch_emitter: &OrchestrationProvenanceEmitter,
+    council_circuit_breaker: Option<&Arc<CircuitBreaker>>,
+    db_circuit_breaker: Option<&Arc<CircuitBreaker>>,
 ) -> Result<FinalVerdict> {
     // Plan resource allocation (heuristic) for council evaluation
     let tier = match desc.risk_tier {
@@ -151,6 +157,13 @@ pub async fn orchestrate_task(
     //    - Handle event deduplication and filtering
     //    - Support event persistence and retrieval
     //    - Implement event analytics and reporting capabilities
+    // Acceptance Criteria:
+    // - Orchestration integration tests can inject a test ProvenanceService, observe the exact
+    //   events emitted for validation short-circuits and council verdicts, and verify JWS hashes.
+    // - Service lifecycle hooks ensure only one shared instance is created per orchestrator run
+    //   and is torn down gracefully even on errors.
+    // - Misconfiguration surfaces typed errors before orchestration proceeds, preventing silent
+    //   drops of provenance events.
     if let Ok(cfg_json) = std::env::var("PROVENANCE_CONFIG_JSON") {
         if let Ok(_cfg) = serde_json::from_str::<serde_json::Value>(&cfg_json) {
             // Minimal in-memory or existing storage init would go here; using a no-op on error
@@ -206,11 +219,58 @@ pub async fn orchestrate_task(
         return Ok(result.final_verdict);
     }
 
-    let result = coordinator.evaluate_task(to_task_spec(desc)).await?;
-    writer
-        .persist_verdict(&desc.task_id, &result.final_verdict)
+    // Council evaluation with circuit breaker and retry
+    let result = if let Some(cb) = council_circuit_breaker {
+        retry_with_backoff(
+            RetryConfig {
+                max_attempts: 3,
+                initial_delay_ms: 1000,
+                max_delay_ms: 10000,
+                backoff_multiplier: 2.0,
+                jitter_factor: 0.1,
+                use_exponential_backoff: true,
+                use_jitter: true,
+            },
+            || async {
+                cb.call(|| async { coordinator.evaluate_task(to_task_spec(desc)).await })
+                    .await
+            },
+        )
+        .await?
+    } else {
+        coordinator.evaluate_task(to_task_spec(desc)).await?
+    };
+
+    // Database persistence with circuit breaker and retry
+    if let Some(cb) = db_circuit_breaker {
+        retry_with_backoff(
+            RetryConfig {
+                max_attempts: 3,
+                initial_delay_ms: 500,
+                max_delay_ms: 5000,
+                backoff_multiplier: 1.5,
+                jitter_factor: 0.1,
+                use_exponential_backoff: true,
+                use_jitter: true,
+            },
+            || async {
+                cb.call(|| async {
+                    writer
+                        .persist_verdict(&desc.task_id, &result.final_verdict)
+                        .await
+                })
+                .await
+            },
+        )
         .await
         .ok();
+    } else {
+        writer
+            .persist_verdict(&desc.task_id, &result.final_verdict)
+            .await
+            .ok();
+    }
+
     emitter.on_final_verdict(result.task_id, &result.final_verdict);
     orch_emitter.orchestrate_exit(&desc.task_id, "completed");
     Ok(result.final_verdict)

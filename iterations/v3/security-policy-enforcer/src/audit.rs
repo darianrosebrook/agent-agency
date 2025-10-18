@@ -130,7 +130,10 @@ impl SecurityAuditor {
 
         // If update fails, rollback to previous policy
         if let Err(e) = update_result {
-            warn!("Policy update failed, rolling back to previous policy: {}", e);
+            warn!(
+                "Policy update failed, rolling back to previous policy: {}",
+                e
+            );
             self.policy = old_policy;
             return Err(e);
         }
@@ -204,8 +207,10 @@ impl SecurityAuditor {
             operation: "audit_policy_update".to_string(),
             resource: "audit_policy".to_string(),
             result: SecurityEventResult::Success,
-            details: Some(format!("Updated audit policy: enabled={}, retention_days={}",
-                                new_policy.enabled, new_policy.retention_days)),
+            details: Some(format!(
+                "Updated audit policy: enabled={}, retention_days={}",
+                new_policy.enabled, new_policy.retention_days
+            )),
             risk_score: 0.1, // Low risk for policy updates
         };
 
@@ -254,18 +259,16 @@ impl SecurityAuditor {
         let backup_file = format!("{}.backup", policy_file);
 
         if Path::new(policy_file).exists() {
-            fs::copy(policy_file, &backup_file)
-                .context("Failed to create policy backup")?;
+            fs::copy(policy_file, &backup_file).context("Failed to create policy backup")?;
         }
 
         // Attempt to save new policy
-        let policy_json = serde_json::to_string_pretty(&self.policy)
-            .context("Failed to serialize policy")?;
+        let policy_json =
+            serde_json::to_string_pretty(&self.policy).context("Failed to serialize policy")?;
 
         // Write to temporary file first for atomicity
         let temp_file = format!("{}.tmp", policy_file);
-        fs::write(&temp_file, &policy_json)
-            .context("Failed to write policy to temporary file")?;
+        fs::write(&temp_file, &policy_json).context("Failed to write policy to temporary file")?;
 
         // Atomic move to final location
         fs::rename(&temp_file, policy_file)
@@ -353,7 +356,10 @@ impl SecurityAuditor {
         // Update the log_file_path
         self.log_file_path = new_log_file_path;
 
-        info!("Audit log rotation completed successfully. Archive: {}", archive_path);
+        info!(
+            "Audit log rotation completed successfully. Archive: {}",
+            archive_path
+        );
         Ok(())
     }
 
@@ -372,7 +378,11 @@ impl SecurityAuditor {
     }
 
     /// Move log file to archive location with optional compression
-    async fn archive_log_file(&self, current_path: &str, timestamp: &chrono::DateTime<Utc>) -> Result<String> {
+    async fn archive_log_file(
+        &self,
+        current_path: &str,
+        timestamp: &chrono::DateTime<Utc>,
+    ) -> Result<String> {
         use std::fs;
         use std::path::Path;
 
@@ -380,14 +390,20 @@ impl SecurityAuditor {
 
         // Check if the current log file exists and has content
         if !current_file_path.exists() {
-            debug!("Current log file does not exist, skipping archive: {}", current_path);
+            debug!(
+                "Current log file does not exist, skipping archive: {}",
+                current_path
+            );
             return Ok("none".to_string());
         }
 
         // Get file metadata to check size
         let metadata = fs::metadata(current_file_path)?;
         if metadata.len() == 0 {
-            debug!("Current log file is empty, skipping archive: {}", current_path);
+            debug!(
+                "Current log file is empty, skipping archive: {}",
+                current_path
+            );
             return Ok("empty".to_string());
         }
 
@@ -396,8 +412,10 @@ impl SecurityAuditor {
         fs::create_dir_all(archive_dir)?;
 
         // Create archive filename with timestamp
-        let archive_filename = format!("security_audit_{}.log.gz",
-                                     timestamp.format("%Y%m%d_%H%M%S"));
+        let archive_filename = format!(
+            "security_audit_{}.log.gz",
+            timestamp.format("%Y%m%d_%H%M%S")
+        );
         let archive_path = format!("{}/{}", archive_dir, archive_filename);
 
         // Compress the log file using gzip
@@ -405,13 +423,19 @@ impl SecurityAuditor {
 
         // Verify the archive was created successfully
         if !Path::new(&archive_path).exists() {
-            return Err(anyhow::anyhow!("Failed to create archive file: {}", archive_path));
+            return Err(anyhow::anyhow!(
+                "Failed to create archive file: {}",
+                archive_path
+            ));
         }
 
         // Remove the original file after successful archiving
         fs::remove_file(current_path)?;
 
-        debug!("Log file archived successfully: {} -> {}", current_path, archive_path);
+        debug!(
+            "Log file archived successfully: {} -> {}",
+            current_path, archive_path
+        );
         Ok(archive_path)
     }
 
@@ -519,8 +543,10 @@ impl SecurityAuditor {
         }
 
         if files_removed > 0 {
-            info!("Archive cleanup completed: {} files removed, {} bytes freed",
-                  files_removed, total_size_freed);
+            info!(
+                "Archive cleanup completed: {} files removed, {} bytes freed",
+                files_removed, total_size_freed
+            );
         }
 
         Ok(())
@@ -537,18 +563,23 @@ impl SecurityAuditor {
         let stats = self.calculate_audit_statistics(&log_entries).await?;
 
         // 3. Statistics aggregation: Aggregate across time periods and detect patterns
-        let enriched_stats = self.aggregate_statistics_with_patterns(stats, &log_entries).await?;
+        let enriched_stats = self
+            .aggregate_statistics_with_patterns(stats, &log_entries)
+            .await?;
 
-        info!("Audit statistics generated successfully: {} total events", enriched_stats.total_events);
+        info!(
+            "Audit statistics generated successfully: {} total events",
+            enriched_stats.total_events
+        );
         Ok(enriched_stats)
     }
 
     /// Analyze current and archived log files for audit events
     async fn analyze_log_files(&self) -> Result<Vec<AuditLogEntry>> {
-        use std::fs;
-        use std::path::Path;
         use flate2::read::GzDecoder;
+        use std::fs;
         use std::io::BufReader;
+        use std::path::Path;
 
         let mut all_entries = Vec::new();
 
@@ -577,7 +608,10 @@ impl SecurityAuditor {
 
                 // Sort by modification time (newest first)
                 archive_files.sort_by(|a, b| {
-                    b.metadata().unwrap().modified().unwrap()
+                    b.metadata()
+                        .unwrap()
+                        .modified()
+                        .unwrap()
                         .cmp(&a.metadata().unwrap().modified().unwrap())
                 });
 
@@ -587,7 +621,11 @@ impl SecurityAuditor {
                     match self.parse_log_file(path.to_str().unwrap(), true).await {
                         Ok(entries) => {
                             all_entries.extend(entries);
-                            debug!("Analyzed archive file {}: {} entries", path.display(), entries.len());
+                            debug!(
+                                "Analyzed archive file {}: {} entries",
+                                path.display(),
+                                entries.len()
+                            );
                         }
                         Err(e) => {
                             warn!("Failed to analyze archive file {}: {}", path.display(), e);
@@ -602,7 +640,11 @@ impl SecurityAuditor {
     }
 
     /// Parse a log file (compressed or uncompressed) into audit entries
-    async fn parse_log_file(&self, file_path: &str, compressed: bool) -> Result<Vec<AuditLogEntry>> {
+    async fn parse_log_file(
+        &self,
+        file_path: &str,
+        compressed: bool,
+    ) -> Result<Vec<AuditLogEntry>> {
         use std::fs::File;
         use std::io::{BufRead, BufReader};
 
@@ -653,7 +695,8 @@ impl SecurityAuditor {
             *events_by_result.entry(result_key).or_insert(0) += 1;
 
             // Count by actor (user_id or session_id)
-            let actor_key = entry.user_id
+            let actor_key = entry
+                .user_id
                 .as_ref()
                 .or(entry.session_id.as_ref())
                 .unwrap_or(&"unknown".to_string())
@@ -674,7 +717,7 @@ impl SecurityAuditor {
     async fn aggregate_statistics_with_patterns(
         &self,
         mut stats: AuditStats,
-        entries: &[AuditLogEntry]
+        entries: &[AuditLogEntry],
     ) -> Result<AuditStats> {
         // Add time-based aggregations (last 24 hours, 7 days, 30 days)
         let now = Utc::now();
@@ -699,18 +742,15 @@ impl SecurityAuditor {
         }
 
         // Add time-based statistics as additional keys
-        stats.events_by_type.insert(
-            "last_24h".to_string(),
-            recent_entries.len() as u64
-        );
-        stats.events_by_type.insert(
-            "last_7d".to_string(),
-            weekly_entries.len() as u64
-        );
-        stats.events_by_type.insert(
-            "last_30d".to_string(),
-            monthly_entries.len() as u64
-        );
+        stats
+            .events_by_type
+            .insert("last_24h".to_string(), recent_entries.len() as u64);
+        stats
+            .events_by_type
+            .insert("last_7d".to_string(), weekly_entries.len() as u64);
+        stats
+            .events_by_type
+            .insert("last_30d".to_string(), monthly_entries.len() as u64);
 
         // Detect potential anomalies (high-frequency events)
         self.detect_anomalies(&stats, entries);
@@ -726,15 +766,21 @@ impl SecurityAuditor {
             let failure_rate = *failed_count as f64 / total_events as f64;
 
             if failure_rate > 0.5 && total_events > 10 {
-                warn!("High failure rate detected: {:.1}% ({}/{}) - potential security issue",
-                      failure_rate * 100.0, failed_count, total_events);
+                warn!(
+                    "High failure rate detected: {:.1}% ({}/{}) - potential security issue",
+                    failure_rate * 100.0,
+                    failed_count,
+                    total_events
+                );
             }
         }
 
         // Check for unusual actor activity
         let mut actor_frequencies: HashMap<String, u64> = HashMap::new();
         for entry in entries {
-            let actor = entry.user_id.as_ref()
+            let actor = entry
+                .user_id
+                .as_ref()
                 .or(entry.session_id.as_ref())
                 .unwrap_or(&"unknown".to_string());
             *actor_frequencies.entry(actor.clone()).or_insert(0) += 1;

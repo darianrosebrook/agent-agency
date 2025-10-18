@@ -224,8 +224,14 @@ impl EvidenceCollector {
 
                     // Check if the message is relevant to the claim
                     if let Some(message) = clippy_message.get("message").and_then(|v| v.as_str()) {
-                        if message.to_lowercase().contains(&claim.claim_text.to_lowercase())
-                            || claim.claim_text.to_lowercase().contains(&message.to_lowercase()) {
+                        if message
+                            .to_lowercase()
+                            .contains(&claim.claim_text.to_lowercase())
+                            || claim
+                                .claim_text
+                                .to_lowercase()
+                                .contains(&message.to_lowercase())
+                        {
                             relevant_findings.push(message.to_string());
                         }
                     }
@@ -233,8 +239,18 @@ impl EvidenceCollector {
             }
         }
 
-        let severity_score = if error_count > 0 { 0.3 } else if warning_count > 3 { 0.6 } else { 0.9 };
-        let confidence = if relevant_findings.is_empty() { 0.5 } else { severity_score };
+        let severity_score = if error_count > 0 {
+            0.3
+        } else if warning_count > 3 {
+            0.6
+        } else {
+            0.9
+        };
+        let confidence = if relevant_findings.is_empty() {
+            0.5
+        } else {
+            severity_score
+        };
 
         let content = format!(
             "Clippy Analysis Results:\n- Errors: {}\n- Warnings: {}\n- Relevant findings: {}\n- Quality score: {:.1}",
@@ -301,7 +317,12 @@ impl EvidenceCollector {
         use std::path::Path;
 
         let mut relevant_files = Vec::new();
-        let src_dirs = ["src", "claim-extraction/src", "council/src", "orchestration/src"];
+        let src_dirs = [
+            "src",
+            "claim-extraction/src",
+            "council/src",
+            "orchestration/src",
+        ];
 
         for dir in &src_dirs {
             let path = Path::new(dir);
@@ -328,7 +349,8 @@ impl EvidenceCollector {
                 } else if path.extension().unwrap_or_default() == "rs" {
                     if let Ok(content) = std::fs::read_to_string(&path) {
                         let claim_words: Vec<&str> = claim.claim_text.split_whitespace().collect();
-                        let relevance_score = claim_words.iter()
+                        let relevance_score = claim_words
+                            .iter()
                             .filter(|word| content.to_lowercase().contains(&word.to_lowercase()))
                             .count();
 
@@ -346,7 +368,8 @@ impl EvidenceCollector {
     fn calculate_file_metrics(&self, file_path: &std::path::Path) -> Result<CodeMetrics> {
         let content = std::fs::read_to_string(file_path)?;
         let lines_of_code = content.lines().count();
-        let function_count = content.lines()
+        let function_count = content
+            .lines()
             .filter(|line| line.trim().starts_with("fn ") || line.trim().starts_with("pub fn "))
             .count();
 
@@ -380,8 +403,11 @@ impl EvidenceCollector {
 
         for file_path in &relevant_files {
             if let Ok(content) = std::fs::read_to_string(file_path) {
-                let functions: Vec<&str> = content.lines()
-                    .filter(|line| line.trim().starts_with("fn ") || line.trim().starts_with("pub fn "))
+                let functions: Vec<&str> = content
+                    .lines()
+                    .filter(|line| {
+                        line.trim().starts_with("fn ") || line.trim().starts_with("pub fn ")
+                    })
                     .collect();
 
                 total_functions += functions.len();
@@ -409,7 +435,11 @@ impl EvidenceCollector {
             }
         }
 
-        let documentation_ratio = if total_functions == 0 { 0.0 } else { documented_functions as f64 / total_functions as f64 };
+        let documentation_ratio = if total_functions == 0 {
+            0.0
+        } else {
+            documented_functions as f64 / total_functions as f64
+        };
         let confidence = documentation_ratio * 0.9 + 0.1; // Base confidence of 0.1
 
         let content = format!(
@@ -456,7 +486,11 @@ impl EvidenceCollector {
                     }
                 }
 
-                let coverage_ratio = if total_lines == 0 { 0.0 } else { covered_lines as f64 / total_lines as f64 };
+                let coverage_ratio = if total_lines == 0 {
+                    0.0
+                } else {
+                    covered_lines as f64 / total_lines as f64
+                };
                 let confidence = coverage_ratio * 0.9 + 0.1;
 
                 format!(
@@ -550,15 +584,24 @@ impl EvidenceCollector {
                     }
 
                     // Extract execution time if available
-                    if let Some(exec_time) = test_message.get("exec_time").and_then(|v| v.as_f64()) {
+                    if let Some(exec_time) = test_message.get("exec_time").and_then(|v| v.as_f64())
+                    {
                         execution_time_ms += (exec_time * 1000.0) as u64;
                     }
                 }
             }
         }
 
-        let pass_rate = if total_tests == 0 { 0.0 } else { passed_tests as f64 / total_tests as f64 };
-        let confidence = if failed_tests == 0 { 0.9 } else { pass_rate * 0.8 };
+        let pass_rate = if total_tests == 0 {
+            0.0
+        } else {
+            passed_tests as f64 / total_tests as f64
+        };
+        let confidence = if failed_tests == 0 {
+            0.9
+        } else {
+            pass_rate * 0.8
+        };
 
         // Check if tests are related to the claim
         let claim_relevance = self.assess_test_claim_relevance(claim, &test_output);
@@ -621,8 +664,16 @@ impl EvidenceCollector {
                             }
 
                             let total_tests = passed_tests + failed_tests;
-                            let pass_rate = if total_tests == 0 { 0.0 } else { passed_tests as f64 / total_tests as f64 };
-                            let confidence = if failed_tests == 0 { 0.85 } else { pass_rate * 0.7 };
+                            let pass_rate = if total_tests == 0 {
+                                0.0
+                            } else {
+                                passed_tests as f64 / total_tests as f64
+                            };
+                            let confidence = if failed_tests == 0 {
+                                0.85
+                            } else {
+                                pass_rate * 0.7
+                            };
 
                             let content = format!(
                                 "JavaScript Test Results:\n- Total tests: {}\n- Passed: {}\n- Failed: {}\n- Pass rate: {:.1}%%\n- Quality assessment: {}",
@@ -763,10 +814,13 @@ impl EvidenceCollector {
         for readme_path in &readme_paths {
             if std::path::Path::new(readme_path).exists() {
                 if let Ok(content) = std::fs::read_to_string(readme_path) {
-                    let relevance_score = self.calculate_text_relevance(&claim.claim_text, &content);
+                    let relevance_score =
+                        self.calculate_text_relevance(&claim.claim_text, &content);
 
-                    if relevance_score > 0.1 { // Only include if somewhat relevant
-                        let excerpts = self.extract_relevant_excerpts(&claim.claim_text, &content, 3);
+                    if relevance_score > 0.1 {
+                        // Only include if somewhat relevant
+                        let excerpts =
+                            self.extract_relevant_excerpts(&claim.claim_text, &content, 3);
 
                         let content_summary = format!(
                             "README Documentation ({}):\nRelevance: {:.1}\nKey excerpts:\n{}",
@@ -776,9 +830,9 @@ impl EvidenceCollector {
                         );
 
                         evidence_list.push(Evidence {
-            id: Uuid::new_v4(),
-            claim_id: claim.id,
-            evidence_type: EvidenceType::Documentation,
+                            id: Uuid::new_v4(),
+                            claim_id: claim.id,
+                            evidence_type: EvidenceType::Documentation,
                             content: content_summary,
                             source: EvidenceSource {
                                 source_type: SourceType::FileSystem,
@@ -808,11 +862,17 @@ impl EvidenceCollector {
         }
 
         // Search for OpenAPI/Swagger specs
-        let spec_paths = ["docs/api.yaml", "docs/api.json", "docs/swagger.yaml", "docs/openapi.yaml"];
+        let spec_paths = [
+            "docs/api.yaml",
+            "docs/api.json",
+            "docs/swagger.yaml",
+            "docs/openapi.yaml",
+        ];
         for spec_path in &spec_paths {
             if std::path::Path::new(spec_path).exists() {
                 if let Ok(content) = std::fs::read_to_string(spec_path) {
-                    let relevance_score = self.calculate_text_relevance(&claim.claim_text, &content);
+                    let relevance_score =
+                        self.calculate_text_relevance(&claim.claim_text, &content);
 
                     if relevance_score > 0.2 {
                         let content_summary = format!(
@@ -856,7 +916,9 @@ impl EvidenceCollector {
                 // Extract Rust doc comments (/// and //!)
                 for line in content.lines() {
                     let trimmed = line.trim();
-                    if (trimmed.starts_with("///") || trimmed.starts_with("//!")) && trimmed.len() > 3 {
+                    if (trimmed.starts_with("///") || trimmed.starts_with("//!"))
+                        && trimmed.len() > 3
+                    {
                         let comment_text = trimmed[3..].trim();
                         if self.calculate_text_relevance(&claim.claim_text, comment_text) > 0.3 {
                             relevant_comments.push(comment_text.to_string());
@@ -901,7 +963,7 @@ impl EvidenceCollector {
             "docs/design.md",
             "docs/DESIGN.md",
             "ARCHITECTURE.md",
-            "docs/contracts/README.md"
+            "docs/contracts/README.md",
         ];
 
         let mut best_match = None;
@@ -980,7 +1042,8 @@ impl EvidenceCollector {
                     if let Ok(content) = std::fs::read_to_string(&path) {
                         let relevance = self.calculate_text_relevance(&claim.claim_text, &content);
                         if relevance > 0.2 {
-                            let excerpts = self.extract_relevant_excerpts(&claim.claim_text, &content, 2);
+                            let excerpts =
+                                self.extract_relevant_excerpts(&claim.claim_text, &content, 2);
 
                             let content_summary = format!(
                                 "Documentation ({}):\nRelevance: {:.1}\nExcerpts:\n{}",
@@ -1013,7 +1076,8 @@ impl EvidenceCollector {
 
     /// Calculate relevance score between claim text and document content
     fn calculate_text_relevance(&self, claim_text: &str, content: &str) -> f64 {
-        let claim_words: Vec<String> = claim_text.split_whitespace()
+        let claim_words: Vec<String> = claim_text
+            .split_whitespace()
             .filter(|word| word.len() > 3)
             .map(|word| word.to_lowercase())
             .collect();
@@ -1041,15 +1105,22 @@ impl EvidenceCollector {
     }
 
     /// Extract relevant excerpts from text
-    fn extract_relevant_excerpts(&self, claim_text: &str, content: &str, max_excerpts: usize) -> Vec<String> {
+    fn extract_relevant_excerpts(
+        &self,
+        claim_text: &str,
+        content: &str,
+        max_excerpts: usize,
+    ) -> Vec<String> {
         let mut excerpts = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
         let claim_lower = claim_text.to_lowercase();
 
         for (i, line) in lines.iter().enumerate() {
-            if line.to_lowercase().contains(&claim_lower) ||
-               claim_text.split_whitespace().any(|word| line.to_lowercase().contains(&word.to_lowercase())) {
-
+            if line.to_lowercase().contains(&claim_lower)
+                || claim_text
+                    .split_whitespace()
+                    .any(|word| line.to_lowercase().contains(&word.to_lowercase()))
+            {
                 // Extract context around the matching line
                 let start = i.saturating_sub(2);
                 let end = (i + 3).min(lines.len());
@@ -1138,7 +1209,8 @@ impl EvidenceCollector {
                 relevant_benchmarks.join("\n- ")
             )
         } else {
-            "No relevant benchmark data found - consider adding benchmarks for performance claims".to_string()
+            "No relevant benchmark data found - consider adding benchmarks for performance claims"
+                .to_string()
         };
 
         let confidence = if benchmark_found { 0.85 } else { 0.4 };
@@ -1214,7 +1286,7 @@ impl EvidenceCollector {
         let perf_files = [
             "target/coverage/lcov.info",
             "target/debug/deps/test_times.json",
-            "target/criterion/summary.json"
+            "target/criterion/summary.json",
         ];
 
         for perf_file in &perf_files {
@@ -1418,14 +1490,15 @@ impl EvidenceCollector {
                 if let Some(message) = clippy_message.get("message").and_then(|v| v.as_str()) {
                     let message_lower = message.to_lowercase();
                     // Check for security-related warnings
-                    if message_lower.contains("unsafe") ||
-                       message_lower.contains("cryptography") ||
-                       message_lower.contains("authentication") ||
-                       message_lower.contains("authorization") ||
-                       message_lower.contains("input validation") ||
-                       message_lower.contains("sql injection") ||
-                       message_lower.contains("xss") ||
-                       message_lower.contains("csrf") {
+                    if message_lower.contains("unsafe")
+                        || message_lower.contains("cryptography")
+                        || message_lower.contains("authentication")
+                        || message_lower.contains("authorization")
+                        || message_lower.contains("input validation")
+                        || message_lower.contains("sql injection")
+                        || message_lower.contains("xss")
+                        || message_lower.contains("csrf")
+                    {
                         security_warnings.push(message.to_string());
                     }
                 }
@@ -1438,7 +1511,12 @@ impl EvidenceCollector {
             let content = format!(
                 "Security Warnings from Clippy:\nFound {} security-related warnings:\n{}",
                 security_warnings.len(),
-                security_warnings.iter().take(5).cloned().collect::<Vec<_>>().join("\n- ")
+                security_warnings
+                    .iter()
+                    .take(5)
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join("\n- ")
             );
 
             evidence_list.push(Evidence {
@@ -1466,7 +1544,8 @@ impl EvidenceCollector {
 
         let content = if lockfile_path.exists() {
             if let Ok(lockfile_content) = std::fs::read_to_string(lockfile_path) {
-                let dependency_count = lockfile_content.lines()
+                let dependency_count = lockfile_content
+                    .lines()
                     .filter(|line| line.starts_with("name = "))
                     .count();
 
@@ -1527,16 +1606,25 @@ impl EvidenceCollector {
                 }
 
                 if content_lower.contains("password") && content_lower.contains("string") {
-                    security_issues.push(format!("Potential password in string in {}", file_path.display()));
+                    security_issues.push(format!(
+                        "Potential password in string in {}",
+                        file_path.display()
+                    ));
                 }
 
                 if content_lower.contains("sql") && content_lower.contains("format!") {
-                    security_issues.push(format!("Potential SQL injection via format! in {}", file_path.display()));
+                    security_issues.push(format!(
+                        "Potential SQL injection via format! in {}",
+                        file_path.display()
+                    ));
                 }
 
                 // Check for security best practices
                 if content.contains("#[derive(Debug)]") && content.contains("password") {
-                    security_issues.push(format!("Debug derive on password-containing struct in {}", file_path.display()));
+                    security_issues.push(format!(
+                        "Debug derive on password-containing struct in {}",
+                        file_path.display()
+                    ));
                 }
 
                 if content.contains("tokio::spawn") && !content.contains("timeout") {
@@ -1580,7 +1668,10 @@ impl EvidenceCollector {
         claim: &AtomicClaim,
         _context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
-        debug!("Collecting CAWS constitutional evidence for claim: {}", claim.id);
+        debug!(
+            "Collecting CAWS constitutional evidence for claim: {}",
+            claim.id
+        );
 
         let mut evidence_list = Vec::new();
 
@@ -1688,7 +1779,11 @@ impl EvidenceCollector {
                 let failed_gates = stdout.lines().filter(|line| line.contains("FAIL")).count();
                 let total_gates = passed_gates + failed_gates;
 
-                let pass_rate = if total_gates == 0 { 0.0 } else { passed_gates as f64 / total_gates as f64 };
+                let pass_rate = if total_gates == 0 {
+                    0.0
+                } else {
+                    passed_gates as f64 / total_gates as f64
+                };
 
                 let content = format!(
                     "CAWS Quality Gates Results:\n- Total gates: {}\n- Passed: {}\n- Failed: {}\n- Pass rate: {:.1}%%\n- Quality assessment: {}",
@@ -1716,7 +1811,8 @@ impl EvidenceCollector {
 
                 // Add detailed failure evidence if any gates failed
                 if failed_gates > 0 {
-                    let failure_details = stderr.lines()
+                    let failure_details = stderr
+                        .lines()
                         .filter(|line| line.contains("FAIL") || line.contains("ERROR"))
                         .take(3)
                         .collect::<Vec<_>>()
@@ -1835,7 +1931,13 @@ impl EvidenceCollector {
             "CAWS Workflow Compliance:\n{}\n- Overall compliance score: {:.1}\n- Status: {}",
             compliance_checks.join("\n"),
             compliance_score,
-            if compliance_score > 0.9 { "Fully compliant" } else if compliance_score > 0.7 { "Mostly compliant" } else { "Needs improvement" }
+            if compliance_score > 0.9 {
+                "Fully compliant"
+            } else if compliance_score > 0.7 {
+                "Mostly compliant"
+            } else {
+                "Needs improvement"
+            }
         );
 
         Ok(Evidence {

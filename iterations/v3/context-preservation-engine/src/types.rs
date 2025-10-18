@@ -585,3 +585,14 @@ pub struct ContextCacheStats {
     /// Number of active sessions
     pub sessions_count: usize,
 }
+
+/// Context performance data for learning system integration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextPerformanceData {
+    /// Effectiveness score (0.0 to 1.0)
+    pub effectiveness_score: f64,
+    /// Utilization rate (0.0 to 1.0)
+    pub utilization_rate: f64,
+    /// Freshness score (0.0 to 1.0)
+    pub freshness_score: f64,
+}

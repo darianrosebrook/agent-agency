@@ -216,6 +216,7 @@ mod tests {
 
         let result = builder
             .build_quality_weighted_consensus(
+                Uuid::new_v4(),
                 &pleading_result,
                 &confidence_scores,
                 &quality_assessment,
@@ -258,7 +259,11 @@ mod tests {
             ),
         ];
 
-        let result = engine.unwrap().resolve_conflicts(conflicting_outputs).await.unwrap();
+        let result = engine
+            .unwrap()
+            .resolve_conflicts(conflicting_outputs)
+            .await
+            .unwrap();
 
         // Verify arbitration result structure
         assert!(result.confidence >= 0.0 && result.confidence <= 1.0);
@@ -297,7 +302,11 @@ mod tests {
             300,
         )];
 
-        let result = engine.unwrap().resolve_conflicts(single_output).await.unwrap();
+        let result = engine
+            .unwrap()
+            .resolve_conflicts(single_output)
+            .await
+            .unwrap();
 
         // Should handle single output gracefully
         assert!(result.confidence >= 0.0 && result.confidence <= 1.0);
@@ -368,6 +377,7 @@ mod tests {
         let tracker = PerformanceTracker::new();
 
         let consensus = ConsensusResult {
+            task_id: Uuid::new_v4(),
             final_decision: "Final decision".to_string(),
             confidence: 0.85,
             quality_score: 0.9,
@@ -377,6 +387,7 @@ mod tests {
                 ("worker2".to_string(), 0.7),
             ]),
             reasoning: "Reasoning for decision".to_string(),
+            evaluation_time_ms: 0,
         };
 
         // Should track performance without error
@@ -428,7 +439,11 @@ mod tests {
             create_test_worker_output("worker3", "Similar solution 3", 0.8, 0.8, 500),
         ];
 
-        let result = engine.unwrap().resolve_conflicts(similar_outputs).await.unwrap();
+        let result = engine
+            .unwrap()
+            .resolve_conflicts(similar_outputs)
+            .await
+            .unwrap();
         assert!(result.confidence >= 0.0 && result.confidence <= 1.0);
 
         // Test with very different confidence levels
@@ -437,7 +452,11 @@ mod tests {
             create_test_worker_output("worker2", "Solution B", 0.9, 0.95, 200), // High confidence
         ];
 
-        let result2 = engine.unwrap().resolve_conflicts(varied_outputs).await.unwrap();
+        let result2 = AdvancedArbitrationEngine::new()
+            .unwrap()
+            .resolve_conflicts(varied_outputs)
+            .await
+            .unwrap();
         assert!(result2.confidence >= 0.0 && result2.confidence <= 1.0);
     }
 }

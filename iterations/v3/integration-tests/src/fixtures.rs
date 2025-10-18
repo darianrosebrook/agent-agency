@@ -284,6 +284,54 @@ impl TestFixtures {
             }
         })
     }
+
+    /// TODO: [critical-consensus-fixture]: Provide an end-to-end deterministic state bundle
+    /// covering council consensus, claim verification, provenance signing, and runtime
+    /// validation so Phase 1 critical infrastructure can be exercised before live trials.
+    ///
+    /// Requirements:
+    /// 1. Capture a single JSON payload that includes simulated inputs and expected outputs for
+    ///    council debates, claim extraction evidence, provenance commits, and runtime validator
+    ///    findings with cross-referenced identifiers.
+    /// 2. Include deterministic timestamps/UUIDs and seeded randomness so the bundle can be
+    ///    replayed without flakiness across CI and local environments.
+    /// 3. Embed CAWS acceptance checkpoints (A1–A9) that specify which assertions an integration
+    ///    test must validate when this fixture is consumed.
+    ///
+    /// Acceptance Criteria:
+    /// - Loading the fixture yields sections for `council_state`, `claim_pipeline`,
+    ///   `provenance_ledger`, and `runtime_validator`, each containing the minimal data needed to
+    ///   drive the corresponding subsystems.
+    /// - An integration test can drive the orchestrator from task intake through final verdict
+    ///   using only this fixture plus deterministic mocks, producing the expected consensus score
+    ///   (<5 s wall-clock in test) and verifying evidence links.
+    /// - Regression assertions fail if any subsystem omits required fields (e.g., missing judge
+    ///   confidence, absent JWS signature, or absent CAWS rule reference).
+    pub fn consensus_infrastructure_bundle() -> Value {
+        todo!("Implement consensus_infrastructure_bundle per TODO[critical-consensus-fixture]");
+    }
+
+    /// TODO[snapshot-diff-plan]: Design snapshot + rollback fixtures that operate without Git yet
+    /// still support diffing, provenance replay, and restore operations for integration testing.
+    ///
+    /// Requirements:
+    /// 1. Emit paired `baseline` and `candidate` snapshots capturing file manifests, content
+    ///    hashes, execution metadata, and provenance annotations to enable pure data diffs.
+    /// 2. Provide a rollback recipe that lists inverse operations (file deletions, restores,
+    ///    metadata resets) so tests can simulate reverting to `baseline` without touching a VCS.
+    /// 3. Describe validation hooks (hash comparison, schema checks, CAWS policy references) that
+    ///    tests must execute before applying or rolling back snapshots.
+    ///
+    /// Acceptance Criteria:
+    /// - Integration tests consuming the fixture can compute a deterministic diff report that
+    ///   flags added/changed/removed files and CAWS policy violations with stable ordering.
+    /// - Applying the rollback recipe restores the `baseline` snapshot byte-for-byte (hash match)
+    ///   in temporary directories while leaving the host workspace untouched.
+    /// - Snapshot metadata includes enough context (risk tier, change budget, tooling versions) to
+    ///   assert compliance against the working spec during validation.
+    pub fn snapshot_diff_plan() -> Value {
+        todo!("Implement snapshot_diff_plan per TODO[snapshot-diff-plan]");
+    }
 }
 
 /// Test data generators for different scenarios

@@ -402,26 +402,185 @@ impl MinimalDiffEvaluator {
         &self.config
     }
 
-    /// Update evaluation configuration
-    pub async fn update_config(&self, new_config: DiffEvaluationConfig) -> Result<()> {
-        info!("Updating diff evaluation configuration");
-        // TODO: Implement configuration update with the following requirements:
+    /// Update evaluation configuration with comprehensive validation and atomic updates
+    pub async fn update_config(&mut self, new_config: DiffEvaluationConfig) -> Result<()> {
+        info!("Updating diff evaluation configuration with validation and rollback support");
+
         // 1. Configuration validation: Validate new configuration parameters
-        //    - Validate configuration format and parameter values
-        //    - Check configuration compatibility and constraints
-        //    - Handle configuration validation error detection and reporting
-        // 2. Configuration update: Update system configuration with new values
-        //    - Apply new configuration parameters to system components
-        //    - Handle configuration update atomicity and consistency
-        //    - Implement proper configuration update error handling
+        self.validate_configuration(&new_config).await?;
+
+        // 2. Configuration update: Update system configuration with atomicity
+        let old_config = self.config.clone();
+        let update_result = self.apply_configuration_update(new_config).await;
+
+        // Rollback on failure
+        if let Err(e) = update_result {
+            warn!("Configuration update failed, rolling back: {}", e);
+            self.config = old_config;
+            return Err(e);
+        }
+
         // 3. Component reinitialization: Reinitialize components as needed
-        //    - Reinitialize components that depend on configuration changes
-        //    - Handle component reinitialization error detection and recovery
-        //    - Implement proper component lifecycle management
-        // 4. Configuration persistence: Persist configuration changes
-        //    - Save configuration changes to persistent storage
-        //    - Handle configuration persistence error detection and recovery
-        //    - Implement proper configuration backup and rollback mechanisms
+        if let Err(e) = self.reinitialize_components().await {
+            error!("Component reinitialization failed: {}", e);
+            // Continue with new config even if reinitialization fails
+            // The system can operate with updated config
+        }
+
+        // 4. Configuration persistence: Persist configuration changes with backup
+        if let Err(e) = self.persist_configuration().await {
+            error!("Configuration persistence failed: {}", e);
+            // Continue operating with in-memory config
+            warn!("Continuing with in-memory configuration");
+        }
+
+        info!("Configuration update completed successfully");
+        Ok(())
+    }
+
+    /// Validate configuration parameters and constraints
+    async fn validate_configuration(&self, config: &DiffEvaluationConfig) -> Result<()> {
+        // Validate file size limits
+        if config.max_file_size == 0 {
+            return Err(anyhow::anyhow!("Max file size cannot be zero"));
+        }
+        if config.max_file_size > 100 * 1024 * 1024 { // 100MB
+            return Err(anyhow::anyhow!("Max file size cannot exceed 100MB"));
+        }
+
+        // Validate analysis time limits
+        if config.max_analysis_time == 0 {
+            return Err(anyhow::anyhow!("Max analysis time cannot be zero"));
+        }
+        if config.max_analysis_time > 300 { // 5 minutes
+            return Err(anyhow::anyhow!("Max analysis time cannot exceed 5 minutes"));
+        }
+
+        // Validate that at least one analysis type is enabled
+        if !config.enable_ast_analysis && !config.enable_impact_analysis && !config.enable_language_analysis {
+            return Err(anyhow::anyhow!("At least one analysis type must be enabled"));
+        }
+
+        // Validate language configurations
+        for (language, lang_config) in &config.language_configs {
+            if lang_config.complexity_thresholds.cyclomatic_complexity == 0 {
+                return Err(anyhow::anyhow!("Cyclomatic complexity threshold cannot be zero for {:?}", language));
+            }
+
+            if lang_config.quality_thresholds.comment_density < 0.0 || lang_config.quality_thresholds.comment_density > 1.0 {
+                return Err(anyhow::anyhow!("Comment density must be between 0.0 and 1.0 for {:?}", language));
+            }
+        }
+
+        // Validate quality thresholds
+        if config.quality_thresholds.comment_density < 0.0 || config.quality_thresholds.comment_density > 1.0 {
+            return Err(anyhow::anyhow!("Global comment density must be between 0.0 and 1.0"));
+        }
+
+        Ok(())
+    }
+
+    /// Apply configuration update with atomicity guarantees
+    async fn apply_configuration_update(&mut self, new_config: DiffEvaluationConfig) -> Result<()> {
+        // Store old config for potential rollback
+        let old_config = self.config.clone();
+
+        // Apply new configuration atomically
+        self.config = new_config.clone();
+
+        // Test configuration by attempting to create components
+        let test_ast_analyzer = if self.config.enable_ast_analysis {
+            Some(crate::ast_analyzer::ASTAnalyzer::new(self.config.clone())?)
+        } else {
+            None
+        };
+
+        let test_impact_analyzer = if self.config.enable_impact_analysis {
+            Some(crate::impact_analyzer::ImpactAnalyzer::new(self.config.clone())?)
+        } else {
+            None
+        };
+
+        // If validation fails, restore old config
+        if test_ast_analyzer.is_none() && self.config.enable_ast_analysis {
+            self.config = old_config;
+            return Err(anyhow::anyhow!("Failed to initialize AST analyzer with new configuration"));
+        }
+
+        if test_impact_analyzer.is_none() && self.config.enable_impact_analysis {
+            self.config = old_config;
+            return Err(anyhow::anyhow!("Failed to initialize impact analyzer with new configuration"));
+        }
+
+        // Log configuration change
+        let change_event = serde_json::json!({
+            "event": "configuration_update",
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+            "changes": {
+                "ast_analysis": format!("{} -> {}", old_config.enable_ast_analysis, new_config.enable_ast_analysis),
+                "impact_analysis": format!("{} -> {}", old_config.enable_impact_analysis, new_config.enable_impact_analysis),
+                "language_analysis": format!("{} -> {}", old_config.enable_language_analysis, new_config.enable_language_analysis),
+                "max_file_size": format!("{} -> {}", old_config.max_file_size, new_config.max_file_size),
+                "max_analysis_time": format!("{} -> {}", old_config.max_analysis_time, new_config.max_analysis_time)
+            }
+        });
+
+        debug!("Configuration updated successfully: {}", change_event);
+
+        Ok(())
+    }
+
+    /// Reinitialize components that depend on configuration changes
+    async fn reinitialize_components(&mut self) -> Result<()> {
+        // Reinitialize AST analyzer if configuration changed
+        if self.config.enable_ast_analysis {
+            self.ast_analyzer = Some(crate::ast_analyzer::ASTAnalyzer::new(self.config.clone())?);
+        } else {
+            self.ast_analyzer = None;
+        }
+
+        // Reinitialize impact analyzer if configuration changed
+        if self.config.enable_impact_analysis {
+            self.impact_analyzer = Some(crate::impact_analyzer::ImpactAnalyzer::new(self.config.clone())?);
+        } else {
+            self.impact_analyzer = None;
+        }
+
+        // Note: Change classifier doesn't need reinitialization as it works with any config
+
+        debug!("Component reinitialization completed");
+        Ok(())
+    }
+
+    /// Persist configuration changes to storage with backup
+    async fn persist_configuration(&self) -> Result<()> {
+        use std::fs;
+        use std::path::Path;
+
+        let config_file = "diff_evaluator_config.json";
+
+        // Create backup if config file exists
+        if Path::new(config_file).exists() {
+            let backup_file = format!("{}.backup", config_file);
+            fs::copy(config_file, &backup_file)?;
+        }
+
+        // Serialize and save new configuration
+        let config_json = serde_json::to_string_pretty(&self.config)?;
+        let temp_file = format!("{}.tmp", config_file);
+
+        fs::write(&temp_file, &config_json)?;
+
+        // Atomic move to final location
+        fs::rename(&temp_file, config_file)?;
+
+        // Clean up backup after successful save
+        let backup_file = format!("{}.backup", config_file);
+        if Path::new(&backup_file).exists() {
+            let _ = fs::remove_file(&backup_file); // Ignore cleanup errors
+        }
+
+        debug!("Configuration persisted successfully to {}", config_file);
         Ok(())
     }
 }

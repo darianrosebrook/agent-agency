@@ -465,7 +465,10 @@ impl SecurityPolicyEnforcer {
         let resolved_workspace = match self.resolve_path_safely(workspace_root) {
             Ok(p) => p,
             Err(_) => {
-                warn!("Failed to resolve workspace root safely: {}", workspace_root);
+                warn!(
+                    "Failed to resolve workspace root safely: {}",
+                    workspace_root
+                );
                 return false;
             }
         };
@@ -478,7 +481,10 @@ impl SecurityPolicyEnforcer {
 
         // 3. Security checks: Implement security-focused path checks
         if !self.check_path_security(&resolved_path, &resolved_workspace) {
-            warn!("Path security check failed for: {} within workspace: {}", path, workspace_root);
+            warn!(
+                "Path security check failed for: {} within workspace: {}",
+                path, workspace_root
+            );
             return false;
         }
 
@@ -506,7 +512,9 @@ impl SecurityPolicyEnforcer {
                     match std::env::current_dir() {
                         Ok(cwd) => {
                             let joined = cwd.join(path_obj);
-                            joined.canonicalize().map_err(|_| "Failed to canonicalize relative path")
+                            joined
+                                .canonicalize()
+                                .map_err(|_| "Failed to canonicalize relative path")
                         }
                         Err(_) => Err("Cannot get current directory for relative path resolution"),
                     }
@@ -531,9 +539,16 @@ impl SecurityPolicyEnforcer {
 
         // Prevent workspace in system directories
         let restricted_paths = [
-            "/System", "/usr", "/bin", "/sbin", "/private",
-            "/Library/Frameworks", "/System/Library",
-            "C:\\Windows", "C:\\Program Files", "C:\\System32",  // Windows
+            "/System",
+            "/usr",
+            "/bin",
+            "/sbin",
+            "/private",
+            "/Library/Frameworks",
+            "/System/Library",
+            "C:\\Windows",
+            "C:\\Program Files",
+            "C:\\System32", // Windows
         ];
 
         for restricted in &restricted_paths {
@@ -579,9 +594,15 @@ impl SecurityPolicyEnforcer {
 
             // Block access to common system/hidden files
             let blocked_files = [
-                ".DS_Store", "Thumbs.db", "desktop.ini",
-                ".bashrc", ".bash_profile", ".zshrc",
-                "passwd", "shadow", "sudoers",
+                ".DS_Store",
+                "Thumbs.db",
+                "desktop.ini",
+                ".bashrc",
+                ".bash_profile",
+                ".zshrc",
+                "passwd",
+                "shadow",
+                "sudoers",
             ];
 
             if blocked_files.contains(&filename_str.as_ref()) {

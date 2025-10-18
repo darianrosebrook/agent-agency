@@ -20,4 +20,5 @@ parking_lot = "0.12"
 agent-agency-council = { path = "../council" }
 agent-agency-apple-silicon = { path = "../apple-silicon" }
 agent-agency-provenance = { path = "../provenance" }
+agent-agency-resilience = { path = "../resilience" }
 tracing = "0.1"

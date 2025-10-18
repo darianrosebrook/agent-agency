@@ -1082,17 +1082,21 @@ impl DatabaseOperations for DatabaseClient {
         Ok(())
     }
 
-
     async fn delete_worker(&self, id: Uuid) -> Result<(), Self::Error> {
         // First, check if worker exists and get basic info
-        let worker = self.get_worker(id).await?
+        let worker = self
+            .get_worker(id)
+            .await?
             .ok_or_else(|| anyhow::anyhow!("Worker with ID {} not found", id))?;
 
         // Validate worker deletion operation
         self.validate_worker_deletion(id).await?;
 
         // Use database transaction for atomicity
-        let mut tx = self.pool.begin().await
+        let mut tx = self
+            .pool
+            .begin()
+            .await
             .context("Failed to begin database transaction")?;
 
         // Create audit trail entry before deletion
@@ -1112,7 +1116,7 @@ impl DatabaseOperations for DatabaseClient {
         // Insert audit trail (within transaction)
         sqlx::query(
             "INSERT INTO audit_trail (entity_type, entity_id, action, details, user_id, ip_address)
-             VALUES ($1, $2, $3, $4, $5, $6)"
+             VALUES ($1, $2, $3, $4, $5, $6)",
         )
         .bind(&audit_entry.entity_type)
         .bind(audit_entry.entity_id)
@@ -1150,10 +1154,14 @@ impl DatabaseOperations for DatabaseClient {
         }
 
         // Commit transaction
-        tx.commit().await
+        tx.commit()
+            .await
             .context("Failed to commit worker deletion transaction")?;
 
-        info!("Successfully deleted worker: {} with ID: {}", worker.name, id);
+        info!(
+            "Successfully deleted worker: {} with ID: {}",
+            worker.name, id
+        );
         Ok(())
     }
 
@@ -1162,7 +1170,10 @@ impl DatabaseOperations for DatabaseClient {
         self.validate_task_creation(&task).await?;
 
         // Use database transaction for atomicity
-        let mut tx = self.pool.begin().await
+        let mut tx = self
+            .pool
+            .begin()
+            .await
             .context("Failed to begin database transaction")?;
 
         // Insert task record
@@ -1199,7 +1210,7 @@ impl DatabaseOperations for DatabaseClient {
         // Insert audit trail (within transaction)
         sqlx::query(
             "INSERT INTO audit_trail (entity_type, entity_id, action, details, user_id, ip_address)
-             VALUES ($1, $2, $3, $4, $5, $6)"
+             VALUES ($1, $2, $3, $4, $5, $6)",
         )
         .bind(&audit_entry.entity_type)
         .bind(audit_entry.entity_id)
@@ -1212,10 +1223,14 @@ impl DatabaseOperations for DatabaseClient {
         .context("Failed to create audit trail entry")?;
 
         // Commit transaction
-        tx.commit().await
+        tx.commit()
+            .await
             .context("Failed to commit task creation transaction")?;
 
-        info!("Created task: {} with ID: {}", created_task.title, created_task.id);
+        info!(
+            "Created task: {} with ID: {}",
+            created_task.title, created_task.id
+        );
         Ok(created_task)
     }
 
@@ -1327,7 +1342,10 @@ impl DatabaseOperations for DatabaseClient {
         self.validate_council_verdict_creation(&verdict).await?;
 
         // Use database transaction for atomicity
-        let mut tx = self.pool.begin().await
+        let mut tx = self
+            .pool
+            .begin()
+            .await
             .context("Failed to begin database transaction")?;
 
         // Insert council verdict record
@@ -1367,7 +1385,7 @@ impl DatabaseOperations for DatabaseClient {
         // Insert audit trail (within transaction)
         sqlx::query(
             "INSERT INTO audit_trail (entity_type, entity_id, action, details, user_id, ip_address)
-             VALUES ($1, $2, $3, $4, $5, $6)"
+             VALUES ($1, $2, $3, $4, $5, $6)",
         )
         .bind(&audit_entry.entity_type)
         .bind(audit_entry.entity_id)
@@ -1380,10 +1398,14 @@ impl DatabaseOperations for DatabaseClient {
         .context("Failed to create audit trail entry")?;
 
         // Commit transaction
-        tx.commit().await
+        tx.commit()
+            .await
             .context("Failed to commit council verdict creation transaction")?;
 
-        info!("Created council verdict: {} for task: {}", created_verdict.verdict_id, created_verdict.task_id);
+        info!(
+            "Created council verdict: {} for task: {}",
+            created_verdict.verdict_id, created_verdict.task_id
+        );
         Ok(created_verdict)
     }
 
@@ -1524,7 +1546,7 @@ impl DatabaseClient {
 
         // Check if worker has any running task executions
         let running_executions: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM task_executions WHERE worker_id = $1 AND status = 'running'"
+            "SELECT COUNT(*) FROM task_executions WHERE worker_id = $1 AND status = 'running'",
         )
         .bind(id)
         .fetch_one(&self.pool)
@@ -1622,36 +1644,44 @@ impl DatabaseClient {
     }
 
     /// Validate council verdict creation data
-    async fn validate_council_verdict_creation(&self, verdict: &CreateCouncilVerdict) -> Result<()> {
+    async fn validate_council_verdict_creation(
+        &self,
+        verdict: &CreateCouncilVerdict,
+    ) -> Result<()> {
         // Validate consensus score range
         if verdict.consensus_score < 0.0 || verdict.consensus_score > 1.0 {
-            return Err(anyhow::anyhow!("Consensus score must be between 0.0 and 1.0"));
+            return Err(anyhow::anyhow!(
+                "Consensus score must be between 0.0 and 1.0"
+            ));
         }
 
         // Validate verdict_id uniqueness
-        let existing: Option<String> = sqlx::query_scalar(
-            "SELECT verdict_id FROM council_verdicts WHERE verdict_id = $1"
-        )
-        .bind(&verdict.verdict_id)
-        .fetch_optional(&self.pool)
-        .await
-        .context("Failed to check verdict_id uniqueness")?;
+        let existing: Option<String> =
+            sqlx::query_scalar("SELECT verdict_id FROM council_verdicts WHERE verdict_id = $1")
+                .bind(&verdict.verdict_id)
+                .fetch_optional(&self.pool)
+                .await
+                .context("Failed to check verdict_id uniqueness")?;
 
         if existing.is_some() {
-            return Err(anyhow::anyhow!("Verdict ID already exists: {}", verdict.verdict_id));
+            return Err(anyhow::anyhow!(
+                "Verdict ID already exists: {}",
+                verdict.verdict_id
+            ));
         }
 
         // Validate task exists
-        let task_exists: Option<Uuid> = sqlx::query_scalar(
-            "SELECT id FROM tasks WHERE id = $1"
-        )
-        .bind(verdict.task_id)
-        .fetch_optional(&self.pool)
-        .await
-        .context("Failed to validate task existence")?;
+        let task_exists: Option<Uuid> = sqlx::query_scalar("SELECT id FROM tasks WHERE id = $1")
+            .bind(verdict.task_id)
+            .fetch_optional(&self.pool)
+            .await
+            .context("Failed to validate task existence")?;
 
         if task_exists.is_none() {
-            return Err(anyhow::anyhow!("Task with ID {} does not exist", verdict.task_id));
+            return Err(anyhow::anyhow!(
+                "Task with ID {} does not exist",
+                verdict.task_id
+            ));
         }
 
         // Validate debate rounds (must be non-negative)

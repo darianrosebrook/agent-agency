@@ -93,7 +93,8 @@ impl DisambiguationStage {
         }
 
         // Remove duplicates and create Ambiguity structs
-        let unique_referential: std::collections::HashSet<String> = referential_ambiguities.into_iter().collect();
+        let unique_referential: std::collections::HashSet<String> =
+            referential_ambiguities.into_iter().collect();
 
         for pronoun in unique_referential {
             // Find all occurrences of this pronoun
@@ -103,7 +104,9 @@ impl DisambiguationStage {
                     ambiguity_type: AmbiguityType::Pronoun,
                     position: (mat.start(), mat.end()),
                     original_text: pronoun.clone(),
-                    possible_resolutions: self.context_resolver.get_pronoun_resolutions(&pronoun, context),
+                    possible_resolutions: self
+                        .context_resolver
+                        .get_pronoun_resolutions(&pronoun, context),
                     confidence: 0.8, // Base confidence, will be adjusted based on context
                 });
             }

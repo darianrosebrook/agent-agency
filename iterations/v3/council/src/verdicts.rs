@@ -1081,6 +1081,269 @@ mod tests {
 
             Ok(())
         }
+
+        #[tokio::test]
+        async fn test_council_verdict_transaction_integrity() -> Result<()> {
+            let test_db = TestDatabase::new().await?;
+            let storage = DatabaseVerdictStorage::new(Arc::new(test_db.client));
+
+            let task_id = TaskId(Uuid::new_v4());
+
+            // Test successful transaction - store multiple verdicts atomically
+            let mut verdict_ids = Vec::new();
+            for i in 0..3 {
+                let verdict_id = VerdictId(Uuid::parse_str(&test_db.unique_id(&format!("tx_verdict_{}", i))).unwrap());
+                verdict_ids.push(verdict_id);
+
+                let consensus_result = create_test_consensus_result(task_id, verdict_id);
+                let verdict_record = VerdictRecord {
+                    verdict_id,
+                    consensus_result,
+                    debate_session: None,
+                    created_at: chrono::Utc::now(),
+                    accessed_at: chrono::Utc::now(),
+                    access_count: 1,
+                    storage_location: Some(format!("tx_test_{}", i)),
+                };
+
+                storage.store_verdict(&verdict_record).await?;
+            }
+
+            // Verify all verdicts were stored
+            for verdict_id in &verdict_ids {
+                let loaded = storage.load_verdict(*verdict_id).await?;
+                assert!(loaded.is_some(), "Verdict {} should exist", verdict_id.0);
+            }
+
+            // Test load by task returns all verdicts
+            let task_verdicts = storage.load_verdicts_by_task(task_id).await?;
+            assert_eq!(task_verdicts.len(), 3, "Should load all 3 verdicts for the task");
+
+            // Test deletion transaction integrity
+            for verdict_id in &verdict_ids {
+                storage.delete_verdict(*verdict_id).await?;
+            }
+
+            // Verify all were deleted
+            for verdict_id in &verdict_ids {
+                let loaded = storage.load_verdict(*verdict_id).await?;
+                assert!(loaded.is_none(), "Verdict {} should be deleted", verdict_id.0);
+            }
+
+            // Verify task loading returns empty
+            let task_verdicts_after_delete = storage.load_verdicts_by_task(task_id).await?;
+            assert!(task_verdicts_after_delete.is_empty(), "Should have no verdicts after deletion");
+
+            // Clean up
+            test_db.cleanup().await?;
+
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_council_verdict_concurrent_access() -> Result<()> {
+            let test_db = TestDatabase::new().await?;
+            let storage = DatabaseVerdictStorage::new(Arc::new(test_db.client));
+
+            let task_id = TaskId(Uuid::new_v4());
+            let verdict_id = VerdictId(Uuid::parse_str(&test_db.unique_id("concurrent_verdict")).unwrap());
+            let consensus_result = create_test_consensus_result(task_id, verdict_id);
+
+            let verdict_record = VerdictRecord {
+                verdict_id,
+                consensus_result,
+                debate_session: None,
+                created_at: chrono::Utc::now(),
+                accessed_at: chrono::Utc::now(),
+                access_count: 1,
+                storage_location: Some("concurrent_test".to_string()),
+            };
+
+            // Store verdict
+            storage.store_verdict(&verdict_record).await?;
+
+            // Test concurrent reads (should work fine)
+            let mut handles = Vec::new();
+            for _ in 0..5 {
+                let storage_clone = DatabaseVerdictStorage::new(Arc::new(test_db.client.clone()));
+                let verdict_id_clone = verdict_id;
+                let handle = tokio::spawn(async move {
+                    storage_clone.load_verdict(verdict_id_clone).await
+                });
+                handles.push(handle);
+            }
+
+            // Wait for all concurrent reads to complete
+            for handle in handles {
+                let result = handle.await??;
+                assert!(result.is_some(), "Concurrent read should succeed");
+                assert_eq!(result.unwrap().verdict_id, verdict_id);
+            }
+
+            // Clean up
+            test_db.cleanup().await?;
+
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_council_verdict_error_handling() -> Result<()> {
+            let test_db = TestDatabase::new().await?;
+            let storage = DatabaseVerdictStorage::new(Arc::new(test_db.client));
+
+            // Test loading non-existent verdict
+            let nonexistent_id = VerdictId(Uuid::parse_str(&test_db.unique_id("error_test")).unwrap());
+            let result = storage.load_verdict(nonexistent_id).await?;
+            assert!(result.is_none(), "Loading non-existent verdict should return None");
+
+            // Test deleting non-existent verdict (should not error)
+            storage.delete_verdict(nonexistent_id).await?;
+
+            // Test loading verdicts for non-existent task
+            let nonexistent_task = TaskId(Uuid::new_v4());
+            let task_verdicts = storage.load_verdicts_by_task(nonexistent_task).await?;
+            assert!(task_verdicts.is_empty(), "Loading verdicts for non-existent task should return empty");
+
+            // Test time range with no results
+            let past_time = chrono::Utc::now() - chrono::Duration::days(365);
+            let future_time = chrono::Utc::now() + chrono::Duration::days(365);
+            let time_range_verdicts = storage.load_verdicts_by_time_range(past_time, future_time).await?;
+            // This might return existing verdicts from other tests, so we just ensure it doesn't error
+
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_council_verdict_data_consistency() -> Result<()> {
+            let test_db = TestDatabase::new().await?;
+            let storage = DatabaseVerdictStorage::new(Arc::new(test_db.client));
+
+            let task_id = TaskId(Uuid::new_v4());
+            let verdict_id = VerdictId(Uuid::parse_str(&test_db.unique_id("consistency_verdict")).unwrap());
+            let mut consensus_result = create_test_consensus_result(task_id, verdict_id);
+
+            // Modify consensus result to test data consistency
+            consensus_result.consensus_score = 0.95;
+            consensus_result.final_verdict = serde_json::json!({"type": "approved", "confidence": 0.95});
+
+            let verdict_record = VerdictRecord {
+                verdict_id,
+                consensus_result: consensus_result.clone(),
+                debate_session: Some(create_test_debate_session()),
+                created_at: chrono::Utc::now(),
+                accessed_at: chrono::Utc::now(),
+                access_count: 5, // Test access count preservation
+                storage_location: Some("consistency_test".to_string()),
+            };
+
+            // Store verdict
+            storage.store_verdict(&verdict_record).await?;
+
+            // Load and verify data consistency
+            let loaded = storage.load_verdict(verdict_id).await?;
+            assert!(loaded.is_some(), "Verdict should be loaded");
+
+            let loaded_record = loaded.unwrap();
+            assert_eq!(loaded_record.verdict_id, verdict_id);
+            assert_eq!(loaded_record.consensus_result.task_id, task_id);
+            assert_eq!(loaded_record.consensus_result.consensus_score, 0.95);
+            assert_eq!(loaded_record.access_count, 5);
+            assert!(loaded_record.debate_session.is_some(), "Debate session should be preserved");
+
+            // Verify JSON serialization/deserialization consistency
+            let loaded_consensus = &loaded_record.consensus_result;
+            assert_eq!(loaded_consensus.final_verdict["type"], "approved");
+            assert_eq!(loaded_consensus.final_verdict["confidence"], 0.95);
+
+            // Clean up
+            test_db.cleanup().await?;
+
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_council_verdict_performance_and_load() -> Result<()> {
+            let test_db = TestDatabase::new().await?;
+            let storage = DatabaseVerdictStorage::new(Arc::new(test_db.client));
+
+            let task_id = TaskId(Uuid::new_v4());
+
+            // Performance test: Store multiple verdicts quickly
+            let start_time = std::time::Instant::now();
+            let mut verdict_ids = Vec::new();
+
+            for i in 0..100 {
+                let verdict_id = VerdictId(Uuid::parse_str(&test_db.unique_id(&format!("perf_verdict_{}", i))).unwrap());
+                verdict_ids.push(verdict_id);
+
+                let consensus_result = create_test_consensus_result(task_id, verdict_id);
+                let verdict_record = VerdictRecord {
+                    verdict_id,
+                    consensus_result,
+                    debate_session: if i % 10 == 0 { Some(create_test_debate_session()) } else { None },
+                    created_at: chrono::Utc::now(),
+                    accessed_at: chrono::Utc::now(),
+                    access_count: i as u64,
+                    storage_location: Some(format!("perf_test_{}", i)),
+                };
+
+                storage.store_verdict(&verdict_record).await?;
+            }
+
+            let store_duration = start_time.elapsed();
+            println!("Stored 100 verdicts in {:?}", store_duration);
+
+            // Load performance test
+            let load_start = std::time::Instant::now();
+            let mut load_count = 0;
+
+            for verdict_id in &verdict_ids {
+                let loaded = storage.load_verdict(*verdict_id).await?;
+                assert!(loaded.is_some(), "Verdict should exist");
+                load_count += 1;
+            }
+
+            let load_duration = load_start.elapsed();
+            println!("Loaded {} verdicts in {:?}", load_count, load_duration);
+
+            // Task-based loading performance test
+            let task_load_start = std::time::Instant::now();
+            let task_verdicts = storage.load_verdicts_by_task(task_id).await?;
+            let task_load_duration = task_load_start.elapsed();
+
+            println!("Loaded {} verdicts by task in {:?}", task_verdicts.len(), task_load_duration);
+            assert_eq!(task_verdicts.len(), 100, "Should load all verdicts for the task");
+
+            // Time range performance test
+            let time_start = chrono::Utc::now() - chrono::Duration::hours(1);
+            let time_end = chrono::Utc::now() + chrono::Duration::hours(1);
+
+            let time_load_start = std::time::Instant::now();
+            let time_verdicts = storage.load_verdicts_by_time_range(time_start, time_end).await?;
+            let time_load_duration = time_load_start.elapsed();
+
+            println!("Loaded {} verdicts by time range in {:?}", time_verdicts.len(), time_load_duration);
+
+            // Statistics performance test
+            let stats_start = std::time::Instant::now();
+            let stats = storage.get_storage_stats().await?;
+            let stats_duration = stats_start.elapsed();
+
+            println!("Retrieved storage stats in {:?}", stats_duration);
+            assert_eq!(stats.total_verdicts, 100, "Should have 100 total verdicts");
+            assert!(stats.total_debates >= 10, "Should have at least 10 debates");
+
+            // Performance assertions
+            assert!(store_duration.as_millis() < 5000, "Storing 100 verdicts should take less than 5 seconds");
+            assert!(load_duration.as_millis() < 3000, "Loading 100 verdicts should take less than 3 seconds");
+            assert!(task_load_duration.as_millis() < 1000, "Task-based loading should be fast");
+            assert!(stats_duration.as_millis() < 500, "Statistics query should be fast");
+
+            // Cleanup
+            test_db.cleanup().await?;
+
+            Ok(())
+        }
     }
 
     #[tokio::test]

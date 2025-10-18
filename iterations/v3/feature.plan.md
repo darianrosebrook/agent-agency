@@ -5,6 +5,7 @@
 - Implement the three core predictive components called out in the task: `PerformancePredictor`, `StrategyOptimizer`, and `ResourcePredictor`.
 - Expose orchestration via `PredictiveLearningSystem::learn_and_predict` so reflexive learning can consume proactive insights (performance, strategy, resource).
 - Stay within existing `reflexive-learning` scope; no cross-crate behavioral changes beyond the new public API and logs.
+- Elevate the coordinator's progress tracking by implementing `update_progress_metrics` so trend data influences completion estimates and persists into session state.
 
 ## Architecture Sketch
 ```
@@ -34,6 +35,7 @@ PredictiveLearningSystem
 - Add structured `tracing` spans around prediction/optimization to surface component-level timing.
 - Emit debug-level fields with predicted scores, recommended strategies, and resource pressure for downstream metrics ingestion.
 - Surface prediction confidence in returned insights so higher layers can fan-out to metrics (`consensus-time`, `agent-success-rate`) already tracked in spec.
+- Ensure progress metric updates emit structured fields (quality delta, completion adjustment, trend direction) to keep audit trails consistent with Tier 1 observability expectations.
 
 ## Test Matrix
 | Test Type | Scenario | Assertion |
@@ -43,6 +45,7 @@ PredictiveLearningSystem
 | Unit | Failure due to resource exhaustion | Resource predictor flags high pressure and elevated resource needs |
 | Unit | Timeout with partial progress metrics | Performance predictor lengthens completion time, resource predictor estimates retry cost |
 | Integration | `PredictiveLearningSystem::learn_and_predict` on contrasting outcomes | Aggregated insights combine component outputs coherently and preserve confidence fields |
+- Unit | Improving vs. declining performance trends | `update_progress_metrics` adjusts completion percentage appropriately and persists updated trend history |
 
 ## Acceptance Alignment
 - Supports working spec acceptance A3 (learning adaptation) by enabling proactive adjustments.

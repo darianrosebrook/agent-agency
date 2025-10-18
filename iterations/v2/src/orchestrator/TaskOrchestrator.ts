@@ -46,7 +46,11 @@ import {
 } from "./worker/WorkerPoolSupervisor";
 
 // Define orchestratorDir for ES modules (Jest-compatible)
-const orchestratorDir = path.join(process.cwd(), "src", "orchestrator");
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const orchestratorDir = dirname(__filename);
 
 /**
  * Worker Pool Manager
@@ -541,7 +545,7 @@ export class TaskOrchestrator extends EventEmitter {
   async submitTask(task: any): Promise<string> {
     // Process task through intake processor first
     const envelope: TaskIntakeEnvelope = {
-      payload: task,
+      payload: JSON.stringify(task), // Convert task to JSON string for intake processor
       metadata: {
         contentType: "application/json",
         encoding: "utf8",
@@ -572,11 +576,12 @@ export class TaskOrchestrator extends EventEmitter {
     this.validateTask(sanitizedTask);
 
     // Route task to appropriate agent (skip for file editing tasks)
+    let routingDecision: any = null;
     if (sanitizedTask.type === "file_editing") {
       // File editing tasks are executed directly in workers
       (sanitizedTask as any).assignedAgent = "worker-pool";
     } else {
-      const routingDecision = await this.routingManager.routeTask(
+      routingDecision = await this.routingManager.routeTask(
         sanitizedTask
       );
       (sanitizedTask as any).assignedAgent = routingDecision.selectedAgent.id;
@@ -595,32 +600,34 @@ export class TaskOrchestrator extends EventEmitter {
       "Task submitted"
     );
 
-    // Track performance
-    const performanceRoutingDecision = {
-      taskId: sanitizedTask.id,
-      selectedAgent: routingDecision.selectedAgent.id,
-      routingStrategy: routingDecision.strategy as any,
-      confidence: routingDecision.confidence,
-      alternativesConsidered: routingDecision.alternatives.map((alt: any) => ({
-        agentId: alt.agent.id,
-        score: routingDecision.confidence * 0.8,
-        reason: alt.reason,
-      })),
-      rationale: routingDecision.reason,
-      timestamp: new Date().toISOString(),
-    };
+    // Track performance (only for non-file-editing tasks)
+    if (routingDecision) {
+      const performanceRoutingDecision = {
+        taskId: sanitizedTask.id,
+        selectedAgent: routingDecision.selectedAgent.id,
+        routingStrategy: routingDecision.strategy as any,
+        confidence: routingDecision.confidence,
+        alternativesConsidered: routingDecision.alternatives.map((alt: any) => ({
+          agentId: alt.agent.id,
+          score: routingDecision.confidence * 0.8,
+          reason: alt.reason,
+        })),
+        rationale: routingDecision.reason,
+        timestamp: new Date().toISOString(),
+      };
 
-    const _executionId = await this.performanceTracker.startTaskExecution(
-      sanitizedTask.id,
-      routingDecision.selectedAgent.id,
-      performanceRoutingDecision,
-      {
-        taskType: sanitizedTask.type,
-        priority: sanitizedTask.priority,
-        timeoutMs: sanitizedTask.timeoutMs,
-        budget: sanitizedTask.budget,
-      }
-    );
+      const _executionId = await this.performanceTracker.startTaskExecution(
+        sanitizedTask.id,
+        routingDecision.selectedAgent.id,
+        performanceRoutingDecision,
+        {
+          taskType: sanitizedTask.type,
+          priority: sanitizedTask.priority,
+          timeoutMs: sanitizedTask.timeoutMs,
+          budget: sanitizedTask.budget,
+        }
+      );
+    }
 
     this.emit(TaskOrchestratorEvents.TASK_SUBMITTED, sanitizedTask);
 

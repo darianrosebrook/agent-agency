@@ -4,8 +4,10 @@
 
 use crate::types::*;
 use agent_agency_council::models::{RiskTier, TaskContext as CouncilTaskContext, TaskSpec};
+use agent_agency_resilience::{retry_with_backoff, CircuitBreaker, RetryConfig};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tracing::{info, warn};
 use uuid::Uuid;
 
@@ -41,41 +43,47 @@ impl TaskExecutor {
         &self,
         task_spec: TaskSpec,
         worker_id: Uuid,
+        circuit_breaker: Option<&Arc<CircuitBreaker>>,
     ) -> Result<TaskExecutionResult> {
         let task_id = task_spec.id;
         let started_at = self.clock.now();
 
         info!("Executing task {} with worker {}", task_id, worker_id);
 
-        // TODO: Get worker from registry with the following requirements:
-        // 1. Worker registry integration: Integrate with worker registry system
-        //    - Query worker registry for available workers
-        //    - Filter workers by capability and availability
-        //    - Handle worker discovery and registration
-        // 2. Worker selection: Select appropriate worker for task execution
-        //    - Match worker capabilities with task requirements
-        //    - Consider worker load and performance metrics
-        //    - Implement worker selection algorithms and strategies
-        // 3. Worker communication: Establish communication with selected worker
-        //    - Handle worker authentication and authorization
-        //    - Manage worker connections and session state
-        //    - Implement worker health monitoring and status checks
-        // 4. Task execution: Execute tasks on selected workers
-        //    - Send task data to worker for execution
-        //    - Monitor task progress and execution status
-        //    - Handle task completion and result collection
-        // 5. Error handling: Handle worker and execution errors
-        //    - Handle worker failures and unavailability
-        //    - Implement task retry and fallback strategies
-        //    - Provide meaningful error messages and recovery options
+        // NOTE: Current implementation simulates worker execution
+        // Future enhancement: Full worker registry and distributed execution system
+        // - Worker discovery and capability matching
+        // - Load balancing and performance optimization
+        // - Distributed worker coordination and health monitoring
+        // - Secure worker authentication and authorization
 
         // Prepare execution input
         let execution_input = self.prepare_execution_input(&task_spec)?;
 
-        // Execute with worker (simulated)
-        let execution_result = self
-            .execute_with_worker(worker_id, &execution_input)
-            .await?;
+        // Execute with worker (simulated) with circuit breaker and retry
+        let execution_result = if let Some(cb) = circuit_breaker {
+            retry_with_backoff(
+                RetryConfig {
+                    max_attempts: 3,
+                    initial_delay_ms: 500,
+                    max_delay_ms: 5000,
+                    backoff_multiplier: 2.0,
+                    jitter_factor: 0.1,
+                    use_exponential_backoff: true,
+                    use_jitter: true,
+                },
+                || async {
+                    cb.call(|| async {
+                        self.execute_with_worker(worker_id, &execution_input).await
+                    })
+                    .await
+                },
+            )
+            .await?
+        } else {
+            self.execute_with_worker(worker_id, &execution_input)
+                .await?
+        };
 
         // Process and validate result
         let result = self
@@ -274,27 +282,12 @@ impl TaskExecutor {
         });
 
         // For now, simulate the worker endpoint URL
-        // TODO: Implement worker registry integration with the following requirements:
-        // 1. Worker registry design: Design comprehensive worker registry system
-        //    - Define worker registration schema and metadata structure
-        //    - Implement worker discovery and registration protocols
-        //    - Support worker health monitoring and status tracking
-        //    - Handle worker lifecycle management and deregistration
-        // 2. Service discovery implementation: Implement service discovery for worker endpoints
-        //    - Set up service registry with worker endpoint information
-        //    - Implement DNS-based or registry-based service discovery
-        //    - Support load balancing and worker selection algorithms
-        //    - Handle service discovery failures and fallbacks
-        // 3. Worker metadata management: Manage comprehensive worker metadata
-        //    - Track worker capabilities, specializations, and constraints
-        //    - Store worker performance metrics and reliability data
-        //    - Implement worker versioning and compatibility checking
-        //    - Support worker configuration and customization options
-        // 4. Registry integration and operations: Integrate registry with execution workflow
-        //    - Implement worker lookup and endpoint resolution
-        //    - Support worker failover and retry mechanisms
-        //    - Handle registry updates and worker state changes
-        //    - Implement registry monitoring and analytics
+        // NOTE: Current implementation uses simulated worker endpoints
+        // Future enhancement: Full worker registry with service discovery
+        // - Distributed worker registry with health monitoring
+        // - Service discovery and load balancing
+        // - Worker capability matching and selection algorithms
+        // - Real-time worker performance tracking and optimization
         let worker_endpoint = format!("http://worker-{}/execute", worker_id);
 
         let response = self
@@ -418,11 +411,145 @@ impl TaskExecutor {
         QualityMetrics {
             completeness_score: if output.content.is_empty() { 0.0 } else { 0.9 },
             correctness_score: output.self_assessment.quality_score,
-            maintainability_score: 0.8, // TODO: Calculate based on code analysis
-            readability_score: 0.85,    // TODO: Calculate based on code structure
-            test_coverage: None,        // TODO: Calculate if tests are present
-            performance_impact: None,   // TODO: Calculate based on changes
+            maintainability_score: self.calculate_maintainability_score(&output.content),
+            readability_score: self.calculate_readability_score(&output.content),
+            test_coverage: self.estimate_test_coverage(&output.content),
+            performance_impact: self.estimate_performance_impact(&output.content),
         }
+    }
+
+    /// Calculate maintainability score based on code structure and patterns
+    fn calculate_maintainability_score(&self, content: &str) -> f32 {
+        let mut score = 0.5; // Base score
+
+        // Check for good practices that improve maintainability
+        let lines = content.lines().count();
+
+        // Penalize very long files
+        if lines > 500 {
+            score -= 0.2;
+        } else if lines > 200 {
+            score -= 0.1;
+        }
+
+        // Reward modular structure (functions, structs)
+        let function_count = content.matches("fn ").count();
+        let struct_count = content.matches("struct ").count();
+
+        if function_count > 5 {
+            score += 0.1;
+        }
+        if struct_count > 2 {
+            score += 0.1;
+        }
+
+        // Check for documentation
+        let comment_lines = content.lines().filter(|l| l.trim().starts_with("//")).count();
+        let comment_ratio = comment_lines as f32 / lines.max(1) as f32;
+
+        if comment_ratio > 0.1 {
+            score += 0.1;
+        }
+
+        // Penalize complex nested structures
+        let nested_braces = content.matches("{").count();
+        if nested_braces > lines / 10 {
+            score -= 0.1;
+        }
+
+        score.max(0.0).min(1.0)
+    }
+
+    /// Calculate readability score based on code formatting and structure
+    fn calculate_readability_score(&self, content: &str) -> f32 {
+        let mut score = 0.5; // Base score
+
+        // Check line length (reward reasonable line lengths)
+        let long_lines = content.lines().filter(|l| l.len() > 100).count();
+        let total_lines = content.lines().count();
+
+        if total_lines > 0 {
+            let long_line_ratio = long_lines as f32 / total_lines as f32;
+            if long_line_ratio < 0.1 {
+                score += 0.2;
+            } else if long_line_ratio > 0.3 {
+                score -= 0.2;
+            }
+        }
+
+        // Check for consistent indentation (basic check)
+        let spaces_indent = content.lines().filter(|l| l.starts_with("    ")).count();
+        let tabs_indent = content.lines().filter(|l| l.starts_with("\t")).count();
+
+        // Mixed indentation is bad for readability
+        if spaces_indent > 0 && tabs_indent > 0 {
+            score -= 0.1;
+        }
+
+        // Reward descriptive naming (basic heuristic)
+        let short_names = content.matches("let x").count() + content.matches("let y").count();
+        if short_names < 3 {
+            score += 0.1;
+        }
+
+        score.max(0.0).min(1.0)
+    }
+
+    /// Estimate test coverage based on content analysis
+    fn estimate_test_coverage(&self, content: &str) -> Option<f32> {
+        let has_tests = content.contains("#[test]") ||
+                       content.to_lowercase().contains("test") ||
+                       content.contains("#[tokio::test]");
+
+        if has_tests {
+            // Rough estimation based on test markers and assertions
+            let test_functions = content.matches("#[test]").count() +
+                               content.matches("#[tokio::test]").count();
+            let assertions = content.matches("assert").count();
+
+            if test_functions > 0 {
+                let coverage_estimate = (assertions as f32 / test_functions as f32).min(1.0);
+                Some(coverage_estimate * 0.8) // Conservative estimate
+            } else {
+                Some(0.1) // Minimal coverage if tests exist but no assertions
+            }
+        } else {
+            None // No tests detected
+        }
+    }
+
+    /// Estimate performance impact based on code patterns
+    fn estimate_performance_impact(&self, content: &str) -> Option<f32> {
+        let mut impact_score = 0.5; // Neutral impact
+
+        // Check for performance-sensitive patterns
+        let allocations = content.matches("vec!").count() +
+                        content.matches("HashMap::new").count() +
+                        content.matches("Box::new").count();
+
+        let async_operations = content.matches("async").count();
+        let blocking_operations = content.matches("std::fs").count() +
+                                content.matches("std::net").count();
+
+        // Performance concerns
+        if allocations > 10 {
+            impact_score += 0.2; // Memory pressure
+        }
+
+        if blocking_operations > async_operations {
+            impact_score += 0.1; // Potential blocking
+        }
+
+        // Performance optimizations
+        if content.contains("Arc<") || content.contains("Mutex<") {
+            impact_score -= 0.1; // Good concurrency practices
+        }
+
+        if content.contains("tokio::spawn") {
+            impact_score -= 0.1; // Async task spawning
+        }
+
+        Some(impact_score.max(0.0).min(1.0))
     }
 
     /// Check CAWS compliance for worker output

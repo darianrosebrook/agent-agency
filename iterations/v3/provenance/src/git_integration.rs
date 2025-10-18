@@ -102,7 +102,7 @@ impl GitTrailerManager {
     fn get_branch_ref(&self) -> Result<()> {
         let refname = format!("refs/heads/{}", self.branch);
         let _repo = self.repository.lock().unwrap();
-        // TODO: Implement proper reference handling without lifetime issues with the following requirements:
+        // TODO[git-reference-management]: Implement proper reference handling without lifetime issues.
         // 1. Reference management: Implement proper Git reference handling
         //    - Handle Git references with proper lifetime management
         //    - Implement reference resolution and validation
@@ -119,12 +119,16 @@ impl GitTrailerManager {
         //    - Implement efficient reference caching and lookup
         //    - Minimize Git repository access and operations
         //    - Handle large repositories and reference sets efficiently
+        // Acceptance Criteria:
+        // - Integration tests that mutate branch refs in temp repos complete without panics and
+        //   observe correct ref pointers post-update.
+        // - Reference locking prevents concurrent mutation races (verified via stress tests or mock).
         Ok(())
     }
 
     /// Get the current HEAD commit (simplified for now)
     fn get_head_commit(&self) -> Result<()> {
-        // TODO: Implement proper commit handling without lifetime issues with the following requirements:
+        // TODO[git-head-resolution]: Implement proper commit handling without lifetime issues.
         // 1. Commit management: Implement proper Git commit handling
         //    - Handle Git commits with proper lifetime management
         //    - Implement commit resolution and validation
@@ -141,6 +145,9 @@ impl GitTrailerManager {
         //    - Implement efficient commit caching and lookup
         //    - Minimize Git repository access for commit operations
         //    - Handle large commit histories efficiently
+        // Acceptance Criteria:
+        // - Integration tests can fetch HEAD before/after provenance commits and confirm hashes.
+        // - Error conditions (detached head, missing refs) raise typed errors that tests can assert.
         Ok(())
     }
 }

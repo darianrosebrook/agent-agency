@@ -47,7 +47,7 @@ async fn main() -> anyhow::Result<()> {
     // Orchestration provenance (example in-memory backend; replace with provenance service client)
     let orch_backend = InMemoryBackend(Mutex::new(Vec::new()));
     let orch_emitter = OrchestrationProvenanceEmitter::new(std::sync::Arc::new(orch_backend));
-    let verdict = orchestrate_task(&spec, &desc, &diff, true, true, &coord, &writer, &council_emitter, &orch_emitter).await?;
+    let verdict = orchestrate_task(&spec, &desc, &diff, true, true, &coord, &writer, &council_emitter, &orch_emitter, None, None).await?;
     println!("Final decision: {:?}", verdict.decision);
     Ok(())
 }

@@ -6,13 +6,15 @@
 use crate::types::*;
 use crate::{CawsChecker, TaskExecutor, TaskRouter, WorkerPoolConfig};
 use agent_agency_council::models::TaskSpec;
+use agent_agency_resilience::CircuitBreaker;
 use anyhow::Result;
 use async_trait::async_trait;
 use dashmap::DashMap;
+use reqwest::Client;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use tokio::time::{Duration, Instant};
-use tracing::{info, warn};
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 /// Main worker pool manager
@@ -27,12 +29,20 @@ pub struct WorkerPoolManager {
     stats: Arc<RwLock<WorkerPoolStats>>,
     health_check_handle: Option<tokio::task::JoinHandle<()>>,
     pool_start_time: Instant,
+    http_client: Client,
 }
 
 impl WorkerPoolManager {
     /// Create a new worker pool manager
     pub fn new(config: WorkerPoolConfig) -> Self {
         let (event_sender, _event_receiver) = mpsc::unbounded_channel();
+
+        // Create HTTP client with health check timeouts
+        let http_client = Client::builder()
+            .timeout(Duration::from_secs(5))
+            .pool_max_idle_per_host(10)
+            .build()
+            .expect("Failed to create HTTP client for health checks");
 
         Self {
             config,
@@ -56,6 +66,7 @@ impl WorkerPoolManager {
             })),
             health_check_handle: None,
             pool_start_time: Instant::now(),
+            http_client,
         }
     }
 
@@ -168,7 +179,11 @@ impl WorkerPoolManager {
     }
 
     /// Route and execute a task
-    pub async fn execute_task(&self, task_spec: TaskSpec) -> Result<TaskExecutionResult> {
+    pub async fn execute_task(
+        &self,
+        task_spec: TaskSpec,
+        circuit_breaker: Option<&std::sync::Arc<agent_agency_resilience::CircuitBreaker>>,
+    ) -> Result<TaskExecutionResult> {
         let task_id = task_spec.id;
         info!("Executing task: {} ({})", task_spec.title, task_id);
 
@@ -209,7 +224,7 @@ impl WorkerPoolManager {
         // Execute task
         let result = self
             .task_executor
-            .execute_task(task_spec, worker_id)
+            .execute_task(task_spec, worker_id, circuit_breaker)
             .await?;
         let result_status = result.status.clone();
 
@@ -529,7 +544,11 @@ pub trait WorkerPoolService: Send + Sync {
     async fn get_worker(&self, worker_id: Uuid) -> Option<Worker>;
     async fn get_workers(&self) -> Vec<Worker>;
     async fn get_available_workers(&self) -> Vec<Worker>;
-    async fn execute_task(&self, task_spec: TaskSpec) -> Result<TaskExecutionResult>;
+    async fn execute_task(
+        &self,
+        task_spec: TaskSpec,
+        circuit_breaker: Option<&std::sync::Arc<agent_agency_resilience::CircuitBreaker>>,
+    ) -> Result<TaskExecutionResult>;
     async fn update_worker_status(&self, worker_id: Uuid, status: WorkerStatus) -> Result<()>;
     async fn get_stats(&self) -> WorkerPoolStats;
 }
@@ -556,8 +575,12 @@ impl WorkerPoolService for WorkerPoolManager {
         self.get_available_workers().await
     }
 
-    async fn execute_task(&self, task_spec: TaskSpec) -> Result<TaskExecutionResult> {
-        self.execute_task(task_spec).await
+    async fn execute_task(
+        &self,
+        task_spec: TaskSpec,
+        circuit_breaker: Option<&std::sync::Arc<agent_agency_resilience::CircuitBreaker>>,
+    ) -> Result<TaskExecutionResult> {
+        self.execute_task(task_spec, circuit_breaker).await
     }
 
     async fn update_worker_status(&self, worker_id: Uuid, status: WorkerStatus) -> Result<()> {
