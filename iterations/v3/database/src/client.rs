@@ -1509,13 +1509,18 @@ impl DatabaseOperations for DatabaseClient {
                 id: row.get("id"),
                 task_id: row.get("task_id"),
                 worker_id: row.get("worker_id"),
+                execution_started_at: row.get("execution_started_at"),
+                execution_completed_at: row.get("execution_completed_at"),
+                execution_time_ms: row.get("execution_time_ms"),
                 status: row.get("status"),
-                started_at: row.get("started_at"),
-                completed_at: row.get("completed_at"),
+                worker_output: row.get("worker_output"),
+                self_assessment: row.get("self_assessment"),
+                metadata: row.get("metadata"),
+                error_message: row.get("error_message"),
+                tokens_used: row.get("tokens_used"),
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),
                 execution_metadata: row.get("execution_metadata"),
-                error_message: row.get("error_message"),
                 result_data: row.get("result_data"),
             })
             .collect();
@@ -1597,13 +1602,18 @@ impl DatabaseOperations for DatabaseClient {
             id: row.get("id"),
             task_id: row.get("task_id"),
             worker_id: row.get("worker_id"),
+            execution_started_at: row.get("execution_started_at"),
+            execution_completed_at: row.get("execution_completed_at"),
+            execution_time_ms: row.get("execution_time_ms"),
             status: row.get("status"),
-            started_at: row.get("started_at"),
-            completed_at: row.get("completed_at"),
+            worker_output: row.get("worker_output"),
+            self_assessment: row.get("self_assessment"),
+            metadata: row.get("metadata"),
+            error_message: row.get("error_message"),
+            tokens_used: row.get("tokens_used"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             execution_metadata: row.get("execution_metadata"),
-            error_message: row.get("error_message"),
             result_data: row.get("result_data"),
         };
 
@@ -1660,6 +1670,7 @@ impl DatabaseOperations for DatabaseClient {
             }),
             user_id: None,
             ip_address: None,
+            timestamp: Some(chrono::Utc::now()),
         };
 
         // Insert audit trail (within transaction)
@@ -1710,12 +1721,14 @@ impl DatabaseOperations for DatabaseClient {
                 task_id: row.get("task_id"),
                 verdict_id: row.get("verdict_id"),
                 consensus_score: row.get("consensus_score"),
+                final_verdict: row.get("final_verdict"),
+                individual_verdicts: row.get("individual_verdicts"),
                 debate_rounds: row.get("debate_rounds"),
                 evaluation_time_ms: row.get("evaluation_time_ms"),
                 created_at: row.get("created_at"),
+                contract: row.get("contract"),
                 updated_at: row.get("updated_at"),
                 verdict_details: row.get("verdict_details"),
-                participant_contributions: row.get("participant_contributions"),
             };
             Ok(Some(verdict))
         } else {
@@ -1807,8 +1820,12 @@ impl DatabaseOperations for DatabaseClient {
         }
 
         if let Some(pagination) = pagination {
-            query_builder = query_builder.bind(pagination.limit as i64);
-            query_builder = query_builder.bind(pagination.offset as i64);
+            if let Some(limit) = pagination.limit {
+                query_builder = query_builder.bind(limit);
+            }
+            if let Some(offset) = pagination.offset {
+                query_builder = query_builder.bind(offset);
+            }
         }
 
         let rows = query_builder
@@ -1823,12 +1840,14 @@ impl DatabaseOperations for DatabaseClient {
                 task_id: row.get("task_id"),
                 verdict_id: row.get("verdict_id"),
                 consensus_score: row.get("consensus_score"),
+                final_verdict: row.get("final_verdict"),
+                individual_verdicts: row.get("individual_verdicts"),
                 debate_rounds: row.get("debate_rounds"),
                 evaluation_time_ms: row.get("evaluation_time_ms"),
                 created_at: row.get("created_at"),
+                contract: row.get("contract"),
                 updated_at: row.get("updated_at"),
                 verdict_details: row.get("verdict_details"),
-                participant_contributions: row.get("participant_contributions"),
             })
             .collect();
 

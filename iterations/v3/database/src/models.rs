@@ -90,6 +90,8 @@ pub struct CouncilVerdict {
     pub evaluation_time_ms: i32,
     pub created_at: DateTime<Utc>,
     pub contract: serde_json::Value,
+    pub updated_at: Option<DateTime<Utc>>,
+    pub verdict_details: Option<serde_json::Value>,
 }
 
 /// Judge evaluation model from database
