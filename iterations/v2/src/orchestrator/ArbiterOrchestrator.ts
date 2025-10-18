@@ -912,6 +912,11 @@ export class ArbiterOrchestrator {
       return true;
     }
 
+    // Tasks with "violation" in the ID are violating
+    if (task.id && task.id.includes("violation")) {
+      return true;
+    }
+
     // Tasks with "unsafe" in the type are considered violating
     if (task.type && task.type.includes("unsafe")) {
       return true;
