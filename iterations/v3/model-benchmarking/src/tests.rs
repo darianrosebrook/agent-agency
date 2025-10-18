@@ -389,3 +389,186 @@ async fn test_benchmark_report_analysis_generates_alerts() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_model_evaluation_generates_metrics() -> Result<()> {
+    let evaluator = ModelEvaluator::new();
+    let model = ModelSpecification {
+        id: Uuid::new_v4(),
+        name: "Evaluator Test Model".to_string(),
+        model_type: ModelType::CodeGeneration,
+        parameters: ModelParameters {
+            size: 75_000_000,
+            context_length: 8192,
+            training_data: "synthetic".to_string(),
+            architecture: "transformer".to_string(),
+        },
+        capabilities: vec![
+            Capability {
+                capability_type: CapabilityType::CodeGeneration,
+                proficiency_level: ProficiencyLevel::Expert,
+                supported_domains: vec!["rust".to_string(), "python".to_string()],
+            },
+            Capability {
+                capability_type: CapabilityType::Testing,
+                proficiency_level: ProficiencyLevel::Advanced,
+                supported_domains: vec!["unit".to_string()],
+            },
+        ],
+        constraints: vec![],
+    };
+
+    let metrics = evaluator.evaluate_model(&model).await?;
+    assert!(
+        (0.6..=1.0).contains(&metrics.performance_metrics.accuracy),
+        "expected meaningful accuracy metric"
+    );
+    assert_eq!(
+        metrics.capability_scores.len(),
+        model.capabilities.len(),
+        "each capability should produce a score"
+    );
+    assert!(
+        metrics.overall_score > 0.6,
+        "overall score should reflect strong capability mix"
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_baseline_comparison_highlights_regressions() -> Result<()> {
+    let evaluator = ModelEvaluator::new();
+    let model = ModelSpecification {
+        id: Uuid::new_v4(),
+        name: "Baseline Test Model".to_string(),
+        model_type: ModelType::Analysis,
+        parameters: ModelParameters {
+            size: 150_000_000,
+            context_length: 4096,
+            training_data: "mixed".to_string(),
+            architecture: "encoder-decoder".to_string(),
+        },
+        capabilities: vec![Capability {
+            capability_type: CapabilityType::Analysis,
+            proficiency_level: ProficiencyLevel::Intermediate,
+            supported_domains: vec!["security".to_string()],
+        }],
+        constraints: vec![],
+    };
+
+    let evaluation = evaluator.evaluate_model(&model).await?;
+    let comparison = evaluator
+        .compare_against_baseline(&model, &evaluation)
+        .await?;
+
+    assert!(
+        !comparison.regression_areas.is_empty()
+            || !comparison.improvement_areas.is_empty(),
+        "comparison should surface differences relative to baseline"
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_generate_recommendation_considers_regressions() -> Result<()> {
+    let evaluator = ModelEvaluator::new();
+    let model = ModelSpecification {
+        id: Uuid::new_v4(),
+        name: "Recommendation Model".to_string(),
+        model_type: ModelType::Testing,
+        parameters: ModelParameters {
+            size: 200_000_000,
+            context_length: 2048,
+            training_data: "mixed".to_string(),
+            architecture: "transformer".to_string(),
+        },
+        capabilities: vec![
+            Capability {
+                capability_type: CapabilityType::Testing,
+                proficiency_level: ProficiencyLevel::Advanced,
+                supported_domains: vec!["qa".to_string()],
+            },
+            Capability {
+                capability_type: CapabilityType::CodeReview,
+                proficiency_level: ProficiencyLevel::Intermediate,
+                supported_domains: vec!["security".to_string()],
+            },
+        ],
+        constraints: vec![],
+    };
+
+    let evaluation = evaluator.evaluate_model(&model).await?;
+    let comparison = evaluator
+        .compare_against_baseline(&model, &evaluation)
+        .await?;
+    let recommendation = evaluator
+        .generate_recommendation(&model, &evaluation, &comparison)
+        .await?;
+
+    assert!(
+        matches!(
+            recommendation.recommendation,
+            RecommendationDecision::Adopt
+                | RecommendationDecision::ConditionalAdopt
+                | RecommendationDecision::FurtherEvaluation
+        ),
+        "recommendation should provide a concrete decision"
+    );
+    assert!(
+        (0.0..=1.0).contains(&recommendation.confidence),
+        "confidence must be normalized"
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_regression_detector_identifies_score_drop() -> Result<()> {
+    let detector = RegressionDetector::new();
+    let model_id = Uuid::new_v4();
+
+    let historical = BenchmarkResult {
+        model_id,
+        benchmark_type: BenchmarkType::MicroBenchmark,
+        metrics: BenchmarkMetrics {
+            accuracy: 0.9,
+            speed: 0.85,
+            efficiency: 0.88,
+            quality: 0.9,
+            compliance: 0.87,
+        },
+        score: 0.88,
+        ranking: 1,
+        sla_validation: None,
+    };
+
+    let regression = BenchmarkResult {
+        model_id,
+        benchmark_type: BenchmarkType::MicroBenchmark,
+        metrics: BenchmarkMetrics {
+            accuracy: 0.72,
+            speed: 0.65,
+            efficiency: 0.6,
+            quality: 0.68,
+            compliance: 0.7,
+        },
+        score: 0.64,
+        ranking: 2,
+        sla_validation: None,
+    };
+
+    let alerts = detector
+        .check_for_regressions(&[historical, regression])
+        .await?;
+
+    assert!(
+        !alerts.is_empty(),
+        "significant drops should trigger regression alerts"
+    );
+    assert!(
+        alerts
+            .iter()
+            .any(|alert| alert.metric_name == "score"),
+        "score regression should be reported"
+    );
+    Ok(())
+}

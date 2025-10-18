@@ -957,21 +957,17 @@ pub struct CouncilSubmissionResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CouncilVerdict {
-    Pass {
-        confidence: f32,
-        reasoning: String,
-        evidence: Vec<CouncilEvidence>,
+    Accepted {
+        confidence: f64,
+        summary: String,
     },
-    Fail {
-        violations: Vec<CouncilViolation>,
-        reasoning: String,
-        evidence: Vec<CouncilEvidence>,
+    Rejected {
+        primary_reasons: Vec<String>,
+        summary: String,
     },
-    Uncertain {
-        concerns: Vec<CouncilConcern>,
-        reasoning: String,
-        evidence: Vec<CouncilEvidence>,
-        recommendation: CouncilRecommendation,
+    NeedsInvestigation {
+        questions: Vec<String>,
+        summary: String,
     },
 }
 
