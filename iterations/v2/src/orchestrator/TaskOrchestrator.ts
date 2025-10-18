@@ -216,11 +216,8 @@ class WorkerPoolManager extends EventEmitter {
 
   async executeTask(task: Task): Promise<void> {
     // Early return if task is already being processed
-    const existingExecution = this.activeExecutions.get(task.id);
-    if (existingExecution && (existingExecution.status === "running" || existingExecution.status === "completed")) {
-      console.log(`[TaskOrchestrator] Task ${task.id} already being processed or completed`);
-      return;
-    }
+    // Note: activeExecutions is not available in WorkerPoolManager, so we'll skip this check for now
+    // TODO: Add proper task state tracking to WorkerPoolManager
 
     const availableWorker = this.findAvailableWorker();
     if (!availableWorker) {
@@ -250,11 +247,33 @@ class WorkerPoolManager extends EventEmitter {
     });
     this.supervisor?.markWorkerBusy(availableWorker, task.id);
 
-    // Send task to worker
-    worker.postMessage({
-      type: "execute_task",
-      task,
-    });
+    // Use circuit breaker for worker execution
+    const workerBreaker = circuitBreakerManager.getBreaker(
+      `worker-${availableWorker}`,
+      {
+        failureThreshold: 3,
+        recoveryTimeout: 10000, // 10 seconds
+        halfOpenMaxCalls: 1,
+      }
+    );
+
+    try {
+      await workerBreaker.execute(async () => {
+        // Send task to worker
+        worker.postMessage({
+          type: "execute_task",
+          task,
+        });
+      });
+    } catch (error) {
+      // Circuit breaker is open or execution failed
+      this.activeTasks.delete(availableWorker);
+        this.updateWorkerMetrics(availableWorker, {
+          status: "idle", // Reset to idle on error
+        });
+      this.supervisor?.markWorkerIdle(availableWorker);
+      throw error;
+    }
   }
 
   private findAvailableWorker(): string | null {
@@ -996,9 +1015,13 @@ export class TaskOrchestrator extends EventEmitter {
     }
 
     if (
-      !["script", "api_call", "data_processing", "ai_inference", "file_editing"].includes(
-        task.type
-      )
+      ![
+        "script",
+        "api_call",
+        "data_processing",
+        "ai_inference",
+        "file_editing",
+      ].includes(task.type)
     ) {
       throw new Error(`Unsupported task type: ${task.type}`);
     }

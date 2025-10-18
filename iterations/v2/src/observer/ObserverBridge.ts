@@ -14,6 +14,7 @@ import {
   ObserverConfig,
   ObserverEventPayload,
 } from "./types";
+import { HealthMonitor } from "../monitoring/HealthMonitor";
 
 /**
  * Arbiter Observer Bridge
@@ -30,11 +31,11 @@ export class ObserverBridge {
   private metricsTimer?: ReturnType<typeof setTimeout>;
   private started = false;
 
-  constructor(runtime?: ArbiterRuntime | null, config?: ObserverConfig) {
+  constructor(runtime?: ArbiterRuntime | null, config?: ObserverConfig, healthMonitor?: HealthMonitor) {
     this.config = config ?? loadObserverConfig();
     this.runtime = runtime ?? null;
     this.store = new ObserverStoreImpl(this.config, this.runtime ?? undefined);
-    this.server = new ObserverHttpServer(this.config, this.store, this.store);
+    this.server = new ObserverHttpServer(this.config, this.store, this.store, healthMonitor);
     this.handler = this.handleEvent.bind(this);
   }
 

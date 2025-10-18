@@ -1,9 +1,9 @@
 /**
  * Circuit Breaker Manager for V2 Arbiter
- * 
+ *
  * Provides centralized circuit breaker management for external dependencies
  * and critical system components to prevent cascade failures.
- * 
+ *
  * @author @darianrosebrook
  */
 
@@ -32,10 +32,7 @@ export class CircuitBreaker extends EventEmitter {
   private nextAttemptTime?: Date;
   private halfOpenCalls = 0;
 
-  constructor(
-    private name: string,
-    private config: CircuitBreakerConfig
-  ) {
+  constructor(private name: string, private config: CircuitBreakerConfig) {
     super();
   }
 
@@ -49,8 +46,13 @@ export class CircuitBreaker extends EventEmitter {
       this.emit("state-change", { from: "open", to: "half-open" });
     }
 
-    if (this.state === "half-open" && this.halfOpenCalls >= this.config.halfOpenMaxCalls) {
-      throw new Error(`Circuit breaker ${this.name} is half-open and max calls reached`);
+    if (
+      this.state === "half-open" &&
+      this.halfOpenCalls >= this.config.halfOpenMaxCalls
+    ) {
+      throw new Error(
+        `Circuit breaker ${this.name} is half-open and max calls reached`
+      );
     }
 
     try {
@@ -121,7 +123,10 @@ export class CircuitBreakerManager {
     halfOpenMaxCalls: 3,
   };
 
-  getBreaker(name: string, config?: Partial<CircuitBreakerConfig>): CircuitBreaker {
+  getBreaker(
+    name: string,
+    config?: Partial<CircuitBreakerConfig>
+  ): CircuitBreaker {
     if (!this.breakers.has(name)) {
       const breakerConfig = { ...this.defaultConfig, ...config };
       const breaker = new CircuitBreaker(name, breakerConfig);

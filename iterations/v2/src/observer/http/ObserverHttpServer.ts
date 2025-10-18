@@ -11,6 +11,8 @@ import {
   SubmitTaskPayload,
 } from "../types";
 import { SseManager } from "./SseManager";
+import { contractValidator, CommonSchemas } from "../../api/ContractValidator";
+import { HealthMonitor } from "../../monitoring/HealthMonitor";
 
 interface RequestContext {
   req: IncomingMessage;
@@ -25,16 +27,19 @@ export class ObserverHttpServer {
   private readonly controller: ArbiterController;
   private readonly sse: SseManager;
   private server?: Server;
+  private healthMonitor?: HealthMonitor;
 
   constructor(
     config: ObserverConfig,
     store: ObserverStore,
-    controller: ArbiterController
+    controller: ArbiterController,
+    healthMonitor?: HealthMonitor
   ) {
     this.config = config;
     this.store = store;
     this.controller = controller;
     this.sse = new SseManager(config);
+    this.healthMonitor = healthMonitor;
   }
 
   async start(): Promise<void> {
@@ -122,7 +127,12 @@ export class ObserverHttpServer {
       authorizeRequest(req, this.config);
     } catch (error) {
       if (error instanceof ObserverAuthError) {
-        this.sendJson(res, error.status, { error: error.message }, originHeader);
+        this.sendJson(
+          res,
+          error.status,
+          { error: error.message },
+          originHeader
+        );
       } else {
         this.sendJson(res, 401, { error: "Unauthorized" }, originHeader);
       }
@@ -151,6 +161,28 @@ export class ObserverHttpServer {
     if (req.method === "GET" && url.pathname === "/observer/progress") {
       const progress = this.store.getProgress();
       this.sendJson(res, 200, progress, originHeader);
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/observer/health") {
+      if (this.healthMonitor) {
+        const healthSummary = this.healthMonitor.getHealthSummary();
+        const metrics = this.healthMonitor.getMetrics();
+        const alerts = this.healthMonitor.getAlerts();
+        const overallStatus = this.healthMonitor.getOverallStatus();
+        
+        this.sendJson(res, 200, {
+          status: overallStatus,
+          checks: healthSummary,
+          metrics,
+          alerts,
+          timestamp: new Date().toISOString(),
+        }, originHeader);
+      } else {
+        this.sendJson(res, 503, { 
+          error: "Health monitoring not available" 
+        }, originHeader);
+      }
       return;
     }
 
@@ -219,8 +251,29 @@ export class ObserverHttpServer {
 
     if (req.method === "POST" && url.pathname === "/observer/tasks") {
       const body = await this.readJsonBody(ctx);
+
+      // Validate request against contract
+      const validation = contractValidator.validateRequest(
+        "observer",
+        "submitTask",
+        body
+      );
+      if (!validation.valid) {
+        this.sendJson(
+          res,
+          400,
+          {
+            error: "Invalid request format",
+            details: validation.errors,
+          },
+          originHeader
+        );
+        return;
+      }
+
       const payload: SubmitTaskPayload = {
-        description: typeof body?.description === "string" ? body.description : "",
+        description:
+          typeof body?.description === "string" ? body.description : "",
         specPath:
           typeof body?.specPath === "string" ? body.specPath : undefined,
         metadata:
@@ -229,6 +282,7 @@ export class ObserverHttpServer {
             : undefined,
         type: typeof body?.type === "string" ? body.type : undefined,
       };
+
       if (!payload.description && !payload.specPath) {
         this.sendJson(
           res,
@@ -238,7 +292,21 @@ export class ObserverHttpServer {
         );
         return;
       }
+
       const result = await this.controller.submitTask(payload);
+
+      // Validate response against contract
+      const responseValidation = contractValidator.validateResponse(
+        "observer",
+        "submitTask",
+        result,
+        202
+      );
+      if (!responseValidation.valid) {
+        console.warn("Response validation failed:", responseValidation.errors);
+        // Don't fail the request, just log the warning
+      }
+
       this.sendJson(res, 202, result, originHeader);
       return;
     }
@@ -289,9 +357,9 @@ export class ObserverHttpServer {
     const until = ctx.url.searchParams.get("untilTs");
     const type = ctx.url.searchParams.get("type") ?? undefined;
     const taskId = ctx.url.searchParams.get("taskId") ?? undefined;
-    const severity = ctx.url.searchParams.get(
-      "severity"
-    ) as ObserverEventPayload["severity"] | null;
+    const severity = ctx.url.searchParams.get("severity") as
+      | ObserverEventPayload["severity"]
+      | null;
 
     return await this.store.listEvents({
       cursor,
@@ -349,9 +417,9 @@ export class ObserverHttpServer {
   }
 
   private handleSse(ctx: RequestContext): void {
-    const severity = ctx.url.searchParams.get(
-      "severity"
-    ) as ObserverEventPayload["severity"] | null;
+    const severity = ctx.url.searchParams.get("severity") as
+      | ObserverEventPayload["severity"]
+      | null;
     const filters = {
       taskId: ctx.url.searchParams.get("taskId") ?? undefined,
       type: ctx.url.searchParams.get("type") ?? undefined,
@@ -378,10 +446,7 @@ export class ObserverHttpServer {
       "Access-Control-Allow-Headers",
       "Content-Type, Authorization, X-Requested-With"
     );
-    res.setHeader(
-      "Access-Control-Allow-Methods",
-      "GET, POST, OPTIONS"
-    );
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   }
 
   private sendJson(

@@ -348,6 +348,12 @@ pub enum EdgeCaseType {
     IOError,
     ExceptionalCondition,
     TypeCoercion,
+    Equivalence,
+    Stress,
+    Security,
+    Usability,
+    Reliability,
+    Performance,
 }
 
 /// Edge case analysis results
@@ -1549,6 +1555,71 @@ impl EdgeCaseAnalyzer {
                         impact: 0.7,
                         risk_level: RiskLevel::High,
                         detection_method: DetectionMethod::StaticAnalysis,
+                    });
+                }
+                RequirementType::NonFunctional => {
+                    // Non-functional requirements edge cases
+                    edge_cases.push(IdentifiedEdgeCase {
+                        edge_case_id: Uuid::new_v4(),
+                        edge_case_name: "Performance degradation".to_string(),
+                        edge_case_type: EdgeCaseType::Performance,
+                        description: format!("Input '{}' causing performance issues", input.requirement_name),
+                        probability: 0.6,
+                        impact: 0.8,
+                        risk_level: RiskLevel::High,
+                        detection_method: DetectionMethod::PerformanceTesting,
+                    });
+                }
+                RequirementType::Performance => {
+                    // Performance requirements edge cases
+                    edge_cases.push(IdentifiedEdgeCase {
+                        edge_case_id: Uuid::new_v4(),
+                        edge_case_name: "Load testing edge case".to_string(),
+                        edge_case_type: EdgeCaseType::Performance,
+                        description: format!("Input '{}' under high load conditions", input.requirement_name),
+                        probability: 0.7,
+                        impact: 0.9,
+                        risk_level: RiskLevel::High,
+                        detection_method: DetectionMethod::LoadTesting,
+                    });
+                }
+                RequirementType::Security => {
+                    // Security requirements edge cases
+                    edge_cases.push(IdentifiedEdgeCase {
+                        edge_case_id: Uuid::new_v4(),
+                        edge_case_name: "Security vulnerability".to_string(),
+                        edge_case_type: EdgeCaseType::Security,
+                        description: format!("Input '{}' with potential security risk", input.requirement_name),
+                        probability: 0.4,
+                        impact: 0.95,
+                        risk_level: RiskLevel::Critical,
+                        detection_method: DetectionMethod::SecurityTesting,
+                    });
+                }
+                RequirementType::Usability => {
+                    // Usability requirements edge cases
+                    edge_cases.push(IdentifiedEdgeCase {
+                        edge_case_id: Uuid::new_v4(),
+                        edge_case_name: "Usability issue".to_string(),
+                        edge_case_type: EdgeCaseType::Usability,
+                        description: format!("Input '{}' causing usability problems", input.requirement_name),
+                        probability: 0.5,
+                        impact: 0.6,
+                        risk_level: RiskLevel::Medium,
+                        detection_method: DetectionMethod::UsabilityTesting,
+                    });
+                }
+                RequirementType::Reliability => {
+                    // Reliability requirements edge cases
+                    edge_cases.push(IdentifiedEdgeCase {
+                        edge_case_id: Uuid::new_v4(),
+                        edge_case_name: "Reliability failure".to_string(),
+                        edge_case_type: EdgeCaseType::Reliability,
+                        description: format!("Input '{}' causing system failure", input.requirement_name),
+                        probability: 0.3,
+                        impact: 0.9,
+                        risk_level: RiskLevel::Critical,
+                        detection_method: DetectionMethod::ReliabilityTesting,
                     });
                 }
             }

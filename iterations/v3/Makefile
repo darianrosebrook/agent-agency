@@ -1,6 +1,37 @@
 SHELL := /bin/bash
 
-.PHONY: verify verify-tier1 verify-tier2 verify-tier3 test-coverage coverage-report schema-validate clean mutants-mcp mutants-mcp-list mutants-mcp-files test-contract test-e2e gates install-hooks
+.PHONY: verify verify-tier1 verify-tier2 verify-tier3 test-coverage coverage-report schema-validate clean mutants-mcp mutants-mcp-list mutants-mcp-files test-contract test-e2e gates install-hooks build build-dev build-test build-release check check-fast install-tools
+
+# Build targets using optimized wrapper
+build: build-dev
+
+build-dev:
+	@echo "🔨 Building in dev mode with optimized settings..."
+	@./scripts/build-wrapper.sh dev --workspace
+
+build-test:
+	@echo "🧪 Building tests with optimized settings..."
+	@./scripts/build-wrapper.sh test --workspace
+
+build-release:
+	@echo "🚀 Building release with optimized settings..."
+	@./scripts/build-wrapper.sh release --workspace
+
+check:
+	@echo "✅ Checking workspace with optimized settings..."
+	@./scripts/build-wrapper.sh check --workspace
+
+check-fast:
+	@echo "⚡ Fast check (single package)..."
+	@AGENT_ID="fast-check" ./scripts/build-wrapper.sh check --lib
+
+# Tool installation
+install-tools:
+	@echo "📦 Installing build optimization tools..."
+	@cargo install sccache cargo-nextest || echo "Some tools may already be installed"
+	@echo "🔧 Installing fast linker for macOS..."
+	@brew install llvm || echo "LLVM may already be installed"
+	@echo "✅ Tools installed. You may need to restart your shell to use them."
 
 # Default verification (Tier 2)
 verify: test-coverage schema-validate gates

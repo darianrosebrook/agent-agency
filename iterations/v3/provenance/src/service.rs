@@ -18,6 +18,7 @@ use crate::{
         BudgetAdherence,
     },
     ProvenanceConfig,
+    SigningAlgorithm,
 };
 
 /// Storage trait for provenance records
@@ -233,23 +234,7 @@ impl ProvenanceService {
                 start: chrono::DateTime::from_timestamp(0, 0).unwrap_or_else(Utc::now),
                 end: Utc::now(),
             }),
-            filters_applied: vec![], // TODO: Extract from query with the following requirements:
-            // 1. Query parsing: Parse provenance query to extract applied filters
-            //    - Extract filter conditions from provenance query parameters
-            //    - Parse filter types, values, and operators
-            //    - Handle complex filter combinations and nested conditions
-            // 2. Filter validation: Validate extracted filters for correctness
-            //    - Verify filter syntax and parameter validity
-            //    - Check filter compatibility and consistency
-            //    - Handle filter validation errors and corrections
-            // 3. Filter processing: Process filters for provenance data export
-            //    - Apply filters to provenance data selection
-            //    - Handle filter execution and result filtering
-            //    - Implement proper filter performance optimization
-            // 4. Filter documentation: Document applied filters in export metadata
-            //    - Record filter details in export metadata
-            //    - Provide filter descriptions and explanations
-            //    - Enable filter audit and traceability
+            filters_applied: self.extract_filters_from_query(&query)?,
             export_reason: "Data export requested".to_string(),
             recipient: None,
         };
@@ -262,6 +247,297 @@ impl ProvenanceService {
             created_at: Utc::now(),
             created_by: "provenance-service".to_string(),
         })
+    }
+
+    /// Extract filters from provenance query parameters
+    fn extract_filters_from_query(&self, query: &ProvenanceQuery) -> Result<Vec<ProvenanceFilter>> {
+        let mut filters = Vec::new();
+
+        // 1. Query parsing: Parse provenance query to extract applied filters
+        self.extract_time_range_filters(query, &mut filters)?;
+        self.extract_entity_filters(query, &mut filters)?;
+        self.extract_activity_filters(query, &mut filters)?;
+        self.extract_agent_filters(query, &mut filters)?;
+        self.extract_custom_filters(query, &mut filters)?;
+
+        // 2. Filter validation: Validate extracted filters for correctness
+        self.validate_filters(&filters)?;
+
+        // 3. Filter processing: Process filters for provenance data export
+        self.optimize_filters(&mut filters)?;
+
+        Ok(filters)
+    }
+
+    /// Extract time range filters from query
+    fn extract_time_range_filters(&self, query: &ProvenanceQuery, filters: &mut Vec<ProvenanceFilter>) -> Result<()> {
+        if let Some(time_range) = &query.time_range {
+            filters.push(ProvenanceFilter {
+                filter_type: FilterType::TimeRange,
+                field: "timestamp".to_string(),
+                operator: FilterOperator::Between,
+                value: serde_json::json!({
+                    "start": time_range.start,
+                    "end": time_range.end
+                }),
+                description: format!("Time range: {} to {}", 
+                    time_range.start.format("%Y-%m-%d %H:%M:%S"),
+                    time_range.end.format("%Y-%m-%d %H:%M:%S")
+                ),
+            });
+        }
+        Ok(())
+    }
+
+    /// Extract entity filters from query
+    fn extract_entity_filters(&self, query: &ProvenanceQuery, filters: &mut Vec<ProvenanceFilter>) -> Result<()> {
+        if let Some(entity_types) = &query.entity_types {
+            if !entity_types.is_empty() {
+                filters.push(ProvenanceFilter {
+                    filter_type: FilterType::EntityType,
+                    field: "entity_type".to_string(),
+                    operator: FilterOperator::In,
+                    value: serde_json::to_value(entity_types)?,
+                    description: format!("Entity types: {}", entity_types.join(", ")),
+                });
+            }
+        }
+
+        if let Some(entity_ids) = &query.entity_ids {
+            if !entity_ids.is_empty() {
+                filters.push(ProvenanceFilter {
+                    filter_type: FilterType::EntityId,
+                    field: "entity_id".to_string(),
+                    operator: FilterOperator::In,
+                    value: serde_json::to_value(entity_ids)?,
+                    description: format!("Entity IDs: {}", entity_ids.len()),
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Extract activity filters from query
+    fn extract_activity_filters(&self, query: &ProvenanceQuery, filters: &mut Vec<ProvenanceFilter>) -> Result<()> {
+        if let Some(activity_types) = &query.activity_types {
+            if !activity_types.is_empty() {
+                filters.push(ProvenanceFilter {
+                    filter_type: FilterType::ActivityType,
+                    field: "activity_type".to_string(),
+                    operator: FilterOperator::In,
+                    value: serde_json::to_value(activity_types)?,
+                    description: format!("Activity types: {}", activity_types.join(", ")),
+                });
+            }
+        }
+
+        if let Some(activity_ids) = &query.activity_ids {
+            if !activity_ids.is_empty() {
+                filters.push(ProvenanceFilter {
+                    filter_type: FilterType::ActivityId,
+                    field: "activity_id".to_string(),
+                    operator: FilterOperator::In,
+                    value: serde_json::to_value(activity_ids)?,
+                    description: format!("Activity IDs: {}", activity_ids.len()),
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Extract agent filters from query
+    fn extract_agent_filters(&self, query: &ProvenanceQuery, filters: &mut Vec<ProvenanceFilter>) -> Result<()> {
+        if let Some(agent_ids) = &query.agent_ids {
+            if !agent_ids.is_empty() {
+                filters.push(ProvenanceFilter {
+                    filter_type: FilterType::AgentId,
+                    field: "agent_id".to_string(),
+                    operator: FilterOperator::In,
+                    value: serde_json::to_value(agent_ids)?,
+                    description: format!("Agent IDs: {}", agent_ids.len()),
+                });
+            }
+        }
+
+        if let Some(agent_types) = &query.agent_types {
+            if !agent_types.is_empty() {
+                filters.push(ProvenanceFilter {
+                    filter_type: FilterType::AgentType,
+                    field: "agent_type".to_string(),
+                    operator: FilterOperator::In,
+                    value: serde_json::to_value(agent_types)?,
+                    description: format!("Agent types: {}", agent_types.join(", ")),
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Extract custom filters from query
+    fn extract_custom_filters(&self, query: &ProvenanceQuery, filters: &mut Vec<ProvenanceFilter>) -> Result<()> {
+        if let Some(custom_filters) = &query.custom_filters {
+            for (field, filter_value) in custom_filters {
+                let filter = ProvenanceFilter {
+                    filter_type: FilterType::Custom,
+                    field: field.clone(),
+                    operator: self.determine_operator(filter_value)?,
+                    value: filter_value.clone(),
+                    description: format!("Custom filter: {} {}", field, self.describe_filter_value(filter_value)?),
+                };
+                filters.push(filter);
+            }
+        }
+        Ok(())
+    }
+
+    /// Determine filter operator from value type
+    fn determine_operator(&self, value: &serde_json::Value) -> Result<FilterOperator> {
+        match value {
+            serde_json::Value::Array(_) => Ok(FilterOperator::In),
+            serde_json::Value::Object(obj) => {
+                if obj.contains_key("start") && obj.contains_key("end") {
+                    Ok(FilterOperator::Between)
+                } else if obj.contains_key("min") && obj.contains_key("max") {
+                    Ok(FilterOperator::Between)
+                } else {
+                    Ok(FilterOperator::Equals)
+                }
+            },
+            _ => Ok(FilterOperator::Equals),
+        }
+    }
+
+    /// Describe filter value for documentation
+    fn describe_filter_value(&self, value: &serde_json::Value) -> Result<String> {
+        match value {
+            serde_json::Value::String(s) => Ok(format!("= '{}'", s)),
+            serde_json::Value::Number(n) => Ok(format!("= {}", n)),
+            serde_json::Value::Bool(b) => Ok(format!("= {}", b)),
+            serde_json::Value::Array(arr) => Ok(format!("in [{} values]", arr.len())),
+            serde_json::Value::Object(obj) => {
+                if obj.contains_key("start") && obj.contains_key("end") {
+                    Ok("between range".to_string())
+                } else if obj.contains_key("min") && obj.contains_key("max") {
+                    Ok("between range".to_string())
+                } else {
+                    Ok("matches object".to_string())
+                }
+            },
+            serde_json::Value::Null => Ok("is null".to_string()),
+        }
+    }
+
+    /// Validate extracted filters for correctness
+    fn validate_filters(&self, filters: &[ProvenanceFilter]) -> Result<()> {
+        for filter in filters {
+            // Verify filter syntax and parameter validity
+            if filter.field.is_empty() {
+                return Err(anyhow::anyhow!("Filter field cannot be empty"));
+            }
+
+            // Check filter compatibility and consistency
+            match filter.filter_type {
+                FilterType::TimeRange => {
+                    if filter.field != "timestamp" {
+                        return Err(anyhow::anyhow!("Time range filter must use 'timestamp' field"));
+                    }
+                },
+                FilterType::EntityType => {
+                    if filter.field != "entity_type" {
+                        return Err(anyhow::anyhow!("Entity type filter must use 'entity_type' field"));
+                    }
+                },
+                FilterType::ActivityType => {
+                    if filter.field != "activity_type" {
+                        return Err(anyhow::anyhow!("Activity type filter must use 'activity_type' field"));
+                    }
+                },
+                FilterType::AgentType => {
+                    if filter.field != "agent_type" {
+                        return Err(anyhow::anyhow!("Agent type filter must use 'agent_type' field"));
+                    }
+                },
+                _ => {}, // Custom filters can use any field
+            }
+
+            // Validate operator compatibility
+            match filter.operator {
+                FilterOperator::In => {
+                    if !filter.value.is_array() {
+                        return Err(anyhow::anyhow!("IN operator requires array value"));
+                    }
+                },
+                FilterOperator::Between => {
+                    if !filter.value.is_object() {
+                        return Err(anyhow::anyhow!("BETWEEN operator requires object value"));
+                    }
+                },
+                _ => {}, // Other operators are compatible with any value type
+            }
+        }
+        Ok(())
+    }
+
+    /// Optimize filters for performance
+    fn optimize_filters(&self, filters: &mut Vec<ProvenanceFilter>) -> Result<()> {
+        // Sort filters by selectivity (most selective first)
+        filters.sort_by(|a, b| {
+            let a_selectivity = self.estimate_filter_selectivity(a);
+            let b_selectivity = self.estimate_filter_selectivity(b);
+            b_selectivity.partial_cmp(&a_selectivity).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        // Remove redundant filters
+        self.remove_redundant_filters(filters)?;
+
+        Ok(())
+    }
+
+    /// Estimate filter selectivity (lower is more selective)
+    fn estimate_filter_selectivity(&self, filter: &ProvenanceFilter) -> f64 {
+        match filter.filter_type {
+            FilterType::TimeRange => 0.1, // Time ranges are usually very selective
+            FilterType::EntityId | FilterType::ActivityId | FilterType::AgentId => 0.05, // IDs are very selective
+            FilterType::EntityType | FilterType::ActivityType | FilterType::AgentType => 0.3, // Types are moderately selective
+            FilterType::Custom => 0.5, // Custom filters are less predictable
+        }
+    }
+
+    /// Remove redundant filters
+    fn remove_redundant_filters(&self, filters: &mut Vec<ProvenanceFilter>) -> Result<()> {
+        let mut i = 0;
+        while i < filters.len() {
+            let mut j = i + 1;
+            while j < filters.len() {
+                if self.filters_are_redundant(&filters[i], &filters[j]) {
+                    filters.remove(j);
+                } else {
+                    j += 1;
+                }
+            }
+            i += 1;
+        }
+        Ok(())
+    }
+
+    /// Check if two filters are redundant
+    fn filters_are_redundant(&self, filter1: &ProvenanceFilter, filter2: &ProvenanceFilter) -> bool {
+        // Same field and operator
+        if filter1.field == filter2.field && filter1.operator == filter2.operator {
+            // Check if values are equivalent
+            match (&filter1.value, &filter2.value) {
+                (serde_json::Value::Array(arr1), serde_json::Value::Array(arr2)) => {
+                    // If one array contains the other, they're redundant
+                    arr1.len() == arr2.len() && arr1.iter().all(|v| arr2.contains(v))
+                },
+                (val1, val2) => val1 == val2,
+            }
+        } else {
+            false
+        }
     }
 
     /// Perform full integrity check on all records

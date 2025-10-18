@@ -1,0 +1,26 @@
+# Cargo configuration for optimized builds
+# @darianrosebrook
+
+# Fast linker configuration (uncomment after installing LLVM)
+# [target.aarch64-apple-darwin]
+# # Use fast linker for macOS Apple Silicon
+# rustflags = ["-Clink-arg=-fuse-ld=/usr/local/bin/ld64.lld"]
+
+# [target.x86_64-apple-darwin]
+# # Use fast linker for macOS Intel
+# rustflags = ["-Clink-arg=-fuse-ld=/usr/local/bin/ld64.lld"]
+
+# Build configuration
+[build]
+# Compiler cache
+# Use all available cores
+jobs = 8
+
+# Registry configuration for faster dependency resolution
+[registries.crates-io]
+protocol = "sparse"
+
+# Network configuration
+[net]
+retry = 2
+git-fetch-with-cli = true

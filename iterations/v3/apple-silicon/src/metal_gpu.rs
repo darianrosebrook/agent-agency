@@ -231,8 +231,8 @@ impl MetalGPUManager {
             }
         }
         
-        // Fallback to default Apple Silicon specs
-        let memory_mb = 8192; // TODO: Implement detect_unified_memory_size
+        // Detect unified memory size for Apple Silicon
+        let memory_mb = self.detect_unified_memory_size().unwrap_or(8192);
         Ok(MetalDeviceInfo {
             name: "Apple Silicon GPU".to_string(),
             vendor: "Apple".to_string(),
@@ -244,6 +244,178 @@ impl MetalGPUManager {
         })
     }
     
+    /// Detect unified memory size for Apple Silicon devices
+    fn detect_unified_memory_size(&self) -> Result<u32> {
+        // Method 1: Try to read from system_profiler
+        if let Ok(memory) = self.get_memory_from_system_profiler() {
+            return Ok(memory);
+        }
+        
+        // Method 2: Try to read from sysctl
+        if let Ok(memory) = self.get_memory_from_sysctl() {
+            return Ok(memory);
+        }
+        
+        // Method 3: Try to read from /proc/meminfo (if available)
+        if let Ok(memory) = self.get_memory_from_proc() {
+            return Ok(memory);
+        }
+        
+        // Method 4: Use hardware model detection
+        if let Ok(memory) = self.get_memory_from_hardware_model() {
+            return Ok(memory);
+        }
+        
+        Err(anyhow::anyhow!("Unable to detect unified memory size"))
+    }
+
+    /// Get memory size from system_profiler command
+    fn get_memory_from_system_profiler(&self) -> Result<u32> {
+        use std::process::Command;
+        
+        let output = Command::new("system_profiler")
+            .args(&["SPHardwareDataType", "-json"])
+            .output()?;
+            
+        if !output.status.success() {
+            return Err(anyhow::anyhow!("system_profiler command failed"));
+        }
+        
+        let json: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+        
+        if let Some(hardware) = json.get("SPHardwareDataType").and_then(|h| h.as_array()).and_then(|a| a.first()) {
+            if let Some(memory_info) = hardware.get("physical_memory") {
+                if let Some(memory_str) = memory_info.as_str() {
+                    // Parse memory string like "16 GB" or "8 GB"
+                    let memory_mb = self.parse_memory_string(memory_str)?;
+                    return Ok(memory_mb);
+                }
+            }
+        }
+        
+        Err(anyhow::anyhow!("Could not parse memory from system_profiler"))
+    }
+
+    /// Get memory size from sysctl command
+    fn get_memory_from_sysctl(&self) -> Result<u32> {
+        use std::process::Command;
+        
+        let output = Command::new("sysctl")
+            .arg("-n")
+            .arg("hw.memsize")
+            .output()?;
+            
+        if !output.status.success() {
+            return Err(anyhow::anyhow!("sysctl command failed"));
+        }
+        
+        let memory_bytes_str = String::from_utf8(output.stdout)?;
+        let memory_bytes: u64 = memory_bytes_str.trim().parse()?;
+        
+        // Convert bytes to MB
+        let memory_mb = (memory_bytes / (1024 * 1024)) as u32;
+        Ok(memory_mb)
+    }
+
+    /// Get memory size from /proc/meminfo (Linux compatibility)
+    fn get_memory_from_proc(&self) -> Result<u32> {
+        use std::fs;
+        
+        let meminfo = fs::read_to_string("/proc/meminfo")?;
+        
+        for line in meminfo.lines() {
+            if line.starts_with("MemTotal:") {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    if let Ok(kb) = parts[1].parse::<u64>() {
+                        // Convert KB to MB
+                        let memory_mb = (kb / 1024) as u32;
+                        return Ok(memory_mb);
+                    }
+                }
+            }
+        }
+        
+        Err(anyhow::anyhow!("Could not parse /proc/meminfo"))
+    }
+
+    /// Get memory size from hardware model detection
+    fn get_memory_from_hardware_model(&self) -> Result<u32> {
+        use std::process::Command;
+        
+        let output = Command::new("sysctl")
+            .arg("-n")
+            .arg("hw.model")
+            .output()?;
+            
+        if !output.status.success() {
+            return Err(anyhow::anyhow!("sysctl hw.model command failed"));
+        }
+        
+        let model = String::from_utf8(output.stdout)?;
+        let model = model.trim();
+        
+        // Map known Apple Silicon models to their memory configurations
+        let memory_mb = match model {
+            // MacBook Air M1
+            m if m.contains("MacBookAir10,1") => 8192,  // 8GB
+            m if m.contains("MacBookAir10,2") => 16384, // 16GB
+            
+            // MacBook Pro M1
+            m if m.contains("MacBookPro17,1") => 8192,  // 8GB
+            m if m.contains("MacBookPro17,2") => 16384, // 16GB
+            
+            // Mac mini M1
+            m if m.contains("Macmini9,1") => 8192,      // 8GB
+            m if m.contains("Macmini9,2") => 16384,     // 16GB
+            
+            // iMac M1
+            m if m.contains("iMac21,1") => 8192,        // 8GB
+            m if m.contains("iMac21,2") => 16384,       // 16GB
+            
+            // MacBook Air M2
+            m if m.contains("MacBookAir13,2") => 8192,  // 8GB
+            m if m.contains("MacBookAir13,2") && m.contains("16") => 16384, // 16GB
+            
+            // MacBook Pro M2
+            m if m.contains("MacBookPro18,1") => 8192,  // 8GB
+            m if m.contains("MacBookPro18,2") => 16384, // 16GB
+            
+            // Mac Studio M1/M2
+            m if m.contains("Mac13,1") => 32768,        // 32GB
+            m if m.contains("Mac13,2") => 65536,        // 64GB
+            
+            // Mac Pro M2
+            m if m.contains("Mac14,8") => 65536,        // 64GB
+            m if m.contains("Mac14,9") => 131072,       // 128GB
+            
+            // Default fallback
+            _ => 8192,
+        };
+        
+        Ok(memory_mb)
+    }
+
+    /// Parse memory string like "16 GB" or "8 GB" to MB
+    fn parse_memory_string(&self, memory_str: &str) -> Result<u32> {
+        let parts: Vec<&str> = memory_str.split_whitespace().collect();
+        if parts.len() < 2 {
+            return Err(anyhow::anyhow!("Invalid memory format: {}", memory_str));
+        }
+        
+        let amount: f64 = parts[0].parse()?;
+        let unit = parts[1].to_lowercase();
+        
+        let memory_mb = match unit.as_str() {
+            "gb" | "g" => (amount * 1024.0) as u32,
+            "mb" | "m" => amount as u32,
+            "tb" | "t" => (amount * 1024.0 * 1024.0) as u32,
+            _ => return Err(anyhow::anyhow!("Unknown memory unit: {}", unit)),
+        };
+        
+        Ok(memory_mb)
+    }
+
     /// Extract Apple GPU information from display data
     fn extract_apple_gpu_info(&self, display: &serde_json::Value) -> Result<MetalDeviceInfo> {
         let name = display.get("_name")

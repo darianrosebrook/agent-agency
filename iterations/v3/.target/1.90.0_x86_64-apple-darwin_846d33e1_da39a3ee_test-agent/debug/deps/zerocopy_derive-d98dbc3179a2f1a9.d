@@ -1,0 +1,8 @@
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/.target/1.90.0_x86_64-apple-darwin_846d33e1_da39a3ee_test-agent/debug/deps/zerocopy_derive-d98dbc3179a2f1a9.d: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/enum.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/ext.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/repr.rs
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/.target/1.90.0_x86_64-apple-darwin_846d33e1_da39a3ee_test-agent/debug/deps/libzerocopy_derive-d98dbc3179a2f1a9.dylib: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/enum.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/ext.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/repr.rs
+
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/enum.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/ext.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/repr.rs:

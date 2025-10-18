@@ -16,6 +16,8 @@ import { PerformanceTrackerDatabaseClient } from "@/database/PerformanceTrackerD
 import { ArbiterMCPServer } from "@/mcp-server/ArbiterMCPServer";
 import { SystemHealthMonitor } from "@/monitoring/SystemHealthMonitor";
 import { Logger } from "@/observability/Logger";
+import { contractValidator, CommonSchemas } from "./api/ContractValidator";
+import { HealthMonitor } from "./monitoring/HealthMonitor";
 import {
   ObserverBridge,
   ObserverHttpServer,
@@ -46,12 +48,64 @@ let mcpServer: ArbiterMCPServer | null = null;
 let orchestrator: ArbiterOrchestrator | null = null;
 let arbiterController: ArbiterController | null = null;
 let webServerProcess: import("child_process").ChildProcess | null = null;
+let healthMonitor: HealthMonitor | null = null;
 
 /**
  * Initialize application services
  */
 async function initialize(): Promise<void> {
   logger.info("Initializing V2 Arbiter...");
+
+  // Register API contracts
+  contractValidator.registerContract("observer", {
+    version: "2.0.0",
+    endpoints: {
+      submitTask: {
+        method: "POST",
+        path: "/observer/tasks",
+        requestSchema: CommonSchemas.TaskSubmission,
+        responseSchema: CommonSchemas.TaskResponse,
+        errorSchemas: {
+          400: CommonSchemas.ErrorResponse,
+          500: CommonSchemas.ErrorResponse,
+        },
+        description: "Submit a new task to the arbiter",
+      },
+      getStatus: {
+        method: "GET",
+        path: "/observer/status",
+        responseSchema: CommonSchemas.StatusResponse,
+        description: "Get arbiter status information",
+      },
+    },
+  });
+
+  // Initialize health monitoring
+  healthMonitor = new HealthMonitor({
+    checkIntervalMs: 30000, // 30 seconds
+    metricsIntervalMs: 10000, // 10 seconds
+    alertThresholds: {
+      memoryUsagePercent: 85,
+      cpuUsagePercent: 80,
+      errorRatePercent: 5,
+      responseTimeMs: 5000,
+    },
+  });
+
+  healthMonitor.on("alert-created", (alert) => {
+    logger.warn("Health alert created", {
+      component: alert.component,
+      severity: alert.severity,
+      message: alert.message,
+    });
+  });
+
+  healthMonitor.on("health-checks-completed", (summary) => {
+    const overallStatus = healthMonitor?.getOverallStatus();
+    if (overallStatus !== "healthy") {
+      logger.warn("System health degraded", { status: overallStatus, summary });
+    }
+  });
 
   // Initialize database connection pool
   try {
@@ -136,7 +190,7 @@ async function initialize(): Promise<void> {
     }
     arbiterRuntime = controllerRuntime;
 
-    observerBridge = new ObserverBridge(arbiterRuntime);
+    observerBridge = new ObserverBridge(arbiterRuntime, undefined, healthMonitor);
     setObserverBridge(observerBridge);
     await observerBridge.start();
     logger.info("Observer bridge started");
@@ -201,6 +255,12 @@ async function initialize(): Promise<void> {
  */
 async function shutdown(signal: string): Promise<void> {
   logger.info(`Received ${signal}, shutting down gracefully...`);
+
+  // Stop health monitoring first
+  if (healthMonitor) {
+    healthMonitor.stop();
+    logger.info("Health monitoring stopped");
+  }
 
   try {
     // Shutdown database connection pool
@@ -407,32 +467,60 @@ async function startWebInterface(): Promise<void> {
 
     // Start the Next.js development server with configurable port and fallback
     const webObserverPort = process.env.WEB_OBSERVER_PORT || "3000";
-    
-    // Try to find an available port if the default is taken
+
+    // Try to find an available port with multiple fallbacks
     let actualPort = webObserverPort;
     if (webObserverPort === "3000") {
-      try {
-        const net = await import("net");
-        const testServer = net.createServer();
-        await new Promise<void>((resolve, reject) => {
-          testServer.listen(3000, () => {
-            testServer.close(() => resolve());
+      const fallbackPorts = ["3000", "3001", "3002", "3003", "3004"];
+      let portFound = false;
+      
+      for (const port of fallbackPorts) {
+        try {
+          const net = await import("net");
+          const testServer = net.createServer();
+          
+          await new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              testServer.close();
+              reject(new Error("Port check timeout"));
+            }, 1000);
+            
+            testServer.listen(parseInt(port), () => {
+              clearTimeout(timeout);
+              testServer.close(() => {
+                actualPort = port;
+                portFound = true;
+                resolve();
+              });
+            });
+            
+            testServer.on("error", (err: any) => {
+              clearTimeout(timeout);
+              if (err.code === "EADDRINUSE") {
+                // Port is in use, try next one
+                resolve();
+              } else {
+                reject(err);
+              }
+            });
           });
-          testServer.on("error", (err: any) => {
-            if (err.code === "EADDRINUSE") {
-              // Port 3000 is in use, try 3001
-              actualPort = "3001";
-              resolve();
-            } else {
-              reject(err);
-            }
-          });
-        });
-      } catch (error) {
-        logger.warn("Could not check port availability, using default", { error });
+          
+          if (portFound) {
+            logger.info(`Found available port: ${actualPort}`);
+            break;
+          }
+        } catch (error) {
+          logger.warn(`Port ${port} check failed, trying next port`, { error });
+          continue;
+        }
+      }
+      
+      if (!portFound) {
+        logger.error("No available ports found in range 3000-3004, using default");
+        actualPort = "3000";
       }
     }
-    
+
     webServerProcess = spawn("npm", ["run", "dev"], {
       cwd: webObserverPath,
       stdio: "inherit",
@@ -481,6 +569,12 @@ async function main(): Promise<void> {
     await startMcpServer();
     await startTaskProcessing();
     await startWebInterface();
+    
+    // Start health monitoring
+    if (healthMonitor) {
+      healthMonitor.start();
+      logger.info("Health monitoring started");
+    }
 
     logger.info("V2 Arbiter running with all services started");
   } catch (error) {

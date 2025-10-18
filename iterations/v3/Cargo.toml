@@ -76,10 +76,26 @@ ndarray = "0.15"
 
 [profile.release]
 opt-level = 3
-lto = true
-codegen-units = 1
-panic = "abort"
+debug = 1                  # keep some symbols for backtraces
+incremental = false        # avoid pathological LTO+incremental combos
+codegen-units = 1          # best runtime perf/size
+lto = "thin"               # great perf/size without full-fat link times
+panic = "abort"            # if acceptable for binaries
+strip = "symbols"          # if smaller artifacts help link time/size
 
 [profile.dev]
-opt-level = 1
-debug = true
+opt-level = 0
+debug = 2
+incremental = true
+codegen-units = 256        # maximize parallel codegen for quick rebuilds
+lto = "off"
+debug-assertions = true
+overflow-checks = true
+
+[profile.test]
+opt-level = 0
+debug = 1
+incremental = true
+codegen-units = 256
+lto = "off"
+debug-assertions = true
