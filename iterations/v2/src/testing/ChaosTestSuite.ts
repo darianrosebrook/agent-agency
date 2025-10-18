@@ -290,11 +290,11 @@ export class ChaosTestSuite {
    * Setup event handlers
    */
   private setupEventHandlers(): void {
-    this.harness.on("chaosEvent", (event: ChaosEvent) => {
+    this.harness.on("chaosEvent", async (event: ChaosEvent) => {
       console.log(
         `Chaos event triggered: ${event.eventType} - ${event.severity}`
       );
-      this.handleChaosEvent(event);
+      await this.handleChaosEvent(event);
     });
 
     this.harness.on("recovery", (event: ChaosEvent) => {
@@ -306,16 +306,16 @@ export class ChaosTestSuite {
   /**
    * Handle chaos events
    */
-  private handleChaosEvent(event: ChaosEvent): void {
+  private async handleChaosEvent(event: ChaosEvent): Promise<void> {
     switch (event.eventType) {
       case "failure":
         this.handleWorkerFailure(event);
         break;
       case "network_issue":
-        this.handleNetworkIssue(event);
+        await this.handleNetworkIssue(event);
         break;
       case "resource_exhaustion":
-        this.handleResourceExhaustion(event);
+        await this.handleResourceExhaustion(event);
         break;
       default:
         console.log(`Unhandled chaos event type: ${event.eventType}`);
@@ -342,23 +342,92 @@ export class ChaosTestSuite {
   /**
    * Handle network issue events
    */
-  private handleNetworkIssue(event: ChaosEvent): void {
+  private async handleNetworkIssue(event: ChaosEvent): Promise<void> {
     const affectedWorkers = event.metadata.affectedWorkers as string[];
     if (affectedWorkers) {
       console.log(
         `Network issue affecting workers: ${affectedWorkers.join(", ")}`
       );
-      // In a real implementation, this would affect network communication
+
+      // Simulate network issues by affecting worker communication
+      for (const workerId of affectedWorkers) {
+        try {
+          // Mark worker as having network issues
+          await this.workerRegistry.updateHealth(workerId, "degraded", 0.3);
+
+          // In a real implementation, this would:
+          // 1. Block network communication to/from the worker
+          // 2. Simulate packet loss, latency, or timeouts
+          // 3. Update load balancer to reduce traffic to affected workers
+          // 4. Trigger circuit breakers for network calls
+          // 5. Update worker capabilities to reflect network degradation
+
+          console.log(`Worker ${workerId} network capabilities degraded`);
+        } catch (error) {
+          console.error(
+            `Failed to apply network degradation to worker ${workerId}:`,
+            error
+          );
+        }
+      }
     }
   }
 
   /**
    * Handle resource exhaustion events
    */
-  private handleResourceExhaustion(event: ChaosEvent): void {
+  private async handleResourceExhaustion(event: ChaosEvent): Promise<void> {
     const resourceType = event.metadata.resourceType as string;
-    console.log(`Resource exhaustion: ${resourceType}`);
-    // In a real implementation, this would affect resource allocation
+    const affectedWorkers = (event.metadata.affectedWorkers as string[]) || [];
+    const exhaustionLevel = (event.metadata.exhaustionLevel as number) || 0.9; // 0-1, how exhausted
+
+    console.log(
+      `Resource exhaustion: ${resourceType} at ${(
+        exhaustionLevel * 100
+      ).toFixed(1)}%`
+    );
+
+    // Apply resource exhaustion effects to affected workers
+    for (const workerId of affectedWorkers) {
+      try {
+        // Mark worker as resource-constrained
+        await this.workerRegistry.updateHealth(
+          workerId,
+          "degraded",
+          exhaustionLevel
+        );
+
+        // In a real implementation, this would:
+        // 1. Apply resource exhaustion based on resource type (memory, cpu, disk, network)
+        // 2. Update worker capabilities to reflect resource constraints
+        // 3. Trigger resource monitoring alerts
+        // 4. Implement backpressure mechanisms
+        // 5. Reduce task assignment to affected workers
+        // 6. Trigger auto-scaling or resource provisioning
+        // 7. Implement circuit breakers for resource-intensive operations
+
+        console.log(
+          `Worker ${workerId} ${resourceType} capabilities exhausted to ${(
+            exhaustionLevel * 100
+          ).toFixed(1)}%`
+        );
+      } catch (error) {
+        console.error(
+          `Failed to apply resource exhaustion to worker ${workerId}:`,
+          error
+        );
+      }
+    }
+
+    // If no specific workers affected, apply system-wide resource constraints
+    if (affectedWorkers.length === 0) {
+      console.log(`System-wide ${resourceType} exhaustion detected`);
+      // In a real implementation, this would:
+      // 1. Reduce overall system throughput
+      // 2. Implement global backpressure
+      // 3. Trigger emergency resource allocation
+      // 4. Alert system administrators
+    }
   }
 
   /**
@@ -466,9 +535,3 @@ export class ChaosTestSuite {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
-
-
-
-
-
-

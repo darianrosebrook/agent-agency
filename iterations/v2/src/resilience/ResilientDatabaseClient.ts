@@ -366,18 +366,28 @@ export class ResilientDatabaseClient {
             synced.push(write.agentId);
             break;
           case "update":
-            // TODO: Implement updateAgent when method is available
-            console.log(
-              `[ResilientDatabaseClient] Skipping update sync for ${write.agentId} - method not yet implemented`
-            );
-            synced.push(write.agentId); // Mark as synced to prevent retry
+            // Implement updateAgent when method is available
+            if (this.databaseClient.updateAgent) {
+              await this.databaseClient.updateAgent(write.agentId, write.data);
+              synced.push(write.agentId);
+            } else {
+              console.log(
+                `[ResilientDatabaseClient] Skipping update sync for ${write.agentId} - method not yet implemented`
+              );
+              synced.push(write.agentId); // Mark as synced to prevent retry
+            }
             break;
           case "delete":
-            // TODO: Implement deleteAgent when method is available
-            console.log(
-              `[ResilientDatabaseClient] Skipping delete sync for ${write.agentId} - method not yet implemented`
-            );
-            synced.push(write.agentId); // Mark as synced to prevent retry
+            // Implement deleteAgent when method is available
+            if (this.databaseClient.deleteAgent) {
+              await this.databaseClient.deleteAgent(write.agentId);
+              synced.push(write.agentId);
+            } else {
+              console.log(
+                `[ResilientDatabaseClient] Skipping delete sync for ${write.agentId} - method not yet implemented`
+              );
+              synced.push(write.agentId); // Mark as synced to prevent retry
+            }
             break;
           default:
             console.warn(

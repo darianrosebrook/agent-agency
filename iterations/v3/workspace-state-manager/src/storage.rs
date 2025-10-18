@@ -334,9 +334,9 @@ impl StateStorage for FileStorage {
 
 /// In-memory storage implementation for testing
 pub struct MemoryStorage {
-    states: std::sync::RwLock<HashMap<StateId, WorkspaceState>>,
-    diffs: std::sync::RwLock<HashMap<(StateId, StateId), WorkspaceDiff>>,
-    metrics: std::sync::RwLock<StorageMetrics>,
+    states: tokio::sync::RwLock<HashMap<StateId, WorkspaceState>>,
+    diffs: tokio::sync::RwLock<HashMap<(StateId, StateId), WorkspaceDiff>>,
+    metrics: tokio::sync::RwLock<StorageMetrics>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -351,9 +351,9 @@ impl MemoryStorage {
     /// Create a new in-memory storage
     pub fn new() -> Self {
         Self {
-            states: std::sync::RwLock::new(HashMap::new()),
-            diffs: std::sync::RwLock::new(HashMap::new()),
-            metrics: std::sync::RwLock::new(StorageMetrics::default()),
+            states: tokio::sync::RwLock::new(HashMap::new()),
+            diffs: tokio::sync::RwLock::new(HashMap::new()),
+            metrics: tokio::sync::RwLock::new(StorageMetrics::default()),
         }
     }
 }

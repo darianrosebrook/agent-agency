@@ -1053,7 +1053,7 @@ impl IntelligentEdgeCaseTesting {
     }
 
     /// Calculate actual coverage improvement for an edge case
-    async fn calculate_coverage_improvement(&self, edge_case: &IdentifiedEdgeCase) -> Result<f64> {
+    pub async fn calculate_coverage_improvement(&self, edge_case: &IdentifiedEdgeCase) -> Result<f64> {
         // Calculate improvement based on edge case risk level and type
         let mut improvement = 0.0;
 

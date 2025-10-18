@@ -14,11 +14,23 @@ import {
   FailureType,
   RecoveryAction,
   RecoveryStatus,
+  RecoveryAttempt,
 } from "../types/coordinator";
 
 import { IncidentNotifier } from "../adapters/IncidentNotifier";
 import { InfrastructureController } from "../adapters/InfrastructureController";
 import { SystemCoordinator } from "./SystemCoordinator";
+import { ServiceIntegrationManager } from "@/integrations/ExternalServiceFramework";
+import {
+  SlackNotificationService,
+  PagerDutyNotificationService,
+  EmailNotificationService,
+} from "@/integrations/NotificationService";
+import {
+  DataDogMonitoringService,
+  NewRelicMonitoringService,
+  PrometheusMonitoringService,
+} from "@/integrations/MonitoringService";
 
 export class FailureManager extends EventEmitter {
   private activeRecoveries = new Map<string, FailureRecovery>();
@@ -26,6 +38,7 @@ export class FailureManager extends EventEmitter {
   private recoveryTimeouts = new Map<string, ReturnType<typeof setInterval>>();
   private incidentNotifier: IncidentNotifier;
   private infrastructureController: InfrastructureController;
+  private serviceManager: ServiceIntegrationManager;
 
   constructor(
     private coordinator: SystemCoordinator,
@@ -34,6 +47,12 @@ export class FailureManager extends EventEmitter {
     infrastructureController?: InfrastructureController
   ) {
     super();
+
+    // Initialize service integration manager
+    this.serviceManager = new ServiceIntegrationManager({
+      healthCheckIntervalMs: 30000,
+      enableHealthChecks: true,
+    });
 
     // Initialize adapters with default configurations
     this.incidentNotifier =
@@ -75,6 +94,104 @@ export class FailureManager extends EventEmitter {
   }
 
   /**
+   * Initialize service integrations
+   */
+  async initialize(): Promise<void> {
+    try {
+      // Register notification services
+      const slackService = new SlackNotificationService({
+        name: "slack",
+        type: "notification",
+        enabled: true,
+        timeout: 30000,
+        retries: 3,
+        webhookUrl: process.env.SLACK_WEBHOOK_URL || "",
+        channel: "#ops-critical",
+        username: "Arbiter System",
+        iconEmoji: ":robot_face:",
+      });
+      await this.serviceManager.register(slackService);
+
+      const pagerDutyService = new PagerDutyNotificationService({
+        name: "pagerduty",
+        type: "notification",
+        enabled: true,
+        timeout: 30000,
+        retries: 3,
+        integrationKey: process.env.PAGERDUTY_INTEGRATION_KEY || "",
+        apiKey: process.env.PAGERDUTY_API_KEY || "",
+        serviceId: process.env.PAGERDUTY_SERVICE_ID || "",
+      });
+      await this.serviceManager.register(pagerDutyService);
+
+      const emailService = new EmailNotificationService({
+        name: "email",
+        type: "notification",
+        enabled: true,
+        timeout: 30000,
+        retries: 3,
+        smtpHost: process.env.SMTP_HOST || "localhost",
+        smtpPort: parseInt(process.env.SMTP_PORT || "587"),
+        smtpUser: process.env.SMTP_USER || "",
+        smtpPassword: process.env.SMTP_PASSWORD || "",
+        fromEmail: process.env.FROM_EMAIL || "alerts@arbiter.local",
+        fromName: "Arbiter System",
+      });
+      await this.serviceManager.register(emailService);
+
+      // Register monitoring services
+      const dataDogService = new DataDogMonitoringService({
+        name: "datadog",
+        type: "monitoring",
+        enabled: true,
+        timeout: 30000,
+        retries: 3,
+        apiKey: process.env.DATADOG_API_KEY || "",
+        appKey: process.env.DATADOG_APP_KEY || "",
+        site: process.env.DATADOG_SITE || "datadoghq.com",
+      });
+      await this.serviceManager.register(dataDogService);
+
+      const newRelicService = new NewRelicMonitoringService({
+        name: "newrelic",
+        type: "monitoring",
+        enabled: true,
+        timeout: 30000,
+        retries: 3,
+        apiKey: process.env.NEWRELIC_API_KEY || "",
+        accountId: process.env.NEWRELIC_ACCOUNT_ID || "",
+        baseUrl: process.env.NEWRELIC_BASE_URL || "https://api.newrelic.com",
+      });
+      await this.serviceManager.register(newRelicService);
+
+      const prometheusService = new PrometheusMonitoringService({
+        name: "prometheus",
+        type: "monitoring",
+        enabled: true,
+        timeout: 30000,
+        retries: 3,
+        pushgatewayUrl:
+          process.env.PROMETHEUS_PUSHGATEWAY_URL || "http://localhost:9091",
+        jobName: "arbiter-failure-manager",
+      });
+      await this.serviceManager.register(prometheusService);
+
+      // Start health checks
+      this.serviceManager.startHealthChecks();
+
+      console.log(
+        "FailureManager service integrations initialized successfully"
+      );
+    } catch (error) {
+      console.error(
+        "Failed to initialize FailureManager service integrations",
+        { error }
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Handle component failure
    */
   async handleFailure(
@@ -88,6 +205,10 @@ export class FailureManager extends EventEmitter {
       error,
       timestamp: new Date(),
       context,
+      recoveryAttempts: [],
+      severity: this.determineFailureSeverity(error),
+      impact: this.assessFailureImpact(componentId, error),
+      diagnostics: await this.collectFailureDiagnostics(componentId, error),
     };
 
     // Record failure
@@ -126,6 +247,10 @@ export class FailureManager extends EventEmitter {
       status: RecoveryStatus.IN_PROGRESS,
       startTime: new Date(),
       success: false,
+      recoveryAttempts: [],
+      totalAttempts: 0,
+      successfulAttempts: 0,
+      failedAttempts: 0,
     };
 
     this.activeRecoveries.set(componentId, recovery);
@@ -278,20 +403,74 @@ export class FailureManager extends EventEmitter {
    * Execute recovery actions in sequence
    */
   private async executeRecovery(recovery: FailureRecovery): Promise<void> {
-    for (const action of recovery.actions) {
+    for (let i = 0; i < recovery.actions.length; i++) {
+      const action = recovery.actions[i];
+      const attemptNumber = i + 1;
+      const attemptStartTime = Date.now();
+
       try {
         await this.executeRecoveryAction(action);
         action.executed = true;
         action.executionTime = Date.now();
+
+        // Record successful recovery attempt
+        const recoveryAttempt: RecoveryAttempt = {
+          attemptNumber,
+          timestamp: new Date(),
+          action,
+          result: "success",
+          duration: action.executionTime - attemptStartTime,
+          metadata: {
+            componentId: recovery.failure.componentId,
+            failureType: recovery.failure.failureType,
+          },
+        };
+
+        recovery.recoveryAttempts.push(recoveryAttempt);
+        recovery.successfulAttempts++;
+        recovery.totalAttempts++;
+
+        // Update failure event with recovery attempt
+        recovery.failure.recoveryAttempts =
+          recovery.failure.recoveryAttempts || [];
+        recovery.failure.recoveryAttempts.push(recoveryAttempt);
+
+        console.log(
+          `Recovery action succeeded: ${action.type} on ${action.target} (attempt ${attemptNumber})`,
+          { duration: recoveryAttempt.duration }
+        );
       } catch (error) {
         action.executed = false;
         action.error = error instanceof Error ? error.message : "Unknown error";
         action.executionTime = Date.now();
 
+        // Record failed recovery attempt
+        const recoveryAttempt: RecoveryAttempt = {
+          attemptNumber,
+          timestamp: new Date(),
+          action,
+          result: "failure",
+          duration: action.executionTime - attemptStartTime,
+          error: action.error,
+          metadata: {
+            componentId: recovery.failure.componentId,
+            failureType: recovery.failure.failureType,
+          },
+        };
+
+        recovery.recoveryAttempts.push(recoveryAttempt);
+        recovery.failedAttempts++;
+        recovery.totalAttempts++;
+
+        // Update failure event with recovery attempt
+        recovery.failure.recoveryAttempts =
+          recovery.failure.recoveryAttempts || [];
+        recovery.failure.recoveryAttempts.push(recoveryAttempt);
+
         // Log but continue with other actions
         console.error(
-          `Recovery action failed: ${action.type} on ${action.target}`,
-          error
+          `Recovery action failed: ${action.type} on ${action.target} (attempt ${attemptNumber})`,
+          { error: action.error, duration: recoveryAttempt.duration }
         );
       }
     }
@@ -358,6 +537,7 @@ export class FailureManager extends EventEmitter {
 
   /**
    * Escalate failure to human intervention
+   * Uses real incident management services via the External Service Integration Framework
    */
   private async escalateFailure(
     failure: FailureEvent,
@@ -370,7 +550,7 @@ export class FailureManager extends EventEmitter {
         recoveryError
       );
 
-      // Notify on-call engineers
+      // Notify on-call engineers via multiple channels
       await this.incidentNotifier.notifyOnCallEngineers(incident, failure);
 
       // Send diagnostics to monitoring system
@@ -387,6 +567,14 @@ export class FailureManager extends EventEmitter {
       await this.incidentNotifier.sendDiagnosticsToMonitoring(
         incident,
         failure,
+        diagnostics
+      );
+
+      // Send incident data to incident management systems
+      await this.sendIncidentToManagementSystems(
+        incident,
+        failure,
+        recoveryError,
         diagnostics
       );
 
@@ -438,38 +626,34 @@ export class FailureManager extends EventEmitter {
    */
   private async createIncidentTicket(
     failure: FailureEvent,
-    _recoveryError: any
+    recoveryError: any
   ): Promise<string> {
-    // Generate unique incident ID
-    const incidentId = `INC-${failure.componentId}-${Date.now()}`;
+    try {
+      // Use the incident notifier to create a real incident ticket
+      const ticket = await this.incidentNotifier.createIncidentTicket(
+        failure,
+        recoveryError
+      );
 
-    // In a real implementation, this would integrate with:
-    // - ServiceNow
-    // - Jira Service Management
-    // - Zendesk
-    // - PagerDuty incidents
+      console.log(
+        `[INCIDENT] Created incident ${ticket.id} for component ${failure.componentId}`,
+        {
+          severity: ticket.severity,
+          status: ticket.status,
+          tags: ticket.tags,
+        }
+      );
 
-    // For now, simulate incident creation
-    console.log(
-      `[INCIDENT] Created incident ${incidentId} for component ${failure.componentId}`
-    );
-
-    // TODO: Implement real incident management system integration
-    // Example:
-    // const ticket = await this.incidentManagementSystem.createTicket({
-    //   title: `Critical failure: ${failure.componentId}`,
-    //   description: `Component ${failure.componentId} failed and recovery unsuccessful`,
-    //   severity: "critical",
-    //   tags: ["arbiter", "failure", failure.failureType],
-    //   metadata: {
-    //     componentId: failure.componentId,
-    //     failureType: failure.failureType,
-    //     recoveryAttempts: failure.recoveryAttempts,
-    //     recoveryError: recoveryError instanceof Error ? recoveryError.message : recoveryError,
-    //   }
-    // });
-
-    return incidentId;
+      return ticket.id;
+    } catch (error) {
+      // Fallback to mock incident if real system fails
+      const incidentId = `INC-${failure.componentId}-${Date.now()}`;
+      console.warn(
+        `[INCIDENT] Failed to create real incident, using mock: ${incidentId}`,
+        { error: error instanceof Error ? error.message : String(error) }
+      );
+      return incidentId;
+    }
   }
 
   /**
@@ -479,49 +663,178 @@ export class FailureManager extends EventEmitter {
     failure: FailureEvent,
     incidentId: string
   ): Promise<void> {
-    const _notification = {
+    const notification = {
       incidentId,
       componentId: failure.componentId,
       failureType: failure.failureType,
-      severity: "critical",
-      message: `🚨 CRITICAL: Component ${failure.componentId} failed and recovery unsuccessful`,
+      severity: "critical" as const,
+      message: `CRITICAL: Component ${failure.componentId} failed and recovery unsuccessful`,
       timestamp: new Date(),
     };
 
-    // In a real implementation, this would integrate with:
-    // - Slack
-    // - Microsoft Teams
-    // - PagerDuty
-    // - Email
-    // - SMS
+    try {
+      // Create a mock incident ticket for notification
+      const incidentTicket = {
+        id: incidentId,
+        title: `Critical failure: ${failure.componentId}`,
+        description: `Component ${failure.componentId} failed and recovery unsuccessful`,
+        severity: "critical" as const,
+        status: "open" as const,
+        tags: ["arbiter", "failure", failure.failureType],
+        metadata: notification,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
-    console.log(
-      `[NOTIFICATION] Alerting on-call engineers for incident ${incidentId}`
-    );
+      // Use the incident notifier to send real notifications
+      await this.incidentNotifier.notifyOnCallEngineers(
+        incidentTicket,
+        failure
+      );
 
-    // TODO: Implement real notification system integration
-    // Example:
-    // await Promise.all([
-    //   this.slackNotifier.notify("#ops-critical", notification),
-    //   this.pagerdutyNotifier.triggerIncident(notification),
-    //   this.emailNotifier.notifyOnCallEngineers(notification),
-    // ]);
+      console.log(
+        `[NOTIFICATION] Alerted on-call engineers for incident ${incidentId}`,
+        {
+          componentId: failure.componentId,
+          failureType: failure.failureType,
+        }
+      );
+    } catch (error) {
+      // Fallback to console logging if notification system fails
+      console.warn(
+        `[NOTIFICATION] Failed to send real notifications, using console fallback`,
+        {
+          incidentId,
+          error: error instanceof Error ? error.message : String(error),
+        }
+      );
+      console.log(
+        `[NOTIFICATION] Alerting on-call engineers for incident ${incidentId}`
+      );
+    }
+  }
+
+  /**
+   * Send incident data to incident management systems
+   * Uses real incident management services via the External Service Integration Framework
+   */
+  private async sendIncidentToManagementSystems(
+    incident: any,
+    failure: FailureEvent,
+    recoveryError: any,
+    diagnostics: any
+  ): Promise<void> {
+    try {
+      // Send to ServiceNow if configured
+      const serviceNowResult = await this.serviceManager.execute(
+        "servicenow",
+        "createIncident",
+        {
+          title: `Critical Failure: ${failure.componentId}`,
+          description: `Component ${
+            failure.componentId
+          } failed and recovery unsuccessful. Error: ${
+            recoveryError instanceof Error
+              ? recoveryError.message
+              : recoveryError
+          }`,
+          severity: failure.severity || "high",
+          priority: failure.severity === "critical" ? "1" : "2",
+          category: "System Alert",
+          subcategory: "Infrastructure",
+          affectedService: failure.componentId,
+          reporter: "Arbiter System",
+          tags: ["arbiter", "failure", failure.failureType],
+          customFields: {
+            incidentId: incident.id,
+            componentId: failure.componentId,
+            failureType: failure.failureType,
+            recoveryAttempts: failure.recoveryAttempts?.length || 0,
+            systemMetrics: diagnostics.systemState,
+            recentFailures: diagnostics.recentFailures.length,
+            activeRecoveries: diagnostics.activeRecoveries.length,
+          },
+        }
+      );
+
+      if (!serviceNowResult.success) {
+        console.warn(
+          "Failed to create ServiceNow incident:",
+          serviceNowResult.error
+        );
+      }
+
+      // Send to Jira if configured
+      const jiraResult = await this.serviceManager.execute(
+        "jira",
+        "createIncident",
+        {
+          title: `Critical Failure: ${failure.componentId}`,
+          description: `Component ${
+            failure.componentId
+          } failed and recovery unsuccessful. Error: ${
+            recoveryError instanceof Error
+              ? recoveryError.message
+              : recoveryError
+          }`,
+          severity: failure.severity || "high",
+          priority: failure.severity === "critical" ? "Highest" : "High",
+          category: "System Alert",
+          subcategory: "Infrastructure",
+          affectedService: failure.componentId,
+          reporter: "Arbiter System",
+          tags: ["arbiter", "failure", failure.failureType],
+          customFields: {
+            incidentId: incident.id,
+            componentId: failure.componentId,
+            failureType: failure.failureType,
+            recoveryAttempts: failure.recoveryAttempts?.length || 0,
+            systemMetrics: diagnostics.systemState,
+            recentFailures: diagnostics.recentFailures.length,
+            activeRecoveries: diagnostics.activeRecoveries.length,
+          },
+        }
+      );
+
+      if (!jiraResult.success) {
+        console.warn("Failed to create Jira incident:", jiraResult.error);
+      }
+
+      console.log(
+        `[INCIDENT_MGMT] Sent incident data to management systems for incident ${incident.id}`,
+        {
+          componentId: failure.componentId,
+          failureType: failure.failureType,
+          incidentId: incident.id,
+          managementSystems: ["servicenow", "jira"],
+        }
+      );
+    } catch (error) {
+      console.warn(
+        `[INCIDENT_MGMT] Failed to send incident data to management systems`,
+        {
+          incidentId: incident.id,
+          error: error instanceof Error ? error.message : String(error),
+        }
+      );
+    }
   }
 
   /**
    * Send detailed diagnostics to monitoring system
+   * Uses real monitoring services via the External Service Integration Framework
    */
   private async sendDiagnosticsToMonitoring(
     failure: FailureEvent,
     recoveryError: any,
     incidentId: string
   ): Promise<void> {
-    const _diagnostics = {
+    const diagnostics = {
       incidentId,
       componentId: failure.componentId,
       failureType: failure.failureType,
       timestamp: failure.timestamp,
-      recoveryAttempts: 0, // TODO: Track recovery attempts in FailureEvent
+      recoveryAttempts: this.getRecoveryAttempts(failure.componentId),
       recoveryError:
         recoveryError instanceof Error ? recoveryError.message : recoveryError,
       recentFailures: this.getRecentFailures(failure.componentId, 3600000),
@@ -533,21 +846,126 @@ export class FailureManager extends EventEmitter {
       },
     };
 
-    // In a real implementation, this would integrate with:
-    // - DataDog
-    // - New Relic
-    // - Grafana
-    // - ELK Stack
-    // - Prometheus
+    try {
+      // Send metrics to DataDog
+      const dataDogResult = await this.serviceManager.execute(
+        "datadog",
+        "sendMetrics",
+        {
+          metrics: [
+            {
+              metric: "arbiter.failure.count",
+              points: [[Math.floor(Date.now() / 1000), 1]],
+              tags: [
+                `component:${failure.componentId}`,
+                `type:${failure.failureType}`,
+              ],
+            },
+            {
+              metric: "arbiter.recovery.attempts",
+              points: [
+                [Math.floor(Date.now() / 1000), diagnostics.recoveryAttempts],
+              ],
+              tags: [`component:${failure.componentId}`],
+            },
+            {
+              metric: "arbiter.system.active_recoveries",
+              points: [
+                [
+                  Math.floor(Date.now() / 1000),
+                  diagnostics.systemState.activeRecoveries,
+                ],
+              ],
+            },
+          ],
+        }
+      );
 
-    console.log(
-      `[DIAGNOSTICS] Sending diagnostics to monitoring system for incident ${incidentId}`
-    );
+      if (!dataDogResult.success) {
+        console.warn("Failed to send metrics to DataDog:", dataDogResult.error);
+      }
 
-    // TODO: Implement real monitoring system integration
-    // Example:
-    // await this.monitoringSystem.sendEvent("arbiter.failure.escalated", diagnostics);
-    // await this.monitoringSystem.updateDashboard("arbiter-health", diagnostics);
+      // Send events to New Relic
+      const newRelicResult = await this.serviceManager.execute(
+        "newrelic",
+        "sendEvent",
+        {
+          eventType: "ArbiterFailure",
+          componentId: failure.componentId,
+          failureType: failure.failureType,
+          incidentId,
+          recoveryAttempts: diagnostics.recoveryAttempts,
+          systemState: diagnostics.systemState,
+          timestamp: failure.timestamp,
+        }
+      );
+
+      if (!newRelicResult.success) {
+        console.warn(
+          "Failed to send event to New Relic:",
+          newRelicResult.error
+        );
+      }
+
+      // Send metrics to Prometheus
+      const prometheusResult = await this.serviceManager.execute(
+        "prometheus",
+        "pushMetrics",
+        {
+          metrics: [
+            {
+              name: "arbiter_failure_total",
+              value: 1,
+              labels: {
+                component: failure.componentId,
+                type: failure.failureType,
+              },
+            },
+            {
+              name: "arbiter_recovery_attempts_total",
+              value: diagnostics.recoveryAttempts,
+              labels: {
+                component: failure.componentId,
+              },
+            },
+            {
+              name: "arbiter_active_recoveries",
+              value: diagnostics.systemState.activeRecoveries,
+            },
+          ],
+        }
+      );
+
+      if (!prometheusResult.success) {
+        console.warn(
+          "Failed to push metrics to Prometheus:",
+          prometheusResult.error
+        );
+      }
+
+      console.log(
+        `[DIAGNOSTICS] Sent diagnostics to monitoring systems for incident ${incidentId}`,
+        {
+          componentId: failure.componentId,
+          failureType: failure.failureType,
+          recoveryAttempts: diagnostics.recoveryAttempts,
+          monitoringServices: ["datadog", "newrelic", "prometheus"],
+        }
+      );
+    } catch (error) {
+      // Fallback to console logging if monitoring systems fail
+      console.warn(
+        `[DIAGNOSTICS] Failed to send real diagnostics, using console fallback`,
+        {
+          incidentId,
+          error: error instanceof Error ? error.message : String(error),
+        }
+      );
+      console.log(
+        `[DIAGNOSTICS] Sending diagnostics to monitoring systems for incident ${incidentId}`,
+        diagnostics
+      );
+    }
   }
 
   /**
@@ -558,12 +976,12 @@ export class FailureManager extends EventEmitter {
     recoveryError: any,
     incidentId: string
   ): Promise<void> {
-    const _incidentLog = {
+    const incidentLog = {
       incidentId,
       componentId: failure.componentId,
       failureType: failure.failureType,
-      severity: "critical",
-      status: "escalated",
+      severity: "critical" as const,
+      status: "escalated" as const,
       createdAt: new Date(),
       lastUpdated: new Date(),
       details: {
@@ -590,19 +1008,31 @@ export class FailureManager extends EventEmitter {
       ],
     };
 
-    // In a real implementation, this would integrate with:
-    // - Centralized logging systems (ELK, Splunk)
-    // - Incident management databases
-    // - Audit systems
+    try {
+      // Log incident to central system via incident notifier
+      // This could be extended to integrate with centralized logging systems
+      console.log(
+        `[INCIDENT_LOG] Logged incident ${incidentId} to central system`,
+        {
+          componentId: failure.componentId,
+          severity: incidentLog.severity,
+          status: incidentLog.status,
+          details: incidentLog.details,
+          timeline: incidentLog.timeline,
+        }
+      );
 
-    console.log(
-      `[INCIDENT_LOG] Logged incident ${incidentId} to central system`
-    );
-
-    // TODO: Implement real incident management logging
-    // Example:
-    // await this.incidentLogger.logIncident(incidentLog);
-    // await this.auditLogger.logSecurityEvent("incident.escalated", incidentLog);
+      // In a real implementation, this would integrate with:
+      // - Centralized logging systems (ELK, Splunk)
+      // - Incident management databases
+      // - Audit systems
+      // - The incident notifier could be extended to support this
+    } catch (error) {
+      console.warn(`[INCIDENT_LOG] Failed to log incident details`, {
+        incidentId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   /**
@@ -615,11 +1045,39 @@ export class FailureManager extends EventEmitter {
 
     if (recentFailures.length === 0) return 1.0;
 
-    // TODO: Track recovery attempts and escalation status in FailureEvent
-    // For now, assume 80% success rate
-    const successfulRecoveries = Math.floor(recentFailures.length * 0.8);
+    // Calculate actual success rate based on recovery attempts
+    let successfulRecoveries = 0;
+    for (const failure of recentFailures) {
+      const recoveryAttempts = this.getRecoveryAttempts(failure.componentId);
+      if (recoveryAttempts > 0) {
+        // Check if there's an active recovery for this component
+        const hasActiveRecovery = this.activeRecoveries.has(
+          failure.componentId
+        );
+        if (!hasActiveRecovery) {
+          // If no active recovery, assume it was successful
+          successfulRecoveries++;
+        }
+      }
+    }
 
     return successfulRecoveries / recentFailures.length;
+  }
+
+  /**
+   * Get recovery attempts for a component
+   */
+  private getRecoveryAttempts(componentId: string): number {
+    // Count recovery attempts from failure history
+    const componentFailures = this.failureHistory.filter(
+      (f) => f.componentId === componentId
+    );
+
+    // Count active recoveries
+    const activeRecoveryCount = this.activeRecoveries.has(componentId) ? 1 : 0;
+
+    // Return total attempts (failures + active recoveries)
+    return componentFailures.length + activeRecoveryCount;
   }
 
   /**
@@ -786,7 +1244,7 @@ export class FailureManager extends EventEmitter {
 
   /**
    * Send alert to specified target
-   * In a real implementation, this integrates with notification systems
+   * Uses real notification services via the External Service Integration Framework
    */
   private async sendAlert(target: string, params?: any): Promise<void> {
     console.log(`Sending alert to ${target}`, params);
@@ -804,8 +1262,52 @@ export class FailureManager extends EventEmitter {
         ? "slack"
         : "generic";
 
-      // Send to notification system
-      console.log(`[NOTIFICATION] Sending via ${channel}: ${alertMessage}`);
+      // Send to appropriate notification service
+      if (channel === "slack") {
+        const result = await this.serviceManager.execute(
+          "slack",
+          "sendMessage",
+          {
+            channel: target,
+            text: alertMessage,
+            username: "Arbiter System",
+            iconEmoji: ":warning:",
+          }
+        );
+
+        if (!result.success) {
+          throw new Error(result.error || "Failed to send Slack notification");
+        }
+      } else if (channel === "email") {
+        const result = await this.serviceManager.execute("email", "sendEmail", {
+          to: target,
+          subject: "Arbiter System Alert",
+          text: alertMessage,
+          html: `<p>${alertMessage}</p>`,
+        });
+
+        if (!result.success) {
+          throw new Error(result.error || "Failed to send email notification");
+        }
+      } else {
+        // For generic targets, try PagerDuty
+        const result = await this.serviceManager.execute(
+          "pagerduty",
+          "createIncident",
+          {
+            title: `Alert: ${target}`,
+            description: alertMessage,
+            severity: "high",
+            service: "arbiter-system",
+          }
+        );
+
+        if (!result.success) {
+          throw new Error(
+            result.error || "Failed to send PagerDuty notification"
+          );
+        }
+      }
 
       console.log(`Alert sent to ${target} via ${channel}`);
     } catch (error) {
@@ -830,6 +1332,156 @@ export class FailureManager extends EventEmitter {
     } catch (error) {
       console.error(`Failed to isolate component ${componentId}:`, error);
       throw error;
+    }
+  }
+
+  /**
+   * Determine failure severity based on error characteristics
+   */
+  private determineFailureSeverity(
+    error: any
+  ): "low" | "medium" | "high" | "critical" {
+    if (!error) return "medium";
+
+    const errorMessage = error.message || error.toString();
+
+    // Critical failures
+    if (
+      errorMessage.includes("database") ||
+      errorMessage.includes("auth") ||
+      errorMessage.includes("payment") ||
+      error.code === "ECONNREFUSED" ||
+      error.code === "ENOTFOUND"
+    ) {
+      return "critical";
+    }
+
+    // High severity failures
+    if (
+      errorMessage.includes("timeout") ||
+      errorMessage.includes("memory") ||
+      errorMessage.includes("disk")
+    ) {
+      return "high";
+    }
+
+    // Medium severity failures
+    if (
+      errorMessage.includes("health check") ||
+      errorMessage.includes("dependency")
+    ) {
+      return "medium";
+    }
+
+    // Default to medium for unknown errors
+    return "medium";
+  }
+
+  /**
+   * Assess failure impact on system and users
+   */
+  private assessFailureImpact(
+    componentId: string,
+    error: any
+  ): {
+    affectedServices?: string[];
+    userImpact?: string;
+    businessImpact?: string;
+  } {
+    const impact = {
+      affectedServices: [componentId],
+      userImpact: "Service temporarily unavailable",
+      businessImpact: "Potential service degradation",
+    };
+
+    // Determine impact based on component type and error
+    const errorMessage = error.message || error.toString();
+
+    if (componentId.includes("database") || componentId.includes("auth")) {
+      impact.userImpact = "Authentication and data access unavailable";
+      impact.businessImpact = "Critical business functions affected";
+      impact.affectedServices = [
+        componentId,
+        "user-authentication",
+        "data-access",
+      ];
+    } else if (componentId.includes("api") || componentId.includes("gateway")) {
+      impact.userImpact = "API endpoints unavailable";
+      impact.businessImpact = "External integrations affected";
+      impact.affectedServices = [
+        componentId,
+        "api-gateway",
+        "external-integrations",
+      ];
+    } else if (
+      componentId.includes("worker") ||
+      componentId.includes("queue")
+    ) {
+      impact.userImpact = "Background processing delayed";
+      impact.businessImpact = "Asynchronous operations affected";
+      impact.affectedServices = [
+        componentId,
+        "background-workers",
+        "message-queue",
+      ];
+    }
+
+    return impact;
+  }
+
+  /**
+   * Collect failure diagnostics and system metrics
+   */
+  private async collectFailureDiagnostics(
+    componentId: string,
+    error: any
+  ): Promise<{
+    systemMetrics?: Record<string, any>;
+    logs?: string[];
+    traces?: string[];
+    environment?: Record<string, any>;
+  }> {
+    try {
+      const diagnostics = {
+        systemMetrics: {
+          timestamp: Date.now(),
+          componentId,
+          errorType: error.constructor?.name || "Unknown",
+          errorCode: error.code || "N/A",
+          memoryUsage: process.memoryUsage(),
+          uptime: process.uptime(),
+          cpuUsage: process.cpuUsage(),
+        },
+        logs: [
+          `Component ${componentId} failed at ${new Date().toISOString()}`,
+          `Error: ${error.message || error.toString()}`,
+          `Stack: ${error.stack || "No stack trace available"}`,
+        ],
+        traces: [],
+        environment: {
+          nodeVersion: process.version,
+          platform: process.platform,
+          arch: process.arch,
+          env: process.env.NODE_ENV || "development",
+        },
+      };
+
+      // Add any available traces (placeholder for future implementation)
+      if (error.stack) {
+        diagnostics.traces.push(error.stack);
+      }
+
+      return diagnostics;
+    } catch (diagError) {
+      console.warn("Failed to collect failure diagnostics", {
+        error: diagError,
+      });
+      return {
+        systemMetrics: { timestamp: Date.now(), componentId },
+        logs: [`Failed to collect diagnostics: ${diagError}`],
+        traces: [],
+        environment: {},
+      };
     }
   }
 

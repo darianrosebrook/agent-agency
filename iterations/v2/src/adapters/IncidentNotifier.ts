@@ -9,6 +9,13 @@
 
 import { Logger } from "@/observability/Logger";
 import { FailureEvent, FailureType } from "@/types/coordinator";
+import { ServiceIntegrationManager } from "@/integrations/ExternalServiceFramework";
+import {
+  ServiceNowIncidentService,
+  JiraIncidentService,
+  IncidentData,
+  IncidentTicket as ServiceIncidentTicket,
+} from "@/integrations/IncidentManagementService";
 
 export interface IncidentTicket {
   id: string;
@@ -52,6 +59,7 @@ export interface IncidentNotifierConfig {
 export class IncidentNotifier {
   private readonly logger = new Logger("IncidentNotifier");
   private readonly config: IncidentNotifierConfig;
+  private readonly serviceManager: ServiceIntegrationManager;
 
   constructor(config: Partial<IncidentNotifierConfig> = {}) {
     this.config = {
@@ -71,6 +79,70 @@ export class IncidentNotifier {
       },
       ...config,
     };
+
+    // Initialize service integration manager
+    this.serviceManager = new ServiceIntegrationManager({
+      healthCheckIntervalMs: 30000,
+      enableHealthChecks: true,
+    });
+  }
+
+  /**
+   * Initialize incident management services
+   */
+  async initialize(): Promise<void> {
+    try {
+      // Register ServiceNow service if configured
+      if (
+        this.config.incidentSystem.type === "servicenow" ||
+        (this.config.incidentSystem as any).servicenow
+      ) {
+        const servicenowConfig = (this.config.incidentSystem as any).servicenow;
+        const serviceNowService = new ServiceNowIncidentService({
+          name: "servicenow",
+          type: "incident",
+          enabled: true,
+          timeout: 30000,
+          retries: 3,
+          instanceUrl: servicenowConfig.instanceUrl,
+          username: servicenowConfig.username,
+          password: servicenowConfig.password,
+          tableName: servicenowConfig.tableName,
+        });
+        await this.serviceManager.register(serviceNowService);
+      }
+
+      // Register Jira service if configured
+      if (
+        this.config.incidentSystem.type === "jira" ||
+        (this.config.incidentSystem as any).jira
+      ) {
+        const jiraConfig = (this.config.incidentSystem as any).jira;
+        const jiraService = new JiraIncidentService({
+          name: "jira",
+          type: "incident",
+          enabled: true,
+          timeout: 30000,
+          retries: 3,
+          baseUrl: jiraConfig.baseUrl,
+          username: jiraConfig.username,
+          apiToken: jiraConfig.apiToken,
+          projectKey: jiraConfig.projectKey,
+          issueType: jiraConfig.issueType,
+        });
+        await this.serviceManager.register(jiraService);
+      }
+
+      // Start health checks
+      this.serviceManager.startHealthChecks();
+
+      this.logger.info("Incident management services initialized successfully");
+    } catch (error) {
+      this.logger.error("Failed to initialize incident management services", {
+        error,
+      });
+      throw error;
+    }
   }
 
   /**
@@ -343,19 +415,149 @@ export class IncidentNotifier {
   private async createServiceNowTicket(
     incidentData: Record<string, any>
   ): Promise<IncidentTicket> {
-    // TODO: Implement ServiceNow integration
-    // Use ServiceNow REST API to create incident
-    this.logger.info("Creating ServiceNow ticket", incidentData);
-    return this.createMockTicket(incidentData);
+    try {
+      this.logger.info("Creating ServiceNow ticket", incidentData);
+
+      // Convert incident data to ServiceNow format
+      const serviceNowData: IncidentData = {
+        title: incidentData.title,
+        description: incidentData.description,
+        severity: incidentData.severity,
+        priority: incidentData.priority || "medium",
+        category: incidentData.category || "System Alert",
+        subcategory: incidentData.subcategory || "Infrastructure",
+        affectedService: incidentData.affectedService,
+        assignee: incidentData.assignee,
+        reporter: incidentData.reporter || "Arbiter System",
+        tags: incidentData.tags || [],
+        customFields: incidentData.customFields || {},
+      };
+
+      // Use ServiceNow service integration
+      const result = await this.serviceManager.execute(
+        "servicenow",
+        "createIncident",
+        serviceNowData
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create ServiceNow ticket");
+      }
+
+      const ticket = result.data as ServiceIncidentTicket;
+
+      // Convert to internal format
+      const incidentTicket: IncidentTicket = {
+        id: ticket.id,
+        title: ticket.title,
+        description: ticket.description,
+        severity: ticket.severity,
+        status: this.mapServiceStatusToInternal(ticket.status),
+        tags: [],
+        createdAt: ticket.createdDate || new Date(),
+        updatedAt: ticket.updatedDate || new Date(),
+        metadata: {
+          number: ticket.number,
+          url: ticket.url,
+          createdDate: ticket.createdDate,
+          updatedDate: ticket.updatedDate,
+          resolvedDate: ticket.resolvedDate,
+          assignee: ticket.assignee,
+          reporter: ticket.reporter,
+          customFields: ticket.customFields,
+        },
+      };
+
+      this.logger.info("ServiceNow ticket created successfully", {
+        ticketId: incidentTicket.id,
+        number: ticket.number,
+      });
+
+      return incidentTicket;
+    } catch (error) {
+      this.logger.error("Failed to create ServiceNow ticket", {
+        error: error instanceof Error ? error.message : String(error),
+        incidentData,
+      });
+
+      // Fallback to mock ticket
+      this.logger.warn("Falling back to mock ticket creation");
+      return this.createMockTicket(incidentData);
+    }
   }
 
   private async createJiraTicket(
     incidentData: Record<string, any>
   ): Promise<IncidentTicket> {
-    // TODO: Implement Jira integration
-    // Use Jira REST API to create issue
-    this.logger.info("Creating Jira ticket", incidentData);
-    return this.createMockTicket(incidentData);
+    try {
+      this.logger.info("Creating Jira ticket", incidentData);
+
+      // Convert incident data to Jira format
+      const jiraData: IncidentData = {
+        title: incidentData.title,
+        description: incidentData.description,
+        severity: incidentData.severity,
+        priority: incidentData.priority || "medium",
+        category: incidentData.category || "System Alert",
+        subcategory: incidentData.subcategory || "Infrastructure",
+        affectedService: incidentData.affectedService,
+        assignee: incidentData.assignee,
+        reporter: incidentData.reporter || "Arbiter System",
+        tags: incidentData.tags || [],
+        customFields: incidentData.customFields || {},
+      };
+
+      // Use Jira service integration
+      const result = await this.serviceManager.execute(
+        "jira",
+        "createIncident",
+        jiraData
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create Jira ticket");
+      }
+
+      const ticket = result.data as ServiceIncidentTicket;
+
+      // Convert to internal format
+      const incidentTicket: IncidentTicket = {
+        id: ticket.id,
+        title: ticket.title,
+        description: ticket.description,
+        severity: ticket.severity,
+        status: this.mapServiceStatusToInternal(ticket.status),
+        tags: [],
+        createdAt: ticket.createdDate || new Date(),
+        updatedAt: ticket.updatedDate || new Date(),
+        metadata: {
+          number: ticket.number,
+          url: ticket.url,
+          createdDate: ticket.createdDate,
+          updatedDate: ticket.updatedDate,
+          resolvedDate: ticket.resolvedDate,
+          assignee: ticket.assignee,
+          reporter: ticket.reporter,
+          customFields: ticket.customFields,
+        },
+      };
+
+      this.logger.info("Jira ticket created successfully", {
+        ticketId: incidentTicket.id,
+        number: ticket.number,
+      });
+
+      return incidentTicket;
+    } catch (error) {
+      this.logger.error("Failed to create Jira ticket", {
+        error: error instanceof Error ? error.message : String(error),
+        incidentData,
+      });
+
+      // Fallback to mock ticket
+      this.logger.warn("Falling back to mock ticket creation");
+      return this.createMockTicket(incidentData);
+    }
   }
 
   private async createZendeskTicket(
@@ -517,12 +719,46 @@ export class IncidentNotifier {
     status: IncidentTicket["status"],
     notes?: string
   ): Promise<void> {
-    // TODO: Implement ServiceNow ticket update
-    this.logger.info("Updating ServiceNow ticket", {
-      incidentId,
-      status,
-      notes,
-    });
+    try {
+      this.logger.info("Updating ServiceNow ticket", {
+        incidentId,
+        status,
+        notes,
+      });
+
+      // Convert status to ServiceNow format
+      const updateData = {
+        status: this.mapStatusToServiceNow(status),
+        work_notes: notes,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Use ServiceNow service integration
+      const result = await this.serviceManager.execute(
+        "servicenow",
+        "updateIncident",
+        {
+          sysId: incidentId,
+          data: updateData,
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to update ServiceNow ticket");
+      }
+
+      this.logger.info("ServiceNow ticket updated successfully", {
+        incidentId,
+        status,
+      });
+    } catch (error) {
+      this.logger.error("Failed to update ServiceNow ticket", {
+        incidentId,
+        status,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   }
 
   private async updateJiraTicket(
@@ -530,8 +766,59 @@ export class IncidentNotifier {
     status: IncidentTicket["status"],
     notes?: string
   ): Promise<void> {
-    // TODO: Implement Jira ticket update
-    this.logger.info("Updating Jira ticket", { incidentId, status, notes });
+    try {
+      this.logger.info("Updating Jira ticket", { incidentId, status, notes });
+
+      // Convert status to Jira format
+      const updateData = {
+        status: this.mapStatusToJira(status),
+        comment: notes
+          ? {
+              body: {
+                type: "doc",
+                version: 1,
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [
+                      {
+                        type: "text",
+                        text: notes,
+                      },
+                    ],
+                  },
+                ],
+              },
+            }
+          : undefined,
+      };
+
+      // Use Jira service integration
+      const result = await this.serviceManager.execute(
+        "jira",
+        "updateIncident",
+        {
+          issueId: incidentId,
+          data: updateData,
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to update Jira ticket");
+      }
+
+      this.logger.info("Jira ticket updated successfully", {
+        incidentId,
+        status,
+      });
+    } catch (error) {
+      this.logger.error("Failed to update Jira ticket", {
+        incidentId,
+        status,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   }
 
   private async updateZendeskTicket(
@@ -600,5 +887,61 @@ export class IncidentNotifier {
     }
 
     throw lastError || new Error(`Failed ${operationName}`);
+  }
+
+  /**
+   * Map internal status to ServiceNow status
+   */
+  private mapStatusToServiceNow(status: IncidentTicket["status"]): string {
+    switch (status) {
+      case "open":
+        return "1"; // New
+      case "investigating":
+        return "2"; // In Progress
+      case "resolved":
+        return "6"; // Resolved
+      case "closed":
+        return "7"; // Closed
+      default:
+        return "1";
+    }
+  }
+
+  /**
+   * Map internal status to Jira status
+   */
+  private mapStatusToJira(status: IncidentTicket["status"]): string {
+    switch (status) {
+      case "open":
+        return "To Do";
+      case "investigating":
+        return "In Progress";
+      case "resolved":
+        return "Done";
+      case "closed":
+        return "Closed";
+      default:
+        return "To Do";
+    }
+  }
+
+  /**
+   * Map service status to internal status
+   */
+  private mapServiceStatusToInternal(status: string): IncidentTicket["status"] {
+    switch (status) {
+      case "new":
+        return "open";
+      case "assigned":
+        return "investigating";
+      case "in_progress":
+        return "investigating";
+      case "resolved":
+        return "resolved";
+      case "closed":
+        return "closed";
+      default:
+        return "open";
+    }
   }
 }

@@ -115,6 +115,29 @@ export interface FailureEvent {
   error: any;
   timestamp: Date;
   context?: Record<string, any>;
+  recoveryAttempts?: RecoveryAttempt[];
+  severity?: "low" | "medium" | "high" | "critical";
+  impact?: {
+    affectedServices?: string[];
+    userImpact?: string;
+    businessImpact?: string;
+  };
+  diagnostics?: {
+    systemMetrics?: Record<string, any>;
+    logs?: string[];
+    traces?: string[];
+    environment?: Record<string, any>;
+  };
+}
+
+export interface RecoveryAttempt {
+  attemptNumber: number;
+  timestamp: Date;
+  action: RecoveryAction;
+  result: "success" | "failure" | "timeout";
+  duration?: number;
+  error?: any;
+  metadata?: Record<string, any>;
 }
 
 export interface RecoveryAction {
@@ -133,6 +156,10 @@ export interface FailureRecovery {
   startTime: Date;
   endTime?: Date;
   success: boolean;
+  recoveryAttempts: RecoveryAttempt[];
+  totalAttempts: number;
+  successfulAttempts: number;
+  failedAttempts: number;
 }
 
 export interface SystemCoordinatorConfig {
@@ -164,4 +191,3 @@ export interface CoordinatorStats {
     recentFailures: number;
   };
 }
-

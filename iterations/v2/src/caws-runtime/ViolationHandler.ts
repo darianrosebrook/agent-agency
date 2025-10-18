@@ -711,21 +711,213 @@ export class ViolationHandler extends EventEmitter {
   }
 }
 
-// TODO: Implement these interfaces
-// Placeholder interfaces for dependencies
+/**
+ * Alert Manager - Handles alerting and escalation for constitutional violations
+ */
+export class AlertManager {
+  private config: {
+    enabled: boolean;
+    channels: string[];
+    escalationThreshold: number;
+    rateLimitWindow: number;
+    rateLimitMax: number;
+  };
+  private alertHistory: Map<string, number[]> = new Map();
+
+  constructor(config?: Partial<AlertManager["config"]>) {
+    this.config = {
+      enabled: true,
+      channels: ["console", "slack", "email"],
+      escalationThreshold: 3,
+      rateLimitWindow: 60000, // 1 minute
+      rateLimitMax: 10,
+      ...config,
+    };
+  }
+
+  async sendAlert(alert: AlertMessage): Promise<void> {
+    if (!this.config.enabled) {
+      return;
+    }
+
+    // Rate limiting check
+    if (this.isRateLimited(alert.title)) {
+      console.warn(`Alert rate limited: ${alert.title}`);
+      return;
+    }
+
+    try {
+      // Send to configured channels
+      for (const channel of this.config.channels) {
+        await this.sendToChannel(channel, alert);
+      }
+
+      // Record alert for rate limiting
+      this.recordAlert(alert.title);
+    } catch (error) {
+      console.error("Failed to send alert:", error);
+    }
+  }
+
+  async escalateViolation(
+    violation: ConstitutionalViolation,
+    operation: OperationContext,
+    context: EvaluationContext
+  ): Promise<void> {
+    const alert: AlertMessage = {
+      title: `Constitutional Violation: ${violation.policyId}`,
+      message: `Violation detected in operation ${operation.type} (${
+        operation.id
+      }). Policy: ${violation.policyId}. Agent: ${
+        context.agentId || "unknown"
+      }`,
+      severity: "high" as any,
+      timestamp: new Date(),
+      operationId: operation.id,
+      agentId: context.agentId,
+      userId: context.userId,
+      details: violation,
+    };
+
+    await this.sendAlert(alert);
+  }
+
+  private async sendToChannel(
+    channel: string,
+    alert: AlertMessage
+  ): Promise<void> {
+    switch (channel) {
+      case "console":
+        console.error(`🚨 ALERT: ${alert.title} - ${alert.message}`);
+        break;
+      case "slack":
+        // In a real implementation, this would send to Slack webhook
+        console.log(`[SLACK] ${alert.title}: ${alert.message}`);
+        break;
+      case "email":
+        // In a real implementation, this would send email
+        console.log(`[EMAIL] ${alert.title}: ${alert.message}`);
+        break;
+      default:
+        console.warn(`Unknown alert channel: ${channel}`);
+    }
+  }
+
+  private isRateLimited(alertTitle: string): boolean {
+    const now = Date.now();
+    const history = this.alertHistory.get(alertTitle) || [];
+
+    // Remove old entries outside the rate limit window
+    const recentHistory = history.filter(
+      (timestamp) => now - timestamp < this.config.rateLimitWindow
+    );
+
+    return recentHistory.length >= this.config.rateLimitMax;
+  }
+
+  private recordAlert(alertTitle: string): void {
+    const now = Date.now();
+    const history = this.alertHistory.get(alertTitle) || [];
+    history.push(now);
+    this.alertHistory.set(alertTitle, history);
+  }
+}
+
+/**
+ * Audit Logger - Handles logging of constitutional violations for compliance
+ */
+export class AuditLogger {
+  private config: {
+    enabled: boolean;
+    logLevel: "info" | "warn" | "error";
+    includeStackTrace: boolean;
+    retentionDays: number;
+  };
+  private logger = console; // In a real implementation, this would be a proper logger
+
+  constructor(config?: Partial<AuditLogger["config"]>) {
+    this.config = {
+      enabled: true,
+      logLevel: "warn",
+      includeStackTrace: true,
+      retentionDays: 90,
+      ...config,
+    };
+  }
+
+  async logViolation(
+    violation: ConstitutionalViolation,
+    operation: OperationContext,
+    context: EvaluationContext
+  ): Promise<void> {
+    if (!this.config.enabled) {
+      return;
+    }
+
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      type: "constitutional_violation",
+      violation: {
+        id: violation.id,
+        policyId: violation.policyId,
+        severity: violation.severity,
+        message: violation.message,
+      },
+      operation: {
+        id: operation.id,
+        type: operation.type,
+        timestamp: operation.timestamp,
+      },
+      context: {
+        agentId: context.agentId,
+        userId: context.userId,
+        sessionId: context.sessionId,
+      },
+      metadata: {
+        retentionDays: this.config.retentionDays,
+        logLevel: this.config.logLevel,
+      },
+    };
+
+    try {
+      // Log based on configured level
+      switch (this.config.logLevel) {
+        case "error":
+          this.logger.error("Constitutional Violation:", logEntry);
+          break;
+        case "warn":
+          this.logger.warn("Constitutional Violation:", logEntry);
+          break;
+        case "info":
+        default:
+          this.logger.info("Constitutional Violation:", logEntry);
+          break;
+      }
+
+      // In a real implementation, this would also:
+      // - Write to audit database
+      // - Send to compliance monitoring system
+      // - Trigger automated compliance reports
+    } catch (error) {
+      console.error("Failed to log violation:", error);
+    }
+  }
+}
+
+// Export interfaces for backward compatibility
 export interface AlertManager {
-  sendAlert(_alert: AlertMessage): Promise<void>;
+  sendAlert(alert: AlertMessage): Promise<void>;
   escalateViolation(
-    _violation: ConstitutionalViolation,
-    _operation: OperationContext,
-    _context: EvaluationContext
+    violation: ConstitutionalViolation,
+    operation: OperationContext,
+    context: EvaluationContext
   ): Promise<void>;
 }
 
 export interface AuditLogger {
   logViolation(
-    _violation: ConstitutionalViolation,
-    _operation: OperationContext,
-    _context: EvaluationContext
+    violation: ConstitutionalViolation,
+    operation: OperationContext,
+    context: EvaluationContext
   ): Promise<void>;
 }

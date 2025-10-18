@@ -1,136 +1,100 @@
-# Universal Hidden TODO Analysis Report
+# Improved Hidden TODO Analysis Report (v2.0)
 ============================================================
 
 ## Summary
-- Total files: 280860
-- Non-ignored files: 2320
-- Ignored files: 278540
-- Files with hidden TODOs: 429
-- Total hidden TODOs found: 2442
+- Total files: 232926
+- Non-ignored files: 4402
+- Ignored files: 228524
+- Files with hidden TODOs: 28
+- Total hidden TODOs found: 97
+- Code stub detections: 1
+- High confidence TODOs (≥0.9): 87
+- Medium confidence TODOs (≥0.6): 10
+- Low confidence TODOs (<0.6): 0
+- Minimum confidence threshold: 0.6
 
 ## Files by Language
-- **javascript**: 82 files
-- **json**: 1476 files
-- **markdown**: 75 files
-- **python**: 30 files
-- **rust**: 146 files
-- **shell**: 19 files
-- **typescript**: 438 files
-- **yaml**: 54 files
+- **javascript**: 10 files
+- **json**: 3934 files
+- **markdown**: 55 files
+- **python**: 26 files
+- **rust**: 1 files
+- **shell**: 9 files
+- **typescript**: 325 files
+- **yaml**: 42 files
 
 ## Pattern Statistics
+- `\bTODO\b.*?:`: 50 occurrences
+- `\bin\s+a\s+real\s+implementation\b`: 31 occurrences
+- `\bto\s+be\s+implemented\b`: 6 occurrences
+- `\bwould\s+be\b.*?(implemented|added|fixed)`: 4 occurrences
+- `\bnot\s+yet\s+implemented\b`: 2 occurrences
+- `\bwill\s+be\b.*?(implemented|added|fixed)`: 1 occurrences
+- `\bplaceholder\s+implementation\b`: 1 occurrences
+- `\bcould\s+be\b.*?(implemented|added|fixed)`: 1 occurrences
+- `python_pass_stub`: 1 occurrences
 
-## Files with Most Hidden TODOs
-- `iterations/v3/model-benchmarking/src/benchmark_runner.rs` (rust): 64 hidden TODOs
-- `iterations/v3/council/src/advanced_arbitration.rs` (rust): 60 hidden TODOs
-- `iterations/v3/model-benchmarking/src/performance_tracker.rs` (rust): 51 hidden TODOs
-- `iterations/v3/reflexive-learning/src/coordinator.rs` (rust): 36 hidden TODOs
-- `iterations/v2/src/rl/PerformanceTracker.ts` (typescript): 35 hidden TODOs
-- `iterations/v3/database/src/client.rs` (rust): 34 hidden TODOs
-- `iterations/v3/council/src/learning.rs` (rust): 32 hidden TODOs
-- `iterations/v3/apple-silicon/src/core_ml.rs` (rust): 30 hidden TODOs
-- `iterations/v3/workers/src/executor.rs` (rust): 29 hidden TODOs
-- `iterations/v3/research/src/knowledge_seeker.rs` (rust): 28 hidden TODOs
-- `iterations/v3/model-benchmarking/src/lib.rs` (rust): 26 hidden TODOs
-- `iterations/v2/src/types/performance-tracking.ts` (typescript): 26 hidden TODOs
-- `iterations/v3/provenance/src/storage.rs` (rust): 25 hidden TODOs
-- `iterations/v3/council/src/verdicts.rs` (rust): 25 hidden TODOs
-- `iterations/v3/database/src/health.rs` (rust): 25 hidden TODOs
+## Files with High-Confidence Hidden TODOs
+- `src/adapters/InfrastructureController.ts` (typescript): 19 high-confidence TODOs
+- `src/adapters/IncidentNotifier.ts` (typescript): 14 high-confidence TODOs
+- `src/coordinator/FailureManager.ts` (typescript): 10 high-confidence TODOs
+- `src/adapters/NotificationAdapter.ts` (typescript): 6 high-confidence TODOs
+- `src/adapters/AuditLogger.ts` (typescript): 6 high-confidence TODOs
+- `src/orchestrator/ArbiterOrchestrator.ts` (typescript): 6 high-confidence TODOs
+- `src/workspace/WorkspaceStateManager.ts` (typescript): 2 high-confidence TODOs
+- `src/caws-runtime/ViolationHandler.ts` (typescript): 2 high-confidence TODOs
+- `src/mcp/arbiter-mcp-server.ts` (typescript): 2 high-confidence TODOs
+- `src/testing/ChaosTestSuite.ts` (typescript): 2 high-confidence TODOs
+- `src/resilience/ResilientDatabaseClient.ts` (typescript): 2 high-confidence TODOs
+- `src/orchestrator/runtime/ArbiterRuntime.ts` (typescript): 2 high-confidence TODOs
+- `playground/broken-rust.rs` (rust): 1 high-confidence TODOs
+- `src/orchestrator/task-worker.js` (javascript): 1 high-confidence TODOs
+- `playground/broken-types.ts` (typescript): 1 high-confidence TODOs
+- `src/embeddings/HealthCheck.ts` (typescript): 1 high-confidence TODOs
+- `src/config/ConfigManager.ts` (typescript): 1 high-confidence TODOs
+- `src/caws-runtime/WaiverManager.ts` (typescript): 1 high-confidence TODOs
+- `src/caws-validator/CAWSValidator.ts` (typescript): 1 high-confidence TODOs
+- `src/verification/VerificationEngine.ts` (typescript): 1 high-confidence TODOs
+- `src/orchestrator/SecurityManager.ts` (typescript): 1 high-confidence TODOs
+- `src/orchestrator/AgentRegistryManager.ts` (typescript): 1 high-confidence TODOs
+- `src/orchestrator/TaskOrchestrator.ts` (typescript): 1 high-confidence TODOs
+- `src/verification/validators/CrossReferenceValidator.ts` (typescript): 1 high-confidence TODOs
+- `playground/broken-python.py` (python): 1 high-confidence TODOs
+- `python-services/dspy-integration/main.py` (python): 1 high-confidence TODOs
 
-## Pattern Categories
-### Performance Quality (1208 items)
-- `iterations/v3/mcp-integration/src/types.rs:266` (rust): / Performance metrics...
-- `iterations/v3/mcp-integration/src/lib.rs:29` (rust): / Performance settings...
-- `iterations/v3/mcp-integration/src/lib.rs:102` (rust): / Enable performance monitoring...
-- ... and 1205 more
+## Pattern Categories by Confidence
+### Explicit Todos (50 items)
+#### High Confidence (50 items)
+- `playground/broken-rust.rs:55` (rust, conf: 1.0 (context: 0.3)): TODO: Implement proper error handling for API calls...
+- `playground/broken-types.ts:51` (typescript, conf: 1.0 (context: 0.3)): TODO: Implement proper error handling for API calls...
+- `src/coordinator/FailureManager.ts:457` (typescript, conf: 1.0 (context: 0.3)): TODO: Implement real incident management system integration...
+- ... and 47 more high-confidence items
 
-### Simulation (120 items)
-- `iterations/v3/mcp-integration/src/tool_registry.rs:149` (rust): Simulated execution router: respect timeout and return structured result...
-- `iterations/v3/mcp-integration/src/tool_registry.rs:152` (rust): placeholder for execution; sleep a tiny amount to simulate work...
-- `iterations/v3/workers/src/manager.rs:319` (rust): 5. Return actual health check results (not simulated)...
-- ... and 117 more
+### Future Improvements (37 items)
+#### High Confidence (30 items)
+- `src/orchestrator/task-worker.js:41` (javascript, conf: 0.9 (context: 0.0)): Simple mock sandbox for now - workers will be fixed in proper implementation...
+- `src/coordinator/FailureManager.ts:446` (typescript, conf: 0.9 (context: 0.0)): In a real implementation, this would integrate with:...
+- `src/coordinator/FailureManager.ts:491` (typescript, conf: 0.9 (context: 0.0)): In a real implementation, this would integrate with:...
+- ... and 27 more high-confidence items
+#### Medium Confidence (7 items)
+- `src/workspace/WorkspaceStateManager.ts:404` (typescript, conf: 0.9 (context: -0.2)): This is a placeholder - in a real implementation, we'd:...
+- `src/rl/PerformanceTracker.ts:934` (typescript, conf: 0.9 (context: -0.2)): Note: DataCollector integration for task performance could be added here...
+- ... and 5 more medium-confidence items
 
-### Placeholder (240 items)
-- `iterations/v3/mcp-integration/src/tool_registry.rs:152` (rust): placeholder for execution; sleep a tiny amount to simulate work...
-- `iterations/v3/mcp-integration/src/caws_integration.rs:176` (rust): Example governance: require output schema...
-- `iterations/v3/workers/src/manager.rs:424` (rust): 5. Return actual discovered workers (not mock workers)...
-- ... and 237 more
+### Placeholder Code (1 items)
+#### High Confidence (1 items)
+- `src/workspace/WorkspaceStateManager.ts:394` (typescript, conf: 0.9 (context: 0.0)): For now, return empty array as this is a placeholder implementation...
 
-### Version Integration (17 items)
-- `iterations/v3/mcp-integration/src/lib.rs:1` (rust): ! Agent Agency V3 - MCP Integration...
-- `iterations/v3/apple-silicon/src/lib.rs:1` (rust): ! Agent Agency V3 - Apple Silicon Integration...
-- `iterations/v3/council/src/types.rs:388` (rust): Claim Extraction and Verification Types (V2 Integration)...
-- ... and 14 more
+### Incomplete Implementation (8 items)
+#### High Confidence (6 items)
+- `src/orchestrator/ArbiterOrchestrator.ts:1221` (typescript, conf: 0.9 (context: 0.1)): This would need to be implemented based on the actual agent registry API...
+- `src/orchestrator/ArbiterOrchestrator.ts:1240` (typescript, conf: 0.9 (context: 0.1)): This would need to be implemented based on the actual agent registry API...
+- `src/orchestrator/ArbiterOrchestrator.ts:1289` (typescript, conf: 0.9 (context: 0.1)): This would need to be implemented based on the actual override storage...
+- ... and 3 more high-confidence items
+#### Medium Confidence (2 items)
+- `src/mcp/arbiter-mcp-server.ts:340` (typescript, conf: 0.9 (context: -0.2)): note: "File operation type not yet implemented",...
+- `src/mcp/arbiter-mcp-server.ts:532` (typescript, conf: 0.9 (context: -0.2)): note: "Code generation type not yet implemented",...
 
-### Temporal (628 items)
-- `iterations/v3/mcp-integration/src/tool_discovery.rs:141` (rust): simple glob over manifest patterns...
-- `iterations/v3/mcp-integration/src/caws_integration.rs:147` (rust): Basic CAWS validation based on rulebook + tool manifest metadata...
-- `iterations/v3/mcp-integration/src/caws_integration.rs:151` (rust): Simple static checks derived from CAWS invariants...
-- ... and 625 more
-
-### Hardcoded Config (6 items)
-- `iterations/v3/workers/src/caws_checker.rs:743` (rust): Check for hardcoded values in code...
-- `iterations/poc/scripts/verify-production-readiness.js:288` (javascript): Check for hardcoded secrets (excluding test files and known safe patterns)...
-- `iterations/v2/src/resources/ResourceAllocator.ts:319` (typescript): This is still better than hardcoded mock data...
-- ... and 3 more
-
-### Error Handling (140 items)
-- `iterations/v3/workers/src/caws_checker.rs:875` (rust): - Implement proper error handling and transaction management...
-- `iterations/v3/workers/src/manager.rs:224` (rust): Keep busy if failed to allow retry logic...
-- `iterations/v3/workers/src/manager.rs:315` (rust): 4. Error handling: Handle health check failures and errors...
-- ... and 137 more
-
-### Api Network (8 items)
-- `iterations/v3/workers/src/executor.rs:15` (rust): TODO: Add HTTP client for model communication with the following requirements:...
-- `iterations/v3/workers/src/executor.rs:16` (rust): 1. HTTP client implementation: Implement robust HTTP client for worker communication...
-- `iterations/v3/workers/src/executor.rs:24` (rust): 3. Request/response handling: Handle HTTP requests and responses...
-- ... and 5 more
-
-### Fallback Alternatives (123 items)
-- `iterations/v3/workers/src/executor.rs:81` (rust): - Implement task retry and fallback strategies...
-- `iterations/v3/resilience/src/circuit_breaker.rs:116` (rust): / * `fallback` - Optional fallback if circuit is open...
-- `iterations/v3/resilience/src/circuit_breaker.rs:119` (rust): / Result of operation or fallback...
-- ... and 120 more
-
-### Database Storage (13 items)
-- `iterations/v3/workspace-state-manager/src/manager.rs:17` (rust): / Storage backend for states and diffs...
-- `iterations/v3/workspace-state-manager/src/storage.rs:353` (rust): / Database storage implementation using SQLx...
-- `iterations/v3/orchestration/src/persistence.rs:11` (rust): / In-memory stub implementation; replace with DB client (Postgres) later....
-- ... and 10 more
-
-### Stub Interfaces (5 items)
-- `iterations/v3/orchestration/src/persistence.rs:11` (rust): / In-memory stub implementation; replace with DB client (Postgres) later....
-- `iterations/v3/orchestration/src/caws_runtime.rs:97` (rust): Minimal Diff Evaluator (stub interface)...
-- `iterations/v3/council/src/advanced_arbitration.rs:193` (rust): Stub implementation - would integrate learning from arbitration outcomes...
-- ... and 2 more
-
-### Future (2 items)
-- `iterations/v3/provenance/src/git_integration.rs:510` (rust): #[async_trait] impl GitIntegration for GitTrailerManager { async fn add_trailer_to_commit( &self, co...
-- `iterations/v2/src/mcp/arbiter-mcp-server.ts:1157` (typescript): // In a real implementation, this would collect logs from the logger...
-
-### Security (46 items)
-- `iterations/v3/security-policy-enforcer/src/types.rs:23` (rust): / File access control policy...
-- `iterations/v3/security-policy-enforcer/src/enforcer.rs:458` (rust): / Update security policy configuration with validation and rollback snapshot....
-- `iterations/v3/reflexive-learning/src/credit_assigner.rs:24` (rust): - Handle credit-based access control and privileges...
-- ... and 43 more
-
-### Testing Related (4 items)
-- `iterations/v3/research/src/knowledge_seeker.rs:872` (rust): 4. Testing integration: Integrate minimal seeker with testing framework...
-- `iterations/v2/src/orchestrator/ArbiterController.ts:8` (typescript): * @fileoverview ArbiterController - Real implementation for orchestrator control * * Provides real c...
-- `iterations/v2/src/arbitration/adapters/MLPrecedentMatcher.ts:263` (typescript): Mock implementation - in real system would use spaCy, NLTK, or cloud NLP service...
-- ... and 1 more
-
-### Workarounds (4 items)
-- `iterations/v2/apps/web-observer/.next/static/chunks/main-app.js:518` (javascript): !*** ./node_modules/next/dist/client/components/router-reducer/apply-router-state-patch-to-tree.js *...
-- `iterations/v2/apps/web-observer/.next/static/chunks/main-app.js:793` (javascript): !*** ./node_modules/next/dist/client/components/router-reducer/reducers/server-patch-reducer.js ***!...
-- `iterations/v2/apps/web-observer/.next/server/vendor-chunks/next.js:1110` (javascript): !*** ./node_modules/next/dist/server/lib/patch-fetch.js ***!...
-- ... and 1 more
-
-### Implementation Status (3 items)
-- `iterations/v2/src/mcp/arbiter-mcp-server.ts:340` (typescript): note: "File operation type not yet implemented",...
-- `iterations/v2/src/mcp/arbiter-mcp-server.ts:532` (typescript): note: "Code generation type not yet implemented",...
-- `.cursor/plans/caws-compliant-rl-system-a67a784b.plan.md:231` (markdown): # CAWS-Compliant RL System Implementation Plan ## Overview Implement missing RL components to enable...
-
-### Conditional (2 items)
-- `iterations/poc/src/mcp/tools/categories/SystemTools.ts:1156` (typescript): This would show detailed budget tracking if implemented...
-- `iterations/v2/python-services/dspy-integration/optimization/training_data.py:169` (python): synthetic_data = [ { "task_context": "Generate a professional email to a client", "agent_output": "H...
+### Code Stubs (1 items)
+#### Medium Confidence (1 items)
+- `playground/broken-python.py:41` (python, conf: 0.8 (context: 0.1)): pass...

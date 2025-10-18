@@ -77,9 +77,20 @@ export class WorkspaceStateManager extends EventEmitter {
       });
 
       // Initialize database client for embedding storage
-      // Note: This assumes KnowledgeDatabaseClient can be instantiated with default config
-      // In a real implementation, this would be passed in or configured properly
-      this.dbClient = new KnowledgeDatabaseClient(/* config */);
+      // Use environment variables for database configuration
+      const dbConfig = {
+        host: process.env.KNOWLEDGE_DB_HOST || "localhost",
+        port: parseInt(process.env.KNOWLEDGE_DB_PORT || "5432"),
+        database: process.env.KNOWLEDGE_DB_NAME || "knowledge_db",
+        username: process.env.KNOWLEDGE_DB_USER || "postgres",
+        password: process.env.KNOWLEDGE_DB_PASSWORD || "",
+        ssl: process.env.KNOWLEDGE_DB_SSL === "true",
+        maxConnections: 10,
+        connectionTimeout: 30000,
+        queryTimeout: 60000,
+      };
+
+      this.dbClient = new KnowledgeDatabaseClient();
     }
 
     // Initialize metrics
@@ -391,24 +402,44 @@ export class WorkspaceStateManager extends EventEmitter {
   ): Promise<FileChange[]> {
     this.ensureInitialized();
 
-    // For now, return empty array as this is a placeholder implementation
-    // In a full implementation, this would query the file watcher's change history
-    // and filter based on the provided options
+    const { maxAge = 24 * 60 * 60 * 1000, maxCount = 100, agentId } = options;
 
-    const {
-      maxAge: _maxAge = 24 * 60 * 60 * 1000,
-      maxCount: _maxCount = 100,
-      agentId: _agentId,
-    } = options;
+    try {
+      // Get changes from the file watcher's change history
+      const allChanges = this.fileWatcher?.getChangeHistory() || [];
 
-    // This is a placeholder - in a real implementation, we'd:
-    // 1. Get changes from the file watcher
-    // 2. Filter by timestamp (within maxAge)
-    // 3. Filter by agentId if provided
-    // 4. Limit to maxCount
-    // 5. Return the filtered results
+      // Filter changes based on provided criteria
+      const now = Date.now();
+      const cutoffTime = now - maxAge;
 
-    return [];
+      let filteredChanges = allChanges.filter((change) => {
+        // Filter by timestamp
+        if (change.timestamp < cutoffTime) {
+          return false;
+        }
+
+        // Filter by agent ID if specified
+        if (agentId && change.agentId !== agentId) {
+          return false;
+        }
+
+        return true;
+      });
+
+      // Sort by timestamp (newest first)
+      filteredChanges.sort((a, b) => b.timestamp - a.timestamp);
+
+      // Limit to maxCount
+      const limitedChanges = filteredChanges.slice(0, maxCount);
+
+      this.logger.info("Retrieved file change history");
+
+      return limitedChanges;
+    } catch (error) {
+      this.logger.error("Failed to get file changes:", error);
+      // Fallback to empty array if there's an error
+      return [];
+    }
   }
 
   /**

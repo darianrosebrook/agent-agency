@@ -758,10 +758,8 @@ export class ArbiterRuntime {
         step: "File editing operations in progress",
       });
 
-      // Wait for TaskOrchestrator to complete the task
-      // Note: In a real implementation, we'd need to implement proper task completion monitoring
-      // For now, we'll simulate completion after a reasonable delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Monitor task completion with proper status checking
+      await this.monitorTaskCompletion(orchestratorTaskId, task.id);
 
       const executionTime = Date.now() - start;
 
@@ -1631,6 +1629,90 @@ return context.artifacts
     };
 
     await bridge.recordChainOfThought(entry);
+  }
+
+  /**
+   * Monitor task completion with proper status checking
+   */
+  private async monitorTaskCompletion(
+    orchestratorTaskId: string,
+    arbiterTaskId: string
+  ): Promise<void> {
+    const maxWaitTime = 300000; // 5 minutes
+    const pollInterval = 1000; // 1 second
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < maxWaitTime) {
+      try {
+        const status = await this.taskOrchestrator.getTaskStatus(
+          orchestratorTaskId
+        );
+
+        if (!status) {
+          // Task not found, wait and retry
+          await new Promise((resolve) => setTimeout(resolve, pollInterval));
+          continue;
+        }
+
+        // Update progress based on task status
+        const progress = this.calculateProgressFromStatus(status);
+        this.emitEvent(EventTypes.TASK_PROGRESS_UPDATED, {
+          taskId: arbiterTaskId,
+          progress,
+          step: `Task orchestrator status: ${status}`,
+          orchestratorTaskId,
+          status: status,
+        });
+
+        // Check if task is completed (success or failure)
+        if (
+          status === "completed" ||
+          status === "failed" ||
+          status === "cancelled"
+        ) {
+          await this.recordChainOfThought(arbiterTaskId, "execute", {
+            content: `Task orchestrator completed with status: ${status}`,
+          });
+          return;
+        }
+
+        // Wait before next poll
+        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+      } catch (error) {
+        console.error(`Error monitoring task ${orchestratorTaskId}:`, error);
+        // Continue monitoring despite errors
+        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+      }
+    }
+
+    // Timeout reached
+    console.warn(`Task monitoring timeout for ${orchestratorTaskId}`);
+    await this.recordChainOfThought(arbiterTaskId, "other", {
+      content: `Task orchestrator monitoring timed out after ${maxWaitTime}ms`,
+    });
+  }
+
+  /**
+   * Calculate progress percentage from task status
+   */
+  private calculateProgressFromStatus(status: string | null): number {
+    if (!status) return 0.5; // Default to 50% if no status
+
+    switch (status) {
+      case "pending":
+      case "queued":
+        return 0.1;
+      case "assigned":
+      case "running":
+        return 0.5;
+      case "completed":
+        return 1.0;
+      case "failed":
+      case "cancelled":
+        return 0.9; // Almost done but failed
+      default:
+        return 0.5;
+    }
   }
 
   private emitEvent(type: string, metadata: Record<string, any>): void {
