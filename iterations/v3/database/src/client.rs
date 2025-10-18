@@ -2214,50 +2214,321 @@ impl DatabaseOperations for DatabaseClient {
 
     async fn create_caws_compliance(
         &self,
-        _compliance: CreateCawsCompliance,
+        compliance: CreateCawsCompliance,
     ) -> Result<CawsCompliance, Self::Error> {
-        todo!("Implement create_caws_compliance")
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+
+        let row = sqlx::query(
+            r#"
+            INSERT INTO caws_compliance (
+                id, task_id, compliance_status, compliance_score, 
+                violations, recommendations, audit_timestamp, created_at, updated_at,
+                compliance_metadata, audit_details
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            RETURNING *
+            "#
+        )
+        .bind(id)
+        .bind(compliance.task_id)
+        .bind(&compliance.compliance_status)
+        .bind(compliance.compliance_score)
+        .bind(serde_json::to_value(&compliance.violations).unwrap_or_default())
+        .bind(serde_json::to_value(&compliance.recommendations).unwrap_or_default())
+        .bind(compliance.audit_timestamp)
+        .bind(now)
+        .bind(now)
+        .bind(serde_json::to_value(&compliance.compliance_metadata).unwrap_or_default())
+        .bind(serde_json::to_value(&compliance.audit_details).unwrap_or_default())
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to create CAWS compliance record")?;
+
+        let caws_compliance = CawsCompliance {
+            id: row.get("id"),
+            task_id: row.get("task_id"),
+            compliance_status: row.get("compliance_status"),
+            compliance_score: row.get("compliance_score"),
+            violations: row.get("violations"),
+            recommendations: row.get("recommendations"),
+            audit_timestamp: row.get("audit_timestamp"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            compliance_metadata: row.get("compliance_metadata"),
+            audit_details: row.get("audit_details"),
+        };
+
+        info!("Created CAWS compliance record {} for task {}", id, compliance.task_id);
+        Ok(caws_compliance)
     }
 
     async fn get_caws_compliance(
         &self,
-        _task_id: Uuid,
+        task_id: Uuid,
     ) -> Result<Option<CawsCompliance>, Self::Error> {
-        todo!("Implement get_caws_compliance")
+        let row = sqlx::query(
+            r#"
+            SELECT * FROM caws_compliance 
+            WHERE task_id = $1
+            ORDER BY created_at DESC
+            LIMIT 1
+            "#
+        )
+        .bind(task_id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to fetch CAWS compliance record")?;
+
+        if let Some(row) = row {
+            let compliance = CawsCompliance {
+                id: row.get("id"),
+                task_id: row.get("task_id"),
+                compliance_status: row.get("compliance_status"),
+                compliance_score: row.get("compliance_score"),
+                violations: row.get("violations"),
+                recommendations: row.get("recommendations"),
+                audit_timestamp: row.get("audit_timestamp"),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+                compliance_metadata: row.get("compliance_metadata"),
+                audit_details: row.get("audit_details"),
+            };
+            Ok(Some(compliance))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn create_audit_trail_entry(
         &self,
-        _entry: CreateAuditTrailEntry,
+        entry: CreateAuditTrailEntry,
     ) -> Result<AuditTrailEntry, Self::Error> {
-        todo!("Implement create_audit_trail_entry")
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+
+        let row = sqlx::query(
+            r#"
+            INSERT INTO audit_trail (
+                id, entity_type, entity_id, action, details, 
+                user_id, ip_address, timestamp, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING *
+            "#
+        )
+        .bind(id)
+        .bind(&entry.entity_type)
+        .bind(entry.entity_id)
+        .bind(&entry.action)
+        .bind(&entry.details)
+        .bind(&entry.user_id)
+        .bind(&entry.ip_address.map(|ip| ip.to_string()))
+        .bind(entry.timestamp)
+        .bind(now)
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to create audit trail entry")?;
+
+        let audit_entry = AuditTrailEntry {
+            id: row.get("id"),
+            entity_type: row.get("entity_type"),
+            entity_id: row.get("entity_id"),
+            action: row.get("action"),
+            details: row.get("details"),
+            user_id: row.get("user_id"),
+            ip_address: row.get("ip_address"),
+            timestamp: row.get("timestamp"),
+            created_at: row.get("created_at"),
+        };
+
+        info!("Created audit trail entry {} for {} {}", id, entry.entity_type, entry.entity_id);
+        Ok(audit_entry)
     }
 
     async fn get_audit_trail(
         &self,
-        _entity_type: &str,
-        _entity_id: Uuid,
+        entity_type: &str,
+        entity_id: Uuid,
     ) -> Result<Vec<AuditTrailEntry>, Self::Error> {
-        todo!("Implement get_audit_trail")
+        let rows = sqlx::query(
+            r#"
+            SELECT * FROM audit_trail 
+            WHERE entity_type = $1 AND entity_id = $2
+            ORDER BY timestamp DESC
+            "#
+        )
+        .bind(entity_type)
+        .bind(entity_id)
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to fetch audit trail")?;
+
+        let entries: Vec<AuditTrailEntry> = rows
+            .into_iter()
+            .map(|row| AuditTrailEntry {
+                id: row.get("id"),
+                entity_type: row.get("entity_type"),
+                entity_id: row.get("entity_id"),
+                action: row.get("action"),
+                details: row.get("details"),
+                user_id: row.get("user_id"),
+                ip_address: row.get("ip_address"),
+                timestamp: row.get("timestamp"),
+                created_at: row.get("created_at"),
+            })
+            .collect();
+
+        info!("Retrieved {} audit trail entries for {} {}", entries.len(), entity_type, entity_id);
+        Ok(entries)
     }
 
     async fn get_council_metrics(&self) -> Result<Vec<CouncilMetrics>, Self::Error> {
-        todo!("Implement get_council_metrics")
+        let rows = sqlx::query(
+            r#"
+            SELECT 
+                COUNT(*) as total_verdicts,
+                AVG(consensus_score) as avg_consensus_score,
+                AVG(debate_rounds) as avg_debate_rounds,
+                AVG(evaluation_time_ms) as avg_evaluation_time_ms,
+                DATE_TRUNC('day', created_at) as date
+            FROM council_verdicts 
+            WHERE created_at >= NOW() - INTERVAL '30 days'
+            GROUP BY DATE_TRUNC('day', created_at)
+            ORDER BY date DESC
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to fetch council metrics")?;
+
+        let metrics: Vec<CouncilMetrics> = rows
+            .into_iter()
+            .map(|row| CouncilMetrics {
+                date: row.get("date"),
+                total_verdicts: row.get("total_verdicts"),
+                avg_consensus_score: row.get("avg_consensus_score"),
+                avg_debate_rounds: row.get("avg_debate_rounds"),
+                avg_evaluation_time_ms: row.get("avg_evaluation_time_ms"),
+            })
+            .collect();
+
+        info!("Retrieved {} council metrics entries", metrics.len());
+        Ok(metrics)
     }
 
     async fn get_judge_performance(&self) -> Result<Vec<JudgePerformance>, Self::Error> {
-        todo!("Implement get_judge_performance")
+        let rows = sqlx::query(
+            r#"
+            SELECT 
+                judge_id,
+                COUNT(*) as total_evaluations,
+                AVG(evaluation_score) as avg_evaluation_score,
+                AVG(confidence_score) as avg_confidence_score,
+                AVG(evaluation_time_ms) as avg_evaluation_time_ms,
+                COUNT(CASE WHEN verdict_decision = 'approved' THEN 1 END) as approved_count,
+                COUNT(CASE WHEN verdict_decision = 'rejected' THEN 1 END) as rejected_count
+            FROM judge_evaluations 
+            WHERE created_at >= NOW() - INTERVAL '30 days'
+            GROUP BY judge_id
+            ORDER BY total_evaluations DESC
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to fetch judge performance metrics")?;
+
+        let performance: Vec<JudgePerformance> = rows
+            .into_iter()
+            .map(|row| JudgePerformance {
+                judge_id: row.get("judge_id"),
+                total_evaluations: row.get("total_evaluations"),
+                avg_evaluation_score: row.get("avg_evaluation_score"),
+                avg_confidence_score: row.get("avg_confidence_score"),
+                avg_evaluation_time_ms: row.get("avg_evaluation_time_ms"),
+                approved_count: row.get("approved_count"),
+                rejected_count: row.get("rejected_count"),
+            })
+            .collect();
+
+        info!("Retrieved {} judge performance entries", performance.len());
+        Ok(performance)
     }
 
     async fn get_worker_performance(&self) -> Result<Vec<WorkerPerformance>, Self::Error> {
-        todo!("Implement get_worker_performance")
+        let rows = sqlx::query(
+            r#"
+            SELECT 
+                worker_id,
+                COUNT(*) as total_executions,
+                COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_count,
+                COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_count,
+                AVG(CASE WHEN completed_at IS NOT NULL AND started_at IS NOT NULL 
+                    THEN EXTRACT(EPOCH FROM (completed_at - started_at)) * 1000 
+                    END) as avg_execution_time_ms
+            FROM task_executions 
+            WHERE created_at >= NOW() - INTERVAL '30 days'
+            GROUP BY worker_id
+            ORDER BY total_executions DESC
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to fetch worker performance metrics")?;
+
+        let performance: Vec<WorkerPerformance> = rows
+            .into_iter()
+            .map(|row| WorkerPerformance {
+                worker_id: row.get("worker_id"),
+                total_executions: row.get("total_executions"),
+                completed_count: row.get("completed_count"),
+                failed_count: row.get("failed_count"),
+                avg_execution_time_ms: row.get("avg_execution_time_ms"),
+            })
+            .collect();
+
+        info!("Retrieved {} worker performance entries", performance.len());
+        Ok(performance)
     }
 
     async fn get_task_execution_summary(
         &self,
-        _task_id: Uuid,
+        task_id: Uuid,
     ) -> Result<Option<TaskExecutionSummary>, Self::Error> {
-        todo!("Implement get_task_execution_summary")
+        let row = sqlx::query(
+            r#"
+            SELECT 
+                COUNT(*) as total_executions,
+                COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_count,
+                COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_count,
+                COUNT(CASE WHEN status = 'running' THEN 1 END) as running_count,
+                AVG(CASE WHEN completed_at IS NOT NULL AND started_at IS NOT NULL 
+                    THEN EXTRACT(EPOCH FROM (completed_at - started_at)) * 1000 
+                    END) as avg_execution_time_ms,
+                MIN(started_at) as first_execution,
+                MAX(completed_at) as last_completion
+            FROM task_executions 
+            WHERE task_id = $1
+            "#
+        )
+        .bind(task_id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to fetch task execution summary")?;
+
+        if let Some(row) = row {
+            let summary = TaskExecutionSummary {
+                task_id,
+                total_executions: row.get("total_executions"),
+                completed_count: row.get("completed_count"),
+                failed_count: row.get("failed_count"),
+                running_count: row.get("running_count"),
+                avg_execution_time_ms: row.get("avg_execution_time_ms"),
+                first_execution: row.get("first_execution"),
+                last_completion: row.get("last_completion"),
+            };
+            Ok(Some(summary))
+        } else {
+            Ok(None)
+        }
     }
 }
 

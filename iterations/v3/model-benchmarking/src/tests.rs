@@ -221,3 +221,171 @@ async fn test_performance_trend_calculation() -> Result<()> {
     println!("Performance trend: {:?}", trend);
     Ok(())
 }
+
+#[tokio::test]
+async fn test_performance_summary_contains_top_performers() -> Result<()> {
+    let scoring = MultiDimensionalScoringSystem::new();
+    let model_a = Uuid::new_v4();
+    let model_b = Uuid::new_v4();
+
+    let results = vec![
+        BenchmarkResult {
+            model_id: model_a,
+            benchmark_type: BenchmarkType::MicroBenchmark,
+            metrics: BenchmarkMetrics {
+                accuracy: 0.82,
+                speed: 0.75,
+                efficiency: 0.70,
+                quality: 0.78,
+                compliance: 0.60,
+            },
+            score: 0.74,
+            ranking: 1,
+            sla_validation: None,
+        },
+        BenchmarkResult {
+            model_id: model_a,
+            benchmark_type: BenchmarkType::PerformanceBenchmark,
+            metrics: BenchmarkMetrics {
+                accuracy: 0.88,
+                speed: 0.80,
+                efficiency: 0.72,
+                quality: 0.82,
+                compliance: 0.58,
+            },
+            score: 0.79,
+            ranking: 1,
+            sla_validation: None,
+        },
+        BenchmarkResult {
+            model_id: model_b,
+            benchmark_type: BenchmarkType::ComplianceBenchmark,
+            metrics: BenchmarkMetrics {
+                accuracy: 0.65,
+                speed: 0.60,
+                efficiency: 0.55,
+                quality: 0.62,
+                compliance: 0.45,
+            },
+            score: 0.58,
+            ranking: 2,
+            sla_validation: None,
+        },
+    ];
+
+    let summary = scoring
+        .calculate_performance_summary(&results)
+        .await
+        .expect("summary calculation should succeed");
+
+    assert!(summary.overall_performance > 0.0);
+    assert!(!summary.top_performers.is_empty(), "expected at least one top performer");
+    assert!(
+        summary
+            .top_performers
+            .iter()
+            .any(|top| top.model_id == model_a),
+        "higher scoring model should appear in top performers"
+    );
+    assert!(
+        !summary.improvement_areas.is_empty(),
+        "summary should surface improvement opportunities"
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_benchmark_report_analysis_generates_alerts() -> Result<()> {
+    let runner = BenchmarkRunner::new();
+    let model = ModelSpecification {
+        id: Uuid::new_v4(),
+        name: "Report Test Model".to_string(),
+        model_type: ModelType::Analysis,
+        parameters: ModelParameters {
+            size: 10_000_000,
+            context_length: 1024,
+            training_data: "synthetic".to_string(),
+            architecture: "transformer".to_string(),
+        },
+        capabilities: vec![Capability {
+            capability_type: CapabilityType::Analysis,
+            proficiency_level: ProficiencyLevel::Intermediate,
+            supported_domains: vec!["analysis".to_string()],
+        }],
+        constraints: vec![],
+    };
+
+    let failing_sla = SlaValidationReport {
+        timestamp: chrono::Utc::now(),
+        overall_compliant: false,
+        sla_results: vec![SlaValidationResult {
+            sla: SlaDefinition {
+                name: "API Response Time (P95)".to_string(),
+                target: 1000.0,
+                unit: "milliseconds".to_string(),
+                higher_is_better: false,
+                tolerance_percent: 10.0,
+            },
+            actual_value: 1500.0,
+            passed: false,
+            deviation_percent: 50.0,
+            severity: SlaViolationSeverity::Critical,
+        }],
+        summary: SlaSummary {
+            passed_count: 0,
+            failed_count: 1,
+            critical_violations: 1,
+            average_deviation_percent: 50.0,
+            worst_violation: None,
+        },
+    };
+
+    let results = vec![
+        BenchmarkResult {
+            model_id: model.id,
+            benchmark_type: BenchmarkType::MicroBenchmark,
+            metrics: BenchmarkMetrics {
+                accuracy: 0.70,
+                speed: 0.65,
+                efficiency: 0.60,
+                quality: 0.68,
+                compliance: 0.50,
+            },
+            score: 0.63,
+            ranking: 2,
+            sla_validation: Some(failing_sla.clone()),
+        },
+        BenchmarkResult {
+            model_id: model.id,
+            benchmark_type: BenchmarkType::PerformanceBenchmark,
+            metrics: BenchmarkMetrics {
+                accuracy: 0.90,
+                speed: 0.88,
+                efficiency: 0.85,
+                quality: 0.86,
+                compliance: 0.82,
+            },
+            score: 0.88,
+            ranking: 1,
+            sla_validation: Some(failing_sla),
+        },
+    ];
+
+    let (summary, alerts, recommendations) = runner
+        .analyze_results_for_testing(&model, &results)
+        .await
+        .expect("analysis should succeed");
+
+    assert!(!summary.top_performers.is_empty(), "analysis should surface top performers");
+    assert!(
+        !alerts.is_empty(),
+        "analysis should raise regression alerts for failing SLA metrics"
+    );
+    assert!(
+        !recommendations.is_empty(),
+        "analysis should produce actionable recommendations"
+    );
+
+    Ok(())
+}
