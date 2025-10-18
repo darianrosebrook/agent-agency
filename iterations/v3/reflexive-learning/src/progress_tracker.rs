@@ -54,6 +54,8 @@ pub struct ProgressTracker {
     active_sessions: HashMap<Uuid, LearningSession>,
     /// Historical progress data for analysis
     progress_history: HashMap<Uuid, Vec<ProgressSnapshot>>,
+    /// Mapping of session IDs to task types for historical lookups
+    session_task_types: HashMap<Uuid, TaskType>,
     /// Learning milestones achieved
     milestones: Vec<LearningMilestone>,
     /// Performance baselines for comparison
@@ -86,6 +88,7 @@ impl ProgressTracker {
         Self {
             active_sessions: HashMap::new(),
             progress_history: HashMap::new(),
+            session_task_types: HashMap::new(),
             milestones: Vec::new(),
             performance_baselines: HashMap::new(),
             optimization_cache: HashMap::new(),
@@ -101,6 +104,8 @@ impl ProgressTracker {
 
         self.active_sessions.insert(session_id, session.clone());
         self.progress_history.insert(session_id, Vec::new());
+        self.session_task_types
+            .insert(session_id, session.task_type.clone());
 
         // Record initial milestone
         self.record_milestone(LearningMilestone {
@@ -207,9 +212,23 @@ impl ProgressTracker {
 
     /// Get progress history for a task type (used by coordinator)
     pub fn get_progress_history(&self, task_type: &TaskType) -> Vec<ProgressSnapshot> {
-        // In a real implementation, this would aggregate progress history across sessions
-        // For now, return empty vec as we don't store historical data long-term
-        Vec::new()
+        let mut snapshots = Vec::new();
+
+        for (session_id, history) in &self.progress_history {
+            let session_task_type = self
+                .session_task_types
+                .get(session_id)
+                .or_else(|| self.active_sessions.get(session_id).map(|s| &s.task_type));
+
+            if let Some(session_task_type) = session_task_type {
+                if session_task_type == task_type {
+                    snapshots.extend(history.iter().cloned());
+                }
+            }
+        }
+
+        snapshots.sort_by_key(|snapshot| snapshot.timestamp);
+        snapshots
     }
 
     /// Initialize progress tracking for a new learning session
@@ -220,6 +239,8 @@ impl ProgressTracker {
         self.active_sessions.insert(session.id, session.clone());
         self.progress_history.insert(session.id, Vec::new());
         self.optimization_cache.insert(session.id, Vec::new());
+        self.session_task_types
+            .insert(session.id, session.task_type.clone());
 
         // 2. Progress baseline: Establish progress baseline and starting point
         let baseline_snapshot = ProgressSnapshot {
@@ -513,5 +534,136 @@ impl Default for BaselineComparison {
             efficiency_vs_baseline: 0.0,
             is_outperforming: false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::{
+        ContextPreservationState, LearningSession, LearningState, LearningStrategy,
+        PerformanceTrends, ProgressMetrics, ResourceUtilization, TaskType, TrendData,
+        TrendDirection,
+    };
+    use chrono::Utc;
+    use std::collections::HashMap;
+    use uuid::Uuid;
+
+    fn sample_session(task_type: TaskType) -> LearningSession {
+        LearningSession {
+            id: Uuid::new_v4(),
+            task_id: Uuid::new_v4(),
+            task_type,
+            start_time: Utc::now(),
+            current_turn: 0,
+            progress: ProgressMetrics {
+                completion_percentage: 0.0,
+                quality_score: 0.5,
+                efficiency_score: 0.5,
+                error_rate: 0.1,
+                learning_velocity: 1.0,
+            },
+            learning_state: LearningState {
+                current_strategy: LearningStrategy::Balanced,
+                adaptation_history: Vec::new(),
+                performance_trends: PerformanceTrends {
+                    short_term: TrendData {
+                        direction: TrendDirection::Stable,
+                        magnitude: 0.0,
+                        confidence: 0.5,
+                        data_points: 0,
+                    },
+                    medium_term: TrendData {
+                        direction: TrendDirection::Stable,
+                        magnitude: 0.0,
+                        confidence: 0.5,
+                        data_points: 0,
+                    },
+                    long_term: TrendData {
+                        direction: TrendDirection::Stable,
+                        magnitude: 0.0,
+                        confidence: 0.5,
+                        data_points: 0,
+                    },
+                },
+                resource_utilization: ResourceUtilization {
+                    cpu_usage: 0.5,
+                    memory_usage: 0.5,
+                    token_usage: 0.5,
+                    time_usage: 0.5,
+                    efficiency_ratio: 0.5,
+                },
+            },
+            context_preservation: ContextPreservationState {
+                preserved_contexts: Vec::new(),
+                context_freshness: HashMap::new(),
+                context_usage: HashMap::new(),
+            },
+        }
+    }
+
+    fn updated_metrics(completion: f64, quality: f64) -> ProgressMetrics {
+        ProgressMetrics {
+            completion_percentage: completion,
+            quality_score: quality,
+            efficiency_score: 0.6,
+            error_rate: 0.15,
+            learning_velocity: 1.1,
+        }
+    }
+
+    #[test]
+    fn aggregates_progress_history_across_sessions_for_task_type() {
+        let mut tracker = ProgressTracker::new();
+
+        let session_a = sample_session(TaskType::CodeGeneration);
+        tracker.start_session(session_a.clone()).unwrap();
+        tracker
+            .update_progress(session_a.id, updated_metrics(0.3, 0.65))
+            .unwrap();
+        tracker.complete_session(session_a.id).unwrap();
+
+        let session_b = sample_session(TaskType::CodeGeneration);
+        tracker.start_session(session_b.clone()).unwrap();
+        tracker
+            .update_progress(session_b.id, updated_metrics(0.6, 0.78))
+            .unwrap();
+
+        let history = tracker.get_progress_history(&TaskType::CodeGeneration);
+        assert_eq!(history.len(), 2);
+        assert!(history
+            .windows(2)
+            .all(|window| window[0].timestamp <= window[1].timestamp));
+    }
+
+    #[test]
+    fn filters_progress_history_by_task_type() {
+        let mut tracker = ProgressTracker::new();
+
+        let session_a = sample_session(TaskType::CodeGeneration);
+        tracker.start_session(session_a.clone()).unwrap();
+        tracker
+            .update_progress(session_a.id, updated_metrics(0.4, 0.72))
+            .unwrap();
+
+        let session_b = sample_session(TaskType::Documentation);
+        tracker.start_session(session_b.clone()).unwrap();
+        tracker
+            .update_progress(session_b.id, updated_metrics(0.5, 0.70))
+            .unwrap();
+
+        let code_history = tracker.get_progress_history(&TaskType::CodeGeneration);
+        assert_eq!(code_history.len(), 1);
+        assert!(code_history
+            .first()
+            .map(|snapshot| snapshot.metrics.completion_percentage)
+            .is_some_and(|completion| (completion - 0.4).abs() < f64::EPSILON));
+
+        let doc_history = tracker.get_progress_history(&TaskType::Documentation);
+        assert_eq!(doc_history.len(), 1);
+        assert!(doc_history
+            .first()
+            .map(|snapshot| snapshot.metrics.completion_percentage)
+            .is_some_and(|completion| (completion - 0.5).abs() < f64::EPSILON));
     }
 }

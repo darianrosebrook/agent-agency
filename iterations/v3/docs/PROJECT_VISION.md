@@ -264,3 +264,4 @@ V3 represents a fundamental shift in how we approach AI agent governance. Instea
 **The time to build the governance infrastructure for AI agents is now.** The alternative—unconstrained AI agent proliferation—is unacceptable from safety, ethical, and practical perspectives.
 
 Join us in building the constitutional foundation that will enable the beneficial emergence of AI agent ecosystems.
+

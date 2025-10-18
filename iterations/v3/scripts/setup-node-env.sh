@@ -41,3 +41,4 @@ setup_node() {
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     setup_node
 fi
+

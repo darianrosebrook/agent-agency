@@ -30,3 +30,4 @@ setup_python() {
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     setup_python
 fi
+

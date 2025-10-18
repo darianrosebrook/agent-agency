@@ -71,11 +71,13 @@ impl ClaimExtractionAndVerificationProcessor {
         let mut disambiguated_sentence = sentence.to_string();
         let mut atomic_claims = Vec::new();
         let mut verification_evidence = Vec::new();
+        let mut ambiguities_resolved = 0u32;
 
         // Stage 1: Disambiguation
         match self.disambiguation_stage.process(sentence, context).await {
             Ok(disambiguation_result) => {
                 disambiguated_sentence = disambiguation_result.disambiguated_sentence;
+                ambiguities_resolved = disambiguation_result.ambiguities_resolved;
                 stages_completed.push(ProcessingStage::Disambiguation);
                 info!(
                     "Disambiguation completed: {} ambiguities resolved",
@@ -190,7 +192,7 @@ impl ClaimExtractionAndVerificationProcessor {
             processing_metadata: ProcessingMetadata {
                 processing_time_ms,
                 stages_completed,
-                ambiguities_resolved: 0, // TODO: Track from disambiguation stage
+                ambiguities_resolved,
                 claims_extracted: claims_count,
                 evidence_collected: evidence_count,
                 errors,

@@ -45,3 +45,4 @@ setup_rust() {
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     setup_rust
 fi
+
