@@ -51,6 +51,9 @@ pub struct Task {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
+    pub priority: Option<i32>,
+    pub deadline: Option<DateTime<Utc>>,
+    pub metadata: Option<serde_json::Value>,
 }
 
 /// Task execution model from database
@@ -69,6 +72,9 @@ pub struct TaskExecution {
     pub error_message: Option<String>,
     pub tokens_used: Option<i32>,
     pub created_at: DateTime<Utc>,
+    pub updated_at: Option<DateTime<Utc>>,
+    pub execution_metadata: Option<serde_json::Value>,
+    pub result_data: Option<serde_json::Value>,
 }
 
 /// Council verdict model from database
@@ -253,6 +259,8 @@ pub struct CreateKnowledgeEntry {
     pub metadata: Option<serde_json::Value>,
     pub embedding_vector: Option<Vec<f32>>,
     pub access_level: Option<String>,
+    pub version: Option<String>,
+    pub parent_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -263,6 +271,11 @@ pub struct CreatePerformanceMetric {
     pub metric_value: f64,
     pub metric_unit: Option<String>,
     pub metadata: serde_json::Value,
+    pub metric_type: Option<String>,
+    pub component: Option<String>,
+    pub task_id: Option<Uuid>,
+    pub execution_id: Option<Uuid>,
+    pub timestamp: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -275,6 +288,11 @@ pub struct CreateCawsCompliance {
     pub budget_adherence: serde_json::Value,
     pub quality_gates: serde_json::Value,
     pub provenance_trail: serde_json::Value,
+    pub compliance_status: Option<String>,
+    pub recommendations: Option<serde_json::Value>,
+    pub audit_timestamp: Option<DateTime<Utc>>,
+    pub compliance_metadata: Option<serde_json::Value>,
+    pub audit_details: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -285,6 +303,7 @@ pub struct CreateAuditTrailEntry {
     pub details: serde_json::Value,
     pub user_id: Option<String>,
     pub ip_address: Option<std::net::IpAddr>,
+    pub timestamp: Option<DateTime<Utc>>,
 }
 
 /// Update types for modifying existing records
@@ -392,6 +411,9 @@ pub struct KnowledgeFilters {
     pub source: Option<String>,
     pub tags: Option<Vec<String>>,
     pub relevance_score_min: Option<f32>,
+    pub content_type: Option<String>,
+    pub access_level: Option<String>,
+    pub parent_id: Option<Uuid>,
     pub created_after: Option<DateTime<Utc>>,
     pub created_before: Option<DateTime<Utc>>,
 }

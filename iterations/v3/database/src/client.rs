@@ -1114,6 +1114,7 @@ impl DatabaseOperations for DatabaseClient {
             }),
             user_id: None,
             ip_address: None,
+            timestamp: Some(chrono::Utc::now()),
         };
 
         // Insert audit trail (within transaction)
@@ -1208,6 +1209,7 @@ impl DatabaseOperations for DatabaseClient {
             }),
             user_id: None,
             ip_address: None,
+            timestamp: Some(chrono::Utc::now()),
         };
 
         // Insert audit trail (within transaction)
@@ -1373,11 +1375,17 @@ impl DatabaseOperations for DatabaseClient {
             id: row.get("id"),
             title: row.get("title"),
             description: row.get("description"),
+            risk_tier: row.get("risk_tier"),
+            scope: row.get("scope"),
+            acceptance_criteria: row.get("acceptance_criteria"),
+            context: row.get("context"),
+            caws_spec: row.get("caws_spec"),
             status: row.get("status"),
-            priority: row.get("priority"),
             assigned_worker_id: row.get("assigned_worker_id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
+            completed_at: row.get("completed_at"),
+            priority: row.get("priority"),
             deadline: row.get("deadline"),
             metadata: row.get("metadata"),
         };
@@ -1460,13 +1468,18 @@ impl DatabaseOperations for DatabaseClient {
             id: row.get("id"),
             task_id: row.get("task_id"),
             worker_id: row.get("worker_id"),
+            execution_started_at: row.get("execution_started_at"),
+            execution_completed_at: row.get("execution_completed_at"),
+            execution_time_ms: row.get("execution_time_ms"),
             status: row.get("status"),
-            started_at: row.get("started_at"),
-            completed_at: row.get("completed_at"),
+            worker_output: row.get("worker_output"),
+            self_assessment: row.get("self_assessment"),
+            metadata: row.get("metadata"),
+            error_message: row.get("error_message"),
+            tokens_used: row.get("tokens_used"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             execution_metadata: row.get("execution_metadata"),
-            error_message: row.get("error_message"),
             result_data: row.get("result_data"),
         };
 
