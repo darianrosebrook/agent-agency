@@ -320,18 +320,111 @@ impl MultiModalVerificationEngine {
         // Only analyze claims that reference code behavior
         if !claim.claim_text.contains("function") &&
            !claim.claim_text.contains("method") &&
-           !claim.claim_text.contains("class") {
+           !claim.claim_text.contains("class") &&
+           !claim.claim_text.contains("return") &&
+           !claim.claim_text.contains("variable") {
             return Ok(None);
         }
 
-        // TODO: Implement code behavior analysis
-        // This should:
-        // - Extract code snippets from the claim
-        // - Analyze control flow and data flow
-        // - Check for potential bugs or inconsistencies
-        // - Validate against coding standards
+        // Extract potential code patterns from the claim
+        let code_patterns = self.extract_code_patterns(&claim.claim_text);
 
-        Ok(Some(0.8)) // High confidence for code-related claims
+        if code_patterns.is_empty() {
+            return Ok(Some(0.4)); // Low confidence for vague code references
+        }
+
+        // Analyze the extracted patterns for consistency
+        let pattern_consistency = self.analyze_pattern_consistency(&code_patterns);
+
+        // Check for common programming errors or inconsistencies
+        let error_detection = self.detect_programming_errors(&code_patterns);
+
+        // Combine analysis scores
+        let behavior_score = (pattern_consistency + (1.0 - error_detection)) / 2.0;
+
+        debug!(
+            "Code behavior analysis for '{}': {} patterns found, consistency={:.2}, errors={:.2}, score={:.2}",
+            claim.claim_text, code_patterns.len(), pattern_consistency, error_detection, behavior_score
+        );
+
+        Ok(Some(behavior_score))
+    }
+
+    /// Extract code patterns from claim text
+    fn extract_code_patterns(&self, claim_text: &str) -> Vec<String> {
+        let mut patterns = Vec::new();
+
+        // Look for function definitions
+        if let Some(func_match) = claim_text.find("function") {
+            let start = func_match;
+            let end = claim_text[start..].find(')').unwrap_or(claim_text.len() - start) + start + 1;
+            if end > start && end <= claim_text.len() {
+                patterns.push(claim_text[start..end].to_string());
+            }
+        }
+
+        // Look for method calls
+        if let Some(method_match) = claim_text.find('.') {
+            let start = method_match.saturating_sub(20).max(0);
+            let end = claim_text[method_match..].find('(')
+                .map(|pos| method_match + pos + 1)
+                .unwrap_or(method_match + 20);
+            if end <= claim_text.len() {
+                patterns.push(claim_text[start..end].to_string());
+            }
+        }
+
+        // Look for variable assignments
+        if claim_text.contains('=') {
+            patterns.push("assignment".to_string());
+        }
+
+        patterns
+    }
+
+    /// Analyze consistency of extracted patterns
+    fn analyze_pattern_consistency(&self, patterns: &[String]) -> f64 {
+        if patterns.is_empty() {
+            return 0.5;
+        }
+
+        // Check for consistent programming style
+        let has_functions = patterns.iter().any(|p| p.contains("function"));
+        let has_methods = patterns.iter().any(|p| p.contains('.'));
+        let has_assignments = patterns.iter().any(|p| p == "assignment");
+
+        // Score based on coherent programming concepts
+        let mut consistency = 0.0;
+        if has_functions { consistency += 0.3; }
+        if has_methods { consistency += 0.3; }
+        if has_assignments { consistency += 0.2; }
+
+        // Bonus for multiple related patterns
+        if patterns.len() > 1 {
+            consistency += 0.2;
+        }
+
+        consistency.min(1.0)
+    }
+
+    /// Detect potential programming errors in patterns
+    fn detect_programming_errors(&self, patterns: &[String]) -> f64 {
+        let mut error_score = 0.0;
+
+        for pattern in patterns {
+            // Check for common syntax issues
+            if pattern.contains("function") && !pattern.contains('(') {
+                error_score += 0.3; // Missing parentheses
+            }
+            if pattern.contains('(') && !pattern.contains(')') {
+                error_score += 0.2; // Unclosed parentheses
+            }
+            if pattern.contains("return") && pattern.contains("void") {
+                error_score += 0.1; // Type mismatch hint
+            }
+        }
+
+        error_score.min(1.0)
     }
 
     /// Validate authority attribution and source credibility

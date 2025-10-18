@@ -535,16 +535,9 @@ impl CouncilIntegrator {
         // Generate mock verdict based on claim type
         let verdict = match task_spec.worker_output.content.to_lowercase() {
             content if content.contains("error") || content.contains("fail") => {
-                CouncilVerdict::Fail {
-                    violations: vec![CouncilViolation {
-                        rule: "CAWS-001".to_string(),
-                        severity: CouncilViolationSeverity::Major,
-                        description: "Claim contains error conditions".to_string(),
-                        location: None,
-                        suggestion: Some("Review error handling".to_string()),
-                    }],
-                    reasoning: "Claim indicates potential error conditions".to_string(),
-                    evidence: vec![],
+                CouncilVerdict::Rejected {
+                    primary_reasons: vec!["Claim contains error conditions".to_string()],
+                    summary: "Claim indicates potential error conditions".to_string(),
                 }
             }
             content if content.contains("security") || content.contains("auth") => {
