@@ -374,16 +374,16 @@ impl CouncilIntegrator {
         Evidence {
             id: Uuid::new_v4(),
             claim_id: claim.id,
-            evidence_type: EvidenceType::CouncilVerdict,
+            evidence_type: EvidenceType::ConstitutionalReference,
             content: serde_json::to_string(&result.verdict).unwrap_or_default(),
+            source: EvidenceSource {
+                source_type: SourceType::CouncilDecision,
+                location: "Council API".to_string(),
+                authority: "Council".to_string(),
+                freshness: Utc::now(),
+            },
             confidence,
-            source,
-            relevance,
             timestamp: Utc::now(),
-            metadata: HashMap::from([
-                ("debate_rounds".to_string(), result.debate_rounds.to_string()),
-                ("processing_time_ms".to_string(), result.processing_time_ms.to_string()),
-            ]),
         }
     }
     async fn verify_with_council(
@@ -1069,7 +1069,7 @@ pub struct TaskContext {
     pub recent_changes: Vec<String>,
     pub dependencies: std::collections::HashMap<String, String>,
 }
-
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CouncilEvidence {
