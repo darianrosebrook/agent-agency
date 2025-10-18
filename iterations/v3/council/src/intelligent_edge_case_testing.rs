@@ -36,7 +36,7 @@ pub struct TestInput {
 /// Edge case test result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EdgeCaseTestResult {
-    pub test_id: String,
+    pub test_id: Uuid,
     pub test_name: String,
     pub passed: bool,
     pub execution_time_ms: u64,
@@ -60,7 +60,7 @@ pub struct EdgeCaseReport {
 /// Test case specification
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestCase {
-    pub test_id: String,
+    pub test_id: Uuid,
     pub test_name: String,
     pub test_type: String,
     pub test_scenario: String,
@@ -3779,8 +3779,16 @@ impl ScenarioGenerator {
                             data
                         },
                         execution_context: ExecutionContext::default(),
-                        preconditions: vec!["System is initialized".to_string()],
-                        postconditions: vec!["System handles boundary value correctly".to_string()],
+                        preconditions: vec![Precondition {
+                            condition_name: "System is initialized".to_string(),
+                            condition_type: ConditionType::SystemState,
+                            description: "System is in a stable state".to_string(),
+                        }],
+                        postconditions: vec![Postcondition {
+                            condition_name: "System handles boundary value correctly".to_string(),
+                            condition_type: ConditionType::SystemState,
+                            description: "System processes boundary value without errors".to_string(),
+                        }],
                     },
                     edge_case_type: EdgeCaseType::Boundary,
                     risk_level: self
@@ -3813,12 +3821,24 @@ impl ScenarioGenerator {
                     test_type: TestType::Combinatorial,
                     test_scenario: TestScenario {
                         scenario_name: combination.name.clone(),
-                        input_data: combination.parameters.clone(),
+                        input_data: {
+                            let mut data = HashMap::new();
+                            for (key, value) in &combination.parameters {
+                                data.insert(key.clone(), TestData::String(value.to_string()));
+                            }
+                            data
+                        },
                         execution_context: ExecutionContext::default(),
-                        preconditions: vec![
-                            "System supports all parameter combinations".to_string()
-                        ],
-                        postconditions: vec!["System handles combination correctly".to_string()],
+                        preconditions: vec![Precondition {
+                            condition_name: "System supports all parameter combinations".to_string(),
+                            condition_type: ConditionType::SystemState,
+                            description: "System is configured to handle all parameter combinations".to_string(),
+                        }],
+                        postconditions: vec![Postcondition {
+                            condition_name: "System handles combination correctly".to_string(),
+                            condition_type: ConditionType::SystemState,
+                            description: "System processes combination without errors".to_string(),
+                        }],
                     },
                     edge_case_type: EdgeCaseType::Combinatorial,
                     risk_level: self.assess_combinatorial_risk(combination),
@@ -3857,16 +3877,24 @@ impl ScenarioGenerator {
                                 self.resource_type_name(&generator.resource_type),
                                 stress_level.name
                             ),
-                            input_data: serde_json::json!({
-                                "stress_type": self.resource_type_name(&generator.resource_type),
-                                "intensity": stress_level.intensity,
-                                "duration_seconds": duration
-                            }),
+                        input_data: {
+                            let mut data = HashMap::new();
+                            data.insert("stress_type".to_string(), TestData::String(self.resource_type_name(&generator.resource_type)));
+                            data.insert("intensity".to_string(), TestData::Number(stress_level.intensity as f64));
+                            data.insert("duration_seconds".to_string(), TestData::Number(duration as f64));
+                            data
+                        },
                             execution_context: ExecutionContext::default(),
-                            preconditions: vec!["System is in stable state".to_string()],
-                            postconditions: vec![
-                                "System maintains stability under stress".to_string()
-                            ],
+                            preconditions: vec![Precondition {
+                                condition_name: "System is in stable state".to_string(),
+                                condition_type: ConditionType::SystemState,
+                                description: "System is in a stable state before stress testing".to_string(),
+                            }],
+                            postconditions: vec![Postcondition {
+                                condition_name: "System maintains stability under stress".to_string(),
+                                condition_type: ConditionType::SystemState,
+                                description: "System maintains stability under stress conditions".to_string(),
+                            }],
                         },
                         edge_case_type: EdgeCaseType::PerformanceIssue,
                         risk_level: self.assess_stress_risk(stress_level),
@@ -4154,6 +4182,7 @@ enum ParameterType {
     Float,
     Boolean,
     Array,
+    Object,
 }
 
 /// Parameter constraints

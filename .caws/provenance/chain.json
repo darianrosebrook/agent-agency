@@ -8238,5 +8238,41 @@
     },
     "previous_hash": "aab7a3cbba54e9956dade990dfb01ced860f8d3f121f9e532ed49465c8dbceb6",
     "hash": "f7d1a205c40a28eae33c24619b97177081216cb9fa2a59d7253371ece2ee6d74"
+  },
+  {
+    "id": "prov-1760767984294",
+    "timestamp": "2025-10-18T06:13:04.294Z",
+    "commit": {
+      "hash": "e5d313861f53c8d0ee84431e780f6c323a1c2b9b",
+      "message": "Implement comprehensive integration tests for council and research systems",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T06:13:04.295Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "f7d1a205c40a28eae33c24619b97177081216cb9fa2a59d7253371ece2ee6d74",
+    "hash": "59f4ea8eec034c860c195cc247f79302270a2cac48102b93c9bfa77a1436a7ed"
   }
 ]

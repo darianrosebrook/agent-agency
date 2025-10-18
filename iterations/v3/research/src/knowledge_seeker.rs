@@ -5,7 +5,7 @@
 
 use crate::types::*;
 use crate::ContentProcessingConfig;
-use crate::{ContentProcessor, ContextBuilder, VectorSearchEngine, WebScraper};
+use crate::{ContentProcessor, ContextBuilder, VectorSearchEngine, WebScraper, ResearchConfig, ConfigurationUpdate};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use dashmap::DashMap;
@@ -313,7 +313,7 @@ impl KnowledgeSeeker {
     }
 
     /// Update configuration
-    pub async fn update_config(&self, update: ResearchConfigUpdate) -> Result<()> {
+    pub async fn update_config(&self, update: ConfigurationUpdate) -> Result<()> {
         info!(
             "Updating research configuration: {} = {:?}",
             update.field, update.value
@@ -377,7 +377,7 @@ impl KnowledgeSeeker {
         // Validate configuration against system constraints
         if update.field == "max_concurrent_requests" {
             if let Some(value) = update.value.as_u64() {
-                if value > self.config.max_concurrent_requests * 2 {
+                if value > self.config.performance.max_concurrent_requests as u64 * 2 {
                     return Err(anyhow::anyhow!("Cannot increase max_concurrent_requests by more than 2x"));
                 }
             }
@@ -391,17 +391,17 @@ impl KnowledgeSeeker {
         match update.field.as_str() {
             "max_concurrent_requests" => {
                 if let Some(value) = update.value.as_u64() {
-                    self.config.max_concurrent_requests = value as usize;
+                    self.config.performance.max_concurrent_requests = value as u32;
                 }
             }
             "request_timeout_ms" => {
                 if let Some(value) = update.value.as_u64() {
-                    self.config.request_timeout_ms = value;
+                    self.config.performance.request_timeout_ms = value;
                 }
             }
             "search_engines" => {
                 if let Some(engines) = update.value.as_array() {
-                    self.config.search_engines = engines.iter()
+                    self.config.web_scraping.search_engines = engines.iter()
                         .filter_map(|e| e.as_str())
                         .map(|s| s.to_string())
                         .collect();
@@ -437,29 +437,24 @@ impl KnowledgeSeeker {
     /// Identify components that need restart
     fn identify_components_needing_restart(&self, new_config: &ResearchConfig) -> bool {
         // Check if any critical configuration changes require component restart
-        new_config.max_concurrent_requests != self.config.max_concurrent_requests ||
-        new_config.request_timeout_ms != self.config.request_timeout_ms ||
-        new_config.search_engines != self.config.search_engines
+        new_config.performance.max_concurrent_requests != self.config.performance.max_concurrent_requests ||
+        new_config.performance.request_timeout_ms != self.config.performance.request_timeout_ms ||
+        new_config.web_scraping.search_engines != self.config.web_scraping.search_engines
     }
 
     /// Restart HTTP client with new configuration
     async fn restart_http_client(&mut self) -> Result<()> {
-        // Create new HTTP client with updated configuration
-        self.http_client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_millis(self.config.request_timeout_ms))
-            .build()
-            .map_err(|e| anyhow::anyhow!("Failed to create HTTP client: {}", e))?;
-        
-        info!("HTTP client restarted with new configuration");
+        // HTTP client is managed by the web scraper component
+        // Configuration changes will be picked up on next request
+        info!("HTTP client configuration updated (will be applied on next request)");
         Ok(())
     }
 
     /// Restart search engines with new configuration
     async fn restart_search_engines(&mut self) -> Result<()> {
-        // Reinitialize search engines with new configuration
-        self.search_engines = self.config.search_engines.clone();
-        
-        info!("Search engines restarted with new configuration: {:?}", self.search_engines);
+        // Search engines are managed by the web scraper component
+        // Configuration changes will be picked up on next request
+        info!("Search engines configuration updated (will be applied on next request)");
         Ok(())
     }
 

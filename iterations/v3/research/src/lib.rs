@@ -71,6 +71,8 @@ pub struct WebScrapingConfig {
     pub allowed_domains: Vec<String>,
     /// Blocked domains
     pub blocked_domains: Vec<String>,
+    /// Search engines to use
+    pub search_engines: Vec<String>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -132,6 +134,7 @@ impl Default for ResearchConfig {
                 rate_limit_per_minute: 60,
                 allowed_domains: vec![],
                 blocked_domains: vec![],
+                search_engines: vec!["google".to_string(), "bing".to_string()],
             },
             content_processing: ContentProcessingConfig {
                 enable_cleaning: true,
@@ -149,6 +152,7 @@ impl Default for ResearchConfig {
             },
             performance: PerformanceConfig {
                 max_concurrent_requests: 10,
+                request_timeout_ms: 30000, // 30 seconds
                 cache_ttl_seconds: 3600, // 1 hour
                 enable_caching: true,
                 enable_monitoring: true,

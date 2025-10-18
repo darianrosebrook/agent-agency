@@ -380,7 +380,8 @@ impl TaskExecutor {
         let quality_metrics = self.calculate_quality_metrics(&worker_output);
 
         // Check CAWS compliance
-        let caws_compliance = self.check_caws_compliance(&worker_output);
+        let caws_compliance =
+            self.check_caws_compliance(&worker_output, raw_result.execution_time_ms);
 
         // Determine execution status
         let status = if caws_compliance.is_compliant && quality_metrics.completeness_score > 0.8 {
@@ -556,7 +557,11 @@ impl TaskExecutor {
     }
 
     /// Check CAWS compliance for worker output
-    fn check_caws_compliance(&self, output: &WorkerOutput) -> CawsComplianceResult {
+    fn check_caws_compliance(
+        &self,
+        output: &WorkerOutput,
+        execution_time_ms: u64,
+    ) -> CawsComplianceResult {
         let mut violations = Vec::new();
         let mut compliance_score: f32 = 1.0;
 
@@ -612,7 +617,7 @@ impl TaskExecutor {
                 files_limit: 10, // Example limit
                 loc_used: loc_estimate,
                 loc_limit: 2000, // Example limit
-                time_used_ms: 0, // TODO: Set by caller with actual execution time
+                time_used_ms: execution_time_ms,
                 time_limit_ms: None,
                 within_budget: is_compliant,
             },

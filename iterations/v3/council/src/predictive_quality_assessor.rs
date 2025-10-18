@@ -282,7 +282,8 @@ impl PredictiveQualityAssessor {
         let seasonal_patterns = self.detect_seasonal_patterns(&histories);
         let forecast_accuracy = self.calculate_forecast_accuracy(&histories);
 
-        if let Ok(mut accuracy) = self.performance_predictor.prediction_accuracy.write().await {
+        {
+            let mut accuracy = self.performance_predictor.prediction_accuracy.write().await;
             *accuracy = forecast_accuracy;
         }
 
