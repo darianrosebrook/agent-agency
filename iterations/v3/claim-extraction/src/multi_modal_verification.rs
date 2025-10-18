@@ -2577,12 +2577,6 @@ pub struct CitationAnalysis {
     pub quality_issues: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
-pub struct ConsistencyAnalysis {
-    pub conflicts: Vec<Conflict>,
-    pub gaps: Vec<String>,
-    pub supporting_evidence: Vec<String>,
-}
 
 #[derive(Debug, Clone)]
 pub struct Conflict {
@@ -4735,12 +4729,6 @@ struct MeaningRepresentation {
     dependencies: Vec<String>,
 }
 
-/// Consistency analysis results
-#[derive(Debug, Clone)]
-struct ConsistencyAnalysis {
-    consistency_score: f64,
-    conflicts: Vec<String>,
-}
 
 /// Coherence analysis results
 #[derive(Debug, Clone)]

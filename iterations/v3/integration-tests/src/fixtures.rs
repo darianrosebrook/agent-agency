@@ -2,6 +2,9 @@
 
 use serde_json::Value;
 use std::collections::HashMap;
+use uuid::Uuid;
+use chrono;
+use rand::{SeedableRng, StdRng};
 
 /// Test fixtures for various V3 components
 pub struct TestFixtures;
@@ -308,7 +311,266 @@ impl TestFixtures {
     /// - Regression assertions fail if any subsystem omits required fields (e.g., missing judge
     ///   confidence, absent JWS signature, or absent CAWS rule reference).
     pub fn consensus_infrastructure_bundle() -> Value {
-        todo!("Implement consensus_infrastructure_bundle per TODO[critical-consensus-fixture]");
+        // Deterministic seed for reproducible results
+        let seed = 12345u64;
+        let mut rng = StdRng::seed_from_u64(seed);
+        
+        // Generate deterministic UUIDs and timestamps
+        let task_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
+        let verdict_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440001").unwrap();
+        let evidence_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440002").unwrap();
+        let timestamp = chrono::DateTime::parse_from_rfc3339("2024-01-15T10:30:00Z").unwrap();
+        
+        json!({
+            "metadata": {
+                "version": "1.0",
+                "seed": seed,
+                "generated_at": timestamp.to_rfc3339(),
+                "description": "End-to-end deterministic state bundle for consensus infrastructure testing"
+            },
+            "council_state": {
+                "task_spec": {
+                    "id": task_id.to_string(),
+                    "title": "Implement user authentication system",
+                    "description": "Add secure user authentication with JWT tokens and password hashing",
+                    "risk_tier": "Medium",
+                    "acceptance_criteria": [
+                        "A1: User can register with email and password",
+                        "A2: User can login with valid credentials", 
+                        "A3: JWT tokens are properly generated and validated",
+                        "A4: Passwords are hashed using bcrypt",
+                        "A5: Rate limiting prevents brute force attacks"
+                    ],
+                    "context": {
+                        "domain": "authentication",
+                        "complexity": "medium",
+                        "estimated_effort_hours": 16
+                    }
+                },
+                "individual_verdicts": {
+                    "constitutional": {
+                        "verdict": "Pass",
+                        "reasoning": "Authentication system complies with security standards and privacy regulations",
+                        "confidence": 0.85,
+                        "evidence_references": [evidence_id.to_string()]
+                    },
+                    "technical": {
+                        "verdict": "Pass", 
+                        "reasoning": "JWT implementation follows industry best practices with proper key management",
+                        "confidence": 0.80,
+                        "evidence_references": [evidence_id.to_string()]
+                    },
+                    "quality": {
+                        "verdict": "Pass",
+                        "reasoning": "Code quality meets standards with proper error handling and logging",
+                        "confidence": 0.75,
+                        "evidence_references": [evidence_id.to_string()]
+                    },
+                    "integration": {
+                        "verdict": "Pass",
+                        "reasoning": "Authentication integrates cleanly with existing user management system",
+                        "confidence": 0.78,
+                        "evidence_references": [evidence_id.to_string()]
+                    }
+                },
+                "consensus_score": 0.795,
+                "debate_rounds": 0,
+                "final_verdict": {
+                    "type": "Accepted",
+                    "confidence": 0.795,
+                    "summary": "Task accepted with 0.795 consensus across all judges. All acceptance criteria can be met with high confidence."
+                }
+            },
+            "claim_pipeline": {
+                "input_claim": {
+                    "id": "claim_auth_001",
+                    "text": "The authentication system will use JWT tokens for session management",
+                    "type": "functional_requirement",
+                    "confidence": 0.90,
+                    "source": "product_requirements_document"
+                },
+                "disambiguation": {
+                    "resolved_claim": "The authentication system will use JSON Web Token (JWT) tokens for secure session management",
+                    "ambiguities_resolved": [
+                        {
+                            "original": "JWT tokens",
+                            "resolved": "JSON Web Token (JWT) tokens",
+                            "type": "acronym_expansion"
+                        }
+                    ]
+                },
+                "qualification": {
+                    "verifiable": true,
+                    "verification_method": "code_review_and_testing",
+                    "success_criteria": [
+                        "JWT tokens are generated upon successful login",
+                        "Tokens contain proper claims (user_id, exp, iat)",
+                        "Token validation middleware rejects invalid tokens"
+                    ]
+                },
+                "decomposition": {
+                    "atomic_claims": [
+                        {
+                            "id": "atomic_001",
+                            "text": "JWT tokens are generated when user logs in successfully",
+                            "type": "implementation_detail"
+                        },
+                        {
+                            "id": "atomic_002", 
+                            "text": "JWT tokens contain user_id, expiration time, and issued at time",
+                            "type": "data_structure"
+                        },
+                        {
+                            "id": "atomic_003",
+                            "text": "Token validation middleware rejects tokens with invalid signatures",
+                            "type": "security_requirement"
+                        }
+                    ]
+                },
+                "verification": {
+                    "evidence": [
+                        {
+                            "id": evidence_id.to_string(),
+                            "type": "code_analysis",
+                            "source": "authentication_middleware.rs",
+                            "relevance": 0.95,
+                            "confidence": 0.88,
+                            "content": {
+                                "file_path": "src/auth/middleware.rs",
+                                "line_range": "45-67",
+                                "code_snippet": "pub fn validate_jwt_token(token: &str) -> Result<Claims> { ... }",
+                                "analysis": "JWT validation logic properly checks signature and expiration"
+                            }
+                        }
+                    ],
+                    "council_verification": {
+                        "submitted": true,
+                        "council_task_id": task_id.to_string(),
+                        "verdict": "Pass",
+                        "confidence": 0.82
+                    }
+                }
+            },
+            "provenance_ledger": {
+                "commit_hash": "a1b2c3d4e5f6789012345678901234567890abcd",
+                "timestamp": timestamp.to_rfc3339(),
+                "author": "system@agent-agency.com",
+                "message": "Consensus reached on authentication system implementation",
+                "signature": {
+                    "algorithm": "Ed25519",
+                    "signature": "3045022100a1b2c3d4e5f6789012345678901234567890abcd1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                    "public_key": "302a300506032b6570032100a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef1234567890"
+                },
+                "evidence_links": [
+                    {
+                        "evidence_id": evidence_id.to_string(),
+                        "claim_id": "atomic_001",
+                        "verification_status": "verified"
+                    }
+                ],
+                "caws_checkpoints": {
+                    "A1": {
+                        "description": "User can register with email and password",
+                        "status": "verified",
+                        "evidence_count": 2
+                    },
+                    "A2": {
+                        "description": "User can login with valid credentials",
+                        "status": "verified", 
+                        "evidence_count": 3
+                    },
+                    "A3": {
+                        "description": "JWT tokens are properly generated and validated",
+                        "status": "verified",
+                        "evidence_count": 4
+                    },
+                    "A4": {
+                        "description": "Passwords are hashed using bcrypt",
+                        "status": "verified",
+                        "evidence_count": 2
+                    },
+                    "A5": {
+                        "description": "Rate limiting prevents brute force attacks",
+                        "status": "verified",
+                        "evidence_count": 1
+                    }
+                }
+            },
+            "runtime_validator": {
+                "validation_results": [
+                    {
+                        "checkpoint": "A1",
+                        "status": "passed",
+                        "execution_time_ms": 45,
+                        "details": "User registration endpoint responds correctly with 201 status"
+                    },
+                    {
+                        "checkpoint": "A2", 
+                        "status": "passed",
+                        "execution_time_ms": 32,
+                        "details": "Login endpoint validates credentials and returns JWT token"
+                    },
+                    {
+                        "checkpoint": "A3",
+                        "status": "passed", 
+                        "execution_time_ms": 28,
+                        "details": "JWT token validation middleware correctly processes valid tokens"
+                    },
+                    {
+                        "checkpoint": "A4",
+                        "status": "passed",
+                        "execution_time_ms": 67,
+                        "details": "Password hashing uses bcrypt with proper salt rounds"
+                    },
+                    {
+                        "checkpoint": "A5",
+                        "status": "passed",
+                        "execution_time_ms": 23,
+                        "details": "Rate limiting middleware blocks requests exceeding threshold"
+                    }
+                ],
+                "overall_status": "passed",
+                "total_execution_time_ms": 195,
+                "performance_metrics": {
+                    "max_response_time_ms": 67,
+                    "min_response_time_ms": 23,
+                    "average_response_time_ms": 39.0,
+                    "throughput_tps": 25.6
+                }
+            },
+            "integration_assertions": {
+                "required_fields": [
+                    "council_state.task_spec.id",
+                    "council_state.individual_verdicts.constitutional.verdict",
+                    "council_state.consensus_score",
+                    "claim_pipeline.verification.evidence[0].id",
+                    "provenance_ledger.signature.signature",
+                    "runtime_validator.overall_status"
+                ],
+                "expected_values": {
+                    "council_state.consensus_score": {
+                        "min": 0.7,
+                        "max": 1.0
+                    },
+                    "runtime_validator.total_execution_time_ms": {
+                        "max": 5000
+                    },
+                    "provenance_ledger.caws_checkpoints.A1.status": "verified"
+                },
+                "cross_references": [
+                    {
+                        "from": "council_state.task_spec.id",
+                        "to": "provenance_ledger.evidence_links[0].evidence_id",
+                        "type": "task_to_evidence_link"
+                    },
+                    {
+                        "from": "claim_pipeline.verification.evidence[0].id", 
+                        "to": "provenance_ledger.evidence_links[0].evidence_id",
+                        "type": "evidence_consistency"
+                    }
+                ]
+            }
+        })
     }
 
     /// TODO[snapshot-diff-plan]: Design snapshot + rollback fixtures that operate without Git yet
