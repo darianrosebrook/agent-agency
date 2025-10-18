@@ -11,7 +11,7 @@ import {
 } from "@/models/LocalModelSelector";
 import { ModelRegistry } from "@/models/ModelRegistry";
 import type { ModelSelectionCriteria } from "@/types/model-registry";
-import { beforeEach, describe, expect, fail, it } from "@jest/globals";
+import { beforeEach, describe, expect, it } from "@jest/globals";
 
 describe("LocalModelSelector", () => {
   let selector: LocalModelSelector;
@@ -731,7 +731,7 @@ describe("LocalModelSelector", () => {
 
       try {
         await selector.selectModel(criteria);
-        fail("Should have thrown error");
+        throw new Error("Should have thrown error");
       } catch (error) {
         expect(error).toBeInstanceOf(ModelSelectorError);
         if (error instanceof ModelSelectorError) {

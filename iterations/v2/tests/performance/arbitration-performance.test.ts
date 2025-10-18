@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 /**
  * Performance Tests: Arbitration System Load Testing
  *
@@ -66,7 +68,10 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
   });
 
   // Helper: Create a lightweight violation for performance testing
-  const createPerfViolation = (ruleId: string, index: number): ConstitutionalViolation => ({
+  const createPerfViolation = (
+    ruleId: string,
+    index: number
+  ): ConstitutionalViolation => ({
     id: `perf-violation-${index}`,
     ruleId,
     severity: ViolationSeverity.MINOR,
@@ -100,7 +105,11 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
         const promises = Array.from({ length: sessionCount }, async (_, i) => {
           const rule = createPerfRule(i);
           const violation = createPerfViolation(rule.id, i);
-          const session = await orchestrator.startSession(violation, [rule], [`agent-${i}`]);
+          const session = await orchestrator.startSession(
+            violation,
+            [rule],
+            [`agent-${i}`]
+          );
           sessions.push(session.id);
           return session;
         });
@@ -124,7 +133,11 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
         const rule = createPerfRule(i);
         const violation = createPerfViolation(rule.id, i);
 
-        const session = await orchestrator.startSession(violation, [rule], [`agent-${i}`]);
+        const session = await orchestrator.startSession(
+          violation,
+          [rule],
+          [`agent-${i}`]
+        );
         await orchestrator.evaluateRules(session.id);
         await orchestrator.generateVerdict(session.id, "arbiter-perf");
         await orchestrator.completeSession(session.id);
@@ -146,7 +159,11 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
       const violation = createPerfViolation(rule.id, 0);
 
       // Measure individual operation latencies
-      const session = await orchestrator.startSession(violation, [rule], ["agent-perf"]);
+      const session = await orchestrator.startSession(
+        violation,
+        [rule],
+        ["agent-perf"]
+      );
 
       const evaluateTime = await measureTime(async () => {
         await orchestrator.evaluateRules(session.id);
@@ -176,10 +193,16 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
       // Create complex rules with multiple precedents
       const createComplexRule = (index: number): ConstitutionalRule => ({
         ...createPerfRule(index),
-        description: "Complex rule with detailed description and multiple evidence requirements for performance testing under load conditions".repeat(5),
+        description:
+          "Complex rule with detailed description and multiple evidence requirements for performance testing under load conditions".repeat(
+            5
+          ),
         requiredEvidence: Array.from({ length: 10 }, (_, i) => `evidence-${i}`),
         metadata: {
-          complexData: Array.from({ length: 100 }, (_, i) => ({ key: `key-${i}`, value: `value-${i}` })),
+          complexData: Array.from({ length: 100 }, (_, i) => ({
+            key: `key-${i}`,
+            value: `value-${i}`,
+          })),
         },
       });
 
@@ -187,7 +210,11 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
         const rule = createComplexRule(i);
         const violation = createPerfViolation(rule.id, i);
 
-        const session = await orchestrator.startSession(violation, [rule], [`agent-${i}`]);
+        const session = await orchestrator.startSession(
+          violation,
+          [rule],
+          [`agent-${i}`]
+        );
         await orchestrator.evaluateRules(session.id);
         await orchestrator.generateVerdict(session.id, "arbiter-perf");
         await orchestrator.completeSession(session.id);
@@ -207,7 +234,11 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
 
     it("should demonstrate linear scalability up to 25 concurrent sessions", async () => {
       const sessionCounts = [5, 10, 15, 20, 25];
-      const scalabilityResults: Array<{ count: number; time: number; avgTime: number }> = [];
+      const scalabilityResults: Array<{
+        count: number;
+        time: number;
+        avgTime: number;
+      }> = [];
 
       for (const count of sessionCounts) {
         const startTime = Date.now();
@@ -215,7 +246,11 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
         const promises = Array.from({ length: count }, async (_, i) => {
           const rule = createPerfRule(i);
           const violation = createPerfViolation(rule.id, i);
-          const session = await orchestrator.startSession(violation, [rule], [`agent-${i}`]);
+          const session = await orchestrator.startSession(
+            violation,
+            [rule],
+            [`agent-${i}`]
+          );
           await orchestrator.evaluateRules(session.id);
           await orchestrator.generateVerdict(session.id, "arbiter-perf");
           await orchestrator.completeSession(session.id);
@@ -257,7 +292,11 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
         const rule = createPerfRule(i);
         const violation = createPerfViolation(rule.id, i);
 
-        const session = await orchestrator.startSession(violation, [rule], [`agent-${i}`]);
+        const session = await orchestrator.startSession(
+          violation,
+          [rule],
+          [`agent-${i}`]
+        );
         await orchestrator.evaluateRules(session.id);
         await orchestrator.generateVerdict(session.id, "arbiter-perf");
 
@@ -287,7 +326,9 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
     it("should handle large evidence arrays without memory issues", async () => {
       const largeEvidenceCount = 1000;
       const largeEvidence = Array.from({ length: largeEvidenceCount }, (_, i) =>
-        `Evidence item ${i} with substantial content that demonstrates memory handling capabilities. `.repeat(10)
+        `Evidence item ${i} with substantial content that demonstrates memory handling capabilities. `.repeat(
+          10
+        )
       );
 
       const rule = createPerfRule(0);
@@ -296,7 +337,11 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
 
       const initialMemory = getMemoryUsage();
 
-      const session = await orchestrator.startSession(violation, [rule], ["agent-large-evidence"]);
+      const session = await orchestrator.startSession(
+        violation,
+        [rule],
+        ["agent-large-evidence"]
+      );
       await orchestrator.evaluateRules(session.id);
       await orchestrator.generateVerdict(session.id, "arbiter-perf");
       await orchestrator.completeSession(session.id);
@@ -320,7 +365,11 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
         const rule = createPerfRule(i);
         const violation = createPerfViolation(rule.id, i);
 
-        const session = await orchestrator.startSession(violation, [rule], [`agent-${i}`]);
+        const session = await orchestrator.startSession(
+          violation,
+          [rule],
+          [`agent-${i}`]
+        );
         await orchestrator.evaluateRules(session.id);
         await orchestrator.generateVerdict(session.id, "arbiter-perf");
         await orchestrator.completeSession(session.id);
@@ -338,34 +387,41 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
       const concurrentComplex = 8;
       const initialMemory = getMemoryUsage();
 
-      const promises = Array.from({ length: concurrentComplex }, async (_, i) => {
-        const rule = createPerfRule(i);
-        const violation = createPerfViolation(rule.id, i);
+      const promises = Array.from(
+        { length: concurrentComplex },
+        async (_, i) => {
+          const rule = createPerfRule(i);
+          const violation = createPerfViolation(rule.id, i);
 
-        // Add complex metadata to increase memory pressure
-        rule.metadata = {
-          complexData: Array.from({ length: 1000 }, (_, j) => ({
-            nested: {
-              data: `Complex nested data ${j} for session ${i}`,
-              array: Array.from({ length: 50 }, (_, k) => `Item ${k}`),
-            },
-          })),
-        };
+          // Add complex metadata to increase memory pressure
+          rule.metadata = {
+            complexData: Array.from({ length: 1000 }, (_, j) => ({
+              nested: {
+                data: `Complex nested data ${j} for session ${i}`,
+                array: Array.from({ length: 50 }, (_, k) => `Item ${k}`),
+              },
+            })),
+          };
 
-        violation.context = {
-          largeContext: Array.from({ length: 500 }, (_, j) => ({
-            key: `context-${j}`,
-            value: `Large context value ${j} for performance testing`,
-          })),
-        };
+          violation.context = {
+            largeContext: Array.from({ length: 500 }, (_, j) => ({
+              key: `context-${j}`,
+              value: `Large context value ${j} for performance testing`,
+            })),
+          };
 
-        const session = await orchestrator.startSession(violation, [rule], [`agent-${i}`]);
-        await orchestrator.evaluateRules(session.id);
-        await orchestrator.generateVerdict(session.id, "arbiter-perf");
-        await orchestrator.completeSession(session.id);
+          const session = await orchestrator.startSession(
+            violation,
+            [rule],
+            [`agent-${i}`]
+          );
+          await orchestrator.evaluateRules(session.id);
+          await orchestrator.generateVerdict(session.id, "arbiter-perf");
+          await orchestrator.completeSession(session.id);
 
-        return session.id;
-      });
+          return session.id;
+        }
+      );
 
       await Promise.all(promises);
 
@@ -384,31 +440,38 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
       // Force garbage collection if available (only in certain Node.js versions)
       if (global.gc) {
         global.gc();
-        await new Promise(resolve => setImmediate(resolve));
+        await new Promise((resolve) => setImmediate(resolve));
       }
 
       const initialMemory = getMemoryUsage();
       const loadTestSessions = 15;
 
       // Run load test
-      const promises = Array.from({ length: loadTestSessions }, async (_, i) => {
-        const rule = createPerfRule(i);
-        const violation = createPerfViolation(rule.id, i);
+      const promises = Array.from(
+        { length: loadTestSessions },
+        async (_, i) => {
+          const rule = createPerfRule(i);
+          const violation = createPerfViolation(rule.id, i);
 
-        const session = await orchestrator.startSession(violation, [rule], [`agent-${i}`]);
-        await orchestrator.evaluateRules(session.id);
-        await orchestrator.generateVerdict(session.id, "arbiter-perf");
-        await orchestrator.completeSession(session.id);
+          const session = await orchestrator.startSession(
+            violation,
+            [rule],
+            [`agent-${i}`]
+          );
+          await orchestrator.evaluateRules(session.id);
+          await orchestrator.generateVerdict(session.id, "arbiter-perf");
+          await orchestrator.completeSession(session.id);
 
-        return session.id;
-      });
+          return session.id;
+        }
+      );
 
       await Promise.all(promises);
 
       // Force GC again if available
       if (global.gc) {
         global.gc();
-        await new Promise(resolve => setImmediate(resolve));
+        await new Promise((resolve) => setImmediate(resolve));
       }
 
       const finalMemory = getMemoryUsage();
@@ -434,7 +497,11 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
       const promises = Array.from({ length: maxConcurrent }, async (_, i) => {
         const rule = createPerfRule(i);
         const violation = createPerfViolation(rule.id, i);
-        const session = await orchestrator.startSession(violation, [rule], [`agent-${i}`]);
+        const session = await orchestrator.startSession(
+          violation,
+          [rule],
+          [`agent-${i}`]
+        );
         sessions.push(session.id);
         return session;
       });
@@ -454,7 +521,7 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
       ).rejects.toThrow("Maximum concurrent sessions reached");
 
       // Clean up all sessions
-      const cleanupPromises = sessions.map(sessionId =>
+      const cleanupPromises = sessions.map((sessionId) =>
         orchestrator.completeSession(sessionId)
       );
       await Promise.all(cleanupPromises);
@@ -470,7 +537,11 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
         const rule = createPerfRule(i);
         const violation = createPerfViolation(rule.id, i);
 
-        const session = await orchestrator.startSession(violation, [rule], [`agent-${i}`]);
+        const session = await orchestrator.startSession(
+          violation,
+          [rule],
+          [`agent-${i}`]
+        );
         await orchestrator.evaluateRules(session.id);
         await orchestrator.generateVerdict(session.id, "arbiter-perf");
         await orchestrator.completeSession(session.id);
@@ -481,9 +552,11 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
         // Check performance degradation every 10 sessions
         if (i > 0 && i % 10 === 0) {
           const recentWindows = timeWindows.slice(-10);
-          const avgRecent = recentWindows.reduce((a, b) => a + b, 0) / recentWindows.length;
+          const avgRecent =
+            recentWindows.reduce((a, b) => a + b, 0) / recentWindows.length;
           const initialWindows = timeWindows.slice(0, 10);
-          const avgInitial = initialWindows.reduce((a, b) => a + b, 0) / initialWindows.length;
+          const avgInitial =
+            initialWindows.reduce((a, b) => a + b, 0) / initialWindows.length;
 
           const degradation = avgRecent / avgInitial;
           expect(degradation).toBeLessThan(2.0); // Allow up to 2x degradation under sustained load
@@ -504,11 +577,18 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
         const rule = createPerfRule(i);
         const violation = createPerfViolation(rule.id, i);
 
-        const session = await orchestrator.startSession(violation, [rule], [`agent-${i}`]);
+        const session = await orchestrator.startSession(
+          violation,
+          [rule],
+          [`agent-${i}`]
+        );
 
         if (i % 2 === 0) {
           // Fail even-numbered sessions
-          await orchestrator.failSession(session.id, new Error("Simulated failure"));
+          await orchestrator.failSession(
+            session.id,
+            new Error("Simulated failure")
+          );
           failedSessions.push(session.id);
         } else {
           // Complete odd-numbered sessions
@@ -526,7 +606,11 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
       // System should still be functional
       const newRule = createPerfRule(failureTestSessions);
       const newViolation = createPerfViolation(newRule.id, failureTestSessions);
-      const newSession = await orchestrator.startSession(newViolation, [newRule], ["agent-recovery"]);
+      const newSession = await orchestrator.startSession(
+        newViolation,
+        [newRule],
+        ["agent-recovery"]
+      );
 
       expect(newSession.state).toBe(ArbitrationState.RULE_EVALUATION);
 
@@ -547,7 +631,11 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
           const rule = createPerfRule(index);
           const violation = createPerfViolation(rule.id, index);
 
-          const session = await orchestrator.startSession(violation, [rule], [`agent-${index}`]);
+          const session = await orchestrator.startSession(
+            violation,
+            [rule],
+            [`agent-${index}`]
+          );
           await orchestrator.evaluateRules(session.id);
           await orchestrator.generateVerdict(session.id, "arbiter-perf");
           await orchestrator.completeSession(session.id);
@@ -577,32 +665,51 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
 
     it("should maintain data integrity under concurrent load", async () => {
       const integrityTestSessions = 15;
-      const sessionData: Array<{ id: string; expectedState: ArbitrationState }> = [];
+      const sessionData: Array<{
+        id: string;
+        expectedState: ArbitrationState;
+      }> = [];
 
       // Create sessions with expected final states
-      const promises = Array.from({ length: integrityTestSessions }, async (_, i) => {
-        const rule = createPerfRule(i);
-        const violation = createPerfViolation(rule.id, i);
+      const promises = Array.from(
+        { length: integrityTestSessions },
+        async (_, i) => {
+          const rule = createPerfRule(i);
+          const violation = createPerfViolation(rule.id, i);
 
-        const session = await orchestrator.startSession(violation, [rule], [`agent-${i}`]);
+          const session = await orchestrator.startSession(
+            violation,
+            [rule],
+            [`agent-${i}`]
+          );
 
-        // Some sessions get full workflow, others partial
-        if (i % 3 === 0) {
-          await orchestrator.evaluateRules(session.id);
-          await orchestrator.generateVerdict(session.id, "arbiter-perf");
-          await orchestrator.completeSession(session.id);
-          sessionData.push({ id: session.id, expectedState: ArbitrationState.COMPLETED });
-        } else if (i % 3 === 1) {
-          await orchestrator.evaluateRules(session.id);
-          await orchestrator.generateVerdict(session.id, "arbiter-perf");
-          sessionData.push({ id: session.id, expectedState: ArbitrationState.VERDICT_GENERATION });
-        } else {
-          await orchestrator.evaluateRules(session.id);
-          sessionData.push({ id: session.id, expectedState: ArbitrationState.VERDICT_GENERATION });
+          // Some sessions get full workflow, others partial
+          if (i % 3 === 0) {
+            await orchestrator.evaluateRules(session.id);
+            await orchestrator.generateVerdict(session.id, "arbiter-perf");
+            await orchestrator.completeSession(session.id);
+            sessionData.push({
+              id: session.id,
+              expectedState: ArbitrationState.COMPLETED,
+            });
+          } else if (i % 3 === 1) {
+            await orchestrator.evaluateRules(session.id);
+            await orchestrator.generateVerdict(session.id, "arbiter-perf");
+            sessionData.push({
+              id: session.id,
+              expectedState: ArbitrationState.VERDICT_GENERATION,
+            });
+          } else {
+            await orchestrator.evaluateRules(session.id);
+            sessionData.push({
+              id: session.id,
+              expectedState: ArbitrationState.VERDICT_GENERATION,
+            });
+          }
+
+          return session.id;
         }
-
-        return session.id;
-      });
+      );
 
       await Promise.all(promises);
 
@@ -622,7 +729,9 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
       }
 
       // Complete remaining sessions
-      for (const { id } of sessionData.filter(s => s.expectedState !== ArbitrationState.COMPLETED)) {
+      for (const { id } of sessionData.filter(
+        (s) => s.expectedState !== ArbitrationState.COMPLETED
+      )) {
         await orchestrator.completeSession(id);
       }
 
@@ -640,7 +749,11 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
         const rule = createPerfRule(i);
         const violation = createPerfViolation(rule.id, i);
 
-        const session = await orchestrator.startSession(violation, [rule], [`agent-${i}`]);
+        const session = await orchestrator.startSession(
+          violation,
+          [rule],
+          [`agent-${i}`]
+        );
         await orchestrator.evaluateRules(session.id);
         await orchestrator.generateVerdict(session.id, "arbiter-perf");
         await orchestrator.completeSession(session.id);
@@ -671,9 +784,15 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
       }
 
       // Calculate aggregate statistics
-      const avgRuleEvalTime = allMetrics.reduce((sum, m) => sum + m.ruleEvaluationMs, 0) / allMetrics.length;
-      const avgVerdictTime = allMetrics.reduce((sum, m) => sum + m.verdictGenerationMs, 0) / allMetrics.length;
-      const avgTotalTime = allMetrics.reduce((sum, m) => sum + m.totalDurationMs, 0) / allMetrics.length;
+      const avgRuleEvalTime =
+        allMetrics.reduce((sum, m) => sum + m.ruleEvaluationMs, 0) /
+        allMetrics.length;
+      const avgVerdictTime =
+        allMetrics.reduce((sum, m) => sum + m.verdictGenerationMs, 0) /
+        allMetrics.length;
+      const avgTotalTime =
+        allMetrics.reduce((sum, m) => sum + m.totalDurationMs, 0) /
+        allMetrics.length;
 
       expect(avgRuleEvalTime).toBeLessThan(100);
       expect(avgVerdictTime).toBeLessThan(100);
@@ -689,7 +808,11 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
 
         const violation = createPerfViolation(rule.id, i);
 
-        const session = await orchestrator.startSession(violation, [rule], [`agent-${i}`]);
+        const session = await orchestrator.startSession(
+          violation,
+          [rule],
+          [`agent-${i}`]
+        );
         await orchestrator.evaluateRules(session.id);
         await orchestrator.generateVerdict(session.id, "arbiter-perf");
 
@@ -705,16 +828,24 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
           context: {},
         };
 
-        await orchestrator.evaluateWaiver(session.id, waiverRequest, "arbiter-perf");
+        await orchestrator.evaluateWaiver(
+          session.id,
+          waiverRequest,
+          "arbiter-perf"
+        );
       }
 
       const allMetrics = orchestrator.getAllMetrics();
-      const waiverMetrics = allMetrics.filter(m => m.waiverEvaluationMs !== undefined);
+      const waiverMetrics = allMetrics.filter(
+        (m) => m.waiverEvaluationMs !== undefined
+      );
 
       expect(waiverMetrics).toHaveLength(waiverBenchmarkSessions);
 
       // Analyze waiver performance
-      const avgWaiverTime = waiverMetrics.reduce((sum, m) => sum + (m.waiverEvaluationMs || 0), 0) / waiverMetrics.length;
+      const avgWaiverTime =
+        waiverMetrics.reduce((sum, m) => sum + (m.waiverEvaluationMs || 0), 0) /
+        waiverMetrics.length;
       expect(avgWaiverTime).toBeLessThan(200); // Waiver evaluation should be reasonably fast
 
       // Verify all waivers were processed
@@ -730,7 +861,11 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
         const rule = createPerfRule(i);
         const violation = createPerfViolation(rule.id, i);
 
-        const session = await orchestrator.startSession(violation, [rule], [`agent-${i}`]);
+        const session = await orchestrator.startSession(
+          violation,
+          [rule],
+          [`agent-${i}`]
+        );
         await orchestrator.evaluateRules(session.id);
         await orchestrator.generateVerdict(session.id, "arbiter-perf");
         await orchestrator.completeSession(session.id);
@@ -744,7 +879,9 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
         );
 
         // Review appeal
-        await orchestrator.reviewAppeal(session.id, appeal.id, [`reviewer-${i}`]);
+        await orchestrator.reviewAppeal(session.id, appeal.id, [
+          `reviewer-${i}`,
+        ]);
       }
 
       const stats = orchestrator.getStatistics();
@@ -757,7 +894,10 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
 
     it("should measure and report memory efficiency metrics", async () => {
       const memoryTestSessions = 10;
-      const memorySamples: Array<{ sessionCount: number; memoryUsage: NodeJS.MemoryUsage }> = [];
+      const memorySamples: Array<{
+        sessionCount: number;
+        memoryUsage: NodeJS.MemoryUsage;
+      }> = [];
 
       memorySamples.push({ sessionCount: 0, memoryUsage: getMemoryUsage() });
 
@@ -765,7 +905,11 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
         const rule = createPerfRule(i);
         const violation = createPerfViolation(rule.id, i);
 
-        const session = await orchestrator.startSession(violation, [rule], [`agent-${i}`]);
+        const session = await orchestrator.startSession(
+          violation,
+          [rule],
+          [`agent-${i}`]
+        );
         await orchestrator.evaluateRules(session.id);
         await orchestrator.generateVerdict(session.id, "arbiter-perf");
         await orchestrator.completeSession(session.id);
@@ -778,7 +922,8 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
 
       // Analyze memory efficiency
       const initialMemory = memorySamples[0].memoryUsage.heapUsed;
-      const finalMemory = memorySamples[memorySamples.length - 1].memoryUsage.heapUsed;
+      const finalMemory =
+        memorySamples[memorySamples.length - 1].memoryUsage.heapUsed;
       const totalMemoryIncrease = finalMemory - initialMemory;
       const avgMemoryPerSession = totalMemoryIncrease / memoryTestSessions;
 
@@ -800,16 +945,22 @@ describe("ARBITER-015 Performance: Arbitration System Load Testing", () => {
         const rule = createPerfRule(i);
         const violation = createPerfViolation(rule.id, i);
 
-        const session = await orchestrator.startSession(violation, [rule], [`agent-${i}`]);
+        const session = await orchestrator.startSession(
+          violation,
+          [rule],
+          [`agent-${i}`]
+        );
 
         // Measure component interactions
         const evaluateStart = process.hrtime.bigint();
         await orchestrator.evaluateRules(session.id);
-        const evaluateTime = Number(process.hrtime.bigint() - evaluateStart) / 1_000_000;
+        const evaluateTime =
+          Number(process.hrtime.bigint() - evaluateStart) / 1_000_000;
 
         const verdictStart = process.hrtime.bigint();
         await orchestrator.generateVerdict(session.id, "arbiter-perf");
-        const verdictTime = Number(process.hrtime.bigint() - verdictStart) / 1_000_000;
+        const verdictTime =
+          Number(process.hrtime.bigint() - verdictStart) / 1_000_000;
 
         await orchestrator.completeSession(session.id);
 

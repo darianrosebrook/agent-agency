@@ -9,8 +9,9 @@
  */
 
 import { EventEmitter } from "events";
-import * as os from "os";
 import { SystemMetrics } from "./HealthMonitor";
+
+/// <reference types="node" />
 
 export interface PerformanceSnapshot {
   timestamp: number;
@@ -132,8 +133,8 @@ export class PerformanceTracker extends EventEmitter {
     );
     if (relevantSnapshots.length < 2) return null;
 
-    let values: number[] = [];
-    let timestamps: number[] = [];
+    const values: number[] = [];
+    const timestamps: number[] = [];
 
     for (const snapshot of relevantSnapshots) {
       let value: number | undefined;
@@ -365,4 +366,3 @@ export class PerformanceTracker extends EventEmitter {
     };
   }
 }
-

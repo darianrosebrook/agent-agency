@@ -133,7 +133,7 @@ export class OpenAIProvider extends LLMProvider {
         throw new Error(`OpenAI API error: ${response.statusText}`);
       }
 
-      const data = await response.json() as OpenAIChatCompletion;
+      const data = (await response.json()) as OpenAIChatCompletion;
       const content = data.choices[0]?.message?.content;
 
       if (!content) {
@@ -239,7 +239,7 @@ export class AnthropicProvider extends LLMProvider {
         throw new Error(`Anthropic API error: ${response.statusText}`);
       }
 
-      const data = await response.json() as AnthropicMessageResponse;
+      const data = (await response.json()) as AnthropicMessageResponse;
       const content = data.content?.[0]?.text;
 
       if (!content) {
@@ -372,7 +372,7 @@ export class OllamaProvider extends LLMProvider {
         );
       }
 
-      const data = await response.json() as OllamaGenerateResponse;
+      const data = (await response.json()) as OllamaGenerateResponse;
       return this.parseEvaluationResponse(data.response, criterion);
     } catch (error) {
       const errorMessage = `Ollama API connection failed: ${

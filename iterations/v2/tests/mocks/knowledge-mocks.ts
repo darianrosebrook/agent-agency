@@ -280,7 +280,7 @@ export class MockDatabaseClient {
     this.data = new Map();
   }
 
-  async query(sql: string, params): Promise<{ rows }> {
+  async query(sql: string, params: any[]): Promise<{ rows: any[] }> {
     // Simple mock implementation - just store data
     const tableName = this.extractTableName(sql);
     if (sql.includes("INSERT")) {

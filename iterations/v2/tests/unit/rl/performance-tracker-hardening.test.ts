@@ -797,7 +797,7 @@ describe("Performance Tracker - Production Hardening (ARBITER-004)", () => {
       expect(tracker.isActive()).toBe(true);
     });
 
-    it("should cleanup old incomplete task executions", () => {
+    it("should cleanup old incomplete task executions", async () => {
       // Start task but never complete
       const executionId = await tracker.startTaskExecution(
         "task-incomplete",

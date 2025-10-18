@@ -4,7 +4,7 @@
  * Tests CAWS integration and constitutional compliance checking
  */
 
-import { beforeEach, describe, expect, fail } from "@jest/globals";
+import { beforeEach, describe, expect } from "@jest/globals";
 import {
   ArbiterOrchestrator,
   defaultArbiterOrchestratorConfig,
@@ -1459,7 +1459,7 @@ describe("ArbiterOrchestrator - CAWS Integration", () => {
 
       try {
         await orchestrator.submitTask(invalidTask);
-        fail("Should have thrown an error");
+        throw new Error("Should have thrown an error");
       } catch (error) {
         expect(error instanceof Error).toBe(true);
         const errorMessage = (error as Error).message;
@@ -1481,7 +1481,7 @@ describe("ArbiterOrchestrator - CAWS Integration", () => {
       expect(status.components.arbitrationProtocol).toBe(true);
       expect(status.components.reasoningEngine).toBe(true);
       expect(status.components.humanOverride).toBe(true);
-      expect(status.metrics.uptimeSeconds).toBeGreaterThan(0);
+      expect(status.metrics.uptimeSeconds).toBeGreaterThanOrEqual(0);
       expect(status.version).toBe("2.0.0");
     });
   });

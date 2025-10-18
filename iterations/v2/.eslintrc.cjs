@@ -23,6 +23,7 @@ module.exports = {
     Buffer: "readonly",
     __dirname: "readonly",
     __filename: "readonly",
+    NodeJS: "readonly",
   },
   rules: {
     // Disable base rule for TypeScript files (use @typescript-eslint/no-unused-vars instead)

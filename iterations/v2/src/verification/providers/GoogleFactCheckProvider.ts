@@ -13,13 +13,6 @@ import {
   VerificationVerdict,
 } from "../../types/verification";
 
-export interface GoogleFactCheckConfig {
-  apiKey: string;
-  baseUrl?: string;
-  timeout?: number;
-  maxRetries?: number;
-}
-
 export interface GoogleFactCheckResponse {
   claims?: Array<{
     text: string;
@@ -36,6 +29,13 @@ export interface GoogleFactCheckResponse {
       languageCode: string;
     }>;
   }>;
+}
+
+export interface GoogleFactCheckConfig {
+  apiKey: string;
+  baseUrl?: string;
+  timeout?: number;
+  maxRetries?: number;
 }
 
 /**
@@ -131,7 +131,7 @@ export class GoogleFactCheckProvider {
       );
     }
 
-    return await response.json();
+    return (await response.json()) as GoogleFactCheckResponse;
   }
 
   /**

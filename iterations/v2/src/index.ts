@@ -80,33 +80,33 @@ async function initialize(): Promise<void> {
     },
   });
 
-      // Initialize health monitoring
-      // Temporarily commented out for debugging
-      // healthMonitor = new HealthMonitor({
-      //   checkIntervalMs: 60000, // 60 seconds (reduced frequency)
-      //   metricsIntervalMs: 30000, // 30 seconds (reduced frequency)
-      //   alertThresholds: {
-      //     memoryUsagePercent: 90, // Higher threshold
-      //     cpuUsagePercent: 80,
-      //     errorRatePercent: 5,
-      //     responseTimeMs: 5000,
-      //   },
-      // });
+  // Initialize health monitoring
+  // Temporarily commented out for debugging
+  // healthMonitor = new HealthMonitor({
+  //   checkIntervalMs: 60000, // 60 seconds (reduced frequency)
+  //   metricsIntervalMs: 30000, // 30 seconds (reduced frequency)
+  //   alertThresholds: {
+  //     memoryUsagePercent: 90, // Higher threshold
+  //     cpuUsagePercent: 80,
+  //     errorRatePercent: 5,
+  //     responseTimeMs: 5000,
+  //   },
+  // });
 
-      // healthMonitor.on("alert-created", (alert) => {
-      //   logger.warn("Health alert created", {
-      //     component: alert.component,
-      //     severity: alert.severity,
-      //     message: alert.message,
-      //   });
-      // });
+  // healthMonitor.on("alert-created", (alert) => {
+  //   logger.warn("Health alert created", {
+  //     component: alert.component,
+  //     severity: alert.severity,
+  //     message: alert.message,
+  //   });
+  // });
 
-      // healthMonitor.on("health-checks-completed", (summary) => {
-      //   const overallStatus = healthMonitor?.getOverallStatus();
-      //   if (overallStatus !== "healthy") {
-      //     logger.warn("System health degraded", { status: overallStatus, summary });
-      //   }
-      // });
+  // healthMonitor.on("health-checks-completed", (summary) => {
+  //   const overallStatus = healthMonitor?.getOverallStatus();
+  //   if (overallStatus !== "healthy") {
+  //     logger.warn("System health degraded", { status: overallStatus, summary });
+  //   }
+  // });
 
   // Initialize database connection pool
   try {
@@ -193,7 +193,7 @@ async function initialize(): Promise<void> {
 
     observerBridge = new ObserverBridge(
       arbiterRuntime,
-      undefined,
+      undefined
       // healthMonitor // Temporarily commented out for debugging
     );
     setObserverBridge(observerBridge);

@@ -113,7 +113,7 @@ export abstract class BaseSearchProvider implements ISearchProvider {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json() as T;
+      const data = (await response.json()) as T;
       const responseTime = Date.now() - startTime;
 
       // Update health metrics

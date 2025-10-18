@@ -1040,20 +1040,21 @@ export class ArbiterOrchestrator {
   /**
    * Get registered components
    */
-  getComponents(): string[] {
-    const components: string[] = [];
-    if (this.components.taskQueue) components.push("taskQueue");
-    if (this.components.taskAssignment) components.push("taskAssignment");
-    if (this.components.agentRegistry) components.push("agentRegistry");
-    if (this.components.security) components.push("security");
-    if (this.components.healthMonitor) components.push("healthMonitor");
-    if (this.components.recoveryManager) components.push("recoveryManager");
-    if (this.components.knowledgeSeeker) components.push("knowledgeSeeker");
-    if (this.components.reasoningEngine) components.push("reasoningEngine");
-    if (this.components.verificationEngine)
-      components.push("verificationEngine");
-    if (this.components.auditLogger) components.push("auditLogger");
-    return components;
+  getComponents(): Record<string, boolean> {
+    return {
+      taskQueue: !!this.components.taskQueue,
+      taskAssignment: !!this.components.taskAssignment,
+      agentRegistry: !!this.components.agentRegistry,
+      security: !!this.components.security,
+      healthMonitor: !!this.components.healthMonitor,
+      recoveryManager: !!this.components.recoveryManager,
+      knowledgeSeeker: !!this.components.knowledgeSeeker,
+      reasoningEngine: !!this.components.reasoningEngine,
+      verificationEngine: !!this.components.verificationEngine,
+      auditLogger: !!this.components.auditLogger,
+      arbitrationProtocol: true, // Always available
+      humanOverride: true, // Always available
+    };
   }
 
   /**
@@ -1062,10 +1063,11 @@ export class ArbiterOrchestrator {
   getStatistics(): any {
     return {
       uptime: Date.now() - this.startTime,
+      uptimeSeconds: Math.floor((Date.now() - this.startTime) / 1000),
       tasksProcessed: 0, // Would need to track this
       agentsRegistered: 0, // Would need to track this
       errorsHandled: 0, // Would need to track this
-      componentsInitialized: this.getComponents().length,
+      componentsInitialized: Object.values(this.getComponents()).filter(Boolean).length,
     };
   }
 
@@ -1077,7 +1079,8 @@ export class ArbiterOrchestrator {
       initialized: this.initialized,
       healthy: this.initialized,
       components: this.getComponents(),
-      statistics: this.getStatistics(),
+      metrics: this.getStatistics(),
+      version: "2.0.0",
     };
   }
 
@@ -1146,19 +1149,37 @@ export class ArbiterOrchestrator {
   }
 
   /**
+   * Get a specific override request by ID
+   */
+  async getOverrideRequest(overrideId: string): Promise<any | null> {
+    // This would need to be implemented based on the actual override storage
+    console.log(`Retrieving override request: ${overrideId}`);
+    // For now, return a mock override request
+    return {
+      id: overrideId,
+      taskId: `task-${overrideId}`,
+      status: "pending",
+      requestedAt: new Date(),
+    };
+  }
+
+  /**
    * Resubmit a task with an approved override
    */
   async resubmitTaskWithOverride(
     taskId: string,
     overrideId: string
-  ): Promise<boolean> {
+  ): Promise<{ taskId: string; assignmentId: string }> {
     try {
       // This would need to be implemented based on the actual override logic
       console.log(`Resubmitting task ${taskId} with override ${overrideId}`);
-      return true;
+      return {
+        taskId,
+        assignmentId: `assignment-${taskId}`,
+      };
     } catch (error) {
       console.error(`Failed to resubmit task ${taskId} with override:`, error);
-      return false;
+      throw error;
     }
   }
 

@@ -233,7 +233,7 @@ export class EmbeddingService implements IEmbeddingService {
         return false;
       }
 
-      const data = await response.json() as OllamaTagsResponse;
+      const data = (await response.json()) as OllamaTagsResponse;
       return (
         data.models?.some(
           (model: any) =>
@@ -298,7 +298,7 @@ export class EmbeddingService implements IEmbeddingService {
               );
             }
 
-            const data = await response.json() as OllamaEmbeddingResponse;
+            const data = (await response.json()) as OllamaEmbeddingResponse;
 
             if (!data.embedding || !Array.isArray(data.embedding)) {
               throw new EmbeddingError(
@@ -310,10 +310,12 @@ export class EmbeddingService implements IEmbeddingService {
             return {
               embedding: data.embedding,
               model: data.model || request.model || this.model,
-              usage: data.prompt_eval_count ? {
-                prompt_tokens: data.prompt_eval_count,
-                total_tokens: data.prompt_eval_count, // Approximate total tokens
-              } : undefined,
+              usage: data.prompt_eval_count
+                ? {
+                    prompt_tokens: data.prompt_eval_count,
+                    total_tokens: data.prompt_eval_count, // Approximate total tokens
+                  }
+                : undefined,
             };
           } catch (error) {
             clearTimeout(timeoutId);

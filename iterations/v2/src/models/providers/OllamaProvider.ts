@@ -51,7 +51,6 @@ interface OllamaTagsResponse {
   }>;
 }
 
-
 /**
  * Ollama provider error
  */
@@ -126,7 +125,7 @@ export class OllamaProvider extends LocalModelProvider {
         );
       }
 
-      const data = await response.json() as OllamaGenerateResponse;
+      const data = (await response.json()) as OllamaGenerateResponse;
 
       const endTime = Date.now();
       const generationTimeMs = endTime - startTime;
@@ -203,7 +202,7 @@ export class OllamaProvider extends LocalModelProvider {
         };
       }
 
-      const data = await response.json() as OllamaTagsResponse;
+      const data = (await response.json()) as OllamaTagsResponse;
       const models = data.models || [];
 
       // Check if our model is available

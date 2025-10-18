@@ -15,6 +15,52 @@ import {
 } from "../../types/verification";
 
 /**
+ * DuckDuckGo Instant Answer API response
+ */
+interface DuckDuckGoInstantAnswer {
+  Abstract?: string;
+  AbstractURL?: string;
+  Heading?: string;
+  RelatedTopics?: Array<{
+    Text?: string;
+    FirstURL?: string;
+    Result?: string;
+  }>;
+}
+
+/**
+ * Bing Web Search API response
+ */
+interface BingWebSearchResponse {
+  web?: {
+    results?: Array<{
+      title: string;
+      url: string;
+      snippet: string;
+      description?: string;
+    }>;
+  };
+  webPages?: {
+    value?: Array<{
+      url: string;
+      name: string;
+      snippet: string;
+    }>;
+  };
+}
+
+/**
+ * Google Custom Search API response
+ */
+interface GoogleCustomSearchResponse {
+  items?: Array<{
+    title: string;
+    link: string;
+    snippet: string;
+  }>;
+}
+
+/**
  * Configuration for cross-reference validation
  */
 export interface CrossReferenceConfig {
@@ -367,7 +413,7 @@ export class CrossReferenceValidator {
         throw new Error(`DuckDuckGo API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as DuckDuckGoInstantAnswer;
       const references: ReferenceSource[] = [];
 
       // Extract instant answer
@@ -443,7 +489,7 @@ export class CrossReferenceValidator {
         throw new Error(`Brave API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as BingWebSearchResponse;
       const references: ReferenceSource[] = [];
 
       if (data.web?.results) {
@@ -451,9 +497,16 @@ export class CrossReferenceValidator {
           references.push({
             url: result.url,
             title: result.title,
-            snippet: result.description,
-            quality: this.calculateQuality(result.title, result.description),
-            supports: this.analyzeSupport(result.description, query, context),
+            snippet: result.description || result.snippet || "",
+            quality: this.calculateQuality(
+              result.title,
+              result.description || result.snippet || ""
+            ),
+            supports: this.analyzeSupport(
+              result.description || result.snippet || "",
+              query,
+              context
+            ),
             confidence: this.calculateConfidence(result),
           });
         }
@@ -505,7 +558,7 @@ export class CrossReferenceValidator {
         throw new Error(`Google API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as GoogleCustomSearchResponse;
       const references: ReferenceSource[] = [];
 
       if (data.items) {
@@ -566,7 +619,7 @@ export class CrossReferenceValidator {
         throw new Error(`Bing API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as BingWebSearchResponse;
       const references: ReferenceSource[] = [];
 
       if (data.webPages?.value) {

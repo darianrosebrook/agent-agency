@@ -12,6 +12,8 @@ import * as os from "os";
 import { ConnectionPoolManager } from "../database/ConnectionPoolManager.js";
 import { circuitBreakerManager } from "../resilience/CircuitBreakerManager";
 
+/// <reference types="node" />
+
 export interface HealthCheck {
   name: string;
   status: "healthy" | "degraded" | "unhealthy";
@@ -282,8 +284,8 @@ export class HealthMonitor extends EventEmitter {
         details: { responseTimeMs: responseTime, statusCode: response.status },
       });
 
-      // Only alert if completely unhealthy (not just degraded)
-      if (status === "unhealthy") {
+      // Alert if degraded (not responding properly)
+      if (status === "degraded") {
         this.createAlert(
           "web-interface",
           "medium",
@@ -295,7 +297,10 @@ export class HealthMonitor extends EventEmitter {
         name: "web-interface",
         status: "unhealthy",
         message: `Web interface check failed: ${error}`,
-        details: { error: error.message },
+        lastChecked: new Date(),
+        details: {
+          error: error instanceof Error ? error.message : String(error),
+        },
       });
 
       this.createAlert(

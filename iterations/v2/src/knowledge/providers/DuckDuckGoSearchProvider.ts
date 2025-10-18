@@ -110,7 +110,7 @@ export class DuckDuckGoSearchProvider extends BaseSearchProvider {
         );
       }
 
-      const data = await response.json() as DuckDuckGoResponse;
+      const data = (await response.json()) as DuckDuckGoResponse;
 
       // Parse and transform results
       const results = this.parseDuckDuckGoResults(data, query);
