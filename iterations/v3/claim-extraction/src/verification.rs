@@ -5,8 +5,9 @@
 
 use crate::types::*;
 use anyhow::Result;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use tokio::time::{timeout, Duration};
 use tracing::debug;
 use uuid::Uuid;
@@ -1032,31 +1033,6 @@ pub struct TaskContext {
     pub dependencies: std::collections::HashMap<String, String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum CouncilVerdict {
-    Accepted {
-        confidence: f64,
-        summary: String,
-    },
-    Rejected {
-        primary_reasons: Vec<String>,
-        summary: String,
-    },
-    NeedsInvestigation {
-        questions: Vec<String>,
-        summary: String,
-    },
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CouncilSubmissionResult {
-    pub task_id: Uuid,
-    pub verdict: CouncilVerdict,
-    pub debate_rounds: u32,
-    pub processing_time_ms: u64,
-    pub submitted_at: DateTime<Utc>,
-    pub completed_at: Option<DateTime<Utc>>,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CouncilEvidence {
