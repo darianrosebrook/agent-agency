@@ -60,7 +60,7 @@ pub struct StorageConfig {
     pub retention_days: u32,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum SigningAlgorithm {
     RS256,
     ES256,

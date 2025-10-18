@@ -9,6 +9,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tracing::{debug, info, warn};
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
 /// Main workspace state manager
 pub struct WorkspaceStateManager {
@@ -650,17 +652,18 @@ impl WorkspaceStateManager {
                     file_states.insert(file_path, file_state);
                 }
                 ChangeType::Renamed => {
-                    // Handle renamed files
-                    if let Some(old_path) = change.old_path {
+                    // Handle renamed files - clone the change to avoid partial move
+                    let change_clone = change.clone();
+                    if let Some(old_path) = change_clone.old_path {
                         // Mark old path as deleted
                         let old_file_state = FileState {
                             path: old_path.clone(),
                             size: 0,
                             content_hash: "deleted".to_string(),
-                            modified_at: DateTime::from_timestamp(change.timestamp as i64, 0).unwrap_or_default(),
+                            modified_at: DateTime::from_timestamp(change_clone.timestamp as i64, 0).unwrap_or_default(),
                             permissions: 0,
                             git_tracked: true,
-                            git_commit: Some(change.commit_hash.clone()),
+                            git_commit: Some(change_clone.commit_hash.clone()),
                         };
                         file_states.insert(old_path, old_file_state);
                     }
@@ -668,7 +671,7 @@ impl WorkspaceStateManager {
                     // Add new path
                     let file_path = change.file_path.clone();
                     let file_state = self.build_file_state_from_change(&change, &repo).await?;
-                    file_states.insert(file_path, file_state);
+                    file_states.insert(file_path.clone(), file_state);
                 }
             }
         }
@@ -750,21 +753,23 @@ impl WorkspaceStateManager {
 
         // Walk the tree to find all files
         tree.walk(git2::TreeWalkMode::PreOrder, |root, entry| {
-            if let Some(path) = entry.to_object(repo).ok().and_then(|obj| obj.as_blob()) {
-                let file_path = PathBuf::from(root).join(entry.name().unwrap_or(""));
-                
-                let change = FileChange {
-                    file_path,
-                    old_path: None,
-                    change_type: ChangeType::Added,
-                    timestamp: commit.time().seconds() as u64,
-                    author: commit.author().name().unwrap_or("unknown").to_string(),
-                    commit_hash: commit.id().to_string(),
-                    size_delta: path.size() as i64,
-                    is_binary: path.is_binary(),
-                };
+            if let Ok(obj) = entry.to_object(repo) {
+                if let Some(blob) = obj.as_blob() {
+                    let file_path = PathBuf::from(root).join(entry.name().unwrap_or(""));
+                    
+                    let change = FileChange {
+                        file_path,
+                        old_path: None,
+                        change_type: ChangeType::Added,
+                        timestamp: commit.time().seconds() as u64,
+                        author: commit.author().name().unwrap_or("unknown").to_string(),
+                        commit_hash: commit.id().to_string(),
+                        size_delta: blob.size() as i64,
+                        is_binary: blob.is_binary(),
+                    };
 
-                changes.push(change);
+                    changes.push(change);
+                }
             }
             git2::TreeWalkResult::Ok
         })?;
@@ -795,8 +800,12 @@ impl WorkspaceStateManager {
             format!("binary_{}", size) // Use size as hash for binary files
         };
 
-        // Get file permissions
-        let permissions = metadata.permissions().mode();
+        // Get file permissions (Unix-style)
+        let permissions = if cfg!(unix) {
+            metadata.permissions().mode()
+        } else {
+            0o644 // Default permissions for non-Unix systems
+        };
 
         Ok(FileState {
             path: change.file_path.clone(),
@@ -822,21 +831,39 @@ impl WorkspaceStateManager {
                 
                 let dir_state = directory_states.entry(dir_path.clone()).or_insert_with(|| DirectoryState {
                     path: dir_path,
-                    exists: true,
                     file_count: 0,
+                    subdirectory_count: 0,
                     total_size: 0,
-                    modified_time: file_state.modified_time,
-                    subdirectories: Vec::new(),
-                    files: Vec::new(),
+                    last_modified: file_state.modified_at,
                 });
 
-                if file_state.exists {
-                    dir_state.file_count += 1;
-                    dir_state.total_size += file_state.size;
-                    dir_state.files.push(file_state.path.clone());
+                dir_state.file_count += 1;
+                dir_state.total_size += file_state.size;
+                if file_state.modified_at > dir_state.last_modified {
+                    dir_state.last_modified = file_state.modified_at;
                 }
             }
         }
+    }
+
+    /// Calculate SHA-256 hash of a file
+    async fn calculate_file_hash(&self, file_path: &Path) -> Result<String, WorkspaceError> {
+        use std::io::Read;
+        use sha2::{Sha256, Digest};
+        
+        let mut file = std::fs::File::open(file_path).map_err(WorkspaceError::from)?;
+        let mut hasher = Sha256::new();
+        let mut buffer = [0; 8192];
+        
+        loop {
+            let bytes_read = file.read(&mut buffer).map_err(WorkspaceError::from)?;
+            if bytes_read == 0 {
+                break;
+            }
+            hasher.update(&buffer[..bytes_read]);
+        }
+        
+        Ok(format!("{:x}", hasher.finalize()))
     }
 }
 

@@ -1,11 +1,23 @@
-//! Integration tests for the Orchestration system
+//! Orchestration integration tests
+//!
+//! Tests the Orchestration system working with intelligent edge case testing
+//! and predictive learning components.
 
 use anyhow::Result;
+use std::sync::Arc;
 use tracing::{debug, info};
+use uuid::Uuid;
 
-use crate::fixtures::{TestDataGenerator, TestFixtures};
-use crate::mocks::{MockDatabase, MockEventEmitter, MockFactory, MockMetricsCollector};
+use crate::fixtures::TestFixtures;
+use crate::mocks::{
+    MockDatabase, MockEventEmitter, MockFactory, MockHttpClient, MockMetricsCollector,
+};
 use crate::test_utils::{TestExecutor, TestResult, DEFAULT_TEST_TIMEOUT};
+
+// Import orchestration and related components
+use orchestration::coordinator::OrchestrationCoordinator;
+use council::intelligent_edge_case_testing::IntelligentEdgeCaseTester;
+use council::predictive_learning_system::PredictiveLearningSystem;
 
 /// Orchestration integration test suite
 pub struct OrchestrationIntegrationTests {
@@ -13,6 +25,7 @@ pub struct OrchestrationIntegrationTests {
     mock_db: MockDatabase,
     mock_events: MockEventEmitter,
     mock_metrics: MockMetricsCollector,
+    mock_http: MockHttpClient,
 }
 
 impl OrchestrationIntegrationTests {
@@ -22,321 +35,546 @@ impl OrchestrationIntegrationTests {
             mock_db: MockFactory::create_database(),
             mock_events: MockFactory::create_event_emitter(),
             mock_metrics: MockFactory::create_metrics_collector(),
+            mock_http: MockFactory::create_http_client(),
         }
     }
 
     /// Run all orchestration integration tests
     pub async fn run_all_tests(&self) -> Result<Vec<TestResult>> {
-        info!("Running Orchestration integration tests");
+        info!("Running orchestration integration tests");
 
         let mut results = Vec::new();
 
-        // Test task routing
-        results.push(
-            self.executor
-                .execute("orchestration_task_routing", self.test_task_routing())
-                .await,
-        );
-
-        // Test worker selection
+        // Test orchestration with edge case testing
         results.push(
             self.executor
                 .execute(
-                    "orchestration_worker_selection",
-                    self.test_worker_selection(),
+                    "orchestration_edge_case_integration",
+                    self.test_orchestration_edge_case_integration(),
                 )
                 .await,
         );
 
-        // Test load balancing
+        // Test orchestration with predictive learning
         results.push(
             self.executor
-                .execute("orchestration_load_balancing", self.test_load_balancing())
+                .execute(
+                    "orchestration_predictive_learning_integration",
+                    self.test_orchestration_predictive_learning_integration(),
+                )
                 .await,
         );
 
-        // Test CAWS compliance checking
+        // Test orchestration load balancing
         results.push(
             self.executor
-                .execute("orchestration_caws_compliance", self.test_caws_compliance())
+                .execute(
+                    "orchestration_load_balancing",
+                    self.test_orchestration_load_balancing(),
+                )
                 .await,
         );
 
-        // Test task execution coordination
+        // Test orchestration error recovery
         results.push(
             self.executor
-                .execute("orchestration_task_execution", self.test_task_execution())
+                .execute(
+                    "orchestration_error_recovery",
+                    self.test_orchestration_error_recovery(),
+                )
                 .await,
         );
 
-        // Test error handling and recovery
+        // Test orchestration performance optimization
         results.push(
             self.executor
-                .execute("orchestration_error_handling", self.test_error_handling())
+                .execute(
+                    "orchestration_performance_optimization",
+                    self.test_orchestration_performance_optimization(),
+                )
                 .await,
         );
 
         Ok(results)
     }
 
-    /// Test task routing functionality
-    async fn test_task_routing(&self) -> Result<()> {
-        debug!("Testing orchestration task routing");
+    /// Test orchestration integration with intelligent edge case testing
+    async fn test_orchestration_edge_case_integration(&self) -> Result<()> {
+        debug!("Testing orchestration with intelligent edge case testing");
 
-        // Setup test data
-        let orchestration_request = TestFixtures::orchestration_request();
-        let working_spec = TestFixtures::working_spec();
+        // Initialize orchestration coordinator
+        let coordinator = Arc::new(OrchestrationCoordinator::new().await?);
 
-        // TODO: Initialize orchestration system
-        // let orchestrator = Orchestrator::new()
-        //     .with_database(Arc::new(self.mock_db.clone()))
-        //     .with_events(Arc::new(self.mock_events.clone()))
-        //     .with_metrics(Arc::new(self.mock_metrics.clone()))
-        //     .build()?;
+        // Initialize edge case tester
+        let edge_case_tester = Arc::new(IntelligentEdgeCaseTester::new());
 
-        // TODO: Test task routing
-        // let routing_result = orchestrator.route_task(&orchestration_request).await?;
-        // assert!(routing_result.worker_id.is_some());
-        // assert!(routing_result.routing_confidence > 0.0);
+        // Create a test task specification
+        let task_id = Uuid::new_v4();
+        let task_spec = create_test_task_spec(task_id);
 
-        // Verify routing events
-        let events = self.mock_events.get_events().await;
-        // assert!(events.iter().any(|e| e.event_type == "task_routed"));
+        info!("Created test task: {}", task_spec.title);
 
-        info!("✅ Task routing test completed");
+        // Submit task to orchestration
+        let task_handle = coordinator.submit_task(task_spec.clone()).await?;
+        info!("Submitted task to orchestration, handle: {:?}", task_handle);
+
+        // Generate edge cases for the task
+        let edge_cases = edge_case_tester
+            .generate_edge_cases(&task_spec, 10)
+            .await?;
+        info!("Generated {} edge cases for task", edge_cases.len());
+
+        // Test edge case execution through orchestration
+        for edge_case in edge_cases.iter().take(3) {
+            // Create a task spec for each edge case
+            let edge_task_id = Uuid::new_v4();
+            let mut edge_task_spec = task_spec.clone();
+            edge_task_spec.id = edge_task_id;
+            edge_task_spec.title = format!("Edge Case: {}", edge_case.description);
+            edge_task_spec.description = edge_case.description.clone();
+
+            // Submit edge case task
+            let edge_handle = coordinator.submit_task(edge_task_spec).await?;
+            info!("Submitted edge case task: {}", edge_case.description);
+
+            // Wait for completion (with timeout)
+            let result = coordinator.wait_for_task(edge_handle, std::time::Duration::from_secs(30)).await?;
+            info!("Edge case task completed with result: {:?}", result.is_some());
+        }
+
+        // Analyze edge case testing results
+        let analysis = edge_case_tester
+            .analyze_edge_case_effectiveness(&task_spec, &edge_cases)
+            .await?;
+        info!("Edge case analysis: coverage={:.2}, effectiveness={:.2}",
+            analysis.coverage_score, analysis.effectiveness_score);
+
+        assert!(analysis.coverage_score > 0.0, "Should have some edge case coverage");
+        assert!(analysis.effectiveness_score > 0.0, "Should have some effectiveness");
+
+        info!("✅ Orchestration edge case integration successful");
+
         Ok(())
     }
 
-    /// Test worker selection algorithm
-    async fn test_worker_selection(&self) -> Result<()> {
-        debug!("Testing orchestration worker selection");
+    /// Test orchestration integration with predictive learning
+    async fn test_orchestration_predictive_learning_integration(&self) -> Result<()> {
+        debug!("Testing orchestration with predictive learning");
 
-        // Setup test data with multiple workers
-        let workers = vec![
-            serde_json::json!({
-                "worker_id": "worker-001",
-                "capabilities": ["rust", "testing", "authentication"],
-                "current_load": 0.3,
-                "performance_score": 0.9
-            }),
-            serde_json::json!({
-                "worker_id": "worker-002",
-                "capabilities": ["rust", "testing"],
-                "current_load": 0.7,
-                "performance_score": 0.8
-            }),
-            serde_json::json!({
-                "worker_id": "worker-003",
-                "capabilities": ["rust", "authentication", "security"],
-                "current_load": 0.1,
-                "performance_score": 0.95
-            }),
-        ];
+        // Initialize orchestration coordinator
+        let coordinator = Arc::new(OrchestrationCoordinator::new().await?);
 
-        let task_requirements = serde_json::json!({
-            "required_capabilities": ["rust", "authentication"],
-            "preferred_capabilities": ["testing", "security"],
-            "max_load_threshold": 0.8
-        });
+        // Initialize predictive learning system
+        let predictive_system = Arc::new(PredictiveLearningSystem::new());
 
-        // TODO: Initialize worker selector
-        // let worker_selector = WorkerSelector::new()
-        //     .with_database(Arc::new(self.mock_db.clone()))
-        //     .with_events(Arc::new(self.mock_events.clone()))
-        //     .build()?;
+        // Create multiple test tasks
+        let mut task_specs = Vec::new();
+        for i in 0..5 {
+            let task_id = Uuid::new_v4();
+            let mut task_spec = create_test_task_spec(task_id);
+            task_spec.title = format!("Predictive Test Task {}", i);
+            task_spec.description = format!("Test task {} for predictive learning", i);
+            task_specs.push(task_spec);
+        }
 
-        // TODO: Test worker selection
-        // let selected_worker = worker_selector.select_worker(&workers, &task_requirements).await?;
-        // assert_eq!(selected_worker.worker_id, "worker-003"); // Should select best match
+        info!("Created {} test tasks for predictive learning", task_specs.len());
 
-        info!("✅ Worker selection test completed");
+        // Submit tasks and collect performance data
+        let mut task_handles = Vec::new();
+        for task_spec in &task_specs {
+            let handle = coordinator.submit_task(task_spec.clone()).await?;
+            task_handles.push((task_spec.clone(), handle));
+        }
+
+        info!("Submitted all tasks to orchestration");
+
+        // Wait for all tasks to complete and collect results
+        let mut completed_tasks = Vec::new();
+        for (task_spec, handle) in task_handles {
+            let result = coordinator.wait_for_task(handle, std::time::Duration::from_secs(30)).await?;
+            if let Some(result) = result {
+                completed_tasks.push((task_spec, result));
+            }
+        }
+
+        info!("Completed {} tasks successfully", completed_tasks.len());
+
+        // Train predictive model with task performance data
+        for (task_spec, result) in &completed_tasks {
+            let task_outcome = create_task_outcome_from_result(task_spec, result);
+            predictive_system.train_with_outcome(&task_outcome).await?;
+        }
+
+        info!("Trained predictive model with task outcomes");
+
+        // Test predictions for new tasks
+        let new_task_id = Uuid::new_v4();
+        let new_task_spec = create_test_task_spec(new_task_id);
+
+        // Get performance prediction
+        let performance_prediction = predictive_system
+            .predict_performance(&new_task_spec)
+            .await?;
+        info!("Performance prediction for new task: {:?}", performance_prediction);
+
+        // Get resource prediction
+        let resource_prediction = predictive_system
+            .predict_resource_needs(&new_task_spec)
+            .await?;
+        info!("Resource prediction for new task: {:?}", resource_prediction);
+
+        // Get outcome prediction
+        let outcome_prediction = predictive_system
+            .predict_outcome(&new_task_spec)
+            .await?;
+        info!("Outcome prediction for new task: {:?}", outcome_prediction);
+
+        // Verify predictions are reasonable
+        assert!(performance_prediction.estimated_time_ms > 0, "Should predict positive execution time");
+        assert!(resource_prediction.cpu_cores >= 0.0, "Should predict non-negative CPU usage");
+        assert!(outcome_prediction.success_probability >= 0.0 && outcome_prediction.success_probability <= 1.0,
+            "Success probability should be between 0 and 1");
+
+        info!("✅ Orchestration predictive learning integration successful");
+
         Ok(())
     }
 
-    /// Test load balancing across workers
-    async fn test_load_balancing(&self) -> Result<()> {
+    /// Test orchestration load balancing capabilities
+    async fn test_orchestration_load_balancing(&self) -> Result<()> {
         debug!("Testing orchestration load balancing");
 
-        // Setup test data with varying worker loads
-        let workers = vec![
-            serde_json::json!({
-                "worker_id": "worker-001",
-                "current_load": 0.9,
-                "max_capacity": 1.0
-            }),
-            serde_json::json!({
-                "worker_id": "worker-002",
-                "current_load": 0.3,
-                "max_capacity": 1.0
-            }),
-            serde_json::json!({
-                "worker_id": "worker-003",
-                "current_load": 0.6,
-                "max_capacity": 1.0
-            }),
+        // Initialize orchestration coordinator
+        let coordinator = Arc::new(OrchestrationCoordinator::new().await?);
+
+        // Create a burst of tasks to test load balancing
+        let num_tasks = 20;
+        let mut task_handles = Vec::new();
+
+        info!("Creating {} concurrent tasks for load balancing test", num_tasks);
+
+        // Submit tasks concurrently
+        for i in 0..num_tasks {
+            let task_id = Uuid::new_v4();
+            let mut task_spec = create_test_task_spec(task_id);
+            task_spec.title = format!("Load Test Task {}", i);
+            task_spec.description = format!("Load balancing test task {}", i);
+
+            let coordinator_clone = coordinator.clone();
+            let handle_future = tokio::spawn(async move {
+                coordinator_clone.submit_task(task_spec).await
+            });
+
+            task_handles.push(handle_future);
+        }
+
+        // Wait for all submissions to complete
+        let mut submitted_handles = Vec::new();
+        for handle_future in task_handles {
+            let handle_result = handle_future.await??;
+            submitted_handles.push(handle_result);
+        }
+
+        info!("Successfully submitted {} tasks concurrently", submitted_handles.len());
+
+        // Monitor task completion with load balancing
+        let mut completed_count = 0;
+        let mut start_time = std::time::Instant::now();
+
+        // Wait for tasks to complete, but with a reasonable timeout
+        while completed_count < submitted_handles.len() && start_time.elapsed() < std::time::Duration::from_secs(60) {
+            for handle in &submitted_handles {
+                if let Ok(Some(_)) = coordinator.wait_for_task(*handle, std::time::Duration::from_millis(100)).await {
+                    completed_count += 1;
+                }
+            }
+
+            if completed_count >= submitted_handles.len() {
+                break;
+            }
+
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        }
+
+        let total_time = start_time.elapsed();
+        info!("Load balancing test completed: {}/{} tasks in {:?}",
+            completed_count, submitted_handles.len(), total_time);
+
+        // Verify load balancing effectiveness
+        assert!(completed_count > 0, "Should complete at least some tasks");
+        assert!(total_time < std::time::Duration::from_secs(45),
+            "Load balancing should complete tasks within reasonable time");
+
+        // Calculate throughput
+        let throughput = completed_count as f64 / total_time.as_secs_f64();
+        info!("Load balancing throughput: {:.2} tasks/second", throughput);
+
+        assert!(throughput > 0.1, "Should have reasonable throughput under load");
+
+        info!("✅ Orchestration load balancing successful");
+
+        Ok(())
+    }
+
+    /// Test orchestration error recovery capabilities
+    async fn test_orchestration_error_recovery(&self) -> Result<()> {
+        debug!("Testing orchestration error recovery");
+
+        // Initialize orchestration coordinator
+        let coordinator = Arc::new(OrchestrationCoordinator::new().await?);
+
+        // Create tasks that will likely fail or timeout
+        let failing_task_specs = vec![
+            create_failing_task_spec("Task with impossible requirements"),
+            create_failing_task_spec("Task with invalid dependencies"),
+            create_failing_task_spec("Task with resource conflicts"),
         ];
 
-        let tasks = TestDataGenerator::generate_working_specs(10);
+        info!("Created {} failing tasks for error recovery test", failing_task_specs.len());
 
-        // TODO: Initialize load balancer
-        // let load_balancer = LoadBalancer::new()
-        //     .with_database(Arc::new(self.mock_db.clone()))
-        //     .with_events(Arc::new(self.mock_events.clone()))
-        //     .build()?;
+        // Submit failing tasks
+        let mut task_handles = Vec::new();
+        for task_spec in failing_task_specs {
+            let handle = coordinator.submit_task(task_spec).await?;
+            task_handles.push(handle);
+        }
 
-        // TODO: Test load balancing
-        // let balanced_assignments = load_balancer.balance_load(&workers, &tasks).await?;
-        // assert_eq!(balanced_assignments.len(), 10);
+        info!("Submitted failing tasks to orchestration");
 
-        // Verify load distribution is balanced
-        // let final_loads = load_balancer.calculate_final_loads(&workers, &balanced_assignments).await?;
-        // let max_load = final_loads.values().fold(0.0, |acc, &load| acc.max(load));
-        // let min_load = final_loads.values().fold(1.0, |acc, &load| acc.min(load));
-        // assert!(max_load - min_load < 0.3); // Load should be reasonably balanced
+        // Monitor error recovery
+        let mut failed_count = 0;
+        let mut recovered_count = 0;
 
-        info!("✅ Load balancing test completed");
-        Ok(())
-    }
+        for handle in task_handles {
+            // Wait for task completion or failure
+            let result = coordinator.wait_for_task(handle, std::time::Duration::from_secs(10)).await;
 
-    /// Test CAWS compliance checking
-    async fn test_caws_compliance(&self) -> Result<()> {
-        debug!("Testing orchestration CAWS compliance");
-
-        // Setup test data
-        let working_spec = TestFixtures::working_spec();
-        let worker_output = TestFixtures::worker_output();
-
-        // TODO: Initialize CAWS compliance checker
-        // let caws_checker = CawsComplianceChecker::new()
-        //     .with_database(Arc::new(self.mock_db.clone()))
-        //     .with_events(Arc::new(self.mock_events.clone()))
-        //     .build()?;
-
-        // TODO: Test CAWS compliance checking
-        // let compliance_result = caws_checker.check_compliance(&working_spec, &worker_output).await?;
-        // assert!(compliance_result.compliant);
-        // assert!(compliance_result.compliance_score >= 0.0);
-        // assert!(compliance_result.compliance_score <= 1.0);
-
-        // Verify compliance events
-        let events = self.mock_events.get_events().await;
-        // assert!(events.iter().any(|e| e.event_type == "caws_compliance_checked"));
-
-        info!("✅ CAWS compliance test completed");
-        Ok(())
-    }
-
-    /// Test task execution coordination
-    async fn test_task_execution(&self) -> Result<()> {
-        debug!("Testing orchestration task execution");
-
-        // Setup test data
-        let orchestration_request = TestFixtures::orchestration_request();
-        let working_spec = TestFixtures::working_spec();
-
-        // TODO: Initialize task executor
-        // let task_executor = TaskExecutor::new()
-        //     .with_database(Arc::new(self.mock_db.clone()))
-        //     .with_events(Arc::new(self.mock_events.clone()))
-        //     .with_metrics(Arc::new(self.mock_metrics.clone()))
-        //     .build()?;
-
-        // TODO: Test task execution
-        // let execution_result = task_executor.execute_task(&orchestration_request, &working_spec).await?;
-        // assert!(execution_result.success);
-        // assert!(!execution_result.task_id.is_empty());
-
-        // Verify execution events
-        let events = self.mock_events.get_events().await;
-        // assert!(events.iter().any(|e| e.event_type == "task_execution_started"));
-        // assert!(events.iter().any(|e| e.event_type == "task_execution_completed"));
-
-        // Verify execution metrics
-        let metrics = self.mock_metrics.get_all_metrics().await;
-        // assert!(metrics.contains_key("task_execution_time_ms"));
-
-        info!("✅ Task execution test completed");
-        Ok(())
-    }
-
-    /// Test error handling and recovery
-    async fn test_error_handling(&self) -> Result<()> {
-        debug!("Testing orchestration error handling");
-
-        // Setup test data with intentional errors
-        let invalid_request = serde_json::json!({
-            "request_id": "invalid-request",
-            "task_spec": {
-                "id": "INVALID-001",
-                "title": "", // Invalid: empty title
-            },
-            "worker_preferences": {
-                "max_workers": -1, // Invalid: negative value
+            match result {
+                Ok(Some(_)) => {
+                    info!("Task completed successfully despite being designed to fail");
+                }
+                Ok(None) => {
+                    failed_count += 1;
+                    info!("Task failed as expected");
+                }
+                Err(e) => {
+                    // Check if orchestration recovered from the error
+                    if e.to_string().contains("recovered") || e.to_string().contains("retry") {
+                        recovered_count += 1;
+                        info!("Orchestration recovered from error: {}", e);
+                    } else {
+                        failed_count += 1;
+                        info!("Task failed with unrecovered error: {}", e);
+                    }
+                }
             }
-        });
+        }
 
-        // TODO: Initialize orchestration system
-        // let orchestrator = Orchestrator::new()
-        //     .with_database(Arc::new(self.mock_db.clone()))
-        //     .with_events(Arc::new(self.mock_events.clone()))
-        //     .build()?;
+        info!("Error recovery results: {} failed, {} recovered", failed_count, recovered_count);
 
-        // TODO: Test error handling
-        // let result = orchestrator.route_task(&invalid_request).await;
-        // assert!(result.is_err());
+        // Test system stability after errors
+        let healthy_task_id = Uuid::new_v4();
+        let healthy_task_spec = create_test_task_spec(healthy_task_id);
 
-        // Verify error events were emitted
-        let events = self.mock_events.get_events().await;
-        // assert!(events.iter().any(|e| e.event_type == "orchestration_error"));
+        let healthy_handle = coordinator.submit_task(healthy_task_spec).await?;
+        let healthy_result = coordinator.wait_for_task(healthy_handle, std::time::Duration::from_secs(15)).await?;
 
-        // Test recovery mechanisms
-        // let recovery_result = orchestrator.recover_from_error(&invalid_request).await?;
-        // assert!(recovery_result.recovered);
+        assert!(healthy_result.is_some(), "System should remain functional after error recovery");
 
-        info!("✅ Error handling test completed");
+        info!("✅ Orchestration error recovery successful - system remained stable");
+
+        Ok(())
+    }
+
+    /// Test orchestration performance optimization
+    async fn test_orchestration_performance_optimization(&self) -> Result<()> {
+        debug!("Testing orchestration performance optimization");
+
+        // Initialize orchestration coordinator
+        let coordinator = Arc::new(OrchestrationCoordinator::new().await?);
+
+        // Initialize predictive learning for optimization
+        let predictive_system = Arc::new(PredictiveLearningSystem::new());
+
+        // Create tasks with different performance characteristics
+        let task_specs = vec![
+            create_optimized_task_spec("CPU-intensive task", "high", "cpu"),
+            create_optimized_task_spec("Memory-intensive task", "high", "memory"),
+            create_optimized_task_spec("I/O-intensive task", "medium", "io"),
+            create_optimized_task_spec("Network-intensive task", "low", "network"),
+        ];
+
+        info!("Created {} optimized tasks for performance testing", task_specs.len());
+
+        // Submit tasks and measure performance
+        let mut task_results = Vec::new();
+        let start_time = std::time::Instant::now();
+
+        for task_spec in task_specs {
+            let handle = coordinator.submit_task(task_spec.clone()).await?;
+            let result = coordinator.wait_for_task(handle, std::time::Duration::from_secs(20)).await?;
+            let execution_time = start_time.elapsed();
+
+            if let Some(result) = result {
+                let task_outcome = create_task_outcome_from_result(&task_spec, &result);
+                task_results.push((task_spec, task_outcome, execution_time));
+            }
+        }
+
+        let total_time = start_time.elapsed();
+        info!("Performance optimization test completed in {:?}", total_time);
+
+        // Analyze performance patterns
+        for (task_spec, outcome, exec_time) in &task_results {
+            info!("Task '{}' completed in {:?}: success={}",
+                task_spec.title, exec_time, outcome.success);
+        }
+
+        // Train predictive model with performance data
+        for (_, outcome, _) in &task_results {
+            predictive_system.train_with_outcome(outcome).await?;
+        }
+
+        // Test optimization recommendations
+        let optimization_recommendations = predictive_system
+            .generate_optimization_recommendations()
+            .await?;
+        info!("Generated {} optimization recommendations", optimization_recommendations.len());
+
+        // Verify optimization effectiveness
+        assert!(!task_results.is_empty(), "Should have completed some tasks");
+        assert!(total_time < std::time::Duration::from_secs(30),
+            "Optimized orchestration should complete tasks efficiently");
+
+        // Calculate average success rate
+        let success_count = task_results.iter().filter(|(_, outcome, _)| outcome.success).count();
+        let success_rate = success_count as f64 / task_results.len() as f64;
+
+        info!("Performance optimization success rate: {:.2}", success_rate);
+        assert!(success_rate >= 0.5, "Should maintain reasonable success rate under optimization");
+
+        info!("✅ Orchestration performance optimization successful");
+
         Ok(())
     }
 }
 
-impl Default for OrchestrationIntegrationTests {
-    fn default() -> Self {
-        Self::new()
+/// Helper function to create a test task specification
+fn create_test_task_spec(task_id: Uuid) -> orchestration::models::TaskSpec {
+    use orchestration::models::{TaskSpec, TaskPriority, ResourceRequirements};
+
+    TaskSpec {
+        id: task_id,
+        title: "Integration Test Task".to_string(),
+        description: "A test task for integration testing".to_string(),
+        priority: TaskPriority::Medium,
+        resource_requirements: ResourceRequirements {
+            cpu_cores: 1.0,
+            memory_mb: 512,
+            disk_mb: 100,
+            network_mbps: 10,
+        },
+        timeout_seconds: 30,
+        dependencies: vec![],
+        metadata: std::collections::HashMap::new(),
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// Helper function to create a failing task specification
+fn create_failing_task_spec(description: &str) -> orchestration::models::TaskSpec {
+    use orchestration::models::{TaskSpec, TaskPriority, ResourceRequirements};
 
-    #[tokio::test]
-    async fn test_orchestration_integration_tests_creation() {
-        let tests = OrchestrationIntegrationTests::new();
-        assert_eq!(tests.mock_db.count().await, 0);
-        assert_eq!(tests.mock_events.event_count().await, 0);
+    TaskSpec {
+        id: Uuid::new_v4(),
+        title: format!("Failing Task: {}", description),
+        description: description.to_string(),
+        priority: TaskPriority::High,
+        resource_requirements: ResourceRequirements {
+            cpu_cores: 100.0, // Impossible requirement
+            memory_mb: 1000000, // Impossible requirement
+            disk_mb: 100000,
+            network_mbps: 10000,
+        },
+        timeout_seconds: 5, // Very short timeout
+        dependencies: vec![],
+        metadata: std::collections::HashMap::new(),
     }
+}
 
-    #[tokio::test]
-    async fn test_mock_metrics_setup() {
-        let tests = OrchestrationIntegrationTests::new();
+/// Helper function to create an optimized task specification
+fn create_optimized_task_spec(title: &str, priority: &str, resource_focus: &str) -> orchestration::models::TaskSpec {
+    use orchestration::models::{TaskSpec, TaskPriority, ResourceRequirements};
 
-        tests
-            .mock_metrics
-            .record_metric("test_metric".to_string(), 42.0)
-            .await
-            .unwrap();
-        tests
-            .mock_metrics
-            .increment_counter("test_counter".to_string())
-            .await
-            .unwrap();
+    let priority = match priority {
+        "high" => TaskPriority::High,
+        "medium" => TaskPriority::Medium,
+        "low" => TaskPriority::Low,
+        _ => TaskPriority::Medium,
+    };
 
-        assert_eq!(
-            tests.mock_metrics.get_metric("test_metric").await,
-            Some(42.0)
-        );
-        assert_eq!(
-            tests.mock_metrics.get_counter("test_counter").await,
-            Some(1)
-        );
+    let resource_reqs = match resource_focus {
+        "cpu" => ResourceRequirements {
+            cpu_cores: 4.0,
+            memory_mb: 1024,
+            disk_mb: 500,
+            network_mbps: 50,
+        },
+        "memory" => ResourceRequirements {
+            cpu_cores: 2.0,
+            memory_mb: 4096,
+            disk_mb: 1000,
+            network_mbps: 100,
+        },
+        "io" => ResourceRequirements {
+            cpu_cores: 1.0,
+            memory_mb: 512,
+            disk_mb: 2000,
+            network_mbps: 25,
+        },
+        "network" => ResourceRequirements {
+            cpu_cores: 1.0,
+            memory_mb: 256,
+            disk_mb: 100,
+            network_mbps: 500,
+        },
+        _ => ResourceRequirements {
+            cpu_cores: 1.0,
+            memory_mb: 512,
+            disk_mb: 100,
+            network_mbps: 10,
+        },
+    };
+
+    TaskSpec {
+        id: Uuid::new_v4(),
+        title: title.to_string(),
+        description: format!("Optimized task for {} performance", resource_focus),
+        priority,
+        resource_requirements: resource_reqs,
+        timeout_seconds: 60,
+        dependencies: vec![],
+        metadata: std::collections::HashMap::new(),
+    }
+}
+
+/// Helper function to create a task outcome from a result
+fn create_task_outcome_from_result(
+    task_spec: &orchestration::models::TaskSpec,
+    result: &orchestration::models::TaskResult,
+) -> council::predictive_learning_system::TaskOutcome {
+    use council::predictive_learning_system::TaskOutcome;
+
+    TaskOutcome {
+        task_id: task_spec.id,
+        success: result.success,
+        execution_time_ms: result.execution_time_ms,
+        resource_usage: council::predictive_learning_system::ResourceUsage {
+            cpu_cores_used: task_spec.resource_requirements.cpu_cores,
+            memory_mb_used: task_spec.resource_requirements.memory_mb as f64,
+            network_mbps_used: task_spec.resource_requirements.network_mbps as f64,
+        },
+        error_message: result.error_message.clone(),
+        retry_count: 0,
+        timestamp: chrono::Utc::now(),
     }
 }

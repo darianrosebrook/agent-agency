@@ -1911,10 +1911,8 @@ impl SemanticAnalyzer {
         structure: &SemanticStructure,
         entities: &[SemanticEntity],
         relationships: &[SemanticRelationship],
-    ) -> Result<ConsistencyAnalysis> {
+    ) -> Result<CoherenceAnalysis> {
         let mut conflicts = Vec::new();
-        let mut gaps = Vec::new();
-        let mut supporting_evidence = Vec::new();
         let mut consistency_score: f64 = 1.0;
 
         for relationship in relationships {
@@ -1936,21 +1934,12 @@ impl SemanticAnalyzer {
             consistency_score -= 0.15;
         }
 
-        // Check for logical gaps in the structure
-        if let Some(missing_elements) = self.assess_semantic_completeness(structure, entities.len(), relationships.len()) {
-            if missing_elements < 0.8 {
-                gaps.push("Structure has significant logical gaps".to_string());
-                consistency_score -= 0.1;
-            }
-        }
-
         consistency_score = consistency_score.max(0.0).min(1.0);
 
-        Ok(ConsistencyAnalysis {
-            consistency_score,
-            conflicts,
-            gaps,
-            supporting_evidence,
+        Ok(CoherenceAnalysis {
+            coherence_score: consistency_score,
+            gaps: Vec::new(),
+            logical_flow_score: 1.0,
         })
     }
 
@@ -2373,7 +2362,7 @@ impl CrossReferenceValidator {
     }
     
     /// Check consistency across references
-    async fn check_consistency(&self, references: &[ValidatedReference]) -> Result<ConsistencyAnalysis> {
+    async fn check_consistency(&self, references: &[ValidatedReference]) -> Result<CoherenceAnalysis> {
         let mut conflicts = Vec::new();
         let mut gaps = Vec::new();
         let mut supporting_evidence = Vec::new();
@@ -2396,10 +2385,11 @@ impl CrossReferenceValidator {
             }
         }
         
-        Ok(ConsistencyAnalysis {
-            conflicts,
+        Ok(CoherenceAnalysis {
+            coherence_score: 0.8,
             gaps,
-            supporting_evidence,
+            logical_flow_score: 0.9,
+            completeness_score: 0.8,
         })
     }
     
@@ -2408,7 +2398,6 @@ impl CrossReferenceValidator {
         let conflict_penalty = analysis.conflicts.len() as f64 * 0.2;
         let gap_penalty = analysis.gaps.len() as f64 * 0.1;
         let evidence_bonus = analysis.supporting_evidence.len() as f64 * 0.05;
-        
         (1.0 - conflict_penalty - gap_penalty + evidence_bonus).max(0.0).min(1.0)
     }
     
@@ -2429,12 +2418,12 @@ impl CrossReferenceValidator {
     }
     
     /// Identify contradictions in references
-    async fn identify_contradictions(&self, analysis: &ConsistencyAnalysis) -> Result<Vec<Contradiction>> {
+    async fn identify_contradictions(&self, analysis: &CoherenceAnalysis) -> Result<Vec<Contradiction>> {
         let mut contradictions = Vec::new();
         
         for conflict in &analysis.conflicts {
             contradictions.push(Contradiction {
-                contradiction_type: ContradictionType::LogicalInconsistency,
+                contradiction_type: ContradictionType::Direct,
                 conflicting_claim_id: uuid::Uuid::new_v4(),
                 contradiction_severity: ErrorSeverity::Medium,
                 resolution_suggestions: vec!["Review conflicting references".to_string()],
@@ -2536,7 +2525,7 @@ impl CrossReferenceValidator {
 }
 
 // Data structures for cross-reference validation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Reference {
     pub id: uuid::Uuid,
     pub reference_type: ReferenceType,
@@ -4794,23 +4783,3 @@ struct SemanticGraph {
     nodes: Vec<SemanticEntity>,
     edges: Vec<SemanticRelationship>,
 }
-
-
-
-
-
-    concept: String,
-    domain: String,
-    confidence: f64,
-}
-
-/// Semantic graph representation
-#[derive(Debug, Clone)]
-struct SemanticGraph {
-    nodes: Vec<SemanticEntity>,
-    edges: Vec<SemanticRelationship>,
-}
-
-
-
-

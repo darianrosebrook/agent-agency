@@ -445,6 +445,24 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_orchestration_integration() {
+        init_test_logging();
+        let tests = OrchestrationIntegrationTests::new();
+        let results = tests.run_all_tests().await.unwrap();
+        assert!(
+            !results.is_empty(),
+            "Orchestration integration tests should produce results"
+        );
+        for result in results {
+            assert!(
+                result.success,
+                "Orchestration test '{}' failed: {:?}",
+                result.test_name, result.error_message
+            );
+        }
+    }
+
+    #[tokio::test]
     async fn test_research_integration() {
         init_test_logging();
         let tests = ResearchIntegrationTests::new();
@@ -553,12 +571,12 @@ mod tests {
                 DatabaseIntegrationTests::new().run_all_tests().await,
             ),
             (
-                "Research",
-                ResearchIntegrationTests::new().run_all_tests().await,
-            ),
-            (
                 "Orchestration",
                 OrchestrationIntegrationTests::new().run_all_tests().await,
+            ),
+            (
+                "Research",
+                ResearchIntegrationTests::new().run_all_tests().await,
             ),
             (
                 "Cross Component",
