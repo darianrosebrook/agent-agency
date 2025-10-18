@@ -1968,11 +1968,27 @@ impl SourceValidator {
     /// Validate cryptographic aspects with proper signature verification
     async fn validate_cryptography(&self, source: &str) -> Result<bool> {
         // Verify digital signatures and cryptographic integrity
-        // In a real implementation, this would:
-        // 1. Extract and verify digital signatures
-        // 2. Validate certificate chains
-        // 3. Check timestamps and expiration
-        // 4. Perform non-repudiation checks
+        // TODO: Implement cryptographic validation with the following requirements:
+        // 1. Digital signature verification: Extract and verify digital signatures
+        //    - Extract digital signatures from source content and metadata
+        //    - Verify digital signature authenticity and integrity
+        //    - Handle signature validation errors and edge cases
+        //    - Support multiple signature algorithms and formats
+        // 2. Certificate chain validation: Validate certificate chains and trust
+        //    - Validate certificate chains and trust relationships
+        //    - Handle certificate validation errors and edge cases
+        //    - Implement certificate chain verification and validation
+        //    - Support multiple certificate formats and standards
+        // 3. Timestamp and expiration: Check timestamps and expiration validation
+        //    - Check timestamps for validity and expiration
+        //    - Handle timestamp validation errors and edge cases
+        //    - Implement timestamp verification and validation
+        //    - Support multiple timestamp formats and standards
+        // 4. Non-repudiation checks: Perform non-repudiation validation and verification
+        //    - Perform non-repudiation checks and validation
+        //    - Handle non-repudiation validation errors and edge cases
+        //    - Implement non-repudiation verification and validation
+        //    - Support multiple non-repudiation mechanisms and protocols
 
         // Check if source has been tampered with (basic integrity check)
         let expected_length_range = 3..=100;
@@ -2020,11 +2036,27 @@ impl SourceValidator {
     /// Validate against trusted registries with database-backed validation
     async fn validate_registry(&self, source: &str) -> Result<bool> {
         // Query trusted registries for source validation
-        // In a real implementation, this would:
-        // 1. Query database for trusted source registries
-        // 2. Check certificate revocation lists
-        // 3. Validate against real-time trust scores
-        // 4. Cross-reference with multiple trusted registries
+        // TODO: Implement registry validation with the following requirements:
+        // 1. Database integration: Query database for trusted source registries
+        //    - Query database for trusted source registry information
+        //    - Handle database query errors and edge cases
+        //    - Implement database query optimization and performance
+        //    - Support multiple database backends and configurations
+        // 2. Certificate revocation: Check certificate revocation lists and status
+        //    - Check certificate revocation lists and status information
+        //    - Handle certificate revocation errors and edge cases
+        //    - Implement certificate revocation verification and validation
+        //    - Support multiple certificate revocation mechanisms and protocols
+        // 3. Real-time trust scores: Validate against real-time trust scores
+        //    - Validate against real-time trust scores and metrics
+        //    - Handle trust score validation errors and edge cases
+        //    - Implement trust score verification and validation
+        //    - Support multiple trust score providers and algorithms
+        // 4. Cross-referencing: Cross-reference with multiple trusted registries
+        //    - Cross-reference with multiple trusted registry sources
+        //    - Handle cross-referencing errors and edge cases
+        //    - Implement cross-referencing verification and validation
+        //    - Support multiple registry formats and standards
 
         let source_lower = source.to_lowercase();
 

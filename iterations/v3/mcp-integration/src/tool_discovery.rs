@@ -325,7 +325,27 @@ impl ToolDiscovery {
         use tokio::time::timeout;
 
         // Simple health check - try to connect to the endpoint
-        // In a real implementation, this might make an actual API call
+        // TODO: Implement comprehensive health check API calls with the following requirements:
+        // 1. API endpoint validation: Implement proper API endpoint health checking
+        //    - Make actual API calls to validate endpoint functionality
+        //    - Handle different API response formats and status codes
+        //    - Implement proper timeout handling and retry mechanisms
+        //    - Support authentication and authorization for protected endpoints
+        // 2. Health check metrics: Implement comprehensive health check metrics
+        //    - Collect response time and availability metrics
+        //    - Track health check success/failure rates and trends
+        //    - Monitor endpoint performance and reliability
+        //    - Implement health check result caching and optimization
+        // 3. Error handling: Implement robust error handling for health checks
+        //    - Handle network errors, timeouts, and connection failures
+        //    - Provide meaningful error messages and recovery options
+        //    - Implement proper error classification and handling
+        //    - Support graceful degradation and fallback mechanisms
+        // 4. Performance optimization: Optimize health check performance
+        //    - Implement efficient health check scheduling and batching
+        //    - Minimize health check overhead and resource usage
+        //    - Support concurrent health checks with proper resource management
+        //    - Implement health check result caching and optimization strategies
         let endpoint = &tool.endpoint;
 
         // For HTTP endpoints, try a HEAD request

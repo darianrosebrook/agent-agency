@@ -716,7 +716,11 @@ impl WorkspaceStateManager {
 
                 let change = match delta.status() {
                     git2::Delta::Added => {
-                        let content = self.get_content_from_git_tree(repo, &to_commit.tree()?, &new_file_path)
+                        let tree = match to_commit.tree() {
+                            Ok(t) => t,
+                            Err(_) => return None,
+                        };
+                        let content = self.get_content_from_git_tree(repo, &tree, &new_file_path)
                             .unwrap_or_else(|_| Vec::new());
                         DiffChange::Add {
                             path: new_file_path,
@@ -727,9 +731,17 @@ impl WorkspaceStateManager {
                         path: old_file_path.unwrap_or_else(|| new_file_path.clone())
                     },
                     git2::Delta::Modified => {
-                        let old_content = self.get_content_from_git_tree(repo, &from_commit.tree()?, &old_file_path.unwrap_or(new_file_path.clone()))
+                        let from_tree = match from_commit.tree() {
+                            Ok(t) => t,
+                            Err(_) => return None,
+                        };
+                        let to_tree = match to_commit.tree() {
+                            Ok(t) => t,
+                            Err(_) => return None,
+                        };
+                        let old_content = self.get_content_from_git_tree(repo, &from_tree, &old_file_path.unwrap_or(new_file_path.clone()))
                             .ok();
-                        let new_content = self.get_content_from_git_tree(repo, &to_commit.tree()?, &new_file_path)
+                        let new_content = self.get_content_from_git_tree(repo, &to_tree, &new_file_path)
                             .unwrap_or_else(|_| Vec::new());
                         DiffChange::Modify {
                             path: new_file_path,
@@ -738,9 +750,17 @@ impl WorkspaceStateManager {
                         }
                     },
                     git2::Delta::Renamed => {
-                        let old_content = self.get_content_from_git_tree(repo, &from_commit.tree()?, &old_file_path.unwrap_or(new_file_path.clone()))
+                        let from_tree = match from_commit.tree() {
+                            Ok(t) => t,
+                            Err(_) => return None,
+                        };
+                        let to_tree = match to_commit.tree() {
+                            Ok(t) => t,
+                            Err(_) => return None,
+                        };
+                        let old_content = self.get_content_from_git_tree(repo, &from_tree, &old_file_path.unwrap_or(new_file_path.clone()))
                             .ok();
-                        let new_content = self.get_content_from_git_tree(repo, &to_commit.tree()?, &new_file_path)
+                        let new_content = self.get_content_from_git_tree(repo, &to_tree, &new_file_path)
                             .unwrap_or_else(|_| Vec::new());
                         DiffChange::Modify {
                             path: new_file_path,

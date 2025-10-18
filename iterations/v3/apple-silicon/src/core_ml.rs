@@ -364,7 +364,11 @@ impl CoreMLManager {
                         let mut cache = self.model_cache.write().await;
                         if let Some(model) = cache.get_mut(model_name) {
                             model.optimization_status = OptimizationStatus::Optimized;
-                            // Note: In a real implementation, we would add timestamps and optimization target tracking
+                            // TODO: Implement timestamp and optimization target tracking with the following requirements:
+                            //    - Add timestamps for optimization tracking and monitoring
+                            //    - Implement optimization target tracking and analysis
+                            //    - Handle optimization performance metrics and reporting
+                            //    - Support optimization history and trend analysis
                         }
                     }
                     Err(e) => {
@@ -490,11 +494,27 @@ impl CoreMLManager {
             }
 
             // Perform the optimization
-            // Note: In a real implementation, this would:
-            // 1. Load the original model
-            // 2. Apply the configuration
-            // 3. Compile the model for the target hardware
-            // 4. Save the optimized model
+            // TODO: Implement Core ML model optimization with the following requirements:
+            // 1. Model loading: Load the original model for optimization
+            //    - Load the original Core ML model for optimization processing
+            //    - Handle model loading errors and validation
+            //    - Implement model loading performance optimization
+            //    - Support multiple model formats and compatibility
+            // 2. Configuration application: Apply optimization configuration to model
+            //    - Apply optimization configuration settings to the model
+            //    - Handle configuration validation and error checking
+            //    - Implement configuration application optimization
+            //    - Support dynamic configuration adjustment and tuning
+            // 3. Hardware compilation: Compile the model for target hardware
+            //    - Compile the model for target hardware optimization
+            //    - Handle hardware-specific compilation and optimization
+            //    - Implement compilation performance optimization
+            //    - Support multiple hardware targets and compatibility
+            // 4. Model persistence: Save the optimized model for future use
+            //    - Save the optimized model with proper persistence
+            //    - Handle model saving errors and validation
+            //    - Implement model saving performance optimization
+            //    - Support model versioning and backup strategies
 
             info!("Core ML optimization completed successfully");
             Ok(())

@@ -1087,7 +1087,7 @@ impl IntelligentEdgeCaseTesting {
     }
 
     /// Calculate edge case coverage for a specific edge case
-    async fn calculate_edge_case_coverage(
+    pub async fn calculate_edge_case_coverage(
         &self,
         edge_case: &IdentifiedEdgeCase,
         edge_case_type: &EdgeCaseType,
@@ -1129,7 +1129,7 @@ impl IntelligentEdgeCaseTesting {
     }
 
     /// Calculate generation confidence for an edge case
-    async fn calculate_generation_confidence(&self, edge_case: &IdentifiedEdgeCase) -> Result<f64> {
+    pub async fn calculate_generation_confidence(&self, edge_case: &IdentifiedEdgeCase) -> Result<f64> {
         // Base confidence from the edge case probability score
         let mut confidence = edge_case.probability;
 
@@ -1256,7 +1256,27 @@ impl DynamicTestGenerator {
     /// Extract parameter information from a requirement string
     fn extract_parameter_from_requirement(&self, requirement: &str) -> Option<InputParameter> {
         // Simple pattern matching to extract parameter information
-        // This would be more sophisticated in a real implementation
+        // TODO: Implement sophisticated parameter extraction with the following requirements:
+        // 1. Advanced pattern recognition: Implement sophisticated pattern recognition for parameter extraction
+        //    - Use NLP techniques for natural language requirement parsing
+        //    - Implement context-aware parameter type inference
+        //    - Handle complex parameter relationships and dependencies
+        //    - Support multiple parameter extraction strategies and algorithms
+        // 2. Parameter validation: Implement comprehensive parameter validation and verification
+        //    - Validate parameter types, constraints, and relationships
+        //    - Implement parameter consistency checking and validation
+        //    - Handle parameter conflict detection and resolution
+        //    - Support parameter schema validation and verification
+        // 3. Machine learning integration: Implement ML-based parameter extraction
+        //    - Use machine learning models for parameter type classification
+        //    - Implement adaptive parameter extraction based on historical data
+        //    - Support parameter extraction model training and optimization
+        //    - Handle parameter extraction accuracy and performance metrics
+        // 4. Error handling: Implement robust error handling for parameter extraction
+        //    - Handle ambiguous or conflicting parameter requirements
+        //    - Provide meaningful error messages and recovery options
+        //    - Implement proper error classification and handling
+        //    - Support graceful degradation and fallback mechanisms
         if requirement.contains("input") || requirement.contains("parameter") {
             Some(InputParameter {
                 name: format!("param_{}", requirement.len() % 10), // Simple hash-like naming
@@ -2766,7 +2786,7 @@ impl TestOptimizer {
     /// Calculate priority score for a test case
     fn calculate_test_priority(
         &self,
-        test_case: &TestCase,
+        test_case: &GeneratedTest,
         analysis: &TestEfficiencyAnalysis,
     ) -> f64 {
         let mut score: f64 = 0.0;
@@ -2809,36 +2829,45 @@ impl TestOptimizer {
     /// Get priority reason for a test case
     fn get_priority_reason(
         &self,
-        test_case: &TestCase,
+        test_case: &GeneratedTest,
         analysis: &TestEfficiencyAnalysis,
     ) -> String {
         if analysis.redundant_tests.contains(&test_case.test_id) {
             "Redundant test case".to_string()
         } else if analysis.low_value_tests.contains(&test_case.test_id) {
             "Low value test case".to_string()
-        } else if test_case.priority >= 8 {
-            "High priority test case".to_string()
-        } else if test_case.test_type == "edge_case" {
+        } else if test_case.confidence_score >= 0.8 {
+            "High confidence test case".to_string()
+        } else if matches!(test_case.test_type, TestType::EdgeCase) {
             "Edge case test - high value".to_string()
-        } else if test_case.priority >= 6 {
-            "Fast execution".to_string()
+        } else if test_case.confidence_score >= 0.6 {
+            "Good confidence test".to_string()
         } else {
             "Standard priority".to_string()
         }
     }
 
     /// Estimate the value of a test case
-    fn estimate_test_value(&self, test_case: &TestCase) -> f64 {
-        let priority_value = (test_case.priority as f64 / 10.0) * 0.4;
-        let test_type_value = match test_case.test_type.as_str() {
-            "edge_case" => 0.4,
-            "integration" => 0.3,
-            "unit" => 0.2,
+    fn estimate_test_value(&self, test_case: &GeneratedTest) -> f64 {
+        let confidence_value = test_case.confidence_score * 0.4;
+        let test_type_value = match test_case.test_type {
+            TestType::EdgeCase => 0.4,
+            TestType::Boundary => 0.35,
+            TestType::Integration => 0.3,
+            TestType::Unit => 0.2,
+            TestType::Stress => 0.25,
+            TestType::Performance => 0.3,
+            TestType::Combinatorial => 0.25,
             _ => 0.1,
         };
-        let efficiency_value = if test_case.priority >= 7 { 0.2 } else { 0.1 };
+        let edge_case_value = match test_case.edge_case_type {
+            EdgeCaseType::CriticalFailure | EdgeCaseType::SecurityVulnerability => 0.4,
+            EdgeCaseType::RaceCondition | EdgeCaseType::Concurrency => 0.35,
+            EdgeCaseType::Boundary | EdgeCaseType::InvalidInput => 0.3,
+            _ => 0.2,
+        };
 
-        priority_value + test_type_value + efficiency_value
+        confidence_value + test_type_value + edge_case_value
     }
 
     /// Generate optimization suggestions
