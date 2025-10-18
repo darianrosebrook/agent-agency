@@ -315,116 +315,17 @@ impl BenchmarkRunner {
     ) -> Result<BenchmarkReport> {
         let results = self.run_full_benchmark_suite(model).await?;
 
-        // Generate SLA validation summary across all benchmarks
-        let mut all_sla_results = Vec::new();
-        for result in &results {
-            if let Some(sla_validation) = &result.sla_validation {
-                all_sla_results.extend(sla_validation.sla_results.clone());
-            }
-        }
+        let (performance_summary, regression_alerts, recommendations) =
+            self.analyze_benchmarks(model, &results).await?;
 
-        // Create overall SLA validation report
-        let overall_sla_compliant = all_sla_results.iter().all(|r| r.passed);
-
-        let report = BenchmarkReport {
+        Ok(BenchmarkReport {
             report_id: uuid::Uuid::new_v4(),
             timestamp: chrono::Utc::now(),
             benchmark_results: results,
-            performance_summary: PerformanceSummary {
-                overall_performance: all_sla_results
-                    .iter()
-                    .map(|r| if r.passed { 1.0 } else { 0.0 })
-                    .sum::<f64>()
-                    / all_sla_results.len() as f64,
-                performance_trend: PerformanceTrend::Stable, // TODO: Calculate from historical data with the following requirements:
-                // 1. Historical data analysis: Analyze historical performance data
-                //    - Collect and analyze historical benchmark results
-                //    - Calculate performance trends and patterns over time
-                //    - Identify performance improvements and degradations
-                // 2. Trend calculation: Calculate performance trends from historical data
-                //    - Use statistical methods to calculate trend direction and magnitude
-                //    - Handle seasonal variations and cyclical patterns
-                //    - Implement trend confidence and reliability measures
-                // 3. Trend classification: Classify performance trends
-                //    - Categorize trends as improving, stable, or declining
-                //    - Handle trend transitions and inflection points
-                //    - Implement trend validation and verification
-                // 4. Trend reporting: Report performance trends and insights
-                //    - Generate trend reports and visualizations
-                //    - Provide trend explanations and context
-                //    - Enable trend-based decision making and planning
-                top_performers: vec![], // TODO: Implement with the following requirements:
-                // 1. Performance ranking: Rank models by performance metrics
-                //    - Calculate performance scores and rankings
-                //    - Identify top-performing models and configurations
-                //    - Handle performance comparison and evaluation
-                // 2. Top performer identification: Identify top-performing models
-                //    - Select models with highest performance scores
-                //    - Consider multiple performance dimensions and criteria
-                //    - Handle performance tie-breaking and selection
-                // 3. Performance analysis: Analyze top performer characteristics
-                //    - Identify common characteristics of top performers
-                //    - Analyze performance patterns and success factors
-                //    - Generate performance insights and recommendations
-                // 4. Performance reporting: Report top performer information
-                //    - Generate top performer reports and rankings
-                //    - Provide performance explanations and context
-                //    - Enable performance-based model selection
-                improvement_areas: vec![], // TODO: Implement with the following requirements:
-                                           // 1. Performance gap analysis: Analyze performance gaps and areas for improvement
-                                           //    - Identify performance bottlenecks and limitations
-                                           //    - Compare current performance against targets and benchmarks
-                                           //    - Analyze performance improvement opportunities
-                                           // 2. Improvement area identification: Identify specific areas for improvement
-                                           //    - Categorize improvement areas by type and impact
-                                           //    - Prioritize improvement areas by potential impact
-                                           //    - Handle improvement area validation and verification
-                                           // 3. Improvement analysis: Analyze improvement opportunities
-                                           //    - Estimate improvement potential and impact
-                                           //    - Analyze improvement feasibility and requirements
-                                           //    - Generate improvement recommendations and strategies
-                                           // 4. Improvement reporting: Report improvement areas and recommendations
-                                           //    - Generate improvement area reports and visualizations
-                                           //    - Provide improvement explanations and context
-                                           //    - Enable improvement-based planning and execution
-            },
-            regression_alerts: vec![], // TODO: Implement regression detection with the following requirements:
-            // 1. Regression detection: Implement comprehensive regression detection
-            //    - Monitor performance changes and degradations over time
-            //    - Detect significant performance regressions and anomalies
-            //    - Handle regression validation and confirmation
-            // 2. Regression analysis: Analyze detected regressions
-            //    - Identify regression causes and contributing factors
-            //    - Analyze regression impact and severity
-            //    - Generate regression insights and recommendations
-            // 3. Regression alerting: Implement regression alerting system
-            //    - Generate regression alerts and notifications
-            //    - Handle alert prioritization and routing
-            //    - Implement alert validation and confirmation
-            // 4. Regression reporting: Report regression information
-            //    - Generate regression reports and visualizations
-            //    - Provide regression explanations and context
-            //    - Enable regression-based decision making and response
-            recommendations: vec![], // TODO: Implement recommendations with the following requirements:
-                                     // 1. Recommendation generation: Generate comprehensive recommendations
-                                     //    - Analyze benchmark results and performance data
-                                     //    - Generate actionable recommendations for improvement
-                                     //    - Handle recommendation prioritization and ranking
-                                     // 2. Recommendation analysis: Analyze recommendation effectiveness
-                                     //    - Evaluate recommendation quality and relevance
-                                     //    - Analyze recommendation impact and feasibility
-                                     //    - Generate recommendation insights and validation
-                                     // 3. Recommendation customization: Customize recommendations for specific contexts
-                                     //    - Tailor recommendations to specific models and use cases
-                                     //    - Handle recommendation personalization and adaptation
-                                     //    - Implement recommendation context and relevance
-                                     // 4. Recommendation reporting: Report recommendation information
-                                     //    - Generate recommendation reports and visualizations
-                                     //    - Provide recommendation explanations and context
-                                     //    - Enable recommendation-based decision making and action
-        };
-
-        Ok(report)
+            performance_summary,
+            regression_alerts,
+            recommendations,
+        })
     }
 
     #[cfg(test)]
