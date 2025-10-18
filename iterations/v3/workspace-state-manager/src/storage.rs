@@ -4,6 +4,7 @@
  */
 use crate::types::*;
 use anyhow::Result;
+use async_trait::async_trait;
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use serde_json;
 use sqlx::Row;
@@ -95,7 +96,7 @@ impl FileStorage {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 impl StateStorage for FileStorage {
     async fn store_state(&self, state: &WorkspaceState) -> Result<(), WorkspaceError> {
         self.ensure_directory()?;
@@ -551,7 +552,7 @@ impl MemoryStorage {
 
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 impl StateStorage for MemoryStorage {
     async fn store_state(&self, state: &WorkspaceState) -> Result<(), WorkspaceError> {
         // 1. Concurrent access handling: Implement thread-safe storage operations
@@ -996,7 +997,7 @@ impl DatabaseStorage {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 impl StateStorage for DatabaseStorage {
     async fn store_state(&self, state: &WorkspaceState) -> Result<(), WorkspaceError> {
         let metadata_json =

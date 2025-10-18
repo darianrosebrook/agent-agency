@@ -498,6 +498,8 @@ impl WorkspaceStateManager {
             permissions: 0o644, // Default permissions for cross-platform compatibility
             git_tracked,
             git_commit,
+            content: None, // Content not captured during metadata scan
+            compressed: false, // Not compressed initially
         }))
     }
 
@@ -655,6 +657,8 @@ impl WorkspaceStateManager {
                         permissions: 0,
                         git_tracked: true,
                         git_commit: Some(change.commit_hash.clone()),
+                        content: None,
+                        compressed: false,
                     };
                     file_states.insert(file_path, file_state);
                 }
@@ -672,6 +676,8 @@ impl WorkspaceStateManager {
                             permissions: 0,
                             git_tracked: true,
                             git_commit: Some(change_clone.commit_hash.clone()),
+                            content: None,
+                            compressed: false,
                         };
                         file_states.insert(old_path, old_file_state);
                     }
@@ -824,6 +830,8 @@ impl WorkspaceStateManager {
             permissions,
             git_tracked: true,
             git_commit: Some(change.commit_hash.clone()),
+            content: None,
+            compressed: false,
         })
     }
 
