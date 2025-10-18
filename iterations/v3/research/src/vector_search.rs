@@ -764,7 +764,7 @@ impl VectorSearchEngine {
     /// Cache embedding for performance optimization
     async fn cache_embedding(&self, text: &str, embedding: &[f32]) -> Result<Vec<f32>> {
         // Check if embedding is already cached
-        if let Some(cached) = self.get_cached_embedding(text).await? {
+        if let Some(cached) = self.get_cached_embedding(text).await {
             return Ok(cached);
         }
         
@@ -847,15 +847,10 @@ impl VectorSearchEngine {
     }
 
     /// Get cached embedding
-    async fn get_cached_embedding(&self, text: &str) -> Result<Option<Vec<f32>>> {
+    async fn get_cached_embedding(&self, text: &str) -> Option<Vec<f32>> {
         // Check local cache first
         let cache = self.embedding_cache.read().await;
-        if let Some(cached) = cache.get(text) {
-            return Ok(Some(cached.clone()));
-        }
-        
-        // In a real implementation, this would check a persistent cache store
-        Ok(None)
+        cache.get(text).cloned()
     }
 
     /// Store embedding in cache
