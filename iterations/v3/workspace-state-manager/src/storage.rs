@@ -297,12 +297,7 @@ impl MemoryStorage {
         
         let mut to_remove = Vec::new();
         // TODO: Implement database cleanup
-        let states: Vec<()> = vec![]; // Placeholder
-        for (id, state) in states.iter() {
-            if state.captured_at < cutoff_time {
-                to_remove.push(id.clone());
-            }
-        }
+        // No states to process in database storage
         
         for id in to_remove {
             // TODO: implement database removal
@@ -583,12 +578,7 @@ impl DatabaseStorage {
         
         let mut to_remove = Vec::new();
         // TODO: Implement database cleanup
-        let states: Vec<()> = vec![]; // Placeholder
-        for (id, state) in states.iter() {
-            if state.captured_at < cutoff_time {
-                to_remove.push(id.clone());
-            }
-        }
+        // No states to process in database storage
         
         for id in to_remove {
             // TODO: implement database removal

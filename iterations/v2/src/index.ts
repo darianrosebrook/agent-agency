@@ -405,15 +405,41 @@ async function startWebInterface(): Promise<void> {
       return;
     }
 
-    // Start the Next.js development server with configurable port
+    // Start the Next.js development server with configurable port and fallback
     const webObserverPort = process.env.WEB_OBSERVER_PORT || "3000";
+    
+    // Try to find an available port if the default is taken
+    let actualPort = webObserverPort;
+    if (webObserverPort === "3000") {
+      try {
+        const net = await import("net");
+        const testServer = net.createServer();
+        await new Promise<void>((resolve, reject) => {
+          testServer.listen(3000, () => {
+            testServer.close(() => resolve());
+          });
+          testServer.on("error", (err: any) => {
+            if (err.code === "EADDRINUSE") {
+              // Port 3000 is in use, try 3001
+              actualPort = "3001";
+              resolve();
+            } else {
+              reject(err);
+            }
+          });
+        });
+      } catch (error) {
+        logger.warn("Could not check port availability, using default", { error });
+      }
+    }
+    
     webServerProcess = spawn("npm", ["run", "dev"], {
       cwd: webObserverPath,
       stdio: "inherit",
       detached: false,
       env: {
         ...process.env,
-        WEB_OBSERVER_PORT: webObserverPort,
+        WEB_OBSERVER_PORT: actualPort,
       },
     });
 
@@ -430,7 +456,7 @@ async function startWebInterface(): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
     logger.info(
-      `Next.js web interface started successfully on http://localhost:${webObserverPort}`
+      `Next.js web interface started successfully on http://localhost:${actualPort}`
     );
   } catch (error) {
     logger.error("Failed to start web interface", { error });

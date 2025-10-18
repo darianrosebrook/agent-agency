@@ -40,7 +40,7 @@ mod tests {
             id: Uuid::new_v4(),
             title: task_id.to_string(),
             description: "Test task for arbitration".to_string(),
-            risk_tier: RiskTier::Tier2,
+            risk_tier: RiskTier::Medium,
             scope: TaskScope {
                 files_affected: vec![],
                 max_files: Some(10),

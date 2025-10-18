@@ -54,6 +54,10 @@ mod tests {
                 edge_case_coverage_threshold: 0.75,
                 integration_coverage_threshold: 0.7,
             },
+            requirements: vec![], // Empty for now
+            acceptance_criteria: vec![], // Empty for now
+            dependencies: vec![], // Empty for now
+            test_cases: vec![], // Empty for now
         }
     }
 

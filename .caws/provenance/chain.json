@@ -7878,5 +7878,41 @@
     },
     "previous_hash": "bad08902b0484ec0c39796b04c3a1735796954f8f3c4979fa2e5ebaaee09eb77",
     "hash": "dbad62b212ac9e98abb73218a75c11b104980a2ca430b022b7a30cf6cfe2c8ea"
+  },
+  {
+    "id": "prov-1760766307135",
+    "timestamp": "2025-10-18T05:45:07.135Z",
+    "commit": {
+      "hash": "d284d5da37c865edad29780de7b23146b853b1b1",
+      "message": "Clean up unused imports across council modules",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T05:45:07.136Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "dbad62b212ac9e98abb73218a75c11b104980a2ca430b022b7a30cf6cfe2c8ea",
+    "hash": "7eb3c3e8ece536b3544553882a7d5d68161df8686e62b576cad95e25fbc96237"
   }
 ]
