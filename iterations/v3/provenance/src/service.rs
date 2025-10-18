@@ -18,7 +18,6 @@ use crate::{
         BudgetAdherence,
     },
     ProvenanceConfig,
-    SigningAlgorithm,
 };
 
 /// Storage trait for provenance records

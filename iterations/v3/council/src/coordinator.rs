@@ -7,7 +7,7 @@ use crate::evidence_enrichment::EvidenceEnrichmentCoordinator;
 use crate::models::{EvidencePacket, ParticipantContribution, RiskTier, TaskSpec};
 use crate::resilience::ResilienceManager;
 use crate::types::{ConsensusResult, FinalVerdict, JudgeVerdict};
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 use crate::CouncilConfig;
 use anyhow::Result;
 use std::collections::HashMap;
@@ -330,12 +330,11 @@ impl ConsensusCoordinator {
     /// Generate moderator notes for debate round
     async fn generate_moderator_notes(&self, round_result: &DebateRoundResult, moderator: &str) -> Result<String> {
         let notes = format!(
-            "Round {} moderated by {}: {} participants contributed. Supermajority: {}, Timeout: {}",
-            round_result.round_number,
+            "Round {} moderated by {}: consensus reached: {}, should terminate: {}",
+            round_result.round,
             moderator,
-            round_result.participant_contributions.len(),
-            round_result.supermajority_reached,
-            round_result.timeout_reached
+            round_result.consensus_reached,
+            round_result.should_terminate
         );
         
         Ok(notes)
@@ -485,7 +484,7 @@ impl ConsensusCoordinator {
         }
         
         let mut total_rounds = 0u32;
-        let max_rounds = self.get_max_debate_rounds(task_spec.risk_tier);
+        let max_rounds = self.get_max_debate_rounds(task_spec.risk_tier.clone());
         
         for round in 1u32..=max_rounds {
             debug!("Starting debate round {} for task: {}", round, task_spec.id);

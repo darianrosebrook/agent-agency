@@ -5,7 +5,7 @@
 #[cfg(test)]
 mod tests {
     use crate::predictive_learning_system::{
-        LearningAccelerator, LearningEventType, LearningInsights, OutcomePredictor, OutcomeType,
+        LearningAccelerator, LearningInsights, OutcomePredictor, OutcomeType,
         PerformancePredictor, PredictiveLearningSystem, ResourcePredictor, StrategyOptimizer,
         TaskOutcome, TrendDirection,
     };

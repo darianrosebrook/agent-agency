@@ -5,12 +5,11 @@
 #[cfg(test)]
 mod tests {
     use crate::advanced_arbitration::{
-        AdvancedArbitrationEngine, ArbitrationResult, ConfidenceScorer, ConflictPrediction,
-        ConsensusBuilder, ConsensusResult, LearningInsights, LearningIntegrator,
+        AdvancedArbitrationEngine, ArbitrationResult, ConfidenceScorer,
+        ConsensusBuilder, ConsensusResult, LearningInsights,
         PerformanceTracker, PleadingResult, PleadingWorkflow, QualityAssessment, QualityAssessor,
         WorkerOutput,
     };
-    use crate::types::*;
     use chrono::Utc;
     use std::collections::HashMap;
     use uuid::Uuid;

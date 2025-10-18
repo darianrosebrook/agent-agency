@@ -8,10 +8,9 @@ mod tests {
         AcceptanceCriterion, CoverageRequirement, CriterionType, EdgeCaseRequirement, EdgeCaseType,
         IntelligentEdgeCaseTesting, IntelligentTestInsights, PerformanceRequirement, Priority,
         RequirementType, ResourceUsage, TestExecution, TestOutcome, TestRequirement,
-        TestSpecification, TestType,
+        TestSpecification,
     };
     use chrono::Utc;
-    use std::collections::HashMap;
     use uuid::Uuid;
 
     /// Create a test specification for testing

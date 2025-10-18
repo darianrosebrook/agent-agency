@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 use uuid::Uuid;
 
 /// Predictive Learning System that surpasses V2's reactive learning

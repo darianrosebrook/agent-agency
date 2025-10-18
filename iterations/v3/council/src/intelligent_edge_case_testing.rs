@@ -1387,7 +1387,7 @@ impl EdgeCaseAnalyzer {
         let analysis_report = self.generate_edge_case_report(&classified_edge_cases, &test_results).await?;
 
         Ok(EdgeCaseAnalysis {
-            identified_edge_cases: classified_edge_cases,
+            identified_edge_cases: classified_edge_cases.clone(),
             edge_case_coverage: self.calculate_coverage_metrics(&classified_edge_cases, &test_results).coverage_percentage / 100.0,
             analysis_confidence: 0.85,
             risk_assessment: self.generate_risk_assessment(&classified_edge_cases),
@@ -1682,17 +1682,24 @@ impl EdgeCaseAnalyzer {
         
         // Mock test execution based on edge case type
         let (passed, error_message) = match edge_case.edge_case_type {
-            EdgeCaseType::NullHandling => (true, None),
+            EdgeCaseType::Boundary => (true, None),
             EdgeCaseType::BoundaryCondition => (true, None),
+            EdgeCaseType::NullHandling => (true, None),
+            EdgeCaseType::EmptyData => (false, Some("Empty data handling failed".to_string())),
+            EdgeCaseType::InvalidInput => (false, Some("Invalid input validation failed".to_string())),
             EdgeCaseType::InputValidation => (false, Some("Input validation failed".to_string())),
-            EdgeCaseType::ExceptionalCondition => (false, Some("Exception occurred".to_string())),
-            EdgeCaseType::RaceCondition => (true, None),
-            EdgeCaseType::TimingIssue => (true, None),
-            EdgeCaseType::NetworkIssue => (false, Some("Network error".to_string())),
             EdgeCaseType::ResourceExhaustion => (false, Some("Resource exhausted".to_string())),
-            EdgeCaseType::IOError => (false, Some("IO error".to_string())),
-            EdgeCaseType::TypeCoercion => (true, None),
             EdgeCaseType::PerformanceIssue => (true, None),
+            EdgeCaseType::Concurrency => (true, None),
+            EdgeCaseType::RaceCondition => (true, None),
+            EdgeCaseType::Timeout => (false, Some("Timeout occurred".to_string())),
+            EdgeCaseType::TimingIssue => (true, None),
+            EdgeCaseType::NetworkFailure => (false, Some("Network failure".to_string())),
+            EdgeCaseType::NetworkIssue => (false, Some("Network error".to_string())),
+            EdgeCaseType::IOError => (false, Some("IO error".to_string())),
+            EdgeCaseType::ExceptionalCondition => (false, Some("Exception occurred".to_string())),
+            EdgeCaseType::TypeCoercion => (true, None),
+            EdgeCaseType::SecurityVulnerability => (false, Some("Security vulnerability detected".to_string())),
         };
 
         let execution_time = start_time.elapsed();
@@ -2010,7 +2017,7 @@ impl TestOptimizer {
         let name_similarity = self.calculate_string_similarity(&test1.test_name, &test2.test_name);
         
         // Check if test scenarios are similar
-        let scenario_similarity = self.calculate_string_similarity(&test1.test_scenario.description, &test2.test_scenario.description);
+        let scenario_similarity = self.calculate_string_similarity(&test1.test_scenario.scenario_name, &test2.test_scenario.scenario_name);
         
         // Check if test types are the same
         let type_similarity = if test1.test_type == test2.test_type { 1.0 } else { 0.0 };
@@ -2049,12 +2056,12 @@ impl TestOptimizer {
         let mut prioritized_tests = Vec::new();
 
         for (index, test_case) in test_spec.test_cases.iter().enumerate() {
-            let priority_score = self.calculate_generated_test_priority(test_case, analysis);
-            let priority_reason = self.get_generated_test_priority_reason(test_case, analysis);
-            let estimated_value = self.estimate_generated_test_value(test_case);
+            let priority_score = self.calculate_test_priority(test_case, analysis);
+            let priority_reason = self.get_priority_reason(test_case, analysis);
+            let estimated_value = self.estimate_test_value(test_case);
 
             prioritized_tests.push(PrioritizedTest {
-                test_id: test_case.test_id.to_string(),
+                test_id: test_case.test_id,
                 priority_score,
                 priority_reason,
                 execution_order: (index + 1) as u32,
@@ -2593,20 +2600,852 @@ impl CoverageAnalyzer {
 //    - Generate coverage gap reports
 //    - Suggest additional test cases needed
 
+/// Test pattern analyzer for identifying common failure patterns and edge cases
 #[derive(Debug)]
-struct TestPatternAnalyzer;
+struct TestPatternAnalyzer {
+    failure_patterns: HashMap<String, FailurePattern>,
+    edge_case_templates: Vec<EdgeCaseTemplate>,
+}
+
+/// Represents a failure pattern identified from historical data
+#[derive(Debug, Clone)]
+struct FailurePattern {
+    pattern_id: String,
+    description: String,
+    frequency: f64,
+    severity: PatternSeverity,
+    common_causes: Vec<String>,
+    mitigation_strategies: Vec<String>,
+}
+
+/// Severity levels for failure patterns
+#[derive(Debug, Clone)]
+enum PatternSeverity {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+/// Template for generating edge case test scenarios
+#[derive(Debug, Clone)]
+struct EdgeCaseTemplate {
+    template_id: String,
+    name: String,
+    description: String,
+    parameters: Vec<TemplateParameter>,
+    expected_behavior: String,
+    risk_level: RiskLevel,
+}
+
+/// Parameter for edge case templates
+#[derive(Debug, Clone)]
+struct TemplateParameter {
+    name: String,
+    parameter_type: ParameterType,
+    default_value: String,
+    constraints: Vec<String>,
+}
+
+/// Types of parameters for edge case templates
+#[derive(Debug, Clone)]
+enum ParameterType {
+    Integer,
+    String,
+    Boolean,
+    Float,
+    Array,
+    Object,
+}
+
+/// Risk levels for edge case templates
+#[derive(Debug, Clone)]
+enum RiskLevel {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
 impl TestPatternAnalyzer {
+    /// Create a new test pattern analyzer
     fn new() -> Self {
-        Self
+        let mut analyzer = Self {
+            failure_patterns: HashMap::new(),
+            edge_case_templates: Vec::new(),
+        };
+        
+        // Initialize with common failure patterns
+        analyzer.initialize_common_patterns();
+        analyzer.initialize_edge_case_templates();
+        
+        analyzer
+    }
+
+    /// Initialize common failure patterns based on historical data
+    fn initialize_common_patterns(&mut self) {
+        // Null pointer exceptions
+        self.failure_patterns.insert("null_pointer".to_string(), FailurePattern {
+            pattern_id: "null_pointer".to_string(),
+            description: "Null pointer dereference causing crashes".to_string(),
+            frequency: 0.15,
+            severity: PatternSeverity::High,
+            common_causes: vec![
+                "Uninitialized variables".to_string(),
+                "Missing null checks".to_string(),
+                "Race conditions".to_string(),
+            ],
+            mitigation_strategies: vec![
+                "Add null checks before dereferencing".to_string(),
+                "Use optional types".to_string(),
+                "Implement defensive programming".to_string(),
+            ],
+        });
+
+        // Boundary value issues
+        self.failure_patterns.insert("boundary_values".to_string(), FailurePattern {
+            pattern_id: "boundary_values".to_string(),
+            description: "Failures at boundary conditions".to_string(),
+            frequency: 0.12,
+            severity: PatternSeverity::Medium,
+            common_causes: vec![
+                "Off-by-one errors".to_string(),
+                "Array bounds violations".to_string(),
+                "Integer overflow".to_string(),
+            ],
+            mitigation_strategies: vec![
+                "Test boundary values explicitly".to_string(),
+                "Use safe arithmetic operations".to_string(),
+                "Implement bounds checking".to_string(),
+            ],
+        });
+
+        // Memory leaks
+        self.failure_patterns.insert("memory_leaks".to_string(), FailurePattern {
+            pattern_id: "memory_leaks".to_string(),
+            description: "Memory not properly released".to_string(),
+            frequency: 0.08,
+            severity: PatternSeverity::High,
+            common_causes: vec![
+                "Missing cleanup in error paths".to_string(),
+                "Circular references".to_string(),
+                "Resource not released".to_string(),
+            ],
+            mitigation_strategies: vec![
+                "Use RAII patterns".to_string(),
+                "Implement proper cleanup".to_string(),
+                "Use memory profilers".to_string(),
+            ],
+        });
+    }
+
+    /// Initialize edge case templates for common scenarios
+    fn initialize_edge_case_templates(&mut self) {
+        // Empty input template
+        self.edge_case_templates.push(EdgeCaseTemplate {
+            template_id: "empty_input".to_string(),
+            name: "Empty Input Handling".to_string(),
+            description: "Test behavior with empty or null inputs".to_string(),
+            parameters: vec![
+                TemplateParameter {
+                    name: "input_value".to_string(),
+                    parameter_type: ParameterType::String,
+                    default_value: "".to_string(),
+                    constraints: vec!["Can be empty string".to_string(), "Can be null".to_string()],
+                },
+            ],
+            expected_behavior: "Should handle gracefully without crashing".to_string(),
+            risk_level: RiskLevel::Medium,
+        });
+
+        // Large input template
+        self.edge_case_templates.push(EdgeCaseTemplate {
+            template_id: "large_input".to_string(),
+            name: "Large Input Handling".to_string(),
+            description: "Test behavior with very large inputs".to_string(),
+            parameters: vec![
+                TemplateParameter {
+                    name: "input_size".to_string(),
+                    parameter_type: ParameterType::Integer,
+                    default_value: "1000000".to_string(),
+                    constraints: vec!["Must be positive integer".to_string()],
+                },
+            ],
+            expected_behavior: "Should handle efficiently or reject with appropriate error".to_string(),
+            risk_level: RiskLevel::High,
+        });
+
+        // Concurrent access template
+        self.edge_case_templates.push(EdgeCaseTemplate {
+            template_id: "concurrent_access".to_string(),
+            name: "Concurrent Access".to_string(),
+            description: "Test behavior under concurrent access".to_string(),
+            parameters: vec![
+                TemplateParameter {
+                    name: "thread_count".to_string(),
+                    parameter_type: ParameterType::Integer,
+                    default_value: "10".to_string(),
+                    constraints: vec!["Must be positive integer".to_string()],
+                },
+            ],
+            expected_behavior: "Should maintain data consistency and avoid race conditions".to_string(),
+            risk_level: RiskLevel::Critical,
+        });
+    }
+
+    /// Analyze historical test failure patterns
+    async fn analyze_failure_patterns(&self, test_results: &[TestResult]) -> Result<Vec<FailureAnalysis>> {
+        let mut analyses = Vec::new();
+        
+        for result in test_results {
+            if !result.passed {
+                let analysis = self.analyze_single_failure(result).await?;
+                analyses.push(analysis);
+            }
+        }
+        
+        Ok(analyses)
+    }
+
+    /// Analyze a single test failure
+    async fn analyze_single_failure(&self, result: &TestResult) -> Result<FailureAnalysis> {
+        let error_message = result.error_message.as_deref().unwrap_or("Unknown error");
+        
+        // Match against known patterns
+        let matched_pattern = self.match_failure_pattern(error_message);
+        
+        Ok(FailureAnalysis {
+            test_id: result.test_id,
+            failure_type: matched_pattern.clone(),
+            confidence: self.calculate_pattern_confidence(error_message, &matched_pattern),
+            suggested_fixes: self.get_suggested_fixes(&matched_pattern),
+            risk_assessment: self.assess_failure_risk(&matched_pattern),
+        })
+    }
+
+    /// Match error message against known failure patterns
+    fn match_failure_pattern(&self, error_message: &str) -> String {
+        let error_lower = error_message.to_lowercase();
+        
+        if error_lower.contains("null") || error_lower.contains("nil") {
+            "null_pointer".to_string()
+        } else if error_lower.contains("boundary") || error_lower.contains("index") || error_lower.contains("out of bounds") {
+            "boundary_values".to_string()
+        } else if error_lower.contains("memory") || error_lower.contains("leak") {
+            "memory_leaks".to_string()
+        } else if error_lower.contains("timeout") || error_lower.contains("deadlock") {
+            "concurrency".to_string()
+        } else {
+            "unknown".to_string()
+        }
+    }
+
+    /// Calculate confidence in pattern match
+    fn calculate_pattern_confidence(&self, error_message: &str, pattern: &str) -> f64 {
+        match pattern {
+            "null_pointer" => {
+                if error_message.to_lowercase().contains("null") { 0.9 } else { 0.3 }
+            },
+            "boundary_values" => {
+                if error_message.to_lowercase().contains("index") { 0.8 } else { 0.4 }
+            },
+            "memory_leaks" => {
+                if error_message.to_lowercase().contains("memory") { 0.85 } else { 0.2 }
+            },
+            _ => 0.1,
+        }
+    }
+
+    /// Get suggested fixes for a failure pattern
+    fn get_suggested_fixes(&self, pattern: &str) -> Vec<String> {
+        self.failure_patterns
+            .get(pattern)
+            .map(|p| p.mitigation_strategies.clone())
+            .unwrap_or_else(|| vec!["Investigate error message for clues".to_string()])
+    }
+
+    /// Assess risk level of a failure pattern
+    fn assess_failure_risk(&self, pattern: &str) -> RiskLevel {
+        self.failure_patterns
+            .get(pattern)
+            .map(|p| match p.severity {
+                PatternSeverity::Low => RiskLevel::Low,
+                PatternSeverity::Medium => RiskLevel::Medium,
+                PatternSeverity::High => RiskLevel::High,
+                PatternSeverity::Critical => RiskLevel::Critical,
+            })
+            .unwrap_or(RiskLevel::Medium)
+    }
+
+    /// Generate test case templates from identified patterns
+    async fn generate_test_templates(&self, patterns: &[String]) -> Result<Vec<TestTemplate>> {
+        let mut templates = Vec::new();
+        
+        for pattern in patterns {
+            if let Some(edge_template) = self.edge_case_templates.iter().find(|t| t.template_id == *pattern) {
+                let test_template = TestTemplate {
+                    template_id: edge_template.template_id.clone(),
+                    name: edge_template.name.clone(),
+                    description: edge_template.description.clone(),
+                    test_steps: self.generate_test_steps(edge_template),
+                    expected_outcome: edge_template.expected_behavior.clone(),
+                    risk_level: edge_template.risk_level.clone(),
+                };
+                templates.push(test_template);
+            }
+        }
+        
+        Ok(templates)
+    }
+
+    /// Generate test steps for a template
+    fn generate_test_steps(&self, template: &EdgeCaseTemplate) -> Vec<String> {
+        match template.template_id.as_str() {
+            "empty_input" => vec![
+                "1. Initialize system with empty input".to_string(),
+                "2. Execute the operation".to_string(),
+                "3. Verify system handles gracefully".to_string(),
+                "4. Check for proper error handling".to_string(),
+            ],
+            "large_input" => vec![
+                "1. Generate large input data".to_string(),
+                "2. Execute operation with large input".to_string(),
+                "3. Monitor memory usage".to_string(),
+                "4. Verify performance is acceptable".to_string(),
+            ],
+            "concurrent_access" => vec![
+                "1. Create multiple threads".to_string(),
+                "2. Execute operations concurrently".to_string(),
+                "3. Monitor for race conditions".to_string(),
+                "4. Verify data consistency".to_string(),
+            ],
+            _ => vec!["1. Implement test based on template".to_string()],
+        }
     }
 }
 
+/// Analysis result for a test failure
+#[derive(Debug, Clone)]
+struct FailureAnalysis {
+    test_id: Uuid,
+    failure_type: String,
+    confidence: f64,
+    suggested_fixes: Vec<String>,
+    risk_assessment: RiskLevel,
+}
+
+/// Test template generated from patterns
+#[derive(Debug, Clone)]
+struct TestTemplate {
+    template_id: String,
+    name: String,
+    description: String,
+    test_steps: Vec<String>,
+    expected_outcome: String,
+    risk_level: RiskLevel,
+}
+
+/// Edge case scenario generator for automated test case discovery
 #[derive(Debug)]
-struct ScenarioGenerator;
+struct ScenarioGenerator {
+    boundary_generators: Vec<BoundaryGenerator>,
+    combinatorial_generators: Vec<CombinatorialGenerator>,
+    stress_test_generators: Vec<StressTestGenerator>,
+}
+
+/// Generator for boundary condition test cases
+#[derive(Debug)]
+struct BoundaryGenerator {
+    parameter_name: String,
+    parameter_type: ParameterType,
+    min_value: Option<String>,
+    max_value: Option<String>,
+    boundary_values: Vec<String>,
+}
+
+/// Generator for combinatorial test scenarios
+#[derive(Debug)]
+struct CombinatorialGenerator {
+    parameters: Vec<CombinatorialParameter>,
+    interaction_level: u32, // 2-way, 3-way, etc.
+}
+
+/// Parameter for combinatorial testing
+#[derive(Debug)]
+struct CombinatorialParameter {
+    name: String,
+    values: Vec<String>,
+    is_required: bool,
+}
+
+/// Generator for stress testing scenarios
+#[derive(Debug)]
+struct StressTestGenerator {
+    resource_type: ResourceType,
+    stress_levels: Vec<StressLevel>,
+    duration_limits: Vec<u64>, // in seconds
+}
+
+/// Types of resources to stress test
+#[derive(Debug)]
+enum ResourceType {
+    Memory,
+    CPU,
+    Network,
+    Disk,
+    ConcurrentConnections,
+}
+
+/// Stress levels for testing
+#[derive(Debug)]
+struct StressLevel {
+    name: String,
+    intensity: f64, // 0.0 to 1.0
+    description: String,
+}
+
 impl ScenarioGenerator {
+    /// Create a new scenario generator
     fn new() -> Self {
-        Self
+        let mut generator = Self {
+            boundary_generators: Vec::new(),
+            combinatorial_generators: Vec::new(),
+            stress_test_generators: Vec::new(),
+        };
+        
+        generator.initialize_generators();
+        generator
     }
+
+    /// Initialize all generators with common scenarios
+    fn initialize_generators(&mut self) {
+        // Initialize boundary generators
+        self.initialize_boundary_generators();
+        
+        // Initialize combinatorial generators
+        self.initialize_combinatorial_generators();
+        
+        // Initialize stress test generators
+        self.initialize_stress_test_generators();
+    }
+
+    /// Initialize boundary value generators
+    fn initialize_boundary_generators(&mut self) {
+        // Integer boundary generator
+        self.boundary_generators.push(BoundaryGenerator {
+            parameter_name: "integer_value".to_string(),
+            parameter_type: ParameterType::Integer,
+            min_value: Some("0".to_string()),
+            max_value: Some("2147483647".to_string()), // i32::MAX
+            boundary_values: vec![
+                "0".to_string(),
+                "1".to_string(),
+                "-1".to_string(),
+                "2147483647".to_string(),
+                "-2147483648".to_string(), // i32::MIN
+            ],
+        });
+
+        // String boundary generator
+        self.boundary_generators.push(BoundaryGenerator {
+            parameter_name: "string_value".to_string(),
+            parameter_type: ParameterType::String,
+            min_value: None,
+            max_value: None,
+            boundary_values: vec![
+                "".to_string(),
+                " ".to_string(),
+                "a".to_string(),
+                "very_long_string_that_exceeds_normal_limits".to_string(),
+                "string_with_special_chars_!@#$%^&*()".to_string(),
+            ],
+        });
+
+        // Array boundary generator
+        self.boundary_generators.push(BoundaryGenerator {
+            parameter_name: "array_size".to_string(),
+            parameter_type: ParameterType::Integer,
+            min_value: Some("0".to_string()),
+            max_value: Some("1000000".to_string()),
+            boundary_values: vec![
+                "0".to_string(),
+                "1".to_string(),
+                "100".to_string(),
+                "1000".to_string(),
+                "1000000".to_string(),
+            ],
+        });
+    }
+
+    /// Initialize combinatorial generators
+    fn initialize_combinatorial_generators(&mut self) {
+        // User input validation combinatorial test
+        self.combinatorial_generators.push(CombinatorialGenerator {
+            parameters: vec![
+                CombinatorialParameter {
+                    name: "input_type".to_string(),
+                    values: vec!["string".to_string(), "number".to_string(), "boolean".to_string(), "null".to_string()],
+                    is_required: true,
+                },
+                CombinatorialParameter {
+                    name: "input_length".to_string(),
+                    values: vec!["empty".to_string(), "short".to_string(), "medium".to_string(), "long".to_string()],
+                    is_required: true,
+                },
+                CombinatorialParameter {
+                    name: "special_chars".to_string(),
+                    values: vec!["none".to_string(), "symbols".to_string(), "unicode".to_string(), "whitespace".to_string()],
+                    is_required: false,
+                },
+            ],
+            interaction_level: 2, // 2-way interaction testing
+        });
+
+        // API parameter combinatorial test
+        self.combinatorial_generators.push(CombinatorialGenerator {
+            parameters: vec![
+                CombinatorialParameter {
+                    name: "method".to_string(),
+                    values: vec!["GET".to_string(), "POST".to_string(), "PUT".to_string(), "DELETE".to_string()],
+                    is_required: true,
+                },
+                CombinatorialParameter {
+                    name: "content_type".to_string(),
+                    values: vec!["application/json".to_string(), "application/xml".to_string(), "text/plain".to_string()],
+                    is_required: true,
+                },
+                CombinatorialParameter {
+                    name: "authentication".to_string(),
+                    values: vec!["none".to_string(), "basic".to_string(), "bearer".to_string(), "invalid".to_string()],
+                    is_required: false,
+                },
+            ],
+            interaction_level: 3, // 3-way interaction testing
+        });
+    }
+
+    /// Initialize stress test generators
+    fn initialize_stress_test_generators(&mut self) {
+        // Memory stress test
+        self.stress_test_generators.push(StressTestGenerator {
+            resource_type: ResourceType::Memory,
+            stress_levels: vec![
+                StressLevel {
+                    name: "Low".to_string(),
+                    intensity: 0.3,
+                    description: "30% of available memory".to_string(),
+                },
+                StressLevel {
+                    name: "Medium".to_string(),
+                    intensity: 0.6,
+                    description: "60% of available memory".to_string(),
+                },
+                StressLevel {
+                    name: "High".to_string(),
+                    intensity: 0.9,
+                    description: "90% of available memory".to_string(),
+                },
+            ],
+            duration_limits: vec![60, 300, 600], // 1 min, 5 min, 10 min
+        });
+
+        // CPU stress test
+        self.stress_test_generators.push(StressTestGenerator {
+            resource_type: ResourceType::CPU,
+            stress_levels: vec![
+                StressLevel {
+                    name: "Low".to_string(),
+                    intensity: 0.4,
+                    description: "40% CPU utilization".to_string(),
+                },
+                StressLevel {
+                    name: "Medium".to_string(),
+                    intensity: 0.7,
+                    description: "70% CPU utilization".to_string(),
+                },
+                StressLevel {
+                    name: "High".to_string(),
+                    intensity: 0.95,
+                    description: "95% CPU utilization".to_string(),
+                },
+            ],
+            duration_limits: vec![30, 120, 300], // 30 sec, 2 min, 5 min
+        });
+
+        // Concurrent connections stress test
+        self.stress_test_generators.push(StressTestGenerator {
+            resource_type: ResourceType::ConcurrentConnections,
+            stress_levels: vec![
+                StressLevel {
+                    name: "Low".to_string(),
+                    intensity: 0.2,
+                    description: "20% of max connections".to_string(),
+                },
+                StressLevel {
+                    name: "Medium".to_string(),
+                    intensity: 0.5,
+                    description: "50% of max connections".to_string(),
+                },
+                StressLevel {
+                    name: "High".to_string(),
+                    intensity: 0.8,
+                    description: "80% of max connections".to_string(),
+                },
+            ],
+            duration_limits: vec![60, 300, 900], // 1 min, 5 min, 15 min
+        });
+    }
+
+    /// Generate boundary condition test cases
+    async fn generate_boundary_tests(&self, test_spec: &TestSpecification) -> Result<Vec<EdgeCaseTest>> {
+        let mut tests = Vec::new();
+        
+        for generator in &self.boundary_generators {
+            for boundary_value in &generator.boundary_values {
+                let test = EdgeCaseTest {
+                    test_id: Uuid::new_v4(),
+                    test_name: format!("Boundary test for {}: {}", generator.parameter_name, boundary_value),
+                    test_type: TestType::Boundary,
+                    test_scenario: TestScenario {
+                        scenario_name: format!("Boundary scenario: {} = {}", generator.parameter_name, boundary_value),
+                        input_data: serde_json::json!({
+                            generator.parameter_name: boundary_value
+                        }),
+                        execution_context: ExecutionContext::default(),
+                        preconditions: vec!["System is initialized".to_string()],
+                        postconditions: vec!["System handles boundary value correctly".to_string()],
+                    },
+                    edge_case_type: EdgeCaseType::Boundary,
+                    risk_level: self.assess_boundary_risk(boundary_value, &generator.parameter_type),
+                    expected_behavior: self.get_boundary_expected_behavior(boundary_value, &generator.parameter_type),
+                };
+                tests.push(test);
+            }
+        }
+        
+        Ok(tests)
+    }
+
+    /// Generate combinatorial test scenarios
+    async fn generate_combinatorial_tests(&self, test_spec: &TestSpecification) -> Result<Vec<EdgeCaseTest>> {
+        let mut tests = Vec::new();
+        
+        for generator in &self.combinatorial_generators {
+            let combinations = self.generate_combinations(&generator.parameters, generator.interaction_level);
+            
+            for (i, combination) in combinations.iter().enumerate() {
+                let test = EdgeCaseTest {
+                    test_id: Uuid::new_v4(),
+                    test_name: format!("Combinatorial test {}: {}", i + 1, combination.name),
+                    test_type: TestType::Combinatorial,
+                    test_scenario: TestScenario {
+                        scenario_name: combination.name.clone(),
+                        input_data: combination.parameters.clone(),
+                        execution_context: ExecutionContext::default(),
+                        preconditions: vec!["System supports all parameter combinations".to_string()],
+                        postconditions: vec!["System handles combination correctly".to_string()],
+                    },
+                    edge_case_type: EdgeCaseType::Combinatorial,
+                    risk_level: self.assess_combinatorial_risk(combination),
+                    expected_behavior: "System should handle parameter combination without errors".to_string(),
+                };
+                tests.push(test);
+            }
+        }
+        
+        Ok(tests)
+    }
+
+    /// Generate stress testing scenarios
+    async fn generate_stress_tests(&self, test_spec: &TestSpecification) -> Result<Vec<EdgeCaseTest>> {
+        let mut tests = Vec::new();
+        
+        for generator in &self.stress_test_generators {
+            for stress_level in &generator.stress_levels {
+                for duration in &generator.duration_limits {
+                    let test = EdgeCaseTest {
+                        test_id: Uuid::new_v4(),
+                        test_name: format!("Stress test: {} {} for {}s", 
+                            stress_level.name, 
+                            self.resource_type_name(&generator.resource_type),
+                            duration
+                        ),
+                        test_type: TestType::Stress,
+                        test_scenario: TestScenario {
+                            scenario_name: format!("Stress scenario: {} at {} intensity", 
+                                self.resource_type_name(&generator.resource_type),
+                                stress_level.name
+                            ),
+                            input_data: serde_json::json!({
+                                "stress_type": self.resource_type_name(&generator.resource_type),
+                                "intensity": stress_level.intensity,
+                                "duration_seconds": duration
+                            }),
+                            execution_context: ExecutionContext::default(),
+                            preconditions: vec!["System is in stable state".to_string()],
+                            postconditions: vec!["System maintains stability under stress".to_string()],
+                        },
+                        edge_case_type: EdgeCaseType::PerformanceIssue,
+                        risk_level: self.assess_stress_risk(stress_level),
+                        expected_behavior: "System should maintain performance and stability".to_string(),
+                    };
+                    tests.push(test);
+                }
+            }
+        }
+        
+        Ok(tests)
+    }
+
+    /// Generate combinations for combinatorial testing
+    fn generate_combinations(&self, parameters: &[CombinatorialParameter], interaction_level: u32) -> Vec<TestCombination> {
+        let mut combinations = Vec::new();
+        
+        // Generate all possible combinations up to the interaction level
+        if interaction_level >= 2 {
+            for i in 0..parameters.len() {
+                for j in (i + 1)..parameters.len() {
+                    for value1 in &parameters[i].values {
+                        for value2 in &parameters[j].values {
+                            let mut params = serde_json::Map::new();
+                            params.insert(parameters[i].name.clone(), serde_json::Value::String(value1.clone()));
+                            params.insert(parameters[j].name.clone(), serde_json::Value::String(value2.clone()));
+                            
+                            combinations.push(TestCombination {
+                                name: format!("{}={}, {}={}", 
+                                    parameters[i].name, value1,
+                                    parameters[j].name, value2
+                                ),
+                                parameters: serde_json::Value::Object(params),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Add 3-way combinations if requested
+        if interaction_level >= 3 {
+            for i in 0..parameters.len() {
+                for j in (i + 1)..parameters.len() {
+                    for k in (j + 1)..parameters.len() {
+                        for value1 in &parameters[i].values {
+                            for value2 in &parameters[j].values {
+                                for value3 in &parameters[k].values {
+                                    let mut params = serde_json::Map::new();
+                                    params.insert(parameters[i].name.clone(), serde_json::Value::String(value1.clone()));
+                                    params.insert(parameters[j].name.clone(), serde_json::Value::String(value2.clone()));
+                                    params.insert(parameters[k].name.clone(), serde_json::Value::String(value3.clone()));
+                                    
+                                    combinations.push(TestCombination {
+                                        name: format!("{}={}, {}={}, {}={}", 
+                                            parameters[i].name, value1,
+                                            parameters[j].name, value2,
+                                            parameters[k].name, value3
+                                        ),
+                                        parameters: serde_json::Value::Object(params),
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        combinations
+    }
+
+    /// Assess risk level for boundary values
+    fn assess_boundary_risk(&self, value: &str, param_type: &ParameterType) -> RiskLevel {
+        match param_type {
+            ParameterType::Integer => {
+                if value == "0" || value == "1" {
+                    RiskLevel::Low
+                } else if value.contains("-2147483648") || value.contains("2147483647") {
+                    RiskLevel::Critical
+                } else {
+                    RiskLevel::Medium
+                }
+            },
+            ParameterType::String => {
+                if value.is_empty() {
+                    RiskLevel::Medium
+                } else if value.len() > 1000 {
+                    RiskLevel::High
+                } else {
+                    RiskLevel::Low
+                }
+            },
+            _ => RiskLevel::Medium,
+        }
+    }
+
+    /// Assess risk level for combinatorial tests
+    fn assess_combinatorial_risk(&self, combination: &TestCombination) -> RiskLevel {
+        // Higher risk for combinations with null or invalid values
+        let combination_str = combination.name.to_lowercase();
+        if combination_str.contains("null") || combination_str.contains("invalid") {
+            RiskLevel::High
+        } else if combination_str.contains("empty") || combination_str.contains("long") {
+            RiskLevel::Medium
+        } else {
+            RiskLevel::Low
+        }
+    }
+
+    /// Assess risk level for stress tests
+    fn assess_stress_risk(&self, stress_level: &StressLevel) -> RiskLevel {
+        match stress_level.intensity {
+            i if i <= 0.3 => RiskLevel::Low,
+            i if i <= 0.6 => RiskLevel::Medium,
+            i if i <= 0.8 => RiskLevel::High,
+            _ => RiskLevel::Critical,
+        }
+    }
+
+    /// Get expected behavior for boundary values
+    fn get_boundary_expected_behavior(&self, value: &str, param_type: &ParameterType) -> String {
+        match param_type {
+            ParameterType::Integer => {
+                if value == "0" {
+                    "Should handle zero value correctly".to_string()
+                } else if value.contains("-2147483648") || value.contains("2147483647") {
+                    "Should handle integer overflow/underflow gracefully".to_string()
+                } else {
+                    "Should handle boundary integer value correctly".to_string()
+                }
+            },
+            ParameterType::String => {
+                if value.is_empty() {
+                    "Should handle empty string gracefully".to_string()
+                } else if value.len() > 1000 {
+                    "Should handle very long string efficiently".to_string()
+                } else {
+                    "Should handle string boundary value correctly".to_string()
+                }
+            },
+            _ => "Should handle boundary value correctly".to_string(),
+        }
+    }
+
+    /// Get resource type name for display
+    fn resource_type_name(&self, resource_type: &ResourceType) -> String {
+        match resource_type {
+            ResourceType::Memory => "Memory".to_string(),
+            ResourceType::CPU => "CPU".to_string(),
+            ResourceType::Network => "Network".to_string(),
+            ResourceType::Disk => "Disk".to_string(),
+            ResourceType::ConcurrentConnections => "Concurrent Connections".to_string(),
+        }
+    }
+}
+
+/// Test combination for combinatorial testing
+#[derive(Debug, Clone)]
+struct TestCombination {
+    name: String,
+    parameters: serde_json::Value,
 }
 
 #[derive(Debug)]
