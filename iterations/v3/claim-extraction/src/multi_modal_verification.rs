@@ -29,14 +29,15 @@ impl MultiModalVerificationEngine {
 
         for claim in claims {
             let verification = VerifiedClaim {
-                original_text: claim.clone(),
-                confidence_score: 0.5, // Placeholder
-                verification_status: VerificationStatus::Pending,
-                evidence_packets: vec![],
-                timestamp: Utc::now(),
+                original_claim: claim.clone(),
+                verification_results: VerificationStatus::Pending,
+                overall_confidence: 0.5, // Placeholder
+                verification_timestamp: Utc::now(),
             };
             results.verified_claims.push(verification);
         }
+
+        results.total_processed = claims.len();
 
         Ok(results)
     }

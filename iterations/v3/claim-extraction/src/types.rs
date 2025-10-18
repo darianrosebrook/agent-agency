@@ -343,3 +343,29 @@ pub struct VerifiabilityAssessment {
     pub unverifiable_parts: Vec<UnverifiableContent>,
     pub confidence: f64,
 }
+
+/// Results of multi-modal verification
+#[derive(Debug, Clone, Default)]
+pub struct VerificationResults {
+    pub verified_claims: Vec<VerifiedClaim>,
+    pub total_processed: usize,
+    pub successful_verifications: usize,
+}
+
+/// Individual verified claim
+#[derive(Debug, Clone)]
+pub struct VerifiedClaim {
+    pub original_claim: String,
+    pub verification_results: VerificationStatus,
+    pub overall_confidence: f64,
+    pub verification_timestamp: DateTime<Utc>,
+}
+
+/// Status of verification process
+#[derive(Debug, Clone)]
+pub enum VerificationStatus {
+    Verified,
+    Refuted,
+    Pending,
+    Error(String),
+}
