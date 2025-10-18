@@ -268,9 +268,9 @@ class WorkerPoolManager extends EventEmitter {
     } catch (error) {
       // Circuit breaker is open or execution failed
       this.activeTasks.delete(availableWorker);
-        this.updateWorkerMetrics(availableWorker, {
-          status: "idle", // Reset to idle on error
-        });
+      this.updateWorkerMetrics(availableWorker, {
+        status: "idle", // Reset to idle on error
+      });
       this.supervisor?.markWorkerIdle(availableWorker);
       throw error;
     }

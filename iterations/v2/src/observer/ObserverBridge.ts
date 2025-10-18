@@ -31,11 +31,20 @@ export class ObserverBridge {
   private metricsTimer?: ReturnType<typeof setTimeout>;
   private started = false;
 
-  constructor(runtime?: ArbiterRuntime | null, config?: ObserverConfig, healthMonitor?: HealthMonitor) {
+  constructor(
+    runtime?: ArbiterRuntime | null,
+    config?: ObserverConfig,
+    healthMonitor?: HealthMonitor
+  ) {
     this.config = config ?? loadObserverConfig();
     this.runtime = runtime ?? null;
     this.store = new ObserverStoreImpl(this.config, this.runtime ?? undefined);
-    this.server = new ObserverHttpServer(this.config, this.store, this.store, healthMonitor);
+    this.server = new ObserverHttpServer(
+      this.config,
+      this.store,
+      this.store,
+      healthMonitor
+    );
     this.handler = this.handleEvent.bind(this);
   }
 

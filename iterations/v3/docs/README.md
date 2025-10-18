@@ -8,6 +8,7 @@ This directory contains the core architectural documentation for V3 - the mainta
 - **[interaction-contracts.md](./interaction-contracts.md)** - API contracts and interaction patterns between components
 - **[agents.md](./agents.md)** - CAWS agent workflow guide and collaboration patterns
 - **[coordinating-concurrency.md](./coordinating-concurrency.md)** - Framework for concurrent agent coordination within council-based systems
+- **[DOCUMENTATION_STANDARDS.md](./DOCUMENTATION_STANDARDS.md)** - Professional documentation standards and reconstruction requirements
 
 ## Component Documentation
 

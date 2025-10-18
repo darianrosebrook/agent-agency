@@ -116,14 +116,129 @@ pub async fn evaluate_judges_constitutionally_parallel(
   - Tier 2: <2s (checkpoint consensus)
   - Tier 1: <3s (sequential with oversight)
 
-## Implementation Status
+## Implementation Details
 
-**✅ Production-Ready**: All council components implemented with:
-- Debate protocol with learning signals
-- Risk-tiered execution coordination
+### Core Data Structures
+
+```rust
+#[derive(Debug, Clone)]
+pub struct ConsensusCoordinator {
+    config: CouncilConfig,
+    evidence_enrichment: EvidenceEnrichmentCoordinator,
+    resilience_manager: Arc<ResilienceManager>,
+    metrics: Arc<RwLock<CoordinatorMetrics>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct JudgeVerdict {
+    pub judge_id: String,
+    pub task_id: Uuid,
+    pub pass: bool,
+    pub reasoning: String,
+    pub confidence: f32,
+    pub evidence: Vec<EvidencePacket>,
+    pub timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug)]
+pub struct ConsensusResult {
+    pub task_id: Uuid,
+    pub verdict_id: Uuid,
+    pub final_verdict: FinalVerdict,
+    pub individual_verdicts: HashMap<String, JudgeVerdict>,
+    pub consensus_score: f32,
+    pub debate_rounds: i32,
+    pub evaluation_time_ms: u64,
+    pub timestamp: DateTime<Utc>,
+}
+```
+
+### Execution Flow Implementation
+
+```rust
+impl ConsensusCoordinator {
+    pub async fn evaluate_task(&mut self, task_spec: TaskSpec) -> Result<ConsensusResult> {
+        // 1. Evidence enrichment with resilience
+        let evidence = self.resilience_manager
+            .execute_resilient("evidence_enrichment", || async {
+                self.evidence_enrichment.enrich_task_evidence(&task_spec).await
+            })
+            .await?;
+
+        // 2. Sequential judge evaluation (current implementation)
+        let mut individual_verdicts = HashMap::new();
+        self.evaluate_constitutional_judge(&task_spec, &evidence, &mut individual_verdicts).await?;
+        self.evaluate_technical_judge(&task_spec, &evidence, &mut individual_verdicts).await?;
+        self.evaluate_quality_judge(&task_spec, &evidence, &mut individual_verdicts).await?;
+        self.evaluate_integration_judge(&task_spec, &evidence, &mut individual_verdicts).await?;
+
+        // 3. Consensus calculation
+        let consensus_score = self.calculate_consensus_score(&individual_verdicts);
+        let final_verdict = self.determine_final_verdict(&individual_verdicts, consensus_score, &evidence);
+
+        // 4. Debate protocol (if consensus low)
+        let debate_rounds = if consensus_score < self.config.debate_threshold {
+            self.orchestrate_debate(&individual_verdicts, &task_spec).await?
+        } else {
+            0
+        };
+
+        // 5. Result construction with provenance
+        let result = ConsensusResult { /* ... */ };
+        self.record_provenance(&result).await?;
+
+        Ok(result)
+    }
+}
+```
+
+### Risk-Tier Implementation
+
+```rust
+#[derive(Debug, Clone, PartialEq)]
+pub enum RiskTier {
+    Tier1, // High risk: Sequential, maximum oversight
+    Tier2, // Medium risk: Limited parallel, checkpoint consensus
+    Tier3, // Low risk: High parallel, minimal coordination
+}
+
+impl RiskTier {
+    pub fn max_parallelism(&self) -> usize {
+        match self {
+            RiskTier::Tier1 => 1,
+            RiskTier::Tier2 => 2,
+            RiskTier::Tier3 => 4,
+        }
+    }
+
+    pub fn requires_debate(&self) -> bool {
+        matches!(self, RiskTier::Tier1 | RiskTier::Tier2)
+    }
+}
+```
+
+### Current Development Status
+
+**Implemented:**
+- Sequential judge evaluation framework
 - Evidence enrichment integration
-- Constitutional audit trails
-- Performance optimization for Apple Silicon
+- Basic consensus calculation
+- Debate protocol skeleton
+- Provenance recording infrastructure
+- Resilience patterns for judge evaluation
+
+**Active Development:**
+- Risk-tiered execution coordination
+- Parallel judge evaluation implementation
+- Advanced debate protocol completion
+- Learning signal processing
+- Performance optimization for Apple Silicon targets
+
+**Test Coverage:**
+- Unit tests for individual judge evaluation
+- Integration tests for consensus coordination
+- Evidence enrichment validation
+- Resilience pattern testing
 
 ## See Also
 

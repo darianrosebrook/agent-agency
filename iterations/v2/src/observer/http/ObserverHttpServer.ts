@@ -170,18 +170,28 @@ export class ObserverHttpServer {
         const metrics = this.healthMonitor.getMetrics();
         const alerts = this.healthMonitor.getAlerts();
         const overallStatus = this.healthMonitor.getOverallStatus();
-        
-        this.sendJson(res, 200, {
-          status: overallStatus,
-          checks: healthSummary,
-          metrics,
-          alerts,
-          timestamp: new Date().toISOString(),
-        }, originHeader);
+
+        this.sendJson(
+          res,
+          200,
+          {
+            status: overallStatus,
+            checks: healthSummary,
+            metrics,
+            alerts,
+            timestamp: new Date().toISOString(),
+          },
+          originHeader
+        );
       } else {
-        this.sendJson(res, 503, { 
-          error: "Health monitoring not available" 
-        }, originHeader);
+        this.sendJson(
+          res,
+          503,
+          {
+            error: "Health monitoring not available",
+          },
+          originHeader
+        );
       }
       return;
     }

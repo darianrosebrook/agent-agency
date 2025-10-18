@@ -84,6 +84,20 @@ pub enum KnowledgeSource {
     InternalKnowledgeBase(String),
 }
 
+impl std::fmt::Display for KnowledgeSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KnowledgeSource::WebPage(url) => write!(f, "WebPage: {}", url),
+            KnowledgeSource::Documentation(doc) => write!(f, "Documentation: {}", doc),
+            KnowledgeSource::CodeRepository(repo) => write!(f, "CodeRepository: {}", repo),
+            KnowledgeSource::ApiDocumentation(api) => write!(f, "ApiDocumentation: {}", api),
+            KnowledgeSource::CommunityPost(post) => write!(f, "CommunityPost: {}", post),
+            KnowledgeSource::AcademicPaper(paper) => write!(f, "AcademicPaper: {}", paper),
+            KnowledgeSource::InternalKnowledgeBase(kb) => write!(f, "InternalKnowledgeBase: {}", kb),
+        }
+    }
+}
+
 /// Research query
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResearchQuery {

@@ -1,9 +1,9 @@
 /**
  * Comprehensive Health Monitor for V2 Arbiter
- * 
+ *
  * Provides real-time health monitoring, metrics collection, and alerting
  * for all system components to ensure production readiness.
- * 
+ *
  * @author @darianrosebrook
  */
 
@@ -66,38 +66,38 @@ export class HealthMonitor extends EventEmitter {
 
   start(): void {
     if (this.isRunning) return;
-    
+
     this.isRunning = true;
     this.startTime = Date.now();
-    
+
     // Start health checks
     this.checkInterval = setInterval(() => {
       this.performHealthChecks();
     }, this.config.checkIntervalMs);
-    
+
     // Start metrics collection
     this.metricsInterval = setInterval(() => {
       this.collectMetrics();
     }, this.config.metricsIntervalMs);
-    
+
     this.emit("started");
   }
 
   stop(): void {
     if (!this.isRunning) return;
-    
+
     this.isRunning = false;
-    
+
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
       this.checkInterval = undefined;
     }
-    
+
     if (this.metricsInterval) {
       clearInterval(this.metricsInterval);
       this.metricsInterval = undefined;
     }
-    
+
     this.emit("stopped");
   }
 
@@ -119,7 +119,7 @@ export class HealthMonitor extends EventEmitter {
     try {
       // This would integrate with your actual database health check
       const responseTime = Date.now() - start;
-      
+
       this.updateHealthCheck("database", {
         name: "database",
         status: "healthy",
@@ -139,7 +139,7 @@ export class HealthMonitor extends EventEmitter {
         lastChecked: new Date(),
         responseTimeMs: Date.now() - start,
       });
-      
+
       this.createAlert("database", "high", "Database health check failed");
     }
   }
@@ -148,16 +148,17 @@ export class HealthMonitor extends EventEmitter {
     try {
       const stats = circuitBreakerManager.getAllStats();
       let overallStatus: "healthy" | "degraded" | "unhealthy" = "healthy";
-      
+
       for (const [name, breakerStats] of Object.entries(stats)) {
         if (breakerStats.state === "open") {
           overallStatus = "unhealthy";
           this.createAlert(name, "high", `Circuit breaker ${name} is open`);
         } else if (breakerStats.state === "half-open") {
-          overallStatus = overallStatus === "healthy" ? "degraded" : overallStatus;
+          overallStatus =
+            overallStatus === "healthy" ? "degraded" : overallStatus;
         }
       }
-      
+
       this.updateHealthCheck("circuit-breakers", {
         name: "circuit-breakers",
         status: overallStatus,
@@ -178,15 +179,22 @@ export class HealthMonitor extends EventEmitter {
   private async checkMemoryUsage(): Promise<void> {
     const memUsage = process.memoryUsage();
     const memUsagePercent = (memUsage.heapUsed / memUsage.heapTotal) * 100;
-    
+
     let status: "healthy" | "degraded" | "unhealthy" = "healthy";
     if (memUsagePercent > this.config.alertThresholds.memoryUsagePercent) {
       status = "unhealthy";
-      this.createAlert("memory", "critical", `High memory usage: ${memUsagePercent.toFixed(1)}%`);
-    } else if (memUsagePercent > this.config.alertThresholds.memoryUsagePercent * 0.8) {
+      this.createAlert(
+        "memory",
+        "critical",
+        `High memory usage: ${memUsagePercent.toFixed(1)}%`
+      );
+    } else if (
+      memUsagePercent >
+      this.config.alertThresholds.memoryUsagePercent * 0.8
+    ) {
       status = "degraded";
     }
-    
+
     this.updateHealthCheck("memory", {
       name: "memory",
       status,
@@ -204,15 +212,19 @@ export class HealthMonitor extends EventEmitter {
   private async checkTaskQueue(): Promise<void> {
     // This would integrate with your actual task queue
     const queueDepth = 0; // This would be actual queue depth
-    
+
     let status: "healthy" | "degraded" | "unhealthy" = "healthy";
     if (queueDepth > 100) {
       status = "unhealthy";
-      this.createAlert("task-queue", "high", `High task queue depth: ${queueDepth}`);
+      this.createAlert(
+        "task-queue",
+        "high",
+        `High task queue depth: ${queueDepth}`
+      );
     } else if (queueDepth > 50) {
       status = "degraded";
     }
-    
+
     this.updateHealthCheck("task-queue", {
       name: "task-queue",
       status,
@@ -228,17 +240,17 @@ export class HealthMonitor extends EventEmitter {
       // Check if web interface is responding
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
-      const response = await fetch("http://localhost:3000/", { 
+
+      const response = await fetch("http://localhost:3000/", {
         method: "HEAD",
-        signal: controller.signal
+        signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       const responseTime = Date.now() - start;
       const status = response.ok ? "healthy" : "degraded";
-      
+
       this.updateHealthCheck("web-interface", {
         name: "web-interface",
         status,
@@ -254,8 +266,12 @@ export class HealthMonitor extends EventEmitter {
         lastChecked: new Date(),
         responseTimeMs: Date.now() - start,
       });
-      
-      this.createAlert("web-interface", "medium", "Web interface not responding");
+
+      this.createAlert(
+        "web-interface",
+        "medium",
+        "Web interface not responding"
+      );
     }
   }
 
@@ -270,7 +286,7 @@ export class HealthMonitor extends EventEmitter {
       errorRate: 0, // This would be calculated from actual error logs
       throughput: 0, // This would be calculated from task completion rates
     };
-    
+
     this.emit("metrics-collected", this.metrics);
   }
 
@@ -279,7 +295,11 @@ export class HealthMonitor extends EventEmitter {
     this.emit("health-check-updated", name, check);
   }
 
-  private createAlert(component: string, severity: HealthAlert["severity"], message: string): void {
+  private createAlert(
+    component: string,
+    severity: HealthAlert["severity"],
+    message: string
+  ): void {
     const alertId = `${component}-${Date.now()}`;
     const alert: HealthAlert = {
       id: alertId,
@@ -289,7 +309,7 @@ export class HealthMonitor extends EventEmitter {
       timestamp: new Date(),
       resolved: false,
     };
-    
+
     this.alerts.set(alertId, alert);
     this.emit("alert-created", alert);
   }
@@ -317,7 +337,7 @@ export class HealthMonitor extends EventEmitter {
   }
 
   getAlerts(): HealthAlert[] {
-    return Array.from(this.alerts.values()).filter(alert => !alert.resolved);
+    return Array.from(this.alerts.values()).filter((alert) => !alert.resolved);
   }
 
   resolveAlert(alertId: string): boolean {
@@ -332,15 +352,15 @@ export class HealthMonitor extends EventEmitter {
 
   getOverallStatus(): "healthy" | "degraded" | "unhealthy" {
     const checks = Array.from(this.healthChecks.values());
-    
-    if (checks.some(check => check.status === "unhealthy")) {
+
+    if (checks.some((check) => check.status === "unhealthy")) {
       return "unhealthy";
     }
-    
-    if (checks.some(check => check.status === "degraded")) {
+
+    if (checks.some((check) => check.status === "degraded")) {
       return "degraded";
     }
-    
+
     return "healthy";
   }
 }

@@ -108,29 +108,58 @@ flowchart TB
   CPU <---> MEM
 ```
 
-## Current Implementation Status
+## Implementation Architecture
 
-### ✅ Production-Ready Components (11/11)
+### Core Components (23 Crates)
 
-**Core Council System:**
-- **Council Coordinator**: Debate protocol with learning signals, risk-tiered execution
-- **Constitutional Judge**: CAWS compliance, provenance tracking, budget enforcement
-- **Technical Auditor**: Code quality analysis, security scanning, contract validation
-- **Quality Evaluator**: Requirements fit assessment, acceptance criteria verification
-- **Integration Validator**: Cross-system coherence, breaking change detection
+**Coordination Layer:**
+- `council/`: Consensus coordination and debate protocol implementation
+- `orchestration/`: Task routing and execution management
+- `workers/`: Agent pool lifecycle and execution coordination
 
-**Worker & Research Systems:**
-- **Research Agent**: Context synthesis, evidence gathering, cross-reference detection
-- **Worker Pool**: Generalist/specialist workers with adaptive routing
-- **Reflexive Learning**: Multi-turn learning coordination, continuous improvement
+**Domain Services:**
+- `research/`: Context synthesis and evidence gathering algorithms
+- `claim-extraction/`: V2 pipeline port for claim processing and disambiguation
+- `reflexive-learning/`: Multi-turn learning coordination and adaptation
+- `model-benchmarking/`: Performance evaluation and comparative scoring
 
-**Infrastructure & Security:**
-- **System Health Monitor**: Agent monitoring, circuit breakers, Prometheus metrics
-- **Security Policy Enforcer**: Comprehensive security controls, audit logging
-- **Context Preservation Engine**: Multi-tenant context management, synthesis
-- **Workspace State Manager**: Repository state management, rollback capabilities
+**Infrastructure Layer:**
+- `database/`: PostgreSQL/pgvector persistence with connection pooling
+- `provenance/`: Git-backed audit trails with JWS cryptographic signing
+- `apple-silicon/`: Hardware-accelerated inference with ANE/GPU/CPU orchestration
+- `system-health-monitor/`: Agent monitoring with circuit breaker patterns
+- `security-policy-enforcer/`: Security controls and audit logging framework
+- `context-preservation-engine/`: Multi-tenant context management and synthesis
+- `workspace-state-manager/`: Repository state tracking and diff computation
+- `embedding-service/`: Vector embedding computation and caching
+- `minimal-diff-evaluator/`: AST-based change assessment and impact analysis
+- `integration-tests/`: Cross-component validation and contract testing
+- `config/`: Configuration management with validation and hot-reloading
+- `resilience/`: Circuit breaker and retry pattern implementations
+- `observability/`: Metrics collection and monitoring infrastructure
+- `mcp-integration/`: Model Context Protocol server implementation
 
-### 🔧 Key Architectural Features
+### Component Maturity Levels
+
+**Stable Implementation:**
+- Database schema and migration framework
+- Basic council coordination and judge evaluation
+- Worker pool management and routing
+- Provenance recording and audit trails
+
+**Active Development:**
+- Constitutional concurrency coordination patterns
+- Apple Silicon hardware optimization
+- Cross-component integration testing
+- Configuration management and validation
+
+**Early Implementation:**
+- Advanced learning signal processing
+- Multi-tenant context isolation
+- Performance benchmarking automation
+- Security policy enforcement
+
+### Key Architectural Patterns
 
 **Constitutional Concurrency:**
 - Risk-tiered parallelism (Tier 1: sequential, Tier 2: checkpoint, Tier 3: parallel)

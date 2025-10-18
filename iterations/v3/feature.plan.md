@@ -1,53 +1,79 @@
-# Predictive Learning System Enhancements (Tier 1)
+# Interoperability Hardening & Smart Contracts (Tier 1)
 
 ## Scope & Objectives
-- Introduce a `predictive` module inside `reflexive-learning` that houses V3's `PredictiveLearningSystem`.
-- Implement the three core predictive components called out in the task: `PerformancePredictor`, `StrategyOptimizer`, and `ResourcePredictor`.
-- Expose orchestration via `PredictiveLearningSystem::learn_and_predict` so reflexive learning can consume proactive insights (performance, strategy, resource).
-- Stay within existing `reflexive-learning` scope; no cross-crate behavioral changes beyond the new public API and logs.
-- Elevate the coordinator's progress tracking by implementing `update_progress_metrics` so trend data influences completion estimates and persists into session state.
+- Replace orchestration–council–provenance shims with production-ready adapters:
+  - implement `PostgresVerdictWriter` + waiver persistence (SQLx) and retire the `InMemoryWriter` stub.
+  - finish `ProvenanceServiceAdapter` by wiring to the provenance crate’s service API and surfacing structured errors.
+  - stabilize `OrchestrationProvenanceEmitter` into an async-safe component with bounded queues and health monitoring.
+- Establish canonical data contracts shared across layers (workers → council → orchestration → provenance) backed by JSON Schemas in `docs/contracts/`.
+- Enforce contract validation at every boundary with replayable error handling + retry/backoff so malformed payloads can be quarantined without crashing the pipeline.
+- Deliver deterministic recovery paths (idempotent writes, resume-safe event batching) to honour Tier 1 reliability expectations.
+
+**Risk tier:** 🔴 Tier 1 (multi-agent governance + persistence).  
+**Change budget target:** ≤12 files / ≤900 LOC pending final design.
 
 ## Architecture Sketch
 ```
-TaskOutcome (+ optional snapshot data)
-        │
-        ▼
-PredictiveLearningSystem
-    ├── PerformancePredictor::predict_future
-    │       - blends recent progress metrics with outcome signals
-    │       - outputs quality/success/time forecasts + risk
-    ├── StrategyOptimizer::optimize_strategies
-    │       - examines outcome category + trend data
-    │       - suggests proactive strategy & weighted adjustments
-    └── ResourcePredictor::predict_needs
-            - infers CPU/memory/token/time load & pressure level
-            - emits rationale for adaptive allocation
+WorkerOutput JSON
+    │  (schema validation + contract → domain conversion)
+    ▼
+Orchestrator TaskDesc ──▶ Council::ConsensusCoordinator
+    │                         │
+    │                         ├─ emits JudgeVerdict contract payloads
+    │                         ▼
+    │                    Verdict aggregation
+    │                         │
+    ▼                         ▼
+Orchestrator persistence ─▶ PostgresVerdictWriter (transactional)
+    │                         │
+    │                         └─► ProvenanceServiceAdapter ──► ProvenanceService::record_provenance
+    ▼
+Retry + CircuitBreaker wrappers
 ```
-- Shared helper `TaskLearningSnapshot` encapsulates task outcome, optional progress metrics, and resource statistics.
-- Insights aggregated into `PredictiveLearningInsights` struct returned to callers.
+- **ContractRegistry** module will load/compile schemas once, cache validators, and expose typed helpers (`validate_worker_output`, `encode_final_verdict`).
+- **Error bus:** introduce `InterchangeError` enum covering validation, transport, persistence; bubbled through `anyhow` context so callers log actionable data.
+- **Recovery:** persistence + provenance writes wrapped in `RetryConfig` with exponential backoff + circuit breaker integration already present in orchestrator.
 
-## Data Plan
-- Primary input: `TaskOutcome` plus optional `ProgressMetrics` and `ResourceUtilization` captured from the reflexive loop.
-- Leverage light-weight statistical heuristics (moving averages, categorical weights) computed in-memory; no persistent schema changes required.
-- Preserve deterministic calculations by parameterizing smoothing constants (`PredictiveLearningConfig`) and avoiding real-time randomness.
+## Data & Contract Plan
+- Create `interoperability::contracts` (new crate or module in `orchestration`) exporting Serde structs exactly matching JSON schemas plus `TryFrom` conversions to legacy types (`council::models`, `workers::executor`).
+- Compile schemas using `jsonschema` crate at build-time (lazy_static) and provide validation helpers returning structured diagnostics (path, keyword, description).
+- Introduce deterministic ID/seed propagation: extend worker metadata mapping so seeds/waivers/claims flow through orchestrator into council inputs and provenance records.
+- Persist verdict + waivers transactionally in Postgres (`sqlx::query!` with offline data or runtime `query` + typed mapping) ensuring idempotent upserts using natural keys (`task_id`, `waiver.id`).
 
-## Observability
-- Add structured `tracing` spans around prediction/optimization to surface component-level timing.
-- Emit debug-level fields with predicted scores, recommended strategies, and resource pressure for downstream metrics ingestion.
-- Surface prediction confidence in returned insights so higher layers can fan-out to metrics (`consensus-time`, `agent-success-rate`) already tracked in spec.
-- Ensure progress metric updates emit structured fields (quality delta, completion adjustment, trend direction) to keep audit trails consistent with Tier 1 observability expectations.
+## Observability & Resilience
+- Wrap contract validations + persistence calls in tracing spans (`contract.validate`, `db.persist_verdict`, `provenance.append_event`) with structured fields (task_id, tier, retry_attempt).
+- Emit warning-level logs when payload fails validation including truncated diagnostics (no PII) and persist recoverable dead-letter entries for follow-up.
+- Add health probes to provenance emitter (async interval) publishing metrics via `metrics::counter!` (events_recorded, queue_depth) to satisfy spec observability list (`consensus-time`, `agent-success-rate`).
+- Ensure provenance adapter converts errors into `ProvenanceFault` with retry/backoff while preserving audit trail in storage.
 
-## Test Matrix
-| Test Type | Scenario | Assertion |
-|-----------|----------|-----------|
-| Unit | Success outcome with strong quality indicators | Performance predictor yields high success probability & low risk |
-| Unit | Partial success with remediation issues | Strategy optimizer recommends adaptive strategy with targeted adjustments |
-| Unit | Failure due to resource exhaustion | Resource predictor flags high pressure and elevated resource needs |
-| Unit | Timeout with partial progress metrics | Performance predictor lengthens completion time, resource predictor estimates retry cost |
-| Integration | `PredictiveLearningSystem::learn_and_predict` on contrasting outcomes | Aggregated insights combine component outputs coherently and preserve confidence fields |
-- Unit | Improving vs. declining performance trends | `update_progress_metrics` adjusts completion percentage appropriately and persists updated trend history |
+## Test Matrix (Tier 1 Quality Bar)
+| Type | Scenario | Assertion |
+|------|----------|-----------|
+| Unit (contracts) | Valid worker output JSON round-trips to domain structs | Validator succeeds; conversion preserves seeds/waivers |
+| Unit (contracts) | Missing contract fields | Returns `InterchangeError::Validation` with precise JSON pointer; no panic |
+| Unit (provenance) | Adapter surfaces provenance service failure | Error propagated; retry policy invoked once; no event loss |
+| Integration | Orchestrate flow with mocked council + Postgres test pool | Verdict persisted + provenance recorded; retries not triggered |
+| Integration | Schema mismatch injected mid-flow | Orchestrator short-circuits, records failure provenance, returns `FinalVerdict::Rejected` |
+| Contract Tests | Validate schema examples + generated payloads via `jsonschema` + AJV (Node script) | All pass; mismatched payloads fail with expected diagnostics |
+| Mutation/Coverage | Ensure new modules reach ≥90% branch coverage; targeted mutation tests on validation helpers | Mutation score ≥70% on contract layer |
+
+## Tooling & Fixtures
+- Spin up ephemeral Postgres via `sqlx::test` feature or docker-less `sqlx::AnyPool` in tests; seed schema using existing migrations.
+- Provide deterministic sample payloads in `docs/contracts/examples/*` reused by tests.
+- Extend `Makefile` / `npm run test:contract` to execute new Rust contract tests & Node AJV validation.
+
+## Risks & Mitigations
+- **SQLx offline data**: compile-time macros require DSN; mitigate by using runtime `query` with explicit row structs or `sqlx::query!` + `DATABASE_URL` env gating tests.
+- **Schema drift**: add JSON schema hash assertion in tests to detect accidental changes.
+- **Cyclic deps**: keep new contract module free of heavy crate dependencies; use feature flags if shared crate introduced.
+- **Performance**: cache validators (once) to avoid per-request compile overhead.
 
 ## Acceptance Alignment
-- Supports working spec acceptance A3 (learning adaptation) by enabling proactive adjustments.
-- Reinforces invariants around auditable decisions via structured outputs and logging.
-- Complements Adaptive Resource Manager work without exceeding current change budget.
+- A1/A7: faster consensus + auditable provenance through transactional persistence & contract enforcement.
+- A2/A8: structured claims/evidence fields flow through interop layer enabling claim verification pipeline.
+- A5/A9: contract validation ensures MCP + CAWS compliance data carries rule references + violations with deterministic handling.
+
+## Open Questions / Follow-ups
+- Confirm desired storage schema for waiver updates (append-only vs upsert). Default plan: use upsert with history table optional.
+- Need clarity on provenance git integration readiness; plan assumes service API available but will feature-gate if absent.
+- Should invalid payloads trigger `FinalVerdict::Rejected` or queue for manual review? Current design leans Reject + provenance entry; await stakeholder confirmation.

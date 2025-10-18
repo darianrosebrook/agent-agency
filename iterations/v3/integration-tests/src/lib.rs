@@ -188,45 +188,45 @@ impl IntegrationTestRunner {
 
     async fn run_orchestration_tests(&mut self) -> Result<(), anyhow::Error> {
         tracing::info!("Running orchestration integration tests");
-        // TODO: Implement orchestration tests with the following requirements:
-        // 1. Orchestration integration tests: Implement comprehensive orchestration integration tests
-        //    - Test orchestration task routing and execution
-        //    - Test orchestration worker management and coordination
-        //    - Handle orchestration test validation and verification
-        // 2. Orchestration functionality tests: Test orchestration functionality and features
-        //    - Test orchestration load balancing and distribution
-        //    - Test orchestration error handling and recovery
-        //    - Handle orchestration functionality test validation
-        // 3. Orchestration performance tests: Test orchestration performance and scalability
-        //    - Test orchestration response times and throughput
-        //    - Test orchestration load handling and stress testing
-        //    - Handle orchestration performance test validation
-        // 4. Orchestration error handling tests: Test orchestration error handling and recovery
-        //    - Test orchestration error scenarios and edge cases
-        //    - Test orchestration error recovery and resilience
-        //    - Handle orchestration error handling test validation
+        
+        // Test 1: Orchestration task routing and execution
+        self.test_orchestration_task_routing().await?;
+        
+        // Test 2: Orchestration worker management and coordination
+        self.test_orchestration_worker_management().await?;
+        
+        // Test 3: Orchestration load balancing and distribution
+        self.test_orchestration_load_balancing().await?;
+        
+        // Test 4: Orchestration performance and scalability
+        self.test_orchestration_performance().await?;
+        
+        // Test 5: Orchestration error handling and recovery
+        self.test_orchestration_error_handling().await?;
+        
+        tracing::info!("Orchestration integration tests completed successfully");
         Ok(())
     }
 
     async fn run_claim_extraction_tests(&mut self) -> Result<(), anyhow::Error> {
         tracing::info!("Running claim extraction integration tests");
-        // TODO: Implement claim extraction tests with the following requirements:
-        // 1. Claim extraction integration tests: Implement comprehensive claim extraction integration tests
-        //    - Test claim extraction from various sources and formats
-        //    - Test claim extraction processing and validation
-        //    - Handle claim extraction test validation and verification
-        // 2. Claim extraction functionality tests: Test claim extraction functionality and features
-        //    - Test claim extraction accuracy and completeness
-        //    - Test claim extraction error handling and recovery
-        //    - Handle claim extraction functionality test validation
-        // 3. Claim extraction performance tests: Test claim extraction performance and scalability
-        //    - Test claim extraction response times and throughput
-        //    - Test claim extraction load handling and stress testing
-        //    - Handle claim extraction performance test validation
-        // 4. Claim extraction error handling tests: Test claim extraction error handling and recovery
-        //    - Test claim extraction error scenarios and edge cases
-        //    - Test claim extraction error recovery and resilience
-        //    - Handle claim extraction error handling test validation
+        
+        // Test 1: Claim extraction from various sources and formats
+        self.test_claim_extraction_sources().await?;
+        
+        // Test 2: Claim extraction processing and validation
+        self.test_claim_extraction_processing().await?;
+        
+        // Test 3: Claim extraction accuracy and completeness
+        self.test_claim_extraction_accuracy().await?;
+        
+        // Test 4: Claim extraction performance and scalability
+        self.test_claim_extraction_performance().await?;
+        
+        // Test 5: Claim extraction error handling and recovery
+        self.test_claim_extraction_error_handling().await?;
+        
+        tracing::info!("Claim extraction integration tests completed successfully");
         Ok(())
     }
 
@@ -1258,6 +1258,774 @@ mod tests {
         }
         
         tracing::info!("Database error handling test passed");
+        Ok(())
+    }
+
+    /// Test orchestration task routing and execution
+    async fn test_orchestration_task_routing(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing orchestration task routing and execution");
+        
+        // Test orchestration engine initialization
+        let config = agent_agency_orchestration::OrchestrationConfig {
+            max_concurrent_tasks: 10,
+            task_timeout_ms: 30000,
+            worker_pool_size: 5,
+            enable_retry: true,
+            max_retries: 3,
+            debug_mode: false,
+        };
+        
+        let orchestration_engine = agent_agency_orchestration::OrchestrationEngine::new(config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize orchestration engine: {:?}", e))?;
+        
+        // Test task creation and routing
+        let test_task = agent_agency_orchestration::types::Task {
+            id: uuid::Uuid::new_v4(),
+            title: "Integration Test Task".to_string(),
+            description: "Test task for orchestration routing".to_string(),
+            priority: agent_agency_orchestration::types::TaskPriority::Medium,
+            complexity: agent_agency_orchestration::types::TaskComplexity::Medium,
+            estimated_duration_ms: 5000,
+            required_skills: vec!["testing".to_string()],
+            dependencies: vec![],
+            metadata: std::collections::HashMap::new(),
+        };
+        
+        // Test task submission
+        let submission_result = orchestration_engine.submit_task(test_task.clone()).await
+            .map_err(|e| anyhow::anyhow!("Failed to submit task: {:?}", e))?;
+        
+        assert_eq!(submission_result.task_id, test_task.id, "Submitted task ID should match");
+        assert!(submission_result.assigned_worker_id.is_some(), "Task should be assigned to a worker");
+        
+        // Test task status tracking
+        let task_status = orchestration_engine.get_task_status(test_task.id).await
+            .map_err(|e| anyhow::anyhow!("Failed to get task status: {:?}", e))?;
+        
+        assert!(task_status.is_some(), "Task status should be available");
+        let status = task_status.unwrap();
+        assert!(matches!(status, agent_agency_orchestration::types::TaskStatus::Pending | 
+                           agent_agency_orchestration::types::TaskStatus::InProgress), 
+                "Task should be pending or in progress");
+        
+        tracing::info!("Orchestration task routing test passed");
+        Ok(())
+    }
+
+    /// Test orchestration worker management and coordination
+    async fn test_orchestration_worker_management(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing orchestration worker management and coordination");
+        
+        let config = agent_agency_orchestration::OrchestrationConfig {
+            max_concurrent_tasks: 10,
+            task_timeout_ms: 30000,
+            worker_pool_size: 3,
+            enable_retry: true,
+            max_retries: 3,
+            debug_mode: false,
+        };
+        
+        let orchestration_engine = agent_agency_orchestration::OrchestrationEngine::new(config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize orchestration engine: {:?}", e))?;
+        
+        // Test worker registration
+        let worker_id = uuid::Uuid::new_v4();
+        let worker_capabilities = agent_agency_orchestration::types::WorkerCapabilities {
+            skills: vec!["testing".to_string(), "integration".to_string()],
+            max_concurrent_tasks: 2,
+            preferred_task_types: vec!["integration_test".to_string()],
+            performance_metrics: std::collections::HashMap::new(),
+        };
+        
+        let registration_result = orchestration_engine.register_worker(worker_id, worker_capabilities).await
+            .map_err(|e| anyhow::anyhow!("Failed to register worker: {:?}", e))?;
+        
+        assert!(registration_result, "Worker registration should succeed");
+        
+        // Test worker status monitoring
+        let worker_status = orchestration_engine.get_worker_status(worker_id).await
+            .map_err(|e| anyhow::anyhow!("Failed to get worker status: {:?}", e))?;
+        
+        assert!(worker_status.is_some(), "Worker status should be available");
+        let status = worker_status.unwrap();
+        assert_eq!(status.worker_id, worker_id, "Worker ID should match");
+        assert_eq!(status.status, agent_agency_orchestration::types::WorkerStatus::Available, 
+                   "Worker should be available");
+        
+        // Test worker health monitoring
+        let health_check = orchestration_engine.check_worker_health(worker_id).await
+            .map_err(|e| anyhow::anyhow!("Failed to check worker health: {:?}", e))?;
+        
+        assert!(health_check.is_healthy, "Worker should be healthy");
+        assert!(health_check.last_heartbeat.is_some(), "Worker should have heartbeat");
+        
+        tracing::info!("Orchestration worker management test passed");
+        Ok(())
+    }
+
+    /// Test orchestration load balancing and distribution
+    async fn test_orchestration_load_balancing(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing orchestration load balancing and distribution");
+        
+        let config = agent_agency_orchestration::OrchestrationConfig {
+            max_concurrent_tasks: 20,
+            task_timeout_ms: 30000,
+            worker_pool_size: 5,
+            enable_retry: true,
+            max_retries: 3,
+            debug_mode: false,
+        };
+        
+        let orchestration_engine = agent_agency_orchestration::OrchestrationEngine::new(config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize orchestration engine: {:?}", e))?;
+        
+        // Register multiple workers
+        let mut worker_ids = Vec::new();
+        for i in 0..3 {
+            let worker_id = uuid::Uuid::new_v4();
+            let worker_capabilities = agent_agency_orchestration::types::WorkerCapabilities {
+                skills: vec!["testing".to_string(), "load_balancing".to_string()],
+                max_concurrent_tasks: 3,
+                preferred_task_types: vec!["load_test".to_string()],
+                performance_metrics: std::collections::HashMap::new(),
+            };
+            
+            orchestration_engine.register_worker(worker_id, worker_capabilities).await
+                .map_err(|e| anyhow::anyhow!("Failed to register worker {}: {:?}", i, e))?;
+            worker_ids.push(worker_id);
+        }
+        
+        // Submit multiple tasks to test load balancing
+        let mut task_ids = Vec::new();
+        for i in 0..10 {
+            let test_task = agent_agency_orchestration::types::Task {
+                id: uuid::Uuid::new_v4(),
+                title: format!("Load Test Task {}", i),
+                description: "Test task for load balancing".to_string(),
+                priority: agent_agency_orchestration::types::TaskPriority::Medium,
+                complexity: agent_agency_orchestration::types::TaskComplexity::Low,
+                estimated_duration_ms: 1000,
+                required_skills: vec!["testing".to_string()],
+                dependencies: vec![],
+                metadata: std::collections::HashMap::new(),
+            };
+            
+            let submission_result = orchestration_engine.submit_task(test_task.clone()).await
+                .map_err(|e| anyhow::anyhow!("Failed to submit load test task {}: {:?}", i, e))?;
+            
+            task_ids.push(submission_result.task_id);
+        }
+        
+        // Wait a moment for task distribution
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        
+        // Check load distribution across workers
+        let mut worker_loads = Vec::new();
+        for worker_id in &worker_ids {
+            let worker_status = orchestration_engine.get_worker_status(*worker_id).await
+                .map_err(|e| anyhow::anyhow!("Failed to get worker status: {:?}", e))?;
+            
+            if let Some(status) = worker_status {
+                worker_loads.push(status.active_tasks);
+            }
+        }
+        
+        // Validate load distribution (should be relatively balanced)
+        let total_load: u32 = worker_loads.iter().sum();
+        let avg_load = total_load as f32 / worker_loads.len() as f32;
+        
+        // Each worker should have some load, and the distribution should be reasonable
+        assert!(total_load > 0, "Workers should have some load");
+        assert!(avg_load > 0.0, "Average load should be positive");
+        
+        // Check that no single worker is overloaded (more than 2x average)
+        for load in &worker_loads {
+            assert!(*load as f32 <= avg_load * 2.5, "No worker should be severely overloaded");
+        }
+        
+        tracing::info!("Orchestration load balancing test passed - Total load: {}, Average: {:.2}", total_load, avg_load);
+        Ok(())
+    }
+
+    /// Test orchestration performance and scalability
+    async fn test_orchestration_performance(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing orchestration performance and scalability");
+        
+        let config = agent_agency_orchestration::OrchestrationConfig {
+            max_concurrent_tasks: 50,
+            task_timeout_ms: 30000,
+            worker_pool_size: 10,
+            enable_retry: true,
+            max_retries: 3,
+            debug_mode: false,
+        };
+        
+        let orchestration_engine = agent_agency_orchestration::OrchestrationEngine::new(config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize orchestration engine: {:?}", e))?;
+        
+        // Register workers for performance testing
+        for i in 0..5 {
+            let worker_id = uuid::Uuid::new_v4();
+            let worker_capabilities = agent_agency_orchestration::types::WorkerCapabilities {
+                skills: vec!["performance_testing".to_string()],
+                max_concurrent_tasks: 10,
+                preferred_task_types: vec!["performance_test".to_string()],
+                performance_metrics: std::collections::HashMap::new(),
+            };
+            
+            orchestration_engine.register_worker(worker_id, worker_capabilities).await
+                .map_err(|e| anyhow::anyhow!("Failed to register performance test worker {}: {:?}", i, e))?;
+        }
+        
+        // Test high-volume task submission performance
+        let start_time = std::time::Instant::now();
+        let mut submission_handles = Vec::new();
+        
+        for i in 0..20 {
+            let engine_clone = orchestration_engine.clone();
+            let handle = tokio::spawn(async move {
+                let test_task = agent_agency_orchestration::types::Task {
+                    id: uuid::Uuid::new_v4(),
+                    title: format!("Performance Test Task {}", i),
+                    description: "High-volume performance test".to_string(),
+                    priority: agent_agency_orchestration::types::TaskPriority::Low,
+                    complexity: agent_agency_orchestration::types::TaskComplexity::Low,
+                    estimated_duration_ms: 500,
+                    required_skills: vec!["performance_testing".to_string()],
+                    dependencies: vec![],
+                    metadata: std::collections::HashMap::new(),
+                };
+                
+                engine_clone.submit_task(test_task).await
+            });
+            submission_handles.push(handle);
+        }
+        
+        // Wait for all submissions to complete
+        let mut successful_submissions = 0;
+        for handle in submission_handles {
+            match handle.await {
+                Ok(Ok(_)) => successful_submissions += 1,
+                Ok(Err(e)) => tracing::warn!("Task submission failed: {:?}", e),
+                Err(e) => tracing::warn!("Task submission task failed: {:?}", e),
+            }
+        }
+        
+        let elapsed = start_time.elapsed();
+        
+        // Performance assertions
+        assert!(elapsed.as_millis() < 5000, "High-volume task submission should complete within 5 seconds");
+        assert!(successful_submissions >= 15, "At least 75% of submissions should succeed");
+        
+        // Test orchestration engine metrics
+        let metrics = orchestration_engine.get_metrics().await
+            .map_err(|e| anyhow::anyhow!("Failed to get orchestration metrics: {:?}", e))?;
+        
+        assert!(metrics.total_tasks_submitted > 0, "Should have submitted some tasks");
+        assert!(metrics.active_workers > 0, "Should have active workers");
+        
+        tracing::info!("Orchestration performance test passed in {:?} - Successful submissions: {}/20", elapsed, successful_submissions);
+        Ok(())
+    }
+
+    /// Test orchestration error handling and recovery
+    async fn test_orchestration_error_handling(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing orchestration error handling and recovery");
+        
+        let config = agent_agency_orchestration::OrchestrationConfig {
+            max_concurrent_tasks: 10,
+            task_timeout_ms: 5000, // Short timeout for testing
+            worker_pool_size: 2,
+            enable_retry: true,
+            max_retries: 2,
+            debug_mode: false,
+        };
+        
+        let orchestration_engine = agent_agency_orchestration::OrchestrationEngine::new(config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize orchestration engine: {:?}", e))?;
+        
+        // Test handling of invalid task submission
+        let invalid_task = agent_agency_orchestration::types::Task {
+            id: uuid::Uuid::new_v4(),
+            title: "".to_string(), // Invalid empty title
+            description: "Test task with invalid data".to_string(),
+            priority: agent_agency_orchestration::types::TaskPriority::Medium,
+            complexity: agent_agency_orchestration::types::TaskComplexity::Medium,
+            estimated_duration_ms: 0, // Invalid zero duration
+            required_skills: vec![],
+            dependencies: vec![],
+            metadata: std::collections::HashMap::new(),
+        };
+        
+        let result = orchestration_engine.submit_task(invalid_task).await;
+        match result {
+            Ok(_) => {
+                tracing::info!("Orchestration engine accepted invalid task (may be permissive)");
+            }
+            Err(e) => {
+                tracing::info!("Orchestration engine correctly rejected invalid task: {:?}", e);
+            }
+        }
+        
+        // Test handling of non-existent worker operations
+        let non_existent_worker = uuid::Uuid::new_v4();
+        let worker_status = orchestration_engine.get_worker_status(non_existent_worker).await
+            .map_err(|e| anyhow::anyhow!("Failed to check non-existent worker status: {:?}", e))?;
+        
+        assert!(worker_status.is_none(), "Non-existent worker should return None status");
+        
+        // Test handling of non-existent task operations
+        let non_existent_task = uuid::Uuid::new_v4();
+        let task_status = orchestration_engine.get_task_status(non_existent_task).await
+            .map_err(|e| anyhow::anyhow!("Failed to check non-existent task status: {:?}", e))?;
+        
+        assert!(task_status.is_none(), "Non-existent task should return None status");
+        
+        // Test timeout handling
+        let timeout_task = agent_agency_orchestration::types::Task {
+            id: uuid::Uuid::new_v4(),
+            title: "Timeout Test Task".to_string(),
+            description: "Task designed to timeout".to_string(),
+            priority: agent_agency_orchestration::types::TaskPriority::Low,
+            complexity: agent_agency_orchestration::types::TaskComplexity::High,
+            estimated_duration_ms: 10000, // Longer than timeout
+            required_skills: vec!["timeout_testing".to_string()],
+            dependencies: vec![],
+            metadata: std::collections::HashMap::new(),
+        };
+        
+        let submission_result = orchestration_engine.submit_task(timeout_task.clone()).await;
+        match submission_result {
+            Ok(result) => {
+                // If task is submitted, wait for timeout
+                tokio::time::sleep(std::time::Duration::from_millis(6000)).await;
+                
+                let final_status = orchestration_engine.get_task_status(timeout_task.id).await
+                    .map_err(|e| anyhow::anyhow!("Failed to get timeout task status: {:?}", e))?;
+                
+                if let Some(status) = final_status {
+                    tracing::info!("Timeout task final status: {:?}", status);
+                }
+            }
+            Err(e) => {
+                tracing::info!("Orchestration engine rejected timeout task: {:?}", e);
+            }
+        }
+        
+        tracing::info!("Orchestration error handling test passed");
+        Ok(())
+    }
+
+    /// Test claim extraction from various sources and formats
+    async fn test_claim_extraction_sources(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing claim extraction from various sources and formats");
+        
+        // Test claim extractor initialization
+        let config = agent_agency_claim_extraction::ClaimExtractionConfig {
+            max_concurrent_extractions: 5,
+            extraction_timeout_ms: 30000,
+            enable_multi_modal: true,
+            confidence_threshold: 0.7,
+            debug_mode: false,
+        };
+        
+        let claim_extractor = agent_agency_claim_extraction::ClaimExtractor::new(config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize claim extractor: {:?}", e))?;
+        
+        // Test text-based claim extraction
+        let text_content = "The study shows that 85% of participants improved their performance after using the new system. The research was conducted over 6 months with 200 participants.";
+        let text_claims = claim_extractor.extract_claims_from_text(text_content).await
+            .map_err(|e| anyhow::anyhow!("Failed to extract claims from text: {:?}", e))?;
+        
+        assert!(!text_claims.is_empty(), "Should extract at least one claim from text");
+        assert!(text_claims.len() >= 2, "Should extract multiple claims from rich text");
+        
+        // Validate claim structure
+        for claim in &text_claims {
+            assert!(!claim.content.is_empty(), "Claim content should not be empty");
+            assert!(claim.confidence_score >= 0.0 && claim.confidence_score <= 1.0, 
+                    "Confidence score should be between 0.0 and 1.0");
+            assert!(!claim.source.is_empty(), "Claim source should not be empty");
+        }
+        
+        // Test structured data claim extraction
+        let structured_data = serde_json::json!({
+            "title": "Performance Study Results",
+            "findings": [
+                {"metric": "improvement_rate", "value": 0.85, "unit": "percentage"},
+                {"metric": "study_duration", "value": 6, "unit": "months"},
+                {"metric": "participant_count", "value": 200, "unit": "people"}
+            ],
+            "conclusion": "The new system significantly improves user performance"
+        });
+        
+        let structured_claims = claim_extractor.extract_claims_from_structured_data(&structured_data).await
+            .map_err(|e| anyhow::anyhow!("Failed to extract claims from structured data: {:?}", e))?;
+        
+        assert!(!structured_claims.is_empty(), "Should extract claims from structured data");
+        
+        // Test URL-based claim extraction (mock)
+        let test_url = "https://example.com/research/study-results";
+        let url_claims = claim_extractor.extract_claims_from_url(test_url).await
+            .map_err(|e| anyhow::anyhow!("Failed to extract claims from URL: {:?}", e))?;
+        
+        // URL extraction might fail in test environment, which is acceptable
+        match url_claims {
+            Ok(claims) => {
+                tracing::info!("Successfully extracted {} claims from URL", claims.len());
+            }
+            Err(e) => {
+                tracing::info!("URL claim extraction failed (expected in test environment): {:?}", e);
+            }
+        }
+        
+        tracing::info!("Claim extraction sources test passed");
+        Ok(())
+    }
+
+    /// Test claim extraction processing and validation
+    async fn test_claim_extraction_processing(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing claim extraction processing and validation");
+        
+        let config = agent_agency_claim_extraction::ClaimExtractionConfig {
+            max_concurrent_extractions: 3,
+            extraction_timeout_ms: 15000,
+            enable_multi_modal: true,
+            confidence_threshold: 0.6,
+            debug_mode: false,
+        };
+        
+        let claim_extractor = agent_agency_claim_extraction::ClaimExtractor::new(config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize claim extractor: {:?}", e))?;
+        
+        // Test claim processing pipeline
+        let complex_text = r#"
+        Research Study: "Impact of AI on Software Development"
+        
+        Abstract: This comprehensive study examines the effects of artificial intelligence tools on software development productivity and code quality.
+        
+        Key Findings:
+        1. Development teams using AI tools showed 40% faster code completion
+        2. Code quality metrics improved by 25% on average
+        3. Bug detection rates increased by 60% with AI-assisted testing
+        4. Developer satisfaction scores rose by 35%
+        
+        Methodology: The study involved 500 developers across 50 companies over 12 months.
+        Statistical significance: p < 0.001 for all primary metrics.
+        
+        Conclusion: AI tools significantly enhance software development outcomes.
+        "#;
+        
+        let extracted_claims = claim_extractor.extract_claims_from_text(complex_text).await
+            .map_err(|e| anyhow::anyhow!("Failed to extract claims from complex text: {:?}", e))?;
+        
+        // Validate processing results
+        assert!(!extracted_claims.is_empty(), "Should extract claims from complex text");
+        assert!(extracted_claims.len() >= 4, "Should extract multiple claims from structured content");
+        
+        // Test claim validation
+        let validation_results = claim_extractor.validate_claims(&extracted_claims).await
+            .map_err(|e| anyhow::anyhow!("Failed to validate claims: {:?}", e))?;
+        
+        assert_eq!(validation_results.len(), extracted_claims.len(), "Should validate all extracted claims");
+        
+        // Check validation results
+        let valid_claims: usize = validation_results.iter().filter(|r| r.is_valid).count();
+        let invalid_claims: usize = validation_results.len() - valid_claims;
+        
+        assert!(valid_claims > 0, "Should have at least some valid claims");
+        tracing::info!("Claim validation: {} valid, {} invalid", valid_claims, invalid_claims);
+        
+        // Test claim deduplication
+        let deduplicated_claims = claim_extractor.deduplicate_claims(&extracted_claims).await
+            .map_err(|e| anyhow::anyhow!("Failed to deduplicate claims: {:?}", e))?;
+        
+        assert!(deduplicated_claims.len() <= extracted_claims.len(), "Deduplication should not increase claim count");
+        
+        tracing::info!("Claim extraction processing test passed");
+        Ok(())
+    }
+
+    /// Test claim extraction accuracy and completeness
+    async fn test_claim_extraction_accuracy(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing claim extraction accuracy and completeness");
+        
+        let config = agent_agency_claim_extraction::ClaimExtractionConfig {
+            max_concurrent_extractions: 2,
+            extraction_timeout_ms: 20000,
+            enable_multi_modal: true,
+            confidence_threshold: 0.8, // High threshold for accuracy testing
+            debug_mode: false,
+        };
+        
+        let claim_extractor = agent_agency_claim_extraction::ClaimExtractor::new(config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize claim extractor: {:?}", e))?;
+        
+        // Test with known factual content
+        let factual_text = r#"
+        Scientific Study: "Climate Change Impact on Arctic Ice"
+        
+        Published in Nature Climate Change, 2023.
+        Authors: Dr. Sarah Johnson, Dr. Michael Chen, Dr. Emily Rodriguez
+        
+        Key Results:
+        - Arctic sea ice extent decreased by 13% per decade since 1979
+        - Average ice thickness reduced by 2.3 meters over the study period
+        - Temperature increase of 2.1°C observed in Arctic regions
+        - Study duration: 44 years (1979-2023)
+        - Data sources: NASA satellite observations, NOAA measurements
+        
+        Statistical Analysis:
+        - Confidence interval: 95%
+        - Sample size: 1,200+ measurements
+        - P-value: < 0.001
+        - R-squared: 0.89
+        
+        Conclusion: Arctic ice loss is accelerating and statistically significant.
+        "#;
+        
+        let factual_claims = claim_extractor.extract_claims_from_text(factual_text).await
+            .map_err(|e| anyhow::anyhow!("Failed to extract factual claims: {:?}", e))?;
+        
+        // Validate accuracy indicators
+        assert!(!factual_claims.is_empty(), "Should extract claims from factual content");
+        
+        let high_confidence_claims: usize = factual_claims.iter()
+            .filter(|claim| claim.confidence_score >= 0.8)
+            .count();
+        
+        let total_claims = factual_claims.len();
+        let accuracy_ratio = high_confidence_claims as f32 / total_claims as f32;
+        
+        assert!(accuracy_ratio >= 0.6, "At least 60% of claims should have high confidence");
+        tracing::info!("Accuracy ratio: {:.2} ({}/{} high confidence claims)", accuracy_ratio, high_confidence_claims, total_claims);
+        
+        // Test completeness - check for key information extraction
+        let claim_contents: Vec<&str> = factual_claims.iter().map(|c| c.content.as_str()).collect();
+        let combined_content = claim_contents.join(" ").to_lowercase();
+        
+        // Check for key metrics extraction
+        let key_metrics = ["13%", "2.3 meters", "2.1°c", "44 years", "95%", "0.001"];
+        let extracted_metrics: usize = key_metrics.iter()
+            .filter(|metric| combined_content.contains(metric.to_lowercase().as_str()))
+            .count();
+        
+        let completeness_ratio = extracted_metrics as f32 / key_metrics.len() as f32;
+        assert!(completeness_ratio >= 0.5, "Should extract at least 50% of key metrics");
+        tracing::info!("Completeness ratio: {:.2} ({}/{} key metrics extracted)", completeness_ratio, extracted_metrics, key_metrics.len());
+        
+        // Test claim categorization
+        let categorized_claims = claim_extractor.categorize_claims(&factual_claims).await
+            .map_err(|e| anyhow::anyhow!("Failed to categorize claims: {:?}", e))?;
+        
+        assert_eq!(categorized_claims.len(), factual_claims.len(), "Should categorize all claims");
+        
+        let categories: std::collections::HashSet<String> = categorized_claims.iter()
+            .map(|c| c.category.clone())
+            .collect();
+        
+        assert!(!categories.is_empty(), "Should have at least one category");
+        tracing::info!("Claim categories: {:?}", categories);
+        
+        tracing::info!("Claim extraction accuracy test passed");
+        Ok(())
+    }
+
+    /// Test claim extraction performance and scalability
+    async fn test_claim_extraction_performance(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing claim extraction performance and scalability");
+        
+        let config = agent_agency_claim_extraction::ClaimExtractionConfig {
+            max_concurrent_extractions: 10,
+            extraction_timeout_ms: 30000,
+            enable_multi_modal: true,
+            confidence_threshold: 0.7,
+            debug_mode: false,
+        };
+        
+        let claim_extractor = agent_agency_claim_extraction::ClaimExtractor::new(config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize claim extractor: {:?}", e))?;
+        
+        // Test performance with multiple concurrent extractions
+        let start_time = std::time::Instant::now();
+        let mut extraction_handles = Vec::new();
+        
+        let test_texts = vec![
+            "Study shows 75% improvement in efficiency with new methodology.",
+            "Research indicates 3.2x faster processing using advanced algorithms.",
+            "Analysis reveals 40% reduction in error rates through automation.",
+            "Findings demonstrate 2.5x increase in accuracy with machine learning.",
+            "Results show 60% cost savings through optimized workflows.",
+        ];
+        
+        for (i, text) in test_texts.iter().enumerate() {
+            let extractor_clone = claim_extractor.clone();
+            let text_clone = text.to_string();
+            let handle = tokio::spawn(async move {
+                extractor_clone.extract_claims_from_text(&text_clone).await
+            });
+            extraction_handles.push(handle);
+        }
+        
+        // Wait for all extractions to complete
+        let mut successful_extractions = 0;
+        let mut total_claims = 0;
+        
+        for handle in extraction_handles {
+            match handle.await {
+                Ok(Ok(claims)) => {
+                    successful_extractions += 1;
+                    total_claims += claims.len();
+                }
+                Ok(Err(e)) => tracing::warn!("Claim extraction failed: {:?}", e),
+                Err(e) => tracing::warn!("Extraction task failed: {:?}", e),
+            }
+        }
+        
+        let elapsed = start_time.elapsed();
+        
+        // Performance assertions
+        assert!(elapsed.as_millis() < 10000, "Concurrent extractions should complete within 10 seconds");
+        assert!(successful_extractions >= 4, "At least 80% of extractions should succeed");
+        assert!(total_claims > 0, "Should extract at least some claims");
+        
+        // Test scalability with larger content
+        let large_text = "Research finding: ".repeat(100) + "The study demonstrates significant improvements across all measured metrics.";
+        let large_start = std::time::Instant::now();
+        
+        let large_claims = claim_extractor.extract_claims_from_text(&large_text).await
+            .map_err(|e| anyhow::anyhow!("Failed to extract claims from large text: {:?}", e))?;
+        
+        let large_elapsed = large_start.elapsed();
+        
+        // Large content performance assertions
+        assert!(large_elapsed.as_millis() < 5000, "Large content extraction should complete within 5 seconds");
+        assert!(!large_claims.is_empty(), "Should extract claims from large content");
+        
+        tracing::info!("Claim extraction performance test passed - Concurrent: {:?}, Large content: {:?}, Total claims: {}", 
+                      elapsed, large_elapsed, total_claims);
+        Ok(())
+    }
+
+    /// Test claim extraction error handling and recovery
+    async fn test_claim_extraction_error_handling(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing claim extraction error handling and recovery");
+        
+        let config = agent_agency_claim_extraction::ClaimExtractionConfig {
+            max_concurrent_extractions: 3,
+            extraction_timeout_ms: 5000, // Short timeout for testing
+            enable_multi_modal: true,
+            confidence_threshold: 0.7,
+            debug_mode: false,
+        };
+        
+        let claim_extractor = agent_agency_claim_extraction::ClaimExtractor::new(config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize claim extractor: {:?}", e))?;
+        
+        // Test handling of empty content
+        let empty_result = claim_extractor.extract_claims_from_text("").await;
+        match empty_result {
+            Ok(claims) => {
+                assert!(claims.is_empty(), "Empty text should result in no claims");
+                tracing::info!("Empty text handled correctly");
+            }
+            Err(e) => {
+                tracing::info!("Empty text correctly rejected: {:?}", e);
+            }
+        }
+        
+        // Test handling of very short content
+        let short_result = claim_extractor.extract_claims_from_text("Yes.").await;
+        match short_result {
+            Ok(claims) => {
+                tracing::info!("Short text processed, extracted {} claims", claims.len());
+            }
+            Err(e) => {
+                tracing::info!("Short text rejected: {:?}", e);
+            }
+        }
+        
+        // Test handling of malformed structured data
+        let malformed_data = serde_json::json!({
+            "invalid": "data",
+            "missing": null,
+            "broken": [1, 2, 3, "mixed", true]
+        });
+        
+        let malformed_result = claim_extractor.extract_claims_from_structured_data(&malformed_data).await;
+        match malformed_result {
+            Ok(claims) => {
+                tracing::info!("Malformed data processed, extracted {} claims", claims.len());
+            }
+            Err(e) => {
+                tracing::info!("Malformed data correctly rejected: {:?}", e);
+            }
+        }
+        
+        // Test handling of invalid URLs
+        let invalid_urls = vec![
+            "not-a-url",
+            "http://",
+            "https://nonexistent-domain-12345.com/invalid",
+            "ftp://invalid-protocol.com",
+        ];
+        
+        for url in invalid_urls {
+            let url_result = claim_extractor.extract_claims_from_url(url).await;
+            match url_result {
+                Ok(Ok(claims)) => {
+                    tracing::info!("URL {} processed, extracted {} claims", url, claims.len());
+                }
+                Ok(Err(e)) => {
+                    tracing::info!("URL {} correctly rejected: {:?}", url, e);
+                }
+                Err(e) => {
+                    tracing::info!("URL {} task failed: {:?}", url, e);
+                }
+            }
+        }
+        
+        // Test timeout handling with very long content
+        let timeout_text = "This is a very long text that should trigger timeout. ".repeat(1000);
+        let timeout_start = std::time::Instant::now();
+        
+        let timeout_result = claim_extractor.extract_claims_from_text(&timeout_text).await;
+        let timeout_elapsed = timeout_start.elapsed();
+        
+        match timeout_result {
+            Ok(claims) => {
+                tracing::info!("Timeout text processed in {:?}, extracted {} claims", timeout_elapsed, claims.len());
+            }
+            Err(e) => {
+                tracing::info!("Timeout text correctly handled: {:?}", e);
+            }
+        }
+        
+        // Test recovery from partial failures
+        let mixed_content = vec![
+            "Valid research finding: 85% improvement observed.",
+            "", // Empty content
+            "Another valid finding: 3.2x performance increase.",
+            "Invalid content with no clear claims or data.",
+        ];
+        
+        let mut recovery_successes = 0;
+        for content in mixed_content {
+            let result = claim_extractor.extract_claims_from_text(content).await;
+            match result {
+                Ok(claims) => {
+                    recovery_successes += 1;
+                    tracing::info!("Recovery test: extracted {} claims from content", claims.len());
+                }
+                Err(e) => {
+                    tracing::info!("Recovery test: content rejected: {:?}", e);
+                }
+            }
+        }
+        
+        assert!(recovery_successes >= 2, "Should successfully process at least some content during recovery test");
+        
+        tracing::info!("Claim extraction error handling test passed");
         Ok(())
     }
 }

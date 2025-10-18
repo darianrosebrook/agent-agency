@@ -1,12 +1,14 @@
 //! Benchmark runner for model performance testing
 
+use crate::scoring_system::MultiDimensionalScoringSystem;
 use crate::sla_validator::SlaValidator;
 use crate::types::*;
 use anyhow::Result;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 use tracing::{debug, info, warn};
+use uuid::Uuid;
 
 pub struct BenchmarkRunner {
     /// Configuration for benchmark execution
@@ -273,23 +275,29 @@ impl BenchmarkRunner {
             }
         }
 
-        // TODO: Add macro and other benchmark types when implemented with the following requirements:
-        // 1. Benchmark type expansion: Add support for additional benchmark types
-        //    - Implement macro benchmarks for end-to-end system testing
-        //    - Add specialized benchmark types for specific use cases
-        //    - Support custom benchmark types and configurations
-        // 2. Benchmark integration: Integrate new benchmark types with existing system
-        //    - Ensure compatibility with existing benchmark infrastructure
-        //    - Handle benchmark type selection and execution
-        //    - Implement proper benchmark result handling and reporting
-        // 3. Benchmark configuration: Configure new benchmark types
-        //    - Set up benchmark parameters and configurations
-        //    - Handle benchmark-specific settings and options
-        //    - Implement benchmark validation and error handling
-        // 4. Benchmark documentation: Document new benchmark types
-        //    - Provide clear documentation for new benchmark types
-        //    - Include usage examples and best practices
-        //    - Enable benchmark type discovery and selection
+        match self.run_macro_benchmark(model).await {
+            Ok(result) => results.push(result),
+            Err(e) => warn!(
+                "Macro benchmark failed for model {}: {}",
+                model.name, e
+            ),
+        }
+
+        match self.run_quality_benchmark(model).await {
+            Ok(result) => results.push(result),
+            Err(e) => warn!(
+                "Quality benchmark failed for model {}: {}",
+                model.name, e
+            ),
+        }
+
+        match self.run_performance_benchmark(model).await {
+            Ok(result) => results.push(result),
+            Err(e) => warn!(
+                "Performance benchmark failed for model {}: {}",
+                model.name, e
+            ),
+        }
 
         info!(
             "Completed benchmark suite for model: {} - {} benchmarks run",

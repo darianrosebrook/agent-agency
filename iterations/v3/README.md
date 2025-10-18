@@ -24,39 +24,75 @@ The release bundles council governance, worker execution, research assistance, b
 - **Research responsibilities** are isolated to a dedicated agent, improving worker throughput and token efficiency.
 - **V3 consolidates** the component count into nine focused crates, simplifying maintenance and deployment.
 
-## Delivery Status
+## System Metrics
 
-### ✅ Completed
+### Codebase Statistics
+- **Source files**: 240 Rust modules
+- **Total lines**: 228,764 lines of code
+- **Workspace crates**: 23 Rust packages
+- **Build status**: 41 compilation errors, 30 warnings (active development)
+- **Test coverage**: Implementation in progress
 
-- **Rust workspace configuration** with nine crates and shared tooling.
-- **Council system** with consensus coordination, debate flow, verdict persistence, and learning integration.
-- **Worker pool** with routing, lifecycle management, and CAWS compliance checks.
-- **Research agent** delivering retrieval, vector search, and context building.
-- **PostgreSQL/pgvector data layer**, including schema and migrations.
-- **MCP integration** for tool discovery and registration.
-- **Provenance subsystem** with Git integration and JWS signing.
-- **Apple Silicon execution path** covering Core ML models, ANE/GPU/CPU routing, and thermal management.
-- **Database client implementation** with 14/22 critical methods implemented (64% complete).
-- **Task management system** with complete CRUD operations and execution tracking.
-- **Council database integration** with verdict management and judge evaluation tracking.
-- **Code quality improvements** with 100+ linting errors resolved and production-ready codebase.
-- **Edge case testing system** with comprehensive intelligent testing framework.
-- **Workspace state management** with memory and database storage implementations.
+### Database Implementation
+- **Client methods**: 11/22 async methods implemented
+- **Schema**: PostgreSQL with pgvector extension
+- **Migrations**: Version-controlled schema evolution
 
-### 🔄 In Progress
+### Performance Targets
+- **Constitutional Judge**: <100ms inference (ANE-optimized)
+- **Technical Auditor**: <500ms analysis (GPU-accelerated)
+- **Quality Evaluator**: <200ms assessment
+- **Integration Validator**: <150ms coherence checking
+- **Council consensus**: <3s maximum (risk-tier dependent)
 
-- **Remaining database methods** (8/22 methods): knowledge entries, performance metrics, CAWS compliance, audit trails.
-- **Model fine-tuning assets** and LoRA scripts in `training/`.
-- **Observer bridge** for deliberation visualization.
-- **Comprehensive automated testing** across unit, integration, and end-to-end suites.
+## Implementation Status
 
-### 📋 Planned Next
+### Core Architecture (23 Crates)
 
-- **Production hardening**: benchmarking, monitoring, alerting, and error recovery.
-- **Model performance tuning** and regression tracking.
-- **Expanded documentation** for deployment and operations.
-- **Knowledge management system** completion.
-- **Performance metrics collection** and analysis.
+**Coordination Layer:**
+- `council/`: Consensus coordination and debate protocol
+- `orchestration/`: Task routing and execution management
+- `workers/`: Agent pool and lifecycle management
+
+**Domain Services:**
+- `research/`: Context synthesis and evidence gathering
+- `claim-extraction/`: V2 pipeline port for claim processing
+- `reflexive-learning/`: Multi-turn learning coordination
+- `model-benchmarking/`: Performance evaluation and scoring
+
+**Infrastructure:**
+- `database/`: PostgreSQL/pgvector persistence layer
+- `provenance/`: Git-backed audit trails with JWS signing
+- `apple-silicon/`: Hardware-accelerated inference optimization
+- `system-health-monitor/`: Agent monitoring and circuit breakers
+- `security-policy-enforcer/`: Security controls and audit logging
+- `context-preservation-engine/`: Multi-tenant context management
+- `workspace-state-manager/`: Repository state tracking
+- `embedding-service/`: Vector embedding computation
+- `minimal-diff-evaluator/`: AST-based change assessment
+- `integration-tests/`: Cross-component validation
+- `config/`: Configuration management and validation
+- `resilience/`: Circuit breaker and retry patterns
+- `observability/`: Metrics collection and monitoring
+- `mcp-integration/`: Model Context Protocol support
+
+### Development Status
+
+**Active Development:**
+- Database client completion (11/22 methods implemented)
+- Compilation error resolution (41 errors remaining)
+- Test suite establishment
+- Configuration system implementation
+
+**Integration Testing:**
+- Cross-component validation framework
+- Performance benchmarking infrastructure
+- CAWS compliance verification
+
+**Documentation:**
+- Architecture specification completion
+- Component implementation guides
+- Deployment and operations procedures
 
 ## Workspace Layout
 

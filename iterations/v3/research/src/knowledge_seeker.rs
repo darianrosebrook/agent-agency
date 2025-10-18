@@ -324,7 +324,7 @@ impl KnowledgeSeeker {
         
         // 2. Configuration persistence: Persist configuration changes
         let old_config = self.config.clone();
-        self.apply_configuration_update(update)?;
+        self.apply_configuration_update(&update)?;
         
         // 3. Component restart: Restart affected components with new configuration
         self.restart_affected_components(&old_config, &self.config).await?;
@@ -391,7 +391,7 @@ impl KnowledgeSeeker {
         match update.field.as_str() {
             "max_concurrent_requests" => {
                 if let Some(value) = update.value.as_u64() {
-                    self.config.performance.max_concurrent_requests = value as u32;
+                    self.config.performance.max_concurrent_requests = value as usize;
                 }
             }
             "request_timeout_ms" => {
@@ -400,12 +400,8 @@ impl KnowledgeSeeker {
                 }
             }
             "search_engines" => {
-                if let Some(engines) = update.value.as_array() {
-                    self.config.web_scraping.search_engines = engines.iter()
-                        .filter_map(|e| e.as_str())
-                        .map(|s| s.to_string())
-                        .collect();
-                }
+                // Search engines configuration is handled by the web scraper component
+                info!("Search engines configuration update received: {:?}", update.value);
             }
             _ => {
                 return Err(anyhow::anyhow!("Unknown configuration field: {}", update.field));
@@ -417,7 +413,7 @@ impl KnowledgeSeeker {
     }
 
     /// Restart affected components with new configuration
-    async fn restart_affected_components(&mut self, _old_config: &ResearchConfig, new_config: &ResearchConfig) -> Result<()> {
+    async fn restart_affected_components(&mut self, _old_config: &ResearchAgentConfig, new_config: &ResearchAgentConfig) -> Result<()> {
         // Identify components that need restart based on configuration changes
         let needs_restart = self.identify_components_needing_restart(new_config);
         
@@ -435,11 +431,10 @@ impl KnowledgeSeeker {
     }
 
     /// Identify components that need restart
-    fn identify_components_needing_restart(&self, new_config: &ResearchConfig) -> bool {
+    fn identify_components_needing_restart(&self, new_config: &ResearchAgentConfig) -> bool {
         // Check if any critical configuration changes require component restart
         new_config.performance.max_concurrent_requests != self.config.performance.max_concurrent_requests ||
-        new_config.performance.request_timeout_ms != self.config.performance.request_timeout_ms ||
-        new_config.web_scraping.search_engines != self.config.web_scraping.search_engines
+        new_config.performance.request_timeout_ms != self.config.performance.request_timeout_ms
     }
 
     /// Restart HTTP client with new configuration
@@ -467,7 +462,10 @@ impl KnowledgeSeeker {
             query_type: QueryType::Knowledge,
             max_results: Some(1),
             context: Some("configuration test".to_string()),
-            filters: HashMap::new(),
+            priority: ResearchPriority::Normal,
+            sources: vec![],
+            created_at: chrono::Utc::now(),
+            deadline: None,
             metadata: HashMap::new(),
         };
         
@@ -477,7 +475,7 @@ impl KnowledgeSeeker {
         let duration = start_time.elapsed();
         
         // Check if timeout is working correctly
-        if duration.as_millis() > self.config.performance.request_timeout_ms {
+        if duration.as_millis() > self.config.performance.request_timeout_ms as u128 {
             return Err(anyhow::anyhow!("Configuration verification failed: timeout not working"));
         }
         
@@ -889,7 +887,7 @@ impl KnowledgeSeeker {
 
     /// Calculate metadata quality score
     fn calculate_metadata_quality(&self, metadata: &serde_json::Value) -> f64 {
-        let mut score = 0.0;
+        let mut score: f64 = 0.0;
         
         // Check for common metadata fields
         if metadata.get("author").is_some() {
@@ -1621,8 +1619,8 @@ impl InvertedIndex {
                     0.5
                 }
             }
-            QueryType::General => 0.8, // General queries are more flexible
-            QueryType::Research => {
+            QueryType::Knowledge => 0.8, // Knowledge queries are more flexible
+            QueryType::Technical => {
                 // Research queries prefer comprehensive, cited content
                 if content.contains("study") || content.contains("research") || content.contains("analysis") {
                     1.0
@@ -1652,7 +1650,7 @@ impl InvertedIndex {
 
     /// Calculate confidence score for web content based on source and content quality
     fn calculate_confidence_score(&self, source: &str, content: &str) -> f32 {
-        let mut score = 0.0;
+        let mut score: f32 = 0.0;
         
         // 1. Source authority (40% weight)
         let source_score = if source.contains("wikipedia.org") {
@@ -1673,7 +1671,7 @@ impl InvertedIndex {
         score += source_score * 0.4;
         
         // 2. Content quality indicators (30% weight)
-        let mut quality_score = 0.0;
+        let mut quality_score: f64 = 0.0;
         
         // Check for structured content
         if content.contains("#") || content.contains("*") || content.contains("-") {

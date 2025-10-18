@@ -190,7 +190,11 @@ async function initialize(): Promise<void> {
     }
     arbiterRuntime = controllerRuntime;
 
-    observerBridge = new ObserverBridge(arbiterRuntime, undefined, healthMonitor);
+    observerBridge = new ObserverBridge(
+      arbiterRuntime,
+      undefined,
+      healthMonitor
+    );
     setObserverBridge(observerBridge);
     await observerBridge.start();
     logger.info("Observer bridge started");
@@ -473,18 +477,18 @@ async function startWebInterface(): Promise<void> {
     if (webObserverPort === "3000") {
       const fallbackPorts = ["3000", "3001", "3002", "3003", "3004"];
       let portFound = false;
-      
+
       for (const port of fallbackPorts) {
         try {
           const net = await import("net");
           const testServer = net.createServer();
-          
+
           await new Promise<void>((resolve, reject) => {
             const timeout = setTimeout(() => {
               testServer.close();
               reject(new Error("Port check timeout"));
             }, 1000);
-            
+
             testServer.listen(parseInt(port), () => {
               clearTimeout(timeout);
               testServer.close(() => {
@@ -493,7 +497,7 @@ async function startWebInterface(): Promise<void> {
                 resolve();
               });
             });
-            
+
             testServer.on("error", (err: any) => {
               clearTimeout(timeout);
               if (err.code === "EADDRINUSE") {
@@ -504,7 +508,7 @@ async function startWebInterface(): Promise<void> {
               }
             });
           });
-          
+
           if (portFound) {
             logger.info(`Found available port: ${actualPort}`);
             break;
@@ -514,9 +518,11 @@ async function startWebInterface(): Promise<void> {
           continue;
         }
       }
-      
+
       if (!portFound) {
-        logger.error("No available ports found in range 3000-3004, using default");
+        logger.error(
+          "No available ports found in range 3000-3004, using default"
+        );
         actualPort = "3000";
       }
     }
@@ -569,7 +575,7 @@ async function main(): Promise<void> {
     await startMcpServer();
     await startTaskProcessing();
     await startWebInterface();
-    
+
     // Start health monitoring
     if (healthMonitor) {
       healthMonitor.start();

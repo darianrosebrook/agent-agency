@@ -20,7 +20,7 @@ use serde_json::json;
 use std::ffi::OsStr;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use tracing::{debug, info};
 
 #[cfg(unix)]
@@ -249,6 +249,76 @@ impl LocalKeySigner {
         })
     }
 
+    fn export_key_material(&self, format: KeyFormat) -> Result<Vec<u8>> {
+        match format {
+            KeyFormat::Pkcs8 => Ok(self.pkcs8_private_key.clone()),
+            KeyFormat::Pem => self.export_pem(),
+            KeyFormat::Jwk => self.export_jwk(),
+        }
+    }
+
+    fn export_pem(&self) -> Result<Vec<u8>> {
+        let base64 = STANDARD.encode(&self.pkcs8_private_key);
+        let mut pem = String::with_capacity(base64.len() + 64);
+        pem.push_str("-----BEGIN PRIVATE KEY-----\n");
+        for chunk in base64.as_bytes().chunks(64) {
+            pem.push_str(std::str::from_utf8(chunk).unwrap_or_default());
+            pem.push('\n');
+        }
+        pem.push_str("-----END PRIVATE KEY-----\n");
+        Ok(pem.into_bytes())
+    }
+
+    fn export_jwk(&self) -> Result<Vec<u8>> {
+        let (seed, public_key) = self.extract_ed25519_components()?;
+        let jwk = json!({
+            "kty": "OKP",
+            "crv": "Ed25519",
+            "kid": self.key_id,
+            "d": URL_SAFE_NO_PAD.encode(seed),
+            "x": URL_SAFE_NO_PAD.encode(public_key),
+        });
+        Ok(serde_json::to_vec_pretty(&jwk)?)
+    }
+
+    fn extract_ed25519_components(&self) -> Result<(Vec<u8>, Vec<u8>)> {
+        let pk_info = PrivateKeyInfo::from_der(&self.pkcs8_private_key)
+            .context("Failed to parse PKCS#8 private key")?;
+
+        // Ed25519 object identifier per RFC 8410.
+        let ed25519_oid = ObjectIdentifier::new("1.3.101.112")
+            .expect("hard-coded Ed25519 OID must be valid");
+        if pk_info.algorithm.oid != ed25519_oid {
+            bail!(
+                "Unsupported key algorithm {} when exporting Ed25519 key",
+                pk_info.algorithm.oid
+            );
+        }
+
+        let private_key = pk_info.private_key;
+        let seed = if private_key.len() == 32 {
+            private_key.to_vec()
+        } else if private_key.len() >= 34 && private_key[0] == 0x04 {
+            let declared_len = private_key[1] as usize;
+            if declared_len != 32 || private_key.len() < 2 + declared_len {
+                bail!("Invalid Ed25519 private key structure");
+            }
+            private_key[2..2 + declared_len].to_vec()
+        } else if private_key.len() >= 32 {
+            private_key[private_key.len() - 32..].to_vec()
+        } else {
+            bail!("Unexpected Ed25519 private key length: {}", private_key.len());
+        };
+
+        let public_key = if let Some(pk) = pk_info.public_key {
+            pk.to_vec()
+        } else {
+            self.key_pair.public_key().as_ref().to_vec()
+        };
+
+        Ok((seed, public_key))
+    }
+
     /// Get the public key as bytes
     pub fn public_key_bytes(&self) -> &[u8] {
         self.key_pair.public_key().as_ref()
@@ -277,12 +347,12 @@ impl SignerTrait for LocalKeySigner {
         let signature = self.sign_data(&signing_data)?;
 
         // Encode as base64
-        Ok(general_purpose::STANDARD.encode(signature))
+        Ok(STANDARD.encode(signature))
     }
 
     async fn verify(&self, record: &ProvenanceRecord, signature: &str) -> Result<bool> {
         // Decode signature from base64
-        let signature_bytes = general_purpose::STANDARD
+        let signature_bytes = STANDARD
             .decode(signature)
             .context("Failed to decode signature")?;
 
