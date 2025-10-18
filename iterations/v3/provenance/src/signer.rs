@@ -344,6 +344,8 @@ impl SignerFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use tempfile::tempdir;
 
     #[tokio::test]
     async fn test_local_key_signer_sign_and_verify() {
@@ -380,6 +382,68 @@ mod tests {
         let signer = SignerFactory::create_default_signer().unwrap();
         assert_eq!(signer.key_id(), "provenance-default");
         assert_eq!(signer.algorithm(), SigningAlgorithm::EdDSA);
+    }
+
+    #[test]
+    fn test_signer_factory_persists_pem_keys() {
+        let temp_dir = tempdir().expect("tempdir");
+        let pem_path = temp_dir.path().join("factory-key.pem");
+
+        let signer = SignerFactory::create_signer(
+            pem_path.to_str().unwrap(),
+            "pem-key".to_string(),
+            SigningAlgorithm::EdDSA,
+        )
+        .expect("signer creation");
+
+        assert!(
+            pem_path.exists(),
+            "expected PEM key to be persisted to disk"
+        );
+
+        let contents =
+            fs::read_to_string(&pem_path).expect("generated PEM file should be readable");
+        assert!(
+            contents.contains("BEGIN PRIVATE KEY"),
+            "PEM file should include standard header"
+        );
+
+        let record = create_test_provenance_record();
+        tokio_test::block_on(async {
+            let signature = signer.sign(&record).await.expect("signature");
+            assert!(!signature.is_empty(), "signature output may not be empty");
+        });
+    }
+
+    #[test]
+    fn test_signer_factory_persists_jwk_keys() {
+        let temp_dir = tempdir().expect("tempdir");
+        let jwk_path = temp_dir.path().join("factory-key.jwk");
+
+        let signer = SignerFactory::create_signer(
+            jwk_path.to_str().unwrap(),
+            "jwk-key".to_string(),
+            SigningAlgorithm::EdDSA,
+        )
+        .expect("signer creation");
+
+        assert!(
+            jwk_path.exists(),
+            "expected JWK key to be persisted to disk"
+        );
+
+        let contents =
+            fs::read_to_string(&jwk_path).expect("generated JWK file should be readable");
+        assert!(
+            contents.contains("\"kty\""),
+            "JWK file should contain key type metadata"
+        );
+
+        let record = create_test_provenance_record();
+        tokio_test::block_on(async {
+            let signature = signer.sign(&record).await.expect("signature");
+            assert!(!signature.is_empty(), "signature output may not be empty");
+        });
     }
 
     fn create_test_provenance_record() -> ProvenanceRecord {

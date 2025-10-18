@@ -1398,10 +1398,14 @@ mod tests {
             metadata: std::collections::HashMap::new(),
         };
 
-        let compliance = executor.check_caws_compliance(&output);
+        let compliance = executor.check_caws_compliance(&output, 1_234);
         assert!(compliance.is_compliant);
         assert!(compliance.compliance_score > 0.9);
         assert!(compliance.provenance_complete);
+        assert_eq!(
+            compliance.budget_adherence.time_used_ms, 1_234,
+            "budget adherence should reflect the measured execution duration"
+        );
     }
 
     #[tokio::test]

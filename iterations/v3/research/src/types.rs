@@ -33,6 +33,13 @@ pub enum ResearchPriority {
     Critical = 4,
 }
 
+/// Configuration update for research agent
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConfigurationUpdate {
+    pub field: String,
+    pub value: serde_json::Value,
+}
+
 /// Knowledge query for research
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KnowledgeQuery {

@@ -105,6 +105,8 @@ pub struct ContextSynthesisConfig {
 pub struct PerformanceConfig {
     /// Maximum concurrent requests
     pub max_concurrent_requests: u32,
+    /// Request timeout in milliseconds
+    pub request_timeout_ms: u64,
     /// Cache TTL in seconds
     pub cache_ttl_seconds: u64,
     /// Enable request caching

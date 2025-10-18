@@ -143,7 +143,7 @@ pub struct GeneratedTest {
     pub confidence_score: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TestType {
     Unit,
     Integration,
@@ -152,6 +152,7 @@ pub enum TestType {
     Equivalence,
     Stress,
     Performance,
+    Combinatorial,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -218,6 +219,17 @@ pub struct ExecutionContext {
     pub timeout_ms: u64,
 }
 
+impl Default for ExecutionContext {
+    fn default() -> Self {
+        Self {
+            environment: TestEnvironment::Unit,
+            dependencies: Vec::new(),
+            resources: ResourceRequirements::default(),
+            timeout_ms: 5000,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TestEnvironment {
     Unit,
@@ -249,6 +261,17 @@ pub struct ResourceRequirements {
     pub memory_mb: u64,
     pub disk_space_mb: u64,
     pub network_bandwidth_mbps: u64,
+}
+
+impl Default for ResourceRequirements {
+    fn default() -> Self {
+        Self {
+            cpu_cores: 1,
+            memory_mb: 512,
+            disk_space_mb: 100,
+            network_bandwidth_mbps: 10,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -347,6 +370,9 @@ pub enum EdgeCaseType {
     NetworkIssue,
     IOError,
     ExceptionalCondition,
+    SecurityVulnerability,
+    CriticalFailure,
+    Combinatorial,
     TypeCoercion,
     Equivalence,
     Stress,
@@ -385,6 +411,11 @@ pub enum DetectionMethod {
     CodeReview,
     HistoricalData,
     Heuristic,
+    PerformanceTesting,
+    LoadTesting,
+    SecurityTesting,
+    UsabilityTesting,
+    ReliabilityTesting,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -1388,18 +1419,18 @@ impl DynamicTestGenerator {
                 (
                     key,
                     TestData {
-                        data_type: match &value {
-                            serde_json::Value::String(_) => DataType::String,
-                            serde_json::Value::Number(n) if n.is_i64() => DataType::Integer,
-                            serde_json::Value::Number(_) => DataType::Float,
-                            serde_json::Value::Bool(_) => DataType::Boolean,
-                            serde_json::Value::Array(_) => DataType::Array,
-                            serde_json::Value::Object(_) => DataType::Object,
-                            serde_json::Value::Null => DataType::Null,
-                        },
-                        value,
-                        constraints: vec![],
-                        edge_case_flags: vec![],
+                data_type: match &value {
+                    serde_json::Value::String(_) => DataType::String,
+                    serde_json::Value::Number(n) if n.is_i64() => DataType::Integer,
+                    serde_json::Value::Number(_) => DataType::Float,
+                    serde_json::Value::Bool(_) => DataType::Boolean,
+                    serde_json::Value::Array(_) => DataType::Array,
+                    serde_json::Value::Object(_) => DataType::Object,
+                    serde_json::Value::Null => DataType::Null,
+                },
+                value,
+                constraints: vec![],
+                edge_case_flags: vec![],
                     },
                 )
             })
@@ -1560,7 +1591,7 @@ impl EdgeCaseAnalyzer {
                 RequirementType::Functional => {
                     // String boundary conditions
                     edge_cases.push(IdentifiedEdgeCase {
-                        edge_case_id: Uuid::new_v4(),
+            edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Empty string input".to_string(),
                         edge_case_type: EdgeCaseType::BoundaryCondition,
                         description: format!(
@@ -1713,12 +1744,12 @@ impl EdgeCaseAnalyzer {
                     edge_cases.push(IdentifiedEdgeCase {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Null object input".to_string(),
-                        edge_case_type: EdgeCaseType::NullHandling,
+            edge_case_type: EdgeCaseType::NullHandling,
                         description: format!("Input '{}' with null object", input.requirement_name),
-                        probability: 0.7,
-                        impact: 0.8,
-                        risk_level: RiskLevel::High,
-                        detection_method: DetectionMethod::StaticAnalysis,
+            probability: 0.7,
+            impact: 0.8,
+            risk_level: RiskLevel::High,
+            detection_method: DetectionMethod::StaticAnalysis,
                     });
 
                     // Missing required fields
@@ -2178,9 +2209,9 @@ impl EdgeCaseAnalyzer {
 
         RiskAssessment {
             overall_risk_score,
-            risk_distribution,
+                risk_distribution,
             high_risk_areas,
-            risk_trends: Vec::new(),
+                risk_trends: Vec::new(),
         }
     }
 
@@ -2193,11 +2224,11 @@ impl EdgeCaseAnalyzer {
 
         // Add null input tests strategy
         strategies.push(MitigationStrategy {
-            strategy_name: "Add null input tests".to_string(),
-            strategy_type: StrategyType::Test,
-            effectiveness: 0.9,
-            implementation_cost: 0.3,
-            description: "Generate comprehensive null input test cases".to_string(),
+                strategy_name: "Add null input tests".to_string(),
+                strategy_type: StrategyType::Test,
+                effectiveness: 0.9,
+                implementation_cost: 0.3,
+                description: "Generate comprehensive null input test cases".to_string(),
         });
 
         // Add boundary value tests strategy
@@ -2917,7 +2948,7 @@ impl CoverageAnalyzer {
         for gap in gaps {
             let recommendation = match gap.gap_type {
                 GapType::EdgeCase => CoverageRecommendation {
-                    recommendation_type: RecommendationType::AddTests,
+                recommendation_type: RecommendationType::AddTests,
                     description: "Add edge case and boundary value tests".to_string(),
                     expected_coverage_improvement: 0.25,
                     implementation_effort: ImplementationEffort::High,
@@ -2926,8 +2957,8 @@ impl CoverageAnalyzer {
                 _ => CoverageRecommendation {
                     recommendation_type: RecommendationType::ImproveCode,
                     description: "Address coverage gap in code".to_string(),
-                    expected_coverage_improvement: 0.1,
-                    implementation_effort: ImplementationEffort::Medium,
+                expected_coverage_improvement: 0.1,
+                implementation_effort: ImplementationEffort::Medium,
                     priority: Priority::Medium,
                 },
             };
@@ -3742,9 +3773,11 @@ impl ScenarioGenerator {
                             "Boundary scenario: {} = {}",
                             generator.parameter_name, boundary_value
                         ),
-                        input_data: serde_json::json!({
-                            generator.parameter_name: boundary_value
-                        }),
+                        input_data: {
+                            let mut data = HashMap::new();
+                            data.insert(generator.parameter_name.clone(), TestData::String(boundary_value.to_string()));
+                            data
+                        },
                         execution_context: ExecutionContext::default(),
                         preconditions: vec!["System is initialized".to_string()],
                         postconditions: vec!["System handles boundary value correctly".to_string()],

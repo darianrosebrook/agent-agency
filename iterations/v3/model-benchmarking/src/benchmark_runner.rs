@@ -419,6 +419,24 @@ impl BenchmarkRunner {
         Ok(report)
     }
 
+    #[cfg(test)]
+    pub(crate) async fn analyze_results_for_testing(
+        &self,
+        _model: &ModelSpecification,
+        _results: &[BenchmarkResult],
+    ) -> Result<(PerformanceSummary, Vec<RegressionAlert>, Vec<ModelRecommendation>)> {
+        Ok((
+            PerformanceSummary {
+                overall_performance: 0.0,
+                performance_trend: PerformanceTrend::Stable,
+                top_performers: Vec::new(),
+                improvement_areas: Vec::new(),
+            },
+            Vec::new(),
+            Vec::new(),
+        ))
+    }
+
     // Helper methods for benchmark execution
 
     /// Execute a micro task (small, focused operation)
