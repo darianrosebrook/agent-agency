@@ -541,15 +541,9 @@ impl CouncilIntegrator {
                 }
             }
             content if content.contains("security") || content.contains("auth") => {
-                CouncilVerdict::Pass {
+                CouncilVerdict::Accepted {
                     confidence: 0.9,
-                    reasoning: "Security-related claim verified".to_string(),
-                    evidence: vec![CouncilEvidence {
-                        source: CouncilEvidenceSource::CAWSRules,
-                        content: "Security claim validated against CAWS rules".to_string(),
-                        relevance: 0.95,
-                        timestamp: Utc::now(),
-                    }],
+                    summary: "Security-related claim verified".to_string(),
                 }
             }
             _ => CouncilVerdict::Pass {
