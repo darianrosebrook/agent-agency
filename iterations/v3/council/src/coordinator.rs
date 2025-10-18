@@ -7,11 +7,11 @@ use crate::evidence_enrichment::EvidenceEnrichmentCoordinator;
 use crate::models::{EvidencePacket, ParticipantContribution, RiskTier, TaskSpec};
 use crate::resilience::ResilienceManager;
 use crate::types::{ConsensusResult, FinalVerdict, JudgeVerdict};
-use tracing::{debug, info};
 use crate::CouncilConfig;
 use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::Arc;
+use tracing::{debug, info};
 use uuid::Uuid;
 
 /// Main coordinator for council consensus building
@@ -108,7 +108,7 @@ impl ConsensusCoordinator {
 
         // Track individual stage timings for SLA verification
         let enrichment_start = std::time::Instant::now();
-        
+
         // Enrich task with evidence from claim extraction (with V2 resilience)
         let task_spec_clone = task_spec.clone();
         let evidence_enrichment = self.evidence_enrichment.clone();
@@ -124,13 +124,13 @@ impl ConsensusCoordinator {
                 }
             })
             .await?;
-        
+
         let enrichment_time = enrichment_start.elapsed().as_millis() as u64;
         debug!("Evidence enrichment completed in {}ms", enrichment_time);
 
         // Track judge inference timing
         let judge_inference_start = std::time::Instant::now();
-        
+
         // Create individual judge verdicts with evidence enhancement
         let mut individual_verdicts = HashMap::new();
 
@@ -185,7 +185,7 @@ impl ConsensusCoordinator {
             )
             .await?;
         individual_verdicts.insert("integration".to_string(), integration_verdict);
-        
+
         let judge_inference_time = judge_inference_start.elapsed().as_millis() as u64;
         debug!("Judge inference completed in {}ms", judge_inference_time);
 
@@ -198,16 +198,24 @@ impl ConsensusCoordinator {
 
         // Track debate timing
         let debate_start = std::time::Instant::now();
-        let debate_rounds = self.orchestrate_debate(&individual_verdicts, &task_spec).await?;
+        let debate_rounds = self
+            .orchestrate_debate(&individual_verdicts, &task_spec)
+            .await?;
         let debate_time = debate_start.elapsed().as_millis() as u64;
-        debug!("Debate orchestration completed in {}ms with {} rounds", debate_time, debate_rounds);
+        debug!(
+            "Debate orchestration completed in {}ms with {} rounds",
+            debate_time, debate_rounds
+        );
 
         // Calculate total evaluation time from individual stage timings
         let total_evaluation_time = enrichment_time + judge_inference_time + debate_time;
-        
+
         // Verify SLA compliance (5 second limit)
         if total_evaluation_time > 5000 {
-            eprintln!("⚠️ SLA violation: evaluation took {}ms, exceeding 5s limit", total_evaluation_time);
+            eprintln!(
+                "⚠️ SLA violation: evaluation took {}ms, exceeding 5s limit",
+                total_evaluation_time
+            );
         }
 
         let verdict_id = Uuid::new_v4();
@@ -231,7 +239,7 @@ impl ConsensusCoordinator {
             metrics.total_enrichment_time_ms += enrichment_time;
             metrics.total_judge_inference_time_ms += judge_inference_time;
             metrics.total_debate_time_ms += debate_time;
-            
+
             // Track SLA violations
             if total_evaluation_time > 5000 {
                 metrics.sla_violations += 1;
@@ -275,7 +283,7 @@ impl ConsensusCoordinator {
     /// Prepare evidence packets for debate
     async fn prepare_evidence_packets(&self, task_spec: &TaskSpec) -> Result<Vec<EvidencePacket>> {
         let mut evidence_packets = Vec::new();
-        
+
         // 1. Task specification evidence
         evidence_packets.push(EvidencePacket {
             id: Uuid::new_v4(),
@@ -284,21 +292,20 @@ impl ConsensusCoordinator {
             confidence: 1.0,
             timestamp: chrono::Utc::now(),
         });
-        
+
         // 2. Research agent lookups (if available)
         if let Some(research_evidence) = self.query_research_agents(task_spec).await? {
             evidence_packets.push(research_evidence);
         }
-        
+
         // 3. Claim extraction evidence (if available)
         if let Some(claim_evidence) = self.query_claim_extraction(task_spec).await? {
             evidence_packets.push(claim_evidence);
         }
-        
+
         Ok(evidence_packets)
     }
-    
-    
+
     /// Get participant contribution for debate round
     async fn get_participant_contribution(
         &self,
@@ -308,7 +315,7 @@ impl ConsensusCoordinator {
     ) -> Result<ParticipantContribution> {
         // In a real implementation, this would query the actual judge/participant
         // For now, simulate a contribution based on evidence
-        
+
         let contribution = ParticipantContribution {
             participant: participant.to_string(),
             round_number,
@@ -317,18 +324,25 @@ impl ConsensusCoordinator {
             confidence: 0.8,
             timestamp: chrono::Utc::now(),
         };
-        
+
         Ok(contribution)
     }
-    
+
     /// Check if supermajority has been reached
-    fn check_supermajority(&self, contributions: &HashMap<String, ParticipantContribution>) -> bool {
+    fn check_supermajority(
+        &self,
+        contributions: &HashMap<String, ParticipantContribution>,
+    ) -> bool {
         // Simple supermajority check - in real implementation, this would be more sophisticated
         contributions.len() >= 2 && contributions.values().all(|c| c.confidence > 0.7)
     }
-    
+
     /// Generate moderator notes for debate round
-    async fn generate_moderator_notes(&self, round_result: &DebateRoundResult, moderator: &str) -> Result<String> {
+    async fn generate_moderator_notes(
+        &self,
+        round_result: &DebateRoundResult,
+        moderator: &str,
+    ) -> Result<String> {
         let notes = format!(
             "Round {} moderated by {}: consensus reached: {}, should terminate: {}",
             round_result.round,
@@ -336,59 +350,59 @@ impl ConsensusCoordinator {
             round_result.consensus_reached,
             round_result.should_terminate
         );
-        
+
         Ok(notes)
     }
-    
+
     /// Apply debate resolution policies
-    async fn apply_debate_resolution(&self, participants: &[String], evidence_packets: &[EvidencePacket]) -> Result<()> {
+    async fn apply_debate_resolution(
+        &self,
+        participants: &[String],
+        evidence_packets: &[EvidencePacket],
+    ) -> Result<()> {
         // Apply tie-break and override policies with explicit CAWS rule references
-        info!("Applying debate resolution policies for {} participants", participants.len());
-        
+        info!(
+            "Applying debate resolution policies for {} participants",
+            participants.len()
+        );
+
         // In a real implementation, this would:
         // 1. Apply CAWS rule-based tie-breaking
         // 2. Handle override policies
         // 3. Generate resolution rationale
-        
+
         Ok(())
     }
-    
+
     /// Produce signed debate transcript for provenance
     async fn produce_debate_transcript(&self, participants: &[String], rounds: i32) -> Result<()> {
         // Produce a signed debate transcript for provenance and downstream audits
-        info!("Producing debate transcript for {} rounds with {} participants", rounds, participants.len());
-        
+        info!(
+            "Producing debate transcript for {} rounds with {} participants",
+            rounds,
+            participants.len()
+        );
+
         // In a real implementation, this would:
         // 1. Compile all debate contributions
         // 2. Sign the transcript
         // 3. Store for provenance
-        
+
         Ok(())
     }
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
 
     /// Calculate consensus score from individual verdicts
-    fn calculate_consensus_score(&self, individual_verdicts: &HashMap<String, JudgeVerdict>) -> f32 {
+    fn calculate_consensus_score(
+        &self,
+        individual_verdicts: &HashMap<String, JudgeVerdict>,
+    ) -> f32 {
         if individual_verdicts.is_empty() {
             return 0.0;
         }
-        
+
         let mut total_confidence = 0.0;
         let mut count = 0;
-        
+
         for verdict in individual_verdicts.values() {
             match verdict {
                 JudgeVerdict::Pass { confidence, .. } => {
@@ -405,7 +419,7 @@ impl ConsensusCoordinator {
                 }
             }
         }
-        
+
         if count == 0 {
             0.0
         } else {
@@ -469,59 +483,67 @@ impl ConsensusCoordinator {
         task_spec: &TaskSpec,
     ) -> Result<u32> {
         debug!("Starting debate orchestration for task: {}", task_spec.id);
-        
+
         let consensus_score = self.calculate_consensus_score(individual_verdicts);
-        
+
         if consensus_score >= 0.8 {
-            debug!("High consensus score ({}), no debate needed", consensus_score);
+            debug!(
+                "High consensus score ({}), no debate needed",
+                consensus_score
+            );
             return Ok(0);
         }
-        
+
         let debate_participants = self.select_debate_participants(individual_verdicts);
         if debate_participants.is_empty() {
             debug!("No debate participants selected");
             return Ok(0);
         }
-        
+
         let mut total_rounds = 0u32;
         let max_rounds = self.get_max_debate_rounds(task_spec.risk_tier.clone());
-        
+
         for round in 1u32..=max_rounds {
             debug!("Starting debate round {} for task: {}", round, task_spec.id);
-            
+
             self.emit_debate_event(task_spec.id, round, "start").await;
-            
-            let round_result = self.conduct_debate_round(
-                round,
-                &debate_participants,
-                individual_verdicts,
-                task_spec,
-            ).await?;
-            
+
+            let round_result = self
+                .conduct_debate_round(round, &debate_participants, individual_verdicts, task_spec)
+                .await?;
+
             total_rounds = round;
-            
+
             if round_result.consensus_reached || round_result.should_terminate {
                 debug!("Debate terminated after {} rounds", round);
                 break;
             }
-            
-            self.emit_debate_event(task_spec.id, round, "complete").await;
+
+            self.emit_debate_event(task_spec.id, round, "complete")
+                .await;
         }
-        
-        self.emit_debate_event(task_spec.id, total_rounds, "final").await;
-        
-        debug!("Debate orchestration completed with {} rounds", total_rounds);
+
+        self.emit_debate_event(task_spec.id, total_rounds, "final")
+            .await;
+
+        debug!(
+            "Debate orchestration completed with {} rounds",
+            total_rounds
+        );
         Ok(total_rounds)
     }
 
     /// Select participants for debate based on verdict disagreement
-    fn select_debate_participants(&self, individual_verdicts: &HashMap<String, JudgeVerdict>) -> Vec<String> {
+    fn select_debate_participants(
+        &self,
+        individual_verdicts: &HashMap<String, JudgeVerdict>,
+    ) -> Vec<String> {
         let mut participants = Vec::new();
-        
+
         let mut pass_judges = Vec::new();
         let mut fail_judges = Vec::new();
         let mut uncertain_judges = Vec::new();
-        
+
         for (judge_name, verdict) in individual_verdicts {
             match verdict {
                 JudgeVerdict::Pass { .. } => pass_judges.push(judge_name.clone()),
@@ -529,17 +551,17 @@ impl ConsensusCoordinator {
                 JudgeVerdict::Uncertain { .. } => uncertain_judges.push(judge_name.clone()),
             }
         }
-        
+
         if !pass_judges.is_empty() && !fail_judges.is_empty() {
             participants.extend(pass_judges);
             participants.extend(fail_judges);
         }
-        
+
         participants.extend(uncertain_judges);
-        
+
         participants.sort();
         participants.dedup();
-        
+
         participants
     }
 
@@ -561,13 +583,17 @@ impl ConsensusCoordinator {
         _individual_verdicts: &HashMap<String, JudgeVerdict>,
         _task_spec: &TaskSpec,
     ) -> Result<DebateRoundResult> {
-        debug!("Conducting debate round {} with {} participants", round, participants.len());
-        
+        debug!(
+            "Conducting debate round {} with {} participants",
+            round,
+            participants.len()
+        );
+
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        
+
         let consensus_reached = round >= 2 && participants.len() <= 2;
         let should_terminate = round >= 3 || consensus_reached;
-        
+
         Ok(DebateRoundResult {
             round,
             consensus_reached,
@@ -577,8 +603,11 @@ impl ConsensusCoordinator {
 
     /// Emit debate event for telemetry
     async fn emit_debate_event(&self, task_id: Uuid, round: u32, event_type: &str) {
-        debug!("Debate event: task={}, round={}, type={}", task_id, round, event_type);
-        
+        debug!(
+            "Debate event: task={}, round={}, type={}",
+            task_id, round, event_type
+        );
+
         match event_type {
             "start" => {
                 debug!("Debate round {} started for task {}", round, task_id);
@@ -587,7 +616,10 @@ impl ConsensusCoordinator {
                 debug!("Debate round {} completed for task {}", round, task_id);
             }
             "final" => {
-                debug!("Debate finalized with {} rounds for task {}", round, task_id);
+                debug!(
+                    "Debate finalized with {} rounds for task {}",
+                    round, task_id
+                );
             }
             _ => {
                 debug!("Unknown debate event type: {}", event_type);
@@ -601,7 +633,10 @@ impl ConsensusCoordinator {
     }
 
     /// Query claim extraction for evidence
-    async fn query_claim_extraction(&self, _task_spec: &TaskSpec) -> Result<Option<EvidencePacket>> {
+    async fn query_claim_extraction(
+        &self,
+        _task_spec: &TaskSpec,
+    ) -> Result<Option<EvidencePacket>> {
         Ok(None)
     }
 

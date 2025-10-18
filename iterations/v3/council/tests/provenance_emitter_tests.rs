@@ -34,7 +34,8 @@ async fn emits_final_verdict_event() {
     let emitter = Arc::new(TestEmitter {
         final_calls: calls.clone(),
     });
-    let coord = agent_agency_council::coordinator::ConsensusCoordinator::new(cfg).with_emitter(emitter);
+    let coord =
+        agent_agency_council::coordinator::ConsensusCoordinator::new(cfg).with_emitter(emitter);
 
     let spec = TaskSpec {
         id: uuid::Uuid::nil(),

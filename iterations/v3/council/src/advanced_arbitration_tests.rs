@@ -5,10 +5,9 @@
 #[cfg(test)]
 mod tests {
     use crate::advanced_arbitration::{
-        AdvancedArbitrationEngine, ArbitrationResult, ConfidenceScorer,
-        ConsensusBuilder, ConsensusResult, LearningInsights,
-        PerformanceTracker, PleadingResult, PleadingWorkflow, QualityAssessment, QualityAssessor,
-        WorkerOutput,
+        AdvancedArbitrationEngine, ArbitrationResult, ConfidenceScorer, ConsensusBuilder,
+        ConsensusResult, LearningInsights, PerformanceTracker, PleadingResult, PleadingWorkflow,
+        QualityAssessment, QualityAssessor, WorkerOutput,
     };
     use chrono::Utc;
     use std::collections::HashMap;

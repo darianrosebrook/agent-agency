@@ -5,9 +5,9 @@
 #[cfg(test)]
 mod tests {
     use crate::predictive_learning_system::{
-        LearningAccelerator, LearningInsights, OutcomePredictor, OutcomeType,
-        PerformancePredictor, PredictiveLearningSystem, ResourcePredictor, StrategyOptimizer,
-        TaskOutcome, TrendDirection,
+        LearningAccelerator, LearningInsights, OutcomePredictor, OutcomeType, PerformancePredictor,
+        PredictiveLearningSystem, ResourcePredictor, StrategyOptimizer, TaskOutcome,
+        TrendDirection,
     };
     use chrono::Utc;
     use std::collections::HashMap;

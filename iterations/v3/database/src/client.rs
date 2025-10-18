@@ -1507,10 +1507,83 @@ impl DatabaseOperations for DatabaseClient {
 
     async fn update_task_execution(
         &self,
-        _id: Uuid,
-        _update: UpdateTaskExecution,
+        id: Uuid,
+        update: UpdateTaskExecution,
     ) -> Result<TaskExecution, Self::Error> {
-        todo!("Implement update_task_execution")
+        let mut query = "UPDATE task_executions SET updated_at = NOW()".to_string();
+        let mut param_count = 0;
+
+        // Build dynamic query based on provided fields
+        if let Some(status) = &update.status {
+            param_count += 1;
+            query.push_str(&format!(", status = ${}", param_count));
+        }
+
+        if let Some(completed_at) = &update.completed_at {
+            param_count += 1;
+            query.push_str(&format!(", completed_at = ${}", param_count));
+        }
+
+        if let Some(error_message) = &update.error_message {
+            param_count += 1;
+            query.push_str(&format!(", error_message = ${}", param_count));
+        }
+
+        if let Some(result_data) = &update.result_data {
+            param_count += 1;
+            query.push_str(&format!(", result_data = ${}", param_count));
+        }
+
+        if let Some(execution_metadata) = &update.execution_metadata {
+            param_count += 1;
+            query.push_str(&format!(", execution_metadata = ${}", param_count));
+        }
+
+        param_count += 1;
+        query.push_str(&format!(" WHERE id = ${} RETURNING *", param_count));
+
+        let mut query_builder = sqlx::query(&query);
+
+        // Bind parameters
+        if let Some(status) = &update.status {
+            query_builder = query_builder.bind(status);
+        }
+        if let Some(completed_at) = &update.completed_at {
+            query_builder = query_builder.bind(completed_at);
+        }
+        if let Some(error_message) = &update.error_message {
+            query_builder = query_builder.bind(error_message);
+        }
+        if let Some(result_data) = &update.result_data {
+            query_builder = query_builder.bind(serde_json::to_value(result_data).unwrap_or_default());
+        }
+        if let Some(execution_metadata) = &update.execution_metadata {
+            query_builder = query_builder.bind(serde_json::to_value(execution_metadata).unwrap_or_default());
+        }
+
+        query_builder = query_builder.bind(id);
+
+        let row = query_builder
+            .fetch_one(&self.pool)
+            .await
+            .context("Failed to update task execution")?;
+
+        let task_execution = TaskExecution {
+            id: row.get("id"),
+            task_id: row.get("task_id"),
+            worker_id: row.get("worker_id"),
+            status: row.get("status"),
+            started_at: row.get("started_at"),
+            completed_at: row.get("completed_at"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            execution_metadata: row.get("execution_metadata"),
+            error_message: row.get("error_message"),
+            result_data: row.get("result_data"),
+        };
+
+        info!("Updated task execution {} with status {:?}", id, task_execution.status);
+        Ok(task_execution)
     }
 
     async fn create_council_verdict(
@@ -1590,31 +1663,242 @@ impl DatabaseOperations for DatabaseClient {
 
     async fn get_council_verdict(
         &self,
-        _verdict_id: Uuid,
+        verdict_id: Uuid,
     ) -> Result<Option<CouncilVerdict>, Self::Error> {
-        todo!("Implement get_council_verdict")
+        let row = sqlx::query(
+            r#"
+            SELECT * FROM council_verdicts 
+            WHERE id = $1
+            "#
+        )
+        .bind(verdict_id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to fetch council verdict")?;
+
+        if let Some(row) = row {
+            let verdict = CouncilVerdict {
+                id: row.get("id"),
+                task_id: row.get("task_id"),
+                verdict_id: row.get("verdict_id"),
+                consensus_score: row.get("consensus_score"),
+                debate_rounds: row.get("debate_rounds"),
+                evaluation_time_ms: row.get("evaluation_time_ms"),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+                verdict_details: row.get("verdict_details"),
+                participant_contributions: row.get("participant_contributions"),
+            };
+            Ok(Some(verdict))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn get_council_verdicts(
         &self,
-        _filters: Option<VerdictFilters>,
-        _pagination: Option<PaginationParams>,
+        filters: Option<VerdictFilters>,
+        pagination: Option<PaginationParams>,
     ) -> Result<Vec<CouncilVerdict>, Self::Error> {
-        todo!("Implement get_council_verdicts")
+        let mut query = "SELECT * FROM council_verdicts".to_string();
+        let mut conditions = Vec::new();
+        let mut param_count = 0;
+
+        // Apply filters if provided
+        if let Some(filters) = filters {
+            if let Some(task_id) = filters.task_id {
+                param_count += 1;
+                conditions.push(format!("task_id = ${}", param_count));
+            }
+            if let Some(min_consensus_score) = filters.min_consensus_score {
+                param_count += 1;
+                conditions.push(format!("consensus_score >= ${}", param_count));
+            }
+            if let Some(max_consensus_score) = filters.max_consensus_score {
+                param_count += 1;
+                conditions.push(format!("consensus_score <= ${}", param_count));
+            }
+            if let Some(min_debate_rounds) = filters.min_debate_rounds {
+                param_count += 1;
+                conditions.push(format!("debate_rounds >= ${}", param_count));
+            }
+            if let Some(max_debate_rounds) = filters.max_debate_rounds {
+                param_count += 1;
+                conditions.push(format!("debate_rounds <= ${}", param_count));
+            }
+            if let Some(created_after) = filters.created_after {
+                param_count += 1;
+                conditions.push(format!("created_at >= ${}", param_count));
+            }
+            if let Some(created_before) = filters.created_before {
+                param_count += 1;
+                conditions.push(format!("created_at <= ${}", param_count));
+            }
+        }
+
+        if !conditions.is_empty() {
+            query.push_str(" WHERE ");
+            query.push_str(&conditions.join(" AND "));
+        }
+
+        query.push_str(" ORDER BY created_at DESC");
+
+        // Apply pagination
+        if let Some(pagination) = pagination {
+            param_count += 1;
+            query.push_str(&format!(" LIMIT ${}", param_count));
+            param_count += 1;
+            query.push_str(&format!(" OFFSET ${}", param_count));
+        }
+
+        let mut query_builder = sqlx::query(&query);
+
+        // Bind parameters
+        if let Some(filters) = filters {
+            if let Some(task_id) = filters.task_id {
+                query_builder = query_builder.bind(task_id);
+            }
+            if let Some(min_consensus_score) = filters.min_consensus_score {
+                query_builder = query_builder.bind(min_consensus_score);
+            }
+            if let Some(max_consensus_score) = filters.max_consensus_score {
+                query_builder = query_builder.bind(max_consensus_score);
+            }
+            if let Some(min_debate_rounds) = filters.min_debate_rounds {
+                query_builder = query_builder.bind(min_debate_rounds);
+            }
+            if let Some(max_debate_rounds) = filters.max_debate_rounds {
+                query_builder = query_builder.bind(max_debate_rounds);
+            }
+            if let Some(created_after) = filters.created_after {
+                query_builder = query_builder.bind(created_after);
+            }
+            if let Some(created_before) = filters.created_before {
+                query_builder = query_builder.bind(created_before);
+            }
+        }
+
+        if let Some(pagination) = pagination {
+            query_builder = query_builder.bind(pagination.limit as i64);
+            query_builder = query_builder.bind(pagination.offset as i64);
+        }
+
+        let rows = query_builder
+            .fetch_all(&self.pool)
+            .await
+            .context("Failed to fetch council verdicts")?;
+
+        let verdicts: Vec<CouncilVerdict> = rows
+            .into_iter()
+            .map(|row| CouncilVerdict {
+                id: row.get("id"),
+                task_id: row.get("task_id"),
+                verdict_id: row.get("verdict_id"),
+                consensus_score: row.get("consensus_score"),
+                debate_rounds: row.get("debate_rounds"),
+                evaluation_time_ms: row.get("evaluation_time_ms"),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+                verdict_details: row.get("verdict_details"),
+                participant_contributions: row.get("participant_contributions"),
+            })
+            .collect();
+
+        info!("Retrieved {} council verdicts", verdicts.len());
+        Ok(verdicts)
     }
 
     async fn create_judge_evaluation(
         &self,
-        _evaluation: CreateJudgeEvaluation,
+        evaluation: CreateJudgeEvaluation,
     ) -> Result<JudgeEvaluation, Self::Error> {
-        todo!("Implement create_judge_evaluation")
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+
+        let row = sqlx::query(
+            r#"
+            INSERT INTO judge_evaluations (
+                id, verdict_id, judge_id, evaluation_score, confidence_score,
+                reasoning, evidence_used, evaluation_time_ms, created_at, updated_at,
+                evaluation_metadata, verdict_decision, risk_assessment
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            RETURNING *
+            "#
+        )
+        .bind(id)
+        .bind(evaluation.verdict_id)
+        .bind(evaluation.judge_id)
+        .bind(evaluation.evaluation_score)
+        .bind(evaluation.confidence_score)
+        .bind(&evaluation.reasoning)
+        .bind(serde_json::to_value(&evaluation.evidence_used).unwrap_or_default())
+        .bind(evaluation.evaluation_time_ms)
+        .bind(now)
+        .bind(now)
+        .bind(serde_json::to_value(&evaluation.evaluation_metadata).unwrap_or_default())
+        .bind(&evaluation.verdict_decision)
+        .bind(serde_json::to_value(&evaluation.risk_assessment).unwrap_or_default())
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to create judge evaluation")?;
+
+        let judge_evaluation = JudgeEvaluation {
+            id: row.get("id"),
+            verdict_id: row.get("verdict_id"),
+            judge_id: row.get("judge_id"),
+            evaluation_score: row.get("evaluation_score"),
+            confidence_score: row.get("confidence_score"),
+            reasoning: row.get("reasoning"),
+            evidence_used: row.get("evidence_used"),
+            evaluation_time_ms: row.get("evaluation_time_ms"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            evaluation_metadata: row.get("evaluation_metadata"),
+            verdict_decision: row.get("verdict_decision"),
+            risk_assessment: row.get("risk_assessment"),
+        };
+
+        info!("Created judge evaluation {} for verdict {}", id, evaluation.verdict_id);
+        Ok(judge_evaluation)
     }
 
     async fn get_judge_evaluations(
         &self,
-        _verdict_id: Uuid,
+        verdict_id: Uuid,
     ) -> Result<Vec<JudgeEvaluation>, Self::Error> {
-        todo!("Implement get_judge_evaluations")
+        let rows = sqlx::query(
+            r#"
+            SELECT * FROM judge_evaluations 
+            WHERE verdict_id = $1 
+            ORDER BY created_at DESC
+            "#
+        )
+        .bind(verdict_id)
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to fetch judge evaluations")?;
+
+        let evaluations: Vec<JudgeEvaluation> = rows
+            .into_iter()
+            .map(|row| JudgeEvaluation {
+                id: row.get("id"),
+                verdict_id: row.get("verdict_id"),
+                judge_id: row.get("judge_id"),
+                evaluation_score: row.get("evaluation_score"),
+                confidence_score: row.get("confidence_score"),
+                reasoning: row.get("reasoning"),
+                evidence_used: row.get("evidence_used"),
+                evaluation_time_ms: row.get("evaluation_time_ms"),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+                evaluation_metadata: row.get("evaluation_metadata"),
+                verdict_decision: row.get("verdict_decision"),
+                risk_assessment: row.get("risk_assessment"),
+            })
+            .collect();
+
+        info!("Retrieved {} judge evaluations for verdict {}", evaluations.len(), verdict_id);
+        Ok(evaluations)
     }
 
     async fn create_knowledge_entry(

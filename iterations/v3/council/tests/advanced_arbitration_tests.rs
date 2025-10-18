@@ -5,7 +5,9 @@
 //! quality-weighted consensus building.
 
 use agent_agency_council::advanced_arbitration::*;
-use agent_agency_council::types::{WorkerOutput, WorkerMetadata, Seeds, Artifacts, PatchArtifact, SelfAssessment};
+use agent_agency_council::types::{
+    Artifacts, PatchArtifact, Seeds, SelfAssessment, WorkerMetadata, WorkerOutput,
+};
 use std::collections::HashMap;
 use uuid::Uuid;
 

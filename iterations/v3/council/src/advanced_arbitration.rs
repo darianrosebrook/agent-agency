@@ -667,9 +667,9 @@ impl AdvancedArbitrationEngine {
         // Risk based on task complexity and risk tier
         match task_spec.risk_tier {
             crate::models::RiskTier::Critical => risk_score += 0.8, // Critical risk
-            crate::models::RiskTier::High => risk_score += 0.6, // High risk
-            crate::models::RiskTier::Medium => risk_score += 0.4, // Medium risk
-            crate::models::RiskTier::Low => risk_score += 0.1, // Low risk
+            crate::models::RiskTier::High => risk_score += 0.6,     // High risk
+            crate::models::RiskTier::Medium => risk_score += 0.4,   // Medium risk
+            crate::models::RiskTier::Low => risk_score += 0.1,      // Low risk
         }
 
         // Risk based on task scope - broader scope = higher conflict potential
@@ -2113,7 +2113,10 @@ impl ConflictResolver {
         // Check for high-resolution-success patterns
         for pattern in &historically_resolvable_patterns {
             if conflict_lower.contains(pattern) {
-                debug!("Found historically resolvable pattern '{}' in conflict", pattern);
+                debug!(
+                    "Found historically resolvable pattern '{}' in conflict",
+                    pattern
+                );
                 return true; // These conflicts typically resolve through discussion
             }
         }
@@ -2128,7 +2131,10 @@ impl ConflictResolver {
 
         for pattern in &escalation_patterns {
             if conflict_lower.contains(pattern) {
-                debug!("Found escalation-required pattern '{}' in conflict", pattern);
+                debug!(
+                    "Found escalation-required pattern '{}' in conflict",
+                    pattern
+                );
                 return false; // These typically need higher-level intervention
             }
         }
@@ -5244,12 +5250,12 @@ impl ArbitrationFeedback {
                 "needs_improvement"
             }
             .to_string(),
-            total_decisions: 1, // Default to 1 for this analysis
+            total_decisions: 1,               // Default to 1 for this analysis
             quality_score: consensus_quality, // Use consensus quality as quality score
-            efficiency_score: success_rate, // Use success rate as efficiency score
+            efficiency_score: success_rate,   // Use success rate as efficiency score
             consensus_strength: decision_confidence, // Use decision confidence as consensus strength
             decision_strategy: "weighted_consensus".to_string(), // Default strategy
-            resolution_time_ms: 1000, // Default 1 second
+            resolution_time_ms: 1000,                // Default 1 second
         })
     }
 
@@ -5360,8 +5366,7 @@ impl ArbitrationFeedback {
         if outcome_analysis.quality_score > 0.9 {
             info!(
                 "High quality score achieved ({:.2}), strategy '{}' performing well",
-                outcome_analysis.quality_score,
-                outcome_analysis.decision_strategy
+                outcome_analysis.quality_score, outcome_analysis.decision_strategy
             );
         }
 

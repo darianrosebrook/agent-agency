@@ -110,7 +110,18 @@ iterations/v3/
    cd iterations/v3
    ```
 
-2. Provision PostgreSQL and pgvector, then create the project database:
+2. **Bootstrap agent environment** (recommended for concurrent work):
+
+   ```bash
+   # Auto-detect platform and setup agent isolation
+   ./scripts/bootstrap-agent.sh
+
+   # Or manually set agent identity
+   export AGENT_ID="dev-setup-$(date +%s)"
+   ./scripts/bootstrap-agent.sh
+   ```
+
+3. Provision PostgreSQL and pgvector, then create the project database:
 
    ```bash
    brew install postgresql pgvector
@@ -118,7 +129,7 @@ iterations/v3/
    psql agent_agency_v3 < database/schema.sql
    ```
 
-3. Pull required baseline models via Ollama (fine-tuning happens later):
+4. Pull required baseline models via Ollama (fine-tuning happens later):
 
    ```bash
    ollama pull gemma3n:e2b
@@ -129,12 +140,38 @@ iterations/v3/
    ollama pull mistral:3b
    ```
 
-4. Build and test the workspace:
+5. Build and test the workspace:
 
    ```bash
-   cargo build
-   cargo test
+   # Use optimized build wrapper for concurrent safety
+   AGENT_ID="setup-build" ./scripts/build-wrapper.sh dev --workspace
+   AGENT_ID="setup-test" ./scripts/build-wrapper.sh test --workspace
    ```
+
+### Concurrent Agent Operations
+
+For running multiple agents concurrently without resource conflicts:
+
+- **Read the comprehensive guide**: [`CONCURRENT_AGENT_OPERATIONS.md`](./CONCURRENT_AGENT_OPERATIONS.md)
+- **Use agent bootstrap**: `./scripts/bootstrap-agent.sh` for automatic environment setup
+- **Use build wrapper**: `./scripts/build-wrapper.sh` instead of raw `cargo` commands
+- **Follow isolation principles**: Each agent gets unique write paths and shared read caches
+
+**Example concurrent setup:**
+
+```bash
+# Terminal 1: Development agent
+AGENT_ID="dev-agent-1" ./scripts/bootstrap-agent.sh
+AGENT_ID="dev-agent-1" ./scripts/build-wrapper.sh dev --package council &
+
+# Terminal 2: Test agent
+AGENT_ID="test-agent-2" ./scripts/bootstrap-agent.sh
+AGENT_ID="test-agent-2" ./scripts/build-wrapper.sh test --workspace &
+
+# Terminal 3: Documentation agent
+AGENT_ID="docs-agent-3" ./scripts/bootstrap-agent.sh
+AGENT_ID="docs-agent-3" cargo doc --workspace &
+```
 
 ## Usage Examples
 
@@ -225,9 +262,11 @@ println!("Created judge: {:?}", judge);
 
 ## Documentation
 
-- `/docs` contains persistent architecture references, contracts, ADRs, and integration guidance.
-- `/docs-status` tracks implementation progress, gap analyses, and project status (git-ignored).
-- `/archive` retains superseded research material for historical reference.
+- [`CONCURRENT_AGENT_OPERATIONS.md`](./CONCURRENT_AGENT_OPERATIONS.md) - Comprehensive guide for running multiple agents concurrently across Rust, Python, and Node/TypeScript
+- [`docs/BUILD_OPTIMIZATION.md`](./docs/BUILD_OPTIMIZATION.md) - Rust build performance optimization guide and agent isolation
+- `/docs` contains persistent architecture references, contracts, ADRs, and integration guidance
+- `/docs-status` tracks implementation progress, gap analyses, and project status (git-ignored)
+- `/archive` retains superseded research material for historical reference
 
 ## Contributing
 

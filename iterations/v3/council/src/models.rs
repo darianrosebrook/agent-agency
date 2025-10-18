@@ -24,9 +24,9 @@ pub struct TaskSpec {
 /// Risk tier for task classification
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RiskTier {
-    Low,     // Low-risk changes (UI, docs, internal tools)
-    Medium,  // Standard features (APIs, data writes)
-    High,    // Critical systems (auth, billing, migrations)
+    Low,      // Low-risk changes (UI, docs, internal tools)
+    Medium,   // Standard features (APIs, data writes)
+    High,     // Critical systems (auth, billing, migrations)
     Critical, // System-critical changes (core infrastructure)
 }
 

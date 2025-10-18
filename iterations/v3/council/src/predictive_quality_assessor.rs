@@ -255,9 +255,11 @@ impl PredictiveQualityAssessor {
         let mut all_trends = Vec::new();
         let mut all_volatilities = Vec::new();
         let mut all_anomalies = Vec::new();
+        let mut histories = Vec::new();
 
         for worker_id in workers {
             let history = self.get_quality_history(worker_id).await?;
+            histories.push(history.clone());
             let trend = self
                 .quality_trend_analyzer
                 .analyze_worker_trend(&history)
@@ -277,14 +279,20 @@ impl PredictiveQualityAssessor {
         let overall_trend = self.determine_overall_trend(&all_trends);
         let trend_strength = self.calculate_trend_strength(&all_trends);
         let avg_volatility = all_volatilities.iter().sum::<f32>() / all_volatilities.len() as f32;
+        let seasonal_patterns = self.detect_seasonal_patterns(&histories);
+        let forecast_accuracy = self.calculate_forecast_accuracy(&histories);
+
+        if let Ok(mut accuracy) = self.performance_predictor.prediction_accuracy.write().await {
+            *accuracy = forecast_accuracy;
+        }
 
         Ok(QualityTrendAnalysis {
             overall_trend,
             trend_strength,
             volatility: avg_volatility,
-            seasonal_patterns: Vec::new(), // TODO: Implement seasonal pattern detection
+            seasonal_patterns,
             anomalies: all_anomalies,
-            forecast_accuracy: 0.85, // TODO: Calculate actual accuracy
+            forecast_accuracy,
         })
     }
 
@@ -530,6 +538,161 @@ impl PredictiveQualityAssessor {
             .count();
 
         matching_count as f32 / total as f32
+    }
+
+    fn detect_seasonal_patterns(&self, histories: &[QualityHistory]) -> Vec<SeasonalPattern> {
+        if histories.is_empty() {
+            return Vec::new();
+        }
+
+        let candidate_lags = [1usize, 3, 7];
+        let mut patterns = Vec::new();
+
+        for &lag in &candidate_lags {
+            let mut correlations = Vec::new();
+            let mut amplitudes = Vec::new();
+
+            for history in histories {
+                if history.quality_scores.len() <= lag {
+                    continue;
+                }
+
+                if let Some(corr) = Self::lag_autocorrelation(&history.quality_scores, lag) {
+                    correlations.push(corr);
+                    if corr > 0.0 {
+                        amplitudes.push(Self::lag_amplitude(&history.quality_scores, lag));
+                    }
+                }
+            }
+
+            if correlations.is_empty() {
+                continue;
+            }
+
+            let avg_corr = correlations.iter().sum::<f32>() / correlations.len() as f32;
+            if avg_corr < 0.35 {
+                continue;
+            }
+
+            let avg_amplitude = if amplitudes.is_empty() {
+                0.0
+            } else {
+                amplitudes.iter().sum::<f32>() / amplitudes.len() as f32
+            };
+
+            let phase = Self::estimate_phase(histories, lag);
+
+            patterns.push(SeasonalPattern {
+                pattern_type: format!("{}-step_cycle", lag),
+                frequency: 1.0 / lag as f32,
+                amplitude: avg_amplitude,
+                phase,
+                confidence: avg_corr.clamp(0.0, 1.0),
+            });
+        }
+
+        patterns
+    }
+
+    fn calculate_forecast_accuracy(&self, histories: &[QualityHistory]) -> f32 {
+        let mut accuracies = Vec::new();
+
+        for history in histories {
+            if history.quality_scores.len() < 4 {
+                continue;
+            }
+
+            let actual = *history.quality_scores.last().unwrap_or(&0.0);
+            let predicted = history
+                .quality_scores
+                .iter()
+                .rev()
+                .skip(1)
+                .take(3)
+                .sum::<f32>()
+                / 3.0;
+            let error = (actual - predicted).abs();
+            accuracies.push((1.0 - error).clamp(0.0, 1.0));
+        }
+
+        if accuracies.is_empty() {
+            0.85
+        } else {
+            accuracies.iter().sum::<f32>() / accuracies.len() as f32
+        }
+    }
+
+    fn lag_autocorrelation(series: &[f32], lag: usize) -> Option<f32> {
+        if series.len() <= lag {
+            return None;
+        }
+
+        let mean = series.iter().sum::<f32>() / series.len() as f32;
+        let variance = series
+            .iter()
+            .map(|value| (value - mean).powi(2))
+            .sum::<f32>()
+            / series.len() as f32;
+        if variance.abs() < f32::EPSILON {
+            return None;
+        }
+
+        let mut numerator = 0.0;
+        let mut denominator = 0.0;
+
+        for i in lag..series.len() {
+            numerator += (series[i] - mean) * (series[i - lag] - mean);
+        }
+        for value in series {
+            denominator += (value - mean).powi(2);
+        }
+
+        if denominator.abs() < f32::EPSILON {
+            None
+        } else {
+            Some((numerator / (series.len() - lag) as f32) / (denominator / series.len() as f32))
+        }
+    }
+
+    fn lag_amplitude(series: &[f32], lag: usize) -> f32 {
+        if series.len() <= lag {
+            return 0.0;
+        }
+
+        let mut diffs = Vec::new();
+        for i in lag..series.len() {
+            diffs.push((series[i] - series[i - lag]).abs());
+        }
+
+        if diffs.is_empty() {
+            0.0
+        } else {
+            diffs.iter().sum::<f32>() / diffs.len() as f32
+        }
+    }
+
+    fn estimate_phase(histories: &[QualityHistory], lag: usize) -> f32 {
+        for history in histories {
+            if history.quality_scores.len() <= lag {
+                continue;
+            }
+
+            let mut max_diff = 0.0;
+            let mut phase_index = 0usize;
+            for i in lag..history.quality_scores.len() {
+                let diff = (history.quality_scores[i] - history.quality_scores[i - lag]).abs();
+                if diff > max_diff {
+                    max_diff = diff;
+                    phase_index = i % lag;
+                }
+            }
+
+            if max_diff > 0.0 {
+                return phase_index as f32 / lag as f32;
+            }
+        }
+
+        0.0
     }
 
     async fn identify_risk_factors(&self, history: &QualityHistory) -> Result<Vec<String>> {
@@ -875,6 +1038,114 @@ impl Default for PatternRecognizer {
 impl Default for AnomalyDetector {
     fn default() -> Self {
         Self {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{Duration, Utc};
+
+    fn make_history(worker_id: &str) -> QualityHistory {
+        let now = Utc::now();
+        let mut quality_scores = Vec::new();
+        let mut timestamps = Vec::new();
+
+        let pattern = [0.62_f32, 0.74, 0.88];
+        for day in 0..12 {
+            quality_scores.push(pattern[day % pattern.len()]);
+            timestamps.push(now - Duration::days((11 - day) as i64));
+        }
+
+        QualityHistory {
+            worker_id: worker_id.to_string(),
+            task_type: "analysis".to_string(),
+            quality_scores,
+            timestamps,
+            trend_direction: TrendDirection::Stable,
+            volatility: 0.12,
+            last_updated: now,
+        }
+    }
+
+    #[tokio::test]
+    async fn analyze_quality_trends_detects_seasonal_patterns() {
+        let assessor = PredictiveQualityAssessor::new();
+        {
+            let mut history_store = assessor.historical_quality.write().await;
+            history_store.insert("worker-a".to_string(), make_history("worker-a"));
+            history_store.insert("worker-b".to_string(), make_history("worker-b"));
+        }
+
+        let workers = vec!["worker-a".to_string(), "worker-b".to_string()];
+        let analysis = assessor
+            .analyze_quality_trends(&workers)
+            .await
+            .expect("trend analysis");
+
+        assert!(
+            !analysis.seasonal_patterns.is_empty(),
+            "seasonal patterns should be detected"
+        );
+        assert!(
+            analysis
+                .seasonal_patterns
+                .iter()
+                .any(|pattern| pattern.pattern_type.contains("3-step")),
+            "expected detection of the 3-step seasonal cycle"
+        );
+        assert!(
+            (0.0..=1.0).contains(&analysis.forecast_accuracy),
+            "forecast accuracy should be normalized"
+        );
+        assert!(
+            analysis.forecast_accuracy > 0.8,
+            "forecast accuracy should reflect low error for repeating pattern"
+        );
+
+        let stored_accuracy = *assessor
+            .performance_predictor
+            .prediction_accuracy
+            .read()
+            .await;
+        assert!(
+            (stored_accuracy - analysis.forecast_accuracy).abs() < f32::EPSILON,
+            "prediction accuracy state should mirror computed accuracy"
+        );
+    }
+
+    #[tokio::test]
+    async fn analyze_quality_trends_handles_sparse_history() {
+        let assessor = PredictiveQualityAssessor::new();
+        {
+            let mut history_store = assessor.historical_quality.write().await;
+            history_store.insert(
+                "worker-sparse".to_string(),
+                QualityHistory {
+                    worker_id: "worker-sparse".to_string(),
+                    task_type: "analysis".to_string(),
+                    quality_scores: vec![0.68, 0.7],
+                    timestamps: vec![Utc::now() - Duration::days(1), Utc::now()],
+                    trend_direction: TrendDirection::Stable,
+                    volatility: 0.05,
+                    last_updated: Utc::now(),
+                },
+            );
+        }
+
+        let analysis = assessor
+            .analyze_quality_trends(&["worker-sparse".to_string()])
+            .await
+            .expect("trend analysis");
+
+        assert!(
+            analysis.seasonal_patterns.is_empty(),
+            "no seasonal patterns should be reported for sparse data"
+        );
+        assert!(
+            (analysis.forecast_accuracy - 0.85).abs() < f32::EPSILON,
+            "forecast accuracy should fall back to default when insufficient data exists"
+        );
     }
 }
 

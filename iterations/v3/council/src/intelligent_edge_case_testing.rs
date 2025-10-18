@@ -807,10 +807,12 @@ impl IntelligentEdgeCaseTesting {
         history.performance_metrics.failure_rate = 1.0 - history.performance_metrics.success_rate;
 
         // Calculate resource efficiency based on actual resource usage data
-        history.performance_metrics.resource_efficiency = self.calculate_resource_efficiency(&history.execution_history);
+        history.performance_metrics.resource_efficiency =
+            self.calculate_resource_efficiency(&history.execution_history);
 
         // Calculate stability score based on execution consistency
-        history.performance_metrics.stability_score = self.calculate_stability_score(&history.execution_history);
+        history.performance_metrics.stability_score =
+            self.calculate_stability_score(&history.execution_history);
 
         Ok(())
     }
@@ -823,10 +825,26 @@ impl IntelligentEdgeCaseTesting {
 
         // Calculate average resource usage across all executions
         let total_executions = executions.len() as f64;
-        let avg_cpu = executions.iter().map(|e| e.resource_usage.cpu_usage).sum::<f64>() / total_executions;
-        let avg_memory = executions.iter().map(|e| e.resource_usage.memory_usage).sum::<f64>() / total_executions;
-        let avg_disk = executions.iter().map(|e| e.resource_usage.disk_usage).sum::<f64>() / total_executions;
-        let avg_network = executions.iter().map(|e| e.resource_usage.network_usage).sum::<f64>() / total_executions;
+        let avg_cpu = executions
+            .iter()
+            .map(|e| e.resource_usage.cpu_usage)
+            .sum::<f64>()
+            / total_executions;
+        let avg_memory = executions
+            .iter()
+            .map(|e| e.resource_usage.memory_usage)
+            .sum::<f64>()
+            / total_executions;
+        let avg_disk = executions
+            .iter()
+            .map(|e| e.resource_usage.disk_usage)
+            .sum::<f64>()
+            / total_executions;
+        let avg_network = executions
+            .iter()
+            .map(|e| e.resource_usage.network_usage)
+            .sum::<f64>()
+            / total_executions;
 
         // Define baseline efficient usage thresholds
         let cpu_efficiency_threshold = 0.7; // 70% CPU usage is considered efficient
@@ -864,7 +882,8 @@ impl IntelligentEdgeCaseTesting {
             cpu_efficiency * 0.4 +      // CPU is most important
             memory_efficiency * 0.3 +   // Memory is critical
             disk_efficiency * 0.2 +     // Disk is moderately important
-            network_efficiency * 0.1    // Network is least important
+            network_efficiency * 0.1
+            // Network is least important
         );
 
         // Ensure result is between 0.0 and 1.0
@@ -879,7 +898,10 @@ impl IntelligentEdgeCaseTesting {
 
         // Analyze outcome consistency
         let outcomes: Vec<_> = executions.iter().map(|e| &e.outcome).collect();
-        let unique_outcomes = outcomes.iter().collect::<std::collections::HashSet<_>>().len();
+        let unique_outcomes = outcomes
+            .iter()
+            .collect::<std::collections::HashSet<_>>()
+            .len();
 
         // Calculate outcome stability (lower unique outcomes = more stable)
         let outcome_stability = if unique_outcomes == 1 {
@@ -889,11 +911,16 @@ impl IntelligentEdgeCaseTesting {
         };
 
         // Analyze execution time variance
-        let execution_times: Vec<f64> = executions.iter().map(|e| e.execution_time_ms as f64).collect();
+        let execution_times: Vec<f64> = executions
+            .iter()
+            .map(|e| e.execution_time_ms as f64)
+            .collect();
         let avg_time = execution_times.iter().sum::<f64>() / execution_times.len() as f64;
-        let time_variance = execution_times.iter()
+        let time_variance = execution_times
+            .iter()
             .map(|t| (t - avg_time).powi(2))
-            .sum::<f64>() / execution_times.len() as f64;
+            .sum::<f64>()
+            / execution_times.len() as f64;
         let time_std_dev = time_variance.sqrt();
 
         // Calculate time stability (lower variance = more stable)
@@ -910,7 +937,8 @@ impl IntelligentEdgeCaseTesting {
         let overall_stability = (
             outcome_stability * 0.5 +     // Outcome consistency is most important
             time_stability * 0.3 +        // Execution time stability
-            resource_stability * 0.2      // Resource usage stability
+            resource_stability * 0.2
+            // Resource usage stability
         );
 
         overall_stability.max(0.0).min(1.0)
@@ -923,10 +951,22 @@ impl IntelligentEdgeCaseTesting {
         }
 
         // Calculate coefficient of variation for each resource type
-        let cpu_values: Vec<f64> = executions.iter().map(|e| e.resource_usage.cpu_usage).collect();
-        let memory_values: Vec<f64> = executions.iter().map(|e| e.resource_usage.memory_usage).collect();
-        let disk_values: Vec<f64> = executions.iter().map(|e| e.resource_usage.disk_usage).collect();
-        let network_values: Vec<f64> = executions.iter().map(|e| e.resource_usage.network_usage).collect();
+        let cpu_values: Vec<f64> = executions
+            .iter()
+            .map(|e| e.resource_usage.cpu_usage)
+            .collect();
+        let memory_values: Vec<f64> = executions
+            .iter()
+            .map(|e| e.resource_usage.memory_usage)
+            .collect();
+        let disk_values: Vec<f64> = executions
+            .iter()
+            .map(|e| e.resource_usage.disk_usage)
+            .collect();
+        let network_values: Vec<f64> = executions
+            .iter()
+            .map(|e| e.resource_usage.network_usage)
+            .collect();
 
         let cpu_cv = self.coefficient_of_variation(&cpu_values);
         let memory_cv = self.coefficient_of_variation(&memory_values);
@@ -950,9 +990,7 @@ impl IntelligentEdgeCaseTesting {
             return 0.0;
         }
 
-        let variance = values.iter()
-            .map(|v| (v - mean).powi(2))
-            .sum::<f64>() / values.len() as f64;
+        let variance = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64;
         let std_dev = variance.sqrt();
 
         std_dev / mean // Coefficient of variation
@@ -1005,8 +1043,11 @@ impl DynamicTestGenerator {
         let coverage_metrics = self.calculate_test_coverage(&validated_tests, test_spec)?;
         let effectiveness_score = self.calculate_test_effectiveness(&validated_tests)?;
 
-        debug!("Generated {} dynamic tests with {:.1}% edge case coverage",
-               validated_tests.len(), coverage_metrics.edge_case_coverage * 100.0);
+        debug!(
+            "Generated {} dynamic tests with {:.1}% edge case coverage",
+            validated_tests.len(),
+            coverage_metrics.edge_case_coverage * 100.0
+        );
 
         Ok(DynamicTestResults {
             generated_tests: validated_tests,
@@ -1018,19 +1059,26 @@ impl DynamicTestGenerator {
     }
 
     /// Analyze test specification to extract input parameters and constraints
-    fn analyze_test_specification(&self, test_spec: &TestSpecification) -> Result<Vec<InputParameter>> {
+    fn analyze_test_specification(
+        &self,
+        test_spec: &TestSpecification,
+    ) -> Result<Vec<InputParameter>> {
         let mut parameters = Vec::new();
 
         // Extract parameters from test specification requirements
         for requirement in &test_spec.requirements {
-            if let Some(param) = self.extract_parameter_from_requirement(requirement.description.as_str()) {
+            if let Some(param) =
+                self.extract_parameter_from_requirement(requirement.description.as_str())
+            {
                 parameters.push(param);
             }
         }
 
         // Extract parameters from acceptance criteria
         for criterion in &test_spec.acceptance_criteria {
-            if let Some(param) = self.extract_parameter_from_criterion(criterion.criterion_name.as_str()) {
+            if let Some(param) =
+                self.extract_parameter_from_criterion(criterion.criterion_name.as_str())
+            {
                 parameters.push(param);
             }
         }
@@ -1050,7 +1098,7 @@ impl DynamicTestGenerator {
         if requirement.contains("input") || requirement.contains("parameter") {
             Some(InputParameter {
                 name: format!("param_{}", requirement.len() % 10), // Simple hash-like naming
-                param_type: ParameterType::String, // Default assumption
+                param_type: ParameterType::String,                 // Default assumption
                 constraints: ParameterConstraints {
                     min_value: None,
                     max_value: None,
@@ -1108,30 +1156,44 @@ impl DynamicTestGenerator {
                     pattern: None,
                 },
                 required: false,
-            }
+            },
         ]
     }
 
     /// Generate boundary value tests based on input parameters
-    fn generate_boundary_tests(&self, parameters: &[InputParameter], test_spec: &TestSpecification) -> Result<Vec<GeneratedTest>> {
+    fn generate_boundary_tests(
+        &self,
+        parameters: &[InputParameter],
+        test_spec: &TestSpecification,
+    ) -> Result<Vec<GeneratedTest>> {
         let mut tests = Vec::new();
 
         for param in parameters {
             if let Some(min_val) = param.constraints.min_value {
                 // Test minimum boundary
                 let mut input_data = HashMap::new();
-                input_data.insert(param.name.clone(), serde_json::Value::Number(serde_json::Number::from_f64(min_val).unwrap()));
+                input_data.insert(
+                    param.name.clone(),
+                    serde_json::Value::Number(serde_json::Number::from_f64(min_val).unwrap()),
+                );
 
                 tests.push(GeneratedTest {
                     test_id: Uuid::new_v4(),
                     test_name: format!("Boundary test - {} minimum", param.name),
                     test_type: TestType::Boundary,
-                    test_scenario: self.create_test_scenario(&param.name, input_data.clone(), test_spec),
+                    test_scenario: self.create_test_scenario(
+                        &param.name,
+                        input_data.clone(),
+                        test_spec,
+                    ),
                     expected_outcome: ExpectedOutcome {
                         outcome_type: OutcomeType::Success,
                         expected_result: serde_json::json!({"status": "success"}),
                         success_criteria: vec![SuccessCriterion {
-                            criterion_name: format!("{} handles minimum boundary correctly", param.name),
+                            criterion_name: format!(
+                                "{} handles minimum boundary correctly",
+                                param.name
+                            ),
                             criterion_type: CriterionType::Performance,
                             expected_value: serde_json::json!(true),
                             tolerance: None,
@@ -1144,7 +1206,10 @@ impl DynamicTestGenerator {
                         }],
                     },
                     edge_case_type: EdgeCaseType::Boundary,
-                    generation_reason: format!("Testing minimum boundary value for parameter {}", param.name),
+                    generation_reason: format!(
+                        "Testing minimum boundary value for parameter {}",
+                        param.name
+                    ),
                     confidence_score: 0.95,
                 });
             }
@@ -1152,18 +1217,28 @@ impl DynamicTestGenerator {
             if let Some(max_val) = param.constraints.max_value {
                 // Test maximum boundary
                 let mut input_data = HashMap::new();
-                input_data.insert(param.name.clone(), serde_json::Value::Number(serde_json::Number::from_f64(max_val).unwrap()));
+                input_data.insert(
+                    param.name.clone(),
+                    serde_json::Value::Number(serde_json::Number::from_f64(max_val).unwrap()),
+                );
 
                 tests.push(GeneratedTest {
                     test_id: Uuid::new_v4(),
                     test_name: format!("Boundary test - {} maximum", param.name),
                     test_type: TestType::Boundary,
-                    test_scenario: self.create_test_scenario(&param.name, input_data.clone(), test_spec),
+                    test_scenario: self.create_test_scenario(
+                        &param.name,
+                        input_data.clone(),
+                        test_spec,
+                    ),
                     expected_outcome: ExpectedOutcome {
                         outcome_type: OutcomeType::Success,
                         expected_result: serde_json::json!({"status": "success"}),
                         success_criteria: vec![SuccessCriterion {
-                            criterion_name: format!("{} handles maximum boundary correctly", param.name),
+                            criterion_name: format!(
+                                "{} handles maximum boundary correctly",
+                                param.name
+                            ),
                             criterion_type: CriterionType::Performance,
                             expected_value: serde_json::json!(true),
                             tolerance: None,
@@ -1176,7 +1251,10 @@ impl DynamicTestGenerator {
                         }],
                     },
                     edge_case_type: EdgeCaseType::Boundary,
-                    generation_reason: format!("Testing maximum boundary value for parameter {}", param.name),
+                    generation_reason: format!(
+                        "Testing maximum boundary value for parameter {}",
+                        param.name
+                    ),
                     confidence_score: 0.95,
                 });
             }
@@ -1186,38 +1264,61 @@ impl DynamicTestGenerator {
     }
 
     /// Generate equivalence class tests
-    fn generate_equivalence_tests(&self, parameters: &[InputParameter], test_spec: &TestSpecification) -> Result<Vec<GeneratedTest>> {
+    fn generate_equivalence_tests(
+        &self,
+        parameters: &[InputParameter],
+        test_spec: &TestSpecification,
+    ) -> Result<Vec<GeneratedTest>> {
         let mut tests = Vec::new();
 
         for param in parameters {
             // Test valid equivalence classes
             for allowed_value in &param.constraints.allowed_values {
                 let mut input_data = HashMap::new();
-                input_data.insert(param.name.clone(), serde_json::Value::String(allowed_value.clone()));
+                input_data.insert(
+                    param.name.clone(),
+                    serde_json::Value::String(allowed_value.clone()),
+                );
 
                 tests.push(GeneratedTest {
                     test_id: Uuid::new_v4(),
-                    test_name: format!("Equivalence test - {} valid value '{}'", param.name, allowed_value),
+                    test_name: format!(
+                        "Equivalence test - {} valid value '{}'",
+                        param.name, allowed_value
+                    ),
                     test_type: TestType::Equivalence,
-                    test_scenario: self.create_test_scenario(&param.name, input_data.clone(), test_spec),
+                    test_scenario: self.create_test_scenario(
+                        &param.name,
+                        input_data.clone(),
+                        test_spec,
+                    ),
                     expected_outcome: ExpectedOutcome {
                         outcome_type: OutcomeType::Success,
                         expected_result: serde_json::json!({"status": "success"}),
                         success_criteria: vec![SuccessCriterion {
-                            criterion_name: format!("{} accepts valid value '{}'", param.name, allowed_value),
+                            criterion_name: format!(
+                                "{} accepts valid value '{}'",
+                                param.name, allowed_value
+                            ),
                             criterion_type: CriterionType::Equality,
                             expected_value: serde_json::json!(allowed_value),
                             tolerance: None,
                         }],
                         failure_scenarios: vec![FailureScenario {
-                            scenario_name: format!("{} rejects valid value '{}'", param.name, allowed_value),
+                            scenario_name: format!(
+                                "{} rejects valid value '{}'",
+                                param.name, allowed_value
+                            ),
                             failure_type: FailureType::Validation,
                             expected_error: "Value rejection failed".to_string(),
                             error_code: None,
                         }],
                     },
                     edge_case_type: EdgeCaseType::InvalidInput,
-                    generation_reason: format!("Testing valid equivalence class for parameter {}", param.name),
+                    generation_reason: format!(
+                        "Testing valid equivalence class for parameter {}",
+                        param.name
+                    ),
                     confidence_score: 0.85,
                 });
             }
@@ -1227,7 +1328,11 @@ impl DynamicTestGenerator {
     }
 
     /// Generate edge case tests
-    fn generate_edge_case_tests(&self, parameters: &[InputParameter], test_spec: &TestSpecification) -> Result<Vec<GeneratedTest>> {
+    fn generate_edge_case_tests(
+        &self,
+        parameters: &[InputParameter],
+        test_spec: &TestSpecification,
+    ) -> Result<Vec<GeneratedTest>> {
         let mut tests = Vec::new();
 
         // Generate null input tests
@@ -1240,7 +1345,11 @@ impl DynamicTestGenerator {
                     test_id: Uuid::new_v4(),
                     test_name: format!("Edge case - {} null input", param.name),
                     test_type: TestType::EdgeCase,
-                    test_scenario: self.create_test_scenario(&param.name, null_input.clone(), test_spec),
+                    test_scenario: self.create_test_scenario(
+                        &param.name,
+                        null_input.clone(),
+                        test_spec,
+                    ),
                     expected_outcome: ExpectedOutcome {
                         outcome_type: OutcomeType::Failure,
                         expected_result: serde_json::json!({"error": "null_required_parameter"}),
@@ -1248,12 +1357,16 @@ impl DynamicTestGenerator {
                         failure_scenarios: vec![FailureScenario {
                             scenario_name: format!("{} should reject null values", param.name),
                             failure_type: FailureType::Validation,
-                            expected_error: "Null value not allowed for required parameter".to_string(),
+                            expected_error: "Null value not allowed for required parameter"
+                                .to_string(),
                             error_code: Some("NULL_REQUIRED_PARAM".to_string()),
                         }],
                     },
                     edge_case_type: EdgeCaseType::NullHandling,
-                    generation_reason: format!("Testing null input handling for required parameter {}", param.name),
+                    generation_reason: format!(
+                        "Testing null input handling for required parameter {}",
+                        param.name
+                    ),
                     confidence_score: 0.95,
                 });
             }
@@ -1263,36 +1376,49 @@ impl DynamicTestGenerator {
     }
 
     /// Create a test scenario for a generated test
-    fn create_test_scenario(&self, param_name: &str, input_data: HashMap<String, serde_json::Value>, test_spec: &TestSpecification) -> TestScenario {
-        let test_data: HashMap<String, TestData> = input_data.into_iter().map(|(key, value)| {
-            (key, TestData {
-                data_type: match &value {
-                    serde_json::Value::String(_) => DataType::String,
-                    serde_json::Value::Number(n) if n.is_i64() => DataType::Integer,
-                    serde_json::Value::Number(_) => DataType::Float,
-                    serde_json::Value::Bool(_) => DataType::Boolean,
-                    serde_json::Value::Array(_) => DataType::Array,
-                    serde_json::Value::Object(_) => DataType::Object,
-                    serde_json::Value::Null => DataType::Null,
-                },
-                value,
-                constraints: vec![],
-                edge_case_flags: vec![],
+    fn create_test_scenario(
+        &self,
+        param_name: &str,
+        input_data: HashMap<String, serde_json::Value>,
+        test_spec: &TestSpecification,
+    ) -> TestScenario {
+        let test_data: HashMap<String, TestData> = input_data
+            .into_iter()
+            .map(|(key, value)| {
+                (
+                    key,
+                    TestData {
+                        data_type: match &value {
+                            serde_json::Value::String(_) => DataType::String,
+                            serde_json::Value::Number(n) if n.is_i64() => DataType::Integer,
+                            serde_json::Value::Number(_) => DataType::Float,
+                            serde_json::Value::Bool(_) => DataType::Boolean,
+                            serde_json::Value::Array(_) => DataType::Array,
+                            serde_json::Value::Object(_) => DataType::Object,
+                            serde_json::Value::Null => DataType::Null,
+                        },
+                        value,
+                        constraints: vec![],
+                        edge_case_flags: vec![],
+                    },
+                )
             })
-        }).collect();
+            .collect();
         TestScenario {
             scenario_name: format!("Test scenario for parameter {}", param_name),
             input_data: test_data,
             execution_context: ExecutionContext {
                 environment: TestEnvironment::Unit,
-                dependencies: test_spec.dependencies.iter().map(|dep_name| {
-                    Dependency {
+                dependencies: test_spec
+                    .dependencies
+                    .iter()
+                    .map(|dep_name| Dependency {
                         dependency_name: dep_name.clone(),
                         dependency_type: DependencyType::Library,
                         version: "latest".to_string(),
                         required: true,
-                    }
-                }).collect(),
+                    })
+                    .collect(),
                 resources: ResourceRequirements {
                     cpu_cores: 1,
                     memory_mb: 256,
@@ -1320,7 +1446,11 @@ impl DynamicTestGenerator {
     fn optimize_test_suite(&self, tests: Vec<GeneratedTest>) -> Result<Vec<GeneratedTest>> {
         // Remove duplicates and prioritize by confidence
         let mut optimized = tests;
-        optimized.sort_by(|a, b| b.confidence_score.partial_cmp(&a.confidence_score).unwrap_or(std::cmp::Ordering::Equal));
+        optimized.sort_by(|a, b| {
+            b.confidence_score
+                .partial_cmp(&a.confidence_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         optimized.truncate(15); // Limit to top 15 tests
         Ok(optimized)
     }
@@ -1328,7 +1458,8 @@ impl DynamicTestGenerator {
     /// Validate generated test cases
     fn validate_test_cases(&self, tests: &[GeneratedTest]) -> Result<Vec<GeneratedTest>> {
         // Basic validation - ensure tests have required fields
-        let validated: Vec<GeneratedTest> = tests.iter()
+        let validated: Vec<GeneratedTest> = tests
+            .iter()
             .filter(|test| !test.test_name.is_empty() && !test.test_scenario.input_data.is_empty())
             .cloned()
             .collect();
@@ -1336,10 +1467,20 @@ impl DynamicTestGenerator {
     }
 
     /// Calculate test coverage metrics
-    fn calculate_test_coverage(&self, tests: &[GeneratedTest], _test_spec: &TestSpecification) -> Result<CoverageMetrics> {
+    fn calculate_test_coverage(
+        &self,
+        tests: &[GeneratedTest],
+        _test_spec: &TestSpecification,
+    ) -> Result<CoverageMetrics> {
         let total_tests = tests.len() as f64;
-        let boundary_tests = tests.iter().filter(|t| matches!(t.test_type, TestType::Boundary)).count() as f64;
-        let edge_case_tests = tests.iter().filter(|t| matches!(t.test_type, TestType::EdgeCase)).count() as f64;
+        let boundary_tests = tests
+            .iter()
+            .filter(|t| matches!(t.test_type, TestType::Boundary))
+            .count() as f64;
+        let edge_case_tests = tests
+            .iter()
+            .filter(|t| matches!(t.test_type, TestType::EdgeCase))
+            .count() as f64;
 
         Ok(CoverageMetrics {
             coverage_improvement: (boundary_tests + edge_case_tests) / total_tests.max(1.0) * 0.1,
@@ -1382,19 +1523,24 @@ impl EdgeCaseAnalyzer {
 
         // 1. Edge case identification: Identify potential edge cases and boundary conditions
         let identified_edge_cases = self.identify_edge_cases(test_spec).await?;
-        
+
         // 2. Edge case classification: Classify edge cases by type and severity
         let classified_edge_cases = self.classify_edge_cases(&identified_edge_cases).await?;
-        
+
         // 3. Edge case testing: Test identified edge cases for correctness
         let test_results = self.test_edge_cases(&classified_edge_cases).await?;
-        
+
         // 4. Edge case reporting: Report edge case analysis results
-        let analysis_report = self.generate_edge_case_report(&classified_edge_cases, &test_results).await?;
+        let analysis_report = self
+            .generate_edge_case_report(&classified_edge_cases, &test_results)
+            .await?;
 
         Ok(EdgeCaseAnalysis {
             identified_edge_cases: classified_edge_cases.clone(),
-            edge_case_coverage: self.calculate_coverage_metrics(&classified_edge_cases, &test_results).coverage_percentage / 100.0,
+            edge_case_coverage: self
+                .calculate_coverage_metrics(&classified_edge_cases, &test_results)
+                .coverage_percentage
+                / 100.0,
             analysis_confidence: 0.85,
             risk_assessment: self.generate_risk_assessment(&classified_edge_cases),
             mitigation_strategies: self.generate_mitigation_strategies(&classified_edge_cases),
@@ -1402,7 +1548,10 @@ impl EdgeCaseAnalyzer {
     }
 
     /// Identify potential edge cases and boundary conditions
-    async fn identify_edge_cases(&self, test_spec: &TestSpecification) -> Result<Vec<IdentifiedEdgeCase>> {
+    async fn identify_edge_cases(
+        &self,
+        test_spec: &TestSpecification,
+    ) -> Result<Vec<IdentifiedEdgeCase>> {
         let mut edge_cases = Vec::new();
 
         // Analyze input ranges and boundary values
@@ -1414,7 +1563,10 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Empty string input".to_string(),
                         edge_case_type: EdgeCaseType::BoundaryCondition,
-                        description: format!("Input '{}' with empty string value", input.requirement_name),
+                        description: format!(
+                            "Input '{}' with empty string value",
+                            input.requirement_name
+                        ),
                         probability: 0.8,
                         impact: 0.6,
                         risk_level: RiskLevel::Medium,
@@ -1426,7 +1578,10 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Very long string input".to_string(),
                         edge_case_type: EdgeCaseType::BoundaryCondition,
-                        description: format!("Input '{}' with extremely long string value", input.requirement_name),
+                        description: format!(
+                            "Input '{}' with extremely long string value",
+                            input.requirement_name
+                        ),
                         probability: 0.3,
                         impact: 0.7,
                         risk_level: RiskLevel::High,
@@ -1438,7 +1593,10 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Special characters in string".to_string(),
                         edge_case_type: EdgeCaseType::InputValidation,
-                        description: format!("Input '{}' with special characters and unicode", input.requirement_name),
+                        description: format!(
+                            "Input '{}' with special characters and unicode",
+                            input.requirement_name
+                        ),
                         probability: 0.6,
                         impact: 0.5,
                         risk_level: RiskLevel::Medium,
@@ -1463,7 +1621,10 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Negative integer input".to_string(),
                         edge_case_type: EdgeCaseType::BoundaryCondition,
-                        description: format!("Input '{}' with negative value", input.requirement_name),
+                        description: format!(
+                            "Input '{}' with negative value",
+                            input.requirement_name
+                        ),
                         probability: 0.7,
                         impact: 0.6,
                         risk_level: RiskLevel::Medium,
@@ -1475,7 +1636,10 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Maximum integer input".to_string(),
                         edge_case_type: EdgeCaseType::BoundaryCondition,
-                        description: format!("Input '{}' with maximum integer value", input.requirement_name),
+                        description: format!(
+                            "Input '{}' with maximum integer value",
+                            input.requirement_name
+                        ),
                         probability: 0.2,
                         impact: 0.8,
                         risk_level: RiskLevel::High,
@@ -1488,7 +1652,10 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Security validation bypass".to_string(),
                         edge_case_type: EdgeCaseType::SecurityVulnerability,
-                        description: format!("Input '{}' with potential security bypass", input.requirement_name),
+                        description: format!(
+                            "Input '{}' with potential security bypass",
+                            input.requirement_name
+                        ),
                         probability: 0.1,
                         impact: 0.9,
                         risk_level: RiskLevel::Critical,
@@ -1500,7 +1667,10 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Injection attack vector".to_string(),
                         edge_case_type: EdgeCaseType::SecurityVulnerability,
-                        description: format!("Input '{}' with injection attack patterns", input.requirement_name),
+                        description: format!(
+                            "Input '{}' with injection attack patterns",
+                            input.requirement_name
+                        ),
                         probability: 0.2,
                         impact: 0.8,
                         risk_level: RiskLevel::Critical,
@@ -1513,7 +1683,10 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Empty input validation".to_string(),
                         edge_case_type: EdgeCaseType::InputValidation,
-                        description: format!("Input '{}' with empty value handling", input.requirement_name),
+                        description: format!(
+                            "Input '{}' with empty value handling",
+                            input.requirement_name
+                        ),
                         probability: 0.8,
                         impact: 0.6,
                         risk_level: RiskLevel::Medium,
@@ -1525,7 +1698,10 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Very large input handling".to_string(),
                         edge_case_type: EdgeCaseType::PerformanceIssue,
-                        description: format!("Input '{}' with very large value", input.requirement_name),
+                        description: format!(
+                            "Input '{}' with very large value",
+                            input.requirement_name
+                        ),
                         probability: 0.2,
                         impact: 0.8,
                         risk_level: RiskLevel::High,
@@ -1550,7 +1726,10 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Missing required fields".to_string(),
                         edge_case_type: EdgeCaseType::InputValidation,
-                        description: format!("Input '{}' with missing required fields", input.requirement_name),
+                        description: format!(
+                            "Input '{}' with missing required fields",
+                            input.requirement_name
+                        ),
                         probability: 0.6,
                         impact: 0.7,
                         risk_level: RiskLevel::High,
@@ -1563,7 +1742,10 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Performance degradation".to_string(),
                         edge_case_type: EdgeCaseType::Performance,
-                        description: format!("Input '{}' causing performance issues", input.requirement_name),
+                        description: format!(
+                            "Input '{}' causing performance issues",
+                            input.requirement_name
+                        ),
                         probability: 0.6,
                         impact: 0.8,
                         risk_level: RiskLevel::High,
@@ -1576,7 +1758,10 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Load testing edge case".to_string(),
                         edge_case_type: EdgeCaseType::Performance,
-                        description: format!("Input '{}' under high load conditions", input.requirement_name),
+                        description: format!(
+                            "Input '{}' under high load conditions",
+                            input.requirement_name
+                        ),
                         probability: 0.7,
                         impact: 0.9,
                         risk_level: RiskLevel::High,
@@ -1589,7 +1774,10 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Security vulnerability".to_string(),
                         edge_case_type: EdgeCaseType::Security,
-                        description: format!("Input '{}' with potential security risk", input.requirement_name),
+                        description: format!(
+                            "Input '{}' with potential security risk",
+                            input.requirement_name
+                        ),
                         probability: 0.4,
                         impact: 0.95,
                         risk_level: RiskLevel::Critical,
@@ -1602,7 +1790,10 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Usability issue".to_string(),
                         edge_case_type: EdgeCaseType::Usability,
-                        description: format!("Input '{}' causing usability problems", input.requirement_name),
+                        description: format!(
+                            "Input '{}' causing usability problems",
+                            input.requirement_name
+                        ),
                         probability: 0.5,
                         impact: 0.6,
                         risk_level: RiskLevel::Medium,
@@ -1615,7 +1806,10 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Reliability failure".to_string(),
                         edge_case_type: EdgeCaseType::Reliability,
-                        description: format!("Input '{}' causing system failure", input.requirement_name),
+                        description: format!(
+                            "Input '{}' causing system failure",
+                            input.requirement_name
+                        ),
                         probability: 0.3,
                         impact: 0.9,
                         risk_level: RiskLevel::Critical,
@@ -1635,7 +1829,10 @@ impl EdgeCaseAnalyzer {
     }
 
     /// Identify exceptional conditions and error cases
-    async fn identify_exceptional_conditions(&self, test_spec: &TestSpecification) -> Result<Vec<IdentifiedEdgeCase>> {
+    async fn identify_exceptional_conditions(
+        &self,
+        test_spec: &TestSpecification,
+    ) -> Result<Vec<IdentifiedEdgeCase>> {
         let mut edge_cases = Vec::new();
 
         // Network timeouts
@@ -1678,7 +1875,10 @@ impl EdgeCaseAnalyzer {
     }
 
     /// Detect potential race conditions and timing issues
-    async fn identify_race_conditions(&self, test_spec: &TestSpecification) -> Result<Vec<IdentifiedEdgeCase>> {
+    async fn identify_race_conditions(
+        &self,
+        test_spec: &TestSpecification,
+    ) -> Result<Vec<IdentifiedEdgeCase>> {
         let mut edge_cases = Vec::new();
 
         // Concurrent access
@@ -1709,14 +1909,19 @@ impl EdgeCaseAnalyzer {
     }
 
     /// Classify edge cases by type and severity
-    async fn classify_edge_cases(&self, edge_cases: &[IdentifiedEdgeCase]) -> Result<Vec<IdentifiedEdgeCase>> {
+    async fn classify_edge_cases(
+        &self,
+        edge_cases: &[IdentifiedEdgeCase],
+    ) -> Result<Vec<IdentifiedEdgeCase>> {
         let mut classified = edge_cases.to_vec();
 
         // Sort by risk level and impact
         classified.sort_by(|a, b| {
             let a_priority = self.calculate_priority(a);
             let b_priority = self.calculate_priority(b);
-            b_priority.partial_cmp(&a_priority).unwrap_or(std::cmp::Ordering::Equal)
+            b_priority
+                .partial_cmp(&a_priority)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         Ok(classified)
@@ -1730,12 +1935,15 @@ impl EdgeCaseAnalyzer {
             RiskLevel::Medium => 2.0,
             RiskLevel::Low => 1.0,
         };
-        
+
         edge_case.probability * edge_case.impact * risk_weight
     }
 
     /// Test identified edge cases for correctness
-    async fn test_edge_cases(&self, edge_cases: &[IdentifiedEdgeCase]) -> Result<Vec<EdgeCaseTestResult>> {
+    async fn test_edge_cases(
+        &self,
+        edge_cases: &[IdentifiedEdgeCase],
+    ) -> Result<Vec<EdgeCaseTestResult>> {
         let mut test_results = Vec::new();
 
         for edge_case in edge_cases {
@@ -1747,17 +1955,22 @@ impl EdgeCaseAnalyzer {
     }
 
     /// Execute a single edge case test
-    async fn execute_edge_case_test(&self, edge_case: &IdentifiedEdgeCase) -> Result<EdgeCaseTestResult> {
+    async fn execute_edge_case_test(
+        &self,
+        edge_case: &IdentifiedEdgeCase,
+    ) -> Result<EdgeCaseTestResult> {
         // Simulate test execution
         let start_time = std::time::Instant::now();
-        
+
         // Mock test execution based on edge case type
         let (passed, error_message) = match edge_case.edge_case_type {
             EdgeCaseType::Boundary => (true, None),
             EdgeCaseType::BoundaryCondition => (true, None),
             EdgeCaseType::NullHandling => (true, None),
             EdgeCaseType::EmptyData => (false, Some("Empty data handling failed".to_string())),
-            EdgeCaseType::InvalidInput => (false, Some("Invalid input validation failed".to_string())),
+            EdgeCaseType::InvalidInput => {
+                (false, Some("Invalid input validation failed".to_string()))
+            }
             EdgeCaseType::InputValidation => (false, Some("Input validation failed".to_string())),
             EdgeCaseType::ResourceExhaustion => (false, Some("Resource exhausted".to_string())),
             EdgeCaseType::PerformanceIssue => (true, None),
@@ -1770,7 +1983,9 @@ impl EdgeCaseAnalyzer {
             EdgeCaseType::IOError => (false, Some("IO error".to_string())),
             EdgeCaseType::ExceptionalCondition => (false, Some("Exception occurred".to_string())),
             EdgeCaseType::TypeCoercion => (true, None),
-            EdgeCaseType::SecurityVulnerability => (false, Some("Security vulnerability detected".to_string())),
+            EdgeCaseType::SecurityVulnerability => {
+                (false, Some("Security vulnerability detected".to_string()))
+            }
         };
 
         let execution_time = start_time.elapsed();
@@ -1782,7 +1997,7 @@ impl EdgeCaseAnalyzer {
             execution_time_ms: execution_time.as_millis() as u64,
             error_message,
             coverage_improvement: 0.0, // TODO: Calculate actual coverage improvement
-            edge_case_coverage: 0.0, // TODO: Calculate actual edge case coverage
+            edge_case_coverage: 0.0,   // TODO: Calculate actual edge case coverage
             generation_confidence: 0.8, // TODO: Calculate actual generation confidence
         })
     }
@@ -1799,12 +2014,16 @@ impl EdgeCaseAnalyzer {
 
         let mut risk_distribution = HashMap::new();
         for edge_case in edge_cases {
-            *risk_distribution.entry(edge_case.risk_level.clone()).or_insert(0) += 1;
+            *risk_distribution
+                .entry(edge_case.risk_level.clone())
+                .or_insert(0) += 1;
         }
 
         let mut type_distribution = HashMap::new();
         for edge_case in edge_cases {
-            *type_distribution.entry(edge_case.edge_case_type.clone()).or_insert(0) += 1;
+            *type_distribution
+                .entry(edge_case.edge_case_type.clone())
+                .or_insert(0) += 1;
         }
 
         Ok(EdgeCaseReport {
@@ -1813,7 +2032,11 @@ impl EdgeCaseAnalyzer {
             total_tests: total_edge_cases as u32,
             passed_tests: passed_tests as u32,
             failed_tests: failed_tests as u32,
-            coverage_score: if total_edge_cases > 0 { passed_tests as f64 / total_edge_cases as f64 } else { 0.0 },
+            coverage_score: if total_edge_cases > 0 {
+                passed_tests as f64 / total_edge_cases as f64
+            } else {
+                0.0
+            },
         })
     }
 
@@ -1829,14 +2052,26 @@ impl EdgeCaseAnalyzer {
 
         CoverageMetrics {
             coverage_improvement: 0.1,
-            edge_case_coverage: if total_edge_cases > 0 { tested_edge_cases as f64 / total_edge_cases as f64 } else { 0.0 },
+            edge_case_coverage: if total_edge_cases > 0 {
+                tested_edge_cases as f64 / total_edge_cases as f64
+            } else {
+                0.0
+            },
             generation_confidence: 0.8,
             total_edge_cases: total_edge_cases as u64,
             tested_edge_cases: tested_edge_cases as u64,
             passed_tests: passed_tests as u64,
             failed_tests: (tested_edge_cases - passed_tests) as u64,
-            coverage_percentage: if total_edge_cases > 0 { tested_edge_cases as f64 / total_edge_cases as f64 * 100.0 } else { 0.0 },
-            pass_rate: if tested_edge_cases > 0 { passed_tests as f64 / tested_edge_cases as f64 * 100.0 } else { 0.0 },
+            coverage_percentage: if total_edge_cases > 0 {
+                tested_edge_cases as f64 / total_edge_cases as f64 * 100.0
+            } else {
+                0.0
+            },
+            pass_rate: if tested_edge_cases > 0 {
+                passed_tests as f64 / tested_edge_cases as f64 * 100.0
+            } else {
+                0.0
+            },
         }
     }
 
@@ -1849,10 +2084,11 @@ impl EdgeCaseAnalyzer {
         let mut recommendations = Vec::new();
 
         // Check for critical issues
-        let critical_issues = edge_cases.iter()
+        let critical_issues = edge_cases
+            .iter()
             .filter(|ec| ec.risk_level == RiskLevel::Critical)
             .count();
-        
+
         if critical_issues > 0 {
             recommendations.push(format!(
                 "Address {} critical edge cases immediately to prevent system failures",
@@ -1861,10 +2097,11 @@ impl EdgeCaseAnalyzer {
         }
 
         // Check for high-risk issues
-        let high_risk_issues = edge_cases.iter()
+        let high_risk_issues = edge_cases
+            .iter()
             .filter(|ec| ec.risk_level == RiskLevel::High)
             .count();
-        
+
         if high_risk_issues > 0 {
             recommendations.push(format!(
                 "Prioritize {} high-risk edge cases for testing and mitigation",
@@ -1891,20 +2128,24 @@ impl EdgeCaseAnalyzer {
         }
 
         // Check for specific edge case types that need attention
-        let null_handling_issues = edge_cases.iter()
+        let null_handling_issues = edge_cases
+            .iter()
             .filter(|ec| ec.edge_case_type == EdgeCaseType::NullHandling)
             .count();
-        
+
         if null_handling_issues > 0 {
-            recommendations.push("Implement robust null handling throughout the system".to_string());
+            recommendations
+                .push("Implement robust null handling throughout the system".to_string());
         }
 
-        let race_condition_issues = edge_cases.iter()
+        let race_condition_issues = edge_cases
+            .iter()
             .filter(|ec| ec.edge_case_type == EdgeCaseType::RaceCondition)
             .count();
-        
+
         if race_condition_issues > 0 {
-            recommendations.push("Review and implement proper synchronization mechanisms".to_string());
+            recommendations
+                .push("Review and implement proper synchronization mechanisms".to_string());
         }
 
         if recommendations.is_empty() {
@@ -1921,10 +2162,14 @@ impl EdgeCaseAnalyzer {
         let mut overall_risk_score = 0.0;
 
         for edge_case in edge_cases {
-            *risk_distribution.entry(edge_case.risk_level.clone()).or_insert(0) += 1;
+            *risk_distribution
+                .entry(edge_case.risk_level.clone())
+                .or_insert(0) += 1;
             overall_risk_score += edge_case.probability * edge_case.impact;
-            
-            if edge_case.risk_level == RiskLevel::High || edge_case.risk_level == RiskLevel::Critical {
+
+            if edge_case.risk_level == RiskLevel::High
+                || edge_case.risk_level == RiskLevel::Critical
+            {
                 high_risk_areas.push(edge_case.edge_case_name.clone());
             }
         }
@@ -1940,7 +2185,10 @@ impl EdgeCaseAnalyzer {
     }
 
     /// Generate mitigation strategies for edge cases
-    fn generate_mitigation_strategies(&self, edge_cases: &[IdentifiedEdgeCase]) -> Vec<MitigationStrategy> {
+    fn generate_mitigation_strategies(
+        &self,
+        edge_cases: &[IdentifiedEdgeCase],
+    ) -> Vec<MitigationStrategy> {
         let mut strategies = Vec::new();
 
         // Add null input tests strategy
@@ -1988,15 +2236,19 @@ impl TestOptimizer {
 
         // 1. Test analysis: Analyze existing test cases for optimization opportunities
         let test_analysis = self.analyze_test_efficiency(test_spec).await?;
-        
+
         // 2. Test prioritization: Prioritize test cases based on effectiveness
         let prioritized_tests = self.prioritize_tests(test_spec, &test_analysis).await?;
-        
+
         // 3. Test optimization: Optimize test cases for better performance
-        let optimization_suggestions = self.generate_optimization_suggestions(&test_analysis).await?;
-        
+        let optimization_suggestions = self
+            .generate_optimization_suggestions(&test_analysis)
+            .await?;
+
         // 4. Test maintenance: Maintain optimized test suites over time
-        let maintenance_recommendations = self.generate_maintenance_recommendations(&test_analysis).await?;
+        let maintenance_recommendations = self
+            .generate_maintenance_recommendations(&test_analysis)
+            .await?;
 
         Ok(TestOptimization {
             optimization_suggestions,
@@ -2011,7 +2263,10 @@ impl TestOptimizer {
     }
 
     /// Analyze test efficiency and identify optimization opportunities
-    async fn analyze_test_efficiency(&self, test_spec: &TestSpecification) -> Result<TestEfficiencyAnalysis> {
+    async fn analyze_test_efficiency(
+        &self,
+        test_spec: &TestSpecification,
+    ) -> Result<TestEfficiencyAnalysis> {
         let mut redundant_tests = Vec::new();
         let mut slow_tests = Vec::new();
         let mut low_value_tests = Vec::new();
@@ -2044,16 +2299,36 @@ impl TestOptimizer {
             redundant_tests,
             slow_tests,
             low_value_tests,
-            efficiency_improvement: if total_tests > 0 { (redundant_count + low_value_count) as f64 / total_tests as f64 } else { 0.0 },
-            redundancy_reduction: if total_tests > 0 { redundant_count as f64 / total_tests as f64 } else { 0.0 },
-            execution_time_reduction: if total_tests > 0 { slow_count as f64 / total_tests as f64 * 0.5 } else { 0.0 },
-            resource_usage_reduction: if total_tests > 0 { (redundant_count + low_value_count) as f64 / total_tests as f64 * 0.3 } else { 0.0 },
+            efficiency_improvement: if total_tests > 0 {
+                (redundant_count + low_value_count) as f64 / total_tests as f64
+            } else {
+                0.0
+            },
+            redundancy_reduction: if total_tests > 0 {
+                redundant_count as f64 / total_tests as f64
+            } else {
+                0.0
+            },
+            execution_time_reduction: if total_tests > 0 {
+                slow_count as f64 / total_tests as f64 * 0.5
+            } else {
+                0.0
+            },
+            resource_usage_reduction: if total_tests > 0 {
+                (redundant_count + low_value_count) as f64 / total_tests as f64 * 0.3
+            } else {
+                0.0
+            },
             confidence: 0.85,
         })
     }
 
     /// Check if a generated test case is redundant
-    fn is_redundant_generated_test(&self, test_case: &GeneratedTest, all_tests: &[GeneratedTest]) -> bool {
+    fn is_redundant_generated_test(
+        &self,
+        test_case: &GeneratedTest,
+        all_tests: &[GeneratedTest],
+    ) -> bool {
         for other_test in all_tests {
             if other_test.test_id == test_case.test_id {
                 continue;
@@ -2086,19 +2361,33 @@ impl TestOptimizer {
     fn generated_tests_are_similar(&self, test1: &GeneratedTest, test2: &GeneratedTest) -> bool {
         // Check if test names are similar
         let name_similarity = self.calculate_string_similarity(&test1.test_name, &test2.test_name);
-        
+
         // Check if test scenarios are similar
-        let scenario_similarity = self.calculate_string_similarity(&test1.test_scenario.scenario_name, &test2.test_scenario.scenario_name);
-        
+        let scenario_similarity = self.calculate_string_similarity(
+            &test1.test_scenario.scenario_name,
+            &test2.test_scenario.scenario_name,
+        );
+
         // Check if test types are the same
-        let type_similarity = if test1.test_type == test2.test_type { 1.0 } else { 0.0 };
-        
+        let type_similarity = if test1.test_type == test2.test_type {
+            1.0
+        } else {
+            0.0
+        };
+
         // Check if edge case types are the same
-        let edge_type_similarity = if test1.edge_case_type == test2.edge_case_type { 1.0 } else { 0.0 };
-        
+        let edge_type_similarity = if test1.edge_case_type == test2.edge_case_type {
+            1.0
+        } else {
+            0.0
+        };
+
         // Calculate overall similarity
-        let overall_similarity = (name_similarity * 0.3 + scenario_similarity * 0.4 + type_similarity * 0.2 + edge_type_similarity * 0.1);
-        
+        let overall_similarity = (name_similarity * 0.3
+            + scenario_similarity * 0.4
+            + type_similarity * 0.2
+            + edge_type_similarity * 0.1);
+
         overall_similarity > 0.8
     }
 
@@ -2106,8 +2395,9 @@ impl TestOptimizer {
     fn tests_are_similar(&self, test1: &TestCase, test2: &TestCase) -> bool {
         // Simple similarity check based on test name and scenario
         let name_similarity = self.calculate_string_similarity(&test1.test_name, &test2.test_name);
-        let scenario_similarity = self.calculate_string_similarity(&test1.test_scenario, &test2.test_scenario);
-        
+        let scenario_similarity =
+            self.calculate_string_similarity(&test1.test_scenario, &test2.test_scenario);
+
         name_similarity > 0.8 || scenario_similarity > 0.8
     }
 
@@ -2115,15 +2405,23 @@ impl TestOptimizer {
     fn calculate_string_similarity(&self, s1: &str, s2: &str) -> f64 {
         let chars1: std::collections::HashSet<char> = s1.to_lowercase().chars().collect();
         let chars2: std::collections::HashSet<char> = s2.to_lowercase().chars().collect();
-        
+
         let intersection = chars1.intersection(&chars2).count();
         let union = chars1.union(&chars2).count();
-        
-        if union == 0 { 0.0 } else { intersection as f64 / union as f64 }
+
+        if union == 0 {
+            0.0
+        } else {
+            intersection as f64 / union as f64
+        }
     }
 
     /// Prioritize test cases based on effectiveness
-    async fn prioritize_tests(&self, test_spec: &TestSpecification, analysis: &TestEfficiencyAnalysis) -> Result<Vec<PrioritizedTest>> {
+    async fn prioritize_tests(
+        &self,
+        test_spec: &TestSpecification,
+        analysis: &TestEfficiencyAnalysis,
+    ) -> Result<Vec<PrioritizedTest>> {
         let mut prioritized_tests = Vec::new();
 
         for (index, test_case) in test_spec.test_cases.iter().enumerate() {
@@ -2141,7 +2439,11 @@ impl TestOptimizer {
         }
 
         // Sort by priority score (highest first)
-        prioritized_tests.sort_by(|a, b| b.priority_score.partial_cmp(&a.priority_score).unwrap_or(std::cmp::Ordering::Equal));
+        prioritized_tests.sort_by(|a, b| {
+            b.priority_score
+                .partial_cmp(&a.priority_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         // Update execution order
         for (index, test) in prioritized_tests.iter_mut().enumerate() {
@@ -2152,7 +2454,11 @@ impl TestOptimizer {
     }
 
     /// Calculate priority score for a generated test case
-    fn calculate_generated_test_priority(&self, test_case: &GeneratedTest, analysis: &TestEfficiencyAnalysis) -> f64 {
+    fn calculate_generated_test_priority(
+        &self,
+        test_case: &GeneratedTest,
+        analysis: &TestEfficiencyAnalysis,
+    ) -> f64 {
         let mut score: f64 = 0.0;
 
         // Base score from confidence
@@ -2198,7 +2504,11 @@ impl TestOptimizer {
     }
 
     /// Get priority reason for a generated test case
-    fn get_generated_test_priority_reason(&self, test_case: &GeneratedTest, analysis: &TestEfficiencyAnalysis) -> String {
+    fn get_generated_test_priority_reason(
+        &self,
+        test_case: &GeneratedTest,
+        analysis: &TestEfficiencyAnalysis,
+    ) -> String {
         if analysis.redundant_tests.contains(&test_case.test_id) {
             "Redundant test - low priority".to_string()
         } else if analysis.low_value_tests.contains(&test_case.test_id) {
@@ -2249,7 +2559,11 @@ impl TestOptimizer {
     }
 
     /// Calculate priority score for a test case
-    fn calculate_test_priority(&self, test_case: &TestCase, analysis: &TestEfficiencyAnalysis) -> f64 {
+    fn calculate_test_priority(
+        &self,
+        test_case: &TestCase,
+        analysis: &TestEfficiencyAnalysis,
+    ) -> f64 {
         let mut score: f64 = 0.0;
 
         // Base score from priority
@@ -2288,7 +2602,11 @@ impl TestOptimizer {
     }
 
     /// Get priority reason for a test case
-    fn get_priority_reason(&self, test_case: &TestCase, analysis: &TestEfficiencyAnalysis) -> String {
+    fn get_priority_reason(
+        &self,
+        test_case: &TestCase,
+        analysis: &TestEfficiencyAnalysis,
+    ) -> String {
         if analysis.redundant_tests.contains(&test_case.test_id) {
             "Redundant test case".to_string()
         } else if analysis.low_value_tests.contains(&test_case.test_id) {
@@ -2319,14 +2637,20 @@ impl TestOptimizer {
     }
 
     /// Generate optimization suggestions
-    async fn generate_optimization_suggestions(&self, analysis: &TestEfficiencyAnalysis) -> Result<Vec<OptimizationSuggestion>> {
+    async fn generate_optimization_suggestions(
+        &self,
+        analysis: &TestEfficiencyAnalysis,
+    ) -> Result<Vec<OptimizationSuggestion>> {
         let mut suggestions = Vec::new();
 
         // Redundancy removal suggestion
         if !analysis.redundant_tests.is_empty() {
             suggestions.push(OptimizationSuggestion {
                 suggestion_type: SuggestionType::RemoveRedundant,
-                description: format!("Remove {} redundant test cases", analysis.redundant_tests.len()),
+                description: format!(
+                    "Remove {} redundant test cases",
+                    analysis.redundant_tests.len()
+                ),
                 expected_improvement: analysis.redundancy_reduction,
                 implementation_effort: ImplementationEffort::Low,
                 priority: Priority::High,
@@ -2348,7 +2672,10 @@ impl TestOptimizer {
         if !analysis.low_value_tests.is_empty() {
             suggestions.push(OptimizationSuggestion {
                 suggestion_type: SuggestionType::RemoveLowValue,
-                description: format!("Remove {} low-value test cases", analysis.low_value_tests.len()),
+                description: format!(
+                    "Remove {} low-value test cases",
+                    analysis.low_value_tests.len()
+                ),
                 expected_improvement: analysis.resource_usage_reduction,
                 implementation_effort: ImplementationEffort::Low,
                 priority: Priority::Medium,
@@ -2370,20 +2697,31 @@ impl TestOptimizer {
     }
 
     /// Generate maintenance recommendations
-    async fn generate_maintenance_recommendations(&self, analysis: &TestEfficiencyAnalysis) -> Result<Vec<String>> {
+    async fn generate_maintenance_recommendations(
+        &self,
+        analysis: &TestEfficiencyAnalysis,
+    ) -> Result<Vec<String>> {
         let mut recommendations = Vec::new();
 
-        recommendations.push("Monitor test execution times regularly to identify performance regressions".to_string());
-        recommendations.push("Review test coverage metrics monthly to ensure adequate coverage".to_string());
-        recommendations.push("Update test cases when requirements change to maintain relevance".to_string());
-        recommendations.push("Regularly audit test suite for redundancy and low-value tests".to_string());
+        recommendations.push(
+            "Monitor test execution times regularly to identify performance regressions"
+                .to_string(),
+        );
+        recommendations
+            .push("Review test coverage metrics monthly to ensure adequate coverage".to_string());
+        recommendations
+            .push("Update test cases when requirements change to maintain relevance".to_string());
+        recommendations
+            .push("Regularly audit test suite for redundancy and low-value tests".to_string());
 
         if analysis.redundancy_reduction > 0.1 {
-            recommendations.push("Consider implementing automated redundancy detection".to_string());
+            recommendations
+                .push("Consider implementing automated redundancy detection".to_string());
         }
 
         if analysis.execution_time_reduction > 0.2 {
-            recommendations.push("Investigate test execution bottlenecks and optimize slow tests".to_string());
+            recommendations
+                .push("Investigate test execution bottlenecks and optimize slow tests".to_string());
         }
 
         Ok(recommendations)
@@ -2407,15 +2745,19 @@ impl CoverageAnalyzer {
 
         // 1. Coverage measurement: Measure test coverage across different dimensions
         let coverage_metrics = self.measure_coverage_dimensions(test_spec).await?;
-        
+
         // 2. Coverage analysis: Analyze coverage patterns and trends
         let coverage_patterns = self.analyze_coverage_patterns(&coverage_metrics).await?;
-        
+
         // 3. Coverage optimization: Optimize coverage for better effectiveness
-        let coverage_gaps = self.identify_coverage_gaps(&coverage_metrics, test_spec).await?;
-        
+        let coverage_gaps = self
+            .identify_coverage_gaps(&coverage_metrics, test_spec)
+            .await?;
+
         // 4. Coverage reporting: Generate comprehensive coverage reports
-        let improvement_recommendations = self.generate_coverage_recommendations(&coverage_gaps, &coverage_metrics).await?;
+        let improvement_recommendations = self
+            .generate_coverage_recommendations(&coverage_gaps, &coverage_metrics)
+            .await?;
 
         Ok(CoverageAnalysis {
             overall_coverage: coverage_metrics.edge_case_coverage,
@@ -2433,7 +2775,10 @@ impl CoverageAnalyzer {
     }
 
     /// Measure test coverage across different dimensions
-    async fn measure_coverage_dimensions(&self, test_spec: &TestSpecification) -> Result<CoverageMetrics> {
+    async fn measure_coverage_dimensions(
+        &self,
+        test_spec: &TestSpecification,
+    ) -> Result<CoverageMetrics> {
         let mut edge_case_coverage = 0.0;
         let mut coverage_improvement = 0.0;
         let mut generation_confidence = 0.0;
@@ -2451,7 +2796,8 @@ impl CoverageAnalyzer {
             generation_confidence,
             total_edge_cases: test_spec.edge_case_requirements.len() as u64,
             tested_edge_cases: test_spec.edge_case_requirements.len() as u64,
-            passed_tests: (edge_case_coverage * test_spec.edge_case_requirements.len() as f64) as u64,
+            passed_tests: (edge_case_coverage * test_spec.edge_case_requirements.len() as f64)
+                as u64,
             failed_tests: 0,
             coverage_percentage: edge_case_coverage * 100.0,
             pass_rate: 1.0,
@@ -2459,15 +2805,24 @@ impl CoverageAnalyzer {
     }
 
     /// Analyze coverage patterns and trends
-    async fn analyze_coverage_patterns(&self, metrics: &CoverageMetrics) -> Result<CoveragePatterns> {
+    async fn analyze_coverage_patterns(
+        &self,
+        metrics: &CoverageMetrics,
+    ) -> Result<CoveragePatterns> {
         let mut trends = Vec::new();
         let mut anomalies = Vec::new();
         let mut distribution = HashMap::new();
 
         // Analyze coverage distribution
         distribution.insert("edge_case_coverage".to_string(), metrics.edge_case_coverage);
-        distribution.insert("coverage_improvement".to_string(), metrics.coverage_improvement);
-        distribution.insert("generation_confidence".to_string(), metrics.generation_confidence);
+        distribution.insert(
+            "coverage_improvement".to_string(),
+            metrics.coverage_improvement,
+        );
+        distribution.insert(
+            "generation_confidence".to_string(),
+            metrics.generation_confidence,
+        );
 
         // Detect coverage anomalies
         if metrics.edge_case_coverage < 0.5 {
@@ -2510,7 +2865,11 @@ impl CoverageAnalyzer {
     }
 
     /// Identify coverage gaps and uncovered areas
-    async fn identify_coverage_gaps(&self, metrics: &CoverageMetrics, test_spec: &TestSpecification) -> Result<Vec<CoverageGap>> {
+    async fn identify_coverage_gaps(
+        &self,
+        metrics: &CoverageMetrics,
+        test_spec: &TestSpecification,
+    ) -> Result<Vec<CoverageGap>> {
         let mut gaps = Vec::new();
 
         // Edge case coverage gaps
@@ -2521,7 +2880,10 @@ impl CoverageAnalyzer {
                 gap_description: "Missing edge case tests for boundary conditions".to_string(),
                 gap_severity: GapSeverity::High,
                 affected_components: self.identify_affected_components(test_spec, "edge_case"),
-                suggested_tests: vec!["boundary_value_tests".to_string(), "error_handling_tests".to_string()],
+                suggested_tests: vec![
+                    "boundary_value_tests".to_string(),
+                    "error_handling_tests".to_string(),
+                ],
             });
         }
 
@@ -2532,8 +2894,12 @@ impl CoverageAnalyzer {
                 gap_type: GapType::EdgeCase,
                 gap_description: "Low coverage improvement potential".to_string(),
                 gap_severity: GapSeverity::Medium,
-                affected_components: self.identify_affected_components(test_spec, "coverage_improvement"),
-                suggested_tests: vec!["additional_tests".to_string(), "optimized_tests".to_string()],
+                affected_components: self
+                    .identify_affected_components(test_spec, "coverage_improvement"),
+                suggested_tests: vec![
+                    "additional_tests".to_string(),
+                    "optimized_tests".to_string(),
+                ],
             });
         }
 
@@ -2541,7 +2907,11 @@ impl CoverageAnalyzer {
     }
 
     /// Generate coverage recommendations
-    async fn generate_coverage_recommendations(&self, gaps: &[CoverageGap], metrics: &CoverageMetrics) -> Result<Vec<CoverageRecommendation>> {
+    async fn generate_coverage_recommendations(
+        &self,
+        gaps: &[CoverageGap],
+        metrics: &CoverageMetrics,
+    ) -> Result<Vec<CoverageRecommendation>> {
         let mut recommendations = Vec::new();
 
         for gap in gaps {
@@ -2597,21 +2967,41 @@ impl CoverageAnalyzer {
     }
 
     /// Identify affected components for a coverage gap
-    fn identify_affected_components(&self, test_spec: &TestSpecification, gap_type: &str) -> Vec<String> {
+    fn identify_affected_components(
+        &self,
+        test_spec: &TestSpecification,
+        gap_type: &str,
+    ) -> Vec<String> {
         match gap_type {
             "line_coverage" => vec!["core_logic".to_string(), "business_logic".to_string()],
-            "branch_coverage" => vec!["conditional_logic".to_string(), "decision_points".to_string()],
-            "edge_case" => vec!["input_validation".to_string(), "boundary_conditions".to_string()],
-            "integration" => vec!["component_interfaces".to_string(), "api_endpoints".to_string()],
-            "function_coverage" => vec!["utility_functions".to_string(), "helper_methods".to_string()],
+            "branch_coverage" => vec![
+                "conditional_logic".to_string(),
+                "decision_points".to_string(),
+            ],
+            "edge_case" => vec![
+                "input_validation".to_string(),
+                "boundary_conditions".to_string(),
+            ],
+            "integration" => vec![
+                "component_interfaces".to_string(),
+                "api_endpoints".to_string(),
+            ],
+            "function_coverage" => vec![
+                "utility_functions".to_string(),
+                "helper_methods".to_string(),
+            ],
             _ => vec!["general".to_string()],
         }
     }
 
     /// Calculate coverage quality score
-    fn calculate_coverage_quality_score(&self, metrics: &CoverageMetrics, anomalies: &[CoverageAnomaly]) -> f64 {
+    fn calculate_coverage_quality_score(
+        &self,
+        metrics: &CoverageMetrics,
+        anomalies: &[CoverageAnomaly],
+    ) -> f64 {
         let mut score = metrics.edge_case_coverage;
-        
+
         // Penalty for anomalies
         for anomaly in anomalies {
             let penalty = match anomaly.severity {
@@ -2621,28 +3011,28 @@ impl CoverageAnalyzer {
             };
             score -= penalty;
         }
-        
+
         score.max(0.0).min(1.0)
     }
 
     /// Identify coverage hotspots
     fn identify_coverage_hotspots(&self, metrics: &CoverageMetrics) -> Vec<String> {
         let mut hotspots = Vec::new();
-        
+
         if metrics.edge_case_coverage > 0.9 {
             hotspots.push("edge_case_coverage".to_string());
         }
         if metrics.generation_confidence > 0.9 {
             hotspots.push("generation_confidence".to_string());
         }
-        
+
         hotspots
     }
 
     /// Identify coverage cold spots
     fn identify_coverage_cold_spots(&self, metrics: &CoverageMetrics) -> Vec<String> {
         let mut cold_spots = Vec::new();
-        
+
         if metrics.edge_case_coverage < 0.5 {
             cold_spots.push("edge_case_coverage".to_string());
         }
@@ -2652,7 +3042,7 @@ impl CoverageAnalyzer {
         if metrics.generation_confidence < 0.7 {
             cold_spots.push("generation_confidence".to_string());
         }
-        
+
         cold_spots
     }
 }
@@ -2753,69 +3143,78 @@ impl TestPatternAnalyzer {
             failure_patterns: HashMap::new(),
             edge_case_templates: Vec::new(),
         };
-        
+
         // Initialize with common failure patterns
         analyzer.initialize_common_patterns();
         analyzer.initialize_edge_case_templates();
-        
+
         analyzer
     }
 
     /// Initialize common failure patterns based on historical data
     fn initialize_common_patterns(&mut self) {
         // Null pointer exceptions
-        self.failure_patterns.insert("null_pointer".to_string(), FailurePattern {
-            pattern_id: "null_pointer".to_string(),
-            description: "Null pointer dereference causing crashes".to_string(),
-            frequency: 0.15,
-            severity: PatternSeverity::High,
-            common_causes: vec![
-                "Uninitialized variables".to_string(),
-                "Missing null checks".to_string(),
-                "Race conditions".to_string(),
-            ],
-            mitigation_strategies: vec![
-                "Add null checks before dereferencing".to_string(),
-                "Use optional types".to_string(),
-                "Implement defensive programming".to_string(),
-            ],
-        });
+        self.failure_patterns.insert(
+            "null_pointer".to_string(),
+            FailurePattern {
+                pattern_id: "null_pointer".to_string(),
+                description: "Null pointer dereference causing crashes".to_string(),
+                frequency: 0.15,
+                severity: PatternSeverity::High,
+                common_causes: vec![
+                    "Uninitialized variables".to_string(),
+                    "Missing null checks".to_string(),
+                    "Race conditions".to_string(),
+                ],
+                mitigation_strategies: vec![
+                    "Add null checks before dereferencing".to_string(),
+                    "Use optional types".to_string(),
+                    "Implement defensive programming".to_string(),
+                ],
+            },
+        );
 
         // Boundary value issues
-        self.failure_patterns.insert("boundary_values".to_string(), FailurePattern {
-            pattern_id: "boundary_values".to_string(),
-            description: "Failures at boundary conditions".to_string(),
-            frequency: 0.12,
-            severity: PatternSeverity::Medium,
-            common_causes: vec![
-                "Off-by-one errors".to_string(),
-                "Array bounds violations".to_string(),
-                "Integer overflow".to_string(),
-            ],
-            mitigation_strategies: vec![
-                "Test boundary values explicitly".to_string(),
-                "Use safe arithmetic operations".to_string(),
-                "Implement bounds checking".to_string(),
-            ],
-        });
+        self.failure_patterns.insert(
+            "boundary_values".to_string(),
+            FailurePattern {
+                pattern_id: "boundary_values".to_string(),
+                description: "Failures at boundary conditions".to_string(),
+                frequency: 0.12,
+                severity: PatternSeverity::Medium,
+                common_causes: vec![
+                    "Off-by-one errors".to_string(),
+                    "Array bounds violations".to_string(),
+                    "Integer overflow".to_string(),
+                ],
+                mitigation_strategies: vec![
+                    "Test boundary values explicitly".to_string(),
+                    "Use safe arithmetic operations".to_string(),
+                    "Implement bounds checking".to_string(),
+                ],
+            },
+        );
 
         // Memory leaks
-        self.failure_patterns.insert("memory_leaks".to_string(), FailurePattern {
-            pattern_id: "memory_leaks".to_string(),
-            description: "Memory not properly released".to_string(),
-            frequency: 0.08,
-            severity: PatternSeverity::High,
-            common_causes: vec![
-                "Missing cleanup in error paths".to_string(),
-                "Circular references".to_string(),
-                "Resource not released".to_string(),
-            ],
-            mitigation_strategies: vec![
-                "Use RAII patterns".to_string(),
-                "Implement proper cleanup".to_string(),
-                "Use memory profilers".to_string(),
-            ],
-        });
+        self.failure_patterns.insert(
+            "memory_leaks".to_string(),
+            FailurePattern {
+                pattern_id: "memory_leaks".to_string(),
+                description: "Memory not properly released".to_string(),
+                frequency: 0.08,
+                severity: PatternSeverity::High,
+                common_causes: vec![
+                    "Missing cleanup in error paths".to_string(),
+                    "Circular references".to_string(),
+                    "Resource not released".to_string(),
+                ],
+                mitigation_strategies: vec![
+                    "Use RAII patterns".to_string(),
+                    "Implement proper cleanup".to_string(),
+                    "Use memory profilers".to_string(),
+                ],
+            },
+        );
     }
 
     /// Initialize edge case templates for common scenarios
@@ -2825,14 +3224,12 @@ impl TestPatternAnalyzer {
             template_id: "empty_input".to_string(),
             name: "Empty Input Handling".to_string(),
             description: "Test behavior with empty or null inputs".to_string(),
-            parameters: vec![
-                TemplateParameter {
-                    name: "input_value".to_string(),
-                    parameter_type: ParameterType::String,
-                    default_value: "".to_string(),
-                    constraints: vec!["Can be empty string".to_string(), "Can be null".to_string()],
-                },
-            ],
+            parameters: vec![TemplateParameter {
+                name: "input_value".to_string(),
+                parameter_type: ParameterType::String,
+                default_value: "".to_string(),
+                constraints: vec!["Can be empty string".to_string(), "Can be null".to_string()],
+            }],
             expected_behavior: "Should handle gracefully without crashing".to_string(),
             risk_level: RiskLevel::Medium,
         });
@@ -2842,15 +3239,14 @@ impl TestPatternAnalyzer {
             template_id: "large_input".to_string(),
             name: "Large Input Handling".to_string(),
             description: "Test behavior with very large inputs".to_string(),
-            parameters: vec![
-                TemplateParameter {
-                    name: "input_size".to_string(),
-                    parameter_type: ParameterType::Integer,
-                    default_value: "1000000".to_string(),
-                    constraints: vec!["Must be positive integer".to_string()],
-                },
-            ],
-            expected_behavior: "Should handle efficiently or reject with appropriate error".to_string(),
+            parameters: vec![TemplateParameter {
+                name: "input_size".to_string(),
+                parameter_type: ParameterType::Integer,
+                default_value: "1000000".to_string(),
+                constraints: vec!["Must be positive integer".to_string()],
+            }],
+            expected_behavior: "Should handle efficiently or reject with appropriate error"
+                .to_string(),
             risk_level: RiskLevel::High,
         });
 
@@ -2859,40 +3255,42 @@ impl TestPatternAnalyzer {
             template_id: "concurrent_access".to_string(),
             name: "Concurrent Access".to_string(),
             description: "Test behavior under concurrent access".to_string(),
-            parameters: vec![
-                TemplateParameter {
-                    name: "thread_count".to_string(),
-                    parameter_type: ParameterType::Integer,
-                    default_value: "10".to_string(),
-                    constraints: vec!["Must be positive integer".to_string()],
-                },
-            ],
-            expected_behavior: "Should maintain data consistency and avoid race conditions".to_string(),
+            parameters: vec![TemplateParameter {
+                name: "thread_count".to_string(),
+                parameter_type: ParameterType::Integer,
+                default_value: "10".to_string(),
+                constraints: vec!["Must be positive integer".to_string()],
+            }],
+            expected_behavior: "Should maintain data consistency and avoid race conditions"
+                .to_string(),
             risk_level: RiskLevel::Critical,
         });
     }
 
     /// Analyze historical test failure patterns
-    async fn analyze_failure_patterns(&self, test_results: &[TestResult]) -> Result<Vec<FailureAnalysis>> {
+    async fn analyze_failure_patterns(
+        &self,
+        test_results: &[TestResult],
+    ) -> Result<Vec<FailureAnalysis>> {
         let mut analyses = Vec::new();
-        
+
         for result in test_results {
             if !result.passed {
                 let analysis = self.analyze_single_failure(result).await?;
                 analyses.push(analysis);
             }
         }
-        
+
         Ok(analyses)
     }
 
     /// Analyze a single test failure
     async fn analyze_single_failure(&self, result: &TestResult) -> Result<FailureAnalysis> {
         let error_message = result.error_message.as_deref().unwrap_or("Unknown error");
-        
+
         // Match against known patterns
         let matched_pattern = self.match_failure_pattern(error_message);
-        
+
         Ok(FailureAnalysis {
             test_id: result.test_id,
             failure_type: matched_pattern.clone(),
@@ -2905,10 +3303,13 @@ impl TestPatternAnalyzer {
     /// Match error message against known failure patterns
     fn match_failure_pattern(&self, error_message: &str) -> String {
         let error_lower = error_message.to_lowercase();
-        
+
         if error_lower.contains("null") || error_lower.contains("nil") {
             "null_pointer".to_string()
-        } else if error_lower.contains("boundary") || error_lower.contains("index") || error_lower.contains("out of bounds") {
+        } else if error_lower.contains("boundary")
+            || error_lower.contains("index")
+            || error_lower.contains("out of bounds")
+        {
             "boundary_values".to_string()
         } else if error_lower.contains("memory") || error_lower.contains("leak") {
             "memory_leaks".to_string()
@@ -2923,14 +3324,26 @@ impl TestPatternAnalyzer {
     fn calculate_pattern_confidence(&self, error_message: &str, pattern: &str) -> f64 {
         match pattern {
             "null_pointer" => {
-                if error_message.to_lowercase().contains("null") { 0.9 } else { 0.3 }
-            },
+                if error_message.to_lowercase().contains("null") {
+                    0.9
+                } else {
+                    0.3
+                }
+            }
             "boundary_values" => {
-                if error_message.to_lowercase().contains("index") { 0.8 } else { 0.4 }
-            },
+                if error_message.to_lowercase().contains("index") {
+                    0.8
+                } else {
+                    0.4
+                }
+            }
             "memory_leaks" => {
-                if error_message.to_lowercase().contains("memory") { 0.85 } else { 0.2 }
-            },
+                if error_message.to_lowercase().contains("memory") {
+                    0.85
+                } else {
+                    0.2
+                }
+            }
             _ => 0.1,
         }
     }
@@ -2959,9 +3372,13 @@ impl TestPatternAnalyzer {
     /// Generate test case templates from identified patterns
     async fn generate_test_templates(&self, patterns: &[String]) -> Result<Vec<TestTemplate>> {
         let mut templates = Vec::new();
-        
+
         for pattern in patterns {
-            if let Some(edge_template) = self.edge_case_templates.iter().find(|t| t.template_id == *pattern) {
+            if let Some(edge_template) = self
+                .edge_case_templates
+                .iter()
+                .find(|t| t.template_id == *pattern)
+            {
                 let test_template = TestTemplate {
                     template_id: edge_template.template_id.clone(),
                     name: edge_template.name.clone(),
@@ -2973,7 +3390,7 @@ impl TestPatternAnalyzer {
                 templates.push(test_template);
             }
         }
-        
+
         Ok(templates)
     }
 
@@ -3091,7 +3508,7 @@ impl ScenarioGenerator {
             combinatorial_generators: Vec::new(),
             stress_test_generators: Vec::new(),
         };
-        
+
         generator.initialize_generators();
         generator
     }
@@ -3100,10 +3517,10 @@ impl ScenarioGenerator {
     fn initialize_generators(&mut self) {
         // Initialize boundary generators
         self.initialize_boundary_generators();
-        
+
         // Initialize combinatorial generators
         self.initialize_combinatorial_generators();
-        
+
         // Initialize stress test generators
         self.initialize_stress_test_generators();
     }
@@ -3163,17 +3580,32 @@ impl ScenarioGenerator {
             parameters: vec![
                 CombinatorialParameter {
                     name: "input_type".to_string(),
-                    values: vec!["string".to_string(), "number".to_string(), "boolean".to_string(), "null".to_string()],
+                    values: vec![
+                        "string".to_string(),
+                        "number".to_string(),
+                        "boolean".to_string(),
+                        "null".to_string(),
+                    ],
                     is_required: true,
                 },
                 CombinatorialParameter {
                     name: "input_length".to_string(),
-                    values: vec!["empty".to_string(), "short".to_string(), "medium".to_string(), "long".to_string()],
+                    values: vec![
+                        "empty".to_string(),
+                        "short".to_string(),
+                        "medium".to_string(),
+                        "long".to_string(),
+                    ],
                     is_required: true,
                 },
                 CombinatorialParameter {
                     name: "special_chars".to_string(),
-                    values: vec!["none".to_string(), "symbols".to_string(), "unicode".to_string(), "whitespace".to_string()],
+                    values: vec![
+                        "none".to_string(),
+                        "symbols".to_string(),
+                        "unicode".to_string(),
+                        "whitespace".to_string(),
+                    ],
                     is_required: false,
                 },
             ],
@@ -3185,17 +3617,31 @@ impl ScenarioGenerator {
             parameters: vec![
                 CombinatorialParameter {
                     name: "method".to_string(),
-                    values: vec!["GET".to_string(), "POST".to_string(), "PUT".to_string(), "DELETE".to_string()],
+                    values: vec![
+                        "GET".to_string(),
+                        "POST".to_string(),
+                        "PUT".to_string(),
+                        "DELETE".to_string(),
+                    ],
                     is_required: true,
                 },
                 CombinatorialParameter {
                     name: "content_type".to_string(),
-                    values: vec!["application/json".to_string(), "application/xml".to_string(), "text/plain".to_string()],
+                    values: vec![
+                        "application/json".to_string(),
+                        "application/xml".to_string(),
+                        "text/plain".to_string(),
+                    ],
                     is_required: true,
                 },
                 CombinatorialParameter {
                     name: "authentication".to_string(),
-                    values: vec!["none".to_string(), "basic".to_string(), "bearer".to_string(), "invalid".to_string()],
+                    values: vec![
+                        "none".to_string(),
+                        "basic".to_string(),
+                        "bearer".to_string(),
+                        "invalid".to_string(),
+                    ],
                     is_required: false,
                 },
             ],
@@ -3276,17 +3722,26 @@ impl ScenarioGenerator {
     }
 
     /// Generate boundary condition test cases
-    async fn generate_boundary_tests(&self, test_spec: &TestSpecification) -> Result<Vec<EdgeCaseTest>> {
+    async fn generate_boundary_tests(
+        &self,
+        test_spec: &TestSpecification,
+    ) -> Result<Vec<EdgeCaseTest>> {
         let mut tests = Vec::new();
-        
+
         for generator in &self.boundary_generators {
             for boundary_value in &generator.boundary_values {
                 let test = EdgeCaseTest {
                     test_id: Uuid::new_v4(),
-                    test_name: format!("Boundary test for {}: {}", generator.parameter_name, boundary_value),
+                    test_name: format!(
+                        "Boundary test for {}: {}",
+                        generator.parameter_name, boundary_value
+                    ),
                     test_type: TestType::Boundary,
                     test_scenario: TestScenario {
-                        scenario_name: format!("Boundary scenario: {} = {}", generator.parameter_name, boundary_value),
+                        scenario_name: format!(
+                            "Boundary scenario: {} = {}",
+                            generator.parameter_name, boundary_value
+                        ),
                         input_data: serde_json::json!({
                             generator.parameter_name: boundary_value
                         }),
@@ -3295,23 +3750,29 @@ impl ScenarioGenerator {
                         postconditions: vec!["System handles boundary value correctly".to_string()],
                     },
                     edge_case_type: EdgeCaseType::Boundary,
-                    risk_level: self.assess_boundary_risk(boundary_value, &generator.parameter_type),
-                    expected_behavior: self.get_boundary_expected_behavior(boundary_value, &generator.parameter_type),
+                    risk_level: self
+                        .assess_boundary_risk(boundary_value, &generator.parameter_type),
+                    expected_behavior: self
+                        .get_boundary_expected_behavior(boundary_value, &generator.parameter_type),
                 };
                 tests.push(test);
             }
         }
-        
+
         Ok(tests)
     }
 
     /// Generate combinatorial test scenarios
-    async fn generate_combinatorial_tests(&self, test_spec: &TestSpecification) -> Result<Vec<EdgeCaseTest>> {
+    async fn generate_combinatorial_tests(
+        &self,
+        test_spec: &TestSpecification,
+    ) -> Result<Vec<EdgeCaseTest>> {
         let mut tests = Vec::new();
-        
+
         for generator in &self.combinatorial_generators {
-            let combinations = self.generate_combinations(&generator.parameters, generator.interaction_level);
-            
+            let combinations =
+                self.generate_combinations(&generator.parameters, generator.interaction_level);
+
             for (i, combination) in combinations.iter().enumerate() {
                 let test = EdgeCaseTest {
                     test_id: Uuid::new_v4(),
@@ -3321,37 +3782,45 @@ impl ScenarioGenerator {
                         scenario_name: combination.name.clone(),
                         input_data: combination.parameters.clone(),
                         execution_context: ExecutionContext::default(),
-                        preconditions: vec!["System supports all parameter combinations".to_string()],
+                        preconditions: vec![
+                            "System supports all parameter combinations".to_string()
+                        ],
                         postconditions: vec!["System handles combination correctly".to_string()],
                     },
                     edge_case_type: EdgeCaseType::Combinatorial,
                     risk_level: self.assess_combinatorial_risk(combination),
-                    expected_behavior: "System should handle parameter combination without errors".to_string(),
+                    expected_behavior: "System should handle parameter combination without errors"
+                        .to_string(),
                 };
                 tests.push(test);
             }
         }
-        
+
         Ok(tests)
     }
 
     /// Generate stress testing scenarios
-    async fn generate_stress_tests(&self, test_spec: &TestSpecification) -> Result<Vec<EdgeCaseTest>> {
+    async fn generate_stress_tests(
+        &self,
+        test_spec: &TestSpecification,
+    ) -> Result<Vec<EdgeCaseTest>> {
         let mut tests = Vec::new();
-        
+
         for generator in &self.stress_test_generators {
             for stress_level in &generator.stress_levels {
                 for duration in &generator.duration_limits {
                     let test = EdgeCaseTest {
                         test_id: Uuid::new_v4(),
-                        test_name: format!("Stress test: {} {} for {}s", 
-                            stress_level.name, 
+                        test_name: format!(
+                            "Stress test: {} {} for {}s",
+                            stress_level.name,
                             self.resource_type_name(&generator.resource_type),
                             duration
                         ),
                         test_type: TestType::Stress,
                         test_scenario: TestScenario {
-                            scenario_name: format!("Stress scenario: {} at {} intensity", 
+                            scenario_name: format!(
+                                "Stress scenario: {} at {} intensity",
                                 self.resource_type_name(&generator.resource_type),
                                 stress_level.name
                             ),
@@ -3362,24 +3831,31 @@ impl ScenarioGenerator {
                             }),
                             execution_context: ExecutionContext::default(),
                             preconditions: vec!["System is in stable state".to_string()],
-                            postconditions: vec!["System maintains stability under stress".to_string()],
+                            postconditions: vec![
+                                "System maintains stability under stress".to_string()
+                            ],
                         },
                         edge_case_type: EdgeCaseType::PerformanceIssue,
                         risk_level: self.assess_stress_risk(stress_level),
-                        expected_behavior: "System should maintain performance and stability".to_string(),
+                        expected_behavior: "System should maintain performance and stability"
+                            .to_string(),
                     };
                     tests.push(test);
                 }
             }
         }
-        
+
         Ok(tests)
     }
 
     /// Generate combinations for combinatorial testing
-    fn generate_combinations(&self, parameters: &[CombinatorialParameter], interaction_level: u32) -> Vec<TestCombination> {
+    fn generate_combinations(
+        &self,
+        parameters: &[CombinatorialParameter],
+        interaction_level: u32,
+    ) -> Vec<TestCombination> {
         let mut combinations = Vec::new();
-        
+
         // Generate all possible combinations up to the interaction level
         if interaction_level >= 2 {
             for i in 0..parameters.len() {
@@ -3387,13 +3863,19 @@ impl ScenarioGenerator {
                     for value1 in &parameters[i].values {
                         for value2 in &parameters[j].values {
                             let mut params = serde_json::Map::new();
-                            params.insert(parameters[i].name.clone(), serde_json::Value::String(value1.clone()));
-                            params.insert(parameters[j].name.clone(), serde_json::Value::String(value2.clone()));
-                            
+                            params.insert(
+                                parameters[i].name.clone(),
+                                serde_json::Value::String(value1.clone()),
+                            );
+                            params.insert(
+                                parameters[j].name.clone(),
+                                serde_json::Value::String(value2.clone()),
+                            );
+
                             combinations.push(TestCombination {
-                                name: format!("{}={}, {}={}", 
-                                    parameters[i].name, value1,
-                                    parameters[j].name, value2
+                                name: format!(
+                                    "{}={}, {}={}",
+                                    parameters[i].name, value1, parameters[j].name, value2
                                 ),
                                 parameters: serde_json::Value::Object(params),
                             });
@@ -3402,7 +3884,7 @@ impl ScenarioGenerator {
                 }
             }
         }
-        
+
         // Add 3-way combinations if requested
         if interaction_level >= 3 {
             for i in 0..parameters.len() {
@@ -3412,15 +3894,28 @@ impl ScenarioGenerator {
                             for value2 in &parameters[j].values {
                                 for value3 in &parameters[k].values {
                                     let mut params = serde_json::Map::new();
-                                    params.insert(parameters[i].name.clone(), serde_json::Value::String(value1.clone()));
-                                    params.insert(parameters[j].name.clone(), serde_json::Value::String(value2.clone()));
-                                    params.insert(parameters[k].name.clone(), serde_json::Value::String(value3.clone()));
-                                    
+                                    params.insert(
+                                        parameters[i].name.clone(),
+                                        serde_json::Value::String(value1.clone()),
+                                    );
+                                    params.insert(
+                                        parameters[j].name.clone(),
+                                        serde_json::Value::String(value2.clone()),
+                                    );
+                                    params.insert(
+                                        parameters[k].name.clone(),
+                                        serde_json::Value::String(value3.clone()),
+                                    );
+
                                     combinations.push(TestCombination {
-                                        name: format!("{}={}, {}={}, {}={}", 
-                                            parameters[i].name, value1,
-                                            parameters[j].name, value2,
-                                            parameters[k].name, value3
+                                        name: format!(
+                                            "{}={}, {}={}, {}={}",
+                                            parameters[i].name,
+                                            value1,
+                                            parameters[j].name,
+                                            value2,
+                                            parameters[k].name,
+                                            value3
                                         ),
                                         parameters: serde_json::Value::Object(params),
                                     });
@@ -3431,7 +3926,7 @@ impl ScenarioGenerator {
                 }
             }
         }
-        
+
         combinations
     }
 
@@ -3446,7 +3941,7 @@ impl ScenarioGenerator {
                 } else {
                     RiskLevel::Medium
                 }
-            },
+            }
             ParameterType::String => {
                 if value.is_empty() {
                     RiskLevel::Medium
@@ -3455,7 +3950,7 @@ impl ScenarioGenerator {
                 } else {
                     RiskLevel::Low
                 }
-            },
+            }
             _ => RiskLevel::Medium,
         }
     }
@@ -3494,7 +3989,7 @@ impl ScenarioGenerator {
                 } else {
                     "Should handle boundary integer value correctly".to_string()
                 }
-            },
+            }
             ParameterType::String => {
                 if value.is_empty() {
                     "Should handle empty string gracefully".to_string()
@@ -3503,7 +3998,7 @@ impl ScenarioGenerator {
                 } else {
                     "Should handle string boundary value correctly".to_string()
                 }
-            },
+            }
             _ => "Should handle boundary value correctly".to_string(),
         }
     }
@@ -3651,7 +4146,6 @@ struct CoverageMetrics {
     pass_rate: f64,
 }
 
-
 /// Test efficiency analysis results
 #[derive(Debug, Clone)]
 struct TestEfficiencyAnalysis {
@@ -3666,7 +4160,6 @@ struct TestEfficiencyAnalysis {
     confidence: f64,
 }
 
-
 /// Coverage patterns and analysis results
 #[derive(Debug, Clone)]
 struct CoveragePatterns {
@@ -3677,7 +4170,6 @@ struct CoveragePatterns {
     hotspots: Vec<String>,
     cold_spots: Vec<String>,
 }
-
 
 /// Coverage anomaly information
 #[derive(Debug, Clone)]
