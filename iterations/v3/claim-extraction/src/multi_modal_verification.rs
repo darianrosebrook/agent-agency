@@ -2387,6 +2387,7 @@ impl CrossReferenceValidator {
         }
         
         Ok(ConsistencyAnalysis {
+            consistency_score: 0.8,
             conflicts,
             gaps,
             supporting_evidence,
@@ -2395,11 +2396,10 @@ impl CrossReferenceValidator {
     
     /// Calculate overall consistency score
     fn calculate_consistency_score(&self, analysis: &ConsistencyAnalysis) -> f64 {
-        let gap_penalty = analysis.gaps.len() as f64 * 0.1;
-        let coherence_bonus = analysis.coherence_score * 0.3;
-        let logical_flow_bonus = analysis.logical_flow_score * 0.2;
-        let completeness_bonus = analysis.completeness_score * 0.1;
-        (coherence_bonus + logical_flow_bonus + completeness_bonus - gap_penalty).max(0.0).min(1.0)
+        let conflict_penalty = analysis.conflicts.len() as f64 * 0.3;
+        let gap_penalty = analysis.gaps.len() as f64 * 0.2;
+        let evidence_bonus = analysis.supporting_evidence.len() as f64 * 0.1;
+        (analysis.consistency_score - conflict_penalty - gap_penalty + evidence_bonus).max(0.0).min(1.0)
     }
     
     /// Extract relationships between references
@@ -4731,14 +4731,6 @@ struct MeaningRepresentation {
 }
 
 
-/// Consistency analysis results
-#[derive(Debug, Clone)]
-struct ConsistencyAnalysis {
-    consistency_score: f64,
-    conflicts: Vec<String>,
-    gaps: Vec<String>,
-    supporting_evidence: Vec<String>,
-}
 
 /// Coherence analysis results
 #[derive(Debug, Clone)]

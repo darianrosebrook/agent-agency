@@ -7,7 +7,7 @@ use crate::DatabaseClient;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, Row};
+use sqlx::Row;
 use std::path::PathBuf;
 use tokio::fs;
 use tracing::{debug, error, info, warn};
