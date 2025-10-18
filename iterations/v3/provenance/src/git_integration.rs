@@ -294,12 +294,13 @@ impl GitIntegration for GitTrailerManager {
     }
 
     async fn get_commit_by_trailer(&self, trailer: &str) -> Result<Option<CommitInfo>> {
-        let mut revwalk = self.repository.revwalk()?;
+        let repo = self.repository.lock().unwrap();
+        let mut revwalk = repo.revwalk()?;
         revwalk.push_head()?;
 
         for commit_id in revwalk {
             let commit_id = commit_id?;
-            let commit = self.repository.find_commit(commit_id)?;
+            let commit = repo.find_commit(commit_id)?;
 
             if let Some(message) = commit.message() {
                 if message.contains(trailer) {

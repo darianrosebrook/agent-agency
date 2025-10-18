@@ -653,10 +653,6 @@ impl VectorSearchEngine {
     }
 
     /// Get cached embedding if available
-    async fn get_cached_embedding(&self, text: &str) -> Option<Vec<f32>> {
-        let cache = self.embedding_cache.read().await;
-        cache.get(text).cloned()
-    }
 
     /// Cache embedding for future use
 
