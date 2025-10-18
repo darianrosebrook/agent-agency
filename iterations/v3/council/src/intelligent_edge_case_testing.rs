@@ -1439,7 +1439,7 @@ impl EdgeCaseAnalyzer {
                         detection_method: DetectionMethod::StaticAnalysis,
                     });
                 }
-                InputType::Integer => {
+                RequirementType::Performance => {
                     // Integer boundary conditions
                     edge_cases.push(IdentifiedEdgeCase {
                         edge_case_id: Uuid::new_v4(),
@@ -1476,70 +1476,57 @@ impl EdgeCaseAnalyzer {
                         detection_method: DetectionMethod::StaticAnalysis,
                     });
                 }
-                InputType::Float => {
-                    // Float boundary conditions
+                RequirementType::Security => {
+                    // Security-related edge cases
                     edge_cases.push(IdentifiedEdgeCase {
                         edge_case_id: Uuid::new_v4(),
-                        edge_case_name: "NaN float input".to_string(),
-                        edge_case_type: EdgeCaseType::ExceptionalCondition,
-                        description: format!("Input '{}' with NaN value", input.requirement_name),
+                        edge_case_name: "Security validation bypass".to_string(),
+                        edge_case_type: EdgeCaseType::SecurityVulnerability,
+                        description: format!("Input '{}' with potential security bypass", input.requirement_name),
                         probability: 0.1,
                         impact: 0.9,
                         risk_level: RiskLevel::Critical,
                         detection_method: DetectionMethod::StaticAnalysis,
                     });
 
-                    // Infinity values
+                    // Injection attacks
                     edge_cases.push(IdentifiedEdgeCase {
                         edge_case_id: Uuid::new_v4(),
-                        edge_case_name: "Infinity float input".to_string(),
-                        edge_case_type: EdgeCaseType::ExceptionalCondition,
-                        description: format!("Input '{}' with infinity value", input.requirement_name),
-                        probability: 0.1,
+                        edge_case_name: "Injection attack vector".to_string(),
+                        edge_case_type: EdgeCaseType::SecurityVulnerability,
+                        description: format!("Input '{}' with injection attack patterns", input.requirement_name),
+                        probability: 0.2,
                         impact: 0.8,
-                        risk_level: RiskLevel::High,
+                        risk_level: RiskLevel::Critical,
                         detection_method: DetectionMethod::StaticAnalysis,
                     });
                 }
-                InputType::Boolean => {
-                    // Boolean edge cases are limited, but we can test unexpected values
+                RequirementType::Usability => {
+                    // Usability edge cases
                     edge_cases.push(IdentifiedEdgeCase {
                         edge_case_id: Uuid::new_v4(),
-                        edge_case_name: "Boolean type coercion".to_string(),
-                        edge_case_type: EdgeCaseType::TypeCoercion,
-                        description: format!("Input '{}' with non-boolean value that gets coerced", input.requirement_name),
-                        probability: 0.4,
-                        impact: 0.5,
-                        risk_level: RiskLevel::Medium,
-                        detection_method: DetectionMethod::StaticAnalysis,
-                    });
-                }
-                InputType::Array => {
-                    // Array boundary conditions
-                    edge_cases.push(IdentifiedEdgeCase {
-                        edge_case_id: Uuid::new_v4(),
-                        edge_case_name: "Empty array input".to_string(),
-                        edge_case_type: EdgeCaseType::BoundaryCondition,
-                        description: format!("Input '{}' with empty array", input.requirement_name),
+                        edge_case_name: "Empty input validation".to_string(),
+                        edge_case_type: EdgeCaseType::InputValidation,
+                        description: format!("Input '{}' with empty value handling", input.requirement_name),
                         probability: 0.8,
                         impact: 0.6,
                         risk_level: RiskLevel::Medium,
                         detection_method: DetectionMethod::StaticAnalysis,
                     });
 
-                    // Very large array
+                    // Very large input
                     edge_cases.push(IdentifiedEdgeCase {
                         edge_case_id: Uuid::new_v4(),
-                        edge_case_name: "Very large array input".to_string(),
+                        edge_case_name: "Very large input handling".to_string(),
                         edge_case_type: EdgeCaseType::PerformanceIssue,
-                        description: format!("Input '{}' with very large array", input.requirement_name),
+                        description: format!("Input '{}' with very large value", input.requirement_name),
                         probability: 0.2,
                         impact: 0.8,
                         risk_level: RiskLevel::High,
                         detection_method: DetectionMethod::StaticAnalysis,
                     });
                 }
-                InputType::Object => {
+                RequirementType::Reliability => {
                     // Object edge cases
                     edge_cases.push(IdentifiedEdgeCase {
                         edge_case_id: Uuid::new_v4(),
@@ -1711,13 +1698,14 @@ impl EdgeCaseAnalyzer {
         let execution_time = start_time.elapsed();
 
         Ok(EdgeCaseTestResult {
-            test_id: Uuid::new_v4(),
-            edge_case_id: edge_case.edge_case_id,
+            test_id: Uuid::new_v4().to_string(),
+            test_name: edge_case.edge_case_name.clone(),
             passed,
             execution_time_ms: execution_time.as_millis() as u64,
             error_message,
-            test_data: serde_json::Value::Null,
-            timestamp: chrono::Utc::now(),
+            coverage_improvement: 0.0, // TODO: Calculate actual coverage improvement
+            edge_case_coverage: 0.0, // TODO: Calculate actual edge case coverage
+            generation_confidence: 0.8, // TODO: Calculate actual generation confidence
         })
     }
 
@@ -1742,21 +1730,12 @@ impl EdgeCaseAnalyzer {
         }
 
         Ok(EdgeCaseReport {
-            report_id: Uuid::new_v4(),
-            total_edge_cases,
-            passed_tests,
-            failed_tests,
-            pass_rate: if total_edge_cases > 0 { passed_tests as f64 / total_edge_cases as f64 } else { 0.0 },
-            risk_distribution,
-            type_distribution,
-            critical_issues: edge_cases.iter()
-                .filter(|ec| ec.risk_level == RiskLevel::Critical)
-                .count(),
-            high_priority_issues: edge_cases.iter()
-                .filter(|ec| ec.risk_level == RiskLevel::High)
-                .count(),
-            recommendations: self.generate_recommendations(edge_cases, test_results),
-            timestamp: chrono::Utc::now(),
+            report_id: Uuid::new_v4().to_string(),
+            test_results: test_results.to_vec(),
+            total_tests: total_edge_cases as u32,
+            passed_tests: passed_tests as u32,
+            failed_tests: failed_tests as u32,
+            coverage_score: if total_edge_cases > 0 { passed_tests as f64 / total_edge_cases as f64 } else { 0.0 },
         })
     }
 
@@ -1962,17 +1941,17 @@ impl TestOptimizer {
         // Analyze each test case
         for test_case in &test_spec.test_cases {
             // Check for redundancy
-            if self.is_redundant_test(test_case, &test_spec.test_cases) {
-                redundant_tests.push(test_case.test_id.clone());
+            if self.is_redundant_generated_test(test_case, &test_spec.test_cases) {
+                redundant_tests.push(test_case.test_id);
             }
 
             // Check for slow execution (using confidence score as proxy)
             if test_case.confidence_score < 0.5 {
-                slow_tests.push(test_case.test_id.clone());
+                slow_tests.push(test_case.test_id);
             }
 
-            // Check for low value (low coverage, low risk)
-            if test_case.estimated_coverage < 0.3 && test_case.risk_level == RiskLevel::Low {
+            // Check for low value (low confidence, low risk)
+            if test_case.confidence_score < 0.3 {
                 low_value_tests.push(test_case.test_id.clone());
             }
         }
@@ -1995,6 +1974,21 @@ impl TestOptimizer {
         })
     }
 
+    /// Check if a generated test case is redundant
+    fn is_redundant_generated_test(&self, test_case: &GeneratedTest, all_tests: &[GeneratedTest]) -> bool {
+        for other_test in all_tests {
+            if other_test.test_id == test_case.test_id {
+                continue;
+            }
+
+            // Check for similar test logic
+            if self.generated_tests_are_similar(test_case, other_test) {
+                return true;
+            }
+        }
+        false
+    }
+
     /// Check if a test case is redundant
     fn is_redundant_test(&self, test_case: &TestCase, all_tests: &[TestCase]) -> bool {
         for other_test in all_tests {
@@ -2010,13 +2004,33 @@ impl TestOptimizer {
         false
     }
 
+    /// Check if two generated test cases are similar
+    fn generated_tests_are_similar(&self, test1: &GeneratedTest, test2: &GeneratedTest) -> bool {
+        // Check if test names are similar
+        let name_similarity = self.calculate_string_similarity(&test1.test_name, &test2.test_name);
+        
+        // Check if test scenarios are similar
+        let scenario_similarity = self.calculate_string_similarity(&test1.test_scenario.description, &test2.test_scenario.description);
+        
+        // Check if test types are the same
+        let type_similarity = if test1.test_type == test2.test_type { 1.0 } else { 0.0 };
+        
+        // Check if edge case types are the same
+        let edge_type_similarity = if test1.edge_case_type == test2.edge_case_type { 1.0 } else { 0.0 };
+        
+        // Calculate overall similarity
+        let overall_similarity = (name_similarity * 0.3 + scenario_similarity * 0.4 + type_similarity * 0.2 + edge_type_similarity * 0.1);
+        
+        overall_similarity > 0.8
+    }
+
     /// Check if two tests are similar enough to be considered redundant
     fn tests_are_similar(&self, test1: &TestCase, test2: &TestCase) -> bool {
-        // Simple similarity check based on test name and description
+        // Simple similarity check based on test name and scenario
         let name_similarity = self.calculate_string_similarity(&test1.test_name, &test2.test_name);
-        let desc_similarity = self.calculate_string_similarity(&test1.description, &test2.description);
+        let scenario_similarity = self.calculate_string_similarity(&test1.test_scenario, &test2.test_scenario);
         
-        name_similarity > 0.8 || desc_similarity > 0.8
+        name_similarity > 0.8 || scenario_similarity > 0.8
     }
 
     /// Calculate string similarity using simple character overlap
@@ -2035,15 +2049,15 @@ impl TestOptimizer {
         let mut prioritized_tests = Vec::new();
 
         for (index, test_case) in test_spec.test_cases.iter().enumerate() {
-            let priority_score = self.calculate_test_priority(test_case, analysis);
-            let priority_reason = self.get_priority_reason(test_case, analysis);
-            let estimated_value = self.estimate_test_value(test_case);
+            let priority_score = self.calculate_generated_test_priority(test_case, analysis);
+            let priority_reason = self.get_generated_test_priority_reason(test_case, analysis);
+            let estimated_value = self.estimate_generated_test_value(test_case);
 
             prioritized_tests.push(PrioritizedTest {
-                test_id: test_case.test_id.clone(),
+                test_id: test_case.test_id.to_string(),
                 priority_score,
                 priority_reason,
-                execution_order: index + 1,
+                execution_order: (index + 1) as u32,
                 estimated_value,
             });
         }
@@ -2059,26 +2073,115 @@ impl TestOptimizer {
         Ok(prioritized_tests)
     }
 
+    /// Calculate priority score for a generated test case
+    fn calculate_generated_test_priority(&self, test_case: &GeneratedTest, analysis: &TestEfficiencyAnalysis) -> f64 {
+        let mut score: f64 = 0.0;
+
+        // Base score from confidence
+        score += test_case.confidence_score * 0.3;
+
+        // Edge case type importance
+        let edge_type_weight = match test_case.edge_case_type {
+            EdgeCaseType::SecurityVulnerability => 1.0,
+            EdgeCaseType::CriticalFailure => 0.9,
+            EdgeCaseType::PerformanceIssue => 0.8,
+            EdgeCaseType::BoundaryCondition => 0.7,
+            EdgeCaseType::InputValidation => 0.6,
+            EdgeCaseType::ExceptionalCondition => 0.5,
+            EdgeCaseType::TypeCoercion => 0.4,
+            EdgeCaseType::NullHandling => 0.3,
+            EdgeCaseType::NetworkIssue => 0.2,
+        };
+        score += edge_type_weight * 0.4;
+
+        // Test type importance
+        let test_type_weight = match test_case.test_type {
+            TestType::EdgeCase => 1.0,
+            TestType::Integration => 0.8,
+            TestType::Unit => 0.6,
+        };
+        score += test_type_weight * 0.2;
+
+        // Penalty for redundancy
+        if analysis.redundant_tests.contains(&test_case.test_id) {
+            score *= 0.3;
+        }
+
+        // Penalty for low value
+        if analysis.low_value_tests.contains(&test_case.test_id) {
+            score *= 0.5;
+        }
+
+        score
+    }
+
+    /// Get priority reason for a generated test case
+    fn get_generated_test_priority_reason(&self, test_case: &GeneratedTest, analysis: &TestEfficiencyAnalysis) -> String {
+        if analysis.redundant_tests.contains(&test_case.test_id) {
+            "Redundant test - low priority".to_string()
+        } else if analysis.low_value_tests.contains(&test_case.test_id) {
+            "Low value test - medium priority".to_string()
+        } else if test_case.edge_case_type == EdgeCaseType::SecurityVulnerability {
+            "Security vulnerability test - high priority".to_string()
+        } else if test_case.confidence_score > 0.8 {
+            "High confidence test - high priority".to_string()
+        } else {
+            "Standard test - medium priority".to_string()
+        }
+    }
+
+    /// Estimate test value for a generated test case
+    fn estimate_generated_test_value(&self, test_case: &GeneratedTest) -> f64 {
+        let mut value = 0.0;
+
+        // Base value from confidence
+        value += test_case.confidence_score * 0.4;
+
+        // Edge case type value
+        let edge_type_value = match test_case.edge_case_type {
+            EdgeCaseType::SecurityVulnerability => 1.0,
+            EdgeCaseType::CriticalFailure => 0.9,
+            EdgeCaseType::PerformanceIssue => 0.8,
+            EdgeCaseType::BoundaryCondition => 0.7,
+            EdgeCaseType::InputValidation => 0.6,
+            EdgeCaseType::ExceptionalCondition => 0.5,
+            EdgeCaseType::TypeCoercion => 0.4,
+            EdgeCaseType::NullHandling => 0.3,
+            EdgeCaseType::NetworkIssue => 0.2,
+        };
+        value += edge_type_value * 0.4;
+
+        // Test type value
+        let test_type_value = match test_case.test_type {
+            TestType::EdgeCase => 1.0,
+            TestType::Integration => 0.8,
+            TestType::Unit => 0.6,
+        };
+        value += test_type_value * 0.2;
+
+        value
+    }
+
     /// Calculate priority score for a test case
     fn calculate_test_priority(&self, test_case: &TestCase, analysis: &TestEfficiencyAnalysis) -> f64 {
         let mut score: f64 = 0.0;
 
-        // Base score from coverage
-        score += test_case.estimated_coverage * 0.3;
+        // Base score from priority
+        score += (test_case.priority as f64 / 10.0) * 0.3;
 
-        // Risk level weight
-        let risk_weight = match test_case.risk_level {
-            RiskLevel::Critical => 1.0,
-            RiskLevel::High => 0.8,
-            RiskLevel::Medium => 0.6,
-            RiskLevel::Low => 0.4,
+        // Test type weight
+        let test_type_weight = match test_case.test_type.as_str() {
+            "edge_case" => 1.0,
+            "integration" => 0.8,
+            "unit" => 0.6,
+            _ => 0.5,
         };
-        score += risk_weight * 0.4;
+        score += test_type_weight * 0.4;
 
-        // Execution time penalty (using confidence score as proxy)
-        let time_penalty = if test_case.confidence_score < 0.3 {
+        // Execution time penalty (using priority as proxy)
+        let time_penalty = if test_case.priority < 3 {
             0.1
-        } else if test_case.confidence_score < 0.6 {
+        } else if test_case.priority < 6 {
             0.2
         } else {
             0.3
@@ -2104,11 +2207,11 @@ impl TestOptimizer {
             "Redundant test case".to_string()
         } else if analysis.low_value_tests.contains(&test_case.test_id) {
             "Low value test case".to_string()
-        } else if test_case.risk_level == RiskLevel::Critical {
-            "Critical risk coverage".to_string()
-        } else if test_case.estimated_coverage > 0.8 {
-            "High coverage value".to_string()
-        } else if test_case.confidence_score > 0.8 {
+        } else if test_case.priority >= 8 {
+            "High priority test case".to_string()
+        } else if test_case.test_type == "edge_case" {
+            "Edge case test - high value".to_string()
+        } else if test_case.priority >= 6 {
             "Fast execution".to_string()
         } else {
             "Standard priority".to_string()
@@ -2117,16 +2220,16 @@ impl TestOptimizer {
 
     /// Estimate the value of a test case
     fn estimate_test_value(&self, test_case: &TestCase) -> f64 {
-        let coverage_value = test_case.estimated_coverage * 0.4;
-        let risk_value = match test_case.risk_level {
-            RiskLevel::Critical => 0.4,
-            RiskLevel::High => 0.3,
-            RiskLevel::Medium => 0.2,
-            RiskLevel::Low => 0.1,
+        let priority_value = (test_case.priority as f64 / 10.0) * 0.4;
+        let test_type_value = match test_case.test_type.as_str() {
+            "edge_case" => 0.4,
+            "integration" => 0.3,
+            "unit" => 0.2,
+            _ => 0.1,
         };
-        let efficiency_value = if test_case.confidence_score > 0.7 { 0.2 } else { 0.1 };
+        let efficiency_value = if test_case.priority >= 7 { 0.2 } else { 0.1 };
 
-        coverage_value + risk_value + efficiency_value
+        priority_value + test_type_value + efficiency_value
     }
 
     /// Generate optimization suggestions

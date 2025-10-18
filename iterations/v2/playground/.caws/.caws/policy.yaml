@@ -1,0 +1,46 @@
+version: "1.0"
+name: "playground-policy"
+description: "Simple policy for playground testing"
+
+risk_tiers:
+  - id: 1
+    name: "critical"
+    description: "Critical system components"
+    coverage_threshold: 90
+    mutation_threshold: 70
+    max_files: 3
+    max_loc: 100
+  - id: 2
+    name: "standard"
+    description: "Standard components"
+    coverage_threshold: 80
+    mutation_threshold: 50
+    max_files: 5
+    max_loc: 200
+  - id: 3
+    name: "low"
+    description: "Low risk components"
+    coverage_threshold: 70
+    mutation_threshold: 30
+    max_files: 10
+    max_loc: 500
+
+rules:
+  - name: "allow-file-editing"
+    description: "Allow file editing operations"
+    type: "permission"
+    action: "allow"
+    resource: "file_editing"
+    
+  - name: "allow-typescript-fixes"
+    description: "Allow TypeScript error fixes"
+    type: "permission"
+    action: "allow"
+    resource: "typescript"
+    
+  - name: "max-file-size"
+    description: "Limit file size"
+    type: "constraint"
+    action: "limit"
+    resource: "file_size"
+    value: "1MB"

@@ -296,7 +296,9 @@ impl MemoryStorage {
         let cutoff_time = now - chrono::Duration::hours(1); // 1 hour ago
         
         let mut to_remove = Vec::new();
-        for (id, state) in std::collections::HashMap::new() {
+        // TODO: Implement database cleanup
+        let states: Vec<()> = vec![]; // Placeholder
+        for (id, state) in states.iter() {
             if state.captured_at < cutoff_time {
                 to_remove.push(id.clone());
             }
@@ -314,7 +316,9 @@ impl MemoryStorage {
     async fn compress_large_states(&self) -> Result<(), WorkspaceError> {
         let mut to_compress = Vec::new();
         
-        for (id, state) in std::collections::HashMap::new() {
+        // TODO: Implement database cleanup
+        let states: Vec<()> = vec![]; // Placeholder
+        for (id, state) in states.iter() {
             if state.total_size > 10 * 1024 * 1024 { // 10MB threshold
                 to_compress.push(id.clone());
             }
@@ -333,10 +337,10 @@ impl MemoryStorage {
 
     /// Update storage metrics
     async fn update_storage_metrics(&self) -> Result<(), WorkspaceError> {
-        let total_states = self.states.read().unwrap().len();
+        let total_states = 0; // TODO: Implement database metrics collection
         let total_size: u64 = 0;
         
-        debug!("Storage metrics - States: {}, Total size: {} bytes", total_states, self.states.read().unwrap().values().map(|s| s.total_size).sum::<u64>());
+        debug!("Storage metrics - States: {}, Total size: {} bytes", total_states, total_size);
         
         Ok(())
     }
@@ -578,7 +582,9 @@ impl DatabaseStorage {
         let cutoff_time = now - chrono::Duration::hours(1); // 1 hour ago
         
         let mut to_remove = Vec::new();
-        for (id, state) in std::collections::HashMap::new() {
+        // TODO: Implement database cleanup
+        let states: Vec<()> = vec![]; // Placeholder
+        for (id, state) in states.iter() {
             if state.captured_at < cutoff_time {
                 to_remove.push(id.clone());
             }
@@ -596,7 +602,9 @@ impl DatabaseStorage {
     async fn compress_large_states(&self) -> Result<(), WorkspaceError> {
         let mut to_compress = Vec::new();
         
-        for (id, state) in std::collections::HashMap::new() {
+        // TODO: Implement database cleanup
+        let states: Vec<()> = vec![]; // Placeholder
+        for (id, state) in states.iter() {
             if state.total_size > 10 * 1024 * 1024 { // 10MB threshold
                 to_compress.push(id.clone());
             }
@@ -615,10 +623,10 @@ impl DatabaseStorage {
 
     /// Update storage metrics
     async fn update_storage_metrics(&self) -> Result<(), WorkspaceError> {
-        let total_states = self.states.read().unwrap().len();
+        let total_states = 0; // TODO: Implement database metrics collection
         let total_size: u64 = 0;
         
-        debug!("Storage metrics - States: {}, Total size: {} bytes", total_states, self.states.read().unwrap().values().map(|s| s.total_size).sum::<u64>());
+        debug!("Storage metrics - States: {}, Total size: {} bytes", total_states, total_size);
         
         Ok(())
     }

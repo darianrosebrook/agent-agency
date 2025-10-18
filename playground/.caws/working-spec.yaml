@@ -1,0 +1,31 @@
+id: PLAYGROUND-001
+title: "Fix TypeScript errors in playground file"
+risk_tier: 3
+mode: fix
+change_budget:
+  max_files: 5
+  max_loc: 200
+blast_radius:
+  modules: ["playground"]
+  data_migration: false
+operational_rollback_slo: "1m"
+scope:
+  in: ["playground/"]
+  out: ["node_modules/", "dist/", ".git/"]
+invariants:
+  - "No breaking changes to existing functionality"
+  - "All TypeScript errors must be resolved"
+acceptance:
+  - id: "A1"
+    given: "TypeScript file has compilation errors"
+    when: "Arbiter processes file editing task"
+    then: "All TypeScript errors are resolved"
+  - id: "A2"
+    given: "File contains TODO comments"
+    when: "Arbiter processes the file"
+    then: "TODO comments are resolved or properly handled"
+non_functional:
+  a11y: []
+  perf: { api_p95_ms: 5000, lcp_ms: 10000 }
+  security: ["input-validation"]
+contracts: []

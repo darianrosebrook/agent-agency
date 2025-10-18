@@ -1,0 +1,23 @@
+version: "1.0.0"
+risk_tiers:
+  1:
+    max_files: 15
+    max_loc: 300
+    coverage_threshold: 0.90
+    mutation_threshold: 0.70
+    contracts_required: true
+    manual_review_required: true
+  2:
+    max_files: 75
+    max_loc: 6000
+    coverage_threshold: 0.80
+    mutation_threshold: 0.70
+    contracts_required: true
+    manual_review_required: false
+  3:
+    max_files: 100
+    max_loc: 10000
+    coverage_threshold: 0.70
+    mutation_threshold: 0.30
+    contracts_required: false
+    manual_review_required: false

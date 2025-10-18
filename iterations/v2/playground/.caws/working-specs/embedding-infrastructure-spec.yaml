@@ -1,0 +1,48 @@
+id: INFRA-006
+title: "Embedding Infrastructure Extension for Semantic Search"
+risk_tier: 1
+mode: feature
+change_budget:
+  max_files: 25
+  max_loc: 2000
+blast_radius:
+  modules: ["embeddings", "workspace", "knowledge"]
+  data_migration: true
+operational_rollback_slo: "10m"
+scope:
+  in:
+    - "src/embeddings/"
+    - "src/workspace/WorkspaceStateManager.ts"
+    - "src/knowledge/KnowledgeSeeker.ts"
+    - "migrations/016_*.sql"
+    - "migrations/017_*.sql"
+    - "tests/embeddings/"
+  out:
+    - "node_modules/"
+    - "dist/"
+invariants:
+  - "Extends existing schema, creates no parallel tables"
+  - "Reuses existing hybrid_search functions from migration 008"
+  - "All embeddings 768-dimensional (embeddinggemma)"
+  - "Leverages existing HNSW indexes"
+acceptance:
+  - id: "A1"
+    given: "Workspace file content"
+    when: "Embedding generated"
+    then: "Stored in agent_capabilities_graph with capability_type=TECHNOLOGY"
+  - id: "A2"
+    given: "Query text"
+    when: "Semantic search executed"
+    then: "Uses existing hybrid_search() function, includes workspace files"
+  - id: "A3"
+    given: "Knowledge update"
+    when: "New version stored"
+    then: "Old version marked inactive with decay_rate"
+non_functional:
+  perf:
+    embedding_generation_ms: 500
+    similarity_search_p95_ms: 20
+  security: ["tenant-isolation"]
+contracts:
+  - type: "typescript"
+    path: "src/embeddings/types.ts"
