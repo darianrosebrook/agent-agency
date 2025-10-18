@@ -362,11 +362,11 @@ impl CouncilIntegrator {
             CouncilVerdict::NeedsInvestigation { .. } => 0.5,
         };
 
-        let source = format!("Council evaluation ({} debate rounds, {}ms)",
-            result.debate_rounds, result.processing_time_ms);
+        let source = format!("Council evaluation ({}ms processing time)",
+            result.processing_time_ms);
 
-        let relevance = if result.debate_rounds > 3 {
-            0.9 // High relevance for thoroughly debated claims
+        let relevance = if result.processing_time_ms > 500 {
+            0.9 // High relevance for thoroughly processed claims
         } else {
             0.7 // Moderate relevance for quickly resolved claims
         };
