@@ -105,24 +105,18 @@ impl GitTrailerManager {
         let refname = format!("refs/heads/{}", self.branch);
 
         // Check if reference exists first
-        {
+        let reference_exists = {
             let repo = self.repository.lock().unwrap();
-            match repo.find_reference(&refname) {
-                Ok(reference) => {
-                    // Validate reference
-                    if let Ok(commit) = reference.peel_to_commit() {
-                        debug!("Found branch reference: {} -> {}", refname, commit.id());
-                        return Ok(());
-                    } else {
-                        return Err(anyhow::anyhow!("Invalid reference: {}", refname));
-                    }
-                }
-                Err(e) if e.code() == git2::ErrorCode::NotFound => {
-                    // Reference doesn't exist, create it
-                    return self.create_branch_reference(&repo, &refname);
-                }
-                Err(e) => return Err(anyhow::anyhow!("Failed to find reference {}: {}", refname, e)),
-            }
+            let x = repo.find_reference(&refname).is_ok(); x
+        };
+
+        if reference_exists {
+            debug!("Found branch reference: {}", refname);
+            Ok(())
+        } else {
+            // Reference doesn't exist, create it
+            let repo = self.repository.lock().unwrap();
+            self.create_branch_reference(&repo, &refname)
         }
     }
 
@@ -141,25 +135,19 @@ impl GitTrailerManager {
 
     /// Get the current HEAD commit with proper commit handling
     fn get_head_commit(&self) -> Result<()> {
-        // Check HEAD first
-        {
+        // Check if HEAD exists first
+        let head_exists = {
             let repo = self.repository.lock().unwrap();
-            match repo.head() {
-                Ok(head) => {
-                    // Validate HEAD reference
-                    if let Ok(commit) = head.peel_to_commit() {
-                        debug!("Found HEAD commit: {}", commit.id());
-                        return Ok(());
-                    } else {
-                        return Err(anyhow::anyhow!("Invalid HEAD reference"));
-                    }
-                }
-                Err(e) if e.code() == git2::ErrorCode::NotFound => {
-                    // HEAD doesn't exist, create initial commit
-                    return self.create_initial_commit(&repo);
-                }
-                Err(e) => return Err(anyhow::anyhow!("Failed to get HEAD: {}", e)),
-            }
+            let x = repo.head().is_ok(); x
+        };
+
+        if head_exists {
+            debug!("Found HEAD commit");
+            Ok(())
+        } else {
+            // HEAD doesn't exist, create initial commit
+            let repo = self.repository.lock().unwrap();
+            self.create_initial_commit(&repo)
         }
     }
 

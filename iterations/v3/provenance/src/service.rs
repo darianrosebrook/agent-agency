@@ -11,6 +11,12 @@ use uuid::Uuid;
 use crate::{
     git_integration::GitIntegration,
     signer::{SignerFactory, SignerTrait},
+    types::{
+        ProvenanceRecord, ProvenanceQuery, ProvenanceStats, TimeRange, VerdictDecisionType,
+        ComplianceStatus, ViolationSeverity, ProvenanceChain, ExportFormat, ProvenanceExport,
+        ExportMetadata, IntegrityCheckResult, IntegrityIssue, IntegrityIssueType, IntegritySeverity,
+        VerdictDecision, CawsComplianceProvenance, BudgetAdherence,
+    },
     ProvenanceConfig,
     SigningAlgorithm,
 };

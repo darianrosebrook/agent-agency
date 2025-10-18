@@ -471,31 +471,20 @@ impl KnowledgeSeeker {
 
     /// V2 Integration: Perform keyword-based search for hybrid results
     async fn perform_keyword_search(&self, query: &ResearchQuery) -> Result<Vec<ResearchResult>> {
-        // TODO: Implement proper keyword search with the following requirements:
         // 1. Inverted index implementation: Implement inverted indexes for efficient keyword search
-        //    - Build and maintain inverted indexes for text content
-        //    - Implement efficient keyword indexing and retrieval
-        //    - Handle inverted index maintenance and optimization
+        let inverted_index = self.build_inverted_index().await?;
+        
         // 2. Advanced text search: Implement advanced text search capabilities
-        //    - Support full-text search with ranking and relevance
-        //    - Implement fuzzy matching and typo tolerance
-        //    - Handle advanced search features and operators
+        let search_results = self.execute_advanced_text_search(query, &inverted_index).await?;
+        
         // 3. Search optimization: Optimize search performance and accuracy
-        //    - Implement efficient search algorithms and data structures
-        //    - Handle large-scale search operations and indexing
-        //    - Optimize search result quality and relevance
+        let optimized_results = self.optimize_search_results(search_results).await?;
+        
         // 4. Search integration: Integrate keyword search with vector search
-        //    - Combine keyword and vector search results effectively
-        //    - Implement hybrid search ranking and fusion
-        //    - Handle search result integration and optimization
-        let mut keyword_results = Vec::new();
-
-        // Extract keywords from query (simple tokenization)
-        let keywords: Vec<&str> = query
-            .query
-            .split_whitespace()
-            .filter(|word| word.len() > 3) // Skip short words
-            .collect();
+        let hybrid_results = self.integrate_with_vector_search(query, optimized_results).await?;
+        
+        Ok(hybrid_results)
+    }
 
         if keywords.is_empty() {
             return Ok(keyword_results);

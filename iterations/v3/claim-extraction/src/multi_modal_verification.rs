@@ -1936,13 +1936,12 @@ impl SemanticAnalyzer {
 
         consistency_score = consistency_score.max(0.0).min(1.0);
 
-        Ok(CoherenceAnalysis {
-            coherence_score: consistency_score,
+        Ok(ConsistencyAnalysis {
+            conflicts: Vec::new(),
             gaps: Vec::new(),
-            logical_flow_score: 1.0,
-            completeness_score: 1.0,
-        })
-    }
+            supporting_evidence: Vec::new(),
+            consistency_score,
+        })    }
 
     /// Analyze semantic coherence (enhanced)
     async fn analyze_coherence(
@@ -1957,16 +1956,13 @@ impl SemanticAnalyzer {
 
         let overall_coherence = (logical_flow_score + completeness_score) / 2.0;
 
-        Ok(CoherenceAnalysis {
-            coherence_score: overall_coherence,
+        Ok(ConsistencyAnalysis {
+            conflicts: Vec::new(),
             gaps,
-            logical_flow_score,
-            completeness_score,
-        })
-    }
-
-    /// Validate against domain knowledge (enhanced)
-    async fn validate_domain_knowledge(
+            supporting_evidence: Vec::new(),
+            consistency_score: overall_coherence,
+        }
+    }    async fn validate_domain_knowledge(
         &self,
         structure: &SemanticStructure,
         domain_mappings: &[DomainMapping],
@@ -2425,19 +2421,19 @@ impl CrossReferenceValidator {
     }
     
     /// Identify contradictions in references
-    async fn identify_contradictions(&self, analysis: &CoherenceAnalysisConsistencyAnalysis) -> Result<Vec<Contradiction>> {
+    async fn identify_contradictions(&self, analysis: &ConsistencyAnalysis) -> Result<Vec<Contradiction>> {
         let mut contradictions = Vec::new();
         
         // Create contradictions based on gaps in coherence
-        for gap in &analysis.gaps {
+        // Create contradictions based on conflicts in consistency analysis
+        for conflict in &analysis.conflicts {
             contradictions.push(Contradiction {
                 contradiction_type: ContradictionType::Direct,
                 conflicting_claim_id: uuid::Uuid::new_v4(),
                 contradiction_severity: ErrorSeverity::Medium,
-                resolution_suggestions: vec![format!("Address coherence gap: {}", gap)],
+                resolution_suggestions: vec![format!("Resolve conflict: {}", conflict.description)],
             });
-        }
-        
+        }        
         Ok(contradictions)
     }
     
