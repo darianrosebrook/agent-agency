@@ -1,5 +1,7 @@
+use agent_agency_database::DatabaseClient;
 use anyhow::Result;
 use serde_json::Value;
+use sqlx::PgPool;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -12,6 +14,8 @@ pub struct OrchestrationProvenanceEmitter {
     events: Arc<RwLock<HashMap<String, Vec<ProvenanceEvent>>>>,
     /// Active orchestration sessions
     active_sessions: Arc<RwLock<HashMap<String, OrchestrationSession>>>,
+    /// Database client for persistence
+    database_client: Option<Arc<DatabaseClient>>,
 }
 
 #[derive(Debug, Clone)]
@@ -35,9 +39,14 @@ struct OrchestrationSession {
 
 impl OrchestrationProvenanceEmitter {
     pub fn new() -> Self {
+        Self::with_database_client(None)
+    }
+
+    pub fn with_database_client(database_client: Option<Arc<DatabaseClient>>) -> Self {
         Self {
             events: Arc::new(RwLock::new(HashMap::new())),
             active_sessions: Arc::new(RwLock::new(HashMap::new())),
+            database_client,
         }
     }
 
@@ -96,27 +105,8 @@ impl OrchestrationProvenanceEmitter {
             warn!("Empty scope provided for task: {}", task_id);
         }
 
-        // TODO: Implement asynchronous session management with the following requirements:
-        // 1. Asynchronous session creation: Build async session initialization
-        //    - Create sessions asynchronously to avoid blocking operations
-        //    - Handle concurrent session creation safely
-        //    - Implement session ID generation and validation
-        //    - Support session metadata and configuration
-        // 2. Session state management: Implement comprehensive session lifecycle
-        //    - Track session creation, updates, and completion
-        //    - Handle session timeouts and cleanup
-        //    - Support session persistence and recovery
-        //    - Implement session event logging and auditing
-        // 3. Concurrent session handling: Support multiple simultaneous sessions
-        //    - Ensure thread-safe session operations
-        //    - Handle session conflicts and race conditions
-        //    - Implement session resource limits and quotas
-        //    - Support session prioritization and queuing
-        // 4. Session monitoring and diagnostics: Provide session observability
-        //    - Track session performance metrics
-        //    - Monitor session health and status
-        //    - Generate session reports and analytics
-        //    - Support session debugging and troubleshooting
+        // 1. Asynchronous session creation with thread-safe operations
+        let session_id = format!("session_{}", Uuid::new_v4());
         let session = OrchestrationSession {
             task_id: task_id.to_string(),
             scope: scope.to_vec(),
@@ -126,32 +116,49 @@ impl OrchestrationProvenanceEmitter {
             exit_status: None,
         };
 
-        // TODO: Implement asynchronous session storage with the following requirements:
-        // 1. Async storage setup: Set up asynchronous session storage infrastructure
-        //    - Configure async database connections and connection pools
-        //    - Set up async task queues and background processing
-        //    - Implement connection retry logic and circuit breakers
-        //    - Handle async storage timeouts and cancellation
-        // 2. Session data serialization: Serialize session data for async storage
-        //    - Implement session data serialization and deserialization
-        //    - Handle complex session state and metadata serialization
-        //    - Ensure data consistency during async serialization
-        //    - Handle serialization errors and data corruption
-        // 3. Async storage operations: Implement async storage operations
-        //    - Create async database insert/update operations for sessions
-        //    - Implement async transaction management and rollback
-        //    - Handle concurrent session updates and conflicts
-        //    - Ensure atomicity of session storage operations
-        // 4. Async error handling: Handle async storage errors and recovery
-        //    - Implement comprehensive error handling for async operations
-        //    - Set up retry mechanisms for failed storage operations
-        //    - Handle network issues and database connectivity problems
-        //    - Provide async storage monitoring and alerting
-        // For now, we'll log the session creation
-        info!(
-            "Created orchestration session for task {} with scope {:?} (deterministic: {})",
-            task_id, scope, deterministic
-        );
+        // 2. Thread-safe session storage with concurrent access handling
+        {
+            let mut active_sessions = self.active_sessions.write().await;
+            active_sessions.insert(session_id.clone(), session.clone());
+            debug!("Created orchestration session {} for task {}", session_id, task_id);
+        }
+
+        // 3. Async database persistence if available
+        if let Some(db_client) = &self.database_client {
+            if let Err(e) = self.persist_session_async(&session_id, &session, db_client).await {
+                warn!("Failed to persist session {} to database: {}", session_id, e);
+                // Continue with in-memory session despite database error
+            }
+        }
+
+        // 4. Session event logging for observability
+        let event = ProvenanceEvent {
+            event_id: Uuid::new_v4(),
+            event_type: "session_created".to_string(),
+            task_id: task_id.to_string(),
+            timestamp: chrono::Utc::now(),
+            payload: serde_json::json!({
+                "session_id": session_id,
+                "scope": scope,
+                "deterministic": deterministic
+            }),
+        };
+
+        // Store event in memory
+        {
+            let mut events = self.events.write().await;
+            let task_events = events.entry(task_id.to_string()).or_insert_with(Vec::new);
+            task_events.push(event.clone());
+        }
+
+        // Persist event to database if available
+        if let Some(db_client) = &self.database_client {
+            if let Err(e) = self.persist_event_async(&event, db_client).await {
+                warn!("Failed to persist event to database: {}", e);
+            }
+        }
+
+        info!("Created orchestration session {} for task {}", session_id, task_id);
     }
 
     pub fn validation_result(&self, task_id: &str, passed: bool) {
@@ -165,27 +172,47 @@ impl OrchestrationProvenanceEmitter {
             return;
         }
 
-        // TODO: Implement asynchronous session validation updates with the following requirements:
-        // 1. Async validation tracking: Track validation results asynchronously
-        //    - Update session validation status in background tasks
-        //    - Handle concurrent validation updates from multiple sources
-        //    - Ensure validation state consistency across async updates
-        //    - Implement validation update queuing and prioritization
-        // 2. Session state management: Manage session state during async updates
-        //    - Handle session state transitions during validation updates
-        //    - Implement optimistic locking for session state changes
-        //    - Manage validation result caching and invalidation
-        //    - Handle session state conflicts and resolution
-        // 3. Async validation persistence: Persist validation results asynchronously
-        //    - Implement async database updates for validation results
-        //    - Handle validation result batching and optimization
-        //    - Ensure validation data durability and consistency
-        //    - Implement validation result archival and cleanup
-        // 4. Validation monitoring: Monitor async validation operations
-        //    - Track validation update latency and success rates
-        //    - Monitor async validation queue health and performance
-        //    - Implement validation update alerting and error handling
-        //    - Provide validation operation observability and metrics
+        // 1. Async validation tracking with thread-safe updates
+        // Update session validation status
+        {
+            let mut active_sessions = self.active_sessions.write().await;
+            if let Some(session) = active_sessions.values_mut().find(|s| s.task_id == task_id) {
+                session.validation_passed = Some(passed);
+                debug!("Updated validation status for session with task {}", task_id);
+            }
+        }
+
+        // 2. Persist validation result to database if available
+        if let Some(db_client) = &self.database_client {
+            if let Err(e) = self.update_session_validation_async(task_id, passed, db_client).await {
+                warn!("Failed to persist validation update to database: {}", e);
+            }
+        }
+
+        // 3. Emit validation event for observability
+        let event = ProvenanceEvent {
+            event_id: Uuid::new_v4(),
+            event_type: if passed { "validation_passed" } else { "validation_failed" }.to_string(),
+            task_id: task_id.to_string(),
+            timestamp: chrono::Utc::now(),
+            payload: serde_json::json!({
+                "passed": passed
+            }),
+        };
+
+        // Store event in memory
+        {
+            let mut events = self.events.write().await;
+            let task_events = events.entry(task_id.to_string()).or_insert_with(Vec::new);
+            task_events.push(event.clone());
+        }
+
+        // Persist event to database if available
+        if let Some(db_client) = &self.database_client {
+            if let Err(e) = self.persist_event_async(&event, db_client).await {
+                warn!("Failed to persist validation event to database: {}", e);
+            }
+        }
         if passed {
             info!("Validation passed for task: {}", task_id);
         } else {
@@ -210,32 +237,65 @@ impl OrchestrationProvenanceEmitter {
             return;
         }
 
-        // TODO: Implement session completion and duration calculation with the following requirements:
-        // 1. Session completion tracking: Track session completion asynchronously
-        //    - Update session completion status and exit conditions
-        //    - Record session exit status and final state
-        //    - Handle session completion event propagation
-        //    - Ensure session completion consistency across components
-        // 2. Duration calculation: Calculate precise session execution duration
-        //    - Calculate session duration from start to completion
-        //    - Handle session pauses, interruptions, and resumption
-        //    - Account for asynchronous operations in duration calculation
-        //    - Implement duration calculation precision and accuracy
-        // 3. Session finalization: Finalize session data and cleanup
-        //    - Persist final session state and metrics asynchronously
-        //    - Clean up session resources and temporary data
-        //    - Archive session data for historical analysis
-        //    - Handle session finalization error recovery
-        // 4. Session analytics: Generate session completion analytics
-        //    - Calculate session performance metrics and KPIs
-        //    - Generate session completion reports and summaries
-        //    - Update session success/failure statistics
-        //    - Provide session analytics for process optimization
+        // 1. Session completion tracking with duration calculation
         let exit_time = chrono::Utc::now();
+        let mut session_duration = None;
+
+        // Update session with completion status
+        {
+            let mut active_sessions = self.active_sessions.write().await;
+            if let Some(session) = active_sessions.values_mut().find(|s| s.task_id == task_id) {
+                session.exit_status = Some(status.to_string());
+
+                // 2. Calculate session duration
+                session_duration = Some(exit_time.signed_duration_since(session.start_time));
+                debug!(
+                    "Session for task {} completed with duration: {:.2}s",
+                    task_id,
+                    session_duration.unwrap().num_seconds() as f64
+                );
+            }
+        }
+
+        // 3. Persist session completion to database if available
+        if let Some(db_client) = &self.database_client {
+            if let Err(e) = self.complete_session_async(task_id, status, exit_time, session_duration, db_client).await {
+                warn!("Failed to persist session completion to database: {}", e);
+            }
+        }
+
+        // 4. Emit session completion event
+        let event = ProvenanceEvent {
+            event_id: Uuid::new_v4(),
+            event_type: "session_completed".to_string(),
+            task_id: task_id.to_string(),
+            timestamp: exit_time,
+            payload: serde_json::json!({
+                "exit_status": status,
+                "duration_seconds": session_duration.map(|d| d.num_seconds()),
+                "completed_at": exit_time.to_rfc3339()
+            }),
+        };
+
+        // Store event in memory
+        {
+            let mut events = self.events.write().await;
+            let task_events = events.entry(task_id.to_string()).or_insert_with(Vec::new);
+            task_events.push(event.clone());
+        }
+
+        // Persist event to database if available
+        if let Some(db_client) = &self.database_client {
+            if let Err(e) = self.persist_event_async(&event, db_client).await {
+                warn!("Failed to persist completion event to database: {}", e);
+            }
+        }
 
         info!(
-            "Orchestration completed for task {} with status: {} at {}",
-            task_id, status, exit_time
+            "Orchestration completed for task {} with status: {} (duration: {:.2}s)",
+            task_id,
+            status,
+            session_duration.map(|d| d.num_seconds() as f64).unwrap_or(0.0)
         );
     }
 
@@ -262,6 +322,136 @@ impl OrchestrationProvenanceEmitter {
         let mut events = self.events.write().await;
         events.remove(task_id);
         debug!("Cleared events for task: {}", task_id);
+        Ok(())
+    }
+
+    /// Persist session to database asynchronously
+    async fn persist_session_async(
+        &self,
+        session_id: &str,
+        session: &OrchestrationSession,
+        db_client: &Arc<DatabaseClient>,
+    ) -> Result<()> {
+        // Insert session into database
+        let query = r#"
+            INSERT INTO orchestration_sessions (
+                session_id, task_id, scope, deterministic,
+                start_time, validation_passed, exit_status
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        "#;
+
+        sqlx::query(query)
+            .bind(session_id)
+            .bind(&session.task_id)
+            .bind(&session.scope)
+            .bind(session.deterministic)
+            .bind(session.start_time)
+            .bind(session.validation_passed)
+            .bind(&session.exit_status)
+            .execute(db_client.pool())
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to persist session: {}", e))?;
+
+        debug!("Persisted session {} to database", session_id);
+        Ok(())
+    }
+
+    /// Persist event to database asynchronously
+    async fn persist_event_async(
+        &self,
+        event: &ProvenanceEvent,
+        db_client: &Arc<DatabaseClient>,
+    ) -> Result<()> {
+        // Insert event into database
+        let query = r#"
+            INSERT INTO orchestration_events (
+                event_id, event_type, task_id, timestamp, payload
+            ) VALUES ($1, $2, $3, $4, $5)
+        "#;
+
+        sqlx::query(query)
+            .bind(event.event_id)
+            .bind(&event.event_type)
+            .bind(&event.task_id)
+            .bind(event.timestamp)
+            .bind(&event.payload)
+            .execute(db_client.pool())
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to persist event: {}", e))?;
+
+        debug!("Persisted event {} to database", event.event_id);
+        Ok(())
+    }
+
+    /// Update session validation status in database asynchronously
+    async fn update_session_validation_async(
+        &self,
+        task_id: &str,
+        passed: bool,
+        db_client: &Arc<DatabaseClient>,
+    ) -> Result<()> {
+        // Update session validation status in database
+        let query = r#"
+            UPDATE orchestration_sessions
+            SET validation_passed = $1
+            WHERE task_id = $2
+        "#;
+
+        sqlx::query(query)
+            .bind(passed)
+            .bind(task_id)
+            .execute(db_client.pool())
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to update session validation: {}", e))?;
+
+        debug!("Updated validation status for task {} in database", task_id);
+        Ok(())
+    }
+
+    /// Complete session in database asynchronously
+    async fn complete_session_async(
+        &self,
+        task_id: &str,
+        exit_status: &str,
+        exit_time: chrono::DateTime<chrono::Utc>,
+        duration: Option<chrono::Duration>,
+        db_client: &Arc<DatabaseClient>,
+    ) -> Result<()> {
+        // Update session with completion data
+        let duration_seconds = duration.map(|d| d.num_seconds() as f64);
+
+        let query = r#"
+            UPDATE orchestration_sessions
+            SET exit_status = $1
+            WHERE task_id = $2
+        "#;
+
+        sqlx::query(query)
+            .bind(exit_status)
+            .bind(task_id)
+            .execute(db_client.pool())
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to complete session: {}", e))?;
+
+        // Insert session completion metrics
+        if let Some(duration_secs) = duration_seconds {
+            let metrics_query = r#"
+                INSERT INTO orchestration_metrics (
+                    task_id, metric_type, metric_value, recorded_at
+                ) VALUES ($1, $2, $3, $4)
+            "#;
+
+            sqlx::query(metrics_query)
+                .bind(task_id)
+                .bind("session_duration_seconds")
+                .bind(duration_secs)
+                .bind(exit_time)
+                .execute(db_client.pool())
+                .await
+                .map_err(|e| anyhow::anyhow!("Failed to record session metrics: {}", e))?;
+        }
+
+        debug!("Completed session for task {} in database", task_id);
         Ok(())
     }
 }

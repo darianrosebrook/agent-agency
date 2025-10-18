@@ -414,3 +414,50 @@ pub struct TaskExecutionSummary {
     pub verdicts: serde_json::Value,
     pub compliance: serde_json::Value,
 }
+
+/// CAWS violation model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct CawsViolation {
+    pub id: Uuid,
+    pub task_id: Uuid,
+    pub violation_code: String,
+    pub severity: String,
+    pub description: String,
+    pub file_path: Option<String>,
+    pub line_number: Option<i32>,
+    pub column_number: Option<i32>,
+    pub rule_id: String,
+    pub constitutional_reference: Option<String>,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+    pub resolved_at: Option<DateTime<Utc>>,
+    pub metadata: serde_json::Value,
+}
+
+/// CAWS rule model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct CawsRule {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub rule_type: String,
+    pub severity: String,
+    pub file_patterns: serde_json::Value,
+    pub config: serde_json::Value,
+    pub constitutional_reference: Option<String>,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// CAWS specification model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct CawsSpecification {
+    pub id: Uuid,
+    pub name: String,
+    pub version: String,
+    pub specification: serde_json::Value,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}

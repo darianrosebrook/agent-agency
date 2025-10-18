@@ -1354,7 +1354,7 @@ export class ClaimExtractor
 
     // Adapt patterns based on task surface
     switch (taskSurface) {
-      case "code-editing":
+      case "file_editing":
         // Focus on code-related factual claims
         updatedPatterns.codePatterns =
           this.extractionPatterns.get("code") || [];

@@ -36,7 +36,7 @@ describe("Security Component Performance Benchmarks", () => {
     name: "Performance Test Agent",
     modelFamily: "gpt-4",
     capabilities: {
-      taskTypes: ["code-editing", "research"],
+      taskTypes: ["file_editing", "research"],
       languages: ["TypeScript", "Python"],
       specializations: ["Security audit", "API design"] as Specialization[],
     },

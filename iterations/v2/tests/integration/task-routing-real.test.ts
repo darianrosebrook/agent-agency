@@ -18,10 +18,10 @@ describe("Task Routing with Real Agents", () => {
   // Helper to create test tasks
   const createTestTask = (overrides: Partial<Task>): Task => ({
     id: `test-task-${Math.random().toString(36).substring(2, 9)}`,
-    type: "code-editing",
+    type: "file_editing",
     description: "Test task",
     requiredCapabilities: {
-      taskTypes: ["code-editing"],
+      taskTypes: ["file_editing"],
     },
     priority: 5,
     timeoutMs: 30000,
@@ -97,10 +97,10 @@ describe("Task Routing with Real Agents", () => {
       expect(agentProfile.capabilities.taskTypes).toContain("testing");
     });
 
-    it("should route code-editing task to appropriate agent", async () => {
+    it("should route file_editing task to appropriate agent", async () => {
       const task = createTestTask({
         requiredCapabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
         },
       });
@@ -112,7 +112,7 @@ describe("Task Routing with Real Agents", () => {
 
       // Verify the selected agent has the required capabilities
       const agentProfile = await registry.getProfile(decision.selectedAgent.id);
-      expect(agentProfile.capabilities.taskTypes).toContain("code-editing");
+      expect(agentProfile.capabilities.taskTypes).toContain("file_editing");
       expect(agentProfile.capabilities.languages).toContain("TypeScript");
     });
 
@@ -133,13 +133,13 @@ describe("Task Routing with Real Agents", () => {
       // Create a task that multiple agents can handle
       const task = createTestTask({
         requiredCapabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
         },
       });
 
       // Get all eligible agents
       const eligibleAgents = await registry.getAgentsByCapability({
-        taskType: "code-editing",
+        taskType: "file_editing",
       });
 
       expect(eligibleAgents.length).toBeGreaterThan(1); // Need multiple for meaningful test
@@ -169,7 +169,7 @@ describe("Task Routing with Real Agents", () => {
     it("should respect language requirements in routing", async () => {
       const task = createTestTask({
         requiredCapabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["Python"], // Specific language requirement
         },
       });
@@ -184,7 +184,7 @@ describe("Task Routing with Real Agents", () => {
     it("should respect specialization requirements", async () => {
       const task = createTestTask({
         requiredCapabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           specializations: ["API design"], // Specific specialization
         },
       });
@@ -216,7 +216,7 @@ describe("Task Routing with Real Agents", () => {
     it("should provide alternatives in routing decision", async () => {
       const task = createTestTask({
         requiredCapabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
         },
       });
 
@@ -227,7 +227,7 @@ describe("Task Routing with Real Agents", () => {
 
       // Should have at least one alternative (if multiple agents available)
       const eligibleAgents = await registry.getAgentsByCapability({
-        taskType: "code-editing",
+        taskType: "file_editing",
       });
 
       if (eligibleAgents.length > 1) {
@@ -259,7 +259,7 @@ describe("Task Routing with Real Agents", () => {
 
       const task = createTestTask({
         requiredCapabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
         },
       });
 
@@ -275,7 +275,7 @@ describe("Task Routing with Real Agents", () => {
       // For now, verify the routing manager considers load balancing weight
       const task = createTestTask({
         requiredCapabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
         },
       });
 
@@ -292,7 +292,7 @@ describe("Task Routing with Real Agents", () => {
       // Test that agents with high utilization are avoided when alternatives exist
       const task = createTestTask({
         requiredCapabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
         },
       });
 
@@ -304,7 +304,7 @@ describe("Task Routing with Real Agents", () => {
 
       // Should prefer agents that aren't at 100% utilization if alternatives exist
       const eligibleAgents = await registry.getAgentsByCapability({
-        taskType: "code-editing",
+        taskType: "file_editing",
       });
 
       const _hasLowerUtilizationAlternatives = eligibleAgents.some(

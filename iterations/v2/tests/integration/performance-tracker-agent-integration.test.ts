@@ -46,7 +46,7 @@ describe("Performance Tracker - Agent Registry Integration", () => {
       name: "Test Agent",
       modelFamily: "gpt-4",
       capabilities: {
-        taskTypes: ["code-editing"],
+        taskTypes: ["file_editing"],
         languages: ["TypeScript"],
         specializationsV2: [
           {
@@ -78,7 +78,7 @@ describe("Performance Tracker - Agent Registry Integration", () => {
       success: true,
       qualityScore: 0.95,
       latencyMs: 2500,
-      taskType: "code-editing" as const,
+      taskType: "file_editing" as const,
     };
 
     const updatedAgent = await registry.updatePerformance(
@@ -104,7 +104,7 @@ describe("Performance Tracker - Agent Registry Integration", () => {
     // Verify the event contains the correct data
     const taskEvent = taskPerformanceEvents[0];
     expect(taskEvent.data.agentId).toBe("test-agent-001");
-    expect(taskEvent.data.taskType).toBe("code-editing");
+    expect(taskEvent.data.taskType).toBe("file_editing");
     expect(taskEvent.data.success).toBe(true);
     expect(taskEvent.data.qualityScore).toBe(0.95);
     expect(taskEvent.data.latencyMs).toBe(2500);
@@ -118,7 +118,7 @@ describe("Performance Tracker - Agent Registry Integration", () => {
       name: "Specialist Agent",
       modelFamily: "claude-3.5",
       capabilities: {
-        taskTypes: ["code-editing", "api-design"],
+        taskTypes: ["file_editing", "api-design"],
         languages: ["TypeScript", "Python"],
         specializationsV2: [
           {
@@ -185,7 +185,7 @@ describe("Performance Tracker - Agent Registry Integration", () => {
       name: "History Agent",
       modelFamily: "gpt-4",
       capabilities: {
-        taskTypes: ["code-editing"],
+        taskTypes: ["file_editing"],
         languages: ["TypeScript"],
         specializationsV2: [],
       },
@@ -213,7 +213,7 @@ describe("Performance Tracker - Agent Registry Integration", () => {
     for (const metrics of updates) {
       await registry.updatePerformance("history-agent-001", {
         ...metrics,
-        taskType: "code-editing",
+        taskType: "file_editing",
       });
     }
 
@@ -252,7 +252,7 @@ describe("Performance Tracker - Agent Registry Integration", () => {
       name: "High Performer",
       modelFamily: "gpt-4",
       capabilities: {
-        taskTypes: ["code-editing"],
+        taskTypes: ["file_editing"],
         languages: ["TypeScript"],
         specializationsV2: [],
       },
@@ -270,7 +270,7 @@ describe("Performance Tracker - Agent Registry Integration", () => {
       name: "Consistent Performer",
       modelFamily: "claude-3.5",
       capabilities: {
-        taskTypes: ["code-editing"],
+        taskTypes: ["file_editing"],
         languages: ["TypeScript"],
         specializationsV2: [],
       },
@@ -288,14 +288,14 @@ describe("Performance Tracker - Agent Registry Integration", () => {
       success: true,
       qualityScore: 0.95,
       latencyMs: 2400,
-      taskType: "code-editing",
+      taskType: "file_editing",
     });
 
     await registry.updatePerformance("consistent-performer", {
       success: true,
       qualityScore: 0.88,
       latencyMs: 3100,
-      taskType: "code-editing",
+      taskType: "file_editing",
     });
 
     // Get performance stats from tracker

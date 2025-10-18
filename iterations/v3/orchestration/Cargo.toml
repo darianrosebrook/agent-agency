@@ -21,4 +21,5 @@ agent-agency-council = { path = "../council" }
 agent-agency-apple-silicon = { path = "../apple-silicon" }
 agent-agency-provenance = { path = "../provenance" }
 agent-agency-resilience = { path = "../resilience" }
+agent-agency-database = { path = "../database" }
 tracing = "0.1"

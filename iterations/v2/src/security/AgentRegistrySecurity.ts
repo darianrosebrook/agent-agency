@@ -386,7 +386,6 @@ export class AgentRegistrySecurity {
         // Validate task types
         if (caps.taskTypes) {
           const validTaskTypes = [
-            "code-editing",
             "research",
             "code-review",
             "documentation",

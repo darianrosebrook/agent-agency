@@ -111,7 +111,7 @@ describe("Security Components - Realistic Performance Benchmarks", () => {
       name: "Performance Test Agent",
       modelFamily: "gpt-4",
       capabilities: {
-        taskTypes: ["code-editing", "research", "testing"],
+        taskTypes: ["file_editing", "research", "testing"],
         languages: ["TypeScript", "Python", "JavaScript"],
         specializations: ["Performance testing", "Security auditing"] as any,
       },
@@ -357,7 +357,7 @@ describe("Security Components - Realistic Performance Benchmarks", () => {
         modelFamily: "gpt-4" as const,
         capabilities: {
           taskTypes: [
-            "code-editing",
+            "file_editing",
             "research",
             "testing",
             "debugging",

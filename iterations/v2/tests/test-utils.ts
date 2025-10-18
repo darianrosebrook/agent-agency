@@ -367,7 +367,7 @@ export class MockFactory {
       name: "Mock Agent",
       modelFamily: "gpt-4",
       capabilities: [
-        { name: "code-editing", score: 0.9 },
+        { name: "file_editing", score: 0.9 },
         { name: "debugging", score: 0.8 },
       ],
       performanceHistory: [],
@@ -391,7 +391,7 @@ export class MockFactory {
       latency: 150,
       quality: 0.85,
       confidence: 0.9,
-      taskType: "code-editing",
+      taskType: "file_editing",
       taskId: "task-123",
       ...overrides,
     };

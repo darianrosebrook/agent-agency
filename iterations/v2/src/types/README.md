@@ -33,7 +33,7 @@ import { AgentProfile, AgentQuery } from "../types/agent-registry";
 // Query for agents
 const query: AgentQuery = {
   languages: ["TypeScript"],
-  taskType: "code-editing", // Note: singular, not plural
+  taskType: "file_editing", // Note: singular, not plural
 };
 
 const results = await registry.getAgentsByCapability(query);
@@ -69,10 +69,10 @@ import { Task, TaskType } from "../types/arbiter-orchestration";
 const task: Task = {
   id: "task-001",
   description: "Refactor module",
-  type: "code-editing" as TaskType,
+  type: "file_editing" as TaskType,
   requiredCapabilities: {
     languages: ["TypeScript"],
-    taskTypes: ["code-editing"],
+    taskTypes: ["file_editing"],
   },
   priority: 5,
   timeoutMs: 30000,
@@ -325,10 +325,10 @@ const agent = createTestAgent({
 const task: Task = {
   id: "task-001",
   description: "Do something",
-  type: "code-editing",
+  type: "file_editing",
   requiredCapabilities: {
     languages: ["TypeScript"],
-    taskTypes: ["code-editing"],
+    taskTypes: ["file_editing"],
   },
   priority: 5,
   timeoutMs: 30000,
@@ -345,7 +345,7 @@ const task: Task = {
 ```typescript
 const task = createMinimalTask({
   description: "Do something",
-  type: "code-editing",
+  type: "file_editing",
 });
 ```
 
@@ -365,7 +365,7 @@ const query: AgentQuery = {
 
 ```typescript
 const query: AgentQuery = {
-  taskType: "code-editing", // Correct: singular
+  taskType: "file_editing", // Correct: singular
   languages: ["TypeScript"],
 };
 ```

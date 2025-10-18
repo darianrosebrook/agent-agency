@@ -57,7 +57,7 @@ describe("AgentRegistryDatabaseClient", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing", "code-review"],
+          taskTypes: ["file_editing", "code-review"],
           languages: ["TypeScript", "Python"],
           specializations: ["API design"],
         },
@@ -96,7 +96,7 @@ describe("AgentRegistryDatabaseClient", () => {
         name: "Duplicate Test",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -127,7 +127,7 @@ describe("AgentRegistryDatabaseClient", () => {
         qualityScore: 0.95,
         latencyMs: 1000,
         tokensUsed: 500,
-        taskType: "code-editing",
+        taskType: "file_editing",
       };
 
       await dbClient.updatePerformance(testAgentId, metrics);
@@ -146,7 +146,7 @@ describe("AgentRegistryDatabaseClient", () => {
         qualityScore: 0.95,
         latencyMs: 1000,
         tokensUsed: 500,
-        taskType: "code-editing",
+        taskType: "file_editing",
       };
 
       // Get current state
@@ -189,7 +189,7 @@ describe("AgentRegistryDatabaseClient", () => {
   describe("Queries", () => {
     it("should query agents by capability", async () => {
       const results = await dbClient.queryAgentsByCapability({
-        taskType: "code-editing",
+        taskType: "file_editing",
         languages: ["TypeScript"],
         maxUtilization: 80,
         minSuccessRate: 0.7,

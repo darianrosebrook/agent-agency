@@ -139,7 +139,11 @@ export class EmbeddingMonitor {
         latencies.push(Date.now() - startTime);
         totalTokens += Math.ceil(text.length / 4); // Rough token estimation
       } catch (error) {
-        console.warn(`Embedding performance test failed: ${error.message}`);
+        console.warn(
+          `Embedding performance test failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
         latencies.push(1000); // Penalize failures with high latency
       }
     }

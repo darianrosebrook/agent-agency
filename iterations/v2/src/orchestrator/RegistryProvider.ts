@@ -144,7 +144,7 @@ export class RegistryProvider {
       name: partial.name || `Agent ${partial.id}`,
       modelFamily: partial.modelFamily || "gpt-4",
       capabilities: {
-        taskTypes: partial.capabilities?.taskTypes || ["code-editing"],
+        taskTypes: partial.capabilities?.taskTypes || ["file_editing"],
         languages: partial.capabilities?.languages || ["TypeScript"],
         specializations: partial.capabilities?.specializations || [],
       },

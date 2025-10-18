@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 /// Advanced arbitration engine that surpasses V2's capabilities
@@ -666,9 +666,10 @@ impl AdvancedArbitrationEngine {
 
         // Risk based on task complexity and risk tier
         match task_spec.risk_tier {
-            crate::models::RiskTier::Tier1 => risk_score += 0.8, // High risk
-            crate::models::RiskTier::Tier2 => risk_score += 0.6, // Medium-high risk
-            crate::models::RiskTier::Tier3 => risk_score += 0.4, // Medium risk
+            crate::models::RiskTier::Critical => risk_score += 0.8, // Critical risk
+            crate::models::RiskTier::High => risk_score += 0.6, // High risk
+            crate::models::RiskTier::Medium => risk_score += 0.4, // Medium risk
+            crate::models::RiskTier::Low => risk_score += 0.1, // Low risk
         }
 
         // Risk based on task scope - broader scope = higher conflict potential
@@ -694,19 +695,22 @@ impl AdvancedArbitrationEngine {
 
         // Predict based on risk tier (higher tiers more likely to have conflicts)
         match task_spec.risk_tier {
-            crate::models::RiskTier::Tier1 => {
+            crate::models::RiskTier::Critical => {
                 conflict_types.push("architectural_approach".to_string());
                 conflict_types.push("security_concerns".to_string());
                 conflict_types.push("reliability_impact".to_string());
             }
-            crate::models::RiskTier::Tier2 => {
+            crate::models::RiskTier::High => {
                 conflict_types.push("design_approach".to_string());
                 conflict_types.push("api_compatibility".to_string());
                 conflict_types.push("performance_impact".to_string());
             }
-            crate::models::RiskTier::Tier3 => {
+            crate::models::RiskTier::Medium => {
                 conflict_types.push("style_consistency".to_string());
                 conflict_types.push("documentation_clarity".to_string());
+            }
+            crate::models::RiskTier::Low => {
+                conflict_types.push("code_style".to_string());
             }
         }
 
@@ -848,9 +852,10 @@ impl AdvancedArbitrationEngine {
 
         // Adjust based on risk tier (higher tiers = more confidence in prediction)
         let risk_bonus = match task_spec.risk_tier {
-            crate::models::RiskTier::Tier1 => 0.2,
-            crate::models::RiskTier::Tier2 => 0.1,
-            crate::models::RiskTier::Tier3 => 0.0,
+            crate::models::RiskTier::Critical => 0.3,
+            crate::models::RiskTier::High => 0.2,
+            crate::models::RiskTier::Medium => 0.1,
+            crate::models::RiskTier::Low => 0.0,
         };
         confidence += risk_bonus;
 
@@ -5239,6 +5244,12 @@ impl ArbitrationFeedback {
                 "needs_improvement"
             }
             .to_string(),
+            total_decisions: 1, // Default to 1 for this analysis
+            quality_score: consensus_quality, // Use consensus quality as quality score
+            efficiency_score: success_rate, // Use success rate as efficiency score
+            consensus_strength: decision_confidence, // Use decision confidence as consensus strength
+            decision_strategy: "weighted_consensus".to_string(), // Default strategy
+            resolution_time_ms: 1000, // Default 1 second
         })
     }
 
@@ -5365,6 +5376,12 @@ struct OutcomeAnalysis {
     consensus_quality: f32,
     decision_confidence: f32,
     outcome_classification: String,
+    total_decisions: u32,
+    quality_score: f32,
+    efficiency_score: f32,
+    consensus_strength: f32,
+    decision_strategy: String,
+    resolution_time_ms: u64,
 }
 
 /// Quality metrics for feedback

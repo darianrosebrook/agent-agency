@@ -93,7 +93,7 @@ describe("ResearchDetector", () => {
       const task = mockTask({
         description:
           "I know how to implement this feature. It's straightforward.",
-        type: "code-editing",
+        type: "file_editing",
         metadata: {
           prompt: "", // Override to remove the default question
           requester: "test-user",
@@ -225,7 +225,7 @@ describe("ResearchDetector", () => {
     it("should detect 'API' technical keyword", () => {
       const task = mockTask({
         description: "Integrate the Stripe API for payment processing.",
-        type: "code-editing",
+        type: "file_editing",
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -279,7 +279,7 @@ describe("ResearchDetector", () => {
     it("should infer technical needs from task type", () => {
       const task = mockTask({
         description: "Build a new feature for user management.",
-        type: "code-editing",
+        type: "file_editing",
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -300,7 +300,7 @@ describe("ResearchDetector", () => {
 
       const task = mockTask({
         description: "Implement the API authentication system.",
-        type: "code-editing",
+        type: "file_editing",
       });
 
       const result = disabledDetector.detectResearchNeeds(task);
@@ -396,7 +396,7 @@ describe("ResearchDetector", () => {
       const task = mockTask({
         description:
           "How do I implement OAuth2? I'm not sure which library to use. Compare passport-oauth2 vs simple-oauth2.",
-        type: "code-editing",
+        type: "file_editing",
       });
 
       const result = detector.detectResearchNeeds(task);
@@ -415,7 +415,7 @@ describe("ResearchDetector", () => {
 
       const task = mockTask({
         description: "Implement basic user authentication.",
-        type: "code-editing",
+        type: "file_editing",
       });
 
       const result = strictDetector.detectResearchNeeds(task);
@@ -564,7 +564,7 @@ describe("ResearchDetector", () => {
     it("should infer TECHNICAL for technical keywords", () => {
       const task = mockTask({
         description: "Implementation details for OAuth2 API.",
-        type: "code-editing",
+        type: "file_editing",
       });
 
       const result = detector.detectResearchNeeds(task);

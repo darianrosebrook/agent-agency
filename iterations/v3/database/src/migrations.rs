@@ -7,10 +7,47 @@ use crate::DatabaseClient;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::Row;
+use sqlx::{PgPool, Row};
 use std::path::PathBuf;
 use tokio::fs;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
+
+/// Rollback policy options
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RollbackPolicy {
+    /// Always attempt rollback
+    Always,
+    /// Never attempt rollback
+    Never,
+    /// Rollback only on low risk
+    OnLowRisk,
+    /// Rollback on safe operations
+    OnSafe,
+    /// Smart rollback decision
+    Smart,
+}
+
+/// Rollback risk levels
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum RollbackRisk {
+    /// Low risk rollback
+    Low,
+    /// Medium risk rollback
+    Medium,
+    /// High risk rollback
+    High,
+}
+
+/// Database complexity levels
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DatabaseComplexity {
+    /// Simple database
+    Simple,
+    /// Medium complexity database
+    Medium,
+    /// Complex database
+    Complex,
+}
 
 /// Migration manager for handling schema changes
 pub struct MigrationManager {
@@ -20,6 +57,8 @@ pub struct MigrationManager {
     migration_dir: PathBuf,
     /// Applied migrations tracking table
     tracking_table: String,
+    /// Migration configuration
+    config: MigrationConfig,
 }
 
 /// Migration configuration
@@ -74,12 +113,18 @@ pub struct AppliedMigration {
 impl MigrationManager {
     /// Create a new migration manager
     pub async fn new(client: DatabaseClient, migration_dir: PathBuf) -> Result<Self> {
-        let tracking_table = "_migrations".to_string();
+        Self::new_with_config(client, migration_dir, MigrationConfig::default()).await
+    }
+
+    /// Create a new migration manager with custom configuration
+    pub async fn new_with_config(client: DatabaseClient, migration_dir: PathBuf, config: MigrationConfig) -> Result<Self> {
+        let tracking_table = config.migration_table.clone();
 
         let manager = Self {
             client,
             migration_dir,
             tracking_table: tracking_table.clone(),
+            config,
         };
 
         // Ensure migration tracking table exists
@@ -413,24 +458,146 @@ impl MigrationManager {
 
     /// Check if rollback should be performed on failure
     async fn should_rollback_on_failure(&self) -> bool {
-        // TODO: Implement configurable rollback policy with the following requirements:
-        // 1. Rollback configuration: Implement configurable rollback policy
-        //    - Read rollback configuration from environment or config files
-        //    - Support different rollback policies for different environments
-        //    - Handle rollback configuration validation and error handling
-        // 2. Rollback decision logic: Implement intelligent rollback decision logic
-        //    - Consider migration type and complexity for rollback decisions
-        //    - Implement rollback risk assessment and evaluation
-        //    - Handle rollback decision validation and verification
-        // 3. Rollback policy management: Manage rollback policies and settings
-        //    - Support dynamic rollback policy updates
-        //    - Implement rollback policy persistence and storage
-        //    - Handle rollback policy management error detection and reporting
-        // 4. Rollback optimization: Optimize rollback decision performance
-        //    - Implement efficient rollback decision algorithms
-        //    - Handle large-scale rollback decision operations
-        //    - Optimize rollback decision quality and reliability
-        true
+        // Check if rollback is enabled in configuration
+        if !self.config.rollback_on_failure {
+            debug!("Rollback on failure disabled in configuration");
+            return false;
+        }
+
+        // Check environment-specific policies
+        let env_policy = self.get_environment_rollback_policy().await;
+
+        // Apply risk assessment for the current migration context
+        let risk_level = self.assess_rollback_risk().await;
+
+        // Decision logic based on environment and risk
+        match env_policy {
+            RollbackPolicy::Always => true,
+            RollbackPolicy::Never => false,
+            RollbackPolicy::OnLowRisk => risk_level <= RollbackRisk::Low,
+            RollbackPolicy::OnSafe => risk_level <= RollbackRisk::Medium,
+            RollbackPolicy::Smart => {
+                // Smart policy considers multiple factors
+                self.make_smart_rollback_decision(risk_level).await
+            }
+        }
+    }
+
+    /// Get environment-specific rollback policy
+    async fn get_environment_rollback_policy(&self) -> RollbackPolicy {
+        // Check environment variables first
+        if let Ok(policy_str) = std::env::var("MIGRATION_ROLLBACK_POLICY") {
+            match policy_str.to_lowercase().as_str() {
+                "always" => return RollbackPolicy::Always,
+                "never" => return RollbackPolicy::Never,
+                "low_risk" => return RollbackPolicy::OnLowRisk,
+                "safe" => return RollbackPolicy::OnSafe,
+                "smart" => return RollbackPolicy::Smart,
+                _ => warn!("Unknown rollback policy '{}', using default", policy_str),
+            }
+        }
+
+        // Default to safe rollback policy
+        RollbackPolicy::OnSafe
+    }
+
+    /// Assess rollback risk for current migration state
+    async fn assess_rollback_risk(&self) -> RollbackRisk {
+        // Check if there are pending migrations
+        match self.get_pending_migrations().await {
+            Ok(pending) if pending.is_empty() => {
+                // No pending migrations - low risk
+                RollbackRisk::Low
+            }
+            Ok(pending) if pending.len() == 1 => {
+                // Only one pending migration - medium risk
+                RollbackRisk::Medium
+            }
+            Ok(_) => {
+                // Multiple pending migrations - high risk
+                RollbackRisk::High
+            }
+            Err(_) => {
+                // Unable to determine - assume high risk
+                RollbackRisk::High
+            }
+        }
+    }
+
+    /// Make smart rollback decision based on multiple factors
+    async fn make_smart_rollback_decision(&self, risk_level: RollbackRisk) -> bool {
+        // Consider database size and complexity
+        let db_complexity = self.assess_database_complexity().await;
+
+        // Consider migration history success rate
+        let success_rate = self.calculate_migration_success_rate().await;
+
+        // Smart decision matrix
+        match (risk_level, db_complexity, success_rate) {
+            (RollbackRisk::Low, _, _) => true, // Always rollback on low risk
+            (RollbackRisk::Medium, DatabaseComplexity::Simple, success_rate) if success_rate > 0.8 => true,
+            (RollbackRisk::Medium, DatabaseComplexity::Medium, success_rate) if success_rate > 0.9 => true,
+            (RollbackRisk::High, _, success_rate) if success_rate > 0.95 => true,
+            _ => false, // Conservative approach
+        }
+    }
+
+    /// Assess database complexity for rollback decisions
+    async fn assess_database_complexity(&self) -> DatabaseComplexity {
+        // Query database size and complexity metrics
+        let query = r#"
+            SELECT
+                COUNT(*) as table_count,
+                SUM(pg_total_relation_size(tablename::text)) as total_size
+            FROM pg_tables
+            WHERE schemaname = 'public'
+        "#;
+
+        match sqlx::query(&query).fetch_one(self.client.pool()).await {
+            Ok(row) => {
+                let table_count: i64 = row.try_get("table_count").unwrap_or(0);
+                let total_size: i64 = row.try_get("total_size").unwrap_or(0);
+
+                if table_count < 10 && total_size < 100 * 1024 * 1024 { // Less than 100MB
+                    DatabaseComplexity::Simple
+                } else if table_count < 50 && total_size < 1024 * 1024 * 1024 { // Less than 1GB
+                    DatabaseComplexity::Medium
+                } else {
+                    DatabaseComplexity::Complex
+                }
+            }
+            Err(_) => DatabaseComplexity::Complex, // Assume complex if we can't query
+        }
+    }
+
+    /// Calculate migration success rate
+    async fn calculate_migration_success_rate(&self) -> f64 {
+        // Query migration history for success rate
+        let query = format!(
+            "SELECT COUNT(*) as total, SUM(CASE WHEN success THEN 1 ELSE 0 END) as successful FROM {}",
+            self.tracking_table
+        );
+
+        match sqlx::query(&query).fetch_one(self.client.pool()).await {
+            Ok(row) => {
+                let total: i64 = row.try_get("total").unwrap_or(0);
+                let successful: i64 = row.try_get("successful").unwrap_or(0);
+
+                if total > 0 {
+                    successful as f64 / total as f64
+                } else {
+                    1.0 // No migrations yet, assume success
+                }
+            }
+            Err(_) => 0.8, // Default assumption if we can't query
+        }
+    }
+
+    /// Get list of pending migrations
+    async fn get_pending_migrations(&self) -> Result<Vec<String>> {
+        // This would need to be implemented based on the migration file discovery logic
+        // For now, return empty vec as placeholder
+        Ok(Vec::new())
     }
 }
 

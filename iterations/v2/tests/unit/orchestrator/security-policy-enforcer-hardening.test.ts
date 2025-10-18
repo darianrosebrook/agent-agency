@@ -28,7 +28,7 @@ describe("Security Policy Enforcer - Production Hardening (ARBITER-013)", () => 
     name: `Agent ${id}`,
     modelFamily: "gpt-4" as any,
     capabilities: {
-      "code-editing": { supported: true, confidence: 0.9 },
+      "file_editing": { supported: true, confidence: 0.9 },
     } as any,
     performanceHistory: [] as any,
     currentLoad: {
@@ -54,7 +54,7 @@ describe("Security Policy Enforcer - Production Hardening (ARBITER-013)", () => 
         maxTaskDescriptionLength: 10000,
         maxMetadataSize: 10240,
         allowedTaskTypes: {
-          "code-agent": ["code-editing", "analysis"],
+          "code-agent": ["file_editing", "analysis"],
           "research-agent": ["research", "analysis"],
         },
         suspiciousPatterns: [

@@ -98,18 +98,18 @@ describe("Task Routing Manager (ARBITER-002)", () => {
     it("should route TypeScript task to highest UCB scoring agent within 50ms", async () => {
       // Given: 5 agents with varying TypeScript expertise
       const agents = [
-        createTestAgent("agent-1", "code-editing", 0.95, 30),
-        createTestAgent("agent-2", "code-editing", 0.85, 50),
-        createTestAgent("agent-3", "code-editing", 0.75, 70),
-        createTestAgent("agent-4", "code-editing", 0.9, 40),
-        createTestAgent("agent-5", "code-editing", 0.8, 60),
+        createTestAgent("agent-1", "file_editing", 0.95, 30),
+        createTestAgent("agent-2", "file_editing", 0.85, 50),
+        createTestAgent("agent-3", "file_editing", 0.75, 70),
+        createTestAgent("agent-4", "file_editing", 0.9, 40),
+        createTestAgent("agent-5", "file_editing", 0.8, 60),
       ];
 
       for (const agent of agents) {
         await agentRegistry.registerAgent(agent);
       }
 
-      const task = createTestTask("task-1", "code-editing", {
+      const task = createTestTask("task-1", "file_editing", {
         languages: ["TypeScript"],
       });
 
@@ -127,15 +127,15 @@ describe("Task Routing Manager (ARBITER-002)", () => {
 
     it("should include routing rationale and alternatives", async () => {
       const agents = [
-        createTestAgent("agent-1", "code-editing", 0.95),
-        createTestAgent("agent-2", "code-editing", 0.85),
+        createTestAgent("agent-1", "file_editing", 0.95),
+        createTestAgent("agent-2", "file_editing", 0.85),
       ];
 
       for (const agent of agents) {
         await agentRegistry.registerAgent(agent);
       }
 
-      const task = createTestTask("task-1", "code-editing");
+      const task = createTestTask("task-1", "file_editing");
       const decision = await routingManager.routeTask(task);
 
       expect(decision.reason).toBeDefined();
@@ -150,12 +150,12 @@ describe("Task Routing Manager (ARBITER-002)", () => {
       // Given: Agent with 95% success rate
       const highPerformer = createTestAgent(
         "high-performer",
-        "code-editing",
+        "file_editing",
         0.95
       );
       const lowPerformer = createTestAgent(
         "low-performer",
-        "code-editing",
+        "file_editing",
         0.5
       );
 
@@ -165,7 +165,7 @@ describe("Task Routing Manager (ARBITER-002)", () => {
       // When: Make 100 routing decisions
       let highPerformerSelected = 0;
       for (let i = 0; i < 100; i++) {
-        const task = createTestTask(`task-${i}`, "code-editing");
+        const task = createTestTask(`task-${i}`, "file_editing");
         const decision = await routingManager.routeTask(task);
 
         if (decision.selectedAgent.id === "high-performer") {
@@ -183,10 +183,10 @@ describe("Task Routing Manager (ARBITER-002)", () => {
   describe("A3: 10% probability of exploration for new agents", () => {
     it("should give new unproven agent exploration opportunities", async () => {
       // Given: One proven agent and one new agent
-      const provenAgent = createTestAgent("proven", "code-editing", 0.95);
+      const provenAgent = createTestAgent("proven", "file_editing", 0.95);
       provenAgent.performanceHistory.taskCount = 50;
 
-      const newAgent = createTestAgent("new", "code-editing", 0.8);
+      const newAgent = createTestAgent("new", "file_editing", 0.8);
       newAgent.performanceHistory.taskCount = 5; // New agent with minimal history
 
       await agentRegistry.registerAgent(provenAgent);
@@ -195,7 +195,7 @@ describe("Task Routing Manager (ARBITER-002)", () => {
       // When: Make 100 routing decisions
       let newAgentSelected = 0;
       for (let i = 0; i < 100; i++) {
-        const task = createTestTask(`task-${i}`, "code-editing");
+        const task = createTestTask(`task-${i}`, "file_editing");
         const decision = await routingManager.routeTask(task);
 
         if (decision.selectedAgent.id === "new") {
@@ -216,13 +216,13 @@ describe("Task Routing Manager (ARBITER-002)", () => {
       // Given: One agent at 90% load, one at 30% load
       const overloadedAgent = createTestAgent(
         "overloaded",
-        "code-editing",
+        "file_editing",
         0.95,
         90
       );
       const availableAgent = createTestAgent(
         "available",
-        "code-editing",
+        "file_editing",
         0.9,
         30
       );
@@ -231,7 +231,7 @@ describe("Task Routing Manager (ARBITER-002)", () => {
       await agentRegistry.registerAgent(availableAgent);
 
       // When: Make routing decision
-      const task = createTestTask("task-1", "code-editing");
+      const task = createTestTask("task-1", "file_editing");
       const decision = await routingManager.routeTask(task);
 
       // Then: Prefer available agent despite slightly lower success rate
@@ -251,18 +251,18 @@ describe("Task Routing Manager (ARBITER-002)", () => {
   describe("A5: Task rejected with capability mismatch error", () => {
     it("should throw error when no agents have required specialization", async () => {
       // Given: Agents lack required specialization
-      const agent = createTestAgent("agent-1", "code-editing");
+      const agent = createTestAgent("agent-1", "file_editing");
       agent.capabilities.specializations = ["API design"]; // Not security audit
 
       await agentRegistry.registerAgent(agent);
 
       // When: Task requires specific security audit specialization
-      const task = createTestTask("task-1", "code-editing");
+      const task = createTestTask("task-1", "file_editing");
       task.requiredCapabilities.specializations = ["Security audit"];
 
       // Then: Should throw error because no agents match the specialization filter
       await expect(routingManager.routeTask(task)).rejects.toThrow(
-        /No agents available for task type: code-editing/
+        /No agents available for task type: file_editing/
       );
     });
 
@@ -271,12 +271,12 @@ describe("Task Routing Manager (ARBITER-002)", () => {
       const agent = createTestAgent("agent-1", "research");
       await agentRegistry.registerAgent(agent);
 
-      // When: Task requires code-editing
-      const task = createTestTask("task-1", "code-editing");
+      // When: Task requires file_editing
+      const task = createTestTask("task-1", "file_editing");
 
       // Then: Throw error
       await expect(routingManager.routeTask(task)).rejects.toThrow(
-        /No agents available for task type: code-editing/
+        /No agents available for task type: file_editing/
       );
     });
   });
@@ -287,7 +287,7 @@ describe("Task Routing Manager (ARBITER-002)", () => {
       for (let i = 0; i < 10; i++) {
         const agent = createTestAgent(
           `agent-${i}`,
-          "code-editing",
+          "file_editing",
           0.8 + i * 0.01
         );
         await agentRegistry.registerAgent(agent);
@@ -296,7 +296,7 @@ describe("Task Routing Manager (ARBITER-002)", () => {
       // When: Make 100 routing decisions and measure latency
       const latencies: number[] = [];
       for (let i = 0; i < 100; i++) {
-        const task = createTestTask(`task-${i}`, "code-editing");
+        const task = createTestTask(`task-${i}`, "file_editing");
         const startTime = Date.now();
         await routingManager.routeTask(task);
         latencies.push(Date.now() - startTime);
@@ -313,10 +313,10 @@ describe("Task Routing Manager (ARBITER-002)", () => {
 
   describe("Routing Outcome Feedback", () => {
     it("should update agent performance based on routing outcomes", async () => {
-      const agent = createTestAgent("agent-1", "code-editing", 0.8);
+      const agent = createTestAgent("agent-1", "file_editing", 0.8);
       await agentRegistry.registerAgent(agent);
 
-      const task = createTestTask("task-1", "code-editing");
+      const task = createTestTask("task-1", "file_editing");
       const decision = await routingManager.routeTask(task);
 
       // Record successful outcome
@@ -338,10 +338,10 @@ describe("Task Routing Manager (ARBITER-002)", () => {
     });
 
     it("should update routing metrics based on outcomes", async () => {
-      const agent = createTestAgent("agent-1", "code-editing");
+      const agent = createTestAgent("agent-1", "file_editing");
       await agentRegistry.registerAgent(agent);
 
-      const task = createTestTask("task-1", "code-editing");
+      const task = createTestTask("task-1", "file_editing");
       const decision = await routingManager.routeTask(task);
 
       // Record outcomes
@@ -360,10 +360,10 @@ describe("Task Routing Manager (ARBITER-002)", () => {
 
   describe("Routing Statistics", () => {
     it("should provide comprehensive routing statistics", async () => {
-      const agent = createTestAgent("agent-1", "code-editing");
+      const agent = createTestAgent("agent-1", "file_editing");
       await agentRegistry.registerAgent(agent);
 
-      const task = createTestTask("task-1", "code-editing");
+      const task = createTestTask("task-1", "file_editing");
       await routingManager.routeTask(task);
 
       const stats = await routingManager.getRoutingStats();
@@ -379,8 +379,8 @@ describe("Task Routing Manager (ARBITER-002)", () => {
 
     it("should track exploration vs exploitation rates", async () => {
       const agents = [
-        createTestAgent("agent-1", "code-editing", 0.95),
-        createTestAgent("agent-2", "code-editing", 0.5),
+        createTestAgent("agent-1", "file_editing", 0.95),
+        createTestAgent("agent-2", "file_editing", 0.5),
       ];
 
       for (const agent of agents) {
@@ -389,7 +389,7 @@ describe("Task Routing Manager (ARBITER-002)", () => {
 
       // Make multiple routing decisions
       for (let i = 0; i < 20; i++) {
-        const task = createTestTask(`task-${i}`, "code-editing");
+        const task = createTestTask(`task-${i}`, "file_editing");
         await routingManager.routeTask(task);
       }
 
@@ -418,10 +418,10 @@ describe("Task Routing Manager (ARBITER-002)", () => {
     });
 
     it("should reset metrics correctly", async () => {
-      const agent = createTestAgent("agent-1", "code-editing");
+      const agent = createTestAgent("agent-1", "file_editing");
       await agentRegistry.registerAgent(agent);
 
-      const task = createTestTask("task-1", "code-editing");
+      const task = createTestTask("task-1", "file_editing");
       await routingManager.routeTask(task);
 
       routingManager.resetMetrics();
@@ -441,7 +441,7 @@ describe("Task Routing Manager (ARBITER-002)", () => {
 
   describe("Error Handling", () => {
     it("should handle empty agent registry gracefully", async () => {
-      const task = createTestTask("task-1", "code-editing");
+      const task = createTestTask("task-1", "file_editing");
 
       await expect(routingManager.routeTask(task)).rejects.toThrow(
         /No agents available/
@@ -449,7 +449,7 @@ describe("Task Routing Manager (ARBITER-002)", () => {
     });
 
     it("should track failed routing attempts in metrics", async () => {
-      const task = createTestTask("task-1", "code-editing");
+      const task = createTestTask("task-1", "file_editing");
 
       try {
         await routingManager.routeTask(task);
@@ -470,15 +470,15 @@ describe("Task Routing Manager (ARBITER-002)", () => {
       });
 
       const agents = [
-        createTestAgent("agent-1", "code-editing", 0.95),
-        createTestAgent("agent-2", "code-editing", 0.85),
+        createTestAgent("agent-1", "file_editing", 0.95),
+        createTestAgent("agent-2", "file_editing", 0.85),
       ];
 
       for (const agent of agents) {
         await agentRegistry.registerAgent(agent);
       }
 
-      const task = createTestTask("task-1", "code-editing");
+      const task = createTestTask("task-1", "file_editing");
       const decision = await noBanditRouter.routeTask(task);
 
       expect(decision.strategy).toBe("capability-match");

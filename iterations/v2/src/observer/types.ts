@@ -202,6 +202,7 @@ export interface SubmitTaskPayload {
   description: string;
   specPath?: string;
   metadata?: Record<string, unknown>;
+  type?: string;
 }
 
 export interface SubmitTaskResult {

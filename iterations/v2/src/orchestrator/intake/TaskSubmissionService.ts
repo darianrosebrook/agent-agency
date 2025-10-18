@@ -56,7 +56,7 @@ export async function processTaskSubmission(
   const { intakeProcessor, auditLogger, runtime, generateTaskId } = deps;
 
   const intakeResult = await intakeProcessor.process({
-    payload: rawTask,
+    payload: JSON.stringify(rawTask),
     metadata: {
       contentType: "application/json",
       surface:
@@ -138,6 +138,7 @@ export async function processTaskSubmission(
   await runtime.submitTask({
     description: sanitizedTask.description,
     metadata: sanitizedTask.metadata,
+    type: sanitizedTask.type,
     task: sanitizedTask,
   });
 

@@ -188,7 +188,8 @@ pub struct MemoryStatus {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum MemoryPressure {
     Normal,
-    Warning,
+    Medium,
+    High,
     Critical,
 }
 

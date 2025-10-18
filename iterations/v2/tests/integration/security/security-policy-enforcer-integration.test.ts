@@ -41,7 +41,7 @@ describe("Security Policy Enforcer - End-to-End Integration", () => {
     name: "Test Agent",
     modelFamily: "gpt-4",
     capabilities: {
-      taskTypes: ["code-editing", "research"],
+      taskTypes: ["file_editing", "research"],
       languages: ["TypeScript", "Python"],
       specializations: ["Security audit", "API design"] as Specialization[],
     },

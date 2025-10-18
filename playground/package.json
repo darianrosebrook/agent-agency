@@ -1,0 +1,22 @@
+{
+  "name": "arbiter-playground",
+  "version": "1.0.0",
+  "description": "Playground for testing v2 arbiter capabilities",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "typescript": "^5.0.0",
+    "eslint": "^8.0.0",
+    "@types/node": "^20.0.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.0.0"
+  },
+  "keywords": ["arbiter", "testing", "playground"],
+  "author": "@darianrosebrook",
+  "license": "MIT"
+}

@@ -158,7 +158,7 @@ async function benchmarkAgentRegistration(
       name: `Benchmark Agent ${i}`,
       modelFamily: i % 2 === 0 ? "gpt-4" : "claude-3",
       capabilities: {
-        taskTypes: ["code-editing"],
+        taskTypes: ["file_editing"],
         languages: ["TypeScript"],
         specializations: [],
       },
@@ -210,7 +210,7 @@ async function benchmarkCapabilityQuery(
   const iterations = 200;
 
   const queries = [
-    { taskType: "code-editing", languages: ["TypeScript"] },
+    { taskType: "file_editing", languages: ["TypeScript"] },
     { taskType: "debugging", languages: ["TypeScript"] },
   ];
 
@@ -242,7 +242,7 @@ async function benchmarkPerformanceUpdate(
   for (let i = 0; i < iterations; i++) {
     const agentId = agentIds[i % agentIds.length];
     const metrics: PerformanceMetrics = {
-      taskType: "code-editing",
+      taskType: "file_editing",
       success: i % 3 !== 0,
       qualityScore: 0.7 + Math.random() * 0.3,
       latencyMs: 100 + Math.random() * 100,
@@ -322,7 +322,7 @@ async function benchmarkMemoryUsage(
       name: `Memory Test Agent ${i}`,
       modelFamily: i % 2 === 0 ? "gpt-4" : "claude-3",
       capabilities: {
-        taskTypes: ["code-editing", "debugging", "testing"],
+        taskTypes: ["file_editing", "debugging", "testing"],
         languages: ["TypeScript", "Python"],
         specializations: ["performance"],
       },

@@ -11,7 +11,7 @@ import * as crypto from "crypto";
 import { EventEmitter } from "events";
 import * as path from "path";
 import { Worker } from "worker_threads";
-import { PerformanceTracker } from "../rl/PerformanceTracker";
+import { PerformanceTracker } from "../rl/PerformanceTracker.js";
 import {
   PleadingDecision,
   PleadingWorkflow,
@@ -46,11 +46,8 @@ import {
 } from "./worker/WorkerPoolSupervisor";
 
 // Define orchestratorDir for ES modules (Jest-compatible)
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const orchestratorDir = dirname(__filename);
+// Use a simple path resolution that works in most cases
+const orchestratorDir = path.join(process.cwd(), 'src', 'orchestrator');
 
 /**
  * Worker Pool Manager

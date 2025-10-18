@@ -15,7 +15,7 @@ async fn test_v3_superiority_demonstration() {
     println!("{}", "=".repeat(50));
 
     // Create V3's Advanced Arbitration Engine
-    let arbitration_engine = AdvancedArbitrationEngine::new();
+    let arbitration_engine = AdvancedArbitrationEngine::new().unwrap();
 
     // Create test worker outputs with varying characteristics
     let outputs = vec![
@@ -254,6 +254,7 @@ async fn test_v3_learning_integration_superiority() {
 
     // Create test arbitration result
     let consensus = ConsensusResult {
+        task_id: Uuid::new_v4(),
         final_decision: "Accept with modifications".to_string(),
         confidence: 0.85,
         quality_score: 0.8,
@@ -264,6 +265,7 @@ async fn test_v3_learning_integration_superiority() {
             ("quality".to_string(), 0.8),
         ]),
         reasoning: "Quality-weighted consensus achieved with constitutional override".to_string(),
+        evaluation_time_ms: 150,
     };
 
     // Create test outputs

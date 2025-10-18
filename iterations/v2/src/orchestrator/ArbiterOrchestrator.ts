@@ -602,7 +602,6 @@ export class ArbiterOrchestrator {
     } else {
       // Allow only safe task types
       const allowedTypes = [
-        "code-editing",
         "code-review",
         "analysis",
         "research",

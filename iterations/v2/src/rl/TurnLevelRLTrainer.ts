@@ -468,7 +468,7 @@ export class TurnLevelRLTrainer {
         const state = {
           taskContext: {
             taskId: rewardedTrajectory.conversationId,
-            taskType: "code-editing",
+            taskType: "file_editing",
             complexity: "standard" as const,
             requirements: {},
           },

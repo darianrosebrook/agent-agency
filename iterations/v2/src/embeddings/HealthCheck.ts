@@ -124,10 +124,10 @@ export class EmbeddingHealthCheck {
       memoryHealth,
     ] = await Promise.allSettled([
       this.checkOllamaHealth(
-        options.ollamaEndpoint || "http://localhost:11434"
+        options?.ollamaEndpoint || "http://localhost:11434"
       ),
-      this.checkCircuitBreakerHealth(options.circuitBreaker),
-      this.checkRateLimiterHealth(options.rateLimiter),
+      this.checkCircuitBreakerHealth(options?.circuitBreaker),
+      this.checkRateLimiterHealth(options?.rateLimiter),
       this.checkCacheHealth(embeddingService),
       this.checkMemoryHealth(),
     ]);

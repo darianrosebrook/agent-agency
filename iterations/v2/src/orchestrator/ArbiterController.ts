@@ -21,6 +21,7 @@ import { TaskPriority } from "../types/task-runner.js";
 import { WorkspaceStateManager } from "../workspace/WorkspaceStateManager.js";
 import { AgentRegistryManager } from "./AgentRegistryManager.js";
 import { AgentRegistry } from "../types/agent-registry.js";
+import { runtimeAgentSeeds } from "./runtime/runtimeAgentDataset.js";
 import { ArbiterOrchestrator } from "./ArbiterOrchestrator.js";
 import { TaskOrchestrator } from "./TaskOrchestrator.js";
 import {
@@ -120,6 +121,13 @@ export class ArbiterController {
   constructor(config: ArbiterControllerConfig) {
     this.config = config;
     this.taskIntakeProcessor = new TaskIntakeProcessor(config.intake);
+  }
+
+  /**
+   * Get the ArbiterRuntime instance
+   */
+  getRuntime(): ArbiterRuntime | undefined {
+    return this.runtime;
   }
 
   /**
@@ -227,12 +235,19 @@ export class ArbiterController {
           enableAutoCleanup: true,
           cleanupIntervalMs: 60 * 60 * 1000, // 1 hour
           enablePersistence: false,
-          enableSecurity: true,
+          enableSecurity: false, // Disable security for runtime agents
         },
         this.performanceTracker
       );
       await this.agentRegistry.initialize();
-      console.log("✅ Agent registry initialized");
+
+      // Seed the registry with runtime agents
+      for (const seed of runtimeAgentSeeds) {
+        await this.agentRegistry.registerAgent(seed);
+      }
+      console.log(
+        `✅ Agent registry initialized with ${runtimeAgentSeeds.length} seeded agents`
+      );
 
       // Initialize task orchestrator
       this.taskOrchestrator = new TaskOrchestrator(
@@ -651,6 +666,9 @@ export class ArbiterController {
    * Get the agent registry for sharing with other components
    */
   getAgentRegistry(): AgentRegistry {
+    if (!this.agentRegistry) {
+      throw new Error("Agent registry not initialized");
+    }
     return this.agentRegistry;
   }
 

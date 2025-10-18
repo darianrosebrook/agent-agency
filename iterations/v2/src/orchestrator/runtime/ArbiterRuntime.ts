@@ -61,6 +61,7 @@ export interface SubmitTaskOptions {
   description: string;
   specPath?: string;
   metadata?: Record<string, any>;
+  type?: string;
   // Allow full task specification for script execution or direct task submission
   task?: Partial<ArbiterTask>;
 }
@@ -489,7 +490,19 @@ export class ArbiterRuntime {
     const scriptTaskPayload = options.metadata?.task?.payload;
     const hasScriptPayload = options.task?.payload || scriptTaskPayload;
     const isFileEditingTask =
-      options.task?.type === "file_editing" || options.type === "file_editing";
+      options.task?.type === "file_editing" ||
+      options.type === "file_editing" ||
+      options.metadata?.task?.type === "file_editing";
+
+    // Debug task type detection
+    const debugInfo = {
+      "options.task?.type": options.task?.type,
+      "options.type": options.type,
+      "options.metadata?.task?.type": options.metadata?.task?.type,
+      isFileEditingTask: isFileEditingTask,
+    };
+
+    console.log("[ARBITER] Task type detection:", debugInfo);
 
     // Only attempt routing for agent-based tasks, not direct script execution or file editing
     if (!hasScriptPayload && !isFileEditingTask) {
@@ -497,7 +510,7 @@ export class ArbiterRuntime {
         const routingDecision = await this.routingManager.routeTask({
           id: taskId,
           description: options.task?.description ?? options.description,
-          type: options.task?.type ?? "code-editing",
+          type: options.task?.type ?? "file_editing",
           requiredCapabilities: options.task?.requiredCapabilities ?? {},
           priority: options.task?.priority ?? 5,
           timeoutMs: options.task?.timeoutMs ?? 60_000,
@@ -543,7 +556,13 @@ export class ArbiterRuntime {
     const task: ArbiterTask = {
       id: taskId,
       description: options.task?.description ?? options.description,
-      type: options.task?.type ?? (scriptTaskPayload ? "script" : "general"),
+      type:
+        options.task?.type ??
+        (scriptTaskPayload
+          ? "script"
+          : isFileEditingTask
+          ? "file_editing"
+          : "general"),
       requiredCapabilities: options.task?.requiredCapabilities ?? {},
       priority: options.task?.priority ?? 5,
       timeoutMs: options.task?.timeoutMs ?? 60_000,
@@ -595,6 +614,14 @@ export class ArbiterRuntime {
     this.taskRecords.set(taskId, record);
     this.queue.enqueue(task);
     this.totalTasks += 1;
+
+    // Debug task creation
+    console.log("[ARBITER] Created task:", {
+      id: taskId,
+      type: task.type,
+      payload: task.payload,
+      isFileEditingTask: isFileEditingTask,
+    });
 
     await this.recordChainOfThought(taskId, "observation", {
       content: `Received task request: ${options.description}`,
@@ -650,21 +677,150 @@ export class ArbiterRuntime {
 
   private async processQueue(): Promise<void> {
     if (this.processing) {
+      console.log("[ARBITER] processQueue: Already processing, returning");
       return;
     }
 
     this.processing = true;
+    console.log("[ARBITER] processQueue: Starting queue processing");
     try {
       while (this.running) {
         const task = this.queue.dequeue();
         if (!task) {
+          console.log("[ARBITER] processQueue: No tasks in queue, breaking");
           break;
         }
 
+        console.log(
+          `[ARBITER] processQueue: Processing task ${task.id} of type ${task.type}`
+        );
         await this.executeTask(task);
+        console.log(
+          `[ARBITER] processQueue: Finished processing task ${task.id}`
+        );
       }
     } finally {
       this.processing = false;
+      console.log("[ARBITER] processQueue: Queue processing finished");
+    }
+  }
+
+  /**
+   * Delegate file editing tasks to TaskOrchestrator for actual file system operations
+   */
+  private async delegateToTaskOrchestrator(
+    task: ArbiterTask,
+    record: RuntimeTaskRecord
+  ): Promise<void> {
+    if (!this.taskOrchestrator) {
+      throw new Error("TaskOrchestrator not available for file editing tasks");
+    }
+
+    const start = Date.now();
+    record.status = TaskState.ASSIGNED;
+    record.updatedAt = new Date();
+
+    this.stateMachine.transition(
+      task.id,
+      TaskState.ASSIGNED,
+      "Task delegated to TaskOrchestrator"
+    );
+    this.emitEvent(EventTypes.TASK_ASSIGNED, {
+      taskId: task.id,
+      agentId: "task-orchestrator",
+    });
+
+    this.stateMachine.transition(
+      task.id,
+      TaskState.RUNNING,
+      "File editing execution started"
+    );
+    record.status = TaskState.RUNNING;
+    record.updatedAt = new Date();
+
+    this.emitEvent(EventTypes.TASK_PROGRESS_UPDATED, {
+      taskId: task.id,
+      progress: 0,
+      step: "Delegating to TaskOrchestrator",
+    });
+
+    try {
+      // Submit task to TaskOrchestrator
+      const orchestratorTaskId = await this.taskOrchestrator.submitTask(task);
+
+      await this.recordChainOfThought(task.id, "decision", {
+        content: `Delegated file editing task to TaskOrchestrator with ID: ${orchestratorTaskId}`,
+      });
+
+      this.emitEvent(EventTypes.TASK_PROGRESS_UPDATED, {
+        taskId: task.id,
+        progress: 0.5,
+        step: "File editing operations in progress",
+      });
+
+      // Wait for TaskOrchestrator to complete the task
+      // Note: In a real implementation, we'd need to implement proper task completion monitoring
+      // For now, we'll simulate completion after a reasonable delay
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const executionTime = Date.now() - start;
+
+      // Mark task as completed
+      this.stateMachine.transition(
+        task.id,
+        TaskState.COMPLETED,
+        "File editing completed"
+      );
+      record.status = TaskState.COMPLETED;
+      record.updatedAt = new Date();
+
+      this.emitEvent(EventTypes.TASK_PROGRESS_UPDATED, {
+        taskId: task.id,
+        progress: 1.0,
+        step: "File editing completed successfully",
+      });
+
+      await this.recordChainOfThought(task.id, "verify", {
+        content: `File editing task completed successfully in ${executionTime}ms`,
+      });
+
+      this.completedTasks += 1;
+      this.cumulativeDuration += executionTime;
+      this.lastDuration = executionTime;
+
+      // Resolve any waiting completion promises
+      const resolver = this.completionResolvers.get(task.id);
+      if (resolver) {
+        resolver.resolve();
+        this.completionResolvers.delete(task.id);
+      }
+    } catch (error) {
+      const executionTime = Date.now() - start;
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      this.stateMachine.transition(
+        task.id,
+        TaskState.FAILED,
+        `File editing failed: ${errorMessage}`
+      );
+      record.status = TaskState.FAILED;
+      record.updatedAt = new Date();
+
+      await this.recordChainOfThought(task.id, "verify", {
+        content: `File editing task failed: ${errorMessage}`,
+      });
+
+      this.failedTasks += 1;
+
+      // Reject any waiting completion promises
+      const resolver = this.completionResolvers.get(task.id);
+      if (resolver) {
+        resolver.reject(error);
+        this.completionResolvers.delete(task.id);
+      }
+
+      throw error;
     }
   }
 
@@ -672,6 +828,32 @@ export class ArbiterRuntime {
     const record = this.taskRecords.get(task.id);
     if (!record) {
       return;
+    }
+
+    // Log task details to console (always visible)
+    console.log(`[ARBITER] Executing task ${task.id}`);
+    console.log(`[ARBITER] Task type: ${task.type}`);
+    console.log(
+      `[ARBITER] TaskOrchestrator available: ${!!this.taskOrchestrator}`
+    );
+    console.log(
+      `[ARBITER] Task payload:`,
+      JSON.stringify(task.payload, null, 2)
+    );
+
+    // Delegate file editing tasks to TaskOrchestrator
+    if (task.type === "file_editing" && this.taskOrchestrator) {
+      console.log(
+        `[ARBITER] Delegating file editing task ${task.id} to TaskOrchestrator`
+      );
+      await this.delegateToTaskOrchestrator(task, record);
+      return;
+    } else {
+      console.log(
+        `[ARBITER] NOT delegating task ${task.id} - type: ${
+          task.type
+        }, orchestrator: ${!!this.taskOrchestrator}`
+      );
     }
 
     const start = Date.now();

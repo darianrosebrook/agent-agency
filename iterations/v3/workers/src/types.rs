@@ -33,6 +33,9 @@ pub struct Worker {
     pub capabilities: WorkerCapabilities,
     pub status: WorkerStatus,
     pub performance_metrics: WorkerPerformanceMetrics,
+    pub health_status: WorkerHealthStatus,
+    pub health_metrics: Option<WorkerHealthMetrics>,
+    pub last_health_check: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub last_heartbeat: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
@@ -247,6 +250,35 @@ pub struct WorkerPoolStats {
     pub last_updated: DateTime<Utc>,
 }
 
+/// Worker health status
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WorkerHealthStatus {
+    Healthy,
+    Degraded,
+    Unhealthy,
+}
+
+/// Worker health metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkerHealthMetrics {
+    pub response_time_ms: u64,
+    pub cpu_usage_percent: f32,
+    pub memory_usage_percent: f32,
+    pub active_tasks: u32,
+    pub queue_depth: u32,
+    pub last_seen: DateTime<Utc>,
+    pub consecutive_failures: u32,
+}
+
+/// Worker metrics collection from /metrics endpoint
+#[derive(Debug, Clone, Default)]
+pub struct WorkerMetricsCollection {
+    pub cpu_usage: Option<f64>,
+    pub memory_usage: Option<f64>,
+    pub active_tasks: Option<u32>,
+    pub queue_depth: Option<u32>,
+}
+
 /// Worker health check result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkerHealthCheck {
@@ -305,6 +337,12 @@ pub enum WorkerPoolEvent {
         task_id: Uuid,
         worker_id: Uuid,
         error: String,
+    },
+    WorkerHealthChecked {
+        worker_id: Uuid,
+        is_healthy: bool,
+        response_time_ms: u64,
+        checked_at: DateTime<Utc>,
     },
     HealthCheckFailed {
         worker_id: Uuid,

@@ -2001,6 +2001,7 @@ impl MultiTurnLearningCoordinator {
         // In production, this would query worker performance logs
         Ok(Vec::new())
     }
+}
 
 /// Internal data structures for historical performance analysis
 

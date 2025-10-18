@@ -444,7 +444,10 @@ impl TaskExecutor {
         }
 
         // Check for documentation
-        let comment_lines = content.lines().filter(|l| l.trim().starts_with("//")).count();
+        let comment_lines = content
+            .lines()
+            .filter(|l| l.trim().starts_with("//"))
+            .count();
         let comment_ratio = comment_lines as f32 / lines.max(1) as f32;
 
         if comment_ratio > 0.1 {
@@ -497,14 +500,14 @@ impl TaskExecutor {
 
     /// Estimate test coverage based on content analysis
     fn estimate_test_coverage(&self, content: &str) -> Option<f32> {
-        let has_tests = content.contains("#[test]") ||
-                       content.to_lowercase().contains("test") ||
-                       content.contains("#[tokio::test]");
+        let has_tests = content.contains("#[test]")
+            || content.to_lowercase().contains("test")
+            || content.contains("#[tokio::test]");
 
         if has_tests {
             // Rough estimation based on test markers and assertions
-            let test_functions = content.matches("#[test]").count() +
-                               content.matches("#[tokio::test]").count();
+            let test_functions =
+                content.matches("#[test]").count() + content.matches("#[tokio::test]").count();
             let assertions = content.matches("assert").count();
 
             if test_functions > 0 {
@@ -523,13 +526,13 @@ impl TaskExecutor {
         let mut impact_score = 0.5; // Neutral impact
 
         // Check for performance-sensitive patterns
-        let allocations = content.matches("vec!").count() +
-                        content.matches("HashMap::new").count() +
-                        content.matches("Box::new").count();
+        let allocations = content.matches("vec!").count()
+            + content.matches("HashMap::new").count()
+            + content.matches("Box::new").count();
 
         let async_operations = content.matches("async").count();
-        let blocking_operations = content.matches("std::fs").count() +
-                                content.matches("std::net").count();
+        let blocking_operations =
+            content.matches("std::fs").count() + content.matches("std::net").count();
 
         // Performance concerns
         if allocations > 10 {
@@ -765,25 +768,475 @@ struct RawExecutionResult {
     error: Option<String>,
 }
 
-/// CAWS specification (simplified)
+/// CAWS specification structure for quality assurance and compliance
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct CawsSpec {
-    // TODO: Implement actual CAWS specification details with the following requirements:
-    // 1. CAWS specification parsing: Parse CAWS specification files
-    //    - Load and parse CAWS specification from files
-    //    - Validate CAWS specification format and structure
-    //    - Handle CAWS specification parsing error detection and reporting
-    // 2. CAWS specification validation: Validate CAWS specification content
-    //    - Verify CAWS specification completeness and accuracy
-    //    - Check CAWS specification compatibility and constraints
-    //    - Handle CAWS specification validation error detection and reporting
-    // 3. CAWS specification processing: Process CAWS specification data
-    //    - Convert CAWS specification to structured format
-    //    - Handle CAWS specification processing error detection and reporting
-    // 4. CAWS specification optimization: Optimize CAWS specification handling
-    //    - Implement efficient CAWS specification algorithms
-    //    - Handle large-scale CAWS specification operations
-    //    - Optimize CAWS specification quality and reliability
+pub struct CawsSpec {
+    /// Specification version
+    pub version: String,
+    /// Specification metadata
+    pub metadata: CawsMetadata,
+    /// Quality gates and criteria
+    pub quality_gates: Vec<QualityGate>,
+    /// Compliance requirements
+    pub compliance: ComplianceRequirements,
+    /// Validation rules
+    pub validation_rules: Vec<ValidationRule>,
+    /// Performance benchmarks
+    pub benchmarks: Option<BenchmarkSpec>,
+    /// Security requirements
+    pub security: SecurityRequirements,
+}
+
+/// CAWS specification metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CawsMetadata {
+    /// Specification name
+    pub name: String,
+    /// Description
+    pub description: String,
+    /// Author information
+    pub author: String,
+    /// Creation timestamp
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    /// Last modified timestamp
+    pub modified_at: chrono::DateTime<chrono::Utc>,
+    /// Tags for categorization
+    pub tags: Vec<String>,
+}
+
+/// Quality gate definition
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QualityGate {
+    /// Gate identifier
+    pub id: String,
+    /// Gate name
+    pub name: String,
+    /// Gate description
+    pub description: String,
+    /// Gate type
+    pub gate_type: QualityGateType,
+    /// Threshold values
+    pub thresholds: ThresholdConfig,
+    /// Required for passing
+    pub required: bool,
+    /// Weight in overall scoring
+    pub weight: f32,
+}
+
+/// Quality gate types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum QualityGateType {
+    /// Code coverage threshold
+    Coverage,
+    /// Performance benchmark
+    Performance,
+    /// Security scan results
+    Security,
+    /// Code quality metrics
+    CodeQuality,
+    /// Documentation completeness
+    Documentation,
+    /// Test coverage
+    TestCoverage,
+    /// Custom gate
+    Custom(String),
+}
+
+/// Threshold configuration for quality gates
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThresholdConfig {
+    /// Minimum acceptable value
+    pub min: Option<f32>,
+    /// Maximum acceptable value
+    pub max: Option<f32>,
+    /// Target value
+    pub target: Option<f32>,
+    /// Unit of measurement
+    pub unit: String,
+}
+
+/// Compliance requirements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComplianceRequirements {
+    /// Required standards
+    pub standards: Vec<String>,
+    /// Regulatory requirements
+    pub regulatory: Vec<RegulatoryRequirement>,
+    /// Internal policies
+    pub policies: Vec<PolicyRequirement>,
+    /// Audit requirements
+    pub audit: AuditRequirements,
+}
+
+/// Regulatory requirement
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegulatoryRequirement {
+    /// Regulation name
+    pub name: String,
+    /// Regulation version
+    pub version: String,
+    /// Applicable regions
+    pub regions: Vec<String>,
+    /// Compliance level required
+    pub level: ComplianceLevel,
+}
+
+/// Policy requirement
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PolicyRequirement {
+    /// Policy identifier
+    pub id: String,
+    /// Policy name
+    pub name: String,
+    /// Policy description
+    pub description: String,
+    /// Enforcement level
+    pub enforcement: EnforcementLevel,
+}
+
+/// Compliance levels
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ComplianceLevel {
+    /// Must comply
+    Required,
+    /// Should comply
+    Recommended,
+    /// Optional compliance
+    Optional,
+}
+
+/// Enforcement levels
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum EnforcementLevel {
+    /// Hard requirement - failure blocks deployment
+    Hard,
+    /// Soft requirement - failure generates warning
+    Soft,
+    /// Advisory - failure generates info message
+    Advisory,
+}
+
+/// Audit requirements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditRequirements {
+    /// Audit frequency
+    pub frequency: AuditFrequency,
+    /// Audit scope
+    pub scope: Vec<String>,
+    /// Retention period for audit logs
+    pub retention_days: u32,
+    /// Required audit evidence
+    pub evidence: Vec<AuditEvidence>,
+}
+
+/// Audit frequency
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AuditFrequency {
+    /// Continuous monitoring
+    Continuous,
+    /// Daily audits
+    Daily,
+    /// Weekly audits
+    Weekly,
+    /// Monthly audits
+    Monthly,
+    /// Quarterly audits
+    Quarterly,
+    /// Annual audits
+    Annual,
+}
+
+/// Audit evidence requirements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditEvidence {
+    /// Evidence type
+    pub evidence_type: String,
+    /// Evidence description
+    pub description: String,
+    /// Required format
+    pub format: String,
+    /// Retention period
+    pub retention_days: u32,
+}
+
+/// Validation rule
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidationRule {
+    /// Rule identifier
+    pub id: String,
+    /// Rule name
+    pub name: String,
+    /// Rule description
+    pub description: String,
+    /// Rule type
+    pub rule_type: ValidationRuleType,
+    /// Rule configuration
+    pub config: serde_json::Value,
+    /// Severity level
+    pub severity: SeverityLevel,
+    /// Applicable file patterns
+    pub file_patterns: Vec<String>,
+}
+
+/// Validation rule types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ValidationRuleType {
+    /// Syntax validation
+    Syntax,
+    /// Semantic validation
+    Semantic,
+    /// Style validation
+    Style,
+    /// Security validation
+    Security,
+    /// Performance validation
+    Performance,
+    /// Custom validation
+    Custom(String),
+}
+
+/// Severity levels
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum SeverityLevel {
+    /// Critical - must be fixed
+    Critical,
+    /// High - should be fixed
+    High,
+    /// Medium - consider fixing
+    Medium,
+    /// Low - nice to fix
+    Low,
+    /// Info - informational only
+    Info,
+}
+
+/// Benchmark specification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BenchmarkSpec {
+    /// Benchmark name
+    pub name: String,
+    /// Benchmark description
+    pub description: String,
+    /// Performance metrics
+    pub metrics: Vec<PerformanceMetric>,
+    /// Test scenarios
+    pub scenarios: Vec<TestScenario>,
+    /// Baseline values
+    pub baselines: HashMap<String, f32>,
+}
+
+/// Performance metric
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceMetric {
+    /// Metric name
+    pub name: String,
+    /// Metric description
+    pub description: String,
+    /// Metric unit
+    pub unit: String,
+    /// Measurement method
+    pub method: String,
+    /// Target value
+    pub target: Option<f32>,
+    /// Threshold value
+    pub threshold: Option<f32>,
+}
+
+/// Test scenario
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScenario {
+    /// Scenario name
+    pub name: String,
+    /// Scenario description
+    pub description: String,
+    /// Test parameters
+    pub parameters: HashMap<String, serde_json::Value>,
+    /// Expected outcomes
+    pub expected: HashMap<String, f32>,
+}
+
+/// Security requirements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SecurityRequirements {
+    /// Security standards
+    pub standards: Vec<String>,
+    /// Vulnerability scanning requirements
+    pub vulnerability_scanning: VulnerabilityScanning,
+    /// Access control requirements
+    pub access_control: AccessControlRequirements,
+    /// Data protection requirements
+    pub data_protection: DataProtectionRequirements,
+}
+
+/// Vulnerability scanning requirements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VulnerabilityScanning {
+    /// Enable vulnerability scanning
+    pub enabled: bool,
+    /// Scan frequency
+    pub frequency: ScanFrequency,
+    /// Severity thresholds
+    pub severity_thresholds: HashMap<SeverityLevel, bool>,
+    /// Excluded vulnerabilities
+    pub exclusions: Vec<String>,
+}
+
+/// Scan frequency
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ScanFrequency {
+    /// On every build
+    OnBuild,
+    /// Daily
+    Daily,
+    /// Weekly
+    Weekly,
+    /// Monthly
+    Monthly,
+}
+
+/// Access control requirements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccessControlRequirements {
+    /// Authentication requirements
+    pub authentication: AuthenticationRequirements,
+    /// Authorization requirements
+    pub authorization: AuthorizationRequirements,
+    /// Session management
+    pub session_management: SessionManagement,
+}
+
+/// Authentication requirements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthenticationRequirements {
+    /// Required authentication methods
+    pub methods: Vec<AuthMethod>,
+    /// Password requirements
+    pub password_policy: Option<PasswordPolicy>,
+    /// Multi-factor authentication
+    pub mfa_required: bool,
+}
+
+/// Authentication methods
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AuthMethod {
+    /// Username/password
+    UsernamePassword,
+    /// API key
+    ApiKey,
+    /// OAuth
+    OAuth,
+    /// SAML
+    Saml,
+    /// LDAP
+    Ldap,
+    /// Custom
+    Custom(String),
+}
+
+/// Password policy
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PasswordPolicy {
+    /// Minimum length
+    pub min_length: u32,
+    /// Maximum length
+    pub max_length: u32,
+    /// Require uppercase
+    pub require_uppercase: bool,
+    /// Require lowercase
+    pub require_lowercase: bool,
+    /// Require numbers
+    pub require_numbers: bool,
+    /// Require special characters
+    pub require_special: bool,
+    /// Password expiration days
+    pub expiration_days: Option<u32>,
+}
+
+/// Authorization requirements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthorizationRequirements {
+    /// Role-based access control
+    pub rbac_enabled: bool,
+    /// Attribute-based access control
+    pub abac_enabled: bool,
+    /// Required roles
+    pub required_roles: Vec<String>,
+    /// Permission model
+    pub permission_model: PermissionModel,
+}
+
+/// Permission models
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PermissionModel {
+    /// Role-based permissions
+    RoleBased,
+    /// Resource-based permissions
+    ResourceBased,
+    /// Attribute-based permissions
+    AttributeBased,
+    /// Hybrid model
+    Hybrid,
+}
+
+/// Session management
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionManagement {
+    /// Session timeout (minutes)
+    pub timeout_minutes: u32,
+    /// Maximum concurrent sessions
+    pub max_concurrent: Option<u32>,
+    /// Session invalidation on logout
+    pub invalidate_on_logout: bool,
+    /// Secure session cookies
+    pub secure_cookies: bool,
+}
+
+/// Data protection requirements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DataProtectionRequirements {
+    /// Encryption requirements
+    pub encryption: EncryptionRequirements,
+    /// Data retention policies
+    pub retention: RetentionPolicy,
+    /// Privacy requirements
+    pub privacy: PrivacyRequirements,
+}
+
+/// Encryption requirements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncryptionRequirements {
+    /// Encryption at rest
+    pub at_rest: bool,
+    /// Encryption in transit
+    pub in_transit: bool,
+    /// Minimum encryption strength
+    pub min_strength: u32,
+    /// Approved algorithms
+    pub approved_algorithms: Vec<String>,
+}
+
+/// Retention policy
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RetentionPolicy {
+    /// Default retention period (days)
+    pub default_retention_days: u32,
+    /// Data type specific policies
+    pub type_specific: HashMap<String, u32>,
+    /// Automatic deletion
+    pub auto_delete: bool,
+}
+
+/// Privacy requirements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrivacyRequirements {
+    /// GDPR compliance
+    pub gdpr_compliant: bool,
+    /// CCPA compliance
+    pub ccpa_compliant: bool,
+    /// Data anonymization
+    pub anonymization_required: bool,
+    /// Consent management
+    pub consent_management: bool,
 }
 
 // Deterministic timing abstraction

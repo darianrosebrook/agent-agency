@@ -76,7 +76,11 @@ export class WordNetIndexer {
         `- Rate: ${(processedCount / (duration / 1000)).toFixed(1)} synsets/sec`
       );
     } catch (error) {
-      console.error(`WordNet indexing failed: ${error.message}`);
+      console.error(
+        `WordNet indexing failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
       throw error;
     }
   }
@@ -101,7 +105,11 @@ export class WordNetIndexer {
     } catch (error) {
       // Cleanup on error
       await execAsync(`rm -rf "${tempDir}"`);
-      throw new Error(`Failed to extract tar.gz: ${error.message}`);
+      throw new Error(
+        `Failed to extract tar.gz: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     }
   }
 
@@ -123,7 +131,11 @@ export class WordNetIndexer {
         synsets.push(...fileSynsets);
         console.log(`Parsed ${fileSynsets.length} ${pos} synsets`);
       } catch (error) {
-        console.warn(`Failed to parse ${pos} file: ${error.message}`);
+        console.warn(
+          `Failed to parse ${pos} file: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
       }
     }
 
@@ -162,7 +174,11 @@ export class WordNetIndexer {
         }
       }
     } catch (error) {
-      console.warn(`Error reading file ${filePath}: ${error.message}`);
+      console.warn(
+        `Error reading file ${filePath}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     }
 
     return synsets;
@@ -284,7 +300,11 @@ export class WordNetIndexer {
         insertData as any[]
       );
     } catch (error) {
-      console.error(`Batch processing failed: ${error.message}`);
+      console.error(
+        `Batch processing failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
       errorCount = synsets.length;
     }
 

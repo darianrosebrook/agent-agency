@@ -174,7 +174,7 @@ describe("Foundation Performance Benchmarks", () => {
         "Agent Query by Capability",
         async () => {
           await registry.getAgentsByCapability({
-            taskType: "code-editing",
+            taskType: "file_editing",
             languages: ["TypeScript"],
           });
         },

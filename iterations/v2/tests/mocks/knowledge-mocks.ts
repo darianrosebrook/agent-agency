@@ -169,7 +169,7 @@ export const mockResearchContext = (overrides: any = {}) => ({
  */
 export const mockTask = (overrides: Partial<Task> = {}): Task => ({
   id: `task-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-  type: "code-editing",
+  type: "file_editing",
   description: "Implement OAuth2 authentication in the Express.js API",
   requiredCapabilities: {},
   priority: 1,

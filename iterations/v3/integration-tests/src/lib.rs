@@ -11,6 +11,7 @@ pub mod test_utils;
 pub mod claim_extraction_tests;
 pub mod council_tests;
 pub mod cross_component_tests;
+pub mod database_tests;
 pub mod end_to_end_tests;
 pub mod orchestration_tests;
 pub mod performance_tests;
@@ -81,6 +82,7 @@ impl IntegrationTestRunner {
         self.run_research_tests().await?;
         self.run_orchestration_tests().await?;
         self.run_claim_extraction_tests().await?;
+        self.run_database_tests().await?;
         self.run_cross_component_tests().await?;
         self.run_end_to_end_tests().await?;
 
@@ -345,6 +347,7 @@ mod tests {
     use crate::claim_extraction_tests::ClaimExtractionIntegrationTests;
     use crate::council_tests::CouncilIntegrationTests;
     use crate::cross_component_tests::CrossComponentIntegrationTests;
+    use crate::database_tests::DatabaseIntegrationTests;
     use crate::end_to_end_tests::EndToEndIntegrationTests;
     use crate::orchestration_tests::OrchestrationIntegrationTests;
     use crate::performance_tests::PerformanceTests;

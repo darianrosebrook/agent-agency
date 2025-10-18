@@ -516,7 +516,7 @@ export class WorkspaceStateManager extends EventEmitter {
     }
 
     // Check file extension
-    const ext = change.path.split(".").pop()?.toLowerCase();
+    const ext = change.file.path.split(".").pop()?.toLowerCase();
     const supportedExtensions = [
       "ts",
       "js",
@@ -549,11 +549,11 @@ export class WorkspaceStateManager extends EventEmitter {
     try {
       // Read file content
       const fs = await import("fs/promises");
-      const content = await fs.readFile(change.path, "utf-8");
+      const content = await fs.readFile(change.file.path, "utf-8");
 
       // Prepare text for embedding
       const textForEmbedding = this.prepareFileTextForEmbedding(
-        change.path,
+        change.file.path,
         content
       );
 
@@ -574,18 +574,21 @@ export class WorkspaceStateManager extends EventEmitter {
       `,
         [
           "system",
-          change.path,
+          change.file.path,
           `[${embedding.join(",")}]`,
           JSON.stringify({
             source: "workspace_file",
-            file_type: change.path.split(".").pop(),
+            file_type: change.file.path.split(".").pop(),
             last_modified: change.timestamp || new Date().toISOString(),
           }),
         ]
       );
     } catch (error) {
       // Log error but don't throw - embedding failures shouldn't break file watching
-      console.error(`Failed to update embedding for ${change.path}:`, error);
+      console.error(
+        `Failed to update embedding for ${change.file.path}:`,
+        error
+      );
     }
   }
 

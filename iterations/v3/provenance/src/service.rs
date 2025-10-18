@@ -417,7 +417,7 @@ mod tests {
         // Service should be created successfully
         assert_eq!(
             service.config.signing.algorithm,
-            signer::SigningAlgorithm::EdDSA
+            SigningAlgorithm::EdDSA
         );
     }
 

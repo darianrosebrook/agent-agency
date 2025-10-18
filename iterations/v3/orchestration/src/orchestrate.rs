@@ -15,7 +15,7 @@ use agent_agency_council::coordinator::ProvenanceEmitter;
 use agent_agency_council::models::TaskSpec as CouncilTaskSpec;
 use agent_agency_council::types::*;
 use agent_agency_resilience::{
-    retry_with_backoff, CircuitBreaker, CircuitBreakerConfig, RetryConfig,
+    retry, CircuitBreaker, CircuitBreakerConfig, RetryConfig,
 };
 use anyhow::Result;
 use std::collections::HashMap;
@@ -221,7 +221,11 @@ pub async fn orchestrate_task(
 
     // Council evaluation with circuit breaker and retry
     let result = if let Some(cb) = council_circuit_breaker {
-        retry_with_backoff(
+        retry(
+            || async {
+                cb.call(|| async { coordinator.evaluate_task(to_task_spec(desc)).await })
+                    .await
+            },
             RetryConfig {
                 max_attempts: 3,
                 initial_delay_ms: 1000,
@@ -231,10 +235,6 @@ pub async fn orchestrate_task(
                 use_exponential_backoff: true,
                 use_jitter: true,
             },
-            || async {
-                cb.call(|| async { coordinator.evaluate_task(to_task_spec(desc)).await })
-                    .await
-            },
         )
         .await?
     } else {
@@ -243,7 +243,15 @@ pub async fn orchestrate_task(
 
     // Database persistence with circuit breaker and retry
     if let Some(cb) = db_circuit_breaker {
-        retry_with_backoff(
+        retry(
+            || async {
+                cb.call(|| async {
+                    writer
+                        .persist_verdict(&desc.task_id, &result.final_verdict)
+                        .await
+                })
+                .await
+            },
             RetryConfig {
                 max_attempts: 3,
                 initial_delay_ms: 500,
@@ -252,14 +260,6 @@ pub async fn orchestrate_task(
                 jitter_factor: 0.1,
                 use_exponential_backoff: true,
                 use_jitter: true,
-            },
-            || async {
-                cb.call(|| async {
-                    writer
-                        .persist_verdict(&desc.task_id, &result.final_verdict)
-                        .await
-                })
-                .await
             },
         )
         .await

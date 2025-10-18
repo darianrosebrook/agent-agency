@@ -223,7 +223,7 @@ pub struct TrendData {
     pub data_points: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TrendDirection {
     Improving,
     Declining,

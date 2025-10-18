@@ -107,7 +107,7 @@ describe("Research Flow Integration", () => {
     it("should complete full research flow for question task", async () => {
       const task = mockTask({
         description: "How do I implement OAuth2 in Express.js?",
-        type: "code-editing",
+        type: "file_editing",
       });
 
       // Step 1: Detection
@@ -157,7 +157,7 @@ describe("Research Flow Integration", () => {
       const task = mockTask({
         description:
           "How do I implement OAuth2? What are the security best practices? Which libraries should I use?",
-        type: "code-editing",
+        type: "file_editing",
       });
 
       const startTime = Date.now();
@@ -182,7 +182,7 @@ describe("Research Flow Integration", () => {
       const task = mockTask({
         description:
           "How do I implement OAuth2 in Express.js? I'm not sure which library to use.",
-        type: "code-editing",
+        type: "file_editing",
       });
 
       // Detection
@@ -435,7 +435,7 @@ describe("Research Flow Integration", () => {
       // Task with medium confidence
       const task = mockTask({
         description: "Implement a new API endpoint", // Technical keyword only (50%)
-        type: "code-editing",
+        type: "file_editing",
       });
 
       // Should not trigger research (below 0.95 threshold)

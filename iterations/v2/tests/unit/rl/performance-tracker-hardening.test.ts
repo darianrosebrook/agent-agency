@@ -291,7 +291,7 @@ describe("Performance Tracker - Production Hardening (ARBITER-004)", () => {
   describe("A5: Integration with All Components", () => {
     it("should collect agent registration metrics", async () => {
       await tracker.recordAgentRegistration("agent-test", {
-        capabilities: ["code-editing", "analysis"],
+        capabilities: ["file_editing", "analysis"],
         baselineMetrics: {
           latencyMs: 250,
           accuracy: 0.85,

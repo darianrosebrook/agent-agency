@@ -29,7 +29,7 @@ describe("Full System Integration", () => {
     name: "Integration Test Agent",
     modelFamily: "gpt-4" as any,
     capabilities: {
-      "code-editing": { supported: true, confidence: 0.9 },
+      "file_editing": { supported: true, confidence: 0.9 },
       analysis: { supported: true, confidence: 0.8 },
     } as any,
     performanceHistory: [] as any,
@@ -47,13 +47,13 @@ describe("Full System Integration", () => {
   const testTask: Task = {
     id: "integration-task-1",
     description: "Integration test task for full system validation",
-    type: "code-editing" as TaskType,
+    type: "file_editing" as TaskType,
     priority: 5,
     timeoutMs: 30000,
     attempts: 0,
     maxAttempts: 3,
     requiredCapabilities: {
-      "code-editing": { supported: true, confidence: 0.8 },
+      "file_editing": { supported: true, confidence: 0.8 },
     } as any,
     budget: {
       maxFiles: 10,

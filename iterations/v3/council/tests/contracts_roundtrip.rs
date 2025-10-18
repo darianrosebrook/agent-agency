@@ -1,4 +1,4 @@
-use council::contracts::*;
+use agent_agency_council::contracts::*;
 use serde_json::{json, Value};
 
 #[test]

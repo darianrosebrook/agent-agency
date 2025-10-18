@@ -27,7 +27,7 @@ describe("Enhanced Agent Specialization", () => {
       name: "Frontend Expert",
       modelFamily: "gpt-4",
       capabilities: {
-        taskTypes: ["code-editing", "testing"],
+        taskTypes: ["file_editing", "testing"],
         languages: ["TypeScript", "JavaScript"],
         specializationsV2: [
           {
@@ -66,7 +66,7 @@ describe("Enhanced Agent Specialization", () => {
       name: "Backend Specialist",
       modelFamily: "claude-3.5",
       capabilities: {
-        taskTypes: ["code-editing", "api-design"],
+        taskTypes: ["file_editing", "api-design"],
         languages: ["TypeScript", "Python"],
         specializationsV2: [
           {
@@ -104,7 +104,7 @@ describe("Enhanced Agent Specialization", () => {
   describe("Enhanced Specialization Queries", () => {
     it("should find agents with specific expertise levels", async () => {
       const query: AgentQuery = {
-        taskType: "code-editing",
+        taskType: "file_editing",
         specializationQuery: [
           {
             type: "Frontend architecture",
@@ -123,7 +123,7 @@ describe("Enhanced Agent Specialization", () => {
 
     it("should handle optional specializations with lower weight", async () => {
       const query: AgentQuery = {
-        taskType: "code-editing",
+        taskType: "file_editing",
         specializationQuery: [
           {
             type: "Frontend architecture",
@@ -148,7 +148,7 @@ describe("Enhanced Agent Specialization", () => {
 
     it("should filter agents below minimum success rate", async () => {
       const query: AgentQuery = {
-        taskType: "code-editing",
+        taskType: "file_editing",
         specializationQuery: [
           {
             type: "Frontend architecture",
@@ -170,7 +170,7 @@ describe("Enhanced Agent Specialization", () => {
         name: "Junior Frontend Dev",
         modelFamily: "gpt-3.5-turbo",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["JavaScript"],
           specializationsV2: [
             {
@@ -197,7 +197,7 @@ describe("Enhanced Agent Specialization", () => {
       });
 
       const query: AgentQuery = {
-        taskType: "code-editing",
+        taskType: "file_editing",
         specializationQuery: [
           {
             type: "Frontend architecture",
@@ -332,7 +332,7 @@ describe("Enhanced Agent Specialization", () => {
   describe("Backward Compatibility", () => {
     it("should support legacy specialization queries", async () => {
       const query: AgentQuery = {
-        taskType: "code-editing",
+        taskType: "file_editing",
         specializations: ["Frontend architecture"], // Legacy format
       };
 

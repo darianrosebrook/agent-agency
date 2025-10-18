@@ -95,7 +95,6 @@ export class ValidationUtils {
 
     // Task type validation
     const validTypes: TaskType[] = [
-      "code-editing",
       "code-review",
       "analysis",
       "research",

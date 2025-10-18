@@ -75,7 +75,11 @@ export class WikidataIndexer {
             }
           }
         } catch (error) {
-          console.warn(`Failed to parse line: ${error.message}`);
+          console.warn(
+            `Failed to parse line: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
           errorCount++;
         }
       }
@@ -96,7 +100,11 @@ export class WikidataIndexer {
         `- Rate: ${(processedCount / (duration / 1000)).toFixed(1)} lexemes/sec`
       );
     } catch (error) {
-      console.error(`Wikidata indexing failed: ${error.message}`);
+      console.error(
+        `Wikidata indexing failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
       throw error;
     }
   }
@@ -125,7 +133,11 @@ export class WikidataIndexer {
           })) || [],
       };
     } catch (error) {
-      throw new Error(`Invalid JSON: ${error.message}`);
+      throw new Error(
+        `Invalid JSON: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     }
   }
 
@@ -202,7 +214,11 @@ export class WikidataIndexer {
         insertData as any[]
       );
     } catch (error) {
-      console.error(`Batch processing failed: ${error.message}`);
+      console.error(
+        `Batch processing failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
       // Count all as errors if batch fails
       errorCount = lexemes.length;
     }

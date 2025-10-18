@@ -25,7 +25,6 @@ export type Timestamp = string;
  * Agent capability categories for task routing.
  */
 export type TaskType =
-  | "code-editing"
   | "research"
   | "code-review"
   | "documentation"
@@ -36,7 +35,8 @@ export type TaskType =
   | "analysis"
   | "validation"
   | "general"
-  | "script-execution";
+  | "script-execution"
+  | "file_editing";
 
 /**
  * Programming languages an agent can work with.

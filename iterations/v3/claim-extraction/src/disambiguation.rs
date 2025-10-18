@@ -157,12 +157,12 @@ impl DisambiguationStage {
         &self,
         sentence: &str,
         ambiguities: &[Ambiguity],
-        _context: &ProcessingContext,
+        context: &ProcessingContext,
     ) -> Result<String> {
         let mut resolved_sentence = sentence.to_string();
 
         // Build a context map of potential referents (ported from V2 buildReferentMap)
-        let context_map: HashMap<String, ReferentInfo> = HashMap::new();
+        let context_map = self.context_resolver.build_v2_referent_map(context);
 
         // Process only pronoun ambiguities
         let pronoun_ambiguities: Vec<&Ambiguity> = ambiguities
@@ -241,7 +241,7 @@ impl DisambiguationStage {
                 // Pronoun ambiguity is unresolvable if we cannot confidently resolve the referent
                 AmbiguityType::Pronoun => {
                     let pronoun = ambiguity.original_text.to_lowercase();
-                    let context_map = HashMap::new(); // TODO: Implement extract_context_map
+                    let context_map = self.context_resolver.build_v2_referent_map(context);
                     let referent_opt = self
                         .context_resolver
                         .find_referent_for_pronoun(&pronoun, &context_map);
@@ -638,12 +638,13 @@ impl ContextResolver {
         &self,
         sentence: &str,
         pronouns: &[String],
-        _context: &ProcessingContext,
+        context: &ProcessingContext,
     ) -> Result<String> {
         let mut resolved_sentence = sentence.to_string();
 
         // Build a context map of potential referents (ported from V2 logic)
-        let context_map = HashMap::new(); // TODO: Fix method call - need to access DisambiguationStage method
+        let context_map = self.build_v2_referent_map(context);
+
 
         for pronoun in pronouns {
             let referent = self.find_referent_for_pronoun(&pronoun.to_lowercase(), &context_map);

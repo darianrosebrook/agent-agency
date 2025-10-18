@@ -24,9 +24,10 @@ pub struct TaskSpec {
 /// Risk tier for task classification
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RiskTier {
-    Tier1, // Critical systems (auth, billing, migrations)
-    Tier2, // Standard features (APIs, data writes)
-    Tier3, // Low-risk changes (UI, docs, internal tools)
+    Low,     // Low-risk changes (UI, docs, internal tools)
+    Medium,  // Standard features (APIs, data writes)
+    High,    // Critical systems (auth, billing, migrations)
+    Critical, // System-critical changes (core infrastructure)
 }
 
 /// Task scope definition
@@ -118,4 +119,35 @@ pub struct CawsWaiver {
     pub justification: String,
     pub time_bounded: bool,
     pub expires_at: Option<DateTime<Utc>>,
+}
+
+/// Evidence packet for debate
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidencePacket {
+    pub id: Uuid,
+    pub source: String,
+    pub content: serde_json::Value,
+    pub confidence: f32,
+    pub timestamp: DateTime<Utc>,
+}
+
+/// Debate round result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DebateRoundResult {
+    pub round_number: i32,
+    pub participant_contributions: std::collections::HashMap<String, ParticipantContribution>,
+    pub supermajority_reached: bool,
+    pub timeout_reached: bool,
+    pub moderator_notes: String,
+}
+
+/// Participant contribution to debate
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParticipantContribution {
+    pub participant: String,
+    pub round_number: i32,
+    pub argument: String,
+    pub evidence_references: Vec<Uuid>,
+    pub confidence: f32,
+    pub timestamp: DateTime<Utc>,
 }

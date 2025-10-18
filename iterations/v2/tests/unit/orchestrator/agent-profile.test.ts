@@ -113,7 +113,7 @@ describe("AgentProfileHelper", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -142,7 +142,7 @@ describe("AgentProfileHelper", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -172,7 +172,7 @@ describe("AgentProfileHelper", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -209,7 +209,7 @@ describe("AgentProfileHelper", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -225,7 +225,7 @@ describe("AgentProfileHelper", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -241,7 +241,7 @@ describe("AgentProfileHelper", () => {
         id: "agent-001",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -257,7 +257,7 @@ describe("AgentProfileHelper", () => {
         id: "agent-001",
         name: "Test Agent",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -288,7 +288,7 @@ describe("AgentProfileHelper", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing", "code-review"],
+          taskTypes: ["file_editing", "code-review"],
           languages: ["TypeScript", "Python"],
           specializations: ["API design"],
         },
@@ -325,7 +325,7 @@ describe("AgentProfileHelper", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -352,7 +352,7 @@ describe("AgentProfileHelper", () => {
       cloned.currentLoad.activeTasks = 10;
 
       // Original should be unchanged
-      expect(original.capabilities.taskTypes).toEqual(["code-editing"]);
+      expect(original.capabilities.taskTypes).toEqual(["file_editing"]);
       expect(original.performanceHistory.successRate).toBe(0.9);
       expect(original.currentLoad.activeTasks).toBe(0);
     });
@@ -489,7 +489,7 @@ describe("AgentProfileHelper", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -525,7 +525,7 @@ describe("AgentProfileHelper", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -567,7 +567,7 @@ describe("AgentProfileHelper", () => {
         qualityScore: NaN,
         latencyMs: 2000,
         tokensUsed: 100,
-        taskType: "code-editing" as any,
+        taskType: "file_editing" as any,
       };
 
       const updated = AgentProfileHelper.updatePerformanceHistory(
@@ -593,7 +593,7 @@ describe("AgentProfileHelper", () => {
         qualityScore: 0.95,
         latencyMs: 999999999,
         tokensUsed: 100,
-        taskType: "code-editing" as any,
+        taskType: "file_editing" as any,
       };
 
       const updated = AgentProfileHelper.updatePerformanceHistory(
@@ -646,7 +646,7 @@ describe("AgentProfileHelper", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -669,7 +669,7 @@ describe("AgentProfileHelper", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -692,7 +692,7 @@ describe("AgentProfileHelper", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -715,7 +715,7 @@ describe("AgentProfileHelper", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -738,7 +738,7 @@ describe("AgentProfileHelper", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -760,7 +760,7 @@ describe("AgentProfileHelper", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -782,7 +782,7 @@ describe("AgentProfileHelper", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -804,7 +804,7 @@ describe("AgentProfileHelper", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },

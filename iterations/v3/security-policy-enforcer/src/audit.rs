@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::Write;
 use tracing::{debug, error, info, warn};
+use uuid::Uuid;
 
 /// Security auditor
 #[derive(Debug)]
@@ -201,17 +202,18 @@ impl SecurityAuditor {
         let change_event = SecurityAuditEvent {
             id: Uuid::new_v4(),
             timestamp: Utc::now(),
-            event_type: SecurityEventType::PolicyUpdate,
-            user_id: None,
-            session_id: None,
-            operation: "audit_policy_update".to_string(),
+            event_type: AuditEventType::PolicyViolation,
+            actor: "system".to_string(),
             resource: "audit_policy".to_string(),
-            result: SecurityEventResult::Success,
-            details: Some(format!(
-                "Updated audit policy: enabled={}, retention_days={}",
-                new_policy.enabled, new_policy.retention_days
-            )),
-            risk_score: 0.1, // Low risk for policy updates
+            action: "audit_policy_update".to_string(),
+            result: AuditResult::Approved,
+            metadata: {
+                let mut metadata = HashMap::new();
+                metadata.insert("enabled".to_string(), new_policy.enabled.to_string());
+                metadata.insert("retention_days".to_string(), new_policy.retention_days.to_string());
+                metadata.insert("description".to_string(), "Updated audit policy".to_string());
+                metadata
+            },
         };
 
         // Only log if the old policy would have allowed it
@@ -232,14 +234,16 @@ impl SecurityAuditor {
             let test_event = SecurityAuditEvent {
                 id: Uuid::new_v4(),
                 timestamp: Utc::now(),
-                event_type: SecurityEventType::PolicyUpdate,
-                user_id: None,
-                session_id: None,
-                operation: "policy_test".to_string(),
+                event_type: AuditEventType::PolicyViolation,
+                actor: "system".to_string(),
                 resource: "audit_system".to_string(),
-                result: SecurityEventResult::Success,
-                details: Some("Testing policy application".to_string()),
-                risk_score: 0.0,
+                action: "policy_test".to_string(),
+                result: AuditResult::Approved,
+                metadata: {
+                    let mut metadata = HashMap::new();
+                    metadata.insert("description".to_string(), "Testing policy application".to_string());
+                    metadata
+                },
             };
 
             // Try to format the log entry (doesn't write to disk)

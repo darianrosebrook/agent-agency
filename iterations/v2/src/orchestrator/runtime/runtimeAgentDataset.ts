@@ -3,7 +3,7 @@ import type { AgentProfile } from "../../types/agent-registry";
 /**
  * Seed dataset used by the Arbiter runtime when wiring the real
  * AgentRegistryManager. The profiles mirror the production agents
- * that cover documentation, code-editing, testing, and research
+ * that cover documentation, file_editing, testing, and research
  * capabilities so the routing manager can make meaningful decisions.
  */
 export interface RuntimeAgentSeed
@@ -23,7 +23,7 @@ export const runtimeAgentSeeds: RuntimeAgentSeed[] = [
     name: "Documentation Smith",
     modelFamily: "gpt-4",
     capabilities: {
-      taskTypes: ["documentation", "code-editing", "testing"],
+      taskTypes: ["documentation", "file_editing", "testing"],
       languages: ["TypeScript", "JavaScript"],
       specializations: ["Frontend architecture", "API design"], // Legacy support
       specializationsV2: [
@@ -62,7 +62,7 @@ export const runtimeAgentSeeds: RuntimeAgentSeed[] = [
     name: "Refactor Sage",
     modelFamily: "claude-3.5",
     capabilities: {
-      taskTypes: ["code-editing", "refactoring", "code-review"],
+      taskTypes: ["file_editing", "refactoring", "code-review"],
       languages: ["TypeScript", "Python", "Go"],
       specializations: ["Performance optimization", "Backend architecture"], // Legacy support
       specializationsV2: [
@@ -101,7 +101,12 @@ export const runtimeAgentSeeds: RuntimeAgentSeed[] = [
     name: "Test Pilot",
     modelFamily: "gemini-pro",
     capabilities: {
-      taskTypes: ["testing", "code-review", "documentation"] as const,
+      taskTypes: [
+        "testing",
+        "code-review",
+        "documentation",
+        "file_editing",
+      ] as const,
       languages: ["TypeScript", "JavaScript"],
       specializations: ["API design", "DevOps"], // Legacy support
       specializationsV2: [
@@ -145,6 +150,7 @@ export const runtimeAgentSeeds: RuntimeAgentSeed[] = [
         "api-design",
         "documentation",
         "script-execution",
+        "file_editing",
       ] as const,
       languages: ["Python", "TypeScript"],
       specializations: ["Security audit", "Database design"], // Legacy support

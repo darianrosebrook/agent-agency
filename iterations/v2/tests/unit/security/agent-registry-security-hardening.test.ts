@@ -28,7 +28,7 @@ describe("Agent Registry Security - Production Hardening (ARBITER-013)", () => {
     name: `Agent ${id}`,
     modelFamily: "gpt-4" as any,
     capabilities: {
-      "code-editing": { supported: true, confidence: 0.9 },
+      "file_editing": { supported: true, confidence: 0.9 },
     } as any,
     performanceHistory: [] as any,
     currentLoad: {
@@ -271,7 +271,7 @@ describe("Agent Registry Security - Production Hardening (ARBITER-013)", () => {
           name: "Test Agent",
           modelFamily: "gpt-4" as any,
           capabilities: {
-            taskTypes: ["code-editing" as any],
+            taskTypes: ["file_editing" as any],
             languages: ["TypeScript" as any],
             specializations: ["web-development" as any],
           },
@@ -413,7 +413,7 @@ describe("Agent Registry Security - Production Hardening (ARBITER-013)", () => {
           name: "Test Agent",
           modelFamily: "gpt-4" as any,
           capabilities: {
-            taskTypes: ["code-editing" as any],
+            taskTypes: ["file_editing" as any],
             languages: ["InvalidLanguage" as any],
             specializations: ["web-development" as any],
           },
@@ -432,7 +432,7 @@ describe("Agent Registry Security - Production Hardening (ARBITER-013)", () => {
           success: true,
           qualityScore: 0.85,
           latencyMs: 150,
-          taskType: "code-editing",
+          taskType: "file_editing",
           tokensUsed: 1000,
         };
 

@@ -471,7 +471,7 @@ describe("Performance Tracking E2E Integration", () => {
         name: "Test Agent Integration",
         modelFamily: "gpt-4" as const,
         capabilities: {
-          taskTypes: ["code-editing", "code-review", "testing"] as any,
+          taskTypes: ["file_editing", "code-review", "testing"] as any,
           languages: ["typescript", "python"] as any,
           specializations: ["code-review", "testing"] as any,
         },

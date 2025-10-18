@@ -129,13 +129,12 @@ async function initialize(): Promise<void> {
 
   // Initialize observer bridge with shared registry
   try {
-    arbiterRuntime = new ArbiterRuntime(
-      {
-        outputDir: path.resolve(process.cwd(), "iterations/v2/runtime-output"),
-      },
-      undefined, // taskOrchestrator
-      arbiterController.getAgentRegistry() // existingRegistry
-    );
+    // Use the ArbiterRuntime from ArbiterController (which has TaskOrchestrator)
+    const controllerRuntime = arbiterController.getRuntime();
+    if (!controllerRuntime) {
+      throw new Error("ArbiterRuntime not available from ArbiterController");
+    }
+    arbiterRuntime = controllerRuntime;
 
     observerBridge = new ObserverBridge(arbiterRuntime);
     setObserverBridge(observerBridge);

@@ -64,7 +64,7 @@ describe("Agent Registry Persistence Integration", () => {
         name: "Test Agent",
         modelFamily: "gpt-4" as const,
         capabilities: {
-          taskTypes: ["code-editing" as const, "debugging" as const],
+          taskTypes: ["file_editing" as const, "debugging" as const],
           languages: ["TypeScript" as const],
           specializations: [],
         },
@@ -174,7 +174,7 @@ describe("Agent Registry Persistence Integration", () => {
         success: true,
         qualityScore: 0.9,
         latencyMs: 150,
-        taskType: "code-editing" as const,
+        taskType: "file_editing" as const,
         taskId: "task-123",
       };
 
@@ -208,7 +208,7 @@ describe("Agent Registry Persistence Integration", () => {
       expect(mockRecord).toHaveBeenCalledWith(
         agentId,
         expect.objectContaining({
-          taskType: "code-editing",
+          taskType: "file_editing",
           successRate: 1.0, // true converted to 1.0
           averageLatency: 150,
           qualityScore: 0.9,
@@ -278,7 +278,7 @@ describe("Agent Registry Persistence Integration", () => {
           name: "Loaded Agent 1",
           modelFamily: "gpt-4" as const,
           capabilities: {
-            taskTypes: ["code-editing" as const],
+            taskTypes: ["file_editing" as const],
             languages: ["TypeScript" as const],
             specializations: [],
           },
@@ -425,7 +425,7 @@ describe("Agent Registry Persistence Integration", () => {
         name: "ACID Test Agent",
         modelFamily: "gpt-4" as const,
         capabilities: {
-          taskTypes: ["code-editing" as const, "testing" as const],
+          taskTypes: ["file_editing" as const, "testing" as const],
           languages: ["TypeScript" as const],
           specializations: [],
         },

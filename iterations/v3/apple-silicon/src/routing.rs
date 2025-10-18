@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::info;
-// UUID import removed - not currently used
+use uuid::Uuid;
 
 /// Main inference router for Apple Silicon
 #[derive(Debug)]

@@ -17,7 +17,7 @@ describe("ValidationUtils", () => {
       const validTask = {
         id: "task-123",
         description: "Test task",
-        type: "code-editing" as TaskType,
+        type: "file_editing" as TaskType,
         priority: 5,
         timeoutMs: 30000,
         attempts: 0,
@@ -74,7 +74,7 @@ describe("ValidationUtils", () => {
       const invalidTask = {
         id: "task-123",
         description: "Test task",
-        type: "code-editing" as TaskType,
+        type: "file_editing" as TaskType,
         priority: 15, // Invalid: should be 1-10
         timeoutMs: 30000,
         attempts: 0,
@@ -135,7 +135,7 @@ describe("Guard Functions", () => {
       const validTask = {
         id: "task-123",
         description: "Test task",
-        type: "code-editing" as TaskType,
+        type: "file_editing" as TaskType,
         priority: 5,
         timeoutMs: 30000,
         attempts: 0,

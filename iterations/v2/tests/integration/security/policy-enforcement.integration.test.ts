@@ -23,7 +23,7 @@ describe("Security Policy Enforcement - Integration Tests", () => {
     name: `Agent ${id}`,
     modelFamily: "gpt-4" as any,
     capabilities: {
-      "code-editing": { supported: true, confidence: 0.9 },
+      "file_editing": { supported: true, confidence: 0.9 },
     } as any,
     performanceHistory: [] as any,
     currentLoad: {

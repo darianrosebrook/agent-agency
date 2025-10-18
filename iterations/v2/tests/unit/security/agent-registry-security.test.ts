@@ -333,7 +333,7 @@ describe("AgentRegistrySecurity", () => {
         name: "Test Agent",
         modelFamily: "gpt-4" as const,
         capabilities: {
-          taskTypes: ["code-editing" as const],
+          taskTypes: ["file_editing" as const],
           languages: ["TypeScript" as const],
           specializations: [],
         },
@@ -523,7 +523,7 @@ describe("AgentRegistrySecurity", () => {
         success: true,
         qualityScore: 0.85,
         latencyMs: 150,
-        taskType: "code-editing" as const,
+        taskType: "file_editing" as const,
         tokensUsed: 500,
       };
 

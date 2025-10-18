@@ -563,9 +563,9 @@ export class TaskIntakeProcessor {
       "research",
       "validation",
       "general",
-      "code-editing",
       "code-review",
       "script-execution",
+      "file_editing",
     ];
 
     if (typeof value === "string") {

@@ -478,3 +478,24 @@ pub struct SecurityStats {
     /// Last updated
     pub last_updated: DateTime<Utc>,
 }
+
+/// Security event types for audit logging
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum SecurityEventType {
+    /// Policy update event
+    PolicyUpdate,
+    /// File access event
+    FileAccess,
+    /// Command execution event
+    CommandExecution,
+    /// Secret detection event
+    SecretDetection,
+    /// Council decision event
+    CouncilDecision,
+    /// Rate limit event
+    RateLimit,
+    /// Authentication event
+    Authentication,
+    /// Authorization event
+    Authorization,
+}

@@ -2,12 +2,24 @@
 
 use anyhow::Result;
 use tracing::{debug, info};
+use std::sync::Arc;
 
 use crate::fixtures::TestFixtures;
 use crate::mocks::{
     MockDatabase, MockEventEmitter, MockFactory, MockHttpClient, MockMetricsCollector,
 };
 use crate::test_utils::{TestExecutor, TestResult, LONG_TEST_TIMEOUT};
+
+// Import real system components
+use claim_extraction::multi_modal_verification::MultiModalVerificationEngine;
+use claim_extraction::evidence::EvidenceCollector;
+use council::advanced_arbitration::AdvancedArbitrationEngine;
+use council::predictive_learning_system::PredictiveLearningSystem;
+use council::intelligent_edge_case_testing::IntelligentEdgeCaseTester;
+use apple_silicon::ane::ANEManager;
+use database::client::DatabaseClient;
+use orchestration::coordinator::OrchestrationCoordinator;
+use workers::executor::TaskExecutor;
 
 /// End-to-end integration test suite
 pub struct EndToEndIntegrationTests {
@@ -135,17 +147,177 @@ impl EndToEndIntegrationTests {
         // let completion_result = system.complete_task(&task_id).await?;
         // assert!(completion_result.success);
 
-        // Verify all workflow events
-        let events = self.mock_events.get_events().await;
-        // assert!(events.iter().any(|e| e.event_type == "task_submitted"));
-        // assert!(events.iter().any(|e| e.event_type == "research_completed"));
-        // assert!(events.iter().any(|e| e.event_type == "claims_extracted"));
-        // assert!(events.iter().any(|e| e.event_type == "task_routed"));
-        // assert!(events.iter().any(|e| e.event_type == "task_executed"));
-        // assert!(events.iter().any(|e| e.event_type == "task_evaluated"));
-        // assert!(events.iter().any(|e| e.event_type == "task_completed"));
+        // Initialize real system components
+        let multi_modal_engine = Arc::new(MultiModalVerificationEngine::new());
+        let evidence_collector = Arc::new(EvidenceCollector::new());
+        let arbitration_engine = Arc::new(AdvancedArbitrationEngine::new().await?);
+        let predictive_system = Arc::new(PredictiveLearningSystem::new().await?);
+        let edge_case_tester = Arc::new(IntelligentEdgeCaseTester::new().await?);
+        let ane_manager = Arc::new(ANEManager::new().await?);
 
-        info!("✅ Complete task workflow test completed");
+        // Setup test data - a realistic claim about code behavior
+        let claim_text = "The function calculate_total() should handle edge cases for empty arrays and negative values";
+        let code_context = r#"
+        fn calculate_total(values: &[i32]) -> i32 {
+            values.iter().sum()
+        }
+
+        fn main() {
+            let empty: Vec<i32> = vec![];
+            let result = calculate_total(&empty);
+            println!("Empty array result: {}", result);
+        }
+        "#;
+
+        // 1. Multi-Modal Verification: Verify the claim using various modalities
+        debug!("Step 1: Multi-modal verification");
+        let verification_result = multi_modal_engine.verify_claim(
+            claim_text,
+            code_context,
+            Some("mathematical"),
+            Some("code_behavior")
+        ).await?;
+
+        assert!(verification_result.confidence_score > 0.7,
+            "Claim verification should have high confidence, got: {}",
+            verification_result.confidence_score);
+
+        info!("✅ Claim verification completed with confidence: {:.2}",
+              verification_result.confidence_score);
+
+        // 2. Evidence Collection: Gather supporting evidence
+        debug!("Step 2: Evidence collection");
+        let evidence = evidence_collector.collect_evidence(
+            claim_text,
+            code_context
+        ).await?;
+
+        assert!(!evidence.is_empty(), "Should collect at least some evidence");
+        assert!(evidence.iter().any(|e| e.confidence > 0.5),
+            "Should have at least one piece of strong evidence");
+
+        info!("✅ Collected {} pieces of evidence", evidence.len());
+
+        // 3. Intelligent Edge Case Testing: Generate and run edge case tests
+        debug!("Step 3: Edge case testing");
+        let test_cases = edge_case_tester.generate_edge_case_tests(
+            code_context,
+            claim_text
+        ).await?;
+
+        assert!(!test_cases.is_empty(), "Should generate edge case tests");
+
+        // Run the generated tests
+        let test_results = edge_case_tester.run_edge_case_tests(
+            &test_cases,
+            code_context
+        ).await?;
+
+        let passed_tests = test_results.iter().filter(|r| r.success).count();
+        let pass_rate = passed_tests as f64 / test_results.len() as f64;
+
+        info!("✅ Edge case testing: {}/{} tests passed ({:.1}%)",
+              passed_tests, test_results.len(), pass_rate * 100.0);
+
+        // 4. Council Arbitration: Evaluate the verification results
+        debug!("Step 4: Council arbitration");
+        let task_id = uuid::Uuid::new_v4();
+        let worker_outputs = vec![
+            council::types::WorkerOutput {
+                task_id: task_id.into(),
+                worker_id: "verification_worker".to_string(),
+                result: serde_json::json!({
+                    "verification_result": verification_result,
+                    "evidence_count": evidence.len(),
+                    "test_pass_rate": pass_rate
+                }),
+                confidence: verification_result.confidence_score,
+                metadata: std::collections::HashMap::new(),
+                processing_time_ms: 150,
+                error_message: None,
+            }
+        ];
+
+        let arbitration_result = arbitration_engine.build_consensus(&worker_outputs).await?;
+
+        assert!(arbitration_result.final_decision.confidence > 0.6,
+            "Council should reach confident decision, got: {}",
+            arbitration_result.final_decision.confidence);
+
+        info!("✅ Council arbitration completed with confidence: {:.2}",
+              arbitration_result.final_decision.confidence);
+
+        // 5. Predictive Learning: Learn from this verification pattern
+        debug!("Step 5: Predictive learning");
+        predictive_system.record_verification_pattern(
+            claim_text,
+            &verification_result,
+            &arbitration_result.final_decision
+        ).await?;
+
+        // Generate prediction for similar future claims
+        let prediction = predictive_system.predict_verification_outcome(
+            "A function should handle empty inputs gracefully"
+        ).await?;
+
+        assert!(prediction.confidence > 0.5,
+            "Should be confident in prediction for similar claim");
+
+        info!("✅ Predictive learning: predicted outcome confidence {:.2}",
+              prediction.confidence);
+
+        // 6. ANE Integration: If ANE is available, use it for advanced analysis
+        debug!("Step 6: ANE integration test");
+        if ane_manager.is_ane_available().await? {
+            let inference_request = apple_silicon::types::InferenceRequest {
+                request_id: uuid::Uuid::new_v4(),
+                model_name: "test-model".to_string(),
+                input: format!("Analyze this code claim: {}", claim_text),
+                max_tokens: 100,
+                temperature: 0.7,
+                optimization_target: Some(apple_silicon::types::OptimizationTarget::Quality),
+            };
+
+            let inference_result = ane_manager.run_inference(inference_request).await?;
+
+            assert!(inference_result.output.len() > 0,
+                "ANE should produce some output");
+            assert!(inference_result.inference_time_ms > 0,
+                "Should record inference time");
+
+            info!("✅ ANE inference completed: {} tokens generated in {}ms",
+                  inference_result.tokens_generated,
+                  inference_result.inference_time_ms);
+        } else {
+            info!("⚠️ ANE not available, skipping hardware acceleration test");
+        }
+
+        // 7. Final Validation: Ensure all components produced coherent results
+        debug!("Step 7: Final validation");
+
+        // The verification should be consistent across modalities
+        let modalities_consistent = verification_result.modalities.iter()
+            .all(|(_, score)| *score > 0.4);
+
+        assert!(modalities_consistent,
+            "All verification modalities should have reasonable confidence");
+
+        // Evidence should support the verification result
+        let evidence_supports_claim = evidence.iter()
+            .filter(|e| e.confidence > 0.6)
+            .any(|e| e.evidence_type == "code_analysis" || e.evidence_type == "testing");
+
+        assert!(evidence_supports_claim,
+            "Should have strong evidence supporting the claim verification");
+
+        info!("✅ Complete workflow validation successful");
+        info!("📊 Integration test summary:");
+        info!("   - Multi-modal verification: {:.2} confidence", verification_result.confidence_score);
+        info!("   - Evidence collected: {}", evidence.len());
+        info!("   - Edge case tests: {}/{} passed", passed_tests, test_results.len());
+        info!("   - Council arbitration: {:.2} confidence", arbitration_result.final_decision.confidence);
+        info!("   - Predictive learning: {:.2} prediction confidence", prediction.confidence);
+
         Ok(())
     }
 

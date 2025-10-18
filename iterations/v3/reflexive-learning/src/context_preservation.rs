@@ -128,7 +128,7 @@ impl ContextPreservationEngine {
             }
         }
 
-        contexts.insert(session_id, context);
+        contexts.insert(session_id, context.clone());
 
         if let Some(meta) = metadata {
             let mut metadata_store = self.metadata.write().await;

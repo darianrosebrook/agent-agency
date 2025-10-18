@@ -439,12 +439,12 @@ export class ContextManager {
       // Create file metadata (we don't have full file info from semantic search)
       const fileMetadata: FileMetadata = {
         path: filePath,
-        name: filePath.split("/").pop() || filePath,
-        extension: fileType,
+        relativePath: filePath.replace(process.cwd(), ""),
         size: result.metadata?.size || 0,
-        lastModified: new Date(result.metadata?.last_modified || Date.now()),
-        hash: result.metadata?.hash || "",
+        mtime: new Date(result.metadata?.last_modified || Date.now()),
+        mode: 0o644, // Default file permissions
         isBinary: false, // Assume text files for semantic search
+        extension: fileType,
       };
 
       files.push(fileMetadata);

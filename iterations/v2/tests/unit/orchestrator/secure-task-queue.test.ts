@@ -44,7 +44,7 @@ describe("SecureTaskQueue", () => {
         maxTaskDescriptionLength: 5000,
         maxMetadataSize: 20000,
         allowedTaskTypes: {
-          "*": ["code-editing", "analysis", "research", "general"],
+          "*": ["file_editing", "analysis", "research", "general"],
         },
         suspiciousPatterns: [],
       },
@@ -55,7 +55,7 @@ describe("SecureTaskQueue", () => {
       name: "Unit Test Agent",
       modelFamily: "gpt-4" as any,
       capabilities: {
-        taskTypes: ["code-editing", "documentation"],
+        taskTypes: ["file_editing", "documentation"],
         languages: ["TypeScript"],
         specializations: [],
       },
@@ -89,7 +89,7 @@ describe("SecureTaskQueue", () => {
     baseTask = {
       id: "task-1",
       description: "Implement secure task queue behaviour",
-      type: "code-editing",
+      type: "file_editing",
       priority: 5,
       timeoutMs: 30000,
       budget: {
@@ -97,7 +97,7 @@ describe("SecureTaskQueue", () => {
         maxLoc: 200,
       },
       requiredCapabilities: {
-        taskTypes: ["code-editing"],
+        taskTypes: ["file_editing"],
       } as any,
       createdAt: new Date(),
       metadata: {
@@ -165,7 +165,7 @@ describe("SecureTaskQueue", () => {
     const secureQueue = createSecureQueue({
       auditSink,
       allowedTaskTypes: {
-        "*": ["code-editing"],
+        "*": ["file_editing"],
       },
     });
 

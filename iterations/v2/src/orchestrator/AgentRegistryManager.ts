@@ -137,7 +137,7 @@ export class AgentRegistryManager {
     try {
       // Query all agents (simplified query for loading)
       const result = await this.dbClient.queryAgents({
-        taskType: "code-editing", // Required field
+        taskType: "file_editing", // Required field
       });
 
       // Load agents into memory cache

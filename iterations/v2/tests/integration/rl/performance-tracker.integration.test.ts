@@ -80,7 +80,7 @@ describe("Performance Tracker - Integration Tests (ARBITER-004)", () => {
 
       // Step 1: Record agent registration
       await tracker.recordAgentRegistration(agentId, {
-        capabilities: ["code-editing", "analysis"],
+        capabilities: ["file_editing", "analysis"],
         baselineMetrics: {
           latencyMs: 200,
           accuracy: 0.9,
@@ -248,7 +248,7 @@ describe("Performance Tracker - Integration Tests (ARBITER-004)", () => {
       // Register all agents
       for (const agent of agents) {
         await tracker.recordAgentRegistration(agent.id, {
-          capabilities: ["code-editing"],
+          capabilities: ["file_editing"],
           baselineMetrics: {
             latencyMs: agent.latency,
             accuracy: agent.accuracy,

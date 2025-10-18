@@ -149,7 +149,7 @@ async fn test_conflict_resolution() {
     println!("\n⚖️ Testing Conflict Resolution");
     println!("{}", "=".repeat(60));
 
-    let arbitration_engine = AdvancedArbitrationEngine::new();
+    let arbitration_engine = AdvancedArbitrationEngine::new().unwrap();
 
     // Create conflicting worker outputs
     let conflicting_outputs = vec![
@@ -221,6 +221,7 @@ async fn test_learning_integration() {
 
     // Create test arbitration result
     let consensus = ConsensusResult {
+        task_id: Uuid::new_v4(),
         final_decision: "Accept with modifications".to_string(),
         confidence: 0.85,
         quality_score: 0.8,
@@ -231,6 +232,7 @@ async fn test_learning_integration() {
             ("quality".to_string(), 0.8),
         ]),
         reasoning: "Quality-weighted consensus achieved with constitutional override".to_string(),
+        evaluation_time_ms: 150,
     };
 
     // Create test outputs

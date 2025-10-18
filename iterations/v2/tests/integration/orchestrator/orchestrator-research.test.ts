@@ -18,7 +18,7 @@ describe("Orchestrator Research Integration", () => {
 
       const task = mockTask({
         description: "How do I implement OAuth2 in Express.js?",
-        type: "code-editing",
+        type: "file_editing",
       });
 
       // Expected flow:

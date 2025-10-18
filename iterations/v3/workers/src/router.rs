@@ -5,10 +5,221 @@
 use crate::types::*;
 use crate::{LoadBalancingStrategy, RoutingAlgorithm};
 use agent_agency_council::models::{RiskTier, TaskSpec};
-use anyhow::{Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
+use chrono::{DateTime, Utc};
 use dashmap::DashMap;
-use tracing::{debug, info};
+use parking_lot::Mutex;
+use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use tracing::{debug, info, warn};
 use uuid::Uuid;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct RoundRobinState {
+    current_weights: HashMap<Uuid, f64>,
+    base_weights: HashMap<Uuid, f64>,
+    last_selected: Option<Uuid>,
+    updated_at: DateTime<Utc>,
+}
+
+impl RoundRobinState {
+    fn new() -> Self {
+        Self {
+            current_weights: HashMap::new(),
+            base_weights: HashMap::new(),
+            last_selected: None,
+            updated_at: Utc::now(),
+        }
+    }
+
+    fn reconcile(&mut self, base_weights: &HashMap<Uuid, f64>) {
+        self.current_weights
+            .retain(|id, _| base_weights.contains_key(id));
+        self.base_weights
+            .retain(|id, _| base_weights.contains_key(id));
+
+        for (id, weight) in base_weights {
+            self.base_weights.insert(*id, *weight);
+            self.current_weights.entry(*id).or_insert(0.0);
+        }
+    }
+
+    fn select_next(
+        &mut self,
+        base_weights: &HashMap<Uuid, f64>,
+        total_weight: f64,
+    ) -> Result<(Uuid, f64)> {
+        for (id, weight) in base_weights {
+            let entry = self.current_weights.entry(*id).or_insert(0.0);
+            *entry += *weight;
+        }
+
+        let mut selected_id: Option<Uuid> = None;
+        let mut selected_current = f64::MIN;
+
+        for (id, current) in &self.current_weights {
+            if let Some(base) = base_weights.get(id) {
+                if selected_id.is_none()
+                    || *current > selected_current
+                    || ((*current - selected_current).abs() < f64::EPSILON
+                        && base > base_weights.get(&selected_id.unwrap()).unwrap_or(&0.0))
+                {
+                    selected_id = Some(*id);
+                    selected_current = *current;
+                }
+            }
+        }
+
+        let selected_id =
+            selected_id.ok_or_else(|| anyhow!("No round robin candidate available"))?;
+        if let Some(entry) = self.current_weights.get_mut(&selected_id) {
+            *entry -= total_weight;
+        }
+
+        Ok((selected_id, *base_weights.get(&selected_id).unwrap_or(&0.0)))
+    }
+}
+
+#[derive(Clone)]
+struct RoundRobinStateStore {
+    state: Arc<Mutex<HashMap<String, RoundRobinState>>>,
+    storage_path: PathBuf,
+    persist: bool,
+}
+
+impl std::fmt::Debug for RoundRobinStateStore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RoundRobinStateStore")
+            .field("storage_path", &self.storage_path)
+            .field("persist", &self.persist)
+            .finish()
+    }
+}
+
+impl RoundRobinStateStore {
+    fn with_default_path() -> Result<Self> {
+        let path = std::env::var("TASK_ROUTER_STATE_PATH")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| PathBuf::from(".caws/runtime/task_router_round_robin.json"));
+        Self::new(path)
+    }
+
+    fn new(path: PathBuf) -> Result<Self> {
+        let snapshot = if path.exists() {
+            Self::load_snapshot(&path)?
+        } else {
+            HashMap::new()
+        };
+
+        Ok(Self {
+            state: Arc::new(Mutex::new(snapshot)),
+            storage_path: path,
+            persist: true,
+        })
+    }
+
+    fn in_memory() -> Self {
+        Self {
+            state: Arc::new(Mutex::new(HashMap::new())),
+            storage_path: PathBuf::new(),
+            persist: false,
+        }
+    }
+
+    fn load_snapshot(path: &Path) -> Result<HashMap<String, RoundRobinState>> {
+        let data = fs::read(path)
+            .with_context(|| format!("reading round robin state {}", path.display()))?;
+        let snapshot = serde_json::from_slice(&data)
+            .with_context(|| format!("parsing round robin state {}", path.display()))?;
+        Ok(snapshot)
+    }
+
+    fn next_candidate(
+        &self,
+        key: &str,
+        base_weights: &HashMap<Uuid, f64>,
+    ) -> Result<(Uuid, Option<Uuid>, f64)> {
+        if base_weights.is_empty() {
+            bail!("No round robin weights provided");
+        }
+
+        let total_weight: f64 = base_weights.values().copied().sum();
+        if total_weight <= f64::EPSILON {
+            bail!("Total round robin weight is zero");
+        }
+
+        let mut guard = self.state.lock();
+        let mut state = guard.get(key).cloned().unwrap_or_else(RoundRobinState::new);
+        let previous = state.last_selected;
+        state.reconcile(base_weights);
+        let (selected_id, selected_weight) = state.select_next(base_weights, total_weight)?;
+        state.last_selected = Some(selected_id);
+        state.updated_at = Utc::now();
+        guard.insert(key.to_string(), state);
+
+        let snapshot = if self.persist {
+            Some((*guard).clone())
+        } else {
+            None
+        };
+        drop(guard);
+
+        if let Some(snapshot) = snapshot {
+            if let Err(err) = self.write_snapshot(&snapshot) {
+                warn!(error = ?err, "Failed to persist round robin state");
+            }
+        }
+
+        Ok((selected_id, previous, selected_weight))
+    }
+
+    fn remove(&self, key: &str) {
+        let mut guard = self.state.lock();
+        let removed = guard.remove(key);
+        let snapshot = if removed.is_some() && self.persist {
+            Some((*guard).clone())
+        } else {
+            None
+        };
+        drop(guard);
+
+        if let Some(snapshot) = snapshot {
+            if let Err(err) = self.write_snapshot(&snapshot) {
+                warn!(error = ?err, "Failed to persist round robin state after removal");
+            }
+        }
+    }
+
+    fn write_snapshot(&self, snapshot: &HashMap<String, RoundRobinState>) -> Result<()> {
+        if !self.persist {
+            return Ok(());
+        }
+
+        if let Some(parent) = self.storage_path.parent() {
+            if !parent.as_os_str().is_empty() {
+                fs::create_dir_all(parent).with_context(|| {
+                    format!(
+                        "creating directory for round robin state {}",
+                        parent.display()
+                    )
+                })?;
+            }
+        }
+
+        let data = serde_json::to_vec_pretty(snapshot)?;
+        fs::write(&self.storage_path, data).with_context(|| {
+            format!(
+                "writing round robin state to {}",
+                self.storage_path.display()
+            )
+        })?;
+        Ok(())
+    }
+}
 
 /// Task router implementation
 #[derive(Debug)]
@@ -16,15 +227,25 @@ pub struct TaskRouter {
     routing_algorithm: RoutingAlgorithm,
     capability_threshold: f32,
     load_balancing_strategy: LoadBalancingStrategy,
+    round_robin_state: RoundRobinStateStore,
 }
 
 impl TaskRouter {
     /// Create a new task router
     pub fn new() -> Self {
+        let round_robin_state = RoundRobinStateStore::with_default_path().unwrap_or_else(|err| {
+            warn!(
+                error = ?err,
+                "Failed to initialize persistent round robin state; using in-memory store"
+            );
+            RoundRobinStateStore::in_memory()
+        });
+
         Self {
             routing_algorithm: RoutingAlgorithm::Hybrid,
             capability_threshold: 0.7,
             load_balancing_strategy: LoadBalancingStrategy::ResourceBased,
+            round_robin_state,
         }
     }
 
@@ -34,11 +255,36 @@ impl TaskRouter {
         capability_threshold: f32,
         load_balancing: LoadBalancingStrategy,
     ) -> Self {
+        let round_robin_state = RoundRobinStateStore::with_default_path().unwrap_or_else(|err| {
+            warn!(
+                error = ?err,
+                "Failed to initialize persistent round robin state; using in-memory store"
+            );
+            RoundRobinStateStore::in_memory()
+        });
+
         Self {
             routing_algorithm: algorithm,
             capability_threshold,
             load_balancing_strategy: load_balancing,
+            round_robin_state,
         }
+    }
+
+    /// Create a task router with explicit round robin storage path
+    pub fn with_round_robin_state(
+        algorithm: RoutingAlgorithm,
+        capability_threshold: f32,
+        load_balancing: LoadBalancingStrategy,
+        storage_path: PathBuf,
+    ) -> Result<Self> {
+        let round_robin_state = RoundRobinStateStore::new(storage_path)?;
+        Ok(Self {
+            routing_algorithm: algorithm,
+            capability_threshold,
+            load_balancing_strategy: load_balancing,
+            round_robin_state,
+        })
     }
 
     /// Route a task to appropriate workers
@@ -277,42 +523,153 @@ impl TaskRouter {
     async fn route_by_round_robin(
         &self,
         candidates: &[WorkerCandidate],
-        _requirements: &TaskRequirements,
+        requirements: &TaskRequirements,
     ) -> Result<Vec<WorkerAssignment>> {
         if candidates.is_empty() {
             return Ok(Vec::new());
         }
 
-        // TODO: Implement actual round robin with persistent state with the following requirements:
-        // 1. State persistence: Maintain persistent state for round robin selection
-        //    - Store last selected worker index in persistent storage
-        //    - Handle state recovery and initialization
-        //    - Ensure state consistency across system restarts
-        // 2. Round robin logic: Implement proper round robin selection algorithm
-        //    - Cycle through available workers in order
-        //    - Handle worker availability and health status
-        //    - Implement fair distribution across all eligible workers
-        // 3. Load balancing: Balance load across available workers
-        //    - Consider worker capacity and current load
-        //    - Implement weighted round robin for different worker capabilities
-        //    - Handle worker failures and recovery
-        // 4. Performance optimization: Optimize selection performance
-        //    - Use efficient data structures for worker tracking
-        //    - Implement caching for frequently accessed state
-        //    - Handle concurrent access to selection state
-        // 5. Return WorkerAssignment with actual round robin selection (not first candidate)
-        // 6. Include proper reasoning and selection justification
-        let candidate = &candidates[0];
+        let mut eligible: Vec<WorkerCandidate> = candidates
+            .iter()
+            .filter(|candidate| matches!(candidate.worker.status, WorkerStatus::Available))
+            .cloned()
+            .collect();
+
+        if eligible.is_empty() {
+            eligible = candidates.to_vec();
+        }
+
+        let key = self.compute_round_robin_key(requirements, &eligible);
+        let mut weights = HashMap::new();
+        for candidate in &eligible {
+            let weight = Self::compute_round_robin_weight(candidate);
+            weights.insert(candidate.worker.id, weight);
+        }
+
+        let fallback = eligible
+            .iter()
+            .min_by(|a, b| {
+                a.load_factor
+                    .partial_cmp(&b.load_factor)
+                    .unwrap_or(Ordering::Equal)
+            })
+            .cloned()
+            .unwrap();
+
+        let positive_weight = weights.values().any(|w| *w > f64::EPSILON);
+        let (selected, selected_weight, previous) = if positive_weight {
+            match self.round_robin_state.next_candidate(&key, &weights) {
+                Ok((selected_id, previous, weight)) => {
+                    if let Some(candidate) = eligible
+                        .iter()
+                        .find(|c| c.worker.id == selected_id)
+                        .cloned()
+                    {
+                        (candidate, weight, previous)
+                    } else {
+                        // Candidate disappeared since last selection – reset state and fall back.
+                        self.round_robin_state.remove(&key);
+                        (
+                            fallback.clone(),
+                            weights
+                                .get(&fallback.worker.id)
+                                .copied()
+                                .unwrap_or_default(),
+                            None,
+                        )
+                    }
+                }
+                Err(err) => {
+                    warn!(
+                        error = ?err,
+                        "Round robin state unavailable; falling back to load-based selection"
+                    );
+                    self.round_robin_state.remove(&key);
+                    (
+                        fallback.clone(),
+                        weights
+                            .get(&fallback.worker.id)
+                            .copied()
+                            .unwrap_or_default(),
+                        None,
+                    )
+                }
+            }
+        } else {
+            self.round_robin_state.remove(&key);
+            (fallback.clone(), 0.0, None)
+        };
+
+        let previous_name = previous.and_then(|id| {
+            eligible
+                .iter()
+                .find(|candidate| candidate.worker.id == id)
+                .map(|candidate| candidate.worker.name.clone())
+        });
+
+        let reasoning = format!(
+            "Round robin selection: weight {:.3}, load {:.1}%, capability {:.1}%{}",
+            selected_weight,
+            selected.load_factor * 100.0,
+            selected.capability_score * 100.0,
+            previous_name
+                .map(|name| format!(" (previous: {name})"))
+                .unwrap_or_default()
+        );
+
         let assignment = WorkerAssignment {
-            worker_id: candidate.worker.id,
-            worker_name: candidate.worker.name.clone(),
-            capability_match_score: candidate.capability_score,
-            estimated_execution_time_ms: candidate.estimated_execution_time_ms,
-            reasoning: "Round robin selection (first available)".to_string(),
-            load_factor: candidate.load_factor,
+            worker_id: selected.worker.id,
+            worker_name: selected.worker.name.clone(),
+            capability_match_score: selected.capability_score,
+            estimated_execution_time_ms: selected.estimated_execution_time_ms,
+            reasoning,
+            load_factor: selected.load_factor,
         };
 
         Ok(vec![assignment])
+    }
+
+    fn compute_round_robin_key(
+        &self,
+        requirements: &TaskRequirements,
+        candidates: &[WorkerCandidate],
+    ) -> String {
+        let mut ids: Vec<String> = candidates
+            .iter()
+            .map(|candidate| candidate.worker.id.to_string())
+            .collect();
+        ids.sort();
+
+        let preferred = requirements
+            .preferred_worker_type
+            .as_ref()
+            .map(|t| format!("{:?}", t))
+            .unwrap_or_else(|| "any".to_string());
+
+        format!(
+            "{}|{}|{}|{}|{}",
+            requirements.required_languages.join(","),
+            requirements.required_frameworks.join(","),
+            requirements.required_domains.join(","),
+            preferred,
+            ids.join(",")
+        )
+    }
+
+    fn compute_round_robin_weight(candidate: &WorkerCandidate) -> f64 {
+        let capability = candidate.capability_score.clamp(0.0, 1.0) as f64;
+        let capacity = (1.0 - candidate.load_factor).clamp(0.0, 1.0) as f64;
+        let efficiency =
+            1.0 / (1.0 + (candidate.estimated_execution_time_ms as f64 / 30_000.0).max(0.0));
+        let health = match candidate.worker.health_status {
+            WorkerHealthStatus::Healthy => 1.0,
+            WorkerHealthStatus::Degraded => 0.6,
+            WorkerHealthStatus::Unhealthy => 0.2,
+        };
+
+        // Weighted blend that favors capability while accounting for capacity, efficiency, and health
+        let weight = capability * 0.5 + capacity * 0.3 + efficiency * 0.15 + health * 0.05;
+        weight.max(0.01)
     }
 
     /// Route by least busy worker
@@ -517,6 +874,7 @@ struct WorkerCandidate {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::tempdir;
 
     #[tokio::test]
     async fn test_task_router_creation() {
@@ -662,5 +1020,166 @@ mod tests {
             .unwrap();
         assert_eq!(assignments.len(), 1);
         assert_eq!(assignments[0].capability_match_score, 0.9);
+    }
+
+    fn make_candidate(name: &str, capability: f32, load: f32) -> WorkerCandidate {
+        let mut capabilities = WorkerCapabilities::default();
+        capabilities.languages = vec!["rust".to_string()];
+        capabilities.quality_score = capability;
+        capabilities.caws_awareness = capability;
+
+        let mut worker = Worker::new(
+            name.to_string(),
+            WorkerType::Generalist,
+            "llama3.3:7b".to_string(),
+            "http://localhost:11434".to_string(),
+            capabilities,
+        );
+        worker.performance_metrics.current_load = load;
+        worker.health_status = WorkerHealthStatus::Healthy;
+        worker.health_metrics = None;
+        worker.last_health_check = Some(chrono::Utc::now());
+
+        WorkerCandidate {
+            worker,
+            capability_score: capability,
+            estimated_execution_time_ms: 5000,
+            load_factor: load,
+            combined_score: capability * (1.0 - load),
+        }
+    }
+
+    fn basic_requirements() -> TaskRequirements {
+        TaskRequirements {
+            required_languages: vec!["rust".to_string()],
+            required_frameworks: vec![],
+            required_domains: vec![],
+            min_quality_score: 0.6,
+            min_caws_awareness: 0.6,
+            max_execution_time_ms: None,
+            preferred_worker_type: None,
+            context_length_estimate: 2048,
+        }
+    }
+
+    #[tokio::test]
+    async fn test_round_robin_rotates_workers() {
+        let temp_dir = tempdir().expect("temp dir");
+        let storage_path = temp_dir.path().join("rr_state.json");
+        let router = TaskRouter::with_round_robin_state(
+            RoutingAlgorithm::RoundRobin,
+            0.7,
+            LoadBalancingStrategy::ResourceBased,
+            storage_path.clone(),
+        )
+        .expect("router");
+
+        let candidate_a = make_candidate("worker-a", 0.8, 0.2);
+        let candidate_b = make_candidate("worker-b", 0.8, 0.2);
+        let candidates = vec![candidate_a.clone(), candidate_b.clone()];
+        let requirements = basic_requirements();
+
+        let first = router
+            .route_by_round_robin(&candidates, &requirements)
+            .await
+            .expect("first selection");
+        let second = router
+            .route_by_round_robin(&candidates, &requirements)
+            .await
+            .expect("second selection");
+
+        assert_eq!(first.len(), 1);
+        assert_eq!(second.len(), 1);
+        assert_ne!(
+            first[0].worker_id, second[0].worker_id,
+            "Round robin should rotate between workers"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_weighted_round_robin_prefers_high_weight() {
+        let temp_dir = tempdir().expect("temp dir");
+        let storage_path = temp_dir.path().join("rr_state_weighted.json");
+        let router = TaskRouter::with_round_robin_state(
+            RoutingAlgorithm::RoundRobin,
+            0.7,
+            LoadBalancingStrategy::ResourceBased,
+            storage_path.clone(),
+        )
+        .expect("router");
+
+        let strong = make_candidate("strong-worker", 0.95, 0.1);
+        let weaker = make_candidate("support-worker", 0.75, 0.2);
+        let candidates = vec![strong.clone(), weaker.clone()];
+        let requirements = basic_requirements();
+
+        let mut counts = std::collections::HashMap::new();
+        for _ in 0..6 {
+            let assignment = router
+                .route_by_round_robin(&candidates, &requirements)
+                .await
+                .expect("selection");
+            let id = assignment[0].worker_id;
+            *counts.entry(id).or_insert(0usize) += 1;
+        }
+
+        let strong_count = counts.get(&strong.worker.id).copied().unwrap_or(0);
+        let weak_count = counts.get(&weaker.worker.id).copied().unwrap_or(0);
+        assert!(
+            strong_count > weak_count,
+            "Higher capability worker should be selected more often (strong: {}, weak: {})",
+            strong_count,
+            weak_count
+        );
+        assert!(
+            weak_count > 0,
+            "Lower weight worker should still receive assignments occasionally"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_round_robin_state_persists_across_instances() {
+        let temp_dir = tempdir().expect("temp dir");
+        let storage_path = temp_dir.path().join("rr_state_persist.json");
+
+        let router_one = TaskRouter::with_round_robin_state(
+            RoutingAlgorithm::RoundRobin,
+            0.7,
+            LoadBalancingStrategy::ResourceBased,
+            storage_path.clone(),
+        )
+        .expect("router one");
+
+        let candidate_a = make_candidate("worker-a", 0.8, 0.1);
+        let candidate_b = make_candidate("worker-b", 0.8, 0.1);
+        let candidates = vec![candidate_a.clone(), candidate_b.clone()];
+        let requirements = basic_requirements();
+
+        let first = router_one
+            .route_by_round_robin(&candidates, &requirements)
+            .await
+            .expect("first selection");
+        let first_worker = first[0].worker_id;
+
+        // Drop router_one and create a new router with same storage
+        drop(router_one);
+        let router_two = TaskRouter::with_round_robin_state(
+            RoutingAlgorithm::RoundRobin,
+            0.7,
+            LoadBalancingStrategy::ResourceBased,
+            storage_path.clone(),
+        )
+        .expect("router two");
+
+        let second = router_two
+            .route_by_round_robin(&candidates, &requirements)
+            .await
+            .expect("second selection");
+        let second_worker = second[0].worker_id;
+
+        assert_ne!(
+            first_worker, second_worker,
+            "Round robin state should persist and continue rotation after restart"
+        );
     }
 }

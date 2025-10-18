@@ -1,13 +1,13 @@
 use std::sync::{Arc, Mutex};
 
-use council::models::TaskSpec;
-use council::types::FinalVerdict;
-use council::CouncilConfig;
+use agent_agency_agent_agency_council::models::TaskSpec;
+use agent_agency_agent_agency_council::types::FinalVerdict;
+use agent_agency_agent_agency_council::CouncilConfig;
 
 struct TestEmitter {
     final_calls: Arc<Mutex<Vec<(uuid::Uuid, String)>>>,
 }
-impl council::coordinator::ProvenanceEmitter for TestEmitter {
+impl agent_agency_agent_agency_council::coordinator::ProvenanceEmitter for TestEmitter {
     fn on_judge_verdict(
         &self,
         _task_id: uuid::Uuid,
@@ -34,13 +34,13 @@ async fn emits_final_verdict_event() {
     let emitter = Arc::new(TestEmitter {
         final_calls: calls.clone(),
     });
-    let coord = council::coordinator::ConsensusCoordinator::new(cfg).with_emitter(emitter);
+    let coord = agent_agency_council::coordinator::ConsensusCoordinator::new(cfg).with_emitter(emitter);
 
     let spec = TaskSpec {
         id: uuid::Uuid::nil(),
         title: "t".into(),
         description: "d".into(),
-        risk_tier: council::models::RiskTier::Tier2,
+        risk_tier: agent_agency_council::models::RiskTier::Tier2,
         ..Default::default()
     };
     let res = coord.evaluate_task(spec).await.unwrap();

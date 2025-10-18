@@ -160,7 +160,7 @@ impl AdaptiveResourceAllocator {
     /// Update current resource metrics
     pub async fn update_metrics(&self, metrics: ResourceMetrics) {
         let mut current = self.current_metrics.write().await;
-        *current = metrics;
+        *current = metrics.clone();
 
         // Add to history
         let mut history = self.metrics_history.write().await;

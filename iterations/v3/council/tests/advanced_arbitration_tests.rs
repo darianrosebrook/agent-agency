@@ -5,7 +5,7 @@
 //! quality-weighted consensus building.
 
 use agent_agency_council::advanced_arbitration::*;
-use agent_agency_council::types::*;
+use agent_agency_council::types::{WorkerOutput, WorkerMetadata, Seeds, Artifacts, PatchArtifact, SelfAssessment};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -559,7 +559,7 @@ async fn test_v3_predictive_capabilities() {
 #[tokio::test]
 async fn test_comprehensive_v3_superiority() {
     println!("\n🚀 Testing V3's Comprehensive Superiority over V2");
-    println!("=" * 60);
+    println!("=".repeat(60));
 
     // Test 1: Multi-dimensional confidence scoring
     test_multi_dimensional_confidence_scoring();
@@ -589,7 +589,7 @@ async fn test_comprehensive_v3_superiority() {
     test_v3_predictive_capabilities();
 
     println!("\n🎉 V3 Superiority Demonstration Complete!");
-    println!("=" * 60);
+    println!("=".repeat(60));
     println!("✅ V3 demonstrates significant superiority over V2 in:");
     println!("   • Multi-dimensional confidence scoring");
     println!("   • Predictive conflict resolution");

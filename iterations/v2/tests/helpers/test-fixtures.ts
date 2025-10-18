@@ -37,10 +37,10 @@ export function createMinimalTask(overrides?: Partial<Task>): Task {
   return {
     id: `test-task-${timestamp}`,
     description: "Test task description",
-    type: "code-editing" as TaskType,
+    type: "file_editing" as TaskType,
     requiredCapabilities: {
       languages: ["TypeScript"],
-      taskTypes: ["code-editing"],
+      taskTypes: ["file_editing"],
     },
     priority: 5,
     timeoutMs: 30000,
@@ -133,7 +133,7 @@ export function createTestAgent(
     name: `Test Agent ${id}`,
     modelFamily: "gpt-4",
     capabilities: {
-      taskTypes: ["code-editing", "code-review"],
+      taskTypes: ["file_editing", "code-review"],
       languages: ["TypeScript", "JavaScript"],
       specializations: ["AST analysis", "Performance optimization"],
     },
@@ -176,7 +176,7 @@ export function createAgentWithCapabilities(
   return createTestAgent({
     ...overrides,
     capabilities: {
-      taskTypes: (capabilities.taskTypes || ["code-editing"]) as any,
+      taskTypes: (capabilities.taskTypes || ["file_editing"]) as any,
       languages: (capabilities.languages || ["TypeScript"]) as any,
       specializations: (capabilities.specializations || []) as any,
     },

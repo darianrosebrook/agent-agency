@@ -113,7 +113,7 @@ describe("ARBITER Foundation Integration Tests (001-004)", () => {
         createAgentWithCapabilities(
           {
             languages: ["TypeScript"],
-            taskTypes: ["code-editing"],
+            taskTypes: ["file_editing"],
             specializations: ["AST analysis"],
           },
           { id: "typescript-specialist" }
@@ -125,7 +125,7 @@ describe("ARBITER Foundation Integration Tests (001-004)", () => {
         createAgentWithCapabilities(
           {
             languages: ["Python"],
-            taskTypes: ["code-editing"],
+            taskTypes: ["file_editing"],
             specializations: ["Performance optimization"],
           },
           { id: "python-specialist" }
@@ -135,7 +135,7 @@ describe("ARBITER Foundation Integration Tests (001-004)", () => {
       // Query for TypeScript agents
       const query: AgentQuery = {
         languages: ["TypeScript"],
-        taskType: "code-editing",
+        taskType: "file_editing",
       };
 
       const results = await registry.getAgentsByCapability(query);
@@ -151,7 +151,7 @@ describe("ARBITER Foundation Integration Tests (001-004)", () => {
         createAgentWithCapabilities(
           {
             languages: ["TypeScript", "JavaScript", "Python"],
-            taskTypes: ["code-editing", "code-review"],
+            taskTypes: ["file_editing", "code-review"],
           },
           { id: "full-stack-agent" }
         )
@@ -161,7 +161,7 @@ describe("ARBITER Foundation Integration Tests (001-004)", () => {
         createAgentWithCapabilities(
           {
             languages: ["TypeScript"],
-            taskTypes: ["code-editing"],
+            taskTypes: ["file_editing"],
           },
           { id: "typescript-only-agent" }
         )
@@ -170,7 +170,7 @@ describe("ARBITER Foundation Integration Tests (001-004)", () => {
       // Query for TypeScript only (both agents have it)
       const query: AgentQuery = {
         languages: ["TypeScript"],
-        taskType: "code-editing",
+        taskType: "file_editing",
       };
 
       const results = await registry.getAgentsByCapability(query);
@@ -197,7 +197,7 @@ describe("ARBITER Foundation Integration Tests (001-004)", () => {
       // Create a task
       const task = createMinimalTask({
         description: "Refactor authentication module",
-        type: "code-editing",
+        type: "file_editing",
       });
 
       const routing = await router.routeTask(task);
@@ -215,7 +215,7 @@ describe("ARBITER Foundation Integration Tests (001-004)", () => {
         createAgentWithCapabilities(
           {
             languages: ["TypeScript"],
-            taskTypes: ["code-editing"],
+            taskTypes: ["file_editing"],
           },
           {
             id: "ts-specialist",
@@ -234,7 +234,7 @@ describe("ARBITER Foundation Integration Tests (001-004)", () => {
         createAgentWithCapabilities(
           {
             languages: ["TypeScript", "Python"],
-            taskTypes: ["code-editing"],
+            taskTypes: ["file_editing"],
           },
           {
             id: "general-agent",
@@ -251,7 +251,7 @@ describe("ARBITER Foundation Integration Tests (001-004)", () => {
       // Create TypeScript task
       const task = createTaskRequiring({
         languages: ["TypeScript"],
-        taskTypes: ["code-editing"],
+        taskTypes: ["file_editing"],
       });
 
       const routing = await router.routeTask(task);
@@ -362,7 +362,7 @@ describe("ARBITER Foundation Integration Tests (001-004)", () => {
       // 3. Route task to agent (ARBITER-002)
       const task = createMinimalTask({
         description: "Implement workflow test feature",
-        type: "code-editing",
+        type: "file_editing",
       });
       const routing = await router.routeTask(task);
       expect(routing.selectedAgent.id).toBe("workflow-agent");
@@ -426,7 +426,7 @@ describe("ARBITER Foundation Integration Tests (001-004)", () => {
 
       // Create 50 tasks
       const tasks = createTaskBatch(50, {
-        type: "code-editing",
+        type: "file_editing",
         priority: 5,
       });
 

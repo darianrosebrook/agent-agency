@@ -198,7 +198,11 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
             `Semantic search found ${semanticResults.length} results for query: ${query.query}`
           );
         } catch (error) {
-          console.warn(`Semantic search failed: ${error.message}`);
+          console.warn(
+            `Semantic search failed: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
           // Continue with traditional search
         }
       }

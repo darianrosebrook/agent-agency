@@ -25,7 +25,7 @@ const createMockAgent = (
   name,
   modelFamily: "gpt-4",
   capabilities: {
-    taskTypes: ["code-editing" as TaskType],
+    taskTypes: ["file_editing" as TaskType],
     languages: ["TypeScript"],
     specializations: [],
   },
@@ -101,13 +101,13 @@ describe("MultiArmedBandit", () => {
 
   describe("select", () => {
     it("should throw error for empty candidates", async () => {
-      await expect(bandit.select([], "code-editing")).rejects.toThrow(
+      await expect(bandit.select([], "file_editing")).rejects.toThrow(
         "No candidate agents provided for routing"
       );
     });
 
     it("should select an agent from candidates", async () => {
-      const result = await bandit.select(mockCandidates, "code-editing");
+      const result = await bandit.select(mockCandidates, "file_editing");
 
       expect(mockAgents.map((a) => a.id)).toContain(result.id);
     });
@@ -117,7 +117,7 @@ describe("MultiArmedBandit", () => {
       const selections: string[] = [];
 
       for (let i = 0; i < 200; i++) {
-        const result = await bandit.select(mockCandidates, "code-editing");
+        const result = await bandit.select(mockCandidates, "file_editing");
         selections.push(result.id);
       }
 
@@ -138,7 +138,7 @@ describe("MultiArmedBandit", () => {
     it("should create complete routing decision", () => {
       const taskId = "task-123";
       const selectedAgent = mockAgents[0];
-      const taskType = "code-editing" as TaskType;
+      const taskType = "file_editing" as TaskType;
 
       const decision = bandit.createRoutingDecision(
         taskId,
@@ -164,7 +164,7 @@ describe("MultiArmedBandit", () => {
         "task-123",
         mockCandidates,
         mockAgents[0],
-        "code-editing"
+        "file_editing"
       );
 
       const alternativeIds = decision.alternativesConsidered.map(
@@ -183,7 +183,7 @@ describe("MultiArmedBandit", () => {
         "task-1",
         mockCandidates,
         experiencedAgent,
-        "code-editing"
+        "file_editing"
       );
 
       // Test confidence for new agent
@@ -192,7 +192,7 @@ describe("MultiArmedBandit", () => {
         "task-2",
         mockCandidates,
         newAgent,
-        "code-editing"
+        "file_editing"
       );
 
       expect(decision1.confidence).toBeGreaterThan(decision2.confidence);
@@ -211,7 +211,7 @@ describe("MultiArmedBandit", () => {
         writable: true,
       });
 
-      const result = await bandit.select(mockCandidates, "code-editing");
+      const result = await bandit.select(mockCandidates, "file_editing");
 
       // Should explore and potentially pick a less optimal agent
       expect(mockAgents.map((a) => a.id)).toContain(result.id);
@@ -232,7 +232,7 @@ describe("MultiArmedBandit", () => {
       for (let i = 0; i < 10; i++) {
         const result = await exploitOnlyBandit.select(
           mockCandidates,
-          "code-editing"
+          "file_editing"
         );
         results.push(result.id);
       }
@@ -257,7 +257,7 @@ describe("MultiArmedBandit", () => {
       const testBandit = new MultiArmedBandit();
       (testBandit as any).totalTasks = 1000;
 
-      const ucbScore = (testBandit as any).calculateUCB(agent, "code-editing");
+      const ucbScore = (testBandit as any).calculateUCB(agent, "file_editing");
 
       // UCB should be mean + exploration bonus
       const expectedMean = agent.performanceHistory.successRate;
@@ -272,10 +272,10 @@ describe("MultiArmedBandit", () => {
       const newAgent = mockAgents[3]; // 0 tasks
       const experiencedAgent = mockAgents[0]; // 100 tasks
 
-      const newScore = (bandit as any).calculateUCB(newAgent, "code-editing");
+      const newScore = (bandit as any).calculateUCB(newAgent, "file_editing");
       const experiencedScore = (bandit as any).calculateUCB(
         experiencedAgent,
-        "code-editing"
+        "file_editing"
       );
 
       // New agent should get exploration boost
@@ -309,8 +309,8 @@ describe("MultiArmedBandit", () => {
       expect(bandit.getStats().totalTasks).toBe(0);
 
       // Run some selections
-      bandit.select(mockCandidates, "code-editing");
-      bandit.select(mockCandidates, "code-editing");
+      bandit.select(mockCandidates, "file_editing");
+      bandit.select(mockCandidates, "file_editing");
 
       expect(bandit.getStats().totalTasks).toBe(2);
     });
@@ -337,7 +337,7 @@ describe("MultiArmedBandit", () => {
   describe("edge cases", () => {
     it("should handle single candidate", async () => {
       const singleCandidate = [mockCandidates[0]];
-      const result = await bandit.select(singleCandidate, "code-editing");
+      const result = await bandit.select(singleCandidate, "file_editing");
 
       expect(result.id).toBe(singleCandidate[0].agent.id);
     });
@@ -352,7 +352,7 @@ describe("MultiArmedBandit", () => {
       // Should select one of them without error
       const result = await bandit.select(
         samePerformanceCandidates,
-        "code-editing"
+        "file_editing"
       );
       expect(["agent-a", "agent-b", "agent-c"]).toContain(result.id);
     });
@@ -368,7 +368,7 @@ describe("MultiArmedBandit", () => {
         })
       );
 
-      const result = await bandit.select(lowUtilCandidates, "code-editing");
+      const result = await bandit.select(lowUtilCandidates, "file_editing");
       expect(mockAgents.map((a) => a.id)).toContain(result.id);
     });
   });

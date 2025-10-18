@@ -110,9 +110,11 @@ export class EmbeddingService implements IEmbeddingService {
         throw error;
       }
       throw new EmbeddingError(
-        `Failed to generate embedding: ${error.message}`,
+        `Failed to generate embedding: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
         "API_ERROR",
-        error as Error
+        error instanceof Error ? error : new Error(String(error))
       );
     }
   }
@@ -179,9 +181,11 @@ export class EmbeddingService implements IEmbeddingService {
         }
       } catch (error) {
         throw new EmbeddingError(
-          `Failed to generate batch embeddings: ${error.message}`,
+          `Failed to generate batch embeddings: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
           "BATCH_API_ERROR",
-          error as Error
+          error instanceof Error ? error : new Error(String(error))
         );
       }
     }
@@ -285,7 +289,7 @@ export class EmbeddingService implements IEmbeddingService {
           } catch (error) {
             clearTimeout(timeoutId);
 
-            if (error.name === "AbortError") {
+            if (error instanceof Error && error.name === "AbortError") {
               throw new EmbeddingError(
                 `Embedding generation timeout after ${this.timeout}ms`,
                 "TIMEOUT"
@@ -380,7 +384,9 @@ export class EmbeddingService implements IEmbeddingService {
     // Simple LRU: if cache is full, remove oldest entry
     if (this.cache.size >= this.maxCacheSize) {
       const firstKey = this.cache.keys().next().value;
-      this.cache.delete(firstKey);
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
     }
 
     this.cache.set(key, embedding);

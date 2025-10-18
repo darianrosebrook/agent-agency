@@ -21,7 +21,7 @@ describe("TaskLifecycleManager", () => {
   const createTestTask = (id: string = "test-task-1"): Task => ({
     id,
     description: "Test task for lifecycle",
-    type: "code-editing" as any,
+    type: "file_editing" as any,
     priority: 5,
     timeoutMs: 30000,
     attempts: 0,

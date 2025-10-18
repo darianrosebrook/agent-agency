@@ -294,7 +294,7 @@ export class ResourceAllocator implements IResourceAllocator {
     try {
       // Query for agents with basic capabilities (no specific requirements)
       const basicQuery = {
-        taskType: "code-editing" as const,
+        taskType: "file_editing" as const,
         requiredCapabilities: [],
         minExpertiseLevel: "novice" as const,
         maxResults: 10,

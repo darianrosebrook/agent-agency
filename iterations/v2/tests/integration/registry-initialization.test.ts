@@ -166,12 +166,12 @@ describe("Registry Initialization Integration", () => {
 
     it("should find agents by task type capability", async () => {
       const results = await registry.getAgentsByCapability({
-        taskType: "code-editing",
+        taskType: "file_editing",
         languages: ["TypeScript"],
       });
 
       expect(results.length).toBeGreaterThan(0);
-      expect(results[0].agent.capabilities.taskTypes).toContain("code-editing");
+      expect(results[0].agent.capabilities.taskTypes).toContain("file_editing");
       expect(results[0].matchScore).toBeGreaterThan(0);
       expect(results[0].matchScore).toBeLessThanOrEqual(1);
     });
@@ -195,12 +195,12 @@ describe("Registry Initialization Integration", () => {
 
     it("should filter by language requirements", async () => {
       const tsResults = await registry.getAgentsByCapability({
-        taskType: "code-editing",
+        taskType: "file_editing",
         languages: ["TypeScript"],
       });
 
       const pythonResults = await registry.getAgentsByCapability({
-        taskType: "code-editing",
+        taskType: "file_editing",
         languages: ["Python"],
       });
 
@@ -221,7 +221,7 @@ describe("Registry Initialization Integration", () => {
 
     it("should filter by utilization threshold", async () => {
       const lowUtilizationResults = await registry.getAgentsByCapability({
-        taskType: "code-editing",
+        taskType: "file_editing",
         maxUtilization: 50, // Only agents with <= 50% utilization
       });
 
@@ -235,7 +235,7 @@ describe("Registry Initialization Integration", () => {
 
     it("should filter by minimum success rate", async () => {
       const highSuccessResults = await registry.getAgentsByCapability({
-        taskType: "code-editing",
+        taskType: "file_editing",
         minSuccessRate: 0.9, // Only agents with >= 90% success rate
       });
 

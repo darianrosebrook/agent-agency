@@ -149,7 +149,7 @@ async fn test_conflict_resolution() {
     println!("\n⚖️ Testing Conflict Resolution");
     println!("{}", "=".repeat(60));
 
-    let arbitration_engine = AdvancedArbitrationEngine::new();
+    let arbitration_engine = AdvancedArbitrationEngine::new().unwrap();
 
     // Create conflicting worker outputs
     let conflicting_outputs = vec![

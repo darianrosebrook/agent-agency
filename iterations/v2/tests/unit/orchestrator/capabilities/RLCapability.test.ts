@@ -25,7 +25,7 @@ describe("RLCapability", () => {
   const createTestTask = (): Task => ({
     id: "test-task-1",
     description: "Test task for RL",
-    type: "code-editing" as any,
+    type: "file_editing" as any,
     priority: 5,
     timeoutMs: 30000,
     attempts: 0,

@@ -23,7 +23,6 @@ export { VerificationPriority } from "./verification";
  * Task type enumeration
  */
 export type TaskType =
-  | "code-editing"
   | "code-review"
   | "analysis"
   | "research"

@@ -122,7 +122,7 @@ describe("ARBITER-001 End-to-End Integration", () => {
         name: "E2E Test Agent",
         modelFamily: "claude-3.5" as const,
         capabilities: {
-          taskTypes: ["code-editing" as const, "debugging" as const],
+          taskTypes: ["file_editing" as const, "debugging" as const],
           languages: ["TypeScript" as const, "Python" as const],
           specializations: ["AST analysis" as const],
         },
@@ -134,7 +134,7 @@ describe("ARBITER-001 End-to-End Integration", () => {
       // Assert: Agent created in memory
       expect(registered.id).toBeDefined();
       expect(registered.name).toBe("E2E Test Agent");
-      expect(registered.capabilities.taskTypes).toContain("code-editing");
+      expect(registered.capabilities.taskTypes).toContain("file_editing");
 
       // Assert: Agent persisted to database (if db client available)
       if (dbClient) {
@@ -160,7 +160,7 @@ describe("ARBITER-001 End-to-End Integration", () => {
         name: "Performance Test Agent",
         modelFamily: "gpt-4" as const,
         capabilities: {
-          taskTypes: ["code-editing" as const],
+          taskTypes: ["file_editing" as const],
           languages: ["JavaScript" as const],
           specializations: [],
         },
@@ -169,21 +169,21 @@ describe("ARBITER-001 End-to-End Integration", () => {
       // Act: Record multiple performance metrics
       const metrics: PerformanceMetrics[] = [
         {
-          taskType: "code-editing",
+          taskType: "file_editing",
           success: true,
           qualityScore: 0.95,
           latencyMs: 120,
           tokensUsed: 1500,
         },
         {
-          taskType: "code-editing",
+          taskType: "file_editing",
           success: true,
           qualityScore: 0.88,
           latencyMs: 150,
           tokensUsed: 1800,
         },
         {
-          taskType: "code-editing",
+          taskType: "file_editing",
           success: false,
           qualityScore: 0.4,
           latencyMs: 200,
@@ -265,7 +265,7 @@ describe("ARBITER-001 End-to-End Integration", () => {
         modelFamily:
           i % 2 === 0 ? ("gpt-4" as ModelFamily) : ("claude-3" as ModelFamily),
         capabilities: {
-          taskTypes: ["code-editing" as const],
+          taskTypes: ["file_editing" as const],
           languages: ["TypeScript" as const],
           specializations: [],
         },
@@ -298,7 +298,7 @@ describe("ARBITER-001 End-to-End Integration", () => {
         name: "TypeScript Expert",
         modelFamily: "gpt-4" as const,
         capabilities: {
-          taskTypes: ["code-editing", "code-review"],
+          taskTypes: ["file_editing", "code-review"],
           languages: ["TypeScript" as const],
           specializations: [
             "AST analysis" as const,
@@ -322,7 +322,7 @@ describe("ARBITER-001 End-to-End Integration", () => {
         modelFamily: "gpt-4" as const,
         capabilities: {
           taskTypes: [
-            "code-editing" as const,
+            "file_editing" as const,
             "debugging" as const,
             "testing" as const,
           ],
@@ -333,7 +333,7 @@ describe("ARBITER-001 End-to-End Integration", () => {
 
       // Act: Query for TypeScript + AST analysis
       const tsTesters = await registry.getAgentsByCapability({
-        taskType: "code-editing",
+        taskType: "file_editing",
         languages: ["TypeScript"],
         specializations: ["AST analysis"],
       });
@@ -368,7 +368,7 @@ describe("ARBITER-001 End-to-End Integration", () => {
                 ? ("gpt-4" as ModelFamily)
                 : ("claude-3" as ModelFamily),
             capabilities: {
-              taskTypes: ["code-editing" as const],
+              taskTypes: ["file_editing" as const],
               languages: ["TypeScript" as const],
               specializations: [],
             },
@@ -409,7 +409,7 @@ describe("ARBITER-001 End-to-End Integration", () => {
         name: "Resilience Test Agent",
         modelFamily: "gpt-4" as const,
         capabilities: {
-          taskTypes: ["code-editing" as const],
+          taskTypes: ["file_editing" as const],
           languages: ["TypeScript" as const],
           specializations: [],
         },
@@ -431,7 +431,7 @@ describe("ARBITER-001 End-to-End Integration", () => {
         name: "Transaction Test Agent",
         modelFamily: "gpt-4" as const,
         capabilities: {
-          taskTypes: ["code-editing" as const],
+          taskTypes: ["file_editing" as const],
           languages: ["TypeScript" as const],
           specializations: [],
         },
@@ -508,7 +508,7 @@ describe("ARBITER-001 End-to-End Integration", () => {
         name: "Unique ID Test 1",
         modelFamily: "gpt-4" as const,
         capabilities: {
-          taskTypes: ["code-editing" as const],
+          taskTypes: ["file_editing" as const],
           languages: ["TypeScript" as const],
           specializations: [],
         },
@@ -521,7 +521,7 @@ describe("ARBITER-001 End-to-End Integration", () => {
           name: "Unique ID Test 2",
           modelFamily: "gpt-4" as const,
           capabilities: {
-            taskTypes: ["code-editing" as const],
+            taskTypes: ["file_editing" as const],
             languages: ["TypeScript" as const],
             specializations: [],
           },

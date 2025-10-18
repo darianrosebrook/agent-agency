@@ -92,7 +92,7 @@ describe("ResilientDatabaseClient", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5" as any,
         capabilities: {
-          taskTypes: ["code-editing" as any],
+          taskTypes: ["file_editing" as any],
           languages: ["TypeScript" as any],
           specializations: [],
         },
@@ -116,14 +116,14 @@ describe("ResilientDatabaseClient", () => {
     });
 
     it("should delegate query operations to database", async () => {
-      const query: AgentQuery = { taskType: "code-editing" as any };
+      const query: AgentQuery = { taskType: "file_editing" as any };
       const results = [
         {
           id: "agent1",
           name: "Test Agent",
           modelFamily: "claude-3.5" as any,
           capabilities: {
-            taskTypes: ["code-editing" as any],
+            taskTypes: ["file_editing" as any],
             languages: ["TypeScript"],
             specializations: [],
           },
@@ -168,7 +168,7 @@ describe("ResilientDatabaseClient", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5" as any,
         capabilities: {
-          taskTypes: ["code-editing" as any],
+          taskTypes: ["file_editing" as any],
           languages: ["TypeScript" as any],
           specializations: [],
         },
@@ -192,7 +192,7 @@ describe("ResilientDatabaseClient", () => {
     });
 
     it("should use fallback registry for queries", async () => {
-      const query: AgentQuery = { taskType: "code-editing" as any };
+      const query: AgentQuery = { taskType: "file_editing" as any };
       const results = [{ agent: { id: "agent1" }, score: 0.9 }];
 
       mockFallbackRegistry.getAgentsByCapability.mockResolvedValue(results);
@@ -233,7 +233,7 @@ describe("ResilientDatabaseClient", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5" as any,
         capabilities: {
-          taskTypes: ["code-editing" as any],
+          taskTypes: ["file_editing" as any],
           languages: ["TypeScript" as any],
           specializations: [],
         },
@@ -275,7 +275,7 @@ describe("ResilientDatabaseClient", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5" as any,
         capabilities: {
-          taskTypes: ["code-editing" as any],
+          taskTypes: ["file_editing" as any],
           languages: ["TypeScript" as any],
           specializations: [],
         },
@@ -338,7 +338,7 @@ describe("ResilientDatabaseClient", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5" as any,
         capabilities: {
-          taskTypes: ["code-editing" as any],
+          taskTypes: ["file_editing" as any],
           languages: ["TypeScript" as any],
           specializations: [],
         },

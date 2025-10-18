@@ -49,7 +49,7 @@ describe("AgentRegistryManager", () => {
         name: "Test Agent 1",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing", "code-review"],
+          taskTypes: ["file_editing", "code-review"],
           languages: ["TypeScript", "JavaScript"],
           specializations: ["API design"],
         },
@@ -61,7 +61,7 @@ describe("AgentRegistryManager", () => {
       // THEN: Agent profile is created with capability tracking initialized and agent is queryable
       expect(registered.id).toBe("agent-001");
       expect(registered.name).toBe("Test Agent 1");
-      expect(registered.capabilities.taskTypes).toContain("code-editing");
+      expect(registered.capabilities.taskTypes).toContain("file_editing");
       expect(registered.performanceHistory).toBeDefined();
       expect(registered.performanceHistory.taskCount).toBe(0);
       expect(registered.currentLoad).toBeDefined();
@@ -81,7 +81,7 @@ describe("AgentRegistryManager", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -126,7 +126,7 @@ describe("AgentRegistryManager", () => {
           name: `Agent ${i}`,
           modelFamily: "claude-3.5",
           capabilities: {
-            taskTypes: ["code-editing"],
+            taskTypes: ["file_editing"],
             languages: ["TypeScript"],
             specializations: [],
           },
@@ -162,7 +162,7 @@ describe("AgentRegistryManager", () => {
           // Missing name
           modelFamily: "claude-3.5",
           capabilities: {
-            taskTypes: ["code-editing"],
+            taskTypes: ["file_editing"],
             languages: ["TypeScript"],
             specializations: [],
           },
@@ -175,7 +175,7 @@ describe("AgentRegistryManager", () => {
           name: "Test Agent",
           // Missing modelFamily
           capabilities: {
-            taskTypes: ["code-editing"],
+            taskTypes: ["file_editing"],
             languages: ["TypeScript"],
             specializations: [],
           },
@@ -192,7 +192,7 @@ describe("AgentRegistryManager", () => {
         name: "TypeScript Expert",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing", "code-review"],
+          taskTypes: ["file_editing", "code-review"],
           languages: ["TypeScript", "JavaScript"],
           specializations: ["API design"],
         },
@@ -209,7 +209,7 @@ describe("AgentRegistryManager", () => {
         name: "Python Expert",
         modelFamily: "gpt-4",
         capabilities: {
-          taskTypes: ["code-editing", "testing"],
+          taskTypes: ["file_editing", "testing"],
           languages: ["Python", "JavaScript"],
           specializations: ["Database design"],
         },
@@ -226,7 +226,7 @@ describe("AgentRegistryManager", () => {
         name: "Rust Expert",
         modelFamily: "claude-3",
         capabilities: {
-          taskTypes: ["code-editing", "refactoring"],
+          taskTypes: ["file_editing", "refactoring"],
           languages: ["Rust", "C++"],
           specializations: ["Performance optimization"],
         },
@@ -240,9 +240,9 @@ describe("AgentRegistryManager", () => {
     });
 
     it("should return agents matching task type sorted by success rate", async () => {
-      // GIVEN: Multiple agents with code-editing capability
+      // GIVEN: Multiple agents with file_editing capability
       const query: AgentQuery = {
-        taskType: "code-editing",
+        taskType: "file_editing",
       };
 
       // WHEN: Query for agents by task type
@@ -258,7 +258,7 @@ describe("AgentRegistryManager", () => {
     it("should filter agents by required languages", async () => {
       // GIVEN: Query with language requirements
       const query: AgentQuery = {
-        taskType: "code-editing",
+        taskType: "file_editing",
         languages: ["TypeScript"],
       };
 
@@ -273,7 +273,7 @@ describe("AgentRegistryManager", () => {
     it("should filter agents by required specializations", async () => {
       // GIVEN: Query with specialization requirements
       const query: AgentQuery = {
-        taskType: "code-editing",
+        taskType: "file_editing",
         specializations: ["API design"],
       };
 
@@ -288,7 +288,7 @@ describe("AgentRegistryManager", () => {
     it("should return empty array when no agents match", async () => {
       // GIVEN: Query for non-existent capability combination
       const query: AgentQuery = {
-        taskType: "code-editing",
+        taskType: "file_editing",
         languages: ["Go"],
       };
 
@@ -302,7 +302,7 @@ describe("AgentRegistryManager", () => {
     it("should include match score and reason in results", async () => {
       // GIVEN: Query for agents
       const query: AgentQuery = {
-        taskType: "code-editing",
+        taskType: "file_editing",
         languages: ["TypeScript"],
       };
 
@@ -312,7 +312,7 @@ describe("AgentRegistryManager", () => {
       // THEN: Results include match score and explanation
       expect(results[0].matchScore).toBeGreaterThan(0);
       expect(results[0].matchScore).toBeLessThanOrEqual(1);
-      expect(results[0].matchReason).toContain("code-editing");
+      expect(results[0].matchReason).toContain("file_editing");
       expect(results[0].matchReason).toContain("success rate");
     });
   });
@@ -324,7 +324,7 @@ describe("AgentRegistryManager", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -434,7 +434,7 @@ describe("AgentRegistryManager", () => {
         name: "Low Utilization Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -445,7 +445,7 @@ describe("AgentRegistryManager", () => {
         name: "High Utilization Agent",
         modelFamily: "gpt-4",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -459,7 +459,7 @@ describe("AgentRegistryManager", () => {
     it("should filter agents by utilization threshold", async () => {
       // GIVEN: Agent registry contains agents with current load information
       const query: AgentQuery = {
-        taskType: "code-editing",
+        taskType: "file_editing",
         maxUtilization: 50, // 50% threshold
       };
 
@@ -496,7 +496,7 @@ describe("AgentRegistryManager", () => {
         name: "Agent 1",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },
@@ -582,7 +582,7 @@ describe("AgentRegistryManager", () => {
           name: `Agent ${i}`,
           modelFamily: "claude-3.5",
           capabilities: {
-            taskTypes: ["code-editing"],
+            taskTypes: ["file_editing"],
             languages: ["TypeScript"],
             specializations: [],
           },
@@ -606,7 +606,7 @@ describe("AgentRegistryManager", () => {
         name: "Test Agent",
         modelFamily: "claude-3.5",
         capabilities: {
-          taskTypes: ["code-editing"],
+          taskTypes: ["file_editing"],
           languages: ["TypeScript"],
           specializations: [],
         },

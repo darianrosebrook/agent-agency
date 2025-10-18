@@ -227,6 +227,7 @@ export class ObserverHttpServer {
           body?.metadata && typeof body.metadata === "object"
             ? (body.metadata as Record<string, unknown>)
             : undefined,
+        type: typeof body?.type === "string" ? body.type : undefined,
       };
       if (!payload.description && !payload.specPath) {
         this.sendJson(
