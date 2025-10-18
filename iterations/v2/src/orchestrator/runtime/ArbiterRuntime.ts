@@ -827,6 +827,13 @@ export class ArbiterRuntime {
   private async executeTask(task: ArbiterTask): Promise<void> {
     const record = this.taskRecords.get(task.id);
     if (!record) {
+      console.log(`[ARBITER] Task ${task.id} not found in records, skipping execution`);
+      return;
+    }
+
+    // Early return if task is already completed or failed
+    if (record.status === TaskState.COMPLETED || record.status === TaskState.FAILED) {
+      console.log(`[ARBITER] Task ${task.id} already in final state: ${record.status}`);
       return;
     }
 

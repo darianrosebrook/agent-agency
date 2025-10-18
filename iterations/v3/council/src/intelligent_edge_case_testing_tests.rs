@@ -369,6 +369,10 @@ mod tests {
                 edge_case_coverage_threshold: 0.0,
                 integration_coverage_threshold: 0.0,
             },
+            requirements: vec![], // Empty for now
+            acceptance_criteria: vec![], // Empty for now
+            dependencies: vec![], // Empty for now
+            test_cases: vec![], // Empty for now
         };
 
         let insights = testing_system

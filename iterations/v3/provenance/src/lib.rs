@@ -94,3 +94,6 @@ impl Default for ProvenanceConfig {
         }
     }
 }
+
+// Re-export types for external use
+pub use SigningAlgorithm;

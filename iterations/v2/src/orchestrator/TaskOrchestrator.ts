@@ -12,6 +12,7 @@ import { EventEmitter } from "events";
 import * as path from "path";
 import { Worker } from "worker_threads";
 import { PerformanceTracker } from "../rl/PerformanceTracker.js";
+import { circuitBreakerManager } from "../resilience/CircuitBreakerManager";
 import {
   PleadingDecision,
   PleadingWorkflow,
@@ -214,6 +215,13 @@ class WorkerPoolManager extends EventEmitter {
   }
 
   async executeTask(task: Task): Promise<void> {
+    // Early return if task is already being processed
+    const existingExecution = this.activeExecutions.get(task.id);
+    if (existingExecution && (existingExecution.status === "running" || existingExecution.status === "completed")) {
+      console.log(`[TaskOrchestrator] Task ${task.id} already being processed or completed`);
+      return;
+    }
+
     const availableWorker = this.findAvailableWorker();
     if (!availableWorker) {
       const workerCount = this.workers.size;

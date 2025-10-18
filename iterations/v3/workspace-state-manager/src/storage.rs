@@ -298,11 +298,7 @@ impl MemoryStorage {
         let mut to_remove = Vec::new();
         // TODO: Implement database cleanup
         // No states to process in database storage
-        
-        for id in to_remove {
-            // TODO: implement database removal
-            debug!("Cleaned up old state: {}", id);
-        }
+        debug!("Database cleanup not yet implemented");
         
         Ok(())
     }
@@ -579,11 +575,7 @@ impl DatabaseStorage {
         let mut to_remove = Vec::new();
         // TODO: Implement database cleanup
         // No states to process in database storage
-        
-        for id in to_remove {
-            // TODO: implement database removal
-            debug!("Cleaned up old state: {}", id);
-        }
+        debug!("Database cleanup not yet implemented");
         
         Ok(())
     }
