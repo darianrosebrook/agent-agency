@@ -8274,5 +8274,41 @@
     },
     "previous_hash": "f7d1a205c40a28eae33c24619b97177081216cb9fa2a59d7253371ece2ee6d74",
     "hash": "59f4ea8eec034c860c195cc247f79302270a2cac48102b93c9bfa77a1436a7ed"
+  },
+  {
+    "id": "prov-1760768064955",
+    "timestamp": "2025-10-18T06:14:24.955Z",
+    "commit": {
+      "hash": "58f4f6259dae0a2cfec7cf27faa6bc5847f3cc65",
+      "message": "docs: comprehensive documentation cleanup and architecture updates",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T06:14:24.957Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "59f4ea8eec034c860c195cc247f79302270a2cac48102b93c9bfa77a1436a7ed",
+    "hash": "98fa6c57c43779573ba62df630e9962fd4818e3a163dc754d0fa4bf47d8f248c"
   }
 ]

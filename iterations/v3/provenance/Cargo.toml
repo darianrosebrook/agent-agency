@@ -26,6 +26,7 @@ git2 = { version = "0.19", features = ["vendored-openssl"] }
 jsonwebtoken = "9.3"
 ring = "0.17"
 base64 = "0.22"
+pkcs8.workspace = true
 
 # Database connection pooling
 deadpool = "0.10"
@@ -34,4 +35,3 @@ deadpool-postgres = "0.12"
 [dev-dependencies]
 tokio-test = "0.4"
 tempfile = "3.8"
-

@@ -74,6 +74,8 @@ ndarray = "0.15"
 # CAWS integration (using Node.js tools, not Rust crate)
 # caws-core = { path = "../../apps/tools/caws" }
 
+pkcs8 = "0.10"
+
 [profile.release]
 opt-level = 3
 debug = 1                  # keep some symbols for backtraces

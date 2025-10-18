@@ -464,14 +464,11 @@ impl KnowledgeSeeker {
         let test_query = ResearchQuery {
             id: uuid::Uuid::new_v4(),
             query: "test configuration".to_string(),
-            query_type: crate::types::QueryType::General,
-            priority: crate::types::ResearchPriority::Medium,
-            context: Some("configuration test".to_string()),
+            query_type: QueryType::Knowledge,
             max_results: Some(1),
-            sources: vec![],
-            created_at: chrono::Utc::now(),
-            deadline: None,
-            metadata: std::collections::HashMap::new(),
+            context: Some("configuration test".to_string()),
+            filters: HashMap::new(),
+            metadata: HashMap::new(),
         };
         
         // Validate that new configuration is active and working
@@ -480,7 +477,7 @@ impl KnowledgeSeeker {
         let duration = start_time.elapsed();
         
         // Check if timeout is working correctly
-        if duration.as_millis() > self.config.request_timeout_ms {
+        if duration.as_millis() > self.config.performance.request_timeout_ms {
             return Err(anyhow::anyhow!("Configuration verification failed: timeout not working"));
         }
         
@@ -580,8 +577,8 @@ impl KnowledgeSeeker {
         // 2. Length (moderate length sentences are more important)
         // 3. Word frequency (sentences with common important words)
         
-        let position_score = if sentence == all_sentences.first().unwrap_or(sentence) || 
-                              sentence == all_sentences.last().unwrap_or(sentence) {
+        let position_score = if sentence == all_sentences.first().map_or(sentence, |v| v) || 
+                              sentence == all_sentences.last().map_or(sentence, |v| v) {
             0.3
         } else {
             0.0
@@ -620,7 +617,7 @@ impl KnowledgeSeeker {
         total_score += title_relevance * 0.2;
         
         // Source authority and credibility (20% weight)
-        let source_authority = self.calculate_source_authority(&entry.source);
+        let source_authority = self.calculate_source_authority(&entry.source.to_string());
         total_score += source_authority * 0.2;
         
         // Recency and currency of information (20% weight)
@@ -637,7 +634,7 @@ impl KnowledgeSeeker {
         let content_lower = content.to_lowercase();
         
         let mut matches = 0;
-        let mut total_keywords = query_keywords.len();
+        let total_keywords = query_keywords.len();
         
         for keyword in &query_keywords {
             if content_lower.contains(keyword) {
@@ -739,7 +736,7 @@ impl KnowledgeSeeker {
         let mut total_score = 0.0;
         
         // Source reliability and information quality (40% weight)
-        let source_reliability = self.calculate_source_reliability(&entry.source);
+        let source_reliability = self.calculate_source_reliability(&entry.source.to_string());
         total_score += source_reliability * 0.4;
         
         // Information completeness and accuracy (30% weight)
@@ -751,7 +748,9 @@ impl KnowledgeSeeker {
         total_score += content_quality * 0.2;
         
         // Metadata and verification (10% weight)
-        let metadata_quality = self.calculate_metadata_quality(&entry.metadata);
+        let metadata_quality = self.calculate_metadata_quality(&serde_json::Value::Object(
+            entry.metadata.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+        ));
         total_score += metadata_quality * 0.1;
         
         // Ensure score is between 0.0 and 1.0
@@ -854,7 +853,7 @@ impl KnowledgeSeeker {
             0.0
         };
         
-        (score + length_score).min(1.0)
+        (score + length_score).min(1.0_f64)
     }
 
     /// Calculate content quality score
@@ -880,12 +879,12 @@ impl KnowledgeSeeker {
         // Check for technical terms and specificity
         let technical_terms = ["analysis", "research", "study", "data", "results", "findings", "evidence"];
         let technical_count = technical_terms.iter()
-            .filter(|term| content.to_lowercase().contains(term))
+            .filter(|term| content.to_lowercase().contains(*term))
             .count();
         
         score += (technical_count as f64 / technical_terms.len() as f64) * 0.4;
         
-        score.min(1.0)
+        score.min(1.0_f64)
     }
 
     /// Calculate metadata quality score
@@ -909,7 +908,7 @@ impl KnowledgeSeeker {
             score += 0.2;
         }
         
-        score.min(1.0)
+        score.min(1.0_f64)
     }
 
     /// Internal query execution
@@ -1092,7 +1091,7 @@ impl KnowledgeSeeker {
         for token in query_tokens {
             if let Some(postings) = index.get_postings(&token) {
                 for posting in postings {
-                    let relevance_score = self.calculate_relevance_score(&token, posting);
+                    let relevance_score = self.calculate_term_relevance_score(&token, posting);
                     let search_result = SearchResult {
                         document_id: posting.document_id,
                         relevance_score,
@@ -1193,7 +1192,7 @@ impl KnowledgeSeeker {
     }
 
     /// Calculate relevance score for a term-document pair
-    fn calculate_relevance_score(&self, _term: &str, posting: &Posting) -> f32 {
+    fn calculate_term_relevance_score(&self, _term: &str, posting: &Posting) -> f32 {
         let term_frequency = posting.positions.len() as f32;
         let document_length = posting.document.content.len() as f32;
         let tf = term_frequency / document_length;
@@ -1284,8 +1283,8 @@ impl KnowledgeSeeker {
                 title: entry.title.clone(),
                 content: entry.content.clone(),
                 summary: Some(self.generate_content_summary(&entry.content, &query.query)?),
-                relevance_score: self.calculate_relevance_score(&entry, &query)?,
-                confidence_score: self.calculate_confidence_score(&entry, &query)?,
+                relevance_score: self.calculate_relevance_score(&entry, &query)? as f32,
+                confidence_score: self.calculate_confidence_score(&entry, &query)? as f32,
                 extracted_at: chrono::Utc::now(),
                 url: entry.source_url.clone(),
                 metadata: entry.metadata.clone(),
@@ -1330,19 +1329,8 @@ impl KnowledgeSeeker {
                                 title: scraping_result.title,
                                 content: processed_content.processed_content,
                                 summary: processed_content.summary,
-                                relevance_score: 0.7, // TODO: Calculate relevance with the following requirements:
-                                // 1. Relevance scoring: Calculate relevance scores for web content
-                                //    - Use semantic similarity and keyword matching
-                                //    - Consider query intent and context
-                                //    - Weight different relevance factors appropriately
-                                // 2. Relevance factors: Consider multiple relevance factors
-                                //    - Content topic alignment with query
-                                //    - Recency and currency of information
-                                //    - Source authority and credibility
-                                confidence_score: 0.8, // TODO: Calculate confidence with the following requirements:
-                                // 1. Confidence calculation: Calculate confidence in web content
-                                //    - Assess source reliability and information quality
-                                //    - Consider information completeness and accuracy
+                                relevance_score: self.calculate_relevance_score(&query, &processed_content.processed_content),
+                                confidence_score: self.calculate_confidence_score(&source, &processed_content.processed_content),
                                 //    - Factor in corroboration from multiple sources
                                 // 2. Confidence factors: Consider multiple confidence factors
                                 //    - Source credibility and expertise
@@ -1595,6 +1583,150 @@ impl InvertedIndex {
         for postings in self.index.values_mut() {
             postings.sort_by_key(|p| p.document_id);
         }
+    }
+
+    /// Calculate relevance score for web content based on query and content
+    fn calculate_relevance_score(&self, query: &ResearchQuery, content: &str) -> f32 {
+        let mut score = 0.0;
+        
+        // 1. Keyword matching (40% weight)
+        let query_words: Vec<&str> = query.query.to_lowercase().split_whitespace().collect();
+        let content_lower = content.to_lowercase();
+        let mut keyword_matches = 0;
+        
+        for word in &query_words {
+            if content_lower.contains(word) {
+                keyword_matches += 1;
+            }
+        }
+        
+        let keyword_score = if query_words.is_empty() {
+            0.0
+        } else {
+            keyword_matches as f32 / query_words.len() as f32
+        };
+        score += keyword_score * 0.4;
+        
+        // 2. Content length factor (20% weight) - longer content often more relevant
+        let length_score = (content.len() as f32 / 1000.0).min(1.0);
+        score += length_score * 0.2;
+        
+        // 3. Query type alignment (20% weight)
+        let type_score = match query.query_type {
+            QueryType::Technical => {
+                // Technical queries prefer detailed, structured content
+                if content.contains("API") || content.contains("function") || content.contains("method") {
+                    1.0
+                } else {
+                    0.5
+                }
+            }
+            QueryType::General => 0.8, // General queries are more flexible
+            QueryType::Research => {
+                // Research queries prefer comprehensive, cited content
+                if content.contains("study") || content.contains("research") || content.contains("analysis") {
+                    1.0
+                } else {
+                    0.6
+                }
+            }
+        };
+        score += type_score * 0.2;
+        
+        // 4. Context alignment (20% weight)
+        let context_score = if let Some(context) = &query.context {
+            let context_lower = context.to_lowercase();
+            if content_lower.contains(&context_lower) {
+                1.0
+            } else {
+                0.3
+            }
+        } else {
+            0.5 // Neutral score when no context provided
+        };
+        score += context_score * 0.2;
+        
+        // Ensure score is between 0.0 and 1.0
+        score.min(1.0).max(0.0)
+    }
+
+    /// Calculate confidence score for web content based on source and content quality
+    fn calculate_confidence_score(&self, source: &str, content: &str) -> f32 {
+        let mut score = 0.0;
+        
+        // 1. Source authority (40% weight)
+        let source_score = if source.contains("wikipedia.org") {
+            0.9 // High authority for Wikipedia
+        } else if source.contains("github.com") {
+            0.8 // Good authority for technical content
+        } else if source.contains("stackoverflow.com") {
+            0.7 // Good for technical Q&A
+        } else if source.contains(".edu") || source.contains(".gov") {
+            0.9 // High authority for educational/government sites
+        } else if source.contains(".org") {
+            0.6 // Moderate authority for organizations
+        } else if source.contains(".com") {
+            0.5 // Standard authority for commercial sites
+        } else {
+            0.3 // Lower authority for unknown domains
+        };
+        score += source_score * 0.4;
+        
+        // 2. Content quality indicators (30% weight)
+        let mut quality_score = 0.0;
+        
+        // Check for structured content
+        if content.contains("#") || content.contains("*") || content.contains("-") {
+            quality_score += 0.2; // Structured formatting
+        }
+        
+        // Check for citations or references
+        if content.contains("http") || content.contains("www.") || content.contains("source:") {
+            quality_score += 0.3; // Contains references
+        }
+        
+        // Check for comprehensive content
+        if content.len() > 500 {
+            quality_score += 0.3; // Substantial content
+        } else if content.len() > 200 {
+            quality_score += 0.2; // Moderate content
+        } else {
+            quality_score += 0.1; // Minimal content
+        }
+        
+        // Check for professional language indicators
+        if content.contains("according to") || content.contains("research shows") || content.contains("studies indicate") {
+            quality_score += 0.2; // Professional/academic language
+        }
+        
+        score += quality_score.min(1.0) * 0.3;
+        
+        // 3. Content completeness (20% weight)
+        let completeness_score = if content.len() > 1000 {
+            1.0 // Very comprehensive
+        } else if content.len() > 500 {
+            0.8 // Comprehensive
+        } else if content.len() > 200 {
+            0.6 // Adequate
+        } else {
+            0.3 // Minimal
+        };
+        score += completeness_score * 0.2;
+        
+        // 4. Recency indicators (10% weight)
+        let recency_score = if content.contains("2024") || content.contains("2023") {
+            1.0 // Recent
+        } else if content.contains("2022") || content.contains("2021") {
+            0.8 // Somewhat recent
+        } else if content.contains("2020") || content.contains("2019") {
+            0.6 // Moderately recent
+        } else {
+            0.4 // Older content
+        };
+        score += recency_score * 0.1;
+        
+        // Ensure score is between 0.0 and 1.0
+        score.min(1.0).max(0.0)
     }
 }
 

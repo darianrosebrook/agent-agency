@@ -3,15 +3,28 @@
 //! Implements JWS signing per ADR-003 requirements for cryptographic integrity
 //! of provenance records.
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
-use base64::{engine::general_purpose, Engine as _};
+use base64::{
+    engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD},
+    Engine as _,
+};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use pkcs8::der::Decode;
+use pkcs8::{ObjectIdentifier, PrivateKeyInfo};
+use ring::rand;
 use ring::signature::{Ed25519KeyPair, KeyPair, UnparsedPublicKey, ED25519};
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::path::Path;
+use serde_json::json;
+use std::ffi::OsStr;
+use std::fs::{self, OpenOptions};
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use tracing::{debug, info};
+
+#[cfg(unix)]
+use std::os::unix::fs::OpenOptionsExt;
 
 use crate::types::ProvenanceRecord;
 
@@ -37,6 +50,28 @@ pub enum SigningAlgorithm {
     RS256,
     ES256,
     EdDSA,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum KeyFormat {
+    Pkcs8,
+    Pem,
+    Jwk,
+}
+
+impl KeyFormat {
+    fn from_path(path: &Path) -> Self {
+        match path
+            .extension()
+            .and_then(OsStr::to_str)
+            .map(|ext| ext.to_ascii_lowercase())
+            .as_deref()
+        {
+            Some("pem") => KeyFormat::Pem,
+            Some("jwk") | Some("json") => KeyFormat::Jwk,
+            _ => KeyFormat::Pkcs8,
+        }
+    }
 }
 
 impl SigningAlgorithm {
@@ -182,6 +217,7 @@ struct ProvenancePayload {
 pub struct LocalKeySigner {
     key_id: String,
     key_pair: Ed25519KeyPair,
+    pkcs8_private_key: Vec<u8>,
 }
 
 impl LocalKeySigner {
@@ -190,10 +226,15 @@ impl LocalKeySigner {
         let rng = ring::rand::SystemRandom::new();
         let pkcs8_bytes =
             Ed25519KeyPair::generate_pkcs8(&rng).context("Failed to generate Ed25519 key pair")?;
+        let key_data = pkcs8_bytes.as_ref().to_vec();
         let key_pair = Ed25519KeyPair::from_pkcs8(pkcs8_bytes.as_ref())
             .context("Failed to create Ed25519 key pair from PKCS8")?;
 
-        Ok(Self { key_id, key_pair })
+        Ok(Self {
+            key_id,
+            key_pair,
+            pkcs8_private_key: key_data,
+        })
     }
 
     /// Create from existing key data
@@ -201,7 +242,11 @@ impl LocalKeySigner {
         let key_pair = Ed25519KeyPair::from_pkcs8(key_data)
             .context("Failed to create Ed25519 key pair from key data")?;
 
-        Ok(Self { key_id, key_pair })
+        Ok(Self {
+            key_id,
+            key_pair,
+            pkcs8_private_key: key_data.to_vec(),
+        })
     }
 
     /// Get the public key as bytes
@@ -300,30 +345,15 @@ impl SignerFactory {
     ) -> Result<Box<dyn SignerTrait>> {
         match algorithm {
             SigningAlgorithm::EdDSA => {
-                if Path::new(key_path).exists() {
-                    let key_data = fs::read(key_path).context("Failed to read key file")?;
+                let path = Path::new(key_path);
+                if path.exists() {
+                    let key_data = fs::read(path)
+                        .with_context(|| format!("Failed to read key file at {}", path.display()))?;
                     let signer = LocalKeySigner::from_key_data(&key_data, key_id)?;
                     Ok(Box::new(signer))
                 } else {
-                    // Generate new key and save it
                     let signer = LocalKeySigner::new(key_id.clone())?;
-                    // TODO: Implement key file saving with the following requirements:
-                    // 1. Key format handling: Handle different key formats for file saving
-                    //    - Support various key formats (PEM, DER, JWK, etc.)
-                    //    - Implement key format conversion and validation
-                    //    - Handle key format error detection and reporting
-                    // 2. Key file management: Implement secure key file management
-                    //    - Save keys to appropriate file locations with proper permissions
-                    //    - Implement key file encryption and security
-                    //    - Handle key file management error detection and reporting
-                    // 3. Key persistence: Implement key persistence and storage
-                    //    - Persist keys to secure storage locations
-                    //    - Implement key backup and recovery mechanisms
-                    //    - Handle key persistence error detection and reporting
-                    // 4. Key optimization: Optimize key file operations performance
-                    //    - Implement efficient key file operations
-                    //    - Handle large-scale key file operations
-                    //    - Optimize key file operation quality and reliability
+                    Self::persist_generated_key(path, &signer)?;
                     Ok(Box::new(signer))
                 }
             }
@@ -338,6 +368,35 @@ impl SignerFactory {
     pub fn create_default_signer() -> Result<Box<dyn SignerTrait>> {
         let signer = LocalKeySigner::new("provenance-default".to_string())?;
         Ok(Box::new(signer))
+    }
+
+    fn persist_generated_key(path: &Path, signer: &LocalKeySigner) -> Result<()> {
+        let format = KeyFormat::from_path(path);
+        let key_bytes = signer.export_key_material(format)?;
+        Self::write_secure_key(path, &key_bytes)
+    }
+
+    fn write_secure_key(path: &Path, key_data: &[u8]) -> Result<()> {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create key directory {}", parent.display()))?;
+        }
+
+        let mut options = OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            options.mode(0o600);
+        }
+
+        let mut file = options
+            .open(path)
+            .with_context(|| format!("Failed to create key file at {}", path.display()))?;
+        file.write_all(key_data)
+            .with_context(|| format!("Failed to write key data to {}", path.display()))?;
+        // Best-effort flush; ignoring errors to avoid masking write errors already handled.
+        let _ = file.sync_all();
+        Ok(())
     }
 }
 
