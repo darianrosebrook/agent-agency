@@ -5,7 +5,7 @@
 use crate::types::*;
 use anyhow::{Context, Result};
 use qdrant_client::qdrant::{
-    qdrant_client::QdrantClient, vectors_config::Config, CreateCollection, Distance, PointStruct,
+    vectors_config::Config, CreateCollection, Distance, PointStruct,
     SearchPoints, VectorParams, VectorsConfig, WithPayloadSelector,
 };
 use qdrant_client::Qdrant;

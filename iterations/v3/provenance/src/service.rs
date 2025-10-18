@@ -167,7 +167,7 @@ impl ProvenanceService {
 
         // Verify git integration if present
         if let Some(ref git) = self.git_integration {
-            if let Some(ref commit_hash) = record.git_commit_hash {
+            if let Some(commit_hash) = &record.git_commit_hash {
                 if !git.verify_trailer(commit_hash, &record.git_trailer).await? {
                     issues.push(IntegrityIssue {
                         record_id: record.id,

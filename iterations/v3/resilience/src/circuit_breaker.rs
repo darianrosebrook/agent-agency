@@ -327,8 +327,6 @@ impl std::fmt::Debug for CircuitBreaker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
-    use tokio::time::{sleep, Duration};
 
     #[tokio::test]
     async fn test_circuit_breaker_creation() {

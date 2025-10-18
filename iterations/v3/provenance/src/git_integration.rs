@@ -213,7 +213,8 @@ impl GitIntegration for GitTrailerManager {
         // 2. Creating a new commit with the trailer added to the message
         // 3. Updating the branch reference
 
-        let commit = self.repository.find_commit(
+        let repo = self.repository.lock().unwrap();
+        let commit = repo.find_commit(
             git2::Oid::from_str(commit_hash)
                 .context("Invalid commit hash")?
         )?;
@@ -232,7 +233,7 @@ impl GitIntegration for GitTrailerManager {
         let signature = self.create_signature()?;
         let tree = commit.tree()?;
 
-        let new_commit_id = self.repository.commit(
+        let new_commit_id = repo.commit(
             Some(&format!("refs/heads/{}", self.branch)),
             &signature,
             &signature,
@@ -253,8 +254,9 @@ impl GitIntegration for GitTrailerManager {
             return Err(anyhow::anyhow!("Auto-commit is disabled"));
         }
 
+        let repo = self.repository.lock().unwrap();
         let signature = self.create_signature()?;
-        let head_commit = self.get_head_commit()?;
+        let head_commit = repo.head()?.peel_to_commit()?;
         let tree = head_commit.tree()?;
 
         // Generate commit message with trailer
@@ -264,7 +266,7 @@ impl GitIntegration for GitTrailerManager {
             provenance_record.git_trailer
         );
 
-        let new_commit_id = self.repository.commit(
+        let new_commit_id = repo.commit(
             Some(&format!("refs/heads/{}", self.branch)),
             &signature,
             &signature,
@@ -277,7 +279,8 @@ impl GitIntegration for GitTrailerManager {
     }
 
     async fn verify_trailer(&self, commit_hash: &str, trailer: &str) -> Result<bool> {
-        let commit = self.repository.find_commit(
+        let repo = self.repository.lock().unwrap();
+        let commit = repo.find_commit(
             git2::Oid::from_str(commit_hash)
                 .context("Invalid commit hash")?
         )?;
@@ -544,4 +547,3 @@ mod tests {
         }
     }
 }
-*/

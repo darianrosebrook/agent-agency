@@ -447,7 +447,6 @@ impl Default for HealthCheckManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::Duration;
 
     #[tokio::test]
     async fn test_health_status_priority() {
