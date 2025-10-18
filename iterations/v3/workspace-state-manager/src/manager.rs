@@ -100,9 +100,10 @@ impl WorkspaceStateManager {
         };
 
         // Create workspace state
+        let captured_at = chrono::Utc::now();
         let state = WorkspaceState {
             id: state_id,
-            captured_at: chrono::Utc::now(),
+            captured_at,
             workspace_root: self.workspace_root.clone(),
             git_commit,
             git_branch,
@@ -111,6 +112,7 @@ impl WorkspaceStateManager {
             total_files,
             total_size,
             metadata,
+            timestamp: captured_at,
         };
 
         // Store the state
@@ -228,6 +230,8 @@ impl WorkspaceStateManager {
             files_removed: files_removed_count,
             files_modified: files_modified_count,
             computed_at: chrono::Utc::now(),
+            timestamp: chrono::Utc::now(),
+            changes: Vec::new(), // TODO: populate with actual diff changes
         };
 
         // Store the diff

@@ -19,6 +19,8 @@ pub struct FileStorage {
     base_path: PathBuf,
     /// Whether to compress stored data
     compress: bool,
+    /// Storage metrics
+    metrics: std::sync::RwLock<StorageMetrics>,
 }
 
 impl FileStorage {
@@ -27,6 +29,7 @@ impl FileStorage {
         Self {
             base_path: base_path.as_ref().to_path_buf(),
             compress,
+            metrics: std::sync::RwLock::new(StorageMetrics::default()),
         }
     }
 
@@ -229,6 +232,15 @@ impl StateStorage for FileStorage {
 pub struct MemoryStorage {
     states: std::sync::RwLock<HashMap<StateId, WorkspaceState>>,
     diffs: std::sync::RwLock<HashMap<(StateId, StateId), WorkspaceDiff>>,
+    metrics: std::sync::RwLock<StorageMetrics>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct StorageMetrics {
+    pub total_states_stored: usize,
+    pub total_diffs_stored: usize,
+    pub total_storage_size_bytes: u64,
+    pub last_cleanup_time: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 impl MemoryStorage {
@@ -237,6 +249,7 @@ impl MemoryStorage {
         Self {
             states: std::sync::RwLock::new(HashMap::new()),
             diffs: std::sync::RwLock::new(HashMap::new()),
+            metrics: std::sync::RwLock::new(StorageMetrics::default()),
         }
     }
 }
@@ -439,16 +452,103 @@ impl MemoryStorage {
             total_states, total_size, total_diffs, diff_size
         );
 
-        // Update metrics if available
-        if let Some(metrics) = &self.metrics {
-            metrics.update_state_count(total_states as u64);
-            metrics.update_total_size(total_size);
-            metrics.update_diff_count(total_diffs as u64);
-            metrics.update_diff_size(diff_size);
+        // Update metrics
+        {
+            let mut metrics = self.metrics.write().unwrap();
+            metrics.total_states_stored = total_states;
+            metrics.total_diffs_stored = total_diffs;
+            metrics.total_storage_size_bytes = total_size as u64 + diff_size as u64;
         }
 
         Ok(())
     }
+
+    async fn validate_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
+        // For file storage, validation is the same as memory storage
+        if diff.from_state == diff.to_state {
+            return Err(WorkspaceError::DiffComputation(
+                "Diff from_state and to_state cannot be the same".to_string()
+            ));
+        }
+
+        if diff.changes.is_empty() && (diff.files_added > 0 || diff.files_removed > 0 || diff.files_modified > 0) {
+            return Err(WorkspaceError::DiffComputation(
+                "Diff has file changes but empty changes vector".to_string()
+            ));
+        }
+
+        Ok(())
+    }
+
+    async fn validate_diff_change(&self, change: &DiffChange) -> Result<(), WorkspaceError> {
+        match change {
+            DiffChange::Add { path, content } => {
+                if content.is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        format!("Add change for {} has empty content", path.display())
+                    ));
+                }
+            }
+            DiffChange::Remove { path: _ } => {
+                // Remove operations are always valid
+            }
+            DiffChange::Modify { path, old_content: _, new_content } => {
+                if new_content.is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        format!("Modify change for {} has empty new content", path.display())
+                    ));
+                }
+            }
+            DiffChange::AddDirectory { path: _ } => {
+                // Directory add operations are always valid
+            }
+            DiffChange::RemoveDirectory { path: _ } => {
+                // Directory remove operations are always valid
+            }
+        }
+        Ok(())
+    }
+
+    async fn update_diff_metrics(&self) -> Result<(), WorkspaceError> {
+        // File storage doesn't maintain in-memory metrics for diffs
+        // Metrics are calculated on-demand when needed
+        Ok(())
+    }
+
+    async fn cleanup_old_diffs(&self) -> Result<(), WorkspaceError> {
+        let cutoff_time = chrono::Utc::now() - chrono::Duration::hours(24);
+        let diff_dir = self.base_path.join("diffs");
+
+        if !diff_dir.exists() {
+            return Ok(());
+        }
+
+        let mut removed_count = 0;
+        for entry in fs::read_dir(&diff_dir).map_err(|e| WorkspaceError::Io(e))? {
+            let entry = entry.map_err(|e| WorkspaceError::Io(e))?;
+            let path = entry.path();
+
+            if path.extension().and_then(|s| s.to_str()) == Some("diff") {
+                // Try to extract timestamp from filename or check file metadata
+                if let Ok(metadata) = entry.metadata() {
+                    if let Ok(modified) = metadata.modified() {
+                        let modified_time = chrono::DateTime::<chrono::Utc>::from(modified);
+                        if modified_time < cutoff_time {
+                            fs::remove_file(&path).map_err(|e| WorkspaceError::Io(e))?;
+                            removed_count += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        if removed_count > 0 {
+            debug!("Cleaned up {} old diff files from file storage", removed_count);
+        }
+
+        Ok(())
+    }
+
 }
 
 #[async_trait::async_trait]
@@ -568,7 +668,7 @@ impl StateStorage for MemoryStorage {
     }
 
     /// Validate diff data before storage
-    fn validate_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
+    async fn validate_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
         // Validate diff format and data integrity
         if diff.from_state == diff.to_state {
             return Err(WorkspaceError::DiffComputation(
@@ -601,7 +701,7 @@ impl StateStorage for MemoryStorage {
     }
 
     /// Validate individual diff change
-    fn validate_diff_change(&self, change: &DiffChange) -> Result<(), WorkspaceError> {
+    async fn validate_diff_change(&self, change: &DiffChange) -> Result<(), WorkspaceError> {
         match change {
             DiffChange::Add { path, content } => {
                 if path.is_empty() {
@@ -632,10 +732,12 @@ impl StateStorage for MemoryStorage {
                         "Modify change path cannot be empty".to_string(),
                     ));
                 }
-                if old_content == new_content {
-                    return Err(WorkspaceError::DiffComputation(
-                        "Modify change old and new content cannot be identical".to_string(),
-                    ));
+                if let Some(ref old) = old_content {
+                    if old == new_content {
+                        return Err(WorkspaceError::DiffComputation(
+                            "Modify change old and new content cannot be identical".to_string(),
+                        ));
+                    }
                 }
             }
         }
@@ -659,9 +761,10 @@ impl StateStorage for MemoryStorage {
         );
 
         // Store metrics for monitoring
-        if let Some(metrics) = &self.metrics {
-            metrics.update_diff_count(total_diffs as u64);
-            metrics.update_diff_size(total_size as u64);
+        {
+            let mut metrics = self.metrics.write().unwrap();
+            metrics.total_diffs_stored = total_diffs;
+            metrics.total_storage_size_bytes = total_size as u64;
         }
 
         Ok(())
@@ -1057,5 +1160,84 @@ impl StateStorage for DatabaseStorage {
         let deleted = result.rows_affected() as usize;
         info!("Cleaned up {} old workspace states from database", deleted);
         Ok(deleted)
+    }
+
+    async fn validate_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
+        // Database storage validation - check for referential integrity
+        if diff.from_state == diff.to_state {
+            return Err(WorkspaceError::DiffComputation(
+                "Diff from_state and to_state cannot be the same".to_string()
+            ));
+        }
+
+        // For database storage, we could add more sophisticated validation
+        // such as checking if the referenced states actually exist
+        // For now, use the same basic validation as other implementations
+        if diff.changes.is_empty() && (diff.files_added > 0 || diff.files_removed > 0 || diff.files_modified > 0) {
+            return Err(WorkspaceError::DiffComputation(
+                "Diff has file changes but empty changes vector".to_string()
+            ));
+        }
+
+        Ok(())
+    }
+
+    async fn validate_diff_change(&self, change: &DiffChange) -> Result<(), WorkspaceError> {
+        match change {
+            DiffChange::Add { path, content } => {
+                if content.is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        format!("Add change for {} has empty content", path.display())
+                    ));
+                }
+            }
+            DiffChange::Remove { path: _ } => {
+                // Remove operations are always valid
+            }
+            DiffChange::Modify { path, old_content: _, new_content } => {
+                if new_content.is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        format!("Modify change for {} has empty new content", path.display())
+                    ));
+                }
+            }
+            DiffChange::AddDirectory { path: _ } => {
+                // Directory add operations are always valid
+            }
+            DiffChange::RemoveDirectory { path: _ } => {
+                // Directory remove operations are always valid
+            }
+        }
+        Ok(())
+    }
+
+    async fn update_diff_metrics(&self) -> Result<(), WorkspaceError> {
+        // Database storage could update metrics tables
+        // For now, this is a no-op as metrics are calculated on-demand
+        Ok(())
+    }
+
+    async fn cleanup_old_diffs(&self) -> Result<(), WorkspaceError> {
+        // Database cleanup of old diffs would be done via SQL queries
+        // For now, implement basic cleanup based on timestamp
+        let cutoff_time = chrono::Utc::now() - chrono::Duration::hours(24);
+
+        let result = sqlx::query(
+            r#"
+            DELETE FROM workspace_diffs
+            WHERE computed_at < $1
+            "#,
+        )
+        .bind(cutoff_time)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| WorkspaceError::Storage(format!("Failed to cleanup old diffs: {}", e)))?;
+
+        let deleted = result.rows_affected() as usize;
+        if deleted > 0 {
+            info!("Cleaned up {} old diff records from database", deleted);
+        }
+
+        Ok(())
     }
 }

@@ -48,6 +48,10 @@ pub struct FileState {
     pub git_tracked: bool,
     /// Git commit hash if tracked
     pub git_commit: Option<String>,
+    /// File content (optional, for small files)
+    pub content: Option<Vec<u8>>,
+    /// Whether content is compressed
+    pub compressed: bool,
 }
 
 /// Represents a directory in the workspace
@@ -88,6 +92,8 @@ pub struct WorkspaceState {
     pub total_size: u64,
     /// Metadata about the capture process
     pub metadata: CaptureMetadata,
+    /// Legacy timestamp field for compatibility
+    pub timestamp: DateTime<Utc>,
 }
 
 /// Metadata about how a workspace state was captured
@@ -147,6 +153,38 @@ pub struct WorkspaceDiff {
     pub files_modified: usize,
     /// Timestamp when diff was computed
     pub computed_at: DateTime<Utc>,
+    /// Legacy timestamp field for compatibility
+    pub timestamp: DateTime<Utc>,
+    /// Detailed changes for advanced diff operations
+    pub changes: Vec<DiffChange>,
+}
+
+/// Represents a specific change in a diff
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum DiffChange {
+    /// File was added with content
+    Add {
+        path: PathBuf,
+        content: Vec<u8>,
+    },
+    /// File was removed
+    Remove {
+        path: PathBuf,
+    },
+    /// File was modified
+    Modify {
+        path: PathBuf,
+        old_content: Option<Vec<u8>>,
+        new_content: Vec<u8>,
+    },
+    /// Directory was added
+    AddDirectory {
+        path: PathBuf,
+    },
+    /// Directory was removed
+    RemoveDirectory {
+        path: PathBuf,
+    },
 }
 
 /// Configuration for workspace state management
@@ -285,4 +323,16 @@ pub trait StateStorage: Send + Sync {
 
     /// Clean up old states based on retention policy
     async fn cleanup(&self, max_states: usize) -> Result<usize, WorkspaceError>;
+
+    /// Validate diff format and data integrity
+    async fn validate_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError>;
+
+    /// Validate a specific diff change
+    async fn validate_diff_change(&self, change: &DiffChange) -> Result<(), WorkspaceError>;
+
+    /// Update diff-related metrics
+    async fn update_diff_metrics(&self) -> Result<(), WorkspaceError>;
+
+    /// Clean up old diffs based on retention policy
+    async fn cleanup_old_diffs(&self) -> Result<(), WorkspaceError>;
 }
