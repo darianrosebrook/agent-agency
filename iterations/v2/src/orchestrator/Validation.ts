@@ -100,6 +100,7 @@ export class ValidationUtils {
       "research",
       "validation",
       "general",
+      "file_editing",
     ];
     if (!validTypes.includes(task.type)) {
       errors.push({

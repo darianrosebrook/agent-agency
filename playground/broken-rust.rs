@@ -107,3 +107,4 @@ pub struct UserUpdate {
 pub fn main() {
     println!("Hello, broken Rust world!");
 }
+

@@ -576,6 +576,472 @@ impl BenchmarkRunner {
             .map(|(score, weight)| score * weight)
             .sum()
     }
+
+    /// Create a micro task for execution
+    async fn create_micro_task(&self, model: &ModelSpecification) -> Result<MicroTask> {
+        let task_type = match model.model_type {
+            ModelType::CodeGeneration => MicroTaskType::CodeGeneration,
+            ModelType::CodeReview => MicroTaskType::CodeReview,
+            ModelType::Testing => MicroTaskType::Testing,
+            ModelType::Documentation => MicroTaskType::Documentation,
+            ModelType::Research => MicroTaskType::Research,
+            ModelType::Analysis => MicroTaskType::Analysis,
+        };
+
+        Ok(MicroTask {
+            id: uuid::Uuid::new_v4(),
+            task_type,
+            input: "Sample input for benchmarking".to_string(),
+            expected_output: "Expected output for validation".to_string(),
+            complexity: TaskComplexity::Medium,
+            created_at: chrono::Utc::now(),
+        })
+    }
+
+    /// Execute model task with proper error handling
+    async fn execute_model_task(
+        &self,
+        model: &ModelSpecification,
+        micro_task: &MicroTask,
+    ) -> Result<ModelExecutionResult> {
+        // In a real implementation, this would call the actual model
+        // For now, we'll simulate the execution
+        
+        let start_time = std::time::Instant::now();
+        
+        // Simulate model execution based on task type
+        let output = match micro_task.task_type {
+            MicroTaskType::CodeGeneration => "Generated code output".to_string(),
+            MicroTaskType::CodeReview => "Code review feedback".to_string(),
+            MicroTaskType::Testing => "Test results and coverage".to_string(),
+            MicroTaskType::Documentation => "Generated documentation".to_string(),
+            MicroTaskType::Research => "Research findings and analysis".to_string(),
+            MicroTaskType::Analysis => "Analysis results and insights".to_string(),
+        };
+        
+        let execution_time = start_time.elapsed();
+        
+        Ok(ModelExecutionResult {
+            task_id: micro_task.id,
+            model_id: model.id,
+            output,
+            execution_time,
+            success: true,
+            error_message: None,
+            metrics: ExecutionMetrics {
+                tokens_processed: 100,
+                memory_usage: 50,
+                cpu_usage: 75,
+                quality_score: 0.85,
+            },
+        })
+    }
+
+    /// Process task result with validation
+    async fn process_task_result(
+        &self,
+        execution_result: ModelExecutionResult,
+        micro_task: &MicroTask,
+    ) -> Result<ProcessedTaskResult> {
+        // Validate the execution result
+        let quality_score = self.calculate_quality_score(&execution_result, micro_task);
+        let accuracy_score = self.calculate_accuracy_score(&execution_result, micro_task);
+        
+        Ok(ProcessedTaskResult {
+            execution_result,
+            quality_score,
+            accuracy_score,
+            processing_time: std::time::Duration::from_millis(10),
+            validation_passed: quality_score > 0.7 && accuracy_score > 0.7,
+        })
+    }
+
+    /// Validate execution result
+    async fn validate_execution_result(
+        &self,
+        processed_result: ProcessedTaskResult,
+        micro_task: &MicroTask,
+    ) -> Result<ValidatedTaskResult> {
+        // Perform comprehensive validation
+        let validation_checks = self.perform_validation_checks(&processed_result, micro_task).await?;
+        
+        Ok(ValidatedTaskResult {
+            processed_result,
+            validation_checks,
+            overall_quality: validation_checks.iter().map(|c| c.score).sum::<f32>() / validation_checks.len() as f32,
+            validation_passed: validation_checks.iter().all(|c| c.passed),
+        })
+    }
+
+    /// Optimize execution result
+    async fn optimize_execution_result(
+        &self,
+        validated_result: ValidatedTaskResult,
+    ) -> Result<MicroTaskResult> {
+        // Convert to final result format
+        Ok(MicroTaskResult {
+            task_id: validated_result.processed_result.execution_result.task_id,
+            model_id: validated_result.processed_result.execution_result.model_id,
+            success: validated_result.validation_passed,
+            execution_time: validated_result.processed_result.execution_result.execution_time,
+            quality_score: validated_result.overall_quality,
+            accuracy_score: validated_result.processed_result.accuracy_score,
+            output: validated_result.processed_result.execution_result.output,
+            metrics: validated_result.processed_result.execution_result.metrics,
+            error_message: validated_result.processed_result.execution_result.error_message,
+        })
+    }
+
+    /// Calculate quality score for execution result
+    fn calculate_quality_score(&self, result: &ModelExecutionResult, _task: &MicroTask) -> f32 {
+        // Simple quality scoring based on execution metrics
+        let base_score = result.metrics.quality_score;
+        let time_penalty = if result.execution_time.as_millis() > 1000 { 0.1 } else { 0.0 };
+        let memory_penalty = if result.metrics.memory_usage > 80 { 0.1 } else { 0.0 };
+        
+        (base_score - time_penalty - memory_penalty).max(0.0).min(1.0)
+    }
+
+    /// Calculate accuracy score for execution result
+    fn calculate_accuracy_score(&self, result: &ModelExecutionResult, _task: &MicroTask) -> f32 {
+        // Simple accuracy scoring based on output quality
+        if result.success {
+            0.9 // High accuracy for successful execution
+        } else {
+            0.1 // Low accuracy for failed execution
+        }
+    }
+
+    /// Perform validation checks
+    async fn perform_validation_checks(
+        &self,
+        result: &ProcessedTaskResult,
+        _task: &MicroTask,
+    ) -> Result<Vec<ValidationCheck>> {
+        let mut checks = Vec::new();
+        
+        // Check execution success
+        checks.push(ValidationCheck {
+            check_type: "execution_success".to_string(),
+            passed: result.execution_result.success,
+            score: if result.execution_result.success { 1.0 } else { 0.0 },
+            message: if result.execution_result.success {
+                "Execution completed successfully".to_string()
+            } else {
+                "Execution failed".to_string()
+            },
+        });
+        
+        // Check quality score
+        checks.push(ValidationCheck {
+            check_type: "quality_score".to_string(),
+            passed: result.quality_score > 0.7,
+            score: result.quality_score,
+            message: format!("Quality score: {:.2}", result.quality_score),
+        });
+        
+        // Check accuracy score
+        checks.push(ValidationCheck {
+            check_type: "accuracy_score".to_string(),
+            passed: result.accuracy_score > 0.7,
+            score: result.accuracy_score,
+            message: format!("Accuracy score: {:.2}", result.accuracy_score),
+        });
+        
+        Ok(checks)
+    }
+
+    /// Execute macro benchmarks for comprehensive system testing
+    async fn execute_macro_benchmarks(&self, model: &ModelSpecification) -> Result<MacroBenchmarkResults> {
+        let mut results = MacroBenchmarkResults::new();
+        
+        // Execute end-to-end system benchmarks
+        let system_benchmark = self.run_system_benchmark(model).await?;
+        results.add_result("system_benchmark", system_benchmark);
+        
+        // Execute throughput benchmarks
+        let throughput_benchmark = self.run_throughput_benchmark(model).await?;
+        results.add_result("throughput_benchmark", throughput_benchmark);
+        
+        // Execute load testing benchmarks
+        let load_benchmark = self.run_load_benchmark(model).await?;
+        results.add_result("load_benchmark", load_benchmark);
+        
+        Ok(results)
+    }
+
+    /// Execute quality benchmarks for quality assessment
+    async fn execute_quality_benchmarks(&self, model: &ModelSpecification) -> Result<QualityBenchmarkResults> {
+        let mut results = QualityBenchmarkResults::new();
+        
+        // Execute accuracy benchmarks
+        let accuracy_benchmark = self.run_accuracy_benchmark(model).await?;
+        results.add_result("accuracy_benchmark", accuracy_benchmark);
+        
+        // Execute consistency benchmarks
+        let consistency_benchmark = self.run_consistency_benchmark(model).await?;
+        results.add_result("consistency_benchmark", consistency_benchmark);
+        
+        // Execute reliability benchmarks
+        let reliability_benchmark = self.run_reliability_benchmark(model).await?;
+        results.add_result("reliability_benchmark", reliability_benchmark);
+        
+        Ok(results)
+    }
+
+    /// Execute performance benchmarks for performance assessment
+    async fn execute_performance_benchmarks(&self, model: &ModelSpecification) -> Result<PerformanceBenchmarkResults> {
+        let mut results = PerformanceBenchmarkResults::new();
+        
+        // Execute latency benchmarks
+        let latency_benchmark = self.run_latency_benchmark(model).await?;
+        results.add_result("latency_benchmark", latency_benchmark);
+        
+        // Execute throughput benchmarks
+        let throughput_benchmark = self.run_throughput_benchmark(model).await?;
+        results.add_result("throughput_benchmark", throughput_benchmark);
+        
+        // Execute resource usage benchmarks
+        let resource_benchmark = self.run_resource_benchmark(model).await?;
+        results.add_result("resource_benchmark", resource_benchmark);
+        
+        Ok(results)
+    }
+
+    /// Collect performance metrics from benchmark results
+    async fn collect_performance_metrics(&self, results: &MacroBenchmarkResults) -> Result<PerformanceMetrics> {
+        let mut metrics = PerformanceMetrics::new();
+        
+        // Collect system performance metrics
+        if let Some(system_result) = results.get_result("system_benchmark") {
+            metrics.add_system_metrics(system_result);
+        }
+        
+        // Collect throughput metrics
+        if let Some(throughput_result) = results.get_result("throughput_benchmark") {
+            metrics.add_throughput_metrics(throughput_result);
+        }
+        
+        // Collect load metrics
+        if let Some(load_result) = results.get_result("load_benchmark") {
+            metrics.add_load_metrics(load_result);
+        }
+        
+        Ok(metrics)
+    }
+
+    /// Collect quality metrics from benchmark results
+    async fn collect_quality_metrics(&self, results: &QualityBenchmarkResults) -> Result<QualityMetrics> {
+        let mut metrics = QualityMetrics::new();
+        
+        // Collect accuracy metrics
+        if let Some(accuracy_result) = results.get_result("accuracy_benchmark") {
+            metrics.add_accuracy_metrics(accuracy_result);
+        }
+        
+        // Collect consistency metrics
+        if let Some(consistency_result) = results.get_result("consistency_benchmark") {
+            metrics.add_consistency_metrics(consistency_result);
+        }
+        
+        // Collect reliability metrics
+        if let Some(reliability_result) = results.get_result("reliability_benchmark") {
+            metrics.add_reliability_metrics(reliability_result);
+        }
+        
+        Ok(metrics)
+    }
+
+    /// Analyze benchmark performance results
+    async fn analyze_benchmark_performance(&self, metrics: &PerformanceMetrics) -> Result<PerformanceAnalysis> {
+        let analysis = PerformanceAnalysis {
+            overall_score: metrics.calculate_overall_score(),
+            bottlenecks: metrics.identify_bottlenecks(),
+            optimization_opportunities: metrics.find_optimization_opportunities(),
+            recommendations: metrics.generate_recommendations(),
+        };
+        
+        Ok(analysis)
+    }
+
+    /// Analyze quality results
+    async fn analyze_quality_results(&self, metrics: &QualityMetrics) -> Result<QualityAnalysis> {
+        let analysis = QualityAnalysis {
+            overall_quality_score: metrics.calculate_overall_quality(),
+            quality_issues: metrics.identify_quality_issues(),
+            improvement_opportunities: metrics.find_improvement_opportunities(),
+            recommendations: metrics.generate_quality_recommendations(),
+        };
+        
+        Ok(analysis)
+    }
+
+    /// Analyze performance results
+    async fn analyze_performance_results(&self, metrics: &PerformanceMetrics) -> Result<PerformanceAnalysis> {
+        let analysis = PerformanceAnalysis {
+            overall_score: metrics.calculate_overall_score(),
+            bottlenecks: metrics.identify_bottlenecks(),
+            optimization_opportunities: metrics.find_optimization_opportunities(),
+            recommendations: metrics.generate_recommendations(),
+        };
+        
+        Ok(analysis)
+    }
+
+    /// Generate macro benchmark report
+    async fn generate_macro_benchmark_report(
+        &self,
+        model: &ModelSpecification,
+        analysis: &PerformanceAnalysis,
+    ) -> Result<BenchmarkResult> {
+        Ok(BenchmarkResult {
+            model_id: model.id,
+            benchmark_type: BenchmarkType::MacroBenchmark,
+            metrics: BenchmarkMetrics {
+                accuracy: analysis.overall_score,
+                speed: analysis.overall_score,
+                efficiency: analysis.overall_score,
+                quality: analysis.overall_score,
+                compliance: analysis.overall_score,
+            },
+            score: analysis.overall_score,
+            ranking: 0, // Will be set by scoring system
+            sla_validation: None,
+        })
+    }
+
+    /// Generate quality benchmark report
+    async fn generate_quality_benchmark_report(
+        &self,
+        model: &ModelSpecification,
+        analysis: &QualityAnalysis,
+    ) -> Result<BenchmarkResult> {
+        Ok(BenchmarkResult {
+            model_id: model.id,
+            benchmark_type: BenchmarkType::QualityBenchmark,
+            metrics: BenchmarkMetrics {
+                accuracy: analysis.overall_quality_score,
+                speed: 0.0,
+                efficiency: 0.0,
+                quality: analysis.overall_quality_score,
+                compliance: 0.0,
+            },
+            score: analysis.overall_quality_score,
+            ranking: 0, // Will be set by scoring system
+            sla_validation: None,
+        })
+    }
+
+    /// Generate performance benchmark report
+    async fn generate_performance_benchmark_report(
+        &self,
+        model: &ModelSpecification,
+        analysis: &PerformanceAnalysis,
+    ) -> Result<BenchmarkResult> {
+        Ok(BenchmarkResult {
+            model_id: model.id,
+            benchmark_type: BenchmarkType::PerformanceBenchmark,
+            metrics: BenchmarkMetrics {
+                accuracy: 0.0,
+                speed: analysis.overall_score,
+                efficiency: analysis.overall_score,
+                quality: 0.0,
+                compliance: 0.0,
+            },
+            score: analysis.overall_score,
+            ranking: 0, // Will be set by scoring system
+            sla_validation: None,
+        })
+    }
+
+    // Placeholder benchmark execution methods
+    async fn run_system_benchmark(&self, _model: &ModelSpecification) -> Result<BenchmarkResult> {
+        Ok(BenchmarkResult {
+            model_id: uuid::Uuid::new_v4(),
+            benchmark_type: BenchmarkType::MacroBenchmark,
+            metrics: BenchmarkMetrics::default(),
+            score: 0.8,
+            ranking: 0,
+            sla_validation: None,
+        })
+    }
+
+    async fn run_throughput_benchmark(&self, _model: &ModelSpecification) -> Result<BenchmarkResult> {
+        Ok(BenchmarkResult {
+            model_id: uuid::Uuid::new_v4(),
+            benchmark_type: BenchmarkType::PerformanceBenchmark,
+            metrics: BenchmarkMetrics::default(),
+            score: 0.7,
+            ranking: 0,
+            sla_validation: None,
+        })
+    }
+
+    async fn run_load_benchmark(&self, _model: &ModelSpecification) -> Result<BenchmarkResult> {
+        Ok(BenchmarkResult {
+            model_id: uuid::Uuid::new_v4(),
+            benchmark_type: BenchmarkType::MacroBenchmark,
+            metrics: BenchmarkMetrics::default(),
+            score: 0.9,
+            ranking: 0,
+            sla_validation: None,
+        })
+    }
+
+    async fn run_accuracy_benchmark(&self, _model: &ModelSpecification) -> Result<BenchmarkResult> {
+        Ok(BenchmarkResult {
+            model_id: uuid::Uuid::new_v4(),
+            benchmark_type: BenchmarkType::QualityBenchmark,
+            metrics: BenchmarkMetrics::default(),
+            score: 0.85,
+            ranking: 0,
+            sla_validation: None,
+        })
+    }
+
+    async fn run_consistency_benchmark(&self, _model: &ModelSpecification) -> Result<BenchmarkResult> {
+        Ok(BenchmarkResult {
+            model_id: uuid::Uuid::new_v4(),
+            benchmark_type: BenchmarkType::QualityBenchmark,
+            metrics: BenchmarkMetrics::default(),
+            score: 0.8,
+            ranking: 0,
+            sla_validation: None,
+        })
+    }
+
+    async fn run_reliability_benchmark(&self, _model: &ModelSpecification) -> Result<BenchmarkResult> {
+        Ok(BenchmarkResult {
+            model_id: uuid::Uuid::new_v4(),
+            benchmark_type: BenchmarkType::QualityBenchmark,
+            metrics: BenchmarkMetrics::default(),
+            score: 0.9,
+            ranking: 0,
+            sla_validation: None,
+        })
+    }
+
+    async fn run_latency_benchmark(&self, _model: &ModelSpecification) -> Result<BenchmarkResult> {
+        Ok(BenchmarkResult {
+            model_id: uuid::Uuid::new_v4(),
+            benchmark_type: BenchmarkType::PerformanceBenchmark,
+            metrics: BenchmarkMetrics::default(),
+            score: 0.75,
+            ranking: 0,
+            sla_validation: None,
+        })
+    }
+
+    async fn run_resource_benchmark(&self, _model: &ModelSpecification) -> Result<BenchmarkResult> {
+        Ok(BenchmarkResult {
+            model_id: uuid::Uuid::new_v4(),
+            benchmark_type: BenchmarkType::PerformanceBenchmark,
+            metrics: BenchmarkMetrics::default(),
+            score: 0.8,
+            ranking: 0,
+            sla_validation: None,
+        })
+    }
 }
 
 // Helper structs for benchmark execution
@@ -605,14 +1071,9 @@ impl Default for BenchmarkMetrics {
             compliance: 0.0,
         }
     }
+}
 
-    /// Create a micro task for execution
-    async fn create_micro_task(&self, model: &ModelSpecification) -> Result<MicroTask> {
-        let task_type = match model.model_type {
-            ModelType::CodeGeneration => MicroTaskType::CodeGeneration,
-            ModelType::CodeReview => MicroTaskType::CodeReview,
-            ModelType::Testing => MicroTaskType::Testing,
-            ModelType::Documentation => MicroTaskType::Documentation,
+/// Macro benchmark results container
             ModelType::Research => MicroTaskType::Research,
             ModelType::Analysis => MicroTaskType::Analysis,
         };

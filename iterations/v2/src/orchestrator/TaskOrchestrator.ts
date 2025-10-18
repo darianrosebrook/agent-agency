@@ -47,7 +47,7 @@ import {
 
 // Define orchestratorDir for ES modules (Jest-compatible)
 // Use a simple path resolution that works in most cases
-const orchestratorDir = path.join(process.cwd(), 'src', 'orchestrator');
+const orchestratorDir = path.join(process.cwd(), "src", "orchestrator");
 
 /**
  * Worker Pool Manager
@@ -578,9 +578,7 @@ export class TaskOrchestrator extends EventEmitter {
       // File editing tasks are executed directly in workers
       (sanitizedTask as any).assignedAgent = "worker-pool";
     } else {
-      routingDecision = await this.routingManager.routeTask(
-        sanitizedTask
-      );
+      routingDecision = await this.routingManager.routeTask(sanitizedTask);
       (sanitizedTask as any).assignedAgent = routingDecision.selectedAgent.id;
     }
 
@@ -604,11 +602,13 @@ export class TaskOrchestrator extends EventEmitter {
         selectedAgent: routingDecision.selectedAgent.id,
         routingStrategy: routingDecision.strategy as any,
         confidence: routingDecision.confidence,
-        alternativesConsidered: routingDecision.alternatives.map((alt: any) => ({
-          agentId: alt.agent.id,
-          score: routingDecision.confidence * 0.8,
-          reason: alt.reason,
-        })),
+        alternativesConsidered: routingDecision.alternatives.map(
+          (alt: any) => ({
+            agentId: alt.agent.id,
+            score: routingDecision.confidence * 0.8,
+            reason: alt.reason,
+          })
+        ),
         rationale: routingDecision.reason,
         timestamp: new Date().toISOString(),
       };
@@ -988,7 +988,7 @@ export class TaskOrchestrator extends EventEmitter {
     }
 
     if (
-      !["script", "api_call", "data_processing", "ai_inference"].includes(
+      !["script", "api_call", "data_processing", "ai_inference", "file_editing"].includes(
         task.type
       )
     ) {
