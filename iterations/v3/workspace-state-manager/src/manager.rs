@@ -231,7 +231,9 @@ impl WorkspaceStateManager {
             files_modified: files_modified_count,
             computed_at: chrono::Utc::now(),
             timestamp: chrono::Utc::now(),
-            changes: self.collect_actual_diff_changes(&current_state, &previous_state).await,
+            changes: self
+                .collect_actual_diff_changes(&current_state, &previous_state)
+                .await,
         };
 
         // Store the diff
@@ -498,7 +500,7 @@ impl WorkspaceStateManager {
             permissions: 0o644, // Default permissions for cross-platform compatibility
             git_tracked,
             git_commit,
-            content: None, // Content not captured during metadata scan
+            content: None,     // Content not captured during metadata scan
             compressed: false, // Not compressed initially
         }))
     }
@@ -903,7 +905,11 @@ impl WorkspaceStateManager {
                         change_type: ChangeType::Modified,
                         old_hash: Some(previous_hash.clone()),
                         new_hash: Some(current_hash.clone()),
-                        size_diff: self.calculate_size_diff(file_path, current_state, previous_state),
+                        size_diff: self.calculate_size_diff(
+                            file_path,
+                            current_state,
+                            previous_state,
+                        ),
                     });
                 }
             } else {
@@ -974,4 +980,3 @@ enum ChangeType {
     Deleted,
     Renamed,
 }
-
