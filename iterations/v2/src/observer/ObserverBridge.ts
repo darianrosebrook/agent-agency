@@ -36,6 +36,7 @@ export class ObserverBridge {
     config?: ObserverConfig,
     healthMonitor?: HealthMonitor
   ) {
+    console.log("[OBSERVER_BRIDGE] Creating ObserverBridge with healthMonitor:", !!healthMonitor);
     this.config = config ?? loadObserverConfig();
     this.runtime = runtime ?? null;
     this.store = new ObserverStoreImpl(this.config, this.runtime ?? undefined);
@@ -45,6 +46,7 @@ export class ObserverBridge {
       this.store,
       healthMonitor
     );
+    console.log("[OBSERVER_BRIDGE] ObserverHttpServer created, healthMonitor in server:", !!(this.server as any).healthMonitor);
     this.handler = this.handleEvent.bind(this);
   }
 

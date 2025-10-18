@@ -28,6 +28,22 @@ export interface SystemMetrics {
   circuitBreakerStats: Record<string, any>;
   errorRate: number;
   throughput: number;
+  detailed?: {
+    memoryUsagePercent: number;
+    memoryUsageMB: number;
+    totalMemoryMB: number;
+    freeMemoryMB: number;
+    cpuUsagePercent: number;
+    loadAverage: number[];
+    databaseConnections: { total: number; idle: number; waiting: number };
+    activeAlerts: number;
+    totalHealthChecks: number;
+    systemLoad: number;
+    processUptime: number;
+    nodeVersion: string;
+    platform: string;
+    architecture: string;
+  };
 }
 
 export interface HealthAlert {
@@ -47,6 +63,7 @@ export class HealthMonitor extends EventEmitter {
   private checkInterval?: NodeJS.Timeout;
   private metricsInterval?: NodeJS.Timeout;
   private isRunning = false;
+  private checkCount = 0;
 
   constructor(
     private config: {
@@ -102,6 +119,7 @@ export class HealthMonitor extends EventEmitter {
   }
 
   private async performHealthChecks(): Promise<void> {
+    this.checkCount++;
     const checks = [
       this.checkDatabaseHealth(),
       this.checkCircuitBreakers(),
@@ -285,15 +303,80 @@ export class HealthMonitor extends EventEmitter {
   }
 
   private collectMetrics(): void {
+    // Collect detailed system metrics
+    const memUsage = process.memoryUsage();
+    const cpuUsage = process.cpuUsage();
+    const loadAverage = os.loadavg();
+
+    // Calculate memory usage percentages
+    const totalMemory = os.totalmem();
+    const freeMemory = os.freemem();
+    const memoryUsagePercent = Math.round(((totalMemory - freeMemory) / totalMemory) * 100);
+
+    // Calculate CPU usage (percentage)
+    const cpus = os.cpus();
+    let totalIdle = 0;
+    let totalTick = 0;
+    for (const cpu of cpus) {
+      for (const type in cpu.times) {
+        totalTick += (cpu.times as any)[type];
+      }
+      totalIdle += cpu.times.idle;
+    }
+    const idle = totalIdle / cpus.length;
+    const total = totalTick / cpus.length;
+    const cpuUsagePercent = Math.round(100 - ~~(100 * idle / total));
+
+    // Get database connection stats
+    let dbConnections = { total: 0, idle: 0, waiting: 0 };
+    try {
+      const pool = ConnectionPoolManager.getInstance().getPool();
+      if (pool) {
+        dbConnections = {
+          total: pool.totalCount,
+          idle: pool.idleCount,
+          waiting: pool.waitingCount,
+        };
+      }
+    } catch (error) {
+      console.warn("[HEALTH] Failed to get database connection stats:", error);
+    }
+
+    // Calculate error rate (simplified - would need actual error tracking)
+    const recentErrors = this.alerts.size; // Simplified - actual implementation would track errors over time
+    const errorRate = recentErrors > 0 ? (recentErrors / Math.max(1, this.checkCount)) * 100 : 0;
+
+    // Calculate throughput (simplified - would need task completion tracking)
+    const uptimeMinutes = (Date.now() - this.startTime) / 60000;
+    const throughput = uptimeMinutes > 0 ? this.checkCount / uptimeMinutes : 0;
+
     this.metrics = {
       uptime: Date.now() - this.startTime,
-      memoryUsage: process.memoryUsage(),
-      cpuUsage: process.cpuUsage().user / 1000000, // Convert to seconds
-      activeConnections: 0, // This would be actual connection count
-      taskQueueDepth: 0, // This would be actual queue depth
+      memoryUsage: memUsage,
+      cpuUsage: cpuUsagePercent / 100, // Convert to 0-1 range
+      activeConnections: dbConnections.total,
+      taskQueueDepth: 0, // Would need integration with task queue
       circuitBreakerStats: circuitBreakerManager.getAllStats(),
-      errorRate: 0, // This would be calculated from actual error logs
-      throughput: 0, // This would be calculated from task completion rates
+      errorRate: errorRate,
+      throughput: throughput,
+
+      // Additional detailed metrics
+      detailed: {
+        memoryUsagePercent,
+        memoryUsageMB: Math.round(memUsage.heapUsed / 1024 / 1024),
+        totalMemoryMB: Math.round(totalMemory / 1024 / 1024),
+        freeMemoryMB: Math.round(freeMemory / 1024 / 1024),
+        cpuUsagePercent,
+        loadAverage: loadAverage,
+        databaseConnections: dbConnections,
+        activeAlerts: this.alerts.size,
+        totalHealthChecks: this.checkCount,
+        systemLoad: loadAverage[0], // 1-minute load average
+        processUptime: process.uptime(),
+        nodeVersion: process.version,
+        platform: process.platform,
+        architecture: process.arch,
+      },
     };
 
     this.emit("metrics-collected", this.metrics);
