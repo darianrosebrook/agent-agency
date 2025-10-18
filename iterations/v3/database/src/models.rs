@@ -209,6 +209,7 @@ pub struct CreateTaskExecution {
     pub self_assessment: serde_json::Value,
     pub metadata: serde_json::Value,
     pub tokens_used: Option<i32>,
+    pub execution_metadata: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -230,6 +231,13 @@ pub struct CreateJudgeEvaluation {
     pub evaluation_time_ms: i32,
     pub tokens_used: Option<i32>,
     pub confidence: Option<f32>,
+    pub evaluation_score: Option<f32>,
+    pub confidence_score: Option<f32>,
+    pub reasoning: Option<String>,
+    pub evidence_used: Option<serde_json::Value>,
+    pub evaluation_metadata: Option<serde_json::Value>,
+    pub verdict_decision: Option<String>,
+    pub risk_assessment: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -241,6 +249,10 @@ pub struct CreateKnowledgeEntry {
     pub relevance_score: f32,
     pub tags: serde_json::Value,
     pub embedding: Option<Vec<f32>>,
+    pub content_type: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+    pub embedding_vector: Option<Vec<f32>>,
+    pub access_level: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -313,6 +325,9 @@ pub struct UpdateTask {
     pub status: Option<String>,
     pub assigned_worker_id: Option<Uuid>,
     pub completed_at: Option<DateTime<Utc>>,
+    pub priority: Option<i32>,
+    pub deadline: Option<DateTime<Utc>>,
+    pub metadata: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -325,6 +340,9 @@ pub struct UpdateTaskExecution {
     pub metadata: Option<serde_json::Value>,
     pub error_message: Option<String>,
     pub tokens_used: Option<i32>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub result_data: Option<serde_json::Value>,
+    pub execution_metadata: Option<serde_json::Value>,
 }
 
 /// Query filters and pagination
@@ -332,6 +350,8 @@ pub struct UpdateTaskExecution {
 pub struct PaginationParams {
     pub page: u32,
     pub page_size: u32,
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
 }
 
 impl Default for PaginationParams {
@@ -339,6 +359,8 @@ impl Default for PaginationParams {
         Self {
             page: 1,
             page_size: 20,
+            limit: None,
+            offset: None,
         }
     }
 }
@@ -357,6 +379,10 @@ pub struct VerdictFilters {
     pub task_id: Option<Uuid>,
     pub consensus_score_min: Option<f32>,
     pub consensus_score_max: Option<f32>,
+    pub min_consensus_score: Option<f32>,
+    pub max_consensus_score: Option<f32>,
+    pub min_debate_rounds: Option<i32>,
+    pub max_debate_rounds: Option<i32>,
     pub created_after: Option<DateTime<Utc>>,
     pub created_before: Option<DateTime<Utc>>,
 }

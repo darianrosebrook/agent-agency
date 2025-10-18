@@ -468,13 +468,13 @@ impl DatabaseHealthChecker {
             let tuples_read = tuples_read.unwrap_or(0);
             let tuples_fetched = tuples_fetched.unwrap_or(0);
 
-            let hit_rate = if tuples_read > 0 {
+            let _hit_rate = if tuples_read > 0 {
                 (tuples_fetched as f64 / tuples_read as f64).min(1.0)
             } else {
                 0.0
             };
 
-            let usage_efficiency = if scans > 0 {
+            let _usage_efficiency = if scans > 0 {
                 (tuples_fetched as f64 / scans as f64).max(1.0)
             } else {
                 0.0

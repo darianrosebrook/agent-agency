@@ -10,7 +10,7 @@
 use crate::{models::*, DatabaseConfig};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use chrono;
+use chrono::{DateTime, Duration, Utc};
 use deadpool_postgres::{Config, ManagerConfig, RecyclingMethod, Runtime};
 use serde_json;
 use sqlx::Row;
@@ -18,7 +18,7 @@ use sqlx::{PgPool, Postgres};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::{Duration as StdDuration, Instant};
 use tokio::sync::{RwLock, Semaphore};
 use tracing::{debug, error, info};
 use uuid::Uuid;
@@ -64,7 +64,7 @@ impl CircuitBreaker {
         Self {
             failure_threshold: 3,
             success_threshold: 5,
-            recovery_timeout: Duration::from_secs(30),
+            recovery_timeout: Duration::seconds(30),
             state: Arc::new(RwLock::new(CircuitState::Closed)),
             failures: AtomicU64::new(0),
             successes: AtomicU64::new(0),
@@ -123,7 +123,7 @@ impl DatabaseClient {
         let circuit_breaker = Arc::new(CircuitBreaker {
             failure_threshold: 5,                      // Open after 5 failures
             success_threshold: 3,                      // Close after 3 successes
-            recovery_timeout: Duration::from_secs(30), // Wait 30s before half-open
+            recovery_timeout: Duration::seconds(30), // Wait 30s before half-open
             state: Arc::new(RwLock::new(CircuitState::Closed)),
             failures: AtomicU64::new(0),
             successes: AtomicU64::new(0),
@@ -293,7 +293,9 @@ impl DatabaseClient {
                 // Check if we should attempt recovery
                 let last_failure = circuit_breaker.last_failure.read().await;
                 if let Some(failure_time) = *last_failure {
-                    if start_time.duration_since(failure_time) > circuit_breaker.recovery_timeout {
+                    let elapsed = start_time.duration_since(failure_time);
+                    let elapsed_chrono = Duration::seconds(elapsed.as_secs() as i64);
+                    if elapsed_chrono > circuit_breaker.recovery_timeout {
                         // Attempt recovery - transition to half-open
                         drop(state);
                         let mut state_write = circuit_breaker.state.write().await;
@@ -389,7 +391,7 @@ impl DatabaseClient {
             Box::pin(async move {
                 // Use a timeout for the query execution
                 tokio::time::timeout(
-                    Duration::from_secs(30), // 30 second timeout
+                    StdDuration::from_secs(30), // 30 second timeout
                     sqlx::query(&query).execute(&pool),
                 )
                 .await
@@ -457,7 +459,7 @@ impl DatabaseClient {
                 }
 
                 // Execute with timeout
-                tokio::time::timeout(Duration::from_secs(30), sql_query.execute(&pool))
+                tokio::time::timeout(StdDuration::from_secs(30), sql_query.execute(&pool))
                     .await
                     .map_err(|_| anyhow::anyhow!("Parameterized query timed out"))?
                     .context("Parameterized query execution failed")
