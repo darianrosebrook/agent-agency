@@ -8418,5 +8418,41 @@
     },
     "previous_hash": "bf9749ccc4130a33bcd6566d0752d8fd1b2fba6ef7e609df09c7a46164f3133c",
     "hash": "4d8ec74466cfb0e11801a58d079cb143e4cc1074d4b5fd67dda964e09357c191"
+  },
+  {
+    "id": "prov-1760768631654",
+    "timestamp": "2025-10-18T06:23:51.654Z",
+    "commit": {
+      "hash": "2e9ed9b217ec8a878dde1eeffd2e85bc71cf2633",
+      "message": "Implement comprehensive cross-component integration tests",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T06:23:51.662Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "4d8ec74466cfb0e11801a58d079cb143e4cc1074d4b5fd67dda964e09357c191",
+    "hash": "b46a528880b99b2eb4fc0650702d1bf5eb04e3d4dbef8eba0135acb713fef216"
   }
 ]

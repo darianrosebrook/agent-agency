@@ -88,6 +88,23 @@ pub struct AgentHealthMetrics {
     pub tasks_completed_hour: u32,
 }
 
+/// Database health metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DatabaseHealthMetrics {
+    /// Database connection status
+    pub connection_ok: bool,
+    /// Database pool status
+    pub pool_ok: bool,
+    /// Database performance status
+    pub performance_ok: bool,
+    /// Database response time (milliseconds)
+    pub response_time_ms: u64,
+    /// Database diagnostics
+    pub diagnostics: Option<agent_agency_database::health::DatabaseDiagnostics>,
+    /// Last database health check timestamp
+    pub last_check: chrono::DateTime<chrono::Utc>,
+}
+
 /// Health alert
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthAlert {
@@ -160,6 +177,8 @@ pub struct HealthMetrics {
     pub queue_depth: u32,
     /// Circuit breaker state
     pub circuit_breaker_state: CircuitBreakerState,
+    /// Database health metrics (if available)
+    pub database_health: Option<DatabaseHealthMetrics>,
     /// Embedding metrics (if available)
     pub embedding_metrics: Option<EmbeddingMetrics>,
     /// Timestamp

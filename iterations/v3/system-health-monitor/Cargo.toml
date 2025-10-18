@@ -33,3 +33,4 @@ agent-agency-council = { path = "../council" }
 agent-agency-research = { path = "../research" }
 agent-agency-workers = { path = "../workers" }
 agent-agency-context-preservation-engine = { path = "../context-preservation-engine" }
+agent-agency-database = { path = "../database" }

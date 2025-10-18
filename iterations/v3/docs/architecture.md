@@ -6,26 +6,64 @@ Agent Agency V3 implements a **constitutional council system** where specialized
 
 The architecture coordinates specialized judges, a research agent, and a worker pool via a Rust orchestration core optimized for Apple Silicon, with built-in CAWS compliance and provenance tracking.
 
-## Core Design Principles
+## Core Problems Solved
+
+### The Agent Coordination Crisis
+Traditional multi-agent systems suffer from fundamental coordination failures:
+
+- **Race Conditions**: Agents compete for resources, leading to unpredictable behavior
+- **Safety Gaps**: No runtime enforcement of ethical or legal constraints
+- **Quality Bottlenecks**: Manual review doesn't scale with agent proliferation
+- **Learning Conflicts**: Experience-driven improvement can compromise safety
+- **Audit Nightmares**: Lack of accountability in complex agent interactions
+
+V3's constitutional approach provides the missing governance layer.
+
+## Design Principles
 
 ### 1. Constitutional Concurrency
-**Traditional parallelism** races to execute operations and resolves conflicts later. **Constitutional concurrency** establishes consensus boundaries first, then executes within agreed constraints.
+**Problem**: Traditional parallelism leads to resource conflicts and unpredictable agent behavior.
+
+**Solution**: Constitutional concurrency establishes agreed-upon bounds before execution, preventing conflicts through principled coordination rather than post-hoc resolution.
+
+**Benefits**:
+- Zero race conditions between agents
+- Predictable resource utilization
+- Safe parallel execution within constitutional limits
+- Auditability of all coordination decisions
 
 ### 2. Council-Based Governance
-Four specialized judges provide independent oversight:
-- **Constitutional Judge**: CAWS compliance, budgets, waivers, provenance
-- **Technical Auditor**: Code quality, security, contracts, migrations
-- **Quality Evaluator**: Correctness, completeness, maintainability
-- **Integration Validator**: Cross-file/API/database coherence
+**Problem**: Single orchestrators create bottlenecks and single points of failure in agent governance.
 
-### 3. Risk-Tiered Execution
-Tasks execute with different concurrency models based on risk:
-- **Tier 1 (High Risk)**: Sequential execution with maximum oversight
-- **Tier 2 (Medium Risk)**: Limited parallel with checkpoint consensus
-- **Tier 3 (Low Risk)**: High parallel with minimal coordination
+**Solution**: Four specialized AI judges provide independent, parallel oversight with consensus-based decision making.
 
-### 4. Apple Silicon Optimization
-Native hardware acceleration across the Neural Engine (ANE), GPU, and CPU with unified memory management and thermal awareness.
+**Judge Roles**:
+- **Constitutional Judge**: Enforces ethical guidelines, legal compliance, and CAWS principles
+- **Technical Auditor**: Validates code quality, security standards, and system contracts
+- **Quality Evaluator**: Assesses correctness, completeness, and requirement satisfaction
+- **Integration Validator**: Ensures system coherence, API compatibility, and architectural integrity
+
+### 3. Risk-Tiered Execution Model
+**Problem**: One-size-fits-all governance treats all operations equally, wasting resources on low-risk tasks and risking safety on high-risk ones.
+
+**Solution**: Three-tiered execution model matches governance intensity to operational risk.
+
+**Execution Tiers**:
+- **Tier 1 (High Risk)**: Sequential judge evaluation with debate protocol and maximum oversight
+- **Tier 2 (Medium Risk)**: Limited parallel evaluation with consensus checkpoints
+- **Tier 3 (Low Risk)**: High parallel evaluation with minimal coordination overhead
+
+### 4. Apple Silicon Acceleration Platform
+**Problem**: AI governance requires significant computational resources, creating performance bottlenecks.
+
+**Solution**: Native hardware acceleration leveraging all Apple Silicon capabilities for optimal performance.
+
+**Acceleration Features**:
+- **ANE Integration**: Neural Engine acceleration for constitutional judge inference
+- **GPU Orchestration**: Metal-based parallel processing for complex analysis tasks
+- **Unified Memory**: Efficient data sharing across CPU, GPU, and ANE
+- **Thermal Management**: Performance scaling based on system temperature and power constraints
+- **Core ML Optimization**: Hardware-specific model deployment and quantization
 
 ## System Architecture Diagram
 

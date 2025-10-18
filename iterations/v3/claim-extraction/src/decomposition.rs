@@ -5,6 +5,8 @@
 
 use crate::types::*;
 use anyhow::Result;
+use std::collections::HashSet;
+use std::path::Path;
 use tracing::debug;
 use uuid::Uuid;
 
@@ -381,32 +383,224 @@ impl ClaimExtractor {
 /// Adds contextual brackets to claims
 #[derive(Debug)]
 struct ContextBracketAdder {
-    // TODO: Add context bracket logic with the following requirements:
-    // 1. Context identification: Identify missing context in claims
-    //    - Parse claims to find implicit context dependencies
-    //    - Identify temporal, spatial, and domain-specific context gaps
-    //    - Detect assumptions and prerequisite knowledge requirements
-    // 2. Context extraction: Extract relevant context from available sources
-    //    - Search documentation, specifications, and related materials
-    //    - Extract contextual information from surrounding text
-    //    - Identify relevant background information and constraints
-    // 3. Context bracketing: Add contextual brackets to claims
-    //    - Insert contextual information in appropriate bracket format
-    //    - Maintain claim readability while adding necessary context
-    //    - Ensure context brackets are clearly distinguished from main claim
-    // 4. Context validation: Validate added context for accuracy and relevance
-    //    - Verify that added context is accurate and up-to-date
-    //    - Ensure context relevance to the specific claim
-    //    - Check for context conflicts or inconsistencies
-    // 5. Context optimization: Optimize context for clarity and completeness
-    //    - Balance context completeness with claim conciseness
-    //    - Ensure context provides sufficient information for verification
-    //    - Remove redundant or unnecessary contextual information
 }
 
 impl ContextBracketAdder {
     fn new() -> Self {
         Self {}
+    }
+
+    async fn generate_context_brackets(
+        &self,
+        claim: &str,
+        context: &ProcessingContext,
+    ) -> Result<Vec<String>> {
+        let mut brackets = Vec::new();
+        let mut seen = HashSet::new();
+        let mut push_bracket = |value: String| {
+            if !value.is_empty() && seen.insert(value.clone()) {
+                brackets.push(value);
+            }
+        };
+
+        if !context.working_spec_id.is_empty() {
+            push_bracket(format!("[spec: {}]", context.working_spec_id));
+        }
+
+        if let Some(path) = context.source_file.as_ref() {
+            if let Some(file_name) = Path::new(path).file_name() {
+                push_bracket(format!("[source: {}]", file_name.to_string_lossy()));
+            }
+        }
+
+        for hint in &context.domain_hints {
+            if !hint.trim().is_empty() {
+                push_bracket(format!("[domain: {}]", hint.trim()));
+            }
+        }
+
+        if let Some(timeframe) = self.extract_timeframe(&context.surrounding_context) {
+            push_bracket(format!("[timeframe: {}]", timeframe));
+        }
+
+        if let Some(environment) =
+            self.detect_environment(&context.surrounding_context, &context.domain_hints)
+        {
+            push_bracket(format!("[environment: {}]", environment));
+        }
+
+        if let Some(entity) = self.extract_prominent_entity(&context.surrounding_context) {
+            if self.claim_has_pronoun(claim) {
+                push_bracket(format!("[entity: {}]", entity));
+            }
+        }
+
+        if let Some(scope) = self.infer_scope_from_context(context) {
+            push_bracket(format!("[scope: {}]", scope));
+        }
+
+        if let Some(verification) = self.detect_verification_context(claim, &context.domain_hints) {
+            push_bracket(format!("[verification: {}]", verification));
+        }
+
+        for bracket in self.expand_technical_terms(claim) {
+            push_bracket(bracket);
+        }
+
+        if claim.to_lowercase().contains("must")
+            || claim.to_lowercase().contains("should")
+            || claim.to_lowercase().contains("shall")
+        {
+            push_bracket("[assumption: policy requirement]".to_string());
+        }
+
+        if claim.to_lowercase().contains("depends on")
+            || context.surrounding_context.to_lowercase().contains("requires")
+        {
+            push_bracket("[dependency: referenced components]".to_string());
+        }
+
+        if let Some(limit) = self.detect_constraint(&context.surrounding_context) {
+            push_bracket(format!("[constraint: {}]", limit));
+        }
+
+        // Relevance guard: keep top entries prioritising spec/domain/timeframe first.
+        if brackets.len() > 6 {
+            brackets.truncate(6);
+        }
+
+        Ok(brackets)
+    }
+
+    fn extract_timeframe(&self, text: &str) -> Option<String> {
+        let timeframe_patterns = [
+            r"\bQ[1-4]\s*(?:FY)?\s*\d{4}\b",
+            r"\bFY\s*\d{4}\b",
+            r"\b20\d{2}\b",
+            r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}\b",
+        ];
+
+        for pattern in timeframe_patterns {
+            if let Ok(regex) = regex::Regex::new(pattern) {
+                if let Some(mat) = regex.find(text) {
+                    return Some(mat.as_str().trim().to_string());
+                }
+            }
+        }
+        None
+    }
+
+    fn detect_environment(&self, text: &str, domain_hints: &[String]) -> Option<String> {
+        let lower = text.to_lowercase();
+        let candidate = if lower.contains("production") {
+            Some("production")
+        } else if lower.contains("staging") {
+            Some("staging")
+        } else if lower.contains("dev ") || lower.contains("development") {
+            Some("development")
+        } else if lower.contains("test") || lower.contains("qa") {
+            Some("testing")
+        } else {
+            None
+        };
+
+        candidate
+            .map(|env| env.to_string())
+            .or_else(|| domain_hints.iter().find(|hint| hint.contains("env")).cloned())
+    }
+
+    fn extract_prominent_entity(&self, text: &str) -> Option<String> {
+        let entity_regex =
+            regex::Regex::new(r"\b([A-Z][a-zA-Z0-9_\-/]+(?:\s+[A-Z][a-zA-Z0-9_\-/]+)?)\b").unwrap();
+        entity_regex
+            .captures_iter(text)
+            .map(|caps| caps[1].to_string())
+            .filter(|entity| entity.len() > 2)
+            .last()
+    }
+
+    fn claim_has_pronoun(&self, claim: &str) -> bool {
+        let lower = claim.to_lowercase();
+        lower.contains(" it ")
+            || lower.starts_with("it ")
+            || lower.contains(" they ")
+            || lower.starts_with("they ")
+    }
+
+    fn infer_scope_from_context(&self, context: &ProcessingContext) -> Option<String> {
+        if let Some(source) = &context.source_file {
+            if let Some(parent) = Path::new(source).parent() {
+                let component = parent
+                    .file_name()
+                    .map(|name| name.to_string_lossy().to_string());
+                if component.is_some() {
+                    return component;
+                }
+            }
+        }
+
+        context
+            .domain_hints
+            .iter()
+            .find(|hint| hint.contains("module") || hint.contains("service"))
+            .cloned()
+    }
+
+    fn detect_verification_context(
+        &self,
+        claim: &str,
+        domain_hints: &[String],
+    ) -> Option<String> {
+        let lower = claim.to_lowercase();
+        if lower.contains("performance") || lower.contains("latency") {
+            Some("performance-benchmarks".to_string())
+        } else if lower.contains("security") || lower.contains("vulnerability") {
+            Some("security-audit".to_string())
+        } else if lower.contains("compliance") || lower.contains("policy") {
+            Some("compliance-review".to_string())
+        } else if domain_hints.iter().any(|hint| hint.to_lowercase().contains("ml")) {
+            Some("model-validation".to_string())
+        } else {
+            None
+        }
+    }
+
+    fn expand_technical_terms(&self, claim: &str) -> Vec<String> {
+        let mut brackets = Vec::new();
+        let terms: &[(&str, &str)] = &[
+            ("API", "Application Programming Interface"),
+            ("UI", "User Interface"),
+            ("UX", "User Experience"),
+            ("DB", "Database"),
+            ("SQL", "Structured Query Language"),
+            ("HTTP", "Hypertext Transfer Protocol"),
+            ("JSON", "JavaScript Object Notation"),
+            ("XML", "Extensible Markup Language"),
+            ("gRPC", "Remote Procedure Calls over HTTP/2"),
+            ("ORM", "Object Relational Mapper"),
+        ];
+
+        for (term, expansion) in terms {
+            let regex =
+                regex::Regex::new(&format!(r"\b{}\b", regex::escape(term))).unwrap_or_default();
+            if regex.is_match(claim) {
+                brackets.push(format!("{term} [{expansion}]"));
+            }
+        }
+
+        brackets
+    }
+
+    fn detect_constraint(&self, surrounding_context: &str) -> Option<String> {
+        let lower = surrounding_context.to_lowercase();
+        if let Some(mat) = regex::Regex::new(r"\b(?:limit|deadline|SLA)\b.+")
+            .unwrap()
+            .find(&lower)
+        {
+            return Some(mat.as_str().trim().to_string());
+        }
+
+        None
     }
 }
 
@@ -638,33 +832,9 @@ impl DecompositionStage {
         claim: &str,
         context: &ProcessingContext,
     ) -> Result<Vec<String>> {
-        let mut brackets = Vec::new();
-
-        // Add working spec context
-        brackets.push(format!("[spec: {}]", context.working_spec_id));
-
-        // Add domain context from hints
-        for hint in &context.domain_hints {
-            brackets.push(format!("[domain: {}]", hint));
-        }
-
-        // Add technical term disambiguation (basic implementation)
-        let technical_terms = ["API", "UI", "UX", "DB", "SQL", "HTTP", "JSON", "XML"];
-        for term in &technical_terms {
-            if claim.contains(term) {
-                let expansion = match *term {
-                    "API" => "Application Programming Interface",
-                    "UI" => "User Interface",
-                    "UX" => "User Experience",
-                    "DB" => "Database",
-                    "SQL" => "Structured Query Language",
-                    _ => term,
-                };
-                brackets.push(format!("{} [{}]", term, expansion));
-            }
-        }
-
-        Ok(brackets)
+        self.context_bracket_adder
+            .generate_context_brackets(claim, context)
+            .await
     }
 
     /// Apply contextual brackets to a statement

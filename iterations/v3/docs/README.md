@@ -4,6 +4,7 @@ This directory contains the core architectural documentation for V3 - the mainta
 
 ## Core Architecture
 
+- **[PROJECT_VISION.md](./PROJECT_VISION.md)** - Comprehensive project vision, strategic objectives, and success metrics
 - **[architecture.md](./architecture.md)** - High-level system architecture, design principles, and current implementation status
 - **[interaction-contracts.md](./interaction-contracts.md)** - API contracts and interaction patterns between components
 - **[agents.md](./agents.md)** - CAWS agent workflow guide and collaboration patterns

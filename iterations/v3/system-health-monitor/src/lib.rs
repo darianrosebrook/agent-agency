@@ -729,6 +729,275 @@ impl SystemHealthMonitor {
         severity_counts
     }
 
+    /// Check system component health
+    async fn check_system_components(
+        alerts: &Arc<RwLock<Vec<HealthAlert>>>,
+        config: &SystemHealthMonitorConfig,
+        metrics_history: &Arc<RwLock<Vec<SystemMetrics>>>,
+    ) -> Result<()> {
+        let metrics = metrics_history.read();
+        let latest_metrics = metrics.last();
+
+        if let Some(metrics) = latest_metrics {
+            // Check CPU usage
+            if metrics.cpu_usage >= config.thresholds.cpu_critical_threshold {
+                Self::create_component_alert(
+                    alerts,
+                    AlertSeverity::Critical,
+                    AlertType::SystemHealth,
+                    format!("Critical CPU usage: {:.1}%", metrics.cpu_usage),
+                    "cpu".to_string(),
+                ).await?;
+            } else if metrics.cpu_usage >= config.thresholds.cpu_warning_threshold {
+                Self::create_component_alert(
+                    alerts,
+                    AlertSeverity::High,
+                    AlertType::SystemHealth,
+                    format!("High CPU usage: {:.1}%", metrics.cpu_usage),
+                    "cpu".to_string(),
+                ).await?;
+            }
+
+            // Check memory usage
+            if metrics.memory_usage >= config.thresholds.memory_critical_threshold {
+                Self::create_component_alert(
+                    alerts,
+                    AlertSeverity::Critical,
+                    AlertType::SystemHealth,
+                    format!("Critical memory usage: {:.1}%", metrics.memory_usage),
+                    "memory".to_string(),
+                ).await?;
+            } else if metrics.memory_usage >= config.thresholds.memory_warning_threshold {
+                Self::create_component_alert(
+                    alerts,
+                    AlertSeverity::High,
+                    AlertType::SystemHealth,
+                    format!("High memory usage: {:.1}%", metrics.memory_usage),
+                    "memory".to_string(),
+                ).await?;
+            }
+
+            // Check disk usage
+            if metrics.disk_usage >= config.thresholds.disk_critical_threshold {
+                Self::create_component_alert(
+                    alerts,
+                    AlertSeverity::Critical,
+                    AlertType::SystemHealth,
+                    format!("Critical disk usage: {:.1}%", metrics.disk_usage),
+                    "disk".to_string(),
+                ).await?;
+            } else if metrics.disk_usage >= config.thresholds.disk_warning_threshold {
+                Self::create_component_alert(
+                    alerts,
+                    AlertSeverity::High,
+                    AlertType::SystemHealth,
+                    format!("High disk usage: {:.1}%", metrics.disk_usage),
+                    "disk".to_string(),
+                ).await?;
+            }
+
+            // Check system load
+            if metrics.load_average[0] >= 4.0 {
+                Self::create_component_alert(
+                    alerts,
+                    AlertSeverity::High,
+                    AlertType::SystemHealth,
+                    format!("High system load: {:.2}", metrics.load_average[0]),
+                    "load".to_string(),
+                ).await?;
+            }
+
+            // Check I/O performance (simplified)
+            if metrics.network_io > 100_000_000 || metrics.disk_io > 50_000_000 {
+                // 100MB/s network or 50MB/s disk I/O threshold
+                Self::create_component_alert(
+                    alerts,
+                    AlertSeverity::Medium,
+                    AlertType::SystemHealth,
+                    format!("High I/O activity: network {:.1}MB/s, disk {:.1}MB/s",
+                           metrics.network_io as f64 / 1_000_000.0,
+                           metrics.disk_io as f64 / 1_000_000.0),
+                    "io".to_string(),
+                ).await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Check database health
+    async fn check_database_health(
+        alerts: &Arc<RwLock<Vec<HealthAlert>>>,
+        _config: &SystemHealthMonitorConfig,
+    ) -> Result<()> {
+        // Database health checks are handled by the DatabaseHealthChecker
+        // This method serves as a placeholder for future database-specific alerts
+        // The actual database monitoring is integrated into the health metrics
+        Ok(())
+    }
+
+    /// Check agent health
+    async fn check_agent_health(
+        alerts: &Arc<RwLock<Vec<HealthAlert>>>,
+        config: &SystemHealthMonitorConfig,
+        agent_health_metrics: &Arc<DashMap<String, AgentHealthMetrics>>,
+    ) -> Result<()> {
+        let mut unhealthy_agents = Vec::new();
+
+        for entry in agent_health_metrics.iter() {
+            let agent_id = entry.key();
+            let metrics = entry.value();
+
+            // Check error rate
+            if metrics.error_rate >= config.thresholds.agent_error_rate_threshold as f64 {
+                unhealthy_agents.push((agent_id.clone(), "high_error_rate".to_string()));
+                Self::create_component_alert(
+                    alerts,
+                    AlertSeverity::High,
+                    AlertType::AgentHealth,
+                    format!("Agent {} error rate too high: {:.2}", agent_id, metrics.error_rate),
+                    agent_id.clone(),
+                ).await?;
+            }
+
+            // Check response time
+            if metrics.response_time_p95 >= config.thresholds.agent_response_time_threshold {
+                unhealthy_agents.push((agent_id.clone(), "slow_response".to_string()));
+                Self::create_component_alert(
+                    alerts,
+                    AlertSeverity::Medium,
+                    AlertType::AgentHealth,
+                    format!("Agent {} response time too high: {}ms", agent_id, metrics.response_time_p95),
+                    agent_id.clone(),
+                ).await?;
+            }
+
+            // Check health score
+            if metrics.health_score < 0.5 {
+                unhealthy_agents.push((agent_id.clone(), "low_health_score".to_string()));
+                Self::create_component_alert(
+                    alerts,
+                    AlertSeverity::Critical,
+                    AlertType::AgentHealth,
+                    format!("Agent {} health score critical: {:.2}", agent_id, metrics.health_score),
+                    agent_id.clone(),
+                ).await?;
+            }
+
+            // Check load capacity
+            if metrics.current_load as f64 >= metrics.max_load as f64 * 0.9 {
+                Self::create_component_alert(
+                    alerts,
+                    AlertSeverity::Medium,
+                    AlertType::AgentHealth,
+                    format!("Agent {} near capacity: {}/{}", agent_id, metrics.current_load, metrics.max_load),
+                    agent_id.clone(),
+                ).await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Check resource utilization trends
+    async fn check_resource_utilization(
+        alerts: &Arc<RwLock<Vec<HealthAlert>>>,
+        config: &SystemHealthMonitorConfig,
+        metrics_history: &Arc<RwLock<Vec<SystemMetrics>>>,
+    ) -> Result<()> {
+        let metrics = metrics_history.read();
+
+        // Need at least 10 data points for trend analysis
+        if metrics.len() < 10 {
+            return Ok(());
+        }
+
+        // Analyze CPU trend (last 10 readings)
+        let recent_cpu: Vec<f64> = metrics.iter().rev().take(10).map(|m| m.cpu_usage).collect();
+        if let Some(cpu_trend) = Self::calculate_trend(&recent_cpu) {
+            if cpu_trend > 5.0 { // CPU increasing by more than 5% over time
+                Self::create_component_alert(
+                    alerts,
+                    AlertSeverity::Medium,
+                    AlertType::SystemHealth,
+                    format!("CPU usage trending upward: +{:.1}%", cpu_trend),
+                    "cpu_trend".to_string(),
+                ).await?;
+            }
+        }
+
+        // Analyze memory trend
+        let recent_memory: Vec<f64> = metrics.iter().rev().take(10).map(|m| m.memory_usage).collect();
+        if let Some(memory_trend) = Self::calculate_trend(&recent_memory) {
+            if memory_trend > 3.0 { // Memory increasing by more than 3% over time
+                Self::create_component_alert(
+                    alerts,
+                    AlertSeverity::Medium,
+                    AlertType::SystemHealth,
+                    format!("Memory usage trending upward: +{:.1}%", memory_trend),
+                    "memory_trend".to_string(),
+                ).await?;
+            }
+        }
+
+        // Check for system error rate trends
+        // This would be implemented by tracking error rates over time
+
+        Ok(())
+    }
+
+    /// Calculate trend from a series of measurements (simple linear regression slope)
+    fn calculate_trend(values: &[f64]) -> Option<f64> {
+        if values.len() < 2 {
+            return None;
+        }
+
+        let n = values.len() as f64;
+        let x_sum: f64 = (0..values.len()).map(|i| i as f64).sum();
+        let y_sum: f64 = values.iter().sum();
+        let xy_sum: f64 = values.iter().enumerate().map(|(i, &y)| i as f64 * y).sum();
+        let x_squared_sum: f64 = (0..values.len()).map(|i| (i as f64).powi(2)).sum();
+
+        let slope = (n * xy_sum - x_sum * y_sum) / (n * x_squared_sum - x_sum.powi(2));
+
+        // Return slope as percentage change per measurement
+        Some(slope * 100.0)
+    }
+
+    /// Create a component health alert
+    async fn create_component_alert(
+        alerts: &Arc<RwLock<Vec<HealthAlert>>>,
+        severity: AlertSeverity,
+        alert_type: AlertType,
+        message: String,
+        target: String,
+    ) -> Result<()> {
+        let mut alerts_write = alerts.write();
+
+        // Check if similar alert already exists and is unresolved
+        let has_similar_alert = alerts_write
+            .iter()
+            .any(|a| a.alert_type == alert_type && a.target == target && !a.resolved);
+
+        if !has_similar_alert {
+            let alert = HealthAlert {
+                id: Uuid::new_v4().to_string(),
+                severity,
+                alert_type,
+                message,
+                target,
+                timestamp: Utc::now(),
+                acknowledged: false,
+                resolved: false,
+                resolved_at: None,
+                metadata: HashMap::new(),
+            };
+            alerts_write.push(alert);
+        }
+
+        Ok(())
+    }
+
     /// Get alert statistics and trends
     pub fn get_alert_statistics(&self) -> AlertStatistics {
         let alerts = self.alerts.read();
