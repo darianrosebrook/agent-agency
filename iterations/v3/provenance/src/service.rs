@@ -11,8 +11,8 @@ use uuid::Uuid;
 use crate::{
     git_integration::GitIntegration,
     signer::{SignerFactory, SignerTrait},
-    types::*,
     ProvenanceConfig,
+    SigningAlgorithm,
 };
 
 /// Storage trait for provenance records

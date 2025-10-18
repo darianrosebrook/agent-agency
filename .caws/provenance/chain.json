@@ -7554,5 +7554,77 @@
     },
     "previous_hash": "66a29b1605f3d62989b97ef35c92ca3a750d1efedbba2b7abf79a78a00a24a20",
     "hash": "db201528d2cb0bcadd3801117b0fcecf2a531514f9df8a18562e415aa9ec675b"
+  },
+  {
+    "id": "prov-1760757329615",
+    "timestamp": "2025-10-18T03:15:29.615Z",
+    "commit": {
+      "hash": "890aaa3adc9157e954b94deda3ecaa0e2870455d",
+      "message": "feat: Complete TODO integrations across v3 project",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T03:15:29.619Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "db201528d2cb0bcadd3801117b0fcecf2a531514f9df8a18562e415aa9ec675b",
+    "hash": "3c9fd538a8e33c77f48835119eabe0be7cad17914682760b085d08e6e81d3b79"
+  },
+  {
+    "id": "prov-1760757460839",
+    "timestamp": "2025-10-18T03:17:40.839Z",
+    "commit": {
+      "hash": "51d33246e4be2a3375f8bf275c7c97aa2e2300af",
+      "message": "Implement production embedding model integration for vector search",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T03:17:40.840Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "3c9fd538a8e33c77f48835119eabe0be7cad17914682760b085d08e6e81d3b79",
+    "hash": "a59e2db01e4751cadcd8be84dc81b6a128c2aebb9e7adf5f056748c457f12331"
   }
 ]

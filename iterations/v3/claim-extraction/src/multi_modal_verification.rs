@@ -1911,7 +1911,7 @@ impl SemanticAnalyzer {
         structure: &SemanticStructure,
         entities: &[SemanticEntity],
         relationships: &[SemanticRelationship],
-    ) -> Result<CoherenceAnalysis> {
+    ) -> Result<ConsistencyAnalysis> {
         let mut conflicts = Vec::new();
         let mut consistency_score: f64 = 1.0;
 
@@ -1950,7 +1950,7 @@ impl SemanticAnalyzer {
         structure: &SemanticStructure,
         entities: &[SemanticEntity],
         relationships: &[SemanticRelationship],
-    ) -> Result<CoherenceAnalysis> {
+    ) -> Result<ConsistencyAnalysis> {
         let logical_flow_score = self.evaluate_logical_flow(entities, relationships);
         let gaps = self.identify_semantic_gaps(structure, entities, relationships);
         let completeness_score = self.assess_semantic_completeness(structure, entities.len(), relationships.len());
@@ -2363,7 +2363,7 @@ impl CrossReferenceValidator {
     }
     
     /// Check consistency across references
-    async fn check_consistency(&self, references: &[ValidatedReference]) -> Result<CoherenceAnalysis> {
+    async fn check_consistency(&self, references: &[ValidatedReference]) -> Result<ConsistencyAnalysis> {
         let mut conflicts = Vec::new();
         let mut gaps = Vec::new();
         let mut supporting_evidence = Vec::new();
@@ -2425,7 +2425,7 @@ impl CrossReferenceValidator {
     }
     
     /// Identify contradictions in references
-    async fn identify_contradictions(&self, analysis: &CoherenceAnalysis) -> Result<Vec<Contradiction>> {
+    async fn identify_contradictions(&self, analysis: &CoherenceAnalysisConsistencyAnalysis) -> Result<Vec<Contradiction>> {
         let mut contradictions = Vec::new();
         
         // Create contradictions based on gaps in coherence

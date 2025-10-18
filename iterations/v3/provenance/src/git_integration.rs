@@ -103,24 +103,26 @@ impl GitTrailerManager {
     /// Get current branch reference with proper reference handling
     fn get_branch_ref(&self) -> Result<()> {
         let refname = format!("refs/heads/{}", self.branch);
-        let repo = self.repository.lock().unwrap();
-        
-        // 1. Reference management: Implement proper Git reference handling
-        match repo.find_reference(&refname) {
-            Ok(reference) => {
-                // Validate reference
-                if let Ok(commit) = reference.peel_to_commit() {
-                    debug!("Found branch reference: {} -> {}", refname, commit.id());
-                    Ok(())
-                } else {
-                    Err(anyhow::anyhow!("Invalid reference: {}", refname))
+
+        // Check if reference exists first
+        {
+            let repo = self.repository.lock().unwrap();
+            match repo.find_reference(&refname) {
+                Ok(reference) => {
+                    // Validate reference
+                    if let Ok(commit) = reference.peel_to_commit() {
+                        debug!("Found branch reference: {} -> {}", refname, commit.id());
+                        return Ok(());
+                    } else {
+                        return Err(anyhow::anyhow!("Invalid reference: {}", refname));
+                    }
                 }
+                Err(e) if e.code() == git2::ErrorCode::NotFound => {
+                    // Reference doesn't exist, create it
+                    return self.create_branch_reference(&repo, &refname);
+                }
+                Err(e) => return Err(anyhow::anyhow!("Failed to find reference {}: {}", refname, e)),
             }
-            Err(e) if e.code() == git2::ErrorCode::NotFound => {
-                // Reference doesn't exist, create it
-                self.create_branch_reference(&repo, &refname)
-            }
-            Err(e) => Err(anyhow::anyhow!("Failed to find reference {}: {}", refname, e)),
         }
     }
 
@@ -139,24 +141,25 @@ impl GitTrailerManager {
 
     /// Get the current HEAD commit with proper commit handling
     fn get_head_commit(&self) -> Result<()> {
-        let repo = self.repository.lock().unwrap();
-        
-        // 1. Commit management: Implement proper Git commit handling
-        match repo.head() {
-            Ok(head) => {
-                // Validate HEAD reference
-                if let Ok(commit) = head.peel_to_commit() {
-                    debug!("Found HEAD commit: {}", commit.id());
-                    Ok(())
-                } else {
-                    Err(anyhow::anyhow!("Invalid HEAD reference"))
+        // Check HEAD first
+        {
+            let repo = self.repository.lock().unwrap();
+            match repo.head() {
+                Ok(head) => {
+                    // Validate HEAD reference
+                    if let Ok(commit) = head.peel_to_commit() {
+                        debug!("Found HEAD commit: {}", commit.id());
+                        return Ok(());
+                    } else {
+                        return Err(anyhow::anyhow!("Invalid HEAD reference"));
+                    }
                 }
+                Err(e) if e.code() == git2::ErrorCode::NotFound => {
+                    // HEAD doesn't exist, create initial commit
+                    return self.create_initial_commit(&repo);
+                }
+                Err(e) => return Err(anyhow::anyhow!("Failed to get HEAD: {}", e)),
             }
-            Err(e) if e.code() == git2::ErrorCode::NotFound => {
-                // HEAD doesn't exist, create initial commit
-                self.create_initial_commit(&repo)
-            }
-            Err(e) => Err(anyhow::anyhow!("Failed to get HEAD: {}", e)),
         }
     }
 
