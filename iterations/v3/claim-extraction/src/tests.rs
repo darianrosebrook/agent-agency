@@ -18,6 +18,7 @@ fn create_test_context() -> ProcessingContext {
 #[cfg(test)]
 mod pipeline_integration_tests {
     use super::*;
+    use crate::decomposition::DecompositionStage;
 
     #[tokio::test]
     async fn test_full_pipeline_processing() {
@@ -165,6 +166,48 @@ mod pipeline_integration_tests {
             .atomic_claims
             .iter()
             .any(|c| c.claim_text.contains("authentication")));
+    }
+
+    #[tokio::test]
+    async fn context_bracket_generation_enriches_claims() {
+        let stage = DecompositionStage::new();
+        let mut context = create_test_context();
+        context.surrounding_context =
+            "Production rollout is scheduled for Q4 2025 within the Payments module".to_string();
+        context
+            .domain_hints
+            .extend_from_slice(&["payments".to_string(), "production".to_string()]);
+
+        let claim = "It must handle payment requests within 200ms according to compliance rules";
+        let brackets = stage
+            .extract_contextual_brackets(claim, &context)
+            .await
+            .expect("context extraction");
+
+        assert!(
+            brackets.iter().any(|b| b.contains("[spec:")),
+            "spec bracket should be present"
+        );
+        assert!(
+            brackets.iter().any(|b| b.contains("timeframe: Q4 2025")),
+            "timeframe context should be extracted"
+        );
+        assert!(
+            brackets
+                .iter()
+                .any(|b| b.contains("environment: production")),
+            "environment context should be inferred"
+        );
+        assert!(
+            brackets.iter().any(|b| b.contains("entity:")),
+            "entity context should be added when claim uses pronouns"
+        );
+        assert!(
+            brackets
+                .iter()
+                .any(|b| b.contains("verification: performance-benchmarks")),
+            "verification guidance should be generated for performance claims"
+        );
     }
 
     #[tokio::test]

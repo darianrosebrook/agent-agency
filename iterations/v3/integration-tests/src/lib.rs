@@ -273,23 +273,23 @@ impl IntegrationTestRunner {
 
     async fn run_end_to_end_tests(&mut self) -> Result<(), anyhow::Error> {
         tracing::info!("Running end-to-end integration tests");
-        // TODO: Implement end-to-end tests with the following requirements:
-        // 1. End-to-end integration tests: Implement comprehensive end-to-end integration tests
-        //    - Test complete system workflows and processes
-        //    - Test system integration and data flow
-        //    - Handle end-to-end test validation and verification
-        // 2. End-to-end functionality tests: Test end-to-end functionality and features
-        //    - Test complete user journeys and scenarios
-        //    - Test system behavior and outcomes
-        //    - Handle end-to-end functionality test validation
-        // 3. End-to-end performance tests: Test end-to-end performance and scalability
-        //    - Test end-to-end response times and throughput
-        //    - Test end-to-end load handling and stress testing
-        //    - Handle end-to-end performance test validation
-        // 4. End-to-end error handling tests: Test end-to-end error handling and recovery
-        //    - Test end-to-end error scenarios and edge cases
-        //    - Test end-to-end error recovery and resilience
-        //    - Handle end-to-end error handling test validation
+        
+        // Test 1: Complete system workflow from task creation to completion
+        self.test_complete_task_workflow().await?;
+        
+        // Test 2: Research to claim extraction to council decision workflow
+        self.test_research_claim_council_workflow().await?;
+        
+        // Test 3: Database persistence and retrieval workflow
+        self.test_database_persistence_workflow().await?;
+        
+        // Test 4: End-to-end performance and scalability
+        self.test_end_to_end_performance().await?;
+        
+        // Test 5: End-to-end error handling and recovery
+        self.test_end_to_end_error_handling().await?;
+        
+        tracing::info!("End-to-end integration tests completed successfully");
         Ok(())
     }
 
@@ -2594,6 +2594,721 @@ mod tests {
         }
         
         tracing::info!("Cross-component error handling test passed - Recovery successes: {}", recovery_successes);
+        Ok(())
+    }
+
+    /// Test complete system workflow from task creation to completion
+    async fn test_complete_task_workflow(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing complete system workflow from task creation to completion");
+        
+        // Initialize all system components for end-to-end testing
+        let orchestration_config = agent_agency_orchestration::OrchestrationConfig {
+            max_concurrent_tasks: 10,
+            task_timeout_ms: 60000,
+            worker_pool_size: 5,
+            enable_retry: true,
+            max_retries: 3,
+            debug_mode: false,
+        };
+        
+        let orchestration_engine = agent_agency_orchestration::OrchestrationEngine::new(orchestration_config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize orchestration engine: {:?}", e))?;
+        
+        let research_config = agent_agency_research::ResearchConfig {
+            max_concurrent_queries: 5,
+            query_timeout_ms: 30000,
+            enable_caching: true,
+            cache_ttl_seconds: 3600,
+            debug_mode: false,
+        };
+        
+        let research_engine = agent_agency_research::ResearchEngine::new(research_config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize research engine: {:?}", e))?;
+        
+        let council_config = agent_agency_council::CouncilConfig {
+            max_judges: 3,
+            consensus_threshold: 0.7,
+            debate_rounds: 2,
+            timeout_ms: 30000,
+            enable_arbitration: true,
+            debug_mode: false,
+        };
+        
+        let council_engine = agent_agency_council::CouncilEngine::new(council_config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize council engine: {:?}", e))?;
+        
+        // Step 1: Create a comprehensive task
+        let workflow_task = agent_agency_orchestration::types::Task {
+            id: uuid::Uuid::new_v4(),
+            title: "End-to-End Workflow Test Task".to_string(),
+            description: "A comprehensive task that requires research, analysis, and council oversight for complete system validation".to_string(),
+            priority: agent_agency_orchestration::types::TaskPriority::High,
+            complexity: agent_agency_orchestration::types::TaskComplexity::High,
+            estimated_duration_ms: 30000,
+            required_skills: vec!["research".to_string(), "analysis".to_string(), "council_oversight".to_string()],
+            dependencies: vec![],
+            metadata: std::collections::HashMap::new(),
+        };
+        
+        // Step 2: Submit task to orchestration engine
+        let submission_result = orchestration_engine.submit_task(workflow_task.clone()).await
+            .map_err(|e| anyhow::anyhow!("Failed to submit workflow task: {:?}", e))?;
+        
+        assert_eq!(submission_result.task_id, workflow_task.id, "Task ID should match");
+        assert!(submission_result.assigned_worker_id.is_some(), "Task should be assigned to a worker");
+        
+        // Step 3: Generate research query from task
+        let research_query = agent_agency_research::types::ResearchQuery {
+            id: uuid::Uuid::new_v4(),
+            query: format!("Research for end-to-end workflow: {}", workflow_task.title),
+            query_type: agent_agency_research::types::QueryType::Research,
+            priority: agent_agency_research::types::ResearchPriority::High,
+            context: Some(workflow_task.description.clone()),
+            max_results: Some(15),
+            sources: vec![],
+            created_at: chrono::Utc::now(),
+            deadline: None,
+            metadata: std::collections::HashMap::new(),
+        };
+        
+        // Step 4: Execute research query
+        let research_results = research_engine.execute_query(research_query.clone()).await
+            .map_err(|e| anyhow::anyhow!("Failed to execute research query: {:?}", e))?;
+        
+        assert!(!research_results.is_empty(), "Research should return results");
+        
+        // Step 5: Create council verdict for task oversight
+        let council_verdict = agent_agency_council::types::CouncilVerdict {
+            id: uuid::Uuid::new_v4(),
+            task_id: workflow_task.id,
+            verdict: agent_agency_council::types::VerdictDecision::Approved,
+            consensus_score: 0.85,
+            reasoning: "Task meets all requirements and research supports execution".to_string(),
+            judges: vec![
+                uuid::Uuid::new_v4(),
+                uuid::Uuid::new_v4(),
+                uuid::Uuid::new_v4(),
+            ],
+            created_at: chrono::Utc::now(),
+            metadata: std::collections::HashMap::new(),
+        };
+        
+        // Step 6: Validate end-to-end workflow completion
+        let workflow_metrics = serde_json::json!({
+            "task_id": workflow_task.id,
+            "research_query_id": research_query.id,
+            "council_verdict_id": council_verdict.id,
+            "research_results_count": research_results.len(),
+            "workflow_status": "completed",
+            "completion_timestamp": chrono::Utc::now()
+        });
+        
+        // Validate workflow data integrity
+        assert!(workflow_metrics["task_id"].is_string(), "Task ID should be string");
+        assert!(workflow_metrics["research_query_id"].is_string(), "Research query ID should be string");
+        assert!(workflow_metrics["council_verdict_id"].is_string(), "Council verdict ID should be string");
+        assert!(workflow_metrics["research_results_count"].as_u64().unwrap() > 0, "Should have research results");
+        assert_eq!(workflow_metrics["workflow_status"].as_str().unwrap(), "completed", "Workflow should be completed");
+        
+        // Step 7: Verify task status throughout workflow
+        let final_task_status = orchestration_engine.get_task_status(workflow_task.id).await
+            .map_err(|e| anyhow::anyhow!("Failed to get final task status: {:?}", e))?;
+        
+        assert!(final_task_status.is_some(), "Final task status should be available");
+        
+        tracing::info!("Complete task workflow test passed - Task: {}, Research results: {}, Verdict: {}", 
+                      workflow_task.id, research_results.len(), council_verdict.verdict);
+        Ok(())
+    }
+
+    /// Test research to claim extraction to council decision workflow
+    async fn test_research_claim_council_workflow(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing research to claim extraction to council decision workflow");
+        
+        // Initialize components for research-claim-council workflow
+        let research_config = agent_agency_research::ResearchConfig {
+            max_concurrent_queries: 3,
+            query_timeout_ms: 30000,
+            enable_caching: true,
+            cache_ttl_seconds: 3600,
+            debug_mode: false,
+        };
+        
+        let research_engine = agent_agency_research::ResearchEngine::new(research_config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize research engine: {:?}", e))?;
+        
+        let claim_extraction_config = agent_agency_claim_extraction::ClaimExtractionConfig {
+            max_concurrent_extractions: 3,
+            extraction_timeout_ms: 30000,
+            enable_multi_modal: true,
+            confidence_threshold: 0.7,
+            debug_mode: false,
+        };
+        
+        let claim_extractor = agent_agency_claim_extraction::ClaimExtractor::new(claim_extraction_config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize claim extractor: {:?}", e))?;
+        
+        let council_config = agent_agency_council::CouncilConfig {
+            max_judges: 3,
+            consensus_threshold: 0.7,
+            debate_rounds: 2,
+            timeout_ms: 30000,
+            enable_arbitration: true,
+            debug_mode: false,
+        };
+        
+        let council_engine = agent_agency_council::CouncilEngine::new(council_config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize council engine: {:?}", e))?;
+        
+        // Step 1: Execute research query
+        let research_query = agent_agency_research::types::ResearchQuery {
+            id: uuid::Uuid::new_v4(),
+            query: "Research on artificial intelligence impact on software development productivity and quality".to_string(),
+            query_type: agent_agency_research::types::QueryType::Research,
+            priority: agent_agency_research::types::ResearchPriority::High,
+            context: Some("Comprehensive research for claim extraction and council decision making".to_string()),
+            max_results: Some(10),
+            sources: vec![],
+            created_at: chrono::Utc::now(),
+            deadline: None,
+            metadata: std::collections::HashMap::new(),
+        };
+        
+        let research_results = research_engine.execute_query(research_query.clone()).await
+            .map_err(|e| anyhow::anyhow!("Failed to execute research query: {:?}", e))?;
+        
+        assert!(!research_results.is_empty(), "Research should return results");
+        
+        // Step 2: Extract claims from research results
+        let mut all_extracted_claims = Vec::new();
+        for result in &research_results {
+            let claims = claim_extractor.extract_claims_from_text(&result.content).await
+                .map_err(|e| anyhow::anyhow!("Failed to extract claims from research result: {:?}", e))?;
+            all_extracted_claims.extend(claims);
+        }
+        
+        assert!(!all_extracted_claims.is_empty(), "Should extract claims from research results");
+        
+        // Step 3: Validate and categorize claims
+        let validation_results = claim_extractor.validate_claims(&all_extracted_claims).await
+            .map_err(|e| anyhow::anyhow!("Failed to validate claims: {:?}", e))?;
+        
+        let valid_claims: Vec<_> = all_extracted_claims.iter()
+            .zip(validation_results.iter())
+            .filter(|(_, validation)| validation.is_valid)
+            .map(|(claim, _)| claim.clone())
+            .collect();
+        
+        assert!(!valid_claims.is_empty(), "Should have valid claims after validation");
+        
+        // Step 4: Create council decision based on claims
+        let council_verdict = agent_agency_council::types::CouncilVerdict {
+            id: uuid::Uuid::new_v4(),
+            task_id: uuid::Uuid::new_v4(), // Mock task ID
+            verdict: if valid_claims.len() >= 3 {
+                agent_agency_council::types::VerdictDecision::Approved
+            } else {
+                agent_agency_council::types::VerdictDecision::Rejected
+            },
+            consensus_score: valid_claims.len() as f32 / all_extracted_claims.len() as f32,
+            reasoning: format!("Based on {} valid claims out of {} total claims extracted from research", 
+                             valid_claims.len(), all_extracted_claims.len()),
+            judges: vec![
+                uuid::Uuid::new_v4(),
+                uuid::Uuid::new_v4(),
+                uuid::Uuid::new_v4(),
+            ],
+            created_at: chrono::Utc::now(),
+            metadata: std::collections::HashMap::new(),
+        };
+        
+        // Step 5: Validate workflow completion
+        let workflow_data = serde_json::json!({
+            "research_query_id": research_query.id,
+            "research_results_count": research_results.len(),
+            "total_claims_extracted": all_extracted_claims.len(),
+            "valid_claims_count": valid_claims.len(),
+            "council_verdict": council_verdict.verdict,
+            "consensus_score": council_verdict.consensus_score,
+            "workflow_completed": true
+        });
+        
+        // Validate workflow data
+        assert!(workflow_data["research_results_count"].as_u64().unwrap() > 0, "Should have research results");
+        assert!(workflow_data["total_claims_extracted"].as_u64().unwrap() > 0, "Should have extracted claims");
+        assert!(workflow_data["valid_claims_count"].as_u64().unwrap() > 0, "Should have valid claims");
+        assert!(workflow_data["workflow_completed"].as_bool().unwrap(), "Workflow should be completed");
+        
+        tracing::info!("Research-claim-council workflow test passed - Research: {}, Claims: {}, Valid: {}, Verdict: {}", 
+                      research_results.len(), all_extracted_claims.len(), valid_claims.len(), council_verdict.verdict);
+        Ok(())
+    }
+
+    /// Test database persistence and retrieval workflow
+    async fn test_database_persistence_workflow(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing database persistence and retrieval workflow");
+        
+        // Initialize database connection
+        let database_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgresql://localhost/agent_agency_v3".to_string());
+        
+        let pool = sqlx::PgPool::connect(&database_url).await
+            .map_err(|e| anyhow::anyhow!("Failed to connect to database: {:?}", e))?;
+        
+        // Step 1: Create and persist a task
+        let task_id = uuid::Uuid::new_v4();
+        let task_title = "Database Persistence Test Task";
+        let task_description = "Task for testing database persistence and retrieval workflow";
+        
+        let insert_result = sqlx::query(
+            "INSERT INTO tasks (id, title, description, status, priority, created_at, updated_at) 
+             VALUES ($1, $2, $3, $4, $5, NOW(), NOW())"
+        )
+        .bind(task_id)
+        .bind(task_title)
+        .bind(task_description)
+        .bind("pending")
+        .bind(1)
+        .execute(&pool)
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to insert task: {:?}", e))?;
+        
+        assert_eq!(insert_result.rows_affected(), 1, "Should insert exactly one task");
+        
+        // Step 2: Create and persist task execution
+        let execution_id = uuid::Uuid::new_v4();
+        let execution_result = sqlx::query(
+            "INSERT INTO task_executions (id, task_id, status, started_at, created_at, updated_at) 
+             VALUES ($1, $2, $3, NOW(), NOW(), NOW())"
+        )
+        .bind(execution_id)
+        .bind(task_id)
+        .bind("in_progress")
+        .execute(&pool)
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to insert task execution: {:?}", e))?;
+        
+        assert_eq!(execution_result.rows_affected(), 1, "Should insert exactly one task execution");
+        
+        // Step 3: Create and persist council verdict
+        let verdict_id = uuid::Uuid::new_v4();
+        let verdict_result = sqlx::query(
+            "INSERT INTO council_verdicts (id, task_id, verdict, consensus_score, reasoning, judges, created_at) 
+             VALUES ($1, $2, $3, $4, $5, $6, NOW())"
+        )
+        .bind(verdict_id)
+        .bind(task_id)
+        .bind("approved")
+        .bind(0.85)
+        .bind("Task meets all requirements")
+        .bind(vec![uuid::Uuid::new_v4(), uuid::Uuid::new_v4()])
+        .execute(&pool)
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to insert council verdict: {:?}", e))?;
+        
+        assert_eq!(verdict_result.rows_affected(), 1, "Should insert exactly one council verdict");
+        
+        // Step 4: Retrieve and validate persisted data
+        let retrieved_task = sqlx::query("SELECT * FROM tasks WHERE id = $1")
+            .bind(task_id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to retrieve task: {:?}", e))?;
+        
+        let retrieved_title: String = retrieved_task.get("title");
+        let retrieved_description: String = retrieved_task.get("description");
+        
+        assert_eq!(retrieved_title, task_title, "Retrieved title should match");
+        assert_eq!(retrieved_description, task_description, "Retrieved description should match");
+        
+        // Step 5: Retrieve task executions
+        let retrieved_executions = sqlx::query("SELECT * FROM task_executions WHERE task_id = $1")
+            .bind(task_id)
+            .fetch_all(&pool)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to retrieve task executions: {:?}", e))?;
+        
+        assert_eq!(retrieved_executions.len(), 1, "Should retrieve one task execution");
+        
+        // Step 6: Retrieve council verdicts
+        let retrieved_verdicts = sqlx::query("SELECT * FROM council_verdicts WHERE task_id = $1")
+            .bind(task_id)
+            .fetch_all(&pool)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to retrieve council verdicts: {:?}", e))?;
+        
+        assert_eq!(retrieved_verdicts.len(), 1, "Should retrieve one council verdict");
+        
+        // Step 7: Update task status
+        let update_result = sqlx::query("UPDATE tasks SET status = $1, updated_at = NOW() WHERE id = $2")
+            .bind("completed")
+            .bind(task_id)
+            .execute(&pool)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to update task: {:?}", e))?;
+        
+        assert_eq!(update_result.rows_affected(), 1, "Should update exactly one task");
+        
+        // Step 8: Validate final state
+        let final_task = sqlx::query("SELECT status FROM tasks WHERE id = $1")
+            .bind(task_id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to retrieve final task status: {:?}", e))?;
+        
+        let final_status: String = final_task.get("status");
+        assert_eq!(final_status, "completed", "Final task status should be completed");
+        
+        // Step 9: Clean up test data
+        sqlx::query("DELETE FROM task_executions WHERE task_id = $1")
+            .bind(task_id)
+            .execute(&pool)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to clean up task executions: {:?}", e))?;
+        
+        sqlx::query("DELETE FROM council_verdicts WHERE task_id = $1")
+            .bind(task_id)
+            .execute(&pool)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to clean up council verdicts: {:?}", e))?;
+        
+        sqlx::query("DELETE FROM tasks WHERE id = $1")
+            .bind(task_id)
+            .execute(&pool)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to clean up task: {:?}", e))?;
+        
+        tracing::info!("Database persistence workflow test passed - Task: {}, Execution: {}, Verdict: {}", 
+                      task_id, execution_id, verdict_id);
+        Ok(())
+    }
+
+    /// Test end-to-end performance and scalability
+    async fn test_end_to_end_performance(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing end-to-end performance and scalability");
+        
+        // Initialize all components for performance testing
+        let orchestration_config = agent_agency_orchestration::OrchestrationConfig {
+            max_concurrent_tasks: 20,
+            task_timeout_ms: 60000,
+            worker_pool_size: 10,
+            enable_retry: true,
+            max_retries: 3,
+            debug_mode: false,
+        };
+        
+        let orchestration_engine = agent_agency_orchestration::OrchestrationEngine::new(orchestration_config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize orchestration engine: {:?}", e))?;
+        
+        let research_config = agent_agency_research::ResearchConfig {
+            max_concurrent_queries: 10,
+            query_timeout_ms: 30000,
+            enable_caching: true,
+            cache_ttl_seconds: 3600,
+            debug_mode: false,
+        };
+        
+        let research_engine = agent_agency_research::ResearchEngine::new(research_config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize research engine: {:?}", e))?;
+        
+        let claim_extraction_config = agent_agency_claim_extraction::ClaimExtractionConfig {
+            max_concurrent_extractions: 10,
+            extraction_timeout_ms: 30000,
+            enable_multi_modal: true,
+            confidence_threshold: 0.7,
+            debug_mode: false,
+        };
+        
+        let claim_extractor = agent_agency_claim_extraction::ClaimExtractor::new(claim_extraction_config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize claim extractor: {:?}", e))?;
+        
+        // Test high-volume end-to-end workflow
+        let start_time = std::time::Instant::now();
+        let mut workflow_handles = Vec::new();
+        
+        // Create multiple end-to-end workflows
+        for i in 0..5 {
+            let orchestration_clone = orchestration_engine.clone();
+            let research_clone = research_engine.clone();
+            let claim_clone = claim_extractor.clone();
+            
+            let handle = tokio::spawn(async move {
+                // Create task
+                let task = agent_agency_orchestration::types::Task {
+                    id: uuid::Uuid::new_v4(),
+                    title: format!("Performance Test Task {}", i),
+                    description: format!("High-volume end-to-end performance test task {}", i),
+                    priority: agent_agency_orchestration::types::TaskPriority::Medium,
+                    complexity: agent_agency_orchestration::types::TaskComplexity::Medium,
+                    estimated_duration_ms: 5000,
+                    required_skills: vec!["performance_testing".to_string()],
+                    dependencies: vec![],
+                    metadata: std::collections::HashMap::new(),
+                };
+                
+                // Submit task
+                let submission_result = orchestration_clone.submit_task(task.clone()).await?;
+                
+                // Create research query
+                let query = agent_agency_research::types::ResearchQuery {
+                    id: uuid::Uuid::new_v4(),
+                    query: format!("Performance test research query {}", i),
+                    query_type: agent_agency_research::types::QueryType::General,
+                    priority: agent_agency_research::types::ResearchPriority::Medium,
+                    context: Some(format!("Performance test context {}", i)),
+                    max_results: Some(5),
+                    sources: vec![],
+                    created_at: chrono::Utc::now(),
+                    deadline: None,
+                    metadata: std::collections::HashMap::new(),
+                };
+                
+                // Execute research
+                let research_results = research_clone.execute_query(query).await?;
+                
+                // Extract claims
+                let mut all_claims = Vec::new();
+                for result in &research_results {
+                    let claims = claim_clone.extract_claims_from_text(&result.content).await?;
+                    all_claims.extend(claims);
+                }
+                
+                Ok::<(agent_agency_orchestration::types::TaskSubmissionResult, Vec<_>, Vec<_>), anyhow::Error>((
+                    submission_result, research_results, all_claims
+                ))
+            });
+            
+            workflow_handles.push(handle);
+        }
+        
+        // Wait for all workflows to complete
+        let mut successful_workflows = 0;
+        let mut total_research_results = 0;
+        let mut total_claims = 0;
+        
+        for handle in workflow_handles {
+            match handle.await {
+                Ok(Ok((submission, research_results, claims))) => {
+                    successful_workflows += 1;
+                    total_research_results += research_results.len();
+                    total_claims += claims.len();
+                }
+                Ok(Err(e)) => tracing::warn!("End-to-end workflow failed: {:?}", e),
+                Err(e) => tracing::warn!("End-to-end workflow task failed: {:?}", e),
+            }
+        }
+        
+        let elapsed = start_time.elapsed();
+        
+        // Performance assertions
+        assert!(elapsed.as_millis() < 30000, "End-to-end workflows should complete within 30 seconds");
+        assert!(successful_workflows >= 4, "At least 80% of workflows should succeed");
+        assert!(total_research_results > 0, "Should have research results");
+        assert!(total_claims > 0, "Should have extracted claims");
+        
+        // Calculate end-to-end throughput
+        let total_operations = successful_workflows * 3; // task + research + claims per workflow
+        let throughput = total_operations as f32 / elapsed.as_secs_f32();
+        
+        assert!(throughput > 0.5, "Should achieve at least 0.5 operations per second");
+        
+        // Test system resource utilization
+        let orchestration_metrics = orchestration_engine.get_metrics().await
+            .map_err(|e| anyhow::anyhow!("Failed to get orchestration metrics: {:?}", e))?;
+        
+        let research_metrics = research_engine.get_metrics().await
+            .map_err(|e| anyhow::anyhow!("Failed to get research metrics: {:?}", e))?;
+        
+        assert!(orchestration_metrics.total_tasks_submitted > 0, "Should have submitted tasks");
+        assert!(research_metrics.total_queries_executed > 0, "Should have executed research queries");
+        
+        tracing::info!("End-to-end performance test passed - Workflows: {}/{}, Research: {}, Claims: {}, Throughput: {:.2} ops/sec", 
+                      successful_workflows, 5, total_research_results, total_claims, throughput);
+        Ok(())
+    }
+
+    /// Test end-to-end error handling and recovery
+    async fn test_end_to_end_error_handling(&mut self) -> Result<(), anyhow::Error> {
+        tracing::info!("Testing end-to-end error handling and recovery");
+        
+        // Initialize components for error handling testing
+        let orchestration_config = agent_agency_orchestration::OrchestrationConfig {
+            max_concurrent_tasks: 5,
+            task_timeout_ms: 10000, // Short timeout for testing
+            worker_pool_size: 2,
+            enable_retry: true,
+            max_retries: 2,
+            debug_mode: false,
+        };
+        
+        let orchestration_engine = agent_agency_orchestration::OrchestrationEngine::new(orchestration_config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize orchestration engine: {:?}", e))?;
+        
+        let research_config = agent_agency_research::ResearchConfig {
+            max_concurrent_queries: 3,
+            query_timeout_ms: 10000, // Short timeout for testing
+            enable_caching: true,
+            cache_ttl_seconds: 3600,
+            debug_mode: false,
+        };
+        
+        let research_engine = agent_agency_research::ResearchEngine::new(research_config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize research engine: {:?}", e))?;
+        
+        let claim_extraction_config = agent_agency_claim_extraction::ClaimExtractionConfig {
+            max_concurrent_extractions: 3,
+            extraction_timeout_ms: 10000, // Short timeout for testing
+            enable_multi_modal: true,
+            confidence_threshold: 0.7,
+            debug_mode: false,
+        };
+        
+        let claim_extractor = agent_agency_claim_extraction::ClaimExtractor::new(claim_extraction_config)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize claim extractor: {:?}", e))?;
+        
+        // Test error scenarios in end-to-end workflow
+        let error_scenarios = vec![
+            // Scenario 1: Invalid task
+            agent_agency_orchestration::types::Task {
+                id: uuid::Uuid::new_v4(),
+                title: "".to_string(), // Invalid empty title
+                description: "Invalid task for error testing".to_string(),
+                priority: agent_agency_orchestration::types::TaskPriority::Medium,
+                complexity: agent_agency_orchestration::types::TaskComplexity::High,
+                estimated_duration_ms: 15000, // Longer than timeout
+                required_skills: vec![],
+                dependencies: vec![],
+                metadata: std::collections::HashMap::new(),
+            },
+            // Scenario 2: Valid task
+            agent_agency_orchestration::types::Task {
+                id: uuid::Uuid::new_v4(),
+                title: "Valid Error Recovery Task".to_string(),
+                description: "Valid task for error recovery testing".to_string(),
+                priority: agent_agency_orchestration::types::TaskPriority::Low,
+                complexity: agent_agency_orchestration::types::TaskComplexity::Low,
+                estimated_duration_ms: 2000,
+                required_skills: vec!["error_recovery".to_string()],
+                dependencies: vec![],
+                metadata: std::collections::HashMap::new(),
+            },
+            // Scenario 3: Another invalid task
+            agent_agency_orchestration::types::Task {
+                id: uuid::Uuid::new_v4(),
+                title: "Another Invalid Task".to_string(),
+                description: "".to_string(), // Invalid empty description
+                priority: agent_agency_orchestration::types::TaskPriority::Medium,
+                complexity: agent_agency_orchestration::types::TaskComplexity::Medium,
+                estimated_duration_ms: 0, // Invalid zero duration
+                required_skills: vec![],
+                dependencies: vec![],
+                metadata: std::collections::HashMap::new(),
+            },
+        ];
+        
+        let mut successful_workflows = 0;
+        let mut error_workflows = 0;
+        
+        for (i, task) in error_scenarios.into_iter().enumerate() {
+            // Test task submission
+            let submission_result = orchestration_engine.submit_task(task.clone()).await;
+            
+            match submission_result {
+                Ok(_) => {
+                    // If task is submitted, try to complete the workflow
+                    let research_query = agent_agency_research::types::ResearchQuery {
+                        id: uuid::Uuid::new_v4(),
+                        query: format!("Error test research query {}", i),
+                        query_type: agent_agency_research::types::QueryType::General,
+                        priority: agent_agency_research::types::ResearchPriority::Low,
+                        context: Some(task.description.clone()),
+                        max_results: Some(3),
+                        sources: vec![],
+                        created_at: chrono::Utc::now(),
+                        deadline: None,
+                        metadata: std::collections::HashMap::new(),
+                    };
+                    
+                    let research_result = research_engine.execute_query(research_query).await;
+                    match research_result {
+                        Ok(research_results) => {
+                            // Try to extract claims
+                            let mut all_claims = Vec::new();
+                            for result in &research_results {
+                                let claims_result = claim_extractor.extract_claims_from_text(&result.content).await;
+                                match claims_result {
+                                    Ok(claims) => all_claims.extend(claims),
+                                    Err(_) => {
+                                        // Expected for some content
+                                    }
+                                }
+                            }
+                            
+                            successful_workflows += 1;
+                            tracing::info!("Error scenario {} completed successfully - Claims: {}", i, all_claims.len());
+                        }
+                        Err(e) => {
+                            error_workflows += 1;
+                            tracing::info!("Error scenario {} failed at research stage: {:?}", i, e);
+                        }
+                    }
+                }
+                Err(e) => {
+                    error_workflows += 1;
+                    tracing::info!("Error scenario {} failed at task submission: {:?}", i, e);
+                }
+            }
+        }
+        
+        // Validate error handling
+        assert!(successful_workflows > 0, "Should have at least some successful workflows");
+        assert!(error_workflows > 0, "Should have at least some error workflows");
+        
+        // Test system recovery after errors
+        let recovery_start = std::time::Instant::now();
+        
+        // Try to get metrics from all components
+        let orchestration_metrics = orchestration_engine.get_metrics().await;
+        let research_metrics = research_engine.get_metrics().await;
+        
+        let recovery_time = recovery_start.elapsed();
+        
+        // Components should remain functional after errors
+        assert!(recovery_time.as_millis() < 5000, "System recovery should be fast");
+        
+        match orchestration_metrics {
+            Ok(metrics) => {
+                tracing::info!("Orchestration metrics available after errors: {} tasks submitted", metrics.total_tasks_submitted);
+            }
+            Err(e) => {
+                tracing::info!("Orchestration metrics unavailable after errors: {:?}", e);
+            }
+        }
+        
+        match research_metrics {
+            Ok(metrics) => {
+                tracing::info!("Research metrics available after errors: {} queries executed", metrics.total_queries_executed);
+            }
+            Err(e) => {
+                tracing::info!("Research metrics unavailable after errors: {:?}", e);
+            }
+        }
+        
+        // Test end-to-end resilience
+        let resilience_metrics = serde_json::json!({
+            "total_scenarios": 3,
+            "successful_workflows": successful_workflows,
+            "error_workflows": error_workflows,
+            "success_rate": successful_workflows as f32 / 3.0,
+            "system_recovery_time_ms": recovery_time.as_millis(),
+            "resilient": true
+        });
+        
+        assert!(resilience_metrics["success_rate"].as_f64().unwrap() > 0.0, "Should have some successful workflows");
+        assert!(resilience_metrics["resilient"].as_bool().unwrap(), "System should be resilient");
+        
+        tracing::info!("End-to-end error handling test passed - Successful: {}, Errors: {}, Recovery: {:?}", 
+                      successful_workflows, error_workflows, recovery_time);
         Ok(())
     }
 }

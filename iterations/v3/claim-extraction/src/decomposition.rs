@@ -382,8 +382,7 @@ impl ClaimExtractor {
 
 /// Adds contextual brackets to claims
 #[derive(Debug)]
-struct ContextBracketAdder {
-}
+struct ContextBracketAdder {}
 
 impl ContextBracketAdder {
     fn new() -> Self {
@@ -455,7 +454,10 @@ impl ContextBracketAdder {
         }
 
         if claim.to_lowercase().contains("depends on")
-            || context.surrounding_context.to_lowercase().contains("requires")
+            || context
+                .surrounding_context
+                .to_lowercase()
+                .contains("requires")
         {
             push_bracket("[dependency: referenced components]".to_string());
         }
@@ -504,9 +506,12 @@ impl ContextBracketAdder {
             None
         };
 
-        candidate
-            .map(|env| env.to_string())
-            .or_else(|| domain_hints.iter().find(|hint| hint.contains("env")).cloned())
+        candidate.map(|env| env.to_string()).or_else(|| {
+            domain_hints
+                .iter()
+                .find(|hint| hint.contains("env"))
+                .cloned()
+        })
     }
 
     fn extract_prominent_entity(&self, text: &str) -> Option<String> {
@@ -546,11 +551,7 @@ impl ContextBracketAdder {
             .cloned()
     }
 
-    fn detect_verification_context(
-        &self,
-        claim: &str,
-        domain_hints: &[String],
-    ) -> Option<String> {
+    fn detect_verification_context(&self, claim: &str, domain_hints: &[String]) -> Option<String> {
         let lower = claim.to_lowercase();
         if lower.contains("performance") || lower.contains("latency") {
             Some("performance-benchmarks".to_string())
@@ -558,7 +559,10 @@ impl ContextBracketAdder {
             Some("security-audit".to_string())
         } else if lower.contains("compliance") || lower.contains("policy") {
             Some("compliance-review".to_string())
-        } else if domain_hints.iter().any(|hint| hint.to_lowercase().contains("ml")) {
+        } else if domain_hints
+            .iter()
+            .any(|hint| hint.to_lowercase().contains("ml"))
+        {
             Some("model-validation".to_string())
         } else {
             None

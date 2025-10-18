@@ -19,17 +19,7 @@
     "baseUrl": ".",
     "types": ["node", "jest"],
     "paths": {
-      "@/*": ["src/*"],
-      "@/database/*": ["src/database/*"],
-      "@/mcp-server/*": ["src/mcp-server/*"],
-      "@/monitoring/*": ["src/monitoring/*"],
-      "@/observability/*": ["src/observability/*"],
-      "@/observer/*": ["src/observer/*"],
-      "@/orchestrator/*": ["src/orchestrator/*"],
-      "@/resilience/*": ["src/resilience/*"],
-      "@/api/*": ["src/api/*"],
-      "@/rl/*": ["src/rl/*"],
-      "@/types/*": ["src/types/*"]
+      "@/*": ["src/*"]
     }
   },
   "include": ["src/**/*", "scripts/**/*"],

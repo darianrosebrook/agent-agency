@@ -254,17 +254,26 @@ export class HealthMonitor extends EventEmitter {
       this.updateHealthCheck("web-interface", {
         name: "web-interface",
         status,
-        message: `Web interface responding (${response.status})`,
-        lastChecked: new Date(),
-        responseTimeMs: responseTime,
+        message: response.ok
+          ? "Web interface responsive"
+          : `Web interface returned status ${response.status}`,
+        details: { responseTimeMs: responseTime, statusCode: response.status },
       });
+
+      // Only alert if completely unhealthy (not just degraded)
+      if (status === "unhealthy") {
+        this.createAlert(
+          "web-interface",
+          "medium",
+          "Web interface not responding"
+        );
+      }
     } catch (error) {
       this.updateHealthCheck("web-interface", {
         name: "web-interface",
         status: "unhealthy",
         message: `Web interface check failed: ${error}`,
-        lastChecked: new Date(),
-        responseTimeMs: Date.now() - start,
+        details: { error: error.message },
       });
 
       this.createAlert(

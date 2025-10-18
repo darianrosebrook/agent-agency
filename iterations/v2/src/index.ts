@@ -80,32 +80,32 @@ async function initialize(): Promise<void> {
     },
   });
 
-  // Initialize health monitoring
-  healthMonitor = new HealthMonitor({
-    checkIntervalMs: 30000, // 30 seconds
-    metricsIntervalMs: 10000, // 10 seconds
-    alertThresholds: {
-      memoryUsagePercent: 85,
-      cpuUsagePercent: 80,
-      errorRatePercent: 5,
-      responseTimeMs: 5000,
-    },
-  });
+      // Initialize health monitoring
+      healthMonitor = new HealthMonitor({
+        checkIntervalMs: 60000, // 60 seconds (reduced frequency)
+        metricsIntervalMs: 30000, // 30 seconds (reduced frequency)
+        alertThresholds: {
+          memoryUsagePercent: 90, // Higher threshold
+          cpuUsagePercent: 80,
+          errorRatePercent: 5,
+          responseTimeMs: 5000,
+        },
+      });
 
-  healthMonitor.on("alert-created", (alert) => {
-    logger.warn("Health alert created", {
-      component: alert.component,
-      severity: alert.severity,
-      message: alert.message,
-    });
-  });
+      healthMonitor.on("alert-created", (alert) => {
+        logger.warn("Health alert created", {
+          component: alert.component,
+          severity: alert.severity,
+          message: alert.message,
+        });
+      });
 
-  healthMonitor.on("health-checks-completed", (summary) => {
-    const overallStatus = healthMonitor?.getOverallStatus();
-    if (overallStatus !== "healthy") {
-      logger.warn("System health degraded", { status: overallStatus, summary });
-    }
-  });
+      healthMonitor.on("health-checks-completed", (summary) => {
+        const overallStatus = healthMonitor?.getOverallStatus();
+        if (overallStatus !== "healthy") {
+          logger.warn("System health degraded", { status: overallStatus, summary });
+        }
+      });
 
   // Initialize database connection pool
   try {
@@ -159,7 +159,7 @@ async function initialize(): Promise<void> {
         port: 3001,
         host: "localhost",
       },
-      healthMonitor: {
+      // healthMonitor: {
         enabled: true,
         checkIntervalMs: 30000,
       },

@@ -2819,24 +2819,647 @@ pub struct ReferenceRelationship {
     pub strength: f64,
 }
 
-// TODO: Implement internal component data structures with the following requirements:
-// 1. Expression parser: Build mathematical expression parsing capabilities
-//    - Support algebraic expressions and equations
-//    - Handle operator precedence and associativity
-//    - Parse functions and variables
-//    - Support complex number and matrix operations
-// 2. Logical evaluator: Implement logical statement evaluation
-//    - Parse logical expressions (AND, OR, NOT, XOR)
-//    - Evaluate truth tables and logical equivalences
-//    - Handle conditional statements and implications
-//    - Support modal logic and temporal operators
-// 3. AST analyzer: Implement abstract syntax tree analysis
-//    - Parse multiple programming languages into ASTs
-//    - Extract control flow and data flow information
-//    - Identify code patterns and anti-patterns
-//    - Generate code metrics and complexity scores
-// 4. Semantic analyzer: Implement semantic meaning extraction
-//    - Understand code intent and purpose
+/// Mathematical expression parser for claim verification
+#[derive(Debug, Clone)]
+pub struct ExpressionParser {
+    /// Supported operators with their precedence levels
+    operators: std::collections::HashMap<String, u8>,
+    /// Supported functions
+    functions: std::collections::HashSet<String>,
+}
+
+impl ExpressionParser {
+    /// Create a new expression parser
+    pub fn new() -> Self {
+        let mut operators = std::collections::HashMap::new();
+        // Operator precedence (higher number = higher precedence)
+        operators.insert("^".to_string(), 4); // Exponentiation
+        operators.insert("*".to_string(), 3); // Multiplication
+        operators.insert("/".to_string(), 3); // Division
+        operators.insert("%".to_string(), 3); // Modulo
+        operators.insert("+".to_string(), 2); // Addition
+        operators.insert("-".to_string(), 2); // Subtraction
+        operators.insert("==".to_string(), 1); // Equality
+        operators.insert("!=".to_string(), 1); // Inequality
+        operators.insert("<".to_string(), 1); // Less than
+        operators.insert(">".to_string(), 1); // Greater than
+        operators.insert("<=".to_string(), 1); // Less than or equal
+        operators.insert(">=".to_string(), 1); // Greater than or equal
+
+        let mut functions = std::collections::HashSet::new();
+        functions.insert("sin".to_string());
+        functions.insert("cos".to_string());
+        functions.insert("tan".to_string());
+        functions.insert("log".to_string());
+        functions.insert("ln".to_string());
+        functions.insert("sqrt".to_string());
+        functions.insert("abs".to_string());
+        functions.insert("max".to_string());
+        functions.insert("min".to_string());
+
+        Self {
+            operators,
+            functions,
+        }
+    }
+
+    /// Parse a mathematical expression into an AST
+    pub fn parse_expression(&self, input: &str) -> Result<ExpressionNode, ParseError> {
+        let tokens = self.tokenize(input)?;
+        let mut parser = ExpressionParserState::new(tokens, &self.operators, &self.functions);
+        parser.parse_expression()
+    }
+
+    /// Tokenize input string into tokens
+    fn tokenize(&self, input: &str) -> Result<Vec<Token>, ParseError> {
+        let mut tokens = Vec::new();
+        let mut chars = input.chars().peekable();
+        let mut position = 0;
+
+        while let Some(ch) = chars.next() {
+            position += 1;
+
+            match ch {
+                ' ' | '\t' | '\n' => continue, // Skip whitespace
+                '(' => tokens.push(Token::LeftParen),
+                ')' => tokens.push(Token::RightParen),
+                ',' => tokens.push(Token::Comma),
+                '+' => tokens.push(Token::Operator("+".to_string())),
+                '-' => {
+                    // Check if this is a unary minus
+                    let is_unary = tokens.is_empty() || 
+                        matches!(tokens.last(), Some(Token::Operator(_)) | Some(Token::LeftParen));
+                    if is_unary {
+                        tokens.push(Token::UnaryMinus);
+                    } else {
+                        tokens.push(Token::Operator("-".to_string()));
+                    }
+                }
+                '*' => tokens.push(Token::Operator("*".to_string())),
+                '/' => tokens.push(Token::Operator("/".to_string())),
+                '%' => tokens.push(Token::Operator("%".to_string())),
+                '^' => tokens.push(Token::Operator("^".to_string())),
+                '=' => {
+                    if chars.peek() == Some(&'=') {
+                        chars.next();
+                        tokens.push(Token::Operator("==".to_string()));
+                    } else {
+                        return Err(ParseError::InvalidCharacter(ch, position));
+                    }
+                }
+                '!' => {
+                    if chars.peek() == Some(&'=') {
+                        chars.next();
+                        tokens.push(Token::Operator("!=".to_string()));
+                    } else {
+                        return Err(ParseError::InvalidCharacter(ch, position));
+                    }
+                }
+                '<' => {
+                    if chars.peek() == Some(&'=') {
+                        chars.next();
+                        tokens.push(Token::Operator("<=".to_string()));
+                    } else {
+                        tokens.push(Token::Operator("<".to_string()));
+                    }
+                }
+                '>' => {
+                    if chars.peek() == Some(&'=') {
+                        chars.next();
+                        tokens.push(Token::Operator(">=".to_string()));
+                    } else {
+                        tokens.push(Token::Operator(">".to_string()));
+                    }
+                }
+                '0'..='9' | '.' => {
+                    let mut number = String::new();
+                    number.push(ch);
+                    
+                    // Parse number (including decimal)
+                    while let Some(&next_ch) = chars.peek() {
+                        if next_ch.is_ascii_digit() || next_ch == '.' {
+                            number.push(chars.next().unwrap());
+                        } else {
+                            break;
+                        }
+                    }
+                    
+                    if let Ok(value) = number.parse::<f64>() {
+                        tokens.push(Token::Number(value));
+                    } else {
+                        return Err(ParseError::InvalidNumber(number, position));
+                    }
+                }
+                'a'..='z' | 'A'..='Z' | '_' => {
+                    let mut identifier = String::new();
+                    identifier.push(ch);
+                    
+                    // Parse identifier
+                    while let Some(&next_ch) = chars.peek() {
+                        if next_ch.is_ascii_alphanumeric() || next_ch == '_' {
+                            identifier.push(chars.next().unwrap());
+                        } else {
+                            break;
+                        }
+                    }
+                    
+                    if self.functions.contains(&identifier) {
+                        tokens.push(Token::Function(identifier));
+                    } else {
+                        tokens.push(Token::Variable(identifier));
+                    }
+                }
+                _ => return Err(ParseError::InvalidCharacter(ch, position)),
+            }
+        }
+
+        Ok(tokens)
+    }
+}
+
+/// Token types for the expression parser
+#[derive(Debug, Clone, PartialEq)]
+enum Token {
+    Number(f64),
+    Variable(String),
+    Function(String),
+    Operator(String),
+    LeftParen,
+    RightParen,
+    Comma,
+    UnaryMinus,
+}
+
+/// Expression AST node
+#[derive(Debug, Clone)]
+pub enum ExpressionNode {
+    Number(f64),
+    Variable(String),
+    BinaryOp {
+        operator: String,
+        left: Box<ExpressionNode>,
+        right: Box<ExpressionNode>,
+    },
+    UnaryOp {
+        operator: String,
+        operand: Box<ExpressionNode>,
+    },
+    Function {
+        name: String,
+        args: Vec<ExpressionNode>,
+    },
+}
+
+/// Parse error types
+#[derive(Debug, Clone)]
+pub enum ParseError {
+    InvalidCharacter(char, usize),
+    InvalidNumber(String, usize),
+    UnexpectedToken(Token, usize),
+    UnexpectedEndOfInput,
+    MismatchedParentheses,
+    InvalidFunctionCall(String),
+}
+
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseError::InvalidCharacter(ch, pos) => {
+                write!(f, "Invalid character '{}' at position {}", ch, pos)
+            }
+            ParseError::InvalidNumber(num, pos) => {
+                write!(f, "Invalid number '{}' at position {}", num, pos)
+            }
+            ParseError::UnexpectedToken(token, pos) => {
+                write!(f, "Unexpected token {:?} at position {}", token, pos)
+            }
+            ParseError::UnexpectedEndOfInput => {
+                write!(f, "Unexpected end of input")
+            }
+            ParseError::MismatchedParentheses => {
+                write!(f, "Mismatched parentheses")
+            }
+            ParseError::InvalidFunctionCall(func) => {
+                write!(f, "Invalid function call: {}", func)
+            }
+        }
+    }
+}
+
+impl std::error::Error for ParseError {}
+
+/// Parser state for recursive descent parsing
+struct ExpressionParserState<'a> {
+    tokens: Vec<Token>,
+    position: usize,
+    operators: &'a std::collections::HashMap<String, u8>,
+    functions: &'a std::collections::HashSet<String>,
+}
+
+impl<'a> ExpressionParserState<'a> {
+    fn new(
+        tokens: Vec<Token>,
+        operators: &'a std::collections::HashMap<String, u8>,
+        functions: &'a std::collections::HashSet<String>,
+    ) -> Self {
+        Self {
+            tokens,
+            position: 0,
+            operators,
+            functions,
+        }
+    }
+
+    /// Parse an expression using operator precedence
+    fn parse_expression(&mut self) -> Result<ExpressionNode, ParseError> {
+        self.parse_binary_expression(0)
+    }
+
+    /// Parse binary expressions with given precedence
+    fn parse_binary_expression(&mut self, precedence: u8) -> Result<ExpressionNode, ParseError> {
+        let mut left = self.parse_unary_expression()?;
+
+        while let Some(token) = self.peek() {
+            if let Token::Operator(op) = token {
+                if let Some(&op_precedence) = self.operators.get(op) {
+                    if op_precedence <= precedence {
+                        break;
+                    }
+                    self.advance();
+                    let right = self.parse_binary_expression(op_precedence)?;
+                    left = ExpressionNode::BinaryOp {
+                        operator: op.clone(),
+                        left: Box::new(left),
+                        right: Box::new(right),
+                    };
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        Ok(left)
+    }
+
+    /// Parse unary expressions
+    fn parse_unary_expression(&mut self) -> Result<ExpressionNode, ParseError> {
+        if let Some(Token::UnaryMinus) = self.peek() {
+            self.advance();
+            let operand = self.parse_unary_expression()?;
+            Ok(ExpressionNode::UnaryOp {
+                operator: "-".to_string(),
+                operand: Box::new(operand),
+            })
+        } else {
+            self.parse_primary_expression()
+        }
+    }
+
+    /// Parse primary expressions (numbers, variables, functions, parentheses)
+    fn parse_primary_expression(&mut self) -> Result<ExpressionNode, ParseError> {
+        match self.advance() {
+            Some(Token::Number(value)) => Ok(ExpressionNode::Number(value)),
+            Some(Token::Variable(name)) => Ok(ExpressionNode::Variable(name)),
+            Some(Token::Function(name)) => {
+                self.expect(Token::LeftParen)?;
+                let mut args = Vec::new();
+                
+                if !matches!(self.peek(), Some(Token::RightParen)) {
+                    loop {
+                        args.push(self.parse_expression()?);
+                        match self.peek() {
+                            Some(Token::Comma) => {
+                                self.advance();
+                            }
+                            Some(Token::RightParen) => break,
+                            _ => return Err(ParseError::UnexpectedToken(
+                                self.peek().unwrap().clone(),
+                                self.position
+                            )),
+                        }
+                    }
+                }
+                
+                self.expect(Token::RightParen)?;
+                Ok(ExpressionNode::Function { name, args })
+            }
+            Some(Token::LeftParen) => {
+                let expr = self.parse_expression()?;
+                self.expect(Token::RightParen)?;
+                Ok(expr)
+            }
+            Some(token) => Err(ParseError::UnexpectedToken(token, self.position)),
+            None => Err(ParseError::UnexpectedEndOfInput),
+        }
+    }
+
+    /// Peek at the current token without advancing
+    fn peek(&self) -> Option<&Token> {
+        self.tokens.get(self.position)
+    }
+
+    /// Advance to the next token
+    fn advance(&mut self) -> Option<Token> {
+        if self.position < self.tokens.len() {
+            let token = self.tokens[self.position].clone();
+            self.position += 1;
+            Some(token)
+        } else {
+            None
+        }
+    }
+
+    /// Expect a specific token
+    fn expect(&mut self, expected: Token) -> Result<(), ParseError> {
+        match self.advance() {
+            Some(token) if token == expected => Ok(()),
+            Some(token) => Err(ParseError::UnexpectedToken(token, self.position)),
+            None => Err(ParseError::UnexpectedEndOfInput),
+        }
+    }
+}
+
+/// Expression evaluator for mathematical expressions
+#[derive(Debug)]
+pub struct ExpressionEvaluator {
+    variables: std::collections::HashMap<String, f64>,
+}
+
+impl ExpressionEvaluator {
+    /// Create a new expression evaluator
+    pub fn new() -> Self {
+        Self {
+            variables: std::collections::HashMap::new(),
+        }
+    }
+
+    /// Set a variable value
+    pub fn set_variable(&mut self, name: String, value: f64) {
+        self.variables.insert(name, value);
+    }
+
+    /// Evaluate an expression
+    pub fn evaluate(&self, node: &ExpressionNode) -> Result<f64, EvaluationError> {
+        match node {
+            ExpressionNode::Number(value) => Ok(*value),
+            ExpressionNode::Variable(name) => {
+                self.variables.get(name)
+                    .copied()
+                    .ok_or_else(|| EvaluationError::UndefinedVariable(name.clone()))
+            }
+            ExpressionNode::BinaryOp { operator, left, right } => {
+                let left_val = self.evaluate(left)?;
+                let right_val = self.evaluate(right)?;
+                
+                match operator.as_str() {
+                    "+" => Ok(left_val + right_val),
+                    "-" => Ok(left_val - right_val),
+                    "*" => Ok(left_val * right_val),
+                    "/" => {
+                        if right_val == 0.0 {
+                            Err(EvaluationError::DivisionByZero)
+                        } else {
+                            Ok(left_val / right_val)
+                        }
+                    }
+                    "%" => Ok(left_val % right_val),
+                    "^" => Ok(left_val.powf(right_val)),
+                    "==" => Ok(if (left_val - right_val).abs() < f64::EPSILON { 1.0 } else { 0.0 }),
+                    "!=" => Ok(if (left_val - right_val).abs() >= f64::EPSILON { 1.0 } else { 0.0 }),
+                    "<" => Ok(if left_val < right_val { 1.0 } else { 0.0 }),
+                    ">" => Ok(if left_val > right_val { 1.0 } else { 0.0 }),
+                    "<=" => Ok(if left_val <= right_val { 1.0 } else { 0.0 }),
+                    ">=" => Ok(if left_val >= right_val { 1.0 } else { 0.0 }),
+                    _ => Err(EvaluationError::UnknownOperator(operator.clone())),
+                }
+            }
+            ExpressionNode::UnaryOp { operator, operand } => {
+                let val = self.evaluate(operand)?;
+                match operator.as_str() {
+                    "-" => Ok(-val),
+                    _ => Err(EvaluationError::UnknownOperator(operator.clone())),
+                }
+            }
+            ExpressionNode::Function { name, args } => {
+                let arg_values: Result<Vec<f64>, _> = args.iter()
+                    .map(|arg| self.evaluate(arg))
+                    .collect();
+                let arg_values = arg_values?;
+                
+                match name.as_str() {
+                    "sin" => {
+                        if arg_values.len() != 1 {
+                            return Err(EvaluationError::InvalidArgumentCount(name.clone(), 1, arg_values.len()));
+                        }
+                        Ok(arg_values[0].sin())
+                    }
+                    "cos" => {
+                        if arg_values.len() != 1 {
+                            return Err(EvaluationError::InvalidArgumentCount(name.clone(), 1, arg_values.len()));
+                        }
+                        Ok(arg_values[0].cos())
+                    }
+                    "tan" => {
+                        if arg_values.len() != 1 {
+                            return Err(EvaluationError::InvalidArgumentCount(name.clone(), 1, arg_values.len()));
+                        }
+                        Ok(arg_values[0].tan())
+                    }
+                    "log" => {
+                        if arg_values.len() != 1 {
+                            return Err(EvaluationError::InvalidArgumentCount(name.clone(), 1, arg_values.len()));
+                        }
+                        Ok(arg_values[0].log10())
+                    }
+                    "ln" => {
+                        if arg_values.len() != 1 {
+                            return Err(EvaluationError::InvalidArgumentCount(name.clone(), 1, arg_values.len()));
+                        }
+                        Ok(arg_values[0].ln())
+                    }
+                    "sqrt" => {
+                        if arg_values.len() != 1 {
+                            return Err(EvaluationError::InvalidArgumentCount(name.clone(), 1, arg_values.len()));
+                        }
+                        if arg_values[0] < 0.0 {
+                            return Err(EvaluationError::InvalidArgument(name.clone(), "negative number for sqrt"));
+                        }
+                        Ok(arg_values[0].sqrt())
+                    }
+                    "abs" => {
+                        if arg_values.len() != 1 {
+                            return Err(EvaluationError::InvalidArgumentCount(name.clone(), 1, arg_values.len()));
+                        }
+                        Ok(arg_values[0].abs())
+                    }
+                    "max" => {
+                        if arg_values.is_empty() {
+                            return Err(EvaluationError::InvalidArgumentCount(name.clone(), 1, 0));
+                        }
+                        Ok(arg_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b)))
+                    }
+                    "min" => {
+                        if arg_values.is_empty() {
+                            return Err(EvaluationError::InvalidArgumentCount(name.clone(), 1, 0));
+                        }
+                        Ok(arg_values.iter().fold(f64::INFINITY, |a, &b| a.min(b)))
+                    }
+                    _ => Err(EvaluationError::UnknownFunction(name.clone())),
+                }
+            }
+        }
+    }
+}
+
+/// Evaluation error types
+#[derive(Debug, Clone)]
+pub enum EvaluationError {
+    UndefinedVariable(String),
+    DivisionByZero,
+    UnknownOperator(String),
+    UnknownFunction(String),
+    InvalidArgumentCount(String, usize, usize),
+    InvalidArgument(String, String),
+}
+
+impl std::fmt::Display for EvaluationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EvaluationError::UndefinedVariable(name) => {
+                write!(f, "Undefined variable: {}", name)
+            }
+            EvaluationError::DivisionByZero => {
+                write!(f, "Division by zero")
+            }
+            EvaluationError::UnknownOperator(op) => {
+                write!(f, "Unknown operator: {}", op)
+            }
+            EvaluationError::UnknownFunction(func) => {
+                write!(f, "Unknown function: {}", func)
+            }
+            EvaluationError::InvalidArgumentCount(func, expected, actual) => {
+                write!(f, "Function {} expects {} arguments, got {}", func, expected, actual)
+            }
+            EvaluationError::InvalidArgument(func, reason) => {
+                write!(f, "Invalid argument for {}: {}", func, reason)
+            }
+        }
+    }
+}
+
+impl std::error::Error for EvaluationError {}
+
+/// Logical expression evaluator for boolean logic
+#[derive(Debug)]
+pub struct LogicalEvaluator {
+    variables: std::collections::HashMap<String, bool>,
+}
+
+impl LogicalEvaluator {
+    /// Create a new logical evaluator
+    pub fn new() -> Self {
+        Self {
+            variables: std::collections::HashMap::new(),
+        }
+    }
+
+    /// Set a boolean variable
+    pub fn set_variable(&mut self, name: String, value: bool) {
+        self.variables.insert(name, value);
+    }
+
+    /// Evaluate logical expressions
+    pub fn evaluate_logical(&self, expression: &str) -> Result<bool, LogicalError> {
+        // Simple logical expression parser for AND, OR, NOT operations
+        let tokens: Vec<&str> = expression.split_whitespace().collect();
+        self.evaluate_tokens(&tokens)
+    }
+
+    fn evaluate_tokens(&self, tokens: &[&str]) -> Result<bool, LogicalError> {
+        if tokens.is_empty() {
+            return Err(LogicalError::EmptyExpression);
+        }
+
+        let mut stack = Vec::new();
+        let mut i = 0;
+
+        while i < tokens.len() {
+            match tokens[i] {
+                "true" => stack.push(true),
+                "false" => stack.push(false),
+                "NOT" | "not" | "!" => {
+                    if i + 1 >= tokens.len() {
+                        return Err(LogicalError::InvalidExpression);
+                    }
+                    let operand = self.evaluate_tokens(&tokens[i + 1..i + 2])?;
+                    stack.push(!operand);
+                    i += 1;
+                }
+                "AND" | "and" | "&&" => {
+                    if stack.len() < 2 {
+                        return Err(LogicalError::InvalidExpression);
+                    }
+                    let right = stack.pop().unwrap();
+                    let left = stack.pop().unwrap();
+                    stack.push(left && right);
+                }
+                "OR" | "or" | "||" => {
+                    if stack.len() < 2 {
+                        return Err(LogicalError::InvalidExpression);
+                    }
+                    let right = stack.pop().unwrap();
+                    let left = stack.pop().unwrap();
+                    stack.push(left || right);
+                }
+                "XOR" | "xor" => {
+                    if stack.len() < 2 {
+                        return Err(LogicalError::InvalidExpression);
+                    }
+                    let right = stack.pop().unwrap();
+                    let left = stack.pop().unwrap();
+                    stack.push(left ^ right);
+                }
+                var => {
+                    // Check if it's a variable
+                    if let Some(&value) = self.variables.get(var) {
+                        stack.push(value);
+                    } else {
+                        return Err(LogicalError::UndefinedVariable(var.to_string()));
+                    }
+                }
+            }
+            i += 1;
+        }
+
+        if stack.len() != 1 {
+            Err(LogicalError::InvalidExpression)
+        } else {
+            Ok(stack[0])
+        }
+    }
+}
+
+/// Logical evaluation error types
+#[derive(Debug, Clone)]
+pub enum LogicalError {
+    EmptyExpression,
+    InvalidExpression,
+    UndefinedVariable(String),
+}
+
+impl std::fmt::Display for LogicalError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LogicalError::EmptyExpression => write!(f, "Empty logical expression"),
+            LogicalError::InvalidExpression => write!(f, "Invalid logical expression"),
+            LogicalError::UndefinedVariable(name) => write!(f, "Undefined variable: {}", name),
+        }
+    }
+}
+
+impl std::error::Error for LogicalError {}
 //    - Extract business logic from implementation
 //    - Identify semantic relationships between code elements
 //    - Support multiple programming paradigms

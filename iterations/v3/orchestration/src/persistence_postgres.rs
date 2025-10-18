@@ -1,8 +1,12 @@
 use crate::persistence::VerdictWriter;
-use agent_agency_council::types::*;
-use anyhow::Result;
-use sqlx::types::Json;
-use sqlx::PgPool;
+use agent_agency_contracts::{
+    ContractError, FinalDecision, FinalVerdictContract, VerificationSummary, VoteEntry, VoteVerdict,
+};
+use agent_agency_council::types::{CawsWaiver, ConsensusResult, FinalVerdict, JudgeVerdict};
+use anyhow::{Context, Result};
+use sqlx::{types::Json, PgPool};
+use tracing::{debug, info, warn};
+use uuid::Uuid;
 
 pub struct PostgresVerdictWriter {
     pool: PgPool,
@@ -12,112 +16,159 @@ impl PostgresVerdictWriter {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
+
+    fn build_contract(consensus: &ConsensusResult) -> Result<FinalVerdictContract, ContractError> {
+        let (decision, dissent, remediation) = match &consensus.final_verdict {
+            FinalVerdict::Accepted { summary, .. } => (
+                FinalDecision::Accept,
+                summary.clone(),
+                Vec::<String>::new(),
+            ),
+            FinalVerdict::Rejected {
+                primary_reasons,
+                summary,
+            } => (
+                FinalDecision::Reject,
+                summary.clone(),
+                primary_reasons.clone(),
+            ),
+            FinalVerdict::RequiresModification {
+                required_changes,
+                summary,
+            } => (
+                FinalDecision::Modify,
+                summary.clone(),
+                required_changes
+                    .iter()
+                    .map(|change| change.description.clone())
+                    .collect(),
+            ),
+            FinalVerdict::NeedsInvestigation { questions, summary } => (
+                FinalDecision::Modify,
+                summary.clone(),
+                questions.clone(),
+            ),
+        };
+
+        let votes: Vec<VoteEntry> = consensus
+            .individual_verdicts
+            .iter()
+            .map(|(judge_id, verdict)| VoteEntry {
+                judge_id: judge_id.clone(),
+                weight: match verdict {
+                    JudgeVerdict::Pass { confidence, .. } => *confidence,
+                    JudgeVerdict::Fail { .. } => 0.0,
+                    JudgeVerdict::Uncertain { .. } => 0.5,
+                }
+                .clamp(0.0, 1.0),
+                verdict: match verdict {
+                    JudgeVerdict::Pass { .. } => VoteVerdict::Pass,
+                    JudgeVerdict::Fail { .. } => VoteVerdict::Fail,
+                    JudgeVerdict::Uncertain { .. } => VoteVerdict::Uncertain,
+                },
+            })
+            .collect();
+
+        let contract = FinalVerdictContract {
+            decision,
+            votes,
+            dissent,
+            remediation,
+            constitutional_refs: Vec::new(),
+            verification_summary: VerificationSummary {
+                claims_total: 0,
+                claims_verified: 0,
+                coverage_pct: 0.0,
+            },
+        };
+
+        contract.validate()?;
+        Ok(contract)
+    }
+
+    fn decision_str(decision: &FinalDecision) -> &'static str {
+        match decision {
+            FinalDecision::Accept => "accept",
+            FinalDecision::Reject => "reject",
+            FinalDecision::Modify => "modify",
+        }
+    }
 }
 
 #[async_trait::async_trait]
 impl VerdictWriter for PostgresVerdictWriter {
-    async fn persist_verdict(&self, task_id: &str, verdict: &FinalVerdict) -> Result<()> {
-        let (decision, summary) = match verdict {
-            FinalVerdict::Accepted { summary, .. } => ("accept", summary.clone()),
-            FinalVerdict::Rejected { summary, .. } => ("reject", summary.clone()),
-            FinalVerdict::RequiresModification { summary, .. } => ("modify", summary.clone()),
-            FinalVerdict::NeedsInvestigation { summary, .. } => ("investigate", summary.clone()),
-        };
-        // TODO: Implement comprehensive verdict data handling with the following requirements:
-        // 1. Verdict structure finalization: Finalize FinalVerdict structure with complete fields
-        //    - Define comprehensive verdict schema with all required fields
-        //    - Implement proper serialization/deserialization for verdict data
-        //    - Support all verdict types and their associated metadata
-        //    - Ensure backward compatibility with existing verdict structures
-        // 2. Vote data handling: Handle voting data and consensus information
-        //    - Extract and store voting records from verdict decisions
-        //    - Track voter participation and consensus metrics
-        //    - Implement vote validation and integrity checks
-        //    - Support anonymous and attributed voting schemes
-        // 3. Remediation tracking: Track remediation actions and follow-up procedures
-        //    - Store remediation requirements and action plans
-        //    - Track remediation progress and completion status
-        //    - Link remediation to specific verdict outcomes
-        //    - Implement remediation workflow management
-        // 4. Constitutional reference management: Manage constitutional and legal references
-        //    - Store references to constitutional sections and legal precedents
-        //    - Link verdict decisions to relevant legal frameworks
-        //    - Implement reference validation and citation tracking
-        //    - Support multiple legal systems and jurisdiction handling
-        let votes = Json(&serde_json::Value::Null);
-        let remediation = Json(&serde_json::Value::Null);
-        let refs: Vec<String> = vec![];
-        // TODO: Implement SQLx query macro setup and database configuration with the following requirements:
-        // 1. Database configuration setup: Configure DATABASE_URL and connection parameters
-        //    - Set up environment variable configuration for DATABASE_URL
-        //    - Implement database connection string validation and parsing
-        //    - Support multiple database environments (dev, staging, prod)
-        //    - Handle database connection encryption and security
-        // 2. SQLx macro preparation: Prepare SQLx query macros for compile-time verification
-        //    - Set up offline query preparation and compilation checking
-        //    - Configure sqlx-cli for query verification and code generation
-        //    - Implement query macro compilation in CI/CD pipeline
-        //    - Handle query schema validation and type checking
-        // 3. Query execution implementation: Implement actual query execution with macros
-        //    - Replace placeholder queries with proper sqlx::query! macros
-        //    - Implement parameterized query execution with type safety
-        //    - Handle query result mapping and error handling
-        //    - Support transaction management and connection pooling
-        // 4. Database migration and testing: Set up database testing and migration infrastructure
-        //    - Implement database schema migrations and version control
-        //    - Set up test databases and query testing frameworks
-        //    - Implement database seeding and test data management
-        //    - Support database rollback and state management for tests
-        // sqlx::query!(
-        //     r#"INSERT INTO verdicts (id, task_id, decision, votes, dissent, remediation, constitutional_refs)
-        //        VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
-        //     uuid::Uuid::new_v4(),
-        //     task_id,
-        //     decision,
-        //     votes as _,
-        //     verdict.dissent,
-        //     remediation as _,
-        //     &refs[..]
-        // )
-        // .execute(&self.pool)
-        // .await?;
+    #[tracing::instrument(skip_all, fields(task_id = %consensus.task_id))]
+    async fn persist_consensus(&self, consensus: &ConsensusResult) -> Result<()> {
+        let contract = Self::build_contract(consensus).map_err(|err| {
+            warn!(target = "persistence", verdict_id = %consensus.verdict_id, "Contract validation failed: {err}");
+            err
+        })?;
+
+        let verdict_id = consensus.verdict_id;
+        let decision = Self::decision_str(&contract.decision);
+        let votes_json = Json(contract.votes.clone());
+        let remediation_json = Json(contract.remediation.clone());
+        let contract_json = Json(contract.clone());
+        let task_id_str = consensus.task_id.to_string();
+
+        debug!(target = "persistence", verdict_id = %verdict_id, "Persisting verdict to Postgres");
+
+        sqlx::query(
+            r#"
+            INSERT INTO verdicts (id, task_id, decision, votes, dissent, remediation, constitutional_refs, contract)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ON CONFLICT (id) DO UPDATE SET
+                decision = EXCLUDED.decision,
+                votes = EXCLUDED.votes,
+                dissent = EXCLUDED.dissent,
+                remediation = EXCLUDED.remediation,
+                constitutional_refs = EXCLUDED.constitutional_refs,
+                contract = EXCLUDED.contract
+            "#,
+        )
+        .bind(verdict_id)
+        .bind(&task_id_str)
+        .bind(decision)
+        .bind(votes_json)
+        .bind(&contract.dissent)
+        .bind(remediation_json)
+        .bind(&contract.constitutional_refs)
+        .bind(contract_json)
+        .execute(&self.pool)
+        .await
+        .with_context(|| format!("inserting verdict {} for task {}", verdict_id, task_id_str))?;
+
+        info!(target = "persistence", verdict_id = %verdict_id, "Verdict persisted successfully");
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, fields(task_id))]
     async fn persist_waivers(&self, task_id: &str, waivers: &[CawsWaiver]) -> Result<()> {
-        for w in waivers {
-            // TODO: Implement waiver persistence with SQLx query macros with the following requirements:
-            // 1. Waiver schema definition: Define waiver database schema and table structure
-            //    - Create waiver table with proper columns and constraints
-            //    - Implement waiver ID generation and uniqueness constraints
-            //    - Define waiver reason, scope, and task relationship fields
-            //    - Set up proper indexing for waiver queries and lookups
-            // 2. Waiver upsert logic: Implement upsert logic for waiver persistence
-            //    - Handle waiver creation with conflict resolution (ON CONFLICT)
-            //    - Update existing waivers when new information is available
-            //    - Preserve waiver history and audit trails
-            //    - Handle concurrent waiver updates and locking
-            // 3. Waiver relationship management: Manage waiver-task relationships
-            //    - Link waivers to specific tasks and workflows
-            //    - Track waiver scope and applicability rules
-            //    - Implement waiver validation and authorization checks
-            //    - Support waiver revocation and expiration handling
-            // 4. Waiver query and retrieval: Implement waiver querying capabilities
-            //    - Query waivers by task, scope, and other criteria
-            //    - Implement waiver listing and filtering functionality
-            //    - Support waiver audit and compliance reporting
-            //    - Handle waiver data export and backup procedures
-            // sqlx::query!(
-            //     r#"INSERT INTO waivers (id, reason, scope, task_id) VALUES ($1, $2, $3, $4)
-            //         ON CONFLICT (id) DO UPDATE SET reason = EXCLUDED.reason, scope = EXCLUDED.scope"#,
-            //     w.id,
-            //     w.reason,
-            //     w.scope,
-            //     task_id
-            // )
-            // .execute(&self.pool)
-            // .await?;
+        if waivers.is_empty() {
+            return Ok(());
         }
+
+        for waiver in waivers {
+            sqlx::query(
+                r#"
+                INSERT INTO waivers (id, reason, scope, task_id, verdict_id)
+                VALUES ($1, $2, $3, $4, $5)
+                ON CONFLICT (id) DO UPDATE SET
+                    reason = EXCLUDED.reason,
+                    scope = EXCLUDED.scope,
+                    verdict_id = EXCLUDED.verdict_id
+                "#,
+            )
+            .bind(&waiver.id)
+            .bind(&waiver.reason)
+            .bind::<Option<String>>(None)
+            .bind(task_id)
+            .bind::<Option<Uuid>>(None)
+            .execute(&self.pool)
+            .await
+            .with_context(|| format!("upserting waiver {} for task {}", waiver.id, task_id))?;
+        }
+
         Ok(())
     }
 }

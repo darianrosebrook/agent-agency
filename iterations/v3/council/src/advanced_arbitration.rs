@@ -1056,7 +1056,7 @@ impl PatternDetector {
         })
     }
 
-    /// Detect patterns in worker output using advanced TODO analysis
+    /// Detect patterns in worker output using advanced multi-dimensional analysis
     pub async fn detect_patterns(&self, output: &WorkerOutput) -> Result<f32> {
         info!("Detecting patterns in worker output: {}", output.worker_id);
 
@@ -1066,44 +1066,263 @@ impl PatternDetector {
             .analyze_worker_output(output, &self.todo_config)
             .await?;
 
-        // Calculate pattern score based on TODO analysis results
+        // Calculate multi-dimensional pattern score
         let mut pattern_score = 1.0; // Start with perfect score
 
-        // Penalize based on TODO findings
-        if todo_analysis.total_todos > 0 {
-            // Base penalty for having TODOs
-            let base_penalty = 0.1 * (todo_analysis.total_todos as f32).min(10.0) / 10.0;
-            pattern_score -= base_penalty;
+        // 1. Code Quality Pattern Analysis
+        let code_quality_score = self.analyze_code_quality_patterns(&todo_analysis).await?;
+        pattern_score = (pattern_score * 0.6) + (code_quality_score * 0.4);
 
-            // Additional penalties for high-severity TODOs
-            let high_severity_penalty = 0.2 * (todo_analysis.high_confidence_todos as f32) / 10.0;
-            pattern_score -= high_severity_penalty;
+        // 2. Implementation Completeness Pattern Analysis
+        let completeness_score = self.analyze_implementation_patterns(&todo_analysis).await?;
+        pattern_score = (pattern_score * 0.7) + (completeness_score * 0.3);
 
-            // Penalty for hidden TODOs (worse than explicit ones)
-            let hidden_penalty = 0.15 * (todo_analysis.hidden_todos as f32) / 10.0;
-            pattern_score -= hidden_penalty;
+        // 3. Error Handling and Resilience Pattern Analysis
+        let resilience_score = self.analyze_resilience_patterns(output).await?;
+        pattern_score = (pattern_score * 0.8) + (resilience_score * 0.2);
 
-            // Bonus for explicit TODOs (better than hidden ones)
-            let explicit_bonus = 0.05 * (todo_analysis.explicit_todos as f32) / 10.0;
-            pattern_score += explicit_bonus;
-        }
+        // 4. Performance Pattern Analysis
+        let performance_score = self.analyze_performance_patterns(output).await?;
+        pattern_score = (pattern_score * 0.85) + (performance_score * 0.15);
 
-        // Factor in quality and completeness scores from TODO analysis
-        pattern_score = (pattern_score * 0.7)
-            + (todo_analysis.quality_score * 0.2)
-            + (todo_analysis.completeness_score * 0.1);
+        // 5. Security Pattern Analysis
+        let security_score = self.analyze_security_patterns(output).await?;
+        pattern_score = (pattern_score * 0.9) + (security_score * 0.1);
+
+        // Factor in overall TODO analysis quality scores
+        pattern_score = (pattern_score * 0.8)
+            + (todo_analysis.quality_score * 0.15)
+            + (todo_analysis.completeness_score * 0.05);
+
+        // Apply confidence adjustment based on pattern consistency
+        let pattern_confidence = self.calculate_pattern_confidence(&todo_analysis).await?;
+        pattern_score *= pattern_confidence;
 
         // Log detailed analysis for debugging
         debug!(
-            "Pattern analysis for worker {}: total_todos={}, quality_score={:.2}, completeness_score={:.2}, final_pattern_score={:.2}",
+            "Advanced pattern analysis for worker {}: code_quality={:.2}, completeness={:.2}, resilience={:.2}, performance={:.2}, security={:.2}, confidence={:.2}, final_score={:.2}",
             output.worker_id,
-            todo_analysis.total_todos,
-            todo_analysis.quality_score,
-            todo_analysis.completeness_score,
+            code_quality_score,
+            completeness_score,
+            resilience_score,
+            performance_score,
+            security_score,
+            pattern_confidence,
             pattern_score
         );
 
         Ok(pattern_score.max(0.0_f32).min(1.0_f32))
+    }
+
+    /// Analyze code quality patterns in TODO analysis results
+    async fn analyze_code_quality_patterns(&self, todo_analysis: &TodoAnalysisResult) -> Result<f32> {
+        let mut quality_score = 1.0;
+
+        // Penalize based on TODO patterns indicating poor code quality
+        if todo_analysis.total_todos > 0 {
+            // High ratio of hidden to explicit TODOs indicates poor documentation
+            let hidden_ratio = if todo_analysis.explicit_todos > 0 {
+                todo_analysis.hidden_todos as f32 / todo_analysis.explicit_todos as f32
+            } else {
+                1.0
+            };
+            quality_score -= (hidden_ratio * 0.3).min(0.3);
+
+            // High severity TODOs indicate critical issues
+            let severity_penalty = (todo_analysis.high_confidence_todos as f32 * 0.1).min(0.4);
+            quality_score -= severity_penalty;
+
+            // Bonus for explicit TODOs (shows awareness of incomplete work)
+            let explicit_bonus = (todo_analysis.explicit_todos as f32 * 0.05).min(0.1);
+            quality_score += explicit_bonus;
+        }
+
+        // Factor in quality score from TODO analysis
+        quality_score = (quality_score * 0.7) + (todo_analysis.quality_score * 0.3);
+
+        Ok(quality_score.max(0.0).min(1.0))
+    }
+
+    /// Analyze implementation completeness patterns
+    async fn analyze_implementation_patterns(&self, todo_analysis: &TodoAnalysisResult) -> Result<f32> {
+        let mut completeness_score = 1.0;
+
+        // Lower score for high TODO counts (indicates incomplete implementation)
+        if todo_analysis.total_todos > 5 {
+            let incompleteness_penalty = ((todo_analysis.total_todos - 5) as f32 * 0.05).min(0.5);
+            completeness_score -= incompleteness_penalty;
+        }
+
+        // Bonus for high completeness score from TODO analysis
+        completeness_score = (completeness_score * 0.6) + (todo_analysis.completeness_score * 0.4);
+
+        // Penalize heavily for hidden TODOs (unknown incomplete work is worse)
+        if todo_analysis.hidden_todos > 0 {
+            let hidden_penalty = (todo_analysis.hidden_todos as f32 * 0.1).min(0.3);
+            completeness_score -= hidden_penalty;
+        }
+
+        Ok(completeness_score.max(0.0).min(1.0))
+    }
+
+    /// Analyze error handling and resilience patterns in worker output
+    async fn analyze_resilience_patterns(&self, output: &WorkerOutput) -> Result<f32> {
+        let mut resilience_score = 0.8; // Start with moderate score
+
+        // Check for error handling patterns in output content
+        let content = &output.content;
+        let has_error_handling = content.contains("Result<") ||
+                                content.contains("anyhow::Result") ||
+                                content.contains("try!") ||
+                                content.contains("catch") ||
+                                content.contains("recover");
+
+        let has_logging = content.contains("tracing::") ||
+                         content.contains("log::") ||
+                         content.contains("info!") ||
+                         content.contains("warn!") ||
+                         content.contains("error!");
+
+        let has_retries = content.contains("retry") ||
+                         content.contains("backoff") ||
+                         content.contains("attempt");
+
+        // Bonus for comprehensive error handling
+        if has_error_handling {
+            resilience_score += 0.1;
+        }
+        if has_logging {
+            resilience_score += 0.05;
+        }
+        if has_retries {
+            resilience_score += 0.05;
+        }
+
+        // Penalize for TODO comments related to error handling
+        if content.contains("TODO") && (
+            content.contains("error") ||
+            content.contains("panic") ||
+            content.contains("unwrap") ||
+            content.contains("expect")
+        ) {
+            resilience_score -= 0.1;
+        }
+
+        Ok(resilience_score.max(0.0).min(1.0))
+    }
+
+    /// Analyze performance patterns in worker output
+    async fn analyze_performance_patterns(&self, output: &WorkerOutput) -> Result<f32> {
+        let mut performance_score = 0.7; // Start with moderate score
+
+        let content = &output.content;
+
+        // Check for performance-related patterns
+        let has_async = content.contains("async fn") || content.contains("await");
+        let has_concurrent = content.contains("tokio::") ||
+                           content.contains("futures::") ||
+                           content.contains("spawn") ||
+                           content.contains("parallel");
+
+        let has_optimization = content.contains("cache") ||
+                             content.contains("memo") ||
+                             content.contains("optimize") ||
+                             content.contains("efficient");
+
+        // Bonus for performance-conscious code
+        if has_async {
+            performance_score += 0.1;
+        }
+        if has_concurrent {
+            performance_score += 0.1;
+        }
+        if has_optimization {
+            performance_score += 0.1;
+        }
+
+        // Penalize for TODOs related to performance
+        if content.contains("TODO") && (
+            content.contains("perf") ||
+            content.contains("slow") ||
+            content.contains("optimize") ||
+            content.contains("cache")
+        ) {
+            performance_score -= 0.15;
+        }
+
+        Ok(performance_score.max(0.0).min(1.0))
+    }
+
+    /// Analyze security patterns in worker output
+    async fn analyze_security_patterns(&self, output: &WorkerOutput) -> Result<f32> {
+        let mut security_score = 0.8; // Start with good score
+
+        let content = &output.content;
+
+        // Check for security-related patterns
+        let has_validation = content.contains("validate") ||
+                           content.contains("sanitize") ||
+                           content.contains("check");
+
+        let has_auth = content.contains("auth") ||
+                      content.contains("permission") ||
+                      content.contains("access");
+
+        let has_encryption = content.contains("encrypt") ||
+                           content.contains("hash") ||
+                           content.contains("secure");
+
+        // Bonus for security-conscious code
+        if has_validation {
+            security_score += 0.05;
+        }
+        if has_auth {
+            security_score += 0.1;
+        }
+        if has_encryption {
+            security_score += 0.05;
+        }
+
+        // Penalize for security-related TODOs or unsafe patterns
+        if content.contains("TODO") && (
+            content.contains("security") ||
+            content.contains("auth") ||
+            content.contains("encrypt") ||
+            content.contains("validate")
+        ) {
+            security_score -= 0.2;
+        }
+
+        // Penalize for unsafe patterns
+        if content.contains("unsafe") || content.contains("unwrap()") {
+            security_score -= 0.1;
+        }
+
+        Ok(security_score.max(0.0).min(1.0))
+    }
+
+    /// Calculate confidence in pattern analysis based on data consistency
+    async fn calculate_pattern_confidence(&self, todo_analysis: &TodoAnalysisResult) -> Result<f32> {
+        let mut confidence = 0.8; // Start with good confidence
+
+        // Higher confidence with more data points
+        if todo_analysis.total_todos > 10 {
+            confidence += 0.1;
+        } else if todo_analysis.total_todos < 3 {
+            confidence -= 0.1; // Low confidence with little data
+        }
+
+        // Higher confidence when explicit TODOs dominate (better visibility)
+        if todo_analysis.hidden_todos == 0 && todo_analysis.explicit_todos > 0 {
+            confidence += 0.05;
+        }
+
+        // Lower confidence when hidden TODOs are significant
+        if todo_analysis.hidden_todos > todo_analysis.explicit_todos {
+            confidence -= 0.15;
+        }
+
+        Ok(confidence.max(0.5).min(1.0)) // Minimum confidence of 0.5
     }
 
     /// Get detailed TODO analysis for a worker output
@@ -5274,16 +5493,57 @@ impl ArbitrationFeedback {
 
     /// Identify successful patterns and failed approaches
     async fn identify_success_failure_patterns(&self) -> Result<PatternAnalysis> {
-        let successful_patterns = vec![
-            "High confidence consensus achieved".to_string(),
-            "Quality scores above threshold".to_string(),
-        ];
+        let mut successful_patterns = Vec::new();
+        let mut failed_approaches = Vec::new();
 
-        let failed_approaches = if self.consensus.confidence < 0.6 {
-            vec!["Low confidence in final decision".to_string()]
-        } else {
-            vec![]
-        };
+        // Analyze consensus patterns
+        if self.consensus.confidence > 0.8 {
+            successful_patterns.push("High confidence consensus achieved".to_string());
+        } else if self.consensus.confidence < 0.6 {
+            failed_approaches.push("Low confidence in final decision".to_string());
+        }
+
+        // Analyze debate patterns
+        if let Some(debate_rounds) = self.consensus.debate_rounds {
+            if debate_rounds <= 2 {
+                successful_patterns.push("Efficient debate resolution".to_string());
+            } else if debate_rounds > 5 {
+                failed_approaches.push("Prolonged debate indicates disagreement".to_string());
+            }
+        }
+
+        // Analyze participant patterns
+        if self.consensus.participant_count > 3 {
+            successful_patterns.push("Comprehensive participant involvement".to_string());
+        }
+
+        // Analyze timing patterns
+        if let Some(evaluation_time) = self.consensus.evaluation_time_ms {
+            if evaluation_time < 3000 {
+                successful_patterns.push("Efficient evaluation timing".to_string());
+            } else if evaluation_time > 8000 {
+                failed_approaches.push("Slow evaluation indicates performance issues".to_string());
+            }
+        }
+
+        // Analyze quality patterns
+        if self.consensus.quality_score > 0.85 {
+            successful_patterns.push("High quality consensus achieved".to_string());
+        }
+
+        // Analyze risk patterns
+        if let Some(risk_score) = self.consensus.risk_assessment {
+            if risk_score < 0.3 {
+                successful_patterns.push("Low risk consensus outcome".to_string());
+            } else if risk_score > 0.7 {
+                failed_approaches.push("High risk consensus requires review".to_string());
+            }
+        }
+
+        // If no patterns identified, provide defaults
+        if successful_patterns.is_empty() && failed_approaches.is_empty() {
+            successful_patterns.push("Standard consensus process completed".to_string());
+        }
 
         Ok(PatternAnalysis {
             successful_patterns,

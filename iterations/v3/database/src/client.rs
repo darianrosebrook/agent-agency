@@ -13,6 +13,7 @@ use async_trait::async_trait;
 use chrono;
 use deadpool_postgres::{Config, ManagerConfig, RecyclingMethod, Runtime};
 use serde_json;
+use sqlx::Row;
 use sqlx::{PgPool, Postgres};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};

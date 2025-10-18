@@ -57,6 +57,20 @@ pub struct EdgeCaseReport {
     pub coverage_score: f64,
 }
 
+/// Edge case test specification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EdgeCaseTest {
+    pub test_id: Uuid,
+    pub test_name: String,
+    pub test_type: TestType,
+    pub test_scenario: TestScenario,
+    pub edge_case_type: EdgeCaseType,
+    pub risk_level: RiskLevel,
+    pub expected_behavior: String,
+    pub generation_reason: String,
+    pub confidence_score: f64,
+}
+
 /// Test case specification
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestCase {
@@ -165,11 +179,12 @@ pub struct TestScenario {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestData {
-    pub data_type: DataType,
-    pub value: serde_json::Value,
-    pub constraints: Vec<Constraint>,
-    pub edge_case_flags: Vec<EdgeCaseFlag>,
+pub enum TestData {
+    String(String),
+    Number(f64),
+    Boolean(bool),
+    Array(Vec<TestData>),
+    Object(HashMap<String, TestData>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -287,6 +302,7 @@ pub enum ConditionType {
     State,
     Data,
     Environment,
+    SystemState,
     Permission,
     Resource,
 }
@@ -1419,18 +1435,18 @@ impl DynamicTestGenerator {
                 (
                     key,
                     TestData {
-                        data_type: match &value {
-                            serde_json::Value::String(_) => DataType::String,
-                            serde_json::Value::Number(n) if n.is_i64() => DataType::Integer,
-                            serde_json::Value::Number(_) => DataType::Float,
-                            serde_json::Value::Bool(_) => DataType::Boolean,
-                            serde_json::Value::Array(_) => DataType::Array,
-                            serde_json::Value::Object(_) => DataType::Object,
-                            serde_json::Value::Null => DataType::Null,
-                        },
-                        value,
-                        constraints: vec![],
-                        edge_case_flags: vec![],
+                data_type: match &value {
+                    serde_json::Value::String(_) => DataType::String,
+                    serde_json::Value::Number(n) if n.is_i64() => DataType::Integer,
+                    serde_json::Value::Number(_) => DataType::Float,
+                    serde_json::Value::Bool(_) => DataType::Boolean,
+                    serde_json::Value::Array(_) => DataType::Array,
+                    serde_json::Value::Object(_) => DataType::Object,
+                    serde_json::Value::Null => DataType::Null,
+                },
+                value,
+                constraints: vec![],
+                edge_case_flags: vec![],
                     },
                 )
             })
@@ -1591,7 +1607,7 @@ impl EdgeCaseAnalyzer {
                 RequirementType::Functional => {
                     // String boundary conditions
                     edge_cases.push(IdentifiedEdgeCase {
-                        edge_case_id: Uuid::new_v4(),
+            edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Empty string input".to_string(),
                         edge_case_type: EdgeCaseType::BoundaryCondition,
                         description: format!(
@@ -1744,12 +1760,12 @@ impl EdgeCaseAnalyzer {
                     edge_cases.push(IdentifiedEdgeCase {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Null object input".to_string(),
-                        edge_case_type: EdgeCaseType::NullHandling,
+            edge_case_type: EdgeCaseType::NullHandling,
                         description: format!("Input '{}' with null object", input.requirement_name),
-                        probability: 0.7,
-                        impact: 0.8,
-                        risk_level: RiskLevel::High,
-                        detection_method: DetectionMethod::StaticAnalysis,
+            probability: 0.7,
+            impact: 0.8,
+            risk_level: RiskLevel::High,
+            detection_method: DetectionMethod::StaticAnalysis,
                     });
 
                     // Missing required fields
@@ -2022,7 +2038,7 @@ impl EdgeCaseAnalyzer {
         let execution_time = start_time.elapsed();
 
         Ok(EdgeCaseTestResult {
-            test_id: Uuid::new_v4().to_string(),
+            test_id: Uuid::new_v4(),
             test_name: edge_case.edge_case_name.clone(),
             passed,
             execution_time_ms: execution_time.as_millis() as u64,
@@ -2209,9 +2225,9 @@ impl EdgeCaseAnalyzer {
 
         RiskAssessment {
             overall_risk_score,
-            risk_distribution,
+                risk_distribution,
             high_risk_areas,
-            risk_trends: Vec::new(),
+                risk_trends: Vec::new(),
         }
     }
 
@@ -2224,11 +2240,11 @@ impl EdgeCaseAnalyzer {
 
         // Add null input tests strategy
         strategies.push(MitigationStrategy {
-            strategy_name: "Add null input tests".to_string(),
-            strategy_type: StrategyType::Test,
-            effectiveness: 0.9,
-            implementation_cost: 0.3,
-            description: "Generate comprehensive null input test cases".to_string(),
+                strategy_name: "Add null input tests".to_string(),
+                strategy_type: StrategyType::Test,
+                effectiveness: 0.9,
+                implementation_cost: 0.3,
+                description: "Generate comprehensive null input test cases".to_string(),
         });
 
         // Add boundary value tests strategy
@@ -2506,6 +2522,21 @@ impl TestOptimizer {
             EdgeCaseType::TypeCoercion => 0.4,
             EdgeCaseType::NullHandling => 0.3,
             EdgeCaseType::NetworkIssue => 0.2,
+            EdgeCaseType::Boundary => 0.7,
+            EdgeCaseType::EmptyData => 0.6,
+            EdgeCaseType::InvalidInput => 0.8,
+            EdgeCaseType::ResourceExhaustion => 0.9,
+            EdgeCaseType::Concurrency => 0.8,
+            EdgeCaseType::RaceCondition => 0.9,
+            EdgeCaseType::Timeout => 0.7,
+            EdgeCaseType::TimingIssue => 0.6,
+            EdgeCaseType::NetworkFailure => 0.8,
+            EdgeCaseType::IOError => 0.7,
+            EdgeCaseType::Combinatorial => 0.5,
+            EdgeCaseType::Equivalence => 0.4,
+            EdgeCaseType::Stress => 0.8,
+            EdgeCaseType::Security => 0.9,
+            EdgeCaseType::Usability => 0.3,
         };
         score += edge_type_weight * 0.4;
 
@@ -2518,6 +2549,7 @@ impl TestOptimizer {
             TestType::Equivalence => 0.7,
             TestType::Stress => 0.8,
             TestType::Performance => 0.9,
+            TestType::Combinatorial => 0.8,
         };
         score += test_type_weight * 0.2;
 
@@ -2571,6 +2603,21 @@ impl TestOptimizer {
             EdgeCaseType::TypeCoercion => 0.4,
             EdgeCaseType::NullHandling => 0.3,
             EdgeCaseType::NetworkIssue => 0.2,
+            EdgeCaseType::Boundary => 0.7,
+            EdgeCaseType::EmptyData => 0.6,
+            EdgeCaseType::InvalidInput => 0.8,
+            EdgeCaseType::ResourceExhaustion => 0.9,
+            EdgeCaseType::Concurrency => 0.8,
+            EdgeCaseType::RaceCondition => 0.9,
+            EdgeCaseType::Timeout => 0.7,
+            EdgeCaseType::TimingIssue => 0.6,
+            EdgeCaseType::NetworkFailure => 0.8,
+            EdgeCaseType::IOError => 0.7,
+            EdgeCaseType::Combinatorial => 0.5,
+            EdgeCaseType::Equivalence => 0.4,
+            EdgeCaseType::Stress => 0.8,
+            EdgeCaseType::Security => 0.9,
+            EdgeCaseType::Usability => 0.3,
         };
         value += edge_type_value * 0.4;
 
@@ -2583,6 +2630,7 @@ impl TestOptimizer {
             TestType::Equivalence => 0.7,
             TestType::Stress => 0.8,
             TestType::Performance => 0.9,
+            TestType::Combinatorial => 0.8,
         };
         value += test_type_value * 0.2;
 
@@ -2948,7 +2996,7 @@ impl CoverageAnalyzer {
         for gap in gaps {
             let recommendation = match gap.gap_type {
                 GapType::EdgeCase => CoverageRecommendation {
-                    recommendation_type: RecommendationType::AddTests,
+                recommendation_type: RecommendationType::AddTests,
                     description: "Add edge case and boundary value tests".to_string(),
                     expected_coverage_improvement: 0.25,
                     implementation_effort: ImplementationEffort::High,
@@ -2957,8 +3005,8 @@ impl CoverageAnalyzer {
                 _ => CoverageRecommendation {
                     recommendation_type: RecommendationType::ImproveCode,
                     description: "Address coverage gap in code".to_string(),
-                    expected_coverage_improvement: 0.1,
-                    implementation_effort: ImplementationEffort::Medium,
+                expected_coverage_improvement: 0.1,
+                implementation_effort: ImplementationEffort::Medium,
                     priority: Priority::Medium,
                 },
             };
@@ -3158,14 +3206,6 @@ enum ParameterType {
     Object,
 }
 
-/// Risk levels for edge case templates
-#[derive(Debug, Clone)]
-enum RiskLevel {
-    Low,
-    Medium,
-    High,
-    Critical,
-}
 
 impl TestPatternAnalyzer {
     /// Create a new test pattern analyzer
@@ -3898,7 +3938,7 @@ impl ScenarioGenerator {
                                 );
                                 data.insert(
                                     "duration_seconds".to_string(),
-                                    TestData::Number(duration as f64),
+                                    TestData::Number(*duration as f64),
                                 );
                                 data
                             },
@@ -4101,7 +4141,7 @@ impl ScenarioGenerator {
 #[derive(Debug, Clone)]
 struct TestCombination {
     name: String,
-    parameters: serde_json::Value,
+    parameters: HashMap<String, String>,
 }
 
 #[derive(Debug)]
@@ -4195,16 +4235,6 @@ struct InputParameter {
     required: bool,
 }
 
-/// Parameter type enumeration
-#[derive(Debug, Clone)]
-enum ParameterType {
-    String,
-    Integer,
-    Float,
-    Boolean,
-    Array,
-    Object,
-}
 
 /// Parameter constraints
 #[derive(Debug, Clone)]
