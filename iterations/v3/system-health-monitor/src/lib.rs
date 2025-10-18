@@ -467,7 +467,9 @@ impl SystemHealthMonitor {
                 interval.tick().await;
 
                 // 1. System component health monitoring
-                if let Err(e) = Self::check_system_components(&alerts, &config, &metrics_history).await {
+                if let Err(e) =
+                    Self::check_system_components(&alerts, &config, &metrics_history).await
+                {
                     error!("System component health check failed: {}", e);
                 }
 
@@ -477,12 +479,16 @@ impl SystemHealthMonitor {
                 }
 
                 // 3. Agent health monitoring
-                if let Err(e) = Self::check_agent_health(&alerts, &config, &agent_health_metrics).await {
+                if let Err(e) =
+                    Self::check_agent_health(&alerts, &config, &agent_health_metrics).await
+                {
                     error!("Agent health check failed: {}", e);
                 }
 
                 // 4. Resource utilization monitoring
-                if let Err(e) = Self::check_resource_utilization(&alerts, &config, &metrics_history).await {
+                if let Err(e) =
+                    Self::check_resource_utilization(&alerts, &config, &metrics_history).await
+                {
                     error!("Resource utilization check failed: {}", e);
                 }
 
@@ -747,7 +753,8 @@ impl SystemHealthMonitor {
                     AlertType::SystemHealth,
                     format!("Critical CPU usage: {:.1}%", metrics.cpu_usage),
                     "cpu".to_string(),
-                ).await?;
+                )
+                .await?;
             } else if metrics.cpu_usage >= config.thresholds.cpu_warning_threshold {
                 Self::create_component_alert(
                     alerts,
@@ -755,7 +762,8 @@ impl SystemHealthMonitor {
                     AlertType::SystemHealth,
                     format!("High CPU usage: {:.1}%", metrics.cpu_usage),
                     "cpu".to_string(),
-                ).await?;
+                )
+                .await?;
             }
 
             // Check memory usage
@@ -766,7 +774,8 @@ impl SystemHealthMonitor {
                     AlertType::SystemHealth,
                     format!("Critical memory usage: {:.1}%", metrics.memory_usage),
                     "memory".to_string(),
-                ).await?;
+                )
+                .await?;
             } else if metrics.memory_usage >= config.thresholds.memory_warning_threshold {
                 Self::create_component_alert(
                     alerts,
@@ -774,7 +783,8 @@ impl SystemHealthMonitor {
                     AlertType::SystemHealth,
                     format!("High memory usage: {:.1}%", metrics.memory_usage),
                     "memory".to_string(),
-                ).await?;
+                )
+                .await?;
             }
 
             // Check disk usage
@@ -785,7 +795,8 @@ impl SystemHealthMonitor {
                     AlertType::SystemHealth,
                     format!("Critical disk usage: {:.1}%", metrics.disk_usage),
                     "disk".to_string(),
-                ).await?;
+                )
+                .await?;
             } else if metrics.disk_usage >= config.thresholds.disk_warning_threshold {
                 Self::create_component_alert(
                     alerts,
@@ -793,7 +804,8 @@ impl SystemHealthMonitor {
                     AlertType::SystemHealth,
                     format!("High disk usage: {:.1}%", metrics.disk_usage),
                     "disk".to_string(),
-                ).await?;
+                )
+                .await?;
             }
 
             // Check system load
@@ -804,7 +816,8 @@ impl SystemHealthMonitor {
                     AlertType::SystemHealth,
                     format!("High system load: {:.2}", metrics.load_average[0]),
                     "load".to_string(),
-                ).await?;
+                )
+                .await?;
             }
 
             // Check I/O performance (simplified)
@@ -814,11 +827,14 @@ impl SystemHealthMonitor {
                     alerts,
                     AlertSeverity::Medium,
                     AlertType::SystemHealth,
-                    format!("High I/O activity: network {:.1}MB/s, disk {:.1}MB/s",
-                           metrics.network_io as f64 / 1_000_000.0,
-                           metrics.disk_io as f64 / 1_000_000.0),
+                    format!(
+                        "High I/O activity: network {:.1}MB/s, disk {:.1}MB/s",
+                        metrics.network_io as f64 / 1_000_000.0,
+                        metrics.disk_io as f64 / 1_000_000.0
+                    ),
                     "io".to_string(),
-                ).await?;
+                )
+                .await?;
             }
         }
 
@@ -855,9 +871,13 @@ impl SystemHealthMonitor {
                     alerts,
                     AlertSeverity::High,
                     AlertType::AgentHealth,
-                    format!("Agent {} error rate too high: {:.2}", agent_id, metrics.error_rate),
+                    format!(
+                        "Agent {} error rate too high: {:.2}",
+                        agent_id, metrics.error_rate
+                    ),
                     agent_id.clone(),
-                ).await?;
+                )
+                .await?;
             }
 
             // Check response time
@@ -867,9 +887,13 @@ impl SystemHealthMonitor {
                     alerts,
                     AlertSeverity::Medium,
                     AlertType::AgentHealth,
-                    format!("Agent {} response time too high: {}ms", agent_id, metrics.response_time_p95),
+                    format!(
+                        "Agent {} response time too high: {}ms",
+                        agent_id, metrics.response_time_p95
+                    ),
                     agent_id.clone(),
-                ).await?;
+                )
+                .await?;
             }
 
             // Check health score
@@ -879,9 +903,13 @@ impl SystemHealthMonitor {
                     alerts,
                     AlertSeverity::Critical,
                     AlertType::AgentHealth,
-                    format!("Agent {} health score critical: {:.2}", agent_id, metrics.health_score),
+                    format!(
+                        "Agent {} health score critical: {:.2}",
+                        agent_id, metrics.health_score
+                    ),
                     agent_id.clone(),
-                ).await?;
+                )
+                .await?;
             }
 
             // Check load capacity
@@ -890,9 +918,13 @@ impl SystemHealthMonitor {
                     alerts,
                     AlertSeverity::Medium,
                     AlertType::AgentHealth,
-                    format!("Agent {} near capacity: {}/{}", agent_id, metrics.current_load, metrics.max_load),
+                    format!(
+                        "Agent {} near capacity: {}/{}",
+                        agent_id, metrics.current_load, metrics.max_load
+                    ),
                     agent_id.clone(),
-                ).await?;
+                )
+                .await?;
             }
         }
 
@@ -915,28 +947,37 @@ impl SystemHealthMonitor {
         // Analyze CPU trend (last 10 readings)
         let recent_cpu: Vec<f64> = metrics.iter().rev().take(10).map(|m| m.cpu_usage).collect();
         if let Some(cpu_trend) = Self::calculate_trend(&recent_cpu) {
-            if cpu_trend > 5.0 { // CPU increasing by more than 5% over time
+            if cpu_trend > 5.0 {
+                // CPU increasing by more than 5% over time
                 Self::create_component_alert(
                     alerts,
                     AlertSeverity::Medium,
                     AlertType::SystemHealth,
                     format!("CPU usage trending upward: +{:.1}%", cpu_trend),
                     "cpu_trend".to_string(),
-                ).await?;
+                )
+                .await?;
             }
         }
 
         // Analyze memory trend
-        let recent_memory: Vec<f64> = metrics.iter().rev().take(10).map(|m| m.memory_usage).collect();
+        let recent_memory: Vec<f64> = metrics
+            .iter()
+            .rev()
+            .take(10)
+            .map(|m| m.memory_usage)
+            .collect();
         if let Some(memory_trend) = Self::calculate_trend(&recent_memory) {
-            if memory_trend > 3.0 { // Memory increasing by more than 3% over time
+            if memory_trend > 3.0 {
+                // Memory increasing by more than 3% over time
                 Self::create_component_alert(
                     alerts,
                     AlertSeverity::Medium,
                     AlertType::SystemHealth,
                     format!("Memory usage trending upward: +{:.1}%", memory_trend),
                     "memory_trend".to_string(),
-                ).await?;
+                )
+                .await?;
             }
         }
 

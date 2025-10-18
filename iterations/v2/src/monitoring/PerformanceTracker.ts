@@ -34,7 +34,7 @@ export interface PerformanceTrend {
   values: number[];
   timestamps: number[];
   average: number;
-  trend: 'increasing' | 'decreasing' | 'stable';
+  trend: "increasing" | "decreasing" | "stable";
   standardDeviation: number;
 }
 
@@ -109,13 +109,15 @@ export class PerformanceTracker extends EventEmitter {
   }
 
   public getLatestSnapshot(): PerformanceSnapshot | null {
-    return this.snapshots.length > 0 ? this.snapshots[this.snapshots.length - 1] : null;
+    return this.snapshots.length > 0
+      ? this.snapshots[this.snapshots.length - 1]
+      : null;
   }
 
   public getSnapshots(since?: number): PerformanceSnapshot[] {
     if (!since) return [...this.snapshots];
 
-    return this.snapshots.filter(snapshot => snapshot.timestamp >= since);
+    return this.snapshots.filter((snapshot) => snapshot.timestamp >= since);
   }
 
   public getTrends(metric: string, windowMs?: number): PerformanceTrend | null {
@@ -125,7 +127,9 @@ export class PerformanceTracker extends EventEmitter {
     const window = windowMs || this.config.retentionPeriodMs;
     const cutoff = now - window;
 
-    const relevantSnapshots = this.snapshots.filter(s => s.timestamp >= cutoff);
+    const relevantSnapshots = this.snapshots.filter(
+      (s) => s.timestamp >= cutoff
+    );
     if (relevantSnapshots.length < 2) return null;
 
     let values: number[] = [];
@@ -135,11 +139,11 @@ export class PerformanceTracker extends EventEmitter {
       let value: number | undefined;
 
       // Extract the metric value based on path
-      const path = metric.split('.');
+      const path = metric.split(".");
       let current: any = snapshot.metrics;
 
       for (const key of path) {
-        if (current && typeof current === 'object' && key in current) {
+        if (current && typeof current === "object" && key in current) {
           current = current[key];
         } else {
           current = undefined;
@@ -147,7 +151,7 @@ export class PerformanceTracker extends EventEmitter {
         }
       }
 
-      if (typeof current === 'number') {
+      if (typeof current === "number") {
         values.push(current);
         timestamps.push(snapshot.timestamp);
       }
@@ -157,11 +161,13 @@ export class PerformanceTracker extends EventEmitter {
 
     // Calculate statistics
     const average = values.reduce((sum, val) => sum + val, 0) / values.length;
-    const variance = values.reduce((sum, val) => sum + Math.pow(val - average, 2), 0) / values.length;
+    const variance =
+      values.reduce((sum, val) => sum + Math.pow(val - average, 2), 0) /
+      values.length;
     const standardDeviation = Math.sqrt(variance);
 
     // Calculate trend (simple linear regression slope)
-    let trend: 'increasing' | 'decreasing' | 'stable' = 'stable';
+    let trend: "increasing" | "decreasing" | "stable" = "stable";
     if (values.length >= 3) {
       const n = values.length;
       const sumX = timestamps.reduce((sum, t, i) => sum + i, 0);
@@ -171,8 +177,8 @@ export class PerformanceTracker extends EventEmitter {
 
       const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
 
-      if (slope > 0.1) trend = 'increasing';
-      else if (slope < -0.1) trend = 'decreasing';
+      if (slope > 0.1) trend = "increasing";
+      else if (slope < -0.1) trend = "decreasing";
     }
 
     return {
@@ -190,24 +196,35 @@ export class PerformanceTracker extends EventEmitter {
     const period = periodMs || this.config.retentionPeriodMs;
     const startTime = now - period;
 
-    const relevantSnapshots = this.snapshots.filter(s => s.timestamp >= startTime);
+    const relevantSnapshots = this.snapshots.filter(
+      (s) => s.timestamp >= startTime
+    );
     if (relevantSnapshots.length === 0) {
       throw new Error("No performance data available for the specified period");
     }
 
     // Calculate summary statistics
-    const cpuUsages = relevantSnapshots.map(s => s.metrics.cpuUsage).filter(v => typeof v === 'number');
-    const memoryUsages = relevantSnapshots.map(s => {
+    const cpuUsages = relevantSnapshots
+      .map((s) => s.metrics.cpuUsage)
+      .filter((v) => typeof v === "number");
+    const memoryUsages = relevantSnapshots.map((s) => {
       if (s.metrics.memoryUsage && s.metrics.memoryUsage.heapUsed) {
         return s.metrics.memoryUsage.heapUsed / s.metrics.memoryUsage.heapTotal;
       }
       return 0;
     });
 
-    const averageCpuUsage = cpuUsages.length > 0 ? cpuUsages.reduce((sum, val) => sum + val, 0) / cpuUsages.length : 0;
+    const averageCpuUsage =
+      cpuUsages.length > 0
+        ? cpuUsages.reduce((sum, val) => sum + val, 0) / cpuUsages.length
+        : 0;
     const peakCpuUsage = cpuUsages.length > 0 ? Math.max(...cpuUsages) : 0;
-    const averageMemoryUsage = memoryUsages.length > 0 ? memoryUsages.reduce((sum, val) => sum + val, 0) / memoryUsages.length : 0;
-    const peakMemoryUsage = memoryUsages.length > 0 ? Math.max(...memoryUsages) : 0;
+    const averageMemoryUsage =
+      memoryUsages.length > 0
+        ? memoryUsages.reduce((sum, val) => sum + val, 0) / memoryUsages.length
+        : 0;
+    const peakMemoryUsage =
+      memoryUsages.length > 0 ? Math.max(...memoryUsages) : 0;
 
     // Task metrics (would need integration with task system)
     const totalTasksProcessed = 0; // Placeholder
@@ -216,7 +233,11 @@ export class PerformanceTracker extends EventEmitter {
 
     // Generate trends for key metrics
     const trends: PerformanceTrend[] = [];
-    const keyMetrics = ['cpuUsage', 'memoryUsage.heapUsed', 'activeConnections'];
+    const keyMetrics = [
+      "cpuUsage",
+      "memoryUsage.heapUsed",
+      "activeConnections",
+    ];
 
     for (const metric of keyMetrics) {
       const trend = this.getTrends(metric, period);
@@ -228,21 +249,31 @@ export class PerformanceTracker extends EventEmitter {
     // Generate alerts based on trends
     const alerts: string[] = [];
     for (const trend of trends) {
-      if (trend.trend === 'increasing' && trend.average > 0.8) {
-        alerts.push(`High ${trend.metric} detected (${Math.round(trend.average * 100)}% average)`);
+      if (trend.trend === "increasing" && trend.average > 0.8) {
+        alerts.push(
+          `High ${trend.metric} detected (${Math.round(
+            trend.average * 100
+          )}% average)`
+        );
       }
     }
 
     // Generate recommendations
     const recommendations: string[] = [];
     if (averageCpuUsage > 0.7) {
-      recommendations.push("Consider optimizing CPU-intensive operations or scaling horizontally");
+      recommendations.push(
+        "Consider optimizing CPU-intensive operations or scaling horizontally"
+      );
     }
     if (averageMemoryUsage > 0.8) {
-      recommendations.push("Memory usage is high - consider memory optimization or increasing system memory");
+      recommendations.push(
+        "Memory usage is high - consider memory optimization or increasing system memory"
+      );
     }
     if (peakMemoryUsage - averageMemoryUsage > 0.2) {
-      recommendations.push("High memory usage variance detected - investigate memory leaks");
+      recommendations.push(
+        "High memory usage variance detected - investigate memory leaks"
+      );
     }
 
     return {
@@ -292,7 +323,7 @@ export class PerformanceTracker extends EventEmitter {
 
     // Maintain retention policy
     const cutoff = timestamp - this.config.retentionPeriodMs;
-    this.snapshots = this.snapshots.filter(s => s.timestamp >= cutoff);
+    this.snapshots = this.snapshots.filter((s) => s.timestamp >= cutoff);
 
     // Limit number of snapshots
     if (this.snapshots.length > this.config.maxSnapshots) {
@@ -309,16 +340,21 @@ export class PerformanceTracker extends EventEmitter {
     averageCollectionInterval: number;
   } {
     const totalSnapshots = this.snapshots.length;
-    const oldestSnapshot = totalSnapshots > 0 ? this.snapshots[0].timestamp : null;
-    const newestSnapshot = totalSnapshots > 0 ? this.snapshots[totalSnapshots - 1].timestamp : null;
+    const oldestSnapshot =
+      totalSnapshots > 0 ? this.snapshots[0].timestamp : null;
+    const newestSnapshot =
+      totalSnapshots > 0 ? this.snapshots[totalSnapshots - 1].timestamp : null;
 
     let averageCollectionInterval = 0;
     if (totalSnapshots > 1) {
       const intervals = [];
       for (let i = 1; i < totalSnapshots; i++) {
-        intervals.push(this.snapshots[i].timestamp - this.snapshots[i - 1].timestamp);
+        intervals.push(
+          this.snapshots[i].timestamp - this.snapshots[i - 1].timestamp
+        );
       }
-      averageCollectionInterval = intervals.reduce((sum, val) => sum + val, 0) / intervals.length;
+      averageCollectionInterval =
+        intervals.reduce((sum, val) => sum + val, 0) / intervals.length;
     }
 
     return {

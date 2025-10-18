@@ -64,7 +64,10 @@ pub fn validate_judge_verdict_value(value: &Value) -> Result<(), ContractError> 
                     message: error.to_string(),
                 })
                 .collect();
-            Err(ContractError::validation(ContractKind::JudgeVerdict, issues))
+            Err(ContractError::validation(
+                ContractKind::JudgeVerdict,
+                issues,
+            ))
         }
     }
 }

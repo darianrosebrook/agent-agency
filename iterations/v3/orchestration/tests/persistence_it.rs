@@ -6,10 +6,10 @@ async fn postgres_persistence_smoke() {
     }
     use agent_agency_council::types::{ConsensusResult, FinalVerdict};
     use chrono::Utc;
-    use std::collections::HashMap;
-    use uuid::Uuid;
     use orchestration::db::Db;
     use orchestration::persistence_postgres::PostgresVerdictWriter;
+    use std::collections::HashMap;
+    use uuid::Uuid;
 
     let db = Db::connect(&std::env::var("DATABASE_URL").unwrap(), 1)
         .await

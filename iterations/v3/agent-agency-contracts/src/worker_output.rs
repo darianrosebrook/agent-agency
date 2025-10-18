@@ -116,7 +116,10 @@ pub fn validate_worker_output_value(value: &Value) -> Result<(), ContractError> 
                     message: error.to_string(),
                 })
                 .collect();
-            Err(ContractError::validation(ContractKind::WorkerOutput, issues))
+            Err(ContractError::validation(
+                ContractKind::WorkerOutput,
+                issues,
+            ))
         }
     }
 }

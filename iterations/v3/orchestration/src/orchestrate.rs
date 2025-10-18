@@ -14,10 +14,10 @@ use agent_agency_council::coordinator::{ConsensusCoordinator, ProvenanceEmitter}
 use agent_agency_council::models::{
     AcceptanceCriterion as CouncilAcceptanceCriterion, Environment as CouncilEnvironment,
     RiskTier as CouncilRiskTier, SelfAssessment as CouncilSelfAssessment,
-    TaskContext as CouncilTaskContext, TaskScope as CouncilTaskScope,
-    TaskSpec as CouncilTaskSpec, WorkerOutput as CouncilWorkerOutput,
+    TaskContext as CouncilTaskContext, TaskScope as CouncilTaskScope, TaskSpec as CouncilTaskSpec,
+    WorkerOutput as CouncilWorkerOutput,
 };
-use agent_agency_council::types::{FinalVerdict, ConsensusResult, CawsWaiver};
+use agent_agency_council::types::{CawsWaiver, ConsensusResult, FinalVerdict};
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::sync::Arc;

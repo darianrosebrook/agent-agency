@@ -49,7 +49,10 @@ pub fn validate_router_decision_value(value: &Value) -> Result<(), ContractError
                     message: error.to_string(),
                 })
                 .collect();
-            Err(ContractError::validation(ContractKind::RouterDecision, issues))
+            Err(ContractError::validation(
+                ContractKind::RouterDecision,
+                issues,
+            ))
         }
     }
 }

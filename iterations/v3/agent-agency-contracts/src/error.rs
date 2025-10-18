@@ -42,7 +42,7 @@ impl fmt::Display for ValidationIssue {
 /// Errors raised by the interoperability contract layer.
 #[derive(Debug, thiserror::Error)]
 pub enum ContractError {
-    #[error("{kind} contract validation failed")] 
+    #[error("{kind} contract validation failed")]
     Validation {
         kind: ContractKind,
         issues: Vec<ValidationIssue>,

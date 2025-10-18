@@ -29,8 +29,7 @@ use orchestration::orchestrate::orchestrate_task;
 use orchestration::caws_runtime::{WorkingSpec, TaskDescriptor, DiffStats};
 use council::{CouncilConfig, ConsensusCoordinator};
 use council::coordinator::NoopEmitter;
-use orchestration::provenance::{OrchestrationProvenanceEmitter, InMemoryBackend};
-use parking_lot::Mutex;
+use orchestration::provenance::OrchestrationProvenanceEmitter;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -42,12 +41,10 @@ async fn main() -> anyhow::Result<()> {
     let desc = TaskDescriptor { task_id: "T-123".into(), scope_in: vec!["src/".into()], risk_tier: 2, acceptance: None, metadata: None };
     let diff = DiffStats { files_changed: 1, lines_changed: 5, touched_paths: vec!["src/lib.rs".into()] };
 
-    let coord = ConsensusCoordinator::new(CouncilConfig::default());
+    let mut coord = ConsensusCoordinator::new(CouncilConfig::default());
     let council_emitter = NoopEmitter;
-    // Orchestration provenance (example in-memory backend; replace with provenance service client)
-    let orch_backend = InMemoryBackend(Mutex::new(Vec::new()));
-    let orch_emitter = OrchestrationProvenanceEmitter::new(std::sync::Arc::new(orch_backend));
-    let verdict = orchestrate_task(&spec, &desc, &diff, true, true, &coord, &writer, &council_emitter, &orch_emitter, None, None).await?;
+    let orch_emitter = OrchestrationProvenanceEmitter::default();
+    let verdict = orchestrate_task(&spec, &desc, &diff, true, true, &mut coord, &writer, &council_emitter, &orch_emitter, None, None).await?;
     println!("Final decision: {:?}", verdict.decision);
     Ok(())
 }

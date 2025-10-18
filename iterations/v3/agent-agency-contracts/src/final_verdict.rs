@@ -71,7 +71,10 @@ pub fn validate_final_verdict_value(value: &Value) -> Result<(), ContractError> 
                     message: error.to_string(),
                 })
                 .collect();
-            Err(ContractError::validation(ContractKind::FinalVerdict, issues))
+            Err(ContractError::validation(
+                ContractKind::FinalVerdict,
+                issues,
+            ))
         }
     }
 }

@@ -3,10 +3,10 @@
 
 use agent_agency_council::types::{ConsensusResult, FinalVerdict};
 use chrono::Utc;
-use std::collections::HashMap;
-use uuid::Uuid;
 use orchestration::db::Db;
 use orchestration::persistence_postgres::PostgresVerdictWriter;
+use std::collections::HashMap;
+use uuid::Uuid;
 
 #[tokio::test]
 async fn persist_verdict_if_db_is_available() {

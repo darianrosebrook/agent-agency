@@ -3,9 +3,7 @@ use council::{ConsensusCoordinator, CouncilConfig};
 use orchestration::caws_runtime::{DiffStats, TaskDescriptor, WorkingSpec};
 use orchestration::orchestrate::orchestrate_task;
 use orchestration::persistence::InMemoryWriter;
-use orchestration::provenance::{InMemoryBackend, OrchestrationProvenanceEmitter, ProvEvent};
-use parking_lot::Mutex;
-use std::sync::Arc;
+use orchestration::provenance::OrchestrationProvenanceEmitter;
 
 #[tokio::test]
 async fn provenance_events_emitted_on_short_circuit() {
@@ -28,12 +26,10 @@ async fn provenance_events_emitted_on_short_circuit() {
         lines_changed: 100,
         touched_paths: vec!["src/lib.rs".into()],
     };
-    let coord = ConsensusCoordinator::new(CouncilConfig::default());
+    let mut coord = ConsensusCoordinator::new(CouncilConfig::default());
     let writer = InMemoryWriter;
 
-    // Backend to capture orchestration provenance
-    let backend = Arc::new(InMemoryBackend(Mutex::new(Vec::new())));
-    let orch_emitter = OrchestrationProvenanceEmitter::new(backend.clone());
+    let orch_emitter = OrchestrationProvenanceEmitter::default();
 
     // Council emitter (noop for this test)
     let council_emitter = NoopEmitter;
@@ -45,7 +41,7 @@ async fn provenance_events_emitted_on_short_circuit() {
         &diff,
         /*tests_added*/ false,
         /*deterministic*/ false,
-        &coord,
+        &mut coord,
         &writer,
         &council_emitter,
         &orch_emitter,
@@ -56,24 +52,12 @@ async fn provenance_events_emitted_on_short_circuit() {
     .unwrap();
 
     // Assert orchestration lifecycle events present
-    let events = backend.0.lock().clone();
-    assert!(
-        events
-            .iter()
-            .any(|e| matches!(e, ProvEvent::OrchestrateEnter { .. })),
-        "missing OrchestrateEnter"
-    );
-    assert!(
-        events.iter().any(|e| matches!(
-            e,
-            ProvEvent::ValidationResult {
-                short_circuit: true,
-                ..
-            }
-        )),
-        "missing ValidationResult short_circuit"
-    );
-    assert!(events.iter().any(|e| matches!(e, ProvEvent::OrchestrateExit { outcome, .. } if outcome == "short_circuit")), "missing OrchestrateExit short_circuit");
+    let events = orch_emitter.events_for_task("T-SHORT").await;
+    assert!(events.iter().any(|e| e.event_type == "session_created"));
+    assert!(events.iter().any(|e| e.event_type == "validation_result"
+        && e.payload.get("passed") == Some(&serde_json::json!(true))));
+    assert!(events.iter().any(|e| e.event_type == "session_completed"
+        && e.payload.get("status") == Some(&serde_json::json!("completed"))));
 }
 
 #[tokio::test]
@@ -97,11 +81,10 @@ async fn provenance_events_emitted_on_normal_completion() {
         lines_changed: 0,
         touched_paths: vec!["src/lib.rs".into()],
     };
-    let coord = ConsensusCoordinator::new(CouncilConfig::default());
+    let mut coord = ConsensusCoordinator::new(CouncilConfig::default());
     let writer = InMemoryWriter;
 
-    let backend = Arc::new(InMemoryBackend(Mutex::new(Vec::new())));
-    let orch_emitter = OrchestrationProvenanceEmitter::new(backend.clone());
+    let orch_emitter = OrchestrationProvenanceEmitter::default();
     let council_emitter = NoopEmitter;
 
     let _ = orchestrate_task(
@@ -110,7 +93,7 @@ async fn provenance_events_emitted_on_normal_completion() {
         &diff,
         /*tests_added*/ true,
         /*deterministic*/ true,
-        &coord,
+        &mut coord,
         &writer,
         &council_emitter,
         &orch_emitter,
@@ -120,18 +103,7 @@ async fn provenance_events_emitted_on_normal_completion() {
     .await
     .unwrap();
 
-    let events = backend.0.lock().clone();
-    assert!(
-        events
-            .iter()
-            .any(|e| matches!(e, ProvEvent::OrchestrateEnter { .. })),
-        "missing OrchestrateEnter"
-    );
-    // No ValidationResult short_circuit expected
-    assert!(
-        events.iter().any(
-            |e| matches!(e, ProvEvent::OrchestrateExit { outcome, .. } if outcome == "completed")
-        ),
-        "missing OrchestrateExit completed"
-    );
+    let events = orch_emitter.events_for_task("T-NORMAL").await;
+    assert!(events.iter().any(|e| e.event_type == "session_created"));
+    assert!(events.iter().any(|e| e.event_type == "session_completed"));
 }

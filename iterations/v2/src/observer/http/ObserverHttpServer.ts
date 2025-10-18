@@ -165,7 +165,10 @@ export class ObserverHttpServer {
     }
 
     if (req.method === "GET" && url.pathname === "/observer/health") {
-      console.log("[HEALTH] Health endpoint called, healthMonitor:", !!this.healthMonitor);
+      console.log(
+        "[HEALTH] Health endpoint called, healthMonitor:",
+        !!this.healthMonitor
+      );
       if (this.healthMonitor) {
         const healthSummary = this.healthMonitor.getHealthSummary();
         const metrics = this.healthMonitor.getMetrics();

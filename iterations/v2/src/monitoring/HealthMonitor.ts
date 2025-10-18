@@ -311,7 +311,9 @@ export class HealthMonitor extends EventEmitter {
     // Calculate memory usage percentages
     const totalMemory = os.totalmem();
     const freeMemory = os.freemem();
-    const memoryUsagePercent = Math.round(((totalMemory - freeMemory) / totalMemory) * 100);
+    const memoryUsagePercent = Math.round(
+      ((totalMemory - freeMemory) / totalMemory) * 100
+    );
 
     // Calculate CPU usage (percentage)
     const cpus = os.cpus();
@@ -325,7 +327,7 @@ export class HealthMonitor extends EventEmitter {
     }
     const idle = totalIdle / cpus.length;
     const total = totalTick / cpus.length;
-    const cpuUsagePercent = Math.round(100 - ~~(100 * idle / total));
+    const cpuUsagePercent = Math.round(100 - ~~((100 * idle) / total));
 
     // Get database connection stats
     let dbConnections = { total: 0, idle: 0, waiting: 0 };
@@ -344,7 +346,10 @@ export class HealthMonitor extends EventEmitter {
 
     // Calculate error rate (simplified - would need actual error tracking)
     const recentErrors = this.alerts.size; // Simplified - actual implementation would track errors over time
-    const errorRate = recentErrors > 0 ? (recentErrors / Math.max(1, this.checkCount)) * 100 : 0;
+    const errorRate =
+      recentErrors > 0
+        ? (recentErrors / Math.max(1, this.checkCount)) * 100
+        : 0;
 
     // Calculate throughput (simplified - would need task completion tracking)
     const uptimeMinutes = (Date.now() - this.startTime) / 60000;

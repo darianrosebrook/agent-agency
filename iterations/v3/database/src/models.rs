@@ -83,6 +83,7 @@ pub struct CouncilVerdict {
     pub debate_rounds: i32,
     pub evaluation_time_ms: i32,
     pub created_at: DateTime<Utc>,
+    pub contract: serde_json::Value,
 }
 
 /// Judge evaluation model from database

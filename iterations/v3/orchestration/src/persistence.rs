@@ -1,8 +1,9 @@
 use agent_agency_council::types::{CawsWaiver, ConsensusResult};
 use anyhow::Result;
+use async_trait::async_trait;
 
 /// Placeholder trait for verdict persistence
-#[async_trait::async_trait]
+#[async_trait]
 pub trait VerdictWriter: Send + Sync {
     async fn persist_consensus(&self, consensus: &ConsensusResult) -> Result<()>;
     async fn persist_waivers(&self, task_id: &str, waivers: &[CawsWaiver]) -> Result<()>;
@@ -27,7 +28,7 @@ pub trait VerdictWriter: Send + Sync {
 ///    - Optimize database operation quality and reliability
 pub struct InMemoryWriter;
 
-#[async_trait::async_trait]
+#[async_trait]
 impl VerdictWriter for InMemoryWriter {
     async fn persist_consensus(&self, _consensus: &ConsensusResult) -> Result<()> {
         Ok(())

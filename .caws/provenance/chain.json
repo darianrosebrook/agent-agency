@@ -8634,5 +8634,41 @@
     },
     "previous_hash": "7526deca1a96e880ccedae9662f572f7ec12533b410a533b844eb74fb427e63f",
     "hash": "fbade370e3e92b76f9de174efcbbf016e7764ef14f2ece435ff20f1d9de9a5a3"
+  },
+  {
+    "id": "prov-1760769206532",
+    "timestamp": "2025-10-18T06:33:26.532Z",
+    "commit": {
+      "hash": "f1607cbc220cce9f8a7d952d633df8ff8913afbc",
+      "message": "Implement comprehensive performance integration tests",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T06:33:26.535Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "fbade370e3e92b76f9de174efcbbf016e7764ef14f2ece435ff20f1d9de9a5a3",
+    "hash": "2745d72bad4e1b4be8b56732915ab9cfc3d9e2570d9df73ca9db3bde80dbd72e"
   }
 ]

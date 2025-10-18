@@ -1115,7 +1115,10 @@ impl PatternDetector {
     }
 
     /// Analyze code quality patterns in TODO analysis results
-    async fn analyze_code_quality_patterns(&self, todo_analysis: &TodoAnalysisResult) -> Result<f32> {
+    async fn analyze_code_quality_patterns(
+        &self,
+        todo_analysis: &TodoAnalysisResult,
+    ) -> Result<f32> {
         let mut quality_score = 1.0;
 
         // Penalize based on TODO patterns indicating poor code quality
@@ -1144,7 +1147,10 @@ impl PatternDetector {
     }
 
     /// Analyze implementation completeness patterns
-    async fn analyze_implementation_patterns(&self, todo_analysis: &TodoAnalysisResult) -> Result<f32> {
+    async fn analyze_implementation_patterns(
+        &self,
+        todo_analysis: &TodoAnalysisResult,
+    ) -> Result<f32> {
         let mut completeness_score = 1.0;
 
         // Lower score for high TODO counts (indicates incomplete implementation)
@@ -1171,21 +1177,20 @@ impl PatternDetector {
 
         // Check for error handling patterns in output content
         let content = &output.content;
-        let has_error_handling = content.contains("Result<") ||
-                                content.contains("anyhow::Result") ||
-                                content.contains("try!") ||
-                                content.contains("catch") ||
-                                content.contains("recover");
+        let has_error_handling = content.contains("Result<")
+            || content.contains("anyhow::Result")
+            || content.contains("try!")
+            || content.contains("catch")
+            || content.contains("recover");
 
-        let has_logging = content.contains("tracing::") ||
-                         content.contains("log::") ||
-                         content.contains("info!") ||
-                         content.contains("warn!") ||
-                         content.contains("error!");
+        let has_logging = content.contains("tracing::")
+            || content.contains("log::")
+            || content.contains("info!")
+            || content.contains("warn!")
+            || content.contains("error!");
 
-        let has_retries = content.contains("retry") ||
-                         content.contains("backoff") ||
-                         content.contains("attempt");
+        let has_retries =
+            content.contains("retry") || content.contains("backoff") || content.contains("attempt");
 
         // Bonus for comprehensive error handling
         if has_error_handling {
@@ -1199,12 +1204,12 @@ impl PatternDetector {
         }
 
         // Penalize for TODO comments related to error handling
-        if content.contains("TODO") && (
-            content.contains("error") ||
-            content.contains("panic") ||
-            content.contains("unwrap") ||
-            content.contains("expect")
-        ) {
+        if content.contains("TODO")
+            && (content.contains("error")
+                || content.contains("panic")
+                || content.contains("unwrap")
+                || content.contains("expect"))
+        {
             resilience_score -= 0.1;
         }
 
@@ -1219,15 +1224,15 @@ impl PatternDetector {
 
         // Check for performance-related patterns
         let has_async = content.contains("async fn") || content.contains("await");
-        let has_concurrent = content.contains("tokio::") ||
-                           content.contains("futures::") ||
-                           content.contains("spawn") ||
-                           content.contains("parallel");
+        let has_concurrent = content.contains("tokio::")
+            || content.contains("futures::")
+            || content.contains("spawn")
+            || content.contains("parallel");
 
-        let has_optimization = content.contains("cache") ||
-                             content.contains("memo") ||
-                             content.contains("optimize") ||
-                             content.contains("efficient");
+        let has_optimization = content.contains("cache")
+            || content.contains("memo")
+            || content.contains("optimize")
+            || content.contains("efficient");
 
         // Bonus for performance-conscious code
         if has_async {
@@ -1241,12 +1246,12 @@ impl PatternDetector {
         }
 
         // Penalize for TODOs related to performance
-        if content.contains("TODO") && (
-            content.contains("perf") ||
-            content.contains("slow") ||
-            content.contains("optimize") ||
-            content.contains("cache")
-        ) {
+        if content.contains("TODO")
+            && (content.contains("perf")
+                || content.contains("slow")
+                || content.contains("optimize")
+                || content.contains("cache"))
+        {
             performance_score -= 0.15;
         }
 
@@ -1260,17 +1265,16 @@ impl PatternDetector {
         let content = &output.content;
 
         // Check for security-related patterns
-        let has_validation = content.contains("validate") ||
-                           content.contains("sanitize") ||
-                           content.contains("check");
+        let has_validation = content.contains("validate")
+            || content.contains("sanitize")
+            || content.contains("check");
 
-        let has_auth = content.contains("auth") ||
-                      content.contains("permission") ||
-                      content.contains("access");
+        let has_auth = content.contains("auth")
+            || content.contains("permission")
+            || content.contains("access");
 
-        let has_encryption = content.contains("encrypt") ||
-                           content.contains("hash") ||
-                           content.contains("secure");
+        let has_encryption =
+            content.contains("encrypt") || content.contains("hash") || content.contains("secure");
 
         // Bonus for security-conscious code
         if has_validation {
@@ -1284,12 +1288,12 @@ impl PatternDetector {
         }
 
         // Penalize for security-related TODOs or unsafe patterns
-        if content.contains("TODO") && (
-            content.contains("security") ||
-            content.contains("auth") ||
-            content.contains("encrypt") ||
-            content.contains("validate")
-        ) {
+        if content.contains("TODO")
+            && (content.contains("security")
+                || content.contains("auth")
+                || content.contains("encrypt")
+                || content.contains("validate"))
+        {
             security_score -= 0.2;
         }
 
@@ -1302,7 +1306,10 @@ impl PatternDetector {
     }
 
     /// Calculate confidence in pattern analysis based on data consistency
-    async fn calculate_pattern_confidence(&self, todo_analysis: &TodoAnalysisResult) -> Result<f32> {
+    async fn calculate_pattern_confidence(
+        &self,
+        todo_analysis: &TodoAnalysisResult,
+    ) -> Result<f32> {
         let mut confidence = 0.8; // Start with good confidence
 
         // Higher confidence with more data points

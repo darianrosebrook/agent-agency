@@ -9,11 +9,11 @@ use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
-struct ProvenanceEvent {
-    event_id: Uuid,
-    event_type: String,
-    payload: Value,
-    timestamp: chrono::DateTime<chrono::Utc>,
+pub struct ProvenanceEvent {
+    pub event_id: Uuid,
+    pub event_type: String,
+    pub payload: Value,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
 /// Minimal in-memory provenance emitter used by the orchestrator.
@@ -32,9 +32,7 @@ impl OrchestrationProvenanceEmitter {
             anyhow::bail!("event type cannot be empty");
         }
         let mut guard = self.events.write().await;
-        let entry = guard
-            .entry(task_id.to_string())
-            .or_insert_with(Vec::new);
+        let entry = guard.entry(task_id.to_string()).or_insert_with(Vec::new);
         entry.push(ProvenanceEvent {
             event_id: Uuid::new_v4(),
             event_type: event_type.to_string(),
@@ -54,10 +52,16 @@ impl OrchestrationProvenanceEmitter {
         deterministic: bool,
     ) -> Result<()> {
         if task_id.trim().is_empty() {
-            warn!(target = "provenance", "attempted to start orchestration with empty task id");
+            warn!(
+                target = "provenance",
+                "attempted to start orchestration with empty task id"
+            );
             return Ok(());
         }
-        debug!(target = "provenance", task_id, "starting orchestration session");
+        debug!(
+            target = "provenance",
+            task_id, "starting orchestration session"
+        );
         self.emit_event(
             task_id,
             "session_created",
@@ -79,7 +83,10 @@ impl OrchestrationProvenanceEmitter {
     }
 
     pub async fn orchestrate_exit(&self, task_id: &str, status: &str) -> Result<()> {
-        info!(target = "provenance", task_id, status, "orchestration completed");
+        info!(
+            target = "provenance",
+            task_id, status, "orchestration completed"
+        );
         self.emit_event(
             task_id,
             "session_completed",

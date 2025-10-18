@@ -4,6 +4,7 @@ use agent_agency_contracts::{
 };
 use agent_agency_council::types::{CawsWaiver, ConsensusResult, FinalVerdict, JudgeVerdict};
 use anyhow::{Context, Result};
+use async_trait::async_trait;
 use sqlx::{types::Json, PgPool};
 use tracing::{debug, info, warn};
 use uuid::Uuid;
@@ -19,11 +20,9 @@ impl PostgresVerdictWriter {
 
     fn build_contract(consensus: &ConsensusResult) -> Result<FinalVerdictContract, ContractError> {
         let (decision, dissent, remediation) = match &consensus.final_verdict {
-            FinalVerdict::Accepted { summary, .. } => (
-                FinalDecision::Accept,
-                summary.clone(),
-                Vec::<String>::new(),
-            ),
+            FinalVerdict::Accepted { summary, .. } => {
+                (FinalDecision::Accept, summary.clone(), Vec::<String>::new())
+            }
             FinalVerdict::Rejected {
                 primary_reasons,
                 summary,
@@ -43,11 +42,9 @@ impl PostgresVerdictWriter {
                     .map(|change| change.description.clone())
                     .collect(),
             ),
-            FinalVerdict::NeedsInvestigation { questions, summary } => (
-                FinalDecision::Modify,
-                summary.clone(),
-                questions.clone(),
-            ),
+            FinalVerdict::NeedsInvestigation { questions, summary } => {
+                (FinalDecision::Modify, summary.clone(), questions.clone())
+            }
         };
 
         let votes: Vec<VoteEntry> = consensus
@@ -95,7 +92,7 @@ impl PostgresVerdictWriter {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 impl VerdictWriter for PostgresVerdictWriter {
     #[tracing::instrument(skip_all, fields(task_id = %consensus.task_id))]
     async fn persist_consensus(&self, consensus: &ConsensusResult) -> Result<()> {
