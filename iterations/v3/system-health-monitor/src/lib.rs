@@ -315,9 +315,9 @@ impl SystemHealthMonitor {
             })
             .collect();
 
-        // Alerts by severity (simplified)
+        // Alerts by severity - implement proper alert aggregation
         let alerts = self.alerts.read();
-        let alerts_by_severity = HashMap::new(); // TODO: Implement proper alert aggregation
+        let alerts_by_severity = self.aggregate_alerts_by_severity(&alerts);
 
         Ok(HistoricalMetricsSummary {
             hours_covered: hours_back,
@@ -660,6 +660,103 @@ impl SystemHealthMonitor {
 
         Ok(())
     }
+
+    /// Aggregate alerts by severity level
+    fn aggregate_alerts_by_severity(&self, alerts: &[SystemAlert]) -> HashMap<String, u32> {
+        let mut severity_counts = HashMap::new();
+        
+        for alert in alerts {
+            let severity = match alert.severity {
+                AlertSeverity::Critical => "critical",
+                AlertSeverity::High => "high",
+                AlertSeverity::Medium => "medium",
+                AlertSeverity::Low => "low",
+                AlertSeverity::Info => "info",
+            };
+            
+            *severity_counts.entry(severity.to_string()).or_insert(0) += 1;
+        }
+        
+        // Ensure all severity levels are represented
+        for severity in &["critical", "high", "medium", "low", "info"] {
+            severity_counts.entry(severity.to_string()).or_insert(0);
+        }
+        
+        severity_counts
+    }
+
+    /// Get alert statistics and trends
+    pub fn get_alert_statistics(&self) -> AlertStatistics {
+        let alerts = self.alerts.read();
+        let total_alerts = alerts.len();
+        
+        let severity_counts = self.aggregate_alerts_by_severity(&alerts);
+        
+        // Calculate alert trends
+        let recent_alerts = alerts.iter()
+            .filter(|alert| {
+                let now = std::time::SystemTime::now();
+                let duration = now.duration_since(alert.timestamp)
+                    .unwrap_or_default();
+                duration.as_secs() < 3600 // Last hour
+            })
+            .count();
+        
+        let critical_alerts = severity_counts.get("critical").copied().unwrap_or(0);
+        let high_alerts = severity_counts.get("high").copied().unwrap_or(0);
+        
+        AlertStatistics {
+            total_alerts,
+            critical_alerts,
+            high_alerts,
+            recent_alerts,
+            severity_distribution: severity_counts,
+            alert_trend: if recent_alerts > total_alerts / 2 {
+                AlertTrend::Increasing
+            } else if recent_alerts < total_alerts / 4 {
+                AlertTrend::Decreasing
+            } else {
+                AlertTrend::Stable
+            },
+        }
+    }
+
+    /// Generate alert summary for dashboard
+    pub fn generate_alert_summary(&self) -> AlertSummary {
+        let stats = self.get_alert_statistics();
+        let alerts = self.alerts.read();
+        
+        // Get most recent critical alerts
+        let critical_alerts: Vec<_> = alerts.iter()
+            .filter(|alert| alert.severity == AlertSeverity::Critical)
+            .take(5)
+            .map(|alert| AlertSummaryItem {
+                id: alert.id.clone(),
+                message: alert.message.clone(),
+                timestamp: alert.timestamp,
+                component: alert.component.clone(),
+            })
+            .collect();
+        
+        // Get most recent high priority alerts
+        let high_alerts: Vec<_> = alerts.iter()
+            .filter(|alert| alert.severity == AlertSeverity::High)
+            .take(5)
+            .map(|alert| AlertSummaryItem {
+                id: alert.id.clone(),
+                message: alert.message.clone(),
+                timestamp: alert.timestamp,
+                component: alert.component.clone(),
+            })
+            .collect();
+        
+        AlertSummary {
+            statistics: stats,
+            critical_alerts,
+            high_alerts,
+            last_updated: std::time::SystemTime::now(),
+        }
+    }
 }
 
 /// Metrics collector for system monitoring
@@ -706,4 +803,41 @@ impl MetricsCollector {
             timestamp: Utc::now(),
         })
     }
+}
+
+/// Alert statistics and trends
+#[derive(Debug, Clone)]
+pub struct AlertStatistics {
+    pub total_alerts: usize,
+    pub critical_alerts: u32,
+    pub high_alerts: u32,
+    pub recent_alerts: usize,
+    pub severity_distribution: HashMap<String, u32>,
+    pub alert_trend: AlertTrend,
+}
+
+/// Alert trend indicators
+#[derive(Debug, Clone, PartialEq)]
+pub enum AlertTrend {
+    Increasing,
+    Decreasing,
+    Stable,
+}
+
+/// Alert summary for dashboard display
+#[derive(Debug, Clone)]
+pub struct AlertSummary {
+    pub statistics: AlertStatistics,
+    pub critical_alerts: Vec<AlertSummaryItem>,
+    pub high_alerts: Vec<AlertSummaryItem>,
+    pub last_updated: SystemTime,
+}
+
+/// Individual alert summary item
+#[derive(Debug, Clone)]
+pub struct AlertSummaryItem {
+    pub id: String,
+    pub message: String,
+    pub timestamp: SystemTime,
+    pub component: String,
 }
