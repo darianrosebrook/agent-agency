@@ -1,6 +1,7 @@
 use crate::decomposition::DecompositionStage;
 use crate::disambiguation::DisambiguationStage;
-use crate::multi_modal_verification::{MultiModalVerificationEngine, VerifiedClaim};
+use crate::multi_modal_verification::MultiModalVerificationEngine;
+use crate::types::VerifiedClaim;
 use crate::qualification::QualificationStage;
 use crate::types::*;
 use crate::verification::VerificationStage;

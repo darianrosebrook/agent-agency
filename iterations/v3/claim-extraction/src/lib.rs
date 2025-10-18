@@ -25,7 +25,7 @@ mod tests;
 mod multi_modal_verification_tests;
 
 pub use multi_modal_verification::{
-    MultiModalVerificationEngine, VerificationResults, VerifiedClaim,
+    MultiModalVerificationEngine,
 };
 pub use processor::ClaimExtractionProcessor;
 pub use types::*;
