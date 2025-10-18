@@ -1679,28 +1679,34 @@ export class ArbiterOrchestrator {
    * @param task The task requiring debate participants
    * @returns Array of debate participants with assigned roles
    */
-  async selectDebateParticipants(task: { id: string }): Promise<Array<{
-    agentId: string;
-    role: "ANALYST" | "CRITIC" | "SYNTHESIZER";
-  }>> {
+  async selectDebateParticipants(task: { id: string }): Promise<
+    Array<{
+      agentId: string;
+      role: "ANALYST" | "CRITIC" | "SYNTHESIZER";
+    }>
+  > {
     try {
       // Try to get real agents from registry
       if (this.components.agentRegistry?.getAvailableAgents) {
-        const availableAgents = await this.components.agentRegistry.getAvailableAgents();
-        
+        const availableAgents =
+          await this.components.agentRegistry.getAvailableAgents();
+
         if (availableAgents && availableAgents.length >= 3) {
           // Select top 3 agents based on performance scores
           const selectedAgents = availableAgents
             .slice(0, 3)
             .map((agent: any, index: number) => ({
               agentId: agent.id || agent.agentId,
-              role: ["ANALYST", "CRITIC", "SYNTHESIZER"][index] as "ANALYST" | "CRITIC" | "SYNTHESIZER",
+              role: ["ANALYST", "CRITIC", "SYNTHESIZER"][index] as
+                | "ANALYST"
+                | "CRITIC"
+                | "SYNTHESIZER",
             }));
-          
+
           return selectedAgents;
         }
       }
-      
+
       // Fallback to generated participants if registry is empty or unavailable
       return this.generateFallbackParticipants(task);
     } catch (error) {
@@ -1721,7 +1727,7 @@ export class ArbiterOrchestrator {
   }> {
     const timestamp = Date.now();
     const taskId = task.id || "unknown-task";
-    
+
     return [
       {
         agentId: `agent-analyzer-${taskId}-${timestamp}`,
@@ -1754,17 +1760,19 @@ export class ArbiterOrchestrator {
     try {
       // Capability matching score (70% weight)
       const agentCapabilities = agent.capabilities || [];
-      const matchingCapabilities = requiredCapabilities.filter(cap =>
+      const matchingCapabilities = requiredCapabilities.filter((cap) =>
         agentCapabilities.includes(cap)
       );
-      const capabilityScore = matchingCapabilities.length / requiredCapabilities.length;
+      const capabilityScore =
+        matchingCapabilities.length / requiredCapabilities.length;
 
       // Performance score (30% weight)
-      const performanceScore = agent.performanceHistory?.averageSuccessRate || 0.5;
+      const performanceScore =
+        agent.performanceHistory?.averageSuccessRate || 0.5;
 
       // Weighted combination
       const finalScore = capabilityScore * 0.7 + performanceScore * 0.3;
-      
+
       return Math.min(Math.max(finalScore, 0), 1); // Clamp between 0 and 1
     } catch (error) {
       console.error("Failed to calculate agent score:", error);

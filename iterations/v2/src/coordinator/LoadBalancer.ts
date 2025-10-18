@@ -122,7 +122,7 @@ export class LoadBalancer extends EventEmitter {
       });
       return;
     }
-    
+
     const healthyComponents = allComponents.filter(
       (component: ComponentRegistration) => {
         const health = this.coordinator.getComponentHealth(component.id);
