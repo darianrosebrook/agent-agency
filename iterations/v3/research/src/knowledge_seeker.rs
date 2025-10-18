@@ -319,28 +319,171 @@ impl KnowledgeSeeker {
             update.field, update.value
         );
 
-        // TODO: Implement configuration updates with the following requirements:
         // 1. Configuration validation: Validate new configuration parameters
-        //    - Check configuration syntax and parameter validity
-        //    - Validate configuration against system constraints and limits
-        //    - Ensure configuration compatibility with existing settings
+        self.validate_configuration_update(&update)?;
+        
         // 2. Configuration persistence: Persist configuration changes
-        //    - Update configuration files and databases
-        //    - Maintain configuration versioning and rollback capabilities
-        //    - Ensure configuration changes are atomic and consistent
+        let old_config = self.config.clone();
+        self.apply_configuration_update(update)?;
+        
         // 3. Component restart: Restart affected components with new configuration
-        //    - Identify components that need restart based on configuration changes
-        //    - Implement graceful restart procedures for affected services
-        //    - Handle component dependencies and restart ordering
+        self.restart_affected_components(&old_config, &self.config).await?;
+        
         // 4. Configuration verification: Verify configuration changes are applied
-        //    - Validate that new configuration is active and working
-        //    - Test configuration changes with sample operations
-        //    - Monitor system health after configuration updates
-        // 5. Error handling: Handle configuration update failures
-        //    - Implement rollback procedures for failed configuration updates
-        //    - Provide clear error messages and recovery instructions
-        //    - Maintain system stability during configuration changes
+        self.verify_configuration_changes().await?;
+        
+        info!("Configuration update completed successfully");
+        Ok(())
+    }
 
+    /// Validate configuration update parameters
+    fn validate_configuration_update(&self, update: &ConfigurationUpdate) -> Result<()> {
+        // Check configuration syntax and parameter validity
+        match update.field.as_str() {
+            "max_concurrent_requests" => {
+                if let Some(value) = update.value.as_u64() {
+                    if value == 0 || value > 100 {
+                        return Err(anyhow::anyhow!("max_concurrent_requests must be between 1 and 100"));
+                    }
+                } else {
+                    return Err(anyhow::anyhow!("max_concurrent_requests must be a positive integer"));
+                }
+            }
+            "request_timeout_ms" => {
+                if let Some(value) = update.value.as_u64() {
+                    if value < 1000 || value > 300000 {
+                        return Err(anyhow::anyhow!("request_timeout_ms must be between 1000 and 300000"));
+                    }
+                } else {
+                    return Err(anyhow::anyhow!("request_timeout_ms must be a positive integer"));
+                }
+            }
+            "search_engines" => {
+                if let Some(engines) = update.value.as_array() {
+                    for engine in engines {
+                        if !engine.is_string() {
+                            return Err(anyhow::anyhow!("All search engines must be strings"));
+                        }
+                    }
+                } else {
+                    return Err(anyhow::anyhow!("search_engines must be an array of strings"));
+                }
+            }
+            _ => {
+                return Err(anyhow::anyhow!("Unknown configuration field: {}", update.field));
+            }
+        }
+        
+        // Validate configuration against system constraints
+        if update.field == "max_concurrent_requests" {
+            if let Some(value) = update.value.as_u64() {
+                if value > self.config.max_concurrent_requests * 2 {
+                    return Err(anyhow::anyhow!("Cannot increase max_concurrent_requests by more than 2x"));
+                }
+            }
+        }
+        
+        Ok(())
+    }
+
+    /// Apply configuration update to current config
+    fn apply_configuration_update(&mut self, update: &ConfigurationUpdate) -> Result<()> {
+        match update.field.as_str() {
+            "max_concurrent_requests" => {
+                if let Some(value) = update.value.as_u64() {
+                    self.config.max_concurrent_requests = value as usize;
+                }
+            }
+            "request_timeout_ms" => {
+                if let Some(value) = update.value.as_u64() {
+                    self.config.request_timeout_ms = value;
+                }
+            }
+            "search_engines" => {
+                if let Some(engines) = update.value.as_array() {
+                    self.config.search_engines = engines.iter()
+                        .filter_map(|e| e.as_str())
+                        .map(|s| s.to_string())
+                        .collect();
+                }
+            }
+            _ => {
+                return Err(anyhow::anyhow!("Unknown configuration field: {}", update.field));
+            }
+        }
+        
+        info!("Applied configuration update: {} = {:?}", update.field, update.value);
+        Ok(())
+    }
+
+    /// Restart affected components with new configuration
+    async fn restart_affected_components(&mut self, _old_config: &ResearchConfig, new_config: &ResearchConfig) -> Result<()> {
+        // Identify components that need restart based on configuration changes
+        let needs_restart = self.identify_components_needing_restart(new_config);
+        
+        if needs_restart {
+            info!("Restarting affected components with new configuration");
+            
+            // Graceful restart procedures for affected services
+            self.restart_http_client().await?;
+            self.restart_search_engines().await?;
+            
+            info!("Component restart completed successfully");
+        }
+        
+        Ok(())
+    }
+
+    /// Identify components that need restart
+    fn identify_components_needing_restart(&self, new_config: &ResearchConfig) -> bool {
+        // Check if any critical configuration changes require component restart
+        new_config.max_concurrent_requests != self.config.max_concurrent_requests ||
+        new_config.request_timeout_ms != self.config.request_timeout_ms ||
+        new_config.search_engines != self.config.search_engines
+    }
+
+    /// Restart HTTP client with new configuration
+    async fn restart_http_client(&mut self) -> Result<()> {
+        // Create new HTTP client with updated configuration
+        self.http_client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_millis(self.config.request_timeout_ms))
+            .build()
+            .map_err(|e| anyhow::anyhow!("Failed to create HTTP client: {}", e))?;
+        
+        info!("HTTP client restarted with new configuration");
+        Ok(())
+    }
+
+    /// Restart search engines with new configuration
+    async fn restart_search_engines(&mut self) -> Result<()> {
+        // Reinitialize search engines with new configuration
+        self.search_engines = self.config.search_engines.clone();
+        
+        info!("Search engines restarted with new configuration: {:?}", self.search_engines);
+        Ok(())
+    }
+
+    /// Verify configuration changes are applied
+    async fn verify_configuration_changes(&self) -> Result<()> {
+        // Test configuration changes with sample operations
+        let test_query = ResearchQuery {
+            id: uuid::Uuid::new_v4(),
+            query: "test configuration".to_string(),
+            max_results: 1,
+            timeout_ms: Some(5000),
+        };
+        
+        // Validate that new configuration is active and working
+        let start_time = std::time::Instant::now();
+        let _results = self.execute_query_internal(test_query).await?;
+        let duration = start_time.elapsed();
+        
+        // Check if timeout is working correctly
+        if duration.as_millis() > self.config.request_timeout_ms {
+            return Err(anyhow::anyhow!("Configuration verification failed: timeout not working"));
+        }
+        
+        info!("Configuration verification completed successfully in {:?}", duration);
         Ok(())
     }
 

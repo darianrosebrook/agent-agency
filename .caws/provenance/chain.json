@@ -7986,5 +7986,41 @@
     },
     "previous_hash": "3c43c664d5786f8ee136b18f5b2983d128b9085efcad10761cb11a57c87d5f4a",
     "hash": "3a33f13c65bdcc2e7aa7ca869e29ec5f75700fd0252b3663d276600284d7db1b"
+  },
+  {
+    "id": "prov-1760767128502",
+    "timestamp": "2025-10-18T05:58:48.502Z",
+    "commit": {
+      "hash": "6455c7ec943dc7ac86e4cc6729e8263e54830226",
+      "message": "Fix missing match arms in intelligent edge case testing",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T05:58:48.503Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "3a33f13c65bdcc2e7aa7ca869e29ec5f75700fd0252b3663d276600284d7db1b",
+    "hash": "cbd3dafecb268d3619b9b5a25d7dc26019be5095cb5e986c1c9f21482de9c46d"
   }
 ]

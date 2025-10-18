@@ -350,23 +350,48 @@ impl MemoryStorage {
     async fn compress_large_states(&self) -> Result<(), WorkspaceError> {
         let mut to_compress = Vec::new();
         
-        // TODO: Implement database cleanup
-        let states: Vec<()> = vec![]; // Placeholder
+        // Get all states from memory storage
+        let states = self.states.read().unwrap();
         for (id, state) in states.iter() {
-            if state.total_size > 10 * 1024 * 1024 { // 10MB threshold
+            // Calculate total size of the state
+            let total_size: u64 = state.files.values()
+                .map(|file| file.content.len() as u64)
+                .sum();
+            
+            // Check if state exceeds 10MB threshold
+            if total_size > 10 * 1024 * 1024 {
                 to_compress.push(id.clone());
             }
         }
+        drop(states); // Release the read lock
         
+        // Compress large states
         for id in to_compress {
-            if false {
-                // In a real implementation, this would compress the data
-                // For now, we'll just mark it as compressed
-                debug!("Compressed large state: {}", id);
+            if let Some(state) = self.states.write().unwrap().get_mut(&id) {
+                // Compress file contents
+                for file in state.files.values_mut() {
+                    if !file.content.is_empty() {
+                        let compressed = self.compress_data(&file.content)?;
+                        file.content = compressed;
+                        file.compressed = true;
+                    }
+                }
+                debug!("Compressed large state: {} ({} files)", id, state.files.len());
             }
         }
         
         Ok(())
+    }
+    
+    /// Compress data using gzip compression
+    fn compress_data(&self, data: &[u8]) -> Result<Vec<u8>, WorkspaceError> {
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(data).map_err(|e| {
+            WorkspaceError::Storage(format!("Failed to compress data: {}", e))
+        })?;
+        encoder.finish().map_err(|e| {
+            WorkspaceError::Storage(format!("Failed to finish compression: {}", e))
+        })
     }
 
     /// Update storage metrics

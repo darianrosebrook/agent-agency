@@ -2177,6 +2177,10 @@ impl TestOptimizer {
             TestType::EdgeCase => 1.0,
             TestType::Integration => 0.8,
             TestType::Unit => 0.6,
+            TestType::Boundary => 0.9,
+            TestType::Equivalence => 0.7,
+            TestType::Stress => 0.8,
+            TestType::Performance => 0.9,
         };
         score += test_type_weight * 0.2;
 
@@ -2234,6 +2238,10 @@ impl TestOptimizer {
             TestType::EdgeCase => 1.0,
             TestType::Integration => 0.8,
             TestType::Unit => 0.6,
+            TestType::Boundary => 0.9,
+            TestType::Equivalence => 0.7,
+            TestType::Stress => 0.8,
+            TestType::Performance => 0.9,
         };
         value += test_type_value * 0.2;
 
