@@ -111,7 +111,7 @@ impl ClaimExtractionProcessor {
         Ok(ClaimExtractionResult {
             original_sentence: input.to_string(),
             disambiguated_sentence: disambiguation_result.disambiguated_sentence,
-            atomic_claims: atomic_claims,
+            atomic_claims,
             verification_evidence: all_evidence,
             processing_metadata: ProcessingMetadata {
                 processing_time_ms: processing_time,

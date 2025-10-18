@@ -3,14 +3,12 @@
 //! Provides comprehensive health checking, performance monitoring,
 //! and diagnostic capabilities for production database operations.
 
-use crate::{DatabaseClient, DatabaseConfig};
-use anyhow::{Context, Result};
+use crate::DatabaseClient;
+use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, Row};
-use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, warn};
 
 /// Database health checker
 pub struct DatabaseHealthChecker {

@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: verify verify-tier1 verify-tier2 verify-tier3 test-coverage coverage-report schema-validate clean mutants-mcp mutants-mcp-list mutants-mcp-files test-contract test-e2e gates
+.PHONY: verify verify-tier1 verify-tier2 verify-tier3 test-coverage coverage-report schema-validate clean mutants-mcp mutants-mcp-list mutants-mcp-files test-contract test-e2e gates install-hooks
 
 # Default verification (Tier 2)
 verify: test-coverage schema-validate gates
@@ -61,6 +61,10 @@ contract-tests:
 e2e-tests:
 	@echo "Running end-to-end tests..."
 	@cargo test --workspace e2e --all-features 2>/dev/null || echo "E2E tests not yet implemented"
+
+install-hooks:
+	@echo "Installing CAWS git hooks..."
+	@../../scripts/install-git-hooks.sh
 
 clean:
 	cargo clean

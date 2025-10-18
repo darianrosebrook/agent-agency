@@ -8,7 +8,7 @@ use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
 /// Main workspace state manager
 pub struct WorkspaceStateManager {
@@ -146,7 +146,7 @@ impl WorkspaceStateManager {
         to_state: StateId,
     ) -> Result<WorkspaceResult<WorkspaceDiff>, WorkspaceError> {
         let start_time = Instant::now();
-        let mut warnings = Vec::new();
+        let warnings = Vec::new();
 
         debug!(
             "Computing diff between states {:?} and {:?}",
@@ -308,7 +308,6 @@ impl WorkspaceStateManager {
         ),
         WorkspaceError,
     > {
-        use std::fs;
         use walkdir::WalkDir;
 
         let mut files = HashMap::new();
@@ -358,7 +357,7 @@ impl WorkspaceStateManager {
         let mut directories = HashMap::new();
 
         // Get all tracked files from git
-        let mut index = repo.index()?;
+        let index = repo.index()?;
         for entry in index.iter() {
             let path = PathBuf::from(std::str::from_utf8(&entry.path).map_err(|e| {
                 WorkspaceError::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, e))
@@ -439,7 +438,7 @@ impl WorkspaceStateManager {
         WorkspaceError,
     > {
         // Start with git-based approach for tracked files
-        let (mut files, mut directories) = self.capture_git_based().await?;
+        let (mut files, directories) = self.capture_git_based().await?;
 
         // Add untracked files using filesystem scan
         use walkdir::WalkDir;
@@ -584,7 +583,7 @@ impl WorkspaceStateManager {
             .map_err(|e| WorkspaceError::Configuration(format!("Failed to strip prefix: {}", e)))?;
 
         // Check if file is tracked
-        let mut index = repo.index()?;
+        let index = repo.index()?;
         let is_tracked = index.get_path(relative_path, 0).is_some();
 
         if is_tracked {

@@ -3,7 +3,7 @@
 use anyhow::Result;
 use tracing::{debug, info};
 
-use crate::fixtures::{TestDataGenerator, TestFixtures};
+use crate::fixtures::TestFixtures;
 use crate::mocks::{MockDatabase, MockEventEmitter, MockFactory, MockMetricsCollector};
 use crate::test_utils::{TestExecutor, TestResult, DEFAULT_TEST_TIMEOUT};
 

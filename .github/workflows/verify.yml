@@ -11,6 +11,71 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
+  pre-commit-check:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Get changed files
+      id: changed-files
+      run: |
+        # Get files changed in this PR
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | tr '\n' ' ')
+        else
+          CHANGED_FILES=$(git diff --name-only HEAD~1 | tr '\n' ' ')
+        fi
+        echo "changed_files=$CHANGED_FILES" >> $GITHUB_OUTPUT
+
+    - name: Check for hidden TODOs in changed files
+      run: |
+        if [ -n "${{ steps.changed-files.outputs.changed_files }}" ]; then
+          echo "Checking files: ${{ steps.changed-files.outputs.changed_files }}"
+          cd iterations/v3
+          python3 scripts/todo_analyzer.py --files ${{ steps.changed-files.outputs.changed_files }} --warn-only --verbose
+        else
+          echo "No files changed in this commit"
+        fi
+
+  push-block-check:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip-todo-check]')
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Get changed files in push
+      id: push-changed-files
+      run: |
+        CHANGED_FILES=$(git diff --name-only HEAD~1 | tr '\n' ' ')
+        echo "changed_files=$CHANGED_FILES" >> $GITHUB_OUTPUT
+
+    - name: Block push if hidden TODOs found
+      run: |
+        if [ -n "${{ steps.push-changed-files.outputs.changed_files }}" ]; then
+          echo "Blocking push - checking files: ${{ steps.push-changed-files.outputs.changed_files }}"
+          cd iterations/v3
+          python3 scripts/todo_analyzer.py --files ${{ steps.push-changed-files.outputs.changed_files }} --ci-mode --verbose
+        else
+          echo "No files changed in this push"
+        fi
+
   verify:
     runs-on: ubuntu-latest
     strategy:

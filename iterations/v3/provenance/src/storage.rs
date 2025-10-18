@@ -688,6 +688,7 @@ impl super::service::ProvenanceStorage for InMemoryProvenanceStorage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::service::ProvenanceStorage;
     use crate::types::*;
     use std::collections::HashMap;
 
@@ -698,7 +699,7 @@ mod tests {
         let record = create_test_provenance_record();
         storage.store_record(&record).await.unwrap();
 
-        let retrieved = storage.get_record(record.id).await.unwrap();
+        let retrieved = storage.get_record(&record.id.to_string()).await.unwrap();
         assert!(retrieved.is_some());
 
         let query = ProvenanceQuery {

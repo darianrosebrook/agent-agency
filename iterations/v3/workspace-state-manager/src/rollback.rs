@@ -8,7 +8,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tracing::{debug, error, info, warn};
+use tracing::info;
 
 /// Rollback operation result
 #[derive(Debug, Clone, Serialize, Deserialize)]

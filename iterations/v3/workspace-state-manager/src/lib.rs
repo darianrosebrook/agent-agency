@@ -13,8 +13,6 @@ pub use rollback::{RollbackManager, RollbackResult, ViewMetadata, WorkspaceViewM
 pub use storage::{DatabaseStorage, FileStorage, MemoryStorage};
 pub use types::*;
 
-use std::sync::Arc;
-
 /// Create a new workspace state manager with file-based storage
 pub fn create_file_manager(
     workspace_root: impl AsRef<std::path::Path>,
@@ -47,6 +45,7 @@ pub fn create_database_manager(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
     use tempfile::TempDir;
 
     #[tokio::test]

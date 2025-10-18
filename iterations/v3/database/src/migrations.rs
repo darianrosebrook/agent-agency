@@ -3,16 +3,14 @@
 //! Handles database schema migrations with rollback capabilities,
 //! migration tracking, and production-safe deployment strategies.
 
-use crate::{DatabaseClient, DatabaseConfig};
+use crate::DatabaseClient;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tokio::fs;
-use tracing::{debug, error, info, warn};
-use uuid::Uuid;
+use tracing::{error, info, warn};
 
 /// Migration manager for handling schema changes
 pub struct MigrationManager {
@@ -355,10 +353,10 @@ impl MigrationManager {
             .execute_parameterized_query(
                 &query,
                 vec![
-                    migration.id.to_string(),
-                    migration.name.clone(),
-                    checksum.to_string(),
-                    success.to_string(),
+                    serde_json::Value::String(migration.id.to_string()),
+                    serde_json::Value::String(migration.name.clone()),
+                    serde_json::Value::String(checksum.to_string()),
+                    serde_json::Value::String(success.to_string()),
                 ],
             )
             .await?;
@@ -374,7 +372,10 @@ impl MigrationManager {
         );
 
         self.client
-            .execute_parameterized_query(&query, vec![migration_id.to_string()])
+            .execute_parameterized_query(
+                &query,
+                vec![serde_json::Value::String(migration_id.to_string())],
+            )
             .await?;
 
         Ok(())

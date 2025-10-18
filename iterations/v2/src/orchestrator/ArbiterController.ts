@@ -20,6 +20,7 @@ import { PerformanceTracker } from "../rl/PerformanceTracker.js";
 import { TaskPriority } from "../types/task-runner.js";
 import { WorkspaceStateManager } from "../workspace/WorkspaceStateManager.js";
 import { AgentRegistryManager } from "./AgentRegistryManager.js";
+import { AgentRegistry } from "../types/agent-registry.js";
 import { ArbiterOrchestrator } from "./ArbiterOrchestrator.js";
 import { TaskOrchestrator } from "./TaskOrchestrator.js";
 import {
@@ -644,6 +645,13 @@ export class ArbiterController {
       uptimeMs,
       lastHealthCheck,
     };
+  }
+
+  /**
+   * Get the agent registry for sharing with other components
+   */
+  getAgentRegistry(): AgentRegistry {
+    return this.agentRegistry;
   }
 
   /**

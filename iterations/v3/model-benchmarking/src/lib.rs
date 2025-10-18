@@ -24,7 +24,7 @@ pub mod v3_superiority_benchmark;
 #[cfg(test)]
 mod tests;
 
-use tracing::{debug, error, info, warn};
+use tracing::info;
 
 pub use benchmark_runner::BenchmarkRunner;
 pub use model_evaluator::ModelEvaluator;

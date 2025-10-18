@@ -356,7 +356,7 @@ impl<S: DeviceSensors, R: ModelRegistry> SimplePlanner<S, R> {
 
     fn choose_precision(&self, req: &AllocationRequest, device: DeviceKind) -> Precision {
         // favor lower precision for throughput if supported; higher for quality if judge
-        let mut prefs = match req.workload_hint {
+        let prefs = match req.workload_hint {
             WorkloadHint::WorkerThroughput => [
                 Precision::Int4,
                 Precision::Int8,

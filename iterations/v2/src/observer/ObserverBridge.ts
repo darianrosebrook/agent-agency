@@ -24,7 +24,7 @@ export class ObserverBridge {
   private readonly config: ObserverConfig;
   private readonly runtime: ArbiterRuntime | null;
   private readonly store: ObserverStoreImpl;
-  private readonly server: ObserverHttpServer;
+  public readonly server: ObserverHttpServer;
   private readonly handler: (_event: BaseEvent) => void;
   private readonly registeredTypes: string[] = [];
   private metricsTimer?: ReturnType<typeof setTimeout>;

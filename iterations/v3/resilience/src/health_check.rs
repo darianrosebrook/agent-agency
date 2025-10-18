@@ -9,10 +9,10 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
 use tokio::time::{interval, sleep};
-use tracing::{debug, error, info, warn};
+use tracing::error;
 
 /// Health check status
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

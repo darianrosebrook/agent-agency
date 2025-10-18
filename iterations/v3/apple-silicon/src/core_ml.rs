@@ -3,11 +3,11 @@
 //! Manages Core ML models for Apple Silicon optimization and inference.
 
 use crate::types::*;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, error, info, warn};
+use tracing::info;
 
 /// Core ML model manager
 #[derive(Debug)]

@@ -12,7 +12,6 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use chrono;
 use deadpool_postgres::{Config, ManagerConfig, RecyclingMethod, Runtime};
-use regex::Regex;
 use serde_json;
 use sqlx::{PgPool, Postgres};
 use std::collections::HashMap;
@@ -457,13 +456,10 @@ impl DatabaseClient {
                 }
 
                 // Execute with timeout
-                tokio::time::timeout(
-                    Duration::from_secs(30),
-                    sql_query.execute(&pool),
-                )
-                .await
-                .map_err(|_| anyhow::anyhow!("Parameterized query timed out"))?
-                .context("Parameterized query execution failed")
+                tokio::time::timeout(Duration::from_secs(30), sql_query.execute(&pool))
+                    .await
+                    .map_err(|_| anyhow::anyhow!("Parameterized query timed out"))?
+                    .context("Parameterized query execution failed")
             })
         })
         .await
@@ -476,11 +472,18 @@ impl DatabaseClient {
                 serde_json::Value::String(s) => {
                     // Check for excessively long strings
                     if s.len() > 10000 {
-                        return Err(anyhow::anyhow!("Parameter {}: string too long ({} chars)", i, s.len()));
+                        return Err(anyhow::anyhow!(
+                            "Parameter {}: string too long ({} chars)",
+                            i,
+                            s.len()
+                        ));
                     }
                     // Basic injection pattern check
                     if s.contains('\0') {
-                        return Err(anyhow::anyhow!("Parameter {}: null byte injection attempt", i));
+                        return Err(anyhow::anyhow!(
+                            "Parameter {}: null byte injection attempt",
+                            i
+                        ));
                     }
                 }
                 serde_json::Value::Number(n) => {
@@ -680,6 +683,7 @@ pub trait DatabaseOperations {
     async fn get_workers_by_type(&self, worker_type: &str) -> Result<Vec<Worker>, Self::Error>;
     async fn update_worker(&self, id: Uuid, update: UpdateWorker) -> Result<Worker, Self::Error>;
     async fn delete_worker(&self, id: Uuid) -> Result<(), Self::Error>;
+    fn validate_worker_update(&self, update: &UpdateWorker) -> Result<(), Self::Error>;
 
     // Task operations
     async fn create_task(&self, task: CreateTask) -> Result<Task, Self::Error>;
@@ -1012,7 +1016,9 @@ impl DatabaseOperations for DatabaseClient {
 
         if let Some(capabilities) = &update.capabilities {
             query_parts.push(format!("capabilities = ${}", param_count));
-            params.push(serde_json::Value::String(serde_json::to_string(capabilities)?));
+            params.push(serde_json::Value::String(serde_json::to_string(
+                capabilities,
+            )?));
             param_count += 1;
         }
 
@@ -1038,8 +1044,7 @@ impl DatabaseOperations for DatabaseClient {
         let set_clause = query_parts.join(", ");
         let query = format!(
             "UPDATE workers SET {} WHERE id = ${} RETURNING *",
-            set_clause,
-            param_count
+            set_clause, param_count
         );
 
         // Execute the update

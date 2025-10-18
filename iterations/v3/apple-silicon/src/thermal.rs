@@ -133,10 +133,12 @@ mod tests {
     #[tokio::test]
     async fn test_thermal_manager_creation() {
         let config = ThermalConfig {
-            max_temperature_c: 85,
-            check_interval_ms: 5000,
-            auto_throttle: true,
-            thermal_throttle_threshold_celsius: 80,
+            enable_thermal_monitoring: true,
+            thermal_throttle_threshold_celsius: 80.0,
+            max_temperature_celsius: 85.0,
+            cooling_down_period_ms: 10000,
+            monitoring_interval_ms: 5000,
+            enable_thermal_throttling: true,
         };
 
         let manager = ThermalManager::new(config);

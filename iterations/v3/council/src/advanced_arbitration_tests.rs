@@ -82,7 +82,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_advanced_arbitration_engine_creation() {
-        let engine = AdvancedArbitrationEngine::new();
+        let engine = AdvancedArbitrationEngine::new().unwrap();
         // Engine should be created successfully
         assert!(true); // Placeholder test - engine creation is tested implicitly
     }
@@ -258,7 +258,7 @@ mod tests {
             ),
         ];
 
-        let result = engine.resolve_conflicts(conflicting_outputs).await.unwrap();
+        let result = engine.unwrap().resolve_conflicts(conflicting_outputs).await.unwrap();
 
         // Verify arbitration result structure
         assert!(result.confidence >= 0.0 && result.confidence <= 1.0);
@@ -276,7 +276,7 @@ mod tests {
 
         let task_spec = create_test_task_spec("TASK-001", "feature_implementation");
 
-        let prediction = engine.predict_conflicts(&task_spec).await.unwrap();
+        let prediction = engine.unwrap().predict_conflicts(&task_spec).await.unwrap();
 
         assert_eq!(prediction.task_id, task_spec.id);
         assert!(prediction.conflict_risk >= 0.0 && prediction.conflict_risk <= 1.0);
@@ -297,7 +297,7 @@ mod tests {
             300,
         )];
 
-        let result = engine.resolve_conflicts(single_output).await.unwrap();
+        let result = engine.unwrap().resolve_conflicts(single_output).await.unwrap();
 
         // Should handle single output gracefully
         assert!(result.confidence >= 0.0 && result.confidence <= 1.0);
@@ -314,7 +314,7 @@ mod tests {
         let empty_outputs: Vec<WorkerOutput> = vec![];
 
         // Should handle gracefully or return error
-        let result = engine.resolve_conflicts(empty_outputs).await;
+        let result = engine.unwrap().resolve_conflicts(empty_outputs).await;
         // Note: This might return an error depending on implementation
         // For now, just ensure it doesn't panic
         assert!(result.is_ok() || result.is_err());
@@ -329,7 +329,7 @@ mod tests {
             create_test_worker_output("worker2", "Solution B", 0.7, 0.8, 700),
         ];
 
-        let result = engine.resolve_conflicts(outputs).await.unwrap();
+        let result = engine.unwrap().resolve_conflicts(outputs).await.unwrap();
 
         // Learning insights should be populated
         assert!(result.learning_insights.performance_improvements.len() >= 0);
@@ -428,7 +428,7 @@ mod tests {
             create_test_worker_output("worker3", "Similar solution 3", 0.8, 0.8, 500),
         ];
 
-        let result = engine.resolve_conflicts(similar_outputs).await.unwrap();
+        let result = engine.unwrap().resolve_conflicts(similar_outputs).await.unwrap();
         assert!(result.confidence >= 0.0 && result.confidence <= 1.0);
 
         // Test with very different confidence levels
@@ -437,7 +437,7 @@ mod tests {
             create_test_worker_output("worker2", "Solution B", 0.9, 0.95, 200), // High confidence
         ];
 
-        let result2 = engine.resolve_conflicts(varied_outputs).await.unwrap();
+        let result2 = engine.unwrap().resolve_conflicts(varied_outputs).await.unwrap();
         assert!(result2.confidence >= 0.0 && result2.confidence <= 1.0);
     }
 }

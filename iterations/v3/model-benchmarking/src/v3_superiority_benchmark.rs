@@ -9,13 +9,11 @@
 //! - Intelligent testing coverage (95%+ edge case detection)
 
 use crate::metrics_collector::MetricsCollector;
-use crate::types::*;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::time::Instant;
-use tracing::{info, warn};
+use tracing::info;
 use uuid::Uuid;
 
 /// V3 Superiority Benchmark Results

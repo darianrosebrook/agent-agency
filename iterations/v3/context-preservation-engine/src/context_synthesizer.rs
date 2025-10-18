@@ -1,6 +1,6 @@
 use crate::types::*;
 use anyhow::Result;
-use tracing::{debug, error, warn};
+use tracing::debug;
 use uuid::Uuid;
 
 /// Context synthesizer for creating cross-references and synthesis

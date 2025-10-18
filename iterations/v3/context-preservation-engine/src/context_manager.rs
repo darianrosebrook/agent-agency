@@ -1,7 +1,6 @@
 use crate::types::*;
 use anyhow::Result;
-use tracing::{debug, error, warn};
-use uuid::Uuid;
+use tracing::debug;
 
 /// Context manager for processing and managing context data
 #[derive(Debug)]

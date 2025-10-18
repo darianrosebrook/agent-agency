@@ -56,14 +56,18 @@ impl ContextStore {
 
         // Check tenant limits if multi-tenant is enabled
         if self.config.multi_tenant.enabled {
-            let tenant_limits = self.config.multi_tenant.tenant_limits
+            let default_limits = TenantLimits {
+                max_contexts: self.config.storage.max_contexts_per_tenant,
+                max_context_size: self.config.storage.max_context_size,
+                retention_hours: self.config.storage.retention_hours,
+                max_concurrent_operations: 10,
+            };
+            let tenant_limits = self
+                .config
+                .multi_tenant
+                .tenant_limits
                 .get(tenant_id)
-                .unwrap_or(&TenantLimits {
-                    max_contexts: self.config.storage.max_contexts_per_tenant,
-                    max_context_size: self.config.storage.max_context_size,
-                    retention_hours: self.config.storage.retention_hours,
-                    max_concurrent_operations: 10,
-                });
+                .unwrap_or(&default_limits);
 
             if context_data.content.len() as u64 > tenant_limits.max_context_size {
                 return Err(anyhow::anyhow!(
@@ -75,15 +79,20 @@ impl ContextStore {
 
             // Check total contexts for this tenant (simplified check)
             let storage = self.context_storage.read().await;
-            let tenant_context_count = storage.values()
-                .filter(|(_, meta)| meta.relationships.iter()
-                    .any(|rel| rel.description.contains(tenant_id)))
+            let tenant_context_count = storage
+                .values()
+                .filter(|(_, meta)| {
+                    meta.relationships
+                        .iter()
+                        .any(|rel| rel.description.contains(tenant_id))
+                })
                 .count();
 
             if tenant_context_count >= tenant_limits.max_contexts as usize {
                 return Err(anyhow::anyhow!(
                     "Tenant {} has reached maximum context limit {}",
-                    tenant_id, tenant_limits.max_contexts
+                    tenant_id,
+                    tenant_limits.max_contexts
                 ));
             }
         }
@@ -133,16 +142,26 @@ impl ContextStore {
             // Check tenant access if multi-tenant is enabled
             if self.config.multi_tenant.enabled {
                 // Simple tenant validation based on relationships (this is a simplified check)
-                let has_tenant_access = metadata.relationships.iter()
+                let has_tenant_access = metadata
+                    .relationships
+                    .iter()
                     .any(|rel| rel.description.contains(tenant_id));
 
-                if !has_tenant_access && self.config.multi_tenant.isolation_level == TenantIsolationLevel::Strict {
-                    warn!("Access denied: tenant {} cannot access context {}", tenant_id, context_id);
+                if !has_tenant_access
+                    && self.config.multi_tenant.isolation_level == TenantIsolationLevel::Strict
+                {
+                    warn!(
+                        "Access denied: tenant {} cannot access context {}",
+                        tenant_id, context_id
+                    );
                     return Ok(None);
                 }
             }
 
-            debug!("Successfully retrieved context {} for tenant {}", context_id, tenant_id);
+            debug!(
+                "Successfully retrieved context {} for tenant {}",
+                context_id, tenant_id
+            );
             Ok(Some((context_data.clone(), metadata.clone())))
         } else {
             debug!("Context {} not found", context_id);
@@ -161,7 +180,11 @@ impl ContextStore {
         let relationship_storage = self.relationship_storage.read().await;
 
         if let Some(relationships) = relationship_storage.get(context_id) {
-            debug!("Found {} relationships for context {}", relationships.len(), context_id);
+            debug!(
+                "Found {} relationships for context {}",
+                relationships.len(),
+                context_id
+            );
             Ok(relationships.clone())
         } else {
             debug!("No relationships found for context {}", context_id);
@@ -180,7 +203,11 @@ impl ContextStore {
         let cross_reference_storage = self.cross_reference_storage.read().await;
 
         if let Some(cross_references) = cross_reference_storage.get(context_id) {
-            debug!("Found {} cross-references for context {}", cross_references.len(), context_id);
+            debug!(
+                "Found {} cross-references for context {}",
+                cross_references.len(),
+                context_id
+            );
             Ok(cross_references.clone())
         } else {
             debug!("No cross-references found for context {}", context_id);
@@ -199,7 +226,11 @@ impl ContextStore {
         let synthesis_storage = self.synthesis_storage.read().await;
 
         if let Some(synthesis_results) = synthesis_storage.get(context_id) {
-            debug!("Found {} synthesis results for context {}", synthesis_results.len(), context_id);
+            debug!(
+                "Found {} synthesis results for context {}",
+                synthesis_results.len(),
+                context_id
+            );
             Ok(synthesis_results.clone())
         } else {
             debug!("No synthesis results found for context {}", context_id);
@@ -250,7 +281,15 @@ impl ContextStore {
         };
 
         // Test storage operation
-        match self.store_context(&test_context_id, "health_check_tenant", &test_data, &test_metadata).await {
+        match self
+            .store_context(
+                &test_context_id,
+                "health_check_tenant",
+                &test_data,
+                &test_metadata,
+            )
+            .await
+        {
             Ok(result) => {
                 if !result.stored {
                     warn!("Health check failed: context storage returned stored=false");
@@ -264,7 +303,10 @@ impl ContextStore {
         }
 
         // Test retrieval operation
-        match self.retrieve_context(&test_context_id, "health_check_tenant").await {
+        match self
+            .retrieve_context(&test_context_id, "health_check_tenant")
+            .await
+        {
             Ok(Some(_)) => {
                 debug!("Health check passed: storage and retrieval working");
                 Ok(true)

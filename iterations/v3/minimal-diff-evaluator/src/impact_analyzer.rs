@@ -1,8 +1,7 @@
 use crate::evaluator::EvaluationContext;
 use crate::types::*;
 use anyhow::Result;
-use tracing::{debug, error, warn};
-use uuid::Uuid;
+use tracing::debug;
 
 /// Impact analyzer for assessing change impact
 #[derive(Debug)]

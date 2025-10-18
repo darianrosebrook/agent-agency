@@ -1,7 +1,6 @@
 //! Cross-component integration tests
 
 use anyhow::Result;
-use std::sync::Arc;
 use tracing::{debug, info};
 
 use crate::fixtures::{TestDataGenerator, TestFixtures};

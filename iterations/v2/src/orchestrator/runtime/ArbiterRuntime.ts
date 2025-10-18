@@ -193,7 +193,8 @@ export class ArbiterRuntime {
 
   constructor(
     options: ArbiterRuntimeOptions,
-    taskOrchestrator?: TaskOrchestrator
+    taskOrchestrator?: TaskOrchestrator,
+    existingRegistry?: AgentRegistry
   ) {
     this.options = options;
     this.taskOrchestrator = taskOrchestrator || null;
@@ -204,8 +205,13 @@ export class ArbiterRuntime {
     this.verificationEngine = new VerificationEngineImpl(
       this.verificationConfig
     );
-    // Registry will be initialized in start() method
-    this.agentRegistry = null as any; // Temporary - will be replaced in initializeRegistry()
+    // Use existing registry if provided, otherwise initialize in start() method
+    if (existingRegistry) {
+      this.agentRegistry = existingRegistry;
+      this.registryReady = true;
+    } else {
+      this.agentRegistry = null as any; // Temporary - will be replaced in initializeRegistry()
+    }
     this.routingManager = new TaskRoutingManager(
       this.agentRegistry as any,
       DEFAULT_ROUTING_CONFIG
@@ -221,7 +227,10 @@ export class ArbiterRuntime {
     // Start performance tracking
     await this.performanceTracker.startCollection();
 
-    await this.initializeRegistry();
+    // Only initialize registry if we don't already have one
+    if (!this.registryReady) {
+      await this.initializeRegistry();
+    }
   }
 
   async stop(): Promise<void> {

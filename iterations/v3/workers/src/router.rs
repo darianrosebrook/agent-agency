@@ -4,10 +4,7 @@
 
 use crate::types::*;
 use crate::{LoadBalancingStrategy, RoutingAlgorithm};
-use agent_agency_council::models::{
-    Environment as ConfigEnvironment, RiskTier, SelfAssessment, TaskContext as CouncilTaskContext,
-    TaskScope, TaskSpec, WorkerOutput as CouncilWorkerOutput,
-};
+use agent_agency_council::models::{RiskTier, TaskSpec};
 use anyhow::{Context, Result};
 use dashmap::DashMap;
 use tracing::{debug, info};

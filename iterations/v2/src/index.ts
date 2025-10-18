@@ -127,11 +127,15 @@ async function initialize(): Promise<void> {
     throw error;
   }
 
-  // Initialize observer bridge
+  // Initialize observer bridge with shared registry
   try {
-    arbiterRuntime = new ArbiterRuntime({
-      outputDir: path.resolve(process.cwd(), "iterations/v2/runtime-output"),
-    });
+    arbiterRuntime = new ArbiterRuntime(
+      {
+        outputDir: path.resolve(process.cwd(), "iterations/v2/runtime-output"),
+      },
+      undefined, // taskOrchestrator
+      arbiterController.getAgentRegistry() // existingRegistry
+    );
 
     observerBridge = new ObserverBridge(arbiterRuntime);
     setObserverBridge(observerBridge);
@@ -249,7 +253,7 @@ async function shutdown(signal: string): Promise<void> {
           resolve(void 0);
         }, 5000);
 
-        webServerProcess.on("exit", () => {
+        webServerProcess?.on("exit", () => {
           clearTimeout(timeout);
           resolve(void 0);
         });
@@ -289,24 +293,16 @@ async function startHttpServer(): Promise<void> {
   try {
     logger.info("Starting HTTP server...");
 
-    // Load observer configuration
-    const config = await loadObserverConfig();
-
-    // Create observer store
-    const store = new ObserverStoreImpl(config, arbiterRuntime ?? undefined);
-
-    // Use real ArbiterController
-    if (!arbiterController) {
-      throw new Error("ArbiterController not initialized");
+    // Use the ObserverHttpServer that's already created in ObserverBridge
+    if (!observerBridge) {
+      throw new Error("ObserverBridge not initialized");
     }
 
-    // Create HTTP server with real controller
-    httpServer = new ObserverHttpServer(config, store, arbiterController);
+    // Get the server instance from ObserverBridge
+    httpServer = observerBridge.server;
 
-    // Start the server
-    await httpServer.start();
-
-    logger.info("HTTP server started successfully");
+    // The server is already started by ObserverBridge.start()
+    logger.info("HTTP server started successfully (via ObserverBridge)");
   } catch (error) {
     logger.error("Failed to start HTTP server", { error });
     throw error;
@@ -410,11 +406,16 @@ async function startWebInterface(): Promise<void> {
       return;
     }
 
-    // Start the Next.js development server
+    // Start the Next.js development server with configurable port
+    const webObserverPort = process.env.WEB_OBSERVER_PORT || "3000";
     webServerProcess = spawn("npm", ["run", "dev"], {
       cwd: webObserverPath,
       stdio: "inherit",
       detached: false,
+      env: {
+        ...process.env,
+        WEB_OBSERVER_PORT: webObserverPort,
+      },
     });
 
     // Handle process events
@@ -430,7 +431,7 @@ async function startWebInterface(): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
     logger.info(
-      "Next.js web interface started successfully on http://localhost:3000"
+      `Next.js web interface started successfully on http://localhost:${webObserverPort}`
     );
   } catch (error) {
     logger.error("Failed to start web interface", { error });

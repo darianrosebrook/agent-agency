@@ -3,7 +3,7 @@
 use anyhow::Result;
 use tracing::{debug, info};
 
-use crate::fixtures::{TestDataGenerator, TestFixtures};
+use crate::fixtures::TestFixtures;
 use crate::mocks::{
     MockDatabase, MockEventEmitter, MockFactory, MockHttpClient, MockMetricsCollector,
 };
@@ -161,7 +161,7 @@ impl EndToEndIntegrationTests {
         ];
 
         let tasks_per_tenant = 5;
-        let mut all_task_ids: Vec<String> = Vec::new();
+        let all_task_ids: Vec<String> = Vec::new();
 
         // TODO: Initialize system
         // let system = AgentAgencySystem::new()
@@ -272,7 +272,7 @@ impl EndToEndIntegrationTests {
         //     .build()?;
 
         let start_time = std::time::Instant::now();
-        let mut task_handles: Vec<tokio::task::JoinHandle<()>> = Vec::new();
+        let task_handles: Vec<tokio::task::JoinHandle<()>> = Vec::new();
 
         // TODO: Generate load
         // while start_time.elapsed() < test_duration {

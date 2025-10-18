@@ -2,7 +2,6 @@ pub mod types;
 
 use crate::types::*;
 use anyhow::Result;
-use async_trait::async_trait;
 use chrono::Utc;
 use dashmap::DashMap;
 use parking_lot::RwLock;
@@ -10,7 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::time::{interval, Duration};
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 /// System Health Monitor - Comprehensive Health Assessment

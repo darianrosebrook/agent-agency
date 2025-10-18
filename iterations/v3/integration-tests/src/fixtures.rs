@@ -2,7 +2,6 @@
 
 use serde_json::Value;
 use std::collections::HashMap;
-use uuid::Uuid;
 
 /// Test fixtures for various V3 components
 pub struct TestFixtures;

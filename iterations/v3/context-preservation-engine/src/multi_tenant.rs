@@ -1,7 +1,7 @@
 use crate::types::*;
 use anyhow::Result;
 use std::collections::HashMap;
-use tracing::{debug, error, warn};
+use tracing::{debug, warn};
 
 /// Multi-tenant manager for managing tenant-specific context operations
 #[derive(Debug)]

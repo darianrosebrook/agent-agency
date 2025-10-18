@@ -30,7 +30,7 @@ npm install
 npm run dev
 ```
 
-The web interface will be available at http://localhost:3000
+The web interface will be available at http://localhost:3000 (or the port specified by WEB_OBSERVER_PORT environment variable)
 
 ### Production Build
 
@@ -51,6 +51,17 @@ The web interface connects to the Arbiter Observer HTTP API endpoints:
 - **Observations**: `/observer/observations`
 
 ## Configuration
+
+### Port Configuration
+
+The web interface port can be configured using the `WEB_OBSERVER_PORT` environment variable:
+
+```bash
+# Use port 3001 instead of default 3000
+WEB_OBSERVER_PORT=3001 npm run dev
+```
+
+### Observer API Configuration
 
 The interface automatically connects to the observer API at `http://127.0.0.1:4387` by default. This can be configured by setting the `OBSERVER_URL` environment variable in the main application.
 
@@ -93,4 +104,4 @@ cd iterations/v2
 npm run dev  # This will start the main app and web interface
 ```
 
-The web interface will be available at http://localhost:3000 while the main application runs.
+The web interface will be available at http://localhost:3000 (or the port specified by WEB_OBSERVER_PORT environment variable) while the main application runs.

@@ -207,22 +207,22 @@ impl LearningIntegrator {
                 "Detected {} conflicting outputs for task {}",
                 conflicting_outputs.len(),
                 Uuid::new_v4() // TODO: Add task_id field to ConsensusResult with the following requirements:
-                // 1. Field addition: Add task_id field to ConsensusResult struct
-                //    - Add task_id: Uuid field to the ConsensusResult struct
-                //    - Ensure proper field ordering and documentation
-                //    - Update struct initialization and usage throughout codebase
-                // 2. Type safety: Ensure type safety for task_id field
-                //    - Use appropriate Uuid type for task identification
-                //    - Add proper validation and constraints for task_id values
-                //    - Handle edge cases for missing or invalid task IDs
-                // 3. Data consistency: Maintain data consistency across task references
-                //    - Ensure task_id matches original task specification
-                //    - Update serialization and deserialization logic
-                //    - Add proper error handling for task_id mismatches
-                // 4. Integration updates: Update dependent code and integrations
-                //    - Update consensus builders and result consumers
-                //    - Modify logging and monitoring to include task_id
-                //    - Ensure backward compatibility with existing code
+                               // 1. Field addition: Add task_id field to ConsensusResult struct
+                               //    - Add task_id: Uuid field to the ConsensusResult struct
+                               //    - Ensure proper field ordering and documentation
+                               //    - Update struct initialization and usage throughout codebase
+                               // 2. Type safety: Ensure type safety for task_id field
+                               //    - Use appropriate Uuid type for task identification
+                               //    - Add proper validation and constraints for task_id values
+                               //    - Handle edge cases for missing or invalid task IDs
+                               // 3. Data consistency: Maintain data consistency across task references
+                               //    - Ensure task_id matches original task specification
+                               //    - Update serialization and deserialization logic
+                               //    - Add proper error handling for task_id mismatches
+                               // 4. Integration updates: Update dependent code and integrations
+                               //    - Update consensus builders and result consumers
+                               //    - Modify logging and monitoring to include task_id
+                               //    - Ensure backward compatibility with existing code
             ));
 
             // Analyze response time differences
@@ -231,12 +231,12 @@ impl LearningIntegrator {
                 .map(|output| output.response_time_ms)
                 .collect();
 
-            if let (Some(&min_time), Some(&max_time)) = (
-                response_times.iter().min(),
-                response_times.iter().max(),
-            ) {
+            if let (Some(&min_time), Some(&max_time)) =
+                (response_times.iter().min(), response_times.iter().max())
+            {
                 let time_variance = max_time as f64 - min_time as f64;
-                if time_variance > 1000.0 { // More than 1 second difference
+                if time_variance > 1000.0 {
+                    // More than 1 second difference
                     performance_improvements.push(format!(
                         "High response time variance detected ({:.1}ms range) - consider optimizing slower workers",
                         time_variance
@@ -254,15 +254,14 @@ impl LearningIntegrator {
 
             if consensus.individual_scores.len() > 1 {
                 optimization_suggestions.push(
-                    "Consider increasing judge consensus requirements for low-confidence decisions".to_string()
+                    "Consider increasing judge consensus requirements for low-confidence decisions"
+                        .to_string(),
                 );
             }
         }
 
         // Analyze judge performance
-        let mut judge_scores: Vec<f32> = consensus.individual_scores.values()
-            .cloned()
-            .collect();
+        let judge_scores: Vec<f32> = consensus.individual_scores.values().cloned().collect();
 
         if let (Some(&min_score), Some(&max_score)) = (
             judge_scores.iter().min_by(|a, b| a.partial_cmp(b).unwrap()),
@@ -280,7 +279,8 @@ impl LearningIntegrator {
         // Generate optimization suggestions based on patterns
         if conflicting_outputs.len() > 3 {
             optimization_suggestions.push(
-                "High conflict rate detected - consider implementing pre-arbitration filtering".to_string()
+                "High conflict rate detected - consider implementing pre-arbitration filtering"
+                    .to_string(),
             );
         }
 
@@ -304,7 +304,7 @@ impl LearningIntegrator {
         let evaluation_time_ms = 0;
         if evaluation_time_ms > 5000 {
             optimization_suggestions.push(
-                "Slow evaluation detected - consider parallel processing optimization".to_string()
+                "Slow evaluation detected - consider parallel processing optimization".to_string(),
             );
         }
 
@@ -312,7 +312,8 @@ impl LearningIntegrator {
         let avg_response_time = conflicting_outputs
             .iter()
             .map(|output| output.response_time_ms)
-            .sum::<u64>() as f64 / conflicting_outputs.len().max(1) as f64;
+            .sum::<u64>() as f64
+            / conflicting_outputs.len().max(1) as f64;
 
         if avg_response_time > 2000.0 {
             performance_improvements.push(format!(
@@ -348,12 +349,14 @@ impl LearningIntegrator {
 
             if debate_result.rounds.len() > 3 {
                 optimization_suggestions.push(
-                    "Long debates detected - consider improving initial argument quality".to_string()
+                    "Long debates detected - consider improving initial argument quality"
+                        .to_string(),
                 );
             }
         } else {
             conflict_patterns.push(
-                "Debate failed to reach consensus - indicates fundamental disagreements".to_string()
+                "Debate failed to reach consensus - indicates fundamental disagreements"
+                    .to_string(),
             );
 
             if conflict_resolution.resolution_strategy == "majority_vote_with_tie_breaking" {
@@ -373,8 +376,16 @@ impl LearningIntegrator {
             }
 
             // Check for logical consistency indicators
-            let logical_indicators = ["because", "therefore", "however", "additionally", "consequently"];
-            let has_logic = logical_indicators.iter().any(|&indicator| argument.contains(indicator));
+            let logical_indicators = [
+                "because",
+                "therefore",
+                "however",
+                "additionally",
+                "consequently",
+            ];
+            let has_logic = logical_indicators
+                .iter()
+                .any(|&indicator| argument.contains(indicator));
 
             if !has_logic {
                 quality_insights.push(format!(
@@ -402,7 +413,7 @@ impl LearningIntegrator {
         match conflict_resolution.resolution_strategy.as_str() {
             "debate_consensus" => {
                 performance_improvements.push(
-                    "Debate consensus achieved - excellent pleading facilitation".to_string()
+                    "Debate consensus achieved - excellent pleading facilitation".to_string(),
                 );
             }
             "quality_weighted_consensus" => {
@@ -412,7 +423,7 @@ impl LearningIntegrator {
             }
             "majority_vote_with_tie_breaking" => {
                 optimization_suggestions.push(
-                    "Reliance on majority voting indicates debate quality issues".to_string()
+                    "Reliance on majority voting indicates debate quality issues".to_string(),
                 );
             }
             _ => {}
@@ -420,7 +431,8 @@ impl LearningIntegrator {
 
         // Analyze debate round progression
         if debate_result.rounds.len() > 1 {
-            let arguments_per_round: Vec<usize> = debate_result.rounds
+            let arguments_per_round: Vec<usize> = debate_result
+                .rounds
                 .iter()
                 .map(|round| round.arguments.len())
                 .collect();
@@ -692,7 +704,6 @@ impl AdvancedArbitrationEngine {
             crate::models::RiskTier::Tier3 => risk_score += 0.4, // Medium risk
         }
 
-
         // Risk based on task scope - broader scope = higher conflict potential
         if task_spec.scope.domains.len() > 3 {
             risk_score += 0.2; // Broad scope increases conflict risk
@@ -810,7 +821,10 @@ impl AdvancedArbitrationEngine {
                     measures.push("Create requirement examples and scenarios".to_string());
                 }
                 _ => {
-                    measures.push(format!("Address {} through targeted review process", conflict_type));
+                    measures.push(format!(
+                        "Address {} through targeted review process",
+                        conflict_type
+                    ));
                 }
             }
         }
@@ -819,7 +833,11 @@ impl AdvancedArbitrationEngine {
         let mut seen = std::collections::HashSet::new();
         measures.retain(|measure| seen.insert(measure.clone()));
 
-        debug!("Suggested {} preventive measures for risk level {}", measures.len(), risk_level);
+        debug!(
+            "Suggested {} preventive measures for risk level {}",
+            measures.len(),
+            risk_level
+        );
         Ok(measures)
     }
 
@@ -1136,7 +1154,8 @@ impl DeviationCalculator {
         let mut total_weight = 0.0;
 
         // Response time deviation (weight: 0.3)
-        let response_time_deviation = self.calculate_response_time_deviation(output.response_time_ms);
+        let response_time_deviation =
+            self.calculate_response_time_deviation(output.response_time_ms);
         deviation_score += response_time_deviation * 0.3;
         total_weight += 0.3;
 
@@ -1274,8 +1293,8 @@ impl DeviationCalculator {
         }
 
         // Check for uncertainty indicators
-        if output_lower.matches("maybe").count() > 3 ||
-           output_lower.matches("perhaps").count() > 2 {
+        if output_lower.matches("maybe").count() > 3 || output_lower.matches("perhaps").count() > 2
+        {
             deviation += 0.1;
         }
 
@@ -1417,12 +1436,17 @@ impl EvidenceCollector {
 
         for output in outputs {
             // Extract source identifier from output metadata or use worker ID as fallback
-            let source = output.metadata.get("worker_id")
+            let source = output
+                .metadata
+                .get("worker_id")
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown_worker");
 
             // Synthesize evidence from worker output
-            let synthesized_evidence = self.evidence_synthesizer.synthesize_evidence(output).await?;
+            let synthesized_evidence = self
+                .evidence_synthesizer
+                .synthesize_evidence(output)
+                .await?;
 
             // Assess credibility for each piece of evidence
             let mut source_evidence = Vec::new();
@@ -1431,7 +1455,10 @@ impl EvidenceCollector {
 
             for mut evidence in synthesized_evidence {
                 // Assess credibility score
-                evidence.credibility = self.credibility_assessor.assess_credibility(&evidence).await?;
+                evidence.credibility = self
+                    .credibility_assessor
+                    .assess_credibility(&evidence)
+                    .await?;
                 source_credibility_sum += evidence.credibility;
                 evidence_count += 1;
 
@@ -1440,7 +1467,10 @@ impl EvidenceCollector {
 
             // Calculate aggregate credibility score for source
             if evidence_count > 0 {
-                credibility_scores.insert(source.to_string(), source_credibility_sum / evidence_count as f32);
+                credibility_scores.insert(
+                    source.to_string(),
+                    source_credibility_sum / evidence_count as f32,
+                );
             }
 
             // Validate source using SourceValidator
@@ -1484,10 +1514,10 @@ impl EvidenceSynthesizer {
         // Extract evidence from confidence and quality scores
         evidence_list.push(Evidence {
             source: source.clone(),
-            content: format!("Worker confidence: {:.2}, quality score: {:.2}, response time: {}ms",
-                           output.confidence,
-                           output.quality_score,
-                           output.response_time_ms),
+            content: format!(
+                "Worker confidence: {:.2}, quality score: {:.2}, response time: {}ms",
+                output.confidence, output.quality_score, output.response_time_ms
+            ),
             credibility: 0.0,
             relevance: 0.7,
         });
@@ -1593,10 +1623,10 @@ impl CredibilityAssessor {
     /// Evaluate evidence consistency
     fn evaluate_evidence_consistency(&self, content: &str) -> f32 {
         // Check for logical consistency indicators
-        let has_logical_indicators = content.contains("because") ||
-                                   content.contains("therefore") ||
-                                   content.contains("however") ||
-                                   content.contains("additionally");
+        let has_logical_indicators = content.contains("because")
+            || content.contains("therefore")
+            || content.contains("however")
+            || content.contains("additionally");
 
         if has_logical_indicators {
             0.8
@@ -1694,11 +1724,16 @@ impl ConflictResolver {
         };
 
         // Step 3: Conflict detection and analysis
-        let detected_conflicts = self.detect_conflicts(debate_result, confidence_scores).await?;
+        let detected_conflicts = self
+            .detect_conflicts(debate_result, confidence_scores)
+            .await?;
 
         // Step 4: Resolve conflicts based on priority and strategy
         for conflict in detected_conflicts {
-            if self.can_resolve_conflict(&conflict, &resolution_strategy, consensus_score).await {
+            if self
+                .can_resolve_conflict(&conflict, &resolution_strategy, consensus_score)
+                .await
+            {
                 resolved_conflicts.push(conflict.description);
             } else {
                 remaining_conflicts.push(conflict.description);
@@ -1713,7 +1748,11 @@ impl ConflictResolver {
             }
         }
 
-        let final_confidence = if remaining_conflicts.is_empty() { 0.95 } else { 0.7 };
+        let final_confidence = if remaining_conflicts.is_empty() {
+            0.95
+        } else {
+            0.7
+        };
 
         Ok(ConflictResolution {
             resolution_strategy,
@@ -1752,7 +1791,10 @@ impl ConflictResolver {
             for j in (i + 1)..arguments.len() {
                 if self.arguments_conflict(arguments[i], arguments[j]) {
                     conflicts.push(DetectedConflict {
-                        description: format!("Conflicting arguments between positions {} and {}", i, j),
+                        description: format!(
+                            "Conflicting arguments between positions {} and {}",
+                            i, j
+                        ),
                         severity: ConflictSeverity::High,
                         confidence_threshold: 0.8,
                     });
@@ -1786,8 +1828,9 @@ impl ConflictResolver {
         ];
 
         for (pos, neg) in contradictions {
-            if (arg1.to_lowercase().contains(pos) && arg2.to_lowercase().contains(neg)) ||
-               (arg1.to_lowercase().contains(neg) && arg2.to_lowercase().contains(pos)) {
+            if (arg1.to_lowercase().contains(pos) && arg2.to_lowercase().contains(neg))
+                || (arg1.to_lowercase().contains(neg) && arg2.to_lowercase().contains(pos))
+            {
                 return true;
             }
         }
@@ -1969,10 +2012,11 @@ impl CompletenessChecker {
 
         // Criterion 1: Has substantive content (not just placeholder/error messages)
         criteria_count += 1;
-        if content.len() > 100 &&
-           !content_lower.contains("placeholder") &&
-           !content_lower.contains("not implemented") &&
-           !content_lower.contains("todo") {
+        if content.len() > 100
+            && !content_lower.contains("placeholder")
+            && !content_lower.contains("not implemented")
+            && !content_lower.contains("todo")
+        {
             score += 1.0;
         }
 
@@ -2006,7 +2050,10 @@ impl CompletenessChecker {
             0.0
         };
 
-        debug!("Completeness score for worker {}: {:.3}", output.worker_id, final_score);
+        debug!(
+            "Completeness score for worker {}: {:.3}",
+            output.worker_id, final_score
+        );
         Ok(final_score)
     }
 
@@ -2038,30 +2085,33 @@ impl CompletenessChecker {
 
         // Check for documentation
         expected_components += 1;
-        if content_lower.contains("readme") ||
-           content_lower.contains("documentation") ||
-           content.contains("///") ||
-           content.contains("/**") ||
-           content.contains("# ") {
+        if content_lower.contains("readme")
+            || content_lower.contains("documentation")
+            || content.contains("///")
+            || content.contains("/**")
+            || content.contains("# ")
+        {
             component_score += 1.0;
         }
 
         // Check for error handling
         expected_components += 1;
-        if content_lower.contains("error") ||
-           content_lower.contains("exception") ||
-           content_lower.contains("result") ||
-           content_lower.contains("try") ||
-           content_lower.contains("catch") {
+        if content_lower.contains("error")
+            || content_lower.contains("exception")
+            || content_lower.contains("result")
+            || content_lower.contains("try")
+            || content_lower.contains("catch")
+        {
             component_score += 1.0;
         }
 
         // Check for tests or examples
         expected_components += 1;
-        if content_lower.contains("test") ||
-           content_lower.contains("example") ||
-           content_lower.contains("assert") ||
-           content.contains("fn test_") {
+        if content_lower.contains("test")
+            || content_lower.contains("example")
+            || content_lower.contains("assert")
+            || content.contains("fn test_")
+        {
             component_score += 1.0;
         }
 
@@ -2083,7 +2133,7 @@ impl CompletenessChecker {
         content_lower.contains("coming soon") ||
         content_lower.contains("tbd") ||
         content_lower.matches("...").count() > 3 || // Excessive ellipsis
-        content_lower.matches("pass").count() > 2    // Multiple pass statements
+        content_lower.matches("pass").count() > 2 // Multiple pass statements
     }
 
     /// Check if content length is appropriate

@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::RwLock;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info};
 use uuid::Uuid;
 
 /// Minimal diff evaluator
@@ -82,7 +82,7 @@ impl MinimalDiffEvaluator {
         debug!("Detected language: {:?}", language);
 
         // Perform AST-based analysis if enabled
-        let mut language_analysis = if self.config.enable_ast_analysis {
+        let language_analysis = if self.config.enable_ast_analysis {
             self.ast_analyzer
                 .analyze_diff(diff_content, file_path, &language)
                 .await?

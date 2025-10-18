@@ -3,10 +3,7 @@
 //! Executes tasks by communicating with worker models and handling the execution lifecycle.
 
 use crate::types::*;
-use agent_agency_council::models::{
-    Environment as ConfigEnvironment, RiskTier, SelfAssessment, TaskContext as CouncilTaskContext,
-    TaskScope, TaskSpec, WorkerOutput as CouncilWorkerOutput,
-};
+use agent_agency_council::models::{RiskTier, TaskContext as CouncilTaskContext, TaskSpec};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use tracing::{info, warn};
@@ -203,16 +200,16 @@ impl TaskExecutor {
     fn extract_requirements(&self, task_spec: &TaskSpec) -> TaskRequirements {
         // Implement sophisticated requirement extraction with analysis and validation
         let task_text = format!("{} {}", task_spec.title, task_spec.description);
-        
+
         // Extract programming languages from task description
         let required_languages = self.extract_languages(&task_text);
-        
+
         // Extract frameworks and tools from task description
         let required_frameworks = self.extract_frameworks(&task_text);
-        
+
         // Calculate context length estimate based on task content
         let context_length_estimate = self.calculate_context_length(&task_text, &task_spec.context);
-        
+
         TaskRequirements {
             required_languages,
             required_frameworks,
@@ -263,10 +260,7 @@ impl TaskExecutor {
         input: &ExecutionInput,
     ) -> Result<RawExecutionResult> {
         // Implement actual HTTP call to worker model with robust error handling
-        info!(
-            "Executing task {} with worker {}",
-            input.task_id, worker_id
-        );
+        info!("Executing task {} with worker {}", input.task_id, worker_id);
 
         let start_time = std::time::Instant::now();
 
@@ -303,7 +297,8 @@ impl TaskExecutor {
         //    - Implement registry monitoring and analytics
         let worker_endpoint = format!("http://worker-{}/execute", worker_id);
 
-        let response = self.client
+        let response = self
+            .client
             .post(&worker_endpoint)
             .header("Content-Type", "application/json")
             .header("User-Agent", "Agent-Agency-Executor/1.0")
@@ -314,13 +309,12 @@ impl TaskExecutor {
 
         let status = response.status();
         if !status.is_success() {
-            return Err(anyhow::anyhow!(
-                "Worker returned error status: {}",
-                status
-            ));
+            return Err(anyhow::anyhow!("Worker returned error status: {}", status));
         }
 
-        let response_text = response.text().await
+        let response_text = response
+            .text()
+            .await
             .context("Failed to read response from worker")?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
@@ -330,9 +324,7 @@ impl TaskExecutor {
             .context("Failed to parse worker response as JSON")?;
 
         // Extract execution metrics from response if available
-        let tokens_used = worker_output
-            .get("tokens_used")
-            .and_then(|v| v.as_u64());
+        let tokens_used = worker_output.get("tokens_used").and_then(|v| v.as_u64());
 
         Ok(RawExecutionResult {
             task_id: input.task_id,
@@ -502,20 +494,41 @@ impl TaskExecutor {
     fn extract_languages(&self, text: &str) -> Vec<String> {
         let mut languages = Vec::new();
         let text_lower = text.to_lowercase();
-        
+
         // Common programming languages
         let language_patterns = [
-            "rust", "python", "javascript", "typescript", "java", "c++", "c#", "go",
-            "ruby", "php", "swift", "kotlin", "scala", "haskell", "clojure", "elixir",
-            "dart", "r", "matlab", "perl", "lua", "shell", "bash", "powershell"
+            "rust",
+            "python",
+            "javascript",
+            "typescript",
+            "java",
+            "c++",
+            "c#",
+            "go",
+            "ruby",
+            "php",
+            "swift",
+            "kotlin",
+            "scala",
+            "haskell",
+            "clojure",
+            "elixir",
+            "dart",
+            "r",
+            "matlab",
+            "perl",
+            "lua",
+            "shell",
+            "bash",
+            "powershell",
         ];
-        
+
         for pattern in &language_patterns {
             if text_lower.contains(pattern) {
                 languages.push(pattern.to_string());
             }
         }
-        
+
         languages.sort();
         languages.dedup();
         languages
@@ -525,23 +538,58 @@ impl TaskExecutor {
     fn extract_frameworks(&self, text: &str) -> Vec<String> {
         let mut frameworks = Vec::new();
         let text_lower = text.to_lowercase();
-        
+
         // Common frameworks and tools
         let framework_patterns = [
-            "react", "vue", "angular", "express", "django", "flask", "spring", "rails",
-            "laravel", "symfony", "asp.net", "fastapi", "gin", "echo", "fiber",
-            "tokio", "actix", "warp", "axum", "rocket", "tide", "hyper",
-            "docker", "kubernetes", "terraform", "ansible", "jenkins", "gitlab",
-            "aws", "azure", "gcp", "firebase", "mongodb", "postgresql", "mysql",
-            "redis", "elasticsearch", "kafka", "rabbitmq", "nginx", "apache"
+            "react",
+            "vue",
+            "angular",
+            "express",
+            "django",
+            "flask",
+            "spring",
+            "rails",
+            "laravel",
+            "symfony",
+            "asp.net",
+            "fastapi",
+            "gin",
+            "echo",
+            "fiber",
+            "tokio",
+            "actix",
+            "warp",
+            "axum",
+            "rocket",
+            "tide",
+            "hyper",
+            "docker",
+            "kubernetes",
+            "terraform",
+            "ansible",
+            "jenkins",
+            "gitlab",
+            "aws",
+            "azure",
+            "gcp",
+            "firebase",
+            "mongodb",
+            "postgresql",
+            "mysql",
+            "redis",
+            "elasticsearch",
+            "kafka",
+            "rabbitmq",
+            "nginx",
+            "apache",
         ];
-        
+
         for pattern in &framework_patterns {
             if text_lower.contains(pattern) {
                 frameworks.push(pattern.to_string());
             }
         }
-        
+
         frameworks.sort();
         frameworks.dedup();
         frameworks
@@ -550,14 +598,14 @@ impl TaskExecutor {
     /// Calculate context length estimate based on task content
     fn calculate_context_length(&self, task_text: &str, context: &CouncilTaskContext) -> u32 {
         let mut estimate = task_text.len() as u32;
-        
+
         // Add context length from dependencies and recent changes
         estimate += context.dependencies.len() as u32 * 100;
         estimate += context.recent_changes.len() as u32 * 50;
-        
+
         // Add some padding for system prompts and responses
         estimate += 2000;
-        
+
         // Cap at reasonable maximum
         estimate.min(32000)
     }

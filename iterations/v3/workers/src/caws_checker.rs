@@ -5,9 +5,8 @@
 
 use crate::types::*;
 use agent_agency_council::models::{
-    Environment as ConfigEnvironment, FileModification as CouncilFileModification,
-    FileOperation as CouncilFileOperation, RiskTier, SelfAssessment,
-    TaskContext as CouncilTaskContext, TaskScope, TaskSpec, WorkerOutput as CouncilWorkerOutput,
+    FileModification as CouncilFileModification, FileOperation as CouncilFileOperation, RiskTier,
+    TaskSpec, WorkerOutput as CouncilWorkerOutput,
 };
 use anyhow::Result;
 use std::collections::HashMap;

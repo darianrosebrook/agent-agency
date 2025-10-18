@@ -54,9 +54,9 @@ final_*.json
 final_*.md
 format_*.json
 format_*.md
-hidden_todos*.json
-hidden_todos*.md
-HIDDEN_TODOS*.md
+hidden*.json
+hidden*.md
+HIDDEN*.md
 HIDDEN_TODO*.md
 todos*.json
 todos*.md

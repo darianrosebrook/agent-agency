@@ -296,6 +296,8 @@ pub struct UpdateWorker {
     pub capabilities: Option<serde_json::Value>,
     pub performance_history: Option<serde_json::Value>,
     pub is_active: Option<bool>,
+    pub status: Option<String>,
+    pub last_seen: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

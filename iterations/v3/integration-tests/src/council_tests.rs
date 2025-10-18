@@ -1,9 +1,6 @@
 //! Integration tests for the Council system
 
 use anyhow::Result;
-use async_trait::async_trait;
-use std::sync::Arc;
-use tokio::sync::RwLock;
 use tracing::{debug, info};
 
 use crate::fixtures::{TestDataGenerator, TestFixtures};

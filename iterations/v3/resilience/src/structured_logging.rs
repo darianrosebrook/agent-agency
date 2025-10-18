@@ -5,14 +5,12 @@
 //!
 //! Ported from V2 structured logging patterns with Rust optimizations.
 
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::SystemTime;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn, Level};
-use uuid::Uuid;
 
 /// Log level configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

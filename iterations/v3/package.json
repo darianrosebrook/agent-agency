@@ -21,6 +21,8 @@
     "fmt:check": "cargo fmt --all --check",
     "build": "cargo build --workspace --all-features",
     "build:release": "cargo build --workspace --release",
+    "install-hooks": "make install-hooks",
+    "todo-check": "python3 scripts/todo_analyzer.py",
     "clean": "make clean"
   },
   "devDependencies": {

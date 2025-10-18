@@ -409,7 +409,7 @@ mod tests {
         let service = ProvenanceService::with_defaults(Box::new(storage), config).unwrap();
 
         // Service should be created successfully
-        assert_eq!(service.config.signing.algorithm, SigningAlgorithm::EdDSA);
+        assert_eq!(service.config.signing.algorithm, signer::SigningAlgorithm::EdDSA);
     }
 
     #[tokio::test]
@@ -487,7 +487,7 @@ mod tests {
             Ok(())
         }
 
-        async fn get_record(&self, _id: Uuid) -> Result<Option<ProvenanceRecord>> {
+        async fn get_record(&self, _id: &str) -> Result<Option<ProvenanceRecord>> {
             // Mock implementation
             Ok(None)
         }
@@ -515,7 +515,7 @@ mod tests {
             })
         }
 
-        async fn delete_record(&self, _id: Uuid) -> Result<()> {
+        async fn delete_record(&self, _id: &str) -> Result<()> {
             // Mock implementation
             Ok(())
         }

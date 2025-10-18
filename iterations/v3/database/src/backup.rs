@@ -3,14 +3,14 @@
 //! Provides automated backup capabilities with encryption, compression,
 //! and recovery testing for production database hardening.
 
-use crate::{DatabaseClient, DatabaseConfig};
+use crate::DatabaseConfig;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::fs;
 use tokio::process::Command;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 /// Backup manager for automated database backups

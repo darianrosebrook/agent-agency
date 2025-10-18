@@ -3,7 +3,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 /// Provenance emitter for orchestration tracking
@@ -50,7 +50,8 @@ impl OrchestrationProvenanceEmitter {
         }
 
         // Extract task_id from payload if present
-        let task_id = payload.get("task_id")
+        let task_id = payload
+            .get("task_id")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
@@ -64,7 +65,8 @@ impl OrchestrationProvenanceEmitter {
 
         // Store event
         let mut events = self.events.write().await;
-        let task_events = events.entry(task_id.unwrap_or_else(|| "global".to_string()))
+        let task_events = events
+            .entry(task_id.unwrap_or_else(|| "global".to_string()))
             .or_insert_with(Vec::new);
         task_events.push(event.clone());
 
@@ -73,7 +75,10 @@ impl OrchestrationProvenanceEmitter {
             task_events.remove(0);
         }
 
-        debug!("Successfully emitted event: {} for task: {:?}", event_type, event.task_id);
+        debug!(
+            "Successfully emitted event: {} for task: {:?}",
+            event_type, event.task_id
+        );
 
         Ok(())
     }
@@ -150,7 +155,10 @@ impl OrchestrationProvenanceEmitter {
     }
 
     pub fn validation_result(&self, task_id: &str, passed: bool) {
-        debug!("Recording validation result for task {}: {}", task_id, passed);
+        debug!(
+            "Recording validation result for task {}: {}",
+            task_id, passed
+        );
 
         if task_id.trim().is_empty() {
             warn!("Empty task_id provided to validation_result");
@@ -186,7 +194,10 @@ impl OrchestrationProvenanceEmitter {
     }
 
     pub fn orchestrate_exit(&self, task_id: &str, status: &str) {
-        debug!("Recording orchestration exit for task {}: {}", task_id, status);
+        debug!(
+            "Recording orchestration exit for task {}: {}",
+            task_id, status
+        );
 
         if task_id.trim().is_empty() {
             warn!("Empty task_id provided to orchestrate_exit");

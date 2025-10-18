@@ -1103,6 +1103,123 @@ class HiddenTodoAnalyzer:
 
         return all_results
 
+    def analyze_files(self, file_paths: List[str], min_confidence: float = 0.7) -> Dict:
+        """Analyze specific files for hidden TODO patterns."""
+        print(f"Analyzing {len(file_paths)} specific files with improved patterns")
+        print(f"Minimum confidence threshold: {min_confidence}")
+
+        # Convert string paths to Path objects and filter valid files
+        valid_files = []
+        for file_path in file_paths:
+            path = Path(file_path)
+            if path.exists() and path.is_file():
+                valid_files.append(path)
+            else:
+                print(f"Warning: File not found or not accessible: {file_path}")
+
+        if not valid_files:
+            print("No valid files to analyze")
+            return {
+                'summary': {
+                    'total_files': 0,
+                    'non_ignored_files': 0,
+                    'ignored_files': 0,
+                    'language_counts': {},
+                    'files_with_hidden_todos': 0,
+                    'total_hidden_todos': 0,
+                    'high_confidence_todos': 0,
+                    'medium_confidence_todos': 0,
+                    'low_confidence_todos': 0,
+                    'code_stub_todos': 0,
+                    'pattern_counts': {},
+                    'min_confidence_threshold': min_confidence,
+                },
+                'files': {},
+                'patterns': defaultdict(list)
+            }
+
+        # Reset pattern statistics for this run
+        self.pattern_stats = defaultdict(int)
+
+        # Count languages
+        language_counts = Counter()
+        non_ignored_files = []
+
+        for file_path in valid_files:
+            language = self.detect_language(file_path)
+            if language:
+                language_counts[language] += 1
+                # Skip ignored files
+                if not self.should_ignore_file(file_path):
+                    non_ignored_files.append(file_path)
+
+        all_results = {
+            'summary': {
+                'total_files': len(valid_files),
+                'non_ignored_files': len(non_ignored_files),
+                'ignored_files': len(valid_files) - len(non_ignored_files),
+                'language_counts': dict(language_counts),
+                'files_with_hidden_todos': 0,
+                'total_hidden_todos': 0,
+                'high_confidence_todos': 0,
+                'medium_confidence_todos': 0,
+                'low_confidence_todos': 0,
+                'code_stub_todos': 0,
+                'pattern_counts': {},
+                'min_confidence_threshold': min_confidence,
+            },
+            'files': {},
+            'patterns': defaultdict(list)
+        }
+
+        for file_path in non_ignored_files:
+            print(f"Analyzing: {file_path}")
+            file_analysis = self.analyze_file(file_path)
+
+            if file_analysis and file_analysis['hidden_todos']:
+                # Filter by confidence threshold
+                filtered_todos = {}
+                for line_num, data in file_analysis['hidden_todos'].items():
+                    if data['confidence_score'] >= min_confidence:
+                        filtered_todos[line_num] = data
+
+                        # Count by confidence level
+                        if data['confidence_score'] >= 0.9:
+                            all_results['summary']['high_confidence_todos'] += 1
+                        elif data['confidence_score'] >= 0.6:
+                            all_results['summary']['medium_confidence_todos'] += 1
+                        else:
+                            all_results['summary']['low_confidence_todos'] += 1
+
+                        # Count patterns
+                        for pattern in data['matched_patterns']:
+                            self.pattern_stats[pattern] += 1
+
+                if filtered_todos:
+                    all_results['summary']['files_with_hidden_todos'] += 1
+                    all_results['summary']['total_hidden_todos'] += len(filtered_todos)
+                    all_results['files'][str(file_path)] = {
+                        'language': file_analysis['language'],
+                        'hidden_todos': filtered_todos,
+                        'total_lines': file_analysis['total_lines'],
+                        'comment_lines': file_analysis['comment_lines']
+                    }
+
+                    # Add to patterns
+                    for line_num, data in filtered_todos.items():
+                        for pattern in data['matched_patterns']:
+                            all_results['patterns'][pattern].append({
+                                'file': str(file_path),
+                                'line': line_num,
+                                'confidence': data['confidence_score'],
+                                'text': data['text']
+                            })
+
+        # Finalize pattern counts
+        all_results['summary']['pattern_counts'] = dict(self.pattern_stats)
+
+        return all_results
+
     def generate_report(self, results: Dict) -> str:
         """Generate a comprehensive report with enhanced accuracy information."""
         report = []
@@ -1200,6 +1317,8 @@ def main():
         description='Analyze files for hidden TODO patterns with improved accuracy')
     parser.add_argument('--root', default='.',
                         help='Root directory to analyze (default: current directory)')
+    parser.add_argument('--files', nargs='+',
+                        help='Specific files to analyze (instead of scanning directory)')
     parser.add_argument('--languages', nargs='+',
                         help='Specific languages to analyze (e.g., rust python javascript)')
     parser.add_argument(
@@ -1211,6 +1330,10 @@ def main():
                         action='store_true', help='Verbose output')
     parser.add_argument('--disable-code-stub-scan',
                         action='store_true', help='Disable code stub detection heuristics')
+    parser.add_argument('--ci-mode',
+                        action='store_true', help='CI mode - exit with error code if hidden TODOs found')
+    parser.add_argument('--warn-only',
+                        action='store_true', help='Warning mode - only warn, never fail')
 
     args = parser.parse_args()
 
@@ -1218,7 +1341,12 @@ def main():
         args.root,
         enable_code_stub_scan=not args.disable_code_stub_scan,
     )
-    results = analyzer.analyze_directory(args.languages, args.min_confidence)
+
+    # Analyze specific files or entire directory
+    if args.files:
+        results = analyzer.analyze_files(args.files, args.min_confidence)
+    else:
+        results = analyzer.analyze_directory(args.languages, args.min_confidence)
 
     # Print summary
     summary = results['summary']
@@ -1259,6 +1387,21 @@ def main():
     else:
         # Print report to console
         print("\n" + analyzer.generate_report(results))
+
+    # Handle CI mode and warn-only mode
+    summary = results['summary']
+    total_hidden_todos = summary['total_hidden_todos']
+
+    if total_hidden_todos > 0:
+        if args.ci_mode:
+            print(f"\n❌ CI MODE: Found {total_hidden_todos} hidden TODOs - blocking commit/push")
+            exit(1)
+        elif args.warn_only:
+            print(f"\n⚠️  WARN MODE: Found {total_hidden_todos} hidden TODOs - proceeding anyway")
+        else:
+            print(f"\n⚠️  Found {total_hidden_todos} hidden TODOs - consider addressing them")
+    else:
+        print(f"\n✅ No hidden TODOs found - good job!")
 
 
 if __name__ == '__main__':

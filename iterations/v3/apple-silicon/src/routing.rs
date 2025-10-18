@@ -4,12 +4,12 @@
 //! based on model characteristics, system load, and performance requirements.
 
 use crate::types::*;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
+use tracing::info;
 use uuid::Uuid;
 
 /// Main inference router for Apple Silicon
@@ -634,6 +634,12 @@ mod tests {
     #[tokio::test]
     async fn test_inference_router_creation() {
         let config = RoutingConfig {
+            enable_routing: true,
+            routing_algorithm: RoutingAlgorithm::PerformanceBased,
+            load_balancing_strategy: LoadBalancingStrategy::RoundRobin,
+            max_concurrent_requests: 10,
+            request_timeout_ms: 5000,
+            enable_performance_monitoring: true,
             model_preferences: HashMap::new(),
             load_balancing: true,
             performance_monitoring: true,
@@ -646,6 +652,12 @@ mod tests {
     #[tokio::test]
     async fn test_get_available_targets() {
         let router = InferenceRouter::new(RoutingConfig {
+            enable_routing: true,
+            routing_algorithm: RoutingAlgorithm::PerformanceBased,
+            load_balancing_strategy: LoadBalancingStrategy::RoundRobin,
+            max_concurrent_requests: 10,
+            request_timeout_ms: 5000,
+            enable_performance_monitoring: true,
             model_preferences: HashMap::new(),
             load_balancing: true,
             performance_monitoring: true,
@@ -666,6 +678,12 @@ mod tests {
     #[tokio::test]
     async fn test_calculate_target_score() {
         let router = InferenceRouter::new(RoutingConfig {
+            enable_routing: true,
+            routing_algorithm: RoutingAlgorithm::PerformanceBased,
+            load_balancing_strategy: LoadBalancingStrategy::RoundRobin,
+            max_concurrent_requests: 10,
+            request_timeout_ms: 5000,
+            enable_performance_monitoring: true,
             model_preferences: HashMap::new(),
             load_balancing: true,
             performance_monitoring: true,
@@ -695,6 +713,12 @@ mod tests {
     #[tokio::test]
     async fn test_estimate_execution_time() {
         let router = InferenceRouter::new(RoutingConfig {
+            enable_routing: true,
+            routing_algorithm: RoutingAlgorithm::PerformanceBased,
+            load_balancing_strategy: LoadBalancingStrategy::RoundRobin,
+            max_concurrent_requests: 10,
+            request_timeout_ms: 5000,
+            enable_performance_monitoring: true,
             model_preferences: HashMap::new(),
             load_balancing: true,
             performance_monitoring: true,
@@ -726,6 +750,12 @@ mod tests {
     #[tokio::test]
     async fn test_route_inference() {
         let router = InferenceRouter::new(RoutingConfig {
+            enable_routing: true,
+            routing_algorithm: RoutingAlgorithm::PerformanceBased,
+            load_balancing_strategy: LoadBalancingStrategy::RoundRobin,
+            max_concurrent_requests: 10,
+            request_timeout_ms: 5000,
+            enable_performance_monitoring: true,
             model_preferences: HashMap::new(),
             load_balancing: true,
             performance_monitoring: true,

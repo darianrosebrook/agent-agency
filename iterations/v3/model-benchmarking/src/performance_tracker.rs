@@ -36,7 +36,8 @@ impl PerformanceTracker {
         let active_models = self.active_models.read().await.clone();
 
         // Validate models are still available (basic check)
-        let validated_models = active_models.into_iter()
+        let validated_models = active_models
+            .into_iter()
             .filter(|model| {
                 // Basic validation: ensure model has required fields
                 !model.name.is_empty() && model.id != Uuid::nil()
@@ -54,7 +55,8 @@ impl PerformanceTracker {
         // Update historical benchmarks for each model in the report
         let mut historical = self.historical_benchmarks.write().await;
         for result in &report.benchmark_results {
-            historical.entry(result.model_id)
+            historical
+                .entry(result.model_id)
                 .or_insert_with(Vec::new)
                 .push(result.clone());
         }
@@ -71,7 +73,8 @@ impl PerformanceTracker {
         let mut performance = self.model_performance.write().await;
 
         // Create or update performance entry for this model
-        let model_perf = performance.entry(result.model_spec.id)
+        let model_perf = performance
+            .entry(result.model_spec.id)
             .or_insert_with(Vec::new);
 
         // Calculate overall performance score
@@ -114,9 +117,11 @@ impl PerformanceTracker {
                 let mut perf = latest_perf.clone();
                 // If we have multiple entries, calculate average performance
                 if performances.len() > 1 {
-                    let avg_score = performances.iter()
+                    let avg_score = performances
+                        .iter()
                         .map(|p| p.performance_score)
-                        .sum::<f64>() / performances.len() as f64;
+                        .sum::<f64>()
+                        / performances.len() as f64;
                     perf.performance_score = avg_score;
                 }
                 aggregated_performance.push(perf);
@@ -125,7 +130,9 @@ impl PerformanceTracker {
 
         // Sort by performance score (highest first)
         aggregated_performance.sort_by(|a, b| {
-            b.performance_score.partial_cmp(&a.performance_score).unwrap()
+            b.performance_score
+                .partial_cmp(&a.performance_score)
+                .unwrap()
         });
 
         Ok(aggregated_performance)
@@ -145,16 +152,16 @@ impl PerformanceTracker {
             // 2. Number of evaluations
             // 3. Trend stability
 
-            let scores: Vec<f64> = performances.iter()
-                .map(|p| p.performance_score)
-                .collect();
+            let scores: Vec<f64> = performances.iter().map(|p| p.performance_score).collect();
 
             let avg_score = scores.iter().sum::<f64>() / scores.len() as f64;
 
             // Calculate standard deviation for consistency
-            let variance = scores.iter()
+            let variance = scores
+                .iter()
                 .map(|score| (score - avg_score).powi(2))
-                .sum::<f64>() / scores.len() as f64;
+                .sum::<f64>()
+                / scores.len() as f64;
             let std_dev = variance.sqrt();
 
             // Consistency factor (lower std_dev = higher confidence)
@@ -165,24 +172,26 @@ impl PerformanceTracker {
 
             // Trend factor (recent performance stability)
             let trend_factor = if performances.len() >= 3 {
-                let recent_scores: Vec<f64> = performances.iter()
+                let recent_scores: Vec<f64> = performances
+                    .iter()
                     .rev()
                     .take(3)
                     .map(|p| p.performance_score)
                     .collect();
                 let recent_avg = recent_scores.iter().sum::<f64>() / recent_scores.len() as f64;
-                let recent_std_dev = recent_scores.iter()
+                let recent_std_dev = recent_scores
+                    .iter()
                     .map(|score| (score - recent_avg).powi(2))
-                    .sum::<f64>() / recent_scores.len() as f64;
+                    .sum::<f64>()
+                    / recent_scores.len() as f64;
                 1.0 - (recent_std_dev / 2.0).min(1.0)
             } else {
                 0.5 // Neutral for models with few evaluations
             };
 
             // Combine factors with weights
-            let confidence = (consistency_factor * 0.4) +
-                           (volume_factor * 0.3) +
-                           (trend_factor * 0.3);
+            let confidence =
+                (consistency_factor * 0.4) + (volume_factor * 0.3) + (trend_factor * 0.3);
 
             Ok(confidence.max(0.1).min(1.0))
         } else {
@@ -190,10 +199,7 @@ impl PerformanceTracker {
         }
     }
 
-    pub async fn get_historical_performance(
-        &self,
-        model_id: Uuid,
-    ) -> Result<Vec<BenchmarkResult>> {
+    pub async fn get_historical_performance(&self, model_id: Uuid) -> Result<Vec<BenchmarkResult>> {
         // Retrieve historical benchmark results for the specified model
         let historical_data = self.historical_benchmarks.read().await;
 
@@ -248,21 +254,21 @@ impl PerformanceTracker {
         }
 
         // Calculate overall performance
-        let overall_performance = performances.iter()
+        let overall_performance = performances
+            .iter()
             .map(|p| p.performance_score)
-            .sum::<f64>() / performances.len() as f64;
+            .sum::<f64>()
+            / performances.len() as f64;
 
         // Determine performance trend (simplified)
         let trend = PerformanceTrend::Stable; // Would need more sophisticated analysis
 
         // Get top performers (top 3)
-        let top_performers = performances.iter()
-            .take(3)
-            .cloned()
-            .collect();
+        let top_performers = performances.iter().take(3).cloned().collect();
 
         // Identify improvement areas (models with score < 0.7)
-        let improvement_areas = performances.iter()
+        let improvement_areas = performances
+            .iter()
             .filter(|p| p.performance_score < 0.7)
             .map(|p| ImprovementArea {
                 area: format!("{} performance", p.model_name),

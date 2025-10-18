@@ -4,10 +4,8 @@ use anyhow::Result;
 use std::time::Duration;
 use tracing::{debug, info};
 
-use crate::fixtures::{TestDataGenerator, TestFixtures};
-use crate::helpers::{
-    PerformanceRequirements, PerformanceStats, PerformanceTestUtils, TestAssertions,
-};
+use crate::fixtures::TestDataGenerator;
+use crate::helpers::{PerformanceRequirements, PerformanceTestUtils, TestAssertions};
 use crate::mocks::{MockDatabase, MockEventEmitter, MockFactory, MockMetricsCollector};
 use crate::test_utils::{TestExecutor, TestResult, LONG_TEST_TIMEOUT};
 
@@ -95,7 +93,7 @@ impl PerformanceTests {
 
         // Setup test data
         let requests = TestDataGenerator::generate_working_specs(100);
-        let mut response_times = Vec::new();
+        let response_times = Vec::new();
 
         // TODO: Initialize API system
         // let api_system = ApiSystem::new()
@@ -148,7 +146,7 @@ impl PerformanceTests {
             "SELECT * FROM council_verdicts ORDER BY timestamp DESC LIMIT ?",
         ];
 
-        let mut query_times = Vec::new();
+        let query_times = Vec::new();
 
         // TODO: Initialize database system
         // let db_system = DatabaseSystem::new()
@@ -296,7 +294,7 @@ impl PerformanceTests {
 
         let start_time = std::time::Instant::now();
         let mut operation_count = 0;
-        let mut error_count = 0;
+        let error_count = 0;
 
         // Simple mock throughput test - just count iterations
         let end_time = start_time + test_duration;
@@ -353,7 +351,7 @@ impl PerformanceTests {
 
         // Test different load levels
         let load_levels = vec![10, 50, 100, 200];
-        let mut scalability_results: Vec<String> = Vec::new();
+        let scalability_results: Vec<String> = Vec::new();
 
         // TODO: Initialize system
         // let system = AgentAgencySystem::new()

@@ -6,7 +6,7 @@
 use crate::evidence_enrichment::EvidenceEnrichmentCoordinator;
 use crate::models::TaskSpec;
 use crate::resilience::ResilienceManager;
-use crate::types::{ConsensusResult, FinalVerdict, JudgeVerdict, CouncilMetrics, JudgeMetrics};
+use crate::types::{ConsensusResult, CouncilMetrics, FinalVerdict, JudgeMetrics, JudgeVerdict};
 use crate::CouncilConfig;
 use anyhow::Result;
 use std::collections::HashMap;
@@ -97,7 +97,7 @@ impl ConsensusCoordinator {
 
         // Update metrics - increment total evaluations
         {
-            let mut metrics = self.metrics.write().await;
+            let mut metrics = self.metrics.write().unwrap();
             metrics.total_evaluations += 1;
         }
 
@@ -184,7 +184,7 @@ impl ConsensusCoordinator {
             task_id,
             verdict_id,
             final_verdict,
-            individual_verdicts,
+            individual_verdicts: individual_verdicts.clone(),
             consensus_score,
             debate_rounds: 0, // TODO: Implement debate protocol with the following requirements:
             // 1. Debate initiation: Initiate debate when consensus cannot be reached
@@ -214,13 +214,16 @@ impl ConsensusCoordinator {
         // Update metrics on successful completion
         let evaluation_time = start_time.elapsed().as_millis() as u64;
         {
-            let mut metrics = self.metrics.write().await;
+            let mut metrics = self.metrics.write().unwrap();
             metrics.successful_evaluations += 1;
             metrics.total_evaluation_time_ms += evaluation_time;
 
             // Track judge performance
             for (judge_name, verdict) in &individual_verdicts {
-                let judge_stats = metrics.judge_performance.entry(judge_name.clone()).or_default();
+                let judge_stats = metrics
+                    .judge_performance
+                    .entry(judge_name.clone())
+                    .or_default();
                 judge_stats.total_evaluations += 1;
                 judge_stats.successful_evaluations += 1;
 
@@ -231,8 +234,12 @@ impl ConsensusCoordinator {
                 };
 
                 // Update running average confidence
-                judge_stats.average_confidence = (judge_stats.average_confidence * (judge_stats.total_evaluations - 1) as f32 + confidence) / judge_stats.total_evaluations as f32;
-                judge_stats.total_time_ms += evaluation_time / individual_verdicts.len() as u64; // Distribute time across judges
+                judge_stats.average_confidence = (judge_stats.average_confidence
+                    * (judge_stats.total_evaluations - 1) as f32
+                    + confidence)
+                    / judge_stats.total_evaluations as f32;
+                judge_stats.total_time_ms += evaluation_time / individual_verdicts.len() as u64;
+                // Distribute time across judges
             }
         }
 
@@ -338,7 +345,7 @@ impl ConsensusCoordinator {
 
     /// Get current council metrics
     pub async fn get_metrics(&self) -> CouncilMetrics {
-        let coordinator_metrics = self.metrics.read().await.clone();
+        let coordinator_metrics = self.metrics.read().unwrap().clone();
 
         let total_evaluations = coordinator_metrics.total_evaluations;
         let total_debates = 0; // No debate tracking yet
@@ -352,7 +359,8 @@ impl ConsensusCoordinator {
 
         // Calculate average evaluation time
         let average_evaluation_time_ms = if coordinator_metrics.successful_evaluations > 0 {
-            coordinator_metrics.total_evaluation_time_ms as f64 / coordinator_metrics.successful_evaluations as f64
+            coordinator_metrics.total_evaluation_time_ms as f64
+                / coordinator_metrics.successful_evaluations as f64
         } else {
             0.0
         };
@@ -363,21 +371,20 @@ impl ConsensusCoordinator {
         // Convert judge performance stats to JudgeMetrics format
         let mut judge_performance = HashMap::new();
         for (judge_name, stats) in &coordinator_metrics.judge_performance {
-            let judge_id = uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_DNS, judge_name.as_bytes());
-            judge_performance.insert(judge_id, JudgeMetrics {
-                total_evaluations: stats.total_evaluations,
-                average_time_ms: if stats.total_evaluations > 0 {
-                    stats.total_time_ms as f64 / stats.total_evaluations as f64
-                } else {
-                    0.0
+            judge_performance.insert(
+                judge_name.clone(),
+                JudgeMetrics {
+                    total_evaluations: stats.total_evaluations,
+                    average_time_ms: if stats.total_evaluations > 0 {
+                        stats.total_time_ms as f64 / stats.total_evaluations as f64
+                    } else {
+                        0.0
+                    },
+                    accuracy_rate: stats.average_confidence, // Using confidence as accuracy proxy
+                    reliability_score: stats.average_confidence, // Using confidence as reliability proxy
+                    last_evaluation: None, // TODO: Track last evaluation timestamp
                 },
-                accuracy_rate: stats.average_confidence, // Using confidence as accuracy proxy
-                consensus_contribution: if stats.successful_evaluations > 0 {
-                    stats.successful_evaluations as f32 / stats.total_evaluations as f32
-                } else {
-                    0.0
-                },
-            });
+            );
         }
 
         CouncilMetrics {

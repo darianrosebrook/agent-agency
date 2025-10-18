@@ -8,8 +8,8 @@ use anyhow::Result;
 use chrono::{DateTime, Duration, Utc};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
-use tracing::{debug, info, warn};
+use tokio::sync::RwLock;
+use tracing::{debug, info};
 
 /// Rate limiter for tracking and enforcing rate limits
 pub struct RateLimiter {
