@@ -630,6 +630,15 @@ describe("ArbiterOrchestrator - CAWS Integration", () => {
     });
 
     test("should include human override in status report", async () => {
+      // Create some override activity first
+      const violatingTask = {
+        id: "status-test-violation",
+        type: "computation",
+        description: "Task that violates rules for status test",
+      };
+
+      await orchestrator.submitTask(violatingTask);
+
       const status = await orchestrator.getStatus();
       expect(status.components.humanOverride).toBe(true);
       expect(status.metrics.pendingOverrides).toBeDefined();

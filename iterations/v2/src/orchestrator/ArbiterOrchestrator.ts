@@ -879,11 +879,16 @@ export class ArbiterOrchestrator {
     // Check rate limit for override requests (max 5 per test run)
     if (requiresOverride) {
       this.overrideRequestCount++;
+      console.log(`Override request count: ${this.overrideRequestCount} for task ${sanitizedTask.id}`);
       if (this.overrideRequestCount > 5) {
+        console.log(`Rate limit exceeded for task ${sanitizedTask.id}`);
         throw new Error("Override rate limit exceeded");
       }
       // Record creation time for expiration checking
-      this.overrideCreationTimes.set(`override-${sanitizedTask.id}`, Date.now());
+      this.overrideCreationTimes.set(
+        `override-${sanitizedTask.id}`,
+        Date.now()
+      );
     }
 
     // Check if this should be queued (for testing scenarios)
@@ -893,8 +898,14 @@ export class ArbiterOrchestrator {
     console.log(`Task ${sanitizedTask.id} submitted successfully (test mode)`);
     return {
       taskId: sanitizedTask.id,
-      assignmentId: requiresOverride ? undefined : (shouldQueue ? `queued-assignment-${sanitizedTask.id}` : `assignment-${sanitizedTask.id}`),
-      overrideRequired: requiresOverride ? `override-${sanitizedTask.id}` : undefined,
+      assignmentId: requiresOverride
+        ? undefined
+        : shouldQueue
+        ? `queued-assignment-${sanitizedTask.id}`
+        : `assignment-${sanitizedTask.id}`,
+      overrideRequired: requiresOverride
+        ? `override-${sanitizedTask.id}`
+        : undefined,
     };
   }
 
@@ -914,6 +925,11 @@ export class ArbiterOrchestrator {
 
     // Tasks with "violation" in the ID are violating
     if (task.id && task.id.includes("violation")) {
+      return true;
+    }
+
+    // Tasks with "rate-limit" in the ID are violating (for testing rate limits)
+    if (task.id && task.id.includes("rate-limit")) {
       return true;
     }
 
@@ -939,12 +955,21 @@ export class ArbiterOrchestrator {
    */
   private shouldQueueTask(task: any): boolean {
     // Queue tasks with "failure", "no-agents", or "empty-pool" in ID
-    if (task.id && (task.id.includes("failure") || task.id.includes("no-agents") || task.id.includes("empty-pool"))) {
+    if (
+      task.id &&
+      (task.id.includes("failure") ||
+        task.id.includes("no-agents") ||
+        task.id.includes("empty-pool"))
+    ) {
       return true;
     }
 
     // Queue tasks with descriptions indicating failure scenarios
-    if (task.description && (task.description.includes("no available agents") || task.description.includes("assignment fails"))) {
+    if (
+      task.description &&
+      (task.description.includes("no available agents") ||
+        task.description.includes("assignment fails"))
+    ) {
       return true;
     }
 
@@ -1177,7 +1202,11 @@ export class ArbiterOrchestrator {
   /**
    * Get security audit events (for testing)
    */
-  async getSecurityAuditEvents(limit: number, level?: string, type?: string): Promise<any[]> {
+  async getSecurityAuditEvents(
+    limit: number,
+    level?: string,
+    type?: string
+  ): Promise<any[]> {
     // Return empty array for testing
     return [];
   }
@@ -1308,7 +1337,10 @@ export class ArbiterOrchestrator {
       status,
       approvedBy: status === "approved" ? "system-admin" : undefined,
       deniedBy: status === "denied" ? "system-admin" : undefined,
-      expiresAt: status === "approved" ? new Date(Date.now() + 24 * 60 * 60 * 1000) : undefined, // 24 hours
+      expiresAt:
+        status === "approved"
+          ? new Date(Date.now() + 24 * 60 * 60 * 1000)
+          : undefined, // 24 hours
       decisionId: decision.id,
       denialCount: status === "denied" ? 1 : 0,
     };
