@@ -132,6 +132,8 @@ impl ConsensusCoordinator {
         let judge_inference_start = std::time::Instant::now();
 
         // Create individual judge verdicts with evidence enhancement
+        // FUTURE: Implement constitutional concurrency for parallel judge evaluation
+        // See docs/coordinating-concurrency.md for risk-tier based parallelism patterns
         let mut individual_verdicts = HashMap::new();
 
         // Constitutional Judge evaluation

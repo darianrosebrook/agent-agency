@@ -1903,40 +1903,313 @@ impl DatabaseOperations for DatabaseClient {
 
     async fn create_knowledge_entry(
         &self,
-        _entry: CreateKnowledgeEntry,
+        entry: CreateKnowledgeEntry,
     ) -> Result<KnowledgeEntry, Self::Error> {
-        todo!("Implement create_knowledge_entry")
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+
+        let row = sqlx::query(
+            r#"
+            INSERT INTO knowledge_entries (
+                id, title, content, content_type, source, source_url,
+                tags, metadata, embedding_vector, created_at, updated_at,
+                access_level, version, parent_id
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            RETURNING *
+            "#
+        )
+        .bind(id)
+        .bind(&entry.title)
+        .bind(&entry.content)
+        .bind(&entry.content_type)
+        .bind(&entry.source)
+        .bind(&entry.source_url)
+        .bind(serde_json::to_value(&entry.tags).unwrap_or_default())
+        .bind(serde_json::to_value(&entry.metadata).unwrap_or_default())
+        .bind(&entry.embedding_vector)
+        .bind(now)
+        .bind(now)
+        .bind(&entry.access_level)
+        .bind(entry.version)
+        .bind(&entry.parent_id)
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to create knowledge entry")?;
+
+        let knowledge_entry = KnowledgeEntry {
+            id: row.get("id"),
+            title: row.get("title"),
+            content: row.get("content"),
+            content_type: row.get("content_type"),
+            source: row.get("source"),
+            source_url: row.get("source_url"),
+            tags: row.get("tags"),
+            metadata: row.get("metadata"),
+            embedding_vector: row.get("embedding_vector"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            access_level: row.get("access_level"),
+            version: row.get("version"),
+            parent_id: row.get("parent_id"),
+        };
+
+        info!("Created knowledge entry {}: {}", id, entry.title);
+        Ok(knowledge_entry)
     }
 
     async fn get_knowledge_entries(
         &self,
-        _filters: Option<KnowledgeFilters>,
-        _pagination: Option<PaginationParams>,
+        filters: Option<KnowledgeFilters>,
+        pagination: Option<PaginationParams>,
     ) -> Result<Vec<KnowledgeEntry>, Self::Error> {
-        todo!("Implement get_knowledge_entries")
+        let mut query = "SELECT * FROM knowledge_entries".to_string();
+        let mut conditions = Vec::new();
+        let mut param_count = 0;
+
+        // Apply filters if provided
+        if let Some(filters) = filters {
+            if let Some(content_type) = &filters.content_type {
+                param_count += 1;
+                conditions.push(format!("content_type = ${}", param_count));
+            }
+            if let Some(source) = &filters.source {
+                param_count += 1;
+                conditions.push(format!("source = ${}", param_count));
+            }
+            if let Some(access_level) = &filters.access_level {
+                param_count += 1;
+                conditions.push(format!("access_level = ${}", param_count));
+            }
+            if let Some(tags) = &filters.tags {
+                if !tags.is_empty() {
+                    param_count += 1;
+                    conditions.push(format!("tags @> ${}", param_count));
+                }
+            }
+            if let Some(created_after) = &filters.created_after {
+                param_count += 1;
+                conditions.push(format!("created_at >= ${}", param_count));
+            }
+            if let Some(created_before) = &filters.created_before {
+                param_count += 1;
+                conditions.push(format!("created_at <= ${}", param_count));
+            }
+            if let Some(parent_id) = &filters.parent_id {
+                param_count += 1;
+                conditions.push(format!("parent_id = ${}", param_count));
+            }
+        }
+
+        if !conditions.is_empty() {
+            query.push_str(" WHERE ");
+            query.push_str(&conditions.join(" AND "));
+        }
+
+        query.push_str(" ORDER BY created_at DESC");
+
+        // Apply pagination
+        if let Some(pagination) = pagination {
+            param_count += 1;
+            query.push_str(&format!(" LIMIT ${}", param_count));
+            param_count += 1;
+            query.push_str(&format!(" OFFSET ${}", param_count));
+        }
+
+        let mut query_builder = sqlx::query(&query);
+
+        // Bind parameters
+        if let Some(filters) = filters {
+            if let Some(content_type) = &filters.content_type {
+                query_builder = query_builder.bind(content_type);
+            }
+            if let Some(source) = &filters.source {
+                query_builder = query_builder.bind(source);
+            }
+            if let Some(access_level) = &filters.access_level {
+                query_builder = query_builder.bind(access_level);
+            }
+            if let Some(tags) = &filters.tags {
+                if !tags.is_empty() {
+                    query_builder = query_builder.bind(serde_json::to_value(tags).unwrap_or_default());
+                }
+            }
+            if let Some(created_after) = &filters.created_after {
+                query_builder = query_builder.bind(created_after);
+            }
+            if let Some(created_before) = &filters.created_before {
+                query_builder = query_builder.bind(created_before);
+            }
+            if let Some(parent_id) = &filters.parent_id {
+                query_builder = query_builder.bind(parent_id);
+            }
+        }
+
+        if let Some(pagination) = pagination {
+            query_builder = query_builder.bind(pagination.limit as i64);
+            query_builder = query_builder.bind(pagination.offset as i64);
+        }
+
+        let rows = query_builder
+            .fetch_all(&self.pool)
+            .await
+            .context("Failed to fetch knowledge entries")?;
+
+        let entries: Vec<KnowledgeEntry> = rows
+            .into_iter()
+            .map(|row| KnowledgeEntry {
+                id: row.get("id"),
+                title: row.get("title"),
+                content: row.get("content"),
+                content_type: row.get("content_type"),
+                source: row.get("source"),
+                source_url: row.get("source_url"),
+                tags: row.get("tags"),
+                metadata: row.get("metadata"),
+                embedding_vector: row.get("embedding_vector"),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+                access_level: row.get("access_level"),
+                version: row.get("version"),
+                parent_id: row.get("parent_id"),
+            })
+            .collect();
+
+        info!("Retrieved {} knowledge entries", entries.len());
+        Ok(entries)
     }
 
     async fn search_knowledge(
         &self,
-        _query: &str,
-        _limit: Option<u32>,
+        query: &str,
+        limit: Option<u32>,
     ) -> Result<Vec<KnowledgeEntry>, Self::Error> {
-        todo!("Implement search_knowledge")
+        let limit = limit.unwrap_or(10) as i64;
+        
+        // For now, implement text-based search. In a full implementation,
+        // this would use vector similarity search with pgvector
+        let rows = sqlx::query(
+            r#"
+            SELECT *, 
+                   ts_rank(to_tsvector('english', title || ' ' || content), plainto_tsquery('english', $1)) as rank
+            FROM knowledge_entries 
+            WHERE to_tsvector('english', title || ' ' || content) @@ plainto_tsquery('english', $1)
+            ORDER BY rank DESC, created_at DESC
+            LIMIT $2
+            "#
+        )
+        .bind(query)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to search knowledge entries")?;
+
+        let entries: Vec<KnowledgeEntry> = rows
+            .into_iter()
+            .map(|row| KnowledgeEntry {
+                id: row.get("id"),
+                title: row.get("title"),
+                content: row.get("content"),
+                content_type: row.get("content_type"),
+                source: row.get("source"),
+                source_url: row.get("source_url"),
+                tags: row.get("tags"),
+                metadata: row.get("metadata"),
+                embedding_vector: row.get("embedding_vector"),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+                access_level: row.get("access_level"),
+                version: row.get("version"),
+                parent_id: row.get("parent_id"),
+            })
+            .collect();
+
+        info!("Found {} knowledge entries for query: '{}'", entries.len(), query);
+        Ok(entries)
     }
 
     async fn create_performance_metric(
         &self,
-        _metric: CreatePerformanceMetric,
+        metric: CreatePerformanceMetric,
     ) -> Result<PerformanceMetric, Self::Error> {
-        todo!("Implement create_performance_metric")
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+
+        let row = sqlx::query(
+            r#"
+            INSERT INTO performance_metrics (
+                id, metric_name, metric_value, metric_type, component,
+                task_id, execution_id, timestamp, metadata, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            RETURNING *
+            "#
+        )
+        .bind(id)
+        .bind(&metric.metric_name)
+        .bind(metric.metric_value)
+        .bind(&metric.metric_type)
+        .bind(&metric.component)
+        .bind(&metric.task_id)
+        .bind(&metric.execution_id)
+        .bind(metric.timestamp)
+        .bind(serde_json::to_value(&metric.metadata).unwrap_or_default())
+        .bind(now)
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to create performance metric")?;
+
+        let performance_metric = PerformanceMetric {
+            id: row.get("id"),
+            metric_name: row.get("metric_name"),
+            metric_value: row.get("metric_value"),
+            metric_type: row.get("metric_type"),
+            component: row.get("component"),
+            task_id: row.get("task_id"),
+            execution_id: row.get("execution_id"),
+            timestamp: row.get("timestamp"),
+            metadata: row.get("metadata"),
+            created_at: row.get("created_at"),
+        };
+
+        info!("Created performance metric {}: {} = {}", id, metric.metric_name, metric.metric_value);
+        Ok(performance_metric)
     }
 
     async fn get_performance_metrics(
         &self,
-        _entity_type: &str,
-        _entity_id: Uuid,
+        entity_type: &str,
+        entity_id: Uuid,
     ) -> Result<Vec<PerformanceMetric>, Self::Error> {
-        todo!("Implement get_performance_metrics")
+        let rows = sqlx::query(
+            r#"
+            SELECT * FROM performance_metrics 
+            WHERE component = $1 AND (task_id = $2 OR execution_id = $2)
+            ORDER BY timestamp DESC
+            "#
+        )
+        .bind(entity_type)
+        .bind(entity_id)
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to fetch performance metrics")?;
+
+        let metrics: Vec<PerformanceMetric> = rows
+            .into_iter()
+            .map(|row| PerformanceMetric {
+                id: row.get("id"),
+                metric_name: row.get("metric_name"),
+                metric_value: row.get("metric_value"),
+                metric_type: row.get("metric_type"),
+                component: row.get("component"),
+                task_id: row.get("task_id"),
+                execution_id: row.get("execution_id"),
+                timestamp: row.get("timestamp"),
+                metadata: row.get("metadata"),
+                created_at: row.get("created_at"),
+            })
+            .collect();
+
+        info!("Retrieved {} performance metrics for {} {}", metrics.len(), entity_type, entity_id);
+        Ok(metrics)
     }
 
     async fn create_caws_compliance(

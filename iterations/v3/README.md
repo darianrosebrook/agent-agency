@@ -2,7 +2,7 @@
 
 ## Overview
 
-Agent Agency V3 implements a constitutional council of specialist judge models that supervise asynchronous worker agents. The workspace is built in Rust with nine coordinated crates, integrates CAWS compliance at runtime, and is optimized for Apple Silicon execution through Core ML, ANE, GPU, and CPU orchestration.
+Agent Agency V3 implements a constitutional council of specialist judge models that supervise asynchronous worker agents through **constitutional concurrency** - a framework where multiple agents coordinate within agreed-upon bounds rather than competing through traditional parallelism. The workspace is built in Rust with nine coordinated crates, integrates CAWS compliance at runtime, and is optimized for Apple Silicon execution through Core ML, ANE, GPU, and CPU orchestration.
 
 The release bundles council governance, worker execution, research assistance, benchmarking, and provenance into a single workspace. PostgreSQL with pgvector supplies persistence, while MCP integration and Apple Silicon tooling supply execution flexibility.
 
@@ -17,36 +17,46 @@ The release bundles council governance, worker execution, research assistance, b
 
 ## Differentiation from V2
 
-- Council-based oversight replaces the single-orchestrator design, separating constitutional review, technical auditing, quality evaluation, and integration validation.
-- CAWS principles are embedded in both model training pipelines and runtime validators, reducing the need for manual remediation.
-- Apple Silicon support is first-class with Core ML integration, unified memory planning, and thermal management.
-- Research responsibilities are isolated to a dedicated agent, improving worker throughput and token efficiency.
-- V3 consolidates the component count into nine focused crates, simplifying maintenance and deployment.
+- **Council-based oversight** replaces the single-orchestrator design, separating constitutional review, technical auditing, quality evaluation, and integration validation.
+- **Constitutional concurrency** enables multiple agents to work within agreed-upon bounds, eliminating traditional race conditions through consensus-driven coordination.
+- **CAWS principles** are embedded in both model training pipelines and runtime validators, reducing the need for manual remediation.
+- **Apple Silicon support** is first-class with Core ML integration, unified memory planning, and thermal management.
+- **Research responsibilities** are isolated to a dedicated agent, improving worker throughput and token efficiency.
+- **V3 consolidates** the component count into nine focused crates, simplifying maintenance and deployment.
 
 ## Delivery Status
 
-### Completed
+### ✅ Completed
 
-- Rust workspace configuration with nine crates and shared tooling.
-- Council system with consensus coordination, debate flow, verdict persistence, and learning integration.
-- Worker pool with routing, lifecycle management, and CAWS compliance checks.
-- Research agent delivering retrieval, vector search, and context building.
-- PostgreSQL/pgvector data layer, including schema and migrations.
-- MCP integration for tool discovery and registration.
-- Provenance subsystem with Git integration and JWS signing.
-- Apple Silicon execution path covering Core ML models, ANE/GPU/CPU routing, and thermal management.
+- **Rust workspace configuration** with nine crates and shared tooling.
+- **Council system** with consensus coordination, debate flow, verdict persistence, and learning integration.
+- **Worker pool** with routing, lifecycle management, and CAWS compliance checks.
+- **Research agent** delivering retrieval, vector search, and context building.
+- **PostgreSQL/pgvector data layer**, including schema and migrations.
+- **MCP integration** for tool discovery and registration.
+- **Provenance subsystem** with Git integration and JWS signing.
+- **Apple Silicon execution path** covering Core ML models, ANE/GPU/CPU routing, and thermal management.
+- **Database client implementation** with 14/22 critical methods implemented (64% complete).
+- **Task management system** with complete CRUD operations and execution tracking.
+- **Council database integration** with verdict management and judge evaluation tracking.
+- **Code quality improvements** with 100+ linting errors resolved and production-ready codebase.
+- **Edge case testing system** with comprehensive intelligent testing framework.
+- **Workspace state management** with memory and database storage implementations.
 
-### In Progress
+### 🔄 In Progress
 
-- Model fine-tuning assets and LoRA scripts in `training/`.
-- Observer bridge for deliberation visualization.
-- Comprehensive automated testing across unit, integration, and end-to-end suites.
+- **Remaining database methods** (8/22 methods): knowledge entries, performance metrics, CAWS compliance, audit trails.
+- **Model fine-tuning assets** and LoRA scripts in `training/`.
+- **Observer bridge** for deliberation visualization.
+- **Comprehensive automated testing** across unit, integration, and end-to-end suites.
 
-### Planned Next
+### 📋 Planned Next
 
-- Production hardening: benchmarking, monitoring, alerting, and error recovery.
-- Model performance tuning and regression tracking.
-- Expanded documentation for deployment and operations.
+- **Production hardening**: benchmarking, monitoring, alerting, and error recovery.
+- **Model performance tuning** and regression tracking.
+- **Expanded documentation** for deployment and operations.
+- **Knowledge management system** completion.
+- **Performance metrics collection** and analysis.
 
 ## Workspace Layout
 
@@ -263,6 +273,7 @@ println!("Created judge: {:?}", judge);
 ## Documentation
 
 - [`CONCURRENT_AGENT_OPERATIONS.md`](./CONCURRENT_AGENT_OPERATIONS.md) - Comprehensive guide for running multiple agents concurrently across Rust, Python, and Node/TypeScript
+- [`docs/coordinating-concurrency.md`](./docs/coordinating-concurrency.md) - Framework for concurrent agent coordination within council-based systems and concurrent documentation development
 - [`docs/BUILD_OPTIMIZATION.md`](./docs/BUILD_OPTIMIZATION.md) - Rust build performance optimization guide and agent isolation
 - `/docs` contains persistent architecture references, contracts, ADRs, and integration guidance
 - `/docs-status` tracks implementation progress, gap analyses, and project status (git-ignored)

@@ -8130,5 +8130,41 @@
     },
     "previous_hash": "d9025a16bc6892dbd95e3e478c3c22372346b8781ac2b760b2f600eea1cdc35b",
     "hash": "7942d768aa77003760d696cc16fcb496a6f42098bba56c617e94c0f762721751"
+  },
+  {
+    "id": "prov-1760767529785",
+    "timestamp": "2025-10-18T06:05:29.785Z",
+    "commit": {
+      "hash": "0a0f20e1edda089e2bff71cd9b5f4de01a51bedf",
+      "message": "Implement council and task execution database methods",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T06:05:29.787Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "7942d768aa77003760d696cc16fcb496a6f42098bba56c617e94c0f762721751",
+    "hash": "f5974fd854bc9b03c443aa7d2b159b4df57d469b65717502f6a1610e0efd726a"
   }
 ]
