@@ -1,28 +1,175 @@
-# Agent Agency V3: Council-Based Arbiter Architecture
+# Agent Agency V3: Constitutional AI Agent Governance
 
 ## Overview
 
-Agent Agency V3 implements a constitutional council of specialist judge models that supervise asynchronous worker agents through **constitutional concurrency** - a framework where multiple agents coordinate within agreed-upon bounds rather than competing through traditional parallelism. The workspace is built in Rust with nine coordinated crates, integrates CAWS compliance at runtime, and is optimized for Apple Silicon execution through Core ML, ANE, GPU, and CPU orchestration.
+**Agent Agency V3** is a production-ready Rust framework for governing AI agent ecosystems through **constitutional oversight** - a novel approach where specialized judge models evaluate, constrain, and improve agent behaviors in real-time.
 
-The release bundles council governance, worker execution, research assistance, benchmarking, and provenance into a single workspace. PostgreSQL with pgvector supplies persistence, while MCP integration and Apple Silicon tooling supply execution flexibility.
+### Core Purpose
+V3 addresses the fundamental challenge of **trustworthy AI agent deployment**: how to enable powerful AI agents to collaborate effectively while preventing failures, bias, and unintended consequences.
 
-## Implemented Capabilities
+### Key Innovation: Constitutional Concurrency
+Traditional agent systems use rigid hierarchies or market-based coordination. V3 introduces **constitutional concurrency** - agents coordinate through agreed-upon constitutional principles rather than competing for resources or following fixed command structures.
 
-- **Council governance** – consensus coordinator, debate protocol, verdict storage, and learning signals housed in `council/`.
-- **Worker services** – task routing, lifecycle management, and compliance checks within `workers/`.
-- **Research and context** – dedicated retrieval, vector search, and context synthesis in `research/`.
-- **Theory-critical pipelines** – claim extraction, reflexive learning, and benchmarking crates ported from V2 and reimplemented in Rust.
-- **Compliance and provenance** – CAWS runtime validator, JWS signing, and Git-backed audit trails across `orchestration/` and `provenance/`.
-- **Platform foundations** – Apple Silicon optimized inference layers, database access, and MCP tooling.
+### Technical Foundation
+- **23 Rust crates** with comprehensive error handling and observability
+- **Apple Silicon optimization** with ANE/GPU/CPU orchestration
+- **PostgreSQL + pgvector** for semantic persistence and retrieval
+- **CAWS compliance** embedded in runtime validation
+- **Git-backed provenance** with cryptographic audit trails
 
-## Differentiation from V2
+### What V3 Enables
+- **Safe multi-agent collaboration** at scale without race conditions
+- **Runtime constitutional compliance** preventing agent misbehavior
+- **Continuous improvement** through judge learning and adaptation
+- **Enterprise-grade reliability** with circuit breakers and resilience patterns
+- **Hardware-accelerated performance** on Apple Silicon platforms
 
-- **Council-based oversight** replaces the single-orchestrator design, separating constitutional review, technical auditing, quality evaluation, and integration validation.
-- **Constitutional concurrency** enables multiple agents to work within agreed-upon bounds, eliminating traditional race conditions through consensus-driven coordination.
-- **CAWS principles** are embedded in both model training pipelines and runtime validators, reducing the need for manual remediation.
-- **Apple Silicon support** is first-class with Core ML integration, unified memory planning, and thermal management.
-- **Research responsibilities** are isolated to a dedicated agent, improving worker throughput and token efficiency.
-- **V3 consolidates** the component count into nine focused crates, simplifying maintenance and deployment.
+## Core Capabilities
+
+### Constitutional Governance System
+**Purpose**: Evaluates agent outputs against constitutional principles and CAWS compliance.
+
+- **Four Specialized Judges**: Constitutional (compliance), Technical (code quality), Quality (requirements), Integration (system coherence)
+- **Risk-Tiered Evaluation**: Sequential oversight for high-risk tasks, parallel evaluation for low-risk operations
+- **Debate Protocol**: Judges can debate conflicting verdicts with evidence-based reasoning
+- **Consensus Formation**: Weighted voting produces final verdicts with audit trails
+- **Learning Integration**: Judges improve through experience and feedback loops
+
+### Multi-Agent Orchestration Engine
+**Purpose**: Coordinates worker agents with constitutional oversight and resource management.
+
+- **Task Routing**: Intelligent distribution of work based on agent capabilities and constitutional constraints
+- **Lifecycle Management**: Agent startup, monitoring, failure recovery, and graceful shutdown
+- **Resource Arbitration**: Prevents agent conflicts through coordinated resource allocation
+- **Execution Tracking**: Complete audit trails of agent actions and decision rationale
+- **Circuit Breaker Protection**: Automatic failure isolation and recovery coordination
+
+### Research & Context Intelligence
+**Purpose**: Provides contextual intelligence and evidence gathering for agent decision-making.
+
+- **Semantic Search**: Vector-based retrieval from PostgreSQL with pgvector
+- **Context Synthesis**: Multi-source information integration and relevance ranking
+- **Evidence Enrichment**: Automated gathering of supporting data for constitutional evaluation
+- **Knowledge Graph Integration**: Cross-referencing capabilities for comprehensive analysis
+- **Adaptive Learning**: Context understanding improves through usage patterns
+
+### Advanced AI Pipelines
+**Purpose**: Specialized AI processing for claim analysis, learning optimization, and performance evaluation.
+
+- **Claim Extraction**: Automated identification and validation of factual claims in agent outputs
+- **Reflexive Learning**: Multi-turn learning coordination with feedback integration
+- **Model Benchmarking**: Comparative performance evaluation across different AI models
+- **Minimal Diff Analysis**: AST-based change assessment for precise impact evaluation
+- **Performance Optimization**: Automated tuning based on hardware capabilities and task requirements
+
+### Compliance & Audit Infrastructure
+**Purpose**: Ensures operational integrity, regulatory compliance, and complete auditability.
+
+- **Runtime CAWS Validation**: Continuous compliance checking during agent execution
+- **Cryptographic Provenance**: Git-backed audit trails with JWS digital signatures
+- **Waiver Management**: Structured exception handling with approval workflows
+- **Security Monitoring**: Real-time threat detection and response coordination
+- **Regulatory Reporting**: Automated compliance documentation and evidence collection
+
+### Apple Silicon Acceleration Platform
+**Purpose**: Hardware-optimized execution environment leveraging native Apple Silicon capabilities.
+
+- **ANE Integration**: Neural Engine acceleration for constitutional judge inference
+- **GPU Orchestration**: Metal-based acceleration for complex analysis tasks
+- **Unified Memory Management**: Efficient data sharing across CPU, GPU, and ANE
+- **Thermal Awareness**: Performance scaling based on system temperature and power constraints
+- **Core ML Optimization**: Model quantization and deployment optimization for Apple hardware
+
+## Problem Statement
+
+**The Challenge**: AI agent deployment faces critical barriers to trustworthy, scalable operation:
+
+- **Safety & Compliance**: How do we ensure AI agents follow ethical guidelines and legal requirements in real-time?
+- **Coordination Complexity**: Traditional agent orchestration leads to race conditions, resource conflicts, and unpredictable behavior
+- **Quality Assurance**: Manual review of agent outputs doesn't scale and introduces human error
+- **Continuous Improvement**: Agents need to learn from experience without compromising safety
+- **Enterprise Reliability**: Production agent systems require auditability, resilience, and regulatory compliance
+
+**V3 Solution**: Constitutional governance provides the missing framework for trustworthy AI agent ecosystems.
+
+## Key Innovations
+
+### Constitutional Concurrency
+**Traditional Approach**: Agents compete for resources or follow rigid hierarchies, leading to conflicts and inefficiencies.
+
+**V3 Approach**: Agents coordinate through constitutional principles, establishing agreed bounds before execution rather than resolving conflicts after the fact.
+
+### Council-Based Governance
+**Traditional Approach**: Single orchestrator or manual oversight creates bottlenecks and single points of failure.
+
+**V3 Approach**: Four specialized judges provide independent oversight, enabling parallel evaluation while maintaining comprehensive governance.
+
+### Runtime Compliance
+**Traditional Approach**: Compliance checked after execution, requiring remediation and rollback.
+
+**V3 Approach**: CAWS principles embedded in runtime validation, preventing non-compliant actions before they occur.
+
+## Use Cases & Applications
+
+### Enterprise Software Development
+- **Code Review Automation**: Constitutional judges evaluate code changes for quality, security, and compliance
+- **Architecture Governance**: Integration validators ensure system coherence across microservices
+- **Deployment Safety**: Risk-tiered evaluation prevents problematic releases
+
+### Research & Analysis
+- **Scientific Claim Validation**: Judges verify factual accuracy in research outputs
+- **Bias Detection**: Constitutional oversight identifies and prevents biased analysis
+- **Peer Review Automation**: Multi-judge consensus replaces manual review processes
+
+### Financial Services
+- **Regulatory Compliance**: Runtime validation ensures all actions meet financial regulations
+- **Risk Assessment**: Constitutional judges evaluate transaction safety and market impacts
+- **Audit Automation**: Cryptographic provenance provides immutable transaction trails
+
+### Healthcare & Medical AI
+- **Diagnostic Validation**: Judges verify medical AI outputs against clinical guidelines
+- **Patient Safety**: Constitutional constraints prevent harmful recommendations
+- **Regulatory Compliance**: Automated compliance checking for medical device certification
+
+## Success Criteria
+
+### Technical Metrics
+- **Zero Race Conditions**: Agents coordinate without resource conflicts
+- **Sub-3s Council Consensus**: Constitutional evaluation completes within performance budgets
+- **99.9% Uptime**: Enterprise-grade reliability with circuit breaker protection
+- **100% CAWS Compliance**: Runtime validation prevents non-compliant operations
+
+### Quality Metrics
+- **Judge Accuracy >95%**: Constitutional judges provide reliable evaluations
+- **False Positive Rate <5%**: Minimal incorrect blocking of valid operations
+- **Learning Improvement**: Judge accuracy increases through experience
+- **Audit Completeness**: 100% of agent actions have cryptographic provenance
+
+### Adoption Metrics
+- **Multi-Agent Coordination**: Support for 10+ concurrent agents without conflicts
+- **Enterprise Integration**: Successful deployment in regulated environments
+- **Performance Scaling**: Maintains quality under increased load
+- **Developer Productivity**: Reduces manual oversight by 80%
+
+## Architecture Advantages
+
+### Vs. Traditional Orchestration
+- **Safety**: Constitutional constraints prevent unsafe operations at runtime
+- **Scalability**: Parallel evaluation supports more agents than hierarchical approaches
+- **Reliability**: Consensus-based decisions are more robust than single-orchestrator systems
+- **Auditability**: Complete provenance trails enable regulatory compliance
+
+### Vs. Rule-Based Systems
+- **Adaptability**: Judge learning enables continuous improvement beyond static rules
+- **Context Awareness**: Evidence-based evaluation considers situational factors
+- **Flexibility**: Constitutional principles adapt to new requirements without code changes
+- **Intelligence**: AI judges provide nuanced evaluation beyond binary rule matching
+
+### Vs. Market-Based Coordination
+- **Predictability**: Constitutional bounds prevent chaotic agent competition
+- **Compliance**: Embedded CAWS principles ensure ethical operation
+- **Coordination**: Structured consensus replaces unpredictable market dynamics
+- **Accountability**: Clear audit trails assign responsibility for decisions
 
 ## System Metrics
 

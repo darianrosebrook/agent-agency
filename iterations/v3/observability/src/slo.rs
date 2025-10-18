@@ -1,10 +1,10 @@
 //! Service Level Objectives (SLO) tracking and monitoring
 
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use chrono::{DateTime, Duration, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SLODefinition {
@@ -12,8 +12,8 @@ pub struct SLODefinition {
     pub description: String,
     pub service: String,
     pub metric: String,
-    pub target: f64,           // Target value (e.g., 0.99 for 99%)
-    pub window_days: i64,      // Rolling window in days
+    pub target: f64,      // Target value (e.g., 0.99 for 99%)
+    pub window_days: i64, // Rolling window in days
     pub labels: HashMap<String, String>,
 }
 
@@ -23,7 +23,7 @@ pub struct SLOTarget {
     pub target_value: f64,
     pub current_value: f64,
     pub compliance_percentage: f64,
-    pub remaining_budget: f64,  // Error budget remaining (0.0 to 1.0)
+    pub remaining_budget: f64, // Error budget remaining (0.0 to 1.0)
     pub period_start: DateTime<Utc>,
     pub period_end: DateTime<Utc>,
     pub status: SLOStatus,
@@ -85,10 +85,10 @@ pub struct SLOTracker {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SLOAlertThresholds {
-    pub warning_threshold: f64,      // e.g., 0.95 for 95% of target
-    pub critical_threshold: f64,     // e.g., 0.90 for 90% of target
-    pub violation_threshold: f64,    // e.g., 0.99 (actual SLO target)
-    pub recovery_threshold: f64,     // e.g., 0.995 for recovery
+    pub warning_threshold: f64,   // e.g., 0.95 for 95% of target
+    pub critical_threshold: f64,  // e.g., 0.90 for 90% of target
+    pub violation_threshold: f64, // e.g., 0.99 (actual SLO target)
+    pub recovery_threshold: f64,  // e.g., 0.995 for recovery
 }
 
 impl Default for SLOAlertThresholds {
@@ -118,7 +118,10 @@ impl SLOTracker {
     }
 
     /// Register a new SLO definition
-    pub async fn register_slo(&self, definition: SLODefinition) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn register_slo(
+        &self,
+        definition: SLODefinition,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut definitions = self.definitions.write().await;
         definitions.insert(definition.name.clone(), definition);
         Ok(())
@@ -154,14 +157,19 @@ impl SLOTracker {
     }
 
     /// Get current SLO status
-    pub async fn get_slo_status(&self, slo_name: &str) -> Result<SLOTarget, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn get_slo_status(
+        &self,
+        slo_name: &str,
+    ) -> Result<SLOTarget, Box<dyn std::error::Error + Send + Sync>> {
         let definitions = self.definitions.read().await;
         let measurements = self.measurements.read().await;
 
-        let definition = definitions.get(slo_name)
+        let definition = definitions
+            .get(slo_name)
             .ok_or_else(|| format!("SLO '{}' not found", slo_name))?;
 
-        let slo_measurements = measurements.get(slo_name)
+        let slo_measurements = measurements
+            .get(slo_name)
             .map(|m| m.as_slice())
             .unwrap_or(&[]);
 
@@ -219,7 +227,9 @@ impl SLOTracker {
     }
 
     /// Get all SLO statuses
-    pub async fn get_all_slo_statuses(&self) -> Result<Vec<SLOTarget>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn get_all_slo_statuses(
+        &self,
+    ) -> Result<Vec<SLOTarget>, Box<dyn std::error::Error + Send + Sync>> {
         let definitions = self.definitions.read().await;
         let mut statuses = Vec::new();
 
@@ -235,15 +245,14 @@ impl SLOTracker {
     /// Get recent alerts
     pub async fn get_recent_alerts(&self, limit: usize) -> Vec<SLOAlert> {
         let alerts = self.alerts.read().await;
-        alerts.iter()
-            .rev()
-            .take(limit)
-            .cloned()
-            .collect()
+        alerts.iter().rev().take(limit).cloned().collect()
     }
 
     /// Check for SLO alerts and generate them
-    async fn check_slo_alerts(&self, slo_name: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn check_slo_alerts(
+        &self,
+        slo_name: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let status = self.get_slo_status(slo_name).await?;
 
         let mut alerts = self.alerts.write().await;
@@ -254,8 +263,12 @@ impl SLOTracker {
                 slo_name: slo_name.to_string(),
                 alert_type: SLOAlertType::Violated,
                 severity: AlertSeverity::Critical,
-                message: format!("SLO '{}' is violated: {:.2}% vs target {:.2}%",
-                    slo_name, status.current_value * 100.0, status.target_value * 100.0),
+                message: format!(
+                    "SLO '{}' is violated: {:.2}% vs target {:.2}%",
+                    slo_name,
+                    status.current_value * 100.0,
+                    status.target_value * 100.0
+                ),
                 timestamp: Utc::now(),
                 current_value: status.current_value,
                 target_value: status.target_value,
@@ -271,8 +284,12 @@ impl SLOTracker {
                 slo_name: slo_name.to_string(),
                 alert_type: SLOAlertType::ApproachingViolation,
                 severity: AlertSeverity::Warning,
-                message: format!("SLO '{}' is at risk: {:.2}% vs target {:.2}%",
-                    slo_name, status.current_value * 100.0, status.target_value * 100.0),
+                message: format!(
+                    "SLO '{}' is at risk: {:.2}% vs target {:.2}%",
+                    slo_name,
+                    status.current_value * 100.0,
+                    status.target_value * 100.0
+                ),
                 timestamp: Utc::now(),
                 current_value: status.current_value,
                 target_value: status.target_value,
@@ -320,7 +337,10 @@ impl SLOTracker {
     }
 
     /// Clean up old measurements
-    pub async fn cleanup_old_measurements(&self, max_age_days: i64) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn cleanup_old_measurements(
+        &self,
+        max_age_days: i64,
+    ) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
         let cutoff = Utc::now() - Duration::days(max_age_days);
         let mut measurements = self.measurements.write().await;
 
@@ -335,7 +355,9 @@ impl SLOTracker {
     }
 
     /// Export SLO data for analysis
-    pub async fn export_slo_data(&self) -> Result<SLOExport, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn export_slo_data(
+        &self,
+    ) -> Result<SLOExport, Box<dyn std::error::Error + Send + Sync>> {
         let definitions = self.definitions.read().await;
         let measurements = self.measurements.read().await;
         let alerts = self.alerts.read().await;
@@ -420,8 +442,14 @@ mod tests {
         tracker.register_slo(slo).await.unwrap();
 
         // Record some measurements
-        tracker.record_measurement("test_slo", 0.98, 98, 2).await.unwrap();
-        tracker.record_measurement("test_slo", 0.96, 96, 4).await.unwrap();
+        tracker
+            .record_measurement("test_slo", 0.98, 98, 2)
+            .await
+            .unwrap();
+        tracker
+            .record_measurement("test_slo", 0.96, 96, 4)
+            .await
+            .unwrap();
 
         // Check status
         let status = tracker.get_slo_status("test_slo").await.unwrap();

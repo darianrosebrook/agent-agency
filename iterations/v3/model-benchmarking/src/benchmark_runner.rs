@@ -331,19 +331,157 @@ impl BenchmarkRunner {
     #[cfg(test)]
     pub(crate) async fn analyze_results_for_testing(
         &self,
-        _model: &ModelSpecification,
-        _results: &[BenchmarkResult],
+        model: &ModelSpecification,
+        results: &[BenchmarkResult],
     ) -> Result<(PerformanceSummary, Vec<RegressionAlert>, Vec<ModelRecommendation>)> {
-        Ok((
-            PerformanceSummary {
-                overall_performance: 0.0,
-                performance_trend: PerformanceTrend::Stable,
-                top_performers: Vec::new(),
-                improvement_areas: Vec::new(),
-            },
-            Vec::new(),
-            Vec::new(),
-        ))
+        self.analyze_benchmarks(model, results).await
+    }
+
+    async fn analyze_benchmarks(
+        &self,
+        model: &ModelSpecification,
+        results: &[BenchmarkResult],
+    ) -> Result<(PerformanceSummary, Vec<RegressionAlert>, Vec<ModelRecommendation>)> {
+        let scoring = MultiDimensionalScoringSystem::new();
+        let summary = scoring.calculate_performance_summary(results).await?;
+        let alerts = self.build_regression_alerts(results);
+        let recommendations = self.build_recommendations(model, &summary, &alerts);
+        Ok((summary, alerts, recommendations))
+    }
+
+    fn build_regression_alerts(&self, results: &[BenchmarkResult]) -> Vec<RegressionAlert> {
+        let mut alerts = Vec::new();
+        let mut seen = HashSet::new();
+
+        for result in results {
+            if let Some(report) = &result.sla_validation {
+                for sla in &report.sla_results {
+                    if !sla.passed
+                        && seen.insert((result.model_id, sla.sla.name.clone()))
+                    {
+                        alerts.push(RegressionAlert {
+                            model_id: result.model_id,
+                            metric_name: sla.sla.name.clone(),
+                            current_value: sla.actual_value,
+                            previous_value: sla.sla.target,
+                            regression_percentage: sla.deviation_percent,
+                            severity: Self::map_severity(&sla.severity),
+                            timestamp: report.timestamp,
+                        });
+                    }
+                }
+            }
+        }
+
+        // Validate aggregated performance in case individual benchmarks lacked SLA context
+        if let Some(first_model_id) = results.first().map(|r| r.model_id) {
+            let aggregate_report = self.sla_validator.validate_benchmark_results(results);
+            for sla in aggregate_report.sla_results {
+                if !sla.passed
+                    && seen.insert((first_model_id, sla.sla.name.clone()))
+                {
+                    alerts.push(RegressionAlert {
+                        model_id: first_model_id,
+                        metric_name: sla.sla.name,
+                        current_value: sla.actual_value,
+                        previous_value: sla.sla.target,
+                        regression_percentage: sla.deviation_percent,
+                        severity: Self::map_severity(&sla.severity),
+                        timestamp: aggregate_report.timestamp,
+                    });
+                }
+            }
+        }
+
+        alerts
+    }
+
+    fn build_recommendations(
+        &self,
+        model: &ModelSpecification,
+        summary: &PerformanceSummary,
+        alerts: &[RegressionAlert],
+    ) -> Vec<ModelRecommendation> {
+        let mut recommendations = Vec::new();
+
+        for performer in &summary.top_performers {
+            recommendations.push(ModelRecommendation {
+                recommendation: RecommendationDecision::Adopt,
+                reasoning: format!(
+                    "Model {} achieved a weighted performance score of {:.2}",
+                    performer.model_id, performer.performance_score
+                ),
+                confidence: performer
+                    .performance_score
+                    .clamp(0.0, 1.0),
+                conditions: Vec::new(),
+            });
+        }
+
+        for area in &summary.improvement_areas {
+            recommendations.push(ModelRecommendation {
+                recommendation: RecommendationDecision::FurtherEvaluation,
+                reasoning: format!(
+                    "Improve {} performance from {:.2} toward target {:.2}",
+                    area.area, area.current_score, area.target_score
+                ),
+                confidence: 0.6,
+                conditions: vec![Condition {
+                    condition_type: ConditionType::PerformanceImprovement,
+                    description: format!(
+                        "Increase {} metric by {:.2}",
+                        area.area,
+                        (area.target_score - area.current_score).max(0.0)
+                    ),
+                    required: true,
+                }],
+            });
+        }
+
+        if !alerts.is_empty() {
+            recommendations.push(ModelRecommendation {
+                recommendation: RecommendationDecision::ConditionalAdopt,
+                reasoning: format!(
+                    "Address {} regression alert(s) prior to production rollout",
+                    alerts.len()
+                ),
+                confidence: 0.55,
+                conditions: alerts
+                    .iter()
+                    .map(|alert| Condition {
+                        condition_type: ConditionType::ComplianceRequirement,
+                        description: format!(
+                            "Restore {} metric from {:.2} to {:.2}",
+                            alert.metric_name, alert.current_value, alert.previous_value
+                        ),
+                        required: true,
+                    })
+                    .collect(),
+            });
+        }
+
+        if recommendations.is_empty() {
+            recommendations.push(ModelRecommendation {
+                recommendation: RecommendationDecision::FurtherEvaluation,
+                reasoning: format!(
+                    "Collect additional benchmark data for model {} to reach a confident decision",
+                    model.name
+                ),
+                confidence: 0.5,
+                conditions: Vec::new(),
+            });
+        }
+
+        recommendations
+    }
+
+    fn map_severity(severity: &SlaViolationSeverity) -> RegressionSeverity {
+        match severity {
+            SlaViolationSeverity::Minor => RegressionSeverity::Low,
+            SlaViolationSeverity::Moderate => RegressionSeverity::Medium,
+            SlaViolationSeverity::Critical => RegressionSeverity::High,
+            SlaViolationSeverity::Catastrophic => RegressionSeverity::Critical,
+        }
     }
 
     // Helper methods for benchmark execution

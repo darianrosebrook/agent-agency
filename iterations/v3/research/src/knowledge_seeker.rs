@@ -5,7 +5,10 @@
 
 use crate::types::*;
 use crate::ContentProcessingConfig;
-use crate::{ContentProcessor, ContextBuilder, VectorSearchEngine, WebScraper, ResearchConfig, ConfigurationUpdate};
+use crate::{
+    ConfigurationUpdate, ContentProcessor, ContextBuilder, ResearchConfig, VectorSearchEngine,
+    WebScraper,
+};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use dashmap::DashMap;
@@ -321,17 +324,18 @@ impl KnowledgeSeeker {
 
         // 1. Configuration validation: Validate new configuration parameters
         self.validate_configuration_update(&update)?;
-        
+
         // 2. Configuration persistence: Persist configuration changes
         let old_config = self.config.clone();
         self.apply_configuration_update(&update)?;
-        
+
         // 3. Component restart: Restart affected components with new configuration
-        self.restart_affected_components(&old_config, &self.config).await?;
-        
+        self.restart_affected_components(&old_config, &self.config)
+            .await?;
+
         // 4. Configuration verification: Verify configuration changes are applied
         self.verify_configuration_changes().await?;
-        
+
         info!("Configuration update completed successfully");
         Ok(())
     }
@@ -343,19 +347,27 @@ impl KnowledgeSeeker {
             "max_concurrent_requests" => {
                 if let Some(value) = update.value.as_u64() {
                     if value == 0 || value > 100 {
-                        return Err(anyhow::anyhow!("max_concurrent_requests must be between 1 and 100"));
+                        return Err(anyhow::anyhow!(
+                            "max_concurrent_requests must be between 1 and 100"
+                        ));
                     }
                 } else {
-                    return Err(anyhow::anyhow!("max_concurrent_requests must be a positive integer"));
+                    return Err(anyhow::anyhow!(
+                        "max_concurrent_requests must be a positive integer"
+                    ));
                 }
             }
             "request_timeout_ms" => {
                 if let Some(value) = update.value.as_u64() {
                     if value < 1000 || value > 300000 {
-                        return Err(anyhow::anyhow!("request_timeout_ms must be between 1000 and 300000"));
+                        return Err(anyhow::anyhow!(
+                            "request_timeout_ms must be between 1000 and 300000"
+                        ));
                     }
                 } else {
-                    return Err(anyhow::anyhow!("request_timeout_ms must be a positive integer"));
+                    return Err(anyhow::anyhow!(
+                        "request_timeout_ms must be a positive integer"
+                    ));
                 }
             }
             "search_engines" => {
@@ -366,23 +378,30 @@ impl KnowledgeSeeker {
                         }
                     }
                 } else {
-                    return Err(anyhow::anyhow!("search_engines must be an array of strings"));
+                    return Err(anyhow::anyhow!(
+                        "search_engines must be an array of strings"
+                    ));
                 }
             }
             _ => {
-                return Err(anyhow::anyhow!("Unknown configuration field: {}", update.field));
+                return Err(anyhow::anyhow!(
+                    "Unknown configuration field: {}",
+                    update.field
+                ));
             }
         }
-        
+
         // Validate configuration against system constraints
         if update.field == "max_concurrent_requests" {
             if let Some(value) = update.value.as_u64() {
                 if value > self.config.performance.max_concurrent_requests as u64 * 2 {
-                    return Err(anyhow::anyhow!("Cannot increase max_concurrent_requests by more than 2x"));
+                    return Err(anyhow::anyhow!(
+                        "Cannot increase max_concurrent_requests by more than 2x"
+                    ));
                 }
             }
         }
-        
+
         Ok(())
     }
 
@@ -401,40 +420,55 @@ impl KnowledgeSeeker {
             }
             "search_engines" => {
                 // Search engines configuration is handled by the web scraper component
-                info!("Search engines configuration update received: {:?}", update.value);
+                info!(
+                    "Search engines configuration update received: {:?}",
+                    update.value
+                );
             }
             _ => {
-                return Err(anyhow::anyhow!("Unknown configuration field: {}", update.field));
+                return Err(anyhow::anyhow!(
+                    "Unknown configuration field: {}",
+                    update.field
+                ));
             }
         }
-        
-        info!("Applied configuration update: {} = {:?}", update.field, update.value);
+
+        info!(
+            "Applied configuration update: {} = {:?}",
+            update.field, update.value
+        );
         Ok(())
     }
 
     /// Restart affected components with new configuration
-    async fn restart_affected_components(&mut self, _old_config: &ResearchAgentConfig, new_config: &ResearchAgentConfig) -> Result<()> {
+    async fn restart_affected_components(
+        &mut self,
+        _old_config: &ResearchAgentConfig,
+        new_config: &ResearchAgentConfig,
+    ) -> Result<()> {
         // Identify components that need restart based on configuration changes
         let needs_restart = self.identify_components_needing_restart(new_config);
-        
+
         if needs_restart {
             info!("Restarting affected components with new configuration");
-            
+
             // Graceful restart procedures for affected services
             self.restart_http_client().await?;
             self.restart_search_engines().await?;
-            
+
             info!("Component restart completed successfully");
         }
-        
+
         Ok(())
     }
 
     /// Identify components that need restart
     fn identify_components_needing_restart(&self, new_config: &ResearchAgentConfig) -> bool {
         // Check if any critical configuration changes require component restart
-        new_config.performance.max_concurrent_requests != self.config.performance.max_concurrent_requests ||
-        new_config.performance.request_timeout_ms != self.config.performance.request_timeout_ms
+        new_config.performance.max_concurrent_requests
+            != self.config.performance.max_concurrent_requests
+            || new_config.performance.request_timeout_ms
+                != self.config.performance.request_timeout_ms
     }
 
     /// Restart HTTP client with new configuration
@@ -468,18 +502,23 @@ impl KnowledgeSeeker {
             deadline: None,
             metadata: HashMap::new(),
         };
-        
+
         // Validate that new configuration is active and working
         let start_time = std::time::Instant::now();
         let _results = self.execute_query_internal(test_query).await?;
         let duration = start_time.elapsed();
-        
+
         // Check if timeout is working correctly
         if duration.as_millis() > self.config.performance.request_timeout_ms as u128 {
-            return Err(anyhow::anyhow!("Configuration verification failed: timeout not working"));
+            return Err(anyhow::anyhow!(
+                "Configuration verification failed: timeout not working"
+            ));
         }
-        
-        info!("Configuration verification completed successfully in {:?}", duration);
+
+        info!(
+            "Configuration verification completed successfully in {:?}",
+            duration
+        );
         Ok(())
     }
 
@@ -488,9 +527,10 @@ impl KnowledgeSeeker {
         // 1. Content summarization: Generate concise summaries of research content
         let sentences = self.extract_sentences(content);
         let query_keywords = self.extract_keywords(query);
-        
+
         // Score sentences based on relevance to query and content importance
-        let mut scored_sentences: Vec<(usize, f64, &str)> = sentences.iter()
+        let mut scored_sentences: Vec<(usize, f64, &str)> = sentences
+            .iter()
             .enumerate()
             .map(|(i, sentence)| {
                 let relevance_score = self.calculate_sentence_relevance(sentence, &query_keywords);
@@ -499,25 +539,25 @@ impl KnowledgeSeeker {
                 (i, combined_score, sentence.as_str())
             })
             .collect();
-        
+
         // Sort by score and select top sentences
         scored_sentences.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-        
+
         // 2. Summary quality: Ensure summary quality and relevance
         let max_sentences = std::cmp::min(3, sentences.len());
-        let summary_sentences: Vec<&str> = scored_sentences.iter()
+        let summary_sentences: Vec<&str> = scored_sentences
+            .iter()
             .take(max_sentences)
             .map(|(_, _, sentence)| *sentence)
             .collect();
-        
+
         // Sort selected sentences by original order to maintain coherence
         let mut ordered_sentences = summary_sentences.clone();
-        ordered_sentences.sort_by_key(|sentence| {
-            sentences.iter().position(|s| s == sentence).unwrap_or(0)
-        });
-        
+        ordered_sentences
+            .sort_by_key(|sentence| sentences.iter().position(|s| s == sentence).unwrap_or(0));
+
         let summary = ordered_sentences.join(" ");
-        
+
         // Ensure summary is concise but informative
         if summary.len() > 500 {
             // Truncate while preserving sentence boundaries
@@ -534,7 +574,8 @@ impl KnowledgeSeeker {
 
     /// Extract sentences from content
     fn extract_sentences(&self, content: &str) -> Vec<String> {
-        content.split(&['.', '!', '?'])
+        content
+            .split(&['.', '!', '?'])
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty() && s.len() > 10)
             .collect()
@@ -542,7 +583,8 @@ impl KnowledgeSeeker {
 
     /// Extract keywords from query
     fn extract_keywords(&self, query: &str) -> Vec<String> {
-        query.split_whitespace()
+        query
+            .split_whitespace()
             .map(|word| word.to_lowercase())
             .filter(|word| word.len() > 2)
             .collect()
@@ -552,13 +594,13 @@ impl KnowledgeSeeker {
     fn calculate_sentence_relevance(&self, sentence: &str, query_keywords: &[String]) -> f64 {
         let sentence_lower = sentence.to_lowercase();
         let mut matches = 0;
-        
+
         for keyword in query_keywords {
             if sentence_lower.contains(keyword) {
                 matches += 1;
             }
         }
-        
+
         if query_keywords.is_empty() {
             0.0
         } else {
@@ -569,19 +611,20 @@ impl KnowledgeSeeker {
     /// Calculate sentence importance within the content
     fn calculate_sentence_importance(&self, sentence: &str, all_sentences: &[String]) -> f64 {
         let sentence_lower = sentence.to_lowercase();
-        
+
         // Factors that increase importance:
         // 1. Position (first and last sentences are more important)
         // 2. Length (moderate length sentences are more important)
         // 3. Word frequency (sentences with common important words)
-        
-        let position_score = if sentence == all_sentences.first().map_or(sentence, |v| v) || 
-                              sentence == all_sentences.last().map_or(sentence, |v| v) {
+
+        let position_score = if sentence == all_sentences.first().map_or(sentence, |v| v)
+            || sentence == all_sentences.last().map_or(sentence, |v| v)
+        {
             0.3
         } else {
             0.0
         };
-        
+
         let length_score = if sentence.len() > 50 && sentence.len() < 200 {
             0.3
         } else if sentence.len() < 20 {
@@ -589,39 +632,54 @@ impl KnowledgeSeeker {
         } else {
             0.2
         };
-        
+
         // Check for important words
-        let important_words = ["important", "key", "main", "primary", "significant", "critical", "essential"];
-        let word_score = if important_words.iter().any(|word| sentence_lower.contains(word)) {
+        let important_words = [
+            "important",
+            "key",
+            "main",
+            "primary",
+            "significant",
+            "critical",
+            "essential",
+        ];
+        let word_score = if important_words
+            .iter()
+            .any(|word| sentence_lower.contains(word))
+        {
             0.4
         } else {
             0.0
         };
-        
+
         position_score + length_score + word_score
     }
 
     /// Calculate relevance score for research content
-    fn calculate_relevance_score(&self, entry: &KnowledgeEntry, query: &ResearchQuery) -> Result<f64> {
+    fn calculate_relevance_score(
+        &self,
+        entry: &KnowledgeEntry,
+        query: &ResearchQuery,
+    ) -> Result<f64> {
         // 1. Relevance scoring: Calculate relevance scores for research content
         let mut total_score = 0.0;
-        
+
         // Content topic alignment with query (40% weight)
         let topic_alignment = self.calculate_topic_alignment(&entry.content, &query.query);
         total_score += topic_alignment * 0.4;
-        
+
         // Title relevance (20% weight)
         let title_relevance = self.calculate_title_relevance(&entry.title, &query.query);
         total_score += title_relevance * 0.2;
-        
+
         // Source authority and credibility (20% weight)
         let source_authority = self.calculate_source_authority(&entry.source.to_string());
         total_score += source_authority * 0.2;
-        
+
         // Recency and currency of information (20% weight)
         let recency_score = self.calculate_recency_score(&entry.created_at);
         total_score += recency_score * 0.2;
-        
+
         // Ensure score is between 0.0 and 1.0
         Ok(total_score.min(1.0).max(0.0))
     }
@@ -630,16 +688,16 @@ impl KnowledgeSeeker {
     fn calculate_topic_alignment(&self, content: &str, query: &str) -> f64 {
         let query_keywords = self.extract_keywords(query);
         let content_lower = content.to_lowercase();
-        
+
         let mut matches = 0;
         let total_keywords = query_keywords.len();
-        
+
         for keyword in &query_keywords {
             if content_lower.contains(keyword) {
                 matches += 1;
             }
         }
-        
+
         if total_keywords == 0 {
             0.0
         } else {
@@ -651,14 +709,14 @@ impl KnowledgeSeeker {
     fn calculate_title_relevance(&self, title: &str, query: &str) -> f64 {
         let query_keywords = self.extract_keywords(query);
         let title_lower = title.to_lowercase();
-        
+
         let mut matches = 0;
         for keyword in &query_keywords {
             if title_lower.contains(keyword) {
                 matches += 1;
             }
         }
-        
+
         if query_keywords.is_empty() {
             0.0
         } else {
@@ -669,40 +727,44 @@ impl KnowledgeSeeker {
     /// Calculate source authority and credibility
     fn calculate_source_authority(&self, source: &str) -> f64 {
         let source_lower = source.to_lowercase();
-        
+
         // High authority sources
-        if source_lower.contains("wikipedia") || 
-           source_lower.contains("scholar") || 
-           source_lower.contains("pubmed") ||
-           source_lower.contains("arxiv") ||
-           source_lower.contains("ieee") ||
-           source_lower.contains("acm") {
+        if source_lower.contains("wikipedia")
+            || source_lower.contains("scholar")
+            || source_lower.contains("pubmed")
+            || source_lower.contains("arxiv")
+            || source_lower.contains("ieee")
+            || source_lower.contains("acm")
+        {
             return 0.9;
         }
-        
+
         // Medium authority sources
-        if source_lower.contains("github") || 
-           source_lower.contains("stackoverflow") || 
-           source_lower.contains("medium") ||
-           source_lower.contains("dev.to") {
+        if source_lower.contains("github")
+            || source_lower.contains("stackoverflow")
+            || source_lower.contains("medium")
+            || source_lower.contains("dev.to")
+        {
             return 0.7;
         }
-        
+
         // Government and educational sources
-        if source_lower.contains(".gov") || 
-           source_lower.contains(".edu") || 
-           source_lower.contains("research") {
+        if source_lower.contains(".gov")
+            || source_lower.contains(".edu")
+            || source_lower.contains("research")
+        {
             return 0.8;
         }
-        
+
         // News sources
-        if source_lower.contains("news") || 
-           source_lower.contains("bbc") || 
-           source_lower.contains("reuters") ||
-           source_lower.contains("ap.org") {
+        if source_lower.contains("news")
+            || source_lower.contains("bbc")
+            || source_lower.contains("reuters")
+            || source_lower.contains("ap.org")
+        {
             return 0.6;
         }
-        
+
         // Default score for unknown sources
         0.5
     }
@@ -711,46 +773,54 @@ impl KnowledgeSeeker {
     fn calculate_recency_score(&self, created_at: &chrono::DateTime<chrono::Utc>) -> f64 {
         let now = chrono::Utc::now();
         let age = now.signed_duration_since(*created_at);
-        
+
         // Score based on age in days
         let age_days = age.num_days();
-        
+
         if age_days <= 7 {
-            1.0  // Very recent
+            1.0 // Very recent
         } else if age_days <= 30 {
-            0.8  // Recent
+            0.8 // Recent
         } else if age_days <= 90 {
-            0.6  // Moderately recent
+            0.6 // Moderately recent
         } else if age_days <= 365 {
-            0.4  // Somewhat old
+            0.4 // Somewhat old
         } else {
-            0.2  // Old
+            0.2 // Old
         }
     }
 
     /// Calculate confidence score for research results
-    fn calculate_confidence_score(&self, entry: &KnowledgeEntry, _query: &ResearchQuery) -> Result<f64> {
+    fn calculate_confidence_score(
+        &self,
+        entry: &KnowledgeEntry,
+        _query: &ResearchQuery,
+    ) -> Result<f64> {
         // 1. Confidence calculation: Calculate confidence in research results
         let mut total_score = 0.0;
-        
+
         // Source reliability and information quality (40% weight)
         let source_reliability = self.calculate_source_reliability(&entry.source.to_string());
         total_score += source_reliability * 0.4;
-        
+
         // Information completeness and accuracy (30% weight)
         let completeness = self.calculate_information_completeness(&entry.content);
         total_score += completeness * 0.3;
-        
+
         // Content quality and structure (20% weight)
         let content_quality = self.calculate_content_quality(&entry.content);
         total_score += content_quality * 0.2;
-        
+
         // Metadata and verification (10% weight)
         let metadata_quality = self.calculate_metadata_quality(&serde_json::Value::Object(
-            entry.metadata.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+            entry
+                .metadata
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect(),
         ));
         total_score += metadata_quality * 0.1;
-        
+
         // Ensure score is between 0.0 and 1.0
         Ok(total_score.min(1.0).max(0.0))
     }
@@ -758,60 +828,66 @@ impl KnowledgeSeeker {
     /// Calculate source reliability score
     fn calculate_source_reliability(&self, source: &str) -> f64 {
         let source_lower = source.to_lowercase();
-        
+
         // Academic and research sources (highest reliability)
-        if source_lower.contains("scholar") || 
-           source_lower.contains("pubmed") || 
-           source_lower.contains("arxiv") ||
-           source_lower.contains("ieee") ||
-           source_lower.contains("acm") ||
-           source_lower.contains("springer") ||
-           source_lower.contains("elsevier") {
+        if source_lower.contains("scholar")
+            || source_lower.contains("pubmed")
+            || source_lower.contains("arxiv")
+            || source_lower.contains("ieee")
+            || source_lower.contains("acm")
+            || source_lower.contains("springer")
+            || source_lower.contains("elsevier")
+        {
             return 0.95;
         }
-        
+
         // Government and official sources
-        if source_lower.contains(".gov") || 
-           source_lower.contains(".edu") || 
-           source_lower.contains("who.int") ||
-           source_lower.contains("cdc.gov") {
+        if source_lower.contains(".gov")
+            || source_lower.contains(".edu")
+            || source_lower.contains("who.int")
+            || source_lower.contains("cdc.gov")
+        {
             return 0.9;
         }
-        
+
         // Wikipedia (moderate reliability)
         if source_lower.contains("wikipedia") {
             return 0.7;
         }
-        
+
         // News sources
-        if source_lower.contains("bbc") || 
-           source_lower.contains("reuters") || 
-           source_lower.contains("ap.org") ||
-           source_lower.contains("npr.org") {
+        if source_lower.contains("bbc")
+            || source_lower.contains("reuters")
+            || source_lower.contains("ap.org")
+            || source_lower.contains("npr.org")
+        {
             return 0.8;
         }
-        
+
         // Technical documentation
-        if source_lower.contains("docs.") || 
-           source_lower.contains("developer.") || 
-           source_lower.contains("api.") {
+        if source_lower.contains("docs.")
+            || source_lower.contains("developer.")
+            || source_lower.contains("api.")
+        {
             return 0.75;
         }
-        
+
         // GitHub and open source
-        if source_lower.contains("github") || 
-           source_lower.contains("gitlab") || 
-           source_lower.contains("bitbucket") {
+        if source_lower.contains("github")
+            || source_lower.contains("gitlab")
+            || source_lower.contains("bitbucket")
+        {
             return 0.6;
         }
-        
+
         // Blog and community sources
-        if source_lower.contains("medium") || 
-           source_lower.contains("dev.to") || 
-           source_lower.contains("stackoverflow") {
+        if source_lower.contains("medium")
+            || source_lower.contains("dev.to")
+            || source_lower.contains("stackoverflow")
+        {
             return 0.5;
         }
-        
+
         // Default for unknown sources
         0.4
     }
@@ -820,28 +896,28 @@ impl KnowledgeSeeker {
     fn calculate_information_completeness(&self, content: &str) -> f64 {
         let content_lower = content.to_lowercase();
         let mut score = 0.0;
-        
+
         // Check for key information indicators
         if content_lower.contains("abstract") || content_lower.contains("summary") {
             score += 0.2;
         }
-        
+
         if content_lower.contains("introduction") || content_lower.contains("background") {
             score += 0.2;
         }
-        
+
         if content_lower.contains("method") || content_lower.contains("approach") {
             score += 0.2;
         }
-        
+
         if content_lower.contains("result") || content_lower.contains("finding") {
             score += 0.2;
         }
-        
+
         if content_lower.contains("conclusion") || content_lower.contains("discussion") {
             score += 0.2;
         }
-        
+
         // Check content length (longer content often more complete)
         let length_score = if content.len() > 1000 {
             0.1
@@ -850,62 +926,66 @@ impl KnowledgeSeeker {
         } else {
             0.0
         };
-        
+
         (score + length_score).min(1.0_f64)
     }
 
     /// Calculate content quality score
     fn calculate_content_quality(&self, content: &str) -> f64 {
         let mut score = 0.0;
-        
+
         // Check for proper structure
         let sentences: Vec<&str> = content.split(&['.', '!', '?']).collect();
         if sentences.len() > 3 {
             score += 0.3;
         }
-        
+
         // Check for proper capitalization
-        let capitalized_sentences = sentences.iter()
+        let capitalized_sentences = sentences
+            .iter()
             .filter(|s| s.trim().chars().next().map_or(false, |c| c.is_uppercase()))
             .count();
-        
+
         if sentences.len() > 0 {
             let capitalization_ratio = capitalized_sentences as f64 / sentences.len() as f64;
             score += capitalization_ratio * 0.3;
         }
-        
+
         // Check for technical terms and specificity
-        let technical_terms = ["analysis", "research", "study", "data", "results", "findings", "evidence"];
-        let technical_count = technical_terms.iter()
+        let technical_terms = [
+            "analysis", "research", "study", "data", "results", "findings", "evidence",
+        ];
+        let technical_count = technical_terms
+            .iter()
             .filter(|term| content.to_lowercase().contains(*term))
             .count();
-        
+
         score += (technical_count as f64 / technical_terms.len() as f64) * 0.4;
-        
+
         score.min(1.0_f64)
     }
 
     /// Calculate metadata quality score
     fn calculate_metadata_quality(&self, metadata: &serde_json::Value) -> f64 {
         let mut score: f64 = 0.0;
-        
+
         // Check for common metadata fields
         if metadata.get("author").is_some() {
             score += 0.3;
         }
-        
+
         if metadata.get("date").is_some() || metadata.get("published").is_some() {
             score += 0.3;
         }
-        
+
         if metadata.get("doi").is_some() || metadata.get("url").is_some() {
             score += 0.2;
         }
-        
+
         if metadata.get("tags").is_some() || metadata.get("keywords").is_some() {
             score += 0.2;
         }
-        
+
         score.min(1.0_f64)
     }
 
@@ -1038,39 +1118,43 @@ impl KnowledgeSeeker {
     async fn perform_keyword_search(&self, query: &ResearchQuery) -> Result<Vec<ResearchResult>> {
         // 1. Inverted index implementation: Implement inverted indexes for efficient keyword search
         let inverted_index = self.build_inverted_index().await?;
-        
+
         // 2. Advanced text search: Implement advanced text search capabilities
-        let search_results = self.execute_advanced_text_search(query, &inverted_index).await?;
-        
+        let search_results = self
+            .execute_advanced_text_search(query, &inverted_index)
+            .await?;
+
         // 3. Search optimization: Optimize search performance and accuracy
         let optimized_results = self.optimize_search_results(search_results).await?;
-        
+
         // 4. Search integration: Integrate keyword search with vector search
-        let hybrid_results = self.integrate_with_vector_search(query, optimized_results).await?;
-        
+        let hybrid_results = self
+            .integrate_with_vector_search(query, optimized_results)
+            .await?;
+
         Ok(hybrid_results)
     }
 
     /// Build inverted index for efficient keyword search
     async fn build_inverted_index(&self) -> Result<InvertedIndex> {
         let mut index = InvertedIndex::new();
-        
+
         // Get all documents from vector search
         // In a real implementation, this would get all documents from the vector search engine
         let all_documents: Vec<KnowledgeEntry> = Vec::new(); // Placeholder
-        
+
         for (doc_id, document) in all_documents.iter().enumerate() {
             // Tokenize document content
             let tokens = self.tokenize_text(&document.content);
-            
+
             for token in tokens {
                 index.add_term(&token, doc_id, &document);
             }
         }
-        
+
         // Optimize index
         index.optimize();
-        
+
         Ok(index)
     }
 
@@ -1081,10 +1165,10 @@ impl KnowledgeSeeker {
         index: &InvertedIndex,
     ) -> Result<Vec<SearchResult>> {
         let mut results = Vec::new();
-        
+
         // Tokenize query
         let query_tokens = self.tokenize_text(&query.query);
-        
+
         // Search for each token
         for token in query_tokens {
             if let Some(postings) = index.get_postings(&token) {
@@ -1100,29 +1184,32 @@ impl KnowledgeSeeker {
                 }
             }
         }
-        
+
         // Sort by relevance score
         results.sort_by(|a, b| b.relevance_score.partial_cmp(&a.relevance_score).unwrap());
-        
+
         Ok(results)
     }
 
     /// Optimize search results for performance and accuracy
-    async fn optimize_search_results(&self, results: Vec<SearchResult>) -> Result<Vec<SearchResult>> {
+    async fn optimize_search_results(
+        &self,
+        results: Vec<SearchResult>,
+    ) -> Result<Vec<SearchResult>> {
         let mut optimized = results;
-        
+
         // Remove duplicates
         optimized.dedup_by(|a, b| a.document_id == b.document_id);
-        
+
         // Apply fuzzy matching for typo tolerance
         optimized = self.apply_fuzzy_matching(optimized).await?;
-        
+
         // Re-rank results
         optimized.sort_by(|a, b| b.relevance_score.partial_cmp(&a.relevance_score).unwrap());
-        
+
         // Limit results
         optimized.truncate(50);
-        
+
         Ok(optimized)
     }
 
@@ -1133,14 +1220,14 @@ impl KnowledgeSeeker {
         keyword_results: Vec<SearchResult>,
     ) -> Result<Vec<ResearchResult>> {
         let mut hybrid_results = Vec::new();
-        
+
         // Get vector search results
         let query_embedding = self.vector_search.generate_embedding(&query.query).await?;
         let vector_results = self
             .vector_search
             .search(&query_embedding, Some(20), None)
             .await?;
-        
+
         // Convert keyword results to ResearchResult format
         for result in keyword_results {
             let research_result = ResearchResult {
@@ -1157,7 +1244,7 @@ impl KnowledgeSeeker {
             };
             hybrid_results.push(research_result);
         }
-        
+
         // Add vector search results with different scoring
         for entry in vector_results {
             let research_result = ResearchResult {
@@ -1174,10 +1261,10 @@ impl KnowledgeSeeker {
             };
             hybrid_results.push(research_result);
         }
-        
+
         // Apply hybrid ranking
         self.apply_hybrid_ranking(&mut hybrid_results);
-        
+
         Ok(hybrid_results)
     }
 
@@ -1194,7 +1281,7 @@ impl KnowledgeSeeker {
         let term_frequency = posting.positions.len() as f32;
         let document_length = posting.document.content.len() as f32;
         let tf = term_frequency / document_length;
-        
+
         // Simple TF-IDF-like scoring
         tf * 0.5 + (posting.positions.len() as f32 * 0.1)
     }
@@ -1327,8 +1414,14 @@ impl KnowledgeSeeker {
                                 title: scraping_result.title,
                                 content: processed_content.processed_content,
                                 summary: processed_content.summary,
-                                relevance_score: self.calculate_relevance_score(&query, &processed_content.processed_content),
-                                confidence_score: self.calculate_confidence_score(&source, &processed_content.processed_content),
+                                relevance_score: self.calculate_relevance_score(
+                                    &query,
+                                    &processed_content.processed_content,
+                                ),
+                                confidence_score: self.calculate_confidence_score(
+                                    &source,
+                                    &processed_content.processed_content,
+                                ),
                                 //    - Factor in corroboration from multiple sources
                                 // 2. Confidence factors: Consider multiple confidence factors
                                 //    - Source credibility and expertise
@@ -1568,8 +1661,11 @@ impl InvertedIndex {
             positions: vec![0], // Simplified - in real implementation, track actual positions
             document: document.clone(),
         };
-        
-        self.index.entry(term.to_string()).or_insert_with(Vec::new).push(posting);
+
+        self.index
+            .entry(term.to_string())
+            .or_insert_with(Vec::new)
+            .push(posting);
     }
 
     pub fn get_postings(&self, term: &str) -> Option<&Vec<Posting>> {
@@ -1586,34 +1682,37 @@ impl InvertedIndex {
     /// Calculate relevance score for web content based on query and content
     fn calculate_relevance_score(&self, query: &ResearchQuery, content: &str) -> f32 {
         let mut score = 0.0;
-        
+
         // 1. Keyword matching (40% weight)
         let query_words: Vec<&str> = query.query.to_lowercase().split_whitespace().collect();
         let content_lower = content.to_lowercase();
         let mut keyword_matches = 0;
-        
+
         for word in &query_words {
             if content_lower.contains(word) {
                 keyword_matches += 1;
             }
         }
-        
+
         let keyword_score = if query_words.is_empty() {
             0.0
         } else {
             keyword_matches as f32 / query_words.len() as f32
         };
         score += keyword_score * 0.4;
-        
+
         // 2. Content length factor (20% weight) - longer content often more relevant
         let length_score = (content.len() as f32 / 1000.0).min(1.0);
         score += length_score * 0.2;
-        
+
         // 3. Query type alignment (20% weight)
         let type_score = match query.query_type {
             QueryType::Technical => {
                 // Technical queries prefer detailed, structured content
-                if content.contains("API") || content.contains("function") || content.contains("method") {
+                if content.contains("API")
+                    || content.contains("function")
+                    || content.contains("method")
+                {
                     1.0
                 } else {
                     0.5
@@ -1622,7 +1721,10 @@ impl InvertedIndex {
             QueryType::Knowledge => 0.8, // Knowledge queries are more flexible
             QueryType::Technical => {
                 // Research queries prefer comprehensive, cited content
-                if content.contains("study") || content.contains("research") || content.contains("analysis") {
+                if content.contains("study")
+                    || content.contains("research")
+                    || content.contains("analysis")
+                {
                     1.0
                 } else {
                     0.6
@@ -1630,7 +1732,7 @@ impl InvertedIndex {
             }
         };
         score += type_score * 0.2;
-        
+
         // 4. Context alignment (20% weight)
         let context_score = if let Some(context) = &query.context {
             let context_lower = context.to_lowercase();
@@ -1643,7 +1745,7 @@ impl InvertedIndex {
             0.5 // Neutral score when no context provided
         };
         score += context_score * 0.2;
-        
+
         // Ensure score is between 0.0 and 1.0
         score.min(1.0).max(0.0)
     }
@@ -1651,7 +1753,7 @@ impl InvertedIndex {
     /// Calculate confidence score for web content based on source and content quality
     fn calculate_confidence_score(&self, source: &str, content: &str) -> f32 {
         let mut score: f32 = 0.0;
-        
+
         // 1. Source authority (40% weight)
         let source_score = if source.contains("wikipedia.org") {
             0.9 // High authority for Wikipedia
@@ -1669,20 +1771,20 @@ impl InvertedIndex {
             0.3 // Lower authority for unknown domains
         };
         score += source_score * 0.4;
-        
+
         // 2. Content quality indicators (30% weight)
         let mut quality_score: f64 = 0.0;
-        
+
         // Check for structured content
         if content.contains("#") || content.contains("*") || content.contains("-") {
             quality_score += 0.2; // Structured formatting
         }
-        
+
         // Check for citations or references
         if content.contains("http") || content.contains("www.") || content.contains("source:") {
             quality_score += 0.3; // Contains references
         }
-        
+
         // Check for comprehensive content
         if content.len() > 500 {
             quality_score += 0.3; // Substantial content
@@ -1691,14 +1793,17 @@ impl InvertedIndex {
         } else {
             quality_score += 0.1; // Minimal content
         }
-        
+
         // Check for professional language indicators
-        if content.contains("according to") || content.contains("research shows") || content.contains("studies indicate") {
+        if content.contains("according to")
+            || content.contains("research shows")
+            || content.contains("studies indicate")
+        {
             quality_score += 0.2; // Professional/academic language
         }
-        
+
         score += quality_score.min(1.0) * 0.3;
-        
+
         // 3. Content completeness (20% weight)
         let completeness_score = if content.len() > 1000 {
             1.0 // Very comprehensive
@@ -1710,7 +1815,7 @@ impl InvertedIndex {
             0.3 // Minimal
         };
         score += completeness_score * 0.2;
-        
+
         // 4. Recency indicators (10% weight)
         let recency_score = if content.contains("2024") || content.contains("2023") {
             1.0 // Recent
@@ -1722,7 +1827,7 @@ impl InvertedIndex {
             0.4 // Older content
         };
         score += recency_score * 0.1;
-        
+
         // Ensure score is between 0.0 and 1.0
         score.min(1.0).max(0.0)
     }

@@ -107,7 +107,8 @@ impl GitTrailerManager {
         // Check if reference exists first
         let reference_exists = {
             let repo = self.repository.lock().unwrap();
-            let x = repo.find_reference(&refname).is_ok(); x
+            let x = repo.find_reference(&refname).is_ok();
+            x
         };
 
         if reference_exists {
@@ -125,11 +126,16 @@ impl GitTrailerManager {
         // Get the current HEAD commit
         let head = repo.head()?;
         let head_commit = head.peel_to_commit()?;
-        
+
         // Create the new reference
-        let reference = repo.reference(refname, head_commit.id(), true, "Create branch reference")?;
-        debug!("Created branch reference: {} -> {}", refname, head_commit.id());
-        
+        let reference =
+            repo.reference(refname, head_commit.id(), true, "Create branch reference")?;
+        debug!(
+            "Created branch reference: {} -> {}",
+            refname,
+            head_commit.id()
+        );
+
         Ok(())
     }
 
@@ -138,7 +144,8 @@ impl GitTrailerManager {
         // Check if HEAD exists first
         let head_exists = {
             let repo = self.repository.lock().unwrap();
-            let x = repo.head().is_ok(); x
+            let x = repo.head().is_ok();
+            x
         };
 
         if head_exists {
@@ -159,7 +166,7 @@ impl GitTrailerManager {
             let mut index = repo.index()?;
             let tree_id = index.write_tree()?;
             let tree = repo.find_tree(tree_id)?;
-            
+
             let signature = self.create_signature()?;
             let commit_id = repo.commit(
                 Some("HEAD"),
@@ -169,10 +176,10 @@ impl GitTrailerManager {
                 &tree,
                 &[],
             )?;
-            
+
             debug!("Created initial commit: {}", commit_id);
         }
-        
+
         Ok(())
     }
 }
@@ -196,24 +203,19 @@ impl GitTrailerManager {
 //    - Handle large repositories and operations efficiently
 #[async_trait]
 impl GitIntegration for GitTrailerManager {
-    async fn add_trailer_to_commit(
-        &self,
-        commit_hash: &str,
-        trailer: &str,
-    ) -> Result<String> {
+    async fn add_trailer_to_commit(&self, commit_hash: &str, trailer: &str) -> Result<String> {
         // This would typically involve:
         // 1. Finding the commit
         // 2. Creating a new commit with the trailer added to the message
         // 3. Updating the branch reference
 
         let repo = self.repository.lock().unwrap();
-        let commit = repo.find_commit(
-            git2::Oid::from_str(commit_hash)
-                .context("Invalid commit hash")?
-        )?;
+        let commit =
+            repo.find_commit(git2::Oid::from_str(commit_hash).context("Invalid commit hash")?)?;
 
         // Get the current commit message
-        let mut message = commit.message()
+        let mut message = commit
+            .message()
             .context("Commit has no message")?
             .to_string();
 
@@ -253,11 +255,7 @@ impl GitIntegration for GitTrailerManager {
         let tree = head_commit.tree()?;
 
         // Generate commit message with trailer
-        let commit_message = format!(
-            "{}\n\n{}",
-            message,
-            provenance_record.git_trailer
-        );
+        let commit_message = format!("{}\n\n{}", message, provenance_record.git_trailer);
 
         let new_commit_id = repo.commit(
             Some(&format!("refs/heads/{}", self.branch)),
@@ -273,13 +271,10 @@ impl GitIntegration for GitTrailerManager {
 
     async fn verify_trailer(&self, commit_hash: &str, trailer: &str) -> Result<bool> {
         let repo = self.repository.lock().unwrap();
-        let commit = repo.find_commit(
-            git2::Oid::from_str(commit_hash)
-                .context("Invalid commit hash")?
-        )?;
+        let commit =
+            repo.find_commit(git2::Oid::from_str(commit_hash).context("Invalid commit hash")?)?;
 
-        let message = commit.message()
-            .context("Commit has no message")?;
+        let message = commit.message().context("Commit has no message")?;
 
         Ok(message.contains(trailer))
     }
@@ -299,10 +294,8 @@ impl GitIntegration for GitTrailerManager {
                         hash: commit_id.to_string(),
                         message: message.to_string(),
                         author: commit.author().name().unwrap_or("Unknown").to_string(),
-                        timestamp: DateTime::from_timestamp(
-                            commit.time().seconds(),
-                            0,
-                        ).unwrap_or_else(Utc::now),
+                        timestamp: DateTime::from_timestamp(commit.time().seconds(), 0)
+                            .unwrap_or_else(Utc::now),
                         trailer: trailer.to_string(),
                     }));
                 }
@@ -332,10 +325,8 @@ impl GitIntegration for GitTrailerManager {
                             hash: commit_id.to_string(),
                             message: message.to_string(),
                             author: commit.author().name().unwrap_or("Unknown").to_string(),
-                            timestamp: DateTime::from_timestamp(
-                                commit.time().seconds(),
-                                0,
-                            ).unwrap_or_else(Utc::now),
+                            timestamp: DateTime::from_timestamp(commit.time().seconds(), 0)
+                                .unwrap_or_else(Utc::now),
                             trailer,
                         });
                     }
@@ -346,7 +337,6 @@ impl GitIntegration for GitTrailerManager {
         Ok(commits)
     }
 }
-
 
 /// Git repository status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -369,8 +359,7 @@ impl GitUtils {
 
     /// Initialize a new git repository
     pub fn init_repository<P: AsRef<Path>>(path: P) -> Result<Repository> {
-        Repository::init(path)
-            .context("Failed to initialize git repository")
+        Repository::init(path).context("Failed to initialize git repository")
     }
 
     /// Get repository status
@@ -397,10 +386,8 @@ impl GitUtils {
                 hash: commit.id().to_string(),
                 message: commit.message().unwrap_or("").to_string(),
                 author: commit.author().name().unwrap_or("Unknown").to_string(),
-                timestamp: DateTime::from_timestamp(
-                    commit.time().seconds(),
-                    0,
-                ).unwrap_or_else(Utc::now),
+                timestamp: DateTime::from_timestamp(commit.time().seconds(), 0)
+                    .unwrap_or_else(Utc::now),
                 trailer: String::new(),
             })
         } else {
@@ -445,8 +432,7 @@ impl GitUtils {
             let verdict_part = &trailer[start + 16..]; // Length of "CAWS-VERDICT-ID:"
             let verdict_id = verdict_part.trim();
 
-            Uuid::parse_str(verdict_id)
-                .context("Invalid verdict ID in git trailer")
+            Uuid::parse_str(verdict_id).context("Invalid verdict ID in git trailer")
         } else {
             Err(anyhow::anyhow!("No CAWS-VERDICT-ID trailer found"))
         }
@@ -495,7 +481,8 @@ mod tests {
             "main".to_string(),
             true,
             "Test commit: {verdict_id}".to_string(),
-        ).unwrap();
+        )
+        .unwrap();
 
         // Test commit message generation
         let provenance_record = create_test_provenance_record();

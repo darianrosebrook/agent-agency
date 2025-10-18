@@ -210,8 +210,14 @@ impl SecurityAuditor {
             metadata: {
                 let mut metadata = HashMap::new();
                 metadata.insert("enabled".to_string(), new_policy.enabled.to_string());
-                metadata.insert("retention_days".to_string(), new_policy.retention_days.to_string());
-                metadata.insert("description".to_string(), "Updated audit policy".to_string());
+                metadata.insert(
+                    "retention_days".to_string(),
+                    new_policy.retention_days.to_string(),
+                );
+                metadata.insert(
+                    "description".to_string(),
+                    "Updated audit policy".to_string(),
+                );
                 metadata
             },
         };
@@ -241,7 +247,10 @@ impl SecurityAuditor {
                 result: AuditResult::Approved,
                 metadata: {
                     let mut metadata = HashMap::new();
-                    metadata.insert("description".to_string(), "Testing policy application".to_string());
+                    metadata.insert(
+                        "description".to_string(),
+                        "Testing policy application".to_string(),
+                    );
                     metadata
                 },
             };

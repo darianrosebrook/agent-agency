@@ -1,12 +1,10 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "dom"],
+    "lib": ["ES2022"],
     "module": "ESNext",
     "moduleResolution": "node",
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
+    "allowJs": true,
     "outDir": "./dist",
     "rootDir": ".",
     "strict": true,
@@ -22,11 +20,18 @@
     "types": ["node", "jest"],
     "paths": {
       "@/*": ["src/*"],
+      "@/database/*": ["src/database/*"],
+      "@/mcp-server/*": ["src/mcp-server/*"],
+      "@/monitoring/*": ["src/monitoring/*"],
+      "@/observability/*": ["src/observability/*"],
+      "@/observer/*": ["src/observer/*"],
+      "@/orchestrator/*": ["src/orchestrator/*"],
+      "@/resilience/*": ["src/resilience/*"],
+      "@/api/*": ["src/api/*"],
       "@/rl/*": ["src/rl/*"],
-      "@/thinking/*": ["src/thinking/*"],
-      "@/evaluation/*": ["src/evaluation/*"]
+      "@/types/*": ["src/types/*"]
     }
   },
-  "include": ["src/**/*", "apps/**/*", "tests/**/*", "scripts/**/*", "src/mcp"],
-  "exclude": ["node_modules", "dist", "coverage", "apps/web-observer"]
+  "include": ["src/**/*", "scripts/**/*"],
+  "exclude": ["node_modules", "dist", "coverage", "apps/**/*", "tests/**/*"]
 }

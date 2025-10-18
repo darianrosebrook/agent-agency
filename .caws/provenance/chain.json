@@ -8382,5 +8382,41 @@
     },
     "previous_hash": "da67ab2b19d2d0664b3045ae4eba987644cb7573e8d288da82e904c25b000aa3",
     "hash": "bf9749ccc4130a33bcd6566d0752d8fd1b2fba6ef7e609df09c7a46164f3133c"
+  },
+  {
+    "id": "prov-1760768502258",
+    "timestamp": "2025-10-18T06:21:42.258Z",
+    "commit": {
+      "hash": "c94cda06447d96338f7ec7f1d0aed19220349a65",
+      "message": "Implement comprehensive orchestration and claim extraction integration tests",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T06:21:42.259Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "bf9749ccc4130a33bcd6566d0752d8fd1b2fba6ef7e609df09c7a46164f3133c",
+    "hash": "4d8ec74466cfb0e11801a58d079cb143e4cc1074d4b5fd67dda964e09357c191"
   }
 ]

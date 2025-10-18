@@ -5,12 +5,12 @@
 //! - SLO tracking and alerting
 //! - Basic metrics collection
 
-pub mod logging;
-pub mod slo;
 pub mod alerts;
+pub mod logging;
 pub mod metrics;
+pub mod slo;
 
-pub use logging::*;
-pub use slo::*;
 pub use alerts::*;
+pub use logging::*;
 pub use metrics::*;
+pub use slo::*;

@@ -52,7 +52,8 @@ impl ConnectionTracker {
 
         // Look at connections in the last 5 minutes for rate calculation
         let five_minutes_ago = Instant::now() - Duration::from_secs(300);
-        let recent_connections: Vec<_> = times.iter()
+        let recent_connections: Vec<_> = times
+            .iter()
             .take_while(|&&time| time > five_minutes_ago)
             .collect();
 
@@ -81,7 +82,8 @@ impl ConnectionTracker {
             return 0.0;
         }
 
-        let total_lifetime: f64 = times.iter()
+        let total_lifetime: f64 = times
+            .iter()
             .map(|&time| now.duration_since(time).as_secs_f64())
             .sum();
 
@@ -237,14 +239,16 @@ impl DatabaseHealthChecker {
         let query = query.to_string();
         let pool = self.client.pool().clone();
 
-        self.client.execute_query(|| {
-            Box::pin(async move {
-                sqlx::query(&query)
-                    .fetch_all(&pool)
-                    .await
-                    .context("Query execution failed")
+        self.client
+            .execute_query(|| {
+                Box::pin(async move {
+                    sqlx::query(&query)
+                        .fetch_all(&pool)
+                        .await
+                        .context("Query execution failed")
+                })
             })
-        }).await
+            .await
     }
 
     /// Execute a query that returns a single row
@@ -252,14 +256,16 @@ impl DatabaseHealthChecker {
         let query = query.to_string();
         let pool = self.client.pool().clone();
 
-        self.client.execute_query(|| {
-            Box::pin(async move {
-                sqlx::query(&query)
-                    .fetch_one(&pool)
-                    .await
-                    .context("Query execution failed")
+        self.client
+            .execute_query(|| {
+                Box::pin(async move {
+                    sqlx::query(&query)
+                        .fetch_one(&pool)
+                        .await
+                        .context("Query execution failed")
+                })
             })
-        }).await
+            .await
     }
     /// Create a new health checker
     pub fn new(client: DatabaseClient, config: HealthCheckConfig) -> Self {
@@ -482,7 +488,10 @@ impl DatabaseHealthChecker {
             });
         }
 
-        debug!("Collected index statistics for {} indexes", index_stats.len());
+        debug!(
+            "Collected index statistics for {} indexes",
+            index_stats.len()
+        );
         Ok(index_stats)
     }
 
@@ -550,7 +559,10 @@ impl DatabaseHealthChecker {
             });
         }
 
-        debug!("Collected table statistics for {} tables", table_stats.len());
+        debug!(
+            "Collected table statistics for {} tables",
+            table_stats.len()
+        );
         Ok(table_stats)
     }
 
@@ -579,7 +591,10 @@ impl DatabaseHealthChecker {
         let rows = match self.execute_query_rows(query).await {
             Ok(rows) => rows,
             Err(e) => {
-                debug!("pg_stat_statements not available for slow query analysis: {}", e);
+                debug!(
+                    "pg_stat_statements not available for slow query analysis: {}",
+                    e
+                );
                 return Ok(Vec::new());
             }
         };
@@ -619,7 +634,10 @@ impl DatabaseHealthChecker {
             });
         }
 
-        debug!("Collected statistics for {} slow queries", slow_queries.len());
+        debug!(
+            "Collected statistics for {} slow queries",
+            slow_queries.len()
+        );
         Ok(slow_queries)
     }
 
@@ -651,7 +669,10 @@ impl DatabaseHealthChecker {
         };
 
         // Calculate comprehensive connection statistics
-        let creation_rate = self.connection_tracker.calculate_creation_rate_per_minute().await;
+        let creation_rate = self
+            .connection_tracker
+            .calculate_creation_rate_per_minute()
+            .await;
         let avg_lifetime = self.connection_tracker.calculate_average_lifetime().await;
         let total_connections = self.connection_tracker.total_connections().await as u64;
 
@@ -668,7 +689,10 @@ impl DatabaseHealthChecker {
         let table_sizes = self.collect_table_statistics().await.unwrap_or_default();
 
         // Collect comprehensive slow query statistics
-        let slow_queries = self.collect_slow_query_statistics().await.unwrap_or_default();
+        let slow_queries = self
+            .collect_slow_query_statistics()
+            .await
+            .unwrap_or_default();
 
         Ok(DatabaseDiagnostics {
             pool_stats,

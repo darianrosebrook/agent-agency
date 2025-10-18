@@ -6,11 +6,11 @@ use crate::types::*;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tracing::{debug, info, warn};
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 
 /// Main workspace state manager
 pub struct WorkspaceStateManager {
@@ -623,10 +623,12 @@ impl WorkspaceStateManager {
 
         // Analyze git diff to identify changes
         let changes = if let Some(prev_commit) = previous_commit {
-            self.analyze_git_diff(&repo, &prev_commit, &current_commit).await?
+            self.analyze_git_diff(&repo, &prev_commit, &current_commit)
+                .await?
         } else {
             // First commit - capture all files
-            self.capture_all_files_in_commit(&repo, &current_commit).await?
+            self.capture_all_files_in_commit(&repo, &current_commit)
+                .await?
         };
 
         // Process changes and build state
@@ -644,7 +646,8 @@ impl WorkspaceStateManager {
                         path: file_path.clone(),
                         size: 0,
                         content_hash: "deleted".to_string(),
-                        modified_at: DateTime::from_timestamp(change.timestamp as i64, 0).unwrap_or_default(),
+                        modified_at: DateTime::from_timestamp(change.timestamp as i64, 0)
+                            .unwrap_or_default(),
                         permissions: 0,
                         git_tracked: true,
                         git_commit: Some(change.commit_hash.clone()),
@@ -660,14 +663,15 @@ impl WorkspaceStateManager {
                             path: old_path.clone(),
                             size: 0,
                             content_hash: "deleted".to_string(),
-                            modified_at: DateTime::from_timestamp(change_clone.timestamp as i64, 0).unwrap_or_default(),
+                            modified_at: DateTime::from_timestamp(change_clone.timestamp as i64, 0)
+                                .unwrap_or_default(),
                             permissions: 0,
                             git_tracked: true,
                             git_commit: Some(change_clone.commit_hash.clone()),
                         };
                         file_states.insert(old_path, old_file_state);
                     }
-                    
+
                     // Add new path
                     let file_path = change.file_path.clone();
                     let file_state = self.build_file_state_from_change(&change, &repo).await?;
@@ -692,11 +696,8 @@ impl WorkspaceStateManager {
         let mut changes = Vec::new();
 
         // Get diff between commits
-        let diff = repo.diff_tree_to_tree(
-            Some(&from_commit.tree()?),
-            Some(&to_commit.tree()?),
-            None,
-        )?;
+        let diff =
+            repo.diff_tree_to_tree(Some(&from_commit.tree()?), Some(&to_commit.tree()?), None)?;
 
         // Process each delta in the diff
         diff.foreach(
@@ -707,18 +708,19 @@ impl WorkspaceStateManager {
                     git2::Delta::Deleted => ChangeType::Deleted,
                     git2::Delta::Renamed => ChangeType::Renamed,
                     git2::Delta::Copied => ChangeType::Added, // Treat as added
-                    git2::Delta::Ignored => return true, // Skip ignored files
-                    git2::Delta::Untracked => return true, // Skip untracked files
+                    git2::Delta::Ignored => return true,      // Skip ignored files
+                    git2::Delta::Untracked => return true,    // Skip untracked files
                     git2::Delta::Typechange => ChangeType::Modified,
                     _ => return true, // Skip other types
                 };
 
-                let new_file_path = delta.new_file().path()
+                let new_file_path = delta
+                    .new_file()
+                    .path()
                     .map(|p| p.to_path_buf())
                     .unwrap_or_else(|| PathBuf::from("unknown"));
-                
-                let old_file_path = delta.old_file().path()
-                    .map(|p| p.to_path_buf());
+
+                let old_file_path = delta.old_file().path().map(|p| p.to_path_buf());
 
                 let change = FileChange {
                     file_path: new_file_path,
@@ -756,7 +758,7 @@ impl WorkspaceStateManager {
             if let Ok(obj) = entry.to_object(repo) {
                 if let Some(blob) = obj.as_blob() {
                     let file_path = PathBuf::from(root).join(entry.name().unwrap_or(""));
-                    
+
                     let change = FileChange {
                         file_path,
                         old_path: None,
@@ -784,17 +786,19 @@ impl WorkspaceStateManager {
         _repo: &git2::Repository,
     ) -> Result<FileState, WorkspaceError> {
         let full_path = self.workspace_root.join(&change.file_path);
-        
+
         // Get file metadata
         let metadata = std::fs::metadata(&full_path).map_err(WorkspaceError::from)?;
         let size = metadata.len();
-        let modified_time = metadata.modified()
+        let modified_time = metadata
+            .modified()
             .map_err(WorkspaceError::from)?
             .duration_since(std::time::UNIX_EPOCH)
             .map_err(|e| WorkspaceError::from(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
 
         // Calculate file hash
-        let content_hash = if !change.is_binary && size < 1024 * 1024 { // Only hash files < 1MB
+        let content_hash = if !change.is_binary && size < 1024 * 1024 {
+            // Only hash files < 1MB
             self.calculate_file_hash(&full_path).await?
         } else {
             format!("binary_{}", size) // Use size as hash for binary files
@@ -828,14 +832,17 @@ impl WorkspaceStateManager {
         for file_state in file_states.values() {
             if let Some(parent) = file_state.path.parent() {
                 let dir_path = parent.to_path_buf();
-                
-                let dir_state = directory_states.entry(dir_path.clone()).or_insert_with(|| DirectoryState {
-                    path: dir_path,
-                    file_count: 0,
-                    subdirectory_count: 0,
-                    total_size: 0,
-                    last_modified: file_state.modified_at,
-                });
+
+                let dir_state =
+                    directory_states
+                        .entry(dir_path.clone())
+                        .or_insert_with(|| DirectoryState {
+                            path: dir_path,
+                            file_count: 0,
+                            subdirectory_count: 0,
+                            total_size: 0,
+                            last_modified: file_state.modified_at,
+                        });
 
                 dir_state.file_count += 1;
                 dir_state.total_size += file_state.size;
@@ -848,13 +855,13 @@ impl WorkspaceStateManager {
 
     /// Calculate SHA-256 hash of a file
     async fn calculate_file_hash(&self, file_path: &Path) -> Result<String, WorkspaceError> {
+        use sha2::{Digest, Sha256};
         use std::io::Read;
-        use sha2::{Sha256, Digest};
-        
+
         let mut file = std::fs::File::open(file_path).map_err(WorkspaceError::from)?;
         let mut hasher = Sha256::new();
         let mut buffer = [0; 8192];
-        
+
         loop {
             let bytes_read = file.read(&mut buffer).map_err(WorkspaceError::from)?;
             if bytes_read == 0 {
@@ -862,7 +869,7 @@ impl WorkspaceStateManager {
             }
             hasher.update(&buffer[..bytes_read]);
         }
-        
+
         Ok(format!("{:x}", hasher.finalize()))
     }
 }

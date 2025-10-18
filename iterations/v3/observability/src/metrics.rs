@@ -65,7 +65,10 @@ impl MetricsCollector {
 
         let key = self.make_key(name, labels);
         let mut histograms = self.histograms.write().await;
-        histograms.entry(key.clone()).or_insert_with(Vec::new).push(value);
+        histograms
+            .entry(key.clone())
+            .or_insert_with(Vec::new)
+            .push(value);
 
         // Keep only last 1000 values per histogram
         if let Some(values) = histograms.get_mut(&key) {
@@ -76,20 +79,36 @@ impl MetricsCollector {
     }
 
     // Operation metrics
-    pub async fn record_operation_duration(&self, operation: &str, duration_ms: f64, success: bool, component: &str) {
+    pub async fn record_operation_duration(
+        &self,
+        operation: &str,
+        duration_ms: f64,
+        success: bool,
+        component: &str,
+    ) {
         let status = if success { "success" } else { "failure" };
         self.record_histogram(
             "operation_duration_ms",
             duration_ms,
-            &[("operation", operation), ("status", status), ("component", component)],
-        ).await;
+            &[
+                ("operation", operation),
+                ("status", status),
+                ("component", component),
+            ],
+        )
+        .await;
     }
 
     pub async fn increment_operation_count(&self, operation: &str, status: &str, component: &str) {
         self.increment_counter(
             "operation_total",
-            &[("operation", operation), ("status", status), ("component", component)],
-        ).await;
+            &[
+                ("operation", operation),
+                ("status", status),
+                ("component", component),
+            ],
+        )
+        .await;
     }
 
     // Resource metrics
@@ -98,83 +117,109 @@ impl MetricsCollector {
             "cpu_usage_percent",
             usage_percent,
             &[("component", component)],
-        ).await;
+        )
+        .await;
     }
 
     pub async fn update_memory_usage(&self, usage_mb: f64, component: &str) {
-        self.update_gauge(
-            "memory_usage_mb",
-            usage_mb,
-            &[("component", component)],
-        ).await;
+        self.update_gauge("memory_usage_mb", usage_mb, &[("component", component)])
+            .await;
     }
 
     // Business metrics
     pub async fn record_task_completion(&self, task_type: &str, duration_ms: f64, success: bool) {
-        self.record_operation_duration("task_completion", duration_ms, success, "orchestration").await;
-        self.increment_operation_count("task_completed", if success { "success" } else { "failure" }, "orchestration").await;
+        self.record_operation_duration("task_completion", duration_ms, success, "orchestration")
+            .await;
+        self.increment_operation_count(
+            "task_completed",
+            if success { "success" } else { "failure" },
+            "orchestration",
+        )
+        .await;
 
         self.update_gauge(
             "last_task_duration_ms",
             duration_ms,
             &[("task_type", task_type)],
-        ).await;
+        )
+        .await;
     }
 
-    pub async fn record_council_decision(&self, decision_type: &str, confidence: f64, duration_ms: f64) {
+    pub async fn record_council_decision(
+        &self,
+        decision_type: &str,
+        confidence: f64,
+        duration_ms: f64,
+    ) {
         self.record_histogram(
             "council_decision_duration_ms",
             duration_ms,
             &[("decision_type", decision_type)],
-        ).await;
+        )
+        .await;
 
         self.update_gauge(
             "council_decision_confidence",
             confidence,
             &[("decision_type", decision_type)],
-        ).await;
+        )
+        .await;
     }
 
-    pub async fn record_worker_execution(&self, worker_type: &str, duration_ms: f64, success: bool) {
-        self.record_operation_duration("worker_execution", duration_ms, success, "workers").await;
-        self.increment_operation_count("worker_execution", if success { "success" } else { "failure" }, "workers").await;
+    pub async fn record_worker_execution(
+        &self,
+        worker_type: &str,
+        duration_ms: f64,
+        success: bool,
+    ) {
+        self.record_operation_duration("worker_execution", duration_ms, success, "workers")
+            .await;
+        self.increment_operation_count(
+            "worker_execution",
+            if success { "success" } else { "failure" },
+            "workers",
+        )
+        .await;
 
         if success {
             self.update_gauge(
                 "last_worker_execution_duration_ms",
                 duration_ms,
                 &[("worker_type", worker_type)],
-            ).await;
+            )
+            .await;
         }
     }
 
     // Learning metrics
-    pub async fn record_learning_progress(&self, algorithm: &str, epoch: u32, loss: f64, accuracy: f64) {
-        self.update_gauge(
-            "learning_loss",
-            loss,
-            &[("algorithm", algorithm)],
-        ).await;
+    pub async fn record_learning_progress(
+        &self,
+        algorithm: &str,
+        epoch: u32,
+        loss: f64,
+        accuracy: f64,
+    ) {
+        self.update_gauge("learning_loss", loss, &[("algorithm", algorithm)])
+            .await;
 
-        self.update_gauge(
-            "learning_accuracy",
-            accuracy,
-            &[("algorithm", algorithm)],
-        ).await;
+        self.update_gauge("learning_accuracy", accuracy, &[("algorithm", algorithm)])
+            .await;
 
-        self.update_gauge(
-            "learning_epoch",
-            epoch as f64,
-            &[("algorithm", algorithm)],
-        ).await;
+        self.update_gauge("learning_epoch", epoch as f64, &[("algorithm", algorithm)])
+            .await;
     }
 
     // Error metrics
     pub async fn record_error(&self, error_type: &str, component: &str, operation: &str) {
         self.increment_counter(
             "errors_total",
-            &[("error_type", error_type), ("component", component), ("operation", operation)],
-        ).await;
+            &[
+                ("error_type", error_type),
+                ("component", component),
+                ("operation", operation),
+            ],
+        )
+        .await;
     }
 
     // Export methods
@@ -189,11 +234,14 @@ impl MetricsCollector {
             .iter()
             .map(|(key, &value)| {
                 let (name, labels) = self.parse_key(key);
-                (name, MetricValue {
-                    value: value as f64,
-                    timestamp: now,
-                    labels,
-                })
+                (
+                    name,
+                    MetricValue {
+                        value: value as f64,
+                        timestamp: now,
+                        labels,
+                    },
+                )
             })
             .collect();
 
@@ -201,11 +249,14 @@ impl MetricsCollector {
             .iter()
             .map(|(key, &value)| {
                 let (name, labels) = self.parse_key(key);
-                (name, MetricValue {
-                    value,
-                    timestamp: now,
-                    labels,
-                })
+                (
+                    name,
+                    MetricValue {
+                        value,
+                        timestamp: now,
+                        labels,
+                    },
+                )
             })
             .collect();
 
@@ -271,15 +322,25 @@ mod tests {
         let collector = MetricsCollector::new();
 
         // Test counter
-        collector.increment_counter("test_counter", &[("label", "value")]).await;
-        collector.increment_counter("test_counter", &[("label", "value")]).await;
+        collector
+            .increment_counter("test_counter", &[("label", "value")])
+            .await;
+        collector
+            .increment_counter("test_counter", &[("label", "value")])
+            .await;
 
         // Test gauge
-        collector.update_gauge("test_gauge", 42.0, &[("label", "value")]).await;
+        collector
+            .update_gauge("test_gauge", 42.0, &[("label", "value")])
+            .await;
 
         // Test histogram
-        collector.record_histogram("test_histogram", 1.5, &[("label", "value")]).await;
-        collector.record_histogram("test_histogram", 2.5, &[("label", "value")]).await;
+        collector
+            .record_histogram("test_histogram", 1.5, &[("label", "value")])
+            .await;
+        collector
+            .record_histogram("test_histogram", 2.5, &[("label", "value")])
+            .await;
 
         // Test snapshot
         let snapshot = collector.snapshot().await;

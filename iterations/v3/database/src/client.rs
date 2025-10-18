@@ -1386,7 +1386,7 @@ impl DatabaseOperations for DatabaseClient {
     async fn delete_task(&self, id: Uuid) -> Result<(), Self::Error> {
         // First check if task has any dependencies or active executions
         let active_executions: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM task_executions WHERE task_id = $1 AND status = 'running'"
+            "SELECT COUNT(*) FROM task_executions WHERE task_id = $1 AND status = 'running'",
         )
         .bind(id)
         .fetch_one(&self.pool)
@@ -1437,7 +1437,7 @@ impl DatabaseOperations for DatabaseClient {
                 execution_metadata, error_message, result_data
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING *
-            "#
+            "#,
         )
         .bind(id)
         .bind(execution.task_id)
@@ -1467,7 +1467,10 @@ impl DatabaseOperations for DatabaseClient {
             result_data: row.get("result_data"),
         };
 
-        info!("Created task execution {} for task {}", id, execution.task_id);
+        info!(
+            "Created task execution {} for task {}",
+            id, execution.task_id
+        );
         Ok(task_execution)
     }
 
@@ -1477,7 +1480,7 @@ impl DatabaseOperations for DatabaseClient {
             SELECT * FROM task_executions 
             WHERE task_id = $1 
             ORDER BY created_at DESC
-            "#
+            "#,
         )
         .bind(task_id)
         .fetch_all(&self.pool)
@@ -1501,7 +1504,11 @@ impl DatabaseOperations for DatabaseClient {
             })
             .collect();
 
-        info!("Retrieved {} task executions for task {}", executions.len(), task_id);
+        info!(
+            "Retrieved {} task executions for task {}",
+            executions.len(),
+            task_id
+        );
         Ok(executions)
     }
 
@@ -1555,10 +1562,12 @@ impl DatabaseOperations for DatabaseClient {
             query_builder = query_builder.bind(error_message);
         }
         if let Some(result_data) = &update.result_data {
-            query_builder = query_builder.bind(serde_json::to_value(result_data).unwrap_or_default());
+            query_builder =
+                query_builder.bind(serde_json::to_value(result_data).unwrap_or_default());
         }
         if let Some(execution_metadata) = &update.execution_metadata {
-            query_builder = query_builder.bind(serde_json::to_value(execution_metadata).unwrap_or_default());
+            query_builder =
+                query_builder.bind(serde_json::to_value(execution_metadata).unwrap_or_default());
         }
 
         query_builder = query_builder.bind(id);
@@ -1582,7 +1591,10 @@ impl DatabaseOperations for DatabaseClient {
             result_data: row.get("result_data"),
         };
 
-        info!("Updated task execution {} with status {:?}", id, task_execution.status);
+        info!(
+            "Updated task execution {} with status {:?}",
+            id, task_execution.status
+        );
         Ok(task_execution)
     }
 
@@ -1669,7 +1681,7 @@ impl DatabaseOperations for DatabaseClient {
             r#"
             SELECT * FROM council_verdicts 
             WHERE id = $1
-            "#
+            "#,
         )
         .bind(verdict_id)
         .fetch_optional(&self.pool)
@@ -1823,7 +1835,7 @@ impl DatabaseOperations for DatabaseClient {
                 evaluation_metadata, verdict_decision, risk_assessment
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             RETURNING *
-            "#
+            "#,
         )
         .bind(id)
         .bind(evaluation.verdict_id)
@@ -1858,7 +1870,10 @@ impl DatabaseOperations for DatabaseClient {
             risk_assessment: row.get("risk_assessment"),
         };
 
-        info!("Created judge evaluation {} for verdict {}", id, evaluation.verdict_id);
+        info!(
+            "Created judge evaluation {} for verdict {}",
+            id, evaluation.verdict_id
+        );
         Ok(judge_evaluation)
     }
 
@@ -1871,7 +1886,7 @@ impl DatabaseOperations for DatabaseClient {
             SELECT * FROM judge_evaluations 
             WHERE verdict_id = $1 
             ORDER BY created_at DESC
-            "#
+            "#,
         )
         .bind(verdict_id)
         .fetch_all(&self.pool)
@@ -1897,7 +1912,11 @@ impl DatabaseOperations for DatabaseClient {
             })
             .collect();
 
-        info!("Retrieved {} judge evaluations for verdict {}", evaluations.len(), verdict_id);
+        info!(
+            "Retrieved {} judge evaluations for verdict {}",
+            evaluations.len(),
+            verdict_id
+        );
         Ok(evaluations)
     }
 
@@ -1916,7 +1935,7 @@ impl DatabaseOperations for DatabaseClient {
                 access_level, version, parent_id
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING *
-            "#
+            "#,
         )
         .bind(id)
         .bind(&entry.title)
@@ -2030,7 +2049,8 @@ impl DatabaseOperations for DatabaseClient {
             }
             if let Some(tags) = &filters.tags {
                 if !tags.is_empty() {
-                    query_builder = query_builder.bind(serde_json::to_value(tags).unwrap_or_default());
+                    query_builder =
+                        query_builder.bind(serde_json::to_value(tags).unwrap_or_default());
                 }
             }
             if let Some(created_after) = &filters.created_after {
@@ -2084,7 +2104,7 @@ impl DatabaseOperations for DatabaseClient {
         limit: Option<u32>,
     ) -> Result<Vec<KnowledgeEntry>, Self::Error> {
         let limit = limit.unwrap_or(10) as i64;
-        
+
         // For now, implement text-based search. In a full implementation,
         // this would use vector similarity search with pgvector
         let rows = sqlx::query(
@@ -2123,7 +2143,11 @@ impl DatabaseOperations for DatabaseClient {
             })
             .collect();
 
-        info!("Found {} knowledge entries for query: '{}'", entries.len(), query);
+        info!(
+            "Found {} knowledge entries for query: '{}'",
+            entries.len(),
+            query
+        );
         Ok(entries)
     }
 
@@ -2141,7 +2165,7 @@ impl DatabaseOperations for DatabaseClient {
                 task_id, execution_id, timestamp, metadata, created_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING *
-            "#
+            "#,
         )
         .bind(id)
         .bind(&metric.metric_name)
@@ -2170,7 +2194,10 @@ impl DatabaseOperations for DatabaseClient {
             created_at: row.get("created_at"),
         };
 
-        info!("Created performance metric {}: {} = {}", id, metric.metric_name, metric.metric_value);
+        info!(
+            "Created performance metric {}: {} = {}",
+            id, metric.metric_name, metric.metric_value
+        );
         Ok(performance_metric)
     }
 
@@ -2184,7 +2211,7 @@ impl DatabaseOperations for DatabaseClient {
             SELECT * FROM performance_metrics 
             WHERE component = $1 AND (task_id = $2 OR execution_id = $2)
             ORDER BY timestamp DESC
-            "#
+            "#,
         )
         .bind(entity_type)
         .bind(entity_id)
@@ -2208,7 +2235,12 @@ impl DatabaseOperations for DatabaseClient {
             })
             .collect();
 
-        info!("Retrieved {} performance metrics for {} {}", metrics.len(), entity_type, entity_id);
+        info!(
+            "Retrieved {} performance metrics for {} {}",
+            metrics.len(),
+            entity_type,
+            entity_id
+        );
         Ok(metrics)
     }
 
@@ -2227,7 +2259,7 @@ impl DatabaseOperations for DatabaseClient {
                 compliance_metadata, audit_details
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             RETURNING *
-            "#
+            "#,
         )
         .bind(id)
         .bind(compliance.task_id)
@@ -2258,7 +2290,10 @@ impl DatabaseOperations for DatabaseClient {
             audit_details: row.get("audit_details"),
         };
 
-        info!("Created CAWS compliance record {} for task {}", id, compliance.task_id);
+        info!(
+            "Created CAWS compliance record {} for task {}",
+            id, compliance.task_id
+        );
         Ok(caws_compliance)
     }
 
@@ -2272,7 +2307,7 @@ impl DatabaseOperations for DatabaseClient {
             WHERE task_id = $1
             ORDER BY created_at DESC
             LIMIT 1
-            "#
+            "#,
         )
         .bind(task_id)
         .fetch_optional(&self.pool)
@@ -2313,7 +2348,7 @@ impl DatabaseOperations for DatabaseClient {
                 user_id, ip_address, timestamp, created_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *
-            "#
+            "#,
         )
         .bind(id)
         .bind(&entry.entity_type)
@@ -2340,7 +2375,10 @@ impl DatabaseOperations for DatabaseClient {
             created_at: row.get("created_at"),
         };
 
-        info!("Created audit trail entry {} for {} {}", id, entry.entity_type, entry.entity_id);
+        info!(
+            "Created audit trail entry {} for {} {}",
+            id, entry.entity_type, entry.entity_id
+        );
         Ok(audit_entry)
     }
 
@@ -2354,7 +2392,7 @@ impl DatabaseOperations for DatabaseClient {
             SELECT * FROM audit_trail 
             WHERE entity_type = $1 AND entity_id = $2
             ORDER BY timestamp DESC
-            "#
+            "#,
         )
         .bind(entity_type)
         .bind(entity_id)
@@ -2377,7 +2415,12 @@ impl DatabaseOperations for DatabaseClient {
             })
             .collect();
 
-        info!("Retrieved {} audit trail entries for {} {}", entries.len(), entity_type, entity_id);
+        info!(
+            "Retrieved {} audit trail entries for {} {}",
+            entries.len(),
+            entity_type,
+            entity_id
+        );
         Ok(entries)
     }
 
@@ -2394,7 +2437,7 @@ impl DatabaseOperations for DatabaseClient {
             WHERE created_at >= NOW() - INTERVAL '30 days'
             GROUP BY DATE_TRUNC('day', created_at)
             ORDER BY date DESC
-            "#
+            "#,
         )
         .fetch_all(&self.pool)
         .await
@@ -2430,7 +2473,7 @@ impl DatabaseOperations for DatabaseClient {
             WHERE created_at >= NOW() - INTERVAL '30 days'
             GROUP BY judge_id
             ORDER BY total_evaluations DESC
-            "#
+            "#,
         )
         .fetch_all(&self.pool)
         .await
@@ -2468,7 +2511,7 @@ impl DatabaseOperations for DatabaseClient {
             WHERE created_at >= NOW() - INTERVAL '30 days'
             GROUP BY worker_id
             ORDER BY total_executions DESC
-            "#
+            "#,
         )
         .fetch_all(&self.pool)
         .await
@@ -2507,7 +2550,7 @@ impl DatabaseOperations for DatabaseClient {
                 MAX(completed_at) as last_completion
             FROM task_executions 
             WHERE task_id = $1
-            "#
+            "#,
         )
         .bind(task_id)
         .fetch_optional(&self.pool)

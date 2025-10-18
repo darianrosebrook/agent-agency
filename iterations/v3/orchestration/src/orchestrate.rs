@@ -14,9 +14,7 @@ use agent_agency_council::coordinator::ConsensusCoordinator;
 use agent_agency_council::coordinator::ProvenanceEmitter;
 use agent_agency_council::models::TaskSpec as CouncilTaskSpec;
 use agent_agency_council::types::*;
-use agent_agency_resilience::{
-    retry, CircuitBreaker, CircuitBreakerConfig, RetryConfig,
-};
+use agent_agency_resilience::{retry, CircuitBreaker, CircuitBreakerConfig, RetryConfig};
 use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -264,10 +262,12 @@ pub async fn orchestrate_task(
 
 impl Orchestrator {
     /// Initialize shared ProvenanceService with proper configuration and lifecycle management
-    async fn initialize_provenance_service(&self) -> Result<Arc<dyn ProvenanceService>, OrchestrationError> {
-        use std::sync::Arc;
+    async fn initialize_provenance_service(
+        &self,
+    ) -> Result<Arc<dyn ProvenanceService>, OrchestrationError> {
         use std::collections::HashMap;
-        
+        use std::sync::Arc;
+
         // Create provenance service configuration
         let config = ProvenanceConfig {
             backend: ProvenanceBackend::Git,
@@ -290,14 +290,16 @@ impl Orchestrator {
         };
 
         // Initialize the provenance service
-        let service = ProvenanceServiceImpl::new(config).await
+        let service = ProvenanceServiceImpl::new(config)
+            .await
             .map_err(|e| OrchestrationError::ProvenanceServiceError(e.to_string()))?;
 
         // Wrap in Arc for shared ownership
         let shared_service: Arc<dyn ProvenanceService> = Arc::new(service);
 
         // Register service with health monitoring
-        self.register_provenance_service_health_monitoring(&shared_service).await?;
+        self.register_provenance_service_health_monitoring(&shared_service)
+            .await?;
 
         tracing::info!("ProvenanceService initialized and ready for shared use");
         Ok(shared_service)
@@ -311,12 +313,12 @@ impl Orchestrator {
         // Start health monitoring task
         let service_clone = service.clone();
         let health_check_interval = std::time::Duration::from_secs(30);
-        
+
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(health_check_interval);
             loop {
                 interval.tick().await;
-                
+
                 // Perform health check
                 match service_clone.health_check().await {
                     Ok(health_status) => {
@@ -393,16 +395,19 @@ struct HealthStatus {
 trait ProvenanceService: Send + Sync {
     /// Record a provenance event
     async fn record_event(&self, event: ProvenanceEvent) -> Result<(), ProvenanceError>;
-    
+
     /// Record multiple events in batch
-    async fn record_events_batch(&self, events: Vec<ProvenanceEvent>) -> Result<(), ProvenanceError>;
-    
+    async fn record_events_batch(
+        &self,
+        events: Vec<ProvenanceEvent>,
+    ) -> Result<(), ProvenanceError>;
+
     /// Retrieve provenance events for a given context
     async fn get_events(&self, context: &str) -> Result<Vec<ProvenanceEvent>, ProvenanceError>;
-    
+
     /// Perform health check
     async fn health_check(&self) -> Result<HealthStatus, ProvenanceError>;
-    
+
     /// Get service statistics
     async fn get_statistics(&self) -> Result<ProvenanceStatistics, ProvenanceError>;
 }
@@ -441,22 +446,25 @@ impl ProvenanceService for ProvenanceServiceImpl {
     async fn record_event(&self, event: ProvenanceEvent) -> Result<(), ProvenanceError> {
         let mut queue = self.event_queue.lock().await;
         queue.push(event);
-        
+
         // Update statistics
         let mut stats = self.statistics.lock().unwrap();
         stats.events_recorded += 1;
-        
+
         Ok(())
     }
 
-    async fn record_events_batch(&self, events: Vec<ProvenanceEvent>) -> Result<(), ProvenanceError> {
+    async fn record_events_batch(
+        &self,
+        events: Vec<ProvenanceEvent>,
+    ) -> Result<(), ProvenanceError> {
         let mut queue = self.event_queue.lock().await;
         queue.extend(events);
-        
+
         // Update statistics
         let mut stats = self.statistics.lock().unwrap();
         stats.events_recorded += 1;
-        
+
         Ok(())
     }
 
@@ -467,7 +475,7 @@ impl ProvenanceService for ProvenanceServiceImpl {
             .filter(|event| event.context == context)
             .cloned()
             .collect();
-        
+
         Ok(filtered_events)
     }
 
@@ -499,13 +507,13 @@ struct ProvenanceStatistics {
 enum ProvenanceError {
     #[error("Configuration error: {0}")]
     ConfigurationError(String),
-    
+
     #[error("Storage error: {0}")]
     StorageError(String),
-    
+
     #[error("Serialization error: {0}")]
     SerializationError(String),
-    
+
     #[error("Network error: {0}")]
     NetworkError(String),
 }

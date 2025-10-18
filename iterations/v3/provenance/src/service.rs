@@ -12,13 +12,12 @@ use crate::{
     git_integration::GitIntegration,
     signer::{SignerFactory, SignerTrait},
     types::{
-        ProvenanceRecord, ProvenanceQuery, ProvenanceStats, TimeRange, ProvenanceChain, 
-        ExportFormat, ProvenanceExport, ExportMetadata, IntegrityCheckResult, IntegrityIssue, 
-        IntegrityIssueType, IntegritySeverity, VerdictDecision, CawsComplianceProvenance, 
-        BudgetAdherence,
+        BudgetAdherence, CawsComplianceProvenance, ExportFormat, ExportMetadata,
+        IntegrityCheckResult, IntegrityIssue, IntegrityIssueType, IntegritySeverity,
+        ProvenanceChain, ProvenanceExport, ProvenanceQuery, ProvenanceRecord, ProvenanceStats,
+        TimeRange, VerdictDecision,
     },
-    ProvenanceConfig,
-    SigningAlgorithm,
+    ProvenanceConfig, SigningAlgorithm,
 };
 
 /// Storage trait for provenance records
@@ -270,7 +269,11 @@ impl ProvenanceService {
     }
 
     /// Extract time range filters from query
-    fn extract_time_range_filters(&self, query: &ProvenanceQuery, filters: &mut Vec<ProvenanceFilter>) -> Result<()> {
+    fn extract_time_range_filters(
+        &self,
+        query: &ProvenanceQuery,
+        filters: &mut Vec<ProvenanceFilter>,
+    ) -> Result<()> {
         if let Some(time_range) = &query.time_range {
             filters.push(ProvenanceFilter {
                 filter_type: FilterType::TimeRange,
@@ -280,7 +283,8 @@ impl ProvenanceService {
                     "start": time_range.start,
                     "end": time_range.end
                 }),
-                description: format!("Time range: {} to {}", 
+                description: format!(
+                    "Time range: {} to {}",
                     time_range.start.format("%Y-%m-%d %H:%M:%S"),
                     time_range.end.format("%Y-%m-%d %H:%M:%S")
                 ),
@@ -290,7 +294,11 @@ impl ProvenanceService {
     }
 
     /// Extract entity filters from query
-    fn extract_entity_filters(&self, query: &ProvenanceQuery, filters: &mut Vec<ProvenanceFilter>) -> Result<()> {
+    fn extract_entity_filters(
+        &self,
+        query: &ProvenanceQuery,
+        filters: &mut Vec<ProvenanceFilter>,
+    ) -> Result<()> {
         if let Some(entity_types) = &query.entity_types {
             if !entity_types.is_empty() {
                 filters.push(ProvenanceFilter {
@@ -319,7 +327,11 @@ impl ProvenanceService {
     }
 
     /// Extract activity filters from query
-    fn extract_activity_filters(&self, query: &ProvenanceQuery, filters: &mut Vec<ProvenanceFilter>) -> Result<()> {
+    fn extract_activity_filters(
+        &self,
+        query: &ProvenanceQuery,
+        filters: &mut Vec<ProvenanceFilter>,
+    ) -> Result<()> {
         if let Some(activity_types) = &query.activity_types {
             if !activity_types.is_empty() {
                 filters.push(ProvenanceFilter {
@@ -348,7 +360,11 @@ impl ProvenanceService {
     }
 
     /// Extract agent filters from query
-    fn extract_agent_filters(&self, query: &ProvenanceQuery, filters: &mut Vec<ProvenanceFilter>) -> Result<()> {
+    fn extract_agent_filters(
+        &self,
+        query: &ProvenanceQuery,
+        filters: &mut Vec<ProvenanceFilter>,
+    ) -> Result<()> {
         if let Some(agent_ids) = &query.agent_ids {
             if !agent_ids.is_empty() {
                 filters.push(ProvenanceFilter {
@@ -377,7 +393,11 @@ impl ProvenanceService {
     }
 
     /// Extract custom filters from query
-    fn extract_custom_filters(&self, query: &ProvenanceQuery, filters: &mut Vec<ProvenanceFilter>) -> Result<()> {
+    fn extract_custom_filters(
+        &self,
+        query: &ProvenanceQuery,
+        filters: &mut Vec<ProvenanceFilter>,
+    ) -> Result<()> {
         if let Some(custom_filters) = &query.custom_filters {
             for (field, filter_value) in custom_filters {
                 let filter = ProvenanceFilter {
@@ -385,7 +405,11 @@ impl ProvenanceService {
                     field: field.clone(),
                     operator: self.determine_operator(filter_value)?,
                     value: filter_value.clone(),
-                    description: format!("Custom filter: {} {}", field, self.describe_filter_value(filter_value)?),
+                    description: format!(
+                        "Custom filter: {} {}",
+                        field,
+                        self.describe_filter_value(filter_value)?
+                    ),
                 };
                 filters.push(filter);
             }
@@ -405,7 +429,7 @@ impl ProvenanceService {
                 } else {
                     Ok(FilterOperator::Equals)
                 }
-            },
+            }
             _ => Ok(FilterOperator::Equals),
         }
     }
@@ -425,7 +449,7 @@ impl ProvenanceService {
                 } else {
                     Ok("matches object".to_string())
                 }
-            },
+            }
             serde_json::Value::Null => Ok("is null".to_string()),
         }
     }
@@ -442,25 +466,33 @@ impl ProvenanceService {
             match filter.filter_type {
                 FilterType::TimeRange => {
                     if filter.field != "timestamp" {
-                        return Err(anyhow::anyhow!("Time range filter must use 'timestamp' field"));
+                        return Err(anyhow::anyhow!(
+                            "Time range filter must use 'timestamp' field"
+                        ));
                     }
-                },
+                }
                 FilterType::EntityType => {
                     if filter.field != "entity_type" {
-                        return Err(anyhow::anyhow!("Entity type filter must use 'entity_type' field"));
+                        return Err(anyhow::anyhow!(
+                            "Entity type filter must use 'entity_type' field"
+                        ));
                     }
-                },
+                }
                 FilterType::ActivityType => {
                     if filter.field != "activity_type" {
-                        return Err(anyhow::anyhow!("Activity type filter must use 'activity_type' field"));
+                        return Err(anyhow::anyhow!(
+                            "Activity type filter must use 'activity_type' field"
+                        ));
                     }
-                },
+                }
                 FilterType::AgentType => {
                     if filter.field != "agent_type" {
-                        return Err(anyhow::anyhow!("Agent type filter must use 'agent_type' field"));
+                        return Err(anyhow::anyhow!(
+                            "Agent type filter must use 'agent_type' field"
+                        ));
                     }
-                },
-                _ => {}, // Custom filters can use any field
+                }
+                _ => {} // Custom filters can use any field
             }
 
             // Validate operator compatibility
@@ -469,13 +501,13 @@ impl ProvenanceService {
                     if !filter.value.is_array() {
                         return Err(anyhow::anyhow!("IN operator requires array value"));
                     }
-                },
+                }
                 FilterOperator::Between => {
                     if !filter.value.is_object() {
                         return Err(anyhow::anyhow!("BETWEEN operator requires object value"));
                     }
-                },
-                _ => {}, // Other operators are compatible with any value type
+                }
+                _ => {} // Other operators are compatible with any value type
             }
         }
         Ok(())
@@ -487,7 +519,9 @@ impl ProvenanceService {
         filters.sort_by(|a, b| {
             let a_selectivity = self.estimate_filter_selectivity(a);
             let b_selectivity = self.estimate_filter_selectivity(b);
-            b_selectivity.partial_cmp(&a_selectivity).unwrap_or(std::cmp::Ordering::Equal)
+            b_selectivity
+                .partial_cmp(&a_selectivity)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         // Remove redundant filters
@@ -524,7 +558,11 @@ impl ProvenanceService {
     }
 
     /// Check if two filters are redundant
-    fn filters_are_redundant(&self, filter1: &ProvenanceFilter, filter2: &ProvenanceFilter) -> bool {
+    fn filters_are_redundant(
+        &self,
+        filter1: &ProvenanceFilter,
+        filter2: &ProvenanceFilter,
+    ) -> bool {
         // Same field and operator
         if filter1.field == filter2.field && filter1.operator == filter2.operator {
             // Check if values are equivalent
@@ -532,7 +570,7 @@ impl ProvenanceService {
                 (serde_json::Value::Array(arr1), serde_json::Value::Array(arr2)) => {
                     // If one array contains the other, they're redundant
                     arr1.len() == arr2.len() && arr1.iter().all(|v| arr2.contains(v))
-                },
+                }
                 (val1, val2) => val1 == val2,
             }
         } else {
@@ -696,10 +734,7 @@ mod tests {
         let service = ProvenanceService::with_defaults(Box::new(storage), config).unwrap();
 
         // Service should be created successfully
-        assert_eq!(
-            service.config.signing.algorithm,
-            SigningAlgorithm::EdDSA
-        );
+        assert_eq!(service.config.signing.algorithm, SigningAlgorithm::EdDSA);
     }
 
     #[tokio::test]

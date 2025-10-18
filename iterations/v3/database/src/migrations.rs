@@ -117,7 +117,11 @@ impl MigrationManager {
     }
 
     /// Create a new migration manager with custom configuration
-    pub async fn new_with_config(client: DatabaseClient, migration_dir: PathBuf, config: MigrationConfig) -> Result<Self> {
+    pub async fn new_with_config(
+        client: DatabaseClient,
+        migration_dir: PathBuf,
+        config: MigrationConfig,
+    ) -> Result<Self> {
         let tracking_table = config.migration_table.clone();
 
         let manager = Self {
@@ -535,8 +539,16 @@ impl MigrationManager {
         // Smart decision matrix
         match (risk_level, db_complexity, success_rate) {
             (RollbackRisk::Low, _, _) => true, // Always rollback on low risk
-            (RollbackRisk::Medium, DatabaseComplexity::Simple, success_rate) if success_rate > 0.8 => true,
-            (RollbackRisk::Medium, DatabaseComplexity::Medium, success_rate) if success_rate > 0.9 => true,
+            (RollbackRisk::Medium, DatabaseComplexity::Simple, success_rate)
+                if success_rate > 0.8 =>
+            {
+                true
+            }
+            (RollbackRisk::Medium, DatabaseComplexity::Medium, success_rate)
+                if success_rate > 0.9 =>
+            {
+                true
+            }
             (RollbackRisk::High, _, success_rate) if success_rate > 0.95 => true,
             _ => false, // Conservative approach
         }
@@ -558,9 +570,11 @@ impl MigrationManager {
                 let table_count: i64 = row.try_get("table_count").unwrap_or(0);
                 let total_size: i64 = row.try_get("total_size").unwrap_or(0);
 
-                if table_count < 10 && total_size < 100 * 1024 * 1024 { // Less than 100MB
+                if table_count < 10 && total_size < 100 * 1024 * 1024 {
+                    // Less than 100MB
                     DatabaseComplexity::Simple
-                } else if table_count < 50 && total_size < 1024 * 1024 * 1024 { // Less than 1GB
+                } else if table_count < 50 && total_size < 1024 * 1024 * 1024 {
+                    // Less than 1GB
                     DatabaseComplexity::Medium
                 } else {
                     DatabaseComplexity::Complex

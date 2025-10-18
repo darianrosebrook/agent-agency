@@ -8,7 +8,7 @@ use agent_agency_council::models::{
     FileModification as CouncilFileModification, FileOperation as CouncilFileOperation, RiskTier,
     TaskSpec, WorkerOutput as CouncilWorkerOutput,
 };
-use agent_agency_database::{DatabaseClient, CawsViolation as DbCawsViolation};
+use agent_agency_database::{CawsViolation as DbCawsViolation, DatabaseClient};
 use anyhow::Result;
 use std::collections::HashMap;
 use tracing::info;
@@ -879,7 +879,9 @@ impl CawsChecker {
         let violations = self.query_violations_from_database(task_id).await?;
 
         // Format and enrich violations with constitutional references
-        let enriched_violations = self.enrich_violations_with_constitutional_refs(violations).await?;
+        let enriched_violations = self
+            .enrich_violations_with_constitutional_refs(violations)
+            .await?;
 
         Ok(enriched_violations)
     }
@@ -930,7 +932,9 @@ impl CawsChecker {
                 },
                 description: db_violation.description,
                 location: db_violation.file_path.map(|path| {
-                    if let (Some(line), Some(col)) = (db_violation.line_number, db_violation.column_number) {
+                    if let (Some(line), Some(col)) =
+                        (db_violation.line_number, db_violation.column_number)
+                    {
                         format!("{}:{}:{}", path, line, col)
                     } else {
                         path
@@ -945,14 +949,18 @@ impl CawsChecker {
     }
 
     /// Enrich violations with constitutional references
-    async fn enrich_violations_with_constitutional_refs(&self, violations: Vec<CawsViolation>) -> Result<Vec<CawsViolation>> {
+    async fn enrich_violations_with_constitutional_refs(
+        &self,
+        violations: Vec<CawsViolation>,
+    ) -> Result<Vec<CawsViolation>> {
         let mut enriched = Vec::new();
 
         for mut violation in violations {
             // Add constitutional reference if not already present
             if violation.constitutional_ref.is_none() {
                 if let Some(ref rule) = self.violation_mapper.code_mappings.get(&violation.rule) {
-                    violation.constitutional_ref = Some(format!("{}.{}", rule.section, rule.subsection));
+                    violation.constitutional_ref =
+                        Some(format!("{}.{}", rule.section, rule.subsection));
                 }
             }
 
@@ -971,7 +979,10 @@ impl CawsChecker {
 
         // Add suggestion if missing
         if violation.suggestion.is_none() {
-            violation.suggestion = Some(format!("Review and address the {} violation", violation.rule));
+            violation.suggestion = Some(format!(
+                "Review and address the {} violation",
+                violation.rule
+            ));
         }
 
         // Validate violation data
@@ -1004,7 +1015,11 @@ impl CawsChecker {
     }
 
     /// Store violation in database (for future use)
-    pub async fn store_violation(&self, _task_id: Uuid, _violation: CawsViolation) -> Result<String> {
+    pub async fn store_violation(
+        &self,
+        _task_id: Uuid,
+        _violation: CawsViolation,
+    ) -> Result<String> {
         // In a real implementation, this would INSERT into the database
         // and return the violation ID
 
@@ -1041,7 +1056,11 @@ impl CawsChecker {
     }
 
     /// Bulk operations for violations
-    pub async fn bulk_update_violations(&self, _violation_ids: Vec<String>, _status: &str) -> Result<usize> {
+    pub async fn bulk_update_violations(
+        &self,
+        _violation_ids: Vec<String>,
+        _status: &str,
+    ) -> Result<usize> {
         // In a real implementation, this would perform bulk updates in the database
         // and return the number of affected rows
 
@@ -1072,7 +1091,6 @@ pub enum ComplianceTrend {
     Declining,
     Unknown,
 }
-
 
 impl Default for CawsChecker {
     fn default() -> Self {
@@ -1665,7 +1683,9 @@ mod tests {
     async fn test_calculate_compliance_score() {
         // Create a mock database client for testing
         let db_config = agent_agency_database::DatabaseConfig::default();
-        let db_client = agent_agency_database::DatabaseClient::new(db_config).await.unwrap();
+        let db_client = agent_agency_database::DatabaseClient::new(db_config)
+            .await
+            .unwrap();
         let checker = CawsChecker::new(db_client);
 
         let violations = vec![CawsViolation {

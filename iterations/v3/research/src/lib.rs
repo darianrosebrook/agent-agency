@@ -153,7 +153,7 @@ impl Default for ResearchConfig {
             performance: PerformanceConfig {
                 max_concurrent_requests: 10,
                 request_timeout_ms: 30000, // 30 seconds
-                cache_ttl_seconds: 3600, // 1 hour
+                cache_ttl_seconds: 3600,   // 1 hour
                 enable_caching: true,
                 enable_monitoring: true,
             },

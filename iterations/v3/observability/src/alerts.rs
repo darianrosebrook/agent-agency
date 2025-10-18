@@ -1,10 +1,10 @@
 //! Alerting system for observability events
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Alert {
@@ -100,14 +100,20 @@ impl AlertManager {
     }
 
     /// Register an alert rule
-    pub async fn register_rule(&self, rule: AlertRule) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn register_rule(
+        &self,
+        rule: AlertRule,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut rules = self.rules.write().await;
         rules.push(rule);
         Ok(())
     }
 
     /// Evaluate all alert rules against current metrics
-    pub async fn evaluate_rules(&self, metrics: &HashMap<String, f64>) -> Result<Vec<Alert>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn evaluate_rules(
+        &self,
+        metrics: &HashMap<String, f64>,
+    ) -> Result<Vec<Alert>, Box<dyn std::error::Error + Send + Sync>> {
         let rules = self.rules.read().await;
         let mut new_alerts = Vec::new();
 
@@ -160,7 +166,10 @@ impl AlertManager {
     }
 
     /// Resolve an alert
-    pub async fn resolve_alert(&self, alert_id: &str) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn resolve_alert(
+        &self,
+        alert_id: &str,
+    ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         let mut alerts = self.alerts.write().await;
         let mut history = self.alert_history.write().await;
 
@@ -186,7 +195,10 @@ impl AlertManager {
     }
 
     /// Acknowledge an alert
-    pub async fn acknowledge_alert(&self, alert_id: &str) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn acknowledge_alert(
+        &self,
+        alert_id: &str,
+    ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         let mut alerts = self.alerts.write().await;
 
         if let Some(alert) = alerts.get_mut(alert_id) {
@@ -207,7 +219,8 @@ impl AlertManager {
     /// Get alerts by component
     pub async fn get_alerts_by_component(&self, component: &str) -> Vec<Alert> {
         let alerts = self.alerts.read().await;
-        alerts.values()
+        alerts
+            .values()
             .filter(|a| a.component == component)
             .cloned()
             .collect()
@@ -216,7 +229,8 @@ impl AlertManager {
     /// Get alerts by severity
     pub async fn get_alerts_by_severity(&self, severity: &AlertSeverity) -> Vec<Alert> {
         let alerts = self.alerts.read().await;
-        alerts.values()
+        alerts
+            .values()
             .filter(|a| a.severity == *severity)
             .cloned()
             .collect()
@@ -225,11 +239,7 @@ impl AlertManager {
     /// Get alert history
     pub async fn get_alert_history(&self, limit: usize) -> Vec<Alert> {
         let history = self.alert_history.read().await;
-        history.iter()
-            .rev()
-            .take(limit)
-            .cloned()
-            .collect()
+        history.iter().rev().take(limit).cloned().collect()
     }
 
     /// Get alert statistics
@@ -241,11 +251,15 @@ impl AlertManager {
         let mut resolved_by_severity = HashMap::new();
 
         for alert in alerts.values() {
-            *active_by_severity.entry(alert.severity.clone()).or_insert(0) += 1;
+            *active_by_severity
+                .entry(alert.severity.clone())
+                .or_insert(0) += 1;
         }
 
         for alert in history.iter() {
-            *resolved_by_severity.entry(alert.severity.clone()).or_insert(0) += 1;
+            *resolved_by_severity
+                .entry(alert.severity.clone())
+                .or_insert(0) += 1;
         }
 
         AlertStats {
@@ -256,7 +270,11 @@ impl AlertManager {
         }
     }
 
-    async fn evaluate_condition(&self, condition: &AlertCondition, metrics: &HashMap<String, f64>) -> bool {
+    async fn evaluate_condition(
+        &self,
+        condition: &AlertCondition,
+        metrics: &HashMap<String, f64>,
+    ) -> bool {
         let metric_value = match metrics.get(&condition.metric) {
             Some(value) => *value,
             None => return false,
@@ -272,7 +290,11 @@ impl AlertManager {
         }
     }
 
-    async fn create_alert_from_rule(&self, rule: &AlertRule, metrics: &HashMap<String, f64>) -> Result<Alert, Box<dyn std::error::Error + Send + Sync>> {
+    async fn create_alert_from_rule(
+        &self,
+        rule: &AlertRule,
+        metrics: &HashMap<String, f64>,
+    ) -> Result<Alert, Box<dyn std::error::Error + Send + Sync>> {
         let id = uuid::Uuid::new_v4().to_string();
         let now = Utc::now();
 
@@ -327,7 +349,10 @@ pub fn create_default_alert_rules() -> Vec<AlertRule> {
                 labels: HashMap::new(),
             },
             labels: HashMap::from([("resource".to_string(), "cpu".to_string())]),
-            annotations: HashMap::from([("summary".to_string(), "High CPU usage detected".to_string())]),
+            annotations: HashMap::from([(
+                "summary".to_string(),
+                "High CPU usage detected".to_string(),
+            )]),
             enabled: true,
         },
         AlertRule {
@@ -343,7 +368,10 @@ pub fn create_default_alert_rules() -> Vec<AlertRule> {
                 labels: HashMap::new(),
             },
             labels: HashMap::from([("resource".to_string(), "memory".to_string())]),
-            annotations: HashMap::from([("summary".to_string(), "High memory usage detected".to_string())]),
+            annotations: HashMap::from([(
+                "summary".to_string(),
+                "High memory usage detected".to_string(),
+            )]),
             enabled: true,
         },
         AlertRule {
@@ -359,7 +387,10 @@ pub fn create_default_alert_rules() -> Vec<AlertRule> {
                 labels: HashMap::new(),
             },
             labels: HashMap::from([("service".to_string(), "orchestration".to_string())]),
-            annotations: HashMap::from([("summary".to_string(), "High task failure rate".to_string())]),
+            annotations: HashMap::from([(
+                "summary".to_string(),
+                "High task failure rate".to_string(),
+            )]),
             enabled: true,
         },
         AlertRule {
@@ -375,7 +406,10 @@ pub fn create_default_alert_rules() -> Vec<AlertRule> {
                 labels: HashMap::new(),
             },
             labels: HashMap::from([("type".to_string(), "slo".to_string())]),
-            annotations: HashMap::from([("summary".to_string(), "SLO violation detected".to_string())]),
+            annotations: HashMap::from([(
+                "summary".to_string(),
+                "SLO violation detected".to_string(),
+            )]),
             enabled: true,
         },
     ]
@@ -390,16 +424,19 @@ mod tests {
         let manager = AlertManager::new();
 
         // Create an alert
-        let alert_id = manager.create_alert(
-            AlertType::Performance,
-            AlertSeverity::Warning,
-            "Test Alert".to_string(),
-            "This is a test alert".to_string(),
-            "test".to_string(),
-            HashMap::from([("key".to_string(), "value".to_string())]),
-            Some(95.0),
-            Some(90.0),
-        ).await.unwrap();
+        let alert_id = manager
+            .create_alert(
+                AlertType::Performance,
+                AlertSeverity::Warning,
+                "Test Alert".to_string(),
+                "This is a test alert".to_string(),
+                "test".to_string(),
+                HashMap::from([("key".to_string(), "value".to_string())]),
+                Some(95.0),
+                Some(90.0),
+            )
+            .await
+            .unwrap();
 
         // Check active alerts
         let active = manager.get_active_alerts().await;

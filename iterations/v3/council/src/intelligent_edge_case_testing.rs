@@ -1419,18 +1419,18 @@ impl DynamicTestGenerator {
                 (
                     key,
                     TestData {
-                data_type: match &value {
-                    serde_json::Value::String(_) => DataType::String,
-                    serde_json::Value::Number(n) if n.is_i64() => DataType::Integer,
-                    serde_json::Value::Number(_) => DataType::Float,
-                    serde_json::Value::Bool(_) => DataType::Boolean,
-                    serde_json::Value::Array(_) => DataType::Array,
-                    serde_json::Value::Object(_) => DataType::Object,
-                    serde_json::Value::Null => DataType::Null,
-                },
-                value,
-                constraints: vec![],
-                edge_case_flags: vec![],
+                        data_type: match &value {
+                            serde_json::Value::String(_) => DataType::String,
+                            serde_json::Value::Number(n) if n.is_i64() => DataType::Integer,
+                            serde_json::Value::Number(_) => DataType::Float,
+                            serde_json::Value::Bool(_) => DataType::Boolean,
+                            serde_json::Value::Array(_) => DataType::Array,
+                            serde_json::Value::Object(_) => DataType::Object,
+                            serde_json::Value::Null => DataType::Null,
+                        },
+                        value,
+                        constraints: vec![],
+                        edge_case_flags: vec![],
                     },
                 )
             })
@@ -1591,7 +1591,7 @@ impl EdgeCaseAnalyzer {
                 RequirementType::Functional => {
                     // String boundary conditions
                     edge_cases.push(IdentifiedEdgeCase {
-            edge_case_id: Uuid::new_v4(),
+                        edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Empty string input".to_string(),
                         edge_case_type: EdgeCaseType::BoundaryCondition,
                         description: format!(
@@ -1744,12 +1744,12 @@ impl EdgeCaseAnalyzer {
                     edge_cases.push(IdentifiedEdgeCase {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Null object input".to_string(),
-            edge_case_type: EdgeCaseType::NullHandling,
+                        edge_case_type: EdgeCaseType::NullHandling,
                         description: format!("Input '{}' with null object", input.requirement_name),
-            probability: 0.7,
-            impact: 0.8,
-            risk_level: RiskLevel::High,
-            detection_method: DetectionMethod::StaticAnalysis,
+                        probability: 0.7,
+                        impact: 0.8,
+                        risk_level: RiskLevel::High,
+                        detection_method: DetectionMethod::StaticAnalysis,
                     });
 
                     // Missing required fields
@@ -2209,9 +2209,9 @@ impl EdgeCaseAnalyzer {
 
         RiskAssessment {
             overall_risk_score,
-                risk_distribution,
+            risk_distribution,
             high_risk_areas,
-                risk_trends: Vec::new(),
+            risk_trends: Vec::new(),
         }
     }
 
@@ -2224,11 +2224,11 @@ impl EdgeCaseAnalyzer {
 
         // Add null input tests strategy
         strategies.push(MitigationStrategy {
-                strategy_name: "Add null input tests".to_string(),
-                strategy_type: StrategyType::Test,
-                effectiveness: 0.9,
-                implementation_cost: 0.3,
-                description: "Generate comprehensive null input test cases".to_string(),
+            strategy_name: "Add null input tests".to_string(),
+            strategy_type: StrategyType::Test,
+            effectiveness: 0.9,
+            implementation_cost: 0.3,
+            description: "Generate comprehensive null input test cases".to_string(),
         });
 
         // Add boundary value tests strategy
@@ -2948,7 +2948,7 @@ impl CoverageAnalyzer {
         for gap in gaps {
             let recommendation = match gap.gap_type {
                 GapType::EdgeCase => CoverageRecommendation {
-                recommendation_type: RecommendationType::AddTests,
+                    recommendation_type: RecommendationType::AddTests,
                     description: "Add edge case and boundary value tests".to_string(),
                     expected_coverage_improvement: 0.25,
                     implementation_effort: ImplementationEffort::High,
@@ -2957,8 +2957,8 @@ impl CoverageAnalyzer {
                 _ => CoverageRecommendation {
                     recommendation_type: RecommendationType::ImproveCode,
                     description: "Address coverage gap in code".to_string(),
-                expected_coverage_improvement: 0.1,
-                implementation_effort: ImplementationEffort::Medium,
+                    expected_coverage_improvement: 0.1,
+                    implementation_effort: ImplementationEffort::Medium,
                     priority: Priority::Medium,
                 },
             };
@@ -3775,7 +3775,10 @@ impl ScenarioGenerator {
                         ),
                         input_data: {
                             let mut data = HashMap::new();
-                            data.insert(generator.parameter_name.clone(), TestData::String(boundary_value.to_string()));
+                            data.insert(
+                                generator.parameter_name.clone(),
+                                TestData::String(boundary_value.to_string()),
+                            );
                             data
                         },
                         execution_context: ExecutionContext::default(),
@@ -3787,7 +3790,8 @@ impl ScenarioGenerator {
                         postconditions: vec![Postcondition {
                             condition_name: "System handles boundary value correctly".to_string(),
                             condition_type: ConditionType::SystemState,
-                            description: "System processes boundary value without errors".to_string(),
+                            description: "System processes boundary value without errors"
+                                .to_string(),
                         }],
                     },
                     edge_case_type: EdgeCaseType::Boundary,
@@ -3830,9 +3834,12 @@ impl ScenarioGenerator {
                         },
                         execution_context: ExecutionContext::default(),
                         preconditions: vec![Precondition {
-                            condition_name: "System supports all parameter combinations".to_string(),
+                            condition_name: "System supports all parameter combinations"
+                                .to_string(),
                             condition_type: ConditionType::SystemState,
-                            description: "System is configured to handle all parameter combinations".to_string(),
+                            description:
+                                "System is configured to handle all parameter combinations"
+                                    .to_string(),
                         }],
                         postconditions: vec![Postcondition {
                             condition_name: "System handles combination correctly".to_string(),
@@ -3877,23 +3884,37 @@ impl ScenarioGenerator {
                                 self.resource_type_name(&generator.resource_type),
                                 stress_level.name
                             ),
-                        input_data: {
-                            let mut data = HashMap::new();
-                            data.insert("stress_type".to_string(), TestData::String(self.resource_type_name(&generator.resource_type)));
-                            data.insert("intensity".to_string(), TestData::Number(stress_level.intensity as f64));
-                            data.insert("duration_seconds".to_string(), TestData::Number(duration as f64));
-                            data
-                        },
+                            input_data: {
+                                let mut data = HashMap::new();
+                                data.insert(
+                                    "stress_type".to_string(),
+                                    TestData::String(
+                                        self.resource_type_name(&generator.resource_type),
+                                    ),
+                                );
+                                data.insert(
+                                    "intensity".to_string(),
+                                    TestData::Number(stress_level.intensity as f64),
+                                );
+                                data.insert(
+                                    "duration_seconds".to_string(),
+                                    TestData::Number(duration as f64),
+                                );
+                                data
+                            },
                             execution_context: ExecutionContext::default(),
                             preconditions: vec![Precondition {
                                 condition_name: "System is in stable state".to_string(),
                                 condition_type: ConditionType::SystemState,
-                                description: "System is in a stable state before stress testing".to_string(),
+                                description: "System is in a stable state before stress testing"
+                                    .to_string(),
                             }],
                             postconditions: vec![Postcondition {
-                                condition_name: "System maintains stability under stress".to_string(),
+                                condition_name: "System maintains stability under stress"
+                                    .to_string(),
                                 condition_type: ConditionType::SystemState,
-                                description: "System maintains stability under stress conditions".to_string(),
+                                description: "System maintains stability under stress conditions"
+                                    .to_string(),
                             }],
                         },
                         edge_case_type: EdgeCaseType::PerformanceIssue,

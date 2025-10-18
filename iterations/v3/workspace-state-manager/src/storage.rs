@@ -254,14 +254,16 @@ impl MemoryStorage {
         if state.files.is_empty() {
             return Err(WorkspaceError::Storage("Empty state files".to_string()));
         }
-        
+
         // Check if state size is within limits
-        if state.total_size > 100 * 1024 * 1024 { // 100MB limit
-            return Err(WorkspaceError::Storage(
-                format!("State size {} exceeds limit", state.total_size)
-            ));
+        if state.total_size > 100 * 1024 * 1024 {
+            // 100MB limit
+            return Err(WorkspaceError::Storage(format!(
+                "State size {} exceeds limit",
+                state.total_size
+            )));
         }
-        
+
         Ok(())
     }
 
@@ -275,18 +277,18 @@ impl MemoryStorage {
     /// Optimize storage performance
     async fn optimize_storage_performance(&self) -> Result<(), WorkspaceError> {
         // Implement storage optimization strategies
-        
+
         // 1. Clean up old states if storage is getting full
         if false {
             self.cleanup_old_states().await?;
         }
-        
+
         // 2. Compress large states
         self.compress_large_states().await?;
-        
+
         // 3. Update storage metrics
         self.update_storage_metrics().await?;
-        
+
         Ok(())
     }
 
@@ -294,9 +296,9 @@ impl MemoryStorage {
     async fn cleanup_old_states(&self) -> Result<(), WorkspaceError> {
         let now = chrono::Utc::now();
         let cutoff_time = now - chrono::Duration::hours(1); // 1 hour ago
-        
+
         let mut to_remove = Vec::new();
-        
+
         // Clean up old states from memory storage
         {
             let states = self.states.read().unwrap();
@@ -306,7 +308,7 @@ impl MemoryStorage {
                 }
             }
         }
-        
+
         // Remove old states from memory storage
         if !to_remove.is_empty() {
             let mut states = self.states.write().unwrap();
@@ -315,56 +317,64 @@ impl MemoryStorage {
                 debug!("Cleaned up old state: {}", id);
             }
         }
-        
+
         // Clean up old diffs that reference removed states
         self.cleanup_orphaned_diffs(&to_remove).await?;
-        
-        debug!("✅ Database cleanup completed: removed {} old states", to_remove.len());
+
+        debug!(
+            "✅ Database cleanup completed: removed {} old states",
+            to_remove.len()
+        );
         Ok(())
     }
 
     /// Clean up diffs that reference removed states
-    async fn cleanup_orphaned_diffs(&self, removed_state_ids: &[StateId]) -> Result<(), WorkspaceError> {
+    async fn cleanup_orphaned_diffs(
+        &self,
+        removed_state_ids: &[StateId],
+    ) -> Result<(), WorkspaceError> {
         if removed_state_ids.is_empty() {
             return Ok(());
         }
-        
+
         let mut diffs = self.diffs.write().unwrap();
         let mut to_remove = Vec::new();
-        
+
         for (key, _diff) in diffs.iter() {
             if removed_state_ids.contains(&key.0) || removed_state_ids.contains(&key.1) {
                 to_remove.push(key.clone());
             }
         }
-        
+
         for key in to_remove {
             diffs.remove(&key);
             debug!("Cleaned up orphaned diff: {:?}", key);
         }
-        
+
         Ok(())
     }
 
     /// Compress large states to save memory
     async fn compress_large_states(&self) -> Result<(), WorkspaceError> {
         let mut to_compress = Vec::new();
-        
+
         // Get all states from memory storage
         let states = self.states.read().unwrap();
         for (id, state) in states.iter() {
             // Calculate total size of the state
-            let total_size: u64 = state.files.values()
+            let total_size: u64 = state
+                .files
+                .values()
                 .map(|file| file.content.len() as u64)
                 .sum();
-            
+
             // Check if state exceeds 10MB threshold
             if total_size > 10 * 1024 * 1024 {
                 to_compress.push(id.clone());
             }
         }
         drop(states); // Release the read lock
-        
+
         // Compress large states
         for id in to_compress {
             if let Some(state) = self.states.write().unwrap().get_mut(&id) {
@@ -376,22 +386,26 @@ impl MemoryStorage {
                         file.compressed = true;
                     }
                 }
-                debug!("Compressed large state: {} ({} files)", id, state.files.len());
+                debug!(
+                    "Compressed large state: {} ({} files)",
+                    id,
+                    state.files.len()
+                );
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Compress data using gzip compression
     fn compress_data(&self, data: &[u8]) -> Result<Vec<u8>, WorkspaceError> {
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-        encoder.write_all(data).map_err(|e| {
-            WorkspaceError::Storage(format!("Failed to compress data: {}", e))
-        })?;
-        encoder.finish().map_err(|e| {
-            WorkspaceError::Storage(format!("Failed to finish compression: {}", e))
-        })
+        encoder
+            .write_all(data)
+            .map_err(|e| WorkspaceError::Storage(format!("Failed to compress data: {}", e)))?;
+        encoder
+            .finish()
+            .map_err(|e| WorkspaceError::Storage(format!("Failed to finish compression: {}", e)))
     }
 
     /// Update storage metrics
@@ -399,20 +413,32 @@ impl MemoryStorage {
         // Collect metrics from memory storage
         let states = self.states.read().unwrap();
         let total_states = states.len();
-        let total_size: u64 = states.values().map(|state| {
-            state.files.values().map(|file| file.content.len() as u64).sum::<u64>()
-        }).sum();
-        
+        let total_size: u64 = states
+            .values()
+            .map(|state| {
+                state
+                    .files
+                    .values()
+                    .map(|file| file.content.len() as u64)
+                    .sum::<u64>()
+            })
+            .sum();
+
         // Collect diff metrics
         let diffs = self.diffs.read().unwrap();
         let total_diffs = diffs.len();
-        let diff_size: u64 = diffs.values().map(|diff| {
-            diff.changes.len() as u64 * 100 // Rough estimate
-        }).sum();
-        
-        debug!("Storage metrics - States: {}, Total size: {} bytes, Diffs: {}, Diff size: {} bytes", 
-               total_states, total_size, total_diffs, diff_size);
-        
+        let diff_size: u64 = diffs
+            .values()
+            .map(|diff| {
+                diff.changes.len() as u64 * 100 // Rough estimate
+            })
+            .sum();
+
+        debug!(
+            "Storage metrics - States: {}, Total size: {} bytes, Diffs: {}, Diff size: {} bytes",
+            total_states, total_size, total_diffs, diff_size
+        );
+
         // Update metrics if available
         if let Some(metrics) = &self.metrics {
             metrics.update_state_count(total_states as u64);
@@ -420,7 +446,7 @@ impl MemoryStorage {
             metrics.update_diff_count(total_diffs as u64);
             metrics.update_diff_size(diff_size);
         }
-        
+
         Ok(())
     }
 }
@@ -431,24 +457,24 @@ impl StateStorage for MemoryStorage {
         // 1. Concurrent access handling: Implement thread-safe storage operations
         // Note: In a real implementation, this would use proper synchronization
         // For now, we'll use a simple approach since MemoryStorage uses HashMap
-        
+
         // 2. Data persistence: Implement actual data storage and retrieval
         // Validate state before storing
         self.validate_state(state)?;
-        
+
         // Store in memory with proper serialization
         let serialized_state = self.serialize_state(state)?;
         {
             let mut states = self.states.write().unwrap();
             states.insert(state.id.clone(), serialized_state);
         }
-        
+
         // 3. Error handling: Implement robust error handling for storage operations
         debug!("Stored workspace state {:?} in memory", state.id);
-        
+
         // 4. Performance optimization: Optimize storage performance and scalability
         self.optimize_storage_performance().await?;
-        
+
         Ok(())
     }
 
@@ -471,65 +497,69 @@ impl StateStorage for MemoryStorage {
             let states = self.states.read().unwrap();
             states.contains_key(&id)
         };
-        
+
         if !exists {
             return Err(WorkspaceError::StateNotFound(id));
         }
-        
+
         // 2. State deletion: Delete state from memory storage
         let deleted = {
             let mut states = self.states.write().unwrap();
             states.remove(&id).is_some()
         };
-        
+
         // 3. Deletion verification: Verify state deletion success
         if deleted {
             debug!("Deleted workspace state {:?} from memory", id);
         } else {
-            return Err(WorkspaceError::Storage("Failed to delete state".to_string()));
+            return Err(WorkspaceError::Storage(
+                "Failed to delete state".to_string(),
+            ));
         }
-        
+
         // 4. Deletion optimization: Optimize state deletion performance
         // Clean up any related diffs
         {
             let mut diffs = self.diffs.write().unwrap();
             diffs.retain(|(from, to), _| *from != id && *to != id);
         }
-        
+
         Ok(())
     }
 
     async fn store_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
         // 1. Diff validation: Validate diff data before storage
         self.validate_diff(diff)?;
-        
+
         // 2. Diff storage: Store diff in memory storage with atomicity
         let diff_key = (diff.from_state.clone(), diff.to_state.clone());
         let mut diffs = self.diffs.write().unwrap();
-        
+
         // Check if diff already exists and validate consistency
         if let Some(existing_diff) = diffs.get(&diff_key) {
             if existing_diff.timestamp != diff.timestamp {
-                return Err(WorkspaceError::DiffComputation(
-                    format!("Diff already exists with different timestamp: {:?}", diff_key)
-                ));
+                return Err(WorkspaceError::DiffComputation(format!(
+                    "Diff already exists with different timestamp: {:?}",
+                    diff_key
+                )));
             }
         }
-        
+
         // Store the diff atomically
         diffs.insert(diff_key.clone(), diff.clone());
-        
+
         // 3. Storage verification: Verify diff storage success
         if !diffs.contains_key(&diff_key) {
-            return Err(WorkspaceError::DiffComputation(
-                format!("Failed to store diff: {:?}", diff_key)
-            ));
+            return Err(WorkspaceError::DiffComputation(format!(
+                "Failed to store diff: {:?}",
+                diff_key
+            )));
         }
-        
+
         // 4. Storage optimization: Update metrics and cleanup if needed
         self.update_diff_metrics().await?;
         self.cleanup_old_diffs().await?;
-        
+
         debug!(
             "✅ Stored workspace diff {:?} -> {:?} in memory",
             diff.from_state, diff.to_state
@@ -542,31 +572,31 @@ impl StateStorage for MemoryStorage {
         // Validate diff format and data integrity
         if diff.from_state == diff.to_state {
             return Err(WorkspaceError::DiffComputation(
-                "Diff from_state and to_state cannot be the same".to_string()
+                "Diff from_state and to_state cannot be the same".to_string(),
             ));
         }
-        
+
         // Check diff constraints and business rules
         if diff.changes.is_empty() {
             return Err(WorkspaceError::DiffComputation(
-                "Diff must contain at least one change".to_string()
+                "Diff must contain at least one change".to_string(),
             ));
         }
-        
+
         // Validate individual changes
         for change in &diff.changes {
             self.validate_diff_change(change)?;
         }
-        
+
         // Validate timestamp is reasonable
         let now = chrono::Utc::now();
         let diff_age = now.signed_duration_since(diff.timestamp);
         if diff_age.num_hours() > 24 {
             return Err(WorkspaceError::DiffComputation(
-                "Diff timestamp is too old (more than 24 hours)".to_string()
+                "Diff timestamp is too old (more than 24 hours)".to_string(),
             ));
         }
-        
+
         Ok(())
     }
 
@@ -576,34 +606,38 @@ impl StateStorage for MemoryStorage {
             DiffChange::Add { path, content } => {
                 if path.is_empty() {
                     return Err(WorkspaceError::DiffComputation(
-                        "Add change path cannot be empty".to_string()
+                        "Add change path cannot be empty".to_string(),
                     ));
                 }
                 if content.is_empty() {
                     return Err(WorkspaceError::DiffComputation(
-                        "Add change content cannot be empty".to_string()
+                        "Add change content cannot be empty".to_string(),
                     ));
                 }
-            },
+            }
             DiffChange::Remove { path } => {
                 if path.is_empty() {
                     return Err(WorkspaceError::DiffComputation(
-                        "Remove change path cannot be empty".to_string()
+                        "Remove change path cannot be empty".to_string(),
                     ));
                 }
-            },
-            DiffChange::Modify { path, old_content, new_content } => {
+            }
+            DiffChange::Modify {
+                path,
+                old_content,
+                new_content,
+            } => {
                 if path.is_empty() {
                     return Err(WorkspaceError::DiffComputation(
-                        "Modify change path cannot be empty".to_string()
+                        "Modify change path cannot be empty".to_string(),
                     ));
                 }
                 if old_content == new_content {
                     return Err(WorkspaceError::DiffComputation(
-                        "Modify change old and new content cannot be identical".to_string()
+                        "Modify change old and new content cannot be identical".to_string(),
                     ));
                 }
-            },
+            }
         }
         Ok(())
     }
@@ -612,19 +646,24 @@ impl StateStorage for MemoryStorage {
     async fn update_diff_metrics(&self) -> Result<(), WorkspaceError> {
         let diffs = self.diffs.read().unwrap();
         let total_diffs = diffs.len();
-        let total_size: usize = diffs.values().map(|diff| {
-            diff.changes.len() * 100 // Rough estimate of diff size
-        }).sum();
-        
-        debug!("Diff storage metrics - Total diffs: {}, Estimated size: {} bytes", 
-               total_diffs, total_size);
-        
+        let total_size: usize = diffs
+            .values()
+            .map(|diff| {
+                diff.changes.len() * 100 // Rough estimate of diff size
+            })
+            .sum();
+
+        debug!(
+            "Diff storage metrics - Total diffs: {}, Estimated size: {} bytes",
+            total_diffs, total_size
+        );
+
         // Store metrics for monitoring
         if let Some(metrics) = &self.metrics {
             metrics.update_diff_count(total_diffs as u64);
             metrics.update_diff_size(total_size as u64);
         }
-        
+
         Ok(())
     }
 
@@ -632,29 +671,34 @@ impl StateStorage for MemoryStorage {
     async fn cleanup_old_diffs(&self) -> Result<(), WorkspaceError> {
         let cutoff_time = chrono::Utc::now() - chrono::Duration::hours(24); // 24 hours ago
         let mut diffs = self.diffs.write().unwrap();
-        
+
         let mut to_remove = Vec::new();
         for (key, diff) in diffs.iter() {
             if diff.timestamp < cutoff_time {
                 to_remove.push(key.clone());
             }
         }
-        
+
         for key in to_remove {
             diffs.remove(&key);
             debug!("Cleaned up old diff: {:?}", key);
         }
-        
+
         Ok(())
     }
 
     async fn get_diff(&self, from: StateId, to: StateId) -> Result<WorkspaceDiff, WorkspaceError> {
-        self.diffs.read().unwrap().get(&(from, to)).cloned().ok_or_else(|| {
-            WorkspaceError::DiffComputation(format!(
-                "Diff not found between states {:?} and {:?}",
-                from, to
-            ))
-        })
+        self.diffs
+            .read()
+            .unwrap()
+            .get(&(from, to))
+            .cloned()
+            .ok_or_else(|| {
+                WorkspaceError::DiffComputation(format!(
+                    "Diff not found between states {:?} and {:?}",
+                    from, to
+                ))
+            })
     }
 
     async fn cleanup(&self, max_states: usize) -> Result<usize, WorkspaceError> {
@@ -743,14 +787,16 @@ impl DatabaseStorage {
         if state.files.is_empty() {
             return Err(WorkspaceError::Storage("Empty state files".to_string()));
         }
-        
+
         // Check if state size is within limits
-        if state.total_size > 100 * 1024 * 1024 { // 100MB limit
-            return Err(WorkspaceError::Storage(
-                format!("State size {} exceeds limit", state.total_size)
-            ));
+        if state.total_size > 100 * 1024 * 1024 {
+            // 100MB limit
+            return Err(WorkspaceError::Storage(format!(
+                "State size {} exceeds limit",
+                state.total_size
+            )));
         }
-        
+
         Ok(())
     }
 
@@ -764,18 +810,18 @@ impl DatabaseStorage {
     /// Optimize storage performance
     async fn optimize_storage_performance(&self) -> Result<(), WorkspaceError> {
         // Implement storage optimization strategies
-        
+
         // 1. Clean up old states if storage is getting full
         if false {
             self.cleanup_old_states().await?;
         }
-        
+
         // 2. Compress large states
         self.compress_large_states().await?;
-        
+
         // 3. Update storage metrics
         self.update_storage_metrics().await?;
-        
+
         Ok(())
     }
 
@@ -783,19 +829,17 @@ impl DatabaseStorage {
     async fn cleanup_old_states(&self) -> Result<(), WorkspaceError> {
         let now = chrono::Utc::now();
         let cutoff_time = now - chrono::Duration::hours(1); // 1 hour ago
-        
+
         // Delete old states from database
-        let result = sqlx::query(
-            "DELETE FROM workspace_states WHERE captured_at < $1"
-        )
-        .bind(cutoff_time)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| WorkspaceError::Storage(format!("Failed to cleanup old states: {}", e)))?;
-        
+        let result = sqlx::query("DELETE FROM workspace_states WHERE captured_at < $1")
+            .bind(cutoff_time)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| WorkspaceError::Storage(format!("Failed to cleanup old states: {}", e)))?;
+
         let deleted_count = result.rows_affected();
         debug!("Cleaned up {} old states from database", deleted_count);
-        
+
         Ok(())
     }
 
@@ -809,38 +853,42 @@ impl DatabaseStorage {
         .fetch_all(&self.pool)
         .await
         .map_err(|e| WorkspaceError::Storage(format!("Failed to query large states: {}", e)))?;
-        
+
         for row in large_states {
             let state_id: uuid::Uuid = row.get("id");
             let total_size: i64 = row.get("total_size");
-            
+
             // In a real implementation, this would compress the data
             // For now, we'll just log the large state
-            debug!("Found large state {} with size {} bytes", state_id, total_size);
+            debug!(
+                "Found large state {} with size {} bytes",
+                state_id, total_size
+            );
         }
-        
+
         Ok(())
     }
 
     /// Update storage metrics
     async fn update_storage_metrics(&self) -> Result<(), WorkspaceError> {
         // Get actual metrics from database
-        let total_states = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM workspace_states"
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| WorkspaceError::Storage(format!("Failed to count states: {}", e)))?;
-        
+        let total_states = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM workspace_states")
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| WorkspaceError::Storage(format!("Failed to count states: {}", e)))?;
+
         let total_size = sqlx::query_scalar::<_, i64>(
-            "SELECT COALESCE(SUM(total_size), 0) FROM workspace_states"
+            "SELECT COALESCE(SUM(total_size), 0) FROM workspace_states",
         )
         .fetch_one(&self.pool)
         .await
         .map_err(|e| WorkspaceError::Storage(format!("Failed to sum state sizes: {}", e)))?;
-        
-        debug!("Storage metrics - States: {}, Total size: {} bytes", total_states, total_size);
-        
+
+        debug!(
+            "Storage metrics - States: {}, Total size: {} bytes",
+            total_states, total_size
+        );
+
         Ok(())
     }
 }

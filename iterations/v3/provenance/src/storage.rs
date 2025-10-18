@@ -13,7 +13,6 @@ use uuid::Uuid;
 
 use crate::types::*;
 
-
 /// Database-backed provenance storage
 pub struct DatabaseProvenanceStorage {
     pool: PgPool,

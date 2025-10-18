@@ -38,3 +38,19 @@ pub(crate) static FINAL_VERDICT_SCHEMA: Lazy<JSONSchema> = Lazy::new(|| {
 pub(crate) static ROUTER_DECISION_SCHEMA: Lazy<JSONSchema> = Lazy::new(|| {
     compile(ContractKind::RouterDecision, ROUTER_DECISION_SCHEMA_RAW)
 });
+
+pub fn worker_output_schema_source() -> &'static str {
+    WORKER_OUTPUT_SCHEMA_RAW
+}
+
+pub fn judge_verdict_schema_source() -> &'static str {
+    JUDGE_VERDICT_SCHEMA_RAW
+}
+
+pub fn final_verdict_schema_source() -> &'static str {
+    FINAL_VERDICT_SCHEMA_RAW
+}
+
+pub fn router_decision_schema_source() -> &'static str {
+    ROUTER_DECISION_SCHEMA_RAW
+}

@@ -120,13 +120,22 @@ impl OrchestrationProvenanceEmitter {
         {
             let mut active_sessions = self.active_sessions.write().await;
             active_sessions.insert(session_id.clone(), session.clone());
-            debug!("Created orchestration session {} for task {}", session_id, task_id);
+            debug!(
+                "Created orchestration session {} for task {}",
+                session_id, task_id
+            );
         }
 
         // 3. Async database persistence if available
         if let Some(db_client) = &self.database_client {
-            if let Err(e) = self.persist_session_async(&session_id, &session, db_client).await {
-                warn!("Failed to persist session {} to database: {}", session_id, e);
+            if let Err(e) = self
+                .persist_session_async(&session_id, &session, db_client)
+                .await
+            {
+                warn!(
+                    "Failed to persist session {} to database: {}",
+                    session_id, e
+                );
                 // Continue with in-memory session despite database error
             }
         }
@@ -158,7 +167,10 @@ impl OrchestrationProvenanceEmitter {
             }
         }
 
-        info!("Created orchestration session {} for task {}", session_id, task_id);
+        info!(
+            "Created orchestration session {} for task {}",
+            session_id, task_id
+        );
     }
 
     pub fn validation_result(&self, task_id: &str, passed: bool) {
@@ -178,13 +190,19 @@ impl OrchestrationProvenanceEmitter {
             let mut active_sessions = self.active_sessions.write().await;
             if let Some(session) = active_sessions.values_mut().find(|s| s.task_id == task_id) {
                 session.validation_passed = Some(passed);
-                debug!("Updated validation status for session with task {}", task_id);
+                debug!(
+                    "Updated validation status for session with task {}",
+                    task_id
+                );
             }
         }
 
         // 2. Persist validation result to database if available
         if let Some(db_client) = &self.database_client {
-            if let Err(e) = self.update_session_validation_async(task_id, passed, db_client).await {
+            if let Err(e) = self
+                .update_session_validation_async(task_id, passed, db_client)
+                .await
+            {
                 warn!("Failed to persist validation update to database: {}", e);
             }
         }
@@ -192,7 +210,12 @@ impl OrchestrationProvenanceEmitter {
         // 3. Emit validation event for observability
         let event = ProvenanceEvent {
             event_id: Uuid::new_v4(),
-            event_type: if passed { "validation_passed" } else { "validation_failed" }.to_string(),
+            event_type: if passed {
+                "validation_passed"
+            } else {
+                "validation_failed"
+            }
+            .to_string(),
             task_id: task_id.to_string(),
             timestamp: chrono::Utc::now(),
             payload: serde_json::json!({
@@ -259,7 +282,10 @@ impl OrchestrationProvenanceEmitter {
 
         // 3. Persist session completion to database if available
         if let Some(db_client) = &self.database_client {
-            if let Err(e) = self.complete_session_async(task_id, status, exit_time, session_duration, db_client).await {
+            if let Err(e) = self
+                .complete_session_async(task_id, status, exit_time, session_duration, db_client)
+                .await
+            {
                 warn!("Failed to persist session completion to database: {}", e);
             }
         }
@@ -295,7 +321,9 @@ impl OrchestrationProvenanceEmitter {
             "Orchestration completed for task {} with status: {} (duration: {:.2}s)",
             task_id,
             status,
-            session_duration.map(|d| d.num_seconds() as f64).unwrap_or(0.0)
+            session_duration
+                .map(|d| d.num_seconds() as f64)
+                .unwrap_or(0.0)
         );
     }
 

@@ -6,10 +6,10 @@
 use crate::types::*;
 use anyhow::Result;
 use chrono::Utc;
+use serde::{Deserialize, Serialize};
+use tokio::time::{timeout, Duration};
 use tracing::debug;
 use uuid::Uuid;
-use tokio::time::{timeout, Duration};
-use serde::{Deserialize, Serialize};
 
 /// Stage 4: Verification with evidence collection
 #[derive(Debug)]
@@ -197,13 +197,13 @@ impl CouncilIntegrator {
 
         // 1. Claim preparation: Format council submission payloads using TaskSpec-compatible schemas
         let task_spec = self.prepare_council_submission(claim, context)?;
-        
+
         // 2. Submission + retry strategy: Stream requests through the council async client
         let submission_result = self.submit_to_council_with_retry(&task_spec).await?;
-        
+
         // 3. Verdict ingestion: Parse debate transcripts and consensus metrics from council
         let evidence = self.process_council_verdict(&submission_result, claim)?;
-        
+
         debug!("Council verification completed for claim: {}", claim.id);
         Ok(evidence)
     }
@@ -216,16 +216,16 @@ impl CouncilIntegrator {
     ) -> Result<CouncilTaskSpec> {
         let task_id = Uuid::new_v4();
         let timestamp = Utc::now();
-        
+
         // Determine risk tier based on claim type and scope
         let risk_tier = self.determine_risk_tier(claim);
-        
+
         // Create acceptance criteria from claim
         let acceptance_criteria = vec![CouncilAcceptanceCriterion {
             id: format!("claim_{}", claim.id),
             description: format!("Verify claim: {}", claim.claim_text),
         }];
-        
+
         // Build task context
         let task_context = CouncilTaskContext {
             workspace_root: context.source_file.clone().unwrap_or_default(),
@@ -234,7 +234,7 @@ impl CouncilIntegrator {
             dependencies: std::collections::HashMap::new(),
             environment: CouncilEnvironment::Development,
         };
-        
+
         // Create worker output from claim
         let worker_output = CouncilWorkerOutput {
             content: claim.claim_text.clone(),
@@ -248,14 +248,18 @@ impl CouncilIntegrator {
             },
             metadata: std::collections::HashMap::new(),
         };
-        
+
         Ok(CouncilTaskSpec {
             id: task_id,
             title: format!("Verify Claim: {}", claim.claim_text),
             description: format!("Verification of atomic claim: {}", claim.claim_text),
             risk_tier,
             scope: CouncilTaskScope {
-                files_affected: context.source_file.clone().map(|f| vec![f]).unwrap_or_default(),
+                files_affected: context
+                    .source_file
+                    .clone()
+                    .map(|f| vec![f])
+                    .unwrap_or_default(),
                 max_files: Some(1),
                 max_loc: Some(100),
                 domains: vec!["claim-verification".to_string()],
@@ -276,10 +280,13 @@ impl CouncilIntegrator {
     ) -> Result<CouncilSubmissionResult> {
         const MAX_RETRIES: u32 = 3;
         const TIMEOUT_DURATION: Duration = Duration::from_secs(30);
-        
+
         for attempt in 1..=MAX_RETRIES {
-            debug!("Council submission attempt {} for task {}", attempt, task_spec.id);
-            
+            debug!(
+                "Council submission attempt {} for task {}",
+                attempt, task_spec.id
+            );
+
             let submission_future = self.submit_to_council(task_spec);
             match timeout(TIMEOUT_DURATION, submission_future).await {
                 Ok(Ok(result)) => {
@@ -297,25 +304,34 @@ impl CouncilIntegrator {
                 Err(_) => {
                     debug!("Council submission timed out on attempt {}", attempt);
                     if attempt == MAX_RETRIES {
-                        return Err(anyhow::anyhow!("Council submission timed out after {} attempts", MAX_RETRIES));
+                        return Err(anyhow::anyhow!(
+                            "Council submission timed out after {} attempts",
+                            MAX_RETRIES
+                        ));
                     }
                 }
             }
         }
-        
-        Err(anyhow::anyhow!("Council submission failed after {} attempts", MAX_RETRIES))
+
+        Err(anyhow::anyhow!(
+            "Council submission failed after {} attempts",
+            MAX_RETRIES
+        ))
     }
 
     /// Submit task to council (simulated for now)
-    async fn submit_to_council(&self, task_spec: &CouncilTaskSpec) -> Result<CouncilSubmissionResult> {
+    async fn submit_to_council(
+        &self,
+        task_spec: &CouncilTaskSpec,
+    ) -> Result<CouncilSubmissionResult> {
         // TODO: Replace with actual council client integration
         // For now, simulate council response based on claim characteristics
-        
+
         debug!("Simulating council submission for task: {}", task_spec.id);
-        
+
         // Simulate processing time
         tokio::time::sleep(Duration::from_millis(100)).await;
-        
+
         // Generate mock verdict based on claim type
         let verdict = match task_spec.worker_output.content.to_lowercase() {
             content if content.contains("error") || content.contains("fail") => {
@@ -352,9 +368,9 @@ impl CouncilIntegrator {
                     relevance: 0.8,
                     timestamp: Utc::now(),
                 }],
-            }
+            },
         };
-        
+
         Ok(CouncilSubmissionResult {
             task_id: task_spec.id,
             verdict,
@@ -371,9 +387,12 @@ impl CouncilIntegrator {
         claim: &AtomicClaim,
     ) -> Result<Vec<Evidence>> {
         let mut evidence = Vec::new();
-        
+
         match &submission_result.verdict {
-            CouncilVerdict::Pass { evidence: council_evidence, .. } => {
+            CouncilVerdict::Pass {
+                evidence: council_evidence,
+                ..
+            } => {
                 for council_ev in council_evidence {
                     evidence.push(Evidence {
                         id: Uuid::new_v4(),
@@ -391,7 +410,11 @@ impl CouncilIntegrator {
                     });
                 }
             }
-            CouncilVerdict::Fail { evidence: council_evidence, violations, .. } => {
+            CouncilVerdict::Fail {
+                evidence: council_evidence,
+                violations,
+                ..
+            } => {
                 // Include evidence even for failures
                 for council_ev in council_evidence {
                     evidence.push(Evidence {
@@ -409,14 +432,17 @@ impl CouncilIntegrator {
                         timestamp: Utc::now(),
                     });
                 }
-                
+
                 // Add violation evidence
                 for violation in violations {
                     evidence.push(Evidence {
                         id: Uuid::new_v4(),
                         claim_id: claim.id,
                         evidence_type: EvidenceType::ConstitutionalReference,
-                        content: format!("Violation: {} - {}", violation.rule, violation.description),
+                        content: format!(
+                            "Violation: {} - {}",
+                            violation.rule, violation.description
+                        ),
                         source: EvidenceSource {
                             source_type: SourceType::CouncilDecision,
                             location: "council_violation".to_string(),
@@ -428,7 +454,11 @@ impl CouncilIntegrator {
                     });
                 }
             }
-            CouncilVerdict::Uncertain { evidence: council_evidence, concerns, .. } => {
+            CouncilVerdict::Uncertain {
+                evidence: council_evidence,
+                concerns,
+                ..
+            } => {
                 for council_ev in council_evidence {
                     evidence.push(Evidence {
                         id: Uuid::new_v4(),
@@ -445,7 +475,7 @@ impl CouncilIntegrator {
                         timestamp: Utc::now(),
                     });
                 }
-                
+
                 // Add concern evidence
                 for concern in concerns {
                     evidence.push(Evidence {
@@ -465,7 +495,7 @@ impl CouncilIntegrator {
                 }
             }
         }
-        
+
         Ok(evidence)
     }
 
@@ -482,12 +512,12 @@ impl CouncilIntegrator {
     fn calculate_evidence_digest(&self, claim: &AtomicClaim) -> String {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
-        
+
         let mut hasher = DefaultHasher::new();
         claim.id.hash(&mut hasher);
         claim.claim_text.hash(&mut hasher);
         claim.confidence.to_bits().hash(&mut hasher);
-        
+
         format!("{:x}", hasher.finish())
     }
 }

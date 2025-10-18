@@ -257,7 +257,10 @@ mod tests {
                 Box::pin(async move {
                     let current_attempt = attempt_count.fetch_add(1, Ordering::Relaxed) + 1;
                     if current_attempt < 3 {
-                        Err::<i32, std::io::Error>(std::io::Error::new(std::io::ErrorKind::Other, "test error"))
+                        Err::<i32, std::io::Error>(std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            "test error",
+                        ))
                     } else {
                         Ok(42)
                     }
@@ -282,7 +285,10 @@ mod tests {
         let result = executor
             .execute(|| {
                 Box::pin(async {
-                    Err::<i32, std::io::Error>(std::io::Error::new(std::io::ErrorKind::Other, "test error"))
+                    Err::<i32, std::io::Error>(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "test error",
+                    ))
                 })
             })
             .await;
@@ -327,11 +333,7 @@ mod tests {
             ..Default::default()
         };
 
-        let result = retry(
-            || Box::pin(async { Ok::<i32, std::io::Error>(42) }),
-            config,
-        )
-        .await;
+        let result = retry(|| Box::pin(async { Ok::<i32, std::io::Error>(42) }), config).await;
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 42);

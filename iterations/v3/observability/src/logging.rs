@@ -118,7 +118,11 @@ impl StructuredLogger {
         }
     }
 
-    pub fn log_info(context: &LogContext, message: &str, metadata: Option<HashMap<String, serde_json::Value>>) {
+    pub fn log_info(
+        context: &LogContext,
+        message: &str,
+        metadata: Option<HashMap<String, serde_json::Value>>,
+    ) {
         let metadata = metadata.unwrap_or_default();
         info!(
             request_id = %context.request_id.as_deref().unwrap_or(""),
@@ -132,7 +136,11 @@ impl StructuredLogger {
         );
     }
 
-    pub fn log_warn(context: &LogContext, message: &str, metadata: Option<HashMap<String, serde_json::Value>>) {
+    pub fn log_warn(
+        context: &LogContext,
+        message: &str,
+        metadata: Option<HashMap<String, serde_json::Value>>,
+    ) {
         let metadata = metadata.unwrap_or_default();
         warn!(
             request_id = %context.request_id.as_deref().unwrap_or(""),
@@ -146,7 +154,12 @@ impl StructuredLogger {
         );
     }
 
-    pub fn log_error(context: &LogContext, message: &str, error: Option<&dyn std::error::Error>, metadata: Option<HashMap<String, serde_json::Value>>) {
+    pub fn log_error(
+        context: &LogContext,
+        message: &str,
+        error: Option<&dyn std::error::Error>,
+        metadata: Option<HashMap<String, serde_json::Value>>,
+    ) {
         let metadata = metadata.unwrap_or_default();
         let mut error_msg = message.to_string();
         if let Some(err) = error {

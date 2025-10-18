@@ -1,6 +1,7 @@
 pub mod types;
 
 use crate::types::*;
+use agent_agency_database::DatabaseHealthChecker;
 use anyhow::Result;
 use chrono::Utc;
 use dashmap::DashMap;
@@ -22,6 +23,8 @@ pub struct SystemHealthMonitor {
     config: SystemHealthMonitorConfig,
     /// Metrics collector
     metrics_collector: Arc<MetricsCollector>,
+    /// Database health checker
+    database_health_checker: Option<Arc<DatabaseHealthChecker>>,
     /// Agent health metrics storage
     agent_health_metrics: Arc<DashMap<String, AgentHealthMetrics>>,
     /// System metrics history
@@ -51,12 +54,34 @@ pub struct SystemHealthMonitor {
 impl SystemHealthMonitor {
     /// Create a new system health monitor
     pub fn new(config: SystemHealthMonitorConfig) -> Self {
+        Self::with_database_client(config, None)
+    }
+
+    /// Create a new system health monitor with database health monitoring
+    pub fn with_database_client(
+        config: SystemHealthMonitorConfig,
+        database_client: Option<agent_agency_database::DatabaseClient>,
+    ) -> Self {
         let (alert_sender, _) = mpsc::unbounded_channel();
         let (health_sender, _) = mpsc::unbounded_channel();
+
+        // Create database health checker if database client is provided
+        let database_health_checker = database_client.map(|client| {
+            let health_config = agent_agency_database::health::HealthCheckConfig {
+                enabled: true,
+                check_interval_seconds: 60,
+                query_timeout_seconds: 5,
+                pool_health_threshold: 80.0,
+                performance_threshold_ms: 100,
+                enable_diagnostics: true,
+            };
+            Arc::new(DatabaseHealthChecker::new(client, health_config))
+        });
 
         Self {
             config,
             metrics_collector: Arc::new(MetricsCollector::new()),
+            database_health_checker,
             agent_health_metrics: Arc::new(DashMap::new()),
             metrics_history: Arc::new(RwLock::new(Vec::new())),
             alerts: Arc::new(RwLock::new(Vec::new())),
@@ -117,6 +142,7 @@ impl SystemHealthMonitor {
         let overall_health = self.calculate_overall_health(&system_metrics);
         let error_rate = self.calculate_system_error_rate().await;
         let queue_depth = self.get_estimated_queue_depth().await;
+        let database_health = self.get_database_health_metrics().await;
 
         let circuit_breaker_state = self.circuit_breaker_state.read().clone();
 
@@ -132,6 +158,7 @@ impl SystemHealthMonitor {
             error_rate,
             queue_depth,
             circuit_breaker_state,
+            database_health,
             embedding_metrics: None, // TODO: Integrate with embedding monitor
             timestamp: Utc::now(),
         };
@@ -142,6 +169,28 @@ impl SystemHealthMonitor {
     /// Get agent health metrics
     pub fn get_agent_health(&self, agent_id: &str) -> Option<AgentHealthMetrics> {
         self.agent_health_metrics.get(agent_id).map(|v| v.clone())
+    }
+
+    /// Get database health metrics
+    async fn get_database_health_metrics(&self) -> Option<DatabaseHealthMetrics> {
+        if let Some(ref checker) = self.database_health_checker {
+            match checker.perform_health_check().await {
+                Ok(result) => Some(DatabaseHealthMetrics {
+                    connection_ok: result.connection_ok,
+                    pool_ok: result.pool_ok,
+                    performance_ok: result.performance_ok,
+                    response_time_ms: result.response_time_ms,
+                    diagnostics: result.diagnostics,
+                    last_check: result.last_check,
+                }),
+                Err(e) => {
+                    warn!("Failed to perform database health check: {}", e);
+                    None
+                }
+            }
+        } else {
+            None
+        }
     }
 
     /// Update agent health metrics
@@ -403,46 +452,41 @@ impl SystemHealthMonitor {
     }
 
     async fn start_health_checks(&self) -> Result<()> {
-        info!("Starting health checks");
+        info!("Starting comprehensive health checks");
 
         let alerts = Arc::clone(&self.alerts);
         let config = self.config.clone();
         let agent_health_metrics = Arc::clone(&self.agent_health_metrics);
         let circuit_breaker_state = Arc::clone(&self.circuit_breaker_state);
+        let metrics_history = Arc::clone(&self.metrics_history);
 
         let handle = tokio::spawn(async move {
-            let mut interval = interval(Duration::from_millis(60000)); // 1 minute
+            let mut interval = interval(Duration::from_millis(config.health_check_interval_ms));
 
             loop {
                 interval.tick().await;
 
-                // TODO: Implement comprehensive health checks with the following requirements:
-                // 1. System component health monitoring: Monitor health of all system components
-                //    - Check database connectivity and query performance
-                //    - Monitor API endpoints and response times
-                //    - Track memory usage and garbage collection metrics
-                //    - Monitor CPU utilization and thread health
-                //    - Check disk space and I/O performance
-                //    - Validate network connectivity and latency
-                // 2. Service dependency checking: Verify all service dependencies are healthy
-                //    - Check external service availability and responsiveness
-                //    - Monitor message queue health and backlog
-                //    - Validate authentication and authorization services
-                //    - Check cache services and data consistency
-                //    - Monitor background job processing and queues
-                // 3. Performance metrics collection: Collect comprehensive performance metrics
-                //    - Track request latency and throughput metrics
-                //    - Monitor error rates and exception frequencies
-                //    - Collect resource utilization statistics
-                //    - Track business logic performance indicators
-                //    - Monitor user experience metrics and SLIs
-                // 4. Health check alerting and reporting: Implement health check alerting system
-                //    - Define health check thresholds and alert conditions
-                //    - Implement multi-level alerting (warning, critical, emergency)
-                //    - Create health check dashboards and reporting
-                //    - Support health check notification and escalation
-                //    - Implement health check trend analysis and prediction
-                // For now, just check circuit breaker state changes
+                // 1. System component health monitoring
+                if let Err(e) = Self::check_system_components(&alerts, &config, &metrics_history).await {
+                    error!("System component health check failed: {}", e);
+                }
+
+                // 2. Database health monitoring (if available)
+                if let Err(e) = Self::check_database_health(&alerts, &config).await {
+                    error!("Database health check failed: {}", e);
+                }
+
+                // 3. Agent health monitoring
+                if let Err(e) = Self::check_agent_health(&alerts, &config, &agent_health_metrics).await {
+                    error!("Agent health check failed: {}", e);
+                }
+
+                // 4. Resource utilization monitoring
+                if let Err(e) = Self::check_resource_utilization(&alerts, &config, &metrics_history).await {
+                    error!("Resource utilization check failed: {}", e);
+                }
+
+                // 5. Circuit breaker state monitoring
                 let state = circuit_breaker_state.read().clone();
                 if matches!(state, CircuitBreakerState::Open) {
                     // Create circuit breaker alert if not exists
@@ -664,7 +708,7 @@ impl SystemHealthMonitor {
     /// Aggregate alerts by severity level
     fn aggregate_alerts_by_severity(&self, alerts: &[SystemAlert]) -> HashMap<String, u32> {
         let mut severity_counts = HashMap::new();
-        
+
         for alert in alerts {
             let severity = match alert.severity {
                 AlertSeverity::Critical => "critical",
@@ -673,15 +717,15 @@ impl SystemHealthMonitor {
                 AlertSeverity::Low => "low",
                 AlertSeverity::Info => "info",
             };
-            
+
             *severity_counts.entry(severity.to_string()).or_insert(0) += 1;
         }
-        
+
         // Ensure all severity levels are represented
         for severity in &["critical", "high", "medium", "low", "info"] {
             severity_counts.entry(severity.to_string()).or_insert(0);
         }
-        
+
         severity_counts
     }
 
@@ -689,22 +733,22 @@ impl SystemHealthMonitor {
     pub fn get_alert_statistics(&self) -> AlertStatistics {
         let alerts = self.alerts.read();
         let total_alerts = alerts.len();
-        
+
         let severity_counts = self.aggregate_alerts_by_severity(&alerts);
-        
+
         // Calculate alert trends
-        let recent_alerts = alerts.iter()
+        let recent_alerts = alerts
+            .iter()
             .filter(|alert| {
                 let now = std::time::SystemTime::now();
-                let duration = now.duration_since(alert.timestamp)
-                    .unwrap_or_default();
+                let duration = now.duration_since(alert.timestamp).unwrap_or_default();
                 duration.as_secs() < 3600 // Last hour
             })
             .count();
-        
+
         let critical_alerts = severity_counts.get("critical").copied().unwrap_or(0);
         let high_alerts = severity_counts.get("high").copied().unwrap_or(0);
-        
+
         AlertStatistics {
             total_alerts,
             critical_alerts,
@@ -725,9 +769,10 @@ impl SystemHealthMonitor {
     pub fn generate_alert_summary(&self) -> AlertSummary {
         let stats = self.get_alert_statistics();
         let alerts = self.alerts.read();
-        
+
         // Get most recent critical alerts
-        let critical_alerts: Vec<_> = alerts.iter()
+        let critical_alerts: Vec<_> = alerts
+            .iter()
             .filter(|alert| alert.severity == AlertSeverity::Critical)
             .take(5)
             .map(|alert| AlertSummaryItem {
@@ -737,9 +782,10 @@ impl SystemHealthMonitor {
                 component: alert.component.clone(),
             })
             .collect();
-        
+
         // Get most recent high priority alerts
-        let high_alerts: Vec<_> = alerts.iter()
+        let high_alerts: Vec<_> = alerts
+            .iter()
             .filter(|alert| alert.severity == AlertSeverity::High)
             .take(5)
             .map(|alert| AlertSummaryItem {
@@ -749,7 +795,7 @@ impl SystemHealthMonitor {
                 component: alert.component.clone(),
             })
             .collect();
-        
+
         AlertSummary {
             statistics: stats,
             critical_alerts,

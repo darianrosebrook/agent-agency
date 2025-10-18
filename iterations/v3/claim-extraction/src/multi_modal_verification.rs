@@ -790,15 +790,15 @@ impl CodeBehaviorAnalyzer {
                 Err(e) => {
                     debug!("Failed to trace execution: {}", e);
                     execution_trace_results.push(ExecutionTrace {
-                trace_available: false,
-                execution_path: Vec::new(),
-                variable_states: HashMap::new(),
-                performance_metrics: PerformanceMetrics {
-                    execution_time_ms: 0,
-                    memory_usage_bytes: 0,
-                    cpu_usage_percent: 0.0,
-                    cache_hit_rate: 0.0,
-                },
+                        trace_available: false,
+                        execution_path: Vec::new(),
+                        variable_states: HashMap::new(),
+                        performance_metrics: PerformanceMetrics {
+                            execution_time_ms: 0,
+                            memory_usage_bytes: 0,
+                            cpu_usage_percent: 0.0,
+                            cache_hit_rate: 0.0,
+                        },
                     });
                 }
             }
@@ -1462,27 +1462,36 @@ impl ContextDependencyResolver {
         let scope_boundaries = extracted_context.scope_boundaries;
 
         // 2. Dependency mapping: Map context dependencies to available information sources
-        let dependency_mapping = self.map_dependencies_to_sources(&context_dependencies).await?;
+        let dependency_mapping = self
+            .map_dependencies_to_sources(&context_dependencies)
+            .await?;
         let missing_dependencies = dependency_mapping.missing;
         let available_sources = dependency_mapping.available;
 
         // 3. Context validation: Verify that required context is available and accurate
-        let validation_results = self.validate_context_availability(&available_sources).await?;
+        let validation_results = self
+            .validate_context_availability(&available_sources)
+            .await?;
         let context_resolved = validation_results.all_available && missing_dependencies.is_empty();
 
         // 4. Resolution strategies: Implement strategies for resolving context gaps
-        let resolution_strategies = self.generate_resolution_strategies(&missing_dependencies).await?;
+        let resolution_strategies = self
+            .generate_resolution_strategies(&missing_dependencies)
+            .await?;
 
         // 5. Context quality assessment: Evaluate quality and reliability of context
-        let quality_assessment = self.assess_context_quality(&available_sources, &validation_results).await?;
-        let confidence = self.calculate_context_confidence(&validation_results, &quality_assessment);
+        let quality_assessment = self
+            .assess_context_quality(&available_sources, &validation_results)
+            .await?;
+        let confidence =
+            self.calculate_context_confidence(&validation_results, &quality_assessment);
 
         // 6. Return ContextVerification with actual resolution results
         let verification = ContextVerification {
             context_resolved,
             confidence,
             dependencies: context_dependencies.clone(),
-            scope_boundaries: scope_boundaries,
+            scope_boundaries,
         };
 
         // 7. Include detailed dependency analysis, resolution status, and quality metrics
@@ -1536,8 +1545,8 @@ impl ContextDependencyResolver {
 
         // Look for date/time references
         let temporal_patterns = [
-            r"\b\d{4}-\d{2}-\d{2}\b",  // ISO dates
-            r"\b\d{1,2}/\d{1,2}/\d{4}\b", // US dates
+            r"\b\d{4}-\d{2}-\d{2}\b",        // ISO dates
+            r"\b\d{1,2}/\d{1,2}/\d{4}\b",    // US dates
             r"\b\d{1,2}:\d{2}(?::\d{2})?\b", // Times
             r"\b(last|past|previous|next|future|current|now|today|tomorrow|yesterday)\b",
         ];
@@ -1558,7 +1567,11 @@ impl ContextDependencyResolver {
             }
         }
 
-        if dependencies.is_empty() { None } else { Some(dependencies) }
+        if dependencies.is_empty() {
+            None
+        } else {
+            Some(dependencies)
+        }
     }
 
     /// Extract domain-specific context dependencies
@@ -1567,9 +1580,21 @@ impl ContextDependencyResolver {
 
         // Technical terms that require domain knowledge
         let technical_terms = [
-            "algorithm", "function", "method", "class", "interface", "protocol",
-            "database", "query", "transaction", "concurrency", "optimization",
-            "security", "authentication", "authorization", "encryption",
+            "algorithm",
+            "function",
+            "method",
+            "class",
+            "interface",
+            "protocol",
+            "database",
+            "query",
+            "transaction",
+            "concurrency",
+            "optimization",
+            "security",
+            "authentication",
+            "authorization",
+            "encryption",
         ];
 
         for term in &technical_terms {
@@ -1586,7 +1611,11 @@ impl ContextDependencyResolver {
             }
         }
 
-        if dependencies.is_empty() { None } else { Some(dependencies) }
+        if dependencies.is_empty() {
+            None
+        } else {
+            Some(dependencies)
+        }
     }
 
     /// Extract prerequisite knowledge dependencies
@@ -1595,8 +1624,15 @@ impl ContextDependencyResolver {
 
         // Look for references to previous knowledge or assumptions
         let prereq_indicators = [
-            "assuming", "given that", "based on", "requires", "depends on",
-            "prerequisite", "foundation", "background", "prior knowledge",
+            "assuming",
+            "given that",
+            "based on",
+            "requires",
+            "depends on",
+            "prerequisite",
+            "foundation",
+            "background",
+            "prior knowledge",
         ];
 
         for indicator in &prereq_indicators {
@@ -1613,7 +1649,11 @@ impl ContextDependencyResolver {
             }
         }
 
-        if dependencies.is_empty() { None } else { Some(dependencies) }
+        if dependencies.is_empty() {
+            None
+        } else {
+            Some(dependencies)
+        }
     }
 
     /// Extract scope boundaries from claim text
@@ -1646,7 +1686,10 @@ impl ContextDependencyResolver {
     }
 
     /// Map context dependencies to available information sources
-    async fn map_dependencies_to_sources(&self, dependencies: &[ContextDependency]) -> Result<DependencyMapping> {
+    async fn map_dependencies_to_sources(
+        &self,
+        dependencies: &[ContextDependency],
+    ) -> Result<DependencyMapping> {
         let mut available = Vec::new();
         let mut missing = Vec::new();
 
@@ -1683,7 +1726,10 @@ impl ContextDependencyResolver {
     }
 
     /// Validate context availability and accuracy
-    async fn validate_context_availability(&self, sources: &[ContextDependency]) -> Result<ContextValidationResults> {
+    async fn validate_context_availability(
+        &self,
+        sources: &[ContextDependency],
+    ) -> Result<ContextValidationResults> {
         let mut all_available = true;
         let mut validation_details = Vec::new();
 
@@ -1714,26 +1760,44 @@ impl ContextDependencyResolver {
     }
 
     /// Generate resolution strategies for missing context
-    async fn generate_resolution_strategies(&self, missing: &[ContextDependency]) -> Result<Vec<ResolutionStrategy>> {
+    async fn generate_resolution_strategies(
+        &self,
+        missing: &[ContextDependency],
+    ) -> Result<Vec<ResolutionStrategy>> {
         let mut strategies = Vec::new();
 
         for dependency in missing {
             let strategy = match dependency.source_type.as_str() {
                 "documentation" => ResolutionStrategy {
                     strategy_type: "documentation_search".to_string(),
-                    description: format!("Search for documentation related to: {}", dependency.description),
-                    fallback_sources: vec!["web_search".to_string(), "expert_consultation".to_string()],
+                    description: format!(
+                        "Search for documentation related to: {}",
+                        dependency.description
+                    ),
+                    fallback_sources: vec![
+                        "web_search".to_string(),
+                        "expert_consultation".to_string(),
+                    ],
                     estimated_effort: "medium".to_string(),
                 },
                 "context_history" => ResolutionStrategy {
                     strategy_type: "context_inference".to_string(),
-                    description: format!("Attempt to infer context from available information: {}", dependency.description),
-                    fallback_sources: vec!["similar_claims".to_string(), "domain_experts".to_string()],
+                    description: format!(
+                        "Attempt to infer context from available information: {}",
+                        dependency.description
+                    ),
+                    fallback_sources: vec![
+                        "similar_claims".to_string(),
+                        "domain_experts".to_string(),
+                    ],
                     estimated_effort: "high".to_string(),
                 },
                 _ => ResolutionStrategy {
                     strategy_type: "general_search".to_string(),
-                    description: format!("General search for missing context: {}", dependency.description),
+                    description: format!(
+                        "General search for missing context: {}",
+                        dependency.description
+                    ),
                     fallback_sources: vec!["multiple_sources".to_string()],
                     estimated_effort: "high".to_string(),
                 },
@@ -1746,7 +1810,11 @@ impl ContextDependencyResolver {
     }
 
     /// Assess context quality and reliability
-    async fn assess_context_quality(&self, sources: &[ContextDependency], validation: &ContextValidationResults) -> Result<ContextQualityAssessment> {
+    async fn assess_context_quality(
+        &self,
+        sources: &[ContextDependency],
+        validation: &ContextValidationResults,
+    ) -> Result<ContextQualityAssessment> {
         let mut total_score = 0.0;
         let mut source_count = 0;
 
@@ -1755,13 +1823,22 @@ impl ContextDependencyResolver {
             source_count += 1;
         }
 
-        let overall_score = if source_count > 0 { total_score / source_count as f64 } else { 0.0 };
+        let overall_score = if source_count > 0 {
+            total_score / source_count as f64
+        } else {
+            0.0
+        };
 
         // Assess conflicts (simplified - no conflicts detected)
         let has_conflicts = false;
 
         // Assess completeness based on source coverage
-        let completeness_score = sources.len() as f64 / (sources.len() + validation.validation_details.len().saturating_sub(sources.len())) as f64;
+        let completeness_score = sources.len() as f64
+            / (sources.len()
+                + validation
+                    .validation_details
+                    .len()
+                    .saturating_sub(sources.len())) as f64;
 
         Ok(ContextQualityAssessment {
             overall_score,
@@ -1772,14 +1849,19 @@ impl ContextDependencyResolver {
     }
 
     /// Calculate overall context confidence
-    fn calculate_context_confidence(&self, validation: &ContextValidationResults, quality: &ContextQualityAssessment) -> f64 {
+    fn calculate_context_confidence(
+        &self,
+        validation: &ContextValidationResults,
+        quality: &ContextQualityAssessment,
+    ) -> f64 {
         if !validation.all_available {
             return 0.3; // Low confidence if context is missing
         }
 
         // Combine availability, quality, and completeness
         let availability_score = if validation.all_available { 1.0 } else { 0.0 };
-        let combined_score = (availability_score + quality.overall_score + quality.completeness_score) / 3.0;
+        let combined_score =
+            (availability_score + quality.overall_score + quality.completeness_score) / 3.0;
 
         // Ensure reasonable bounds
         combined_score.max(0.1).min(0.95)
@@ -1789,17 +1871,16 @@ impl ContextDependencyResolver {
     async fn check_documentation_availability(&self, dependency: &ContextDependency) -> bool {
         // In a real implementation, this would check documentation databases/APIs
         // For now, assume technical documentation is available
-        dependency.description.contains("algorithm") ||
-        dependency.description.contains("function") ||
-        dependency.description.contains("database")
+        dependency.description.contains("algorithm")
+            || dependency.description.contains("function")
+            || dependency.description.contains("database")
     }
 
     /// Check context history availability (simplified)
     async fn check_context_history_availability(&self, dependency: &ContextDependency) -> bool {
         // In a real implementation, this would check context history databases
         // For now, assume historical context is partially available
-        dependency.description.contains("given that") ||
-        dependency.description.contains("based on")
+        dependency.description.contains("given that") || dependency.description.contains("based on")
     }
 
     /// Validate documentation source
@@ -1876,7 +1957,9 @@ impl SemanticAnalyzer {
     /// Parse semantic structure from claim text (enhanced implementation)
     async fn parse_semantic_structure(&self, text: &str) -> Result<SemanticStructure> {
         let parsed_entities = self.semantic_parser.parse_entities(text)?;
-        let parsed_relationships = self.semantic_parser.parse_relationships(text, &parsed_entities)?;
+        let parsed_relationships = self
+            .semantic_parser
+            .parse_relationships(text, &parsed_entities)?;
         let intent_analysis = self.intent_analyzer.analyze_intent(text)?;
 
         let technical_concepts = self.extract_technical_concepts(text);
@@ -1893,7 +1976,10 @@ impl SemanticAnalyzer {
     }
 
     /// Build formal meaning representation (enhanced)
-    async fn build_meaning_representation(&self, structure: &SemanticStructure) -> Result<MeaningRepresentation> {
+    async fn build_meaning_representation(
+        &self,
+        structure: &SemanticStructure,
+    ) -> Result<MeaningRepresentation> {
         let semantic_graph = self.meaning_extractor.build_semantic_graph(structure)?;
         let domain_mappings = self.meaning_extractor.map_to_domains(structure)?;
         let dependencies = self.meaning_extractor.identify_dependencies(structure)?;
@@ -1941,7 +2027,8 @@ impl SemanticAnalyzer {
             gaps: Vec::new(),
             supporting_evidence: Vec::new(),
             consistency_score,
-        })    }
+        })
+    }
 
     /// Analyze semantic coherence (enhanced)
     async fn analyze_coherence(
@@ -1952,7 +2039,8 @@ impl SemanticAnalyzer {
     ) -> Result<ConsistencyAnalysis> {
         let logical_flow_score = self.evaluate_logical_flow(entities, relationships);
         let gaps = self.identify_semantic_gaps(structure, entities, relationships);
-        let completeness_score = self.assess_semantic_completeness(structure, entities.len(), relationships.len());
+        let completeness_score =
+            self.assess_semantic_completeness(structure, entities.len(), relationships.len());
 
         let overall_coherence = (logical_flow_score + completeness_score) / 2.0;
 
@@ -1962,7 +2050,8 @@ impl SemanticAnalyzer {
             supporting_evidence: Vec::new(),
             consistency_score: overall_coherence,
         })
-    }    async fn validate_domain_knowledge(
+    }
+    async fn validate_domain_knowledge(
         &self,
         structure: &SemanticStructure,
         domain_mappings: &[DomainMapping],
@@ -2005,7 +2094,11 @@ impl SemanticAnalyzer {
         relationship_count: usize,
     ) -> f64 {
         let base_confidence = (consistency + coherence + domain_validity) / 3.0;
-        let complexity_factor = if entity_count > 5 || relationship_count > 3 { 0.9 } else { 1.0 };
+        let complexity_factor = if entity_count > 5 || relationship_count > 3 {
+            0.9
+        } else {
+            1.0
+        };
         (base_confidence * complexity_factor).max(0.1).min(0.95)
     }
 
@@ -2029,9 +2122,21 @@ impl SemanticAnalyzer {
     // Helper methods for semantic analysis
     fn extract_technical_concepts(&self, text: &str) -> Vec<String> {
         let technical_terms = [
-            "algorithm", "function", "method", "class", "interface", "protocol",
-            "database", "query", "transaction", "concurrency", "optimization",
-            "security", "authentication", "authorization", "encryption",
+            "algorithm",
+            "function",
+            "method",
+            "class",
+            "interface",
+            "protocol",
+            "database",
+            "query",
+            "transaction",
+            "concurrency",
+            "optimization",
+            "security",
+            "authentication",
+            "authorization",
+            "encryption",
         ];
 
         technical_terms
@@ -2041,14 +2146,19 @@ impl SemanticAnalyzer {
             .collect()
     }
 
-    fn identify_semantic_roles(&self, text: &str, entities: &[SemanticEntity]) -> Vec<SemanticRoleInfo> {
+    fn identify_semantic_roles(
+        &self,
+        text: &str,
+        entities: &[SemanticEntity],
+    ) -> Vec<SemanticRoleInfo> {
         entities
             .iter()
             .map(|entity| {
                 let role = if text.starts_with(&entity.name) {
                     SemanticRole::Subject
-                } else if text.contains(&format!("{} is", entity.name)) ||
-                          text.contains(&format!("{} has", entity.name)) {
+                } else if text.contains(&format!("{} is", entity.name))
+                    || text.contains(&format!("{} has", entity.name))
+                {
                     SemanticRole::Predicate
                 } else {
                     SemanticRole::Object
@@ -2062,15 +2172,24 @@ impl SemanticAnalyzer {
             .collect()
     }
 
-    fn detect_logical_contradiction(&self, relationship: &SemanticRelationship, all_relationships: &[SemanticRelationship]) -> Option<String> {
+    fn detect_logical_contradiction(
+        &self,
+        relationship: &SemanticRelationship,
+        all_relationships: &[SemanticRelationship],
+    ) -> Option<String> {
         for other in all_relationships {
             if relationship != other {
-                if (relationship.relationship_type == "is" && other.relationship_type == "is_not") ||
-                   (relationship.relationship_type == "has" && other.relationship_type == "lacks") {
-                    if relationship.source_entity == other.source_entity &&
-                       relationship.target_entity == other.target_entity {
-                        return Some(format!("Contradiction between '{}' and '{}'",
-                                          relationship.description, other.description));
+                if (relationship.relationship_type == "is" && other.relationship_type == "is_not")
+                    || (relationship.relationship_type == "has"
+                        && other.relationship_type == "lacks")
+                {
+                    if relationship.source_entity == other.source_entity
+                        && relationship.target_entity == other.target_entity
+                    {
+                        return Some(format!(
+                            "Contradiction between '{}' and '{}'",
+                            relationship.description, other.description
+                        ));
                     }
                 }
             }
@@ -2078,32 +2197,54 @@ impl SemanticAnalyzer {
         None
     }
 
-    fn detect_entity_inconsistency(&self, entity: &SemanticEntity, all_entities: &[SemanticEntity]) -> Option<String> {
+    fn detect_entity_inconsistency(
+        &self,
+        entity: &SemanticEntity,
+        all_entities: &[SemanticEntity],
+    ) -> Option<String> {
         for other in all_entities {
-            if entity != other && entity.name == other.name && entity.entity_type != other.entity_type {
+            if entity != other
+                && entity.name == other.name
+                && entity.entity_type != other.entity_type
+            {
                 return Some(format!("Entity '{}' has inconsistent types", entity.name));
             }
         }
         None
     }
 
-    fn validate_against_domain_knowledge(&self, structure: &SemanticStructure) -> Option<Vec<String>> {
+    fn validate_against_domain_knowledge(
+        &self,
+        structure: &SemanticStructure,
+    ) -> Option<Vec<String>> {
         let mut conflicts = Vec::new();
 
-        if structure.technical_concepts.contains(&"asynchronous".to_string()) &&
-           structure.original_text.contains("blocking") {
+        if structure
+            .technical_concepts
+            .contains(&"asynchronous".to_string())
+            && structure.original_text.contains("blocking")
+        {
             conflicts.push("Cannot be both asynchronous and blocking".to_string());
         }
 
-        if conflicts.is_empty() { None } else { Some(conflicts) }
+        if conflicts.is_empty() {
+            None
+        } else {
+            Some(conflicts)
+        }
     }
 
-    fn evaluate_logical_flow(&self, entities: &[SemanticEntity], relationships: &[SemanticRelationship]) -> f64 {
+    fn evaluate_logical_flow(
+        &self,
+        entities: &[SemanticEntity],
+        relationships: &[SemanticRelationship],
+    ) -> f64 {
         if entities.is_empty() || relationships.is_empty() {
             return 0.5;
         }
 
-        let connected_entities = relationships.iter()
+        let connected_entities = relationships
+            .iter()
             .flat_map(|r| vec![r.source_entity.clone(), r.target_entity.clone()])
             .collect::<std::collections::HashSet<_>>();
 
@@ -2119,7 +2260,8 @@ impl SemanticAnalyzer {
     ) -> Vec<String> {
         let mut gaps = Vec::new();
 
-        let connected_entities = relationships.iter()
+        let connected_entities = relationships
+            .iter()
             .flat_map(|r| vec![r.source_entity.clone(), r.target_entity.clone()])
             .collect::<std::collections::HashSet<_>>();
 
@@ -2132,8 +2274,17 @@ impl SemanticAnalyzer {
         gaps
     }
 
-    fn assess_semantic_completeness(&self, structure: &SemanticStructure, entity_count: usize, relationship_count: usize) -> f64 {
-        let base_completeness = if entity_count > 0 && relationship_count > 0 { 0.8 } else { 0.4 };
+    fn assess_semantic_completeness(
+        &self,
+        structure: &SemanticStructure,
+        entity_count: usize,
+        relationship_count: usize,
+    ) -> f64 {
+        let base_completeness = if entity_count > 0 && relationship_count > 0 {
+            0.8
+        } else {
+            0.4
+        };
         let technical_bonus = (structure.technical_concepts.len() as f64 * 0.05).min(0.2);
         (base_completeness + technical_bonus).min(1.0)
     }
@@ -2150,12 +2301,21 @@ impl SemanticAnalyzer {
     fn check_domain_logical_issues(&self, structure: &SemanticStructure) -> Option<Vec<String>> {
         let mut issues = Vec::new();
 
-        if structure.technical_concepts.contains(&"security".to_string()) &&
-           !structure.technical_concepts.contains(&"authentication".to_string()) {
+        if structure
+            .technical_concepts
+            .contains(&"security".to_string())
+            && !structure
+                .technical_concepts
+                .contains(&"authentication".to_string())
+        {
             issues.push("Security claims should consider authentication".to_string());
         }
 
-        if issues.is_empty() { None } else { Some(issues) }
+        if issues.is_empty() {
+            None
+        } else {
+            Some(issues)
+        }
     }
 }
 
@@ -2176,22 +2336,22 @@ impl CrossReferenceValidator {
 
         // 1. Reference extraction: Identify and extract cross-references from claim text
         let references = self.extract_references(&claim.claim_text).await?;
-        
+
         // 2. Reference validation: Verify accuracy and accessibility of references
         let validated_references = self.validate_references(&references).await?;
-        
+
         // 3. Link verification: Verify external links and web references
         let link_verification = self.verify_links(&validated_references).await?;
-        
+
         // 4. Citation analysis: Analyze citation patterns and quality
         let citation_analysis = self.analyze_citations(&validated_references).await?;
-        
+
         // 5. Cross-reference consistency: Ensure consistency across references
         let consistency_analysis = self.check_consistency(&validated_references).await?;
-        
+
         // Calculate overall consistency score
         let consistency_score = self.calculate_consistency_score(&consistency_analysis);
-        
+
         // Extract relationships and contradictions
         let relationships = self.extract_relationships(&validated_references).await?;
         let contradictions = self.identify_contradictions(&consistency_analysis).await?;
@@ -2203,11 +2363,11 @@ impl CrossReferenceValidator {
             contradictions,
         })
     }
-    
+
     /// Extract references from claim text
     async fn extract_references(&self, text: &str) -> Result<Vec<Reference>> {
         let mut references = Vec::new();
-        
+
         // Extract URLs
         let url_pattern = regex::Regex::new(r"https?://[^\s]+")?;
         for url_match in url_pattern.find_iter(text) {
@@ -2215,62 +2375,79 @@ impl CrossReferenceValidator {
                 id: uuid::Uuid::new_v4(),
                 reference_type: ReferenceType::Url,
                 content: url_match.as_str().to_string(),
-                context: self.extract_context_around_match(text, url_match.start(), url_match.end()),
+                context: self.extract_context_around_match(
+                    text,
+                    url_match.start(),
+                    url_match.end(),
+                ),
                 confidence: 0.9,
             });
         }
-        
+
         // Extract citations (e.g., [1], (Smith, 2023), etc.)
         let citation_patterns = vec![
-            regex::Regex::new(r"\[(\d+)\]")?, // [1], [2], etc.
+            regex::Regex::new(r"\[(\d+)\]")?,                // [1], [2], etc.
             regex::Regex::new(r"\(([A-Za-z]+,\s*\d{4})\)")?, // (Smith, 2023)
             regex::Regex::new(r"([A-Za-z]+ et al\.\s*\(\d{4}\))")?, // Smith et al. (2023)
         ];
-        
+
         for pattern in citation_patterns {
             for citation_match in pattern.find_iter(text) {
                 references.push(Reference {
                     id: uuid::Uuid::new_v4(),
                     reference_type: ReferenceType::Citation,
                     content: citation_match.as_str().to_string(),
-                    context: self.extract_context_around_match(text, citation_match.start(), citation_match.end()),
+                    context: self.extract_context_around_match(
+                        text,
+                        citation_match.start(),
+                        citation_match.end(),
+                    ),
                     confidence: 0.8,
                 });
             }
         }
-        
+
         // Extract internal references (e.g., "see Section 3.2", "as mentioned above")
         let internal_patterns = vec![
-            regex::Regex::new(r"(?i)(see|refer to|as mentioned in)\s+(section|chapter|figure|table)\s+(\d+(?:\.\d+)*)")?,
+            regex::Regex::new(
+                r"(?i)(see|refer to|as mentioned in)\s+(section|chapter|figure|table)\s+(\d+(?:\.\d+)*)",
+            )?,
             regex::Regex::new(r"(?i)(above|below|previously|earlier)")?,
         ];
-        
+
         for pattern in internal_patterns {
             for internal_match in pattern.find_iter(text) {
                 references.push(Reference {
                     id: uuid::Uuid::new_v4(),
                     reference_type: ReferenceType::Internal,
                     content: internal_match.as_str().to_string(),
-                    context: self.extract_context_around_match(text, internal_match.start(), internal_match.end()),
+                    context: self.extract_context_around_match(
+                        text,
+                        internal_match.start(),
+                        internal_match.end(),
+                    ),
                     confidence: 0.7,
                 });
             }
         }
-        
+
         Ok(references)
     }
-    
+
     /// Validate references for accuracy and accessibility
-    async fn validate_references(&self, references: &[Reference]) -> Result<Vec<ValidatedReference>> {
+    async fn validate_references(
+        &self,
+        references: &[Reference],
+    ) -> Result<Vec<ValidatedReference>> {
         let mut validated = Vec::new();
-        
+
         for reference in references {
             let validation_result = match reference.reference_type {
                 ReferenceType::Url => self.validate_url(&reference.content).await?,
                 ReferenceType::Citation => self.validate_citation(&reference.content).await?,
                 ReferenceType::Internal => self.validate_internal(&reference.content).await?,
             };
-            
+
             validated.push(ValidatedReference {
                 reference: reference.clone(),
                 is_accessible: validation_result.is_accessible,
@@ -2280,39 +2457,40 @@ impl CrossReferenceValidator {
                 validation_notes: validation_result.notes,
             });
         }
-        
+
         Ok(validated)
     }
-    
+
     /// Verify external links
     async fn verify_links(&self, references: &[ValidatedReference]) -> Result<LinkVerification> {
         let mut accessible_links = 0;
         let mut total_links = 0;
         let mut broken_links = Vec::new();
         let mut quality_issues = Vec::new();
-        
+
         for reference in references {
             if matches!(reference.reference.reference_type, ReferenceType::Url) {
                 total_links += 1;
-                
+
                 if reference.is_accessible {
                     accessible_links += 1;
                 } else {
                     broken_links.push(reference.reference.content.clone());
                 }
-                
+
                 if reference.quality_score < 0.7 {
-                    quality_issues.push(format!("Low quality link: {}", reference.reference.content));
+                    quality_issues
+                        .push(format!("Low quality link: {}", reference.reference.content));
                 }
             }
         }
-        
+
         let accessibility_rate = if total_links > 0 {
             accessible_links as f64 / total_links as f64
         } else {
             1.0
         };
-        
+
         Ok(LinkVerification {
             accessibility_rate,
             broken_links,
@@ -2320,36 +2498,42 @@ impl CrossReferenceValidator {
             total_links,
         })
     }
-    
+
     /// Analyze citation patterns and quality
-    async fn analyze_citations(&self, references: &[ValidatedReference]) -> Result<CitationAnalysis> {
+    async fn analyze_citations(
+        &self,
+        references: &[ValidatedReference],
+    ) -> Result<CitationAnalysis> {
         let mut citation_count = 0;
         let mut proper_format_count = 0;
         let mut missing_citations = Vec::new();
         let mut quality_issues = Vec::new();
-        
+
         for reference in references {
             if matches!(reference.reference.reference_type, ReferenceType::Citation) {
                 citation_count += 1;
-                
+
                 if self.is_proper_citation_format(&reference.reference.content) {
                     proper_format_count += 1;
                 } else {
-                    quality_issues.push(format!("Improper citation format: {}", reference.reference.content));
+                    quality_issues.push(format!(
+                        "Improper citation format: {}",
+                        reference.reference.content
+                    ));
                 }
-                
+
                 if !reference.supports_claim {
                     missing_citations.push(reference.reference.content.clone());
                 }
             }
         }
-        
+
         let format_compliance = if citation_count > 0 {
             proper_format_count as f64 / citation_count as f64
         } else {
             1.0
         };
-        
+
         Ok(CitationAnalysis {
             citation_count,
             format_compliance,
@@ -2357,36 +2541,45 @@ impl CrossReferenceValidator {
             quality_issues,
         })
     }
-    
+
     /// Check consistency across references
-    async fn check_consistency(&self, references: &[ValidatedReference]) -> Result<ConsistencyAnalysis> {
+    async fn check_consistency(
+        &self,
+        references: &[ValidatedReference],
+    ) -> Result<ConsistencyAnalysis> {
         let mut conflicts = Vec::new();
         let mut gaps = Vec::new();
         let mut supporting_evidence = Vec::new();
-        
+
         // Check for conflicting information
         for i in 0..references.len() {
             for j in (i + 1)..references.len() {
-                if let Some(conflict) = self.detect_conflict(&references[i], &references[j]).await? {
+                if let Some(conflict) = self.detect_conflict(&references[i], &references[j]).await?
+                {
                     conflicts.push(conflict);
                 }
             }
         }
-        
+
         // Identify evidence gaps
         for reference in references {
             if !reference.supports_claim {
-                gaps.push(format!("Reference does not support claim: {}", reference.reference.content));
+                gaps.push(format!(
+                    "Reference does not support claim: {}",
+                    reference.reference.content
+                ));
             } else {
                 supporting_evidence.push(reference.reference.content.clone());
             }
         }
-        
+
         // Calculate consistency score
         let conflict_penalty = conflicts.len() as f64 * 0.2;
         let gap_penalty = gaps.len() as f64 * 0.1;
         let evidence_bonus = supporting_evidence.len() as f64 * 0.05;
-        let consistency_score = (1.0 - conflict_penalty - gap_penalty + evidence_bonus).max(0.0).min(1.0);
+        let consistency_score = (1.0 - conflict_penalty - gap_penalty + evidence_bonus)
+            .max(0.0)
+            .min(1.0);
 
         Ok(ConsistencyAnalysis {
             conflicts,
@@ -2395,35 +2588,46 @@ impl CrossReferenceValidator {
             consistency_score,
         })
     }
-    
+
     /// Calculate overall consistency score
     fn calculate_consistency_score(&self, analysis: &ConsistencyAnalysis) -> f64 {
         let conflict_penalty = analysis.conflicts.len() as f64 * 0.3;
         let gap_penalty = analysis.gaps.len() as f64 * 0.2;
         let evidence_bonus = analysis.supporting_evidence.len() as f64 * 0.1;
-        (analysis.consistency_score - conflict_penalty - gap_penalty + evidence_bonus).max(0.0).min(1.0)
+        (analysis.consistency_score - conflict_penalty - gap_penalty + evidence_bonus)
+            .max(0.0)
+            .min(1.0)
     }
-    
+
     /// Extract relationships between references
-    async fn extract_relationships(&self, references: &[ValidatedReference]) -> Result<Vec<ReferenceRelationship>> {
+    async fn extract_relationships(
+        &self,
+        references: &[ValidatedReference],
+    ) -> Result<Vec<ReferenceRelationship>> {
         let mut relationships = Vec::new();
-        
+
         // Find supporting relationships
         for i in 0..references.len() {
             for j in (i + 1)..references.len() {
-                if let Some(relationship) = self.analyze_relationship(&references[i], &references[j]).await? {
+                if let Some(relationship) = self
+                    .analyze_relationship(&references[i], &references[j])
+                    .await?
+                {
                     relationships.push(relationship);
                 }
             }
         }
-        
+
         Ok(relationships)
     }
-    
+
     /// Identify contradictions in references
-    async fn identify_contradictions(&self, analysis: &ConsistencyAnalysis) -> Result<Vec<Contradiction>> {
+    async fn identify_contradictions(
+        &self,
+        analysis: &ConsistencyAnalysis,
+    ) -> Result<Vec<Contradiction>> {
         let mut contradictions = Vec::new();
-        
+
         // Create contradictions based on gaps in coherence
         // Create contradictions based on conflicts in consistency analysis
         for conflict in &analysis.conflicts {
@@ -2433,17 +2637,17 @@ impl CrossReferenceValidator {
                 contradiction_severity: ErrorSeverity::Medium,
                 resolution_suggestions: vec![format!("Resolve conflict: {}", conflict.description)],
             });
-        }        
+        }
         Ok(contradictions)
     }
-    
+
     // Helper methods for reference processing
     fn extract_context_around_match(&self, text: &str, start: usize, end: usize) -> String {
         let context_start = start.saturating_sub(50);
         let context_end = (end + 50).min(text.len());
         text[context_start..context_end].to_string()
     }
-    
+
     async fn validate_url(&self, url: &str) -> Result<ValidationResult> {
         // Simulate URL validation
         let is_accessible = url.starts_with("https://") || url.starts_with("http://");
@@ -2454,7 +2658,7 @@ impl CrossReferenceValidator {
         } else {
             0.6
         };
-        
+
         Ok(ValidationResult {
             is_accessible,
             is_accurate: true,
@@ -2463,7 +2667,7 @@ impl CrossReferenceValidator {
             notes: "URL validation completed".to_string(),
         })
     }
-    
+
     async fn validate_citation(&self, citation: &str) -> Result<ValidationResult> {
         // Simulate citation validation
         let is_accessible = true; // Assume citations are accessible
@@ -2472,7 +2676,7 @@ impl CrossReferenceValidator {
         } else {
             0.7
         };
-        
+
         Ok(ValidationResult {
             is_accessible,
             is_accurate: true,
@@ -2481,7 +2685,7 @@ impl CrossReferenceValidator {
             notes: "Citation validation completed".to_string(),
         })
     }
-    
+
     async fn validate_internal(&self, internal: &str) -> Result<ValidationResult> {
         // Simulate internal reference validation
         Ok(ValidationResult {
@@ -2492,17 +2696,23 @@ impl CrossReferenceValidator {
             notes: "Internal reference validation completed".to_string(),
         })
     }
-    
+
     fn is_proper_citation_format(&self, citation: &str) -> bool {
         // Check for common citation formats
-        citation.contains("(") && citation.contains(")") || 
-        citation.starts_with("[") && citation.ends_with("]")
+        citation.contains("(") && citation.contains(")")
+            || citation.starts_with("[") && citation.ends_with("]")
     }
-    
-    async fn detect_conflict(&self, ref1: &ValidatedReference, ref2: &ValidatedReference) -> Result<Option<Conflict>> {
+
+    async fn detect_conflict(
+        &self,
+        ref1: &ValidatedReference,
+        ref2: &ValidatedReference,
+    ) -> Result<Option<Conflict>> {
         // Simulate conflict detection
-        if ref1.quality_score > 0.8 && ref2.quality_score > 0.8 && 
-           ref1.supports_claim != ref2.supports_claim {
+        if ref1.quality_score > 0.8
+            && ref2.quality_score > 0.8
+            && ref1.supports_claim != ref2.supports_claim
+        {
             return Ok(Some(Conflict {
                 reference1: ref1.reference.content.clone(),
                 reference2: ref2.reference.content.clone(),
@@ -2513,8 +2723,12 @@ impl CrossReferenceValidator {
         }
         Ok(None)
     }
-    
-    async fn analyze_relationship(&self, ref1: &ValidatedReference, ref2: &ValidatedReference) -> Result<Option<ReferenceRelationship>> {
+
+    async fn analyze_relationship(
+        &self,
+        ref1: &ValidatedReference,
+        ref2: &ValidatedReference,
+    ) -> Result<Option<ReferenceRelationship>> {
         // Simulate relationship analysis
         if ref1.supports_claim && ref2.supports_claim {
             return Ok(Some(ReferenceRelationship {
@@ -2580,7 +2794,6 @@ pub struct CitationAnalysis {
     pub quality_issues: Vec<String>,
 }
 
-
 #[derive(Debug, Clone)]
 pub struct Conflict {
     pub reference1: String,
@@ -2605,7 +2818,6 @@ pub struct ReferenceRelationship {
     pub relationship_type: String,
     pub strength: f64,
 }
-
 
 // TODO: Implement internal component data structures with the following requirements:
 // 1. Expression parser: Build mathematical expression parsing capabilities
@@ -4593,7 +4805,11 @@ impl SemanticParser {
         Ok(Vec::new())
     }
 
-    fn parse_relationships(&self, _text: &str, _entities: &[SemanticEntity]) -> Result<Vec<SemanticRelationship>> {
+    fn parse_relationships(
+        &self,
+        _text: &str,
+        _entities: &[SemanticEntity],
+    ) -> Result<Vec<SemanticRelationship>> {
         // Placeholder implementation - return empty vec for now
         Ok(Vec::new())
     }
@@ -4677,7 +4893,6 @@ struct ExtractedContext {
     scope_boundaries: Vec<ScopeBoundary>,
 }
 
-
 /// Mapping of dependencies to available sources
 #[derive(Debug, Clone)]
 struct DependencyMapping {
@@ -4739,8 +4954,6 @@ struct MeaningRepresentation {
     domain_mappings: Vec<DomainMapping>,
     dependencies: Vec<String>,
 }
-
-
 
 /// Coherence analysis results
 #[derive(Debug, Clone)]

@@ -645,7 +645,6 @@ impl ContextResolver {
         // Build a context map of potential referents (ported from V2 logic)
         let context_map = self.build_v2_referent_map(context);
 
-
         for pronoun in pronouns {
             let referent = self.find_referent_for_pronoun(&pronoun.to_lowercase(), &context_map);
 

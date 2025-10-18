@@ -283,7 +283,9 @@ impl MultiTenantManager {
         // Query the database for current context count
         if let Some(db_client) = &self.database_client {
             // Use database query to get actual context count
-            let count = self.get_current_context_count_from_db(tenant_id, db_client).await?;
+            let count = self
+                .get_current_context_count_from_db(tenant_id, db_client)
+                .await?;
             Ok(count < tenant_info.limits.max_contexts)
         } else {
             // Fallback to cache-based count for environments without database
@@ -368,7 +370,9 @@ impl MultiTenantManager {
         // Check if tenant has contexts older than retention limit
         if let Some(db_client) = &self.database_client {
             // Query database for contexts older than retention limit
-            let expired_count = self.get_expired_context_count_from_db(tenant_id, oldest_allowed, db_client).await?;
+            let expired_count = self
+                .get_expired_context_count_from_db(tenant_id, oldest_allowed, db_client)
+                .await?;
 
             if expired_count > 0 {
                 warn!(
@@ -568,7 +572,10 @@ impl MultiTenantManager {
             // Verify against database if available
             if let Some(db_client) = &self.database_client {
                 // Check if tenant exists in database
-                if !self.verify_tenant_exists_in_db(tenant_id, db_client).await? {
+                if !self
+                    .verify_tenant_exists_in_db(tenant_id, db_client)
+                    .await?
+                {
                     invalid_tenants.push(tenant_id.clone());
                 }
             } else {

@@ -20,7 +20,8 @@ members = [
     "observability",
     "config",
     "database",
-    "integration-tests"
+    "integration-tests",
+    "agent-agency-contracts"
 ]
 
 [workspace.package]

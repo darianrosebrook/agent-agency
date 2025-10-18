@@ -3,12 +3,12 @@
 //! Manages Metal GPU acceleration for Apple Silicon inference.
 
 use crate::types::*;
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, warn, debug};
+use tracing::{debug, info, warn};
 
 /// Metal GPU device information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,17 +155,17 @@ impl MetalGPUManager {
             let output = std::process::Command::new("system_profiler")
                 .args(&["SPDisplaysDataType"])
                 .output();
-                
+
             match output {
                 Ok(result) if result.status.success() => {
                     let output_str = String::from_utf8_lossy(&result.stdout);
                     // Check for Metal support indicators
-                    output_str.contains("Metal") || 
-                    output_str.contains("GPU") ||
-                    output_str.contains("Apple") ||
-                    output_str.contains("M1") ||
-                    output_str.contains("M2") ||
-                    output_str.contains("M3")
+                    output_str.contains("Metal")
+                        || output_str.contains("GPU")
+                        || output_str.contains("Apple")
+                        || output_str.contains("M1")
+                        || output_str.contains("M2")
+                        || output_str.contains("M3")
                 }
                 _ => {
                     // Fallback: assume Metal is available on modern macOS
@@ -193,7 +193,7 @@ impl MetalGPUManager {
             bail!("Metal is not available on this platform");
         }
     }
-    
+
     /// Query actual Metal device information from system
     async fn query_metal_device_info(&self) -> Result<MetalDeviceInfo> {
         // Use system_profiler to get detailed GPU information
@@ -201,36 +201,41 @@ impl MetalGPUManager {
             .args(&["SPDisplaysDataType", "-json"])
             .output()
             .map_err(|e| anyhow::anyhow!("Failed to query GPU info: {}", e))?;
-            
+
         if !output.status.success() {
             return Err(anyhow::anyhow!("system_profiler command failed"));
         }
-        
+
         let output_str = String::from_utf8_lossy(&output.stdout);
         let device_info = self.parse_gpu_info(&output_str)?;
-        
+
         Ok(device_info)
     }
-    
+
     /// Parse GPU information from system_profiler output
     fn parse_gpu_info(&self, output: &str) -> Result<MetalDeviceInfo> {
         // Parse JSON output from system_profiler
         let json: serde_json::Value = serde_json::from_str(output)
             .map_err(|e| anyhow::anyhow!("Failed to parse GPU info JSON: {}", e))?;
-            
+
         // Extract GPU information
-        let displays = json.get("SPDisplaysDataType")
+        let displays = json
+            .get("SPDisplaysDataType")
             .and_then(|d| d.as_array())
             .ok_or_else(|| anyhow::anyhow!("No display data found"))?;
-            
+
         for display in displays {
             if let Some(gpu_name) = display.get("_name").and_then(|n| n.as_str()) {
-                if gpu_name.contains("Apple") || gpu_name.contains("M1") || gpu_name.contains("M2") || gpu_name.contains("M3") {
+                if gpu_name.contains("Apple")
+                    || gpu_name.contains("M1")
+                    || gpu_name.contains("M2")
+                    || gpu_name.contains("M3")
+                {
                     return self.extract_apple_gpu_info(display);
                 }
             }
         }
-        
+
         // Detect unified memory size for Apple Silicon
         let memory_mb = self.detect_unified_memory_size().unwrap_or(8192);
         Ok(MetalDeviceInfo {
@@ -243,47 +248,51 @@ impl MetalGPUManager {
             supports_family: MetalFamily::Apple7,
         })
     }
-    
+
     /// Detect unified memory size for Apple Silicon devices
     fn detect_unified_memory_size(&self) -> Result<u32> {
         // Method 1: Try to read from system_profiler
         if let Ok(memory) = self.get_memory_from_system_profiler() {
             return Ok(memory);
         }
-        
+
         // Method 2: Try to read from sysctl
         if let Ok(memory) = self.get_memory_from_sysctl() {
             return Ok(memory);
         }
-        
+
         // Method 3: Try to read from /proc/meminfo (if available)
         if let Ok(memory) = self.get_memory_from_proc() {
             return Ok(memory);
         }
-        
+
         // Method 4: Use hardware model detection
         if let Ok(memory) = self.get_memory_from_hardware_model() {
             return Ok(memory);
         }
-        
+
         Err(anyhow::anyhow!("Unable to detect unified memory size"))
     }
 
     /// Get memory size from system_profiler command
     fn get_memory_from_system_profiler(&self) -> Result<u32> {
         use std::process::Command;
-        
+
         let output = Command::new("system_profiler")
             .args(&["SPHardwareDataType", "-json"])
             .output()?;
-            
+
         if !output.status.success() {
             return Err(anyhow::anyhow!("system_profiler command failed"));
         }
-        
+
         let json: serde_json::Value = serde_json::from_slice(&output.stdout)?;
-        
-        if let Some(hardware) = json.get("SPHardwareDataType").and_then(|h| h.as_array()).and_then(|a| a.first()) {
+
+        if let Some(hardware) = json
+            .get("SPHardwareDataType")
+            .and_then(|h| h.as_array())
+            .and_then(|a| a.first())
+        {
             if let Some(memory_info) = hardware.get("physical_memory") {
                 if let Some(memory_str) = memory_info.as_str() {
                     // Parse memory string like "16 GB" or "8 GB"
@@ -292,26 +301,28 @@ impl MetalGPUManager {
                 }
             }
         }
-        
-        Err(anyhow::anyhow!("Could not parse memory from system_profiler"))
+
+        Err(anyhow::anyhow!(
+            "Could not parse memory from system_profiler"
+        ))
     }
 
     /// Get memory size from sysctl command
     fn get_memory_from_sysctl(&self) -> Result<u32> {
         use std::process::Command;
-        
+
         let output = Command::new("sysctl")
             .arg("-n")
             .arg("hw.memsize")
             .output()?;
-            
+
         if !output.status.success() {
             return Err(anyhow::anyhow!("sysctl command failed"));
         }
-        
+
         let memory_bytes_str = String::from_utf8(output.stdout)?;
         let memory_bytes: u64 = memory_bytes_str.trim().parse()?;
-        
+
         // Convert bytes to MB
         let memory_mb = (memory_bytes / (1024 * 1024)) as u32;
         Ok(memory_mb)
@@ -320,9 +331,9 @@ impl MetalGPUManager {
     /// Get memory size from /proc/meminfo (Linux compatibility)
     fn get_memory_from_proc(&self) -> Result<u32> {
         use std::fs;
-        
+
         let meminfo = fs::read_to_string("/proc/meminfo")?;
-        
+
         for line in meminfo.lines() {
             if line.starts_with("MemTotal:") {
                 let parts: Vec<&str> = line.split_whitespace().collect();
@@ -335,64 +346,61 @@ impl MetalGPUManager {
                 }
             }
         }
-        
+
         Err(anyhow::anyhow!("Could not parse /proc/meminfo"))
     }
 
     /// Get memory size from hardware model detection
     fn get_memory_from_hardware_model(&self) -> Result<u32> {
         use std::process::Command;
-        
-        let output = Command::new("sysctl")
-            .arg("-n")
-            .arg("hw.model")
-            .output()?;
-            
+
+        let output = Command::new("sysctl").arg("-n").arg("hw.model").output()?;
+
         if !output.status.success() {
             return Err(anyhow::anyhow!("sysctl hw.model command failed"));
         }
-        
+
         let model = String::from_utf8(output.stdout)?;
         let model = model.trim();
-        
+
         // Map known Apple Silicon models to their memory configurations
         let memory_mb = match model {
             // MacBook Air M1
-            m if m.contains("MacBookAir10,1") => 8192,  // 8GB
+            m if m.contains("MacBookAir10,1") => 8192, // 8GB
             m if m.contains("MacBookAir10,2") => 16384, // 16GB
-            
+
             // MacBook Pro M1
-            m if m.contains("MacBookPro17,1") => 8192,  // 8GB
+            m if m.contains("MacBookPro17,1") => 8192, // 8GB
             m if m.contains("MacBookPro17,2") => 16384, // 16GB
-            
+
             // Mac mini M1
-            m if m.contains("Macmini9,1") => 8192,      // 8GB
-            m if m.contains("Macmini9,2") => 16384,     // 16GB
-            
+            m if m.contains("Macmini9,1") => 8192,  // 8GB
+            m if m.contains("Macmini9,2") => 16384, // 16GB
+
             // iMac M1
-            m if m.contains("iMac21,1") => 8192,        // 8GB
-            m if m.contains("iMac21,2") => 16384,       // 16GB
-            
+            m if m.contains("iMac21,1") => 8192,  // 8GB
+            m if m.contains("iMac21,2") => 16384, // 16GB
+
             // MacBook Air M2
-            m if m.contains("MacBookAir13,2") => 8192,  // 8GB
+            m if m.contains("MacBookAir13,2") => 8192, // 8GB
             m if m.contains("MacBookAir13,2") && m.contains("16") => 16384, // 16GB
-            
+
             // MacBook Pro M2
-            m if m.contains("MacBookPro18,1") => 8192,  // 8GB
+            m if m.contains("MacBookPro18,1") => 8192, // 8GB
             m if m.contains("MacBookPro18,2") => 16384, // 16GB
-            
+
             // Mac Studio M1/M2
-            m if m.contains("Mac13,1") => 32768,        // 32GB
-            m if m.contains("Mac13,2") => 65536,        // 64GB
-            
+            m if m.contains("Mac13,1") => 32768, // 32GB
+            m if m.contains("Mac13,2") => 65536, // 64GB
+
             // Mac Pro M2
-            m if m.contains("Mac14,8") => 65536,        // 64GB
-            m if m.contains("Mac14,9") => 131072,       // 128GB
-            
+            m if m.contains("Mac14,8") => 65536,  // 64GB
+            m if m.contains("Mac14,9") => 131072, // 128GB
+
             // Default fallback
             _ => 8192,
         };
-        
+
         Ok(memory_mb)
     }
 
@@ -402,31 +410,32 @@ impl MetalGPUManager {
         if parts.len() < 2 {
             return Err(anyhow::anyhow!("Invalid memory format: {}", memory_str));
         }
-        
+
         let amount: f64 = parts[0].parse()?;
         let unit = parts[1].to_lowercase();
-        
+
         let memory_mb = match unit.as_str() {
             "gb" | "g" => (amount * 1024.0) as u32,
             "mb" | "m" => amount as u32,
             "tb" | "t" => (amount * 1024.0 * 1024.0) as u32,
             _ => return Err(anyhow::anyhow!("Unknown memory unit: {}", unit)),
         };
-        
+
         Ok(memory_mb)
     }
 
     /// Extract Apple GPU information from display data
     fn extract_apple_gpu_info(&self, display: &serde_json::Value) -> Result<MetalDeviceInfo> {
-        let name = display.get("_name")
+        let name = display
+            .get("_name")
             .and_then(|n| n.as_str())
             .unwrap_or("Apple GPU")
             .to_string();
-            
+
         let memory_mb = self.extract_gpu_memory(display).unwrap_or(8192);
         let device_id = self.extract_device_id(&name);
         let metal_family = self.determine_metal_family(&name);
-        
+
         Ok(MetalDeviceInfo {
             name,
             vendor: "Apple".to_string(),
@@ -437,7 +446,7 @@ impl MetalGPUManager {
             supports_family: metal_family,
         })
     }
-    
+
     /// Extract GPU memory size from display data
     fn extract_gpu_memory(&self, display: &serde_json::Value) -> Option<u32> {
         // Look for memory information in various fields
@@ -446,36 +455,36 @@ impl MetalGPUManager {
                 return Some(mb);
             }
         }
-        
+
         if let Some(memory) = display.get("spdisplays_memory").and_then(|m| m.as_str()) {
             if let Some(mb) = self.parse_memory_size(memory) {
                 return Some(mb);
             }
         }
-        
+
         None
     }
-    
+
     /// Parse memory size string to MB
     fn parse_memory_size(&self, size_str: &str) -> Option<u32> {
         // Parse strings like "8 GB", "8192 MB", "8GB", etc.
         let size_str = size_str.to_lowercase();
-        
+
         if let Some(gb_pos) = size_str.find("gb") {
             if let Ok(gb) = size_str[..gb_pos].trim().parse::<f32>() {
                 return Some((gb * 1024.0) as u32);
             }
         }
-        
+
         if let Some(mb_pos) = size_str.find("mb") {
             if let Ok(mb) = size_str[..mb_pos].trim().parse::<u32>() {
                 return Some(mb);
             }
         }
-        
+
         None
     }
-    
+
     /// Extract device ID from GPU name
     fn extract_device_id(&self, name: &str) -> String {
         if name.contains("M1") {
@@ -488,7 +497,7 @@ impl MetalGPUManager {
             "AppleSilicon".to_string()
         }
     }
-    
+
     /// Determine Metal family from GPU name
     fn determine_metal_family(&self, name: &str) -> MetalFamily {
         if name.contains("M3") {
@@ -501,7 +510,7 @@ impl MetalGPUManager {
             MetalFamily::Apple7 // Default to Apple7
         }
     }
-    
+
     /// Detect unified memory size for Apple Silicon
     async fn detect_unified_memory_size(&self) -> Result<u32> {
         // Use system_profiler to get total system memory
@@ -509,13 +518,13 @@ impl MetalGPUManager {
             .args(&["SPHardwareDataType"])
             .output()
             .map_err(|e| anyhow::anyhow!("Failed to query hardware info: {}", e))?;
-            
+
         if !output.status.success() {
             return Ok(8192); // Default fallback
         }
-        
+
         let output_str = String::from_utf8_lossy(&output.stdout);
-        
+
         // Look for memory information
         for line in output_str.lines() {
             if line.contains("Memory:") {
@@ -524,7 +533,7 @@ impl MetalGPUManager {
                 }
             }
         }
-        
+
         Ok(8192) // Default fallback
     }
 
@@ -594,7 +603,9 @@ impl MetalGPUManager {
 
         Ok(InferenceResult {
             request_id: _request.id,
-            output: "This is a simulated Metal GPU inference result with high performance and accuracy.".to_string(),
+            output:
+                "This is a simulated Metal GPU inference result with high performance and accuracy."
+                    .to_string(),
             inference_time_ms: inference_time as u64,
             tokens_generated,
             tokens_per_second: (tokens_generated as f32 / inference_time) * 1000.0,
@@ -621,7 +632,12 @@ impl MetalGPUManager {
     }
 
     /// Allocate GPU buffer
-    pub async fn allocate_buffer(&self, id: String, size_bytes: u64, usage: BufferUsage) -> Result<String> {
+    pub async fn allocate_buffer(
+        &self,
+        id: String,
+        size_bytes: u64,
+        usage: BufferUsage,
+    ) -> Result<String> {
         let mut buffers = self.buffers.write().await;
 
         if buffers.contains_key(&id) {
@@ -630,7 +646,9 @@ impl MetalGPUManager {
 
         // Check memory availability
         let total_allocated: u64 = buffers.values().map(|b| b.size_bytes).sum();
-        let max_memory = self.device_info.as_ref()
+        let max_memory = self
+            .device_info
+            .as_ref()
             .map(|d| d.memory_mb as u64 * 1024 * 1024)
             .unwrap_or(8 * 1024 * 1024 * 1024); // 8GB default
 
@@ -689,12 +707,20 @@ impl MetalGPUManager {
     }
 
     /// Create custom compute pipeline
-    pub async fn create_pipeline(&self, name: String, shader_function: String, threadgroup_size: (u32, u32, u32)) -> Result<String> {
+    pub async fn create_pipeline(
+        &self,
+        name: String,
+        shader_function: String,
+        threadgroup_size: (u32, u32, u32),
+    ) -> Result<String> {
         let max_threads = threadgroup_size.0 * threadgroup_size.1 * threadgroup_size.2;
 
         if let Some(device) = &self.device_info {
             if max_threads > device.max_threads_per_group {
-                bail!("Threadgroup size exceeds device maximum ({})", device.max_threads_per_group);
+                bail!(
+                    "Threadgroup size exceeds device maximum ({})",
+                    device.max_threads_per_group
+                );
             }
         }
 
@@ -727,13 +753,16 @@ impl MetalGPUManager {
         }
 
         // Analyze buffer usage patterns
-        let usage_stats: HashMap<BufferUsage, usize> = buffers.values()
-            .fold(HashMap::new(), |mut acc, buffer| {
+        let usage_stats: HashMap<BufferUsage, usize> =
+            buffers.values().fold(HashMap::new(), |mut acc, buffer| {
                 *acc.entry(buffer.usage.clone()).or_insert(0) += 1;
                 acc
             });
 
-        info!("GPU memory optimization: {} buffers analyzed", buffers.len());
+        info!(
+            "GPU memory optimization: {} buffers analyzed",
+            buffers.len()
+        );
         debug!("Buffer usage statistics: {:?}", usage_stats);
 
         // In a real implementation, this would reorder buffers for better cache locality

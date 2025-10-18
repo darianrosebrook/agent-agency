@@ -8,7 +8,7 @@
  */
 
 // Load environment variables from .env.local
-import dotenv from "dotenv";
+import * as dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 
 import { ConnectionPoolManager } from "@/database/ConnectionPoolManager";

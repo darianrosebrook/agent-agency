@@ -286,8 +286,8 @@ impl LocalKeySigner {
             .context("Failed to parse PKCS#8 private key")?;
 
         // Ed25519 object identifier per RFC 8410.
-        let ed25519_oid = ObjectIdentifier::new("1.3.101.112")
-            .expect("hard-coded Ed25519 OID must be valid");
+        let ed25519_oid =
+            ObjectIdentifier::new("1.3.101.112").expect("hard-coded Ed25519 OID must be valid");
         if pk_info.algorithm.oid != ed25519_oid {
             bail!(
                 "Unsupported key algorithm {} when exporting Ed25519 key",
@@ -307,7 +307,10 @@ impl LocalKeySigner {
         } else if private_key.len() >= 32 {
             private_key[private_key.len() - 32..].to_vec()
         } else {
-            bail!("Unexpected Ed25519 private key length: {}", private_key.len());
+            bail!(
+                "Unexpected Ed25519 private key length: {}",
+                private_key.len()
+            );
         };
 
         let public_key = if let Some(pk) = pk_info.public_key {
@@ -417,8 +420,9 @@ impl SignerFactory {
             SigningAlgorithm::EdDSA => {
                 let path = Path::new(key_path);
                 if path.exists() {
-                    let key_data = fs::read(path)
-                        .with_context(|| format!("Failed to read key file at {}", path.display()))?;
+                    let key_data = fs::read(path).with_context(|| {
+                        format!("Failed to read key file at {}", path.display())
+                    })?;
                     let signer = LocalKeySigner::from_key_data(&key_data, key_id)?;
                     Ok(Box::new(signer))
                 } else {

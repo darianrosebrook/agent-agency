@@ -93,7 +93,9 @@ impl std::fmt::Display for KnowledgeSource {
             KnowledgeSource::ApiDocumentation(api) => write!(f, "ApiDocumentation: {}", api),
             KnowledgeSource::CommunityPost(post) => write!(f, "CommunityPost: {}", post),
             KnowledgeSource::AcademicPaper(paper) => write!(f, "AcademicPaper: {}", paper),
-            KnowledgeSource::InternalKnowledgeBase(kb) => write!(f, "InternalKnowledgeBase: {}", kb),
+            KnowledgeSource::InternalKnowledgeBase(kb) => {
+                write!(f, "InternalKnowledgeBase: {}", kb)
+            }
         }
     }
 }

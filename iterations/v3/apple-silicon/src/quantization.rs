@@ -3,7 +3,7 @@
 //! Manages model quantization for Apple Silicon optimization.
 
 use crate::types::*;
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{anyhow, bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -191,8 +191,13 @@ impl QuantizationManager {
     }
 
     /// Quantize a model with default configuration
-    pub async fn quantize_model(&self, model_path: &str, method: QuantizationMethod) -> Result<QuantizationResult> {
-        self.quantize_model_with_config(model_path, method, None).await
+    pub async fn quantize_model(
+        &self,
+        model_path: &str,
+        method: QuantizationMethod,
+    ) -> Result<QuantizationResult> {
+        self.quantize_model_with_config(model_path, method, None)
+            .await
     }
 
     /// Quantize a model with custom configuration
@@ -211,7 +216,8 @@ impl QuantizationManager {
 
         // Get configuration
         let config = if let Some(name) = config_name {
-            self.get_config(name).await
+            self.get_config(name)
+                .await
                 .ok_or_else(|| anyhow!("Configuration '{}' not found", name))?
         } else {
             let mut config = self.default_config.clone();
@@ -256,7 +262,11 @@ impl QuantizationManager {
     }
 
     /// Perform the actual quantization
-    async fn perform_quantization(&self, model_path: &str, config: &QuantizationConfig) -> Result<QuantizationResult> {
+    async fn perform_quantization(
+        &self,
+        model_path: &str,
+        config: &QuantizationConfig,
+    ) -> Result<QuantizationResult> {
         // Get original model size
         let metadata = fs::metadata(model_path)
             .with_context(|| format!("Failed to read model file metadata: {}", model_path))?;
@@ -300,22 +310,31 @@ impl QuantizationManager {
                 })
             }
             QuantizationMethod::INT8 => {
-                self.quantize_to_int8(model_path, &output_path, config).await
+                self.quantize_to_int8(model_path, &output_path, config)
+                    .await
             }
             QuantizationMethod::INT4 => {
-                self.quantize_to_int4(model_path, &output_path, config).await
+                self.quantize_to_int4(model_path, &output_path, config)
+                    .await
             }
             QuantizationMethod::Dynamic => {
-                self.quantize_dynamic(model_path, &output_path, config).await
+                self.quantize_dynamic(model_path, &output_path, config)
+                    .await
             }
             QuantizationMethod::Custom(ref custom) => {
-                self.quantize_custom(model_path, &output_path, config, custom).await
+                self.quantize_custom(model_path, &output_path, config, custom)
+                    .await
             }
         }
     }
 
     /// Quantize model to INT8
-    async fn quantize_to_int8(&self, input_path: &str, output_path: &str, config: &QuantizationConfig) -> Result<QuantizationResult> {
+    async fn quantize_to_int8(
+        &self,
+        input_path: &str,
+        output_path: &str,
+        config: &QuantizationConfig,
+    ) -> Result<QuantizationResult> {
         // In a real implementation, this would:
         // 1. Load the model (e.g., using Core ML or similar)
         // 2. Analyze weight distributions
@@ -339,7 +358,10 @@ impl QuantizationManager {
 
         // Perform validation if enabled
         let validation = if config.validation.enable_accuracy_check {
-            Some(self.validate_quantization(input_path, output_path, config).await?)
+            Some(
+                self.validate_quantization(input_path, output_path, config)
+                    .await?,
+            )
         } else {
             None
         };
@@ -363,7 +385,12 @@ impl QuantizationManager {
     }
 
     /// Quantize model to INT4
-    async fn quantize_to_int4(&self, input_path: &str, output_path: &str, config: &QuantizationConfig) -> Result<QuantizationResult> {
+    async fn quantize_to_int4(
+        &self,
+        input_path: &str,
+        output_path: &str,
+        config: &QuantizationConfig,
+    ) -> Result<QuantizationResult> {
         let original_size = fs::metadata(input_path)?.len();
         let quantized_size = (original_size as f32 * 0.25) as u64; // Estimate 75% compression
 
@@ -377,7 +404,10 @@ impl QuantizationManager {
         };
 
         let validation = if config.validation.enable_accuracy_check {
-            Some(self.validate_quantization(input_path, output_path, config).await?)
+            Some(
+                self.validate_quantization(input_path, output_path, config)
+                    .await?,
+            )
         } else {
             None
         };
@@ -401,7 +431,12 @@ impl QuantizationManager {
     }
 
     /// Perform dynamic quantization
-    async fn quantize_dynamic(&self, input_path: &str, output_path: &str, config: &QuantizationConfig) -> Result<QuantizationResult> {
+    async fn quantize_dynamic(
+        &self,
+        input_path: &str,
+        output_path: &str,
+        config: &QuantizationConfig,
+    ) -> Result<QuantizationResult> {
         let original_size = fs::metadata(input_path)?.len();
         let quantized_size = (original_size as f32 * 0.6) as u64; // Estimate 40% compression
 
@@ -415,7 +450,10 @@ impl QuantizationManager {
         };
 
         let validation = if config.validation.enable_accuracy_check {
-            Some(self.validate_quantization(input_path, output_path, config).await?)
+            Some(
+                self.validate_quantization(input_path, output_path, config)
+                    .await?,
+            )
         } else {
             None
         };
@@ -439,7 +477,13 @@ impl QuantizationManager {
     }
 
     /// Perform custom quantization
-    async fn quantize_custom(&self, input_path: &str, output_path: &str, config: &QuantizationConfig, custom_method: &str) -> Result<QuantizationResult> {
+    async fn quantize_custom(
+        &self,
+        input_path: &str,
+        output_path: &str,
+        config: &QuantizationConfig,
+        custom_method: &str,
+    ) -> Result<QuantizationResult> {
         // Parse custom method specification
         match custom_method.to_lowercase().as_str() {
             "fp16" => {
@@ -477,7 +521,12 @@ impl QuantizationManager {
     }
 
     /// Validate quantization results
-    async fn validate_quantization(&self, original_path: &str, quantized_path: &str, config: &QuantizationConfig) -> Result<ValidationResults> {
+    async fn validate_quantization(
+        &self,
+        original_path: &str,
+        quantized_path: &str,
+        config: &QuantizationConfig,
+    ) -> Result<ValidationResults> {
         // In a real implementation, this would:
         // 1. Load both models
         // 2. Run inference on validation dataset

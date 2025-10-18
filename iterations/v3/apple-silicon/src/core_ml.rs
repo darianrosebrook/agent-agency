@@ -88,17 +88,17 @@ impl CoreMLManager {
         // Load Core ML model if on macOS
         let core_ml_model = if cfg!(target_os = "macos") {
             match CoreMLModel::new(&model_path_buf) {
-            Ok(model) => {
-                info!("Successfully loaded Core ML model: {}", model_name);
-                Some(model)
-            }
-            Err(e) => {
+                Ok(model) => {
+                    info!("Successfully loaded Core ML model: {}", model_name);
+                    Some(model)
+                }
+                Err(e) => {
                     warn!(
                         "Failed to load Core ML model {}: {}. Using simulation mode.",
                         model_name, e
                     );
-                None
-            }
+                    None
+                }
             }
         } else {
             None
@@ -476,7 +476,10 @@ impl CoreMLManager {
                     }
                     QuantizationMethod::Custom(params) => {
                         // Configure custom quantization
-                        info!("Applying custom quantization '{}' for Core ML optimization", params);
+                        info!(
+                            "Applying custom quantization '{}' for Core ML optimization",
+                            params
+                        );
                         // In practice, this would parse and apply custom parameters
                     }
                     QuantizationMethod::None => {
@@ -494,7 +497,7 @@ impl CoreMLManager {
             // 4. Save the optimized model
 
             info!("Core ML optimization completed successfully");
-        Ok(())
+            Ok(())
         }
 
         #[cfg(not(target_os = "macos"))]
@@ -650,7 +653,9 @@ impl CoreMLManager {
                 // 3. Calculate usage percentage based on active workloads
 
                 // For now, get a basic estimate from system processes
-                let gpu_processes = system.processes().values()
+                let gpu_processes = system
+                    .processes()
+                    .values()
                     .filter(|p| {
                         let cmd = p.cmd().join(" ").to_lowercase();
                         cmd.contains("metal") || cmd.contains("gpu") || cmd.contains("coreml")
@@ -670,7 +675,9 @@ impl CoreMLManager {
         #[cfg(not(target_os = "macos"))]
         {
             // On non-macOS platforms, estimate based on system processes
-            let gpu_processes = system.processes().values()
+            let gpu_processes = system
+                .processes()
+                .values()
                 .filter(|p| {
                     let cmd = p.cmd().join(" ").to_lowercase();
                     cmd.contains("gpu") || cmd.contains("cuda") || cmd.contains("opencl")
@@ -694,12 +701,17 @@ impl CoreMLManager {
             // 3. Use performance counters for ANE activity
 
             // For now, estimate based on ML/Core ML processes and recent activity
-            let ml_processes = system.processes().values()
+            let ml_processes = system
+                .processes()
+                .values()
                 .filter(|p| {
                     let cmd = p.cmd().join(" ").to_lowercase();
-                    cmd.contains("coreml") || cmd.contains("mlmodel") ||
-                    cmd.contains("neural") || cmd.contains("inference") ||
-                    cmd.contains("transformers") || cmd.contains("diffusion")
+                    cmd.contains("coreml")
+                        || cmd.contains("mlmodel")
+                        || cmd.contains("neural")
+                        || cmd.contains("inference")
+                        || cmd.contains("transformers")
+                        || cmd.contains("diffusion")
                 })
                 .count();
 
@@ -716,11 +728,15 @@ impl CoreMLManager {
         #[cfg(not(target_os = "macos"))]
         {
             // On non-macOS platforms, estimate based on ML processes
-            let ml_processes = system.processes().values()
+            let ml_processes = system
+                .processes()
+                .values()
                 .filter(|p| {
                     let cmd = p.cmd().join(" ").to_lowercase();
-                    cmd.contains("ml") || cmd.contains("neural") ||
-                    cmd.contains("inference") || cmd.contains("tensor")
+                    cmd.contains("ml")
+                        || cmd.contains("neural")
+                        || cmd.contains("inference")
+                        || cmd.contains("tensor")
                 })
                 .count();
 
@@ -752,7 +768,11 @@ impl CoreMLManager {
             let usage_factor = (cpu_usage * 0.15).min(8.0); // Max 8°C increase from CPU usage
 
             // Factor in ML workloads which tend to be thermal-intensive
-            let ml_temp_boost = if self.loaded_models.read().await.len() > 0 { 5.0 } else { 0.0 };
+            let ml_temp_boost = if self.loaded_models.read().await.len() > 0 {
+                5.0
+            } else {
+                0.0
+            };
 
             (base_temp + usage_factor + ml_temp_boost).min(85.0)
         }
@@ -833,7 +853,9 @@ impl CoreMLManager {
 
         // Base perplexity varies by model name patterns (inferred model type)
         let model_name_lower = request.model_name.to_lowercase();
-        let base_perplexity = if model_name_lower.contains("vision") || model_name_lower.contains("clip") {
+        let base_perplexity = if model_name_lower.contains("vision")
+            || model_name_lower.contains("clip")
+        {
             2.1 // Vision models
         } else if model_name_lower.contains("multimodal") || model_name_lower.contains("llava") {
             4.5 // Multimodal models
@@ -870,7 +892,8 @@ impl CoreMLManager {
         let chars = input.chars().count();
 
         // Lexical diversity (unique words / total words)
-        let unique_words = input.split_whitespace()
+        let unique_words = input
+            .split_whitespace()
             .collect::<std::collections::HashSet<_>>()
             .len();
         let lexical_diversity = unique_words as f32 / words.max(1) as f32;
@@ -984,7 +1007,9 @@ impl CoreMLManager {
     /// Extract semantic keywords from input text
     fn extract_semantic_keywords(&self, input: &str) -> Vec<String> {
         // Simple keyword extraction - in practice would use NLP libraries
-        let stop_words = ["the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by"];
+        let stop_words = [
+            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by",
+        ];
 
         input
             .split_whitespace()
@@ -1125,10 +1150,23 @@ impl CoreMLManager {
 
         // Look for words/phrases that indicate factual content
         let factual_terms = [
-            "what", "who", "when", "where", "how many", "how much",
-            "fact", "true", "false", "according to", "research shows",
-            "data indicates", "statistics show", "evidence suggests",
-            "scientifically", "historically", "officially"
+            "what",
+            "who",
+            "when",
+            "where",
+            "how many",
+            "how much",
+            "fact",
+            "true",
+            "false",
+            "according to",
+            "research shows",
+            "data indicates",
+            "statistics show",
+            "evidence suggests",
+            "scientifically",
+            "historically",
+            "officially",
         ];
 
         for term in &factual_terms {
@@ -1156,14 +1194,25 @@ impl CoreMLManager {
         let mut factuality: f32 = 0.5; // Base factuality
 
         // Wh-questions are often factual
-        if input_lower.starts_with("what ") || input_lower.starts_with("who ") ||
-           input_lower.starts_with("when ") || input_lower.starts_with("where ") ||
-           input_lower.starts_with("how many") || input_lower.starts_with("how much") {
+        if input_lower.starts_with("what ")
+            || input_lower.starts_with("who ")
+            || input_lower.starts_with("when ")
+            || input_lower.starts_with("where ")
+            || input_lower.starts_with("how many")
+            || input_lower.starts_with("how much")
+        {
             factuality += 0.2;
         }
 
         // Factual domains increase factuality
-        let factual_domains = ["science", "history", "mathematics", "statistics", "data", "research"];
+        let factual_domains = [
+            "science",
+            "history",
+            "mathematics",
+            "statistics",
+            "data",
+            "research",
+        ];
         for domain in &factual_domains {
             if input_lower.contains(domain) {
                 factuality += 0.1;

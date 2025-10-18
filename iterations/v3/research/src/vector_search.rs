@@ -5,8 +5,8 @@
 use crate::types::*;
 use anyhow::{Context, Result};
 use qdrant_client::qdrant::{
-    vectors_config::Config, CreateCollection, Distance, PointStruct,
-    SearchPoints, VectorParams, VectorsConfig, WithPayloadSelector,
+    vectors_config::Config, CreateCollection, Distance, PointStruct, SearchPoints, VectorParams,
+    VectorsConfig, WithPayloadSelector,
 };
 use qdrant_client::Qdrant;
 use serde_json::json;
@@ -660,16 +660,16 @@ impl VectorSearchEngine {
     async fn generate_embedding_with_model(&self, text: &str) -> Result<Vec<f32>> {
         // 1. Embedding model integration: Integrate with production embedding models
         let embedding = self.generate_embedding_with_api(text).await?;
-        
+
         // 2. Embedding generation: Generate high-quality text embeddings
         let processed_embedding = self.process_embedding(embedding)?;
-        
+
         // 3. Model performance optimization: Optimize embedding generation performance
         let cached_embedding = self.cache_embedding(text, &processed_embedding).await?;
-        
+
         // 4. Embedding validation and quality assurance: Validate embedding quality
         self.validate_embedding_quality(&cached_embedding)?;
-        
+
         Ok(cached_embedding)
     }
 
@@ -677,7 +677,7 @@ impl VectorSearchEngine {
     async fn generate_embedding_with_api(&self, text: &str) -> Result<Vec<f32>> {
         // Preprocess text for embedding generation
         let processed_text = self.preprocess_text_for_embedding(text)?;
-        
+
         // Try primary embedding model
         match self.call_primary_embedding_model(&processed_text).await {
             Ok(embedding) => Ok(embedding),
@@ -697,7 +697,7 @@ impl VectorSearchEngine {
             .chars()
             .filter(|c| c.is_alphanumeric() || c.is_whitespace())
             .collect::<String>();
-        
+
         // Tokenize and limit length
         let tokens: Vec<&str> = cleaned_text.split_whitespace().collect();
         let limited_tokens = if tokens.len() > 512 {
@@ -705,7 +705,7 @@ impl VectorSearchEngine {
         } else {
             &tokens
         };
-        
+
         Ok(limited_tokens.join(" "))
     }
 
@@ -714,16 +714,16 @@ impl VectorSearchEngine {
         // Simulate API call to primary embedding model
         let embedding_size = self.vector_size as usize;
         let mut embedding = vec![0.0; embedding_size];
-        
+
         // Generate embedding based on text content
         let text_hash = self.hash_text(text);
         for i in 0..embedding_size {
             embedding[i] = ((text_hash + i as u64) as f32 / u64::MAX as f32) * 2.0 - 1.0;
         }
-        
+
         // Normalize embedding
         self.normalize_embedding(&mut embedding);
-        
+
         Ok(embedding)
     }
 
@@ -732,16 +732,16 @@ impl VectorSearchEngine {
         // Simulate API call to fallback embedding model
         let embedding_size = self.vector_size as usize;
         let mut embedding = vec![0.0; embedding_size];
-        
+
         // Generate different embedding for fallback
         let text_hash = self.hash_text(text);
         for i in 0..embedding_size {
             embedding[i] = ((text_hash * 2 + i as u64) as f32 / u64::MAX as f32) * 2.0 - 1.0;
         }
-        
+
         // Normalize embedding
         self.normalize_embedding(&mut embedding);
-        
+
         Ok(embedding)
     }
 
@@ -751,13 +751,13 @@ impl VectorSearchEngine {
         if embedding.len() != self.vector_size as usize {
             return Err(anyhow::anyhow!("Embedding size mismatch"));
         }
-        
+
         // Apply quality filters
         self.filter_embedding_quality(&mut embedding)?;
-        
+
         // Ensure consistency
         self.ensure_embedding_consistency(&mut embedding)?;
-        
+
         Ok(embedding)
     }
 
@@ -767,10 +767,10 @@ impl VectorSearchEngine {
         if let Some(cached) = self.get_cached_embedding(text).await {
             return Ok(cached);
         }
-        
+
         // Store embedding in cache
         self.store_embedding_in_cache(text, embedding).await?;
-        
+
         Ok(embedding.to_vec())
     }
 
@@ -780,20 +780,23 @@ impl VectorSearchEngine {
         if embedding.len() != self.vector_size as usize {
             return Err(anyhow::anyhow!("Invalid embedding dimensions"));
         }
-        
+
         // Check for NaN or infinite values
         for &value in embedding {
             if !value.is_finite() {
                 return Err(anyhow::anyhow!("Invalid embedding values"));
             }
         }
-        
+
         // Check embedding magnitude
         let magnitude = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
         if magnitude < 0.1 || magnitude > 10.0 {
-            return Err(anyhow::anyhow!("Invalid embedding magnitude: {}", magnitude));
+            return Err(anyhow::anyhow!(
+                "Invalid embedding magnitude: {}",
+                magnitude
+            ));
         }
-        
+
         Ok(())
     }
 
@@ -801,7 +804,7 @@ impl VectorSearchEngine {
     fn hash_text(&self, text: &str) -> u64 {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
-        
+
         let mut hasher = DefaultHasher::new();
         text.hash(&mut hasher);
         hasher.finish()
@@ -821,15 +824,16 @@ impl VectorSearchEngine {
     fn filter_embedding_quality(&self, embedding: &mut [f32]) -> Result<()> {
         // Remove outliers
         let mean = embedding.iter().sum::<f32>() / embedding.len() as f32;
-        let variance = embedding.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / embedding.len() as f32;
+        let variance =
+            embedding.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / embedding.len() as f32;
         let std_dev = variance.sqrt();
-        
+
         for value in embedding.iter_mut() {
             if (*value - mean).abs() > 3.0 * std_dev {
                 *value = mean;
             }
         }
-        
+
         Ok(())
     }
 
@@ -837,12 +841,12 @@ impl VectorSearchEngine {
     fn ensure_embedding_consistency(&self, embedding: &mut [f32]) -> Result<()> {
         // Ensure embedding is normalized
         self.normalize_embedding(embedding);
-        
+
         // Ensure embedding values are in valid range
         for value in embedding.iter_mut() {
             *value = value.clamp(-1.0, 1.0);
         }
-        
+
         Ok(())
     }
 
@@ -858,7 +862,7 @@ impl VectorSearchEngine {
         // Store in local cache
         let mut cache = self.embedding_cache.write().await;
         cache.insert(text.to_string(), embedding.to_vec());
-        
+
         // In a real implementation, this would also store in a persistent cache store
         debug!("Cached embedding for text: {}", text);
         Ok(())
