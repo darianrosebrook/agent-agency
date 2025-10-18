@@ -231,7 +231,7 @@ impl WorkspaceStateManager {
             files_modified: files_modified_count,
             computed_at: chrono::Utc::now(),
             timestamp: chrono::Utc::now(),
-            changes: Vec::new(), // TODO: populate with actual diff changes
+            changes: self.collect_actual_diff_changes(&current_state, &previous_state).await,
         };
 
         // Store the diff
@@ -884,6 +884,73 @@ impl WorkspaceStateManager {
 
         Ok(format!("{:x}", hasher.finalize()))
     }
+
+    /// Collect actual diff changes between current and previous states
+    async fn collect_actual_diff_changes(
+        &self,
+        current_state: &WorkspaceState,
+        previous_state: &WorkspaceState,
+    ) -> Vec<FileChange> {
+        let mut changes = Vec::new();
+
+        // Compare file hashes to detect changes
+        for (file_path, current_hash) in &current_state.file_hashes {
+            if let Some(previous_hash) = previous_state.file_hashes.get(file_path) {
+                if current_hash != previous_hash {
+                    // File was modified
+                    changes.push(FileChange {
+                        path: file_path.clone(),
+                        change_type: ChangeType::Modified,
+                        old_hash: Some(previous_hash.clone()),
+                        new_hash: Some(current_hash.clone()),
+                        size_diff: self.calculate_size_diff(file_path, current_state, previous_state),
+                    });
+                }
+            } else {
+                // File was added
+                changes.push(FileChange {
+                    path: file_path.clone(),
+                    change_type: ChangeType::Added,
+                    old_hash: None,
+                    new_hash: Some(current_hash.clone()),
+                    size_diff: self.get_file_size(file_path, current_state),
+                });
+            }
+        }
+
+        // Check for deleted files
+        for (file_path, previous_hash) in &previous_state.file_hashes {
+            if !current_state.file_hashes.contains_key(file_path) {
+                // File was deleted
+                changes.push(FileChange {
+                    path: file_path.clone(),
+                    change_type: ChangeType::Deleted,
+                    old_hash: Some(previous_hash.clone()),
+                    new_hash: None,
+                    size_diff: -self.get_file_size(file_path, previous_state),
+                });
+            }
+        }
+
+        changes
+    }
+
+    /// Calculate size difference for a file
+    fn calculate_size_diff(
+        &self,
+        file_path: &str,
+        current_state: &WorkspaceState,
+        previous_state: &WorkspaceState,
+    ) -> i64 {
+        let current_size = self.get_file_size(file_path, current_state);
+        let previous_size = self.get_file_size(file_path, previous_state);
+        current_size - previous_size
+    }
+
+    /// Get file size from state
+    fn get_file_size(&self, file_path: &str, state: &WorkspaceState) -> i64 {
+        state.file_sizes.get(file_path).copied().unwrap_or(0)
+    }
 }
 
 /// Represents a change to a file in the workspace
@@ -906,4 +973,14 @@ enum ChangeType {
     Modified,
     Deleted,
     Renamed,
+}
+
+/// Represents a change to a file in the workspace
+#[derive(Debug, Clone)]
+struct FileChange {
+    path: String,
+    change_type: ChangeType,
+    old_hash: Option<String>,
+    new_hash: Option<String>,
+    size_diff: i64,
 }
