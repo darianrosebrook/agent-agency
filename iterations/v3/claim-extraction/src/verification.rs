@@ -630,26 +630,21 @@ impl CouncilIntegrator {
         let mut evidence = Vec::new();
 
         match &submission_result.verdict {
-            CouncilVerdict::Pass {
-                evidence: council_evidence,
-                ..
-            } => {
-                for council_ev in council_evidence {
-                    evidence.push(Evidence {
-                        id: Uuid::new_v4(),
-                        claim_id: claim.id,
-                        evidence_type: EvidenceType::ConstitutionalReference,
-                        content: format!("Council evaluation for: {}", claim.claim_text),
-                        source: EvidenceSource {
-                            source_type: SourceType::CouncilDecision,
-                            location: "council_verdict".to_string(),
-                            authority: "Agent Agency Council".to_string(),
-                            freshness: Utc::now(),
-                        },
-                        confidence: 0.9,
-                        timestamp: Utc::now(),
-                    });
-                }
+            CouncilVerdict::Accepted { .. } => {
+                evidence.push(Evidence {
+                    id: Uuid::new_v4(),
+                    claim_id: claim.id,
+                    evidence_type: EvidenceType::ConstitutionalReference,
+                    content: format!("Council evaluation for: {}", claim.claim_text),
+                    source: EvidenceSource {
+                        source_type: SourceType::CouncilDecision,
+                        location: "council_verdict".to_string(),
+                        authority: "Agent Agency Council".to_string(),
+                        freshness: Utc::now(),
+                    },
+                    confidence: 0.9,
+                    timestamp: Utc::now(),
+                });
             }
             CouncilVerdict::Fail {
                 evidence: council_evidence,
