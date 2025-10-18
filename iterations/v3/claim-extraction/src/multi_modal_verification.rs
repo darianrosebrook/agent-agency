@@ -4,9 +4,16 @@
 //! and validation with multi-modal analysis including cross-reference validation.
 
 use crate::types::*;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use chrono::Utc;
+use std::collections::HashSet;
+use std::ffi::OsStr;
+use std::fs::File;
+use std::io::Read;
+use std::path::{Path, PathBuf};
+use tokio::task;
 use tracing::{debug, info, warn};
+use walkdir::WalkDir;
 
 /// Multi-Modal Verification Engine for claim validation
 #[derive(Debug)]
@@ -596,49 +603,17 @@ impl MultiModalVerificationEngine {
         let mut doc_files = Vec::new();
 
         // Common documentation file patterns
-        let patterns = [
-            "README.md",
-            "README.txt",
-            "CHANGELOG.md",
-            "docs/**/*.md",
-            "documentation/**/*.md",
-            "**/*.md",
+        let patterns = vec![
+            "README.md".to_string(),
+            "README.txt".to_string(),
+            "CHANGELOG.md".to_string(),
+            "docs/**/*.md".to_string(),
+            "documentation/**/*.md".to_string(),
+            "**/*.md".to_string(),
         ];
 
-        // For now, simulate finding documentation files
-        // TODO: Implement filesystem documentation discovery with the following requirements:
         // 1. Filesystem traversal: Walk the filesystem to find documentation files
-        //    - Implement recursive filesystem traversal for documentation discovery
-        //    - Handle filesystem access errors and permission issues
-        //    - Implement efficient filesystem traversal algorithms
-        //    - Support multiple filesystem types and configurations
-        // 2. Pattern matching: Implement pattern matching for documentation files
-        //    - Implement pattern matching for documentation file discovery
-        //    - Handle pattern matching errors and edge cases
-        //    - Support multiple pattern formats and matching strategies
-        //    - Implement pattern matching optimization and performance tuning
-        // 3. File type detection: Detect and categorize documentation file types
-        //    - Detect and categorize different documentation file types
-        //    - Handle file type detection errors and edge cases
-        //    - Support multiple file type detection algorithms
-        //    - Implement file type detection optimization and performance tuning
-        // 4. Performance optimization: Optimize filesystem traversal performance
-        //    - Optimize filesystem traversal performance and efficiency
-        //    - Implement filesystem traversal caching and optimization
-        //    - Handle large filesystem traversal and resource management
-        //    - Support concurrent filesystem traversal and processing
-        for pattern in &patterns {
-            if pattern.starts_with("README") || pattern.contains("docs/") {
-                // Simulate finding common documentation files
-                if *pattern == "README.md" {
-                    doc_files.push("README.md".to_string());
-                } else if pattern.contains("docs/") {
-                    // Add some common doc files
-                    doc_files.push("docs/architecture.md".to_string());
-                    doc_files.push("docs/api.md".to_string());
-                }
-            }
-        }
+        doc_files = self.discover_documentation_files(&patterns).await?;
 
         // Remove duplicates
         doc_files.sort();
@@ -653,50 +628,18 @@ impl MultiModalVerificationEngine {
         file_path: &str,
         keywords: &[String],
     ) -> Result<(usize, usize)> {
-        // TODO: Implement file content keyword search with the following requirements:
         // 1. File reading: Read file content for keyword searching
-        //    - Read file content efficiently for keyword searching
-        //    - Handle file reading errors and edge cases
-        //    - Implement file reading optimization and performance tuning
-        //    - Support multiple file formats and encoding types
+        let file_content = self.read_file_content(file_path).await?;
+
         // 2. Keyword search: Implement efficient keyword search algorithms
-        //    - Implement efficient keyword search algorithms and strategies
-        //    - Handle keyword search errors and edge cases
-        //    - Support multiple keyword search algorithms and techniques
-        //    - Implement keyword search optimization and performance tuning
+        let search_results = self
+            .search_keywords_in_content(&file_content, keywords)
+            .await?;
+
         // 3. Content analysis: Analyze file content for keyword relevance
-        //    - Analyze file content for keyword relevance and context
-        //    - Handle content analysis errors and edge cases
-        //    - Implement content analysis algorithms and techniques
-        //    - Support multiple content analysis strategies and methods
-        // 4. Performance optimization: Optimize file content search performance
-        //    - Optimize file content search performance and efficiency
-        //    - Implement file content search caching and optimization
-        //    - Handle large file content search and resource management
-        //    - Support concurrent file content search and processing
-        // For now, simulate file content searching
-
-        let mut total_matches = 0;
-        let mut relevant_matches = 0;
-
-        // Simulate reading file content (in real impl: tokio::fs::read_to_string)
-        let simulated_content = self.simulate_file_content(file_path);
-
-        for keyword in keywords {
-            let keyword_matches = simulated_content
-                .to_lowercase()
-                .matches(&keyword.to_lowercase())
-                .count();
-
-            total_matches += keyword_matches;
-
-            // Consider matches relevant if they appear in meaningful contexts
-            if keyword_matches > 0
-                && self.is_relevant_context(file_path, keyword, &simulated_content)
-            {
-                relevant_matches += keyword_matches.min(3); // Cap per keyword
-            }
-        }
+        let (total_matches, relevant_matches) = self
+            .analyze_keyword_relevance(&file_content, &search_results)
+            .await?;
 
         Ok((total_matches, relevant_matches))
     }
@@ -778,31 +721,128 @@ impl MultiModalVerificationEngine {
 
     /// Find source code files in the workspace
     async fn find_source_files(&self) -> Result<Vec<String>> {
-        let mut source_files = Vec::new();
-
-        // Common source code file extensions
-        let extensions = [
+        let extensions: HashSet<String> = [
             "rs", "ts", "js", "py", "java", "cpp", "c", "go", "rb", "php",
+        ]
+        .iter()
+        .map(|ext| ext.to_string())
+        .collect();
+        let ignore_dirs: HashSet<&str> =
+            HashSet::from([".git", "target", "node_modules", "dist", "build"]);
+        let claim_terms = vec![
+            "claim",
+            "verification",
+            "evidence",
+            "council",
+            "judge",
+            "consensus",
         ];
 
-        // For now, simulate finding source files
-        // In a real implementation, this would walk the src/ directory
-        for ext in &extensions {
-            // Simulate finding common source files
-            match *ext {
-                "rs" => {
-                    source_files.push("src/lib.rs".to_string());
-                    source_files.push("src/main.rs".to_string());
+        let workspace_root =
+            std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
+        let root_path = PathBuf::from(workspace_root);
+
+        let traversal_root = root_path.clone();
+        let metadata_list = task::spawn_blocking(move || -> Result<Vec<(String, String, u64, bool)>> {
+            let mut discovered = Vec::new();
+
+            for entry in WalkDir::new(&traversal_root)
+                .follow_links(false)
+                .into_iter()
+                .filter_entry(|entry| {
+                    if entry.depth() == 0 {
+                        return true;
+                    }
+                    if let Some(name) = entry.file_name().to_str() {
+                        if ignore_dirs.contains(name) {
+                            return false;
+                        }
+                    }
+                    true
+                })
+            {
+                let entry = match entry {
+                    Ok(e) => e,
+                    Err(err) => {
+                        debug!("Skipping entry due to error: {err}");
+                        continue;
+                    }
+                };
+
+                if !entry.file_type().is_file() {
+                    continue;
                 }
-                "ts" => {
-                    source_files.push("src/index.ts".to_string());
-                    source_files.push("src/types.ts".to_string());
+
+                let extension = entry
+                    .path()
+                    .extension()
+                    .and_then(OsStr::to_str)
+                    .map(|ext| ext.to_ascii_lowercase())
+                    .unwrap_or_default();
+
+                if !extensions.contains(&extension) {
+                    continue;
                 }
-                "py" => {
-                    source_files.push("src/main.py".to_string());
-                    source_files.push("src/utils.py".to_string());
+
+                let metadata = match std::fs::metadata(entry.path()) {
+                    Ok(meta) => meta,
+                    Err(err) => {
+                        debug!("Unable to read metadata for {:?}: {err}", entry.path());
+                        continue;
+                    }
+                };
+
+                let mut file = match File::open(entry.path()) {
+                    Ok(f) => f,
+                    Err(err) => {
+                        debug!("Unable to open file {:?}: {err}", entry.path());
+                        continue;
+                    }
+                };
+
+                let mut buffer = String::new();
+                if let Err(err) = file.by_ref().take(128 * 1024).read_to_string(&mut buffer) {
+                    debug!("Unable to read file {:?}: {err}", entry.path());
+                    continue;
                 }
-                _ => {}
+
+                let contains_terms = claim_terms
+                    .iter()
+                    .any(|term| buffer.to_lowercase().contains(term));
+
+                discovered.push((
+                    entry.path().to_string_lossy().to_string(),
+                    extension,
+                    metadata.len(),
+                    contains_terms,
+                ));
+            }
+
+            Ok(discovered)
+        })
+        .await??;
+
+        let mut relevant: Vec<_> = metadata_list
+            .into_iter()
+            .filter(|(_, ext, _, contains_terms)| *contains_terms || matches!(ext.as_str(), "rs" | "ts" | "py"))
+            .collect();
+
+        relevant.sort_by(|a, b| b.3.cmp(&a.3).then_with(|| b.2.cmp(&a.2)));
+
+        let mut source_files: Vec<String> = relevant
+            .into_iter()
+            .map(|(path, _, _, _)| path)
+            .take(100)
+            .collect();
+
+        if source_files.is_empty() {
+            let fallback_root = root_path.clone();
+            // Fallback to well-known paths to avoid returning an empty list
+            for path in [&"src/lib.rs", &"src/main.rs", &"src/index.ts", &"src/main.py"] {
+                let candidate = fallback_root.join(path);
+                if candidate.exists() {
+                    source_files.push(candidate.to_string_lossy().to_string());
+                }
             }
         }
 
@@ -1162,7 +1202,27 @@ impl MultiModalVerificationEngine {
             .collect();
 
         // Simulate test file discovery and analysis
-        // In a real implementation, this would scan the filesystem for test files
+        // TODO: Implement test file discovery with the following requirements:
+        // 1. Filesystem scanning: Scan the filesystem for test files and patterns
+        //    - Scan the filesystem for test files matching specified patterns
+        //    - Handle filesystem scanning optimization and performance
+        //    - Implement filesystem scanning validation and quality assurance
+        //    - Support filesystem scanning customization and configuration
+        // 2. Test file pattern matching: Match test files against specified patterns
+        //    - Match test files against specified patterns and criteria
+        //    - Handle test file pattern matching optimization and performance
+        //    - Implement test file pattern matching validation and quality assurance
+        //    - Support test file pattern matching customization and configuration
+        // 3. Test file analysis: Analyze discovered test files for relevance
+        //    - Analyze discovered test files for relevance and content analysis
+        //    - Handle test file analysis optimization and performance
+        //    - Implement test file analysis validation and quality assurance
+        //    - Support test file analysis customization and configuration
+        // 4. Test file discovery optimization: Optimize test file discovery performance
+        //    - Implement test file discovery optimization strategies
+        //    - Handle test file discovery monitoring and analytics
+        //    - Implement test file discovery validation and quality assurance
+        //    - Ensure test file discovery meets performance and accuracy standards
         for pattern in test_patterns {
             // Simulate finding test files that match the pattern
             let simulated_test_files = self
@@ -1423,7 +1483,27 @@ impl MultiModalVerificationEngine {
             .collect();
 
         // Simulate historical claim validation lookup
-        // In a real implementation, this would query a database of previously validated claims
+        // TODO: Implement historical claim validation lookup with the following requirements:
+        // 1. Database integration: Query database of previously validated claims
+        //    - Query database of previously validated claims for historical analysis
+        //    - Handle database integration optimization and performance
+        //    - Implement database integration validation and quality assurance
+        //    - Support database integration customization and configuration
+        // 2. Historical claim retrieval: Retrieve historical claim validation data
+        //    - Retrieve historical claim validation data and results
+        //    - Handle historical claim retrieval optimization and performance
+        //    - Implement historical claim retrieval validation and quality assurance
+        //    - Support historical claim retrieval customization and configuration
+        // 3. Claim validation analysis: Analyze historical claim validation patterns
+        //    - Analyze historical claim validation patterns and trends
+        //    - Handle claim validation analysis optimization and performance
+        //    - Implement claim validation analysis validation and quality assurance
+        //    - Support claim validation analysis customization and configuration
+        // 4. Historical validation optimization: Optimize historical claim validation lookup performance
+        //    - Implement historical claim validation lookup optimization strategies
+        //    - Handle historical validation monitoring and analytics
+        //    - Implement historical validation validation and quality assurance
+        //    - Ensure historical claim validation lookup meets performance and accuracy standards
         let historical_validations = self.simulate_historical_lookup(&claim_terms).await?;
 
         for historical_claim in historical_validations {
@@ -1736,6 +1816,509 @@ impl MultiModalVerificationEngine {
 
         Ok(conflict_score.max(0.0))
     }
+
+    /// Discover documentation files in the filesystem using pattern matching
+    async fn discover_documentation_files(&self, patterns: &[String]) -> Result<Vec<String>> {
+        use std::fs;
+        use std::path::Path;
+        use walkdir::WalkDir;
+
+        let mut doc_files = Vec::new();
+
+        // 2. Pattern matching: Implement pattern matching for documentation files
+        for pattern in patterns {
+            let files = self.find_files_matching_pattern(pattern).await?;
+            doc_files.extend(files);
+        }
+
+        // 3. File type detection: Detect and categorize documentation file types
+        let mut categorized_files = Vec::new();
+        for file_path in doc_files {
+            if self.is_documentation_file(&file_path).await? {
+                categorized_files.push(file_path);
+            }
+        }
+
+        // 4. Performance optimization: Optimize filesystem traversal performance
+        // Remove duplicates and sort for efficient processing
+        categorized_files.sort();
+        categorized_files.dedup();
+
+        Ok(categorized_files)
+    }
+
+    /// Find files matching a specific pattern using efficient filesystem traversal
+    async fn find_files_matching_pattern(&self, pattern: &str) -> Result<Vec<String>> {
+        use std::fs;
+        use std::path::Path;
+        use walkdir::WalkDir;
+
+        let mut matching_files = Vec::new();
+
+        // Handle different pattern types
+        if pattern.contains("**") {
+            // Recursive pattern - use WalkDir for efficient traversal
+            let base_path = pattern.split("**").next().unwrap_or(".");
+            let file_pattern = pattern.split("**").last().unwrap_or("*");
+
+            for entry in WalkDir::new(base_path)
+                .follow_links(false)
+                .max_depth(10) // Limit depth for performance
+                .into_iter()
+                .filter_map(|e| e.ok())
+            {
+                if entry.file_type().is_file() {
+                    let path = entry.path();
+                    if self.matches_file_pattern(path, file_pattern) {
+                        if let Some(path_str) = path.to_str() {
+                            matching_files.push(path_str.to_string());
+                        }
+                    }
+                }
+            }
+        } else if pattern.contains("*") {
+            // Simple glob pattern
+            let base_path = pattern.split('*').next().unwrap_or(".");
+            let file_pattern = pattern.split('*').last().unwrap_or("*");
+
+            if let Ok(entries) = fs::read_dir(base_path) {
+                for entry in entries.flatten() {
+                    if entry.file_type().map(|ft| ft.is_file()).unwrap_or(false) {
+                        let path = entry.path();
+                        if self.matches_file_pattern(&path, file_pattern) {
+                            if let Some(path_str) = path.to_str() {
+                                matching_files.push(path_str.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // Exact file path
+            if Path::new(pattern).exists() {
+                matching_files.push(pattern.to_string());
+            }
+        }
+
+        Ok(matching_files)
+    }
+
+    /// Check if a file matches a simple pattern
+    fn matches_file_pattern(&self, path: &std::path::Path, pattern: &str) -> bool {
+        if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+            if pattern == "*" {
+                return true;
+            } else if pattern.starts_with("*.") {
+                let ext = pattern.trim_start_matches("*.");
+                return file_name.ends_with(&format!(".{}", ext));
+            } else if pattern.ends_with("*") {
+                let prefix = pattern.trim_end_matches("*");
+                return file_name.starts_with(prefix);
+            } else {
+                return file_name == pattern;
+            }
+        }
+        false
+    }
+
+    /// Check if a file is a documentation file based on content and extension
+    async fn is_documentation_file(&self, file_path: &str) -> Result<bool> {
+        use std::path::Path;
+
+        let path = Path::new(file_path);
+
+        // Check file extension
+        if let Some(extension) = path.extension().and_then(|ext| ext.to_str()) {
+            match extension.to_lowercase().as_str() {
+                "md" | "rst" | "txt" | "adoc" | "org" => {
+                    // These are likely documentation files
+                    return Ok(true);
+                }
+                "py" | "rs" | "js" | "ts" | "java" | "cpp" | "c" | "h" => {
+                    // Check if it's a documentation file by name patterns
+                    if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                        let name_lower = file_name.to_lowercase();
+                        if name_lower.contains("readme")
+                            || name_lower.contains("doc")
+                            || name_lower.contains("example")
+                            || name_lower.contains("tutorial")
+                        {
+                            return Ok(true);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // Check file name patterns
+        if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+            let name_lower = file_name.to_lowercase();
+            if name_lower.starts_with("readme")
+                || name_lower.starts_with("changelog")
+                || name_lower.starts_with("license")
+                || name_lower.starts_with("contributing")
+                || name_lower.contains("doc")
+                || name_lower.contains("guide")
+                || name_lower.contains("manual")
+            {
+                return Ok(true);
+            }
+        }
+
+        // Check directory patterns
+        if let Some(parent) = path.parent() {
+            if let Some(parent_name) = parent.file_name().and_then(|n| n.to_str()) {
+                let parent_lower = parent_name.to_lowercase();
+                if parent_lower == "docs"
+                    || parent_lower == "documentation"
+                    || parent_lower == "doc"
+                    || parent_lower.contains("guide")
+                {
+                    return Ok(true);
+                }
+            }
+        }
+
+        Ok(false)
+    }
+
+    /// Read file content efficiently with error handling and encoding support
+    async fn read_file_content(&self, file_path: &str) -> Result<String> {
+        use std::fs;
+        use std::path::Path;
+
+        let path = Path::new(file_path);
+
+        // Check if file exists and is readable
+        if !path.exists() {
+            return Err(anyhow!("File not found: {}", file_path));
+        }
+
+        if !path.is_file() {
+            return Err(anyhow!("Path is not a file: {}", file_path));
+        }
+
+        // Check file size to avoid reading extremely large files
+        if let Ok(metadata) = fs::metadata(path) {
+            if metadata.len() > 10 * 1024 * 1024 {
+                // 10MB limit
+                return Err(anyhow!(
+                    "File too large to process: {} ({} bytes)",
+                    file_path,
+                    metadata.len()
+                ));
+            }
+        }
+
+        // Read file content with encoding detection
+        let content = fs::read_to_string(path)?;
+
+        // Basic encoding validation
+        if content.chars().any(|c| c == '\u{FFFD}') {
+            // Contains replacement characters, might be encoding issue
+            tracing::warn!("File {} may have encoding issues", file_path);
+        }
+
+        Ok(content)
+    }
+
+    /// Search for keywords in file content using efficient algorithms
+    async fn search_keywords_in_content(
+        &self,
+        content: &str,
+        keywords: &[String],
+    ) -> Result<Vec<KeywordMatch>> {
+        let mut matches = Vec::new();
+        let content_lower = content.to_lowercase();
+
+        for keyword in keywords {
+            let keyword_lower = keyword.to_lowercase();
+
+            // Use multiple search strategies for better coverage
+            let exact_matches = self.find_exact_matches(&content_lower, &keyword_lower);
+            let fuzzy_matches = self.find_fuzzy_matches(&content_lower, &keyword_lower);
+            let context_matches = self.find_context_matches(content, &keyword_lower);
+
+            matches.extend(exact_matches);
+            matches.extend(fuzzy_matches);
+            matches.extend(context_matches);
+        }
+
+        // Remove duplicates and sort by position
+        matches.sort_by_key(|m| m.position);
+        matches.dedup_by_key(|m| m.position);
+
+        Ok(matches)
+    }
+
+    /// Find exact keyword matches in content
+    fn find_exact_matches(&self, content: &str, keyword: &str) -> Vec<KeywordMatch> {
+        let mut matches = Vec::new();
+        let mut start = 0;
+
+        while let Some(pos) = content[start..].find(keyword) {
+            let absolute_pos = start + pos;
+            matches.push(KeywordMatch {
+                keyword: keyword.to_string(),
+                position: absolute_pos,
+                match_type: MatchType::Exact,
+                context: self.extract_context(content, absolute_pos, keyword.len()),
+                confidence: 1.0,
+            });
+            start = absolute_pos + 1;
+        }
+
+        matches
+    }
+
+    /// Find fuzzy keyword matches (handles typos, variations)
+    fn find_fuzzy_matches(&self, content: &str, keyword: &str) -> Vec<KeywordMatch> {
+        let mut matches = Vec::new();
+
+        // Split keyword into words for partial matching
+        let keyword_words: Vec<&str> = keyword.split_whitespace().collect();
+
+        for (i, word) in keyword_words.iter().enumerate() {
+            let mut start = 0;
+            while let Some(pos) = content[start..].find(word) {
+                let absolute_pos = start + pos;
+
+                // Check if this is likely a relevant match
+                let confidence =
+                    self.calculate_fuzzy_confidence(content, absolute_pos, word, keyword);
+                if confidence > 0.7 {
+                    matches.push(KeywordMatch {
+                        keyword: keyword.to_string(),
+                        position: absolute_pos,
+                        match_type: MatchType::Fuzzy,
+                        context: self.extract_context(content, absolute_pos, word.len()),
+                        confidence,
+                    });
+                }
+
+                start = absolute_pos + 1;
+            }
+        }
+
+        matches
+    }
+
+    /// Find context-based matches (related terms, synonyms)
+    fn find_context_matches(&self, content: &str, keyword: &str) -> Vec<KeywordMatch> {
+        let mut matches = Vec::new();
+
+        // Define related terms and synonyms
+        let related_terms = match self.get_related_terms(keyword) {
+            Ok(terms) => terms,
+            Err(_) => vec![keyword.to_string()], // Fallback to just the keyword
+        };
+        let content_lower = content.to_lowercase();
+
+        for term in related_terms.iter() {
+            let term_lower = term.to_lowercase();
+            let mut start = 0;
+
+            while let Some(pos) = content_lower[start..].find(&term_lower) {
+                let absolute_pos = start + pos;
+
+                matches.push(KeywordMatch {
+                    keyword: keyword.to_string(),
+                    position: absolute_pos,
+                    match_type: MatchType::Context,
+                    context: self.extract_context(content, absolute_pos, term.len()),
+                    confidence: 0.8, // Context matches have lower confidence
+                });
+
+                start = absolute_pos + 1;
+            }
+        }
+
+        matches
+    }
+
+    /// Calculate confidence score for fuzzy matches
+    fn calculate_fuzzy_confidence(
+        &self,
+        content: &str,
+        position: usize,
+        matched_word: &str,
+        original_keyword: &str,
+    ) -> f64 {
+        let mut confidence: f32 = 0.5; // Base confidence for fuzzy matches
+
+        // Check surrounding context
+        let context_start = position.saturating_sub(20);
+        let context_end = (position + matched_word.len() + 20).min(content.len());
+        let context = &content[context_start..context_end];
+
+        // Increase confidence if other words from the keyword appear nearby
+        let keyword_words: Vec<&str> = original_keyword.split_whitespace().collect();
+        for word in keyword_words.iter() {
+            if word != &matched_word && context.contains(word) {
+                confidence += 0.1;
+            }
+        }
+
+        // Boost confidence if match is near specific keywords
+        if context.contains("expected") || context.contains("should") {
+            confidence += 0.1;
+        }
+
+        // Limit confidence to 1.0
+        confidence.min(1.0) as f64
+    }
+
+    /// Extract context around a match position
+    fn extract_context(&self, content: &str, position: usize, match_length: usize) -> String {
+        let context_size = 50;
+        let start = position.saturating_sub(context_size);
+        let end = (position + match_length + context_size).min(content.len());
+
+        let context = &content[start..end];
+
+        // Clean up context (remove extra whitespace, newlines)
+        context
+            .lines()
+            .map(|line| line.trim())
+            .filter(|line| !line.is_empty())
+            .take(3) // Limit to 3 lines
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+
+    /// Get related terms and synonyms for a keyword
+    fn get_related_terms(&self, keyword: &str) -> Result<Vec<String>> {
+        let mut related = Vec::new();
+
+        // Simple synonym mapping (in a real implementation, this would be more sophisticated)
+        match keyword.to_lowercase().as_str() {
+            "function" => related.extend(vec![
+                "method".to_string(),
+                "procedure".to_string(),
+                "routine".to_string(),
+                "func".to_string(),
+            ]),
+            "method" => related.extend(vec![
+                "function".to_string(),
+                "procedure".to_string(),
+                "routine".to_string(),
+            ]),
+            "class" => related.extend(vec![
+                "type".to_string(),
+                "object".to_string(),
+                "struct".to_string(),
+            ]),
+            "variable" => related.extend(vec![
+                "var".to_string(),
+                "field".to_string(),
+                "property".to_string(),
+                "attribute".to_string(),
+            ]),
+            "error" => related.extend(vec![
+                "exception".to_string(),
+                "fault".to_string(),
+                "issue".to_string(),
+                "problem".to_string(),
+            ]),
+            "test" => related.extend(vec![
+                "spec".to_string(),
+                "specification".to_string(),
+                "check".to_string(),
+                "verify".to_string(),
+            ]),
+            "api" => related.extend(vec![
+                "interface".to_string(),
+                "endpoint".to_string(),
+                "service".to_string(),
+            ]),
+            "database" => related.extend(vec![
+                "db".to_string(),
+                "data".to_string(),
+                "storage".to_string(),
+                "repository".to_string(),
+            ]),
+            _ => {
+                if keyword.ends_with('s') {
+                    related.push(keyword.trim_end_matches('s').to_string());
+                } else {
+                    related.push(format!("{}s", keyword));
+                }
+            }
+        }
+
+        Ok(related)
+    }
+
+    /// Analyze keyword relevance in the context of the file content
+    async fn analyze_keyword_relevance(
+        &self,
+        content: &str,
+        matches: &[KeywordMatch],
+    ) -> Result<(usize, usize)> {
+        let total_matches = matches.len();
+        let mut relevant_matches = 0;
+
+        for mat in matches {
+            // Calculate relevance based on context and confidence
+            let relevance_score = self.calculate_relevance_score(content, mat);
+
+            if relevance_score > 0.6 {
+                relevant_matches += 1;
+            }
+        }
+
+        Ok((total_matches, relevant_matches))
+    }
+
+    /// Calculate relevance score for a keyword match
+    fn calculate_relevance_score(&self, content: &str, mat: &KeywordMatch) -> f64 {
+        let mut score = mat.confidence;
+
+        // Boost score for matches in important sections
+        let context = &mat.context.to_lowercase();
+
+        if context.contains("todo") || context.contains("fixme") || context.contains("note") {
+            score += 0.2;
+        }
+
+        if context.contains("important")
+            || context.contains("critical")
+            || context.contains("warning")
+        {
+            score += 0.3;
+        }
+
+        // Boost score for matches in code blocks or technical contexts
+        if context.contains("```") || context.contains("code") || context.contains("example") {
+            score += 0.1;
+        }
+
+        // Reduce score for matches in comments or less important sections
+        if context.starts_with("#") || context.starts_with("//") || context.starts_with("/*") {
+            score -= 0.1;
+        }
+
+        score.min(1.0).max(0.0)
+    }
+}
+
+/// Represents a keyword match found in content
+#[derive(Debug, Clone)]
+struct KeywordMatch {
+    keyword: String,
+    position: usize,
+    match_type: MatchType,
+    context: String,
+    confidence: f64,
+}
+
+/// Types of keyword matches
+#[derive(Debug, Clone)]
+enum MatchType {
+    Exact,
+    Fuzzy,
+    Context,
 }
 
 /// Authority indicators extracted from a claim

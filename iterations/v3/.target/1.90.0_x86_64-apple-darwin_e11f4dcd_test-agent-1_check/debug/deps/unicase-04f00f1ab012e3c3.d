@@ -1,0 +1,8 @@
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/.target/1.90.0_x86_64-apple-darwin_e11f4dcd_test-agent-1_check/debug/deps/unicase-04f00f1ab012e3c3.d: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/ascii.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/mod.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/map.rs
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/.target/1.90.0_x86_64-apple-darwin_e11f4dcd_test-agent-1_check/debug/deps/libunicase-04f00f1ab012e3c3.rmeta: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/ascii.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/mod.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/map.rs
+
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/lib.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/ascii.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/mod.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/map.rs:

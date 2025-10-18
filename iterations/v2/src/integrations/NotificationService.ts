@@ -401,7 +401,7 @@ export class PagerDutyNotificationService extends BaseServiceIntegration {
         );
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as any;
 
       return this.createResult(
         true,

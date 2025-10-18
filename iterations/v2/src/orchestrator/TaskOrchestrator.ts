@@ -13,6 +13,7 @@ import * as path from "path";
 import { Worker } from "worker_threads";
 import { PerformanceTracker } from "../rl/PerformanceTracker.js";
 import { circuitBreakerManager } from "../resilience/CircuitBreakerManager";
+import { Logger } from "@/observability/Logger";
 import {
   PleadingDecision,
   PleadingWorkflow,
@@ -51,6 +52,19 @@ import {
 const orchestratorDir = path.join(process.cwd(), "src", "orchestrator");
 
 /**
+ * Internal task execution tracking for WorkerPoolManager
+ */
+interface WorkerPoolTaskExecution {
+  taskId: string;
+  workerId: string | null;
+  startTime: Date;
+  endTime?: Date;
+  status: "starting" | "executing" | "completed" | "failed";
+  result?: WorkerExecutionResult;
+  error?: string;
+}
+
+/**
  * Worker Pool Manager
  */
 class WorkerPoolManager extends EventEmitter {
@@ -60,6 +74,11 @@ class WorkerPoolManager extends EventEmitter {
   private config: WorkerPoolConfig;
   private artifactConfig: WorkerPoolConfig["artifactConfig"];
   private supervisor?: WorkerPoolSupervisor;
+  private readonly activeExecutions = new Map<
+    string,
+    WorkerPoolTaskExecution
+  >();
+  private readonly logger = new Logger("WorkerPoolManager");
 
   constructor(config: WorkerPoolConfig, supervisor?: WorkerPoolSupervisor) {
     super();
@@ -177,6 +196,16 @@ class WorkerPoolManager extends EventEmitter {
     const taskId = this.activeTasks.get(workerId);
     if (taskId) {
       this.activeTasks.delete(workerId);
+
+      // Update task execution tracking
+      const execution = this.activeExecutions.get(taskId);
+      if (execution) {
+        execution.status = "completed";
+        execution.endTime = new Date();
+        execution.result = result;
+        // Keep execution record for metrics, don't delete immediately
+      }
+
       this.updateWorkerMetrics(workerId, {
         status: "idle",
         endTime: Date.now(),
@@ -191,6 +220,16 @@ class WorkerPoolManager extends EventEmitter {
     const taskId = this.activeTasks.get(workerId);
     if (taskId) {
       this.activeTasks.delete(workerId);
+
+      // Update task execution tracking
+      const execution = this.activeExecutions.get(taskId);
+      if (execution) {
+        execution.status = "failed";
+        execution.endTime = new Date();
+        execution.error = error;
+        // Keep execution record for metrics, don't delete immediately
+      }
+
       this.updateWorkerMetrics(workerId, {
         status: "idle",
         endTime: Date.now(),
@@ -215,9 +254,19 @@ class WorkerPoolManager extends EventEmitter {
   }
 
   async executeTask(task: Task): Promise<void> {
-    // Early return if task is already being processed
-    // Note: activeExecutions is not available in WorkerPoolManager, so we'll skip this check for now
-    // TODO: Add proper task state tracking to WorkerPoolManager
+    // Check if task is already being processed
+    if (this.activeExecutions.has(task.id)) {
+      this.logger.warn("Task is already being executed", { taskId: task.id });
+      return;
+    }
+
+    // Add task to active executions
+    this.activeExecutions.set(task.id, {
+      taskId: task.id,
+      workerId: null, // Will be set when worker is assigned
+      startTime: new Date(),
+      status: "starting",
+    });
 
     const availableWorker = this.findAvailableWorker();
     if (!availableWorker) {
@@ -237,6 +286,13 @@ class WorkerPoolManager extends EventEmitter {
     const worker = this.workers.get(availableWorker);
     if (!worker) {
       throw new Error(`Worker ${availableWorker} not found`);
+    }
+
+    // Update task execution tracking
+    const execution = this.activeExecutions.get(task.id);
+    if (execution) {
+      execution.workerId = availableWorker;
+      execution.status = "executing";
     }
 
     // Update metrics

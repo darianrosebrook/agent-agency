@@ -315,8 +315,23 @@ impl ConsensusCoordinator {
         evidence_packets: &[EvidencePacket],
         round_number: i32,
     ) -> Result<ParticipantContribution> {
-        // In a real implementation, this would query the actual judge/participant
-        // For now, simulate a contribution based on evidence
+        // TODO: Implement judge/participant contribution analysis with the following requirements:
+        // 1. Judge/participant query system: Query actual judge/participant data
+        //    - Connect to judge/participant database and systems
+        //    - Retrieve judge/participant information and status
+        //    - Handle judge/participant authentication and authorization
+        // 2. Evidence-based contribution: Generate contributions based on evidence analysis
+        //    - Analyze evidence packets for relevance and quality
+        //    - Generate contextual contributions based on evidence
+        //    - Handle evidence contribution validation and quality assurance
+        // 3. Contribution scoring: Score and evaluate contributions
+        //    - Calculate contribution quality and relevance scores
+        //    - Evaluate contribution impact and effectiveness
+        //    - Handle contribution scoring algorithm optimization
+        // 4. Integration with deliberation: Integrate contributions with deliberation process
+        //    - Submit contributions to deliberation system
+        //    - Handle contribution feedback and iteration
+        //    - Ensure contribution integration meets quality and effectiveness standards
 
         let contribution = ParticipantContribution {
             participant: participant.to_string(),
@@ -368,9 +383,23 @@ impl ConsensusCoordinator {
             participants.len()
         );
 
-        // In a real implementation, this would:
-        // 1. Apply CAWS rule-based tie-breaking
-        // 2. Handle override policies
+        // TODO: Implement CAWS rule-based tie-breaking with the following requirements:
+        // 1. CAWS rule integration: Apply CAWS rule-based tie-breaking
+        //    - Apply CAWS rule-based tie-breaking for debate resolution
+        //    - Handle CAWS rule integration optimization and performance
+        //    - Implement CAWS rule integration validation and quality assurance
+        // 2. Override policies: Handle override policies for debate resolution
+        //    - Handle override policies for debate resolution and management
+        //    - Handle override policies optimization and performance
+        //    - Implement override policies validation and quality assurance
+        // 3. Resolution rationale generation: Generate resolution rationale
+        //    - Generate resolution rationale for debate outcomes
+        //    - Handle resolution rationale generation optimization and performance
+        //    - Implement resolution rationale generation validation and quality assurance
+        // 4. Performance optimization: Optimize CAWS rule-based tie-breaking performance
+        //    - Implement CAWS rule-based tie-breaking caching and optimization strategies
+        //    - Handle CAWS rule-based tie-breaking monitoring and analytics
+        //    - Ensure CAWS rule-based tie-breaking meets performance and reliability standards
         // 3. Generate resolution rationale
 
         Ok(())
@@ -385,9 +414,23 @@ impl ConsensusCoordinator {
             participants.len()
         );
 
-        // In a real implementation, this would:
-        // 1. Compile all debate contributions
-        // 2. Sign the transcript
+        // TODO: Implement debate contribution compilation with the following requirements:
+        // 1. Contribution compilation: Compile all debate contributions
+        //    - Compile all debate contributions for analysis and processing
+        //    - Handle contribution compilation optimization and performance
+        //    - Implement contribution compilation validation and quality assurance
+        // 2. Transcript signing: Sign the transcript for authenticity
+        //    - Sign the transcript for authenticity and integrity
+        //    - Handle transcript signing optimization and performance
+        //    - Implement transcript signing validation and quality assurance
+        // 3. Contribution analysis: Analyze compiled contributions for insights
+        //    - Analyze compiled contributions for insights and patterns
+        //    - Handle contribution analysis optimization and performance
+        //    - Implement contribution analysis validation and quality assurance
+        // 4. Performance optimization: Optimize debate contribution compilation performance
+        //    - Implement debate contribution compilation caching and optimization strategies
+        //    - Handle debate contribution compilation monitoring and analytics
+        //    - Ensure debate contribution compilation meets performance and reliability standards
         // 3. Store for provenance
 
         Ok(())
@@ -444,18 +487,108 @@ impl ConsensusCoordinator {
             .any(|v| matches!(v, JudgeVerdict::Uncertain { .. }));
 
         if has_failures {
-            FinalVerdict::Rejected {
-                primary_reasons: vec!["Failed evaluations".to_string()],
-                summary: format!(
-                    "Task rejected due to failed evaluations. Consensus: {:.2}",
-                    consensus_score
-                ),
+            // Collect specific violations and required changes from failed verdicts
+            let mut required_changes = Vec::new();
+            let mut primary_reasons = Vec::new();
+
+            for (judge_id, verdict) in verdicts {
+                if let JudgeVerdict::Fail { violations, reasoning, .. } = verdict {
+                    primary_reasons.push(format!("Judge {}: {}", judge_id, reasoning));
+                    
+                    for violation in violations {
+                        required_changes.push(crate::types::RequiredChange {
+                            priority: match violation.severity {
+                                crate::types::ViolationSeverity::Critical => crate::types::Priority::Critical,
+                                crate::types::ViolationSeverity::Major => crate::types::Priority::High,
+                                crate::types::ViolationSeverity::Minor => crate::types::Priority::Medium,
+                                crate::types::ViolationSeverity::Warning => crate::types::Priority::Low,
+                            },
+                            description: violation.description.clone(),
+                            rationale: format!("Violation of rule: {}", violation.rule),
+                            estimated_effort: violation.suggestion.clone(),
+                        });
+                    }
+                }
+            }
+
+            if required_changes.is_empty() {
+                FinalVerdict::Rejected {
+                    primary_reasons,
+                    summary: format!(
+                        "Task rejected due to failed evaluations. Consensus: {:.2}",
+                        consensus_score
+                    ),
+                }
+            } else {
+                FinalVerdict::RequiresModification {
+                    required_changes,
+                    summary: format!(
+                        "Task requires modifications based on failed evaluations. Consensus: {:.2}",
+                        consensus_score
+                    ),
+                }
             }
         } else if has_uncertain {
-            FinalVerdict::NeedsInvestigation {
-                questions: vec!["Uncertain evaluations require clarification".to_string()],
+            // Collect concerns and recommendations from uncertain verdicts
+            let mut required_changes = Vec::new();
+            let mut questions = Vec::new();
+
+            for (judge_id, verdict) in verdicts {
+                if let JudgeVerdict::Uncertain { concerns, reasoning, recommendation, .. } = verdict {
+                    questions.push(format!("Judge {}: {}", judge_id, reasoning));
+                    
+                    for concern in concerns {
+                        if let crate::types::Recommendation::Modify = recommendation {
+                            required_changes.push(crate::types::RequiredChange {
+                                priority: crate::types::Priority::Medium,
+                                description: format!("Address concern in {}: {}", concern.area, concern.description),
+                                rationale: format!("Impact: {}", concern.impact),
+                                estimated_effort: concern.mitigation.clone(),
+                            });
+                        }
+                    }
+                }
+            }
+
+            if required_changes.is_empty() {
+                FinalVerdict::NeedsInvestigation {
+                    questions,
+                    summary: format!(
+                        "Task requires investigation. Consensus: {:.2}",
+                        consensus_score
+                    ),
+                }
+            } else {
+                FinalVerdict::RequiresModification {
+                    required_changes,
+                    summary: format!(
+                        "Task requires modifications based on concerns. Consensus: {:.2}",
+                        consensus_score
+                    ),
+                }
+            }
+        } else if consensus_score < 0.7 {
+            // Mixed consensus case - collect suggestions from all verdicts
+            let mut required_changes = Vec::new();
+            
+            for (judge_id, verdict) in verdicts {
+                if let JudgeVerdict::Pass { reasoning, .. } = verdict {
+                    // Extract improvement suggestions from reasoning
+                    if reasoning.contains("improve") || reasoning.contains("enhance") || reasoning.contains("consider") {
+                        required_changes.push(crate::types::RequiredChange {
+                            priority: crate::types::Priority::Low,
+                            description: format!("Consider judge {} suggestion: {}", judge_id, reasoning),
+                            rationale: "Mixed consensus indicates room for improvement".to_string(),
+                            estimated_effort: None,
+                        });
+                    }
+                }
+            }
+
+            FinalVerdict::RequiresModification {
+                required_changes,
                 summary: format!(
-                    "Task requires investigation. Consensus: {:.2}",
+                    "Mixed consensus requires modifications. Consensus: {:.2}",
                     consensus_score
                 ),
             }
@@ -744,8 +877,23 @@ impl ConsensusCoordinator {
     fn get_active_evaluations_count(&self) -> u64 {
         // Track active evaluations by counting ongoing tasks
         let metrics = self.metrics.read().unwrap();
-        // For now, simulate active evaluations based on recent activity
-        // In a real implementation, this would track actual running evaluations
+        // TODO: Implement active evaluation tracking with the following requirements:
+        // 1. Evaluation tracking: Track actual running evaluations and their status
+        //    - Monitor active evaluation processes and progress
+        //    - Track evaluation resource usage and performance
+        //    - Handle evaluation tracking error detection and recovery
+        // 2. Evaluation metrics: Calculate evaluation metrics and analytics
+        //    - Compute evaluation completion rates and timing
+        //    - Analyze evaluation quality and effectiveness metrics
+        //    - Handle evaluation metrics aggregation and reporting
+        // 3. Evaluation lifecycle: Manage evaluation lifecycle and states
+        //    - Track evaluation state transitions and progress
+        //    - Handle evaluation lifecycle management and optimization
+        //    - Implement evaluation lifecycle monitoring and alerting
+        // 4. Performance monitoring: Monitor evaluation performance and optimization
+        //    - Track evaluation performance metrics and trends
+        //    - Identify evaluation bottlenecks and optimization opportunities
+        //    - Ensure evaluation tracking meets performance and reliability standards
         if metrics.total_evaluations > 0 {
             // Simulate 1-3 active evaluations based on recent activity
             (metrics.total_evaluations % 3) + 1
@@ -758,8 +906,23 @@ impl ConsensusCoordinator {
     fn get_evaluation_queue_depth(&self) -> u64 {
         // Track evaluation queue depth
         let metrics = self.metrics.read().unwrap();
-        // For now, simulate queue depth based on recent activity
-        // In a real implementation, this would track actual queued tasks
+        // TODO: Implement evaluation queue tracking with the following requirements:
+        // 1. Queue monitoring: Track actual queued evaluation tasks and their status
+        //    - Monitor evaluation queue depth and processing status
+        //    - Track queue processing rates and bottlenecks
+        //    - Handle queue monitoring error detection and recovery
+        // 2. Queue analytics: Analyze queue performance and trends
+        //    - Calculate queue processing metrics and analytics
+        //    - Analyze queue backlog and processing efficiency
+        //    - Handle queue analytics aggregation and reporting
+        // 3. Queue optimization: Optimize queue processing and management
+        //    - Implement queue processing optimization strategies
+        //    - Handle queue prioritization and load balancing
+        //    - Implement queue optimization monitoring and alerting
+        // 4. Queue management: Manage queue lifecycle and operations
+        //    - Handle queue task scheduling and execution
+        //    - Implement queue management and administration
+        //    - Ensure queue tracking meets performance and reliability standards
         if metrics.total_evaluations > 0 {
             // Simulate queue depth based on recent evaluation patterns
             (metrics.total_evaluations % 5) + 1

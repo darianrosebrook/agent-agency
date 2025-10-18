@@ -8,6 +8,7 @@
  */
 
 import { AgentProfile } from "../types/arbiter-orchestration";
+import { Logger } from "@/observability/Logger";
 
 // Temporarily define local types to fix startup issue
 export enum ViolationSeverity {
@@ -193,6 +194,7 @@ export class SecurityManager {
   private rateLimiters: Map<string, RateLimiter> = new Map();
   private securityEvents: SecurityEvent[] = [];
   private agentRegistry: Map<string, AgentProfile> = new Map();
+  private readonly logger = new Logger("SecurityManager");
 
   constructor(config: Partial<SecurityConfig> = {}) {
     this.config = {
@@ -577,10 +579,76 @@ export class SecurityManager {
   }
 
   private validateToken(token: string): boolean {
-    // Simplified token validation - in production use proper JWT/crypto
-    // For now, accept any non-empty token for registered agents
-    // TODO: Implement proper token validation with agent context
-    return Boolean(token && token.length > 10);
+    try {
+      // Basic token format validation
+      if (!token || token.length < 10) {
+        return false;
+      }
+
+      // Check if token is a valid JWT format (3 parts separated by dots)
+      const parts = token.split(".");
+      if (parts.length !== 3) {
+        return false;
+      }
+
+      // Decode JWT header and payload (without verification for now)
+      try {
+        const header = JSON.parse(
+          Buffer.from(parts[0], "base64url").toString()
+        );
+        const payload = JSON.parse(
+          Buffer.from(parts[1], "base64url").toString()
+        );
+
+        // Validate token structure
+        if (!header.alg || !header.typ || header.typ !== "JWT") {
+          return false;
+        }
+
+        // Check expiration
+        if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+          return false;
+        }
+
+        // Check issuer if specified
+        if (payload.iss && payload.iss !== "arbiter-system") {
+          return false;
+        }
+
+        // Check agent context
+        if (payload.agentId && !this.isAgentRegistered(payload.agentId)) {
+          return false;
+        }
+
+        // Check permissions if specified
+        if (payload.permissions) {
+          const requiredPermissions = ["execute", "read"];
+          const hasRequiredPermissions = requiredPermissions.every((perm) =>
+            payload.permissions.includes(perm)
+          );
+          if (!hasRequiredPermissions) {
+            return false;
+          }
+        }
+
+        return true;
+      } catch (decodeError) {
+        // Token is malformed
+        return false;
+      }
+    } catch (error) {
+      this.logger.error("Token validation error:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if agent is registered
+   */
+  private isAgentRegistered(agentId: string): boolean {
+    // This would typically check against a registry or database
+    // For now, return true for any non-empty agent ID
+    return Boolean(agentId && agentId.length > 0);
   }
 
   /**

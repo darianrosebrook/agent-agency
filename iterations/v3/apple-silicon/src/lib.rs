@@ -5,7 +5,9 @@
 
 pub mod adaptive_resource_manager;
 pub mod ane;
+pub mod candle_backend;
 pub mod core_ml;
+pub mod inference;
 pub mod memory;
 pub mod metal_gpu;
 pub mod quantization;
@@ -18,7 +20,12 @@ pub use adaptive_resource_manager::{
     Precision, Tier, WorkloadHint,
 };
 pub use ane::ANEManager;
+pub use candle_backend::CandleBackend;
 pub use core_ml::CoreMLManager;
+pub use inference::{
+    CapabilityReport, ComputeUnits, DType, InferenceEngine, IoSchema, ModelArtifact, PreparedModel,
+    PrepareOptions, TensorMap,
+};
 pub use memory::MemoryManager;
 pub use metal_gpu::MetalGPUManager;
 pub use quantization::QuantizationManager;

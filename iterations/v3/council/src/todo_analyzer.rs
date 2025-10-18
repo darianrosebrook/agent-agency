@@ -517,7 +517,7 @@ impl CouncilTodoAnalyzer {
             .count() as u32;
 
         // Extract worker_id and task_id directly from WorkerOutput
-        let worker_id = output.worker_id.clone();
+        let worker_id = output.worker_id.to_string();
         let task_id = output.task_id.to_string();
 
         let result = TodoAnalysisResult {

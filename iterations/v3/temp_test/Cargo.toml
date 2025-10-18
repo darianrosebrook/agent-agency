@@ -1,0 +1,9 @@
+[package]
+name = "temp_test"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+candle-core = "0.9.1"

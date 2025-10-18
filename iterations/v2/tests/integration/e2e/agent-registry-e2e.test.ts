@@ -119,6 +119,7 @@ describe("ARBITER-001 End-to-End Integration", () => {
     it("should complete full agent registration workflow", async () => {
       // Arrange
       const agentProfile = {
+        id: "e2e-agent-1",
         name: "E2E Test Agent",
         modelFamily: "claude-3.5" as const,
         capabilities: {
@@ -157,6 +158,7 @@ describe("ARBITER-001 End-to-End Integration", () => {
     it("should handle performance tracking end-to-end", async () => {
       // Arrange: Register agent
       const agent = await registry.registerAgent({
+        id: "e2e-agent-perf",
         name: "Performance Test Agent",
         modelFamily: "gpt-4" as const,
         capabilities: {

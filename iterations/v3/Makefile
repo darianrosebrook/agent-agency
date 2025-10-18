@@ -82,8 +82,13 @@ gates:
 
 mutation-tests:
 	@echo "Running mutation tests..."
-	# TODO: Implement mutation testing
-	@echo "Mutation testing placeholder - would check score >= $${MUTATION_MIN:-0.50}"
+	@if [ "$${ENABLE_MUTATION:-false}" = "true" ]; then \
+		echo "Executing mutation testing with cargo-mutants..."; \
+		cargo mutants --workspace --timeout 300 --no-shuffle --baseline run; \
+		echo "Mutation testing completed. Score threshold: $${MUTATION_MIN:-0.50}"; \
+	else \
+		echo "Mutation testing disabled (ENABLE_MUTATION=false)"; \
+	fi
 
 contract-tests:
 	@echo "Running contract tests..."

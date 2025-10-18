@@ -519,7 +519,7 @@ mod tests {
 }
 
 /// Types of provenance filters
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum FilterType {
     TimeRange,
     EntityType,
@@ -532,7 +532,7 @@ pub enum FilterType {
 }
 
 /// Filter operators for provenance queries
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum FilterOperator {
     Equals,
     In,

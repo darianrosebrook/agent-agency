@@ -127,6 +127,19 @@ export class ConfigManager {
         port: this.parseNumber(process.env.PORT, 3000),
         host: process.env.HOST || "localhost",
       },
+      database: {
+        host: process.env.DB_HOST || "localhost",
+        port: this.parseNumber(process.env.DB_PORT, 5432),
+        database: process.env.DB_NAME || "agent_agency",
+        username: process.env.DB_USERNAME,
+        password: process.env.DB_PASSWORD,
+        maxConnections: this.parseNumber(process.env.DB_MAX_CONNECTIONS, 20),
+        connectionTimeout: this.parseNumber(
+          process.env.DB_CONNECTION_TIMEOUT,
+          10000
+        ),
+        queryTimeout: this.parseNumber(process.env.DB_QUERY_TIMEOUT, 30000),
+      },
       registry: {
         maxAgents: this.parseNumber(process.env.MAX_AGENTS, 1000),
         cacheEnabled: this.parseBoolean(process.env.CACHE_ENABLED, true),

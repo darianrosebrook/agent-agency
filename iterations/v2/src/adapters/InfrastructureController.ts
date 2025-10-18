@@ -114,6 +114,8 @@ export class InfrastructureController {
   private readonly activeOperations = new Map<string, ScalingOperation>();
   private readonly serviceManager!: ServiceIntegrationManager;
   private readonly componentMetadataCache = new Map<string, any>();
+  private readonly scheduledTasks = new Map<string, any>();
+  private taskScheduler?: any; // Task scheduler interface
 
   constructor(config: Partial<InfrastructureControllerConfig> = {}) {
     this.config = {
@@ -3592,26 +3594,115 @@ export class InfrastructureController {
     componentId: string,
     durationMs: number
   ): Promise<void> {
-    // TODO: Schedule automatic reinstatement
-    this.logger.info("Scheduling reinstatement", {
-      componentId,
-      durationMs,
-    });
+    try {
+      this.logger.info("Scheduling reinstatement", {
+        componentId,
+        durationMs,
+      });
 
-    // Simulate scheduling
-    await new Promise((resolve) => setTimeout(resolve, 200));
+      // Create scheduled task for reinstatement
+      const scheduledTask = {
+        id: `reinstatement-${componentId}-${Date.now()}`,
+        componentId,
+        type: "reinstatement",
+        scheduledTime: new Date(Date.now() + durationMs),
+        durationMs,
+        status: "scheduled",
+        createdAt: new Date(),
+      };
 
-    // Schedule actual reinstatement (in real implementation)
-    setTimeout(async () => {
-      try {
-        await this.reinstateComponent(componentId);
-      } catch (error) {
-        this.logger.error("Failed to reinstate component", {
-          componentId,
-          error,
+      // Store in scheduled tasks registry
+      this.scheduledTasks.set(scheduledTask.id, scheduledTask);
+
+      // Use proper task scheduler if available
+      if (this.taskScheduler) {
+        await this.taskScheduler.schedule({
+          id: scheduledTask.id,
+          task: async () => {
+            try {
+              await this.reinstateComponent(componentId);
+              this.logger.info("Component reinstated successfully", {
+                componentId,
+              });
+
+              // Update task status
+              const task = this.scheduledTasks.get(scheduledTask.id);
+              if (task) {
+                task.status = "completed";
+                task.completedAt = new Date();
+              }
+            } catch (error) {
+              this.logger.error("Failed to reinstate component", {
+                componentId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+
+              // Update task status
+              const task = this.scheduledTasks.get(scheduledTask.id);
+              if (task) {
+                task.status = "failed";
+                task.error =
+                  error instanceof Error ? error.message : String(error);
+                task.failedAt = new Date();
+              }
+            } finally {
+              // Clean up completed task
+              this.scheduledTasks.delete(scheduledTask.id);
+            }
+          },
+          delay: durationMs,
+          retries: 3,
+          retryDelay: 5000,
         });
+      } else {
+        // Fallback to setTimeout for development
+        setTimeout(async () => {
+          try {
+            await this.reinstateComponent(componentId);
+            this.logger.info("Component reinstated successfully", {
+              componentId,
+            });
+
+            // Update task status
+            const task = this.scheduledTasks.get(scheduledTask.id);
+            if (task) {
+              task.status = "completed";
+              task.completedAt = new Date();
+            }
+          } catch (error) {
+            this.logger.error("Failed to reinstate component", {
+              componentId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+
+            // Update task status
+            const task = this.scheduledTasks.get(scheduledTask.id);
+            if (task) {
+              task.status = "failed";
+              task.error =
+                error instanceof Error ? error.message : String(error);
+              task.failedAt = new Date();
+            }
+          } finally {
+            // Clean up completed task
+            this.scheduledTasks.delete(scheduledTask.id);
+          }
+        }, durationMs);
       }
-    }, durationMs);
+
+      this.logger.info("Reinstatement scheduled successfully", {
+        componentId,
+        taskId: scheduledTask.id,
+        scheduledTime: scheduledTask.scheduledTime,
+      });
+    } catch (error) {
+      this.logger.error("Failed to schedule reinstatement", {
+        componentId,
+        durationMs,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   }
 
   private async reinstateComponent(componentId: string): Promise<void> {

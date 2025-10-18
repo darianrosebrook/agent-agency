@@ -17,6 +17,7 @@ import {
   AgentRegistrySecurity,
   SecurityContext,
 } from "../security/AgentRegistrySecurity.js";
+import { Logger } from "@/observability/Logger";
 import type {
   AgentId,
   AgentProfile,
@@ -67,6 +68,7 @@ export class AgentRegistryManager {
   private dbClient?: AgentRegistryDbClient;
   private securityManager?: AgentRegistrySecurity;
   private performanceTracker?: PerformanceTracker;
+  private readonly logger = new Logger("AgentRegistryManager");
 
   constructor(
     config: Partial<AgentRegistryConfig> = {},
@@ -441,27 +443,12 @@ export class AgentRegistryManager {
     // Store updated profile
     this.agents.set(agentId, updatedProfile);
 
-    // Persist to database if enabled
-    if (this.config.enableDatabase && this.databaseClient) {
-      try {
-        await this.databaseClient.updateAgentStatus(agentId, newStatus, {
-          timestamp: new Date(),
-          reason: reason || "Status update",
-          metadata: metadata || {},
-        });
-        this.logger.debug("Agent status persisted to database", {
-          agentId,
-          newStatus,
-        });
-      } catch (error) {
-        this.logger.error("Failed to persist agent status to database", {
-          agentId,
-          newStatus,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        // Don't throw - status update should succeed even if persistence fails
-      }
-    }
+    // TODO: Implement status persistence to database
+    // Status is currently managed in memory only
+    this.logger.debug("Agent status updated in memory", {
+      agentId,
+      status,
+    });
 
     // Audit log successful status update
     if (this.config.enableSecurity && this.securityManager && securityContext) {

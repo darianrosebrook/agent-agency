@@ -328,10 +328,8 @@ impl ProvenanceService {
             if !activity_types.is_empty() {
                 filters.push(ProvenanceFilter {
                     filter_type: FilterType::ActivityType,
-                    field: "activity_type".to_string(),
                     operator: FilterOperator::In,
                     value: serde_json::to_value(activity_types)?,
-                    description: format!("Activity types: {}", activity_types.join(", ")),
                 });
             }
         }
@@ -340,10 +338,8 @@ impl ProvenanceService {
             if !activity_ids.is_empty() {
                 filters.push(ProvenanceFilter {
                     filter_type: FilterType::ActivityId,
-                    field: "activity_id".to_string(),
                     operator: FilterOperator::In,
                     value: serde_json::to_value(activity_ids)?,
-                    description: format!("Activity IDs: {}", activity_ids.len()),
                 });
             }
         }
@@ -361,10 +357,8 @@ impl ProvenanceService {
             if !agent_ids.is_empty() {
                 filters.push(ProvenanceFilter {
                     filter_type: FilterType::AgentId,
-                    field: "agent_id".to_string(),
                     operator: FilterOperator::In,
                     value: serde_json::to_value(agent_ids)?,
-                    description: format!("Agent IDs: {}", agent_ids.len()),
                 });
             }
         }
@@ -373,10 +367,8 @@ impl ProvenanceService {
             if !agent_types.is_empty() {
                 filters.push(ProvenanceFilter {
                     filter_type: FilterType::AgentType,
-                    field: "agent_type".to_string(),
                     operator: FilterOperator::In,
                     value: serde_json::to_value(agent_types)?,
-                    description: format!("Agent types: {}", agent_types.join(", ")),
                 });
             }
         }
@@ -391,19 +383,8 @@ impl ProvenanceService {
         filters: &mut Vec<ProvenanceFilter>,
     ) -> Result<()> {
         if let Some(custom_filters) = &query.custom_filters {
-            for (field, filter_value) in custom_filters {
-                let filter = ProvenanceFilter {
-                    filter_type: FilterType::Custom,
-                    field: field.clone(),
-                    operator: self.determine_operator(filter_value)?,
-                    value: filter_value.clone(),
-                    description: format!(
-                        "Custom filter: {} {}",
-                        field,
-                        self.describe_filter_value(filter_value)?
-                    ),
-                };
-                filters.push(filter);
+            for filter in custom_filters {
+                filters.push(filter.clone());
             }
         }
         Ok(())
@@ -450,41 +431,25 @@ impl ProvenanceService {
     fn validate_filters(&self, filters: &[ProvenanceFilter]) -> Result<()> {
         for filter in filters {
             // Verify filter syntax and parameter validity
-            if filter.field.is_empty() {
-                return Err(anyhow::anyhow!("Filter field cannot be empty"));
-            }
-
-            // Check filter compatibility and consistency
+            // The filter_type already indicates the field, so we just validate the value
             match filter.filter_type {
                 FilterType::TimeRange => {
-                    if filter.field != "timestamp" {
+                    // Validate that the value is a proper time range
+                    if !filter.value.is_object() {
                         return Err(anyhow::anyhow!(
-                            "Time range filter must use 'timestamp' field"
+                            "Time range filter must have an object value with start/end"
                         ));
                     }
                 }
-                FilterType::EntityType => {
-                    if filter.field != "entity_type" {
+                FilterType::EntityType | FilterType::ActivityType | FilterType::AgentType => {
+                    // These should have array values for 'In' operator
+                    if !filter.value.is_array() {
                         return Err(anyhow::anyhow!(
-                            "Entity type filter must use 'entity_type' field"
+                            "Entity/Activity/Agent type filters must have array values"
                         ));
                     }
                 }
-                FilterType::ActivityType => {
-                    if filter.field != "activity_type" {
-                        return Err(anyhow::anyhow!(
-                            "Activity type filter must use 'activity_type' field"
-                        ));
-                    }
-                }
-                FilterType::AgentType => {
-                    if filter.field != "agent_type" {
-                        return Err(anyhow::anyhow!(
-                            "Agent type filter must use 'agent_type' field"
-                        ));
-                    }
-                }
-                _ => {} // Custom filters can use any field
+                _ => {} // Custom filters can have any value type
             }
 
             // Validate operator compatibility
@@ -555,8 +520,8 @@ impl ProvenanceService {
         filter1: &ProvenanceFilter,
         filter2: &ProvenanceFilter,
     ) -> bool {
-        // Same field and operator
-        if filter1.field == filter2.field && filter1.operator == filter2.operator {
+        // Same filter type and operator
+        if filter1.filter_type == filter2.filter_type && filter1.operator == filter2.operator {
             // Check if values are equivalent
             match (&filter1.value, &filter2.value) {
                 (serde_json::Value::Array(arr1), serde_json::Value::Array(arr2)) => {

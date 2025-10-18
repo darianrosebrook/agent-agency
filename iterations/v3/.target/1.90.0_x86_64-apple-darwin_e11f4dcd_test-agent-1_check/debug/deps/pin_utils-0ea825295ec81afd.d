@@ -1,0 +1,9 @@
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/.target/1.90.0_x86_64-apple-darwin_e11f4dcd_test-agent-1_check/debug/deps/pin_utils-0ea825295ec81afd.d: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/stack_pin.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/projection.rs
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/.target/1.90.0_x86_64-apple-darwin_e11f4dcd_test-agent-1_check/debug/deps/libpin_utils-0ea825295ec81afd.rlib: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/stack_pin.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/projection.rs
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/.target/1.90.0_x86_64-apple-darwin_e11f4dcd_test-agent-1_check/debug/deps/libpin_utils-0ea825295ec81afd.rmeta: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/stack_pin.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/projection.rs
+
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/lib.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/stack_pin.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/projection.rs:

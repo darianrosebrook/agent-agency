@@ -1,0 +1,8 @@
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/.target/1.90.0_x86_64-apple-darwin_e11f4dcd_test-agent-1_check/debug/deps/siphasher-4215b476bac576ed.d: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/siphasher-1.0.1/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/siphasher-1.0.1/src/sip.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/siphasher-1.0.1/src/sip128.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/siphasher-1.0.1/src/../README.md
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/.target/1.90.0_x86_64-apple-darwin_e11f4dcd_test-agent-1_check/debug/deps/libsiphasher-4215b476bac576ed.rmeta: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/siphasher-1.0.1/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/siphasher-1.0.1/src/sip.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/siphasher-1.0.1/src/sip128.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/siphasher-1.0.1/src/../README.md
+
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/siphasher-1.0.1/src/lib.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/siphasher-1.0.1/src/sip.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/siphasher-1.0.1/src/sip128.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/siphasher-1.0.1/src/../README.md:

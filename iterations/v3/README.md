@@ -79,6 +79,8 @@ Traditional agent systems use rigid hierarchies or market-based coordination. V3
 - **Unified Memory Management**: Efficient data sharing across CPU, GPU, and ANE
 - **Thermal Awareness**: Performance scaling based on system temperature and power constraints
 - **Core ML Optimization**: Model quantization and deployment optimization for Apple hardware
+  - ⚠️ **Status**: [Blocked on Objective-C FFI bridge](./docs/CORE_ML_INTEGRATION_RISK.md) – See [Core ML Integration Risk Document](./docs/CORE_ML_INTEGRATION_RISK.md) for architecture, timeline, and alternatives
+  - 📋 **Implementation Path**: [De-Risked Core ML Tactics](./docs/CORE_ML_IMPLEMENTATION_PATH.md) – Concrete Swift→C ABI bridge strategy with telemetry gates and decision checkpoints
 
 ## Problem Statement
 
@@ -178,6 +180,20 @@ Traditional agent systems use rigid hierarchies or market-based coordination. V3
 - **Core Council**: Sequential judge evaluation framework operational
 - **Build Status**: 41 compilation errors, 30 warnings (active stabilization)
 - **Test Coverage**: Basic unit tests implemented, integration tests in progress
+
+### Known Limitations & Blockers
+
+See **[docs/CORE_ML_INTEGRATION_RISK.md](./docs/CORE_ML_INTEGRATION_RISK.md)** for detailed risk analysis of pending work.
+
+| Component | Status | Issue | Impact |
+|-----------|--------|-------|--------|
+| **Core ML Optimization** | ⚠️ Blocked | Requires Objective-C FFI bridge | ANE acceleration unavailable; falls back to CPU |
+| **ANE Device Context** | ✓ Scaffolded | Framework APIs not exposed | Device capability detection works; compilation pending |
+| **Model Lifecycle** | ✓ Complete | — | Model usage tracking, LRU eviction fully implemented |
+| **Consensus Instrumentation** | ✓ Complete | — | Evaluation latency now properly tracked |
+| **Judge Modifications** | ✓ Complete | — | RequiredChange synthesis from verdicts working |
+
+**Recommendation**: Focus on CPU-based optimization and establish performance baseline before investing in Core ML FFI work. See [Core ML Integration Risk Document](./docs/CORE_ML_INTEGRATION_RISK.md) for alternatives and timeline.
 
 ### Immediate Priorities (Q1 2025)
 1. **Resolve compilation errors** - Stabilize core functionality

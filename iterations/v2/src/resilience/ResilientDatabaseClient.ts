@@ -7,7 +7,7 @@
  * @author @darianrosebrook
  */
 
-import { AgentRegistryDatabaseClient } from "../database/AgentRegistryDatabaseClient";
+import { AgentRegistryDbClient } from "../database/AgentRegistryDbClient";
 import { AgentRegistryManager } from "../orchestrator/AgentRegistryManager";
 import {
   AgentId,
@@ -56,7 +56,7 @@ export class ResilientDatabaseClient {
   }> = [];
 
   constructor(
-    private databaseClient: AgentRegistryDatabaseClient,
+    private databaseClient: AgentRegistryDbClient,
     private config: ResilientClientConfig = {
       enableFallback: true,
       circuitBreaker: {
@@ -144,9 +144,10 @@ export class ResilientDatabaseClient {
       return results.map((r) => r.agent);
     }
 
-    return this.executeWithResilience(() =>
-      this.databaseClient.queryAgentsByCapability(query)
+    const results = await this.executeWithResilience(() =>
+      this.databaseClient.queryAgents(query)
     );
+    return results.map((result) => result.agent);
   }
 
   /**
@@ -218,7 +219,19 @@ export class ResilientDatabaseClient {
           };
     }
 
-    return this.executeWithResilience(() => this.databaseClient.getStats());
+    const stats = await this.executeWithResilience(() =>
+      this.databaseClient.getStats()
+    );
+
+    // Transform to RegistryStats interface
+    return {
+      totalAgents: stats.totalAgents,
+      activeAgents: stats.activeAgents,
+      idleAgents: stats.totalAgents - stats.activeAgents,
+      averageUtilization: 0, // TODO: Calculate from agent load data
+      averageSuccessRate: stats.averagePerformance,
+      lastUpdated: new Date().toISOString(),
+    };
   }
 
   /**

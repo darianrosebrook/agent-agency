@@ -38,6 +38,28 @@ export interface CAWSValidationResult {
 
   /** Additional metadata */
   metadata?: ValidationMetadata;
+
+  // Additional properties for compatibility
+  /** Specification ID */
+  specId?: string;
+
+  /** Whether validation is valid (alias for passed) */
+  valid?: boolean;
+
+  /** Validation score (0-1) */
+  score?: number;
+
+  /** Validation violations */
+  violations?: string[];
+
+  /** Suggested fixes */
+  fixes?: string[];
+
+  /** Validation duration in milliseconds */
+  duration?: number;
+
+  /** Validation checks performed */
+  checks?: string[];
 }
 
 /**

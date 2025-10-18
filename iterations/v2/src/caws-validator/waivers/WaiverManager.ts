@@ -180,4 +180,13 @@ export class WaiverManager {
       throw error;
     }
   }
+
+  /**
+   * Get applied waivers for a given specification
+   */
+  public getAppliedWaivers(specId: string): WaiverApplication[] {
+    // In a real implementation, this would track applied waivers
+    // For now, return empty array
+    return [];
+  }
 }

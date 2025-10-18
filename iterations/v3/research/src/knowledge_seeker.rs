@@ -6,7 +6,7 @@
 use crate::types::*;
 use crate::ContentProcessingConfig;
 use crate::{
-    ConfigurationUpdate, ContentProcessor, ContextBuilder, ResearchConfig, VectorSearchEngine,
+    ConfigurationUpdate, ContentProcessor, ContextBuilder, VectorSearchEngine,
     WebScraper,
 };
 use anyhow::{Context, Result};
@@ -316,7 +316,7 @@ impl KnowledgeSeeker {
     }
 
     /// Update configuration
-    pub async fn update_config(&self, update: ConfigurationUpdate) -> Result<()> {
+    pub async fn update_config(&mut self, update: ConfigurationUpdate) -> Result<()> {
         info!(
             "Updating research configuration: {} = {:?}",
             update.field, update.value
@@ -327,10 +327,11 @@ impl KnowledgeSeeker {
 
         // 2. Configuration persistence: Persist configuration changes
         let old_config = self.config.clone();
+        let new_config = self.config.clone(); // Clone before mutable borrow
         self.apply_configuration_update(&update)?;
 
         // 3. Component restart: Restart affected components with new configuration
-        self.restart_affected_components(&old_config, &self.config)
+        self.restart_affected_components(&old_config, &new_config)
             .await?;
 
         // 4. Configuration verification: Verify configuration changes are applied
@@ -1140,7 +1141,27 @@ impl KnowledgeSeeker {
         let mut index = InvertedIndex::new();
 
         // Get all documents from vector search
-        // In a real implementation, this would get all documents from the vector search engine
+        // TODO: Implement vector search engine document retrieval with the following requirements:
+        // 1. Vector search engine integration: Get all documents from the vector search engine
+        //    - Get all documents from the vector search engine for processing
+        //    - Handle vector search engine integration optimization and performance
+        //    - Implement vector search engine integration validation and quality assurance
+        //    - Support vector search engine integration customization and configuration
+        // 2. Document retrieval optimization: Optimize document retrieval performance
+        //    - Optimize document retrieval performance for vector search engine
+        //    - Handle document retrieval optimization and performance
+        //    - Implement document retrieval optimization validation and quality assurance
+        //    - Support document retrieval optimization customization and configuration
+        // 3. Document processing: Process retrieved documents for analysis
+        //    - Process retrieved documents for knowledge analysis and processing
+        //    - Handle document processing optimization and performance
+        //    - Implement document processing validation and quality assurance
+        //    - Support document processing customization and configuration
+        // 4. Vector search optimization: Optimize vector search engine document retrieval performance
+        //    - Implement vector search engine document retrieval optimization strategies
+        //    - Handle vector search engine monitoring and analytics
+        //    - Implement vector search engine validation and quality assurance
+        //    - Ensure vector search engine document retrieval meets performance and accuracy standards
         let all_documents: Vec<KnowledgeEntry> = Vec::new(); // Placeholder
 
         for (doc_id, document) in all_documents.iter().enumerate() {
@@ -1288,8 +1309,23 @@ impl KnowledgeSeeker {
 
     /// Apply fuzzy matching for typo tolerance
     async fn apply_fuzzy_matching(&self, results: Vec<SearchResult>) -> Result<Vec<SearchResult>> {
-        // In a real implementation, this would use fuzzy matching algorithms
-        // For now, we'll just return the results as-is
+        // TODO: Implement fuzzy matching algorithms with the following requirements:
+        // 1. Fuzzy matching implementation: Implement fuzzy matching algorithms for search results
+        //    - Apply fuzzy matching algorithms (Levenshtein, Jaro-Winkler, etc.)
+        //    - Handle fuzzy matching optimization and performance
+        //    - Implement fuzzy matching validation and quality assurance
+        // 2. Search result optimization: Optimize search results using fuzzy matching
+        //    - Improve search result relevance using fuzzy matching
+        //    - Handle search result optimization and ranking
+        //    - Implement search result optimization validation
+        // 3. Fuzzy matching configuration: Configure fuzzy matching parameters and thresholds
+        //    - Configure fuzzy matching sensitivity and thresholds
+        //    - Handle fuzzy matching configuration optimization
+        //    - Implement fuzzy matching configuration validation
+        // 4. Performance optimization: Optimize fuzzy matching performance and accuracy
+        //    - Implement fuzzy matching caching and optimization strategies
+        //    - Handle fuzzy matching performance monitoring and analytics
+        //    - Ensure fuzzy matching meets performance and accuracy standards
         Ok(results)
     }
 
@@ -1408,6 +1444,24 @@ impl KnowledgeSeeker {
                                 .process_content(&scraping_result.content)
                                 .await?;
 
+                            // Create a temporary KnowledgeEntry for scoring
+                            let temp_entry = KnowledgeEntry {
+                                id: uuid::Uuid::new_v4(),
+                                title: scraping_result.title.clone(),
+                                content: processed_content.processed_content.clone(),
+                                source: source.clone(),
+                                source_url: Some(url.clone()),
+                                content_type: ContentType::Html,
+                                language: None,
+                                tags: vec![],
+                                embedding: None,
+                                created_at: chrono::Utc::now(),
+                                updated_at: chrono::Utc::now(),
+                                access_count: 0,
+                                last_accessed: None,
+                                metadata: HashMap::new(),
+                            };
+
                             let result = ResearchResult {
                                 query_id: query.id,
                                 source: source.clone(),
@@ -1415,13 +1469,13 @@ impl KnowledgeSeeker {
                                 content: processed_content.processed_content,
                                 summary: processed_content.summary,
                                 relevance_score: self.calculate_relevance_score(
+                                    &temp_entry,
                                     &query,
-                                    &processed_content.processed_content,
-                                ),
+                                )? as f32,
                                 confidence_score: self.calculate_confidence_score(
-                                    &source,
-                                    &processed_content.processed_content,
-                                ),
+                                    &temp_entry,
+                                    &query,
+                                )? as f32,
                                 //    - Factor in corroboration from multiple sources
                                 // 2. Confidence factors: Consider multiple confidence factors
                                 //    - Source credibility and expertise
@@ -1651,7 +1705,23 @@ mod tests {
         let seeker = KnowledgeSeeker::new(config).await;
 
         // In a real test, we'd assert successful creation
-        // For now, we just ensure it compiles
+        // TODO: Implement comprehensive knowledge seeker testing with the following requirements:
+        // 1. Knowledge seeker validation: Validate knowledge seeker creation and functionality
+        //    - Verify knowledge seeker creation success and configuration
+        //    - Validate knowledge seeker functionality and performance
+        //    - Handle knowledge seeker validation error detection and correction
+        // 2. Integration testing: Test knowledge seeker integration with other systems
+        //    - Test knowledge seeker integration with search and discovery systems
+        //    - Validate integration functionality and performance
+        //    - Handle integration testing quality assurance and validation
+        // 3. Performance testing: Test knowledge seeker performance and scalability
+        //    - Test knowledge seeker performance under various load conditions
+        //    - Validate performance metrics and optimization opportunities
+        //    - Handle performance testing quality assurance and validation
+        // 4. Comprehensive testing: Implement comprehensive knowledge seeker testing
+        //    - Implement end-to-end knowledge seeker testing scenarios
+        //    - Handle comprehensive testing quality assurance and validation
+        //    - Ensure knowledge seeker testing meets quality and reliability standards
         assert!(seeker.is_ok() || seeker.is_err());
     }
 
@@ -1748,7 +1818,8 @@ impl InvertedIndex {
         let mut score = 0.0;
 
         // 1. Keyword matching (40% weight)
-        let query_words: Vec<&str> = query.query.to_lowercase().split_whitespace().collect();
+        let query_lower = query.query.to_lowercase();
+        let query_words: Vec<&str> = query_lower.split_whitespace().collect();
         let content_lower = content.to_lowercase();
         let mut keyword_matches = 0;
 

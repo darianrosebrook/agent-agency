@@ -988,7 +988,23 @@ impl ContextPreservationEngine {
 
         // 3. Context monitoring: Start monitoring context usage and preservation
         // Set up any monitoring timers or background tasks here
-        // For now, we just log the initialization
+        // TODO: Implement context monitoring with the following requirements:
+        // 1. Monitoring system setup: Set up context usage and preservation monitoring
+        //    - Initialize monitoring timers and background tasks
+        //    - Set up context usage tracking and analytics
+        //    - Implement context preservation quality monitoring
+        // 2. Performance tracking: Track context performance metrics
+        //    - Monitor context effectiveness and utilization rates
+        //    - Track context freshness and relevance metrics
+        //    - Implement context performance optimization
+        // 3. Alerting system: Implement context monitoring alerts
+        //    - Set up alerts for context quality degradation
+        //    - Handle context preservation failure notifications
+        //    - Implement context monitoring dashboard and reporting
+        // 4. Maintenance automation: Automate context maintenance tasks
+        //    - Implement automated context cleanup and optimization
+        //    - Handle context lifecycle management and archival
+        //    - Ensure context monitoring meets performance and reliability standards
         debug!(
             "Context preservation initialized for session {}: initial context size={} bytes",
             session_id,
@@ -1005,8 +1021,23 @@ impl ContextPreservationEngine {
     ) -> Result<Vec<crate::types::ContextPerformanceData>, anyhow::Error> {
         debug!("Retrieving performance history for session {}", session_id);
 
-        // In production, this would query performance metrics from storage
-        // For now, return mock data
+        // TODO: Implement performance metrics retrieval with the following requirements:
+        // 1. Performance data storage: Query performance metrics from storage systems
+        //    - Connect to performance metrics databases and storage
+        //    - Retrieve historical performance data and analytics
+        //    - Handle performance data aggregation and processing
+        // 2. Metrics calculation: Calculate performance metrics and KPIs
+        //    - Calculate effectiveness scores and utilization rates
+        //    - Compute freshness scores and relevance metrics
+        //    - Implement performance trend analysis and forecasting
+        // 3. Data validation: Validate performance data quality and integrity
+        //    - Validate performance data accuracy and completeness
+        //    - Handle performance data quality assurance and validation
+        //    - Implement performance data error detection and correction
+        // 4. Performance reporting: Generate performance reports and insights
+        //    - Create performance dashboards and visualization
+        //    - Generate performance reports and analytics
+        //    - Implement performance optimization recommendations
         Ok(vec![crate::types::ContextPerformanceData {
             effectiveness_score: 0.85,
             utilization_rate: 0.72,

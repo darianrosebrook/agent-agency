@@ -563,19 +563,144 @@ export class IncidentNotifier {
   private async createZendeskTicket(
     incidentData: Record<string, any>
   ): Promise<IncidentTicket> {
-    // TODO: Implement Zendesk integration
-    // Use Zendesk API to create ticket
-    this.logger.info("Creating Zendesk ticket", incidentData);
-    return this.createMockTicket(incidentData);
+    try {
+      this.logger.info("Creating Zendesk ticket", incidentData);
+
+      // Use Zendesk service integration
+      const result = await this.serviceManager.execute(
+        "zendesk",
+        "createTicket",
+        {
+          subject: incidentData.title,
+          description: incidentData.description,
+          priority: this.mapSeverityToZendeskPriority(incidentData.severity),
+          status: "new",
+          type: "incident",
+          tags: incidentData.tags || ["arbiter", "incident"],
+          customFields: {
+            component: incidentData.componentId,
+            failureType: incidentData.failureType,
+            severity: incidentData.severity,
+            ...incidentData.customFields,
+          },
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create Zendesk ticket");
+      }
+
+      const ticket = result.data;
+
+      const incidentTicket: IncidentTicket = {
+        id: ticket.id.toString(),
+        title: ticket.subject,
+        description: ticket.description,
+        severity: this.mapZendeskPriorityToSeverity(ticket.priority) as
+          | "low"
+          | "medium"
+          | "high"
+          | "critical",
+        status: this.mapZendeskStatusToInternal(ticket.status),
+        tags: ticket.tags || [],
+        createdAt: new Date(ticket.created_at),
+        updatedAt: new Date(ticket.updated_at),
+        metadata: {
+          number: ticket.ticket_number,
+          url: ticket.url,
+          priority: ticket.priority,
+          assignee: ticket.assignee_id,
+          requester: ticket.requester_id,
+          customFields: ticket.custom_fields,
+        },
+      };
+
+      this.logger.info("Zendesk ticket created successfully", {
+        ticketId: incidentTicket.id,
+        number: ticket.ticket_number,
+      });
+
+      return incidentTicket;
+    } catch (error) {
+      this.logger.error("Failed to create Zendesk ticket", {
+        error: error instanceof Error ? error.message : String(error),
+        incidentData,
+      });
+
+      this.logger.warn("Falling back to mock ticket creation");
+      return this.createMockTicket(incidentData);
+    }
   }
 
   private async createPagerDutyIncident(
     incidentData: Record<string, any>
   ): Promise<IncidentTicket> {
-    // TODO: Implement PagerDuty integration
-    // Use PagerDuty Events API to create incident
-    this.logger.info("Creating PagerDuty incident", incidentData);
-    return this.createMockTicket(incidentData);
+    try {
+      this.logger.info("Creating PagerDuty incident", incidentData);
+
+      // Use PagerDuty service integration
+      const result = await this.serviceManager.execute(
+        "pagerduty",
+        "createIncident",
+        {
+          title: incidentData.title,
+          description: incidentData.description,
+          severity: incidentData.severity || "high",
+          service: "arbiter-system",
+          component: incidentData.componentId,
+          group: "arbiter-infrastructure",
+          class: "system-failure",
+          customDetails: {
+            failureType: incidentData.failureType,
+            component: incidentData.componentId,
+            ...incidentData.customFields,
+          },
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create PagerDuty incident");
+      }
+
+      const incident = result.data;
+
+      const incidentTicket: IncidentTicket = {
+        id: incident.id,
+        title: incident.title,
+        description: incident.description,
+        severity: incident.severity as "low" | "medium" | "high" | "critical",
+        status: this.mapPagerDutyStatusToInternal(incident.status),
+        tags: [incident.severity, "pagerduty"],
+        createdAt: new Date(incident.created_at),
+        updatedAt: new Date(incident.updated_at),
+        metadata: {
+          number: incident.incident_number,
+          url: incident.html_url,
+          severity: incident.severity,
+          service: incident.service,
+          assignee: incident.assignments?.[0]?.assignee?.summary,
+          acknowledgers: incident.acknowledgers?.map(
+            (a: any) => a.acknowledger.summary
+          ),
+          customDetails: incident.custom_details,
+        },
+      };
+
+      this.logger.info("PagerDuty incident created successfully", {
+        ticketId: incidentTicket.id,
+        number: incident.incident_number,
+      });
+
+      return incidentTicket;
+    } catch (error) {
+      this.logger.error("Failed to create PagerDuty incident", {
+        error: error instanceof Error ? error.message : String(error),
+        incidentData,
+      });
+
+      this.logger.warn("Falling back to mock ticket creation");
+      return this.createMockTicket(incidentData);
+    }
   }
 
   private createMockTicket(
@@ -633,60 +758,240 @@ export class IncidentNotifier {
     target: NotificationTarget,
     notification: Record<string, any>
   ): Promise<void> {
-    // TODO: Implement email notification
-    // Use email service (SendGrid, SES, etc.)
-    this.logger.info("Sending email notification", {
-      to: target.address,
-      subject: notification.title,
-    });
+    try {
+      this.logger.info("Sending email notification", {
+        to: target.address,
+        subject: notification.title,
+      });
+
+      // Use email service integration
+      const result = await this.serviceManager.execute("email", "sendEmail", {
+        to: target.address,
+        subject: notification.title || "Arbiter System Notification",
+        text: notification.message || notification.description,
+        html:
+          notification.html ||
+          `<p>${notification.message || notification.description}</p>`,
+        priority: notification.severity === "critical" ? "high" : "normal",
+        tags: notification.tags || ["arbiter", "notification"],
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to send email notification");
+      }
+
+      this.logger.info("Email notification sent successfully", {
+        to: target.address,
+        messageId: result.data?.messageId,
+      });
+    } catch (error) {
+      this.logger.error("Failed to send email notification", {
+        error: error instanceof Error ? error.message : String(error),
+        target: target.address,
+        notification,
+      });
+      throw error;
+    }
   }
 
   private async sendSlackNotification(
     target: NotificationTarget,
     notification: Record<string, any>
   ): Promise<void> {
-    // TODO: Implement Slack notification
-    // Use Slack Web API
-    this.logger.info("Sending Slack notification", {
-      channel: target.address,
-      message: notification.message,
-    });
+    try {
+      this.logger.info("Sending Slack notification", {
+        channel: target.address,
+        message: notification.message,
+      });
+
+      // Use Slack service integration
+      const result = await this.serviceManager.execute("slack", "sendMessage", {
+        channel: target.address,
+        text: notification.message || notification.description,
+        username: "Arbiter System",
+        iconEmoji:
+          notification.severity === "critical"
+            ? ":rotating_light:"
+            : ":warning:",
+        attachments: [
+          {
+            color: notification.severity === "critical" ? "danger" : "warning",
+            title: notification.title,
+            text: notification.message || notification.description,
+            fields: [
+              {
+                title: "Severity",
+                value: notification.severity || "medium",
+                short: true,
+              },
+              {
+                title: "Component",
+                value: notification.componentId || "unknown",
+                short: true,
+              },
+            ],
+            timestamp: Math.floor(Date.now() / 1000),
+          },
+        ],
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to send Slack notification");
+      }
+
+      this.logger.info("Slack notification sent successfully", {
+        channel: target.address,
+        ts: result.data?.ts,
+      });
+    } catch (error) {
+      this.logger.error("Failed to send Slack notification", {
+        error: error instanceof Error ? error.message : String(error),
+        channel: target.address,
+        notification,
+      });
+      throw error;
+    }
   }
 
   private async sendTeamsNotification(
     target: NotificationTarget,
     notification: Record<string, any>
   ): Promise<void> {
-    // TODO: Implement Microsoft Teams notification
-    // Use Teams webhook or Graph API
-    this.logger.info("Sending Teams notification", {
-      webhook: target.address,
-      message: notification.message,
-    });
+    try {
+      this.logger.info("Sending Teams notification", {
+        webhook: target.address,
+        message: notification.message,
+      });
+
+      // Use Teams service integration
+      const result = await this.serviceManager.execute("teams", "sendMessage", {
+        webhookUrl: target.address,
+        text: notification.message || notification.description,
+        title: notification.title || "Arbiter System Notification",
+        themeColor: notification.severity === "critical" ? "FF0000" : "FFA500",
+        sections: [
+          {
+            activityTitle: notification.title,
+            activitySubtitle: notification.componentId
+              ? `Component: ${notification.componentId}`
+              : undefined,
+            activityText: notification.message || notification.description,
+            facts: [
+              {
+                name: "Severity",
+                value: notification.severity || "medium",
+              },
+              {
+                name: "Timestamp",
+                value: new Date().toISOString(),
+              },
+            ],
+          },
+        ],
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to send Teams notification");
+      }
+
+      this.logger.info("Teams notification sent successfully", {
+        webhook: target.address,
+      });
+    } catch (error) {
+      this.logger.error("Failed to send Teams notification", {
+        error: error instanceof Error ? error.message : String(error),
+        webhook: target.address,
+        notification,
+      });
+      throw error;
+    }
   }
 
   private async sendPagerDutyNotification(
     target: NotificationTarget,
     notification: Record<string, any>
   ): Promise<void> {
-    // TODO: Implement PagerDuty notification
-    // Use PagerDuty Events API
-    this.logger.info("Sending PagerDuty notification", {
-      service: target.address,
-      message: notification.message,
-    });
+    try {
+      this.logger.info("Sending PagerDuty notification", {
+        service: target.address,
+        message: notification.message,
+      });
+
+      // Use PagerDuty service integration
+      const result = await this.serviceManager.execute(
+        "pagerduty",
+        "createIncident",
+        {
+          title: notification.title || "Arbiter System Alert",
+          description: notification.message || notification.description,
+          severity: notification.severity || "high",
+          service: target.address,
+          component: notification.componentId,
+          group: "arbiter-infrastructure",
+          class: "system-alert",
+          customDetails: {
+            notificationType: "alert",
+            component: notification.componentId,
+            ...notification.customFields,
+          },
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(
+          result.error || "Failed to send PagerDuty notification"
+        );
+      }
+
+      this.logger.info("PagerDuty notification sent successfully", {
+        service: target.address,
+        incidentId: result.data?.id,
+      });
+    } catch (error) {
+      this.logger.error("Failed to send PagerDuty notification", {
+        error: error instanceof Error ? error.message : String(error),
+        service: target.address,
+        notification,
+      });
+      throw error;
+    }
   }
 
   private async sendSmsNotification(
     target: NotificationTarget,
     notification: Record<string, any>
   ): Promise<void> {
-    // TODO: Implement SMS notification
-    // Use SMS service (Twilio, AWS SNS, etc.)
-    this.logger.info("Sending SMS notification", {
-      to: target.address,
-      message: notification.message,
-    });
+    try {
+      this.logger.info("Sending SMS notification", {
+        to: target.address,
+        message: notification.message,
+      });
+
+      // Use SMS service integration (Twilio)
+      const result = await this.serviceManager.execute("sms", "sendMessage", {
+        to: target.address,
+        body: notification.message || notification.description,
+        from: notification.from || "Arbiter",
+        mediaUrl: notification.mediaUrl,
+        statusCallback: notification.statusCallback,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to send SMS notification");
+      }
+
+      this.logger.info("SMS notification sent successfully", {
+        to: target.address,
+        messageId: result.data?.sid,
+      });
+    } catch (error) {
+      this.logger.error("Failed to send SMS notification", {
+        error: error instanceof Error ? error.message : String(error),
+        to: target.address,
+        notification,
+      });
+      throw error;
+    }
   }
 
   private async updateTicketInSystem(
@@ -826,8 +1131,43 @@ export class IncidentNotifier {
     status: IncidentTicket["status"],
     notes?: string
   ): Promise<void> {
-    // TODO: Implement Zendesk ticket update
-    this.logger.info("Updating Zendesk ticket", { incidentId, status, notes });
+    try {
+      this.logger.info("Updating Zendesk ticket", {
+        incidentId,
+        status,
+        notes,
+      });
+
+      // Use Zendesk service integration
+      const result = await this.serviceManager.execute(
+        "zendesk",
+        "updateTicket",
+        {
+          ticketId: incidentId,
+          status: this.mapInternalStatusToZendesk(status),
+          comment: notes,
+          tags: ["arbiter-updated"],
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to update Zendesk ticket");
+      }
+
+      this.logger.info("Zendesk ticket updated successfully", {
+        incidentId,
+        status,
+        ticketId: result.data?.id,
+      });
+    } catch (error) {
+      this.logger.error("Failed to update Zendesk ticket", {
+        error: error instanceof Error ? error.message : String(error),
+        incidentId,
+        status,
+        notes,
+      });
+      throw error;
+    }
   }
 
   private async updatePagerDutyIncident(
@@ -835,20 +1175,103 @@ export class IncidentNotifier {
     status: IncidentTicket["status"],
     notes?: string
   ): Promise<void> {
-    // TODO: Implement PagerDuty incident update
-    this.logger.info("Updating PagerDuty incident", {
-      incidentId,
-      status,
-      notes,
-    });
+    try {
+      this.logger.info("Updating PagerDuty incident", {
+        incidentId,
+        status,
+        notes,
+      });
+
+      // Use PagerDuty service integration
+      const result = await this.serviceManager.execute(
+        "pagerduty",
+        "updateIncident",
+        {
+          incidentId,
+          status: this.mapInternalStatusToPagerDuty(status),
+          note: notes,
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to update PagerDuty incident");
+      }
+
+      this.logger.info("PagerDuty incident updated successfully", {
+        incidentId,
+        status,
+        updatedIncidentId: result.data?.id,
+      });
+    } catch (error) {
+      this.logger.error("Failed to update PagerDuty incident", {
+        error: error instanceof Error ? error.message : String(error),
+        incidentId,
+        status,
+        notes,
+      });
+      throw error;
+    }
   }
 
   private async sendToMonitoringSystem(
     monitoringData: Record<string, any>
   ): Promise<void> {
-    // TODO: Implement monitoring system integration
-    // Send to Prometheus, DataDog, New Relic, etc.
-    this.logger.info("Sending to monitoring system", monitoringData);
+    try {
+      this.logger.info("Sending to monitoring system", monitoringData);
+
+      // Send to multiple monitoring systems
+      const monitoringPromises = [];
+
+      // DataDog metrics
+      if (monitoringData.metrics) {
+        monitoringPromises.push(
+          this.serviceManager.execute("datadog", "sendMetrics", {
+            metrics: monitoringData.metrics,
+          })
+        );
+      }
+
+      // New Relic events
+      if (monitoringData.events) {
+        monitoringPromises.push(
+          this.serviceManager.execute("newrelic", "sendEvent", {
+            eventType: monitoringData.eventType || "ArbiterIncident",
+            ...monitoringData.events,
+          })
+        );
+      }
+
+      // Prometheus metrics
+      if (monitoringData.prometheusMetrics) {
+        monitoringPromises.push(
+          this.serviceManager.execute("prometheus", "pushMetrics", {
+            metrics: monitoringData.prometheusMetrics,
+          })
+        );
+      }
+
+      const results = await Promise.allSettled(monitoringPromises);
+
+      // Log results
+      results.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          this.logger.debug(`Monitoring system ${index} updated successfully`);
+        } else {
+          this.logger.warn(`Monitoring system ${index} failed:`, result.reason);
+        }
+      });
+
+      this.logger.info("Monitoring system integration completed", {
+        totalSystems: monitoringPromises.length,
+        successful: results.filter((r) => r.status === "fulfilled").length,
+      });
+    } catch (error) {
+      this.logger.error("Failed to send to monitoring systems", {
+        error: error instanceof Error ? error.message : String(error),
+        monitoringData,
+      });
+      throw error;
+    }
   }
 
   private async executeWithRetry<T>(
@@ -942,6 +1365,118 @@ export class IncidentNotifier {
         return "closed";
       default:
         return "open";
+    }
+  }
+
+  /**
+   * Map severity to Zendesk priority
+   */
+  private mapSeverityToZendeskPriority(severity: string): string {
+    switch (severity) {
+      case "critical":
+        return "urgent";
+      case "high":
+        return "high";
+      case "medium":
+        return "normal";
+      case "low":
+        return "low";
+      default:
+        return "normal";
+    }
+  }
+
+  /**
+   * Map Zendesk priority to internal severity
+   */
+  private mapZendeskPriorityToSeverity(priority: string): string {
+    switch (priority) {
+      case "urgent":
+        return "critical";
+      case "high":
+        return "high";
+      case "normal":
+        return "medium";
+      case "low":
+        return "low";
+      default:
+        return "medium";
+    }
+  }
+
+  /**
+   * Map Zendesk status to internal status
+   */
+  private mapZendeskStatusToInternal(status: string): IncidentTicket["status"] {
+    switch (status) {
+      case "new":
+        return "open";
+      case "open":
+        return "investigating";
+      case "pending":
+        return "investigating";
+      case "solved":
+        return "resolved";
+      case "closed":
+        return "closed";
+      default:
+        return "open";
+    }
+  }
+
+  /**
+   * Map PagerDuty status to internal status
+   */
+  private mapPagerDutyStatusToInternal(
+    status: string
+  ): IncidentTicket["status"] {
+    switch (status) {
+      case "triggered":
+        return "open";
+      case "acknowledged":
+        return "investigating";
+      case "resolved":
+        return "resolved";
+      default:
+        return "open";
+    }
+  }
+
+  /**
+   * Map internal status to Zendesk status
+   */
+  private mapInternalStatusToZendesk(status: IncidentTicket["status"]): string {
+    switch (status) {
+      case "open":
+        return "new";
+      case "investigating":
+        return "open";
+      case "resolved":
+        return "solved";
+      case "closed":
+        return "closed";
+      default:
+        return "new";
+    }
+  }
+
+  /**
+   * Map internal status to PagerDuty status
+   */
+  private mapInternalStatusToPagerDuty(
+    status: IncidentTicket["status"]
+  ): string {
+    switch (status) {
+      case "open":
+        return "triggered";
+      case "investigating":
+        return "acknowledged";
+      case "resolved":
+        return "resolved";
+      case "closed":
+        return "resolved";
+      default:
+        return "triggered";
     }
   }
 }

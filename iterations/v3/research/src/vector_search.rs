@@ -863,7 +863,27 @@ impl VectorSearchEngine {
         let mut cache = self.embedding_cache.write().await;
         cache.insert(text.to_string(), embedding.to_vec());
 
-        // In a real implementation, this would also store in a persistent cache store
+        // TODO: Implement persistent cache storage with the following requirements:
+        // 1. Persistent cache integration: Store in a persistent cache store
+        //    - Store embeddings in a persistent cache store for optimization
+        //    - Handle persistent cache integration optimization and performance
+        //    - Implement persistent cache integration validation and quality assurance
+        //    - Support persistent cache integration customization and configuration
+        // 2. Cache storage optimization: Optimize cache storage performance
+        //    - Optimize cache storage performance for persistent storage
+        //    - Handle cache storage optimization and performance
+        //    - Implement cache storage optimization validation and quality assurance
+        //    - Support cache storage optimization customization and configuration
+        // 3. Cache persistence management: Manage cache persistence and lifecycle
+        //    - Manage cache persistence and lifecycle for long-term storage
+        //    - Handle cache persistence management optimization and performance
+        //    - Implement cache persistence management validation and quality assurance
+        //    - Support cache persistence management customization and configuration
+        // 4. Persistent cache optimization: Optimize persistent cache storage performance
+        //    - Implement persistent cache storage optimization strategies
+        //    - Handle persistent cache monitoring and analytics
+        //    - Implement persistent cache validation and quality assurance
+        //    - Ensure persistent cache storage meets performance and reliability standards
         debug!("Cached embedding for text: {}", text);
         Ok(())
     }
@@ -898,7 +918,23 @@ mod tests {
     #[tokio::test]
     async fn test_vector_search_engine_creation() {
         // This test would require a running Qdrant instance
-        // For now, we'll skip it in CI
+        // TODO: Implement CI-compatible vector search testing with the following requirements:
+        // 1. CI environment detection: Detect and handle CI environment requirements
+        //    - Detect CI environment and configure testing accordingly
+        //    - Handle CI environment-specific testing configurations
+        //    - Implement CI environment testing optimization and reliability
+        // 2. Vector search testing: Implement comprehensive vector search testing
+        //    - Test vector search engine creation and functionality
+        //    - Validate vector search performance and accuracy
+        //    - Handle vector search testing quality assurance and validation
+        // 3. Qdrant integration testing: Test Qdrant integration and functionality
+        //    - Test Qdrant instance integration and connectivity
+        //    - Validate Qdrant integration performance and reliability
+        //    - Handle Qdrant integration testing error detection and recovery
+        // 4. Testing optimization: Optimize testing performance and reliability
+        //    - Implement testing optimization strategies for CI environments
+        //    - Handle testing performance monitoring and analytics
+        //    - Ensure vector search testing meets quality and reliability standards
         if std::env::var("CI").is_ok() {
             return;
         }
@@ -908,7 +944,23 @@ mod tests {
                 .await;
 
         // In a real test environment, we'd assert the engine was created successfully
-        // For now, we just ensure it compiles
+        // TODO: Implement comprehensive vector search engine testing with the following requirements:
+        // 1. Engine creation validation: Validate vector search engine creation and configuration
+        //    - Verify vector search engine creation success and configuration
+        //    - Validate engine configuration and optimization
+        //    - Handle engine creation validation error detection and correction
+        // 2. Engine functionality testing: Test vector search engine functionality and performance
+        //    - Test vector search engine search capabilities and accuracy
+        //    - Validate engine performance under various conditions
+        //    - Handle engine functionality testing quality assurance and validation
+        // 3. Integration testing: Test vector search engine integration with other systems
+        //    - Test engine integration with search and discovery systems
+        //    - Validate integration functionality and performance
+        //    - Handle integration testing quality assurance and validation
+        // 4. Performance validation: Validate vector search engine performance and scalability
+        //    - Test engine performance under various load conditions
+        //    - Validate performance metrics and optimization opportunities
+        //    - Ensure vector search engine testing meets quality and reliability standards
         assert!(engine.is_ok() || engine.is_err()); // Either is fine for compilation test
     }
 

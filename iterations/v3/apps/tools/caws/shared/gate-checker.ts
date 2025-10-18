@@ -5,8 +5,8 @@
  * @author @darianrosebrook
  */
 
-import * as path from 'path';
-import { CawsBaseTool } from './base-tool.js';
+import * as path from "path";
+import { CawsBaseTool } from "./base-tool.js";
 import {
   GateResult,
   GateCheckOptions,
@@ -16,8 +16,8 @@ import {
   WaiverConfig,
   HumanOverride,
   AIAssessment,
-} from './types.js';
-import { WaiversManager } from './waivers-manager.js';
+} from "./types.js";
+import { WaiversManager } from "./waivers-manager.js";
 
 export class CawsGateChecker extends CawsBaseTool {
   private tierPolicies: Record<number, TierPolicy> = {
@@ -63,7 +63,9 @@ export class CawsGateChecker extends CawsBaseTool {
   /**
    * Auto-detect the correct working directory for coverage/mutation reports in monorepos
    */
-  private findReportDirectory(startPath: string = this.getWorkingDirectory()): string {
+  private findReportDirectory(
+    startPath: string = this.getWorkingDirectory()
+  ): string {
     // Priority 1: Check if the current directory has the reports or test results
     if (
       this.hasCoverageReports(startPath) ||
@@ -74,7 +76,7 @@ export class CawsGateChecker extends CawsBaseTool {
     }
 
     // Priority 2: Check for npm workspaces configuration
-    const packageJsonPath = path.join(startPath, 'package.json');
+    const packageJsonPath = path.join(startPath, "package.json");
     if (this.pathExists(packageJsonPath)) {
       try {
         const packageJson = this.readJsonFile<any>(packageJsonPath);
@@ -83,12 +85,14 @@ export class CawsGateChecker extends CawsBaseTool {
 
           // Handle workspace patterns (e.g., ["packages/*", "iterations/*"])
           for (const wsPattern of workspaces) {
-            if (wsPattern.includes('*')) {
-              const baseDir = wsPattern.split('*')[0];
+            if (wsPattern.includes("*")) {
+              const baseDir = wsPattern.split("*")[0];
               const fullBaseDir = path.join(startPath, baseDir);
 
               if (this.pathExists(fullBaseDir)) {
-                const entries = fs.readdirSync(fullBaseDir, { withFileTypes: true });
+                const entries = fs.readdirSync(fullBaseDir, {
+                  withFileTypes: true,
+                });
                 for (const entry of entries) {
                   if (entry.isDirectory()) {
                     const wsPath = path.join(fullBaseDir, entry.name);
@@ -119,12 +123,14 @@ export class CawsGateChecker extends CawsBaseTool {
         // Priority 3: If no reports found in workspaces, look for workspaces with test scripts
         if (packageJson?.workspaces) {
           for (const wsPattern of workspaces) {
-            if (wsPattern.includes('*')) {
-              const baseDir = wsPattern.split('*')[0];
+            if (wsPattern.includes("*")) {
+              const baseDir = wsPattern.split("*")[0];
               const fullBaseDir = path.join(startPath, baseDir);
 
               if (this.pathExists(fullBaseDir)) {
-                const entries = fs.readdirSync(fullBaseDir, { withFileTypes: true });
+                const entries = fs.readdirSync(fullBaseDir, {
+                  withFileTypes: true,
+                });
                 for (const entry of entries) {
                   if (entry.isDirectory()) {
                     const wsPath = path.join(fullBaseDir, entry.name);
@@ -156,7 +162,7 @@ export class CawsGateChecker extends CawsBaseTool {
    * Check if a directory has coverage reports
    */
   private hasCoverageReports(dirPath: string): boolean {
-    const coveragePath = path.join(dirPath, 'coverage', 'coverage-final.json');
+    const coveragePath = path.join(dirPath, "coverage", "coverage-final.json");
     return this.pathExists(coveragePath);
   }
 
@@ -164,7 +170,12 @@ export class CawsGateChecker extends CawsBaseTool {
    * Check if a directory has mutation reports
    */
   private hasMutationReports(dirPath: string): boolean {
-    const mutationPath = path.join(dirPath, 'reports', 'mutation', 'mutation.json');
+    const mutationPath = path.join(
+      dirPath,
+      "reports",
+      "mutation",
+      "mutation.json"
+    );
     return this.pathExists(mutationPath);
   }
 
@@ -172,11 +183,13 @@ export class CawsGateChecker extends CawsBaseTool {
    * Check if a directory has test results
    */
   private hasTestResults(dirPath: string): boolean {
-    const testResultsPath = path.join(dirPath, 'test-results');
+    const testResultsPath = path.join(dirPath, "test-results");
     if (this.pathExists(testResultsPath)) {
       try {
         const entries = fs.readdirSync(testResultsPath);
-        return entries.some((entry) => entry.endsWith('.json') || entry.endsWith('.xml'));
+        return entries.some(
+          (entry) => entry.endsWith(".json") || entry.endsWith(".xml")
+        );
       } catch (error) {
         // Ignore read errors
       }
@@ -188,7 +201,7 @@ export class CawsGateChecker extends CawsBaseTool {
    * Check if a directory has a package.json with test scripts
    */
   private hasTestScript(dirPath: string): boolean {
-    const packageJsonPath = path.join(dirPath, 'package.json');
+    const packageJsonPath = path.join(dirPath, "package.json");
     if (this.pathExists(packageJsonPath)) {
       try {
         const packageJson = this.readJsonFile<any>(packageJsonPath);
@@ -217,9 +230,27 @@ export class CawsGateChecker extends CawsBaseTool {
         return { waived: false };
       }
 
-      // Check if any waiver applies (for now, return the first active one)
+      // TODO: Implement waiver validation with the following requirements:
+      // 1. Waiver database: Maintain database of active waivers and policies
+      //    - Store and manage waiver configurations and policies
+      //    - Implement waiver lifecycle management and expiration
+      //    - Handle waiver validation and authorization verification
+      // 2. Waiver matching: Match requests against applicable waivers
+      //    - Implement waiver matching algorithms and criteria
+      //    - Handle waiver scope and condition validation
+      //    - Process waiver application and approval workflows
+      // 3. Waiver enforcement: Enforce waiver policies and restrictions
+      //    - Implement waiver enforcement and compliance checking
+      //    - Handle waiver violations and remediation
+      //    - Track waiver usage and compliance metrics
+      // 4. Waiver auditing: Audit waiver usage and compliance
+      //    - Generate waiver usage reports and analytics
+      //    - Implement waiver compliance monitoring and alerting
+      //    - Ensure waiver management meets security and compliance standards
       for (const waiver of waivers) {
-        const status = await this.waiversManager.checkWaiverStatus(waiver.created_at);
+        const status = await this.waiversManager.checkWaiverStatus(
+          waiver.created_at
+        );
         if (status.active) {
           return { waived: true, waiver };
         }
@@ -244,16 +275,16 @@ export class CawsGateChecker extends CawsBaseTool {
     try {
       const specPath = path.join(
         workingDirectory || this.getWorkingDirectory(),
-        '.caws/working-spec.yml'
+        ".caws/working-spec.yml"
       );
 
       if (!this.pathExists(specPath)) {
-        return { errors: ['Working spec not found at .caws/working-spec.yml'] };
+        return { errors: ["Working spec not found at .caws/working-spec.yml"] };
       }
 
       const spec = await this.readYamlFile(specPath);
       if (!spec) {
-        return { errors: ['Failed to parse working spec'] };
+        return { errors: ["Failed to parse working spec"] };
       }
 
       return {
@@ -316,7 +347,10 @@ export class CawsGateChecker extends CawsBaseTool {
   async checkCoverage(options: GateCheckOptions): Promise<GateResult> {
     try {
       // Check waivers and overrides first
-      const waiverCheck = await this.checkWaiver('coverage', options.workingDirectory);
+      const waiverCheck = await this.checkWaiver(
+        "coverage",
+        options.workingDirectory
+      );
       if (waiverCheck.waived) {
         return {
           passed: true,
@@ -334,7 +368,10 @@ export class CawsGateChecker extends CawsBaseTool {
       const specData = await this.loadWorkingSpec(options.workingDirectory);
 
       // Check human override
-      const overrideCheck = this.checkHumanOverride(specData.human_override, 'coverage');
+      const overrideCheck = this.checkHumanOverride(
+        specData.human_override,
+        "coverage"
+      );
       if (overrideCheck.waived) {
         return {
           passed: true,
@@ -348,10 +385,15 @@ export class CawsGateChecker extends CawsBaseTool {
       }
 
       // Check experiment mode
-      const experimentCheck = this.checkExperimentMode(specData.experiment_mode);
+      const experimentCheck = this.checkExperimentMode(
+        specData.experiment_mode
+      );
 
       let effectiveTier = options.tier;
-      if (experimentCheck.reduced && experimentCheck.adjustments?.reduced_coverage) {
+      if (
+        experimentCheck.reduced &&
+        experimentCheck.adjustments?.reduced_coverage
+      ) {
         // For experiments, use reduced coverage requirement
         effectiveTier = 4; // Special experiment tier
         this.tierPolicies[4] = {
@@ -367,23 +409,31 @@ export class CawsGateChecker extends CawsBaseTool {
       const reportDir = this.findReportDirectory(
         options.workingDirectory || this.getWorkingDirectory()
       );
-      const coveragePath = path.join(reportDir, 'coverage', 'coverage-final.json');
+      const coveragePath = path.join(
+        reportDir,
+        "coverage",
+        "coverage-final.json"
+      );
 
       if (!this.pathExists(coveragePath)) {
         return {
           passed: false,
           score: 0,
           details: {
-            error: 'Coverage report not found. Run tests with coverage first.',
+            error: "Coverage report not found. Run tests with coverage first.",
             searched_paths: [
-              path.join(reportDir, 'coverage', 'coverage-final.json'),
-              path.join(this.getWorkingDirectory(), 'coverage', 'coverage-final.json'),
+              path.join(reportDir, "coverage", "coverage-final.json"),
+              path.join(
+                this.getWorkingDirectory(),
+                "coverage",
+                "coverage-final.json"
+              ),
             ],
-            expected_format: 'Istanbul coverage format (coverage-final.json)',
+            expected_format: "Istanbul coverage format (coverage-final.json)",
             expected_schema: {
-              description: 'JSON object with coverage data by file',
+              description: "JSON object with coverage data by file",
               example: {
-                '/path/to/file.js': {
+                "/path/to/file.js": {
                   statementMap: {
                     /* ... */
                   },
@@ -405,24 +455,30 @@ export class CawsGateChecker extends CawsBaseTool {
                 },
               },
             },
-            run_command: 'npm test -- --coverage --coverageReporters=json',
+            run_command: "npm test -- --coverage --coverageReporters=json",
             alternative_commands: [
-              'npm run test:coverage',
-              'jest --coverage --coverageReporters=json',
-              'vitest run --coverage',
+              "npm run test:coverage",
+              "jest --coverage --coverageReporters=json",
+              "vitest run --coverage",
             ],
             workspace_hint:
               reportDir !== this.getWorkingDirectory()
-                ? `Auto-detected workspace: ${path.relative(this.getWorkingDirectory(), reportDir)}`
-                : 'Run from workspace directory if using monorepo',
+                ? `Auto-detected workspace: ${path.relative(
+                    this.getWorkingDirectory(),
+                    reportDir
+                  )}`
+                : "Run from workspace directory if using monorepo",
             waiver_available: true,
             waiver_suggestion:
-              'If this is an exceptional case, consider creating a coverage waiver',
+              "If this is an exceptional case, consider creating a coverage waiver",
             waiver_command:
               'caws waivers create --title="Coverage waiver" --reason=emergency_hotfix --gates=coverage',
           },
           errors: [
-            `Coverage report not found at ${path.relative(this.getWorkingDirectory(), coveragePath)}`,
+            `Coverage report not found at ${path.relative(
+              this.getWorkingDirectory(),
+              coveragePath
+            )}`,
           ],
         };
       }
@@ -432,8 +488,8 @@ export class CawsGateChecker extends CawsBaseTool {
         return {
           passed: false,
           score: 0,
-          details: { error: 'Failed to parse coverage data' },
-          errors: ['Failed to parse coverage data'],
+          details: { error: "Failed to parse coverage data" },
+          errors: ["Failed to parse coverage data"],
         };
       }
 
@@ -449,7 +505,9 @@ export class CawsGateChecker extends CawsBaseTool {
         const fileData = file as any;
         if (fileData.s) {
           totalStatements += Object.keys(fileData.s).length;
-          coveredStatements += Object.values(fileData.s).filter((s: any) => s > 0).length;
+          coveredStatements += Object.values(fileData.s).filter(
+            (s: any) => s > 0
+          ).length;
         }
         if (fileData.b) {
           for (const branches of Object.values(fileData.b) as number[][]) {
@@ -459,14 +517,19 @@ export class CawsGateChecker extends CawsBaseTool {
         }
         if (fileData.f) {
           totalFunctions += Object.keys(fileData.f).length;
-          coveredFunctions += Object.values(fileData.f).filter((f: any) => f > 0).length;
+          coveredFunctions += Object.values(fileData.f).filter(
+            (f: any) => f > 0
+          ).length;
         }
       }
 
       // Calculate percentages
-      const statementsPct = totalStatements > 0 ? (coveredStatements / totalStatements) * 100 : 0;
-      const branchesPct = totalBranches > 0 ? (coveredBranches / totalBranches) * 100 : 0;
-      const functionsPct = totalFunctions > 0 ? (coveredFunctions / totalFunctions) * 100 : 0;
+      const statementsPct =
+        totalStatements > 0 ? (coveredStatements / totalStatements) * 100 : 0;
+      const branchesPct =
+        totalBranches > 0 ? (coveredBranches / totalBranches) * 100 : 0;
+      const functionsPct =
+        totalFunctions > 0 ? (coveredFunctions / totalFunctions) * 100 : 0;
 
       const branchCoverage = branchesPct / 100;
       const policy = this.tierPolicies[effectiveTier];
@@ -499,7 +562,10 @@ export class CawsGateChecker extends CawsBaseTool {
   async checkMutation(options: GateCheckOptions): Promise<GateResult> {
     try {
       // Check waivers and overrides first
-      const waiverCheck = await this.checkWaiver('mutation', options.workingDirectory);
+      const waiverCheck = await this.checkWaiver(
+        "mutation",
+        options.workingDirectory
+      );
       if (waiverCheck.waived) {
         return {
           passed: true,
@@ -517,7 +583,10 @@ export class CawsGateChecker extends CawsBaseTool {
       const specData = await this.loadWorkingSpec(options.workingDirectory);
 
       // Check human override
-      const overrideCheck = this.checkHumanOverride(specData.human_override, 'mutation_testing');
+      const overrideCheck = this.checkHumanOverride(
+        specData.human_override,
+        "mutation_testing"
+      );
       if (overrideCheck.waived) {
         return {
           passed: true,
@@ -531,8 +600,13 @@ export class CawsGateChecker extends CawsBaseTool {
       }
 
       // Check experiment mode
-      const experimentCheck = this.checkExperimentMode(specData.experiment_mode);
-      if (experimentCheck.reduced && experimentCheck.adjustments?.skip_mutation) {
+      const experimentCheck = this.checkExperimentMode(
+        specData.experiment_mode
+      );
+      if (
+        experimentCheck.reduced &&
+        experimentCheck.adjustments?.skip_mutation
+      ) {
         return {
           passed: true,
           score: 1.0,
@@ -548,21 +622,31 @@ export class CawsGateChecker extends CawsBaseTool {
       const reportDir = this.findReportDirectory(
         options.workingDirectory || this.getWorkingDirectory()
       );
-      const mutationPath = path.join(reportDir, 'reports', 'mutation', 'mutation.json');
+      const mutationPath = path.join(
+        reportDir,
+        "reports",
+        "mutation",
+        "mutation.json"
+      );
 
       if (!this.pathExists(mutationPath)) {
         return {
           passed: false,
           score: 0,
           details: {
-            error: 'Mutation report not found. Run mutation tests first.',
+            error: "Mutation report not found. Run mutation tests first.",
             searched_paths: [
-              path.join(reportDir, 'reports', 'mutation', 'mutation.json'),
-              path.join(this.getWorkingDirectory(), 'reports', 'mutation', 'mutation.json'),
+              path.join(reportDir, "reports", "mutation", "mutation.json"),
+              path.join(
+                this.getWorkingDirectory(),
+                "reports",
+                "mutation",
+                "mutation.json"
+              ),
             ],
-            expected_format: 'Stryker mutation testing JSON report',
+            expected_format: "Stryker mutation testing JSON report",
             expected_schema: {
-              description: 'JSON object with mutation testing results',
+              description: "JSON object with mutation testing results",
               example: {
                 files: {
                   /* file-specific results */
@@ -585,19 +669,25 @@ export class CawsGateChecker extends CawsBaseTool {
                 },
               },
             },
-            run_command: 'npx stryker run',
+            run_command: "npx stryker run",
             alternative_commands: [
-              'npm run test:mutation',
-              'npx stryker run --configFile stryker.conf.json',
-              'yarn mutation:test',
+              "npm run test:mutation",
+              "npx stryker run --configFile stryker.conf.json",
+              "yarn mutation:test",
             ],
             workspace_hint:
               reportDir !== this.getWorkingDirectory()
-                ? `Auto-detected workspace: ${path.relative(this.getWorkingDirectory(), reportDir)}`
-                : 'Run from workspace directory if using monorepo',
+                ? `Auto-detected workspace: ${path.relative(
+                    this.getWorkingDirectory(),
+                    reportDir
+                  )}`
+                : "Run from workspace directory if using monorepo",
           },
           errors: [
-            `Mutation report not found at ${path.relative(this.getWorkingDirectory(), mutationPath)}`,
+            `Mutation report not found at ${path.relative(
+              this.getWorkingDirectory(),
+              mutationPath
+            )}`,
           ],
         };
       }
@@ -607,8 +697,8 @@ export class CawsGateChecker extends CawsBaseTool {
         return {
           passed: false,
           score: 0,
-          details: { error: 'Failed to parse mutation data' },
-          errors: ['Failed to parse mutation data'],
+          details: { error: "Failed to parse mutation data" },
+          errors: ["Failed to parse mutation data"],
         };
       }
 
@@ -645,7 +735,10 @@ export class CawsGateChecker extends CawsBaseTool {
   async checkContracts(options: GateCheckOptions): Promise<GateResult> {
     try {
       // Check waivers and overrides first
-      const waiverCheck = await this.checkWaiver('contracts', options.workingDirectory);
+      const waiverCheck = await this.checkWaiver(
+        "contracts",
+        options.workingDirectory
+      );
       if (waiverCheck.waived) {
         return {
           passed: true,
@@ -673,49 +766,63 @@ export class CawsGateChecker extends CawsBaseTool {
       const reportDir = this.findReportDirectory(
         options.workingDirectory || this.getWorkingDirectory()
       );
-      const contractResultsPath = path.join(reportDir, 'test-results', 'contract-results.json');
+      const contractResultsPath = path.join(
+        reportDir,
+        "test-results",
+        "contract-results.json"
+      );
 
       if (!this.pathExists(contractResultsPath)) {
         return {
           passed: false,
           score: 0,
           details: {
-            error: 'Contract test results not found',
+            error: "Contract test results not found",
             searched_paths: [
-              path.join(reportDir, 'test-results', 'contract-results.json'),
-              path.join(this.getWorkingDirectory(), 'test-results', 'contract-results.json'),
-              path.join(reportDir, '.caws', 'contract-results.json'),
-              path.join(this.getWorkingDirectory(), '.caws', 'contract-results.json'),
+              path.join(reportDir, "test-results", "contract-results.json"),
+              path.join(
+                this.getWorkingDirectory(),
+                "test-results",
+                "contract-results.json"
+              ),
+              path.join(reportDir, ".caws", "contract-results.json"),
+              path.join(
+                this.getWorkingDirectory(),
+                ".caws",
+                "contract-results.json"
+              ),
             ],
             expected_format:
-              'JSON with { tests: [], passed: boolean, numPassed: number, numTotal: number }',
+              "JSON with { tests: [], passed: boolean, numPassed: number, numTotal: number }",
             example_command:
-              'npm run test:contract -- --json --outputFile=test-results/contract-results.json',
+              "npm run test:contract -- --json --outputFile=test-results/contract-results.json",
           },
           errors: [
             `Contract test results not found. Searched in: ${[
               path.relative(
                 this.getWorkingDirectory(),
-                path.join(reportDir, 'test-results', 'contract-results.json')
+                path.join(reportDir, "test-results", "contract-results.json")
               ),
-              'test-results/contract-results.json',
-              '.caws/contract-results.json',
-            ].join(', ')}`,
+              "test-results/contract-results.json",
+              ".caws/contract-results.json",
+            ].join(", ")}`,
           ],
         };
       }
 
-      const results = this.readJsonFile<ContractTestResults>(contractResultsPath);
+      const results =
+        this.readJsonFile<ContractTestResults>(contractResultsPath);
       if (!results) {
         return {
           passed: false,
           score: 0,
-          details: { error: 'Failed to parse contract test results' },
-          errors: ['Failed to parse contract test results'],
+          details: { error: "Failed to parse contract test results" },
+          errors: ["Failed to parse contract test results"],
         };
       }
 
-      const passed = results.numPassed === results.numTotal && results.numTotal > 0;
+      const passed =
+        results.numPassed === results.numTotal && results.numTotal > 0;
 
       return {
         passed,
@@ -743,18 +850,19 @@ export class CawsGateChecker extends CawsBaseTool {
   async calculateTrustScore(options: GateCheckOptions): Promise<GateResult> {
     try {
       // Run all gate checks
-      const [coverageResult, mutationResult, contractResult] = await Promise.all([
-        this.checkCoverage(options),
-        this.checkMutation(options),
-        this.checkContracts(options),
-      ]);
+      const [coverageResult, mutationResult, contractResult] =
+        await Promise.all([
+          this.checkCoverage(options),
+          this.checkMutation(options),
+          this.checkContracts(options),
+        ]);
 
       // Load provenance if available
       let provenance = null;
       try {
         const provenancePath = path.join(
           options.workingDirectory || this.getWorkingDirectory(),
-          '.agent/provenance.json'
+          ".agent/provenance.json"
         );
         if (this.pathExists(provenancePath)) {
           provenance = this.readJsonFile(provenancePath);
@@ -789,7 +897,7 @@ export class CawsGateChecker extends CawsBaseTool {
       totalWeight += weights.contracts;
 
       // A11y component (placeholder - would check axe results)
-      const a11yScore = provenance?.results?.a11y === 'pass' ? 1.0 : 0.5;
+      const a11yScore = provenance?.results?.a11y === "pass" ? 1.0 : 0.5;
       totalScore += a11yScore * weights.a11y;
       totalWeight += weights.a11y;
 

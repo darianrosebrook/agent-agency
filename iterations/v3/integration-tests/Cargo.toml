@@ -35,7 +35,7 @@ proptest = "1.0"
 criterion = { version = "0.5", features = ["html_reports"] }
 
 # Database and storage
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "sqlite", "chrono", "uuid"] }
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
 redis = { version = "0.24", features = ["tokio-comp"] }
 
 # HTTP and networking

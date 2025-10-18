@@ -1,0 +1,9 @@
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/.target/1.90.0_x86_64-apple-darwin_825f98d6_agent-1_check/debug/deps/find_msvc_tools-bf02644d7ec86018.d: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.4/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.4/src/find_tools.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.4/src/tool.rs
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/.target/1.90.0_x86_64-apple-darwin_825f98d6_agent-1_check/debug/deps/libfind_msvc_tools-bf02644d7ec86018.rlib: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.4/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.4/src/find_tools.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.4/src/tool.rs
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/.target/1.90.0_x86_64-apple-darwin_825f98d6_agent-1_check/debug/deps/libfind_msvc_tools-bf02644d7ec86018.rmeta: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.4/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.4/src/find_tools.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.4/src/tool.rs
+
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.4/src/lib.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.4/src/find_tools.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.4/src/tool.rs:

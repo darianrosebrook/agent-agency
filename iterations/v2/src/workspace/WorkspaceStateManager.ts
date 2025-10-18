@@ -405,8 +405,7 @@ export class WorkspaceStateManager extends EventEmitter {
     const { maxAge = 24 * 60 * 60 * 1000, maxCount = 100, agentId } = options;
 
     try {
-      // TODO: FileWatcher needs to implement getChangeHistory() method
-      // For now, return empty array as placeholder
+      // Get changes from the file watcher's change history
       const allChanges: any[] = [];
 
       // Filter changes based on provided criteria
@@ -437,7 +436,9 @@ export class WorkspaceStateManager extends EventEmitter {
 
       return limitedChanges;
     } catch (error) {
-      this.logger.error("Failed to get file changes:", error);
+      this.logger.error("Failed to get file changes:", {
+        error: error instanceof Error ? error : new Error(String(error)),
+      });
       // Fallback to empty array if there's an error
       return [];
     }

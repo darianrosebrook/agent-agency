@@ -525,8 +525,44 @@ impl WorkerPoolManager {
                     let worker_clone = worker.clone();
                     let health_check_future = async move {
                         // Create a temporary manager instance for health checking
-                        // In a real implementation, this would be handled differently
-                        // For now, we'll simulate the health check logic
+                        // TODO: Implement proper health check handling with the following requirements:
+                        // 1. Health check architecture: Handle health checks differently in real implementation
+                        //    - Handle health checks with proper architecture and design
+                        //    - Handle health check architecture optimization and performance
+                        //    - Implement health check architecture validation and quality assurance
+                        //    - Support health check architecture customization and configuration
+                        // 2. Health check management: Manage health check lifecycle and operations
+                        //    - Manage health check lifecycle and operational management
+                        //    - Handle health check management optimization and performance
+                        //    - Implement health check management validation and quality assurance
+                        //    - Support health check management customization and configuration
+                        // 3. Health check optimization: Optimize health check performance and reliability
+                        //    - Optimize health check performance and reliability for production
+                        //    - Handle health check optimization and performance
+                        //    - Implement health check optimization validation and quality assurance
+                        //    - Support health check optimization customization and configuration
+                        // 4. Health check system optimization: Optimize health check system performance
+                        //    - Implement health check system optimization strategies
+                        //    - Handle health check system monitoring and analytics
+                        //    - Implement health check system validation and quality assurance
+                        //    - Ensure health check system meets performance and reliability standards
+                        // TODO: Implement comprehensive worker health checking with the following requirements:
+                        // 1. Health check implementation: Implement actual worker health checking
+                        //    - Create comprehensive worker health check algorithms
+                        //    - Handle health check optimization and performance
+                        //    - Implement health check validation and quality assurance
+                        // 2. Worker monitoring: Monitor worker health and performance
+                        //    - Track worker health status and performance metrics
+                        //    - Handle worker monitoring optimization and alerting
+                        //    - Implement worker monitoring validation and quality assurance
+                        // 3. Health check integration: Integrate health checking with worker management
+                        //    - Connect health checking to worker management systems
+                        //    - Handle health check integration optimization and reliability
+                        //    - Implement health check integration validation and quality assurance
+                        // 4. Performance optimization: Optimize worker health checking performance
+                        //    - Implement health check caching and optimization strategies
+                        //    - Handle health check performance monitoring and analytics
+                        //    - Ensure worker health checking meets performance and reliability standards
 
                         // Simulate HTTP health check (in practice, this would use reqwest)
                         let health_url =
@@ -645,8 +681,27 @@ impl WorkerPoolManager {
         endpoint: &str,
     ) -> Result<Vec<WorkerRegistration>> {
         // Query the discovery endpoint for available workers
-        // In a real implementation, this would:
-        // 1. Send HTTP request to discovery service
+        // TODO: Implement discovery service HTTP request with the following requirements:
+        // 1. HTTP request implementation: Send HTTP request to discovery service
+        //    - Send HTTP request to discovery service for worker discovery
+        //    - Handle HTTP request implementation optimization and performance
+        //    - Implement HTTP request implementation validation and quality assurance
+        //    - Support HTTP request implementation customization and configuration
+        // 2. Discovery service integration: Integrate with discovery service APIs
+        //    - Integrate with discovery service APIs for worker management
+        //    - Handle discovery service integration optimization and performance
+        //    - Implement discovery service integration validation and quality assurance
+        //    - Support discovery service integration customization and configuration
+        // 3. Worker discovery management: Manage worker discovery and registration
+        //    - Manage worker discovery and registration for system management
+        //    - Handle worker discovery management optimization and performance
+        //    - Implement worker discovery management validation and quality assurance
+        //    - Support worker discovery management customization and configuration
+        // 4. Discovery service optimization: Optimize discovery service HTTP request performance
+        //    - Implement discovery service HTTP request optimization strategies
+        //    - Handle discovery service monitoring and analytics
+        //    - Implement discovery service validation and quality assurance
+        //    - Ensure discovery service HTTP request meets performance and reliability standards
         // 2. Parse response in various formats (JSON, YAML, etc.)
         // 3. Handle different service discovery protocols
 

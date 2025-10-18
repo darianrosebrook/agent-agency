@@ -139,8 +139,23 @@ impl EvidenceCollector {
         claim: &AtomicClaim,
         context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
-        // For now, return basic evidence. In a full implementation,
-        // this would integrate with the multi-modal verification engine
+        // TODO: Implement evidence collection with the following requirements:
+        // 1. Multi-modal verification integration: Integrate with multi-modal verification engine
+        //    - Connect evidence collection to multi-modal verification capabilities
+        //    - Handle evidence collection from multiple sources and modalities
+        //    - Implement evidence validation and quality assurance
+        // 2. Evidence source integration: Integrate with various evidence sources
+        //    - Connect to council decision systems and databases
+        //    - Integrate with code analysis and verification tools
+        //    - Handle evidence collection from external sources and APIs
+        // 3. Evidence quality assessment: Assess evidence quality and relevance
+        //    - Implement evidence quality scoring and validation
+        //    - Handle evidence relevance assessment and filtering
+        //    - Implement evidence completeness and coverage analysis
+        // 4. Evidence management: Manage evidence lifecycle and storage
+        //    - Handle evidence storage, retrieval, and archival
+        //    - Implement evidence versioning and change tracking
+        //    - Ensure evidence integrity and provenance tracking
         let evidence = Evidence {
             id: Uuid::new_v4(),
             claim_id: claim.id,

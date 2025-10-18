@@ -1,0 +1,3 @@
+module CoreMLBridge {
+    header "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/CoreMLBridge.build/include/CoreMLBridge-Swift.h"
+}

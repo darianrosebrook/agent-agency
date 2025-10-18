@@ -96,6 +96,15 @@ pub struct WorkspaceState {
     pub timestamp: DateTime<Utc>,
 }
 
+impl WorkspaceState {
+    /// Estimate the size of this state in bytes for storage metrics
+    pub fn estimated_size_bytes(&self) -> u64 {
+        // Use the total_size field which already contains the workspace size
+        // Add some overhead for metadata and structure
+        self.total_size + 1024 // 1KB overhead for metadata
+    }
+}
+
 /// Metadata about how a workspace state was captured
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CaptureMetadata {
@@ -289,6 +298,12 @@ pub enum WorkspaceError {
 
     #[error("Diff computation error: {0}")]
     DiffComputation(String),
+
+    #[error("Validation error: {0}")]
+    Validation(String),
+
+    #[error("Storage timeout for state: {0}")]
+    StorageTimeout(StateId),
 }
 
 /// Trait for workspace state storage backends

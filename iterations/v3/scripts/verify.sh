@@ -31,24 +31,24 @@ cd apps/tools/caws && node gates.js tier $TIER && cd ../..
 
 if [ "$ENABLE_MUTATION" = "true" ]; then
   echo "[verify] Running mutation testing (min score: ${MUTATION_MIN})..."
-  # TODO: Implement mutation testing integration with the following requirements:
-  # 1. Mutation testing setup: Set up mutation testing tools and infrastructure
-  #    - Install and configure mutation testing framework (e.g., Stryker, PIT, MutPy)
-  #    - Configure mutation operators and test execution parameters
-  #    - Set up mutation testing integration with CI/CD pipeline
-  # 2. Mutation testing execution: Execute mutation tests and collect results
-  #    - Run mutation tests on specified codebases and test suites
-  #    - Collect mutation testing metrics and coverage data
-  #    - Generate mutation testing reports and analysis results
-  # 3. Mutation testing validation: Validate mutation testing results and thresholds
-  #    - Compare mutation scores against minimum threshold requirements
-  #    - Identify surviving mutations and code quality issues
-  #    - Generate actionable recommendations for test improvement
-  # 4. Mutation testing reporting: Report mutation testing results and insights
-  #    - Create comprehensive mutation testing reports and dashboards
-  #    - Provide mutation testing analytics and trend analysis
-  #    - Enable data-driven decisions for test quality improvement
-  echo "Mutation testing placeholder - would check score >= ${MUTATION_MIN}"
+  
+  # Check if cargo-mutants is available
+  if ! command -v cargo-mutants &> /dev/null; then
+    echo "[verify] Installing cargo-mutants..."
+    cargo install cargo-mutants
+  fi
+  
+  # Run mutation testing with timeout and baseline
+  echo "[verify] Executing mutation testing with cargo-mutants..."
+  cargo mutants --workspace --timeout 300 --no-shuffle --baseline run
+  
+  # TODO: Parse mutation score from output and compare against threshold
+  # This would require parsing the cargo-mutants output to extract the mutation score
+  # and comparing it against MUTATION_MIN threshold
+  
+  echo "[verify] Mutation testing completed. Score threshold: ${MUTATION_MIN}"
+else
+  echo "[verify] Mutation testing disabled (ENABLE_MUTATION=false)"
 fi
 
 if [ "$ENABLE_CONTRACT" = "true" ]; then

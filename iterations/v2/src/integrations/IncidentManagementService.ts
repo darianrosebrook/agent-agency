@@ -165,7 +165,7 @@ export class ServiceNowIncidentService extends BaseServiceIntegration {
   async execute<T = any>(
     operation: string,
     params?: any
-  ): Promise<ServiceOperationResult<T>> {
+  ): Promise<ServiceOperationResult<any>> {
     const startTime = Date.now();
 
     try {
@@ -237,7 +237,7 @@ export class ServiceNowIncidentService extends BaseServiceIntegration {
         );
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as any;
       const incident = result.result;
 
       const ticket: IncidentTicket = {
@@ -261,14 +261,19 @@ export class ServiceNowIncidentService extends BaseServiceIntegration {
         customFields: incident,
       };
 
-      return this.createResult(true, ticket, undefined, Date.now() - startTime);
+      return {
+        success: true,
+        data: ticket,
+        duration: Date.now() - startTime,
+        timestamp: new Date(),
+      };
     } catch (error) {
-      return this.createResult(
-        false,
-        undefined,
-        error instanceof Error ? error.message : String(error),
-        Date.now() - startTime
-      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        duration: Date.now() - startTime,
+        timestamp: new Date(),
+      };
     }
   }
 
@@ -316,7 +321,7 @@ export class ServiceNowIncidentService extends BaseServiceIntegration {
         );
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as any;
       const incident = result.result;
 
       const ticket: IncidentTicket = {
@@ -340,14 +345,19 @@ export class ServiceNowIncidentService extends BaseServiceIntegration {
         customFields: incident,
       };
 
-      return this.createResult(true, ticket, undefined, Date.now() - startTime);
+      return {
+        success: true,
+        data: ticket,
+        duration: Date.now() - startTime,
+        timestamp: new Date(),
+      };
     } catch (error) {
-      return this.createResult(
-        false,
-        undefined,
-        error instanceof Error ? error.message : String(error),
-        Date.now() - startTime
-      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        duration: Date.now() - startTime,
+        timestamp: new Date(),
+      };
     }
   }
 
@@ -373,7 +383,7 @@ export class ServiceNowIncidentService extends BaseServiceIntegration {
         throw new Error(`ServiceNow API error: ${response.status}`);
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as any;
       const incident = result.result;
 
       const ticket: IncidentTicket = {
@@ -397,14 +407,19 @@ export class ServiceNowIncidentService extends BaseServiceIntegration {
         customFields: incident,
       };
 
-      return this.createResult(true, ticket, undefined, Date.now() - startTime);
+      return {
+        success: true,
+        data: ticket,
+        duration: Date.now() - startTime,
+        timestamp: new Date(),
+      };
     } catch (error) {
-      return this.createResult(
-        false,
-        undefined,
-        error instanceof Error ? error.message : String(error),
-        Date.now() - startTime
-      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        duration: Date.now() - startTime,
+        timestamp: new Date(),
+      };
     }
   }
 
@@ -432,7 +447,7 @@ export class ServiceNowIncidentService extends BaseServiceIntegration {
         throw new Error(`ServiceNow API error: ${response.status}`);
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as any;
       const incidents = result.result;
 
       const tickets: IncidentTicket[] = incidents.map((incident: any) => ({
@@ -463,12 +478,12 @@ export class ServiceNowIncidentService extends BaseServiceIntegration {
         Date.now() - startTime
       );
     } catch (error) {
-      return this.createResult(
-        false,
-        undefined,
-        error instanceof Error ? error.message : String(error),
-        Date.now() - startTime
-      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        duration: Date.now() - startTime,
+        timestamp: new Date(),
+      };
     }
   }
 
@@ -615,7 +630,7 @@ export class JiraIncidentService extends BaseServiceIntegration {
   async execute<T = any>(
     operation: string,
     params?: any
-  ): Promise<ServiceOperationResult<T>> {
+  ): Promise<ServiceOperationResult<any>> {
     const startTime = Date.now();
 
     try {
@@ -704,7 +719,7 @@ export class JiraIncidentService extends BaseServiceIntegration {
         );
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as any;
       const issue = result;
 
       // Fetch the created issue to get full details
@@ -713,19 +728,19 @@ export class JiraIncidentService extends BaseServiceIntegration {
         throw new Error("Failed to fetch created incident details");
       }
 
-      return this.createResult(
-        true,
-        ticketResult.data,
-        undefined,
-        Date.now() - startTime
-      );
+      return {
+        success: true,
+        data: ticketResult.data,
+        duration: Date.now() - startTime,
+        timestamp: new Date(),
+      };
     } catch (error) {
-      return this.createResult(
-        false,
-        undefined,
-        error instanceof Error ? error.message : String(error),
-        Date.now() - startTime
-      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        duration: Date.now() - startTime,
+        timestamp: new Date(),
+      };
     }
   }
 
@@ -794,19 +809,19 @@ export class JiraIncidentService extends BaseServiceIntegration {
         throw new Error("Failed to fetch updated incident details");
       }
 
-      return this.createResult(
-        true,
-        ticketResult.data,
-        undefined,
-        Date.now() - startTime
-      );
+      return {
+        success: true,
+        data: ticketResult.data,
+        duration: Date.now() - startTime,
+        timestamp: new Date(),
+      };
     } catch (error) {
-      return this.createResult(
-        false,
-        undefined,
-        error instanceof Error ? error.message : String(error),
-        Date.now() - startTime
-      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        duration: Date.now() - startTime,
+        timestamp: new Date(),
+      };
     }
   }
 
@@ -831,7 +846,7 @@ export class JiraIncidentService extends BaseServiceIntegration {
         throw new Error(`Jira API error: ${response.status}`);
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as any;
       const issue = result;
 
       const ticket: IncidentTicket = {
@@ -855,14 +870,19 @@ export class JiraIncidentService extends BaseServiceIntegration {
         customFields: issue.fields,
       };
 
-      return this.createResult(true, ticket, undefined, Date.now() - startTime);
+      return {
+        success: true,
+        data: ticket,
+        duration: Date.now() - startTime,
+        timestamp: new Date(),
+      };
     } catch (error) {
-      return this.createResult(
-        false,
-        undefined,
-        error instanceof Error ? error.message : String(error),
-        Date.now() - startTime
-      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        duration: Date.now() - startTime,
+        timestamp: new Date(),
+      };
     }
   }
 
@@ -906,7 +926,7 @@ export class JiraIncidentService extends BaseServiceIntegration {
         throw new Error(`Jira API error: ${response.status}`);
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as any;
       const issues = result.issues;
 
       const tickets: IncidentTicket[] = issues.map((issue: any) => ({
@@ -937,12 +957,12 @@ export class JiraIncidentService extends BaseServiceIntegration {
         Date.now() - startTime
       );
     } catch (error) {
-      return this.createResult(
-        false,
-        undefined,
-        error instanceof Error ? error.message : String(error),
-        Date.now() - startTime
-      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        duration: Date.now() - startTime,
+        timestamp: new Date(),
+      };
     }
   }
 

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker-js/master/packages/api/schema/stryker-core.json",
+  "packageManager": "npm",
+  "reporters": ["clear-text", "progress"],
+  "testRunner": "command",
+  "coverageAnalysis": "off",
+  "mutate": [
+    "src/adapters/IncidentNotifier.ts",
+    "src/adapters/InfrastructureController.ts",
+    "src/orchestrator/TaskOrchestrator.ts",
+    "src/orchestrator/SecurityManager.ts",
+    "src/config/ConfigManager.ts"
+  ],
+  "ignorePatterns": [
+    "node_modules/**/*",
+    "dist/**/*",
+    "coverage/**/*",
+    ".stryker-tmp/**/*",
+    "python-services/**/*",
+    "playground/**/*",
+    "docs/**/*",
+    "migrations/**/*",
+    "scripts/**/*",
+    "apps/**/*"
+  ],
+  "commandRunner": {
+    "command": "npm test"
+  },
+  "timeoutMS": 120000,
+  "timeoutFactor": 2,
+  "concurrency": 1,
+  "mutator": {
+    "excludedMutations": ["StringLiteral", "ObjectLiteral", "ArrayLiteral"]
+  },
+  "tempDirName": ".stryker-tmp",
+  "cleanTempDir": true,
+  "thresholds": {
+    "high": 70,
+    "low": 50,
+    "break": 40
+  }
+}

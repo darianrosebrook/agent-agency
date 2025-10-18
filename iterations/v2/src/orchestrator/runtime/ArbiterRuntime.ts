@@ -1644,7 +1644,7 @@ return context.artifacts
 
     while (Date.now() - startTime < maxWaitTime) {
       try {
-        const status = await this.taskOrchestrator.getTaskStatus(
+        const status = await this.taskOrchestrator?.getTaskStatus(
           orchestratorTaskId
         );
 

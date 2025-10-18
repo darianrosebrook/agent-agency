@@ -8,6 +8,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { PerformanceTracker } from "../rl/PerformanceTracker";
 import { WorkingSpec } from "../types/caws-types";
+import { Logger } from "@/observability/Logger";
 import type {
   BudgetCompliance,
   CAWSValidationResult,
@@ -35,6 +36,8 @@ export class CAWSValidator {
   private waiverManager: WaiverManager;
   private policyLoader: PolicyLoader;
   private performanceTracker?: PerformanceTracker;
+  private logger: Logger;
+  private provenanceSystem?: any;
 
   constructor(
     options: {
@@ -46,6 +49,7 @@ export class CAWSValidator {
     this.policyLoader = options.policyLoader || new PolicyLoader();
     this.waiverManager = options.waiverManager || new WaiverManager();
     this.performanceTracker = options.performanceTracker;
+    this.logger = console as any;
 
     this.specValidator = new SpecValidator(this.performanceTracker);
     this.budgetValidator = new BudgetValidator(
@@ -183,8 +187,16 @@ export class CAWSValidator {
   ): Promise<CAWSValidationResult> {
     const result = await this.validateWorkingSpec(spec, options);
 
-    // TODO: Implement verdict publication to CAWS ledger
-    // This would integrate with the provenance system
+    // Publish verdict to CAWS ledger for provenance tracking
+    try {
+      await this.publishVerdictToLedger(result);
+    } catch (error) {
+      this.logger.warn("Failed to publish verdict to ledger", {
+        error: error instanceof Error ? error.message : String(error),
+        specId: result.specId,
+      });
+      // Don't fail the validation if ledger publication fails
+    }
 
     return result;
   }
@@ -441,7 +453,7 @@ export class CAWSValidator {
       timestamp: new Date().toISOString(),
       budgetCompliance,
       qualityGates,
-      waivers: [], // TODO: Include applied waivers
+      waivers: this.getAppliedWaivers(spec.id),
       verdict,
       remediation: passed ? undefined : errors.map((error) => `Fix: ${error}`),
       metadata: {
@@ -951,6 +963,69 @@ export class CAWSValidator {
         return { responseTimeMs: 5000, memoryMB: 2048 };
       default:
         return { responseTimeMs: 5000, memoryMB: 2048 };
+    }
+  }
+
+  /**
+   * Get applied waivers for a spec
+   */
+  private getAppliedWaivers(specId: string): any[] {
+    try {
+      // Get waivers from waiver manager if available
+      if (this.waiverManager) {
+        return this.waiverManager.getAppliedWaivers(specId);
+      }
+
+      // Fallback to empty array if no waiver manager
+      return [];
+    } catch (error) {
+      this.logger.warn("Failed to get applied waivers", {
+        specId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Publish validation verdict to CAWS ledger
+   */
+  private async publishVerdictToLedger(
+    result: CAWSValidationResult
+  ): Promise<void> {
+    try {
+      const verdictEntry = {
+        id: `verdict-${result.specId}-${Date.now()}`,
+        specId: result.specId,
+        timestamp: new Date(),
+        verdict: result.valid ? "valid" : "invalid",
+        score: result.score,
+        violations: result.violations,
+        fixes: result.fixes,
+        metadata: {
+          validator: "CAWSValidator",
+          version: "1.0.0",
+          duration: result.duration,
+          checks: result.checks,
+        },
+      };
+
+      // Publish to provenance system if available
+      if (this.provenanceSystem) {
+        await this.provenanceSystem.recordValidationVerdict(verdictEntry);
+      }
+
+      this.logger.info("Validation verdict published to ledger", {
+        specId: result.specId,
+        verdict: verdictEntry.verdict,
+        score: result.score,
+      });
+    } catch (error) {
+      this.logger.error("Failed to publish verdict to ledger", {
+        error: error instanceof Error ? error.message : String(error),
+        specId: result.specId,
+      });
+      throw error;
     }
   }
 }

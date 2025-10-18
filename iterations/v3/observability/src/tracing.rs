@@ -372,8 +372,23 @@ impl TraceCollector {
     }
 
     async fn extract_trace_id(&self, span_id: &str) -> Option<String> {
-        // For now, assume span_id is also trace_id for root spans
-        // In a more sophisticated implementation, this would track the trace hierarchy
+        // TODO: Implement trace hierarchy tracking with the following requirements:
+        // 1. Trace hierarchy management: Track and manage trace hierarchy relationships
+        //    - Track trace hierarchy and parent-child span relationships
+        //    - Handle trace hierarchy validation and integrity
+        //    - Implement trace hierarchy optimization and performance
+        // 2. Span relationship tracking: Track span relationships and dependencies
+        //    - Track span parent-child relationships and dependencies
+        //    - Handle span relationship validation and quality assurance
+        //    - Implement span relationship optimization and caching
+        // 3. Trace ID extraction: Implement proper trace ID extraction algorithms
+        //    - Extract trace IDs from span hierarchies and relationships
+        //    - Handle trace ID extraction optimization and performance
+        //    - Implement trace ID extraction validation and quality assurance
+        // 4. Trace analytics: Analyze trace hierarchies and relationships
+        //    - Generate trace hierarchy analytics and insights
+        //    - Handle trace analytics optimization and reporting
+        //    - Ensure trace hierarchy tracking meets performance and accuracy standards
         Some(span_id.to_string())
     }
 }

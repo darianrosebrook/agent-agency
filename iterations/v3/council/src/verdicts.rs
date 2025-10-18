@@ -3,9 +3,10 @@
 //! Provides persistent storage and retrieval of council verdicts, consensus results,
 //! and debate sessions for audit trails and performance analysis.
 
-use crate::database::DatabaseClient;
 use crate::types::*;
+use agent_agency_database::DatabaseClient;
 use anyhow::{Context, Result};
+use async_trait::async_trait;
 use chrono;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
@@ -378,68 +379,129 @@ impl DatabaseVerdictStorage {
     }
 }
 
-#[async_trait]
 impl VerdictStorage for DatabaseVerdictStorage {
-    async fn store_verdict(&self, record: &VerdictRecord) -> Result<()> {
-        // Serialize the verdict record to JSON
-        let consensus_json = serde_json::to_string(&record.consensus_result)
-            .context("Failed to serialize consensus result")?;
-        let debate_json = record.debate_session.as_ref()
-            .map(|ds| serde_json::to_string(ds))
-            .transpose()
-            .context("Failed to serialize debate session")?;
+    fn store_verdict(&self, record: &VerdictRecord) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>> {
+        let db_client = self.db_client.clone();
+        let record = record.clone();
+        Box::pin(async move {
+            // Serialize the verdict record to JSON
+            let consensus_json = serde_json::to_string(&record.consensus_result)
+                .context("Failed to serialize consensus result")?;
+            let debate_json = record.debate_session.as_ref()
+                .map(|ds| serde_json::to_string(ds))
+                .transpose()
+                .context("Failed to serialize debate session")?;
 
-        let storage_location = record.storage_location.clone()
-            .unwrap_or_else(|| format!("verdict_{}", record.verdict_id.0));
+            let storage_location = record.storage_location.clone()
+                .unwrap_or_else(|| format!("verdict_{}", record.verdict_id));
 
-        // Prepare parameters for database insertion
-        let params = vec![
-            serde_json::Value::String(record.verdict_id.0.to_string()),
-            serde_json::Value::String(record.consensus_result.task_id.0.to_string()),
-            serde_json::Value::String(consensus_json),
-            debate_json.map(serde_json::Value::String).unwrap_or(serde_json::Value::Null),
-            serde_json::Value::String(record.created_at.to_rfc3339()),
-            serde_json::Value::String(record.accessed_at.to_rfc3339()),
-            serde_json::Value::Number(record.access_count.into()),
-            serde_json::Value::String(storage_location),
-        ];
+            // Prepare parameters for database insertion
+            let params = vec![
+                serde_json::Value::String(record.verdict_id.to_string()),
+                serde_json::Value::String(record.consensus_result.task_id.to_string()),
+                serde_json::Value::String(consensus_json),
+                debate_json.map(serde_json::Value::String).unwrap_or(serde_json::Value::Null),
+                serde_json::Value::String(record.created_at.to_rfc3339()),
+                serde_json::Value::String(record.accessed_at.to_rfc3339()),
+                serde_json::Value::Number(record.access_count.into()),
+                serde_json::Value::String(storage_location),
+            ];
 
-        // Insert into database using parameterized query
-        let query = r#"
-            INSERT INTO council_verdicts (
-                verdict_id, task_id, consensus_result, debate_session,
-                created_at, accessed_at, access_count, storage_location
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            ON CONFLICT (verdict_id) DO UPDATE SET
-                accessed_at = EXCLUDED.accessed_at,
-                access_count = EXCLUDED.access_count
-        "#;
+            // Insert into database using parameterized query
+            let query = r#"
+                INSERT INTO council_verdicts (
+                    verdict_id, task_id, consensus_result, debate_session,
+                    created_at, accessed_at, access_count, storage_location
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                ON CONFLICT (verdict_id) DO UPDATE SET
+                    accessed_at = EXCLUDED.accessed_at,
+                    access_count = EXCLUDED.access_count
+            "#;
 
-        self.db_client.execute_parameterized_query(query, params).await
-            .context("Failed to store verdict in database")?;
+            db_client.execute_parameterized_query(query, params).await
+                .context("Failed to store verdict in database")?;
 
-        info!("Stored verdict {} in database", record.verdict_id.0);
-        Ok(())
+            info!("Stored verdict {} in database", record.verdict_id);
+            Ok(())
+        })
     }
 
-    async fn load_verdict(&self, verdict_id: VerdictId) -> Result<Option<VerdictRecord>> {
-        // Use direct sqlx query for proper data retrieval
-        let record = sqlx::query!(
-            r#"
-            SELECT
-                verdict_id, task_id, consensus_result, debate_session,
-                created_at, accessed_at, access_count, storage_location
-            FROM council_verdicts
-            WHERE verdict_id = $1
-            "#,
-            verdict_id.0
-        )
-        .fetch_optional(self.db_client.pool())
-        .await
-        .context("Failed to query verdict from database")?;
+    fn load_verdict(&self, verdict_id: VerdictId) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<VerdictRecord>>> + Send>> {
+        let db_client = self.db_client.clone();
+        let verdict_id_clone = verdict_id;
+        Box::pin(async move {
+            // Use direct sqlx query for proper data retrieval
+            let record = sqlx::query(
+                r#"
+                SELECT
+                    verdict_id, task_id, consensus_result, debate_session,
+                    created_at, accessed_at, access_count, storage_location
+                FROM council_verdicts
+                WHERE verdict_id = $1
+                "#
+            )
+            .bind(verdict_id_clone)
+            .fetch_optional(db_client.pool())
+            .await
+            .context("Failed to query verdict from database")?;
 
-        match record {
-            Some(row) => {
+            match record {
+                Some(row) => {
+                    // Parse JSON fields
+                    let consensus_result: ConsensusResult = serde_json::from_str(&row.consensus_result)
+                        .context("Failed to deserialize consensus result")?;
+
+                    let debate_session = if let Some(debate_json) = row.debate_session {
+                        Some(serde_json::from_str(&debate_json)
+                            .context("Failed to deserialize debate session")?)
+                    } else {
+                        None
+                    };
+
+                    let verdict_record = VerdictRecord {
+                        verdict_id: uuid::Uuid::parse_str(&row.verdict_id)?,
+                        consensus_result,
+                        debate_session,
+                        created_at: row.created_at,
+                        accessed_at: row.accessed_at,
+                        access_count: row.access_count as u64,
+                        storage_location: row.storage_location,
+                    };
+
+                    debug!("Loaded verdict {} from database", verdict_id_clone);
+                    Ok(Some(verdict_record))
+                }
+                None => {
+                    debug!("Verdict {} not found in database", verdict_id_clone);
+                    Ok(None)
+                }
+            }
+        })
+    }
+
+    fn load_verdicts_by_task(&self, task_id: TaskId) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<VerdictRecord>>> + Send>> {
+        let db_client = self.db_client.clone();
+        let task_id_clone = task_id;
+        Box::pin(async move {
+            // Use direct sqlx query for proper data retrieval
+            let records = sqlx::query(
+                r#"
+                SELECT
+                    verdict_id, task_id, consensus_result, debate_session,
+                    created_at, accessed_at, access_count, storage_location
+                FROM council_verdicts
+                WHERE task_id = $1
+                ORDER BY created_at DESC
+                "#
+            )
+            .bind(task_id_clone)
+            .fetch_all(db_client.pool())
+            .await
+            .context("Failed to query verdicts by task from database")?;
+
+            let mut verdict_records = Vec::new();
+
+            for row in records {
                 // Parse JSON fields
                 let consensus_result: ConsensusResult = serde_json::from_str(&row.consensus_result)
                     .context("Failed to deserialize consensus result")?;
@@ -452,7 +514,7 @@ impl VerdictStorage for DatabaseVerdictStorage {
                 };
 
                 let verdict_record = VerdictRecord {
-                    verdict_id: VerdictId(uuid::Uuid::parse_str(&row.verdict_id)?),
+                    verdict_id: uuid::Uuid::parse_str(&row.verdict_id)?,
                     consensus_result,
                     debate_session,
                     created_at: row.created_at,
@@ -461,158 +523,120 @@ impl VerdictStorage for DatabaseVerdictStorage {
                     storage_location: row.storage_location,
                 };
 
-                debug!("Loaded verdict {} from database", verdict_id.0);
-                Ok(Some(verdict_record))
+                verdict_records.push(verdict_record);
             }
-            None => {
-                debug!("Verdict {} not found in database", verdict_id.0);
-                Ok(None)
-            }
-        }
+
+            debug!("Loaded {} verdicts for task {} from database", verdict_records.len(), task_id_clone);
+            Ok(verdict_records)
+        })
     }
 
-    async fn load_verdicts_by_task(&self, task_id: TaskId) -> Result<Vec<VerdictRecord>> {
-        // Use direct sqlx query for proper data retrieval
-        let records = sqlx::query!(
-            r#"
-            SELECT
-                verdict_id, task_id, consensus_result, debate_session,
-                created_at, accessed_at, access_count, storage_location
-            FROM council_verdicts
-            WHERE task_id = $1
-            ORDER BY created_at DESC
-            "#,
-            task_id.0
-        )
-        .fetch_all(self.db_client.pool())
-        .await
-        .context("Failed to query verdicts by task from database")?;
-
-        let mut verdict_records = Vec::new();
-
-        for row in records {
-            // Parse JSON fields
-            let consensus_result: ConsensusResult = serde_json::from_str(&row.consensus_result)
-                .context("Failed to deserialize consensus result")?;
-
-            let debate_session = if let Some(debate_json) = row.debate_session {
-                Some(serde_json::from_str(&debate_json)
-                    .context("Failed to deserialize debate session")?)
-            } else {
-                None
-            };
-
-            let verdict_record = VerdictRecord {
-                verdict_id: VerdictId(uuid::Uuid::parse_str(&row.verdict_id)?),
-                consensus_result,
-                debate_session,
-                created_at: row.created_at,
-                accessed_at: row.accessed_at,
-                access_count: row.access_count as u64,
-                storage_location: row.storage_location,
-            };
-
-            verdict_records.push(verdict_record);
-        }
-
-        debug!("Loaded {} verdicts for task {} from database", verdict_records.len(), task_id.0);
-        Ok(verdict_records)
-    }
-
-    async fn load_verdicts_by_time_range(
+    fn load_verdicts_by_time_range(
         &self,
         start: chrono::DateTime<chrono::Utc>,
         end: chrono::DateTime<chrono::Utc>,
-    ) -> Result<Vec<VerdictRecord>> {
-        // Use direct sqlx query for proper data retrieval
-        let records = sqlx::query!(
-            r#"
-            SELECT
-                verdict_id, task_id, consensus_result, debate_session,
-                created_at, accessed_at, access_count, storage_location
-            FROM council_verdicts
-            WHERE created_at >= $1 AND created_at <= $2
-            ORDER BY created_at DESC
-            "#,
-            start,
-            end
-        )
-        .fetch_all(self.db_client.pool())
-        .await
-        .context("Failed to query verdicts by time range from database")?;
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<VerdictRecord>>> + Send>> {
+        let db_client = self.db_client.clone();
+        let start_clone = start;
+        let end_clone = end;
+        Box::pin(async move {
+            // Use direct sqlx query for proper data retrieval
+            let records = sqlx::query(
+                r#"
+                SELECT
+                    verdict_id, task_id, consensus_result, debate_session,
+                    created_at, accessed_at, access_count, storage_location
+                FROM council_verdicts
+                WHERE created_at >= $1 AND created_at <= $2
+                ORDER BY created_at DESC
+                "#
+            )
+            .bind(start_clone)
+            .bind(end_clone)
+            .fetch_all(db_client.pool())
+            .await
+            .context("Failed to query verdicts by time range from database")?;
 
-        let mut verdict_records = Vec::new();
+            let mut verdict_records = Vec::new();
 
-        for row in records {
-            // Parse JSON fields
-            let consensus_result: ConsensusResult = serde_json::from_str(&row.consensus_result)
-                .context("Failed to deserialize consensus result")?;
+            for row in records {
+                // Parse JSON fields
+                let consensus_result: ConsensusResult = serde_json::from_str(&row.consensus_result)
+                    .context("Failed to deserialize consensus result")?;
 
-            let debate_session = if let Some(debate_json) = row.debate_session {
-                Some(serde_json::from_str(&debate_json)
-                    .context("Failed to deserialize debate session")?)
+                let debate_session = if let Some(debate_json) = row.debate_session {
+                    Some(serde_json::from_str(&debate_json)
+                        .context("Failed to deserialize debate session")?)
+                } else {
+                    None
+                };
+
+                let verdict_record = VerdictRecord {
+                    verdict_id: uuid::Uuid::parse_str(&row.verdict_id)?,
+                    consensus_result,
+                    debate_session,
+                    created_at: row.created_at,
+                    accessed_at: row.accessed_at,
+                    access_count: row.access_count as u64,
+                    storage_location: row.storage_location,
+                };
+
+                verdict_records.push(verdict_record);
+            }
+
+            debug!("Loaded {} verdicts in time range {} to {} from database",
+                   verdict_records.len(), start_clone, end_clone);
+            Ok(verdict_records)
+        })
+    }
+
+    fn delete_verdict(&self, verdict_id: VerdictId) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>> {
+        let db_client = self.db_client.clone();
+        let verdict_id_clone = verdict_id;
+        Box::pin(async move {
+            let params = vec![serde_json::Value::String(verdict_id_clone.to_string())];
+
+            let query = "DELETE FROM council_verdicts WHERE verdict_id = $1";
+
+            let result = db_client.execute_parameterized_query(query, params).await
+                .context("Failed to delete verdict from database")?;
+
+            if result.rows_affected() == 0 {
+                warn!("No verdict found with ID {} to delete", verdict_id_clone);
             } else {
-                None
-            };
+                info!("Deleted verdict {} from database", verdict_id_clone);
+            }
 
-            let verdict_record = VerdictRecord {
-                verdict_id: VerdictId(uuid::Uuid::parse_str(&row.verdict_id)?),
-                consensus_result,
-                debate_session,
-                created_at: row.created_at,
-                accessed_at: row.accessed_at,
-                access_count: row.access_count as u64,
-                storage_location: row.storage_location,
-            };
-
-            verdict_records.push(verdict_record);
-        }
-
-        debug!("Loaded {} verdicts in time range {} to {} from database",
-               verdict_records.len(), start, end);
-        Ok(verdict_records)
+            Ok(())
+        })
     }
 
-    async fn delete_verdict(&self, verdict_id: VerdictId) -> Result<()> {
-        let params = vec![serde_json::Value::String(verdict_id.0.to_string())];
+    fn get_storage_stats(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<StorageStats>> + Send>> {
+        let db_client = self.db_client.clone();
+        Box::pin(async move {
+            // Query storage statistics from database
+            let stats = sqlx::query(
+                r#"
+                SELECT
+                    COUNT(*) as "total_verdicts!",
+                    COUNT(debate_session) FILTER (WHERE debate_session IS NOT NULL) as "total_debates!",
+                    COALESCE(SUM(pg_column_size(consensus_result) + COALESCE(pg_column_size(debate_session), 0)), 0) as "storage_size_bytes!",
+                    MIN(created_at) as "oldest_verdict",
+                    MAX(created_at) as "newest_verdict"
+                FROM council_verdicts
+                "#
+            )
+            .fetch_one(db_client.pool())
+            .await
+            .context("Failed to query storage statistics from database")?;
 
-        let query = "DELETE FROM council_verdicts WHERE verdict_id = $1";
-
-        let result = self.db_client.execute_parameterized_query(query, params).await
-            .context("Failed to delete verdict from database")?;
-
-        if result.rows_affected() == 0 {
-            warn!("No verdict found with ID {} to delete", verdict_id.0);
-        } else {
-            info!("Deleted verdict {} from database", verdict_id.0);
-        }
-
-        Ok(())
-    }
-
-    async fn get_storage_stats(&self) -> Result<StorageStats> {
-        // Query storage statistics from database
-        let stats = sqlx::query!(
-            r#"
-            SELECT
-                COUNT(*) as "total_verdicts!",
-                COUNT(debate_session) FILTER (WHERE debate_session IS NOT NULL) as "total_debates!",
-                COALESCE(SUM(pg_column_size(consensus_result) + COALESCE(pg_column_size(debate_session), 0)), 0) as "storage_size_bytes!",
-                MIN(created_at) as "oldest_verdict",
-                MAX(created_at) as "newest_verdict"
-            FROM council_verdicts
-            "#
-        )
-        .fetch_one(self.db_client.pool())
-        .await
-        .context("Failed to query storage statistics from database")?;
-
-        Ok(StorageStats {
-            total_verdicts: stats.total_verdicts as u64,
-            total_debates: stats.total_debates as u64,
-            storage_size_bytes: stats.storage_size_bytes as u64,
-            oldest_verdict: stats.oldest_verdict,
-            newest_verdict: stats.newest_verdict,
+            Ok(StorageStats {
+                total_verdicts: stats.total_verdicts as u64,
+                total_debates: stats.total_debates as u64,
+                storage_size_bytes: stats.storage_size_bytes as u64,
+                oldest_verdict: stats.oldest_verdict,
+                newest_verdict: stats.newest_verdict,
+            })
         })
     }
 }
@@ -634,7 +658,7 @@ mod tests {
     #[cfg(test)]
     mod test_utils {
         use super::*;
-        use crate::database::DatabaseClient;
+        use agent_agency_database::DatabaseClient;
         use std::env;
         use sqlx::PgPool;
 
@@ -1054,10 +1078,10 @@ mod tests {
             storage.store_verdict(&verdict_record).await?;
 
             // Verify audit trail was created
-            let audit_count = sqlx::query_scalar!(
-                "SELECT COUNT(*) FROM audit_trail WHERE entity_type = 'council_verdict' AND entity_id = $1",
-                verdict_id.0
+            let audit_count = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM audit_trail WHERE entity_type = 'council_verdict' AND entity_id = $1"
             )
+            .bind(verdict_id)
             .fetch_one(test_db.pool())
             .await?;
 
@@ -1067,10 +1091,10 @@ mod tests {
             // Delete verdict (should create another audit trail entry)
             storage.delete_verdict(verdict_id).await?;
 
-            let audit_count_after_delete = sqlx::query_scalar!(
-                "SELECT COUNT(*) FROM audit_trail WHERE entity_type = 'council_verdict' AND entity_id = $1",
-                verdict_id.0
+            let audit_count_after_delete = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM audit_trail WHERE entity_type = 'council_verdict' AND entity_id = $1"
             )
+            .bind(verdict_id)
             .fetch_one(test_db.pool())
             .await?;
 
@@ -1113,7 +1137,7 @@ mod tests {
             // Verify all verdicts were stored
             for verdict_id in &verdict_ids {
                 let loaded = storage.load_verdict(*verdict_id).await?;
-                assert!(loaded.is_some(), "Verdict {} should exist", verdict_id.0);
+                assert!(loaded.is_some(), "Verdict {} should exist", verdict_id);
             }
 
             // Test load by task returns all verdicts
@@ -1128,7 +1152,7 @@ mod tests {
             // Verify all were deleted
             for verdict_id in &verdict_ids {
                 let loaded = storage.load_verdict(*verdict_id).await?;
-                assert!(loaded.is_none(), "Verdict {} should be deleted", verdict_id.0);
+                assert!(loaded.is_none(), "Verdict {} should be deleted", verdict_id);
             }
 
             // Verify task loading returns empty

@@ -123,7 +123,9 @@ export class DockerInfrastructureService extends BaseServiceIntegration {
     try {
       // Test Docker daemon connectivity
       const response = await fetch(`http://localhost/info`, {
-        socketPath: this.dockerSocket,
+        headers: {
+          Host: "localhost",
+        },
       });
 
       const responseTime = Date.now() - startTime;
@@ -191,7 +193,9 @@ export class DockerInfrastructureService extends BaseServiceIntegration {
         `http://localhost/containers/${containerId}/restart`,
         {
           method: "POST",
-          socketPath: this.dockerSocket,
+          headers: {
+            Host: "localhost",
+          },
         }
       );
 
@@ -287,7 +291,9 @@ export class DockerInfrastructureService extends BaseServiceIntegration {
       const response = await fetch(
         `http://localhost/containers/${containerId}/json`,
         {
-          socketPath: this.dockerSocket,
+          headers: {
+            Host: "localhost",
+          },
         }
       );
 
@@ -295,7 +301,7 @@ export class DockerInfrastructureService extends BaseServiceIntegration {
         throw new Error(`Failed to get container info: ${response.status}`);
       }
 
-      const containerInfo = await response.json();
+      const containerInfo = (await response.json()) as any;
       const isHealthy = containerInfo.State?.Running === true;
 
       return this.createResult(
@@ -325,14 +331,16 @@ export class DockerInfrastructureService extends BaseServiceIntegration {
 
     try {
       const response = await fetch("http://localhost/containers/json", {
-        socketPath: this.dockerSocket,
+        headers: {
+          Host: "localhost",
+        },
       });
 
       if (!response.ok) {
         throw new Error(`Failed to list containers: ${response.status}`);
       }
 
-      const containers = await response.json();
+      const containers = (await response.json()) as any;
 
       const instances: InfrastructureInstance[] = containers.map(
         (container: any) => ({
@@ -375,7 +383,7 @@ export class DockerInfrastructureService extends BaseServiceIntegration {
     while (Date.now() - startTime < timeoutMs) {
       const healthResult = await this.healthCheckContainer({
         componentId: containerId,
-        operation: "healthCheck",
+        operation: "health-check",
       });
 
       if (healthResult.success && healthResult.data?.healthy) {
@@ -393,14 +401,16 @@ export class DockerInfrastructureService extends BaseServiceIntegration {
   private async getContainerReplicas(componentId: string): Promise<any[]> {
     // Get all containers with the same component label
     const response = await fetch("http://localhost/containers/json", {
-      socketPath: this.dockerSocket,
+      headers: {
+        Host: "localhost",
+      },
     });
 
     if (!response.ok) {
       throw new Error(`Failed to get container replicas: ${response.status}`);
     }
 
-    const containers = await response.json();
+    const containers = (await response.json()) as any;
     return containers.filter(
       (container: any) => container.Labels?.["component.id"] === componentId
     );
@@ -423,8 +433,8 @@ export class DockerInfrastructureService extends BaseServiceIntegration {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Host: "localhost",
       },
-      socketPath: this.dockerSocket,
       body: JSON.stringify(containerConfig),
     });
 
@@ -432,12 +442,14 @@ export class DockerInfrastructureService extends BaseServiceIntegration {
       throw new Error(`Failed to create container replica: ${response.status}`);
     }
 
-    const result = await response.json();
+    const result = (await response.json()) as any;
 
     // Start the container
     await fetch(`http://localhost/containers/${result.Id}/start`, {
       method: "POST",
-      socketPath: this.dockerSocket,
+      headers: {
+        Host: "localhost",
+      },
     });
   }
 
@@ -445,12 +457,16 @@ export class DockerInfrastructureService extends BaseServiceIntegration {
     // Stop and remove container
     await fetch(`http://localhost/containers/${containerId}/stop`, {
       method: "POST",
-      socketPath: this.dockerSocket,
+      headers: {
+        Host: "localhost",
+      },
     });
 
     await fetch(`http://localhost/containers/${containerId}`, {
       method: "DELETE",
-      socketPath: this.dockerSocket,
+      headers: {
+        Host: "localhost",
+      },
     });
   }
 
@@ -667,7 +683,7 @@ export class KubernetesInfrastructureService extends BaseServiceIntegration {
         throw new Error(`Failed to scale deployment: ${response.status}`);
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as any;
 
       return this.createResult(
         true,
@@ -715,7 +731,7 @@ export class KubernetesInfrastructureService extends BaseServiceIntegration {
         throw new Error(`Failed to get pod status: ${response.status}`);
       }
 
-      const pod = await response.json();
+      const pod = (await response.json()) as any;
       const isHealthy =
         pod.status.phase === "Running" &&
         pod.status.conditions?.some(
@@ -761,7 +777,7 @@ export class KubernetesInfrastructureService extends BaseServiceIntegration {
         throw new Error(`Failed to list pods: ${response.status}`);
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as any;
 
       const instances: InfrastructureInstance[] = result.items.map(
         (pod: any) => ({

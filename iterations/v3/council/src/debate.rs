@@ -249,7 +249,23 @@ impl DebateProtocol {
                 JudgeVerdict::Fail { .. } => opposing.push(judge_id.clone()),
                 JudgeVerdict::Uncertain { .. } => {
                     // Uncertain judges can be assigned based on additional criteria
-                    // For now, assign them to opposing to encourage more debate
+                    // TODO: Implement uncertain judge assignment with the following requirements:
+                    // 1. Judge assignment criteria: Define criteria for uncertain judge assignment
+                    //    - Analyze judge uncertainty factors and causes
+                    //    - Define assignment criteria based on debate dynamics
+                    //    - Handle judge assignment criteria validation and optimization
+                    // 2. Assignment algorithms: Implement intelligent judge assignment algorithms
+                    //    - Apply assignment algorithms based on debate requirements
+                    //    - Handle assignment optimization and load balancing
+                    //    - Implement assignment algorithm validation and quality assurance
+                    // 3. Debate optimization: Optimize debate dynamics through judge assignment
+                    //    - Balance debate perspectives and argument quality
+                    //    - Handle debate optimization and effectiveness improvement
+                    //    - Implement debate optimization monitoring and analytics
+                    // 4. Assignment tracking: Track judge assignment effectiveness and outcomes
+                    //    - Monitor assignment success rates and debate quality
+                    //    - Track assignment impact on debate outcomes
+                    //    - Ensure judge assignment meets fairness and effectiveness standards
                     opposing.push(judge_id.clone());
                 }
             }
@@ -312,7 +328,23 @@ impl DebateProtocol {
         // - Evidence credibility assessment and validation
         // - Research result integration with debate arguments
         // - Multi-source research coordination and synthesis
-        // For now, simulate research findings
+        // TODO: Implement research findings integration with the following requirements:
+        // 1. Research coordination: Coordinate multi-source research and synthesis
+        //    - Integrate research results from multiple sources and methodologies
+        //    - Coordinate research synthesis and analysis across sources
+        //    - Handle research coordination error detection and recovery
+        // 2. Research integration: Integrate research findings with debate arguments
+        //    - Incorporate research findings into debate argument development
+        //    - Handle research integration with argument validation and quality assurance
+        //    - Implement research integration monitoring and optimization
+        // 3. Research validation: Validate research findings quality and reliability
+        //    - Verify research findings authenticity and accuracy
+        //    - Handle research validation error detection and correction
+        //    - Implement research validation quality assurance and compliance
+        // 4. Research analytics: Analyze research findings impact and effectiveness
+        //    - Track research findings usage and impact on debate outcomes
+        //    - Generate research analytics and effectiveness reports
+        //    - Ensure research integration meets quality and effectiveness standards
         let findings = vec![ResearchFinding {
             topic: "Best Practices".to_string(),
             finding: "Industry best practices support the proposed approach".to_string(),

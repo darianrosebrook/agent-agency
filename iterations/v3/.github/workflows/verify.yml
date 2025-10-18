@@ -56,7 +56,10 @@ jobs:
           name: provenance-report
           path: iterations/v3/target/provenance/report.json
 
-      # - name: Mutation testing (disabled)
-      #   run: |
-      #     echo "TODO: Enable mutation testing with cargo-mutants (Rust) or Stryker (JS/TS)"
-      #     # cargo mutants --threshold 70 # example for Tier 1
+      - name: Mutation testing (Tier 1 only)
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+        run: |
+          echo "Installing cargo-mutants for mutation testing..."
+          cargo install cargo-mutants
+          echo "Running mutation testing with Tier 1 settings..."
+          ENABLE_MUTATION=true MUTATION_MIN=0.70 make mutation-tests

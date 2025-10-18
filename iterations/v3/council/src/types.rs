@@ -1,6 +1,5 @@
 //! Core types for the Council system
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;

@@ -54,6 +54,7 @@ export class TerminalSessionManager extends EventEmitter {
   private sessions: Map<string, TerminalSession> = new Map();
   private config: TerminalSessionManagerConfig;
   private validator: CommandValidator;
+  private totalSessionsCreated: number = 0;
 
   constructor(config: Partial<TerminalSessionManagerConfig> = {}) {
     super();
@@ -120,6 +121,7 @@ export class TerminalSessionManager extends EventEmitter {
     };
 
     this.sessions.set(sessionId, session);
+    this.totalSessionsCreated++;
 
     // Emit session created event
     this.emit(TerminalEventType.SESSION_CREATED, {
@@ -325,7 +327,7 @@ export class TerminalSessionManager extends EventEmitter {
   } {
     return {
       activeSessions: this.sessions.size,
-      totalSessionsCreated: this.sessions.size, // TODO: Track historical total
+      totalSessionsCreated: this.totalSessionsCreated,
       uptime: Date.now() - (this as any).startTime || 0,
     };
   }

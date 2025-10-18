@@ -1,0 +1,7 @@
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/.target/1.90.0_x86_64-apple-darwin_e11f4dcd_test-agent-1_check/debug/deps/tracing_attributes-5f1d56ca722c2208.d: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tracing-attributes-0.1.30/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tracing-attributes-0.1.30/src/attr.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tracing-attributes-0.1.30/src/expand.rs
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/.target/1.90.0_x86_64-apple-darwin_e11f4dcd_test-agent-1_check/debug/deps/libtracing_attributes-5f1d56ca722c2208.dylib: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tracing-attributes-0.1.30/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tracing-attributes-0.1.30/src/attr.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tracing-attributes-0.1.30/src/expand.rs
+
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tracing-attributes-0.1.30/src/lib.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tracing-attributes-0.1.30/src/attr.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tracing-attributes-0.1.30/src/expand.rs:

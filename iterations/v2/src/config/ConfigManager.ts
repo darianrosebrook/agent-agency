@@ -8,6 +8,7 @@
  */
 
 import { z } from "zod";
+import { Logger } from "@/observability/Logger";
 
 // Base configuration schemas
 const orchestratorConfigSchema = z.object({
@@ -92,8 +93,10 @@ const fullConfigSchema = z.object({
 export class ConfigManager {
   private static instance: ConfigManager;
   private config: any;
+  private logger: Logger;
 
   private constructor() {
+    this.logger = new Logger("ConfigManager");
     this.loadConfig();
   }
 
@@ -212,10 +215,61 @@ export class ConfigManager {
   /**
    * Check if user has access to a configuration section
    */
-  private checkAccess(_section: string, _user: string): boolean {
-    // TODO: Implement proper access control logic
-    // For now, allow all access
-    return true;
+  private checkAccess(section: string, user: string): boolean {
+    try {
+      // Check if access control is enabled
+      if (!this.config.accessControl?.enabled) {
+        return true;
+      }
+
+      // Check user permissions
+      const userPermissions =
+        this.config.accessControl?.userPermissions?.[user];
+      if (!userPermissions) {
+        // User not found in permissions, check default role
+        const defaultRole = this.config.accessControl?.defaultRole;
+        if (defaultRole) {
+          const rolePermissions =
+            this.config.accessControl?.rolePermissions?.[defaultRole];
+          return (
+            rolePermissions?.includes(section) ||
+            rolePermissions?.includes("*") ||
+            false
+          );
+        }
+        return false;
+      }
+
+      // Check if user has explicit permission for this section
+      if (userPermissions.includes(section) || userPermissions.includes("*")) {
+        return true;
+      }
+
+      // Check if user has role-based permissions
+      const userRoles = this.config.accessControl?.userRoles?.[user];
+      if (userRoles) {
+        for (const role of userRoles) {
+          const rolePermissions =
+            this.config.accessControl?.rolePermissions?.[role];
+          if (
+            rolePermissions?.includes(section) ||
+            rolePermissions?.includes("*")
+          ) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    } catch (error) {
+      this.logger.error("Access control check failed", {
+        section,
+        user,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Fail closed - deny access on error
+      return false;
+    }
   }
 
   /**

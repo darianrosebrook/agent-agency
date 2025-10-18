@@ -533,7 +533,6 @@ mod verification_tests {
     }
 }
 
-
 #[cfg(test)]
 mod pipeline_integration_tests {
     use super::*;

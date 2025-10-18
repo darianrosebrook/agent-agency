@@ -45,7 +45,7 @@ pub trait SignerTrait: Send + Sync {
 }
 
 /// Signing algorithm types
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SigningAlgorithm {
     RS256,
     ES256,
@@ -283,7 +283,7 @@ impl LocalKeySigner {
 
     fn extract_ed25519_components(&self) -> Result<(Vec<u8>, Vec<u8>)> {
         let pk_info = PrivateKeyInfo::from_der(&self.pkcs8_private_key)
-            .context("Failed to parse PKCS#8 private key")?;
+            .map_err(|e| anyhow::anyhow!("Failed to parse PKCS#8 private key: {}", e))?;
 
         // Ed25519 object identifier per RFC 8410.
         let ed25519_oid =

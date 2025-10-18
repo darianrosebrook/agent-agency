@@ -42,6 +42,17 @@ pub enum OptimizationStatus {
     Failed(String),
 }
 
+/// Optimization record for tracking optimization history
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OptimizationRecord {
+    pub target: OptimizationTarget,
+    pub duration_ms: u64,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub success: bool,
+    pub performance_improvement: Option<f32>,
+    pub quantization: QuantizationMethod,
+}
+
 /// Hardware resource usage
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceUsage {
@@ -126,6 +137,9 @@ pub struct ModelInfo {
     pub performance_metrics: ModelPerformanceMetrics,
     pub is_loaded: bool,
     pub loaded_target: Option<OptimizationTarget>,
+    pub last_optimized_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub optimization_targets: Vec<OptimizationTarget>,
+    pub optimization_history: Vec<OptimizationRecord>,
 }
 
 /// Model performance metrics
@@ -139,6 +153,9 @@ pub struct ModelPerformanceMetrics {
     pub ane_efficiency: f32,
     pub total_inferences: u64,
     pub success_rate: f32,
+    pub optimization_count: u32,
+    pub last_optimization_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub optimization_targets: std::collections::HashSet<OptimizationTarget>,
 }
 
 /// Thermal status
@@ -413,6 +430,9 @@ impl Default for ModelPerformanceMetrics {
             ane_efficiency: 0.0,
             total_inferences: 0,
             success_rate: 1.0,
+            optimization_count: 0,
+            last_optimization_at: None,
+            optimization_targets: std::collections::HashSet::new(),
         }
     }
 }
@@ -548,6 +568,9 @@ mod tests {
             performance_metrics: ModelPerformanceMetrics::default(),
             is_loaded: true,
             loaded_target: Some(OptimizationTarget::ANE),
+            last_optimized_at: None,
+            optimization_targets: vec![OptimizationTarget::ANE],
+            optimization_history: vec![],
         };
 
         assert_eq!(info.name, "test-model");

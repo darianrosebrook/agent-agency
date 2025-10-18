@@ -1,113 +1,194 @@
 #!/usr/bin/env bash
-# Build performance analysis script
-# @darianrosebrook
-#
-# This script analyzes build performance bottlenecks and provides
-# optimization recommendations.
-
 set -euo pipefail
 
-echo "🔍 Analyzing Rust build performance..."
+# Build performance analysis script
+# Helps identify bottlenecks in Rust compilation
 
-# Check if we're using nightly for advanced analysis
-if ! rustc -vV | grep -q nightly; then
-    echo "⚠️  Some analysis features require nightly toolchain"
-    echo "   Install with: rustup toolchain install nightly"
-    echo "   Use with: rustup override set nightly"
+echo "🔍 Rust Build Performance Analysis"
+echo "=================================="
+
+# Check if we're in a Rust project
+if [[ ! -f "Cargo.toml" ]]; then
+    echo "Error: Not in a Rust project directory"
+    exit 1
 fi
 
-# Create analysis directory
-mkdir -p target/analysis
-
-echo "📊 Running build timing analysis..."
-
-# Generate timing report
-if rustc -vV | grep -q nightly; then
-    echo "   Generating detailed timing report..."
-    CARGO_PROFILE_TIMINGS=html cargo build --workspace 2>&1 | tee target/analysis/build-timings.log
-    echo "   📈 Timing report saved to target/analysis/"
-else
-    echo "   Running basic timing analysis..."
-    time cargo build --workspace 2>&1 | tee target/analysis/build-timings.log
-fi
-
-echo "🔍 Analyzing monomorphization (requires nightly)..."
-
-if rustc -vV | grep -q nightly; then
-    echo "   Generating monomorphization report..."
-    cargo rustc --workspace -- -Zprint-mono-items=lazy 2>&1 | tee target/analysis/mono-items.log
+# Function to run cargo with timing
+run_with_timing() {
+    local cmd="$1"
+    local description="$2"
     
-    # Count unique monomorphizations
-    echo "   📊 Monomorphization summary:"
-    grep -c "MONO_ITEM" target/analysis/mono-items.log || echo "   No mono items found"
+    echo ""
+    echo "📊 $description"
+    echo "Command: $cmd"
+    echo "----------------------------------------"
     
-    # Find most common generic instantiations
-    echo "   🔍 Top generic instantiations:"
-    grep "MONO_ITEM" target/analysis/mono-items.log | \
-        sed 's/.*MONO_ITEM //' | \
-        sort | uniq -c | sort -nr | head -10 || echo "   No data available"
+    # Clear any existing timing data
+    rm -rf target/.rustc-timing
+    
+    # Run with timing if nightly is available
+    if rustc -vV | grep -q nightly; then
+        echo "Using nightly rustc with timing..."
+        time CARGO_PROFILE_TIMINGS=html "$cmd"
+        
+        # Check if timing report was generated
+        if [[ -d "target/.rustc-timing" ]]; then
+            echo "✅ Timing report generated in target/.rustc-timing/"
+            echo "   Open target/.rustc-timing/index.html in your browser"
+        fi
+    else
+        echo "Using stable rustc (no detailed timing available)..."
+        time "$cmd"
+    fi
+}
+
+# Function to analyze crate graph
+analyze_crate_graph() {
+    echo ""
+    echo "📈 Crate Graph Analysis"
+    echo "----------------------"
+    
+    if command -v cargo-tree >/dev/null 2>&1; then
+        echo "Crate dependency tree:"
+        cargo tree --duplicates
+    else
+        echo "Install cargo-tree for dependency analysis:"
+        echo "  cargo install cargo-tree"
+    fi
+    
+    echo ""
+    echo "Workspace members:"
+    cargo metadata --format-version 1 | jq -r '.workspace_members[]' | sort
+}
+
+# Function to check for common performance issues
+check_performance_issues() {
+    echo ""
+    echo "⚠️  Performance Issue Checks"
+    echo "---------------------------"
+    
+    # Check for heavy proc-macros
+    echo "Checking for heavy proc-macros..."
+    if grep -r "proc-macro = true" . --include="*.toml" >/dev/null 2>&1; then
+        echo "Found proc-macros in:"
+        grep -r "proc-macro = true" . --include="*.toml" | cut -d: -f1
+    else
+        echo "✅ No proc-macros found"
+    fi
+    
+    # Check for large feature sets
+    echo ""
+    echo "Checking feature flags..."
+    if grep -r "features = \[" . --include="*.toml" >/dev/null 2>&1; then
+        echo "Found feature flags in:"
+        grep -r "features = \[" . --include="*.toml" | head -5
+    fi
+    
+    # Check for inline attributes
+    echo ""
+    echo "Checking for inline attributes..."
+    if find . -name "*.rs" -exec grep -l "#\[inline" {} \; >/dev/null 2>&1; then
+        echo "Found inline attributes in:"
+        find . -name "*.rs" -exec grep -l "#\[inline" {} \; | head -5
+    else
+        echo "✅ No inline attributes found"
+    fi
+}
+
+# Function to suggest optimizations
+suggest_optimizations() {
+    echo ""
+    echo "💡 Optimization Suggestions"
+    echo "-------------------------"
+    
+    echo "1. Enable sccache for compiler caching:"
+    echo "   ./scripts/setup-sccache.sh"
+    echo ""
+    
+    echo "2. Use fast linkers:"
+    echo "   - Linux: lld or mold"
+    echo "   - macOS: ld64.lld or zld"
+    echo ""
+    
+    echo "3. Use Cranelift for dev builds (nightly only):"
+    echo "   RUSTFLAGS='-Zcodegen-backend=cranelift' cargo build"
+    echo ""
+    
+    echo "4. Use cargo-nextest for faster testing:"
+    echo "   cargo install cargo-nextest"
+    echo "   cargo nextest run"
+    echo ""
+    
+    echo "5. Profile specific crates:"
+    echo "   cargo build -p <crate-name>"
+    echo ""
+    
+    echo "6. Use unique target directories for agents:"
+    echo "   ./scripts/cargo-agent-wrapper.sh dev"
+}
+
+# Main analysis
+echo "Starting build performance analysis..."
+
+# Check basic setup
+echo ""
+echo "🔧 Build Environment"
+echo "-------------------"
+echo "Rust version: $(rustc --version)"
+echo "Cargo version: $(cargo --version)"
+echo "Platform: $(rustc -vV | sed -n 's/^host: //p')"
+
+# Check for sccache
+if command -v sccache >/dev/null 2>&1; then
+    echo "✅ sccache available: $(sccache --version | head -1)"
+    sccache --show-stats | head -10
 else
-    echo "   ⚠️  Skipping monomorphization analysis (requires nightly)"
+    echo "❌ sccache not available (recommended for faster builds)"
 fi
 
-echo "📦 Analyzing crate dependencies..."
+# Check for fast linkers
+echo ""
+echo "🔗 Linker Configuration"
+echo "----------------------"
+case "$(rustc -vV | sed -n 's/^host: //p')" in
+    *linux*)
+        if command -v lld >/dev/null 2>&1; then
+            echo "✅ lld available"
+        else
+            echo "❌ lld not available (recommended for Linux)"
+        fi
+        ;;
+    *darwin*)
+        if command -v ld64.lld >/dev/null 2>&1; then
+            echo "✅ ld64.lld available"
+        elif command -v zld >/dev/null 2>&1; then
+            echo "✅ zld available"
+        else
+            echo "❌ Fast linker not available (ld64.lld or zld recommended)"
+        fi
+        ;;
+esac
 
-# Generate dependency graph
-if command -v cargo-tree >/dev/null 2>&1; then
-    echo "   Generating dependency tree..."
-    cargo tree --workspace > target/analysis/dependency-tree.txt
-else
-    echo "   Installing cargo-tree for dependency analysis..."
-    cargo install cargo-tree
-    cargo tree --workspace > target/analysis/dependency-tree.txt
-fi
+# Run analysis
+analyze_crate_graph
+check_performance_issues
 
-# Analyze dependency depth
-echo "   📊 Dependency analysis:"
-echo "   Total crates: $(cargo tree --workspace | wc -l)"
-echo "   Unique dependencies: $(cargo tree --workspace | grep -v "└──" | grep -v "├──" | wc -l)"
+# Run build with timing
+run_with_timing "cargo check" "Full workspace check"
 
-echo "🔧 Checking for optimization opportunities..."
+# Run package-specific builds
+echo ""
+echo "📦 Package-specific builds"
+echo "-------------------------"
+for package in $(cargo metadata --format-version 1 | jq -r '.workspace_members[]' | sed 's/.* //'); do
+    if [[ -d "$package" ]]; then
+        run_with_timing "cargo check -p $package" "Check $package"
+    fi
+done
 
-# Check for unused dependencies
-if command -v cargo-machete >/dev/null 2>&1; then
-    echo "   Checking for unused dependencies..."
-    cargo machete --workspace > target/analysis/unused-deps.txt || echo "   No unused dependencies found"
-fi
-
-# Check for duplicate dependencies
-echo "   Checking for duplicate dependencies..."
-cargo tree --workspace --duplicates > target/analysis/duplicate-deps.txt || echo "   No duplicate dependencies found"
-
-echo "📋 Performance recommendations:"
-
-# Check cache usage
-if [[ -n "${SCCACHE_STATS:-}" ]]; then
-    echo "   🗄️  Compiler cache stats:"
-    sccache --show-stats || echo "   No cache stats available"
-fi
-
-# Check target directory size
-TARGET_SIZE=$(du -sh target 2>/dev/null | cut -f1 || echo "unknown")
-echo "   📁 Target directory size: $TARGET_SIZE"
-
-# Check for large object files
-echo "   🔍 Large object files (>10MB):"
-find target -name "*.rlib" -o -name "*.rmeta" | xargs ls -lh 2>/dev/null | awk '$5 ~ /[0-9]+M/ && $5+0 > 10' || echo "   No large object files found"
+# Suggest optimizations
+suggest_optimizations
 
 echo ""
-echo "✅ Analysis complete!"
-echo "📊 Results saved to target/analysis/"
-echo ""
-echo "🎯 Optimization priorities:"
-echo "   1. Review timing report for slowest crates"
-echo "   2. Check monomorphization report for generic hotspots"
-echo "   3. Remove unused dependencies"
-echo "   4. Consider splitting large crates"
-echo "   5. Optimize feature flag combinations"
-echo ""
-echo "💡 Next steps:"
-echo "   - Review target/analysis/build-timings.log"
-echo "   - Check target/analysis/mono-items.log for generic hotspots"
-echo "   - Run 'cargo machete' to remove unused dependencies"
-echo "   - Consider using trait objects at crate boundaries"
+echo "🎯 Analysis complete!"
+echo "Check the timing reports in target/.rustc-timing/ for detailed breakdowns"

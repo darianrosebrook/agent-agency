@@ -37,9 +37,12 @@
         }];
 
         // Build task context
+        let workspace_root = context.source_file.clone().unwrap_or_default();
+        let git_branch = self.extract_git_branch(&workspace_root).unwrap_or_else(|| "main".to_string());
+        
         let task_context = CouncilTaskContext {
-            workspace_root: context.source_file.clone().unwrap_or_default(),
-            git_branch: "main".to_string(), // TODO: Extract from context
+            workspace_root,
+            git_branch,
             recent_changes: vec![claim.claim_text.clone()],
             dependencies: std::collections::HashMap::new(),
             environment: CouncilEnvironment::Development,
@@ -58,3 +61,56 @@
             },
             metadata: std::collections::HashMap::new(),
         };
+
+        // ... rest of the method implementation would go here
+    }
+
+    /// Extract git branch from workspace root directory
+    fn extract_git_branch(&self, workspace_root: &str) -> Option<String> {
+        use std::process::Command;
+        
+        // Try to get the current git branch from the workspace root
+        let output = Command::new("git")
+            .args(&["rev-parse", "--abbrev-ref", "HEAD"])
+            .current_dir(workspace_root)
+            .output();
+            
+        match output {
+            Ok(result) => {
+                if result.status.success() {
+                    let branch = String::from_utf8_lossy(&result.stdout).trim().to_string();
+                    if !branch.is_empty() && branch != "HEAD" {
+                        Some(branch)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            Err(_) => {
+                // Git command failed, try alternative approach
+                self.extract_git_branch_from_refs(workspace_root)
+            }
+        }
+    }
+
+    /// Alternative method to extract git branch from .git/HEAD file
+    fn extract_git_branch_from_refs(&self, workspace_root: &str) -> Option<String> {
+        use std::fs;
+        use std::path::Path;
+        
+        let git_head_path = Path::new(workspace_root).join(".git").join("HEAD");
+        
+        if let Ok(head_content) = fs::read_to_string(&git_head_path) {
+            // Parse refs/heads/branch-name format
+            if let Some(branch_name) = head_content.strip_prefix("ref: refs/heads/") {
+                let branch = branch_name.trim().to_string();
+                if !branch.is_empty() {
+                    return Some(branch);
+                }
+            }
+        }
+        
+        None
+    }

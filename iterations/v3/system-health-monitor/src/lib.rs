@@ -476,9 +476,23 @@ impl SystemHealthMonitor {
             // We can use disk usage as a proxy, but for real I/O monitoring
             // we would need additional system calls or external tools
 
-            // For now, return a simplified metric based on disk activity
-            // In a production implementation, this would use system-specific APIs
-            // like iostat on Linux or Performance Counters on Windows
+            // TODO: Implement system-specific disk I/O monitoring with the following requirements:
+            // 1. System-specific APIs integration: Integrate with system-specific disk I/O monitoring APIs
+            //    - Use iostat on Linux, Performance Counters on Windows, and system-specific APIs
+            //    - Handle system-specific API integration optimization and performance
+            //    - Implement system-specific API integration validation and quality assurance
+            // 2. Disk I/O monitoring: Implement comprehensive disk I/O monitoring and analysis
+            //    - Monitor disk I/O performance metrics and trends
+            //    - Handle disk I/O monitoring optimization and performance
+            //    - Implement disk I/O monitoring validation and error handling
+            // 3. Performance metrics: Generate comprehensive disk I/O performance metrics
+            //    - Calculate disk I/O performance metrics and analytics
+            //    - Handle performance metrics optimization and reporting
+            //    - Implement performance metrics validation and quality assurance
+            // 4. System optimization: Optimize disk I/O monitoring performance and reliability
+            //    - Implement disk I/O monitoring caching and optimization strategies
+            //    - Handle monitoring performance analytics and reporting
+            //    - Ensure disk I/O monitoring meets performance and reliability standards
 
             // Placeholder: calculate a rough I/O activity metric
             let disk_usage_percent = disk.total_space().saturating_sub(disk.available_space())
@@ -1158,7 +1172,27 @@ impl SystemHealthMonitor {
     /// Get embedding service metrics
     async fn get_embedding_metrics(&self) -> EmbeddingMetrics {
         // Simulate embedding service metrics
-        // In a real implementation, this would query the embedding service
+        // TODO: Implement embedding service querying with the following requirements:
+        // 1. Embedding service integration: Query the embedding service for metrics
+        //    - Query the embedding service for metrics and performance data
+        //    - Handle embedding service integration optimization and performance
+        //    - Implement embedding service integration validation and quality assurance
+        //    - Support embedding service integration customization and configuration
+        // 2. Service metrics retrieval: Retrieve embedding service metrics and data
+        //    - Retrieve embedding service metrics and performance data
+        //    - Handle service metrics retrieval optimization and performance
+        //    - Implement service metrics retrieval validation and quality assurance
+        //    - Support service metrics retrieval customization and configuration
+        // 3. Embedding service monitoring: Monitor embedding service performance and health
+        //    - Monitor embedding service performance and health metrics
+        //    - Handle embedding service monitoring optimization and performance
+        //    - Implement embedding service monitoring validation and quality assurance
+        //    - Support embedding service monitoring customization and configuration
+        // 4. Embedding service optimization: Optimize embedding service querying performance
+        //    - Implement embedding service querying optimization strategies
+        //    - Handle embedding service monitoring and analytics
+        //    - Implement embedding service validation and quality assurance
+        //    - Ensure embedding service querying meets performance and reliability standards
         EmbeddingMetrics {
             embedding_generation_rate: 150.0,      // embeddings per second
             embedding_cache_hit_rate: 0.85,        // 85% cache hit rate

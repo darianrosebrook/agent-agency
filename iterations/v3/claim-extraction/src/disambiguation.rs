@@ -595,8 +595,23 @@ impl ContextResolver {
 
     /// Extract conversation entities (stub - would need conversation history)
     fn extract_conversation_entities(&self, _context: &ProcessingContext) -> Vec<String> {
-        // In V2 this would analyze conversation history for named entities
-        // For now, return empty vec
+        // TODO: Implement conversation entity extraction with the following requirements:
+        // 1. Conversation history analysis: Analyze conversation history for named entities
+        //    - Parse conversation history and extract entity mentions
+        //    - Identify entity types and relationships from conversation context
+        //    - Handle entity resolution and disambiguation across conversation turns
+        // 2. Named entity recognition: Implement NER for conversation entities
+        //    - Apply named entity recognition algorithms to conversation text
+        //    - Identify person, organization, location, and other entity types
+        //    - Handle entity boundary detection and classification
+        // 3. Entity linking: Link entities to knowledge bases and references
+        //    - Link extracted entities to external knowledge bases
+        //    - Handle entity disambiguation and reference resolution
+        //    - Implement entity linking validation and quality assurance
+        // 4. Context integration: Integrate entity extraction with conversation context
+        //    - Maintain entity context across conversation turns
+        //    - Handle entity evolution and reference changes over time
+        //    - Implement entity tracking and state management
         Vec::new()
     }
 
@@ -783,8 +798,23 @@ impl ContextResolver {
             }
         }
 
-        // V2 would also analyze conversation history here, but we don't have that in ProcessingContext
-        // For now, we use the domain hints and surrounding context
+        // TODO: Implement conversation history analysis with the following requirements:
+        // 1. Conversation context integration: Integrate conversation history into ProcessingContext
+        //    - Extend ProcessingContext to include conversation history data
+        //    - Handle conversation history storage and retrieval
+        //    - Implement conversation context management and optimization
+        // 2. Historical entity analysis: Analyze entities from conversation history
+        //    - Extract and analyze entities mentioned in previous conversation turns
+        //    - Handle entity evolution and reference changes over time
+        //    - Implement historical entity tracking and state management
+        // 3. Context-aware disambiguation: Use conversation history for entity disambiguation
+        //    - Leverage conversation history for improved entity disambiguation
+        //    - Handle context-dependent entity resolution and linking
+        //    - Implement conversation-aware entity disambiguation algorithms
+        // 4. Domain hint integration: Integrate domain hints with conversation context
+        //    - Combine domain hints with conversation history for better disambiguation
+        //    - Handle domain-specific entity recognition and classification
+        //    - Implement domain-aware entity disambiguation and validation
 
         referent_map
     }

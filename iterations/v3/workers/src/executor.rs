@@ -281,9 +281,23 @@ impl TaskExecutor {
             "caws_spec": input.caws_spec
         });
 
-        // For now, simulate the worker endpoint URL
-        // NOTE: Current implementation uses simulated worker endpoints
-        // Future enhancement: Full worker registry with service discovery
+        // TODO: Implement worker registry and service discovery with the following requirements:
+        // 1. Worker registry implementation: Implement comprehensive worker registry system
+        //    - Create worker registry for managing worker endpoints and services
+        //    - Handle worker registry optimization and performance
+        //    - Implement worker registry validation and quality assurance
+        // 2. Service discovery integration: Integrate service discovery with worker registry
+        //    - Implement service discovery for worker endpoint resolution
+        //    - Handle service discovery optimization and reliability
+        //    - Implement service discovery validation and error handling
+        // 3. Worker endpoint management: Manage worker endpoints and connectivity
+        //    - Track worker endpoint status and availability
+        //    - Handle worker endpoint management optimization and monitoring
+        //    - Implement worker endpoint validation and quality assurance
+        // 4. Registry optimization: Optimize worker registry performance and reliability
+        //    - Implement worker registry caching and optimization strategies
+        //    - Handle registry performance monitoring and analytics
+        //    - Ensure worker registry meets performance and reliability standards
         // - Distributed worker registry with health monitoring
         // - Service discovery and load balancing
         // - Worker capability matching and selection algorithms
@@ -580,8 +594,23 @@ impl TaskExecutor {
             })
             .sum();
 
-        // For now, use basic compliance checking
-        // In practice, this would check against actual CAWS rules
+        // TODO: Implement CAWS rules compliance checking with the following requirements:
+        // 1. CAWS rules integration: Integrate with actual CAWS rules and compliance systems
+        //    - Connect to CAWS rules database and validation systems
+        //    - Handle CAWS rules integration optimization and performance
+        //    - Implement CAWS rules integration validation and quality assurance
+        // 2. Compliance validation: Implement comprehensive compliance validation
+        //    - Validate worker compliance against CAWS rules and requirements
+        //    - Handle compliance validation optimization and performance
+        //    - Implement compliance validation error detection and correction
+        // 3. Rules engine implementation: Implement CAWS rules engine for compliance checking
+        //    - Create rules engine for CAWS compliance validation
+        //    - Handle rules engine optimization and performance
+        //    - Implement rules engine validation and quality assurance
+        // 4. Compliance monitoring: Monitor worker compliance and CAWS rules adherence
+        //    - Track worker compliance metrics and trends
+        //    - Handle compliance monitoring optimization and alerting
+        //    - Ensure CAWS compliance checking meets quality and reliability standards
 
         if file_count > 10 {
             violations.push(CawsViolation {

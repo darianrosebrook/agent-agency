@@ -2160,8 +2160,23 @@ impl DatabaseOperations for DatabaseClient {
     ) -> Result<Vec<KnowledgeEntry>, Self::Error> {
         let limit = limit.unwrap_or(10) as i64;
 
-        // For now, implement text-based search. In a full implementation,
-        // this would use vector similarity search with pgvector
+        // TODO: Implement vector similarity search with the following requirements:
+        // 1. Vector search integration: Implement vector similarity search using pgvector
+        //    - Integrate pgvector extension for vector similarity search capabilities
+        //    - Implement vector indexing and search optimization
+        //    - Handle vector search performance optimization and scaling
+        // 2. Embedding generation: Generate embeddings for knowledge entries
+        //    - Create vector embeddings for knowledge entry content
+        //    - Handle embedding generation and storage optimization
+        //    - Implement embedding quality validation and assurance
+        // 3. Similarity algorithms: Implement vector similarity search algorithms
+        //    - Apply cosine similarity, Euclidean distance, and other similarity metrics
+        //    - Handle similarity algorithm optimization and performance
+        //    - Implement similarity search result ranking and filtering
+        // 4. Search optimization: Optimize vector search performance and accuracy
+        //    - Implement vector search indexing and caching strategies
+        //    - Handle search result quality and relevance optimization
+        //    - Ensure vector search meets performance and accuracy standards
         let rows = sqlx::query(
             r#"
             SELECT *, 

@@ -132,10 +132,10 @@ export class FailureManager extends EventEmitter {
         retries: 3,
         smtpHost: process.env.SMTP_HOST || "localhost",
         smtpPort: parseInt(process.env.SMTP_PORT || "587"),
-        smtpUser: process.env.SMTP_USER || "",
-        smtpPassword: process.env.SMTP_PASSWORD || "",
+        username: process.env.SMTP_USER || "",
+        password: process.env.SMTP_PASSWORD || "",
         fromEmail: process.env.FROM_EMAIL || "alerts@arbiter.local",
-        fromName: "Arbiter System",
+        defaultRecipients: [process.env.FROM_EMAIL || "alerts@arbiter.local"],
       });
       await this.serviceManager.register(emailService);
 
@@ -158,9 +158,10 @@ export class FailureManager extends EventEmitter {
         enabled: true,
         timeout: 30000,
         retries: 3,
+        licenseKey: process.env.NEWRELIC_LICENSE_KEY || "",
         apiKey: process.env.NEWRELIC_API_KEY || "",
-        accountId: process.env.NEWRELIC_ACCOUNT_ID || "",
-        baseUrl: process.env.NEWRELIC_BASE_URL || "https://api.newrelic.com",
+        region: process.env.NEWRELIC_REGION || "US",
+        appName: process.env.NEWRELIC_APP_NAME || "arbiter",
       });
       await this.serviceManager.register(newRelicService);
 
@@ -1457,7 +1458,7 @@ export class FailureManager extends EventEmitter {
           `Error: ${error.message || error.toString()}`,
           `Stack: ${error.stack || "No stack trace available"}`,
         ],
-        traces: [],
+        traces: [] as string[],
         environment: {
           nodeVersion: process.version,
           platform: process.platform,
