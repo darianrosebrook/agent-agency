@@ -1,7 +1,10 @@
 // Integration test template for Postgres persistence.
 // Skipped unless DATABASE_URL is set.
 
-use council::contracts::{FinalDecision, FinalVerdict, VerdictSimple, VoteEntry};
+use agent_agency_council::types::{ConsensusResult, FinalVerdict};
+use chrono::Utc;
+use std::collections::HashMap;
+use uuid::Uuid;
 use orchestration::db::Db;
 use orchestration::persistence_postgres::PostgresVerdictWriter;
 
@@ -13,16 +16,18 @@ async fn persist_verdict_if_db_is_available() {
     let url = std::env::var("DATABASE_URL").unwrap();
     let db = Db::connect(&url, 2).await.unwrap();
     let writer = PostgresVerdictWriter::new(db.pool.clone());
-    let verdict = FinalVerdict {
-        decision: FinalDecision::Accept,
-        votes: vec![VoteEntry {
-            judge_id: "constitutional".into(),
-            weight: 0.4,
-            verdict: VerdictSimple::Pass,
-        }],
-        dissent: String::new(),
-        remediation: vec![],
-        constitutional_refs: vec![],
+    let consensus = ConsensusResult {
+        task_id: Uuid::new_v4(),
+        verdict_id: Uuid::new_v4(),
+        final_verdict: FinalVerdict::Accepted {
+            confidence: 0.9,
+            summary: "Accepted in integration test".into(),
+        },
+        individual_verdicts: HashMap::new(),
+        consensus_score: 0.9,
+        debate_rounds: 0,
+        evaluation_time_ms: 42,
+        timestamp: Utc::now(),
     };
-    writer.persist_verdict("T-IT", &verdict).await.unwrap();
+    writer.persist_consensus(&consensus).await.unwrap();
 }

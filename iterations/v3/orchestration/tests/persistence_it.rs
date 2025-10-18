@@ -4,7 +4,10 @@ async fn postgres_persistence_smoke() {
     if std::env::var("DATABASE_URL").is_err() {
         return;
     }
-    use council::contracts::{FinalDecision, FinalVerdict};
+    use agent_agency_council::types::{ConsensusResult, FinalVerdict};
+    use chrono::Utc;
+    use std::collections::HashMap;
+    use uuid::Uuid;
     use orchestration::db::Db;
     use orchestration::persistence_postgres::PostgresVerdictWriter;
 
@@ -12,12 +15,18 @@ async fn postgres_persistence_smoke() {
         .await
         .unwrap();
     let writer = PostgresVerdictWriter::new(db.pool.clone());
-    let verdict = FinalVerdict {
-        decision: FinalDecision::Reject,
-        votes: vec![],
-        dissent: "it".into(),
-        remediation: vec!["r".into()],
-        constitutional_refs: vec!["CAWS:Scope".into()],
+    let consensus = ConsensusResult {
+        task_id: Uuid::new_v4(),
+        verdict_id: Uuid::new_v4(),
+        final_verdict: FinalVerdict::Rejected {
+            primary_reasons: vec!["fails validation".into()],
+            summary: "Rejected in smoke test".into(),
+        },
+        individual_verdicts: HashMap::new(),
+        consensus_score: 0.0,
+        debate_rounds: 0,
+        evaluation_time_ms: 0,
+        timestamp: Utc::now(),
     };
-    writer.persist_verdict("IT-TEST", &verdict).await.unwrap();
+    writer.persist_consensus(&consensus).await.unwrap();
 }
