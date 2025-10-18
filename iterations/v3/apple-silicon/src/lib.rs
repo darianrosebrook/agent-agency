@@ -7,6 +7,10 @@ pub mod adaptive_resource_manager;
 pub mod ane;
 pub mod candle_backend;
 pub mod core_ml;
+#[cfg(target_os = "macos")]
+pub mod core_ml_backend;
+#[cfg(target_os = "macos")]
+pub mod core_ml_bridge;
 pub mod inference;
 pub mod memory;
 pub mod metal_gpu;
@@ -21,6 +25,10 @@ pub use adaptive_resource_manager::{
 };
 pub use ane::ANEManager;
 pub use candle_backend::CandleBackend;
+#[cfg(target_os = "macos")]
+pub use core_ml_backend::CoreMLBackend;
+#[cfg(target_os = "macos")]
+pub use core_ml_bridge::CoreMLModel;
 pub use core_ml::CoreMLManager;
 pub use inference::{
     CapabilityReport, ComputeUnits, DType, InferenceEngine, IoSchema, ModelArtifact, PreparedModel,
