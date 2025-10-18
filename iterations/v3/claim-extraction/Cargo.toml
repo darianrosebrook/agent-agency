@@ -21,6 +21,7 @@ chrono.workspace = true
 regex = "1.10"
 nom = "7.1"  # Parser combinators for claim parsing
 petgraph = "0.6"  # Graph algorithms for claim relationships
+reqwest = { version = "0.11", features = ["json"] }  # HTTP client for external verification
 
 # Research integration for evidence gathering - TODO: Add back when cycle resolved
 # agent-agency-research = { path = "../research" }
