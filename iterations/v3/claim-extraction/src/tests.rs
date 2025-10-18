@@ -178,32 +178,39 @@ mod pipeline_integration_tests {
             .domain_hints
             .extend_from_slice(&["payments".to_string(), "production".to_string()]);
 
-        let claim = "It must handle payment requests within 200ms according to compliance rules";
-        let brackets = stage
-            .extract_contextual_brackets(claim, &context)
+        let sentence = "It must handle payment requests within 200ms according to compliance rules";
+        let claims = stage
+            .extract_atomic_claims(sentence, &context)
             .await
-            .expect("context extraction");
+            .expect("claim extraction");
+        let collected_brackets = claims
+            .first()
+            .expect("at least one claim")
+            .contextual_brackets
+            .clone();
 
         assert!(
-            brackets.iter().any(|b| b.contains("[spec:")),
+            collected_brackets.iter().any(|b| b.contains("[spec:")),
             "spec bracket should be present"
         );
         assert!(
-            brackets.iter().any(|b| b.contains("timeframe: Q4 2025")),
+            collected_brackets
+                .iter()
+                .any(|b| b.contains("timeframe: Q4 2025")),
             "timeframe context should be extracted"
         );
         assert!(
-            brackets
+            collected_brackets
                 .iter()
                 .any(|b| b.contains("environment: production")),
             "environment context should be inferred"
         );
         assert!(
-            brackets.iter().any(|b| b.contains("entity:")),
+            collected_brackets.iter().any(|b| b.contains("entity:")),
             "entity context should be added when claim uses pronouns"
         );
         assert!(
-            brackets
+            collected_brackets
                 .iter()
                 .any(|b| b.contains("verification: performance-benchmarks")),
             "verification guidance should be generated for performance claims"
