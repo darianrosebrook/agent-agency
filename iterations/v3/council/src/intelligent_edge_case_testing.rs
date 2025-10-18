@@ -1401,14 +1401,14 @@ impl EdgeCaseAnalyzer {
 
         // Analyze input ranges and boundary values
         for input in &test_spec.test_requirements {
-            match input.input_type {
-                InputType::String => {
+            match input.requirement_type {
+                RequirementType::Functional => {
                     // String boundary conditions
                     edge_cases.push(IdentifiedEdgeCase {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Empty string input".to_string(),
                         edge_case_type: EdgeCaseType::BoundaryCondition,
-                        description: format!("Input '{}' with empty string value", input.name),
+                        description: format!("Input '{}' with empty string value", input.requirement_name),
                         probability: 0.8,
                         impact: 0.6,
                         risk_level: RiskLevel::Medium,
@@ -1420,7 +1420,7 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Very long string input".to_string(),
                         edge_case_type: EdgeCaseType::BoundaryCondition,
-                        description: format!("Input '{}' with extremely long string value", input.name),
+                        description: format!("Input '{}' with extremely long string value", input.requirement_name),
                         probability: 0.3,
                         impact: 0.7,
                         risk_level: RiskLevel::High,
@@ -1432,7 +1432,7 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Special characters in string".to_string(),
                         edge_case_type: EdgeCaseType::InputValidation,
-                        description: format!("Input '{}' with special characters and unicode", input.name),
+                        description: format!("Input '{}' with special characters and unicode", input.requirement_name),
                         probability: 0.6,
                         impact: 0.5,
                         risk_level: RiskLevel::Medium,
@@ -1445,7 +1445,7 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Zero integer input".to_string(),
                         edge_case_type: EdgeCaseType::BoundaryCondition,
-                        description: format!("Input '{}' with zero value", input.name),
+                        description: format!("Input '{}' with zero value", input.requirement_name),
                         probability: 0.9,
                         impact: 0.4,
                         risk_level: RiskLevel::Low,
@@ -1457,7 +1457,7 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Negative integer input".to_string(),
                         edge_case_type: EdgeCaseType::BoundaryCondition,
-                        description: format!("Input '{}' with negative value", input.name),
+                        description: format!("Input '{}' with negative value", input.requirement_name),
                         probability: 0.7,
                         impact: 0.6,
                         risk_level: RiskLevel::Medium,
@@ -1469,7 +1469,7 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Maximum integer input".to_string(),
                         edge_case_type: EdgeCaseType::BoundaryCondition,
-                        description: format!("Input '{}' with maximum integer value", input.name),
+                        description: format!("Input '{}' with maximum integer value", input.requirement_name),
                         probability: 0.2,
                         impact: 0.8,
                         risk_level: RiskLevel::High,
@@ -1482,7 +1482,7 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "NaN float input".to_string(),
                         edge_case_type: EdgeCaseType::ExceptionalCondition,
-                        description: format!("Input '{}' with NaN value", input.name),
+                        description: format!("Input '{}' with NaN value", input.requirement_name),
                         probability: 0.1,
                         impact: 0.9,
                         risk_level: RiskLevel::Critical,
@@ -1494,7 +1494,7 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Infinity float input".to_string(),
                         edge_case_type: EdgeCaseType::ExceptionalCondition,
-                        description: format!("Input '{}' with infinity value", input.name),
+                        description: format!("Input '{}' with infinity value", input.requirement_name),
                         probability: 0.1,
                         impact: 0.8,
                         risk_level: RiskLevel::High,
@@ -1507,7 +1507,7 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Boolean type coercion".to_string(),
                         edge_case_type: EdgeCaseType::TypeCoercion,
-                        description: format!("Input '{}' with non-boolean value that gets coerced", input.name),
+                        description: format!("Input '{}' with non-boolean value that gets coerced", input.requirement_name),
                         probability: 0.4,
                         impact: 0.5,
                         risk_level: RiskLevel::Medium,
@@ -1520,7 +1520,7 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Empty array input".to_string(),
                         edge_case_type: EdgeCaseType::BoundaryCondition,
-                        description: format!("Input '{}' with empty array", input.name),
+                        description: format!("Input '{}' with empty array", input.requirement_name),
                         probability: 0.8,
                         impact: 0.6,
                         risk_level: RiskLevel::Medium,
@@ -1532,7 +1532,7 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Very large array input".to_string(),
                         edge_case_type: EdgeCaseType::PerformanceIssue,
-                        description: format!("Input '{}' with very large array", input.name),
+                        description: format!("Input '{}' with very large array", input.requirement_name),
                         probability: 0.2,
                         impact: 0.8,
                         risk_level: RiskLevel::High,
@@ -1545,7 +1545,7 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Null object input".to_string(),
                         edge_case_type: EdgeCaseType::NullHandling,
-                        description: format!("Input '{}' with null object", input.name),
+                        description: format!("Input '{}' with null object", input.requirement_name),
                         probability: 0.7,
                         impact: 0.8,
                         risk_level: RiskLevel::High,
@@ -1557,7 +1557,7 @@ impl EdgeCaseAnalyzer {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Missing required fields".to_string(),
                         edge_case_type: EdgeCaseType::InputValidation,
-                        description: format!("Input '{}' with missing required fields", input.name),
+                        description: format!("Input '{}' with missing required fields", input.requirement_name),
                         probability: 0.6,
                         impact: 0.7,
                         risk_level: RiskLevel::High,
@@ -2630,8 +2630,6 @@ struct CoverageMetrics {
     pass_rate: f64,
 }
 
-use std::sync::Arc;
-use tokio::sync::RwLock;
 
 /// Test efficiency analysis results
 #[derive(Debug, Clone)]

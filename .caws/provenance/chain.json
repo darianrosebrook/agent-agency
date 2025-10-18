@@ -7770,5 +7770,41 @@
     },
     "previous_hash": "a20a500727e280da86de917d75fcb985e79f3d84eceb2215755c2b1bdb72a1ba",
     "hash": "250a87b234d4a99d2c0382f2e499def8b47936aa8edf3454b4c8207f628aa593"
+  },
+  {
+    "id": "prov-1760765930244",
+    "timestamp": "2025-10-18T05:38:50.244Z",
+    "commit": {
+      "hash": "0bf2ab97d258606de7efbe33d78f8869d8d14007",
+      "message": "Fix missing type definitions and field access errors",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T05:38:50.245Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "250a87b234d4a99d2c0382f2e499def8b47936aa8edf3454b4c8207f628aa593",
+    "hash": "a8e0c13a27021976ef89b05d7100639c97fff72621261a2ddb6c8c1481ee8b82"
   }
 ]
