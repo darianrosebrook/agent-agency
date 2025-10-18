@@ -10,6 +10,8 @@ use git2::{Repository, Signature};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::Mutex;
+use tracing::debug;
+use uuid::Uuid;
 
 use crate::types::ProvenanceRecord;
 
@@ -114,7 +116,7 @@ impl GitTrailerManager {
                     Err(anyhow::anyhow!("Invalid reference: {}", refname))
                 }
             }
-            Err(git2::Error { code: git2::ErrorCode::NotFound, .. }) => {
+            Err(e) if e.code() == git2::ErrorCode::NotFound => {
                 // Reference doesn't exist, create it
                 self.create_branch_reference(&repo, &refname)
             }
@@ -150,7 +152,7 @@ impl GitTrailerManager {
                     Err(anyhow::anyhow!("Invalid HEAD reference"))
                 }
             }
-            Err(git2::Error { code: git2::ErrorCode::NotFound, .. }) => {
+            Err(e) if e.code() == git2::ErrorCode::NotFound => {
                 // HEAD doesn't exist, create initial commit
                 self.create_initial_commit(&repo)
             }
@@ -320,12 +322,13 @@ impl GitIntegration for GitTrailerManager {
 
     async fn list_provenance_commits(&self) -> Result<Vec<CommitInfo>> {
         let mut commits = Vec::new();
-        let mut revwalk = self.repository.revwalk()?;
+        let repo = self.repository.lock().unwrap();
+        let mut revwalk = repo.revwalk()?;
         revwalk.push_head()?;
 
         for commit_id in revwalk {
             let commit_id = commit_id?;
-            let commit = self.repository.find_commit(commit_id)?;
+            let commit = repo.find_commit(commit_id)?;
 
             if let Some(message) = commit.message() {
                 if message.contains("CAWS-VERDICT-ID:") {

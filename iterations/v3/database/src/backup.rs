@@ -356,7 +356,6 @@ struct BackupInternalResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
 
     #[tokio::test]
     async fn test_backup_config_creation() {

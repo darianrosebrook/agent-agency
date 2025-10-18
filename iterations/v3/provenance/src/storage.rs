@@ -11,7 +11,6 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-use crate::types::*;
 
 /// Database-backed provenance storage
 pub struct DatabaseProvenanceStorage {
@@ -689,7 +688,6 @@ impl super::service::ProvenanceStorage for InMemoryProvenanceStorage {
 mod tests {
     use super::*;
     use crate::service::ProvenanceStorage;
-    use crate::types::*;
     use std::collections::HashMap;
 
     #[tokio::test]

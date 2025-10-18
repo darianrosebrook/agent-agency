@@ -189,7 +189,7 @@ impl ProvenanceService {
 
         // Verify timestamp consistency
         let now = Utc::now();
-        let time_diff = (now - record.timestamp).num_seconds().unwrap_or(0);
+        let time_diff = (now - record.timestamp).num_seconds();
         if time_diff.abs() > 3600 {
             // More than 1 hour difference
             issues.push(IntegrityIssue {

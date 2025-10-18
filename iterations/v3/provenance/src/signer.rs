@@ -344,8 +344,6 @@ impl SignerFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
-    use tempfile::TempDir;
 
     #[tokio::test]
     async fn test_local_key_signer_sign_and_verify() {

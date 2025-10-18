@@ -8,7 +8,6 @@ use anyhow::Result;
 use chrono::Utc;
 use tracing::debug;
 use uuid::Uuid;
-use std::sync::Arc;
 use tokio::time::{timeout, Duration};
 use serde::{Deserialize, Serialize};
 
