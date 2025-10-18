@@ -79,18 +79,14 @@ impl ArgumentGenerator for MockArgumentGenerator {
         Ok(DebateArgument {
             judge_id: judge_id.clone(),
             position,
-            round_number,
             reasoning,
             evidence_cited,
             counter_arguments,
-            confidence: 0.7,
-            timestamp: chrono::Utc::now(),
         })
     }
 }
 
 /// Debate protocol implementation for resolving judge conflicts
-#[derive(Debug)]
 pub struct DebateProtocol {
     config: DebateConfig,
     argument_generator: Arc<dyn ArgumentGenerator>,
@@ -387,15 +383,12 @@ impl DebateProtocol {
                 round.round_number
             );
 
-            return Ok(Some(DebateResult {
-                consensus_reached: true,
-                final_decision: "approved".to_string(), // Simplified: approve if consensus reached
-                confidence: avg_confidence,
-                reasoning,
-                rounds: vec![round.clone()], // Simplified: just current round
-                total_participants: total_judges,
-                consensus_strength,
-                dissenting_opinions: total_judges - supporting_count,
+            return Ok(Some(DebateRound {
+                round_number: 1,
+                arguments: round.arguments.clone(),
+                evidence_requests: vec![],
+                research_input: None,
+                timestamp: chrono::Utc::now(),
             }));
         }
 
@@ -416,30 +409,16 @@ impl DebateProtocol {
             // Medium confidence arguments (0.5-0.8) moderately influence
             // Low confidence arguments (<0.5) weakly influence or remain neutral
 
-            let position_influence = match argument.confidence {
-                c if c > 0.8 => 1.0, // Strong influence
-                c if c > 0.5 => 0.7, // Moderate influence
-                _ => 0.3,            // Weak influence
-            };
-
             match argument.position {
                 ArgumentPosition::Support => {
-                    if position_influence > 0.5 {
-                        supporting.push(judge_id.clone());
-                    } else {
-                        opposing.push(judge_id.clone()); // Weak support becomes opposition
-                    }
+                    supporting.push(judge_id.clone());
                 }
                 ArgumentPosition::Oppose => {
-                    if position_influence > 0.5 {
-                        opposing.push(judge_id.clone());
-                    } else {
-                        supporting.push(judge_id.clone()); // Weak opposition becomes support
-                    }
+                    opposing.push(judge_id.clone());
                 }
                 ArgumentPosition::Neutral => {
                     // Neutral positions are assigned based on evidence strength
-                    let evidence_strength = argument.citations.len() as f32 * 0.1;
+                    let evidence_strength = argument.evidence_cited.len() as f32 * 0.1;
                     if evidence_strength > 0.3 {
                         supporting.push(judge_id.clone());
                     } else {
@@ -515,18 +494,16 @@ impl DebateProtocol {
         tracing::debug!("Getting evidence from session");
         vec![
             Evidence {
-                id: uuid::Uuid::new_v4(),
+                source: EvidenceSource::ExpertKnowledge,
                 content: "Historical precedent supports this position".to_string(),
-                source: "Historical records".to_string(),
-                reliability_score: 0.8,
-                relevance_score: 0.9,
+                relevance: 0.9,
+                timestamp: chrono::Utc::now(),
             },
             Evidence {
-                id: uuid::Uuid::new_v4(),
+                source: EvidenceSource::TestResults,
                 content: "Statistical analysis confirms the trend".to_string(),
-                source: "Research data".to_string(),
-                reliability_score: 0.9,
-                relevance_score: 0.8,
+                relevance: 0.8,
+                timestamp: chrono::Utc::now(),
             },
         ]
     }
@@ -538,7 +515,7 @@ impl DebateProtocol {
             round_number: 1,
             arguments: std::collections::HashMap::new(),
             evidence_requests: vec![],
-            consensus_reached: false,
+            research_input: None,
             timestamp: chrono::Utc::now(),
         }]
     }

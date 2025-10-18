@@ -1,9 +1,17 @@
 //! Helper functions and utilities for integration tests
 
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
+use redis::AsyncCommands;
+use sqlx::postgres::PgPoolOptions;
+use sqlx::sqlite::SqlitePoolOptions;
+use std::io::ErrorKind;
+use std::path::PathBuf;
 use std::time::Duration;
+use tokio::fs;
+use tokio::net::TcpStream;
 use tokio::time::sleep;
 use tracing::{debug, info};
+use reqwest::Url;
 
 /// Wait for a condition to be true with timeout
 pub async fn wait_for_condition<F, Fut>(
@@ -144,7 +152,47 @@ impl TestEnvironmentUtils {
         }
 
         // Check network connectivity (if needed)
-        // TODO: Add network connectivity checks
+        let connectivity_targets = [
+            (
+                "database",
+                std::env::var("DATABASE_URL").ok(),
+                "postgres://127.0.0.1:5432",
+            ),
+            (
+                "redis",
+                std::env::var("REDIS_URL").ok(),
+                "redis://127.0.0.1:6379",
+            ),
+        ];
+
+        for (name, configured, fallback) in connectivity_targets {
+            let connection_str = configured.as_deref().unwrap_or(fallback);
+            let url = Url::parse(connection_str)
+                .map_err(|err| anyhow!("Invalid {} URL '{}': {}", name, connection_str, err))?;
+
+            let host = url
+                .host_str()
+                .ok_or_else(|| anyhow!("{} URL missing host: {}", name, connection_str))?;
+            let port = url
+                .port()
+                .or_else(|| match url.scheme() {
+                    "postgres" | "postgresql" => Some(5432),
+                    "redis" => Some(6379),
+                    "http" => Some(80),
+                    "https" => Some(443),
+                    _ => None,
+                })
+                .ok_or_else(|| anyhow!("{} URL missing port: {}", name, connection_str))?;
+            let addr = format!("{host}:{port}");
+
+            match tokio::time::timeout(Duration::from_secs(2), TcpStream::connect(&addr)).await {
+                Ok(Ok(_)) => {
+                    debug!("Connectivity check passed: {} ({})", name, addr);
+                }
+                Ok(Err(err)) => return Err(anyhow!("Cannot connect to {} at {}: {}", name, addr, err)),
+                Err(_) => return Err(anyhow!("Timeout connecting to {} at {}", name, addr)),
+            }
+        }
 
         info!("✅ Test environment check completed");
         Ok(())
@@ -154,10 +202,9 @@ impl TestEnvironmentUtils {
     pub async fn cleanup_environment() -> Result<()> {
         info!("Cleaning up test environment");
 
-        // TODO: Add cleanup logic
-        // - Clear test databases
-        // - Remove test files
-        // - Reset external services
+        Self::clear_test_databases().await?;
+        Self::remove_test_files().await?;
+        Self::reset_external_services().await?;
 
         info!("✅ Test environment cleanup completed");
         Ok(())
@@ -167,14 +214,309 @@ impl TestEnvironmentUtils {
     pub async fn setup_environment() -> Result<()> {
         info!("Setting up test environment");
 
-        // TODO: Add setup logic
-        // - Initialize test databases
-        // - Create test directories
-        // - Start external services
+        Self::initialize_test_databases().await?;
+        Self::create_test_directories().await?;
+        Self::start_external_services().await?;
 
         info!("✅ Test environment setup completed");
         Ok(())
     }
+
+    async fn initialize_test_databases() -> Result<()> {
+        let database_url = match std::env::var("DATABASE_URL") {
+            Ok(url) if !url.is_empty() => url,
+            _ => {
+                debug!("DATABASE_URL not set; skipping database setup");
+                return Ok(());
+            }
+        };
+
+        let parsed = Url::parse(&database_url)
+            .with_context(|| format!("Invalid DATABASE_URL: {database_url}"))?;
+
+        match parsed.scheme() {
+            "postgres" | "postgresql" => {
+                Self::prepare_postgres_database(&database_url).await?;
+            }
+            "sqlite" | "file" => {
+                Self::prepare_sqlite_database(&database_url, &parsed).await?;
+            }
+            other => debug!("Unsupported database scheme '{}'; skipping setup", other),
+        }
+
+        Ok(())
+    }
+
+    async fn prepare_postgres_database(database_url: &str) -> Result<()> {
+        let pool = PgPoolOptions::new()
+            .max_connections(5)
+            .acquire_timeout(Duration::from_secs(5))
+            .connect(database_url)
+            .await
+            .with_context(|| format!("Failed to connect to Postgres at {database_url}"))?;
+
+        sqlx::query_scalar::<_, i64>("SELECT 1")
+            .fetch_one(&pool)
+            .await
+            .with_context(|| "Postgres readiness query failed")?;
+
+        info!("Postgres test database initialized");
+
+        pool.close().await;
+        Ok(())
+    }
+
+    async fn prepare_sqlite_database(database_url: &str, parsed: &Url) -> Result<()> {
+        if let Ok(path) = parsed.to_file_path() {
+            if let Some(parent) = path.parent() {
+                if let Err(err) = fs::metadata(parent).await {
+                    if err.kind() == ErrorKind::NotFound {
+                        fs::create_dir_all(parent).await.with_context(|| {
+                            format!("Failed to create SQLite directory {:?}", parent)
+                        })?;
+                    } else {
+                        return Err(anyhow!("Failed to inspect {:?}: {}", parent, err));
+                    }
+                }
+            }
+        }
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(Duration::from_secs(5))
+            .connect(database_url)
+            .await
+            .with_context(|| format!("Failed to connect to SQLite at {database_url}"))?;
+
+        sqlx::query_scalar::<_, i64>("SELECT 1")
+            .fetch_one(&pool)
+            .await
+            .with_context(|| "SQLite readiness query failed")?;
+
+        info!("SQLite test database initialized");
+
+        pool.close().await;
+        Ok(())
+    }
+
+    async fn create_test_directories() -> Result<()> {
+        let mut directories: Vec<PathBuf> = Vec::new();
+
+        for var in ["TEST_ARTIFACT_DIR", "TEST_TEMP_DIR", "INTEGRATION_TEST_TMP"] {
+            if let Ok(path) = std::env::var(var) {
+                if !path.is_empty() {
+                    directories.push(PathBuf::from(path));
+                }
+            }
+        }
+
+        if directories.is_empty() {
+            debug!("No test directories configured; skipping directory creation");
+            return Ok(());
+        }
+
+        for dir in directories {
+            match fs::metadata(&dir).await {
+                Ok(metadata) => {
+                    if metadata.is_dir() {
+                        debug!("Test directory already exists: {:?}", dir);
+                    } else {
+                        return Err(anyhow!("Path exists but is not a directory: {:?}", dir));
+                    }
+                }
+                Err(err) if err.kind() == ErrorKind::NotFound => {
+                    fs::create_dir_all(&dir)
+                        .await
+                        .with_context(|| format!("Failed to create test directory {:?}", dir))?;
+                    info!("Created test directory: {:?}", dir);
+                }
+                Err(err) => {
+                    return Err(anyhow!("Failed to inspect {:?}: {}", dir, err));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn start_external_services() -> Result<()> {
+        let redis_url = match std::env::var("REDIS_URL") {
+            Ok(url) if !url.is_empty() => url,
+            _ => {
+                debug!("REDIS_URL not set; skipping external services startup");
+                return Ok(());
+            }
+        };
+
+        let client = redis::Client::open(redis_url.clone())
+            .with_context(|| format!("Invalid REDIS_URL: {redis_url}"))?;
+        let mut connection = client
+            .get_async_connection()
+            .await
+            .with_context(|| format!("Failed to connect to Redis at {redis_url}"))?;
+
+        let _: () = connection
+            .set("integration-test:bootstrap", "ready")
+            .await
+            .with_context(|| "Failed to set Redis bootstrap key")?;
+        let _: bool = connection
+            .expire("integration-test:bootstrap", 60)
+            .await
+            .with_context(|| "Failed to set expiration for Redis bootstrap key")?;
+
+        info!("Redis external service is ready for tests");
+        Ok(())
+    }
+
+    async fn clear_test_databases() -> Result<()> {
+        let database_url = match std::env::var("DATABASE_URL") {
+            Ok(url) if !url.is_empty() => url,
+            _ => {
+                debug!("DATABASE_URL not set; skipping database cleanup");
+                return Ok(());
+            }
+        };
+
+        let url =
+            Url::parse(&database_url).with_context(|| format!("Invalid DATABASE_URL: {database_url}"))?;
+        match url.scheme() {
+            "postgres" | "postgresql" => Self::clear_postgres_database(&database_url).await?,
+            "sqlite" | "file" => Self::clear_sqlite_database(&database_url).await?,
+            other => debug!("Unsupported database scheme '{}'; skipping cleanup", other),
+        }
+
+        Ok(())
+    }
+
+    async fn clear_postgres_database(database_url: &str) -> Result<()> {
+        let pool = PgPoolOptions::new()
+            .max_connections(5)
+            .connect(database_url)
+            .await
+            .with_context(|| format!("Failed to connect to Postgres at {database_url}"))?;
+
+        let mut conn = pool.acquire().await?;
+        let tables: Vec<(String, String)> = sqlx::query_as(
+            "SELECT schemaname, tablename \
+             FROM pg_tables \
+             WHERE schemaname NOT IN ('pg_catalog', 'information_schema')",
+        )
+        .fetch_all(&mut conn)
+        .await?;
+
+        for (schema, table) in tables {
+            let qualified = format!("{}.{}", quote_ident(&schema), quote_ident(&table));
+            let query = format!("TRUNCATE TABLE {qualified} RESTART IDENTITY CASCADE");
+            sqlx::query(&query).execute(&mut conn).await?;
+        }
+
+        drop(conn);
+        pool.close().await;
+        Ok(())
+    }
+
+    async fn clear_sqlite_database(database_url: &str) -> Result<()> {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect(database_url)
+            .await
+            .with_context(|| format!("Failed to connect to SQLite at {database_url}"))?;
+
+        let mut conn = pool.acquire().await?;
+        let tables: Vec<String> = sqlx::query_scalar(
+            "SELECT name FROM sqlite_master \
+             WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
+        )
+        .fetch_all(&mut conn)
+        .await?;
+
+        for table in tables {
+            let query = format!("DELETE FROM {}", quote_ident(&table));
+            sqlx::query(&query).execute(&mut conn).await?;
+        }
+
+        drop(conn);
+        pool.close().await;
+        Ok(())
+    }
+
+    async fn remove_test_files() -> Result<()> {
+        let mut paths: Vec<PathBuf> = Vec::new();
+
+        if let Ok(path) = std::env::var("TEST_ARTIFACT_DIR") {
+            if !path.is_empty() {
+                paths.push(PathBuf::from(path));
+            }
+        }
+
+        if let Ok(path) = std::env::var("TEST_TEMP_DIR") {
+            if !path.is_empty() {
+                paths.push(PathBuf::from(path));
+            }
+        }
+
+        if let Ok(path) = std::env::var("INTEGRATION_TEST_TMP") {
+            if !path.is_empty() {
+                paths.push(PathBuf::from(path));
+            }
+        }
+
+        if paths.is_empty() {
+            debug!("No test artifact directories configured; skipping file cleanup");
+            return Ok(());
+        }
+
+        for path in paths {
+            Self::remove_path(path).await?;
+        }
+
+        Ok(())
+    }
+
+    async fn remove_path(path: PathBuf) -> Result<()> {
+        match fs::metadata(&path).await {
+            Ok(metadata) => {
+                if metadata.is_dir() {
+                    fs::remove_dir_all(&path).await?;
+                } else {
+                    fs::remove_file(&path).await?;
+                }
+                info!("Removed test artifact path: {:?}", path);
+            }
+            Err(err) if err.kind() == ErrorKind::NotFound => {
+                debug!("No artifacts found at {:?}", path);
+            }
+            Err(err) => {
+                return Err(anyhow!("Failed to inspect {:?}: {}", path, err));
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn reset_external_services() -> Result<()> {
+        let redis_url = match std::env::var("REDIS_URL") {
+            Ok(url) if !url.is_empty() => url,
+            _ => {
+                debug!("REDIS_URL not set; skipping Redis cleanup");
+                return Ok(());
+            }
+        };
+
+        let client = redis::Client::open(redis_url.clone())
+            .with_context(|| format!("Invalid REDIS_URL: {redis_url}"))?;
+        let mut connection = client
+            .get_async_connection()
+            .await
+            .with_context(|| format!("Failed to connect to Redis at {redis_url}"))?;
+        connection.flushdb().await?;
+        info!("Redis database flushed for cleanup");
+        Ok(())
+    }
+}
+
+fn quote_ident(value: &str) -> String {
+    format!("\"{}\"", value.replace('"', "\"\""))
 }
 
 /// Performance testing utilities

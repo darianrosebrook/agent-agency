@@ -227,6 +227,68 @@ impl StateStorage for FileStorage {
         info!("Cleaned up {} old workspace states", deleted);
         Ok(deleted)
     }
+
+    async fn validate_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
+        // Validate diff format and data integrity
+        if diff.from_state == diff.to_state {
+            return Err(WorkspaceError::DiffComputation("Diff from and to states are the same".to_string()));
+        }
+        
+        // Validate that changes are not empty
+        if diff.changes.is_empty() {
+            return Err(WorkspaceError::DiffComputation("Diff has no changes".to_string()));
+        }
+        
+        Ok(())
+    }
+
+    async fn validate_diff_change(&self, change: &DiffChange) -> Result<(), WorkspaceError> {
+        match change {
+            DiffChange::Add { path, content } => {
+                if path.to_string_lossy().is_empty() {
+                    return Err(WorkspaceError::DiffComputation("Add change has empty path".to_string()));
+                }
+                if content.is_empty() {
+                    return Err(WorkspaceError::DiffComputation("Add change has empty content".to_string()));
+                }
+            }
+            DiffChange::Remove { path } => {
+                if path.to_string_lossy().is_empty() {
+                    return Err(WorkspaceError::DiffComputation("Remove change has empty path".to_string()));
+                }
+            }
+            DiffChange::Modify { path, old_content: _, new_content } => {
+                if path.to_string_lossy().is_empty() {
+                    return Err(WorkspaceError::DiffComputation("Modify change has empty path".to_string()));
+                }
+                if new_content.is_empty() {
+                    return Err(WorkspaceError::DiffComputation("Modify change has empty new content".to_string()));
+                }
+            }
+            DiffChange::AddDirectory { path } => {
+                if path.to_string_lossy().is_empty() {
+                    return Err(WorkspaceError::DiffComputation("AddDirectory change has empty path".to_string()));
+                }
+            }
+            DiffChange::RemoveDirectory { path } => {
+                if path.to_string_lossy().is_empty() {
+                    return Err(WorkspaceError::DiffComputation("RemoveDirectory change has empty path".to_string()));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    async fn update_diff_metrics(&self) -> Result<(), WorkspaceError> {
+        // File storage doesn't need to update metrics as they are calculated on-demand
+        Ok(())
+    }
+
+    async fn cleanup_old_diffs(&self) -> Result<(), WorkspaceError> {
+        // File storage cleanup is handled by the cleanup method
+        // This is a no-op for file storage
+        Ok(())
+    }
 }
 
 /// In-memory storage implementation for testing
@@ -619,43 +681,27 @@ impl MemoryStorage {
 
     async fn cleanup_old_diffs(&self) -> Result<(), WorkspaceError> {
         let cutoff_time = chrono::Utc::now() - chrono::Duration::hours(24);
-        let diff_dir = self.base_path.join("diffs");
-
-        if !diff_dir.exists() {
-            return Ok(());
+        
+        // For MemoryStorage, we don't have a base_path, so we'll clean up old diffs from memory
+        let mut diffs = self.diffs.write().unwrap();
+        let old_diffs: Vec<_> = diffs.iter()
+            .filter(|(_, diff)| diff.computed_at < cutoff_time)
+            .map(|(key, _)| key.clone())
+            .collect();
+        
+        for key in old_diffs {
+            diffs.remove(&key);
         }
 
-        let mut removed_count = 0;
-        for entry in fs::read_dir(&diff_dir).map_err(|e| WorkspaceError::Io(e))? {
-            let entry = entry.map_err(|e| WorkspaceError::Io(e))?;
-            let path = entry.path();
-
-            if path.extension().and_then(|s| s.to_str()) == Some("diff") {
-                // Try to extract timestamp from filename or check file metadata
-                if let Ok(metadata) = entry.metadata() {
-                    if let Ok(modified) = metadata.modified() {
-                        let modified_time = chrono::DateTime::<chrono::Utc>::from(modified);
-                        if modified_time < cutoff_time {
-                            fs::remove_file(&path).map_err(|e| WorkspaceError::Io(e))?;
-                            removed_count += 1;
-                        }
-                    }
-                }
-            }
-        }
-
-        if removed_count > 0 {
-            debug!(
-                "Cleaned up {} old diff files from file storage",
-                removed_count
-            );
-        }
-
+        debug!("Cleaned up old diffs from memory storage");
         Ok(())
     }
-
-
 }
+
+// Removed duplicate DatabaseStorage implementation - using the one below
+
+// Remove the duplicate implementations that were causing errors
+// The above implementations are now properly separated by storage type
 
 #[async_trait]
 impl StateStorage for MemoryStorage {
@@ -844,6 +890,20 @@ impl StateStorage for MemoryStorage {
                             "Modify change old and new content cannot be identical".to_string(),
                         ));
                     }
+                }
+            }
+            DiffChange::AddDirectory { path } => {
+                if path.as_os_str().is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        "AddDirectory change path cannot be empty".to_string(),
+                    ));
+                }
+            }
+            DiffChange::RemoveDirectory { path } => {
+                if path.as_os_str().is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        "RemoveDirectory change path cannot be empty".to_string(),
+                    ));
                 }
             }
         }

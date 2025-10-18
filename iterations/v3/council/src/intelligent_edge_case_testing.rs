@@ -2659,6 +2659,8 @@ impl TestOptimizer {
             EdgeCaseType::Stress => 0.8,
             EdgeCaseType::Security => 0.9,
             EdgeCaseType::Usability => 0.3,
+            EdgeCaseType::Reliability => 0.75,
+            EdgeCaseType::Performance => 0.85,
         };
         score += edge_type_weight * 0.4;
 
@@ -2740,6 +2742,8 @@ impl TestOptimizer {
             EdgeCaseType::Stress => 0.8,
             EdgeCaseType::Security => 0.9,
             EdgeCaseType::Usability => 0.3,
+            EdgeCaseType::Reliability => 0.75,
+            EdgeCaseType::Performance => 0.85,
         };
         value += edge_type_value * 0.4;
 

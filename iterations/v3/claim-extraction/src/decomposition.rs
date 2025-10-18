@@ -847,6 +847,18 @@ impl DecompositionStage {
                 continue;
             }
 
+            let comma_splits = Self::split_on_delimiters(fragment, &[',']);
+            if comma_splits.len() > 1
+                && comma_splits
+                    .iter()
+                    .all(|part| Self::looks_like_clause(part) || Self::looks_like_phrase(part))
+            {
+                for part in comma_splits.into_iter().rev() {
+                    fragments.push_front(part);
+                }
+                continue;
+            }
+
             if fragment.len() < MIN_FRAGMENT_CHARS {
                 Self::append_fragment(&mut results, fragment);
                 continue;
@@ -954,7 +966,15 @@ impl DecompositionStage {
                             continue;
                         }
                         let right = input[right_start..].trim();
-                        if Self::looks_like_clause(left) && Self::looks_like_clause(right) {
+                        let left_clause = Self::looks_like_clause(left);
+                        let right_clause = Self::looks_like_clause(right);
+                        let left_phrase = Self::looks_like_phrase(left);
+                        let right_phrase = Self::looks_like_phrase(right);
+
+                        if (left_clause && right_clause)
+                            || (left_clause && right_phrase)
+                            || (left_phrase && right_clause)
+                        {
                             return Some((byte_idx, token.len()));
                         }
                     }
@@ -1020,6 +1040,16 @@ impl DecompositionStage {
             let lower = word.to_lowercase();
             verbs.contains(&lower.as_str()) || lower.ends_with("ed") || lower.ends_with("ing")
         })
+    }
+
+    fn looks_like_phrase(text: &str) -> bool {
+        let words: Vec<&str> = text
+            .split_whitespace()
+            .map(|word| word.trim_matches(|c: char| !c.is_alphabetic()))
+            .filter(|segment| !segment.is_empty())
+            .collect();
+
+        words.len() >= 2
     }
 
     fn append_fragment(clauses: &mut Vec<String>, fragment: &str) {
@@ -1352,7 +1382,7 @@ impl DecompositionStage {
             return false;
         }
 
-        words.iter().skip(1).any(|word| self.looks_like_verb(word))
+        words.iter().any(|word| self.looks_like_verb(word))
     }
 
     fn is_semantically_complete(&self, clause: &str) -> bool {

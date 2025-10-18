@@ -233,7 +233,7 @@ impl ProvenanceService {
                 start: chrono::DateTime::from_timestamp(0, 0).unwrap_or_else(Utc::now),
                 end: Utc::now(),
             }),
-            filters_applied: self.extract_filters_from_query(&query)?,
+            filters_applied: self.extract_filters_from_query(&query)?.iter().map(|f| format!("{:?}", f)).collect(),
             export_reason: "Data export requested".to_string(),
             recipient: None,
         };
@@ -598,6 +598,13 @@ impl ProvenanceService {
                 compliance_status: None,
                 limit: Some(batch_size),
                 offset: Some(offset),
+                entity_types: None,
+                entity_ids: None,
+                activity_types: None,
+                activity_ids: None,
+                agent_types: None,
+                agent_ids: None,
+                custom_filters: None,
             };
 
             let records = self.storage.query_records(&query).await?;

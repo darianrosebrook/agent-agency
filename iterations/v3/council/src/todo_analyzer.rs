@@ -18,7 +18,7 @@ use tokio::sync::RwLock;
 use tracing::info;
 use uuid::Uuid;
 
-use crate::advanced_arbitration::WorkerOutput;
+use crate::WorkerOutput;
 
 /// Advanced TODO analyzer for Council quality assessment
 #[derive(Debug)]

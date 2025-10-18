@@ -4,7 +4,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use uuid::Uuid;
 use chrono;
-use rand::{SeedableRng, StdRng};
+use rand::{Rng, SeedableRng, StdRng};
 
 /// Test fixtures for various V3 components
 pub struct TestFixtures;
@@ -288,39 +288,39 @@ impl TestFixtures {
         })
     }
 
-    /// TODO: [critical-consensus-fixture]: Provide an end-to-end deterministic state bundle
-    /// covering council consensus, claim verification, provenance signing, and runtime
-    /// validation so Phase 1 critical infrastructure can be exercised before live trials.
-    ///
-    /// Requirements:
-    /// 1. Capture a single JSON payload that includes simulated inputs and expected outputs for
-    ///    council debates, claim extraction evidence, provenance commits, and runtime validator
-    ///    findings with cross-referenced identifiers.
-    /// 2. Include deterministic timestamps/UUIDs and seeded randomness so the bundle can be
-    ///    replayed without flakiness across CI and local environments.
-    /// 3. Embed CAWS acceptance checkpoints (A1–A9) that specify which assertions an integration
-    ///    test must validate when this fixture is consumed.
-    ///
-    /// Acceptance Criteria:
-    /// - Loading the fixture yields sections for `council_state`, `claim_pipeline`,
-    ///   `provenance_ledger`, and `runtime_validator`, each containing the minimal data needed to
-    ///   drive the corresponding subsystems.
-    /// - An integration test can drive the orchestrator from task intake through final verdict
-    ///   using only this fixture plus deterministic mocks, producing the expected consensus score
-    ///   (<5 s wall-clock in test) and verifying evidence links.
-    /// - Regression assertions fail if any subsystem omits required fields (e.g., missing judge
-    ///   confidence, absent JWS signature, or absent CAWS rule reference).
+    /// End-to-end deterministic state bundle that powers critical consensus infrastructure tests.
     pub fn consensus_infrastructure_bundle() -> Value {
         // Deterministic seed for reproducible results
         let seed = 12345u64;
         let mut rng = StdRng::seed_from_u64(seed);
-        
+
         // Generate deterministic UUIDs and timestamps
         let task_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
         let verdict_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440001").unwrap();
         let evidence_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440002").unwrap();
         let timestamp = chrono::DateTime::parse_from_rfc3339("2024-01-15T10:30:00Z").unwrap();
-        
+        let proposal_timestamp = timestamp + chrono::Duration::minutes(10);
+        let execution_timestamp = timestamp + chrono::Duration::minutes(25);
+
+        let consensus_variation = (rng.gen::<f64>() * 0.01).round(4);
+        let consensus_score = (0.79 + consensus_variation).min(0.99);
+        let confidence_offsets: Vec<f64> = (0..4)
+            .map(|_| (rng.gen::<f64>() * 0.03).round(4))
+            .collect();
+        let runtime_timings: [u64; 4] = [
+            45u64 + rng.gen_range(0u64..3u64),
+            32u64 + rng.gen_range(0u64..3u64),
+            28u64 + rng.gen_range(0u64..3u64),
+            67u64 + rng.gen_range(0u64..3u64),
+        ];
+        let additional_timings = [23u64, 40u64, 34u64, 38u64, 52u64];
+        let mut all_timings = runtime_timings.to_vec();
+        all_timings.extend(additional_timings);
+        let total_execution_time_ms = all_timings.iter().copied().sum::<u64>();
+        let max_response_time_ms = all_timings.iter().copied().max().unwrap_or(0);
+        let min_response_time_ms = all_timings.iter().copied().min().unwrap_or(0);
+        let average_response_time_ms = (total_execution_time_ms as f64) / (all_timings.len() as f64);
+
         json!({
             "metadata": {
                 "version": "1.0",
@@ -339,7 +339,11 @@ impl TestFixtures {
                         "A2: User can login with valid credentials", 
                         "A3: JWT tokens are properly generated and validated",
                         "A4: Passwords are hashed using bcrypt",
-                        "A5: Rate limiting prevents brute force attacks"
+                        "A5: Rate limiting prevents brute force attacks",
+                        "A6: Audit logging captures authentication attempts",
+                        "A7: Feature flag enables controlled rollout of the new flow",
+                        "A8: Observability dashboards expose authentication SLOs",
+                        "A9: Rollback plan can restore legacy authentication"
                     ],
                     "context": {
                         "domain": "authentication",
@@ -351,34 +355,36 @@ impl TestFixtures {
                     "constitutional": {
                         "verdict": "Pass",
                         "reasoning": "Authentication system complies with security standards and privacy regulations",
-                        "confidence": 0.85,
+                        "confidence": (0.85 + confidence_offsets[0]).min(0.99),
                         "evidence_references": [evidence_id.to_string()]
                     },
                     "technical": {
                         "verdict": "Pass", 
                         "reasoning": "JWT implementation follows industry best practices with proper key management",
-                        "confidence": 0.80,
+                        "confidence": (0.80 + confidence_offsets[1]).min(0.99),
                         "evidence_references": [evidence_id.to_string()]
                     },
                     "quality": {
                         "verdict": "Pass",
                         "reasoning": "Code quality meets standards with proper error handling and logging",
-                        "confidence": 0.75,
+                        "confidence": (0.75 + confidence_offsets[2]).min(0.99),
                         "evidence_references": [evidence_id.to_string()]
                     },
                     "integration": {
                         "verdict": "Pass",
                         "reasoning": "Authentication integrates cleanly with existing user management system",
-                        "confidence": 0.78,
+                        "confidence": (0.78 + confidence_offsets[3]).min(0.99),
                         "evidence_references": [evidence_id.to_string()]
                     }
                 },
-                "consensus_score": 0.795,
-                "debate_rounds": 0,
+                "consensus_score": consensus_score,
+                "debate_rounds": 2,
                 "final_verdict": {
                     "type": "Accepted",
-                    "confidence": 0.795,
-                    "summary": "Task accepted with 0.795 consensus across all judges. All acceptance criteria can be met with high confidence."
+                    "confidence": consensus_score,
+                    "summary": "Task accepted with unified council consensus. All acceptance criteria can be met with high confidence.",
+                    "verdict_id": verdict_id.to_string(),
+                    "issued_at": proposal_timestamp.to_rfc3339()
                 }
             },
             "claim_pipeline": {
@@ -447,7 +453,8 @@ impl TestFixtures {
                         "submitted": true,
                         "council_task_id": task_id.to_string(),
                         "verdict": "Pass",
-                        "confidence": 0.82
+                        "confidence": 0.82,
+                        "completed_at": proposal_timestamp.to_rfc3339()
                     }
                 }
             },
@@ -493,6 +500,26 @@ impl TestFixtures {
                         "description": "Rate limiting prevents brute force attacks",
                         "status": "verified",
                         "evidence_count": 1
+                    },
+                    "A6": {
+                        "description": "Audit logging records authentication events",
+                        "status": "verified",
+                        "evidence_count": 2
+                    },
+                    "A7": {
+                        "description": "Feature flag can disable new authentication flow safely",
+                        "status": "verified",
+                        "evidence_count": 1
+                    },
+                    "A8": {
+                        "description": "Observability dashboards capture authentication metrics",
+                        "status": "verified",
+                        "evidence_count": 2
+                    },
+                    "A9": {
+                        "description": "Rollback plan restores previous authentication stack",
+                        "status": "verified",
+                        "evidence_count": 1
                     }
                 }
             },
@@ -501,41 +528,66 @@ impl TestFixtures {
                     {
                         "checkpoint": "A1",
                         "status": "passed",
-                        "execution_time_ms": 45,
+                        "execution_time_ms": runtime_timings[0],
                         "details": "User registration endpoint responds correctly with 201 status"
                     },
                     {
                         "checkpoint": "A2", 
                         "status": "passed",
-                        "execution_time_ms": 32,
+                        "execution_time_ms": runtime_timings[1],
                         "details": "Login endpoint validates credentials and returns JWT token"
                     },
                     {
                         "checkpoint": "A3",
                         "status": "passed", 
-                        "execution_time_ms": 28,
+                        "execution_time_ms": runtime_timings[2],
                         "details": "JWT token validation middleware correctly processes valid tokens"
                     },
                     {
                         "checkpoint": "A4",
                         "status": "passed",
-                        "execution_time_ms": 67,
+                        "execution_time_ms": runtime_timings[3],
                         "details": "Password hashing uses bcrypt with proper salt rounds"
                     },
                     {
                         "checkpoint": "A5",
                         "status": "passed",
-                        "execution_time_ms": 23,
+                        "execution_time_ms": additional_timings[0],
                         "details": "Rate limiting middleware blocks requests exceeding threshold"
+                    },
+                    {
+                        "checkpoint": "A6",
+                        "status": "passed",
+                        "execution_time_ms": additional_timings[1],
+                        "details": "Audit logs capture authentication attempts with immutable storage references"
+                    },
+                    {
+                        "checkpoint": "A7",
+                        "status": "passed",
+                        "execution_time_ms": additional_timings[2],
+                        "details": "Feature flag toggles between legacy and new flow within 10 ms"
+                    },
+                    {
+                        "checkpoint": "A8",
+                        "status": "passed",
+                        "execution_time_ms": additional_timings[3],
+                        "details": "Metrics exporter publishes login success/failure counters every minute"
+                    },
+                    {
+                        "checkpoint": "A9",
+                        "status": "passed",
+                        "execution_time_ms": additional_timings[4],
+                        "details": "Rollback workflow restores legacy configuration without orphaned sessions"
                     }
                 ],
                 "overall_status": "passed",
-                "total_execution_time_ms": 195,
+                "total_execution_time_ms": total_execution_time_ms,
                 "performance_metrics": {
-                    "max_response_time_ms": 67,
-                    "min_response_time_ms": 23,
-                    "average_response_time_ms": 39.0,
-                    "throughput_tps": 25.6
+                    "max_response_time_ms": max_response_time_ms,
+                    "min_response_time_ms": min_response_time_ms,
+                    "average_response_time_ms": ((average_response_time_ms * 100.0).round() / 100.0),
+                    "throughput_tps": 25.6,
+                    "executed_at": execution_timestamp.to_rfc3339()
                 }
             },
             "integration_assertions": {
@@ -555,7 +607,9 @@ impl TestFixtures {
                     "runtime_validator.total_execution_time_ms": {
                         "max": 5000
                     },
-                    "provenance_ledger.caws_checkpoints.A1.status": "verified"
+                    "provenance_ledger.caws_checkpoints.A1.status": "verified",
+                    "provenance_ledger.caws_checkpoints.A9.status": "verified",
+                    "runtime_validator.validation_results.len": 9
                 },
                 "cross_references": [
                     {
@@ -567,30 +621,19 @@ impl TestFixtures {
                         "from": "claim_pipeline.verification.evidence[0].id", 
                         "to": "provenance_ledger.evidence_links[0].evidence_id",
                         "type": "evidence_consistency"
+                    },
+                    {
+                        "from": "provenance_ledger.caws_checkpoints.A6.description",
+                        "to": "runtime_validator.validation_results[5].details",
+                        "type": "audit_alignment"
                     }
-                ]
+                ],
+                "acceptance_checkpoints": ["A1","A2","A3","A4","A5","A6","A7","A8","A9"]
             }
         })
     }
 
-    /// TODO[snapshot-diff-plan]: Design snapshot + rollback fixtures that operate without Git yet
-    /// still support diffing, provenance replay, and restore operations for integration testing.
-    ///
-    /// Requirements:
-    /// 1. Emit paired `baseline` and `candidate` snapshots capturing file manifests, content
-    ///    hashes, execution metadata, and provenance annotations to enable pure data diffs.
-    /// 2. Provide a rollback recipe that lists inverse operations (file deletions, restores,
-    ///    metadata resets) so tests can simulate reverting to `baseline` without touching a VCS.
-    /// 3. Describe validation hooks (hash comparison, schema checks, CAWS policy references) that
-    ///    tests must execute before applying or rolling back snapshots.
-    ///
-    /// Acceptance Criteria:
-    /// - Integration tests consuming the fixture can compute a deterministic diff report that
-    ///   flags added/changed/removed files and CAWS policy violations with stable ordering.
-    /// - Applying the rollback recipe restores the `baseline` snapshot byte-for-byte (hash match)
-    ///   in temporary directories while leaving the host workspace untouched.
-    /// - Snapshot metadata includes enough context (risk tier, change budget, tooling versions) to
-    ///   assert compliance against the working spec during validation.
+    /// Git-less snapshot diff + rollback fixture for exercising deterministic provenance workflows.
     pub fn snapshot_diff_plan() -> Value {
         serde_json::json!({
             "plan_id": "snapshot-plan-001",
@@ -598,39 +641,133 @@ impl TestFixtures {
                 "generated_at": "2025-01-01T00:00:00Z",
                 "risk_tier": 2,
                 "toolchain": "integration-fixtures/1.0.0",
-                "seed": 42
+                "seed": 42,
+                "change_budget": {
+                    "max_files": 12,
+                    "max_loc": 650
+                },
+                "scope": {
+                    "in": ["src/", "docs/"],
+                    "out": ["target/", "node_modules/"]
+                }
             },
             "baseline": {
-                "commit": "1111111",
-                "artifact_hash": "baseline-sha256-aaaaaaaa",
-                "files": [
-                    {"path": "src/lib.rs", "checksum": "lib-baseline", "lines": 120},
-                    {"path": "src/config.rs", "checksum": "config-baseline", "lines": 80}
+                "label": "baseline",
+                "snapshot_hash": "sha256:baseline-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "execution_metadata": {
+                    "captured_at": "2025-01-01T00:00:10Z",
+                    "executor": "fixture-runner",
+                    "workspace": "/tmp/baseline",
+                    "runtime": {"os": "linux", "arch": "x86_64", "rustc": "1.75.0"}
+                },
+                "manifest": [
+                    {
+                        "path": "Cargo.toml",
+                        "checksum": "sha256:cargo-baseline-1111",
+                        "size_bytes": 312,
+                        "mode": "100644",
+                        "provenance": {
+                            "source": "working-spec",
+                            "annotations": ["dependency-locked", "license-reviewed"]
+                        }
+                    },
+                    {
+                        "path": "src/lib.rs",
+                        "checksum": "sha256:lib-baseline-2222",
+                        "size_bytes": 3584,
+                        "mode": "100644",
+                        "provenance": {
+                            "source": "baseline-snapshot",
+                            "annotations": ["telemetry-stable"]
+                        }
+                    },
+                    {
+                        "path": "docs/usage.md",
+                        "checksum": "sha256:docs-baseline-3333",
+                        "size_bytes": 2048,
+                        "mode": "100644",
+                        "provenance": {
+                            "source": "documentation",
+                            "annotations": ["a11y-reviewed"]
+                        }
+                    }
                 ],
                 "metadata": {
+                    "working_spec_id": "FIXTURE-BASELINE-001",
                     "change_budget": {"max_files": 10, "max_loc": 500},
-                    "caws_rules": ["A1", "A4", "A7"]
+                    "caws_rules": ["A1", "A4", "A7"],
+                    "provenance_reference": "baseline-ledger-001"
                 }
             },
             "candidate": {
-                "commit": "2222222",
-                "artifact_hash": "candidate-sha256-bbbbbbbb",
-                "files": [
-                    {"path": "src/lib.rs", "checksum": "lib-candidate", "lines": 135},
-                    {"path": "src/config.rs", "checksum": "config-baseline", "lines": 80},
-                    {"path": "README.md", "checksum": "readme-candidate", "lines": 42}
+                "label": "candidate",
+                "snapshot_hash": "sha256:candidate-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "execution_metadata": {
+                    "captured_at": "2025-01-01T00:05:00Z",
+                    "executor": "fixture-runner",
+                    "workspace": "/tmp/candidate",
+                    "runtime": {"os": "linux", "arch": "x86_64", "rustc": "1.75.0"}
+                },
+                "manifest": [
+                    {
+                        "path": "Cargo.toml",
+                        "checksum": "sha256:cargo-candidate-1111",
+                        "size_bytes": 320,
+                        "mode": "100644",
+                        "provenance": {
+                            "source": "working-spec",
+                            "annotations": ["dependency-locked", "license-reviewed"]
+                        }
+                    },
+                    {
+                        "path": "src/lib.rs",
+                        "checksum": "sha256:lib-candidate-2222",
+                        "size_bytes": 3920,
+                        "mode": "100644",
+                        "provenance": {
+                            "source": "feature-branch",
+                            "annotations": ["telemetry-updated", "error-handling-improved"]
+                        }
+                    },
+                    {
+                        "path": "docs/usage.md",
+                        "checksum": "sha256:docs-baseline-3333",
+                        "size_bytes": 2048,
+                        "mode": "100644",
+                        "provenance": {
+                            "source": "documentation",
+                            "annotations": ["a11y-reviewed"]
+                        }
+                    },
+                    {
+                        "path": "docs/rollback.md",
+                        "checksum": "sha256:docs-candidate-4444",
+                        "size_bytes": 1024,
+                        "mode": "100644",
+                        "provenance": {
+                            "source": "feature-branch",
+                            "annotations": ["rollback-playbook"]
+                        }
+                    }
                 ],
                 "metadata": {
+                    "working_spec_id": "FIXTURE-CANDIDATE-001",
                     "change_budget": {"max_files": 12, "max_loc": 650},
                     "caws_rules": ["A1", "A3", "A7", "A9"],
-                    "provenance_reference": "verdict-456"
+                    "provenance_reference": "candidate-ledger-456"
                 }
             },
-            "diff_summary": {
+            "diff_report": {
+                "summary": {
+                    "added": 1,
+                    "removed": 0,
+                    "modified": 2
+                },
                 "added_files": [
                     {
-                        "path": "README.md",
-                        "reason": "Document new configuration toggles",
+                        "path": "docs/rollback.md",
+                        "checksum": "sha256:docs-candidate-4444",
+                        "reason": "Document rollback process for new telemetry hooks",
                         "caws_reference": "A5"
                     }
                 ],
@@ -638,27 +775,85 @@ impl TestFixtures {
                 "modified_files": [
                     {
                         "path": "src/lib.rs",
-                        "insertions": 20,
-                        "deletions": 5,
-                        "highlights": ["New telemetry hooks", "Refined error handling"]
+                        "baseline_checksum": "sha256:lib-baseline-2222",
+                        "candidate_checksum": "sha256:lib-candidate-2222",
+                        "insertions": 24,
+                        "deletions": 8,
+                        "highlights": [
+                            "Adds deterministic telemetry exporters",
+                            "Improves error handling for rollback failures"
+                        ]
+                    },
+                    {
+                        "path": "Cargo.toml",
+                        "baseline_checksum": "sha256:cargo-baseline-1111",
+                        "candidate_checksum": "sha256:cargo-candidate-1111",
+                        "insertions": 2,
+                        "deletions": 0,
+                        "highlights": ["Pins integration-fixtures crate to 1.0.0"]
+                    }
+                ],
+                "policy_violations": [
+                    {
+                        "rule": "A9",
+                        "status": "warning",
+                        "details": "Rollback documentation must reference latest CAWS policy appendix."
                     }
                 ]
             },
-            "validation": {
-                "checksum_verified": true,
-                "schema_consistent": true,
-                "caws_acceptance": ["A1", "A3", "A7"],
-                "regression_risk": "low"
+            "rollback": {
+                "replay_target": "baseline",
+                "expected_snapshot_hash": "sha256:baseline-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "operations": [
+                    {
+                        "order": 1,
+                        "action": "delete",
+                        "path": "docs/rollback.md",
+                        "reason": "File absent in baseline manifest"
+                    },
+                    {
+                        "order": 2,
+                        "action": "restore",
+                        "path": "src/lib.rs",
+                        "checksum": "sha256:lib-baseline-2222",
+                        "source_manifest": "baseline"
+                    },
+                    {
+                        "order": 3,
+                        "action": "restore",
+                        "path": "Cargo.toml",
+                        "checksum": "sha256:cargo-baseline-1111",
+                        "source_manifest": "baseline"
+                    },
+                    {
+                        "order": 4,
+                        "action": "verify_metadata",
+                        "path": "docs/usage.md",
+                        "expected": {
+                            "mode": "100644",
+                            "checksum": "sha256:docs-baseline-3333"
+                        }
+                    }
+                ],
+                "pre_apply_hooks": ["hash_comparison", "schema_validation"],
+                "post_apply_hooks": ["hash_comparison", "caws_policy_enforcement"]
             },
-            "rollback_recipe": [
-                {"action": "delete", "path": "README.md"},
-                {"action": "restore", "path": "src/lib.rs", "checksum": "lib-baseline"},
-                {"action": "restore", "path": "src/config.rs", "checksum": "config-baseline"}
-            ],
             "validation_hooks": [
-                "hash_comparison",
-                "schema_validation",
-                "caws_policy_enforcement"
+                {
+                    "id": "hash_comparison",
+                    "description": "Compare manifest checksums between snapshots prior to mutation.",
+                    "inputs": ["baseline.manifest", "candidate.manifest"]
+                },
+                {
+                    "id": "schema_validation",
+                    "description": "Validate snapshot schema against CAWS snapshot-spec v1.",
+                    "inputs": ["baseline", "candidate", "diff_report"]
+                },
+                {
+                    "id": "caws_policy_enforcement",
+                    "description": "Ensure CAWS acceptance checkpoints are satisfied and violations are reported deterministically.",
+                    "inputs": ["diff_report.policy_violations", "metadata.change_budget"]
+                }
             ]
         })
     }

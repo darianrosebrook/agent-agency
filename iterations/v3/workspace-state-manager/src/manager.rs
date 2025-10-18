@@ -641,53 +641,38 @@ impl WorkspaceStateManager {
 
         // Process changes and build state
         for change in changes {
-            match change.change_type {
-                ChangeType::Added | ChangeType::Modified => {
-                    let file_path = change.file_path.clone();
+            match &change {
+                DiffChange::Add { ref path, .. } => {
                     let file_state = self.build_file_state_from_change(&change, &repo).await?;
-                    file_states.insert(file_path, file_state);
+                    file_states.insert(path.clone(), file_state);
                 }
-                ChangeType::Deleted => {
+                DiffChange::Modify { ref path, .. } => {
+                    let file_state = self.build_file_state_from_change(&change, &repo).await?;
+                    file_states.insert(path.clone(), file_state);
+                }
+                DiffChange::Remove { ref path } => {
                     // Mark file as deleted in state
-                    let file_path = change.file_path.clone();
+                    let file_path = path.clone();
                     let file_state = FileState {
                         path: file_path.clone(),
                         size: 0,
                         content_hash: "deleted".to_string(),
-                        modified_at: DateTime::from_timestamp(change.timestamp as i64, 0)
-                            .unwrap_or_default(),
+                        modified_at: chrono::Utc::now(),
                         permissions: 0,
                         git_tracked: true,
-                        git_commit: Some(change.commit_hash.clone()),
+                        git_commit: None, // Would need to get from git
                         content: None,
                         compressed: false,
                     };
                     file_states.insert(file_path, file_state);
                 }
-                ChangeType::Renamed => {
-                    // Handle renamed files - clone the change to avoid partial move
-                    let change_clone = change.clone();
-                    if let Some(old_path) = change_clone.old_path {
-                        // Mark old path as deleted
-                        let old_file_state = FileState {
-                            path: old_path.clone(),
-                            size: 0,
-                            content_hash: "deleted".to_string(),
-                            modified_at: DateTime::from_timestamp(change_clone.timestamp as i64, 0)
-                                .unwrap_or_default(),
-                            permissions: 0,
-                            git_tracked: true,
-                            git_commit: Some(change_clone.commit_hash.clone()),
-                            content: None,
-                            compressed: false,
-                        };
-                        file_states.insert(old_path, old_file_state);
-                    }
-
-                    // Add new path
-                    let file_path = change.file_path.clone();
-                    let file_state = self.build_file_state_from_change(&change, &repo).await?;
-                    file_states.insert(file_path.clone(), file_state);
+                DiffChange::AddDirectory { ref path } => {
+                    // Handle directory additions
+                    debug!("Directory added: {:?}", path);
+                }
+                DiffChange::RemoveDirectory { ref path } => {
+                    // Handle directory removals
+                    debug!("Directory removed: {:?}", path);
                 }
             }
         }
@@ -729,7 +714,7 @@ impl WorkspaceStateManager {
 
                 let old_file_path = delta.old_file().path().map(|p| p.to_path_buf());
 
-                let change = match change_type {
+                let change = match delta.status() {
                     git2::Delta::Added => DiffChange::Add { 
                         path: new_file_path, 
                         content: Vec::new() // TODO: Get actual content from git
@@ -747,7 +732,7 @@ impl WorkspaceStateManager {
                         old_content: None, // TODO: Get old content from git
                         new_content: Vec::new(), // TODO: Get new content from git
                     },
-                    _ => continue, // Skip other types for now
+                    _ => return true, // Skip other types for now
                 };
 
                 changes.push(change);
@@ -807,7 +792,7 @@ impl WorkspaceStateManager {
                     .duration_since(std::time::UNIX_EPOCH)
                     .map_err(|e| WorkspaceError::from(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
 
-                let content_hash = self.calculate_content_hash(content)?;
+                let content_hash = self.calculate_file_hash(&full_path).await?;
                 let permissions = if cfg!(unix) {
                     metadata.permissions().mode()
                 } else {
@@ -837,7 +822,7 @@ impl WorkspaceStateManager {
                     .duration_since(std::time::UNIX_EPOCH)
                     .map_err(|e| WorkspaceError::from(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
 
-                let content_hash = self.calculate_content_hash(new_content)?;
+                let content_hash = self.calculate_file_hash(&full_path).await?;
                 let permissions = if cfg!(unix) {
                     metadata.permissions().mode()
                 } else {
@@ -929,22 +914,17 @@ impl WorkspaceStateManager {
             if let Some(previous_file) = previous_state.files.get(file_path) {
                 if current_file.content_hash != previous_file.content_hash {
                     // File was modified
-                    changes.push(DiffChange {
-                        file_path: file_path.clone(),
-                        change_type: ChangeType::Modified,
-                        old_content_hash: Some(previous_file.content_hash.clone()),
-                        new_content_hash: Some(current_file.content_hash.clone()),
-                        size_diff: current_file.size as i64 - previous_file.size as i64,
+                    changes.push(DiffChange::Modify {
+                        path: file_path.clone(),
+                        old_content: None, // TODO: Get old content
+                        new_content: Vec::new(), // TODO: Get new content
                     });
                 }
             } else {
                 // File was added
-                changes.push(DiffChange {
-                    file_path: file_path.clone(),
-                    change_type: ChangeType::Added,
-                    old_content_hash: None,
-                    new_content_hash: Some(current_file.content_hash.clone()),
-                    size_diff: current_file.size as i64,
+                changes.push(DiffChange::Add {
+                    path: file_path.clone(),
+                    content: Vec::new(), // TODO: Get actual content
                 });
             }
         }
@@ -953,12 +933,8 @@ impl WorkspaceStateManager {
         for (file_path, previous_file) in &previous_state.files {
             if !current_state.files.contains_key(file_path) {
                 // File was deleted
-                changes.push(DiffChange {
-                    file_path: file_path.clone(),
-                    change_type: ChangeType::Deleted,
-                    old_content_hash: Some(previous_file.content_hash.clone()),
-                    new_content_hash: None,
-                    size_diff: -(previous_file.size as i64),
+                changes.push(DiffChange::Remove {
+                    path: file_path.clone(),
                 });
             }
         }

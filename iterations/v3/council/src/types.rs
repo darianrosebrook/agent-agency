@@ -169,6 +169,7 @@ pub struct WorkerOutput {
     pub files_modified: Vec<FileModification>,
     pub rationale: String,
     pub self_assessment: SelfAssessment,
+    pub response_time_ms: Option<u64>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
 

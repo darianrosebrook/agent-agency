@@ -214,7 +214,7 @@ impl LearningIntegrator {
             // Analyze response time differences
             let response_times: Vec<_> = conflicting_outputs
                 .iter()
-                .map(|output| output.response_time_ms)
+                .map(|output| output.response_time_ms.unwrap_or(0))
                 .collect();
 
             if let (Some(&min_time), Some(&max_time)) =
@@ -280,7 +280,7 @@ impl LearningIntegrator {
         // Performance improvements based on timing analysis
         let avg_response_time = conflicting_outputs
             .iter()
-            .map(|output| output.response_time_ms)
+            .map(|output| output.response_time_ms.unwrap_or(0))
             .sum::<u64>() as f64
             / conflicting_outputs.len().max(1) as f64;
 
@@ -483,17 +483,6 @@ pub struct PerformancePredictor {
     // Performance prediction algorithms
 }
 
-/// Worker output for arbitration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkerOutput {
-    pub worker_id: String,
-    pub task_id: TaskId,
-    pub output: String,
-    pub confidence: f32,
-    pub quality_score: f32,
-    pub response_time_ms: u64,
-    pub metadata: HashMap<String, serde_json::Value>,
-}
 
 /// Arbitration result
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -533,6 +522,7 @@ pub struct ArbitrationFeedback {
     pub consensus: ConsensusResult,
     pub success: bool,
     pub quality_improvement: f32,
+    pub database_client: Option<Arc<DatabaseClient>>,
 }
 
 impl AdvancedArbitrationEngine {
@@ -566,7 +556,7 @@ impl AdvancedArbitrationEngine {
 
         // 1. Multi-dimensional confidence scoring (V2 had basic scoring)
         let confidence_scores = self
-            .confidence_scorer
+            .self_assessment.confidence_scorer
             .score_multi_dimensional(&conflicting_outputs)
             .await?;
         debug!("Confidence scores calculated: {:?}", confidence_scores);
@@ -928,6 +918,9 @@ pub struct ConsensusResult {
     pub individual_scores: HashMap<String, f32>,
     pub reasoning: String,
     pub evaluation_time_ms: u64,
+    pub debate_rounds: u32,
+    pub participant_count: usize,
+    pub risk_assessment: Option<String>,
 }
 
 impl ConsensusResult {
@@ -941,6 +934,9 @@ impl ConsensusResult {
             individual_scores: HashMap::new(),
             reasoning: String::new(),
             evaluation_time_ms: 0,
+            debate_rounds: 0,
+            participant_count: 0,
+            risk_assessment: None,
         }
     }
 }
@@ -973,10 +969,10 @@ impl ConfidenceScorer {
                 .await?;
 
             // 3. Response time score
-            let response_time_score = self.calculate_response_time_score(output.response_time_ms);
+            let response_time_score = self.calculate_response_time_score(output.response_time_ms.unwrap_or(0));
 
             // 4. Output quality score
-            let output_quality_score = output.quality_score;
+            let output_quality_score = output.self_assessment.quality_score;
 
             // 5. Combined multi-dimensional score
             let combined_score = (historical_score * 0.3)
@@ -1050,7 +1046,7 @@ impl ConsistencyAnalyzer {
 
         // Weight the consistency score with quality and confidence
         let weighted_score =
-            (consistency_score * 0.6) + (output.quality_score * 0.2) + (output.confidence * 0.2);
+            (consistency_score * 0.6) + (output.self_assessment.quality_score * 0.2) + (output.self_assessment.confidence * 0.2);
 
         Ok(weighted_score)
     }
@@ -1221,7 +1217,7 @@ impl PatternDetector {
             resilience_score -= 0.1;
         }
 
-        Ok(resilience_score.max(0.0).min(1.0))
+        Ok(resilience_score.max(0.0_f32).min(1.0_f32))
     }
 
     /// Analyze performance patterns in worker output
@@ -1263,7 +1259,7 @@ impl PatternDetector {
             performance_score -= 0.15;
         }
 
-        Ok(performance_score.max(0.0).min(1.0))
+        Ok(performance_score.max(0.0_f32).min(1.0_f32))
     }
 
     /// Analyze security patterns in worker output
@@ -1310,7 +1306,7 @@ impl PatternDetector {
             security_score -= 0.1;
         }
 
-        Ok(security_score.max(0.0).min(1.0))
+        Ok(security_score.max(0.0_f32).min(1.0_f32))
     }
 
     /// Calculate confidence in pattern analysis based on data consistency
@@ -1337,7 +1333,7 @@ impl PatternDetector {
             confidence -= 0.15;
         }
 
-        Ok(confidence.max(0.5).min(1.0)) // Minimum confidence of 0.5
+        Ok(confidence.max(0.5_f32).min(1.0_f32)) // Minimum confidence of 0.5
     }
 
     /// Get detailed TODO analysis for a worker output
@@ -1365,17 +1361,17 @@ impl DeviationCalculator {
 
         // Response time deviation (weight: 0.3)
         let response_time_deviation =
-            self.calculate_response_time_deviation(output.response_time_ms);
+            self.calculate_response_time_deviation(output.response_time_ms.unwrap_or(0));
         deviation_score += response_time_deviation * 0.3;
         total_weight += 0.3;
 
         // Confidence level deviation (weight: 0.25)
-        let confidence_deviation = self.calculate_confidence_deviation(output.confidence.into());
+        let confidence_deviation = self.calculate_confidence_deviation(output.self_assessment.confidence.into());
         deviation_score += confidence_deviation * 0.25;
         total_weight += 0.25;
 
         // Quality score deviation (weight: 0.25)
-        let quality_deviation = self.calculate_quality_deviation(output.quality_score.into());
+        let quality_deviation = self.calculate_quality_deviation(output.self_assessment.quality_score.into());
         deviation_score += quality_deviation * 0.25;
         total_weight += 0.25;
 
@@ -1393,7 +1389,7 @@ impl DeviationCalculator {
 
         debug!(
             "Calculated deviation score: {:.3} for worker output (response_time: {}, confidence: {:.3}, quality: {:.3})",
-            final_deviation, output.response_time_ms, output.confidence, output.quality_score
+            final_deviation, output.response_time_ms.unwrap_or(0), output.self_assessment.confidence, output.self_assessment.quality_score
         );
 
         Ok(final_deviation.min(1.0_f32))
@@ -1473,7 +1469,7 @@ impl DeviationCalculator {
 
     /// Calculate output characteristics deviation
     fn calculate_output_characteristics_deviation(&self, output: &WorkerOutput) -> f32 {
-        let output_len = output.output.len();
+        let output_len = output.content.len();
         let mut deviation: f32 = 0.0;
 
         // Length-based deviation
@@ -1495,7 +1491,7 @@ impl DeviationCalculator {
         }
 
         // Check for unusual patterns in output
-        let output_lower = output.output.to_lowercase();
+        let output_lower = output.content.to_lowercase();
 
         // Check for error indicators
         if output_lower.contains("error") && output_lower.contains("failed") {
@@ -1712,10 +1708,10 @@ impl EvidenceSynthesizer {
         let source = output.worker_id.clone();
 
         // Extract factual evidence from output
-        if !output.output.is_empty() {
+        if !output.content.is_empty() {
             evidence_list.push(Evidence {
                 source: source.clone(),
-                content: output.output.clone(),
+                content: output.content.clone(),
                 credibility: 0.0, // Will be assessed later
                 relevance: 0.8,   // Default high relevance for main content
             });
@@ -1726,7 +1722,7 @@ impl EvidenceSynthesizer {
             source: source.clone(),
             content: format!(
                 "Worker confidence: {:.2}, quality score: {:.2}, response time: {}ms",
-                output.confidence, output.quality_score, output.response_time_ms
+                output.self_assessment.confidence, output.self_assessment.quality_score, output.response_time_ms.unwrap_or(0)
             ),
             credibility: 0.0,
             relevance: 0.7,
@@ -2219,8 +2215,8 @@ impl ConflictResolver {
         consensus_score: f32,
     ) -> bool {
         match conflict.severity {
-            ConflictSeverity::High => consensus_score >= conflict.confidence_threshold,
-            ConflictSeverity::Medium => consensus_score >= conflict.confidence_threshold * 0.8,
+            ConflictSeverity::High => consensus_score >= conflict.self_assessment.confidence_threshold,
+            ConflictSeverity::Medium => consensus_score >= conflict.self_assessment.confidence_threshold * 0.8,
             ConflictSeverity::Low => true, // Low severity conflicts are easily resolved
         }
     }
@@ -3026,7 +3022,7 @@ impl ConsistencyAnalyzer {
         }
 
         // Calculate median quality score
-        let mut quality_scores: Vec<f32> = outputs.iter().map(|o| o.quality_score).collect();
+        let mut quality_scores: Vec<f32> = outputs.iter().map(|o| o.self_assessment.quality_score).collect();
         quality_scores.sort_by(|a, b| a.partial_cmp(b).unwrap());
         let median_quality = if quality_scores.len() % 2 == 0 {
             (quality_scores[quality_scores.len() / 2 - 1]
@@ -3048,7 +3044,7 @@ impl ConsistencyAnalyzer {
         };
 
         // Calculate median confidence
-        let mut confidence_scores: Vec<f32> = outputs.iter().map(|o| o.confidence).collect();
+        let mut confidence_scores: Vec<f32> = outputs.iter().map(|o| o.self_assessment.confidence).collect();
         confidence_scores.sort_by(|a, b| a.partial_cmp(b).unwrap());
         let median_confidence = if confidence_scores.len() % 2 == 0 {
             (confidence_scores[confidence_scores.len() / 2 - 1]
@@ -3130,13 +3126,13 @@ impl ConsistencyAnalyzer {
         let mut total_weight = 0.0;
 
         // 1. Quality score consistency (weight: 0.25)
-        let quality_deviation = (output.quality_score - group_stats.median_quality).abs();
+        let quality_deviation = (output.self_assessment.quality_score - group_stats.median_quality).abs();
         let quality_consistency = 1.0 - (quality_deviation * 2.0).min(1.0); // Normalize deviation
         consistency_score += quality_consistency * 0.25;
         total_weight += 0.25;
 
         // 2. Response time consistency (weight: 0.2)
-        let time_deviation = ((output.response_time_ms as f64
+        let time_deviation = ((output.response_time_ms.unwrap_or(0) as f64
             - group_stats.median_response_time as f64)
             / group_stats.median_response_time as f64)
             .abs();
@@ -3145,7 +3141,7 @@ impl ConsistencyAnalyzer {
         total_weight += 0.2;
 
         // 3. Confidence consistency (weight: 0.2)
-        let confidence_deviation = (output.confidence - group_stats.median_confidence).abs();
+        let confidence_deviation = (output.self_assessment.confidence - group_stats.median_confidence).abs();
         let confidence_consistency = 1.0 - (confidence_deviation * 2.0).min(1.0);
         consistency_score += confidence_consistency * 0.2;
         total_weight += 0.2;
@@ -3258,10 +3254,10 @@ impl ConsistencyAnalyzer {
         let mut outlier_score: f32 = 0.0;
 
         // Calculate z-scores for quality
-        let qualities: Vec<f32> = all_outputs.iter().map(|o| o.quality_score).collect();
+        let qualities: Vec<f32> = all_outputs.iter().map(|o| o.self_assessment.quality_score).collect();
         if let (Some(mean), Some(std_dev)) = self.calculate_mean_std(&qualities) {
             if std_dev > 0.0 {
-                let z_score = (output.quality_score - mean).abs() / std_dev;
+                let z_score = (output.self_assessment.quality_score - mean).abs() / std_dev;
                 if z_score > 2.0 {
                     // More than 2 standard deviations
                     outlier_score += 0.4;
@@ -3276,7 +3272,7 @@ impl ConsistencyAnalyzer {
             .collect();
         if let (Some(mean), Some(std_dev)) = self.calculate_mean_std_f64(&response_times) {
             if std_dev > 0.0 {
-                let z_score = ((output.response_time_ms as f64) - mean).abs() / std_dev;
+                let z_score = ((output.response_time_ms.unwrap_or(0) as f64) - mean).abs() / std_dev;
                 if z_score > 2.0 {
                     outlier_score += 0.4;
                 }
@@ -3284,10 +3280,10 @@ impl ConsistencyAnalyzer {
         }
 
         // Calculate z-scores for confidence
-        let confidences: Vec<f32> = all_outputs.iter().map(|o| o.confidence).collect();
+        let confidences: Vec<f32> = all_outputs.iter().map(|o| o.self_assessment.confidence).collect();
         if let (Some(mean), Some(std_dev)) = self.calculate_mean_std(&confidences) {
             if std_dev > 0.0 {
-                let z_score = (output.confidence - mean).abs() / std_dev;
+                let z_score = (output.self_assessment.confidence - mean).abs() / std_dev;
                 if z_score > 2.0 {
                     outlier_score += 0.2;
                 }
@@ -3754,15 +3750,15 @@ impl PredictiveAnalyzer {
         let mut regressions = Vec::new();
 
         // Calculate quality statistics
-        let qualities: Vec<f32> = outputs.iter().map(|o| o.quality_score).collect();
+        let qualities: Vec<f32> = outputs.iter().map(|o| o.self_assessment.quality_score).collect();
         let avg_quality = qualities.iter().sum::<f32>() / qualities.len() as f32;
 
         // Check for error handling patterns
         let error_handling_count = outputs
             .iter()
             .filter(|o| {
-                o.output.to_lowercase().contains("result<")
-                    || o.output.to_lowercase().contains("option<")
+                o.content.to_lowercase().contains("result<")
+                    || o.content.to_lowercase().contains("option<")
             })
             .count();
 
@@ -3774,8 +3770,8 @@ impl PredictiveAnalyzer {
         let testing_count = outputs
             .iter()
             .filter(|o| {
-                o.output.to_lowercase().contains("test")
-                    || o.output.to_lowercase().contains("assert")
+                o.content.to_lowercase().contains("test")
+                    || o.content.to_lowercase().contains("assert")
             })
             .count();
 
@@ -3786,7 +3782,7 @@ impl PredictiveAnalyzer {
         // Check for documentation patterns
         let documentation_count = outputs
             .iter()
-            .filter(|o| o.output.contains("///") || o.output.to_lowercase().contains("readme"))
+            .filter(|o| o.content.contains("///") || o.content.to_lowercase().contains("readme"))
             .count();
 
         if documentation_count < outputs.len() / 2 {
@@ -3813,7 +3809,7 @@ impl PredictiveAnalyzer {
         let mut regressions = Vec::new();
 
         // Analyze code complexity patterns
-        let total_lines: usize = outputs.iter().map(|o| o.output.lines().count()).sum();
+        let total_lines: usize = outputs.iter().map(|o| o.content.lines().count()).sum();
 
         let avg_lines = total_lines as f32 / outputs.len() as f32;
 
@@ -3826,7 +3822,7 @@ impl PredictiveAnalyzer {
         // Check for complex type usage
         let complex_types_count = outputs
             .iter()
-            .filter(|o| o.output.matches("::<").count() > 3)
+            .filter(|o| o.content.matches("::<").count() > 3)
             .count();
 
         if complex_types_count > outputs.len() / 4 {
@@ -3856,7 +3852,7 @@ impl PredictiveAnalyzer {
         }
 
         // Analyze confidence trends
-        let confidences: Vec<f32> = outputs.iter().map(|o| o.confidence).collect();
+        let confidences: Vec<f32> = outputs.iter().map(|o| o.self_assessment.confidence).collect();
         let avg_confidence = confidences.iter().sum::<f32>() / confidences.len() as f32;
 
         if avg_confidence > 0.8 {
@@ -3882,8 +3878,8 @@ impl PredictiveAnalyzer {
         let async_count = outputs
             .iter()
             .filter(|o| {
-                o.output.to_lowercase().contains("async")
-                    || o.output.to_lowercase().contains("await")
+                o.content.to_lowercase().contains("async")
+                    || o.content.to_lowercase().contains("await")
             })
             .count();
 
@@ -3898,8 +3894,8 @@ impl PredictiveAnalyzer {
         let modern_error_count = outputs
             .iter()
             .filter(|o| {
-                o.output.to_lowercase().contains("anyhow")
-                    || o.output.to_lowercase().contains("thiserror")
+                o.content.to_lowercase().contains("anyhow")
+                    || o.content.to_lowercase().contains("thiserror")
             })
             .count();
 
@@ -3928,12 +3924,12 @@ impl PredictiveAnalyzer {
         // Analyze code structure for maintenance burden
         let struct_count = outputs
             .iter()
-            .filter(|o| o.output.contains("struct "))
+            .filter(|o| o.content.contains("struct "))
             .count();
 
         let function_count = outputs
             .iter()
-            .map(|o| o.output.matches("fn ").count())
+            .map(|o| o.content.matches("fn ").count())
             .sum::<usize>();
 
         let avg_functions_per_output = function_count as f32 / outputs.len() as f32;
@@ -3946,7 +3942,7 @@ impl PredictiveAnalyzer {
         // Check for TODO comments (maintenance debt)
         let todo_count = outputs
             .iter()
-            .filter(|o| o.output.to_lowercase().contains("todo"))
+            .filter(|o| o.content.to_lowercase().contains("todo"))
             .count();
 
         if todo_count > outputs.len() / 4 {
@@ -4635,7 +4631,7 @@ impl ConsensusAlgorithm {
         for contribution in contributions {
             // Individual score based on quality, confidence, and contribution weight
             let individual_score = (contribution.quality_weight * 0.5)
-                + (contribution.confidence * 0.3)
+                + (contribution.self_assessment.confidence * 0.3)
                 + (contribution.combined_weight * 0.2);
 
             scores.insert(contribution.source.clone(), individual_score);
@@ -4905,7 +4901,7 @@ impl TieBreaker {
 
         // Strategy 2: Confidence-based escalation
         let confidence_result = self
-            .confidence_based_escalation(quality_result, tie_analysis)
+            .self_assessment.confidence_based_escalation(quality_result, tie_analysis)
             .await?;
 
         // Strategy 3: Statistical tie breaking
@@ -5475,6 +5471,7 @@ impl ArbitrationFeedback {
         let decision_confidence = self.consensus.confidence;
 
         Ok(OutcomeAnalysis {
+            task_id: self.consensus.task_id,
             success_rate,
             consensus_quality,
             decision_confidence,
@@ -5689,7 +5686,9 @@ impl ArbitrationFeedback {
 
 /// Outcome analysis results
 #[derive(Debug)]
+#[derive(Serialize)]
 struct OutcomeAnalysis {
+    task_id: TaskId,
     success_rate: f32,
     consensus_quality: f32,
     decision_confidence: f32,
@@ -5766,7 +5765,7 @@ impl ImprovementTracker {
         let mut improvements = learning_results.improvements_suggested.clone();
 
         // Add additional monitoring-based improvements
-        if learning_results.confidence_improvements > 0.1 {
+        if learning_results.self_assessment.confidence_improvements > 0.1 {
             improvements.push("Significant confidence improvements detected".to_string());
         }
 
@@ -5780,10 +5779,10 @@ impl ImprovementTracker {
     ) -> Result<Vec<String>> {
         let mut insights = vec!["improved_consensus_building".to_string()];
 
-        if learning_results.confidence_improvements > 0.0 {
+        if learning_results.self_assessment.confidence_improvements > 0.0 {
             insights.push(format!(
                 "Confidence improvement trend: +{:.1}%",
-                learning_results.confidence_improvements * 100.0
+                learning_results.self_assessment.confidence_improvements * 100.0
             ));
         }
 
@@ -5929,9 +5928,9 @@ impl TrendAnalyzer {
     /// Calculate confidence trends
     async fn calculate_confidence_trend(&self, metrics: &ArbitrationMetrics) -> Result<String> {
         // Simplified trend analysis based on current metrics
-        if metrics.confidence_score > 0.8 {
+        if metrics.self_assessment.confidence_score > 0.8 {
             Ok("high_confidence".to_string())
-        } else if metrics.confidence_score > 0.6 {
+        } else if metrics.self_assessment.confidence_score > 0.6 {
             Ok("moderate_confidence".to_string())
         } else {
             Ok("low_confidence".to_string())
@@ -5940,9 +5939,9 @@ impl TrendAnalyzer {
 
     /// Track quality metrics evolution
     async fn track_quality_evolution(&self, metrics: &ArbitrationMetrics) -> Result<String> {
-        if metrics.quality_score > 0.8 {
+        if metrics.self_assessment.quality_score > 0.8 {
             Ok("excellent_quality".to_string())
-        } else if metrics.quality_score > 0.6 {
+        } else if metrics.self_assessment.quality_score > 0.6 {
             Ok("good_quality".to_string())
         } else {
             Ok("needs_improvement".to_string())
@@ -6004,7 +6003,7 @@ impl PerformancePredictor {
 
     /// Predict confidence from trends
     async fn predict_confidence_from_trends(&self, trends: &ArbitrationTrends) -> Result<f32> {
-        let base_confidence = match trends.confidence_trend.as_str() {
+        let base_confidence = match trends.self_assessment.confidence_trend.as_str() {
             "high_confidence" => 0.85,
             "moderate_confidence" => 0.70,
             "low_confidence" => 0.50,
@@ -6077,7 +6076,7 @@ impl PerformancePredictor {
         // Check if all trends are positive
         let positive_trends = ["high_confidence", "excellent_quality", "strong_consensus"];
         let current_trends = [
-            &trends.confidence_trend,
+            &trends.self_assessment.confidence_trend,
             &trends.quality_trend,
             &trends.consensus_trend,
         ];
