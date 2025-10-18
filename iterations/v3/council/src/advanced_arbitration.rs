@@ -483,7 +483,6 @@ pub struct PerformancePredictor {
     // Performance prediction algorithms
 }
 
-
 /// Arbitration result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ArbitrationResult {
@@ -556,7 +555,7 @@ impl AdvancedArbitrationEngine {
 
         // 1. Multi-dimensional confidence scoring (V2 had basic scoring)
         let confidence_scores = self
-            .self_assessment.confidence_scorer
+            .confidence_scorer
             .score_multi_dimensional(&conflicting_outputs)
             .await?;
         debug!("Confidence scores calculated: {:?}", confidence_scores);
@@ -960,7 +959,12 @@ impl ConfidenceScorer {
 
         for output in outputs {
             // 1. Historical performance score
-            let historical_score = self.calculate_historical_score(&output.worker_id).await?;
+            let worker_id = output
+                .metadata
+                .get("worker_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown_worker");
+            let historical_score = self.calculate_historical_score(worker_id).await?;
 
             // 2. Quality consistency score
             let consistency_score = self
@@ -969,7 +973,8 @@ impl ConfidenceScorer {
                 .await?;
 
             // 3. Response time score
-            let response_time_score = self.calculate_response_time_score(output.response_time_ms.unwrap_or(0));
+            let response_time_score =
+                self.calculate_response_time_score(output.response_time_ms.unwrap_or(0));
 
             // 4. Output quality score
             let output_quality_score = output.self_assessment.quality_score;
@@ -980,7 +985,7 @@ impl ConfidenceScorer {
                 + (response_time_score * 0.2)
                 + (output_quality_score * 0.25);
 
-            scores.insert(output.worker_id.clone(), combined_score);
+            scores.insert(worker_id.to_string(), combined_score);
         }
 
         Ok(scores)
@@ -1045,8 +1050,9 @@ impl ConsistencyAnalyzer {
         let consistency_score = (pattern_score + deviation_score) / 2.0;
 
         // Weight the consistency score with quality and confidence
-        let weighted_score =
-            (consistency_score * 0.6) + (output.self_assessment.quality_score * 0.2) + (output.self_assessment.confidence * 0.2);
+        let weighted_score = (consistency_score * 0.6)
+            + (output.self_assessment.quality_score * 0.2)
+            + (output.self_assessment.confidence * 0.2);
 
         Ok(weighted_score)
     }
@@ -1147,7 +1153,7 @@ impl PatternDetector {
         // Factor in quality score from TODO analysis
         quality_score = (quality_score * 0.7) + (todo_analysis.quality_score * 0.3);
 
-        Ok(quality_score.max(0.0).min(1.0))
+        Ok(quality_score.max(0.0_f32).min(1.0_f32))
     }
 
     /// Analyze implementation completeness patterns
@@ -1172,12 +1178,12 @@ impl PatternDetector {
             completeness_score -= hidden_penalty;
         }
 
-        Ok(completeness_score.max(0.0).min(1.0))
+        Ok(completeness_score.max(0.0_f32).min(1.0_f32))
     }
 
     /// Analyze error handling and resilience patterns in worker output
     async fn analyze_resilience_patterns(&self, output: &WorkerOutput) -> Result<f32> {
-        let mut resilience_score = 0.8; // Start with moderate score
+        let mut resilience_score: f32 = 0.8; // Start with moderate score
 
         // Check for error handling patterns in output content
         let content = &output.content;
@@ -1222,7 +1228,7 @@ impl PatternDetector {
 
     /// Analyze performance patterns in worker output
     async fn analyze_performance_patterns(&self, output: &WorkerOutput) -> Result<f32> {
-        let mut performance_score = 0.7; // Start with moderate score
+        let mut performance_score: f32 = 0.7; // Start with moderate score
 
         let content = &output.content;
 
@@ -1264,7 +1270,7 @@ impl PatternDetector {
 
     /// Analyze security patterns in worker output
     async fn analyze_security_patterns(&self, output: &WorkerOutput) -> Result<f32> {
-        let mut security_score = 0.8; // Start with good score
+        let mut security_score: f32 = 0.8; // Start with good score
 
         let content = &output.content;
 
@@ -1366,12 +1372,14 @@ impl DeviationCalculator {
         total_weight += 0.3;
 
         // Confidence level deviation (weight: 0.25)
-        let confidence_deviation = self.calculate_confidence_deviation(output.self_assessment.confidence.into());
+        let confidence_deviation =
+            self.calculate_confidence_deviation(output.self_assessment.confidence.into());
         deviation_score += confidence_deviation * 0.25;
         total_weight += 0.25;
 
         // Quality score deviation (weight: 0.25)
-        let quality_deviation = self.calculate_quality_deviation(output.self_assessment.quality_score.into());
+        let quality_deviation =
+            self.calculate_quality_deviation(output.self_assessment.quality_score.into());
         deviation_score += quality_deviation * 0.25;
         total_weight += 0.25;
 
@@ -1722,7 +1730,9 @@ impl EvidenceSynthesizer {
             source: source.clone(),
             content: format!(
                 "Worker confidence: {:.2}, quality score: {:.2}, response time: {}ms",
-                output.self_assessment.confidence, output.self_assessment.quality_score, output.response_time_ms.unwrap_or(0)
+                output.self_assessment.confidence,
+                output.self_assessment.quality_score,
+                output.response_time_ms.unwrap_or(0)
             ),
             credibility: 0.0,
             relevance: 0.7,
@@ -1769,7 +1779,7 @@ impl CredibilityAssessor {
         credibility_score *= evidence.relevance;
 
         // Clamp between 0.0 and 1.0
-        let final_score = credibility_score.max(0.0).min(1.0);
+        let final_score = credibility_score.max(0.0_f32).min(1.0_f32);
 
         Ok(final_score)
     }
@@ -1819,7 +1829,7 @@ impl CredibilityAssessor {
         }
 
         // Clamp between 0.0 and 1.0
-        (reputation_score as f32).max(0.0).min(1.0)
+        (reputation_score as f32).max(0.0_f32).min(1.0_f32)
     }
 
     /// Evaluate evidence consistency
@@ -2215,8 +2225,8 @@ impl ConflictResolver {
         consensus_score: f32,
     ) -> bool {
         match conflict.severity {
-            ConflictSeverity::High => consensus_score >= conflict.self_assessment.confidence_threshold,
-            ConflictSeverity::Medium => consensus_score >= conflict.self_assessment.confidence_threshold * 0.8,
+            ConflictSeverity::High => consensus_score >= conflict.confidence_threshold,
+            ConflictSeverity::Medium => consensus_score >= conflict.confidence_threshold * 0.8,
             ConflictSeverity::Low => true, // Low severity conflicts are easily resolved
         }
     }
@@ -2869,7 +2879,7 @@ impl CorrectnessValidator {
         }
 
         // Perfect score if no vulnerabilities, reduce for each vulnerability
-        let security_score = 1.0 - (vulnerabilities as f32 * 0.2).min(1.0);
+        let security_score = 1.0 - (vulnerabilities as f32 * 0.2).min(1.0_f32);
         Ok(security_score)
     }
 
@@ -3022,7 +3032,10 @@ impl ConsistencyAnalyzer {
         }
 
         // Calculate median quality score
-        let mut quality_scores: Vec<f32> = outputs.iter().map(|o| o.self_assessment.quality_score).collect();
+        let mut quality_scores: Vec<f32> = outputs
+            .iter()
+            .map(|o| o.self_assessment.quality_score)
+            .collect();
         quality_scores.sort_by(|a, b| a.partial_cmp(b).unwrap());
         let median_quality = if quality_scores.len() % 2 == 0 {
             (quality_scores[quality_scores.len() / 2 - 1]
@@ -3044,7 +3057,10 @@ impl ConsistencyAnalyzer {
         };
 
         // Calculate median confidence
-        let mut confidence_scores: Vec<f32> = outputs.iter().map(|o| o.self_assessment.confidence).collect();
+        let mut confidence_scores: Vec<f32> = outputs
+            .iter()
+            .map(|o| o.self_assessment.confidence)
+            .collect();
         confidence_scores.sort_by(|a, b| a.partial_cmp(b).unwrap());
         let median_confidence = if confidence_scores.len() % 2 == 0 {
             (confidence_scores[confidence_scores.len() / 2 - 1]
@@ -3126,8 +3142,9 @@ impl ConsistencyAnalyzer {
         let mut total_weight = 0.0;
 
         // 1. Quality score consistency (weight: 0.25)
-        let quality_deviation = (output.self_assessment.quality_score - group_stats.median_quality).abs();
-        let quality_consistency = 1.0 - (quality_deviation * 2.0).min(1.0); // Normalize deviation
+        let quality_deviation =
+            (output.self_assessment.quality_score - group_stats.median_quality).abs();
+        let quality_consistency = 1.0 - (quality_deviation * 2.0).min(1.0_f32); // Normalize deviation
         consistency_score += quality_consistency * 0.25;
         total_weight += 0.25;
 
@@ -3136,13 +3153,14 @@ impl ConsistencyAnalyzer {
             - group_stats.median_response_time as f64)
             / group_stats.median_response_time as f64)
             .abs();
-        let time_consistency = 1.0 - (time_deviation as f32 * 2.0).min(1.0);
+        let time_consistency = 1.0 - (time_deviation as f32 * 2.0).min(1.0_f32);
         consistency_score += time_consistency * 0.2;
         total_weight += 0.2;
 
         // 3. Confidence consistency (weight: 0.2)
-        let confidence_deviation = (output.self_assessment.confidence - group_stats.median_confidence).abs();
-        let confidence_consistency = 1.0 - (confidence_deviation * 2.0).min(1.0);
+        let confidence_deviation =
+            (output.self_assessment.confidence - group_stats.median_confidence).abs();
+        let confidence_consistency = 1.0 - (confidence_deviation * 2.0).min(1.0_f32);
         consistency_score += confidence_consistency * 0.2;
         total_weight += 0.2;
 
@@ -3254,7 +3272,10 @@ impl ConsistencyAnalyzer {
         let mut outlier_score: f32 = 0.0;
 
         // Calculate z-scores for quality
-        let qualities: Vec<f32> = all_outputs.iter().map(|o| o.self_assessment.quality_score).collect();
+        let qualities: Vec<f32> = all_outputs
+            .iter()
+            .map(|o| o.self_assessment.quality_score)
+            .collect();
         if let (Some(mean), Some(std_dev)) = self.calculate_mean_std(&qualities) {
             if std_dev > 0.0 {
                 let z_score = (output.self_assessment.quality_score - mean).abs() / std_dev;
@@ -3272,7 +3293,8 @@ impl ConsistencyAnalyzer {
             .collect();
         if let (Some(mean), Some(std_dev)) = self.calculate_mean_std_f64(&response_times) {
             if std_dev > 0.0 {
-                let z_score = ((output.response_time_ms.unwrap_or(0) as f64) - mean).abs() / std_dev;
+                let z_score =
+                    ((output.response_time_ms.unwrap_or(0) as f64) - mean).abs() / std_dev;
                 if z_score > 2.0 {
                     outlier_score += 0.4;
                 }
@@ -3280,7 +3302,10 @@ impl ConsistencyAnalyzer {
         }
 
         // Calculate z-scores for confidence
-        let confidences: Vec<f32> = all_outputs.iter().map(|o| o.self_assessment.confidence).collect();
+        let confidences: Vec<f32> = all_outputs
+            .iter()
+            .map(|o| o.self_assessment.confidence)
+            .collect();
         if let (Some(mean), Some(std_dev)) = self.calculate_mean_std(&confidences) {
             if std_dev > 0.0 {
                 let z_score = (output.self_assessment.confidence - mean).abs() / std_dev;
@@ -3460,13 +3485,13 @@ impl InnovationEvaluator {
 
         // 1. Novel techniques (weight: 0.3)
         let novel_techniques = self.count_novel_techniques(content, baseline);
-        let technique_score = (novel_techniques as f32 / 3.0).min(1.0); // Max 3 novel techniques
+        let technique_score = (novel_techniques as f32 / 3.0).min(1.0_f32); // Max 3 novel techniques
         innovation_score += technique_score * 0.3;
         total_weight += 0.3;
 
         // 2. Advanced language features (weight: 0.25)
         let advanced_features = self.count_advanced_features(content);
-        let feature_score = (advanced_features as f32 / 5.0).min(1.0); // Max 5 advanced features
+        let feature_score = (advanced_features as f32 / 5.0).min(1.0_f32); // Max 5 advanced features
         innovation_score += feature_score * 0.25;
         total_weight += 0.25;
 
@@ -3750,7 +3775,10 @@ impl PredictiveAnalyzer {
         let mut regressions = Vec::new();
 
         // Calculate quality statistics
-        let qualities: Vec<f32> = outputs.iter().map(|o| o.self_assessment.quality_score).collect();
+        let qualities: Vec<f32> = outputs
+            .iter()
+            .map(|o| o.self_assessment.quality_score)
+            .collect();
         let avg_quality = qualities.iter().sum::<f32>() / qualities.len() as f32;
 
         // Check for error handling patterns
@@ -3852,7 +3880,10 @@ impl PredictiveAnalyzer {
         }
 
         // Analyze confidence trends
-        let confidences: Vec<f32> = outputs.iter().map(|o| o.self_assessment.confidence).collect();
+        let confidences: Vec<f32> = outputs
+            .iter()
+            .map(|o| o.self_assessment.confidence)
+            .collect();
         let avg_confidence = confidences.iter().sum::<f32>() / confidences.len() as f32;
 
         if avg_confidence > 0.8 {
@@ -4328,8 +4359,8 @@ impl ConsensusAlgorithm {
 
         // Calculate confidence interval (simplified)
         let confidence_interval = (
-            (average_quality - 1.96 * standard_deviation).max(0.0),
-            (average_quality + 1.96 * standard_deviation).min(1.0),
+            (average_quality - 1.96 * standard_deviation).max(0.0_f32),
+            (average_quality + 1.96 * standard_deviation).min(1.0_f32),
         );
 
         // Count outliers (more than 2 std devs from mean)
@@ -4350,7 +4381,7 @@ impl ConsensusAlgorithm {
             standard_deviation,
             confidence_interval,
             outlier_count,
-            statistical_significance: statistical_significance.max(0.0).min(1.0),
+            statistical_significance: statistical_significance.max(0.0_f32).min(1.0_f32),
         })
     }
 
@@ -4901,7 +4932,8 @@ impl TieBreaker {
 
         // Strategy 2: Confidence-based escalation
         let confidence_result = self
-            .self_assessment.confidence_based_escalation(quality_result, tie_analysis)
+            .self_assessment
+            .confidence_based_escalation(quality_result, tie_analysis)
             .await?;
 
         // Strategy 3: Statistical tie breaking
@@ -5497,7 +5529,7 @@ impl ArbitrationFeedback {
         let quality_delta = self.consensus.quality_score;
 
         Ok(FeedbackQualityMetrics {
-            overall_improvement: overall_improvement.max(0.0),
+            overall_improvement: overall_improvement.max(0.0_f32),
             confidence_delta,
             quality_delta,
         })
@@ -5685,8 +5717,7 @@ impl ArbitrationFeedback {
 }
 
 /// Outcome analysis results
-#[derive(Debug)]
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 struct OutcomeAnalysis {
     task_id: TaskId,
     success_rate: f32,
@@ -5765,7 +5796,7 @@ impl ImprovementTracker {
         let mut improvements = learning_results.improvements_suggested.clone();
 
         // Add additional monitoring-based improvements
-        if learning_results.self_assessment.confidence_improvements > 0.1 {
+        if learning_results.confidence_improvements > 0.1 {
             improvements.push("Significant confidence improvements detected".to_string());
         }
 
@@ -5779,10 +5810,10 @@ impl ImprovementTracker {
     ) -> Result<Vec<String>> {
         let mut insights = vec!["improved_consensus_building".to_string()];
 
-        if learning_results.self_assessment.confidence_improvements > 0.0 {
+        if learning_results.confidence_improvements > 0.0 {
             insights.push(format!(
                 "Confidence improvement trend: +{:.1}%",
-                learning_results.self_assessment.confidence_improvements * 100.0
+                learning_results.confidence_improvements * 100.0
             ));
         }
 
@@ -5928,9 +5959,9 @@ impl TrendAnalyzer {
     /// Calculate confidence trends
     async fn calculate_confidence_trend(&self, metrics: &ArbitrationMetrics) -> Result<String> {
         // Simplified trend analysis based on current metrics
-        if metrics.self_assessment.confidence_score > 0.8 {
+        if metrics.confidence_score > 0.8 {
             Ok("high_confidence".to_string())
-        } else if metrics.self_assessment.confidence_score > 0.6 {
+        } else if metrics.confidence_score > 0.6 {
             Ok("moderate_confidence".to_string())
         } else {
             Ok("low_confidence".to_string())
@@ -5939,9 +5970,9 @@ impl TrendAnalyzer {
 
     /// Track quality metrics evolution
     async fn track_quality_evolution(&self, metrics: &ArbitrationMetrics) -> Result<String> {
-        if metrics.self_assessment.quality_score > 0.8 {
+        if metrics.quality_score > 0.8 {
             Ok("excellent_quality".to_string())
-        } else if metrics.self_assessment.quality_score > 0.6 {
+        } else if metrics.quality_score > 0.6 {
             Ok("good_quality".to_string())
         } else {
             Ok("needs_improvement".to_string())

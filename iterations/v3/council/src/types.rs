@@ -164,6 +164,7 @@ pub enum Environment {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkerOutput {
+    pub worker_id: Uuid,
     pub task_id: TaskId,
     pub content: String,
     pub files_modified: Vec<FileModification>,

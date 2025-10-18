@@ -930,7 +930,7 @@ impl WorkspaceStateManager {
         }
 
         // Check for deleted files
-        for (file_path, previous_file) in &previous_state.files {
+        for (file_path, _previous_file) in &previous_state.files {
             if !current_state.files.contains_key(file_path) {
                 // File was deleted
                 changes.push(DiffChange::Remove {

@@ -7,11 +7,11 @@
 
 use std::collections::BTreeMap;
 
+use agent_agency_council::types::FinalVerdict;
 use agent_agency_council::{
     coordinator::{ConsensusCoordinator, NoopEmitter},
     CouncilConfig,
 };
-use agent_agency_council::types::FinalVerdict;
 use orchestration::{
     caws_runtime::{DiffStats, TaskDescriptor, WorkingSpec},
     orchestrate::orchestrate_task,
@@ -104,10 +104,7 @@ async fn e2e_happy_path_accepts_change() {
         other => panic!("expected accepted verdict, got {:?}", other),
     }
 
-    let events = harness
-        .provenance()
-        .events_for_task("E2E-ACCEPT-001")
-        .await;
+    let events = harness.provenance().events_for_task("E2E-ACCEPT-001").await;
     assert!(
         events.iter().any(|e| e.event_type == "session_created"),
         "session_created event missing: {:?}",
@@ -118,10 +115,8 @@ async fn e2e_happy_path_accepts_change() {
         "validation_result event missing"
     );
     assert!(
-        events
-            .iter()
-            .any(|e| e.event_type == "session_completed"
-                && e.payload.get("status") == Some(&serde_json::json!("completed"))),
+        events.iter().any(|e| e.event_type == "session_completed"
+            && e.payload.get("status") == Some(&serde_json::json!("completed"))),
         "session_completed event missing or has wrong status"
     );
 }

@@ -225,15 +225,17 @@ impl ProvenanceService {
         format: ExportFormat,
     ) -> Result<ProvenanceExport> {
         let records = self.storage.query_records(&query).await?;
+        let filters_applied = self.extract_filters_from_query(&query)?.iter().map(|f| format!("{:?}", f)).collect();
+        let time_range = query.time_range.unwrap_or_else(|| TimeRange {
+            start: chrono::DateTime::from_timestamp(0, 0).unwrap_or_else(Utc::now),
+            end: Utc::now(),
+        });
 
         let export_id = Uuid::new_v4();
         let metadata = ExportMetadata {
             total_records: records.len() as u64,
-            time_range: query.time_range.unwrap_or_else(|| TimeRange {
-                start: chrono::DateTime::from_timestamp(0, 0).unwrap_or_else(Utc::now),
-                end: Utc::now(),
-            }),
-            filters_applied: self.extract_filters_from_query(&query)?.iter().map(|f| format!("{:?}", f)).collect(),
+            time_range,
+            filters_applied,
             export_reason: "Data export requested".to_string(),
             recipient: None,
         };
@@ -277,17 +279,11 @@ impl ProvenanceService {
         if let Some(time_range) = &query.time_range {
             filters.push(ProvenanceFilter {
                 filter_type: FilterType::TimeRange,
-                field: "timestamp".to_string(),
                 operator: FilterOperator::Between,
                 value: serde_json::json!({
                     "start": time_range.start,
                     "end": time_range.end
                 }),
-                description: format!(
-                    "Time range: {} to {}",
-                    time_range.start.format("%Y-%m-%d %H:%M:%S"),
-                    time_range.end.format("%Y-%m-%d %H:%M:%S")
-                ),
             });
         }
         Ok(())
@@ -303,10 +299,8 @@ impl ProvenanceService {
             if !entity_types.is_empty() {
                 filters.push(ProvenanceFilter {
                     filter_type: FilterType::EntityType,
-                    field: "entity_type".to_string(),
                     operator: FilterOperator::In,
                     value: serde_json::to_value(entity_types)?,
-                    description: format!("Entity types: {}", entity_types.join(", ")),
                 });
             }
         }
@@ -644,6 +638,13 @@ impl ProvenanceService {
             compliance_status: None,
             limit: None,
             offset: None,
+            entity_types: None,
+            entity_ids: None,
+            activity_types: None,
+            activity_ids: None,
+            agent_types: None,
+            agent_ids: None,
+            custom_filters: None,
         };
 
         let records = self.storage.query_records(&query).await?;

@@ -528,12 +528,156 @@ impl MemoryStorage {
         Ok(())
     }
 
+    async fn validate_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
+        // For file storage, validation is the same as memory storage
+        if diff.from_state == diff.to_state {
+            return Err(WorkspaceError::DiffComputation(
+                "Diff from_state and to_state cannot be the same".to_string(),
+            ));
+        }
+
+        if diff.changes.is_empty()
+            && (diff.files_added > 0 || diff.files_removed > 0 || diff.files_modified > 0)
+        {
+            return Err(WorkspaceError::DiffComputation(
+                "Diff has file changes but empty changes vector".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
+
+    async fn validate_diff_change(&self, change: &DiffChange) -> Result<(), WorkspaceError> {
+        match change {
+            DiffChange::Add { path, content } => {
+                if content.is_empty() {
+                    return Err(WorkspaceError::DiffComputation(format!(
+                        "Add change for {} has empty content",
+                        path.display()
+                    )));
+                }
+            }
+            DiffChange::Remove { path: _ } => {
+                // Remove operations are always valid
+            }
+            DiffChange::Modify {
+                path,
+                old_content: _,
+                new_content,
+            } => {
+                if new_content.is_empty() {
+                    return Err(WorkspaceError::DiffComputation(format!(
+                        "Modify change for {} has empty new content",
+                        path.display()
+                    )));
+                }
+            }
+            DiffChange::AddDirectory { path: _ } => {
+                // Directory add operations are always valid
+            }
+            DiffChange::RemoveDirectory { path: _ } => {
+                // Directory remove operations are always valid
+            }
+        }
+        Ok(())
+    }
+
     async fn update_diff_metrics(&self) -> Result<(), WorkspaceError> {
         // File storage doesn't maintain in-memory metrics for diffs
         // Metrics are calculated on-demand when needed
         Ok(())
     }
 
+    async fn validate_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
+        // Validate diff format and data integrity
+        if diff.from_state == diff.to_state {
+            return Err(WorkspaceError::DiffComputation(
+                "Diff from_state and to_state cannot be the same".to_string(),
+            ));
+        }
+
+        // Check diff constraints and business rules
+        if diff.changes.is_empty() {
+            return Err(WorkspaceError::DiffComputation(
+                "Diff must contain at least one change".to_string(),
+            ));
+        }
+
+        // Validate individual changes
+        for change in &diff.changes {
+            self.validate_diff_change(change).await?;
+        }
+
+        // Validate timestamp is reasonable
+        let now = chrono::Utc::now();
+        let diff_age = now.signed_duration_since(diff.timestamp);
+
+        if diff_age.num_hours() > 24 {
+            return Err(WorkspaceError::DiffComputation(
+                "Diff timestamp is too old (more than 24 hours)".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
+
+    async fn validate_diff_change(&self, change: &DiffChange) -> Result<(), WorkspaceError> {
+        match change {
+            DiffChange::Add { path, content } => {
+                if path.as_os_str().is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        "Add change path cannot be empty".to_string(),
+                    ));
+                }
+                if content.is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        "Add change content cannot be empty".to_string(),
+                    ));
+                }
+            },
+            DiffChange::Remove { path } => {
+                if path.as_os_str().is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        "Remove change path cannot be empty".to_string(),
+                    ));
+                }
+            },
+            DiffChange::Modify { path, new_content, .. } => {
+                if path.as_os_str().is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        "Modify change path cannot be empty".to_string(),
+                    ));
+                }
+                if new_content.is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        "Modify change new_content cannot be empty".to_string(),
+                    ));
+                }
+            },
+            DiffChange::AddDirectory { path } => {
+                if path.as_os_str().is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        "AddDirectory change path cannot be empty".to_string(),
+                    ));
+                }
+            },
+            DiffChange::RemoveDirectory { path } => {
+                if path.as_os_str().is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        "RemoveDirectory change path cannot be empty".to_string(),
+                    ));
+                }
+            },
+        }
+
+        Ok(())
+    }
+
+    async fn update_diff_metrics(&self) -> Result<(), WorkspaceError> {
+        // File storage doesn't maintain in-memory metrics for diffs
+        // Metrics are calculated on-demand when needed
+        Ok(())
+    }
 
     async fn cleanup_old_diffs(&self) -> Result<(), WorkspaceError> {
         let cutoff_time = chrono::Utc::now() - chrono::Duration::hours(24);
@@ -553,6 +697,11 @@ impl MemoryStorage {
         Ok(())
     }
 }
+
+// Removed duplicate DatabaseStorage implementation - using the one below
+
+// Remove the duplicate implementations that were causing errors
+// The above implementations are now properly separated by storage type
 
 #[async_trait]
 impl StateStorage for MemoryStorage {
@@ -636,35 +785,30 @@ impl StateStorage for MemoryStorage {
 
         // 2. Diff storage: Store diff in memory storage with atomicity
         let diff_key = (diff.from_state.clone(), diff.to_state.clone());
-        
-        // Store the diff atomically in a separate scope
-        {
-            let mut diffs = self.diffs.write().unwrap();
+        let mut diffs = self.diffs.write().unwrap();
 
-            // Check if diff already exists and validate consistency
-            if let Some(existing_diff) = diffs.get(&diff_key) {
-                if existing_diff.timestamp != diff.timestamp {
-                    return Err(WorkspaceError::DiffComputation(format!(
-                        "Diff already exists with different timestamp: {:?}",
-                        diff_key
-                    )));
-                }
-            }
-
-            // Store the diff atomically
-            diffs.insert(diff_key.clone(), diff.clone());
-
-            // 3. Storage verification: Verify diff storage success
-            if !diffs.contains_key(&diff_key) {
+        // Check if diff already exists and validate consistency
+        if let Some(existing_diff) = diffs.get(&diff_key) {
+            if existing_diff.timestamp != diff.timestamp {
                 return Err(WorkspaceError::DiffComputation(format!(
-                    "Failed to store diff: {:?}",
+                    "Diff already exists with different timestamp: {:?}",
                     diff_key
                 )));
             }
-        } // Lock is automatically dropped here
+        }
+
+        // Store the diff atomically
+        diffs.insert(diff_key.clone(), diff.clone());
+
+        // 3. Storage verification: Verify diff storage success
+        if !diffs.contains_key(&diff_key) {
+            return Err(WorkspaceError::DiffComputation(format!(
+                "Failed to store diff: {:?}",
+                diff_key
+            )));
+        }
 
         // 4. Storage optimization: Update metrics and cleanup if needed
-        // Note: These methods don't need the lock, so we can call them safely
         self.update_diff_metrics().await?;
         self.cleanup_old_diffs().await?;
 
@@ -693,7 +837,7 @@ impl StateStorage for MemoryStorage {
 
         // Validate individual changes
         for change in &diff.changes {
-            self.validate_diff_change(change)?;
+            self.validate_diff_change(change).await?;
         }
 
         // Validate timestamp is reasonable
