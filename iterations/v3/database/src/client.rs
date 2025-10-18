@@ -1307,23 +1307,202 @@ impl DatabaseOperations for DatabaseClient {
         Ok(tasks)
     }
 
-    async fn update_task(&self, _id: Uuid, _update: UpdateTask) -> Result<Task, Self::Error> {
-        todo!("Implement update_task")
+    async fn update_task(&self, id: Uuid, update: UpdateTask) -> Result<Task, Self::Error> {
+        let mut query = "UPDATE tasks SET updated_at = NOW()".to_string();
+        let mut params: Vec<Box<dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync>> = Vec::new();
+        let mut param_count = 0;
+
+        // Build dynamic query based on provided fields
+        if let Some(title) = &update.title {
+            param_count += 1;
+            query.push_str(&format!(", title = ${}", param_count));
+            params.push(Box::new(title.clone()));
+        }
+
+        if let Some(description) = &update.description {
+            param_count += 1;
+            query.push_str(&format!(", description = ${}", param_count));
+            params.push(Box::new(description.clone()));
+        }
+
+        if let Some(status) = &update.status {
+            param_count += 1;
+            query.push_str(&format!(", status = ${}", param_count));
+            params.push(Box::new(status.clone()));
+        }
+
+        if let Some(priority) = &update.priority {
+            param_count += 1;
+            query.push_str(&format!(", priority = ${}", param_count));
+            params.push(Box::new(*priority));
+        }
+
+        if let Some(assigned_worker_id) = &update.assigned_worker_id {
+            param_count += 1;
+            query.push_str(&format!(", assigned_worker_id = ${}", param_count));
+            params.push(Box::new(*assigned_worker_id));
+        }
+
+        if let Some(deadline) = &update.deadline {
+            param_count += 1;
+            query.push_str(&format!(", deadline = ${}", param_count));
+            params.push(Box::new(*deadline));
+        }
+
+        if let Some(metadata) = &update.metadata {
+            param_count += 1;
+            query.push_str(&format!(", metadata = ${}", param_count));
+            params.push(Box::new(serde_json::to_value(metadata).unwrap_or_default()));
+        }
+
+        param_count += 1;
+        query.push_str(&format!(" WHERE id = ${} RETURNING *", param_count));
+        params.push(Box::new(id));
+
+        // Execute the update query
+        let row = sqlx::query(&query)
+            .bind(id)
+            .fetch_one(&self.pool)
+            .await
+            .context("Failed to update task")?;
+
+        let task = Task {
+            id: row.get("id"),
+            title: row.get("title"),
+            description: row.get("description"),
+            status: row.get("status"),
+            priority: row.get("priority"),
+            assigned_worker_id: row.get("assigned_worker_id"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            deadline: row.get("deadline"),
+            metadata: row.get("metadata"),
+        };
+
+        info!("Updated task {} with status {:?}", id, task.status);
+        Ok(task)
     }
 
-    async fn delete_task(&self, _id: Uuid) -> Result<(), Self::Error> {
-        todo!("Implement delete_task")
+    async fn delete_task(&self, id: Uuid) -> Result<(), Self::Error> {
+        // First check if task has any dependencies or active executions
+        let active_executions: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM task_executions WHERE task_id = $1 AND status = 'running'"
+        )
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to check for active task executions")?;
+
+        if active_executions > 0 {
+            return Err(anyhow::anyhow!(
+                "Cannot delete task: {} active executions still running",
+                active_executions
+            ));
+        }
+
+        // Delete related records first (cascade delete)
+        sqlx::query("DELETE FROM task_executions WHERE task_id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await
+            .context("Failed to delete task executions")?;
+
+        // Delete the task
+        let rows_affected = sqlx::query("DELETE FROM tasks WHERE id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await
+            .context("Failed to delete task")?
+            .rows_affected();
+
+        if rows_affected == 0 {
+            return Err(anyhow::anyhow!("Task with id {} not found", id));
+        }
+
+        info!("Deleted task {}", id);
+        Ok(())
     }
 
     async fn create_task_execution(
         &self,
-        _execution: CreateTaskExecution,
+        execution: CreateTaskExecution,
     ) -> Result<TaskExecution, Self::Error> {
-        todo!("Implement create_task_execution")
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+
+        let row = sqlx::query(
+            r#"
+            INSERT INTO task_executions (
+                id, task_id, worker_id, status, started_at, created_at, updated_at,
+                execution_metadata, error_message, result_data
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            RETURNING *
+            "#
+        )
+        .bind(id)
+        .bind(execution.task_id)
+        .bind(execution.worker_id)
+        .bind("pending")
+        .bind(now)
+        .bind(now)
+        .bind(now)
+        .bind(serde_json::to_value(&execution.execution_metadata).unwrap_or_default())
+        .bind::<Option<String>>(None)
+        .bind::<Option<serde_json::Value>>(None)
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to create task execution")?;
+
+        let task_execution = TaskExecution {
+            id: row.get("id"),
+            task_id: row.get("task_id"),
+            worker_id: row.get("worker_id"),
+            status: row.get("status"),
+            started_at: row.get("started_at"),
+            completed_at: row.get("completed_at"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            execution_metadata: row.get("execution_metadata"),
+            error_message: row.get("error_message"),
+            result_data: row.get("result_data"),
+        };
+
+        info!("Created task execution {} for task {}", id, execution.task_id);
+        Ok(task_execution)
     }
 
-    async fn get_task_executions(&self, _task_id: Uuid) -> Result<Vec<TaskExecution>, Self::Error> {
-        todo!("Implement get_task_executions")
+    async fn get_task_executions(&self, task_id: Uuid) -> Result<Vec<TaskExecution>, Self::Error> {
+        let rows = sqlx::query(
+            r#"
+            SELECT * FROM task_executions 
+            WHERE task_id = $1 
+            ORDER BY created_at DESC
+            "#
+        )
+        .bind(task_id)
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to fetch task executions")?;
+
+        let executions: Vec<TaskExecution> = rows
+            .into_iter()
+            .map(|row| TaskExecution {
+                id: row.get("id"),
+                task_id: row.get("task_id"),
+                worker_id: row.get("worker_id"),
+                status: row.get("status"),
+                started_at: row.get("started_at"),
+                completed_at: row.get("completed_at"),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+                execution_metadata: row.get("execution_metadata"),
+                error_message: row.get("error_message"),
+                result_data: row.get("result_data"),
+            })
+            .collect();
+
+        info!("Retrieved {} task executions for task {}", executions.len(), task_id);
+        Ok(executions)
     }
 
     async fn update_task_execution(

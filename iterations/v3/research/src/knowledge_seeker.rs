@@ -738,6 +738,185 @@ impl KnowledgeSeeker {
         }
     }
 
+    /// Calculate confidence score for research results
+    fn calculate_confidence_score(&self, entry: &KnowledgeEntry, _query: &ResearchQuery) -> Result<f64> {
+        // 1. Confidence calculation: Calculate confidence in research results
+        let mut total_score = 0.0;
+        
+        // Source reliability and information quality (40% weight)
+        let source_reliability = self.calculate_source_reliability(&entry.source);
+        total_score += source_reliability * 0.4;
+        
+        // Information completeness and accuracy (30% weight)
+        let completeness = self.calculate_information_completeness(&entry.content);
+        total_score += completeness * 0.3;
+        
+        // Content quality and structure (20% weight)
+        let content_quality = self.calculate_content_quality(&entry.content);
+        total_score += content_quality * 0.2;
+        
+        // Metadata and verification (10% weight)
+        let metadata_quality = self.calculate_metadata_quality(&entry.metadata);
+        total_score += metadata_quality * 0.1;
+        
+        // Ensure score is between 0.0 and 1.0
+        Ok(total_score.min(1.0).max(0.0))
+    }
+
+    /// Calculate source reliability score
+    fn calculate_source_reliability(&self, source: &str) -> f64 {
+        let source_lower = source.to_lowercase();
+        
+        // Academic and research sources (highest reliability)
+        if source_lower.contains("scholar") || 
+           source_lower.contains("pubmed") || 
+           source_lower.contains("arxiv") ||
+           source_lower.contains("ieee") ||
+           source_lower.contains("acm") ||
+           source_lower.contains("springer") ||
+           source_lower.contains("elsevier") {
+            return 0.95;
+        }
+        
+        // Government and official sources
+        if source_lower.contains(".gov") || 
+           source_lower.contains(".edu") || 
+           source_lower.contains("who.int") ||
+           source_lower.contains("cdc.gov") {
+            return 0.9;
+        }
+        
+        // Wikipedia (moderate reliability)
+        if source_lower.contains("wikipedia") {
+            return 0.7;
+        }
+        
+        // News sources
+        if source_lower.contains("bbc") || 
+           source_lower.contains("reuters") || 
+           source_lower.contains("ap.org") ||
+           source_lower.contains("npr.org") {
+            return 0.8;
+        }
+        
+        // Technical documentation
+        if source_lower.contains("docs.") || 
+           source_lower.contains("developer.") || 
+           source_lower.contains("api.") {
+            return 0.75;
+        }
+        
+        // GitHub and open source
+        if source_lower.contains("github") || 
+           source_lower.contains("gitlab") || 
+           source_lower.contains("bitbucket") {
+            return 0.6;
+        }
+        
+        // Blog and community sources
+        if source_lower.contains("medium") || 
+           source_lower.contains("dev.to") || 
+           source_lower.contains("stackoverflow") {
+            return 0.5;
+        }
+        
+        // Default for unknown sources
+        0.4
+    }
+
+    /// Calculate information completeness score
+    fn calculate_information_completeness(&self, content: &str) -> f64 {
+        let content_lower = content.to_lowercase();
+        let mut score = 0.0;
+        
+        // Check for key information indicators
+        if content_lower.contains("abstract") || content_lower.contains("summary") {
+            score += 0.2;
+        }
+        
+        if content_lower.contains("introduction") || content_lower.contains("background") {
+            score += 0.2;
+        }
+        
+        if content_lower.contains("method") || content_lower.contains("approach") {
+            score += 0.2;
+        }
+        
+        if content_lower.contains("result") || content_lower.contains("finding") {
+            score += 0.2;
+        }
+        
+        if content_lower.contains("conclusion") || content_lower.contains("discussion") {
+            score += 0.2;
+        }
+        
+        // Check content length (longer content often more complete)
+        let length_score = if content.len() > 1000 {
+            0.1
+        } else if content.len() > 500 {
+            0.05
+        } else {
+            0.0
+        };
+        
+        (score + length_score).min(1.0)
+    }
+
+    /// Calculate content quality score
+    fn calculate_content_quality(&self, content: &str) -> f64 {
+        let mut score = 0.0;
+        
+        // Check for proper structure
+        let sentences: Vec<&str> = content.split(&['.', '!', '?']).collect();
+        if sentences.len() > 3 {
+            score += 0.3;
+        }
+        
+        // Check for proper capitalization
+        let capitalized_sentences = sentences.iter()
+            .filter(|s| s.trim().chars().next().map_or(false, |c| c.is_uppercase()))
+            .count();
+        
+        if sentences.len() > 0 {
+            let capitalization_ratio = capitalized_sentences as f64 / sentences.len() as f64;
+            score += capitalization_ratio * 0.3;
+        }
+        
+        // Check for technical terms and specificity
+        let technical_terms = ["analysis", "research", "study", "data", "results", "findings", "evidence"];
+        let technical_count = technical_terms.iter()
+            .filter(|term| content.to_lowercase().contains(term))
+            .count();
+        
+        score += (technical_count as f64 / technical_terms.len() as f64) * 0.4;
+        
+        score.min(1.0)
+    }
+
+    /// Calculate metadata quality score
+    fn calculate_metadata_quality(&self, metadata: &serde_json::Value) -> f64 {
+        let mut score = 0.0;
+        
+        // Check for common metadata fields
+        if metadata.get("author").is_some() {
+            score += 0.3;
+        }
+        
+        if metadata.get("date").is_some() || metadata.get("published").is_some() {
+            score += 0.3;
+        }
+        
+        if metadata.get("doi").is_some() || metadata.get("url").is_some() {
+            score += 0.2;
+        }
+        
+        if metadata.get("tags").is_some() || metadata.get("keywords").is_some() {
+            score += 0.2;
+        }
+        
+        score.min(1.0)
+    }
+
     /// Internal query execution
     async fn execute_query_internal(&self, query: ResearchQuery) -> Result<Vec<ResearchResult>> {
         let mut all_results = Vec::new();
@@ -1111,15 +1290,7 @@ impl KnowledgeSeeker {
                 content: entry.content.clone(),
                 summary: Some(self.generate_content_summary(&entry.content, &query.query)?),
                 relevance_score: self.calculate_relevance_score(&entry, &query)?,
-                confidence_score: 0.9, // TODO: Calculate actual confidence with the following requirements:
-                // 1. Confidence calculation: Calculate confidence in research results
-                //    - Assess source reliability and information quality
-                //    - Consider information completeness and accuracy
-                //    - Factor in corroboration from multiple sources
-                // 2. Confidence factors: Consider multiple confidence factors
-                //    - Source credibility and expertise
-                //    - Information consistency and verification
-                //    - Data quality and completeness
+                confidence_score: self.calculate_confidence_score(&entry, &query)?,
                 extracted_at: chrono::Utc::now(),
                 url: entry.source_url.clone(),
                 metadata: entry.metadata.clone(),

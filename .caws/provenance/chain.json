@@ -8058,5 +8058,41 @@
     },
     "previous_hash": "cbd3dafecb268d3619b9b5a25d7dc26019be5095cb5e986c1c9f21482de9c46d",
     "hash": "2896001b33e2f327bb366d480ad59129c0f72f8a025cc2c59bcba8bce646d7de"
+  },
+  {
+    "id": "prov-1760767316941",
+    "timestamp": "2025-10-18T06:01:56.941Z",
+    "commit": {
+      "hash": "b63b28cc6268858a6c27169a1bcf9c9d80193ac5",
+      "message": "Fix final ResearchQuery struct instantiation errors",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T06:01:56.949Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "2896001b33e2f327bb366d480ad59129c0f72f8a025cc2c59bcba8bce646d7de",
+    "hash": "d9025a16bc6892dbd95e3e478c3c22372346b8781ac2b760b2f600eea1cdc35b"
   }
 ]
