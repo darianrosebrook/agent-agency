@@ -454,6 +454,7 @@ impl MemoryManager {
             MemoryPressure::Critical => 50 * 1024 * 1024,   // 50MB
             MemoryPressure::High => 25 * 1024 * 1024,       // 25MB
             MemoryPressure::Medium => 10 * 1024 * 1024,     // 10MB
+            MemoryPressure::Warning => 5 * 1024 * 1024,     // 5MB
             MemoryPressure::Normal => 0,                    // No cleanup needed
         };
         

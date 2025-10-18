@@ -427,6 +427,24 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_database_integration() {
+        init_test_logging();
+        let tests = DatabaseIntegrationTests::new();
+        let results = tests.run_all_tests().await.unwrap();
+        assert!(
+            !results.is_empty(),
+            "Database integration tests should produce results"
+        );
+        for result in results {
+            assert!(
+                result.success,
+                "Database test '{}' failed: {:?}",
+                result.test_name, result.error_message
+            );
+        }
+    }
+
+    #[tokio::test]
     async fn test_research_integration() {
         init_test_logging();
         let tests = ResearchIntegrationTests::new();

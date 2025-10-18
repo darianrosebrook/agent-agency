@@ -1,0 +1,61 @@
+
+    /// Calculate consensus score from individual verdicts
+    fn calculate_consensus_score(&self, verdicts: &HashMap<String, JudgeVerdict>) -> f32 {
+        if verdicts.is_empty() {
+            return 0.0;
+        }
+
+        let mut total_score = 0.0;
+        let mut count = 0;
+
+        for verdict in verdicts.values() {
+            let score = match verdict {
+                JudgeVerdict::Pass { confidence, .. } => *confidence,
+                JudgeVerdict::Fail { .. } => 0.0,
+                JudgeVerdict::Uncertain { concerns, .. } => {
+                    // For uncertain verdicts, use a moderate score
+                    0.5
+                }
+            };
+            total_score += score;
+            count += 1;
+        }
+
+        if count > 0 {
+            total_score / count as f32
+        } else {
+            0.0
+        }
+    }
+
+    /// Determine final verdict based on consensus and evidence
+    fn determine_final_verdict(
+        &self,
+        individual_verdicts: &HashMap<String, JudgeVerdict>,
+        consensus_score: f32,
+        evidence: &[EvidencePacket],
+    ) -> FinalVerdict {
+        if consensus_score > 0.7 {
+            FinalVerdict::Accepted {
+                confidence: consensus_score,
+                summary: "High consensus reached among judges".to_string(),
+            }
+        } else if consensus_score < 0.3 {
+            FinalVerdict::Rejected {
+                primary_reasons: vec!["Low consensus indicates significant concerns".to_string()],
+                summary: "Insufficient consensus for acceptance".to_string(),
+            }
+        } else {
+            FinalVerdict::RequiresModification {
+                required_changes: vec![], // TODO: collect actual required changes
+                summary: "Mixed consensus requires modifications".to_string(),
+            }
+        }
+    }
+
+    /// Orchestrate debate rounds
+    async fn orchestrate_debate(
+        &self,
+        individual_verdicts: &HashMap<String, JudgeVerdict>,
+        task_spec: &TaskSpec,
+    ) -> Result<u32> {
