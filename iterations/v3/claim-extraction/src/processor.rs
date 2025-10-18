@@ -95,8 +95,15 @@ impl ClaimExtractionProcessor {
         // Add evidence from multi-modal verification
         for verified_claim in &verified_claims.verified_claims {
             // Convert verification results to evidence
-            let evidence = self.create_verification_evidence(verified_claim);
-            all_evidence.push(evidence);
+            if let Some(math_evidence) = self.create_mathematical_evidence(verified_claim) {
+                all_evidence.push(math_evidence);
+            }
+            if let Some(code_evidence) = self.create_code_behavior_evidence(verified_claim) {
+                all_evidence.push(code_evidence);
+            }
+            if let Some(semantic_evidence) = self.create_semantic_evidence(verified_claim) {
+                all_evidence.push(semantic_evidence);
+            }
         }
 
         let claims_count = atomic_claims.len();
@@ -139,8 +146,8 @@ impl ClaimExtractionProcessor {
                         source_type: SourceType::ResearchAgent,
                         location: "MultiModalVerificationEngine".to_string(),
                         authority: "MathematicalValidator".to_string(),
+                        freshness: chrono::Utc::now(),
                     },
-                    freshness: chrono::Utc::now(),
                     confidence: verified_claim.overall_confidence,
                     timestamp: chrono::Utc::now(),
                 })
@@ -181,21 +188,23 @@ impl ClaimExtractionProcessor {
             VerificationStatus::Verified => {
                 Some(Evidence {
                     id: uuid::Uuid::new_v4(),
-                    claim_id: verified_claim.original_claim.clone(),
+                    claim_id: uuid::Uuid::new_v4(), // Generate claim ID
                     evidence_type: EvidenceType::CodeAnalysis, // Semantic analysis
                     content: format!(
                         "Semantic analysis: claim validated with confidence {:.2}",
                         verified_claim.overall_confidence
                     ),
                     source: EvidenceSource {
-                        source_type: SourceType::ResearchAgent,
-                        location: "MultiModalVerificationEngine".to_string(),
-                        authority: "SemanticAnalyzer".to_string(),
+                        source_type: SourceType::Analysis,
+                        location: "multi_modal_verification".to_string(),
+                        authority: "Multi-Modal Verifier".to_string(),
+                        freshness: chrono::Utc::now(),
                     },
-                    freshness: chrono::Utc::now(),
                     confidence: verified_claim.overall_confidence,
                     timestamp: chrono::Utc::now(),
                 })
             }
             _ => None,
         }
+    }
+}
