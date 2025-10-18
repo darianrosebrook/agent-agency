@@ -1,355 +1,685 @@
-//! Unit tests for claim extraction pipeline stages
+//! Comprehensive unit tests for the Claim Extraction Pipeline
+//!
+//! Tests all stages: disambiguation, qualification, decomposition, and verification
 
-use super::*;
+use crate::decomposition::DecompositionStage;
+use crate::disambiguation::DisambiguationStage;
+use crate::qualification::QualificationStage;
+use crate::types::*;
+use crate::verification::VerificationStage;
+use anyhow::Result;
+use std::collections::HashMap;
 use uuid::Uuid;
 
-/// Test data factory for creating test contexts
-fn create_test_context() -> ProcessingContext {
-    ProcessingContext {
-        task_id: Uuid::new_v4(),
-        working_spec_id: "test-spec-001".to_string(),
-        source_file: Some("test.rs".to_string()),
-        line_number: Some(42),
-        surrounding_context: "Test context for claim extraction".to_string(),
-        domain_hints: vec!["rust".to_string(), "testing".to_string()],
+#[cfg(test)]
+mod disambiguation_tests {
+    use super::*;
+
+    /// Test pronoun resolution in disambiguation stage
+    #[tokio::test]
+    async fn test_pronoun_resolution() -> Result<()> {
+        let disambiguation = DisambiguationStage::new();
+
+        // Test case with ambiguous pronouns
+        let ambiguous_input = ClaimExtractionInput {
+            id: Uuid::new_v4(),
+            text: "The system should handle user requests. It must be secure and reliable."
+                .to_string(),
+            context: HashMap::from([
+                ("domain".to_string(), "authentication".to_string()),
+                (
+                    "previous_context".to_string(),
+                    "We need to secure the application".to_string(),
+                ),
+            ]),
+            metadata: HashMap::new(),
+        };
+
+        let result = disambiguation.process(&ambiguous_input).await?;
+
+        // Validate pronoun resolution
+        assert!(
+            !result.resolved_claims.is_empty(),
+            "Should resolve ambiguous pronouns"
+        );
+        assert!(result.confidence > 0.0, "Should have positive confidence");
+
+        // Check that pronouns are resolved
+        let resolved_text = result.disambiguated_sentence;
+        assert!(
+            !resolved_text.contains("It must"),
+            "Pronouns should be resolved to specific entities"
+        );
+        assert!(
+            resolved_text.contains("system must") || resolved_text.contains("application must"),
+            "Pronouns should be resolved to specific entities"
+        );
+
+        Ok(())
+    }
+
+    /// Test technical term detection in disambiguation stage
+    #[tokio::test]
+    async fn test_technical_term_detection() -> Result<()> {
+        let disambiguation = DisambiguationStage::new();
+
+        // Test case with technical terms
+        let technical_input = ClaimExtractionInput {
+            id: Uuid::new_v4(),
+            text: "The API should use JWT tokens for authentication and implement rate limiting."
+                .to_string(),
+            context: HashMap::from([
+                ("domain".to_string(), "api_security".to_string()),
+                ("tech_stack".to_string(), "rust, jwt, redis".to_string()),
+            ]),
+            metadata: HashMap::new(),
+        };
+
+        let result = disambiguation.process(&technical_input).await?;
+
+        // Validate technical term detection
+        assert!(
+            !result.resolved_claims.is_empty(),
+            "Should detect and resolve technical terms"
+        );
+        assert!(result.confidence > 0.0, "Should have positive confidence");
+
+        // Check that technical terms are properly identified
+        let resolved_text = result.disambiguated_sentence;
+        assert!(
+            resolved_text.contains("JWT") || resolved_text.contains("JSON Web Token"),
+            "Technical terms should be properly identified"
+        );
+        assert!(
+            resolved_text.contains("API")
+                || resolved_text.contains("Application Programming Interface"),
+            "Technical terms should be properly identified"
+        );
+
+        Ok(())
+    }
+
+    /// Test context-aware disambiguation
+    #[tokio::test]
+    async fn test_context_aware_disambiguation() -> Result<()> {
+        let disambiguation = DisambiguationStage::new();
+
+        // Test case with context-dependent ambiguity
+        let context_input = ClaimExtractionInput {
+            id: Uuid::new_v4(),
+            text: "The service should be fast and handle concurrent requests efficiently."
+                .to_string(),
+            context: HashMap::from([
+                ("domain".to_string(), "performance".to_string()),
+                ("service_type".to_string(), "web_api".to_string()),
+                (
+                    "performance_requirements".to_string(),
+                    "sub-100ms response time".to_string(),
+                ),
+            ]),
+            metadata: HashMap::new(),
+        };
+
+        let result = disambiguation.process(&context_input).await?;
+
+        // Validate context-aware disambiguation
+        assert!(
+            !result.resolved_claims.is_empty(),
+            "Should use context for disambiguation"
+        );
+        assert!(result.confidence > 0.0, "Should have positive confidence");
+
+        // Check that context is used for disambiguation
+        let resolved_text = result.disambiguated_sentence;
+        assert!(
+            resolved_text.contains("web API") || resolved_text.contains("API service"),
+            "Context should be used to resolve ambiguous terms"
+        );
+
+        Ok(())
     }
 }
 
 #[cfg(test)]
+mod qualification_tests {
+    use super::*;
+
+    /// Test verifiability assessment in qualification stage
+    #[tokio::test]
+    async fn test_verifiability_assessment() -> Result<()> {
+        let qualification = QualificationStage::new();
+
+        // Test case with verifiable claims
+        let verifiable_input = ClaimExtractionInput {
+            id: Uuid::new_v4(),
+            text: "The function should return a 200 status code when authentication succeeds."
+                .to_string(),
+            context: HashMap::from([
+                ("domain".to_string(), "api_testing".to_string()),
+                (
+                    "verification_sources".to_string(),
+                    "unit_tests,integration_tests".to_string(),
+                ),
+            ]),
+            metadata: HashMap::new(),
+        };
+
+        let result = qualification.process(&verifiable_input).await?;
+
+        // Validate verifiability assessment
+        assert!(
+            !result.verifiable_claims.is_empty(),
+            "Should identify verifiable claims"
+        );
+        assert!(
+            result.verifiable_claims.len() > 0,
+            "Should have at least one verifiable claim"
+        );
+
+        // Check that claims are properly categorized
+        for claim in &result.verifiable_claims {
+            assert!(
+                claim.verifiability_level == VerifiabilityLevel::DirectlyVerifiable
+                    || claim.verifiability_level == VerifiabilityLevel::IndirectlyVerifiable,
+                "Claims should be categorized as verifiable"
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Test content rewriting in qualification stage
+    #[tokio::test]
+    async fn test_content_rewriting() -> Result<()> {
+        let qualification = QualificationStage::new();
+
+        // Test case with unclear content
+        let unclear_input = ClaimExtractionInput {
+            id: Uuid::new_v4(),
+            text: "The thing should work better and be more good.".to_string(),
+            context: HashMap::from([
+                ("domain".to_string(), "performance".to_string()),
+                (
+                    "rewrite_requirements".to_string(),
+                    "clarity, specificity".to_string(),
+                ),
+            ]),
+            metadata: HashMap::new(),
+        };
+
+        let result = qualification.process(&unclear_input).await?;
+
+        // Validate content rewriting
+        assert!(
+            !result.rewritten_content.is_empty(),
+            "Should rewrite unclear content"
+        );
+
+        // Check that content is improved
+        let rewritten = &result.rewritten_content;
+        assert!(
+            !rewritten.contains("thing"),
+            "Vague terms should be replaced"
+        );
+        assert!(
+            !rewritten.contains("more good"),
+            "Grammatical errors should be corrected"
+        );
+        assert!(
+            rewritten.len() > unclear_input.text.len(),
+            "Rewritten content should be more detailed"
+        );
+
+        Ok(())
+    }
+
+    /// Test mixed verifiability handling
+    #[tokio::test]
+    async fn test_mixed_verifiability_handling() -> Result<()> {
+        let qualification = QualificationStage::new();
+
+        // Test case with mixed verifiable and non-verifiable claims
+        let mixed_input = ClaimExtractionInput {
+            id: Uuid::new_v4(),
+            text: "The API should return 200 status codes and provide a great user experience."
+                .to_string(),
+            context: HashMap::from([
+                ("domain".to_string(), "api_design".to_string()),
+                (
+                    "verification_sources".to_string(),
+                    "testing,monitoring".to_string(),
+                ),
+            ]),
+            metadata: HashMap::new(),
+        };
+
+        let result = qualification.process(&mixed_input).await?;
+
+        // Validate mixed verifiability handling
+        assert!(
+            !result.verifiable_claims.is_empty(),
+            "Should identify verifiable claims"
+        );
+        assert!(
+            !result.non_verifiable_claims.is_empty(),
+            "Should identify non-verifiable claims"
+        );
+
+        // Check that claims are properly separated
+        let total_claims = result.verifiable_claims.len() + result.non_verifiable_claims.len();
+        assert!(total_claims > 0, "Should have claims in both categories");
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod decomposition_tests {
+    use super::*;
+
+    /// Test atomic claim extraction in decomposition stage
+    #[tokio::test]
+    async fn test_atomic_claim_extraction() -> Result<()> {
+        let decomposition = DecompositionStage::new();
+
+        // Test case with compound claims
+        let compound_input = ClaimExtractionInput {
+            id: Uuid::new_v4(),
+            text: "The system should authenticate users securely, handle errors gracefully, and log all activities.".to_string(),
+            context: HashMap::from([
+                ("domain".to_string(), "security".to_string()),
+                ("decomposition_requirements".to_string(), "atomic_claims".to_string()),
+            ]),
+            metadata: HashMap::new(),
+        };
+
+        let result = decomposition.process(&compound_input).await?;
+
+        // Validate atomic claim extraction
+        assert!(
+            !result.atomic_claims.is_empty(),
+            "Should extract atomic claims"
+        );
+        assert!(
+            result.atomic_claims.len() >= 3,
+            "Should extract multiple atomic claims from compound statement"
+        );
+
+        // Check that claims are atomic
+        for claim in &result.atomic_claims {
+            assert!(
+                !claim.content.contains(" and "),
+                "Atomic claims should not contain conjunctions"
+            );
+            assert!(
+                !claim.content.contains(" or "),
+                "Atomic claims should not contain disjunctions"
+            );
+            assert!(
+                claim.content.len() < compound_input.text.len(),
+                "Atomic claims should be smaller than original"
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Test context bracket handling in decomposition stage
+    #[tokio::test]
+    async fn test_context_bracket_handling() -> Result<()> {
+        let decomposition = DecompositionStage::new();
+
+        // Test case with context-dependent claims
+        let context_input = ClaimExtractionInput {
+            id: Uuid::new_v4(),
+            text:
+                "When a user logs in, the system should validate credentials and create a session."
+                    .to_string(),
+            context: HashMap::from([
+                ("domain".to_string(), "authentication".to_string()),
+                ("context_requirements".to_string(), "brackets".to_string()),
+            ]),
+            metadata: HashMap::new(),
+        };
+
+        let result = decomposition.process(&context_input).await?;
+
+        // Validate context bracket handling
+        assert!(
+            !result.atomic_claims.is_empty(),
+            "Should extract claims with context"
+        );
+
+        // Check that context is preserved
+        for claim in &result.atomic_claims {
+            assert!(
+                claim.context_brackets.len() > 0,
+                "Claims should have context brackets"
+            );
+            assert!(
+                claim
+                    .context_brackets
+                    .iter()
+                    .any(|b| b.contains("user logs in")),
+                "Context brackets should preserve original context"
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Test complex sentence decomposition
+    #[tokio::test]
+    async fn test_complex_sentence_decomposition() -> Result<()> {
+        let decomposition = DecompositionStage::new();
+
+        // Test case with complex nested structure
+        let complex_input = ClaimExtractionInput {
+            id: Uuid::new_v4(),
+            text: "If the user is authenticated and has the required permissions, then the system should process the request and return the appropriate response.".to_string(),
+            context: HashMap::from([
+                ("domain".to_string(), "authorization".to_string()),
+                ("complexity".to_string(), "high".to_string()),
+            ]),
+            metadata: HashMap::new(),
+        };
+
+        let result = decomposition.process(&complex_input).await?;
+
+        // Validate complex sentence decomposition
+        assert!(
+            !result.atomic_claims.is_empty(),
+            "Should decompose complex sentences"
+        );
+        assert!(
+            result.atomic_claims.len() >= 4,
+            "Complex sentences should yield multiple atomic claims"
+        );
+
+        // Check that logical structure is preserved
+        let has_condition = result
+            .atomic_claims
+            .iter()
+            .any(|c| c.content.contains("authenticated"));
+        let has_action = result
+            .atomic_claims
+            .iter()
+            .any(|c| c.content.contains("process"));
+        assert!(
+            has_condition && has_action,
+            "Logical structure should be preserved in decomposition"
+        );
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod verification_tests {
+    use super::*;
+
+    /// Test evidence collection in verification stage
+    #[tokio::test]
+    async fn test_evidence_collection() -> Result<()> {
+        let verification = VerificationStage::new();
+
+        // Test case with atomic claims
+        let atomic_claims = vec![AtomicClaim {
+            id: Uuid::new_v4(),
+            content: "The API should return 200 status code for valid requests".to_string(),
+            verifiability_level: VerifiabilityLevel::DirectlyVerifiable,
+            context_brackets: vec!["API endpoint".to_string()],
+            confidence: 0.8,
+            created_at: chrono::Utc::now(),
+            metadata: HashMap::new(),
+        }];
+
+        let result = verification.process(&atomic_claims).await?;
+
+        // Validate evidence collection
+        assert!(
+            !result.verified_claims.is_empty(),
+            "Should collect evidence for claims"
+        );
+
+        // Check that evidence is collected
+        for verified_claim in &result.verified_claims {
+            assert!(
+                !verified_claim.evidence.is_empty(),
+                "Verified claims should have evidence"
+            );
+            assert!(
+                verified_claim.verification_status != VerificationStatus::Unverified,
+                "Claims should be verified"
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Test council integration in verification stage
+    #[tokio::test]
+    async fn test_council_integration() -> Result<()> {
+        let verification = VerificationStage::new();
+
+        // Test case with claims requiring council evaluation
+        let council_claims = vec![AtomicClaim {
+            id: Uuid::new_v4(),
+            content: "The system should comply with security standards".to_string(),
+            verifiability_level: VerifiabilityLevel::RequiresContext,
+            context_brackets: vec!["Security compliance".to_string()],
+            confidence: 0.7,
+            created_at: chrono::Utc::now(),
+            metadata: HashMap::new(),
+        }];
+
+        let result = verification.process(&council_claims).await?;
+
+        // Validate council integration
+        assert!(
+            !result.verified_claims.is_empty(),
+            "Should integrate with council for verification"
+        );
+
+        // Check that council evaluation is performed
+        for verified_claim in &result.verified_claims {
+            assert!(
+                verified_claim.verification_status == VerificationStatus::Verified
+                    || verified_claim.verification_status == VerificationStatus::Rejected,
+                "Council should provide verification status"
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Test verification confidence scoring
+    #[tokio::test]
+    async fn test_verification_confidence_scoring() -> Result<()> {
+        let verification = VerificationStage::new();
+
+        // Test case with high-confidence claims
+        let high_confidence_claims = vec![AtomicClaim {
+            id: Uuid::new_v4(),
+            content: "The function should return a boolean value".to_string(),
+            verifiability_level: VerifiabilityLevel::DirectlyVerifiable,
+            context_brackets: vec!["Function signature".to_string()],
+            confidence: 0.95,
+            created_at: chrono::Utc::now(),
+            metadata: HashMap::new(),
+        }];
+
+        let result = verification.process(&high_confidence_claims).await?;
+
+        // Validate verification confidence scoring
+        assert!(
+            !result.verified_claims.is_empty(),
+            "Should score verification confidence"
+        );
+
+        // Check that confidence is properly calculated
+        for verified_claim in &result.verified_claims {
+            assert!(
+                verified_claim.confidence >= 0.0 && verified_claim.confidence <= 1.0,
+                "Verification confidence should be between 0 and 1"
+            );
+            assert!(
+                verified_claim.confidence > 0.8,
+                "High-confidence claims should maintain high verification confidence"
+            );
+        }
+
+        Ok(())
+    }
+}
+
+
+#[cfg(test)]
 mod pipeline_integration_tests {
     use super::*;
-    use crate::decomposition::DecompositionStage;
-    use crate::qualification::QualificationStage;
 
+    /// Test end-to-end pipeline processing
     #[tokio::test]
-    async fn test_full_pipeline_processing() {
-        let processor = ClaimExtractionAndVerificationProcessor::new();
-        let context = create_test_context();
+    async fn test_end_to_end_pipeline_processing() -> Result<()> {
+        // Create a complete pipeline
+        let disambiguation = DisambiguationStage::new();
+        let qualification = QualificationStage::new();
+        let decomposition = DecompositionStage::new();
+        let verification = VerificationStage::new();
 
-        let sentence = "The system uses PostgreSQL for data storage and Redis for caching";
-        let result = processor
-            .process_sentence(sentence, &context)
-            .await
-            .unwrap();
+        // Test case for end-to-end processing
+        let input = ClaimExtractionInput {
+            id: Uuid::new_v4(),
+            text: "The authentication system should validate user credentials securely and handle failed attempts appropriately.".to_string(),
+            context: HashMap::from([
+                ("domain".to_string(), "authentication".to_string()),
+                ("security_requirements".to_string(), "high".to_string()),
+            ]),
+            metadata: HashMap::new(),
+        };
 
-        // Should have processed through all stages
-        assert_eq!(result.original_sentence, sentence);
-        assert!(!result.atomic_claims.is_empty());
-        assert!(!result.verification_evidence.is_empty());
+        // Stage 1: Disambiguation
+        let disambiguation_result = disambiguation.process(&input).await?;
+        assert!(
+            !disambiguation_result.resolved_claims.is_empty(),
+            "Disambiguation should resolve claims"
+        );
 
-        // Should have multiple atomic claims from compound sentence
-        assert!(result.atomic_claims.len() >= 2);
+        // Stage 2: Qualification
+        let qualification_input = ClaimExtractionInput {
+            id: input.id,
+            text: disambiguation_result.disambiguated_sentence,
+            context: input.context.clone(),
+            metadata: input.metadata.clone(),
+        };
+        let qualification_result = qualification.process(&qualification_input).await?;
+        assert!(
+            !qualification_result.verifiable_claims.is_empty(),
+            "Qualification should identify verifiable claims"
+        );
 
-        // Should have evidence for each claim
-        assert!(!result.verification_evidence.is_empty());
+        // Stage 3: Decomposition
+        let decomposition_input = ClaimExtractionInput {
+            id: input.id,
+            text: qualification_result.rewritten_content,
+            context: input.context.clone(),
+            metadata: input.metadata.clone(),
+        };
+        let decomposition_result = decomposition.process(&decomposition_input).await?;
+        assert!(
+            !decomposition_result.atomic_claims.is_empty(),
+            "Decomposition should extract atomic claims"
+        );
+
+        // Stage 4: Verification
+        let verification_result = verification
+            .process(&decomposition_result.atomic_claims)
+            .await?;
+        assert!(
+            !verification_result.verified_claims.is_empty(),
+            "Verification should verify claims"
+        );
+
+        // Validate end-to-end processing
+        assert!(
+            verification_result.overall_confidence > 0.0,
+            "End-to-end processing should have positive confidence"
+        );
+        assert!(
+            !verification_result.verified_claims.is_empty(),
+            "Should have verified claims at the end"
+        );
+
+        Ok(())
     }
 
+    /// Test error handling and recovery
     #[tokio::test]
-    async fn test_pipeline_with_ambiguous_sentence() {
-        let processor = ClaimExtractionAndVerificationProcessor::new();
-        let context = create_test_context();
+    async fn test_error_handling_and_recovery() -> Result<()> {
+        let disambiguation = DisambiguationStage::new();
 
-        let sentence = "He believes it should be implemented using async/await";
-        let result = processor
-            .process_sentence(sentence, &context)
-            .await
-            .unwrap();
+        // Test case with malformed input
+        let malformed_input = ClaimExtractionInput {
+            id: Uuid::new_v4(),
+            text: "".to_string(), // Empty text should cause error
+            context: HashMap::new(),
+            metadata: HashMap::new(),
+        };
 
-        // Should handle ambiguity resolution
-        assert_eq!(result.original_sentence, sentence);
-        assert!(!result.atomic_claims.is_empty());
-    }
+        // Should handle error gracefully
+        let result = disambiguation.process(&malformed_input).await;
 
-    #[tokio::test]
-    async fn test_pipeline_with_unverifiable_content() {
-        let processor = ClaimExtractionAndVerificationProcessor::new();
-        let context = create_test_context();
-
-        let sentence = "This is a great idea and should be implemented";
-        let result = processor
-            .process_sentence(sentence, &context)
-            .await
-            .unwrap();
-
-        // Should handle unverifiable content gracefully
-        assert!(!result.atomic_claims.is_empty());
-        // May have fewer evidence items for unverifiable content
-    }
-
-    #[tokio::test]
-    async fn test_pipeline_metadata_tracking() {
-        let processor = ClaimExtractionAndVerificationProcessor::new();
-        let context = create_test_context();
-
-        let sentence = "The system uses PostgreSQL for data storage";
-        let result = processor
-            .process_sentence(sentence, &context)
-            .await
-            .unwrap();
-
-        // Should track processing metadata
-        assert_eq!(result.original_sentence, sentence);
-        assert!(result.processing_metadata.processing_time_ms > 0);
-        assert!(!result.processing_metadata.stages_completed.is_empty());
-    }
-
-    #[tokio::test]
-    async fn test_pipeline_error_handling() {
-        let processor = ClaimExtractionAndVerificationProcessor::new();
-        let context = create_test_context();
-
-        let sentence = ""; // Empty sentence should be handled gracefully
-        let result = processor.process_sentence(sentence, &context).await;
-
-        // Should handle empty input gracefully
+        // Validate error handling
         match result {
             Ok(_) => {
-                // If it succeeds, should have empty results
+                // If it succeeds, it should handle empty input gracefully
+                let success_result = result.unwrap();
+                assert!(
+                    success_result.resolved_claims.is_empty() || success_result.confidence == 0.0,
+                    "Empty input should result in no claims or zero confidence"
+                );
             }
             Err(_) => {
-                // If it fails, should be a handled error
+                // Error handling is acceptable for malformed input
+                // The important thing is that it doesn't panic
             }
         }
+
+        Ok(())
     }
 
+    /// Test metadata tracking validation
     #[tokio::test]
-    async fn test_pipeline_with_technical_sentence() {
-        let processor = ClaimExtractionAndVerificationProcessor::new();
-        let context = create_test_context();
+    async fn test_metadata_tracking_validation() -> Result<()> {
+        let disambiguation = DisambiguationStage::new();
 
-        let sentence = "The function returns a Result<Option<String>, Error>";
-        let result = processor
-            .process_sentence(sentence, &context)
-            .await
-            .unwrap();
+        // Test case with metadata
+        let input = ClaimExtractionInput {
+            id: Uuid::new_v4(),
+            text: "The system should be reliable".to_string(),
+            context: HashMap::from([("domain".to_string(), "reliability".to_string())]),
+            metadata: HashMap::from([
+                ("source".to_string(), "test".to_string()),
+                ("priority".to_string(), "high".to_string()),
+            ]),
+        };
 
-        // Should extract technical claims
-        assert!(!result.atomic_claims.is_empty());
-        assert!(result
-            .atomic_claims
-            .iter()
-            .any(|c| c.claim_text.contains("Result")));
-    }
+        let result = disambiguation.process(&input).await?;
 
-    #[tokio::test]
-    async fn test_pipeline_with_performance_claim() {
-        let processor = ClaimExtractionAndVerificationProcessor::new();
-        let context = create_test_context();
-
-        let sentence = "The system processes 1000 requests per second";
-        let result = processor
-            .process_sentence(sentence, &context)
-            .await
-            .unwrap();
-
-        // Should extract performance claims
-        assert!(!result.atomic_claims.is_empty());
-        assert!(result
-            .atomic_claims
-            .iter()
-            .any(|c| c.claim_text.contains("1000")));
-    }
-
-    #[tokio::test]
-    async fn test_pipeline_with_security_claim() {
-        let processor = ClaimExtractionAndVerificationProcessor::new();
-        let context = create_test_context();
-
-        let sentence = "The system implements proper authentication and authorization";
-        let result = processor
-            .process_sentence(sentence, &context)
-            .await
-            .unwrap();
-
-        // Should extract security claims
-        assert!(!result.atomic_claims.is_empty());
-        assert!(result
-            .atomic_claims
-            .iter()
-            .any(|c| c.claim_text.contains("authentication")));
-    }
-
-    #[tokio::test]
-    async fn context_bracket_generation_enriches_claims() {
-        let stage = DecompositionStage::new();
-        let mut context = create_test_context();
-        context.surrounding_context =
-            "Production rollout is scheduled for Q4 2025 within the Payments module".to_string();
-        context
-            .domain_hints
-            .extend_from_slice(&["payments".to_string(), "production".to_string()]);
-
-        let sentence = "It must handle payment requests within 200ms according to compliance rules";
-        let claims = stage
-            .extract_atomic_claims(sentence, &context)
-            .await
-            .expect("claim extraction");
-        let collected_brackets = claims
-            .first()
-            .expect("at least one claim")
-            .contextual_brackets
-            .clone();
-
+        // Validate metadata tracking
         assert!(
-            collected_brackets.iter().any(|b| b.contains("[spec:")),
-            "spec bracket should be present"
+            !result.processing_metadata.stages_completed.is_empty(),
+            "Should track completed stages"
         );
         assert!(
-            collected_brackets
-                .iter()
-                .any(|b| b.contains("timeframe: Q4 2025")),
-            "timeframe context should be extracted"
+            result.processing_metadata.processing_time_ms > 0,
+            "Should track processing time"
         );
         assert!(
-            collected_brackets
-                .iter()
-                .any(|b| b.contains("environment: production")),
-            "environment context should be inferred"
-        );
-        assert!(
-            collected_brackets.iter().any(|b| b.contains("entity:")),
-            "entity context should be added when claim uses pronouns"
-        );
-        assert!(
-            collected_brackets
-                .iter()
-                .any(|b| b.contains("verification: performance-benchmarks")),
-            "verification guidance should be generated for performance claims"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_pipeline_with_constitutional_claim() {
-        let processor = ClaimExtractionAndVerificationProcessor::new();
-        let context = create_test_context();
-
-        let sentence = "The system follows CAWS compliance requirements";
-        let result = processor
-            .process_sentence(sentence, &context)
-            .await
-            .unwrap();
-
-        // Should extract constitutional claims
-        assert!(!result.atomic_claims.is_empty());
-        assert!(result
-            .atomic_claims
-            .iter()
-            .any(|c| c.claim_text.contains("CAWS")));
-    }
-
-    #[tokio::test]
-    async fn test_pipeline_processing_time() {
-        let processor = ClaimExtractionAndVerificationProcessor::new();
-        let context = create_test_context();
-
-        let sentence = "The system uses PostgreSQL for data storage";
-        let result = processor
-            .process_sentence(sentence, &context)
-            .await
-            .unwrap();
-
-        // Should track processing time
-        assert!(result.processing_metadata.processing_time_ms > 0);
-        assert!(result.processing_metadata.processing_time_ms < 10000); // Should be reasonable
-    }
-
-    #[tokio::test]
-    async fn test_pipeline_stages_completed() {
-        let processor = ClaimExtractionAndVerificationProcessor::new();
-        let context = create_test_context();
-
-        let sentence = "The system uses PostgreSQL for data storage";
-        let result = processor
-            .process_sentence(sentence, &context)
-            .await
-            .unwrap();
-
-        // Should have completed at least some stages
-        assert!(!result.processing_metadata.stages_completed.is_empty());
-
-        // Should have extracted claims and evidence
-        assert!(result.processing_metadata.claims_extracted > 0);
-        assert!(result.processing_metadata.evidence_collected > 0);
-    }
-
-    #[tokio::test]
-    async fn clause_splitter_handles_compound_requirements() {
-        let stage = DecompositionStage::new();
-        let mut context = create_test_context();
-        context
-            .domain_hints
-            .extend_from_slice(&["authentication".to_string(), "auditing".to_string()]);
-
-        let sentence = "The authentication service validates JWT tokens, rotates refresh tokens every 24 hours, logs audit events to the ledger, and throttles suspicious clients within 500ms.";
-        let clauses = stage
-            .extract_atomic_claims(sentence, &context)
-            .await
-            .expect("clause extraction");
-
-        assert!(
-            clauses.len() >= 3,
-            "expected multiple atomic claims but found {}",
-            clauses.len()
-        );
-        assert!(
-            clauses
-                .iter()
-                .any(|c| c.claim_text.to_lowercase().contains("audit")),
-            "expected an audit-related clause to be extracted"
-        );
-    }
-
-    #[tokio::test]
-    async fn qualification_rewriter_provides_actionable_guidance() {
-        let stage = QualificationStage::new();
-        let mut context = create_test_context();
-        context.domain_hints = vec!["ux".to_string(), "accessibility".to_string()];
-
-        let sentence =
-            "The interface should be user-friendly, feel intuitive, and respond quickly to user input.";
-        let assessment = stage
-            .detect_verifiable_content(sentence, &context)
-            .await
-            .expect("qualification assessment");
-
-        assert!(
-            !assessment.unverifiable_parts.is_empty(),
-            "expected unverifiable fragments to be detected"
+            result.processing_metadata.claims_extracted > 0,
+            "Should track extracted claims count"
         );
 
-        let suggestion = assessment
-            .unverifiable_parts
-            .iter()
-            .filter_map(|fragment| fragment.suggested_rewrite.as_ref())
-            .find(|rewrite| rewrite.contains("objective requirement"))
-            .expect("expected actionable rewrite guidance");
-
-        assert!(
-            suggestion.contains("SUS")
-                || suggestion.contains("WCAG")
-                || suggestion.contains("numeric acceptance"),
-            "expected rewrite to include measurable guidance, got: {suggestion}"
-        );
-    }
-
-    #[tokio::test]
-    async fn pipeline_records_disambiguation_metrics() {
-        let processor = ClaimExtractionAndVerificationProcessor::new();
-        let mut context = create_test_context();
-        context
-            .domain_hints
-            .extend_from_slice(&["authentication".to_string()]);
-
-        let sentence =
-            "It should validate OAuth tokens and it must rotate credentials every 90 days.";
-        let result = processor
-            .process_sentence(sentence, &context)
-            .await
-            .expect("pipeline execution");
-
-        assert!(
-            result.processing_metadata.ambiguities_resolved > 0,
-            "expected ambiguities_resolved metadata to be incremented"
-        );
+        Ok(())
     }
 }

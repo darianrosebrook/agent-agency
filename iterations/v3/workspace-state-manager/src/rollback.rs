@@ -325,7 +325,7 @@ impl RollbackManager {
         let mut files_restored = 0;
         let mut files_removed = 0;
         let mut files_modified = 0;
-        let _size_delta = 0i64;
+        let mut size_delta = 0i64;
 
         // Ensure workspace root exists
         std::fs::create_dir_all(&target_state.workspace_root).map_err(|e| WorkspaceError::Io(e))?;
@@ -388,7 +388,7 @@ impl RollbackManager {
         }
 
         // Calculate size delta
-        size_delta = target_state.total_size as i64;
+        let mut size_delta = target_state.total_size as i64;
         if let Some(current) = current_state {
             size_delta -= current.total_size as i64;
         }

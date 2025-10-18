@@ -193,6 +193,7 @@ impl ClaimExtractionAndVerificationProcessor {
                 ambiguities_resolved,
                 claims_extracted: claims_count,
                 evidence_collected: evidence_count,
+                rewrite_suggestions: 0, // TODO: Track rewrite suggestions
                 errors,
             },
         };

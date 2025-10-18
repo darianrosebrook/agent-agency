@@ -309,10 +309,8 @@ impl ProvenanceService {
             if !entity_ids.is_empty() {
                 filters.push(ProvenanceFilter {
                     filter_type: FilterType::EntityId,
-                    field: "entity_id".to_string(),
                     operator: FilterOperator::In,
                     value: serde_json::to_value(entity_ids)?,
-                    description: format!("Entity IDs: {}", entity_ids.len()),
                 });
             }
         }

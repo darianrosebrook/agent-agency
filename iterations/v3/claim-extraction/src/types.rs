@@ -157,6 +157,7 @@ pub struct ProcessingMetadata {
     pub ambiguities_resolved: u32,
     pub claims_extracted: u32,
     pub evidence_collected: u32,
+    pub rewrite_suggestions: u32,
     pub errors: Vec<ProcessingError>,
 }
 
@@ -168,6 +169,7 @@ impl Default for ProcessingMetadata {
             ambiguities_resolved: 0,
             claims_extracted: 0,
             evidence_collected: 0,
+            rewrite_suggestions: 0,
             errors: Vec::new(),
         }
     }

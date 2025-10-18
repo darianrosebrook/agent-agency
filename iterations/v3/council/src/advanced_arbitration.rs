@@ -26,9 +26,26 @@ pub struct AdvancedArbitrationEngine {
     learning_integrator: Arc<LearningIntegrator>,
     performance_tracker: Arc<PerformanceTracker>,
     database_client: Option<Arc<DatabaseClient>>,
-}
+    }
 
-/// Multi-dimensional confidence scoring system
+    /// Helper function to extract worker_id from WorkerOutput
+    fn get_worker_id(&self, output: &WorkerOutput) -> &str {
+        output
+            .metadata
+            .get("worker_id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown_worker")
+    }
+
+    /// Helper function to extract response_time_ms from WorkerOutput
+    fn get_response_time_ms(&self, output: &WorkerOutput) -> Option<u64> {
+        output
+            .metadata
+            .get("response_time_ms")
+            .and_then(|v| v.as_u64())
+    }
+
+    /// Multi-dimensional confidence scoring system
 #[derive(Debug)]
 pub struct ConfidenceScorer {
     historical_performance: Arc<RwLock<HashMap<String, PerformanceHistory>>>,
@@ -959,11 +976,7 @@ impl ConfidenceScorer {
 
         for output in outputs {
             // 1. Historical performance score
-            let worker_id = output
-                .metadata
-                .get("worker_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("unknown_worker");
+            let worker_id = self.get_worker_id(output);
             let historical_score = self.calculate_historical_score(worker_id).await?;
 
             // 2. Quality consistency score
@@ -1068,7 +1081,7 @@ impl PatternDetector {
 
     /// Detect patterns in worker output using advanced multi-dimensional analysis
     pub async fn detect_patterns(&self, output: &WorkerOutput) -> Result<f32> {
-        info!("Detecting patterns in worker output: {}", output.worker_id);
+        info!("Detecting patterns in worker output: {}", self.get_worker_id(output));
 
         // Use the advanced TODO analyzer for comprehensive pattern detection
         let todo_analysis = self
@@ -1111,7 +1124,7 @@ impl PatternDetector {
         // Log detailed analysis for debugging
         debug!(
             "Advanced pattern analysis for worker {}: code_quality={:.2}, completeness={:.2}, resilience={:.2}, performance={:.2}, security={:.2}, confidence={:.2}, final_score={:.2}",
-            output.worker_id,
+            self.get_worker_id(output),
             code_quality_score,
             completeness_score,
             resilience_score,
@@ -1320,7 +1333,7 @@ impl PatternDetector {
         &self,
         todo_analysis: &TodoAnalysisResult,
     ) -> Result<f32> {
-        let mut confidence = 0.8; // Start with good confidence
+        let mut confidence: f32 = 0.8; // Start with good confidence
 
         // Higher confidence with more data points
         if todo_analysis.total_todos > 10 {
@@ -1713,12 +1726,12 @@ impl EvidenceSynthesizer {
         let mut evidence_list = Vec::new();
 
         // Extract source identifier
-        let source = output.worker_id.clone();
+        let source = self.get_worker_id(output).clone();
 
         // Extract factual evidence from output
         if !output.content.is_empty() {
             evidence_list.push(Evidence {
-                source: source.clone(),
+                source: source.to_string(),
                 content: output.content.clone(),
                 credibility: 0.0, // Will be assessed later
                 relevance: 0.8,   // Default high relevance for main content
@@ -1727,7 +1740,7 @@ impl EvidenceSynthesizer {
 
         // Extract evidence from confidence and quality scores
         evidence_list.push(Evidence {
-            source: source.clone(),
+            source: source.to_string(),
             content: format!(
                 "Worker confidence: {:.2}, quality score: {:.2}, response time: {}ms",
                 output.self_assessment.confidence,
@@ -1742,7 +1755,7 @@ impl EvidenceSynthesizer {
         for (key, value) in &output.metadata {
             if let Some(str_value) = value.as_str() {
                 evidence_list.push(Evidence {
-                    source: source.clone(),
+                    source: source.to_string(),
                     content: format!("Metadata {}: {}", key, str_value),
                     credibility: 0.0,
                     relevance: 0.5, // Metadata is less relevant
@@ -2562,7 +2575,7 @@ impl CompletenessChecker {
 
         for output in outputs {
             let completeness_score = self.analyze_output_completeness(output).await?;
-            scores.insert(output.worker_id.clone(), completeness_score);
+            scores.insert(self.get_worker_id(output).clone(), completeness_score);
         }
 
         Ok(scores)
@@ -2573,7 +2586,7 @@ impl CompletenessChecker {
         let mut score = 0.0;
         let mut criteria_count = 0;
 
-        let content = &output.output;
+        let content = &output.content;
         let content_lower = content.to_lowercase();
 
         // Criterion 1: Has substantive content (not just placeholder/error messages)
@@ -2618,7 +2631,7 @@ impl CompletenessChecker {
 
         debug!(
             "Completeness score for worker {}: {:.3}",
-            output.worker_id, final_score
+            self.get_worker_id(output), final_score
         );
         Ok(final_score)
     }
@@ -2736,7 +2749,7 @@ impl CorrectnessValidator {
 
         for output in outputs {
             let correctness_score = self.validate_single_output_correctness(output).await?;
-            scores.insert(output.worker_id.clone(), correctness_score);
+            scores.insert(self.get_worker_id(output).clone(), correctness_score);
         }
 
         Ok(scores)
@@ -2776,7 +2789,7 @@ impl CorrectnessValidator {
 
         debug!(
             "Correctness validation for worker {}: static={:.2}, tests={:.2}, reference={:.2}, security={:.2}, final={:.2}",
-            output.worker_id, static_analysis_score, test_execution_score, reference_comparison_score, security_score, final_score
+            self.get_worker_id(output), static_analysis_score, test_execution_score, reference_comparison_score, security_score, final_score
         );
 
         Ok(final_score.max(0.0_f32).min(1.0_f32))
@@ -2785,7 +2798,7 @@ impl CorrectnessValidator {
     /// Perform static analysis on the output
     async fn perform_static_analysis(&self, output: &WorkerOutput) -> Result<f32> {
         let mut score = 1.0; // Start with perfect score
-        let content = &output.output;
+        let content = &output.content;
 
         // Check for syntax errors (simplified)
         let syntax_issues = self.check_syntax_errors(content);
@@ -2808,7 +2821,7 @@ impl CorrectnessValidator {
 
     /// Execute automated tests (simplified simulation)
     async fn execute_automated_tests(&self, output: &WorkerOutput) -> Result<f32> {
-        let content = &output.output;
+        let content = &output.content;
         let content_lower = content.to_lowercase();
 
         // Check for test indicators in the output
@@ -2828,7 +2841,7 @@ impl CorrectnessValidator {
 
     /// Compare with reference implementation (simplified)
     async fn compare_with_reference(&self, output: &WorkerOutput) -> Result<f32> {
-        let content = &output.output;
+        let content = &output.content;
 
         // Check for common correct patterns
         let correct_patterns = [
@@ -2855,7 +2868,7 @@ impl CorrectnessValidator {
 
     /// Check for security vulnerabilities
     async fn check_security_vulnerabilities(&self, output: &WorkerOutput) -> Result<f32> {
-        let content = &output.output;
+        let content = &output.content;
         let content_lower = content.to_lowercase();
 
         // Check for security vulnerabilities
@@ -3016,7 +3029,7 @@ impl ConsistencyAnalyzer {
             let consistency_score = self
                 .analyze_output_consistency(output, &group_stats, outputs)
                 .await?;
-            scores.insert(output.worker_id.clone(), consistency_score);
+            scores.insert(self.get_worker_id(output).clone(), consistency_score);
         }
 
         Ok(scores)
@@ -3046,7 +3059,9 @@ impl ConsistencyAnalyzer {
         };
 
         // Calculate median response time
-        let mut response_times: Vec<u64> = outputs.iter().map(|o| o.response_time_ms).collect();
+        let mut response_times: Vec<u64> = outputs.iter()
+            .filter_map(|o| self.get_response_time_ms(o))
+            .collect();
         response_times.sort();
         let median_response_time = if response_times.len() % 2 == 0 {
             (response_times[response_times.len() / 2 - 1]
@@ -3089,7 +3104,7 @@ impl ConsistencyAnalyzer {
         let mut error_handling_patterns = Vec::new();
 
         for output in outputs {
-            let content = &output.output;
+            let content = &output.content;
 
             // Extract naming patterns
             if content.contains("fn ") {
@@ -3183,7 +3198,7 @@ impl ConsistencyAnalyzer {
 
         debug!(
             "Consistency analysis for worker {}: quality={:.2}, time={:.2}, confidence={:.2}, patterns={:.2}, outliers={:.2}, final={:.2}",
-            output.worker_id, quality_consistency, time_consistency, confidence_consistency, pattern_consistency, outlier_penalty, final_score
+            self.get_worker_id(output), quality_consistency, time_consistency, confidence_consistency, pattern_consistency, outlier_penalty, final_score
         );
 
         Ok(final_score.max(0.0_f32).min(1.0_f32))
@@ -3195,7 +3210,7 @@ impl ConsistencyAnalyzer {
         output: &WorkerOutput,
         group_stats: &GroupStatistics,
     ) -> f32 {
-        let content = &output.output;
+        let content = &output.content;
         let mut pattern_matches = 0;
         let mut total_patterns = 0;
 
@@ -3404,7 +3419,7 @@ impl InnovationEvaluator {
             let innovation_score = self
                 .evaluate_single_output_innovation(output, &baseline_patterns)
                 .await?;
-            scores.insert(output.worker_id.clone(), innovation_score);
+            scores.insert(self.get_worker_id(output).clone(), innovation_score);
         }
 
         Ok(scores)
@@ -3420,7 +3435,7 @@ impl InnovationEvaluator {
         let mut common_features = Vec::new();
 
         for output in outputs {
-            let content = &output.output;
+            let content = &output.content;
             let content_lower = content.to_lowercase();
 
             // Common techniques
@@ -3480,7 +3495,7 @@ impl InnovationEvaluator {
     ) -> Result<f32> {
         let mut innovation_score = 0.0;
         let mut total_weight = 0.0;
-        let content = &output.output;
+        let content = &output.content;
         let content_lower = content.to_lowercase();
 
         // 1. Novel techniques (weight: 0.3)
@@ -3519,7 +3534,7 @@ impl InnovationEvaluator {
 
         debug!(
             "Innovation evaluation for worker {}: techniques={:.2}, features={:.2}, creative={:.2}, emerging={:.2}, balance={:.2}, final={:.2}",
-            output.worker_id, technique_score, feature_score, creative_score, emerging_score, balance_score, final_score
+            self.get_worker_id(output), technique_score, feature_score, creative_score, emerging_score, balance_score, final_score
         );
 
         Ok(final_score.max(0.0_f32).min(1.0_f32))
@@ -4269,7 +4284,7 @@ impl ConsensusAlgorithm {
             let aggregated_evidence = self.aggregate_evidence(evidence_list);
 
             contributions.push(WeightedContribution {
-                source: source.clone(),
+                source: source.to_string(),
                 evidence: aggregated_evidence,
                 confidence: *confidence,
                 quality_weight: *quality_weight,

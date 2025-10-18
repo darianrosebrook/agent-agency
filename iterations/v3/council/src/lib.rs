@@ -15,8 +15,10 @@ pub mod predictive_learning_system;
 pub mod predictive_quality_assessor;
 pub mod resilience; // V2 Production Resilience
 pub mod semantic;
+pub mod tests;
 pub mod todo_analyzer;
 pub mod types;
+pub mod verdicts;
 pub use types::*;
 
 // Re-export key components

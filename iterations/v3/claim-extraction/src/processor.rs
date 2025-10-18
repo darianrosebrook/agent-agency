@@ -125,6 +125,7 @@ impl ClaimExtractionProcessor {
                 ambiguities_resolved: disambiguation_result.ambiguities_resolved,
                 claims_extracted: claims_count as u32,
                 evidence_collected: evidence_count as u32,
+                rewrite_suggestions: 0,
                 errors: Vec::new(),
             },
         })
