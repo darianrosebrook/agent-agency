@@ -469,8 +469,14 @@ impl KnowledgeSeeker {
         let test_query = ResearchQuery {
             id: uuid::Uuid::new_v4(),
             query: "test configuration".to_string(),
-            max_results: 1,
-            timeout_ms: Some(5000),
+            query_type: crate::types::QueryType::General,
+            priority: crate::types::ResearchPriority::Medium,
+            context: Some("configuration test".to_string()),
+            max_results: Some(1),
+            sources: vec![],
+            created_at: chrono::Utc::now(),
+            deadline: None,
+            metadata: std::collections::HashMap::new(),
         };
         
         // Validate that new configuration is active and working
@@ -485,6 +491,251 @@ impl KnowledgeSeeker {
         
         info!("Configuration verification completed successfully in {:?}", duration);
         Ok(())
+    }
+
+    /// Generate content summary using extractive summarization
+    fn generate_content_summary(&self, content: &str, query: &str) -> Result<String> {
+        // 1. Content summarization: Generate concise summaries of research content
+        let sentences = self.extract_sentences(content);
+        let query_keywords = self.extract_keywords(query);
+        
+        // Score sentences based on relevance to query and content importance
+        let mut scored_sentences: Vec<(usize, f64, &str)> = sentences.iter()
+            .enumerate()
+            .map(|(i, sentence)| {
+                let relevance_score = self.calculate_sentence_relevance(sentence, &query_keywords);
+                let importance_score = self.calculate_sentence_importance(sentence, &sentences);
+                let combined_score = relevance_score * 0.7 + importance_score * 0.3;
+                (i, combined_score, sentence.as_str())
+            })
+            .collect();
+        
+        // Sort by score and select top sentences
+        scored_sentences.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        
+        // 2. Summary quality: Ensure summary quality and relevance
+        let max_sentences = std::cmp::min(3, sentences.len());
+        let summary_sentences: Vec<&str> = scored_sentences.iter()
+            .take(max_sentences)
+            .map(|(_, _, sentence)| *sentence)
+            .collect();
+        
+        // Sort selected sentences by original order to maintain coherence
+        let mut ordered_sentences = summary_sentences.clone();
+        ordered_sentences.sort_by_key(|sentence| {
+            sentences.iter().position(|s| s == sentence).unwrap_or(0)
+        });
+        
+        let summary = ordered_sentences.join(" ");
+        
+        // Ensure summary is concise but informative
+        if summary.len() > 500 {
+            // Truncate while preserving sentence boundaries
+            let truncated = summary.chars().take(500).collect::<String>();
+            if let Some(last_period) = truncated.rfind('.') {
+                Ok(truncated[..last_period + 1].to_string())
+            } else {
+                Ok(truncated)
+            }
+        } else {
+            Ok(summary)
+        }
+    }
+
+    /// Extract sentences from content
+    fn extract_sentences(&self, content: &str) -> Vec<String> {
+        content.split(&['.', '!', '?'])
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty() && s.len() > 10)
+            .collect()
+    }
+
+    /// Extract keywords from query
+    fn extract_keywords(&self, query: &str) -> Vec<String> {
+        query.split_whitespace()
+            .map(|word| word.to_lowercase())
+            .filter(|word| word.len() > 2)
+            .collect()
+    }
+
+    /// Calculate sentence relevance to query keywords
+    fn calculate_sentence_relevance(&self, sentence: &str, query_keywords: &[String]) -> f64 {
+        let sentence_lower = sentence.to_lowercase();
+        let mut matches = 0;
+        
+        for keyword in query_keywords {
+            if sentence_lower.contains(keyword) {
+                matches += 1;
+            }
+        }
+        
+        if query_keywords.is_empty() {
+            0.0
+        } else {
+            matches as f64 / query_keywords.len() as f64
+        }
+    }
+
+    /// Calculate sentence importance within the content
+    fn calculate_sentence_importance(&self, sentence: &str, all_sentences: &[String]) -> f64 {
+        let sentence_lower = sentence.to_lowercase();
+        
+        // Factors that increase importance:
+        // 1. Position (first and last sentences are more important)
+        // 2. Length (moderate length sentences are more important)
+        // 3. Word frequency (sentences with common important words)
+        
+        let position_score = if sentence == all_sentences.first().unwrap_or(sentence) || 
+                              sentence == all_sentences.last().unwrap_or(sentence) {
+            0.3
+        } else {
+            0.0
+        };
+        
+        let length_score = if sentence.len() > 50 && sentence.len() < 200 {
+            0.3
+        } else if sentence.len() < 20 {
+            0.1
+        } else {
+            0.2
+        };
+        
+        // Check for important words
+        let important_words = ["important", "key", "main", "primary", "significant", "critical", "essential"];
+        let word_score = if important_words.iter().any(|word| sentence_lower.contains(word)) {
+            0.4
+        } else {
+            0.0
+        };
+        
+        position_score + length_score + word_score
+    }
+
+    /// Calculate relevance score for research content
+    fn calculate_relevance_score(&self, entry: &KnowledgeEntry, query: &ResearchQuery) -> Result<f64> {
+        // 1. Relevance scoring: Calculate relevance scores for research content
+        let mut total_score = 0.0;
+        
+        // Content topic alignment with query (40% weight)
+        let topic_alignment = self.calculate_topic_alignment(&entry.content, &query.query);
+        total_score += topic_alignment * 0.4;
+        
+        // Title relevance (20% weight)
+        let title_relevance = self.calculate_title_relevance(&entry.title, &query.query);
+        total_score += title_relevance * 0.2;
+        
+        // Source authority and credibility (20% weight)
+        let source_authority = self.calculate_source_authority(&entry.source);
+        total_score += source_authority * 0.2;
+        
+        // Recency and currency of information (20% weight)
+        let recency_score = self.calculate_recency_score(&entry.created_at);
+        total_score += recency_score * 0.2;
+        
+        // Ensure score is between 0.0 and 1.0
+        Ok(total_score.min(1.0).max(0.0))
+    }
+
+    /// Calculate topic alignment between content and query
+    fn calculate_topic_alignment(&self, content: &str, query: &str) -> f64 {
+        let query_keywords = self.extract_keywords(query);
+        let content_lower = content.to_lowercase();
+        
+        let mut matches = 0;
+        let mut total_keywords = query_keywords.len();
+        
+        for keyword in &query_keywords {
+            if content_lower.contains(keyword) {
+                matches += 1;
+            }
+        }
+        
+        if total_keywords == 0 {
+            0.0
+        } else {
+            matches as f64 / total_keywords as f64
+        }
+    }
+
+    /// Calculate title relevance to query
+    fn calculate_title_relevance(&self, title: &str, query: &str) -> f64 {
+        let query_keywords = self.extract_keywords(query);
+        let title_lower = title.to_lowercase();
+        
+        let mut matches = 0;
+        for keyword in &query_keywords {
+            if title_lower.contains(keyword) {
+                matches += 1;
+            }
+        }
+        
+        if query_keywords.is_empty() {
+            0.0
+        } else {
+            matches as f64 / query_keywords.len() as f64
+        }
+    }
+
+    /// Calculate source authority and credibility
+    fn calculate_source_authority(&self, source: &str) -> f64 {
+        let source_lower = source.to_lowercase();
+        
+        // High authority sources
+        if source_lower.contains("wikipedia") || 
+           source_lower.contains("scholar") || 
+           source_lower.contains("pubmed") ||
+           source_lower.contains("arxiv") ||
+           source_lower.contains("ieee") ||
+           source_lower.contains("acm") {
+            return 0.9;
+        }
+        
+        // Medium authority sources
+        if source_lower.contains("github") || 
+           source_lower.contains("stackoverflow") || 
+           source_lower.contains("medium") ||
+           source_lower.contains("dev.to") {
+            return 0.7;
+        }
+        
+        // Government and educational sources
+        if source_lower.contains(".gov") || 
+           source_lower.contains(".edu") || 
+           source_lower.contains("research") {
+            return 0.8;
+        }
+        
+        // News sources
+        if source_lower.contains("news") || 
+           source_lower.contains("bbc") || 
+           source_lower.contains("reuters") ||
+           source_lower.contains("ap.org") {
+            return 0.6;
+        }
+        
+        // Default score for unknown sources
+        0.5
+    }
+
+    /// Calculate recency score based on creation date
+    fn calculate_recency_score(&self, created_at: &chrono::DateTime<chrono::Utc>) -> f64 {
+        let now = chrono::Utc::now();
+        let age = now.signed_duration_since(*created_at);
+        
+        // Score based on age in days
+        let age_days = age.num_days();
+        
+        if age_days <= 7 {
+            1.0  // Very recent
+        } else if age_days <= 30 {
+            0.8  // Recent
+        } else if age_days <= 90 {
+            0.6  // Moderately recent
+        } else if age_days <= 365 {
+            0.4  // Somewhat old
+        } else {
+            0.2  // Old
+        }
     }
 
     /// Internal query execution
@@ -858,24 +1109,8 @@ impl KnowledgeSeeker {
                 source: entry.source.clone(),
                 title: entry.title.clone(),
                 content: entry.content.clone(),
-                summary: None, // TODO: Generate summary with the following requirements:
-                // 1. Content summarization: Generate concise summaries of research content
-                //    - Use extractive or abstractive summarization techniques
-                //    - Identify key points, main arguments, and important details
-                //    - Maintain summary accuracy and preserve original meaning
-                // 2. Summary quality: Ensure summary quality and relevance
-                //    - Keep summaries concise but informative
-                //    - Focus on content most relevant to research queries
-                //    - Maintain readability and clarity
-                relevance_score: 0.8, // TODO: Calculate actual relevance with the following requirements:
-                // 1. Relevance scoring: Calculate relevance scores for research content
-                //    - Use semantic similarity and keyword matching
-                //    - Consider query intent and context
-                //    - Weight different relevance factors appropriately
-                // 2. Relevance factors: Consider multiple relevance factors
-                //    - Content topic alignment with query
-                //    - Recency and currency of information
-                //    - Source authority and credibility
+                summary: Some(self.generate_content_summary(&entry.content, &query.query)?),
+                relevance_score: self.calculate_relevance_score(&entry, &query)?,
                 confidence_score: 0.9, // TODO: Calculate actual confidence with the following requirements:
                 // 1. Confidence calculation: Calculate confidence in research results
                 //    - Assess source reliability and information quality
