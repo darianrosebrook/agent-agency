@@ -1940,6 +1940,7 @@ impl SemanticAnalyzer {
             coherence_score: consistency_score,
             gaps: Vec::new(),
             logical_flow_score: 1.0,
+            completeness_score: 1.0,
         })
     }
 
@@ -2362,7 +2363,7 @@ impl CrossReferenceValidator {
     }
     
     /// Check consistency across references
-    async fn check_consistency(&self, references: &[ValidatedReference]) -> Result<CoherenceAnalysis> {
+    async fn check_consistency(&self, references: &[ValidatedReference]) -> Result<ConsistencyAnalysis> {
         let mut conflicts = Vec::new();
         let mut gaps = Vec::new();
         let mut supporting_evidence = Vec::new();
@@ -2385,20 +2386,20 @@ impl CrossReferenceValidator {
             }
         }
         
-        Ok(CoherenceAnalysis {
-            coherence_score: 0.8,
+        Ok(ConsistencyAnalysis {
+            conflicts,
             gaps,
-            logical_flow_score: 0.9,
-            completeness_score: 0.8,
+            supporting_evidence,
         })
     }
     
     /// Calculate overall consistency score
     fn calculate_consistency_score(&self, analysis: &ConsistencyAnalysis) -> f64 {
-        let conflict_penalty = analysis.conflicts.len() as f64 * 0.2;
         let gap_penalty = analysis.gaps.len() as f64 * 0.1;
-        let evidence_bonus = analysis.supporting_evidence.len() as f64 * 0.05;
-        (1.0 - conflict_penalty - gap_penalty + evidence_bonus).max(0.0).min(1.0)
+        let coherence_bonus = analysis.coherence_score * 0.3;
+        let logical_flow_bonus = analysis.logical_flow_score * 0.2;
+        let completeness_bonus = analysis.completeness_score * 0.1;
+        (coherence_bonus + logical_flow_bonus + completeness_bonus - gap_penalty).max(0.0).min(1.0)
     }
     
     /// Extract relationships between references
@@ -2418,15 +2419,16 @@ impl CrossReferenceValidator {
     }
     
     /// Identify contradictions in references
-    async fn identify_contradictions(&self, analysis: &CoherenceAnalysis) -> Result<Vec<Contradiction>> {
+    async fn identify_contradictions(&self, analysis: &ConsistencyAnalysis) -> Result<Vec<Contradiction>> {
         let mut contradictions = Vec::new();
         
-        for conflict in &analysis.conflicts {
+        // Create contradictions based on gaps in coherence
+        for gap in &analysis.gaps {
             contradictions.push(Contradiction {
                 contradiction_type: ContradictionType::Direct,
                 conflicting_claim_id: uuid::Uuid::new_v4(),
                 contradiction_severity: ErrorSeverity::Medium,
-                resolution_suggestions: vec!["Review conflicting references".to_string()],
+                resolution_suggestions: vec![format!("Address coherence gap: {}", gap)],
             });
         }
         
@@ -2534,7 +2536,7 @@ pub struct Reference {
     pub confidence: f64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ReferenceType {
     Url,
     Citation,

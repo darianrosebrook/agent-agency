@@ -60,9 +60,9 @@ impl ProvenanceService {
             &config.signing.key_path,
             config.signing.key_id.clone(),
             match config.signing.algorithm {
-                crate::SigningAlgorithm::RS256 => SigningAlgorithm::RS256,
-                crate::SigningAlgorithm::ES256 => SigningAlgorithm::ES256,
-                crate::SigningAlgorithm::EdDSA => SigningAlgorithm::EdDSA,
+                crate::SigningAlgorithm::RS256 => crate::signer::SigningAlgorithm::RS256,
+                crate::SigningAlgorithm::ES256 => crate::signer::SigningAlgorithm::ES256,
+                crate::SigningAlgorithm::EdDSA => crate::signer::SigningAlgorithm::EdDSA,
             },
         )?;
 
