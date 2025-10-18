@@ -274,3 +274,4 @@ coreml-bridge/
 - Ready for Gate B/C validation
 
 **Next:** Model acquisition and quantization lab (Phase 3)
+

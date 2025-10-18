@@ -294,3 +294,4 @@ Each model includes detailed metadata:
 - **Phase 2 Summary:** `CORE_ML_PHASE_2_COMPLETE.md`
 - **Telemetry Details:** `apple-silicon/src/telemetry.rs`
 - **Model Scripts:** `scripts/models/README.md`
+

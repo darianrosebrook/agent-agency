@@ -1202,8 +1202,8 @@ impl MultiModalVerificationEngine {
             .collect();
 
         // Implement test file discovery and analysis
-        let test_files = self.discover_test_files(&keywords, context).await?;
-        let analyzed_files = self.analyze_test_files(&test_files, &keywords).await?;
+        let test_files = self.discover_test_files(&claim_terms).await?;
+        let analyzed_files = self.analyze_test_files(&test_files, &claim_terms).await?;
         // 4. Test file discovery optimization: Optimize test file discovery performance
         //    - Implement test file discovery optimization strategies
         //    - Handle test file discovery monitoring and analytics
@@ -1469,7 +1469,7 @@ impl MultiModalVerificationEngine {
             .collect();
 
         // Implement historical claim validation lookup
-        let historical_validations = self.lookup_historical_claims(&claim_terms, context).await?;
+        let historical_validations = self.lookup_historical_claims(&claim_terms).await?;
 
         for historical_claim in historical_validations {
             let similarity = self
@@ -2457,16 +2457,13 @@ impl MultiModalVerificationEngine {
 
         score.min(1.0).max(0.0)
     }
-}
-
+    
     /// Discover test files based on keywords and context
     async fn discover_test_files(
         &self,
         keywords: &[String],
-        context: &ProcessingContext,
     ) -> Result<Vec<TestFile>> {
         use walkdir::WalkDir;
-        use std::path::Path;
         
         let mut test_files = Vec::new();
         
@@ -2478,13 +2475,8 @@ impl MultiModalVerificationEngine {
             "*spec*.rs", "*spec*.ts", "*spec*.js", "*spec*.py",
         ];
         
-        // Get search directories from context or use current directory
-        let search_dirs = context
-            .metadata
-            .get("search_directories")
-            .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>())
-            .unwrap_or_else(|| vec!["."]);
+        // Use current directory for search
+        let search_dirs = vec!["."];
         
         for dir in search_dirs {
             let path = Path::new(dir);
@@ -2626,19 +2618,12 @@ impl MultiModalVerificationEngine {
     async fn lookup_historical_claims(
         &self,
         claim_terms: &[String],
-        context: &ProcessingContext,
     ) -> Result<Vec<HistoricalClaim>> {
         let mut historical_claims = Vec::new();
         
-        // Check if we have a database connection in context
-        if let Some(db_url) = context.metadata.get("database_url").and_then(|v| v.as_str()) {
-            // TODO: Implement actual database integration when database component is available
-            // For now, simulate with in-memory cache
-            historical_claims = self.simulate_historical_lookup(claim_terms).await?;
-        } else {
-            // Use in-memory simulation
-            historical_claims = self.simulate_historical_lookup(claim_terms).await?;
-        }
+        // Use in-memory simulation for now
+        // TODO: Implement actual database integration when database component is available
+        historical_claims = self.simulate_historical_lookup(claim_terms).await?;
         
         // Filter and rank historical claims by relevance
         let mut ranked_claims = historical_claims
@@ -2717,6 +2702,8 @@ impl MultiModalVerificationEngine {
         
         Ok(analysis)
     }
+}
+
 /// Represents a test file discovered during filesystem scanning
 #[derive(Debug, Clone)]
 struct TestFile {
