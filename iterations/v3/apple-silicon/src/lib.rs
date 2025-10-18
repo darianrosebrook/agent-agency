@@ -16,6 +16,8 @@ pub mod memory;
 pub mod metal_gpu;
 pub mod quantization;
 pub mod routing;
+#[cfg(target_os = "macos")]
+pub mod telemetry;
 pub mod thermal;
 pub mod types;
 
@@ -29,6 +31,8 @@ pub use candle_backend::CandleBackend;
 pub use core_ml_backend::CoreMLBackend;
 #[cfg(target_os = "macos")]
 pub use core_ml_bridge::CoreMLModel;
+#[cfg(target_os = "macos")]
+pub use telemetry::{CoreMLMetrics, TelemetryCollector, FailureMode};
 pub use core_ml::CoreMLManager;
 pub use inference::{
     CapabilityReport, ComputeUnits, DType, InferenceEngine, IoSchema, ModelArtifact, PreparedModel,

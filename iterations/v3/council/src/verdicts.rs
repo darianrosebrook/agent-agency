@@ -447,11 +447,12 @@ impl VerdictStorage for DatabaseVerdictStorage {
 
             match record {
                 Some(row) => {
-                    // Parse JSON fields
-                    let consensus_result: ConsensusResult = serde_json::from_str(&row.consensus_result)
+                    // Parse JSON fields using try_get for sqlx compatibility
+                    let consensus_result_str: String = row.try_get("consensus_result")?;
+                    let consensus_result: ConsensusResult = serde_json::from_str(&consensus_result_str)
                         .context("Failed to deserialize consensus result")?;
 
-                    let debate_session = if let Some(debate_json) = row.debate_session {
+                    let debate_session = if let Ok(debate_json) = row.try_get::<String, _>("debate_session") {
                         Some(serde_json::from_str(&debate_json)
                             .context("Failed to deserialize debate session")?)
                     } else {
@@ -459,20 +460,20 @@ impl VerdictStorage for DatabaseVerdictStorage {
                     };
 
                     let verdict_record = VerdictRecord {
-                        verdict_id: uuid::Uuid::parse_str(&row.verdict_id)?,
+                        verdict_id: uuid::Uuid::parse_str(&row.try_get::<String, _>("verdict_id")?)?,
                         consensus_result,
                         debate_session,
-                        created_at: row.created_at,
-                        accessed_at: row.accessed_at,
-                        access_count: row.access_count as u64,
-                        storage_location: row.storage_location,
+                        created_at: row.try_get("created_at")?,
+                        accessed_at: row.try_get("accessed_at")?,
+                        access_count: row.try_get::<i64, _>("access_count")? as u64,
+                        storage_location: row.try_get("storage_location")?,
                     };
 
                     debug!("Loaded verdict {} from database", verdict_id_clone);
                     Ok(Some(verdict_record))
                 }
                 None => {
-                    debug!("Verdict {} not found in database", verdict_id_clone);
+                    debug!("No verdict found for ID {:?}", verdict_id_clone);
                     Ok(None)
                 }
             }
@@ -502,11 +503,12 @@ impl VerdictStorage for DatabaseVerdictStorage {
             let mut verdict_records = Vec::new();
 
             for row in records {
-                // Parse JSON fields
-                let consensus_result: ConsensusResult = serde_json::from_str(&row.consensus_result)
+                // Parse JSON fields using try_get for sqlx compatibility
+                let consensus_result_str: String = row.try_get("consensus_result")?;
+                let consensus_result: ConsensusResult = serde_json::from_str(&consensus_result_str)
                     .context("Failed to deserialize consensus result")?;
 
-                let debate_session = if let Some(debate_json) = row.debate_session {
+                let debate_session = if let Ok(debate_json) = row.try_get::<String, _>("debate_session") {
                     Some(serde_json::from_str(&debate_json)
                         .context("Failed to deserialize debate session")?)
                 } else {
@@ -514,13 +516,13 @@ impl VerdictStorage for DatabaseVerdictStorage {
                 };
 
                 let verdict_record = VerdictRecord {
-                    verdict_id: uuid::Uuid::parse_str(&row.verdict_id)?,
+                    verdict_id: uuid::Uuid::parse_str(&row.try_get::<String, _>("verdict_id")?)?,
                     consensus_result,
                     debate_session,
-                    created_at: row.created_at,
-                    accessed_at: row.accessed_at,
-                    access_count: row.access_count as u64,
-                    storage_location: row.storage_location,
+                    created_at: row.try_get("created_at")?,
+                    accessed_at: row.try_get("accessed_at")?,
+                    access_count: row.try_get::<i64, _>("access_count")? as u64,
+                    storage_location: row.try_get("storage_location")?,
                 };
 
                 verdict_records.push(verdict_record);

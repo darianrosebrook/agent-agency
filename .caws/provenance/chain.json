@@ -10830,5 +10830,41 @@
     },
     "previous_hash": "d18a6b9e378ccaddb0eb02ee8adcc42cb93a67d3c7093cc69411f85cd1a8e5e5",
     "hash": "5bf001721ae9c2fb34a36fd3ec3bdacff97243437c6c658c912e88dc559fc8d8"
+  },
+  {
+    "id": "prov-1760817891316",
+    "timestamp": "2025-10-18T20:04:51.316Z",
+    "commit": {
+      "hash": "2db025da900b98f994ba0a6a9c9bab5e78b42851",
+      "message": "Phase 2: Rust wrapper layer and Core ML backend",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T20:04:51.318Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "5bf001721ae9c2fb34a36fd3ec3bdacff97243437c6c658c912e88dc559fc8d8",
+    "hash": "87e640edb3cdd6c9cd8409e23197de97128db209a38574026dd6ea428d0db7cf"
   }
 ]

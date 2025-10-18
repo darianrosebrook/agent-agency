@@ -2191,7 +2191,16 @@ impl MultiModalVerificationEngine {
     fn get_related_terms(&self, keyword: &str) -> Result<Vec<String>> {
         let mut related = Vec::new();
 
-        // Simple synonym mapping (in a real implementation, this would be more sophisticated)
+        // Simple synonym mapping (TODO: Implement more sophisticated synonym mapping with the following requirements:
+        //    - Implement more sophisticated synonym mapping algorithms
+        //    - Handle synonym mapping error detection and recovery
+        //    - Implement synonym mapping performance optimization
+        //    - Handle synonym mapping performance metrics and analytics
+        //    - Ensure synonym mapping operations meet performance requirements
+        //    - Handle synonym mapping creation failures gracefully
+        //    - Implement fallback mechanisms for synonym mapping operations
+        //    - Add proper logging and diagnostics for synonym mapping issues
+        //    - Implement synonym mapping validation and quality assurance
         match keyword.to_lowercase().as_str() {
             "function" => related.extend(vec![
                 "method".to_string(),
