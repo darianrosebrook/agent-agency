@@ -126,6 +126,7 @@ impl ClaimExtractionProcessor {
                 claims_extracted: claims_count as u32,
                 evidence_collected: evidence_count as u32,
                 rewrite_suggestions: 0,
+                unverifiable_breakdown: UnverifiableBreakdown::default(),
                 errors: Vec::new(),
             },
         })

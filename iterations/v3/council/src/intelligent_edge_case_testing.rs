@@ -3950,11 +3950,13 @@ impl ScenarioGenerator {
                         preconditions: vec![Precondition {
                             condition_name: "System is initialized".to_string(),
                             condition_type: ConditionType::SystemState,
+                            condition_value: serde_json::json!(true),
                             description: "System is in a stable state".to_string(),
                         }],
                         postconditions: vec![Postcondition {
                             condition_name: "System handles boundary value correctly".to_string(),
                             condition_type: ConditionType::SystemState,
+                            expected_value: serde_json::json!(true),
                             description: "System processes boundary value without errors"
                                 .to_string(),
                         }],
@@ -3964,6 +3966,8 @@ impl ScenarioGenerator {
                         .assess_boundary_risk(boundary_value, &generator.parameter_type),
                     expected_behavior: self
                         .get_boundary_expected_behavior(boundary_value, &generator.parameter_type),
+                    generation_reason: format!("Generated boundary test for parameter {} with value {}", generator.parameter_name, boundary_value),
+                    confidence_score: 0.8, // Default confidence for boundary tests
                 };
                 tests.push(test);
             }
@@ -4009,6 +4013,7 @@ impl ScenarioGenerator {
                         postconditions: vec![Postcondition {
                             condition_name: "System handles combination correctly".to_string(),
                             condition_type: ConditionType::SystemState,
+                            expected_value: serde_json::json!(true),
                             description: "System processes combination without errors".to_string(),
                         }],
                     },
@@ -4078,6 +4083,7 @@ impl ScenarioGenerator {
                                 condition_name: "System maintains stability under stress"
                                     .to_string(),
                                 condition_type: ConditionType::SystemState,
+                                expected_value: serde_json::json!(true),
                                 description: "System maintains stability under stress conditions"
                                     .to_string(),
                             }],

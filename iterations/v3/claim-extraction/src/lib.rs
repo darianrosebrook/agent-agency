@@ -71,6 +71,7 @@ impl ClaimExtractionAndVerificationProcessor {
         let mut verification_evidence = Vec::new();
         let mut ambiguities_resolved = 0u32;
         let mut rewrite_suggestions = 0u32;
+        let mut unverifiable_breakdown = UnverifiableBreakdown::default();
 
         // Stage 1: Disambiguation
         match self.disambiguation_stage.process(sentence, context).await {
@@ -110,6 +111,28 @@ impl ClaimExtractionAndVerificationProcessor {
                     .iter()
                     .filter(|part| part.suggested_rewrite.is_some())
                     .count() as u32;
+                for fragment in &qualification_result.unverifiable_parts {
+                    match fragment.reason {
+                        UnverifiableReason::SubjectiveLanguage => {
+                            unverifiable_breakdown.subjective_language += 1
+                        }
+                        UnverifiableReason::VagueCriteria => {
+                            unverifiable_breakdown.vague_criteria += 1
+                        }
+                        UnverifiableReason::MissingContext => {
+                            unverifiable_breakdown.missing_context += 1
+                        }
+                        UnverifiableReason::OpinionBased => {
+                            unverifiable_breakdown.opinion_based += 1
+                        }
+                        UnverifiableReason::FuturePrediction => {
+                            unverifiable_breakdown.future_prediction += 1
+                        }
+                        UnverifiableReason::EmotionalContent => {
+                            unverifiable_breakdown.emotional_content += 1
+                        }
+                    }
+                }
                 stages_completed.push(ProcessingStage::Qualification);
                 info!(
                     "Qualification completed: {} verifiable parts found ({} rewrite suggestions)",
@@ -201,6 +224,7 @@ impl ClaimExtractionAndVerificationProcessor {
                 claims_extracted: claims_count,
                 evidence_collected: evidence_count,
                 rewrite_suggestions,
+                unverifiable_breakdown,
                 errors,
             },
         };

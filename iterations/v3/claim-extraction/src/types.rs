@@ -158,6 +158,7 @@ pub struct ProcessingMetadata {
     pub claims_extracted: u32,
     pub evidence_collected: u32,
     pub rewrite_suggestions: u32,
+    pub unverifiable_breakdown: UnverifiableBreakdown,
     pub errors: Vec<ProcessingError>,
 }
 
@@ -170,9 +171,21 @@ impl Default for ProcessingMetadata {
             claims_extracted: 0,
             evidence_collected: 0,
             rewrite_suggestions: 0,
+            unverifiable_breakdown: UnverifiableBreakdown::default(),
             errors: Vec::new(),
         }
     }
+}
+
+/// Breakdown of unverifiable content reasons encountered during qualification
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UnverifiableBreakdown {
+    pub subjective_language: u32,
+    pub vague_criteria: u32,
+    pub missing_context: u32,
+    pub opinion_based: u32,
+    pub future_prediction: u32,
+    pub emotional_content: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -12,7 +12,6 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::sync::RwLock;
 use tracing::{debug, info, warn};
 
 /// File-based storage implementation
@@ -232,14 +231,23 @@ impl StateStorage for FileStorage {
     async fn validate_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
         // Validate diff format and data integrity
         if diff.from_state == diff.to_state {
-            return Err(WorkspaceError::DiffComputation("Diff from and to states are the same".to_string()));
+            return Err(WorkspaceError::DiffComputation(
+                "Diff from_state and to_state cannot be the same".to_string(),
+            ));
         }
-        
-        // Validate that changes are not empty
+
+        // Check diff constraints and business rules
         if diff.changes.is_empty() {
-            return Err(WorkspaceError::DiffComputation("Diff has no changes".to_string()));
+            return Err(WorkspaceError::DiffComputation(
+                "Diff must contain at least one change".to_string(),
+            ));
         }
-        
+
+        // Validate each change in the diff
+        for change in &diff.changes {
+            self.validate_diff_change(change).await?;
+        }
+
         Ok(())
     }
 
@@ -281,22 +289,54 @@ impl StateStorage for FileStorage {
     }
 
     async fn update_diff_metrics(&self) -> Result<(), WorkspaceError> {
-        // File storage doesn't need to update metrics as they are calculated on-demand
+        // File storage doesn't maintain in-memory metrics for diffs
+        // Metrics are calculated on-demand when needed
         Ok(())
     }
 
     async fn cleanup_old_diffs(&self) -> Result<(), WorkspaceError> {
-        // File storage cleanup is handled by the cleanup method
-        // This is a no-op for file storage
+        let cutoff_time = chrono::Utc::now() - chrono::Duration::hours(24);
+        let diff_dir = self.base_path.join("diffs");
+
+        if !diff_dir.exists() {
+            return Ok(());
+        }
+
+        let mut removed_count = 0;
+        for entry in fs::read_dir(&diff_dir).map_err(|e| WorkspaceError::Io(e))? {
+            let entry = entry.map_err(|e| WorkspaceError::Io(e))?;
+            let path = entry.path();
+
+            if path.extension().and_then(|s| s.to_str()) == Some("diff") {
+                // Try to extract timestamp from filename or check file metadata
+                if let Ok(metadata) = entry.metadata() {
+                    if let Ok(modified) = metadata.modified() {
+                        let modified_time = chrono::DateTime::<chrono::Utc>::from(modified);
+                        if modified_time < cutoff_time {
+                            fs::remove_file(&path).map_err(|e| WorkspaceError::Io(e))?;
+                            removed_count += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        if removed_count > 0 {
+            debug!(
+                "Cleaned up {} old diff files from file storage",
+                removed_count
+            );
+        }
+
         Ok(())
     }
 }
 
 /// In-memory storage implementation for testing
 pub struct MemoryStorage {
-    states: tokio::sync::RwLock<HashMap<StateId, WorkspaceState>>,
-    diffs: tokio::sync::RwLock<HashMap<(StateId, StateId), WorkspaceDiff>>,
-    metrics: tokio::sync::RwLock<StorageMetrics>,
+    states: std::sync::RwLock<HashMap<StateId, WorkspaceState>>,
+    diffs: std::sync::RwLock<HashMap<(StateId, StateId), WorkspaceDiff>>,
+    metrics: std::sync::RwLock<StorageMetrics>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -311,9 +351,9 @@ impl MemoryStorage {
     /// Create a new in-memory storage
     pub fn new() -> Self {
         Self {
-            states: tokio::sync::RwLock::new(HashMap::new()),
-            diffs: tokio::sync::RwLock::new(HashMap::new()),
-            metrics: tokio::sync::RwLock::new(StorageMetrics::default()),
+            states: std::sync::RwLock::new(HashMap::new()),
+            diffs: std::sync::RwLock::new(HashMap::new()),
+            metrics: std::sync::RwLock::new(StorageMetrics::default()),
         }
     }
 }
@@ -377,12 +417,10 @@ impl MemoryStorage {
         let mut to_remove = Vec::new();
 
         // Clean up old states from memory storage
-        {
-            let states = self.states.read().await;
-            for (id, state) in states.iter() {
-                if state.timestamp < cutoff_time {
-                    to_remove.push(id.clone());
-                }
+        let states = self.states.read().await;
+        for (id, state) in states.iter() {
+            if state.timestamp < cutoff_time {
+                to_remove.push(id.clone());
             }
         }
 
@@ -442,7 +480,7 @@ impl MemoryStorage {
             let total_size: u64 = state
                 .files
                 .values()
-                .map(|file| file.content.as_ref().map(|c| c.len() as u64).unwrap_or(0))
+                .map(|file| file.content.len() as u64)
                 .sum();
 
             // Check if state exceeds 10MB threshold
@@ -457,12 +495,10 @@ impl MemoryStorage {
             if let Some(state) = self.states.write().await.get_mut(&id) {
                 // Compress file contents
                 for file in state.files.values_mut() {
-                    if let Some(ref content) = file.content {
-                        if !content.is_empty() {
-                            let compressed = self.compress_data(content)?;
-                            file.content = Some(compressed);
-                            file.compressed = true;
-                        }
+                    if !file.content.is_empty() {
+                        let compressed = self.compress_data(&file.content)?;
+                        file.content = compressed;
+                        file.compressed = true;
                     }
                 }
                 debug!(
@@ -498,7 +534,7 @@ impl MemoryStorage {
                 state
                     .files
                     .values()
-                    .map(|file| file.content.as_ref().map(|c| c.len() as u64).unwrap_or(0))
+                    .map(|file| file.content.len() as u64)
                     .sum::<u64>()
             })
             .sum();
@@ -529,28 +565,100 @@ impl MemoryStorage {
         Ok(())
     }
 
+    async fn validate_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
+        // For file storage, validation is the same as memory storage
+        if diff.from_state == diff.to_state {
+            return Err(WorkspaceError::DiffComputation(
+                "Diff from_state and to_state cannot be the same".to_string(),
+            ));
+        }
+
+        if diff.changes.is_empty()
+            && (diff.files_added > 0 || diff.files_removed > 0 || diff.files_modified > 0)
+        {
+            return Err(WorkspaceError::DiffComputation(
+                "Diff has file changes but empty changes vector".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
+
+    async fn validate_diff_change(&self, change: &DiffChange) -> Result<(), WorkspaceError> {
+        match change {
+            DiffChange::Add { path, content } => {
+                if content.is_empty() {
+                    return Err(WorkspaceError::DiffComputation(format!(
+                        "Add change for {} has empty content",
+                        path.display()
+                    )));
+                }
+            }
+            DiffChange::Remove { path: _ } => {
+                // Remove operations are always valid
+            }
+            DiffChange::Modify {
+                path,
+                old_content: _,
+                new_content,
+            } => {
+                if new_content.is_empty() {
+                    return Err(WorkspaceError::DiffComputation(format!(
+                        "Modify change for {} has empty new content",
+                        path.display()
+                    )));
+                }
+            }
+            DiffChange::AddDirectory { path: _ } => {
+                // Directory add operations are always valid
+            }
+            DiffChange::RemoveDirectory { path: _ } => {
+                // Directory remove operations are always valid
+            }
+        }
+        Ok(())
+    }
+
     async fn update_diff_metrics(&self) -> Result<(), WorkspaceError> {
         // File storage doesn't maintain in-memory metrics for diffs
         // Metrics are calculated on-demand when needed
         Ok(())
     }
 
-
     async fn cleanup_old_diffs(&self) -> Result<(), WorkspaceError> {
         let cutoff_time = chrono::Utc::now() - chrono::Duration::hours(24);
-        
-        // For MemoryStorage, we don't have a base_path, so we'll clean up old diffs from memory
-        let mut diffs = self.diffs.write().await;
-        let old_diffs: Vec<_> = diffs.iter()
-            .filter(|(_, diff)| diff.computed_at < cutoff_time)
-            .map(|(key, _)| key.clone())
-            .collect();
-        
-        for key in old_diffs {
-            diffs.remove(&key);
+        let diff_dir = self.base_path.join("diffs");
+
+        if !diff_dir.exists() {
+            return Ok(());
         }
 
-        debug!("Cleaned up old diffs from memory storage");
+        let mut removed_count = 0;
+        for entry in fs::read_dir(&diff_dir).map_err(|e| WorkspaceError::Io(e))? {
+            let entry = entry.map_err(|e| WorkspaceError::Io(e))?;
+            let path = entry.path();
+
+            if path.extension().and_then(|s| s.to_str()) == Some("diff") {
+                // Try to extract timestamp from filename or check file metadata
+                if let Ok(metadata) = entry.metadata() {
+                    if let Ok(modified) = metadata.modified() {
+                        let modified_time = chrono::DateTime::<chrono::Utc>::from(modified);
+                        if modified_time < cutoff_time {
+                            fs::remove_file(&path).map_err(|e| WorkspaceError::Io(e))?;
+                            removed_count += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        if removed_count > 0 {
+            debug!(
+                "Cleaned up {} old diff files from file storage",
+                removed_count
+            );
+        }
+
         Ok(())
     }
 }
@@ -633,7 +741,7 @@ impl StateStorage for MemoryStorage {
 
     async fn store_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
         // 1. Diff validation: Validate diff data before storage
-        self.validate_diff(diff).await?;
+        self.validate_diff(diff)?;
 
         // 2. Diff storage: Store diff in memory storage with atomicity
         let diff_key = (diff.from_state.clone(), diff.to_state.clone());
@@ -660,9 +768,6 @@ impl StateStorage for MemoryStorage {
             )));
         }
 
-        // Drop the lock before calling async methods
-        drop(diffs);
-
         // 4. Storage optimization: Update metrics and cleanup if needed
         self.update_diff_metrics().await?;
         self.cleanup_old_diffs().await?;
@@ -674,7 +779,32 @@ impl StateStorage for MemoryStorage {
         Ok(())
     }
 
-    /// Validate diff data before storage
+
+    async fn get_diff(&self, from: StateId, to: StateId) -> Result<WorkspaceDiff, WorkspaceError> {
+        self.diffs
+            .read()
+            .unwrap()
+            .get(&(from, to))
+            .cloned()
+            .ok_or_else(|| {
+                WorkspaceError::DiffComputation(format!(
+                    "Diff not found between states {:?} and {:?}",
+                    from, to
+                ))
+            })
+    }
+
+    async fn cleanup(&self, max_states: usize) -> Result<usize, WorkspaceError> {
+        let current_count = self.states.read().await.len();
+        if current_count <= max_states {
+            return Ok(0);
+        }
+
+        let to_delete = current_count - max_states;
+        debug!("Would clean up {} states from memory storage", to_delete);
+        Ok(to_delete)
+    }
+
     async fn validate_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
         // Validate diff format and data integrity
         if diff.from_state == diff.to_state {
@@ -695,19 +825,9 @@ impl StateStorage for MemoryStorage {
             self.validate_diff_change(change).await?;
         }
 
-        // Validate timestamp is reasonable
-        let now = chrono::Utc::now();
-        let diff_age = now.signed_duration_since(diff.timestamp);
-        if diff_age.num_hours() > 24 {
-            return Err(WorkspaceError::DiffComputation(
-                "Diff timestamp is too old (more than 24 hours)".to_string(),
-            ));
-        }
-
         Ok(())
     }
 
-    /// Validate individual diff change
     async fn validate_diff_change(&self, change: &DiffChange) -> Result<(), WorkspaceError> {
         match change {
             DiffChange::Add { path, content } => {
@@ -729,11 +849,7 @@ impl StateStorage for MemoryStorage {
                     ));
                 }
             }
-            DiffChange::Modify {
-                path,
-                old_content,
-                new_content,
-            } => {
+            DiffChange::Modify { path, old_content, new_content } => {
                 if path.as_os_str().is_empty() {
                     return Err(WorkspaceError::DiffComputation(
                         "Modify change path cannot be empty".to_string(),
@@ -750,14 +866,14 @@ impl StateStorage for MemoryStorage {
             DiffChange::AddDirectory { path } => {
                 if path.as_os_str().is_empty() {
                     return Err(WorkspaceError::DiffComputation(
-                        "AddDirectory change path cannot be empty".to_string(),
+                        "Add directory change path cannot be empty".to_string(),
                     ));
                 }
             }
             DiffChange::RemoveDirectory { path } => {
                 if path.as_os_str().is_empty() {
                     return Err(WorkspaceError::DiffComputation(
-                        "RemoveDirectory change path cannot be empty".to_string(),
+                        "Remove directory change path cannot be empty".to_string(),
                     ));
                 }
             }
@@ -765,75 +881,34 @@ impl StateStorage for MemoryStorage {
         Ok(())
     }
 
-    /// Update diff storage metrics
     async fn update_diff_metrics(&self) -> Result<(), WorkspaceError> {
-        let diffs = self.diffs.read().await;
-        let total_diffs = diffs.len();
-        let total_size: usize = diffs
-            .values()
-            .map(|diff| {
-                diff.changes.len() * 100 // Rough estimate of diff size
-            })
-            .sum();
+        let states_len = self.states.read().await.len();
+        let diffs_len = self.diffs.read().await.len();
+        let mut metrics = self.metrics.write().await;
 
-        debug!(
-            "Diff storage metrics - Total diffs: {}, Estimated size: {} bytes",
-            total_diffs, total_size
-        );
+        metrics.total_states_stored = states_len;
+        metrics.total_diffs_stored = diffs_len;
 
-        // Store metrics for monitoring
-        {
-            let mut metrics = self.metrics.write().await;
-            metrics.total_diffs_stored = total_diffs;
-            metrics.total_storage_size_bytes = total_size as u64;
-        }
+        // Estimate storage size (rough calculation)
+        metrics.total_storage_size_bytes = (states_len * 1000 + diffs_len * 500) as u64;
 
+        debug!("Updated memory storage metrics: {} states, {} diffs, {} bytes", states_len, diffs_len, metrics.total_storage_size_bytes);
         Ok(())
     }
 
-    /// Cleanup old diffs to optimize storage
     async fn cleanup_old_diffs(&self) -> Result<(), WorkspaceError> {
-        let cutoff_time = chrono::Utc::now() - chrono::Duration::hours(24); // 24 hours ago
+        let cutoff_time = chrono::Utc::now() - chrono::Duration::hours(24);
         let mut diffs = self.diffs.write().await;
 
-        let mut to_remove = Vec::new();
-        for (key, diff) in diffs.iter() {
-            if diff.timestamp < cutoff_time {
-                to_remove.push(key.clone());
-            }
-        }
+        let old_count = diffs.len();
+        diffs.retain(|_, diff| diff.computed_at > cutoff_time);
 
-        for key in to_remove {
-            diffs.remove(&key);
-            debug!("Cleaned up old diff: {:?}", key);
+        let cleaned_count = old_count - diffs.len();
+        if cleaned_count > 0 {
+            debug!("Cleaned up {} old diffs from memory storage", cleaned_count);
         }
 
         Ok(())
-    }
-
-    async fn get_diff(&self, from: StateId, to: StateId) -> Result<WorkspaceDiff, WorkspaceError> {
-        self.diffs
-            .read()
-            .await
-            .get(&(from, to))
-            .cloned()
-            .ok_or_else(|| {
-                WorkspaceError::DiffComputation(format!(
-                    "Diff not found between states {:?} and {:?}",
-                    from, to
-                ))
-            })
-    }
-
-    async fn cleanup(&self, max_states: usize) -> Result<usize, WorkspaceError> {
-        let current_count = self.states.read().await.len();
-        if current_count <= max_states {
-            return Ok(0);
-        }
-
-        let to_delete = current_count - max_states;
-        debug!("Would clean up {} states from memory storage", to_delete);
-        Ok(to_delete)
     }
 }
 
@@ -1191,15 +1266,16 @@ impl StateStorage for DatabaseStorage {
             ));
         }
 
-        // For database storage, we could add more sophisticated validation
-        // such as checking if the referenced states actually exist
-        // For now, use the same basic validation as other implementations
-        if diff.changes.is_empty()
-            && (diff.files_added > 0 || diff.files_removed > 0 || diff.files_modified > 0)
-        {
+        // Check diff constraints and business rules
+        if diff.changes.is_empty() {
             return Err(WorkspaceError::DiffComputation(
-                "Diff has file changes but empty changes vector".to_string(),
+                "Diff must contain at least one change".to_string(),
             ));
+        }
+
+        // Validate individual changes
+        for change in &diff.changes {
+            self.validate_diff_change(change).await?;
         }
 
         Ok(())
@@ -1218,44 +1294,36 @@ impl StateStorage for DatabaseStorage {
             DiffChange::Remove { path: _ } => {
                 // Remove operations are always valid
             }
-            DiffChange::Modify {
-                path,
-                old_content: _,
-                new_content,
-            } => {
-                if new_content.is_empty() {
-                    return Err(WorkspaceError::DiffComputation(format!(
-                        "Modify change for {} has empty new content",
-                        path.display()
-                    )));
+            DiffChange::Modify { path: _, old_content, new_content } => {
+                if let Some(ref old) = old_content {
+                    if old == new_content {
+                        return Err(WorkspaceError::DiffComputation(
+                            "Modify change old and new content cannot be identical".to_string(),
+                        ));
+                    }
                 }
             }
             DiffChange::AddDirectory { path: _ } => {
-                // Directory add operations are always valid
+                // Directory operations are always valid
             }
             DiffChange::RemoveDirectory { path: _ } => {
-                // Directory remove operations are always valid
+                // Directory operations are always valid
             }
         }
         Ok(())
     }
 
     async fn update_diff_metrics(&self) -> Result<(), WorkspaceError> {
-        // Database storage could update metrics tables
-        // For now, this is a no-op as metrics are calculated on-demand
+        // Database storage metrics are calculated on-demand
+        // No persistent metrics storage needed
         Ok(())
     }
 
     async fn cleanup_old_diffs(&self) -> Result<(), WorkspaceError> {
-        // Database cleanup of old diffs would be done via SQL queries
-        // For now, implement basic cleanup based on timestamp
         let cutoff_time = chrono::Utc::now() - chrono::Duration::hours(24);
 
         let result = sqlx::query(
-            r#"
-            DELETE FROM workspace_diffs
-            WHERE computed_at < $1
-            "#,
+            "DELETE FROM workspace_diffs WHERE computed_at < $1"
         )
         .bind(cutoff_time)
         .execute(&self.pool)
@@ -1269,4 +1337,5 @@ impl StateStorage for DatabaseStorage {
 
         Ok(())
     }
+
 }

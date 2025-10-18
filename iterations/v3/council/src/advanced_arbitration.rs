@@ -4256,6 +4256,9 @@ impl ConsensusAlgorithm {
             individual_scores,
             reasoning,
             evaluation_time_ms,
+            debate_rounds: 1, // Single round for this analysis
+            participant_count: individual_scores.len(),
+            risk_assessment: None, // No specific risk assessment
         })
     }
 
@@ -5472,6 +5475,7 @@ impl ArbitrationFeedback {
             consensus: ConsensusResult::new(),
             success: false,
             quality_improvement: 0.0,
+            database_client: None,
         }
     }
 
@@ -5501,6 +5505,7 @@ impl ArbitrationFeedback {
             consensus: self.consensus.clone(),
             success: outcome_analysis.success_rate > 0.7,
             quality_improvement: quality_metrics.overall_improvement,
+            database_client: self.database_client.clone(),
         };
 
         Ok(processed_feedback)

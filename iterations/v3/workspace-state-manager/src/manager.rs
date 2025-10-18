@@ -715,22 +715,38 @@ impl WorkspaceStateManager {
                 let old_file_path = delta.old_file().path().map(|p| p.to_path_buf());
 
                 let change = match delta.status() {
-                    git2::Delta::Added => DiffChange::Add { 
-                        path: new_file_path, 
-                        content: Vec::new() // TODO: Get actual content from git
+                    git2::Delta::Added => {
+                        let content = self.get_content_from_git_tree(repo, &to_commit.tree()?, &new_file_path)
+                            .unwrap_or_else(|_| Vec::new());
+                        DiffChange::Add {
+                            path: new_file_path,
+                            content
+                        }
                     },
                     git2::Delta::Deleted => DiffChange::Remove { 
                         path: old_file_path.unwrap_or_else(|| new_file_path.clone())
                     },
-                    git2::Delta::Modified => DiffChange::Modify {
-                        path: new_file_path,
-                        old_content: None, // TODO: Get old content from git
-                        new_content: Vec::new(), // TODO: Get new content from git
+                    git2::Delta::Modified => {
+                        let old_content = self.get_content_from_git_tree(repo, &from_commit.tree()?, &old_file_path.unwrap_or(new_file_path.clone()))
+                            .ok();
+                        let new_content = self.get_content_from_git_tree(repo, &to_commit.tree()?, &new_file_path)
+                            .unwrap_or_else(|_| Vec::new());
+                        DiffChange::Modify {
+                            path: new_file_path,
+                            old_content,
+                            new_content,
+                        }
                     },
-                    git2::Delta::Renamed => DiffChange::Modify {
-                        path: new_file_path,
-                        old_content: None, // TODO: Get old content from git
-                        new_content: Vec::new(), // TODO: Get new content from git
+                    git2::Delta::Renamed => {
+                        let old_content = self.get_content_from_git_tree(repo, &from_commit.tree()?, &old_file_path.unwrap_or(new_file_path.clone()))
+                            .ok();
+                        let new_content = self.get_content_from_git_tree(repo, &to_commit.tree()?, &new_file_path)
+                            .unwrap_or_else(|_| Vec::new());
+                        DiffChange::Modify {
+                            path: new_file_path,
+                            old_content,
+                            new_content,
+                        }
                     },
                     _ => return true, // Skip other types for now
                 };
@@ -775,11 +791,31 @@ impl WorkspaceStateManager {
         Ok(changes)
     }
 
+    /// Get the current commit hash from the repository
+    fn get_current_commit_hash(&self, repo: &git2::Repository) -> Result<Option<String>, WorkspaceError> {
+        match repo.head() {
+            Ok(head) => {
+                match head.peel_to_commit() {
+                    Ok(commit) => Ok(Some(commit.id().to_string())),
+                    Err(_) => Ok(None),
+                }
+            },
+            Err(_) => Ok(None), // No HEAD, possibly empty repo
+        }
+    }
+
+    /// Get content of a file from a git tree
+    fn get_content_from_git_tree(&self, repo: &git2::Repository, tree: &git2::Tree, path: &Path) -> Result<Vec<u8>> {
+        let entry = tree.get_path(path)?;
+        let blob = repo.find_blob(entry.id())?;
+        Ok(blob.content().to_vec())
+    }
+
     /// Build file state from a file change
     async fn build_file_state_from_change(
         &self,
         change: &DiffChange,
-        _repo: &git2::Repository,
+        repo: &git2::Repository,
     ) -> Result<FileState, WorkspaceError> {
         match change {
             DiffChange::Add { path, content } => {
@@ -807,7 +843,7 @@ impl WorkspaceStateManager {
                         .unwrap_or_default(),
                     permissions,
                     git_tracked: true,
-                    git_commit: None, // TODO: Get from git
+                    git_commit: self.get_current_commit_hash(repo)?,
                     content: Some(content.clone()),
                     compressed: false,
                 })
@@ -837,7 +873,7 @@ impl WorkspaceStateManager {
                         .unwrap_or_default(),
                     permissions,
                     git_tracked: true,
-                    git_commit: None, // TODO: Get from git
+                    git_commit: self.get_current_commit_hash(repo)?,
                     content: Some(new_content.clone()),
                     compressed: false,
                 })
@@ -914,17 +950,19 @@ impl WorkspaceStateManager {
             if let Some(previous_file) = previous_state.files.get(file_path) {
                 if current_file.content_hash != previous_file.content_hash {
                     // File was modified
+                    let new_content = current_file.content.clone().unwrap_or_else(|| Vec::new());
                     changes.push(DiffChange::Modify {
                         path: file_path.clone(),
-                        old_content: None, // TODO: Get old content
-                        new_content: Vec::new(), // TODO: Get new content
+                        old_content: previous_file.content.clone(),
+                        new_content,
                     });
                 }
             } else {
                 // File was added
+                let content = current_file.content.clone().unwrap_or_else(|| Vec::new());
                 changes.push(DiffChange::Add {
                     path: file_path.clone(),
-                    content: Vec::new(), // TODO: Get actual content
+                    content,
                 });
             }
         }

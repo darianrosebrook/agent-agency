@@ -283,9 +283,10 @@ impl MemoryVerdictStorage {
 impl VerdictStorage for MemoryVerdictStorage {
     fn store_verdict(&self, record: &VerdictRecord) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>> {
         let verdicts = self.verdicts.clone();
+        let record = record.clone();
         Box::pin(async move {
             let mut verdicts = verdicts.write().await;
-            verdicts.insert(record.verdict_id, record.clone());
+            verdicts.insert(record.verdict_id, record);
             Ok(())
         })
     }

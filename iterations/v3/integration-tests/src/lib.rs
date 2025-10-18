@@ -14,7 +14,7 @@ pub mod cross_component_tests;
 pub mod database_tests;
 pub mod end_to_end_tests;
 pub mod orchestration_tests;
-pub mod performance_tests;
+pub mod performance_benchmarks;
 pub mod research_tests;
 
 pub use fixtures::*;
