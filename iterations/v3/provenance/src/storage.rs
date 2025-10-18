@@ -11,6 +11,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
+use crate::types::*;
+
 
 /// Database-backed provenance storage
 pub struct DatabaseProvenanceStorage {
