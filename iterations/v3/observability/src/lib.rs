@@ -9,12 +9,14 @@
 
 pub mod agent_telemetry;
 pub mod alerts;
+pub mod dashboard;
 pub mod logging;
 pub mod metrics;
 pub mod slo;
 
 pub use agent_telemetry::*;
 pub use alerts::*;
+pub use dashboard::*;
 pub use logging::*;
 pub use metrics::*;
 pub use slo::*;

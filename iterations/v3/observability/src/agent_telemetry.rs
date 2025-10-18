@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use uuid::Uuid;
 
 /// Agent types in the system
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -581,8 +580,6 @@ pub struct AgentPerformanceTracker {
     tasks_failed: u64,
     /// Error tracking
     errors: Vec<DateTime<Utc>>,
-    /// Start time
-    start_time: DateTime<Utc>,
 }
 
 impl AgentPerformanceTracker {
@@ -596,7 +593,6 @@ impl AgentPerformanceTracker {
             tasks_completed: 0,
             tasks_failed: 0,
             errors: Vec::new(),
-            start_time: Utc::now(),
         }
     }
 
@@ -615,7 +611,7 @@ impl AgentPerformanceTracker {
     }
 
     /// Record task failure
-    pub async fn record_task_failure(&mut self, error: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn record_task_failure(&mut self, _error: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         self.tasks_failed += 1;
         self.errors.push(Utc::now());
         

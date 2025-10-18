@@ -125,6 +125,7 @@ pub enum EvidenceType {
     PerformanceMetrics,
     SecurityScan,
     ConstitutionalReference, // CAWS compliance
+    CouncilDecision, // Council verification results
 }
 
 /// Source of evidence
@@ -368,4 +369,12 @@ pub enum VerificationStatus {
     Refuted,
     Pending,
     Error(String),
+}
+
+/// Council environment settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CouncilEnvironment {
+    Development,
+    Staging,
+    Production,
 }

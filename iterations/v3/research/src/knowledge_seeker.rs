@@ -895,7 +895,7 @@ impl KnowledgeSeeker {
     /// Calculate information completeness score
     fn calculate_information_completeness(&self, content: &str) -> f64 {
         let content_lower = content.to_lowercase();
-        let mut score = 0.0;
+        let mut score: f64 = 0.0;
 
         // Check for key information indicators
         if content_lower.contains("abstract") || content_lower.contains("summary") {
@@ -932,7 +932,7 @@ impl KnowledgeSeeker {
 
     /// Calculate content quality score
     fn calculate_content_quality(&self, content: &str) -> f64 {
-        let mut score = 0.0;
+        let mut score: f64 = 0.0;
 
         // Check for proper structure
         let sentences: Vec<&str> = content.split(&['.', '!', '?']).collect();
@@ -1528,6 +1528,87 @@ impl ResearchAgent for KnowledgeSeeker {
 }
 
 #[cfg(test)]
+impl KnowledgeSeeker {
+    pub fn minimal_for_tests() -> Self {
+        let (event_sender, _event_receiver) = mpsc::unbounded_channel();
+
+        let config = ResearchAgentConfig {
+            vector_search: VectorSearchConfig {
+                enabled: false,
+                qdrant_url: "http://localhost:6333".to_string(),
+                collection_name: "mock_collection".to_string(),
+                model: "mock".to_string(),
+                dimension: 16,
+                similarity_threshold: 0.6,
+                max_results: 8,
+                batch_size: 16,
+            },
+            web_scraping: WebScrapingConfig {
+                enabled: false,
+                max_depth: 1,
+                max_pages: 2,
+                timeout_ms: 5_000,
+                timeout_seconds: 5,
+                user_agent: "knowledge-seeker-tests".to_string(),
+                respect_robots_txt: false,
+                allowed_domains: vec![],
+                rate_limit_per_minute: 30,
+            },
+            context_synthesis: ContextSynthesisConfig {
+                enabled: true,
+                similarity_threshold: 0.6,
+                max_cross_references: 4,
+                max_context_size: 10_000,
+                synthesis_timeout_ms: 5_000,
+            },
+            performance: PerformanceConfig {
+                max_concurrent_requests: 2,
+                request_timeout_ms: 5_000,
+            },
+        };
+
+        let vector_search = Arc::new(VectorSearchEngine::new_mock());
+        let context_builder = Arc::new(ContextBuilder::new(config.context_synthesis.clone()));
+        let web_scraper = Arc::new(WebScraper::new(config.web_scraping.clone()));
+        let content_processor = Arc::new(ContentProcessor::new(ContentProcessingConfig {
+            enable_cleaning: true,
+            enable_markdown: true,
+            enable_text_extraction: true,
+            max_content_length: 10_000,
+            enable_summarization: false,
+        }));
+
+        let metrics = Arc::new(RwLock::new(ResearchMetrics {
+            total_queries: 0,
+            successful_queries: 0,
+            failed_queries: 0,
+            average_response_time_ms: 0.0,
+            average_relevance_score: 0.0,
+            average_confidence_score: 0.0,
+            cache_hit_rate: 0.0,
+            vector_search_accuracy: 0.0,
+            web_scraping_success_rate: 0.0,
+            context_synthesis_quality: 0.0,
+            last_updated: chrono::Utc::now(),
+        }));
+
+        let status = Arc::new(RwLock::new(ResearchAgentStatus::Available));
+
+        Self {
+            config,
+            vector_search,
+            context_builder,
+            web_scraper,
+            content_processor,
+            active_sessions: Arc::new(DashMap::new()),
+            metrics,
+            event_sender,
+            status,
+        }
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -1610,26 +1691,9 @@ mod tests {
                 request_timeout_ms: 30000,
             },
         };
-        let seeker = KnowledgeSeeker::new(config).await.unwrap_or_else(|_| {
-            // TODO: Create minimal seeker for testing with the following requirements:
-            // 1. Minimal seeker creation: Create a minimal knowledge seeker for testing
-            //    - Initialize basic knowledge seeker with minimal configuration
-            //    - Handle minimal seeker creation error handling and recovery
-            //    - Implement proper fallback mechanisms for testing
-            // 2. Testing configuration: Configure minimal seeker for testing
-            //    - Set up basic testing configuration and parameters
-            //    - Handle testing-specific settings and options
-            //    - Implement proper testing environment setup
-            // 3. Minimal functionality: Implement minimal seeker functionality
-            //    - Provide basic knowledge seeking capabilities for testing
-            //    - Handle minimal functionality validation and verification
-            //    - Implement proper testing support and utilities
-            // 4. Testing integration: Integrate minimal seeker with testing framework
-            //    - Ensure compatibility with testing infrastructure
-            //    - Handle testing integration validation and verification
-            //    - Implement proper testing lifecycle management
-            todo!("Create minimal seeker for testing")
-        });
+        let seeker = KnowledgeSeeker::new(config)
+            .await
+            .unwrap_or_else(|_| KnowledgeSeeker::minimal_for_tests());
 
         let session = seeker
             .create_session("test session".to_string(), None)
@@ -1719,15 +1783,59 @@ impl InvertedIndex {
                 }
             }
             QueryType::Knowledge => 0.8, // Knowledge queries are more flexible
-            QueryType::Technical => {
-                // Research queries prefer comprehensive, cited content
-                if content.contains("study")
-                    || content.contains("research")
-                    || content.contains("analysis")
+            QueryType::Code => {
+                // Code queries prefer code examples and implementations
+                if content.contains("```")
+                    || content.contains("function")
+                    || content.contains("class")
                 {
                     1.0
                 } else {
                     0.6
+                }
+            }
+            QueryType::Documentation => {
+                // Documentation queries prefer clear, structured explanations
+                if content.contains("overview")
+                    || content.contains("guide")
+                    || content.contains("reference")
+                {
+                    1.0
+                } else {
+                    0.7
+                }
+            }
+            QueryType::ApiReference => {
+                // API reference queries prefer technical specifications
+                if content.contains("parameter")
+                    || content.contains("return")
+                    || content.contains("signature")
+                {
+                    1.0
+                } else {
+                    0.5
+                }
+            }
+            QueryType::Troubleshooting => {
+                // Troubleshooting queries prefer error solutions and debugging
+                if content.contains("error")
+                    || content.contains("fix")
+                    || content.contains("solution")
+                {
+                    1.0
+                } else {
+                    0.6
+                }
+            }
+            QueryType::BestPractices => {
+                // Best practices queries prefer guidelines and recommendations
+                if content.contains("recommend")
+                    || content.contains("best practice")
+                    || content.contains("guideline")
+                {
+                    1.0
+                } else {
+                    0.7
                 }
             }
         };
@@ -1802,7 +1910,7 @@ impl InvertedIndex {
             quality_score += 0.2; // Professional/academic language
         }
 
-        score += quality_score.min(1.0) * 0.3;
+        score += (quality_score.min(1.0) * 0.3) as f32;
 
         // 3. Content completeness (20% weight)
         let completeness_score = if content.len() > 1000 {

@@ -1,3 +1,4 @@
+pub mod agent_integration;
 pub mod types;
 
 use crate::types::*;

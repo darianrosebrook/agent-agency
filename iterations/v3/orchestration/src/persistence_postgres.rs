@@ -92,6 +92,71 @@ impl PostgresVerdictWriter {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use agent_agency_council::types::{ConsensusResult, FinalVerdict};
+    use std::collections::HashMap;
+
+    fn baseline_consensus(final_verdict: FinalVerdict) -> ConsensusResult {
+        ConsensusResult {
+            task_id: Uuid::new_v4(),
+            verdict_id: Uuid::new_v4(),
+            final_verdict,
+            individual_verdicts: HashMap::new(),
+            consensus_score: 0.0,
+            debate_rounds: 0,
+            evaluation_time_ms: 0,
+            timestamp: chrono::Utc::now(),
+        }
+    }
+
+    #[test]
+    fn build_contract_accepts_valid_consensus() {
+        let consensus = baseline_consensus(FinalVerdict::Accepted {
+            confidence: 0.9,
+            summary: "all good".into(),
+        });
+
+        let contract = PostgresVerdictWriter::build_contract(&consensus).unwrap();
+        assert!(matches!(contract.decision, FinalDecision::Accept));
+        assert_eq!(contract.dissent, "all good");
+    }
+
+    #[test]
+    fn build_contract_maps_required_changes() {
+        let consensus = baseline_consensus(FinalVerdict::RequiresModification {
+            required_changes: vec![agent_agency_council::types::RequiredChange {
+                priority: agent_agency_council::types::Priority::High,
+                description: "add tests".into(),
+                rationale: "coverage".into(),
+                estimated_effort: None,
+            }],
+            summary: "needs work".into(),
+        });
+
+        let contract = PostgresVerdictWriter::build_contract(&consensus).unwrap();
+        assert!(matches!(contract.decision, FinalDecision::Modify));
+        assert_eq!(contract.remediation, vec!["add tests".to_string()]);
+    }
+
+    #[test]
+    fn decision_str_matches_schema_values() {
+        assert_eq!(
+            PostgresVerdictWriter::decision_str(&FinalDecision::Accept),
+            "accept"
+        );
+        assert_eq!(
+            PostgresVerdictWriter::decision_str(&FinalDecision::Reject),
+            "reject"
+        );
+        assert_eq!(
+            PostgresVerdictWriter::decision_str(&FinalDecision::Modify),
+            "modify"
+        );
+    }
+}
+
 #[async_trait]
 impl VerdictWriter for PostgresVerdictWriter {
     #[tracing::instrument(skip_all, fields(task_id = %consensus.task_id))]

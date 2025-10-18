@@ -870,6 +870,28 @@ impl VectorSearchEngine {
 }
 
 #[cfg(test)]
+impl VectorSearchEngine {
+    pub fn new_mock() -> Self {
+        use qdrant_client::config::QdrantConfig;
+
+        let mut config = QdrantConfig::from_url("http://localhost:6333");
+        config.check_compatibility = false;
+        let client = Qdrant::new(config).expect("failed to build mock Qdrant client");
+
+        Self {
+            client: Arc::new(client),
+            collection_name: "mock".to_string(),
+            vector_size: 16,
+            similarity_threshold: 0.5,
+            max_results: 8,
+            cache: Arc::new(RwLock::new(HashMap::new())),
+            embedding_cache: Arc::new(RwLock::new(HashMap::new())),
+            metrics: Arc::new(RwLock::new(VectorSearchMetrics::default())),
+        }
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 

@@ -592,7 +592,75 @@ impl TestFixtures {
     /// - Snapshot metadata includes enough context (risk tier, change budget, tooling versions) to
     ///   assert compliance against the working spec during validation.
     pub fn snapshot_diff_plan() -> Value {
-        todo!("Implement snapshot_diff_plan per TODO[snapshot-diff-plan]");
+        serde_json::json!({
+            "plan_id": "snapshot-plan-001",
+            "metadata": {
+                "generated_at": "2025-01-01T00:00:00Z",
+                "risk_tier": 2,
+                "toolchain": "integration-fixtures/1.0.0",
+                "seed": 42
+            },
+            "baseline": {
+                "commit": "1111111",
+                "artifact_hash": "baseline-sha256-aaaaaaaa",
+                "files": [
+                    {"path": "src/lib.rs", "checksum": "lib-baseline", "lines": 120},
+                    {"path": "src/config.rs", "checksum": "config-baseline", "lines": 80}
+                ],
+                "metadata": {
+                    "change_budget": {"max_files": 10, "max_loc": 500},
+                    "caws_rules": ["A1", "A4", "A7"]
+                }
+            },
+            "candidate": {
+                "commit": "2222222",
+                "artifact_hash": "candidate-sha256-bbbbbbbb",
+                "files": [
+                    {"path": "src/lib.rs", "checksum": "lib-candidate", "lines": 135},
+                    {"path": "src/config.rs", "checksum": "config-baseline", "lines": 80},
+                    {"path": "README.md", "checksum": "readme-candidate", "lines": 42}
+                ],
+                "metadata": {
+                    "change_budget": {"max_files": 12, "max_loc": 650},
+                    "caws_rules": ["A1", "A3", "A7", "A9"],
+                    "provenance_reference": "verdict-456"
+                }
+            },
+            "diff_summary": {
+                "added_files": [
+                    {
+                        "path": "README.md",
+                        "reason": "Document new configuration toggles",
+                        "caws_reference": "A5"
+                    }
+                ],
+                "removed_files": [],
+                "modified_files": [
+                    {
+                        "path": "src/lib.rs",
+                        "insertions": 20,
+                        "deletions": 5,
+                        "highlights": ["New telemetry hooks", "Refined error handling"]
+                    }
+                ]
+            },
+            "validation": {
+                "checksum_verified": true,
+                "schema_consistent": true,
+                "caws_acceptance": ["A1", "A3", "A7"],
+                "regression_risk": "low"
+            },
+            "rollback_recipe": [
+                {"action": "delete", "path": "README.md"},
+                {"action": "restore", "path": "src/lib.rs", "checksum": "lib-baseline"},
+                {"action": "restore", "path": "src/config.rs", "checksum": "config-baseline"}
+            ],
+            "validation_hooks": [
+                "hash_comparison",
+                "schema_validation",
+                "caws_policy_enforcement"
+            ]
+        })
     }
 }
 
