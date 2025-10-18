@@ -440,15 +440,153 @@ impl MultiModalVerificationEngine {
     }
 
     /// Resolve context dependencies for proper verification
-    async fn resolve_context_dependencies(&self, _claim: &AtomicClaim) -> Result<f64> {
-        // TODO: Implement context dependency resolution
-        // This should:
-        // - Identify required context for claim verification
-        // - Resolve dependencies between claims
-        // - Check for missing context that affects validity
-        // - Validate scope boundaries
+    async fn resolve_context_dependencies(&self, claim: &AtomicClaim) -> Result<f64> {
+        // Analyze the claim for context requirements
+        let context_requirements = self.identify_context_requirements(claim);
 
-        Ok(0.75) // Good confidence for context resolution
+        if context_requirements.is_empty() {
+            // Claim is self-contained, high confidence
+            return Ok(0.9);
+        }
+
+        // Check if required context is available
+        let available_context = self.assess_available_context(claim, &context_requirements);
+
+        // Calculate context completeness score
+        let context_completeness = available_context as f64 / context_requirements.len() as f64;
+
+        // Check for scope boundary violations
+        let scope_score = self.validate_scope_boundaries(claim);
+
+        // Combine context and scope scores
+        let dependency_score = (context_completeness + scope_score) / 2.0;
+
+        debug!(
+            "Context dependency resolution for '{}': {} requirements identified, {:.1} available, scope_score={:.2}, final_score={:.2}",
+            claim.claim_text,
+            context_requirements.len(),
+            available_context,
+            scope_score,
+            dependency_score
+        );
+
+        Ok(dependency_score)
+    }
+
+    /// Identify context requirements for a claim
+    fn identify_context_requirements(&self, claim: &AtomicClaim) -> Vec<String> {
+        let mut requirements = Vec::new();
+        let text = &claim.claim_text;
+
+        // Check for pronouns that need resolution
+        let pronouns = ["it", "this", "that", "these", "those", "they", "them"];
+        for pronoun in &pronouns {
+            if text.contains(&format!(" {}", pronoun)) || text.contains(&format!("{} ", pronoun)) {
+                requirements.push(format!("pronoun_resolution:{}", pronoun));
+            }
+        }
+
+        // Check for technical terms that need definition
+        let technical_indicators = ["API", "SDK", "framework", "library", "protocol", "algorithm"];
+        for indicator in &technical_indicators {
+            if text.contains(indicator) {
+                requirements.push(format!("technical_definition:{}", indicator));
+            }
+        }
+
+        // Check for temporal references
+        let temporal_indicators = ["before", "after", "when", "during", "previously", "subsequently"];
+        for indicator in &temporal_indicators {
+            if text.contains(indicator) {
+                requirements.push(format!("temporal_context:{}", indicator));
+            }
+        }
+
+        // Check for domain-specific knowledge requirements
+        if text.contains("security") || text.contains("encryption") {
+            requirements.push("domain_knowledge:security".to_string());
+        }
+        if text.contains("performance") || text.contains("optimization") {
+            requirements.push("domain_knowledge:performance".to_string());
+        }
+
+        requirements
+    }
+
+    /// Assess what context is available for the claim
+    fn assess_available_context(&self, claim: &AtomicClaim, requirements: &[String]) -> usize {
+        let mut available = 0;
+
+        for requirement in requirements {
+            match requirement.as_str() {
+                req if req.starts_with("pronoun_resolution:") => {
+                    // Check if pronouns are resolved in the claim text
+                    // This is a simplified check - in reality would need NLP
+                    if claim.claim_text.len() > 20 {
+                        available += 1; // Assume longer claims provide context
+                    }
+                }
+                req if req.starts_with("technical_definition:") => {
+                    // Check if technical terms are explained
+                    let term = req.split(':').nth(1).unwrap_or("");
+                    if claim.claim_text.contains("defined") ||
+                       claim.claim_text.contains("means") ||
+                       claim.claim_text.contains("refers to") {
+                        available += 1;
+                    }
+                }
+                req if req.starts_with("temporal_context:") => {
+                    // Check if temporal context is provided
+                    if claim.claim_text.contains("at ") ||
+                       claim.claim_text.contains("during ") ||
+                       claim.claim_text.contains("after ") {
+                        available += 1;
+                    }
+                }
+                req if req.starts_with("domain_knowledge:") => {
+                    // Assume domain knowledge is available in the context
+                    available += 1;
+                }
+                _ => {}
+            }
+        }
+
+        available
+    }
+
+    /// Validate scope boundaries for the claim
+    fn validate_scope_boundaries(&self, claim: &AtomicClaim) -> f64 {
+        // Check if the claim respects its declared scope
+        match claim.scope.data_impact {
+            crate::types::DataImpact::None => {
+                // Claims with no data impact should be safe
+                0.9
+            }
+            crate::types::DataImpact::ReadOnly => {
+                // Read-only claims should be relatively safe
+                0.8
+            }
+            crate::types::DataImpact::Write => {
+                // Write claims need careful validation
+                if claim.claim_text.contains("safely") ||
+                   claim.claim_text.contains("without") ||
+                   claim.claim_text.contains("correctly") {
+                    0.7
+                } else {
+                    0.5 // Lower confidence for write claims without safety assurances
+                }
+            }
+            crate::types::DataImpact::Critical => {
+                // Critical claims need explicit safety measures
+                if claim.claim_text.contains("atomic") ||
+                   claim.claim_text.contains("transaction") ||
+                   claim.claim_text.contains("rollback") {
+                    0.8
+                } else {
+                    0.4 // Critical claims need strong safety guarantees
+                }
+            }
+        }
     }
 
     /// Perform semantic analysis for meaning validation
