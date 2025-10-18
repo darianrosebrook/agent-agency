@@ -379,7 +379,7 @@ impl MemoryStorage {
             let total_size: u64 = state
                 .files
                 .values()
-                .map(|file| file.content.len() as u64)
+                .map(|file| file.content.as_ref().map(|c| c.len() as u64).unwrap_or(0))
                 .sum();
 
             // Check if state exceeds 10MB threshold
@@ -394,10 +394,12 @@ impl MemoryStorage {
             if let Some(state) = self.states.write().unwrap().get_mut(&id) {
                 // Compress file contents
                 for file in state.files.values_mut() {
-                    if !file.content.is_empty() {
-                        let compressed = self.compress_data(&file.content)?;
-                        file.content = compressed;
-                        file.compressed = true;
+                    if let Some(ref content) = file.content {
+                        if !content.is_empty() {
+                            let compressed = self.compress_data(content)?;
+                            file.content = Some(compressed);
+                            file.compressed = true;
+                        }
                     }
                 }
                 debug!(
@@ -433,7 +435,7 @@ impl MemoryStorage {
                 state
                     .files
                     .values()
-                    .map(|file| file.content.len() as u64)
+                    .map(|file| file.content.as_ref().map(|c| c.len() as u64).unwrap_or(0))
                     .sum::<u64>()
             })
             .sum();
@@ -468,13 +470,15 @@ impl MemoryStorage {
         // For file storage, validation is the same as memory storage
         if diff.from_state == diff.to_state {
             return Err(WorkspaceError::DiffComputation(
-                "Diff from_state and to_state cannot be the same".to_string()
+                "Diff from_state and to_state cannot be the same".to_string(),
             ));
         }
 
-        if diff.changes.is_empty() && (diff.files_added > 0 || diff.files_removed > 0 || diff.files_modified > 0) {
+        if diff.changes.is_empty()
+            && (diff.files_added > 0 || diff.files_removed > 0 || diff.files_modified > 0)
+        {
             return Err(WorkspaceError::DiffComputation(
-                "Diff has file changes but empty changes vector".to_string()
+                "Diff has file changes but empty changes vector".to_string(),
             ));
         }
 
@@ -485,19 +489,25 @@ impl MemoryStorage {
         match change {
             DiffChange::Add { path, content } => {
                 if content.is_empty() {
-                    return Err(WorkspaceError::DiffComputation(
-                        format!("Add change for {} has empty content", path.display())
-                    ));
+                    return Err(WorkspaceError::DiffComputation(format!(
+                        "Add change for {} has empty content",
+                        path.display()
+                    )));
                 }
             }
             DiffChange::Remove { path: _ } => {
                 // Remove operations are always valid
             }
-            DiffChange::Modify { path, old_content: _, new_content } => {
+            DiffChange::Modify {
+                path,
+                old_content: _,
+                new_content,
+            } => {
                 if new_content.is_empty() {
-                    return Err(WorkspaceError::DiffComputation(
-                        format!("Modify change for {} has empty new content", path.display())
-                    ));
+                    return Err(WorkspaceError::DiffComputation(format!(
+                        "Modify change for {} has empty new content",
+                        path.display()
+                    )));
                 }
             }
             DiffChange::AddDirectory { path: _ } => {
@@ -507,6 +517,97 @@ impl MemoryStorage {
                 // Directory remove operations are always valid
             }
         }
+        Ok(())
+    }
+
+    async fn update_diff_metrics(&self) -> Result<(), WorkspaceError> {
+        // File storage doesn't maintain in-memory metrics for diffs
+        // Metrics are calculated on-demand when needed
+        Ok(())
+    }
+
+    async fn validate_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
+        // Validate diff format and data integrity
+        if diff.from_state == diff.to_state {
+            return Err(WorkspaceError::DiffComputation(
+                "Diff from_state and to_state cannot be the same".to_string(),
+            ));
+        }
+
+        // Check diff constraints and business rules
+        if diff.changes.is_empty() {
+            return Err(WorkspaceError::DiffComputation(
+                "Diff must contain at least one change".to_string(),
+            ));
+        }
+
+        // Validate individual changes
+        for change in &diff.changes {
+            self.validate_diff_change(change).await?;
+        }
+
+        // Validate timestamp is reasonable
+        let now = chrono::Utc::now();
+        let diff_age = now.signed_duration_since(diff.timestamp);
+
+        if diff_age.num_hours() > 24 {
+            return Err(WorkspaceError::DiffComputation(
+                "Diff timestamp is too old (more than 24 hours)".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
+
+    async fn validate_diff_change(&self, change: &DiffChange) -> Result<(), WorkspaceError> {
+        match change {
+            DiffChange::Add { path, content } => {
+                if path.as_os_str().is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        "Add change path cannot be empty".to_string(),
+                    ));
+                }
+                if content.is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        "Add change content cannot be empty".to_string(),
+                    ));
+                }
+            },
+            DiffChange::Remove { path } => {
+                if path.as_os_str().is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        "Remove change path cannot be empty".to_string(),
+                    ));
+                }
+            },
+            DiffChange::Modify { path, new_content, .. } => {
+                if path.as_os_str().is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        "Modify change path cannot be empty".to_string(),
+                    ));
+                }
+                if new_content.is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        "Modify change new_content cannot be empty".to_string(),
+                    ));
+                }
+            },
+            DiffChange::AddDirectory { path } => {
+                if path.as_os_str().is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        "AddDirectory change path cannot be empty".to_string(),
+                    ));
+                }
+            },
+            DiffChange::RemoveDirectory { path } => {
+                if path.as_os_str().is_empty() {
+                    return Err(WorkspaceError::DiffComputation(
+                        "RemoveDirectory change path cannot be empty".to_string(),
+                    ));
+                }
+            },
+        }
+
         Ok(())
     }
 
@@ -544,11 +645,15 @@ impl MemoryStorage {
         }
 
         if removed_count > 0 {
-            debug!("Cleaned up {} old diff files from file storage", removed_count);
+            debug!(
+                "Cleaned up {} old diff files from file storage",
+                removed_count
+            );
         }
 
         Ok(())
     }
+
 
 }
 
@@ -630,7 +735,7 @@ impl StateStorage for MemoryStorage {
 
     async fn store_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
         // 1. Diff validation: Validate diff data before storage
-        self.validate_diff(diff)?;
+        self.validate_diff(diff).await?;
 
         // 2. Diff storage: Store diff in memory storage with atomicity
         let diff_key = (diff.from_state.clone(), diff.to_state.clone());
@@ -686,7 +791,7 @@ impl StateStorage for MemoryStorage {
 
         // Validate individual changes
         for change in &diff.changes {
-            self.validate_diff_change(change)?;
+            self.validate_diff_change(change).await?;
         }
 
         // Validate timestamp is reasonable
@@ -705,7 +810,7 @@ impl StateStorage for MemoryStorage {
     async fn validate_diff_change(&self, change: &DiffChange) -> Result<(), WorkspaceError> {
         match change {
             DiffChange::Add { path, content } => {
-                if path.is_empty() {
+                if path.as_os_str().is_empty() {
                     return Err(WorkspaceError::DiffComputation(
                         "Add change path cannot be empty".to_string(),
                     ));
@@ -717,7 +822,7 @@ impl StateStorage for MemoryStorage {
                 }
             }
             DiffChange::Remove { path } => {
-                if path.is_empty() {
+                if path.as_os_str().is_empty() {
                     return Err(WorkspaceError::DiffComputation(
                         "Remove change path cannot be empty".to_string(),
                     ));
@@ -728,7 +833,7 @@ impl StateStorage for MemoryStorage {
                 old_content,
                 new_content,
             } => {
-                if path.is_empty() {
+                if path.as_os_str().is_empty() {
                     return Err(WorkspaceError::DiffComputation(
                         "Modify change path cannot be empty".to_string(),
                     ));
@@ -1167,16 +1272,18 @@ impl StateStorage for DatabaseStorage {
         // Database storage validation - check for referential integrity
         if diff.from_state == diff.to_state {
             return Err(WorkspaceError::DiffComputation(
-                "Diff from_state and to_state cannot be the same".to_string()
+                "Diff from_state and to_state cannot be the same".to_string(),
             ));
         }
 
         // For database storage, we could add more sophisticated validation
         // such as checking if the referenced states actually exist
         // For now, use the same basic validation as other implementations
-        if diff.changes.is_empty() && (diff.files_added > 0 || diff.files_removed > 0 || diff.files_modified > 0) {
+        if diff.changes.is_empty()
+            && (diff.files_added > 0 || diff.files_removed > 0 || diff.files_modified > 0)
+        {
             return Err(WorkspaceError::DiffComputation(
-                "Diff has file changes but empty changes vector".to_string()
+                "Diff has file changes but empty changes vector".to_string(),
             ));
         }
 
@@ -1187,19 +1294,25 @@ impl StateStorage for DatabaseStorage {
         match change {
             DiffChange::Add { path, content } => {
                 if content.is_empty() {
-                    return Err(WorkspaceError::DiffComputation(
-                        format!("Add change for {} has empty content", path.display())
-                    ));
+                    return Err(WorkspaceError::DiffComputation(format!(
+                        "Add change for {} has empty content",
+                        path.display()
+                    )));
                 }
             }
             DiffChange::Remove { path: _ } => {
                 // Remove operations are always valid
             }
-            DiffChange::Modify { path, old_content: _, new_content } => {
+            DiffChange::Modify {
+                path,
+                old_content: _,
+                new_content,
+            } => {
                 if new_content.is_empty() {
-                    return Err(WorkspaceError::DiffComputation(
-                        format!("Modify change for {} has empty new content", path.display())
-                    ));
+                    return Err(WorkspaceError::DiffComputation(format!(
+                        "Modify change for {} has empty new content",
+                        path.display()
+                    )));
                 }
             }
             DiffChange::AddDirectory { path: _ } => {

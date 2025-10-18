@@ -163,14 +163,9 @@ pub struct WorkspaceDiff {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DiffChange {
     /// File was added with content
-    Add {
-        path: PathBuf,
-        content: Vec<u8>,
-    },
+    Add { path: PathBuf, content: Vec<u8> },
     /// File was removed
-    Remove {
-        path: PathBuf,
-    },
+    Remove { path: PathBuf },
     /// File was modified
     Modify {
         path: PathBuf,
@@ -178,13 +173,9 @@ pub enum DiffChange {
         new_content: Vec<u8>,
     },
     /// Directory was added
-    AddDirectory {
-        path: PathBuf,
-    },
+    AddDirectory { path: PathBuf },
     /// Directory was removed
-    RemoveDirectory {
-        path: PathBuf,
-    },
+    RemoveDirectory { path: PathBuf },
 }
 
 /// Configuration for workspace state management

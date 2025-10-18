@@ -48,7 +48,6 @@ impl QualificationStage {
         context: &ProcessingContext,
     ) -> Result<VerifiabilityAssessment> {
         let mut verifiable_parts = Vec::new();
-        let mut unverifiable_parts = Vec::new();
 
         // Detect factual claims
         verifiable_parts.extend(
@@ -69,10 +68,11 @@ impl QualificationStage {
         );
 
         // Detect unverifiable content
-        unverifiable_parts.extend(
-            self.verifiability_detector
-                .detect_unverifiable_content(sentence)?,
-        );
+        let mut unverifiable_parts = self
+            .verifiability_detector
+            .detect_unverifiable_content(sentence)?;
+        self.content_rewriter
+            .enhance_unverifiable_parts(&mut unverifiable_parts, context);
 
         // Calculate overall verifiability
         let overall_verifiability =
@@ -264,32 +264,264 @@ impl VerifiabilityDetector {
 /// Rewrites content to make it verifiable
 #[derive(Debug)]
 struct ContentRewriter {
-    // TODO: Add content rewriting logic with the following requirements:
-    // 1. Content analysis: Analyze content to identify rewriting opportunities
-    //    - Parse content structure and identify ambiguous or unclear statements
-    //    - Detect subjective language, vague terms, and unverifiable claims
-    //    - Identify areas where specificity and clarity can be improved
-    // 2. Rewriting strategies: Implement various content rewriting approaches
-    //    - Convert subjective statements to objective, measurable claims
-    //    - Replace vague terms with specific, quantifiable language
-    //    - Add context and constraints to make claims more verifiable
-    // 3. Verification enhancement: Rewrite content to improve verifiability
-    //    - Add specific metrics, criteria, and measurable outcomes
-    //    - Include temporal constraints and scope limitations
-    //    - Provide clear success criteria and validation methods
-    // 4. Language optimization: Improve clarity and precision of language
-    //    - Replace ambiguous terms with precise technical language
-    //    - Eliminate unnecessary complexity while maintaining accuracy
-    //    - Ensure consistent terminology and clear communication
-    // 5. Context preservation: Maintain original intent while improving verifiability
-    //    - Preserve the core meaning and intent of original content
-    //    - Add necessary context without changing fundamental claims
-    //    - Balance specificity with maintainability and readability
+    subjective_terms: Vec<(&'static str, &'static str)>,
+    vague_quantifiers: Vec<&'static str>,
+    improvement_terms: Vec<&'static str>,
 }
 
 impl ContentRewriter {
     fn new() -> Self {
-        Self {}
+        Self {
+            subjective_terms: vec![
+                (
+                    "user-friendly",
+                    "achieves System Usability Scale ≥ 80 and meets WCAG 2.1 AA success criteria",
+                ),
+                (
+                    "intuitive",
+                    "passes moderated usability testing with ≥ 90% task completion within the target workflow",
+                ),
+                (
+                    "easy",
+                    "documents a guided workflow requiring ≤ 2 user decisions with onboarding support",
+                ),
+                (
+                    "simple",
+                    "limits the number of configuration options to an approved checklist with automated validation",
+                ),
+                (
+                    "fast",
+                    "maintains p95 service latency ≤ 200ms under 1k requests per second",
+                ),
+                (
+                    "quick",
+                    "maintains p95 service latency ≤ 200ms under 1k requests per second",
+                ),
+                (
+                    "secure",
+                    "satisfies OWASP ASVS Level 2 with zero critical findings in the latest scan",
+                ),
+                (
+                    "reliable",
+                    "achieves ≥ 99.9% availability with automated recovery playbooks",
+                ),
+                (
+                    "robust",
+                    "passes chaos testing across 1,000 failure simulations without critical outages",
+                ),
+                (
+                    "scalable",
+                    "supports ≥ 1,000 concurrent sessions while CPU utilisation stays below 70%",
+                ),
+            ],
+            vague_quantifiers: vec![
+                "some",
+                "many",
+                "few",
+                "better",
+                "improved",
+                "sufficient",
+                "quickly",
+                "significant",
+                "eventually",
+                "easily",
+            ],
+            improvement_terms: vec![
+                "improve",
+                "improves",
+                "improvement",
+                "increase",
+                "increases",
+                "decrease",
+                "decreases",
+                "optimize",
+                "optimise",
+                "optimum",
+                "enhance",
+                "enhances",
+                "boost",
+                "stabilise",
+            ],
+        }
+    }
+
+    fn enhance_unverifiable_parts(
+        &self,
+        fragments: &mut [UnverifiableContent],
+        context: &ProcessingContext,
+    ) {
+        for fragment in fragments {
+            let rewrite = self.rewrite_fragment(&fragment.content, context);
+            if let Some(rewrite) = rewrite {
+                let combined = match fragment.suggested_rewrite.take() {
+                    Some(existing) => format!("{existing}; {rewrite}"),
+                    None => rewrite,
+                };
+                debug!(
+                    "Generated rewrite guidance for unverifiable fragment '{}': {}",
+                    fragment.content, combined
+                );
+                fragment.suggested_rewrite = Some(combined);
+            } else if fragment.suggested_rewrite.is_none() {
+                fragment.suggested_rewrite = Some(self.default_guidance(context));
+            }
+        }
+    }
+
+    fn rewrite_fragment(&self, fragment: &str, context: &ProcessingContext) -> Option<String> {
+        let normalized = fragment.trim();
+        if normalized.is_empty() {
+            return None;
+        }
+
+        let lower = normalized.to_lowercase();
+        let mut actions: Vec<String> = Vec::new();
+
+        for (term, replacement) in &self.subjective_terms {
+            if lower.contains(term) {
+                let action = format!("replace '{term}' with \"{replacement}\"");
+                if !actions.contains(&action) {
+                    actions.push(action);
+                }
+            }
+        }
+
+        if self.contains_vague_quantifier(&lower) {
+            let guidance = self.quantifier_guidance(context);
+            if !actions.contains(&guidance) {
+                actions.push(guidance);
+            }
+        }
+
+        if self
+            .improvement_terms
+            .iter()
+            .any(|term| lower.contains(term))
+        {
+            let improvement = "document baseline metrics and target delta (e.g., reduce critical error rate to ≤ 1%)".to_string();
+            if !actions.contains(&improvement) {
+                actions.push(improvement);
+            }
+        }
+
+        if lower.contains("should") && !lower.chars().any(|c| c.is_ascii_digit()) {
+            let numeric =
+                "add explicit numeric acceptance criteria (thresholds, time bounds, or counts)"
+                    .to_string();
+            if !actions.contains(&numeric) {
+                actions.push(numeric);
+            }
+        }
+
+        if actions.is_empty() {
+            None
+        } else {
+            Some(format!(
+                "Rewrite as an objective requirement: {}",
+                actions.join("; ")
+            ))
+        }
+    }
+
+    fn contains_vague_quantifier(&self, text: &str) -> bool {
+        text.split_whitespace().any(|word| {
+            let normalized = word
+                .trim_matches(|c: char| !c.is_alphabetic())
+                .to_lowercase();
+            self.vague_quantifiers
+                .iter()
+                .any(|term| *term == normalized.as_str())
+        })
+    }
+
+    fn quantifier_guidance(&self, context: &ProcessingContext) -> String {
+        let context_text = format!(
+            "{} {}",
+            context.domain_hints.join(" ").to_lowercase(),
+            context.surrounding_context.to_lowercase()
+        );
+
+        if [
+            "auth",
+            "authentication",
+            "security",
+            "identity",
+            "encryption",
+        ]
+        .iter()
+        .any(|kw| context_text.contains(kw))
+        {
+            "define security acceptance criteria (e.g., OWASP ASVS Level 2 with zero critical findings)".to_string()
+        } else if ["performance", "latency", "throughput", "scalab", "capacity"]
+            .iter()
+            .any(|kw| context_text.contains(kw))
+        {
+            "set measurable performance targets (e.g., p95 latency ≤ 250ms under 1k RPS and error rate ≤ 0.1%)".to_string()
+        } else if ["ux", "ui", "design", "usability", "interface"]
+            .iter()
+            .any(|kw| context_text.contains(kw))
+        {
+            "tie the expectation to UX metrics (e.g., SUS ≥ 80 and WCAG 2.1 AA conformance)"
+                .to_string()
+        } else if ["reliability", "availability", "uptime", "resilience"]
+            .iter()
+            .any(|kw| context_text.contains(kw))
+        {
+            "state reliability objectives (e.g., availability ≥ 99.9% with automated recovery runbooks)".to_string()
+        } else {
+            "add measurable acceptance criteria (e.g., success rate ≥ 99% with monitored SLIs)"
+                .to_string()
+        }
+    }
+
+    fn default_guidance(&self, context: &ProcessingContext) -> String {
+        format!(
+            "Define measurable acceptance criteria for {}",
+            self.primary_domain(context)
+        )
+    }
+
+    fn primary_domain(&self, context: &ProcessingContext) -> &'static str {
+        let context_text = format!(
+            "{} {}",
+            context.domain_hints.join(" ").to_lowercase(),
+            context.surrounding_context.to_lowercase()
+        );
+
+        if ["auth", "authentication", "security", "identity"]
+            .iter()
+            .any(|kw| context_text.contains(kw))
+        {
+            "authentication"
+        } else if ["payment", "billing", "financial"]
+            .iter()
+            .any(|kw| context_text.contains(kw))
+        {
+            "payments"
+        } else if [
+            "performance",
+            "latency",
+            "throughput",
+            "scaling",
+            "capacity",
+        ]
+        .iter()
+        .any(|kw| context_text.contains(kw))
+        {
+            "performance"
+        } else if ["ux", "ui", "design", "usability", "interface"]
+            .iter()
+            .any(|kw| context_text.contains(kw))
+        {
+            "user experience"
+        } else if ["reliability", "availability", "fault tolerance", "uptime"]
+            .iter()
+            .any(|kw| context_text.contains(kw))
+        {
+            "reliability"
+        } else {
+            "the requirement"
+        }
     }
 }
 

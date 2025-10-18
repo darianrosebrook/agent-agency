@@ -24,9 +24,7 @@ mod tests;
 #[cfg(test)]
 mod multi_modal_verification_tests;
 
-pub use multi_modal_verification::{
-    MultiModalVerificationEngine,
-};
+pub use multi_modal_verification::MultiModalVerificationEngine;
 pub use processor::ClaimExtractionProcessor;
 pub use types::*;
 

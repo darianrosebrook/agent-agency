@@ -19,6 +19,7 @@ fn create_test_context() -> ProcessingContext {
 mod pipeline_integration_tests {
     use super::*;
     use crate::decomposition::DecompositionStage;
+    use crate::qualification::QualificationStage;
 
     #[tokio::test]
     async fn test_full_pipeline_processing() {
@@ -269,5 +270,86 @@ mod pipeline_integration_tests {
         // Should have extracted claims and evidence
         assert!(result.processing_metadata.claims_extracted > 0);
         assert!(result.processing_metadata.evidence_collected > 0);
+    }
+
+    #[tokio::test]
+    async fn clause_splitter_handles_compound_requirements() {
+        let stage = DecompositionStage::new();
+        let mut context = create_test_context();
+        context
+            .domain_hints
+            .extend_from_slice(&["authentication".to_string(), "auditing".to_string()]);
+
+        let sentence = "The authentication service validates JWT tokens, rotates refresh tokens every 24 hours, logs audit events to the ledger, and throttles suspicious clients within 500ms.";
+        let clauses = stage
+            .extract_atomic_claims(sentence, &context)
+            .await
+            .expect("clause extraction");
+
+        assert!(
+            clauses.len() >= 3,
+            "expected multiple atomic claims but found {}",
+            clauses.len()
+        );
+        assert!(
+            clauses
+                .iter()
+                .any(|c| c.claim_text.to_lowercase().contains("audit")),
+            "expected an audit-related clause to be extracted"
+        );
+    }
+
+    #[tokio::test]
+    async fn qualification_rewriter_provides_actionable_guidance() {
+        let stage = QualificationStage::new();
+        let mut context = create_test_context();
+        context.domain_hints = vec!["ux".to_string(), "accessibility".to_string()];
+
+        let sentence =
+            "The interface should be user-friendly, feel intuitive, and respond quickly to user input.";
+        let assessment = stage
+            .detect_verifiable_content(sentence, &context)
+            .await
+            .expect("qualification assessment");
+
+        assert!(
+            !assessment.unverifiable_parts.is_empty(),
+            "expected unverifiable fragments to be detected"
+        );
+
+        let suggestion = assessment
+            .unverifiable_parts
+            .iter()
+            .filter_map(|fragment| fragment.suggested_rewrite.as_ref())
+            .find(|rewrite| rewrite.contains("objective requirement"))
+            .expect("expected actionable rewrite guidance");
+
+        assert!(
+            suggestion.contains("SUS")
+                || suggestion.contains("WCAG")
+                || suggestion.contains("numeric acceptance"),
+            "expected rewrite to include measurable guidance, got: {suggestion}"
+        );
+    }
+
+    #[tokio::test]
+    async fn pipeline_records_disambiguation_metrics() {
+        let processor = ClaimExtractionAndVerificationProcessor::new();
+        let mut context = create_test_context();
+        context
+            .domain_hints
+            .extend_from_slice(&["authentication".to_string()]);
+
+        let sentence =
+            "It should validate OAuth tokens and it must rotate credentials every 90 days.";
+        let result = processor
+            .process_sentence(sentence, &context)
+            .await
+            .expect("pipeline execution");
+
+        assert!(
+            result.processing_metadata.ambiguities_resolved > 0,
+            "expected ambiguities_resolved metadata to be incremented"
+        );
     }
 }

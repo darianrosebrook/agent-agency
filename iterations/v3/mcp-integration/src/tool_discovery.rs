@@ -261,24 +261,37 @@ impl ToolDiscovery {
 
         // Permission validation: check for dangerous capability combinations
         let has_network = tool.capabilities.contains(&ToolCapability::NetworkAccess);
-        let has_command = tool.capabilities.contains(&ToolCapability::CommandExecution);
-        let has_file_system = tool.capabilities.contains(&ToolCapability::FileSystemAccess);
+        let has_command = tool
+            .capabilities
+            .contains(&ToolCapability::CommandExecution);
+        let has_file_system = tool
+            .capabilities
+            .contains(&ToolCapability::FileSystemAccess);
 
         if has_network && has_command {
             warnings.push("tool has both network and command execution capabilities - ensure proper sandboxing".into());
         }
 
-        if has_command && !tool.metadata.get("sandboxed").map_or(false, |v| v.as_bool().unwrap_or(false)) {
+        if has_command
+            && !tool
+                .metadata
+                .get("sandboxed")
+                .map_or(false, |v| v.as_bool().unwrap_or(false))
+        {
             errors.push("command execution capability requires sandboxed=true in metadata".into());
         }
 
         if has_file_system {
-            let allowed_paths: Vec<String> = tool.metadata.get("allowed_paths")
+            let allowed_paths: Vec<String> = tool
+                .metadata
+                .get("allowed_paths")
                 .and_then(|p| serde_json::from_value(p.clone()).ok())
                 .unwrap_or_default();
 
             if allowed_paths.is_empty() {
-                warnings.push("filesystem access without restricted paths - consider limiting scope".into());
+                warnings.push(
+                    "filesystem access without restricted paths - consider limiting scope".into(),
+                );
             }
         }
 
@@ -291,7 +304,10 @@ impl ToolDiscovery {
                     }
                 }
                 Err(e) => {
-                    warnings.push(format!("health check error: {} - may indicate connectivity issues", e));
+                    warnings.push(format!(
+                        "health check error: {} - may indicate connectivity issues",
+                        e
+                    ));
                 }
             }
         }
@@ -316,8 +332,10 @@ impl ToolDiscovery {
         if endpoint.starts_with("http") {
             match timeout(
                 Duration::from_secs(self.config.health_check_timeout_seconds as u64),
-                reqwest::get(endpoint)
-            ).await {
+                reqwest::get(endpoint),
+            )
+            .await
+            {
                 Ok(Ok(response)) => {
                     return Ok(response.status().is_success());
                 }
@@ -353,13 +371,15 @@ impl ToolDiscovery {
 
             // Apply tag filters (tool must have ALL specified tags)
             if let Some(tags) = tag_filters {
-                let tool_tags: Vec<String> = tool.metadata.get("tags")
+                let tool_tags: Vec<String> = tool
+                    .metadata
+                    .get("tags")
                     .and_then(|t| serde_json::from_value(t.clone()).ok())
                     .unwrap_or_default();
 
-                let has_all_tags = tags.iter().all(|required_tag| {
-                    tool_tags.contains(required_tag)
-                });
+                let has_all_tags = tags
+                    .iter()
+                    .all(|required_tag| tool_tags.contains(required_tag));
 
                 if !has_all_tags {
                     continue;
@@ -368,7 +388,9 @@ impl ToolDiscovery {
 
             // Apply risk tier filter
             if let Some(required_tier) = &risk_tier_filter {
-                let tool_tier: RiskTier = tool.metadata.get("risk_tier")
+                let tool_tier: RiskTier = tool
+                    .metadata
+                    .get("risk_tier")
                     .and_then(|t| serde_json::from_value(t.clone()).ok())
                     .unwrap_or(RiskTier::Medium);
 
@@ -400,42 +422,49 @@ impl ToolDiscovery {
             return all_tools;
         }
 
-        all_tools.into_iter().filter(|tool| {
-            // Apply language filter
-            if let Some(lang) = language_filter {
-                if !tool.metadata.get("language").map_or(false, |l| l == lang) {
-                    return false;
+        all_tools
+            .into_iter()
+            .filter(|tool| {
+                // Apply language filter
+                if let Some(lang) = language_filter {
+                    if !tool.metadata.get("language").map_or(false, |l| l == lang) {
+                        return false;
+                    }
                 }
-            }
 
-            // Apply tag filters
-            if let Some(tags) = tag_filters {
-                let tool_tags: Vec<String> = tool.metadata.get("tags")
-                    .and_then(|t| serde_json::from_value(t.clone()).ok())
-                    .unwrap_or_default();
+                // Apply tag filters
+                if let Some(tags) = tag_filters {
+                    let tool_tags: Vec<String> = tool
+                        .metadata
+                        .get("tags")
+                        .and_then(|t| serde_json::from_value(t.clone()).ok())
+                        .unwrap_or_default();
 
-                let has_all_tags = tags.iter().all(|required_tag| {
-                    tool_tags.contains(required_tag)
-                });
+                    let has_all_tags = tags
+                        .iter()
+                        .all(|required_tag| tool_tags.contains(required_tag));
 
-                if !has_all_tags {
-                    return false;
+                    if !has_all_tags {
+                        return false;
+                    }
                 }
-            }
 
-            // Apply risk tier filter
-            if let Some(required_tier) = &risk_tier_filter {
-                let tool_tier: RiskTier = tool.metadata.get("risk_tier")
-                    .and_then(|t| serde_json::from_value(t.clone()).ok())
-                    .unwrap_or(RiskTier::Medium);
+                // Apply risk tier filter
+                if let Some(required_tier) = &risk_tier_filter {
+                    let tool_tier: RiskTier = tool
+                        .metadata
+                        .get("risk_tier")
+                        .and_then(|t| serde_json::from_value(t.clone()).ok())
+                        .unwrap_or(RiskTier::Medium);
 
-                if tool_tier != *required_tier {
-                    return false;
+                    if tool_tier != *required_tier {
+                        return false;
+                    }
                 }
-            }
 
-            true
-        }).collect()
+                true
+            })
+            .collect()
     }
 
     /// Get discovered tools

@@ -105,6 +105,14 @@ pub struct JudgeEvaluation {
     pub tokens_used: Option<i32>,
     pub confidence: Option<f32>,
     pub created_at: DateTime<Utc>,
+    pub evaluation_score: Option<f32>,
+    pub confidence_score: Option<f32>,
+    pub reasoning: Option<String>,
+    pub evidence_used: Option<serde_json::Value>,
+    pub evaluation_metadata: Option<serde_json::Value>,
+    pub verdict_decision: Option<String>,
+    pub risk_assessment: Option<serde_json::Value>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 /// Debate session model from database
@@ -134,6 +142,12 @@ pub struct KnowledgeEntry {
     pub embedding: Option<Vec<f32>>, // pgvector as Vec<f32>
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub content_type: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+    pub embedding_vector: Option<Vec<f32>>,
+    pub access_level: Option<String>,
+    pub version: Option<String>,
+    pub parent_id: Option<Uuid>,
 }
 
 /// Performance metric model from database
@@ -423,8 +437,10 @@ pub struct KnowledgeFilters {
 /// Statistics and analytics types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CouncilMetrics {
+    pub date: DateTime<Utc>,
     pub total_verdicts: i64,
     pub avg_consensus_score: Option<f64>,
+    pub avg_debate_rounds: Option<f64>,
     pub accepted_count: i64,
     pub rejected_count: i64,
     pub modification_required_count: i64,
@@ -433,18 +449,24 @@ pub struct CouncilMetrics {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JudgePerformance {
+    pub judge_id: Uuid,
     pub judge_name: String,
     pub model_name: String,
     pub total_evaluations: i64,
     pub avg_evaluation_time_ms: Option<f64>,
     pub avg_confidence: Option<f64>,
+    pub avg_evaluation_score: Option<f32>,
+    pub avg_confidence_score: Option<f32>,
     pub pass_count: i64,
     pub fail_count: i64,
     pub uncertain_count: i64,
+    pub approved_count: Option<i32>,
+    pub rejected_count: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkerPerformance {
+    pub worker_id: Uuid,
     pub worker_name: String,
     pub worker_type: String,
     pub specialty: Option<String>,
@@ -461,6 +483,13 @@ pub struct TaskExecutionSummary {
     pub title: String,
     pub status: String,
     pub risk_tier: String,
+    pub total_executions: i64,
+    pub completed_count: i64,
+    pub failed_count: i64,
+    pub running_count: i64,
+    pub avg_execution_time_ms: Option<f64>,
+    pub first_execution: Option<DateTime<Utc>>,
+    pub last_completion: Option<DateTime<Utc>>,
     pub executions: serde_json::Value,
     pub verdicts: serde_json::Value,
     pub compliance: serde_json::Value,

@@ -16,10 +16,29 @@ pub mod logging;
 pub mod metrics;
 pub mod slo;
 
-pub use agent_telemetry::*;
-pub use alerts::*;
-pub use analytics::*;
-pub use analytics_dashboard::*;
+// Re-export specific types to avoid conflicts
+pub use agent_telemetry::{
+    AgentPerformanceMetrics, AgentPerformanceTracker, AgentTelemetryCollector, AgentType,
+    BusinessMetrics, CoordinationMetrics,
+};
+pub use alerts::{
+    Alert, AlertCondition, AlertManager, AlertRule, AlertSeverity as AlertSeverityType,
+    AlertStatus as AlertStatusType, AlertType,
+};
+pub use analytics::{
+    AgentPerformanceSnapshot, AnalyticsConfig, AnalyticsEngine, AnomalyDetectionResult,
+    AnomalySeverity, AnomalyType, BusinessMetricsSnapshot, CoordinationMetricsSnapshot,
+    EffortLevel, HistoricalData, OptimizationRecommendation, OptimizationType, PredictionType,
+    PredictiveModelResult, PriorityLevel, SystemHealthSnapshot, TrendAnalysis, TrendDirection,
+};
+pub use analytics_dashboard::{
+    AnalyticsAlertPreferences, AnalyticsDashboard, AnalyticsDashboardConfig,
+    AnalyticsDashboardData, AnalyticsInsight, AnalyticsPreferences, AnalyticsRealTimeUpdate,
+    AnalyticsSession, AnalyticsSubscriptionType, AnalyticsSystemOverview, AnomalyDetectionSummary,
+    AnomalyUpdates, ChartConfig, ChartType, DataPoint, InsightSeverity, InsightType,
+    OptimizationUpdates, PredictionUpdates, PredictiveInsightsSummary, TrendAnalysisSummary,
+    TrendUpdates, VisualData,
+};
 pub use dashboard::*;
 pub use logging::*;
 pub use metrics::*;

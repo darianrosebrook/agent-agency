@@ -5,7 +5,7 @@
 
 use crate::types::*;
 use anyhow::Result;
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::path::Path;
 use tracing::debug;
 use uuid::Uuid;
@@ -62,13 +62,18 @@ impl DecompositionStage {
                 .extract_fallback_subject(context)
                 .or_else(|| self.extract_context_entities(context).first().cloned())
                 .unwrap_or_default();
+            let mut last_action: Option<String> = None;
 
             for (compound_index, compound_claim) in compound_claims.iter().enumerate() {
                 let clauses = self.split_into_clauses(compound_claim);
                 let mut clause_offset = 0;
 
                 for clause in &clauses {
-                    let normalized_clause = self.normalize_clause(clause);
+                    let mut normalized_clause = self.normalize_clause(clause);
+
+                    if normalized_clause.is_empty() {
+                        continue;
+                    }
 
                     // Extract or propagate subject (ported from V2 logic)
                     let subject_candidate = self.extract_subject_candidate(&normalized_clause);
@@ -87,7 +92,28 @@ impl DecompositionStage {
                         last_subject.clone()
                     };
 
+                    if !self.has_subject_verb_structure(&normalized_clause) {
+                        if let Some(ref action) = last_action {
+                            if !last_subject.is_empty() {
+                                let clause_body = normalized_clause.trim();
+                                let combined = if clause_body
+                                    .to_lowercase()
+                                    .starts_with(&last_subject.to_lowercase())
+                                {
+                                    format!("{} {}", action, clause_body)
+                                } else {
+                                    format!("{} {} {}", last_subject, action, clause_body)
+                                };
+                                normalized_clause = combined;
+                            }
+                        }
+                    }
+
                     if normalized_clause.len() < 8 {
+                        continue;
+                    }
+
+                    if !self.has_subject_verb_structure(&normalized_clause) {
                         continue;
                     }
 
@@ -125,6 +151,9 @@ impl DecompositionStage {
                     };
 
                     all_claims.push(claim);
+                    if let Some(action) = self.extract_main_verb(&normalized_clause) {
+                        last_action = Some(action);
+                    }
                     clause_offset += 1;
                 }
             }
@@ -466,12 +495,32 @@ impl ContextBracketAdder {
             push_bracket(format!("[constraint: {}]", limit));
         }
 
-        // Relevance guard: keep top entries prioritising spec/domain/timeframe first.
-        if brackets.len() > 6 {
-            brackets.truncate(6);
+        Ok(self.prioritize_brackets(brackets))
+    }
+
+    fn prioritize_brackets(&self, mut brackets: Vec<String>) -> Vec<String> {
+        if brackets.len() <= 6 {
+            return brackets;
         }
 
-        Ok(brackets)
+        brackets.sort_by_key(|b| self.bracket_priority(b));
+        brackets.truncate(6);
+        brackets
+    }
+
+    fn bracket_priority(&self, bracket: &str) -> u8 {
+        let lower = bracket.to_lowercase();
+        match () {
+            _ if lower.starts_with("[spec:") => 0,
+            _ if lower.starts_with("[timeframe:") => 1,
+            _ if lower.starts_with("[environment:") => 2,
+            _ if lower.starts_with("[verification:") => 3,
+            _ if lower.starts_with("[entity:") => 4,
+            _ if lower.starts_with("[scope:") => 5,
+            _ if lower.starts_with("[domain:") => 6,
+            _ if lower.starts_with("[source:") => 7,
+            _ => 8,
+        }
     }
 
     fn extract_timeframe(&self, text: &str) -> Option<String> {
@@ -553,7 +602,10 @@ impl ContextBracketAdder {
 
     fn detect_verification_context(&self, claim: &str, domain_hints: &[String]) -> Option<String> {
         let lower = claim.to_lowercase();
-        if lower.contains("performance") || lower.contains("latency") {
+        if lower.contains("performance")
+            || lower.contains("latency")
+            || self.contains_latency_constraint(&lower)
+        {
             Some("performance-benchmarks".to_string())
         } else if lower.contains("security") || lower.contains("vulnerability") {
             Some("security-audit".to_string())
@@ -567,6 +619,12 @@ impl ContextBracketAdder {
         } else {
             None
         }
+    }
+
+    fn contains_latency_constraint(&self, text: &str) -> bool {
+        regex::Regex::new(r"\b\d+(?:\.\d+)?\s?(?:ms|milliseconds|s|seconds)\b")
+            .unwrap()
+            .is_match(text)
     }
 
     fn expand_technical_terms(&self, claim: &str) -> Vec<String> {
@@ -723,26 +781,276 @@ impl DecompositionStage {
 
     /// Split a compound claim into clauses
     fn split_into_clauses(&self, claim: &str) -> Vec<String> {
-        // 1. Clause identification: Identify and extract individual clauses from compound claims
-        let clause_boundaries = self.identify_clause_boundaries(claim);
         let clause_types = self.analyze_clause_types(claim);
         let clause_structures = self.parse_clause_structures(claim);
-        
-        // 2. Clause splitting: Split compound claims into individual clauses
-        let individual_clauses = self.split_compound_claims(claim, &clause_boundaries);
-        let validated_clauses = self.validate_clause_splitting(&individual_clauses);
+
+        let mut clauses = self.advanced_clause_split(claim);
+        if clauses.is_empty() {
+            clauses.push(claim.to_string());
+        }
+
+        let validated_clauses = self.validate_clause_splitting(&clauses);
         let verified_clauses = self.verify_clause_integrity(&validated_clauses);
-        
+
+        debug!(
+            "Clause analysis for '{}': {:?}, {:?} => {} clauses",
+            claim,
+            clause_types,
+            clause_structures,
+            verified_clauses.len()
+        );
+
         verified_clauses
-        // 3. Clause normalization: Normalize and standardize individual clauses
-        //    - Normalize clause format and structure
-        //    - Handle clause standardization and consistency
-        //    - Implement proper clause normalization validation
-        // 4. Clause optimization: Optimize clause splitting performance and accuracy
-        //    - Implement efficient clause splitting algorithms
-        //    - Handle large-scale clause splitting operations
-        //    - Optimize clause splitting quality and reliability
-        vec![claim.to_string()]
+    }
+
+    fn advanced_clause_split(&self, claim: &str) -> Vec<String> {
+        const MIN_FRAGMENT_CHARS: usize = 8;
+        const CLAUSE_CONNECTORS: [&str; 16] = [
+            ", and then ",
+            ", or else ",
+            ", but also ",
+            ", and ",
+            ", or ",
+            "; and ",
+            "; or ",
+            " and then ",
+            " but then ",
+            " however ",
+            " meanwhile ",
+            " in addition ",
+            " additionally ",
+            " whereas ",
+            " but ",
+            " and ",
+        ];
+
+        let trimmed = claim.trim();
+        if trimmed.is_empty() {
+            return Vec::new();
+        }
+
+        let mut fragments = VecDeque::new();
+        let mut results = Vec::new();
+        fragments.push_back(trimmed.to_string());
+
+        while let Some(fragment) = fragments.pop_front() {
+            let fragment = fragment.trim();
+            if fragment.is_empty() {
+                continue;
+            }
+
+            let delimiter_splits = Self::split_on_delimiters(fragment, &[';', '.']);
+            if delimiter_splits.len() > 1 {
+                for part in delimiter_splits.into_iter().rev() {
+                    fragments.push_front(part);
+                }
+                continue;
+            }
+
+            if fragment.len() < MIN_FRAGMENT_CHARS {
+                Self::append_fragment(&mut results, fragment);
+                continue;
+            }
+
+            if let Some((split_idx, token_len)) =
+                Self::find_split_position(fragment, &CLAUSE_CONNECTORS)
+            {
+                let left = fragment[..split_idx].trim();
+                let right = fragment[split_idx + token_len..].trim();
+                if !right.is_empty() {
+                    fragments.push_front(right.to_string());
+                }
+                if !left.is_empty() {
+                    fragments.push_front(left.to_string());
+                }
+                continue;
+            }
+
+            let colon_splits = Self::split_on_delimiters(fragment, &[':']);
+            if colon_splits.len() > 1 {
+                for part in colon_splits.into_iter().rev() {
+                    fragments.push_front(part);
+                }
+                continue;
+            }
+
+            Self::append_fragment(&mut results, fragment);
+        }
+
+        Self::dedupe_and_preserve_order(results)
+    }
+
+    fn split_on_delimiters(input: &str, delimiters: &[char]) -> Vec<String> {
+        let mut parts = Vec::new();
+        let mut current = String::new();
+        let mut nesting_level = 0usize;
+        let mut in_quotes = false;
+
+        for ch in input.chars() {
+            match ch {
+                '"' => {
+                    in_quotes = !in_quotes;
+                    current.push(ch);
+                }
+                '(' | '[' | '{' => {
+                    nesting_level += 1;
+                    current.push(ch);
+                }
+                ')' | ']' | '}' => {
+                    if nesting_level > 0 {
+                        nesting_level -= 1;
+                    }
+                    current.push(ch);
+                }
+                _ if delimiters.contains(&ch) && nesting_level == 0 && !in_quotes => {
+                    let trimmed = current.trim();
+                    if !trimmed.is_empty() {
+                        parts.push(trimmed.to_string());
+                    }
+                    current.clear();
+                }
+                _ => current.push(ch),
+            }
+        }
+
+        if !current.trim().is_empty() {
+            parts.push(current.trim().to_string());
+        }
+
+        parts
+    }
+
+    fn find_split_position(input: &str, connectors: &[&str]) -> Option<(usize, usize)> {
+        let lower = input.to_lowercase();
+        let chars: Vec<(usize, char)> = input.char_indices().collect();
+        let mut nesting_level = 0usize;
+        let mut in_quotes = false;
+        let connectors_lower: Vec<String> = connectors.iter().map(|c| c.to_lowercase()).collect();
+
+        let mut idx = 0;
+        while idx < chars.len() {
+            let (byte_idx, ch) = chars[idx];
+            match ch {
+                '"' => {
+                    in_quotes = !in_quotes;
+                    idx += 1;
+                    continue;
+                }
+                '(' | '[' | '{' => nesting_level += 1,
+                ')' | ']' | '}' => {
+                    if nesting_level > 0 {
+                        nesting_level -= 1;
+                    }
+                }
+                _ => {}
+            }
+
+            if nesting_level == 0 && !in_quotes {
+                for (token, lower_token) in connectors.iter().zip(connectors_lower.iter()) {
+                    if lower[byte_idx..].starts_with(lower_token) {
+                        let left = input[..byte_idx].trim();
+                        let right_start = byte_idx + token.len();
+                        if right_start > input.len() {
+                            continue;
+                        }
+                        let right = input[right_start..].trim();
+                        if Self::looks_like_clause(left) && Self::looks_like_clause(right) {
+                            return Some((byte_idx, token.len()));
+                        }
+                    }
+                }
+            }
+
+            idx += 1;
+        }
+
+        None
+    }
+
+    fn looks_like_clause(text: &str) -> bool {
+        const MIN_WORDS: usize = 3;
+        let words: Vec<&str> = text
+            .split_whitespace()
+            .map(|word| word.trim_matches(|c: char| !c.is_alphabetic()))
+            .filter(|segment| !segment.is_empty())
+            .collect();
+
+        if words.len() < MIN_WORDS {
+            return false;
+        }
+
+        let verbs = [
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "must",
+            "should",
+            "shall",
+            "ensure",
+            "ensures",
+            "provide",
+            "provides",
+            "support",
+            "supports",
+            "include",
+            "includes",
+            "implement",
+            "implements",
+            "validate",
+            "validates",
+            "handle",
+            "handles",
+            "process",
+            "processes",
+            "store",
+            "stores",
+            "collect",
+            "collects",
+            "log",
+            "logs",
+            "record",
+            "records",
+            "monitor",
+            "monitors",
+        ];
+
+        words.iter().any(|word| {
+            let lower = word.to_lowercase();
+            verbs.contains(&lower.as_str()) || lower.ends_with("ed") || lower.ends_with("ing")
+        })
+    }
+
+    fn append_fragment(clauses: &mut Vec<String>, fragment: &str) {
+        let trimmed = fragment.trim();
+        if trimmed.is_empty() {
+            return;
+        }
+
+        if trimmed.len() < 12 {
+            if let Some(last) = clauses.last_mut() {
+                last.push(' ');
+                last.push_str(trimmed);
+                return;
+            }
+        }
+
+        clauses.push(trimmed.to_string());
+    }
+
+    fn dedupe_and_preserve_order(fragments: Vec<String>) -> Vec<String> {
+        let mut seen = HashSet::new();
+        let mut ordered = Vec::new();
+
+        for fragment in fragments {
+            let key = fragment.to_lowercase();
+            if seen.insert(key) {
+                ordered.push(fragment);
+            }
+        }
+
+        ordered
     }
 
     /// Normalize a clause for processing
@@ -948,4 +1256,200 @@ impl DecompositionStage {
             VerifiabilityLevel::Unverifiable
         }
     }
+
+    // Complex clause splitting implementation methods
+    fn analyze_clause_types(&self, claim: &str) -> Vec<ClauseType> {
+        // Analyze different clause types in the claim
+        let mut clause_types = Vec::new();
+
+        if claim.contains("if") || claim.contains("when") || claim.contains("unless") {
+            clause_types.push(ClauseType::Conditional);
+        }
+        if claim.contains("because") || claim.contains("since") || claim.contains("due to") {
+            clause_types.push(ClauseType::Causal);
+        }
+        if claim.contains("although") || claim.contains("despite") || claim.contains("while") {
+            clause_types.push(ClauseType::Concessive);
+        }
+        if claim.contains("that") || claim.contains("which") || claim.contains("who") {
+            clause_types.push(ClauseType::Relative);
+        }
+
+        if clause_types.is_empty() {
+            clause_types.push(ClauseType::Independent);
+        }
+
+        clause_types
+    }
+
+    fn parse_clause_structures(&self, claim: &str) -> Vec<ClauseStructure> {
+        // Parse clause structures and dependencies
+        let mut structures = Vec::new();
+
+        // Simple structure analysis based on sentence patterns
+        if claim.contains(",") {
+            structures.push(ClauseStructure::Compound);
+        }
+        if claim.contains(";") {
+            structures.push(ClauseStructure::Complex);
+        }
+        if claim.contains(":") {
+            structures.push(ClauseStructure::Explanatory);
+        }
+
+        if structures.is_empty() {
+            structures.push(ClauseStructure::Simple);
+        }
+
+        structures
+    }
+
+    fn validate_clause_splitting(&self, clauses: &[String]) -> Vec<String> {
+        // Validate that clause splitting produced meaningful results
+        let mut validated_clauses = Vec::new();
+
+        for clause in clauses {
+            let trimmed = clause.trim();
+            if !trimmed.is_empty() && trimmed.len() > 3 {
+                // Check if clause has at least a subject and verb
+                if self.has_subject_verb_structure(trimmed) {
+                    validated_clauses.push(trimmed.to_string());
+                }
+            }
+        }
+
+        if validated_clauses.is_empty() {
+            // Fallback to original if no valid clauses found
+            validated_clauses.push(clauses.join(" "));
+        }
+
+        validated_clauses
+    }
+
+    fn verify_clause_integrity(&self, clauses: &[String]) -> Vec<String> {
+        // Verify that clauses maintain semantic integrity
+        let mut verified_clauses = Vec::new();
+
+        for clause in clauses {
+            // Check for semantic completeness
+            if self.is_semantically_complete(clause) {
+                verified_clauses.push(clause.clone());
+            } else {
+                // Try to repair incomplete clauses
+                if let Some(repaired) = self.repair_incomplete_clause(clause) {
+                    verified_clauses.push(repaired);
+                }
+            }
+        }
+
+        verified_clauses
+    }
+
+    fn has_subject_verb_structure(&self, clause: &str) -> bool {
+        // Simple check for subject-verb structure
+        let words: Vec<&str> = clause.split_whitespace().collect();
+        if words.len() < 2 {
+            return false;
+        }
+
+        words.iter().skip(1).any(|word| self.looks_like_verb(word))
+    }
+
+    fn is_semantically_complete(&self, clause: &str) -> bool {
+        // Check if clause is semantically complete
+        !clause.trim().is_empty()
+            && clause.len() > 5
+            && !clause.ends_with("and")
+            && !clause.ends_with("or")
+            && !clause.ends_with("but")
+    }
+
+    fn repair_incomplete_clause(&self, clause: &str) -> Option<String> {
+        // Attempt to repair incomplete clauses
+        let trimmed = clause.trim();
+        if trimmed.ends_with("and") || trimmed.ends_with("or") || trimmed.ends_with("but") {
+            Some(trimmed[..trimmed.len() - 3].trim().to_string())
+        } else if trimmed.len() < 5 {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    }
+
+    fn looks_like_verb(&self, word: &str) -> bool {
+        let trimmed = word
+            .trim_matches(|c: char| !c.is_alphanumeric())
+            .to_lowercase();
+        if trimmed.is_empty() {
+            return false;
+        }
+
+        const COMMON_VERBS: &[&str] = &[
+            "is",
+            "are",
+            "was",
+            "were",
+            "has",
+            "have",
+            "had",
+            "will",
+            "can",
+            "should",
+            "must",
+            "uses",
+            "use",
+            "handles",
+            "supports",
+            "requires",
+            "provides",
+            "manages",
+            "processes",
+            "stores",
+            "caches",
+            "ensures",
+            "runs",
+            "scales",
+            "allocates",
+            "returns",
+            "delivers",
+            "monitors",
+            "checks",
+        ];
+
+        if COMMON_VERBS.contains(&trimmed.as_str()) {
+            return true;
+        }
+
+        trimmed.ends_with("ed") || trimmed.ends_with("ing") || trimmed.ends_with('s')
+    }
+
+    fn extract_main_verb(&self, clause: &str) -> Option<String> {
+        clause
+            .split_whitespace()
+            .find(|word| self.looks_like_verb(word))
+            .map(|word| {
+                word.trim_matches(|c: char| !c.is_alphanumeric())
+                    .to_lowercase()
+            })
+    }
+}
+
+// Supporting types for clause splitting
+#[derive(Debug, Clone)]
+enum ClauseType {
+    Independent,
+    Dependent,
+    Conditional,
+    Causal,
+    Concessive,
+    Relative,
+}
+
+#[derive(Debug, Clone)]
+enum ClauseStructure {
+    Simple,
+    Compound,
+    Complex,
+    CompoundComplex,
+    Explanatory,
 }

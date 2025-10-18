@@ -719,9 +719,12 @@ impl ConsensusCoordinator {
             judge_performance: JudgePerformanceSnapshot {
                 judge_stats: metrics.judge_performance.clone(),
                 total_judges: metrics.judge_performance.len() as u64,
-                average_confidence: metrics.judge_performance.values()
+                average_confidence: metrics
+                    .judge_performance
+                    .values()
                     .map(|stats| stats.average_confidence)
-                    .sum::<f32>() / metrics.judge_performance.len() as f32,
+                    .sum::<f32>()
+                    / metrics.judge_performance.len() as f32,
             },
 
             // System health indicators

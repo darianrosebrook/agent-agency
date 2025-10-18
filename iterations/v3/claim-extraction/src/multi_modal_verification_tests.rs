@@ -4,9 +4,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::multi_modal_verification::{
-        MultiModalVerificationEngine,
-    };
+    use crate::multi_modal_verification::MultiModalVerificationEngine;
     use crate::types::*;
     use chrono::Utc;
     use uuid::Uuid;
@@ -27,7 +25,6 @@ mod tests {
             contextual_brackets: vec![],
         }
     }
-
 
     /// Test complete multi-modal verification engine
     #[tokio::test]
@@ -171,7 +168,6 @@ mod tests {
         // Test overall confidence bounds
         assert!(verified_claim.overall_confidence >= 0.0);
         assert!(verified_claim.overall_confidence <= 1.0);
-
     }
 
     /// Test edge cases and error handling
@@ -200,5 +196,4 @@ mod tests {
         assert_eq!(results.verified_claims.len(), 1);
         assert!(results.verified_claims[0].overall_confidence > 0.0);
     }
-
 }

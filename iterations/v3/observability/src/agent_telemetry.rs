@@ -305,7 +305,12 @@ impl SystemResourceMonitor {
     }
 
     /// Update system metrics
-    pub fn update_metrics(&mut self, current_load: u32, memory_usage_mb: f64, cpu_usage_percent: f64) {
+    pub fn update_metrics(
+        &mut self,
+        current_load: u32,
+        memory_usage_mb: f64,
+        cpu_usage_percent: f64,
+    ) {
         self.current_load = current_load;
         self.memory_usage_mb = memory_usage_mb;
         self.cpu_usage_percent = cpu_usage_percent;
@@ -445,7 +450,10 @@ impl AgentTelemetryCollector {
     }
 
     /// Record agent performance metrics
-    pub async fn record_agent_metrics(&self, metrics: AgentPerformanceMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn record_agent_metrics(
+        &self,
+        metrics: AgentPerformanceMetrics,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut agent_metrics = self.agent_metrics.write().await;
         agent_metrics.insert(metrics.agent_id.clone(), metrics);
         Ok(())
@@ -464,7 +472,10 @@ impl AgentTelemetryCollector {
     }
 
     /// Update coordination metrics
-    pub async fn update_coordination_metrics(&self, metrics: CoordinationMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn update_coordination_metrics(
+        &self,
+        metrics: CoordinationMetrics,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut coordination_metrics = self.coordination_metrics.write().await;
         *coordination_metrics = metrics;
         Ok(())
@@ -477,7 +488,10 @@ impl AgentTelemetryCollector {
     }
 
     /// Update business metrics
-    pub async fn update_business_metrics(&self, metrics: BusinessMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn update_business_metrics(
+        &self,
+        metrics: BusinessMetrics,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut business_metrics = self.business_metrics.write().await;
         *business_metrics = metrics;
         Ok(())
@@ -490,7 +504,10 @@ impl AgentTelemetryCollector {
     }
 
     /// Add system alert
-    pub async fn add_alert(&self, alert: SystemAlert) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn add_alert(
+        &self,
+        alert: SystemAlert,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut alerts = self.alerts.write().await;
         alerts.push(alert);
         Ok(())
@@ -499,7 +516,8 @@ impl AgentTelemetryCollector {
     /// Get active alerts
     pub async fn get_active_alerts(&self) -> Vec<SystemAlert> {
         let alerts = self.alerts.read().await;
-        alerts.iter()
+        alerts
+            .iter()
             .filter(|alert| matches!(alert.status, AlertStatus::Active))
             .cloned()
             .collect()
@@ -508,11 +526,11 @@ impl AgentTelemetryCollector {
     /// Update system dashboard
     pub async fn update_dashboard(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut dashboard = self.dashboard_data.write().await;
-        
+
         // Collect current agent statuses
         let agent_metrics = self.agent_metrics.read().await;
         let mut active_agents = Vec::new();
-        
+
         for (agent_id, metrics) in agent_metrics.iter() {
             let status = if metrics.current_load > 0 {
                 AgentStatusType::Busy
@@ -538,12 +556,11 @@ impl AgentTelemetryCollector {
         // Update dashboard data
         dashboard.active_agents = active_agents;
         dashboard.last_updated = Utc::now();
-        
+
         // Calculate system health
-        let avg_health_score: f64 = agent_metrics.values()
-            .map(|m| m.health_score)
-            .sum::<f64>() / agent_metrics.len() as f64;
-        
+        let avg_health_score: f64 = agent_metrics.values().map(|m| m.health_score).sum::<f64>()
+            / agent_metrics.len() as f64;
+
         dashboard.system_health = if avg_health_score > 0.9 {
             SystemHealthStatus::Healthy
         } else if avg_health_score > 0.7 {
@@ -565,46 +582,47 @@ impl AgentTelemetryCollector {
     pub async fn start_collection(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let collector = self.clone();
         let config = self.config.clone();
-        
+
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(
-                std::time::Duration::from_secs(config.collection_interval_seconds)
-            );
-            
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(
+                config.collection_interval_seconds,
+            ));
+
             loop {
                 interval.tick().await;
-                
+
                 // Update dashboard
                 if let Err(e) = collector.update_dashboard().await {
                     eprintln!("Failed to update dashboard: {}", e);
                 }
-                
+
                 // Clean up old data
                 if let Err(e) = collector.cleanup_old_data().await {
                     eprintln!("Failed to cleanup old data: {}", e);
                 }
             }
         });
-        
+
         Ok(())
     }
 
     /// Clean up old performance data and alerts
     async fn cleanup_old_data(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let cutoff_time = Utc::now() - chrono::Duration::hours(self.config.history_retention_hours as i64);
-        
+        let cutoff_time =
+            Utc::now() - chrono::Duration::hours(self.config.history_retention_hours as i64);
+
         // Clean up performance history
         {
             let mut history = self.performance_history.write().await;
             history.retain(|point| point.timestamp > cutoff_time);
         }
-        
+
         // Clean up old alerts
         {
             let mut alerts = self.alerts.write().await;
             alerts.retain(|alert| alert.timestamp > cutoff_time);
         }
-        
+
         Ok(())
     }
 }
@@ -644,7 +662,11 @@ pub struct AgentPerformanceTracker {
 
 impl AgentPerformanceTracker {
     /// Create a new agent performance tracker
-    pub fn new(agent_id: String, agent_type: AgentType, collector: Arc<AgentTelemetryCollector>) -> Self {
+    pub fn new(
+        agent_id: String,
+        agent_type: AgentType,
+        collector: Arc<AgentTelemetryCollector>,
+    ) -> Self {
         Self {
             agent_id,
             agent_type,
@@ -657,29 +679,35 @@ impl AgentPerformanceTracker {
     }
 
     /// Record task completion
-    pub async fn record_task_completion(&mut self, response_time_ms: u64) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn record_task_completion(
+        &mut self,
+        response_time_ms: u64,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         self.tasks_completed += 1;
         self.response_times.push(response_time_ms);
-        
+
         // Keep only last 1000 response times for memory efficiency
         if self.response_times.len() > 1000 {
             self.response_times.remove(0);
         }
-        
+
         self.update_metrics().await?;
         Ok(())
     }
 
     /// Record task failure
-    pub async fn record_task_failure(&mut self, _error: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn record_task_failure(
+        &mut self,
+        _error: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         self.tasks_failed += 1;
         self.errors.push(Utc::now());
-        
+
         // Keep only last 100 errors for memory efficiency
         if self.errors.len() > 100 {
             self.errors.remove(0);
         }
-        
+
         self.update_metrics().await?;
         Ok(())
     }
@@ -720,7 +748,9 @@ impl AgentPerformanceTracker {
         // Calculate error rate (errors per minute)
         let now = Utc::now();
         let one_minute_ago = now - chrono::Duration::minutes(1);
-        let recent_errors = self.errors.iter()
+        let recent_errors = self
+            .errors
+            .iter()
             .filter(|&&timestamp| timestamp > one_minute_ago)
             .count();
         let error_rate = recent_errors as f64;

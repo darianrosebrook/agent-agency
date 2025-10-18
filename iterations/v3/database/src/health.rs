@@ -526,9 +526,9 @@ impl DatabaseHealthChecker {
             let total_size: Option<i64> = row.try_get("total_size")?;
             let table_size: Option<i64> = row.try_get("table_size")?;
             let index_size: Option<i64> = row.try_get("index_size")?;
-            let inserts: Option<i64> = row.try_get("n_tup_ins")?;
-            let updates: Option<i64> = row.try_get("n_tup_upd")?;
-            let deletes: Option<i64> = row.try_get("n_tup_del")?;
+            let _inserts: Option<i64> = row.try_get("n_tup_ins")?;
+            let _updates: Option<i64> = row.try_get("n_tup_upd")?;
+            let _deletes: Option<i64> = row.try_get("n_tup_del")?;
             let live_tuples: Option<i64> = row.try_get("n_live_tup")?;
             let dead_tuples: Option<i64> = row.try_get("n_dead_tup")?;
 
@@ -540,14 +540,14 @@ impl DatabaseHealthChecker {
 
             // Calculate bloat ratio (dead tuples / total tuples)
             let total_tuples = live_tuples + dead_tuples;
-            let bloat_ratio = if total_tuples > 0 {
+            let _bloat_ratio = if total_tuples > 0 {
                 dead_tuples as f64 / total_tuples as f64
             } else {
                 0.0
             };
 
             // Calculate index to table size ratio
-            let index_ratio = if table_size > 0 {
+            let _index_ratio = if table_size > 0 {
                 index_size as f64 / table_size as f64
             } else {
                 0.0
@@ -615,9 +615,9 @@ impl DatabaseHealthChecker {
             let calls = calls.unwrap_or(0) as u64;
             let mean_time_ms = mean_time.unwrap_or(0.0);
             let total_time = total_time.unwrap_or(0.0);
-            let rows_affected = rows_affected.unwrap_or(0) as u64;
-            let temp_blocks = temp_read.unwrap_or(0) as u64 + temp_written.unwrap_or(0) as u64;
-            let io_time_ms = read_time.unwrap_or(0.0) + write_time.unwrap_or(0.0);
+            let _rows_affected = rows_affected.unwrap_or(0) as u64;
+            let _temp_blocks = temp_read.unwrap_or(0) as u64 + temp_written.unwrap_or(0) as u64;
+            let _io_time_ms = read_time.unwrap_or(0.0) + write_time.unwrap_or(0.0);
 
             // Truncate very long queries for display
             let display_query = if query_text.len() > 200 {

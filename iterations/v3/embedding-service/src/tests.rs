@@ -145,6 +145,7 @@ mod tests {
                 context: std::collections::HashMap::new(),
             },
         };
+        assert_eq!(embedding.id.to_string(), "test_id");
 
         // Test indexing
         index.insert(embedding.clone());
@@ -165,9 +166,16 @@ mod tests {
         let removed = index.remove("test_id").unwrap();
         assert_eq!(removed.id, embedding.id);
         assert!(index.get_by_id("test_id").is_none());
+        assert!(index.get_by_content_type(&ContentType::Evidence).is_empty());
+        assert!(index.get_by_tag("important").is_empty());
 
         // Test stats
         let stats = index.stats();
         assert_eq!(stats.total_embeddings, 0);
+        assert!(stats
+            .content_type_counts
+            .get(&ContentType::Evidence)
+            .is_none());
+        assert!(stats.tag_counts.get("important").is_none());
     }
 }

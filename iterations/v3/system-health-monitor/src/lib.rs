@@ -481,7 +481,8 @@ impl SystemHealthMonitor {
             // like iostat on Linux or Performance Counters on Windows
 
             // Placeholder: calculate a rough I/O activity metric
-            let disk_usage_percent = disk.total_space().saturating_sub(disk.available_space()) as f64
+            let disk_usage_percent = disk.total_space().saturating_sub(disk.available_space())
+                as f64
                 / disk.total_space() as f64;
 
             // Convert to a meaningful I/O activity score (0-1000)
@@ -1159,14 +1160,14 @@ impl SystemHealthMonitor {
         // Simulate embedding service metrics
         // In a real implementation, this would query the embedding service
         EmbeddingMetrics {
-            embedding_generation_rate: 150.0, // embeddings per second
-            embedding_cache_hit_rate: 0.85,   // 85% cache hit rate
-            embedding_quality_score: 0.92,    // 92% quality score
-            embedding_latency_ms: 45.0,       // 45ms average latency
+            embedding_generation_rate: 150.0,      // embeddings per second
+            embedding_cache_hit_rate: 0.85,        // 85% cache hit rate
+            embedding_quality_score: 0.92,         // 92% quality score
+            embedding_latency_ms: 45.0,            // 45ms average latency
             embedding_throughput_mb_per_sec: 12.5, // 12.5 MB/s throughput
-            embedding_error_rate: 0.02,       // 2% error rate
-            embedding_queue_depth: 5,         // 5 items in queue
-            embedding_active_models: 3,       // 3 active models
+            embedding_error_rate: 0.02,            // 2% error rate
+            embedding_queue_depth: 5,              // 5 items in queue
+            embedding_active_models: 3,            // 3 active models
         }
     }
 }

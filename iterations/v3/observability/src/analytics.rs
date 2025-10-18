@@ -3,7 +3,6 @@
 //! Provides trend analysis, anomaly detection, predictive analytics, and
 //! performance optimization recommendations for the Agent Agency V3 system.
 
-use crate::agent_telemetry::*;
 use anyhow::Result;
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -17,7 +16,7 @@ pub struct AnalyticsEngine {
     /// Historical data storage
     historical_data: Arc<RwLock<HistoricalData>>,
     /// Trend analysis cache
-    trend_cache: Arc<RwLock<HashMap<String, TrendAnalysis>>>,
+    pub trend_cache: Arc<RwLock<HashMap<String, TrendAnalysis>>>,
     /// Anomaly detection state
     anomaly_detector: Arc<AnomalyDetector>,
     /// Predictive models
@@ -144,7 +143,7 @@ pub struct AnomalyDetectionResult {
 }
 
 /// Anomaly types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum AnomalyType {
     PerformanceDegradation,
     ResourceExhaustion,
@@ -155,7 +154,7 @@ pub enum AnomalyType {
 }
 
 /// Anomaly severity levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum AnomalySeverity {
     Low,
     Medium,
@@ -359,16 +358,16 @@ impl AnalyticsEngine {
     /// Start the analytics engine
     pub async fn start(&self) -> Result<()> {
         let engine = self.clone();
-        
+
         // Start analytics update task
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(
-                std::time::Duration::from_secs(engine.config.analytics_update_interval_seconds)
-            );
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(
+                engine.config.analytics_update_interval_seconds,
+            ));
 
             loop {
                 interval.tick().await;
-                
+
                 if let Err(e) = engine.update_analytics().await {
                     eprintln!("Failed to update analytics: {}", e);
                 }
@@ -385,55 +384,50 @@ impl AnalyticsEngine {
         snapshot: AgentPerformanceSnapshot,
     ) -> Result<()> {
         let mut data = self.historical_data.write().await;
-        
-        let history = data.agent_performance_history
+
+        let history = data
+            .agent_performance_history
             .entry(agent_id.clone())
             .or_insert_with(VecDeque::new);
-        
+
         history.push_back(snapshot);
-        
+
         // Maintain data retention limit
         let retention_limit = self.config.data_retention_hours as usize;
         while history.len() > retention_limit {
             history.pop_front();
         }
-        
+
         Ok(())
     }
 
     /// Add coordination metrics data point
-    pub async fn add_coordination_data(
-        &self,
-        snapshot: CoordinationMetricsSnapshot,
-    ) -> Result<()> {
+    pub async fn add_coordination_data(&self, snapshot: CoordinationMetricsSnapshot) -> Result<()> {
         let mut data = self.historical_data.write().await;
-        
+
         data.coordination_history.push_back(snapshot);
-        
+
         // Maintain data retention limit
         let retention_limit = self.config.data_retention_hours as usize;
         while data.coordination_history.len() > retention_limit {
             data.coordination_history.pop_front();
         }
-        
+
         Ok(())
     }
 
     /// Add business metrics data point
-    pub async fn add_business_data(
-        &self,
-        snapshot: BusinessMetricsSnapshot,
-    ) -> Result<()> {
+    pub async fn add_business_data(&self, snapshot: BusinessMetricsSnapshot) -> Result<()> {
         let mut data = self.historical_data.write().await;
-        
+
         data.business_history.push_back(snapshot);
-        
+
         // Maintain data retention limit
         let retention_limit = self.config.data_retention_hours as usize;
         while data.business_history.len() > retention_limit {
             data.business_history.pop_front();
         }
-        
+
         Ok(())
     }
 
@@ -444,12 +438,14 @@ impl AnalyticsEngine {
         data_points: &[f64],
     ) -> Result<TrendAnalysis> {
         if data_points.len() < 2 {
-            return Err(anyhow::anyhow!("Insufficient data points for trend analysis"));
+            return Err(anyhow::anyhow!(
+                "Insufficient data points for trend analysis"
+            ));
         }
 
         // Calculate trend using linear regression
         let (slope, confidence) = self.calculate_linear_regression(data_points)?;
-        
+
         // Determine trend direction
         let trend_direction = if slope > 0.1 {
             TrendDirection::Increasing
@@ -463,19 +459,25 @@ impl AnalyticsEngine {
 
         // Calculate trend strength
         let trend_strength = slope.abs().min(1.0);
-        
+
         // Calculate rate of change per hour
         let rate_of_change = slope * 3600.0; // Convert to per hour
-        
+
         // Generate description
         let description = match trend_direction {
             TrendDirection::Increasing => {
-                format!("{} is trending upward with {:.1}% change per hour", 
-                       metric_name, rate_of_change * 100.0)
+                format!(
+                    "{} is trending upward with {:.1}% change per hour",
+                    metric_name,
+                    rate_of_change * 100.0
+                )
             }
             TrendDirection::Decreasing => {
-                format!("{} is trending downward with {:.1}% change per hour", 
-                       metric_name, rate_of_change * 100.0)
+                format!(
+                    "{} is trending downward with {:.1}% change per hour",
+                    metric_name,
+                    rate_of_change * 100.0
+                )
             }
             TrendDirection::Stable => {
                 format!("{} is stable with minimal change", metric_name)
@@ -505,19 +507,21 @@ impl AnalyticsEngine {
         timestamp: DateTime<Utc>,
     ) -> Result<Vec<AnomalyDetectionResult>> {
         let mut anomalies = Vec::new();
-        
+
         // Get historical data for the metric
         let historical_data = self.get_historical_data_for_metric(metric_name).await?;
-        
+
         if historical_data.len() < self.anomaly_detector.config.min_data_points {
             return Ok(anomalies); // Not enough data for anomaly detection
         }
 
         // Calculate statistical measures
         let mean = historical_data.iter().sum::<f64>() / historical_data.len() as f64;
-        let variance = historical_data.iter()
+        let variance = historical_data
+            .iter()
             .map(|x| (x - mean).powi(2))
-            .sum::<f64>() / historical_data.len() as f64;
+            .sum::<f64>()
+            / historical_data.len() as f64;
         let std_dev = variance.sqrt();
 
         if std_dev == 0.0 {
@@ -526,16 +530,17 @@ impl AnalyticsEngine {
 
         // Calculate Z-score
         let z_score = (current_value - mean) / std_dev;
-        
+
         if z_score.abs() > self.anomaly_detector.config.z_score_threshold {
             let anomaly_type = self.determine_anomaly_type(metric_name, current_value, mean)?;
             let severity = self.determine_anomaly_severity(z_score.abs())?;
-            let confidence = (z_score.abs() / self.anomaly_detector.config.z_score_threshold).min(1.0);
+            let confidence =
+                (z_score.abs() / self.anomaly_detector.config.z_score_threshold).min(1.0);
             let deviation_percentage = ((current_value - mean) / mean * 100.0).abs();
-            
+
             let anomaly = AnomalyDetectionResult {
-                anomaly_type,
-                severity,
+                anomaly_type: anomaly_type.clone(),
+                severity: severity.clone(),
                 confidence,
                 anomaly_score: z_score.abs() / self.anomaly_detector.config.z_score_threshold,
                 detected_value: current_value,
@@ -546,9 +551,10 @@ impl AnalyticsEngine {
                     "Anomaly detected in {}: {:.2} (expected: {:.2}, deviation: {:.1}%)",
                     metric_name, current_value, mean, deviation_percentage
                 ),
-                recommended_actions: self.generate_anomaly_recommendations(anomaly_type, severity)?,
+                recommended_actions: self
+                    .generate_anomaly_recommendations(anomaly_type, severity)?,
             };
-            
+
             anomalies.push(anomaly);
         }
 
@@ -562,7 +568,7 @@ impl AnalyticsEngine {
         prediction_type: PredictionType,
     ) -> Result<PredictiveModelResult> {
         let historical_data = self.get_historical_data_for_metric(metric_name).await?;
-        
+
         if historical_data.len() < 10 {
             return Err(anyhow::anyhow!("Insufficient data for prediction"));
         }
@@ -571,24 +577,24 @@ impl AnalyticsEngine {
         let (slope, _) = self.calculate_linear_regression(&historical_data)?;
         let last_value = historical_data.last().unwrap();
         let predicted_value = last_value + slope * self.config.prediction_horizon_hours as f64;
-        
+
         // Calculate confidence interval (simplified)
         let std_dev = self.calculate_standard_deviation(&historical_data)?;
         let confidence_interval = (
             predicted_value - 1.96 * std_dev,
             predicted_value + 1.96 * std_dev,
         );
-        
+
         // Generate recommendations
         let recommendations = self.generate_prediction_recommendations(
-            prediction_type,
+            prediction_type.clone(),
             predicted_value,
-            last_value,
+            *last_value,
         )?;
 
         Ok(PredictiveModelResult {
             model_name: format!("LinearTrend_{}", metric_name),
-            prediction_type,
+            prediction_type: prediction_type.clone(),
             predicted_value,
             confidence_interval,
             prediction_horizon_hours: self.config.prediction_horizon_hours,
@@ -603,10 +609,10 @@ impl AnalyticsEngine {
         &self,
     ) -> Result<Vec<OptimizationRecommendation>> {
         let mut recommendations = Vec::new();
-        
+
         // Analyze current system state
         let data = self.historical_data.read().await;
-        
+
         // Check for performance bottlenecks
         if let Some(latest_business) = data.business_history.back() {
             if latest_business.task_completion_rate < 0.9 {
@@ -671,13 +677,13 @@ impl AnalyticsEngine {
     async fn update_analytics(&self) -> Result<()> {
         // Update trend analysis cache
         self.update_trend_cache().await?;
-        
+
         // Update predictive models
         self.update_predictive_models().await?;
-        
+
         // Clean up old data
         self.cleanup_old_data().await?;
-        
+
         Ok(())
     }
 
@@ -685,79 +691,87 @@ impl AnalyticsEngine {
     async fn update_trend_cache(&self) -> Result<()> {
         let data = self.historical_data.read().await;
         let mut cache = self.trend_cache.write().await;
-        
+
         // Analyze trends for each agent
         for (agent_id, history) in &data.agent_performance_history {
             if history.len() >= 10 {
-                let success_rates: Vec<f64> = history.iter()
+                let success_rates: Vec<f64> = history
+                    .iter()
                     .map(|snapshot| snapshot.success_rate)
                     .collect();
-                
-                let trend = self.analyze_trends(
-                    &format!("{}_success_rate", agent_id),
-                    &success_rates,
-                ).await?;
-                
+
+                let trend = self
+                    .analyze_trends(&format!("{}_success_rate", agent_id), &success_rates)
+                    .await?;
+
                 cache.insert(format!("{}_success_rate", agent_id), trend);
             }
         }
-        
+
         // Analyze system-wide trends
         if data.business_history.len() >= 10 {
-            let completion_rates: Vec<f64> = data.business_history.iter()
+            let completion_rates: Vec<f64> = data
+                .business_history
+                .iter()
                 .map(|snapshot| snapshot.task_completion_rate)
                 .collect();
-            
-            let trend = self.analyze_trends("system_completion_rate", &completion_rates).await?;
+
+            let trend = self
+                .analyze_trends("system_completion_rate", &completion_rates)
+                .await?;
             cache.insert("system_completion_rate".to_string(), trend);
         }
-        
+
         Ok(())
     }
 
     /// Update predictive models
     async fn update_predictive_models(&self) -> Result<()> {
         let data = self.historical_data.read().await;
-        let mut models = self.predictive_models.write().await;
-        
+        let _models = self.predictive_models.write().await;
+
         // Update capacity planning model
         if data.business_history.len() >= 20 {
-            let throughput_data: Vec<f64> = data.business_history.iter()
+            let _throughput_data: Vec<f64> = data
+                .business_history
+                .iter()
                 .map(|snapshot| snapshot.throughput_tasks_per_hour)
                 .collect();
-            
-            let prediction = self.generate_predictions(
-                "throughput",
-                PredictionType::CapacityPlanning,
-            ).await?;
-            
+
+            let _prediction = self
+                .generate_predictions("throughput", PredictionType::CapacityPlanning)
+                .await?;
+
             // Store prediction results (simplified)
             // In a real implementation, you would update the actual model parameters
         }
-        
+
         Ok(())
     }
 
     /// Clean up old data
     async fn cleanup_old_data(&self) -> Result<()> {
         let cutoff_time = Utc::now() - Duration::hours(self.config.data_retention_hours as i64);
-        
+
         let mut data = self.historical_data.write().await;
-        
+
         // Clean up agent performance history
         for history in data.agent_performance_history.values_mut() {
             history.retain(|snapshot| snapshot.timestamp > cutoff_time);
         }
-        
+
         // Clean up coordination history
-        data.coordination_history.retain(|snapshot| snapshot.timestamp > cutoff_time);
-        
+        data.coordination_history
+            .retain(|snapshot| snapshot.timestamp > cutoff_time);
+
         // Clean up business history
-        data.business_history.retain(|snapshot| snapshot.timestamp > cutoff_time);
-        
+        data.business_history
+            .retain(|snapshot| snapshot.timestamp > cutoff_time);
+
         // Clean up system health history
-        data.system_health_history.retain(|snapshot| snapshot.timestamp > cutoff_time);
-        
+        data.system_health_history
+            .retain(|snapshot| snapshot.timestamp > cutoff_time);
+
         Ok(())
     }
 
@@ -766,31 +780,39 @@ impl AnalyticsEngine {
         let n = data_points.len() as f64;
         let x_mean = (n - 1.0) / 2.0;
         let y_mean = data_points.iter().sum::<f64>() / n;
-        
+
         let mut numerator = 0.0;
         let mut denominator = 0.0;
-        
+
         for (i, &y) in data_points.iter().enumerate() {
             let x = i as f64 - x_mean;
             numerator += x * (y - y_mean);
             denominator += x * x;
         }
-        
-        let slope = if denominator != 0.0 { numerator / denominator } else { 0.0 };
-        
+
+        let slope = if denominator != 0.0 {
+            numerator / denominator
+        } else {
+            0.0
+        };
+
         // Calculate R-squared for confidence
         let mut ss_res = 0.0;
         let mut ss_tot = 0.0;
-        
+
         for (i, &y) in data_points.iter().enumerate() {
             let x = i as f64 - x_mean;
             let y_pred = y_mean + slope * x;
             ss_res += (y - y_pred).powi(2);
             ss_tot += (y - y_mean).powi(2);
         }
-        
-        let r_squared = if ss_tot != 0.0 { 1.0 - (ss_res / ss_tot) } else { 0.0 };
-        
+
+        let r_squared = if ss_tot != 0.0 {
+            1.0 - (ss_res / ss_tot)
+        } else {
+            0.0
+        };
+
         Ok((slope, r_squared))
     }
 
@@ -798,12 +820,11 @@ impl AnalyticsEngine {
         if data_points.len() < 2 {
             return 0.0;
         }
-        
+
         let mean = data_points.iter().sum::<f64>() / data_points.len() as f64;
-        let variance = data_points.iter()
-            .map(|x| (x - mean).powi(2))
-            .sum::<f64>() / data_points.len() as f64;
-        
+        let variance =
+            data_points.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / data_points.len() as f64;
+
         variance.sqrt() / mean.max(0.001) // Avoid division by zero
     }
 
@@ -811,52 +832,59 @@ impl AnalyticsEngine {
         if data_points.is_empty() {
             return Err(anyhow::anyhow!("Empty data set"));
         }
-        
+
         let mean = data_points.iter().sum::<f64>() / data_points.len() as f64;
-        let variance = data_points.iter()
-            .map(|x| (x - mean).powi(2))
-            .sum::<f64>() / data_points.len() as f64;
-        
+        let variance =
+            data_points.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / data_points.len() as f64;
+
         Ok(variance.sqrt())
     }
 
     async fn get_historical_data_for_metric(&self, metric_name: &str) -> Result<Vec<f64>> {
         let data = self.historical_data.read().await;
-        
+
         // This is a simplified implementation
         // In a real system, you would have more sophisticated metric mapping
         match metric_name {
-            "throughput" => {
-                Ok(data.business_history.iter()
-                    .map(|snapshot| snapshot.throughput_tasks_per_hour)
-                    .collect())
-            }
-            "completion_rate" => {
-                Ok(data.business_history.iter()
-                    .map(|snapshot| snapshot.task_completion_rate)
-                    .collect())
-            }
-            "quality_score" => {
-                Ok(data.business_history.iter()
-                    .map(|snapshot| snapshot.quality_score)
-                    .collect())
-            }
-            _ => Err(anyhow::anyhow!("Unknown metric: {}", metric_name))
+            "throughput" => Ok(data
+                .business_history
+                .iter()
+                .map(|snapshot| snapshot.throughput_tasks_per_hour)
+                .collect()),
+            "completion_rate" => Ok(data
+                .business_history
+                .iter()
+                .map(|snapshot| snapshot.task_completion_rate)
+                .collect()),
+            "quality_score" => Ok(data
+                .business_history
+                .iter()
+                .map(|snapshot| snapshot.quality_score)
+                .collect()),
+            _ => Err(anyhow::anyhow!("Unknown metric: {}", metric_name)),
         }
     }
 
     fn determine_anomaly_type(
         &self,
         metric_name: &str,
-        current_value: f64,
-        expected_value: f64,
+        _current_value: f64,
+        _expected_value: f64,
     ) -> Result<AnomalyType> {
         match metric_name {
             name if name.contains("response_time") => Ok(AnomalyType::PerformanceDegradation),
-            name if name.contains("cpu") || name.contains("memory") => Ok(AnomalyType::ResourceExhaustion),
-            name if name.contains("consensus") || name.contains("coordination") => Ok(AnomalyType::CoordinationFailure),
-            name if name.contains("quality") || name.contains("accuracy") => Ok(AnomalyType::QualityDrop),
-            name if name.contains("throughput") || name.contains("capacity") => Ok(AnomalyType::CapacityOverflow),
+            name if name.contains("cpu") || name.contains("memory") => {
+                Ok(AnomalyType::ResourceExhaustion)
+            }
+            name if name.contains("consensus") || name.contains("coordination") => {
+                Ok(AnomalyType::CoordinationFailure)
+            }
+            name if name.contains("quality") || name.contains("accuracy") => {
+                Ok(AnomalyType::QualityDrop)
+            }
+            name if name.contains("throughput") || name.contains("capacity") => {
+                Ok(AnomalyType::CapacityOverflow)
+            }
             _ => Ok(AnomalyType::SystemInstability),
         }
     }
@@ -879,7 +907,7 @@ impl AnalyticsEngine {
         severity: AnomalySeverity,
     ) -> Result<Vec<String>> {
         let mut recommendations = Vec::new();
-        
+
         match anomaly_type {
             AnomalyType::PerformanceDegradation => {
                 recommendations.push("Review agent performance metrics".to_string());
@@ -912,11 +940,11 @@ impl AnalyticsEngine {
                 recommendations.push("Consider system restart".to_string());
             }
         }
-        
+
         if matches!(severity, AnomalySeverity::Critical | AnomalySeverity::High) {
             recommendations.push("Immediate investigation required".to_string());
         }
-        
+
         Ok(recommendations)
     }
 
@@ -927,7 +955,7 @@ impl AnalyticsEngine {
         current_value: f64,
     ) -> Result<Vec<String>> {
         let mut recommendations = Vec::new();
-        
+
         match prediction_type {
             PredictionType::CapacityPlanning => {
                 if predicted_value > current_value * 1.2 {
@@ -963,7 +991,7 @@ impl AnalyticsEngine {
                 }
             }
         }
-        
+
         Ok(recommendations)
     }
 }

@@ -60,7 +60,6 @@ pub struct StorageConfig {
     pub retention_days: u32,
 }
 
-
 impl Default for ProvenanceConfig {
     fn default() -> Self {
         Self {

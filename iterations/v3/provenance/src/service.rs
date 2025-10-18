@@ -12,10 +12,10 @@ use crate::{
     git_integration::GitIntegration,
     signer::{SignerFactory, SignerTrait},
     types::{
-        BudgetAdherence, CawsComplianceProvenance, ExportFormat, ExportMetadata,
-        FilterOperator, FilterType, IntegrityCheckResult, IntegrityIssue, IntegrityIssueType, IntegritySeverity,
-        ProvenanceChain, ProvenanceExport, ProvenanceFilter, ProvenanceQuery, ProvenanceRecord, ProvenanceStats,
-        TimeRange, VerdictDecision,
+        BudgetAdherence, CawsComplianceProvenance, ExportFormat, ExportMetadata, FilterOperator,
+        FilterType, IntegrityCheckResult, IntegrityIssue, IntegrityIssueType, IntegritySeverity,
+        ProvenanceChain, ProvenanceExport, ProvenanceFilter, ProvenanceQuery, ProvenanceRecord,
+        ProvenanceStats, TimeRange, VerdictDecision,
     },
     ProvenanceConfig,
 };

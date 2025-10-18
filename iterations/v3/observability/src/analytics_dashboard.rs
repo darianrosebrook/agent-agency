@@ -4,7 +4,6 @@
 //! and predictive insights for the Agent Agency V3 system.
 
 use crate::analytics::*;
-use crate::agent_telemetry::*;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -327,10 +326,7 @@ pub struct PredictiveInsightsSummary {
 
 impl AnalyticsDashboard {
     /// Create a new analytics dashboard
-    pub fn new(
-        analytics_engine: Arc<AnalyticsEngine>,
-        config: AnalyticsDashboardConfig,
-    ) -> Self {
+    pub fn new(analytics_engine: Arc<AnalyticsEngine>, config: AnalyticsDashboardConfig) -> Self {
         Self {
             analytics_engine,
             config,
@@ -342,16 +338,16 @@ impl AnalyticsDashboard {
     /// Start the analytics dashboard
     pub async fn start(&self) -> Result<()> {
         let dashboard = self.clone();
-        
+
         // Start analytics update task
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(
-                std::time::Duration::from_secs(dashboard.config.refresh_interval_seconds)
-            );
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(
+                dashboard.config.refresh_interval_seconds,
+            ));
 
             loop {
                 interval.tick().await;
-                
+
                 if let Err(e) = dashboard.update_analytics_insights().await {
                     eprintln!("Failed to update analytics insights: {}", e);
                 }
@@ -365,7 +361,7 @@ impl AnalyticsDashboard {
 
             loop {
                 interval.tick().await;
-                
+
                 if let Err(e) = dashboard.cleanup_expired_sessions().await {
                     eprintln!("Failed to cleanup expired sessions: {}", e);
                 }
@@ -382,7 +378,7 @@ impl AnalyticsDashboard {
         preferences: Option<AnalyticsPreferences>,
     ) -> Result<String> {
         let session_id = uuid::Uuid::new_v4().to_string();
-        
+
         // Check session limit
         let sessions = self.sessions.read().await;
         if sessions.len() >= self.config.max_sessions {
@@ -412,19 +408,22 @@ impl AnalyticsDashboard {
 
         // Get system overview
         let system_overview = self.get_system_overview().await?;
-        
+
         // Get trend analysis
         let trend_analysis = self.get_trend_analysis_summary().await?;
-        
+
         // Get anomaly detection summary
         let anomaly_detection = self.get_anomaly_detection_summary().await?;
-        
+
         // Get predictive insights
         let predictive_insights = self.get_predictive_insights_summary().await?;
-        
+
         // Get optimization recommendations
-        let optimization_recommendations = self.analytics_engine.generate_optimization_recommendations().await?;
-        
+        let optimization_recommendations = self
+            .analytics_engine
+            .generate_optimization_recommendations()
+            .await?;
+
         // Get performance insights
         let performance_insights = self.get_performance_insights().await?;
 
@@ -468,13 +467,15 @@ impl AnalyticsDashboard {
                     update.prediction_updates = Some(self.get_latest_prediction_updates().await?);
                 }
                 AnalyticsSubscriptionType::OptimizationRecommendations => {
-                    update.optimization_updates = Some(self.get_latest_optimization_updates().await?);
+                    update.optimization_updates =
+                        Some(self.get_latest_optimization_updates().await?);
                 }
                 AnalyticsSubscriptionType::All => {
                     update.trend_updates = Some(self.get_latest_trend_updates().await?);
                     update.anomaly_updates = Some(self.get_latest_anomaly_updates().await?);
                     update.prediction_updates = Some(self.get_latest_prediction_updates().await?);
-                    update.optimization_updates = Some(self.get_latest_optimization_updates().await?);
+                    update.optimization_updates =
+                        Some(self.get_latest_optimization_updates().await?);
                 }
             }
         }
@@ -502,17 +503,29 @@ impl AnalyticsDashboard {
         // Get cached trend analysis
         let cache = self.analytics_engine.trend_cache.read().await;
         let trends: Vec<TrendAnalysis> = cache.values().cloned().collect();
-        
-        let positive_trends = trends.iter().filter(|t| matches!(t.trend_direction, TrendDirection::Increasing)).count();
-        let negative_trends = trends.iter().filter(|t| matches!(t.trend_direction, TrendDirection::Decreasing)).count();
-        let stable_trends = trends.iter().filter(|t| matches!(t.trend_direction, TrendDirection::Stable)).count();
-        let volatile_trends = trends.iter().filter(|t| matches!(t.trend_direction, TrendDirection::Volatile)).count();
-        
+
+        let positive_trends = trends
+            .iter()
+            .filter(|t| matches!(t.trend_direction, TrendDirection::Increasing))
+            .count();
+        let negative_trends = trends
+            .iter()
+            .filter(|t| matches!(t.trend_direction, TrendDirection::Decreasing))
+            .count();
+        let stable_trends = trends
+            .iter()
+            .filter(|t| matches!(t.trend_direction, TrendDirection::Stable))
+            .count();
+        let volatile_trends = trends
+            .iter()
+            .filter(|t| matches!(t.trend_direction, TrendDirection::Volatile))
+            .count();
+
         // Get top trends (highest confidence)
         let mut top_trends = trends.clone();
         top_trends.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap());
         top_trends.truncate(5);
-        
+
         // Generate trend insights
         let trend_insights = self.generate_trend_insights(&trends).await?;
 
@@ -563,9 +576,12 @@ impl AnalyticsDashboard {
     }
 
     /// Generate trend insights
-    async fn generate_trend_insights(&self, trends: &[TrendAnalysis]) -> Result<Vec<AnalyticsInsight>> {
+    async fn generate_trend_insights(
+        &self,
+        trends: &[TrendAnalysis],
+    ) -> Result<Vec<AnalyticsInsight>> {
         let mut insights = Vec::new();
-        
+
         for trend in trends {
             if trend.confidence > 0.8 {
                 let insight = AnalyticsInsight {
@@ -588,25 +604,28 @@ impl AnalyticsDashboard {
                 insights.push(insight);
             }
         }
-        
+
         Ok(insights)
     }
 
     /// Generate trend recommendations
     fn generate_trend_recommendations(&self, trend: &TrendAnalysis) -> Result<Vec<String>> {
         let mut recommendations = Vec::new();
-        
+
         match trend.trend_direction {
             TrendDirection::Increasing => {
                 if trend.metric_name.contains("error") || trend.metric_name.contains("failure") {
                     recommendations.push("Investigate root cause of increasing errors".to_string());
                     recommendations.push("Implement additional monitoring".to_string());
                 } else {
-                    recommendations.push("Monitor trend for optimization opportunities".to_string());
+                    recommendations
+                        .push("Monitor trend for optimization opportunities".to_string());
                 }
             }
             TrendDirection::Decreasing => {
-                if trend.metric_name.contains("performance") || trend.metric_name.contains("quality") {
+                if trend.metric_name.contains("performance")
+                    || trend.metric_name.contains("quality")
+                {
                     recommendations.push("Investigate performance degradation".to_string());
                     recommendations.push("Consider performance optimization".to_string());
                 } else {
@@ -621,7 +640,7 @@ impl AnalyticsDashboard {
                 recommendations.push("Continue monitoring for changes".to_string());
             }
         }
-        
+
         Ok(recommendations)
     }
 
@@ -683,11 +702,12 @@ impl AnalyticsDashboard {
 
     /// Cleanup expired sessions
     async fn cleanup_expired_sessions(&self) -> Result<()> {
-        let cutoff_time = Utc::now() - chrono::Duration::hours(self.config.data_retention_hours as i64);
-        
+        let cutoff_time =
+            Utc::now() - chrono::Duration::hours(self.config.data_retention_hours as i64);
+
         let mut sessions = self.sessions.write().await;
         sessions.retain(|_, session| session.last_activity > cutoff_time);
-        
+
         Ok(())
     }
 }

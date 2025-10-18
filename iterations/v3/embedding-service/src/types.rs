@@ -23,7 +23,13 @@ impl EmbeddingId {
 
 impl fmt::Display for EmbeddingId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
+        f.write_str(&self.0)
+    }
+}
+
+impl AsRef<str> for EmbeddingId {
+    fn as_ref(&self) -> &str {
+        self.as_str()
     }
 }
 

@@ -77,3 +77,71 @@ Retry + CircuitBreaker wrappers
 - Confirm desired storage schema for waiver updates (append-only vs upsert). Default plan: use upsert with history table optional.
 - Need clarity on provenance git integration readiness; plan assumes service API available but will feature-gate if absent.
 - Should invalid payloads trigger `FinalVerdict::Rejected` or queue for manual review? Current design leans Reject + provenance entry; await stakeholder confirmation.
+
+---
+
+# TODO Remediation (Tier 1 Continuation)
+
+## Objectives (In Scope)
+- ✅ **Database parity**: Align `database::models` with the richer CAWS verdict/judge schemas already used by the client layer, fix move/Option handling, and unblock compilation.
+- ✅ **Embedding cache safety**: Provide ergonomic formatting for `EmbeddingId` and ensure `EmbeddingIndex::remove` updates secondary indexes without violating DashMap borrow rules.
+- ✅ **Claim extraction fidelity**: 
+  - propagate disambiguation metrics (`ambiguities_resolved`) through stage metadata,
+  - implement clause splitting heuristics to replace the current stub,
+  - add a production-ready `ContentRewriter` that generates actionable rewrite suggestions for unverifiable fragments.
+- ✅ **Verification uplift**: extend unit coverage for the new logic and exercise the pipeline end-to-end so we meet Tier 1 bars (≥90 % branch, ≥70 % mutation where applicable).
+
+## Design Sketch
+```
+DisambiguationStage ──▶ DisambiguationResult{ambiguities_resolved}
+          │                         │
+          ▼                         └── Pipeline metadata augmented (A2/A3)
+QualificationStage ──▶ VerifiabilityAssessment
+          │                  │
+          │                  └── ContentRewriter::rewrite_parts(...) → rewrite catalog
+          ▼
+DecompositionStage ──▶ ClauseSplitter::split(..) ──▶ AtomicClaim[]
+```
+- **Database alignment**: extend `JudgeEvaluation` and `KnowledgeEntry` structs with optional CAWS fields; ensure client insert/query builders bind Option types safely (borrowed `filters`, `pagination`, `unwrap_or_default` for limits).
+- **Clause splitting heuristics**: tokenise on coordinating conjunctions, semicolons, and relative pronouns; apply balancing for parentheses/quotes; recombine fragments shorter than configurable threshold to avoid over-splitting.
+- **Content rewriting**: rule-based analyzer scoring fragments on subjectivity, vagueness, or missing metrics; generate structured rewrite suggestions (specific metric verbs, acceptance contexts) while preserving intent; feed suggestions into `UnverifiableContent.suggested_rewrite`.
+- **Observability**: add `debug!` spans for rewrite decisions and clause splitting outcomes; increment stage metrics when ambiguity counts fall below expectation.
+
+## Data / Fixture Plan
+- Reuse sentences from `integration-tests` fixtures; extend with targeted samples:
+  - subjective sentence (`"The UI should be user-friendly"`) → rewrite -> `"The UI meets WCAG 2.1 AA guidelines"`.
+  - compound requirement with conjunctions → clause splitter yields ≥3 atomic claims.
+- Add lightweight static fixture module under `claim-extraction/tests/fixtures.rs` for reuse in unit tests.
+
+## Test Matrix (Tier 1)
+| Type | Scenario | Assertion |
+|------|----------|-----------|
+| Unit (database) | Map SQL row → `JudgeEvaluation` | Optional fields populate, absent columns default |
+| Unit (embedding) | `EmbeddingIndex::remove` updates all indexes | Tag & content-type maps no longer reference removed ID |
+| Unit (disambiguation) | Pipeline metadata retains ambiguity count | `process_sentence` returns metadata with expected count |
+| Unit (qualification) | ContentRewriter rewrites subjective fragment | Suggested rewrite matches deterministic template |
+| Unit (decomposition) | Clause splitting on conjunctions | Returns per-clause statements without truncating verbs |
+| Integration | Full sentence through processor | Atomic claims + evidence returned, metadata populated |
+| Mutation/Coverage | Run targeted mutation on clause splitting + rewrite helpers | ≥70 % mutation score; branch ≥90 % for new modules |
+
+## Observability Enhancements
+- Add `tracing::debug` logs for clause splitting boundaries and rewrite strategy decisions (`task_id`, `fragment`, `rewrite_type`).
+- Expose ambiguity, clause, and rewrite counters in `ClaimExtractionResult.processing_metadata` for downstream metrics ingestion.
+- Database client: log when optional filters/pagination adjustments occur to support diagnostics.
+
+## Dependencies / Sequencing
+1. **Database parity first** (unblocks compilation and integration tests).
+2. **Embedding cache fixes** (small, self-contained; adds coverage).
+3. **Claim extraction upgrades** (depends on pipeline compiling).
+4. **Expanded tests & verification** once code builds.
+
+## Acceptance Alignment
+- **A1/A2/A3**: richer metadata + clause splitting improve consensus evidence quality and claim validation.
+- **A7**: database parity ensures persisted judgements retain metadata required for provenance signatures.
+- **A9**: ContentRewriter + metadata feed CAWS runtime validator with actionable remediation hints.
+
+## Risks & Mitigations
+- **Clause over-splitting** → include minimum token threshold & fallback to original fragment.
+- **Rewrite false positives** → dual scoring (subjectivity + vagueness) with conservative thresholds; fall back to existing suggestions.
+- **Database schema mismatch** → guard optional fields behind serde defaults so legacy rows decode.
+- **Test flakiness** → use deterministic fixtures, avoid async timing assumptions in unit tests.

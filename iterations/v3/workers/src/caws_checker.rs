@@ -9,7 +9,9 @@ use agent_agency_council::models::{
     TaskSpec, WorkerOutput as CouncilWorkerOutput,
 };
 use agent_agency_database::{CawsViolation as DbCawsViolation, DatabaseClient};
-use anyhow::Result;
+use anyhow::{Context, Result};
+use serde_json::json;
+use sqlx::Row;
 use std::collections::HashMap;
 use tracing::info;
 use uuid::Uuid;
@@ -914,7 +916,7 @@ impl CawsChecker {
         // Execute the query using the database client
         let db_violations: Vec<DbCawsViolation> = sqlx::query_as(query)
             .bind(task_id)
-            .fetch_all(&self.db_client.pool)
+            .fetch_all(self.db_client.pool())
             .await
             .map_err(|e| anyhow::anyhow!("Failed to query violations: {}", e))?;
 
@@ -1015,56 +1017,244 @@ impl CawsChecker {
     }
 
     /// Store violation in database (for future use)
-    pub async fn store_violation(
-        &self,
-        _task_id: Uuid,
-        _violation: CawsViolation,
-    ) -> Result<String> {
-        // In a real implementation, this would INSERT into the database
-        // and return the violation ID
+    pub async fn store_violation(&self, task_id: Uuid, violation: CawsViolation) -> Result<String> {
+        let CawsViolation {
+            rule,
+            severity,
+            description,
+            location,
+            suggestion,
+            constitutional_ref,
+        } = violation;
 
-        // For now, generate a mock ID
-        let violation_id = format!("violation_{}", Uuid::new_v4());
-        Ok(violation_id)
+        let violation_id = Uuid::new_v4();
+        let (file_path, line_number, column_number) = parse_violation_location(location.as_deref());
+        let metadata = json!({
+            "suggestion": suggestion,
+            "recorded_at": chrono::Utc::now().to_rfc3339(),
+            "original_location": location,
+        });
+
+        sqlx::query(
+            r#"
+            INSERT INTO caws_violations (
+                id,
+                task_id,
+                violation_code,
+                severity,
+                description,
+                file_path,
+                line_number,
+                column_number,
+                rule_id,
+                constitutional_reference,
+                status,
+                created_at,
+                resolved_at,
+                metadata
+            )
+            VALUES (
+                $1, $2, $3, $4, $5,
+                $6, $7, $8, $9, $10,
+                'active', $11, NULL, $12
+            )
+            "#,
+        )
+        .bind(violation_id)
+        .bind(task_id)
+        .bind(&rule)
+        .bind(severity_to_db_value(&severity))
+        .bind(&description)
+        .bind(file_path)
+        .bind(line_number)
+        .bind(column_number)
+        .bind(&rule) // rule_id mirrors violation code for now
+        .bind(constitutional_ref)
+        .bind(chrono::Utc::now())
+        .bind(metadata)
+        .execute(self.db_client.pool())
+        .await
+        .with_context(|| format!("Failed to store CAWS violation for task {}", task_id))?;
+
+        Ok(violation_id.to_string())
     }
 
     /// Update violation status
-    pub async fn update_violation_status(&self, _violation_id: &str, _status: &str) -> Result<()> {
-        // In a real implementation, this would UPDATE the violation status in the database
-        // Status could be: 'active', 'resolved', 'waived', 'dismissed'
+    pub async fn update_violation_status(&self, violation_id: &str, status: &str) -> Result<()> {
+        let violation_uuid = Uuid::parse_str(violation_id)
+            .with_context(|| format!("Invalid violation id: {}", violation_id))?;
+
+        let resolved_at =
+            matches!(status, "resolved" | "waived" | "dismissed").then(|| chrono::Utc::now());
+
+        sqlx::query(
+            r#"
+            UPDATE caws_violations
+            SET status = $1,
+                resolved_at = CASE
+                    WHEN $1 IN ('resolved', 'waived', 'dismissed') THEN $2
+                    ELSE resolved_at
+                END
+            WHERE id = $3
+            "#,
+        )
+        .bind(status)
+        .bind(resolved_at)
+        .bind(violation_uuid)
+        .execute(self.db_client.pool())
+        .await
+        .with_context(|| format!("Failed to update violation {}", violation_id))?;
 
         Ok(())
     }
 
     /// Get violation statistics for reporting
-    pub async fn get_violation_stats(&self, _task_id: Option<Uuid>) -> Result<ViolationStats> {
-        // In a real implementation, this would query aggregated statistics from the database
+    pub async fn get_violation_stats(&self, task_id: Option<Uuid>) -> Result<ViolationStats> {
+        let counts_row = sqlx::query(
+            r#"
+            SELECT
+                COUNT(*) AS total_count,
+                COUNT(*) FILTER (WHERE severity = 'critical') AS critical_count,
+                COUNT(*) FILTER (WHERE severity = 'high') AS high_count,
+                COUNT(*) FILTER (WHERE severity = 'medium') AS medium_count,
+                COUNT(*) FILTER (WHERE severity = 'low') AS low_count,
+                COUNT(*) FILTER (WHERE status = 'resolved') AS resolved_count,
+                COUNT(*) FILTER (WHERE status = 'active') AS active_count,
+                AVG(EXTRACT(EPOCH FROM (resolved_at - created_at)) / 3600.0) AS avg_resolution_hours
+            FROM caws_violations
+            WHERE task_id = COALESCE($1::uuid, task_id)
+            "#,
+        )
+        .bind(task_id)
+        .fetch_one(self.db_client.pool())
+        .await
+        .context("Failed to aggregate CAWS violation statistics")?;
 
-        // For simulation, return mock stats
-        Ok(ViolationStats {
-            total_violations: 25,
-            critical_count: 3,
-            high_count: 8,
-            medium_count: 10,
-            low_count: 4,
-            resolved_count: 15,
-            active_count: 10,
-            average_resolution_time_hours: 24.5,
-            most_common_rule: "File Budget Exceeded".to_string(),
-            compliance_trend: ComplianceTrend::Improving,
-        })
+        let total_violations: i64 = counts_row.try_get("total_count")?;
+        let critical_count: i64 = counts_row.try_get("critical_count")?;
+        let high_count: i64 = counts_row.try_get("high_count")?;
+        let medium_count: i64 = counts_row.try_get("medium_count")?;
+        let low_count: i64 = counts_row.try_get("low_count")?;
+        let resolved_count: i64 = counts_row.try_get("resolved_count")?;
+        let active_count: i64 = counts_row.try_get("active_count")?;
+        let avg_resolution_hours: Option<f64> = counts_row.try_get("avg_resolution_hours")?;
+
+        let most_common_rule = sqlx::query(
+            r#"
+            SELECT rule_id, COUNT(*) AS usage
+            FROM caws_violations
+            WHERE task_id = COALESCE($1::uuid, task_id)
+            GROUP BY rule_id
+            ORDER BY usage DESC
+            LIMIT 1
+            "#,
+        )
+        .bind(task_id)
+        .fetch_optional(self.db_client.pool())
+        .await?
+        .and_then(|row| row.try_get::<String, _>("rule_id").ok())
+        .unwrap_or_else(|| "Unknown".to_string());
+
+        let stats = ViolationStats {
+            total_violations: total_violations as u32,
+            critical_count: critical_count as u32,
+            high_count: high_count as u32,
+            medium_count: medium_count as u32,
+            low_count: low_count as u32,
+            resolved_count: resolved_count as u32,
+            active_count: active_count as u32,
+            average_resolution_time_hours: avg_resolution_hours.unwrap_or_default() as f32,
+            most_common_rule,
+            compliance_trend: infer_compliance_trend(
+                total_violations as u32,
+                resolved_count as u32,
+                active_count as u32,
+            ),
+        };
+
+        Ok(stats)
     }
 
     /// Bulk operations for violations
     pub async fn bulk_update_violations(
         &self,
-        _violation_ids: Vec<String>,
-        _status: &str,
+        violation_ids: Vec<String>,
+        status: &str,
     ) -> Result<usize> {
-        // In a real implementation, this would perform bulk updates in the database
-        // and return the number of affected rows
+        if violation_ids.is_empty() {
+            return Ok(0);
+        }
 
-        Ok(_violation_ids.len())
+        let ids: Vec<Uuid> = violation_ids
+            .into_iter()
+            .map(|id| {
+                Uuid::parse_str(&id)
+                    .with_context(|| format!("Invalid violation id in bulk update: {}", id))
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        let resolved_at =
+            matches!(status, "resolved" | "waived" | "dismissed").then(|| chrono::Utc::now());
+
+        let result = sqlx::query(
+            r#"
+            UPDATE caws_violations
+            SET status = $1,
+                resolved_at = CASE
+                    WHEN $1 IN ('resolved', 'waived', 'dismissed') THEN $2
+                    ELSE resolved_at
+                END
+            WHERE id = ANY($3)
+            "#,
+        )
+        .bind(status)
+        .bind(resolved_at)
+        .bind(&ids)
+        .execute(self.db_client.pool())
+        .await
+        .with_context(|| "Failed to bulk update CAWS violations".to_string())?;
+
+        Ok(result.rows_affected() as usize)
+    }
+}
+
+fn severity_to_db_value(severity: &ViolationSeverity) -> &'static str {
+    match severity {
+        ViolationSeverity::Low => "low",
+        ViolationSeverity::Medium => "medium",
+        ViolationSeverity::High => "high",
+        ViolationSeverity::Critical => "critical",
+    }
+}
+
+fn parse_violation_location(location: Option<&str>) -> (Option<String>, Option<i32>, Option<i32>) {
+    if let Some(location) = location {
+        let mut parts = location.split(':');
+        let path = parts.next().map(|value| value.to_string());
+        let line = parts.next().and_then(|value| value.parse::<i32>().ok());
+        let column = parts.next().and_then(|value| value.parse::<i32>().ok());
+
+        (path, line, column)
+    } else {
+        (None, None, None)
+    }
+}
+
+fn infer_compliance_trend(total: u32, resolved: u32, active: u32) -> ComplianceTrend {
+    if total == 0 {
+        return ComplianceTrend::Unknown;
+    }
+
+    let resolution_ratio = resolved as f32 / total as f32;
+
+    if resolution_ratio >= 0.75 {
+        ComplianceTrend::Improving
+    } else if resolution_ratio >= 0.4 {
+        ComplianceTrend::Stable
+    } else if active > resolved {
+        ComplianceTrend::Declining
+    } else {
+        ComplianceTrend::Stable
     }
 }
 
@@ -1702,5 +1892,49 @@ mod tests {
         let score = checker.calculate_compliance_score(&violations, &warnings);
         assert!(score < 1.0);
         assert!(score >= 0.0);
+    }
+
+    #[test]
+    fn parses_violation_locations_with_line_and_column() {
+        let (path, line, column) = parse_violation_location(Some("src/lib.rs:42:7"));
+        assert_eq!(path.as_deref(), Some("src/lib.rs"));
+        assert_eq!(line, Some(42));
+        assert_eq!(column, Some(7));
+
+        let (path_only, line_only, column_only) = parse_violation_location(Some("src/main.rs"));
+        assert_eq!(path_only.as_deref(), Some("src/main.rs"));
+        assert_eq!(line_only, None);
+        assert_eq!(column_only, None);
+
+        let (none_path, none_line, none_column) = parse_violation_location(None);
+        assert!(none_path.is_none());
+        assert!(none_line.is_none());
+        assert!(none_column.is_none());
+    }
+
+    #[test]
+    fn infers_compliance_trend_from_resolution_ratio() {
+        let improving = infer_compliance_trend(10, 8, 2);
+        assert_eq!(improving, ComplianceTrend::Improving);
+
+        let stable = infer_compliance_trend(10, 5, 4);
+        assert_eq!(stable, ComplianceTrend::Stable);
+
+        let declining = infer_compliance_trend(10, 2, 7);
+        assert_eq!(declining, ComplianceTrend::Declining);
+
+        let unknown = infer_compliance_trend(0, 0, 0);
+        assert_eq!(unknown, ComplianceTrend::Unknown);
+    }
+
+    #[test]
+    fn maps_severity_to_database_value() {
+        assert_eq!(severity_to_db_value(&ViolationSeverity::Low), "low");
+        assert_eq!(severity_to_db_value(&ViolationSeverity::Medium), "medium");
+        assert_eq!(severity_to_db_value(&ViolationSeverity::High), "high");
+        assert_eq!(
+            severity_to_db_value(&ViolationSeverity::Critical),
+            "critical"
+        );
     }
 }

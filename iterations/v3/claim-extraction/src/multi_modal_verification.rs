@@ -63,20 +63,34 @@ struct SemanticAnalyzer {
 }
 
 // Placeholder implementations for all the validator components
-#[derive(Debug)] struct ReferenceFinder;
-#[derive(Debug)] struct ConsistencyChecker;
-#[derive(Debug)] struct RelationshipAnalyzer;
-#[derive(Debug)] struct BehaviorPredictor;
-#[derive(Debug)] struct ExecutionTracer;
-#[derive(Debug)] struct SourceValidator;
-#[derive(Debug)] struct AuthorityScorer;
-#[derive(Debug)] struct CredibilityAssessor;
-#[derive(Debug)] struct DependencyAnalyzer;
-#[derive(Debug)] struct ContextBuilder;
-#[derive(Debug)] struct ScopeResolver;
-#[derive(Debug)] struct SemanticParser;
-#[derive(Debug)] struct MeaningExtractor;
-#[derive(Debug)] struct IntentAnalyzer;
+#[derive(Debug)]
+struct ReferenceFinder;
+#[derive(Debug)]
+struct ConsistencyChecker;
+#[derive(Debug)]
+struct RelationshipAnalyzer;
+#[derive(Debug)]
+struct BehaviorPredictor;
+#[derive(Debug)]
+struct ExecutionTracer;
+#[derive(Debug)]
+struct SourceValidator;
+#[derive(Debug)]
+struct AuthorityScorer;
+#[derive(Debug)]
+struct CredibilityAssessor;
+#[derive(Debug)]
+struct DependencyAnalyzer;
+#[derive(Debug)]
+struct ContextBuilder;
+#[derive(Debug)]
+struct ScopeResolver;
+#[derive(Debug)]
+struct SemanticParser;
+#[derive(Debug)]
+struct MeaningExtractor;
+#[derive(Debug)]
+struct IntentAnalyzer;
 
 impl MultiModalVerificationEngine {
     /// Create a new verification engine with all validators initialized
@@ -116,7 +130,10 @@ impl MultiModalVerificationEngine {
 
         for claim in claims {
             let verification_result = self.verify_single_claim(claim).await?;
-            let was_verified = matches!(verification_result.verification_results, VerificationStatus::Verified);
+            let was_verified = matches!(
+                verification_result.verification_results,
+                VerificationStatus::Verified
+            );
             results.verified_claims.push(verification_result);
 
             if was_verified {
@@ -140,7 +157,10 @@ impl MultiModalVerificationEngine {
         // 1. Cross-reference validation - check consistency across sources
         let cross_ref_score = self.validate_cross_references(claim).await?;
         confidence_scores.push(cross_ref_score);
-        verification_details.push(format!("Cross-reference validation: {:.2}", cross_ref_score));
+        verification_details.push(format!(
+            "Cross-reference validation: {:.2}",
+            cross_ref_score
+        ));
 
         // 2. Code behavior analysis - verify runtime behavior
         if let Some(code_ref_score) = self.analyze_code_behavior(claim).await? {
@@ -250,7 +270,10 @@ impl MultiModalVerificationEngine {
         let claim_keywords: Vec<String> = self.extract_search_keywords(&claim.claim_text);
 
         if claim_keywords.is_empty() {
-            debug!("No searchable keywords found in claim: {}", claim.claim_text);
+            debug!(
+                "No searchable keywords found in claim: {}",
+                claim.claim_text
+            );
             return Ok(None);
         }
 
@@ -286,8 +309,8 @@ impl MultiModalVerificationEngine {
             let relevance_boost = (relevant_matches as f64 / total_matches as f64).min(1.0);
 
             (base_score * 0.7) + (relevance_boost * 0.3)
-                } else {
-                    0.0
+        } else {
+            0.0
         };
 
         debug!(
@@ -319,7 +342,10 @@ impl MultiModalVerificationEngine {
 
         // Search each source file for comments containing claim keywords
         for source_file in &source_files {
-            match self.search_comments_in_file(source_file, &claim_keywords).await {
+            match self
+                .search_comments_in_file(source_file, &claim_keywords)
+                .await
+            {
                 Ok((file_matches, file_relevant)) => {
                     total_comment_matches += file_matches;
                     relevant_comment_matches += file_relevant;
@@ -335,7 +361,8 @@ impl MultiModalVerificationEngine {
         let comment_score = if total_comment_matches > 0 {
             // Comments are highly credible sources
             let base_score = (total_comment_matches as f64).min(5.0) / 5.0; // Cap at 5 matches
-            let relevance_boost = (relevant_comment_matches as f64 / total_comment_matches as f64).min(1.0);
+            let relevance_boost =
+                (relevant_comment_matches as f64 / total_comment_matches as f64).min(1.0);
 
             (base_score * 0.6) + (relevance_boost * 0.4) + 0.3 // Base credibility boost for comments
         } else {
@@ -360,9 +387,11 @@ impl MultiModalVerificationEngine {
         let test_confidence = self.analyze_test_coverage(claim, &test_patterns).await?;
 
         // Only return a score if the claim seems testable and has test coverage
-        if (claim.claim_text.contains("should") ||
-            claim.claim_text.contains("must") ||
-            claim.claim_text.contains("will")) && test_confidence > 0.1 {
+        if (claim.claim_text.contains("should")
+            || claim.claim_text.contains("must")
+            || claim.claim_text.contains("will"))
+            && test_confidence > 0.1
+        {
             Ok(Some(test_confidence))
         } else {
             Ok(None)
@@ -375,7 +404,9 @@ impl MultiModalVerificationEngine {
         let spec_patterns = ["spec", "requirement", "design", ".yaml", ".json"];
 
         // Implement specification document analysis
-        let spec_confidence = self.analyze_specification_coverage(claim, &spec_patterns).await?;
+        let spec_confidence = self
+            .analyze_specification_coverage(claim, &spec_patterns)
+            .await?;
 
         Ok(Some(spec_confidence))
     }
@@ -392,11 +423,12 @@ impl MultiModalVerificationEngine {
     /// Analyze code behavior for runtime verification
     async fn analyze_code_behavior(&self, claim: &AtomicClaim) -> Result<Option<f64>> {
         // Only analyze claims that reference code behavior
-        if !claim.claim_text.contains("function") &&
-           !claim.claim_text.contains("method") &&
-           !claim.claim_text.contains("class") &&
-           !claim.claim_text.contains("return") &&
-           !claim.claim_text.contains("variable") {
+        if !claim.claim_text.contains("function")
+            && !claim.claim_text.contains("method")
+            && !claim.claim_text.contains("class")
+            && !claim.claim_text.contains("return")
+            && !claim.claim_text.contains("variable")
+        {
             return Ok(None);
         }
 
@@ -431,7 +463,11 @@ impl MultiModalVerificationEngine {
         // Look for function definitions
         if let Some(func_match) = claim_text.find("function") {
             let start = func_match;
-            let end = claim_text[start..].find(')').unwrap_or(claim_text.len() - start) + start + 1;
+            let end = claim_text[start..]
+                .find(')')
+                .unwrap_or(claim_text.len() - start)
+                + start
+                + 1;
             if end > start && end <= claim_text.len() {
                 patterns.push(claim_text[start..end].to_string());
             }
@@ -440,7 +476,8 @@ impl MultiModalVerificationEngine {
         // Look for method calls
         if let Some(method_match) = claim_text.find('.') {
             let start = method_match.saturating_sub(20).max(0);
-            let end = claim_text[method_match..].find('(')
+            let end = claim_text[method_match..]
+                .find('(')
                 .map(|pos| method_match + pos + 1)
                 .unwrap_or(method_match + 20);
             if end <= claim_text.len() {
@@ -469,9 +506,15 @@ impl MultiModalVerificationEngine {
 
         // Score based on coherent programming concepts
         let mut consistency: f64 = 0.0;
-        if has_functions { consistency += 0.3; }
-        if has_methods { consistency += 0.3; }
-        if has_assignments { consistency += 0.2; }
+        if has_functions {
+            consistency += 0.3;
+        }
+        if has_methods {
+            consistency += 0.3;
+        }
+        if has_assignments {
+            consistency += 0.2;
+        }
 
         // Bonus for multiple related patterns
         if patterns.len() > 1 {
@@ -530,7 +573,21 @@ impl MultiModalVerificationEngine {
     fn is_stop_word(&self, word: &str) -> bool {
         matches!(
             word.to_lowercase().as_str(),
-            "that" | "this" | "with" | "from" | "have" | "will" | "when" | "what" | "where" | "which" | "they" | "their" | "there" | "these" | "those"
+            "that"
+                | "this"
+                | "with"
+                | "from"
+                | "have"
+                | "will"
+                | "when"
+                | "what"
+                | "where"
+                | "which"
+                | "they"
+                | "their"
+                | "there"
+                | "these"
+                | "those"
         )
     }
 
@@ -571,7 +628,11 @@ impl MultiModalVerificationEngine {
     }
 
     /// Search a single documentation file for keywords
-    async fn search_document_file(&self, file_path: &str, keywords: &[String]) -> Result<(usize, usize)> {
+    async fn search_document_file(
+        &self,
+        file_path: &str,
+        keywords: &[String],
+    ) -> Result<(usize, usize)> {
         // In a real implementation, this would read the file and search for keywords
         // For now, simulate file content searching
 
@@ -590,7 +651,9 @@ impl MultiModalVerificationEngine {
             total_matches += keyword_matches;
 
             // Consider matches relevant if they appear in meaningful contexts
-            if keyword_matches > 0 && self.is_relevant_context(file_path, keyword, &simulated_content) {
+            if keyword_matches > 0
+                && self.is_relevant_context(file_path, keyword, &simulated_content)
+            {
                 relevant_matches += keyword_matches.min(3); // Cap per keyword
             }
         }
@@ -606,26 +669,25 @@ impl MultiModalVerificationEngine {
                 "This project implements an agent agency system with multiple components.
                 The system includes database integration, council arbitration, and claim extraction.
                 Users can verify claims using multi-modal analysis including documentation search.
-                The API supports various verification methods and evidence collection.".to_string()
+                The API supports various verification methods and evidence collection."
+                    .to_string()
             }
-            "docs/architecture.md" => {
-                "System Architecture Overview
+            "docs/architecture.md" => "System Architecture Overview
                 The agent agency consists of several key components:
                 - Council: Advanced arbitration engine with learning capabilities
                 - Database: Real-time health monitoring and performance tracking
                 - Claim Extraction: Multi-modal verification pipeline
                 - Research: Knowledge seeking and vector search capabilities
-                All components integrate through standardized interfaces.".to_string()
-            }
-            "docs/api.md" => {
-                "API Documentation
+                All components integrate through standardized interfaces."
+                .to_string(),
+            "docs/api.md" => "API Documentation
                 The system provides REST APIs for:
                 - Claim verification with evidence collection
                 - Council arbitration with debate rounds
                 - Database health monitoring with metrics
                 - Multi-modal analysis with cross-reference validation
-                Authentication is required for all endpoints.".to_string()
-            }
+                Authentication is required for all endpoints."
+                .to_string(),
             _ => "".to_string(),
         }
     }
@@ -638,15 +700,28 @@ impl MultiModalVerificationEngine {
         // Define relevant context terms based on file type
         let context_terms = match file_path {
             "README.md" => vec!["system", "project", "implements", "provides", "supports"],
-            "docs/architecture.md" => vec!["architecture", "components", "system", "integrates", "capabilities"],
-            "docs/api.md" => vec!["api", "endpoints", "provides", "authentication", "documentation"],
+            "docs/architecture.md" => vec![
+                "architecture",
+                "components",
+                "system",
+                "integrates",
+                "capabilities",
+            ],
+            "docs/api.md" => vec![
+                "api",
+                "endpoints",
+                "provides",
+                "authentication",
+                "documentation",
+            ],
             _ => vec!["system", "provides", "supports"],
         };
 
         // Check if keyword appears near context terms
         for term in context_terms {
-            if content_lower.contains(&format!("{} {}", term, keyword)) ||
-               content_lower.contains(&format!("{} {}", keyword, term)) {
+            if content_lower.contains(&format!("{} {}", term, keyword))
+                || content_lower.contains(&format!("{} {}", keyword, term))
+            {
                 return true;
             }
         }
@@ -654,8 +729,8 @@ impl MultiModalVerificationEngine {
         // Check for keyword in section headers (lines starting with #)
         for line in content.lines() {
             if line.trim().starts_with('#') && line.to_lowercase().contains(keyword) {
-            return true;
-        }
+                return true;
+            }
         }
 
         false
@@ -666,7 +741,9 @@ impl MultiModalVerificationEngine {
         let mut source_files = Vec::new();
 
         // Common source code file extensions
-        let extensions = ["rs", "ts", "js", "py", "java", "cpp", "c", "go", "rb", "php"];
+        let extensions = [
+            "rs", "ts", "js", "py", "java", "cpp", "c", "go", "rb", "php",
+        ];
 
         // For now, simulate finding source files
         // In a real implementation, this would walk the src/ directory
@@ -697,7 +774,11 @@ impl MultiModalVerificationEngine {
     }
 
     /// Search for comments in a source file that match keywords
-    async fn search_comments_in_file(&self, file_path: &str, keywords: &[String]) -> Result<(usize, usize)> {
+    async fn search_comments_in_file(
+        &self,
+        file_path: &str,
+        keywords: &[String],
+    ) -> Result<(usize, usize)> {
         let mut total_matches = 0;
         let mut relevant_matches = 0;
 
@@ -760,8 +841,7 @@ impl MultiModalVerificationEngine {
     /// Simulate source file content for testing
     fn simulate_source_content(&self, file_path: &str) -> String {
         match file_path {
-            "src/lib.rs" => {
-                "// Main library file for the agent agency system
+            "src/lib.rs" => "// Main library file for the agent agency system
                 // This module provides the core functionality for claim extraction and verification
 
                 /// The main entry point for claim processing
@@ -775,28 +855,25 @@ impl MultiModalVerificationEngine {
                    - Add support for custom verification strategies
                    - Implement caching for improved performance
                    - Add metrics collection for monitoring
-                */".to_string()
-            }
-            "src/main.rs" => {
-                "// Main application entry point
+                */"
+            .to_string(),
+            "src/main.rs" => "// Main application entry point
                 // Initializes the agent agency system with all components
 
                 fn main() {
                     // Start the system with database, council, and verification components
                     println!(\"Agent Agency System starting...\");
-                }".to_string()
-            }
-            "src/index.ts" => {
-                "// TypeScript entry point for the web interface
+                }"
+            .to_string(),
+            "src/index.ts" => "// TypeScript entry point for the web interface
                 // Provides API endpoints for claim verification
 
                 export function verifyClaims(claims: string[]): Promise<VerifiedClaim[]> {
                     // Implementation uses multi-modal verification
                     return Promise.resolve([]);
-                }".to_string()
-            }
-            "src/types.ts" => {
-                "// Type definitions for the claim verification system
+                }"
+            .to_string(),
+            "src/types.ts" => "// Type definitions for the claim verification system
 
                 export interface VerifiedClaim {
                     text: string;
@@ -808,8 +885,8 @@ impl MultiModalVerificationEngine {
                     type: string;
                     content: string;
                     confidence: number;
-                }".to_string()
-            }
+                }"
+            .to_string(),
             _ => "".to_string(),
         }
     }
@@ -822,7 +899,7 @@ impl MultiModalVerificationEngine {
         // - Validate author expertise
         // - Assess publication/recency factors
         // - Check for conflicts of interest
-        
+
         let authority_score = self.analyze_authority_credibility(claim).await?;
         Ok(authority_score)
     }
@@ -875,7 +952,14 @@ impl MultiModalVerificationEngine {
         }
 
         // Check for technical terms that need definition
-        let technical_indicators = ["API", "SDK", "framework", "library", "protocol", "algorithm"];
+        let technical_indicators = [
+            "API",
+            "SDK",
+            "framework",
+            "library",
+            "protocol",
+            "algorithm",
+        ];
         for indicator in &technical_indicators {
             if text.contains(indicator) {
                 requirements.push(format!("technical_definition:{}", indicator));
@@ -883,7 +967,14 @@ impl MultiModalVerificationEngine {
         }
 
         // Check for temporal references
-        let temporal_indicators = ["before", "after", "when", "during", "previously", "subsequently"];
+        let temporal_indicators = [
+            "before",
+            "after",
+            "when",
+            "during",
+            "previously",
+            "subsequently",
+        ];
         for indicator in &temporal_indicators {
             if text.contains(indicator) {
                 requirements.push(format!("temporal_context:{}", indicator));
@@ -917,17 +1008,19 @@ impl MultiModalVerificationEngine {
                 req if req.starts_with("technical_definition:") => {
                     // Check if technical terms are explained
                     let term = req.split(':').nth(1).unwrap_or("");
-                    if claim.claim_text.contains("defined") ||
-                       claim.claim_text.contains("means") ||
-                       claim.claim_text.contains("refers to") {
+                    if claim.claim_text.contains("defined")
+                        || claim.claim_text.contains("means")
+                        || claim.claim_text.contains("refers to")
+                    {
                         available += 1;
                     }
                 }
                 req if req.starts_with("temporal_context:") => {
                     // Check if temporal context is provided
-                    if claim.claim_text.contains("at ") ||
-                       claim.claim_text.contains("during ") ||
-                       claim.claim_text.contains("after ") {
+                    if claim.claim_text.contains("at ")
+                        || claim.claim_text.contains("during ")
+                        || claim.claim_text.contains("after ")
+                    {
                         available += 1;
                     }
                 }
@@ -956,21 +1049,23 @@ impl MultiModalVerificationEngine {
             }
             crate::types::DataImpact::Write => {
                 // Write claims need careful validation
-                if claim.claim_text.contains("safely") ||
-                   claim.claim_text.contains("without") ||
-                   claim.claim_text.contains("correctly") {
+                if claim.claim_text.contains("safely")
+                    || claim.claim_text.contains("without")
+                    || claim.claim_text.contains("correctly")
+                {
                     0.7
-        } else {
+                } else {
                     0.5 // Lower confidence for write claims without safety assurances
                 }
             }
             crate::types::DataImpact::Critical => {
                 // Critical claims need explicit safety measures
-                if claim.claim_text.contains("atomic") ||
-                   claim.claim_text.contains("transaction") ||
-                   claim.claim_text.contains("rollback") {
+                if claim.claim_text.contains("atomic")
+                    || claim.claim_text.contains("transaction")
+                    || claim.claim_text.contains("rollback")
+                {
                     0.8
-        } else {
+                } else {
                     0.4 // Critical claims need strong safety guarantees
                 }
             }
@@ -985,7 +1080,7 @@ impl MultiModalVerificationEngine {
         // Check for clear, unambiguous language
         let clarity_score = if text.len() > 10 && text.contains(" ") {
             0.8
-                } else {
+        } else {
             0.4
         };
 
@@ -1000,20 +1095,27 @@ impl MultiModalVerificationEngine {
         // Combine semantic analysis scores
         let semantic_score = (clarity_score + specificity_score) / 2.0;
 
-        debug!("Semantic analysis for '{}': clarity={:.2}, specificity={:.2}, overall={:.2}",
-               text, clarity_score, specificity_score, semantic_score);
+        debug!(
+            "Semantic analysis for '{}': clarity={:.2}, specificity={:.2}, overall={:.2}",
+            text, clarity_score, specificity_score, semantic_score
+        );
 
         Ok(semantic_score)
     }
 
     /// Analyze test coverage for a claim
-    async fn analyze_test_coverage(&self, claim: &AtomicClaim, test_patterns: &[&str]) -> Result<f64> {
+    async fn analyze_test_coverage(
+        &self,
+        claim: &AtomicClaim,
+        test_patterns: &[&str],
+    ) -> Result<f64> {
         let mut coverage_score = 0.0;
         let mut test_count = 0;
         let mut total_confidence = 0.0;
 
         // Extract key terms from the claim for test matching
-        let claim_terms: Vec<String> = claim.claim_text
+        let claim_terms: Vec<String> = claim
+            .claim_text
             .split_whitespace()
             .filter(|word| word.len() > 3 && !word.chars().all(|c| c.is_ascii_punctuation()))
             .map(|s| s.to_lowercase())
@@ -1023,8 +1125,10 @@ impl MultiModalVerificationEngine {
         // In a real implementation, this would scan the filesystem for test files
         for pattern in test_patterns {
             // Simulate finding test files that match the pattern
-            let simulated_test_files = self.simulate_test_file_discovery(pattern, &claim_terms).await?;
-            
+            let simulated_test_files = self
+                .simulate_test_file_discovery(pattern, &claim_terms)
+                .await?;
+
             for test_file in simulated_test_files {
                 let test_relevance = self.calculate_test_relevance(&test_file, claim).await?;
                 if test_relevance > 0.3 {
@@ -1042,16 +1146,22 @@ impl MultiModalVerificationEngine {
             }
         }
 
-        debug!("Test coverage analysis for '{}': {} tests found, coverage={:.2}",
-               claim.claim_text, test_count, coverage_score);
+        debug!(
+            "Test coverage analysis for '{}': {} tests found, coverage={:.2}",
+            claim.claim_text, test_count, coverage_score
+        );
 
         Ok(coverage_score)
     }
 
     /// Simulate test file discovery
-    async fn simulate_test_file_discovery(&self, pattern: &str, claim_terms: &[String]) -> Result<Vec<String>> {
+    async fn simulate_test_file_discovery(
+        &self,
+        pattern: &str,
+        claim_terms: &[String],
+    ) -> Result<Vec<String>> {
         let mut test_files = Vec::new();
-        
+
         // Simulate finding test files based on patterns and claim terms
         for term in claim_terms {
             if term.len() > 4 {
@@ -1067,14 +1177,14 @@ impl MultiModalVerificationEngine {
         // Add some generic test files
         test_files.push("test_utils.rs".to_string());
         test_files.push("integration_tests.rs".to_string());
-        
+
         Ok(test_files)
     }
 
     /// Calculate test relevance to a claim
     async fn calculate_test_relevance(&self, test_file: &str, claim: &AtomicClaim) -> Result<f64> {
         let mut relevance = 0.0;
-        
+
         // Extract terms from test file name
         let test_terms: Vec<String> = test_file
             .split(|c: char| c == '_' || c == '.' || c == '-')
@@ -1083,7 +1193,8 @@ impl MultiModalVerificationEngine {
             .collect();
 
         // Extract terms from claim
-        let claim_terms: Vec<String> = claim.claim_text
+        let claim_terms: Vec<String> = claim
+            .claim_text
             .split_whitespace()
             .filter(|word| word.len() > 3)
             .map(|s| s.to_lowercase())
@@ -1116,13 +1227,18 @@ impl MultiModalVerificationEngine {
     }
 
     /// Analyze specification coverage for a claim
-    async fn analyze_specification_coverage(&self, claim: &AtomicClaim, spec_patterns: &[&str]) -> Result<f64> {
+    async fn analyze_specification_coverage(
+        &self,
+        claim: &AtomicClaim,
+        spec_patterns: &[&str],
+    ) -> Result<f64> {
         let mut spec_score = 0.0;
         let mut spec_count = 0;
         let mut total_confidence = 0.0;
 
         // Extract key terms from the claim for specification matching
-        let claim_terms: Vec<String> = claim.claim_text
+        let claim_terms: Vec<String> = claim
+            .claim_text
             .split_whitespace()
             .filter(|word| word.len() > 3 && !word.chars().all(|c| c.is_ascii_punctuation()))
             .map(|s| s.to_lowercase())
@@ -1130,10 +1246,14 @@ impl MultiModalVerificationEngine {
 
         // Simulate specification document discovery and analysis
         for pattern in spec_patterns {
-            let simulated_specs = self.simulate_specification_discovery(pattern, &claim_terms).await?;
-            
+            let simulated_specs = self
+                .simulate_specification_discovery(pattern, &claim_terms)
+                .await?;
+
             for spec_doc in simulated_specs {
-                let spec_relevance = self.calculate_specification_relevance(&spec_doc, claim).await?;
+                let spec_relevance = self
+                    .calculate_specification_relevance(&spec_doc, claim)
+                    .await?;
                 if spec_relevance > 0.2 {
                     spec_count += 1;
                     total_confidence += spec_relevance;
@@ -1152,16 +1272,22 @@ impl MultiModalVerificationEngine {
             spec_score = 0.3;
         }
 
-        debug!("Specification analysis for '{}': {} specs found, coverage={:.2}",
-               claim.claim_text, spec_count, spec_score);
+        debug!(
+            "Specification analysis for '{}': {} specs found, coverage={:.2}",
+            claim.claim_text, spec_count, spec_score
+        );
 
         Ok(spec_score)
     }
 
     /// Simulate specification document discovery
-    async fn simulate_specification_discovery(&self, pattern: &str, claim_terms: &[String]) -> Result<Vec<String>> {
+    async fn simulate_specification_discovery(
+        &self,
+        pattern: &str,
+        claim_terms: &[String],
+    ) -> Result<Vec<String>> {
         let mut spec_docs = Vec::new();
-        
+
         // Simulate finding specification documents based on patterns and claim terms
         for term in claim_terms {
             if term.len() > 4 {
@@ -1186,14 +1312,18 @@ impl MultiModalVerificationEngine {
         spec_docs.push("docs/architecture.md".to_string());
         spec_docs.push("docs/api_specification.yaml".to_string());
         spec_docs.push("requirements.json".to_string());
-        
+
         Ok(spec_docs)
     }
 
     /// Calculate specification relevance to a claim
-    async fn calculate_specification_relevance(&self, spec_doc: &str, claim: &AtomicClaim) -> Result<f64> {
+    async fn calculate_specification_relevance(
+        &self,
+        spec_doc: &str,
+        claim: &AtomicClaim,
+    ) -> Result<f64> {
         let mut relevance = 0.0;
-        
+
         // Extract terms from specification document name
         let spec_terms: Vec<String> = spec_doc
             .split(|c: char| c == '_' || c == '.' || c == '-' || c == '/')
@@ -1202,7 +1332,8 @@ impl MultiModalVerificationEngine {
             .collect();
 
         // Extract terms from claim
-        let claim_terms: Vec<String> = claim.claim_text
+        let claim_terms: Vec<String> = claim
+            .claim_text
             .split_whitespace()
             .filter(|word| word.len() > 3)
             .map(|s| s.to_lowercase())
@@ -1244,7 +1375,8 @@ impl MultiModalVerificationEngine {
         let mut total_confidence = 0.0;
 
         // Extract key terms from the claim for historical matching
-        let claim_terms: Vec<String> = claim.claim_text
+        let claim_terms: Vec<String> = claim
+            .claim_text
             .split_whitespace()
             .filter(|word| word.len() > 3 && !word.chars().all(|c| c.is_ascii_punctuation()))
             .map(|s| s.to_lowercase())
@@ -1253,9 +1385,11 @@ impl MultiModalVerificationEngine {
         // Simulate historical claim validation lookup
         // In a real implementation, this would query a database of previously validated claims
         let historical_validations = self.simulate_historical_lookup(&claim_terms).await?;
-        
+
         for historical_claim in historical_validations {
-            let similarity = self.calculate_claim_similarity(claim, &historical_claim).await?;
+            let similarity = self
+                .calculate_claim_similarity(claim, &historical_claim)
+                .await?;
             if similarity > 0.4 {
                 validation_count += 1;
                 // Weight by similarity and historical validation outcome
@@ -1275,16 +1409,21 @@ impl MultiModalVerificationEngine {
             historical_score = 0.4;
         }
 
-        debug!("Historical validation analysis for '{}': {} similar claims found, confidence={:.2}",
-               claim.claim_text, validation_count, historical_score);
+        debug!(
+            "Historical validation analysis for '{}': {} similar claims found, confidence={:.2}",
+            claim.claim_text, validation_count, historical_score
+        );
 
         Ok(historical_score)
     }
 
     /// Simulate historical claim validation lookup
-    async fn simulate_historical_lookup(&self, claim_terms: &[String]) -> Result<Vec<HistoricalClaim>> {
+    async fn simulate_historical_lookup(
+        &self,
+        claim_terms: &[String],
+    ) -> Result<Vec<HistoricalClaim>> {
         let mut historical_claims = Vec::new();
-        
+
         // Simulate finding similar historical claims
         for term in claim_terms {
             if term.len() > 4 {
@@ -1295,7 +1434,7 @@ impl MultiModalVerificationEngine {
                     validation_timestamp: chrono::Utc::now() - chrono::Duration::days(30),
                     validation_outcome: ValidationOutcome::Validated,
                 });
-                
+
                 historical_claims.push(HistoricalClaim {
                     claim_text: format!("{} must be implemented according to specifications", term),
                     validation_confidence: 0.92,
@@ -1312,29 +1451,35 @@ impl MultiModalVerificationEngine {
             validation_timestamp: chrono::Utc::now() - chrono::Duration::days(7),
             validation_outcome: ValidationOutcome::Validated,
         });
-        
+
         historical_claims.push(HistoricalClaim {
             claim_text: "Error handling must be robust".to_string(),
             validation_confidence: 0.91,
             validation_timestamp: chrono::Utc::now() - chrono::Duration::days(3),
             validation_outcome: ValidationOutcome::Validated,
         });
-        
+
         Ok(historical_claims)
     }
 
     /// Calculate similarity between two claims
-    async fn calculate_claim_similarity(&self, claim1: &AtomicClaim, claim2: &HistoricalClaim) -> Result<f64> {
+    async fn calculate_claim_similarity(
+        &self,
+        claim1: &AtomicClaim,
+        claim2: &HistoricalClaim,
+    ) -> Result<f64> {
         let mut similarity = 0.0;
-        
+
         // Extract terms from both claims
-        let terms1: Vec<String> = claim1.claim_text
+        let terms1: Vec<String> = claim1
+            .claim_text
             .split_whitespace()
             .filter(|word| word.len() > 3)
             .map(|s| s.to_lowercase())
             .collect();
-            
-        let terms2: Vec<String> = claim2.claim_text
+
+        let terms2: Vec<String> = claim2
+            .claim_text
             .split_whitespace()
             .filter(|word| word.len() > 3)
             .map(|s| s.to_lowercase())
@@ -1371,45 +1516,54 @@ impl MultiModalVerificationEngine {
     /// Analyze authority credibility for a claim
     async fn analyze_authority_credibility(&self, claim: &AtomicClaim) -> Result<f64> {
         let mut authority_score = 0.0;
-        
+
         // Extract potential authority indicators from the claim
         let authority_indicators = self.extract_authority_indicators(claim).await?;
-        
+
         // Check source credibility
-        let source_credibility = self.assess_source_credibility(&authority_indicators).await?;
-        
+        let source_credibility = self
+            .assess_source_credibility(&authority_indicators)
+            .await?;
+
         // Validate author expertise
         let expertise_score = self.assess_author_expertise(&authority_indicators).await?;
-        
+
         // Assess publication/recency factors
-        let recency_score = self.assess_publication_recency(&authority_indicators).await?;
-        
+        let recency_score = self
+            .assess_publication_recency(&authority_indicators)
+            .await?;
+
         // Check for conflicts of interest
-        let conflict_score = self.assess_conflicts_of_interest(&authority_indicators).await?;
-        
+        let conflict_score = self
+            .assess_conflicts_of_interest(&authority_indicators)
+            .await?;
+
         // Combine scores with weights
-        authority_score = (source_credibility * 0.3) + 
-                         (expertise_score * 0.3) + 
-                         (recency_score * 0.2) + 
-                         (conflict_score * 0.2);
-        
+        authority_score = (source_credibility * 0.3)
+            + (expertise_score * 0.3)
+            + (recency_score * 0.2)
+            + (conflict_score * 0.2);
+
         debug!("Authority analysis for '{}': source={:.2}, expertise={:.2}, recency={:.2}, conflicts={:.2}, overall={:.2}",
                claim.claim_text, source_credibility, expertise_score, recency_score, conflict_score, authority_score);
-        
+
         Ok(authority_score)
     }
 
     /// Extract authority indicators from a claim
-    async fn extract_authority_indicators(&self, claim: &AtomicClaim) -> Result<AuthorityIndicators> {
+    async fn extract_authority_indicators(
+        &self,
+        claim: &AtomicClaim,
+    ) -> Result<AuthorityIndicators> {
         let mut indicators = AuthorityIndicators {
             source_types: Vec::new(),
             expertise_domains: Vec::new(),
             publication_indicators: Vec::new(),
             conflict_indicators: Vec::new(),
         };
-        
+
         let claim_lower = claim.claim_text.to_lowercase();
-        
+
         // Extract source type indicators
         if claim_lower.contains("documentation") || claim_lower.contains("docs") {
             indicators.source_types.push(SourceType::Documentation);
@@ -1423,7 +1577,7 @@ impl MultiModalVerificationEngine {
         if claim_lower.contains("research") || claim_lower.contains("study") {
             indicators.source_types.push(SourceType::Research);
         }
-        
+
         // Extract expertise domain indicators
         if claim_lower.contains("security") || claim_lower.contains("auth") {
             indicators.expertise_domains.push("security".to_string());
@@ -1437,33 +1591,41 @@ impl MultiModalVerificationEngine {
         if claim_lower.contains("api") || claim_lower.contains("interface") {
             indicators.expertise_domains.push("api_design".to_string());
         }
-        
+
         // Extract publication indicators
         if claim_lower.contains("recent") || claim_lower.contains("latest") {
             indicators.publication_indicators.push("recent".to_string());
         }
         if claim_lower.contains("peer") || claim_lower.contains("reviewed") {
-            indicators.publication_indicators.push("peer_reviewed".to_string());
+            indicators
+                .publication_indicators
+                .push("peer_reviewed".to_string());
         }
         if claim_lower.contains("official") || claim_lower.contains("standard") {
-            indicators.publication_indicators.push("official".to_string());
+            indicators
+                .publication_indicators
+                .push("official".to_string());
         }
-        
+
         // Extract conflict indicators
         if claim_lower.contains("vendor") || claim_lower.contains("commercial") {
-            indicators.conflict_indicators.push("commercial_interest".to_string());
+            indicators
+                .conflict_indicators
+                .push("commercial_interest".to_string());
         }
         if claim_lower.contains("sponsored") || claim_lower.contains("funded") {
-            indicators.conflict_indicators.push("sponsorship".to_string());
+            indicators
+                .conflict_indicators
+                .push("sponsorship".to_string());
         }
-        
+
         Ok(indicators)
     }
 
     /// Assess source credibility
     async fn assess_source_credibility(&self, indicators: &AuthorityIndicators) -> Result<f64> {
         let mut credibility: f64 = 0.5; // Base credibility
-        
+
         for source_type in &indicators.source_types {
             match source_type {
                 SourceType::Documentation => credibility += 0.2,
@@ -1472,19 +1634,19 @@ impl MultiModalVerificationEngine {
                 SourceType::Research => credibility += 0.15,
             }
         }
-        
+
         // Boost for multiple source types
         if indicators.source_types.len() > 1 {
             credibility += 0.1;
         }
-        
+
         Ok(credibility.min(1.0))
     }
 
     /// Assess author expertise
     async fn assess_author_expertise(&self, indicators: &AuthorityIndicators) -> Result<f64> {
         let mut expertise: f64 = 0.4; // Base expertise
-        
+
         // Domain expertise scoring
         for domain in &indicators.expertise_domains {
             match domain.as_str() {
@@ -1495,19 +1657,19 @@ impl MultiModalVerificationEngine {
                 _ => expertise += 0.05,
             }
         }
-        
+
         // Boost for multiple domains
         if indicators.expertise_domains.len() > 2 {
             expertise += 0.1;
         }
-        
+
         Ok(expertise.min(1.0))
     }
 
     /// Assess publication recency
     async fn assess_publication_recency(&self, indicators: &AuthorityIndicators) -> Result<f64> {
         let mut recency: f64 = 0.5; // Base recency
-        
+
         for indicator in &indicators.publication_indicators {
             match indicator.as_str() {
                 "recent" => recency += 0.3,
@@ -1516,14 +1678,14 @@ impl MultiModalVerificationEngine {
                 _ => recency += 0.1,
             }
         }
-        
+
         Ok(recency.min(1.0))
     }
 
     /// Assess conflicts of interest
     async fn assess_conflicts_of_interest(&self, indicators: &AuthorityIndicators) -> Result<f64> {
         let mut conflict_score: f64 = 1.0; // Start with no conflicts
-        
+
         for conflict in &indicators.conflict_indicators {
             match conflict.as_str() {
                 "commercial_interest" => conflict_score -= 0.2,
@@ -1531,7 +1693,7 @@ impl MultiModalVerificationEngine {
                 _ => conflict_score -= 0.1,
             }
         }
-        
+
         Ok(conflict_score.max(0.0))
     }
 }
@@ -1570,4 +1732,3 @@ enum ValidationOutcome {
     Refuted,
     Uncertain,
 }
-

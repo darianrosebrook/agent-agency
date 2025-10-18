@@ -6,7 +6,6 @@
 use crate::types::*;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::time::{timeout, Duration};
@@ -192,7 +191,9 @@ impl CouncilIntegrator {
         let council_response = self.submit_to_council_api(&task_spec).await?;
 
         // Convert council response to evidence
-        let evidence = self.council_response_to_evidence(&council_response, claim).await?;
+        let evidence = self
+            .council_response_to_evidence(&council_response, claim)
+            .await?;
 
         debug!("Council verification completed for claim: {}", claim.id);
         Ok(evidence)
@@ -226,7 +227,7 @@ impl CouncilIntegrator {
                 "id": "no_contradictions",
                 "description": "Verify no contradictory information exists",
                 "priority": "high"
-            })
+            }),
         ];
 
         // Build task context
@@ -276,7 +277,9 @@ impl CouncilIntegrator {
             components: context.domain_hints.clone(),
             data_impact: match context.domain_hints.first() {
                 Some(domain) if domain.contains("security") => "high".to_string(),
-                Some(domain) if domain.contains("billing") || domain.contains("payment") => "high".to_string(),
+                Some(domain) if domain.contains("billing") || domain.contains("payment") => {
+                    "high".to_string()
+                }
                 _ => "low".to_string(),
             },
             external_dependencies: vec![], // Could be analyzed from context
@@ -284,7 +287,10 @@ impl CouncilIntegrator {
     }
 
     /// Build task context for council submission
-    async fn build_council_task_context(&self, context: &ProcessingContext) -> Result<serde_json::Value> {
+    async fn build_council_task_context(
+        &self,
+        context: &ProcessingContext,
+    ) -> Result<serde_json::Value> {
         // Extract git information if available
         let git_info = self.extract_git_context().await.unwrap_or_else(|_| {
             serde_json::json!({
@@ -310,9 +316,11 @@ impl CouncilIntegrator {
         // Try to get git information
         match self.run_git_command(&["rev-parse", "--abbrev-ref", "HEAD"]) {
             Ok(branch) => {
-                let commit = self.run_git_command(&["rev-parse", "HEAD"])
+                let commit = self
+                    .run_git_command(&["rev-parse", "HEAD"])
                     .unwrap_or_else(|_| "unknown".to_string());
-                let remote = self.run_git_command(&["remote", "get-url", "origin"])
+                let remote = self
+                    .run_git_command(&["remote", "get-url", "origin"])
                     .unwrap_or_else(|_| "unknown".to_string());
 
                 Ok(serde_json::json!({
@@ -337,17 +345,24 @@ impl CouncilIntegrator {
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).to_string())
         } else {
-            Err(anyhow::anyhow!("Git command failed: {}", String::from_utf8_lossy(&output.stderr)))
+            Err(anyhow::anyhow!(
+                "Git command failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ))
         }
     }
 
     /// Submit task spec to council API
-    async fn submit_to_council_api(&self, task_spec: &serde_json::Value) -> Result<serde_json::Value> {
+    async fn submit_to_council_api(
+        &self,
+        task_spec: &serde_json::Value,
+    ) -> Result<serde_json::Value> {
         let url = format!("{}/api/tasks", self.council_endpoint);
 
         debug!("Submitting task to council at: {}", url);
 
-        let mut request = self.client
+        let mut request = self
+            .client
             .post(&url)
             .header("Content-Type", "application/json");
 
@@ -364,8 +379,15 @@ impl CouncilIntegrator {
 
         if !response.status().is_success() {
             let status = response.status();
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("Council API returned error {}: {}", status, error_text));
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!(
+                "Council API returned error {}: {}",
+                status,
+                error_text
+            ));
         }
 
         let council_response: serde_json::Value = response
@@ -415,11 +437,18 @@ impl CouncilIntegrator {
                                 id: Uuid::new_v4(),
                                 claim_id: claim.id,
                                 evidence_type: EvidenceType::CouncilDecision,
-                                content: format!("Debate round {}: {}", i + 1,
-                                    round_summary.as_str().unwrap_or("No summary available")),
+                                content: format!(
+                                    "Debate round {}: {}",
+                                    i + 1,
+                                    round_summary.as_str().unwrap_or("No summary available")
+                                ),
                                 source: EvidenceSource {
                                     source_type: SourceType::CouncilDecision,
-                                    location: format!("{}/api/tasks/debate/{}", self.council_endpoint, i + 1),
+                                    location: format!(
+                                        "{}/api/tasks/debate/{}",
+                                        self.council_endpoint,
+                                        i + 1
+                                    ),
                                     authority: "Council Debate Round".to_string(),
                                     freshness: Utc::now(),
                                 },
@@ -456,15 +485,18 @@ impl CouncilIntegrator {
     /// Extract verdict information from council response
     fn extract_verdict_info(&self, verdict: &serde_json::Value) -> (f64, String) {
         if let Some(accepted) = verdict.get("Accepted") {
-            let confidence = accepted.get("confidence")
+            let confidence = accepted
+                .get("confidence")
                 .and_then(|c| c.as_f64())
                 .unwrap_or(0.8);
-            let summary = accepted.get("summary")
+            let summary = accepted
+                .get("summary")
                 .and_then(|s| s.as_str())
                 .unwrap_or("Claim accepted by council");
             (confidence, summary.to_string())
         } else if let Some(rejected) = verdict.get("Rejected") {
-            let summary = rejected.get("summary")
+            let summary = rejected
+                .get("summary")
                 .and_then(|s| s.as_str())
                 .unwrap_or("Claim rejected by council");
             (0.2, summary.to_string()) // Low confidence for rejections
@@ -475,7 +507,6 @@ impl CouncilIntegrator {
         }
     }
 }
-
 
 /// Stage 4: Verification with evidence collection
 #[derive(Debug)]
@@ -575,4 +606,3 @@ pub enum CouncilEvidenceSource {
     ExpertKnowledge,
     ResearchAgent,
 }
-

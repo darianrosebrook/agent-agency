@@ -3,15 +3,15 @@
 //! Implements adversarial debate system for resolving conflicts between judges
 //! when consensus cannot be reached through simple voting.
 
-use crate::types::*;
 use crate::models::*;
+use crate::types::*;
 use crate::{DebateConfig, JudgeSpec};
-use uuid::Uuid;
-use async_trait::async_trait;
 use anyhow::{Context, Result};
+use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
+use uuid::Uuid;
 
 /// Trait for generating debate arguments
 #[async_trait]
@@ -127,7 +127,10 @@ impl DebateProtocol {
         individual_verdicts: std::collections::HashMap<JudgeId, JudgeVerdict>,
     ) -> Result<DebateSession> {
         let session_id = Uuid::new_v4();
-        info!("Starting debate session {} for task {}", session_id, task_id);
+        info!(
+            "Starting debate session {} for task {}",
+            session_id, task_id
+        );
 
         // Identify conflicting positions
         let (supporting_judges, opposing_judges) = self.categorize_judges(&individual_verdicts);
@@ -148,7 +151,8 @@ impl DebateProtocol {
         }
 
         // Start the first debate round
-        self.execute_debate_round(&debate_session, 1, supporting_judges, opposing_judges).await?;
+        self.execute_debate_round(&debate_session, 1, supporting_judges, opposing_judges)
+            .await?;
 
         Ok(debate_session)
     }
@@ -162,25 +166,35 @@ impl DebateProtocol {
         opposing_judges: Vec<JudgeId>,
     ) -> Result<()> {
         if round_number > self.config.max_rounds {
-            warn!("Debate session {} exceeded max rounds, marking as timeout", session.session_id);
+            warn!(
+                "Debate session {} exceeded max rounds, marking as timeout",
+                session.session_id
+            );
             self.mark_debate_timeout(session.session_id).await?;
             return Ok(());
         }
 
-        info!("Executing debate round {} for session {}", round_number, session.session_id);
+        info!(
+            "Executing debate round {} for session {}",
+            round_number, session.session_id
+        );
 
         // Collect arguments from all judges
         let mut arguments = std::collections::HashMap::new();
-        
+
         // Supporting judges present their case
         for judge_id in &supporting_judges {
-            let argument = self.collect_judge_argument(judge_id, ArgumentPosition::Support, round_number).await?;
+            let argument = self
+                .collect_judge_argument(judge_id, ArgumentPosition::Support, round_number)
+                .await?;
             arguments.insert(judge_id.clone(), argument);
         }
 
         // Opposing judges present counter-arguments
         for judge_id in &opposing_judges {
-            let argument = self.collect_judge_argument(judge_id, ArgumentPosition::Oppose, round_number).await?;
+            let argument = self
+                .collect_judge_argument(judge_id, ArgumentPosition::Oppose, round_number)
+                .await?;
             arguments.insert(judge_id.clone(), argument);
         }
 
@@ -189,7 +203,10 @@ impl DebateProtocol {
 
         // Get research agent input if configured
         let research_input = if self.config.research_agent_involvement {
-            Some(self.request_research_input(session.task_id, &arguments).await?)
+            Some(
+                self.request_research_input(session.task_id, &arguments)
+                    .await?,
+            )
         } else {
             None
         };
@@ -212,7 +229,8 @@ impl DebateProtocol {
         } else if round_number < self.config.max_rounds {
             // Continue to next round with updated judge positions
             let (new_supporting, new_opposing) = self.update_judge_positions(&round);
-            self.execute_debate_round(session, round_number + 1, new_supporting, new_opposing).await?;
+            self.execute_debate_round(session, round_number + 1, new_supporting, new_opposing)
+                .await?;
         } else {
             // Max rounds reached without consensus
             self.mark_debate_timeout(session.session_id).await?;
@@ -266,7 +284,10 @@ impl DebateProtocol {
     }
 
     /// Generate evidence requests based on arguments presented
-    async fn generate_evidence_requests(&self, arguments: &std::collections::HashMap<JudgeId, DebateArgument>) -> Vec<EvidenceRequest> {
+    async fn generate_evidence_requests(
+        &self,
+        arguments: &std::collections::HashMap<JudgeId, DebateArgument>,
+    ) -> Vec<EvidenceRequest> {
         let mut requests = Vec::new();
 
         for (judge_id, argument) in arguments {
@@ -284,7 +305,11 @@ impl DebateProtocol {
     }
 
     /// Request input from research agent
-    async fn request_research_input(&self, task_id: TaskId, arguments: &std::collections::HashMap<JudgeId, DebateArgument>) -> Result<ResearchInput> {
+    async fn request_research_input(
+        &self,
+        task_id: TaskId,
+        arguments: &std::collections::HashMap<JudgeId, DebateArgument>,
+    ) -> Result<ResearchInput> {
         // NOTE: Current implementation simulates research findings
         // Future enhancement: Integrate with actual research agents for evidence gathering
         // - Real-time research query formulation and execution
@@ -292,14 +317,12 @@ impl DebateProtocol {
         // - Research result integration with debate arguments
         // - Multi-source research coordination and synthesis
         // For now, simulate research findings
-        let findings = vec![
-            ResearchFinding {
-                topic: "Best Practices".to_string(),
-                finding: "Industry best practices support the proposed approach".to_string(),
-                relevance: 0.8,
-                sources: vec!["Industry standards documentation".to_string()],
-            },
-        ];
+        let findings = vec![ResearchFinding {
+            topic: "Best Practices".to_string(),
+            finding: "Industry best practices support the proposed approach".to_string(),
+            relevance: 0.8,
+            sources: vec!["Industry standards documentation".to_string()],
+        }];
 
         Ok(ResearchInput {
             research_agent_id: "research-agent-001".to_string(),
@@ -312,7 +335,7 @@ impl DebateProtocol {
     /// Store debate round in the session
     async fn store_debate_round(&self, session_id: Uuid, round: DebateRound) -> Result<()> {
         let mut debates = self.active_debates.write().await;
-        
+
         if let Some(session) = debates.get_mut(&session_id) {
             session.rounds.push(round);
         } else {
@@ -323,25 +346,35 @@ impl DebateProtocol {
     }
 
     /// Evaluate if consensus can be reached after this round
-    async fn evaluate_round_consensus(&self, round: &DebateRound) -> Result<Option<ConsensusResult>> {
+    async fn evaluate_round_consensus(
+        &self,
+        round: &DebateRound,
+    ) -> Result<Option<ConsensusResult>> {
         // Analyze arguments to determine if consensus is possible
-        let supporting_count = round.arguments.values()
+        let supporting_count = round
+            .arguments
+            .values()
             .filter(|arg| matches!(arg.position, ArgumentPosition::Support))
             .count();
-        
-        let opposing_count = round.arguments.values()
+
+        let opposing_count = round
+            .arguments
+            .values()
             .filter(|arg| matches!(arg.position, ArgumentPosition::Oppose))
             .count();
 
         let total_judges = round.arguments.len();
-        
+
         // Simple consensus logic: if 75% or more support, consider consensus reached
         if total_judges > 0 && (supporting_count as f32 / total_judges as f32) >= 0.75 {
             // Create consensus result with comprehensive evaluation
             let consensus_strength = supporting_count as f32 / total_judges as f32;
-            let avg_confidence = round.arguments.values()
+            let avg_confidence = round
+                .arguments
+                .values()
                 .map(|arg| arg.confidence)
-                .sum::<f32>() / round.arguments.len() as f32;
+                .sum::<f32>()
+                / round.arguments.len() as f32;
 
             let reasoning = format!(
                 "Consensus reached with {:.1}% judge support ({} of {}) and average confidence {:.2}. \
@@ -384,9 +417,9 @@ impl DebateProtocol {
             // Low confidence arguments (<0.5) weakly influence or remain neutral
 
             let position_influence = match argument.confidence {
-                c if c > 0.8 => 1.0,  // Strong influence
-                c if c > 0.5 => 0.7,  // Moderate influence
-                _ => 0.3,             // Weak influence
+                c if c > 0.8 => 1.0, // Strong influence
+                c if c > 0.5 => 0.7, // Moderate influence
+                _ => 0.3,            // Weak influence
             };
 
             match argument.position {
@@ -396,14 +429,14 @@ impl DebateProtocol {
                     } else {
                         opposing.push(judge_id.clone()); // Weak support becomes opposition
                     }
-                },
+                }
                 ArgumentPosition::Oppose => {
                     if position_influence > 0.5 {
                         opposing.push(judge_id.clone());
                     } else {
                         supporting.push(judge_id.clone()); // Weak opposition becomes support
                     }
-                },
+                }
                 ArgumentPosition::Neutral => {
                     // Neutral positions are assigned based on evidence strength
                     let evidence_strength = argument.citations.len() as f32 * 0.1;
@@ -412,7 +445,7 @@ impl DebateProtocol {
                     } else {
                         opposing.push(judge_id.clone());
                     }
-                },
+                }
             }
         }
 
@@ -422,7 +455,7 @@ impl DebateProtocol {
     /// Finalize debate with consensus result
     async fn finalize_debate(&self, session_id: Uuid, consensus: ConsensusResult) -> Result<()> {
         let mut debates = self.active_debates.write().await;
-        
+
         if let Some(session) = debates.get_mut(&session_id) {
             session.final_consensus = Some(consensus);
             session.status = DebateStatus::Resolved;
@@ -435,7 +468,7 @@ impl DebateProtocol {
     /// Mark debate as timeout
     async fn mark_debate_timeout(&self, session_id: Uuid) -> Result<()> {
         let mut debates = self.active_debates.write().await;
-        
+
         if let Some(session) = debates.get_mut(&session_id) {
             session.status = DebateStatus::Timeout;
             warn!("Debate session {} timed out", session_id);
@@ -453,7 +486,11 @@ impl DebateProtocol {
     /// Get all active debate sessions
     pub async fn get_active_debates(&self) -> Vec<DebateSession> {
         let debates = self.active_debates.read().await;
-        debates.values().filter(|s| matches!(s.status, DebateStatus::Active)).cloned().collect()
+        debates
+            .values()
+            .filter(|s| matches!(s.status, DebateStatus::Active))
+            .cloned()
+            .collect()
     }
 
     // Session data retrieval methods
@@ -497,22 +534,24 @@ impl DebateProtocol {
     async fn get_previous_rounds_from_session(&self) -> Vec<DebateRound> {
         // Simulate getting previous rounds from session
         tracing::debug!("Getting previous rounds from session");
-        vec![
-            DebateRound {
-                round_number: 1,
-                arguments: std::collections::HashMap::new(),
-                evidence_requests: vec![],
-                consensus_reached: false,
-                timestamp: chrono::Utc::now(),
-            },
-        ]
+        vec![DebateRound {
+            round_number: 1,
+            arguments: std::collections::HashMap::new(),
+            evidence_requests: vec![],
+            consensus_reached: false,
+            timestamp: chrono::Utc::now(),
+        }]
     }
 }
 
 /// Research agent interface for providing additional evidence
 #[async_trait]
 pub trait ResearchAgent {
-    async fn research_topic(&self, topic: String, context: Vec<String>) -> Result<Vec<ResearchFinding>>;
+    async fn research_topic(
+        &self,
+        topic: String,
+        context: Vec<String>,
+    ) -> Result<Vec<ResearchFinding>>;
 }
 
 /// Mock research agent for testing
@@ -520,7 +559,11 @@ pub struct MockResearchAgent;
 
 #[async_trait]
 impl ResearchAgent for MockResearchAgent {
-    async fn research_topic(&self, topic: String, _context: Vec<String>) -> Result<Vec<ResearchFinding>> {
+    async fn research_topic(
+        &self,
+        topic: String,
+        _context: Vec<String>,
+    ) -> Result<Vec<ResearchFinding>> {
         Ok(vec![ResearchFinding {
             topic,
             finding: "Mock research finding".to_string(),
@@ -542,7 +585,7 @@ mod tests {
             evidence_required: true,
             research_agent_involvement: true,
         };
-        
+
         let protocol = DebateProtocol::new(config);
         assert!(protocol.active_debates.read().await.is_empty());
     }
@@ -551,18 +594,24 @@ mod tests {
     async fn test_judge_categorization() {
         let config = DebateConfig::default();
         let protocol = DebateProtocol::new(config);
-        
+
         let mut verdicts = std::collections::HashMap::new();
-        verdicts.insert("judge1".to_string(), JudgeVerdict::Pass {
-            confidence: 0.9,
-            reasoning: "Test".to_string(),
-            evidence: vec![],
-        });
-        verdicts.insert("judge2".to_string(), JudgeVerdict::Fail {
-            violations: vec![],
-            reasoning: "Test".to_string(),
-            evidence: vec![],
-        });
+        verdicts.insert(
+            "judge1".to_string(),
+            JudgeVerdict::Pass {
+                confidence: 0.9,
+                reasoning: "Test".to_string(),
+                evidence: vec![],
+            },
+        );
+        verdicts.insert(
+            "judge2".to_string(),
+            JudgeVerdict::Fail {
+                violations: vec![],
+                reasoning: "Test".to_string(),
+                evidence: vec![],
+            },
+        );
 
         let (supporting, opposing) = protocol.categorize_judges(&verdicts);
         assert_eq!(supporting.len(), 1);
@@ -573,7 +622,7 @@ mod tests {
     async fn test_debate_round_evaluation() {
         let config = DebateConfig::default();
         let protocol = DebateProtocol::new(config);
-        
+
         let round = DebateRound {
             round_number: 1,
             arguments: std::collections::HashMap::new(),

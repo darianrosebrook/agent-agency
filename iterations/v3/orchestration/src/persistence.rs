@@ -68,26 +68,26 @@ impl VerdictWriter for DatabaseWriter {
     async fn persist_consensus(&self, consensus: &ConsensusResult) -> Result<()> {
         // Initialize database schema if needed
         self.initialize_database_schema().await?;
-        
+
         // Persist consensus to database
         self.persist_verdict_to_database(consensus).await?;
-        
+
         // Optimize database operations
         self.optimize_database_operations().await?;
-        
+
         Ok(())
     }
-    
+
     async fn persist_waivers(&self, task_id: &str, waivers: &[CawsWaiver]) -> Result<()> {
         // Initialize database schema if needed
         self.initialize_database_schema().await?;
-        
+
         // Persist waivers to database
         self.persist_waivers_to_database(task_id, waivers).await?;
-        
+
         // Optimize database operations
         self.optimize_database_operations().await?;
-        
+
         Ok(())
     }
 }
@@ -98,8 +98,12 @@ impl DatabaseWriter {
         tracing::debug!("Persisting consensus to database: {:?}", consensus.task_id);
         Ok(())
     }
-    
-    async fn persist_waivers_to_database(&self, task_id: &str, waivers: &[CawsWaiver]) -> Result<()> {
+
+    async fn persist_waivers_to_database(
+        &self,
+        task_id: &str,
+        waivers: &[CawsWaiver],
+    ) -> Result<()> {
         // Simulate database persistence
         tracing::debug!("Persisting {} waivers for task: {}", waivers.len(), task_id);
         Ok(())
@@ -123,17 +127,17 @@ impl DatabaseSchemaManager {
     pub fn new() -> Self {
         Self
     }
-    
+
     pub async fn create_verdicts_table(&self) -> Result<()> {
         tracing::debug!("Creating verdicts table");
         Ok(())
     }
-    
+
     pub async fn create_waivers_table(&self) -> Result<()> {
         tracing::debug!("Creating waivers table");
         Ok(())
     }
-    
+
     pub async fn create_indexes(&self) -> Result<()> {
         tracing::debug!("Creating database indexes");
         Ok(())
@@ -146,7 +150,7 @@ impl QueryOptimizer {
     pub fn new() -> Self {
         Self
     }
-    
+
     pub async fn optimize_queries(&self) -> Result<()> {
         tracing::debug!("Optimizing database queries");
         Ok(())
@@ -159,7 +163,7 @@ impl DatabaseErrorHandler {
     pub fn new() -> Self {
         Self
     }
-    
+
     pub async fn handle_error(&self, _error: anyhow::Error) -> Result<()> {
         tracing::debug!("Handling database error");
         Ok(())

@@ -480,7 +480,6 @@ pub struct ToolDiscoveryConfig {
     pub health_check_timeout_seconds: u32,
 }
 
-
 /// CAWS integration configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CawsIntegrationConfig {

@@ -237,10 +237,7 @@ pub struct CoordinationEffectiveness {
 
 impl DashboardService {
     /// Create a new dashboard service
-    pub fn new(
-        telemetry_collector: Arc<AgentTelemetryCollector>,
-        config: DashboardConfig,
-    ) -> Self {
+    pub fn new(telemetry_collector: Arc<AgentTelemetryCollector>, config: DashboardConfig) -> Self {
         Self {
             telemetry_collector,
             config,
@@ -309,13 +306,13 @@ impl DashboardService {
         // Start data refresh task
         let service = self.clone();
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(
-                std::time::Duration::from_secs(service.config.refresh_interval_seconds)
-            );
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(
+                service.config.refresh_interval_seconds,
+            ));
 
             loop {
                 interval.tick().await;
-                
+
                 if let Err(e) = service.refresh_dashboard_data().await {
                     eprintln!("Failed to refresh dashboard data: {}", e);
                 }
@@ -329,7 +326,7 @@ impl DashboardService {
 
             loop {
                 interval.tick().await;
-                
+
                 if let Err(e) = service.cleanup_expired_sessions().await {
                     eprintln!("Failed to cleanup expired sessions: {}", e);
                 }
@@ -346,7 +343,7 @@ impl DashboardService {
         preferences: Option<DashboardPreferences>,
     ) -> Result<String> {
         let session_id = Uuid::new_v4().to_string();
-        
+
         // Check session limit
         let sessions = self.sessions.read().await;
         if sessions.len() >= self.config.max_sessions {
@@ -423,26 +420,38 @@ impl DashboardService {
                 SubscriptionType::CoordinationMetrics => {
                     update.coordination_metrics = Some(CoordinationMetricsUpdate {
                         consensus_rate: dashboard_data.coordination_effectiveness.consensus_rate,
-                        avg_consensus_time_ms: dashboard_data.coordination_effectiveness.avg_consensus_time_ms,
-                        debate_frequency: dashboard_data.coordination_effectiveness.debate_frequency,
-                        constitutional_compliance_rate: dashboard_data.coordination_effectiveness.constitutional_compliance_rate,
+                        avg_consensus_time_ms: dashboard_data
+                            .coordination_effectiveness
+                            .avg_consensus_time_ms,
+                        debate_frequency: dashboard_data
+                            .coordination_effectiveness
+                            .debate_frequency,
+                        constitutional_compliance_rate: dashboard_data
+                            .coordination_effectiveness
+                            .constitutional_compliance_rate,
                     });
                 }
                 SubscriptionType::BusinessMetrics => {
                     update.business_metrics = Some(BusinessMetricsUpdate {
                         task_completion_rate: dashboard_data.business_metrics.task_completion_rate,
                         quality_score: dashboard_data.business_metrics.quality_score,
-                        throughput_tasks_per_hour: dashboard_data.business_metrics.throughput_tasks_per_hour,
+                        throughput_tasks_per_hour: dashboard_data
+                            .business_metrics
+                            .throughput_tasks_per_hour,
                         system_availability: dashboard_data.business_metrics.system_availability,
                     });
                 }
                 SubscriptionType::Alerts => {
                     update.alerts = Some(AlertsUpdate {
                         active_alerts: dashboard_data.recent_alerts.len(),
-                        critical_alerts: dashboard_data.recent_alerts.iter()
+                        critical_alerts: dashboard_data
+                            .recent_alerts
+                            .iter()
                             .filter(|alert| matches!(alert.severity, AlertSeverity::Critical))
                             .count(),
-                        warning_alerts: dashboard_data.recent_alerts.iter()
+                        warning_alerts: dashboard_data
+                            .recent_alerts
+                            .iter()
                             .filter(|alert| matches!(alert.severity, AlertSeverity::Warning))
                             .count(),
                     });
@@ -463,22 +472,34 @@ impl DashboardService {
                     });
                     update.coordination_metrics = Some(CoordinationMetricsUpdate {
                         consensus_rate: dashboard_data.coordination_effectiveness.consensus_rate,
-                        avg_consensus_time_ms: dashboard_data.coordination_effectiveness.avg_consensus_time_ms,
-                        debate_frequency: dashboard_data.coordination_effectiveness.debate_frequency,
-                        constitutional_compliance_rate: dashboard_data.coordination_effectiveness.constitutional_compliance_rate,
+                        avg_consensus_time_ms: dashboard_data
+                            .coordination_effectiveness
+                            .avg_consensus_time_ms,
+                        debate_frequency: dashboard_data
+                            .coordination_effectiveness
+                            .debate_frequency,
+                        constitutional_compliance_rate: dashboard_data
+                            .coordination_effectiveness
+                            .constitutional_compliance_rate,
                     });
                     update.business_metrics = Some(BusinessMetricsUpdate {
                         task_completion_rate: dashboard_data.business_metrics.task_completion_rate,
                         quality_score: dashboard_data.business_metrics.quality_score,
-                        throughput_tasks_per_hour: dashboard_data.business_metrics.throughput_tasks_per_hour,
+                        throughput_tasks_per_hour: dashboard_data
+                            .business_metrics
+                            .throughput_tasks_per_hour,
                         system_availability: dashboard_data.business_metrics.system_availability,
                     });
                     update.alerts = Some(AlertsUpdate {
                         active_alerts: dashboard_data.recent_alerts.len(),
-                        critical_alerts: dashboard_data.recent_alerts.iter()
+                        critical_alerts: dashboard_data
+                            .recent_alerts
+                            .iter()
                             .filter(|alert| matches!(alert.severity, AlertSeverity::Critical))
                             .count(),
-                        warning_alerts: dashboard_data.recent_alerts.iter()
+                        warning_alerts: dashboard_data
+                            .recent_alerts
+                            .iter()
                             .filter(|alert| matches!(alert.severity, AlertSeverity::Warning))
                             .count(),
                     });
@@ -509,34 +530,38 @@ impl DashboardService {
 
         // Calculate agent performance summary
         let total_agents = agent_metrics.len();
-        let healthy_agents = agent_metrics.values()
+        let healthy_agents = agent_metrics
+            .values()
             .filter(|m| m.health_score > 0.8)
             .count();
-        let degraded_agents = agent_metrics.values()
+        let degraded_agents = agent_metrics
+            .values()
             .filter(|m| m.health_score > 0.5 && m.health_score <= 0.8)
             .count();
-        let failed_agents = agent_metrics.values()
+        let failed_agents = agent_metrics
+            .values()
             .filter(|m| m.health_score <= 0.5)
             .count();
 
         let avg_success_rate = if total_agents > 0 {
-            agent_metrics.values()
-                .map(|m| m.success_rate)
-                .sum::<f64>() / total_agents as f64
+            agent_metrics.values().map(|m| m.success_rate).sum::<f64>() / total_agents as f64
         } else {
             0.0
         };
 
         let avg_response_time_ms = if total_agents > 0 {
-            agent_metrics.values()
+            agent_metrics
+                .values()
                 .map(|m| m.avg_response_time_ms)
-                .sum::<u64>() / total_agents as u64
+                .sum::<u64>()
+                / total_agents as u64
         } else {
             0
         };
 
         // Get top performers and underperformers
-        let mut agent_snapshots: Vec<AgentPerformanceSnapshot> = agent_metrics.values()
+        let mut agent_snapshots: Vec<AgentPerformanceSnapshot> = agent_metrics
+            .values()
             .map(|m| AgentPerformanceSnapshot {
                 agent_id: m.agent_id.clone(),
                 agent_type: format!("{:?}", m.agent_type),
@@ -597,11 +622,12 @@ impl DashboardService {
 
     /// Cleanup expired sessions
     async fn cleanup_expired_sessions(&self) -> Result<()> {
-        let cutoff_time = Utc::now() - chrono::Duration::hours(self.config.data_retention_hours as i64);
-        
+        let cutoff_time =
+            Utc::now() - chrono::Duration::hours(self.config.data_retention_hours as i64);
+
         let mut sessions = self.sessions.write().await;
         sessions.retain(|_, session| session.last_activity > cutoff_time);
-        
+
         Ok(())
     }
 

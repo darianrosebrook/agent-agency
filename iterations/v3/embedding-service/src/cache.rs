@@ -3,6 +3,7 @@
 use crate::types::*;
 use dashmap::DashMap;
 use lru::LruCache;
+use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -28,7 +29,7 @@ impl EmbeddingCache {
     pub async fn get(&self, key: &str) -> Option<StoredEmbedding> {
         let mut cache = self.cache.write().await;
         let result = cache.get(key).cloned();
-        
+
         // Track hit/miss
         let mut hit_counter = self.hit_counter.write().await;
         if result.is_some() {
@@ -36,7 +37,7 @@ impl EmbeddingCache {
         } else {
             hit_counter.record_miss();
         }
-        
+
         result
     }
 
@@ -97,13 +98,13 @@ impl EmbeddingIndex {
     pub fn insert(&self, embedding: StoredEmbedding) {
         let id = embedding.id.to_string();
         self.by_id.insert(id.clone(), embedding.clone());
-        
+
         // Index by content type
         self.by_content_type
             .entry(embedding.metadata.content_type.clone())
             .or_insert_with(Vec::new)
             .push(id.clone());
-        
+
         // Index by tags
         for tag in &embedding.metadata.tags {
             self.by_tag
@@ -144,26 +145,63 @@ impl EmbeddingIndex {
     }
 
     pub fn get_all(&self) -> Vec<StoredEmbedding> {
-        self.by_id.iter().map(|entry| entry.value().clone()).collect()
+        self.by_id
+            .iter()
+            .map(|entry| entry.value().clone())
+            .collect()
     }
 
-    pub fn remove(&mut self, id: &str) -> Option<StoredEmbedding> {
+    pub fn remove(&self, id: &str) -> Option<StoredEmbedding> {
         if let Some((_, embedding)) = self.by_id.remove(id) {
             // Remove from content type index
-            if let Some(mut entry) = self.by_content_type.get_mut(&embedding.metadata.content_type) {
+            if let Some(mut entry) = self
+                .by_content_type
+                .get_mut(&embedding.metadata.content_type)
+            {
                 entry.retain(|stored_id| stored_id != id);
+                if entry.is_empty() {
+                    drop(entry);
+                    self.by_content_type
+                        .remove_if(&embedding.metadata.content_type, |_, values| {
+                            values.is_empty()
+                        });
+                }
             }
-            
+
             // Remove from tag indexes
             for tag in &embedding.metadata.tags {
                 if let Some(mut entry) = self.by_tag.get_mut(tag) {
                     entry.retain(|stored_id| stored_id != id);
+                    if entry.is_empty() {
+                        drop(entry);
+                        self.by_tag.remove_if(tag, |_, values| values.is_empty());
+                    }
                 }
             }
-            
+
             Some(embedding)
         } else {
             None
+        }
+    }
+
+    pub fn stats(&self) -> EmbeddingIndexStats {
+        let content_type_counts = self
+            .by_content_type
+            .iter()
+            .map(|entry| (entry.key().clone(), entry.value().len()))
+            .collect::<HashMap<ContentType, usize>>();
+
+        let tag_counts = self
+            .by_tag
+            .iter()
+            .map(|entry| (entry.key().clone(), entry.value().len()))
+            .collect::<HashMap<String, usize>>();
+
+        EmbeddingIndexStats {
+            total_embeddings: self.by_id.len(),
+            content_type_counts,
+            tag_counts,
         }
     }
 
@@ -182,6 +220,14 @@ impl EmbeddingIndex {
     }
 }
 
+/// Summary statistics for the embedding index
+#[derive(Debug, Clone)]
+pub struct EmbeddingIndexStats {
+    pub total_embeddings: usize,
+    pub content_type_counts: HashMap<ContentType, usize>,
+    pub tag_counts: HashMap<String, usize>,
+}
+
 /// Cache hit counter for tracking hit rate
 pub struct CacheHitCounter {
     hits: u64,
@@ -190,10 +236,7 @@ pub struct CacheHitCounter {
 
 impl CacheHitCounter {
     pub fn new() -> Self {
-        Self {
-            hits: 0,
-            misses: 0,
-        }
+        Self { hits: 0, misses: 0 }
     }
 
     pub fn record_hit(&mut self) {

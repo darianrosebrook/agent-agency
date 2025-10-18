@@ -5,14 +5,14 @@
 
 use crate::types::*;
 use agent_agency_observability::{
-    AgentTelemetryCollector, AgentPerformanceMetrics, CoordinationMetrics,
-    BusinessMetrics, SystemDashboard, AgentType, TelemetryConfig
+    AgentPerformanceMetrics, AgentTelemetryCollector, AgentType, BusinessMetrics,
+    CoordinationMetrics, SystemDashboard, TelemetryConfig,
 };
 use anyhow::Result;
 use chrono::Utc;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 /// Enhanced system health monitor with agent telemetry integration
 #[derive(Debug)]
@@ -22,7 +22,11 @@ pub struct AgentIntegratedHealthMonitor {
     /// Agent telemetry collector
     telemetry_collector: Arc<AgentTelemetryCollector>,
     /// Agent performance tracking
-    agent_performance_trackers: Arc<RwLock<std::collections::HashMap<String, agent_agency_observability::AgentPerformanceTracker>>>,
+    agent_performance_trackers: Arc<
+        RwLock<
+            std::collections::HashMap<String, agent_agency_observability::AgentPerformanceTracker>,
+        >,
+    >,
     /// Integration configuration
     config: AgentIntegrationConfig,
 }
@@ -97,11 +101,7 @@ impl AgentIntegratedHealthMonitor {
     }
 
     /// Register an agent for performance tracking
-    pub async fn register_agent(
-        &self,
-        agent_id: String,
-        agent_type: AgentType,
-    ) -> Result<()> {
+    pub async fn register_agent(&self, agent_id: String, agent_type: AgentType) -> Result<()> {
         let tracker = agent_agency_observability::AgentPerformanceTracker::new(
             agent_id.clone(),
             agent_type,
@@ -125,22 +125,24 @@ impl AgentIntegratedHealthMonitor {
         if let Some(tracker) = trackers.get_mut(agent_id) {
             tracker.record_task_completion(response_time_ms).await?;
         } else {
-            warn!("Attempted to record task completion for unregistered agent: {}", agent_id);
+            warn!(
+                "Attempted to record task completion for unregistered agent: {}",
+                agent_id
+            );
         }
         Ok(())
     }
 
     /// Record agent task failure
-    pub async fn record_agent_task_failure(
-        &self,
-        agent_id: &str,
-        error: &str,
-    ) -> Result<()> {
+    pub async fn record_agent_task_failure(&self, agent_id: &str, error: &str) -> Result<()> {
         let mut trackers = self.agent_performance_trackers.write().await;
         if let Some(tracker) = trackers.get_mut(agent_id) {
             tracker.record_task_failure(error).await?;
         } else {
-            warn!("Attempted to record task failure for unregistered agent: {}", agent_id);
+            warn!(
+                "Attempted to record task failure for unregistered agent: {}",
+                agent_id
+            );
         }
         Ok(())
     }
@@ -162,10 +164,10 @@ impl AgentIntegratedHealthMonitor {
 
         // Update metrics based on new data
         current_metrics.consensus_formation_time_ms = consensus_formation_time_ms;
-        
+
         // Update consensus rate (simple moving average)
         let consensus_weight = 0.1; // 10% weight for new data
-        current_metrics.consensus_rate = current_metrics.consensus_rate * (1.0 - consensus_weight) 
+        current_metrics.consensus_rate = current_metrics.consensus_rate * (1.0 - consensus_weight)
             + (if consensus_achieved { 1.0 } else { 0.0 }) * consensus_weight;
 
         // Update debate frequency
@@ -175,13 +177,17 @@ impl AgentIntegratedHealthMonitor {
 
         // Update constitutional compliance rate
         let compliance_weight = 0.1;
-        current_metrics.constitutional_compliance_rate = current_metrics.constitutional_compliance_rate * (1.0 - compliance_weight)
-            + (if constitutional_compliance { 1.0 } else { 0.0 }) * compliance_weight;
+        current_metrics.constitutional_compliance_rate =
+            current_metrics.constitutional_compliance_rate * (1.0 - compliance_weight)
+                + (if constitutional_compliance { 1.0 } else { 0.0 }) * compliance_weight;
 
         // Update coordination overhead (estimated based on consensus time)
-        current_metrics.coordination_overhead_percentage = (consensus_formation_time_ms as f64 / 1000.0) * 100.0;
+        current_metrics.coordination_overhead_percentage =
+            (consensus_formation_time_ms as f64 / 1000.0) * 100.0;
 
-        self.telemetry_collector.update_coordination_metrics(current_metrics).await?;
+        self.telemetry_collector
+            .update_coordination_metrics(current_metrics)
+            .await?;
         Ok(())
     }
 
@@ -201,18 +207,19 @@ impl AgentIntegratedHealthMonitor {
 
         // Update task completion rate
         let completion_weight = 0.05; // 5% weight for new data
-        current_metrics.task_completion_rate = current_metrics.task_completion_rate * (1.0 - completion_weight)
+        current_metrics.task_completion_rate = current_metrics.task_completion_rate
+            * (1.0 - completion_weight)
             + (if task_completed { 1.0 } else { 0.0 }) * completion_weight;
 
         // Update quality score
         let quality_weight = 0.1;
-        current_metrics.quality_score = current_metrics.quality_score * (1.0 - quality_weight)
-            + quality_score * quality_weight;
+        current_metrics.quality_score =
+            current_metrics.quality_score * (1.0 - quality_weight) + quality_score * quality_weight;
 
         // Update cost per task
         let cost_weight = 0.1;
-        current_metrics.cost_per_task = current_metrics.cost_per_task * (1.0 - cost_weight)
-            + cost_per_task * cost_weight;
+        current_metrics.cost_per_task =
+            current_metrics.cost_per_task * (1.0 - cost_weight) + cost_per_task * cost_weight;
 
         // Calculate throughput (tasks per hour) - simplified
         current_metrics.throughput_tasks_per_hour = current_metrics.task_completion_rate * 100.0;
@@ -220,7 +227,9 @@ impl AgentIntegratedHealthMonitor {
         // Calculate system availability (simplified - based on task completion rate)
         current_metrics.system_availability = current_metrics.task_completion_rate * 100.0;
 
-        self.telemetry_collector.update_business_metrics(current_metrics).await?;
+        self.telemetry_collector
+            .update_business_metrics(current_metrics)
+            .await?;
         Ok(())
     }
 
@@ -236,7 +245,9 @@ impl AgentIntegratedHealthMonitor {
     }
 
     /// Get all agent metrics
-    pub async fn get_all_agent_metrics(&self) -> std::collections::HashMap<String, AgentPerformanceMetrics> {
+    pub async fn get_all_agent_metrics(
+        &self,
+    ) -> std::collections::HashMap<String, AgentPerformanceMetrics> {
         self.telemetry_collector.get_all_agent_metrics().await
     }
 
@@ -256,9 +267,8 @@ impl AgentIntegratedHealthMonitor {
         let interval = self.config.agent_health_check_interval;
 
         tokio::spawn(async move {
-            let mut health_check_interval = tokio::time::interval(
-                std::time::Duration::from_secs(interval)
-            );
+            let mut health_check_interval =
+                tokio::time::interval(std::time::Duration::from_secs(interval));
 
             loop {
                 health_check_interval.tick().await;
@@ -279,14 +289,20 @@ impl AgentIntegratedHealthMonitor {
         for (agent_id, metrics) in agent_metrics {
             // Check for health issues
             if metrics.health_score < 0.5 {
-                warn!("Agent {} has low health score: {}", agent_id, metrics.health_score);
-                
+                warn!(
+                    "Agent {} has low health score: {}",
+                    agent_id, metrics.health_score
+                );
+
                 // Add alert for low health score
                 let alert = agent_agency_observability::SystemAlert {
                     id: uuid::Uuid::new_v4().to_string(),
                     alert_type: agent_agency_observability::AlertType::AgentPerformance,
                     severity: agent_agency_observability::AlertSeverity::Warning,
-                    message: format!("Agent {} has low health score: {}", agent_id, metrics.health_score),
+                    message: format!(
+                        "Agent {} has low health score: {}",
+                        agent_id, metrics.health_score
+                    ),
                     timestamp: Utc::now(),
                     affected_agents: vec![agent_id.clone()],
                     status: agent_agency_observability::AlertStatus::Active,
@@ -299,13 +315,19 @@ impl AgentIntegratedHealthMonitor {
 
             // Check for high error rate
             if metrics.error_rate > 5.0 {
-                warn!("Agent {} has high error rate: {}", agent_id, metrics.error_rate);
-                
+                warn!(
+                    "Agent {} has high error rate: {}",
+                    agent_id, metrics.error_rate
+                );
+
                 let alert = agent_agency_observability::SystemAlert {
                     id: uuid::Uuid::new_v4().to_string(),
                     alert_type: agent_agency_observability::AlertType::AgentPerformance,
                     severity: agent_agency_observability::AlertSeverity::Critical,
-                    message: format!("Agent {} has high error rate: {}", agent_id, metrics.error_rate),
+                    message: format!(
+                        "Agent {} has high error rate: {}",
+                        agent_id, metrics.error_rate
+                    ),
                     timestamp: Utc::now(),
                     affected_agents: vec![agent_id.clone()],
                     status: agent_agency_observability::AlertStatus::Active,
@@ -318,13 +340,19 @@ impl AgentIntegratedHealthMonitor {
 
             // Check for high response time
             if metrics.avg_response_time_ms > 10000 {
-                warn!("Agent {} has high response time: {}ms", agent_id, metrics.avg_response_time_ms);
-                
+                warn!(
+                    "Agent {} has high response time: {}ms",
+                    agent_id, metrics.avg_response_time_ms
+                );
+
                 let alert = agent_agency_observability::SystemAlert {
                     id: uuid::Uuid::new_v4().to_string(),
                     alert_type: agent_agency_observability::AlertType::AgentPerformance,
                     severity: agent_agency_observability::AlertSeverity::Warning,
-                    message: format!("Agent {} has high response time: {}ms", agent_id, metrics.avg_response_time_ms),
+                    message: format!(
+                        "Agent {} has high response time: {}ms",
+                        agent_id, metrics.avg_response_time_ms
+                    ),
                     timestamp: Utc::now(),
                     affected_agents: vec![agent_id.clone()],
                     status: agent_agency_observability::AlertStatus::Active,

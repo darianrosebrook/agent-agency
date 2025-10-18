@@ -168,9 +168,7 @@ impl ANEManager {
         // Use sysctl to get the actual macOS version
         use std::process::Command;
 
-        let output = Command::new("sw_vers")
-            .arg("-productVersion")
-            .output();
+        let output = Command::new("sw_vers").arg("-productVersion").output();
 
         match output {
             Ok(output) if output.status.success() => {
@@ -189,9 +187,7 @@ impl ANEManager {
             }
             _ => {
                 // Fallback: try uname approach
-                let output = Command::new("uname")
-                    .arg("-r")
-                    .output();
+                let output = Command::new("uname").arg("-r").output();
 
                 match output {
                     Ok(output) if output.status.success() => {
@@ -239,9 +235,7 @@ impl ANEManager {
             }
             _ => {
                 // Fallback: try uname -m
-                let output = Command::new("uname")
-                    .arg("-m")
-                    .output();
+                let output = Command::new("uname").arg("-m").output();
 
                 match output {
                     Ok(output) if output.status.success() => {
@@ -378,13 +372,18 @@ impl ANEManager {
 
         for path in &coreml_paths {
             if Path::new(path).exists() {
-                debug!("CoreML framework found at: {} (ANE may be accessible through CoreML)", path);
+                debug!(
+                    "CoreML framework found at: {} (ANE may be accessible through CoreML)",
+                    path
+                );
                 return Ok(());
             }
         }
 
         warn!("Neither ANE nor CoreML framework found on system");
-        Err(anyhow::anyhow!("ANE framework not available on this system"))
+        Err(anyhow::anyhow!(
+            "ANE framework not available on this system"
+        ))
     }
 
     /// Initialize device context
@@ -503,7 +502,7 @@ impl ANEManager {
             .unwrap_or(1024 * 1024 * 1024); // Assume 1GB available
 
         let max_cache_size = std::cmp::min(
-            available_space / 4, // Use up to 25% of available space
+            available_space / 4,    // Use up to 25% of available space
             2 * 1024 * 1024 * 1024, // But no more than 2GB
         );
 
@@ -511,14 +510,19 @@ impl ANEManager {
         if let Ok(entries) = fs::read_dir(&cache_dir) {
             let mut cache_files: Vec<_> = entries
                 .filter_map(|entry| entry.ok())
-                .filter(|entry| entry.path().extension()
-                    .map(|ext| ext == "ane" || ext == "mlmodelc")
-                    .unwrap_or(false))
+                .filter(|entry| {
+                    entry
+                        .path()
+                        .extension()
+                        .map(|ext| ext == "ane" || ext == "mlmodelc")
+                        .unwrap_or(false)
+                })
                 .collect();
 
             // Sort by modification time (oldest first)
             cache_files.sort_by_key(|entry| {
-                entry.metadata()
+                entry
+                    .metadata()
                     .and_then(|m| m.modified())
                     .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
             });

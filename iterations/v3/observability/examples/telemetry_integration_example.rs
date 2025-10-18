@@ -5,17 +5,17 @@
 //! monitoring and observability.
 
 use agent_agency_observability::{
-    AgentTelemetryCollector, AgentPerformanceTracker, DashboardService,
-    AgentType, TelemetryConfig, DashboardConfig, SystemDashboard
+    AgentPerformanceTracker, AgentTelemetryCollector, AgentType, DashboardConfig, DashboardService,
+    SystemDashboard, TelemetryConfig,
 };
 use agent_agency_system_health_monitor::agent_integration::{
-    AgentIntegratedHealthMonitor, AgentIntegrationConfig
+    AgentIntegratedHealthMonitor, AgentIntegrationConfig,
 };
 use agent_agency_system_health_monitor::types::SystemHealthMonitorConfig;
 use anyhow::Result;
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 /// Example telemetry integration
 #[tokio::main]
@@ -91,7 +91,9 @@ async fn main() -> Result<()> {
     ];
 
     for (agent_id, agent_type) in agents {
-        health_monitor.register_agent(agent_id.to_string(), agent_type).await?;
+        health_monitor
+            .register_agent(agent_id.to_string(), agent_type)
+            .await?;
         info!("Registered agent: {}", agent_id);
     }
 
@@ -115,9 +117,7 @@ async fn main() -> Result<()> {
 }
 
 /// Simulate agent activity and performance tracking
-async fn simulate_agent_activity(
-    health_monitor: &AgentIntegratedHealthMonitor,
-) -> Result<()> {
+async fn simulate_agent_activity(health_monitor: &AgentIntegratedHealthMonitor) -> Result<()> {
     info!("Simulating agent activity...");
 
     let agents = vec![
@@ -133,27 +133,25 @@ async fn simulate_agent_activity(
     // Simulate 100 tasks across all agents
     for i in 0..100 {
         let agent_id = agents[i % agents.len()];
-        
+
         // Simulate task completion with varying response times
         let response_time = match i % 10 {
-            0 => 500,   // Fast response
-            1 => 1000,  // Normal response
-            2 => 2000,  // Slow response
-            3 => 5000,  // Very slow response
-            _ => 1500,  // Default response
+            0 => 500,  // Fast response
+            1 => 1000, // Normal response
+            2 => 2000, // Slow response
+            3 => 5000, // Very slow response
+            _ => 1500, // Default response
         };
 
         // Simulate occasional failures
         if i % 20 == 0 {
-            health_monitor.record_agent_task_failure(
-                agent_id,
-                "Simulated task failure for testing"
-            ).await?;
+            health_monitor
+                .record_agent_task_failure(agent_id, "Simulated task failure for testing")
+                .await?;
         } else {
-            health_monitor.record_agent_task_completion(
-                agent_id,
-                response_time,
-            ).await?;
+            health_monitor
+                .record_agent_task_completion(agent_id, response_time)
+                .await?;
         }
 
         // Small delay between tasks
@@ -181,15 +179,17 @@ async fn simulate_coordination_scenarios(
         };
 
         let consensus_achieved = i % 10 != 0; // 90% consensus rate
-        let debate_required = i % 3 == 0;     // 33% debate rate
+        let debate_required = i % 3 == 0; // 33% debate rate
         let constitutional_compliance = i % 20 != 0; // 95% compliance rate
 
-        health_monitor.update_coordination_metrics(
-            consensus_formation_time,
-            consensus_achieved,
-            debate_required,
-            constitutional_compliance,
-        ).await?;
+        health_monitor
+            .update_coordination_metrics(
+                consensus_formation_time,
+                consensus_achieved,
+                debate_required,
+                constitutional_compliance,
+            )
+            .await?;
 
         // Small delay between coordination sessions
         sleep(Duration::from_millis(50)).await;
@@ -200,9 +200,7 @@ async fn simulate_coordination_scenarios(
 }
 
 /// Simulate business metrics updates
-async fn simulate_business_metrics(
-    health_monitor: &AgentIntegratedHealthMonitor,
-) -> Result<()> {
+async fn simulate_business_metrics(health_monitor: &AgentIntegratedHealthMonitor) -> Result<()> {
     info!("Simulating business metrics...");
 
     // Simulate 30 business metric updates
@@ -211,11 +209,9 @@ async fn simulate_business_metrics(
         let quality_score = 0.7 + (i as f64 * 0.01); // Improving quality over time
         let cost_per_task = 0.05 + (i as f64 * 0.001); // Slightly increasing cost
 
-        health_monitor.update_business_metrics(
-            task_completed,
-            quality_score,
-            cost_per_task,
-        ).await?;
+        health_monitor
+            .update_business_metrics(task_completed, quality_score, cost_per_task)
+            .await?;
 
         // Small delay between updates
         sleep(Duration::from_millis(100)).await;
@@ -226,66 +222,111 @@ async fn simulate_business_metrics(
 }
 
 /// Demonstrate dashboard functionality
-async fn demonstrate_dashboard(
-    dashboard_service: &DashboardService,
-) -> Result<()> {
+async fn demonstrate_dashboard(dashboard_service: &DashboardService) -> Result<()> {
     info!("Demonstrating dashboard functionality...");
 
     // Create a dashboard session
-    let session_id = dashboard_service.create_session(
-        Some("demo-user".to_string()),
-        None,
-    ).await?;
+    let session_id = dashboard_service
+        .create_session(Some("demo-user".to_string()), None)
+        .await?;
 
     info!("Created dashboard session: {}", session_id);
 
     // Get dashboard data
     let dashboard_data = dashboard_service.get_dashboard_data(&session_id).await?;
-    
+
     info!("Dashboard data retrieved:");
-    info!("  System health: {:?}", dashboard_data.system_overview.health_status);
-    info!("  Active agents: {}", dashboard_data.system_overview.active_agents);
-    info!("  Tasks in progress: {}", dashboard_data.system_overview.tasks_in_progress);
-    info!("  Total agents: {}", dashboard_data.agent_performance.total_agents);
-    info!("  Healthy agents: {}", dashboard_data.agent_performance.healthy_agents);
-    info!("  Average success rate: {:.2}%", dashboard_data.agent_performance.avg_success_rate * 100.0);
-    info!("  Average response time: {}ms", dashboard_data.agent_performance.avg_response_time_ms);
-    info!("  Consensus rate: {:.2}%", dashboard_data.coordination_effectiveness.consensus_rate * 100.0);
-    info!("  Task completion rate: {:.2}%", dashboard_data.business_metrics.task_completion_rate * 100.0);
-    info!("  Quality score: {:.2}", dashboard_data.business_metrics.quality_score);
+    info!(
+        "  System health: {:?}",
+        dashboard_data.system_overview.health_status
+    );
+    info!(
+        "  Active agents: {}",
+        dashboard_data.system_overview.active_agents
+    );
+    info!(
+        "  Tasks in progress: {}",
+        dashboard_data.system_overview.tasks_in_progress
+    );
+    info!(
+        "  Total agents: {}",
+        dashboard_data.agent_performance.total_agents
+    );
+    info!(
+        "  Healthy agents: {}",
+        dashboard_data.agent_performance.healthy_agents
+    );
+    info!(
+        "  Average success rate: {:.2}%",
+        dashboard_data.agent_performance.avg_success_rate * 100.0
+    );
+    info!(
+        "  Average response time: {}ms",
+        dashboard_data.agent_performance.avg_response_time_ms
+    );
+    info!(
+        "  Consensus rate: {:.2}%",
+        dashboard_data.coordination_effectiveness.consensus_rate * 100.0
+    );
+    info!(
+        "  Task completion rate: {:.2}%",
+        dashboard_data.business_metrics.task_completion_rate * 100.0
+    );
+    info!(
+        "  Quality score: {:.2}",
+        dashboard_data.business_metrics.quality_score
+    );
     info!("  Active alerts: {}", dashboard_data.recent_alerts.len());
 
     // Get real-time updates
-    let real_time_update = dashboard_service.get_real_time_updates(
-        &session_id,
-        vec![agent_agency_observability::SubscriptionType::All],
-    ).await?;
+    let real_time_update = dashboard_service
+        .get_real_time_updates(
+            &session_id,
+            vec![agent_agency_observability::SubscriptionType::All],
+        )
+        .await?;
 
-    info!("Real-time update received at: {}", real_time_update.timestamp);
+    info!(
+        "Real-time update received at: {}",
+        real_time_update.timestamp
+    );
 
     if let Some(system_health) = real_time_update.system_health {
-        info!("  System health update: {} agents, {} tasks", 
-              system_health.active_agents, system_health.total_tasks);
+        info!(
+            "  System health update: {} agents, {} tasks",
+            system_health.active_agents, system_health.total_tasks
+        );
     }
 
     if let Some(agent_performance) = real_time_update.agent_performance {
-        info!("  Agent performance update: {} healthy agents, {:.2}% success rate",
-              agent_performance.healthy_agents, agent_performance.avg_success_rate * 100.0);
+        info!(
+            "  Agent performance update: {} healthy agents, {:.2}% success rate",
+            agent_performance.healthy_agents,
+            agent_performance.avg_success_rate * 100.0
+        );
     }
 
     if let Some(coordination_metrics) = real_time_update.coordination_metrics {
-        info!("  Coordination metrics update: {:.2}% consensus rate, {}ms avg time",
-              coordination_metrics.consensus_rate * 100.0, coordination_metrics.avg_consensus_time_ms);
+        info!(
+            "  Coordination metrics update: {:.2}% consensus rate, {}ms avg time",
+            coordination_metrics.consensus_rate * 100.0,
+            coordination_metrics.avg_consensus_time_ms
+        );
     }
 
     if let Some(business_metrics) = real_time_update.business_metrics {
-        info!("  Business metrics update: {:.2}% completion rate, {:.2} quality score",
-              business_metrics.task_completion_rate * 100.0, business_metrics.quality_score);
+        info!(
+            "  Business metrics update: {:.2}% completion rate, {:.2} quality score",
+            business_metrics.task_completion_rate * 100.0,
+            business_metrics.quality_score
+        );
     }
 
     if let Some(alerts) = real_time_update.alerts {
-        info!("  Alerts update: {} active, {} critical, {} warnings",
-              alerts.active_alerts, alerts.critical_alerts, alerts.warning_alerts);
+        info!(
+            "  Alerts update: {} active, {} critical, {} warnings",
+            alerts.active_alerts, alerts.critical_alerts, alerts.warning_alerts
+        );
     }
 
     info!("Dashboard demonstration completed");
@@ -293,54 +334,99 @@ async fn demonstrate_dashboard(
 }
 
 /// Show system health summary
-async fn show_system_health_summary(
-    health_monitor: &AgentIntegratedHealthMonitor,
-) -> Result<()> {
+async fn show_system_health_summary(health_monitor: &AgentIntegratedHealthMonitor) -> Result<()> {
     info!("System health summary:");
 
     let health_summary = health_monitor.get_health_summary().await?;
-    
+
     info!("  Overall health: {}", health_summary.overall_health);
     info!("  Active agents: {}", health_summary.active_agents);
     info!("  Total tasks: {}", health_summary.total_tasks);
-    info!("  Consensus rate: {:.2}%", health_summary.consensus_rate * 100.0);
-    info!("  Task completion rate: {:.2}%", health_summary.task_completion_rate * 100.0);
+    info!(
+        "  Consensus rate: {:.2}%",
+        health_summary.consensus_rate * 100.0
+    );
+    info!(
+        "  Task completion rate: {:.2}%",
+        health_summary.task_completion_rate * 100.0
+    );
     info!("  Quality score: {:.2}", health_summary.quality_score);
-    info!("  System availability: {:.2}%", health_summary.system_availability);
+    info!(
+        "  System availability: {:.2}%",
+        health_summary.system_availability
+    );
     info!("  Active alerts: {}", health_summary.active_alerts);
     info!("  Last updated: {}", health_summary.last_updated);
 
     // Show individual agent metrics
     let agent_metrics = health_monitor.get_all_agent_metrics().await;
-    
+
     info!("Individual agent metrics:");
     for (agent_id, metrics) in agent_metrics {
-        info!("  {}: {:.2}% success rate, {}ms avg response, {:.2} health score",
-              agent_id, metrics.success_rate * 100.0, metrics.avg_response_time_ms, metrics.health_score);
+        info!(
+            "  {}: {:.2}% success rate, {}ms avg response, {:.2} health score",
+            agent_id,
+            metrics.success_rate * 100.0,
+            metrics.avg_response_time_ms,
+            metrics.health_score
+        );
     }
 
     // Show coordination metrics
     let coordination_metrics = health_monitor.get_coordination_metrics().await;
-    
+
     info!("Coordination metrics:");
-    info!("  Consensus rate: {:.2}%", coordination_metrics.consensus_rate * 100.0);
-    info!("  Average consensus time: {}ms", coordination_metrics.consensus_formation_time_ms);
-    info!("  Debate frequency: {:.2}%", coordination_metrics.debate_frequency * 100.0);
-    info!("  Constitutional compliance: {:.2}%", coordination_metrics.constitutional_compliance_rate * 100.0);
-    info!("  Coordination overhead: {:.2}%", coordination_metrics.coordination_overhead_percentage);
+    info!(
+        "  Consensus rate: {:.2}%",
+        coordination_metrics.consensus_rate * 100.0
+    );
+    info!(
+        "  Average consensus time: {}ms",
+        coordination_metrics.consensus_formation_time_ms
+    );
+    info!(
+        "  Debate frequency: {:.2}%",
+        coordination_metrics.debate_frequency * 100.0
+    );
+    info!(
+        "  Constitutional compliance: {:.2}%",
+        coordination_metrics.constitutional_compliance_rate * 100.0
+    );
+    info!(
+        "  Coordination overhead: {:.2}%",
+        coordination_metrics.coordination_overhead_percentage
+    );
 
     // Show business metrics
     let business_metrics = health_monitor.get_business_metrics().await;
-    
+
     info!("Business metrics:");
-    info!("  Task completion rate: {:.2}%", business_metrics.task_completion_rate * 100.0);
+    info!(
+        "  Task completion rate: {:.2}%",
+        business_metrics.task_completion_rate * 100.0
+    );
     info!("  Quality score: {:.2}", business_metrics.quality_score);
-    info!("  False positive rate: {:.2}%", business_metrics.false_positive_rate * 100.0);
-    info!("  False negative rate: {:.2}%", business_metrics.false_negative_rate * 100.0);
-    info!("  Resource utilization: {:.2}%", business_metrics.resource_utilization * 100.0);
+    info!(
+        "  False positive rate: {:.2}%",
+        business_metrics.false_positive_rate * 100.0
+    );
+    info!(
+        "  False negative rate: {:.2}%",
+        business_metrics.false_negative_rate * 100.0
+    );
+    info!(
+        "  Resource utilization: {:.2}%",
+        business_metrics.resource_utilization * 100.0
+    );
     info!("  Cost per task: ${:.4}", business_metrics.cost_per_task);
-    info!("  Throughput: {:.1} tasks/hour", business_metrics.throughput_tasks_per_hour);
-    info!("  System availability: {:.2}%", business_metrics.system_availability);
+    info!(
+        "  Throughput: {:.1} tasks/hour",
+        business_metrics.throughput_tasks_per_hour
+    );
+    info!(
+        "  System availability: {:.2}%",
+        business_metrics.system_availability
+    );
 
     Ok(())
 }

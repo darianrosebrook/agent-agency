@@ -172,7 +172,7 @@ pub enum TestType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestScenario {
     pub scenario_name: String,
-    pub input_data: HashMap<String, TestData>,
+    pub input_data: HashMap<String, TestDataWithMetadata>,
     pub execution_context: ExecutionContext,
     pub preconditions: Vec<Precondition>,
     pub postconditions: Vec<Postcondition>,
@@ -185,6 +185,15 @@ pub enum TestData {
     Boolean(bool),
     Array(Vec<TestData>),
     Object(HashMap<String, TestData>),
+}
+
+/// Test data with metadata for test scenarios
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestDataWithMetadata {
+    pub data_type: DataType,
+    pub value: serde_json::Value,
+    pub constraints: Vec<Constraint>,
+    pub edge_case_flags: Vec<EdgeCaseFlag>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1535,12 +1544,12 @@ impl DynamicTestGenerator {
         input_data: HashMap<String, serde_json::Value>,
         test_spec: &TestSpecification,
     ) -> TestScenario {
-        let test_data: HashMap<String, TestData> = input_data
+        let test_data: HashMap<String, TestDataWithMetadata> = input_data
             .into_iter()
             .map(|(key, value)| {
                 (
                     key,
-                    TestData {
+                    TestDataWithMetadata {
                         data_type: match &value {
                             serde_json::Value::String(_) => DataType::String,
                             serde_json::Value::Number(n) if n.is_i64() => DataType::Integer,
@@ -3453,7 +3462,7 @@ impl TestPatternAnalyzer {
     /// Analyze historical test failure patterns
     async fn analyze_failure_patterns(
         &self,
-        test_results: &[TestResult],
+        test_results: &[EdgeCaseTestResult],
     ) -> Result<Vec<FailureAnalysis>> {
         let mut analyses = Vec::new();
 
@@ -3468,7 +3477,7 @@ impl TestPatternAnalyzer {
     }
 
     /// Analyze a single test failure
-    async fn analyze_single_failure(&self, result: &TestResult) -> Result<FailureAnalysis> {
+    async fn analyze_single_failure(&self, result: &EdgeCaseTestResult) -> Result<FailureAnalysis> {
         let error_message = result.error_message.as_deref().unwrap_or("Unknown error");
 
         // Match against known patterns

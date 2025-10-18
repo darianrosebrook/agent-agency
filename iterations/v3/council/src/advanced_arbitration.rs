@@ -5637,7 +5637,9 @@ impl ArbitrationFeedback {
                             .bind(metadata)
                             .execute(&pool)
                             .await
-                            .map_err(|e| anyhow::anyhow!("Failed to insert performance metrics: {}", e))
+                            .map_err(|e| {
+                                anyhow::anyhow!("Failed to insert performance metrics: {}", e)
+                            })
                     })
                 })
                 .await

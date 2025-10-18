@@ -232,7 +232,7 @@ impl WorkspaceStateManager {
             computed_at: chrono::Utc::now(),
             timestamp: chrono::Utc::now(),
             changes: self
-                .collect_actual_diff_changes(&current_state, &previous_state)
+                .collect_actual_diff_changes(&to, &from)
                 .await,
         };
 
@@ -704,7 +704,7 @@ impl WorkspaceStateManager {
         repo: &git2::Repository,
         from_commit: &git2::Commit<'_>,
         to_commit: &git2::Commit<'_>,
-    ) -> Result<Vec<FileChange>, WorkspaceError> {
+    ) -> Result<Vec<DiffChange>, WorkspaceError> {
         let mut changes = Vec::new();
 
         // Get diff between commits
@@ -714,16 +714,11 @@ impl WorkspaceStateManager {
         // Process each delta in the diff
         diff.foreach(
             &mut |delta, _| {
-                let change_type = match delta.status() {
-                    git2::Delta::Added => ChangeType::Added,
-                    git2::Delta::Modified => ChangeType::Modified,
-                    git2::Delta::Deleted => ChangeType::Deleted,
-                    git2::Delta::Renamed => ChangeType::Renamed,
-                    git2::Delta::Copied => ChangeType::Added, // Treat as added
+                // Skip certain delta types
+                match delta.status() {
                     git2::Delta::Ignored => return true,      // Skip ignored files
                     git2::Delta::Untracked => return true,    // Skip untracked files
-                    git2::Delta::Typechange => ChangeType::Modified,
-                    _ => return true, // Skip other types
+                    _ => {} // Continue processing other types
                 };
 
                 let new_file_path = delta
@@ -734,15 +729,25 @@ impl WorkspaceStateManager {
 
                 let old_file_path = delta.old_file().path().map(|p| p.to_path_buf());
 
-                let change = FileChange {
-                    file_path: new_file_path,
-                    old_path: old_file_path,
-                    change_type,
-                    timestamp: to_commit.time().seconds() as u64,
-                    author: to_commit.author().name().unwrap_or("unknown").to_string(),
-                    commit_hash: to_commit.id().to_string(),
-                    size_delta: delta.new_file().size() as i64 - delta.old_file().size() as i64,
-                    is_binary: delta.new_file().is_binary() || delta.old_file().is_binary(),
+                let change = match change_type {
+                    git2::Delta::Added => DiffChange::Add { 
+                        path: new_file_path, 
+                        content: Vec::new() // TODO: Get actual content from git
+                    },
+                    git2::Delta::Deleted => DiffChange::Remove { 
+                        path: old_file_path.unwrap_or_else(|| new_file_path.clone())
+                    },
+                    git2::Delta::Modified => DiffChange::Modify {
+                        path: new_file_path,
+                        old_content: None, // TODO: Get old content from git
+                        new_content: Vec::new(), // TODO: Get new content from git
+                    },
+                    git2::Delta::Renamed => DiffChange::Modify {
+                        path: new_file_path,
+                        old_content: None, // TODO: Get old content from git
+                        new_content: Vec::new(), // TODO: Get new content from git
+                    },
+                    _ => continue, // Skip other types for now
                 };
 
                 changes.push(change);
@@ -761,7 +766,7 @@ impl WorkspaceStateManager {
         &self,
         repo: &git2::Repository,
         commit: &git2::Commit<'_>,
-    ) -> Result<Vec<FileChange>, WorkspaceError> {
+    ) -> Result<Vec<DiffChange>, WorkspaceError> {
         let mut changes = Vec::new();
         let tree = commit.tree()?;
 
@@ -771,15 +776,9 @@ impl WorkspaceStateManager {
                 if let Some(blob) = obj.as_blob() {
                     let file_path = PathBuf::from(root).join(entry.name().unwrap_or(""));
 
-                    let change = FileChange {
-                        file_path,
-                        old_path: None,
-                        change_type: ChangeType::Added,
-                        timestamp: commit.time().seconds() as u64,
-                        author: commit.author().name().unwrap_or("unknown").to_string(),
-                        commit_hash: commit.id().to_string(),
-                        size_delta: blob.size() as i64,
-                        is_binary: blob.is_binary(),
+                    let change = DiffChange::Add {
+                        path: file_path,
+                        content: blob.content().to_vec(),
                     };
 
                     changes.push(change);
@@ -794,47 +793,77 @@ impl WorkspaceStateManager {
     /// Build file state from a file change
     async fn build_file_state_from_change(
         &self,
-        change: &FileChange,
+        change: &DiffChange,
         _repo: &git2::Repository,
     ) -> Result<FileState, WorkspaceError> {
-        let full_path = self.workspace_root.join(&change.file_path);
+        match change {
+            DiffChange::Add { path, content } => {
+                let full_path = self.workspace_root.join(path);
+                let metadata = std::fs::metadata(&full_path).map_err(WorkspaceError::from)?;
+                let size = metadata.len();
+                let modified_time = metadata
+                    .modified()
+                    .map_err(WorkspaceError::from)?
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_err(|e| WorkspaceError::from(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
 
-        // Get file metadata
-        let metadata = std::fs::metadata(&full_path).map_err(WorkspaceError::from)?;
-        let size = metadata.len();
-        let modified_time = metadata
-            .modified()
-            .map_err(WorkspaceError::from)?
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_err(|e| WorkspaceError::from(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+                let content_hash = self.calculate_content_hash(content)?;
+                let permissions = if cfg!(unix) {
+                    metadata.permissions().mode()
+                } else {
+                    0o644
+                };
 
-        // Calculate file hash
-        let content_hash = if !change.is_binary && size < 1024 * 1024 {
-            // Only hash files < 1MB
-            self.calculate_file_hash(&full_path).await?
-        } else {
-            format!("binary_{}", size) // Use size as hash for binary files
-        };
+                Ok(FileState {
+                    path: path.clone(),
+                    size,
+                    content_hash,
+                    modified_at: DateTime::from_timestamp(modified_time.as_secs() as i64, 0)
+                        .unwrap_or_default(),
+                    permissions,
+                    git_tracked: true,
+                    git_commit: None, // TODO: Get from git
+                    content: Some(content.clone()),
+                    compressed: false,
+                })
+            },
+            DiffChange::Modify { path, new_content, .. } => {
+                let full_path = self.workspace_root.join(path);
+                let metadata = std::fs::metadata(&full_path).map_err(WorkspaceError::from)?;
+                let size = metadata.len();
+                let modified_time = metadata
+                    .modified()
+                    .map_err(WorkspaceError::from)?
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_err(|e| WorkspaceError::from(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
 
-        // Get file permissions (Unix-style)
-        let permissions = if cfg!(unix) {
-            metadata.permissions().mode()
-        } else {
-            0o644 // Default permissions for non-Unix systems
-        };
+                let content_hash = self.calculate_content_hash(new_content)?;
+                let permissions = if cfg!(unix) {
+                    metadata.permissions().mode()
+                } else {
+                    0o644
+                };
 
-        Ok(FileState {
-            path: change.file_path.clone(),
-            size,
-            content_hash,
-            modified_at: DateTime::from_timestamp(modified_time.as_secs() as i64, 0)
-                .unwrap_or_default(),
-            permissions,
-            git_tracked: true,
-            git_commit: Some(change.commit_hash.clone()),
-            content: None,
-            compressed: false,
-        })
+                Ok(FileState {
+                    path: path.clone(),
+                    size,
+                    content_hash,
+                    modified_at: DateTime::from_timestamp(modified_time.as_secs() as i64, 0)
+                        .unwrap_or_default(),
+                    permissions,
+                    git_tracked: true,
+                    git_commit: None, // TODO: Get from git
+                    content: Some(new_content.clone()),
+                    compressed: false,
+                })
+            },
+            DiffChange::Remove { .. } => {
+                Err(WorkspaceError::DiffComputation("Cannot build file state from remove change".to_string()))
+            },
+            DiffChange::AddDirectory { .. } | DiffChange::RemoveDirectory { .. } => {
+                Err(WorkspaceError::DiffComputation("Cannot build file state from directory change".to_string()))
+            },
+        }
     }
 
     /// Build directory states from file states
@@ -892,48 +921,44 @@ impl WorkspaceStateManager {
         &self,
         current_state: &WorkspaceState,
         previous_state: &WorkspaceState,
-    ) -> Vec<FileChange> {
+    ) -> Vec<DiffChange> {
         let mut changes = Vec::new();
 
-        // Compare file hashes to detect changes
-        for (file_path, current_hash) in &current_state.file_hashes {
-            if let Some(previous_hash) = previous_state.file_hashes.get(file_path) {
-                if current_hash != previous_hash {
+        // Compare file states to detect changes
+        for (file_path, current_file) in &current_state.files {
+            if let Some(previous_file) = previous_state.files.get(file_path) {
+                if current_file.content_hash != previous_file.content_hash {
                     // File was modified
-                    changes.push(FileChange {
-                        path: file_path.clone(),
+                    changes.push(DiffChange {
+                        file_path: file_path.clone(),
                         change_type: ChangeType::Modified,
-                        old_hash: Some(previous_hash.clone()),
-                        new_hash: Some(current_hash.clone()),
-                        size_diff: self.calculate_size_diff(
-                            file_path,
-                            current_state,
-                            previous_state,
-                        ),
+                        old_content_hash: Some(previous_file.content_hash.clone()),
+                        new_content_hash: Some(current_file.content_hash.clone()),
+                        size_diff: current_file.size as i64 - previous_file.size as i64,
                     });
                 }
             } else {
                 // File was added
-                changes.push(FileChange {
-                    path: file_path.clone(),
+                changes.push(DiffChange {
+                    file_path: file_path.clone(),
                     change_type: ChangeType::Added,
-                    old_hash: None,
-                    new_hash: Some(current_hash.clone()),
-                    size_diff: self.get_file_size(file_path, current_state),
+                    old_content_hash: None,
+                    new_content_hash: Some(current_file.content_hash.clone()),
+                    size_diff: current_file.size as i64,
                 });
             }
         }
 
         // Check for deleted files
-        for (file_path, previous_hash) in &previous_state.file_hashes {
-            if !current_state.file_hashes.contains_key(file_path) {
+        for (file_path, previous_file) in &previous_state.files {
+            if !current_state.files.contains_key(file_path) {
                 // File was deleted
-                changes.push(FileChange {
-                    path: file_path.clone(),
+                changes.push(DiffChange {
+                    file_path: file_path.clone(),
                     change_type: ChangeType::Deleted,
-                    old_hash: Some(previous_hash.clone()),
-                    new_hash: None,
-                    size_diff: -self.get_file_size(file_path, previous_state),
+                    old_content_hash: Some(previous_file.content_hash.clone()),
+                    new_content_hash: None,
+                    size_diff: -(previous_file.size as i64),
                 });
             }
         }
@@ -944,39 +969,19 @@ impl WorkspaceStateManager {
     /// Calculate size difference for a file
     fn calculate_size_diff(
         &self,
-        file_path: &str,
+        file_path: &PathBuf,
         current_state: &WorkspaceState,
         previous_state: &WorkspaceState,
     ) -> i64 {
         let current_size = self.get_file_size(file_path, current_state);
         let previous_size = self.get_file_size(file_path, previous_state);
-        current_size - previous_size
+        current_size as i64 - previous_size as i64
     }
 
     /// Get file size from state
-    fn get_file_size(&self, file_path: &str, state: &WorkspaceState) -> i64 {
-        state.file_sizes.get(file_path).copied().unwrap_or(0)
+    fn get_file_size(&self, file_path: &PathBuf, state: &WorkspaceState) -> u64 {
+        state.files.get(file_path).map(|f| f.size).unwrap_or(0)
     }
+
 }
 
-/// Represents a change to a file in the workspace
-#[derive(Debug, Clone)]
-struct FileChange {
-    file_path: PathBuf,
-    old_path: Option<PathBuf>,
-    change_type: ChangeType,
-    timestamp: u64,
-    author: String,
-    commit_hash: String,
-    size_delta: i64,
-    is_binary: bool,
-}
-
-/// Types of file changes
-#[derive(Debug, Clone)]
-enum ChangeType {
-    Added,
-    Modified,
-    Deleted,
-    Renamed,
-}

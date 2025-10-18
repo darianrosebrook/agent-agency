@@ -10,7 +10,7 @@
 use crate::{models::*, DatabaseConfig};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{Duration, Utc};
 use deadpool_postgres::{Config, ManagerConfig, RecyclingMethod, Runtime};
 use serde_json;
 use sqlx::Row;
@@ -121,8 +121,8 @@ impl DatabaseClient {
 
         // Initialize circuit breaker
         let circuit_breaker = Arc::new(CircuitBreaker {
-            failure_threshold: 5,                      // Open after 5 failures
-            success_threshold: 3,                      // Close after 3 successes
+            failure_threshold: 5,                    // Open after 5 failures
+            success_threshold: 3,                    // Close after 3 successes
             recovery_timeout: Duration::seconds(30), // Wait 30s before half-open
             state: Arc::new(RwLock::new(CircuitState::Closed)),
             failures: AtomicU64::new(0),
@@ -1266,19 +1266,19 @@ impl DatabaseOperations for DatabaseClient {
         let mut param_count = 0;
 
         // Apply filters if provided
-        if let Some(filters) = filters {
+        if let Some(ref filters) = filters {
             let mut conditions = Vec::new();
 
-            if let Some(status) = filters.status {
+            if let Some(status) = &filters.status {
                 param_count += 1;
                 conditions.push(format!("status = ${}", param_count));
-                params.push(Box::new(status));
+                params.push(Box::new(status.clone()));
             }
 
-            if let Some(risk_tier) = filters.risk_tier {
+            if let Some(risk_tier) = &filters.risk_tier {
                 param_count += 1;
                 conditions.push(format!("risk_tier = ${}", param_count));
-                params.push(Box::new(risk_tier));
+                params.push(Box::new(risk_tier.clone()));
             }
 
             if let Some(assigned_worker_id) = filters.assigned_worker_id {
@@ -1293,7 +1293,7 @@ impl DatabaseOperations for DatabaseClient {
         }
 
         // Apply pagination if provided
-        if let Some(pagination) = pagination {
+        if let Some(ref pagination) = pagination {
             let offset = (pagination.page - 1) * pagination.page_size;
             query.push_str(&format!(
                 " LIMIT {} OFFSET {}",
@@ -1746,32 +1746,32 @@ impl DatabaseOperations for DatabaseClient {
         let mut param_count = 0;
 
         // Apply filters if provided
-        if let Some(filters) = filters {
-            if let Some(task_id) = filters.task_id {
+        if let Some(ref filters) = filters {
+            if let Some(_task_id) = filters.task_id {
                 param_count += 1;
                 conditions.push(format!("task_id = ${}", param_count));
             }
-            if let Some(min_consensus_score) = filters.min_consensus_score {
+            if let Some(_min_consensus_score) = filters.min_consensus_score {
                 param_count += 1;
                 conditions.push(format!("consensus_score >= ${}", param_count));
             }
-            if let Some(max_consensus_score) = filters.max_consensus_score {
+            if let Some(_max_consensus_score) = filters.max_consensus_score {
                 param_count += 1;
                 conditions.push(format!("consensus_score <= ${}", param_count));
             }
-            if let Some(min_debate_rounds) = filters.min_debate_rounds {
+            if let Some(_min_debate_rounds) = filters.min_debate_rounds {
                 param_count += 1;
                 conditions.push(format!("debate_rounds >= ${}", param_count));
             }
-            if let Some(max_debate_rounds) = filters.max_debate_rounds {
+            if let Some(_max_debate_rounds) = filters.max_debate_rounds {
                 param_count += 1;
                 conditions.push(format!("debate_rounds <= ${}", param_count));
             }
-            if let Some(created_after) = filters.created_after {
+            if let Some(_created_after) = filters.created_after {
                 param_count += 1;
                 conditions.push(format!("created_at >= ${}", param_count));
             }
-            if let Some(created_before) = filters.created_before {
+            if let Some(_created_before) = filters.created_before {
                 param_count += 1;
                 conditions.push(format!("created_at <= ${}", param_count));
             }
@@ -1785,7 +1785,7 @@ impl DatabaseOperations for DatabaseClient {
         query.push_str(" ORDER BY created_at DESC");
 
         // Apply pagination
-        if let Some(pagination) = pagination {
+        if let Some(ref pagination) = pagination {
             param_count += 1;
             query.push_str(&format!(" LIMIT ${}", param_count));
             param_count += 1;
@@ -1795,7 +1795,7 @@ impl DatabaseOperations for DatabaseClient {
         let mut query_builder = sqlx::query(&query);
 
         // Bind parameters
-        if let Some(filters) = filters {
+        if let Some(ref filters) = filters {
             if let Some(task_id) = filters.task_id {
                 query_builder = query_builder.bind(task_id);
             }
@@ -1819,13 +1819,13 @@ impl DatabaseOperations for DatabaseClient {
             }
         }
 
-        if let Some(pagination) = pagination {
-            if let Some(limit) = pagination.limit {
-                query_builder = query_builder.bind(limit);
-            }
-            if let Some(offset) = pagination.offset {
-                query_builder = query_builder.bind(offset);
-            }
+        if let Some(ref pagination) = pagination {
+            let page_size = i64::from(pagination.page_size);
+            let limit = pagination.limit.unwrap_or(page_size);
+            let page_index = i64::from(pagination.page.saturating_sub(1));
+            let offset = pagination.offset.unwrap_or(page_index * page_size);
+            query_builder = query_builder.bind(limit);
+            query_builder = query_builder.bind(offset);
         }
 
         let rows = query_builder
@@ -1893,11 +1893,14 @@ impl DatabaseOperations for DatabaseClient {
             id: row.get("id"),
             verdict_id: row.get("verdict_id"),
             judge_id: row.get("judge_id"),
+            judge_verdict: row.get("judge_verdict"),
             evaluation_score: row.get("evaluation_score"),
             confidence_score: row.get("confidence_score"),
             reasoning: row.get("reasoning"),
             evidence_used: row.get("evidence_used"),
             evaluation_time_ms: row.get("evaluation_time_ms"),
+            tokens_used: row.get("tokens_used"),
+            confidence: row.get("confidence"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             evaluation_metadata: row.get("evaluation_metadata"),
@@ -1934,11 +1937,14 @@ impl DatabaseOperations for DatabaseClient {
                 id: row.get("id"),
                 verdict_id: row.get("verdict_id"),
                 judge_id: row.get("judge_id"),
+                judge_verdict: row.get("judge_verdict"),
                 evaluation_score: row.get("evaluation_score"),
                 confidence_score: row.get("confidence_score"),
                 reasoning: row.get("reasoning"),
                 evidence_used: row.get("evidence_used"),
                 evaluation_time_ms: row.get("evaluation_time_ms"),
+                tokens_used: row.get("tokens_used"),
+                confidence: row.get("confidence"),
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),
                 evaluation_metadata: row.get("evaluation_metadata"),
@@ -1994,14 +2000,20 @@ impl DatabaseOperations for DatabaseClient {
             id: row.get("id"),
             title: row.get("title"),
             content: row.get("content"),
-            content_type: row.get("content_type"),
             source: row.get("source"),
             source_url: row.get("source_url"),
+            relevance_score: row
+                .try_get::<f32, _>("relevance_score")
+                .unwrap_or(entry.relevance_score),
             tags: row.get("tags"),
-            metadata: row.get("metadata"),
-            embedding_vector: row.get("embedding_vector"),
+            embedding: row
+                .try_get::<Option<Vec<f32>>, _>("embedding")
+                .unwrap_or_else(|_| entry.embedding.clone()),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
+            content_type: row.get("content_type"),
+            metadata: row.get("metadata"),
+            embedding_vector: row.get("embedding_vector"),
             access_level: row.get("access_level"),
             version: row.get("version"),
             parent_id: row.get("parent_id"),
@@ -2021,7 +2033,7 @@ impl DatabaseOperations for DatabaseClient {
         let mut param_count = 0;
 
         // Apply filters if provided
-        if let Some(filters) = filters {
+        if let Some(ref filters) = filters {
             if let Some(content_type) = &filters.content_type {
                 param_count += 1;
                 conditions.push(format!("content_type = ${}", param_count));
@@ -2062,7 +2074,7 @@ impl DatabaseOperations for DatabaseClient {
         query.push_str(" ORDER BY created_at DESC");
 
         // Apply pagination
-        if let Some(pagination) = pagination {
+        if let Some(ref pagination) = pagination {
             param_count += 1;
             query.push_str(&format!(" LIMIT ${}", param_count));
             param_count += 1;
@@ -2072,7 +2084,7 @@ impl DatabaseOperations for DatabaseClient {
         let mut query_builder = sqlx::query(&query);
 
         // Bind parameters
-        if let Some(filters) = filters {
+        if let Some(ref filters) = filters {
             if let Some(content_type) = &filters.content_type {
                 query_builder = query_builder.bind(content_type);
             }
@@ -2099,9 +2111,13 @@ impl DatabaseOperations for DatabaseClient {
             }
         }
 
-        if let Some(pagination) = pagination {
-            query_builder = query_builder.bind(pagination.limit as i64);
-            query_builder = query_builder.bind(pagination.offset as i64);
+        if let Some(ref pagination) = pagination {
+            let page_size = i64::from(pagination.page_size);
+            let limit = pagination.limit.unwrap_or(page_size);
+            let page_index = i64::from(pagination.page.saturating_sub(1));
+            let offset = pagination.offset.unwrap_or(page_index * page_size);
+            query_builder = query_builder.bind(limit);
+            query_builder = query_builder.bind(offset);
         }
 
         let rows = query_builder
@@ -2115,14 +2131,18 @@ impl DatabaseOperations for DatabaseClient {
                 id: row.get("id"),
                 title: row.get("title"),
                 content: row.get("content"),
-                content_type: row.get("content_type"),
                 source: row.get("source"),
                 source_url: row.get("source_url"),
+                relevance_score: row.try_get::<f32, _>("relevance_score").unwrap_or(0.0),
                 tags: row.get("tags"),
-                metadata: row.get("metadata"),
-                embedding_vector: row.get("embedding_vector"),
+                embedding: row
+                    .try_get::<Option<Vec<f32>>, _>("embedding")
+                    .unwrap_or(None),
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),
+                content_type: row.get("content_type"),
+                metadata: row.get("metadata"),
+                embedding_vector: row.get("embedding_vector"),
                 access_level: row.get("access_level"),
                 version: row.get("version"),
                 parent_id: row.get("parent_id"),
@@ -2164,14 +2184,16 @@ impl DatabaseOperations for DatabaseClient {
                 id: row.get("id"),
                 title: row.get("title"),
                 content: row.get("content"),
-                content_type: row.get("content_type"),
                 source: row.get("source"),
                 source_url: row.get("source_url"),
+                relevance_score: row.get("relevance_score"),
                 tags: row.get("tags"),
-                metadata: row.get("metadata"),
-                embedding_vector: row.get("embedding_vector"),
+                embedding: row.get("embedding"),
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),
+                content_type: row.get("content_type"),
+                metadata: row.get("metadata"),
+                embedding_vector: row.get("embedding_vector"),
                 access_level: row.get("access_level"),
                 version: row.get("version"),
                 parent_id: row.get("parent_id"),
@@ -2218,15 +2240,13 @@ impl DatabaseOperations for DatabaseClient {
 
         let performance_metric = PerformanceMetric {
             id: row.get("id"),
+            entity_type: row.get("entity_type"),
+            entity_id: row.get("entity_id"),
             metric_name: row.get("metric_name"),
             metric_value: row.get("metric_value"),
-            metric_type: row.get("metric_type"),
-            component: row.get("component"),
-            task_id: row.get("task_id"),
-            execution_id: row.get("execution_id"),
-            timestamp: row.get("timestamp"),
+            metric_unit: row.get("metric_unit"),
             metadata: row.get("metadata"),
-            created_at: row.get("created_at"),
+            recorded_at: row.get("recorded_at"),
         };
 
         info!(
@@ -2258,15 +2278,13 @@ impl DatabaseOperations for DatabaseClient {
             .into_iter()
             .map(|row| PerformanceMetric {
                 id: row.get("id"),
+                entity_type: row.get("entity_type"),
+                entity_id: row.get("entity_id"),
                 metric_name: row.get("metric_name"),
                 metric_value: row.get("metric_value"),
-                metric_type: row.get("metric_type"),
-                component: row.get("component"),
-                task_id: row.get("task_id"),
-                execution_id: row.get("execution_id"),
-                timestamp: row.get("timestamp"),
+                metric_unit: row.get("metric_unit"),
                 metadata: row.get("metadata"),
-                created_at: row.get("created_at"),
+                recorded_at: row.get("recorded_at"),
             })
             .collect();
 
@@ -2314,15 +2332,14 @@ impl DatabaseOperations for DatabaseClient {
         let caws_compliance = CawsCompliance {
             id: row.get("id"),
             task_id: row.get("task_id"),
-            compliance_status: row.get("compliance_status"),
+            verdict_id: row.get("verdict_id"),
             compliance_score: row.get("compliance_score"),
             violations: row.get("violations"),
-            recommendations: row.get("recommendations"),
-            audit_timestamp: row.get("audit_timestamp"),
+            waivers: row.get("waivers"),
+            budget_adherence: row.get("budget_adherence"),
+            quality_gates: row.get("quality_gates"),
+            provenance_trail: row.get("provenance_trail"),
             created_at: row.get("created_at"),
-            updated_at: row.get("updated_at"),
-            compliance_metadata: row.get("compliance_metadata"),
-            audit_details: row.get("audit_details"),
         };
 
         info!(
@@ -2353,15 +2370,14 @@ impl DatabaseOperations for DatabaseClient {
             let compliance = CawsCompliance {
                 id: row.get("id"),
                 task_id: row.get("task_id"),
-                compliance_status: row.get("compliance_status"),
+                verdict_id: row.get("verdict_id"),
                 compliance_score: row.get("compliance_score"),
                 violations: row.get("violations"),
-                recommendations: row.get("recommendations"),
-                audit_timestamp: row.get("audit_timestamp"),
+                waivers: row.get("waivers"),
+                budget_adherence: row.get("budget_adherence"),
+                quality_gates: row.get("quality_gates"),
+                provenance_trail: row.get("provenance_trail"),
                 created_at: row.get("created_at"),
-                updated_at: row.get("updated_at"),
-                compliance_metadata: row.get("compliance_metadata"),
-                audit_details: row.get("audit_details"),
             };
             Ok(Some(compliance))
         } else {
@@ -2405,8 +2421,9 @@ impl DatabaseOperations for DatabaseClient {
             action: row.get("action"),
             details: row.get("details"),
             user_id: row.get("user_id"),
-            ip_address: row.get("ip_address"),
-            timestamp: row.get("timestamp"),
+            ip_address: row
+                .get::<Option<String>, _>("ip_address")
+                .and_then(|s| s.parse().ok()),
             created_at: row.get("created_at"),
         };
 
@@ -2444,8 +2461,9 @@ impl DatabaseOperations for DatabaseClient {
                 action: row.get("action"),
                 details: row.get("details"),
                 user_id: row.get("user_id"),
-                ip_address: row.get("ip_address"),
-                timestamp: row.get("timestamp"),
+                ip_address: row
+                    .get::<Option<String>, _>("ip_address")
+                    .and_then(|s| s.parse().ok()),
                 created_at: row.get("created_at"),
             })
             .collect();
@@ -2485,6 +2503,9 @@ impl DatabaseOperations for DatabaseClient {
                 total_verdicts: row.get("total_verdicts"),
                 avg_consensus_score: row.get("avg_consensus_score"),
                 avg_debate_rounds: row.get("avg_debate_rounds"),
+                accepted_count: row.get("accepted_count"),
+                rejected_count: row.get("rejected_count"),
+                modification_required_count: row.get("modification_required_count"),
                 avg_evaluation_time_ms: row.get("avg_evaluation_time_ms"),
             })
             .collect();
@@ -2518,10 +2539,16 @@ impl DatabaseOperations for DatabaseClient {
             .into_iter()
             .map(|row| JudgePerformance {
                 judge_id: row.get("judge_id"),
+                judge_name: row.get("judge_name"),
+                model_name: row.get("model_name"),
                 total_evaluations: row.get("total_evaluations"),
+                avg_evaluation_time_ms: row.get("avg_evaluation_time_ms"),
+                avg_confidence: row.get("avg_confidence"),
                 avg_evaluation_score: row.get("avg_evaluation_score"),
                 avg_confidence_score: row.get("avg_confidence_score"),
-                avg_evaluation_time_ms: row.get("avg_evaluation_time_ms"),
+                pass_count: row.get("pass_count"),
+                fail_count: row.get("fail_count"),
+                uncertain_count: row.get("uncertain_count"),
                 approved_count: row.get("approved_count"),
                 rejected_count: row.get("rejected_count"),
             })
@@ -2556,10 +2583,14 @@ impl DatabaseOperations for DatabaseClient {
             .into_iter()
             .map(|row| WorkerPerformance {
                 worker_id: row.get("worker_id"),
+                worker_name: row.get("worker_name"),
+                worker_type: row.get("worker_type"),
+                specialty: row.get("specialty"),
                 total_executions: row.get("total_executions"),
+                avg_execution_time_ms: row.get("avg_execution_time_ms"),
                 completed_count: row.get("completed_count"),
                 failed_count: row.get("failed_count"),
-                avg_execution_time_ms: row.get("avg_execution_time_ms"),
+                avg_tokens_used: row.get("avg_tokens_used"),
             })
             .collect();
 
@@ -2595,6 +2626,9 @@ impl DatabaseOperations for DatabaseClient {
         if let Some(row) = row {
             let summary = TaskExecutionSummary {
                 task_id,
+                title: row.get("title"),
+                status: row.get("status"),
+                risk_tier: row.get("risk_tier"),
                 total_executions: row.get("total_executions"),
                 completed_count: row.get("completed_count"),
                 failed_count: row.get("failed_count"),
@@ -2602,6 +2636,9 @@ impl DatabaseOperations for DatabaseClient {
                 avg_execution_time_ms: row.get("avg_execution_time_ms"),
                 first_execution: row.get("first_execution"),
                 last_completion: row.get("last_completion"),
+                executions: row.get("executions"),
+                verdicts: row.get("verdicts"),
+                compliance: row.get("compliance"),
             };
             Ok(Some(summary))
         } else {

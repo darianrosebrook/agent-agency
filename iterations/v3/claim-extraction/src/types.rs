@@ -125,7 +125,7 @@ pub enum EvidenceType {
     PerformanceMetrics,
     SecurityScan,
     ConstitutionalReference, // CAWS compliance
-    CouncilDecision, // Council verification results
+    CouncilDecision,         // Council verification results
 }
 
 /// Source of evidence

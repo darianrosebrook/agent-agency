@@ -150,16 +150,25 @@ impl ToolRegistry {
         let timeout = request.timeout_seconds.unwrap_or(30);
         let execution_result = tokio::time::timeout(
             std::time::Duration::from_secs(timeout as u64),
-            self.route_execution(&tool, &request)
-        ).await;
+            self.route_execution(&tool, &request),
+        )
+        .await;
 
         let completed_at = chrono::Utc::now();
         let duration_ms = start_time.elapsed().as_millis() as u64;
 
         let (status, output, error) = match execution_result {
             Ok(Ok(output)) => (ExecutionStatus::Completed, Some(output), None),
-            Ok(Err(e)) => (ExecutionStatus::Failed, None, Some(format!("execution error: {e}"))),
-            Err(_) => (ExecutionStatus::Timeout, None, Some("execution timed out".into())),
+            Ok(Err(e)) => (
+                ExecutionStatus::Failed,
+                None,
+                Some(format!("execution error: {e}")),
+            ),
+            Err(_) => (
+                ExecutionStatus::Timeout,
+                None,
+                Some("execution timed out".into()),
+            ),
         };
 
         let result = ToolExecutionResult {
@@ -239,11 +248,17 @@ impl ToolRegistry {
         request: &ToolExecutionRequest,
     ) -> Result<serde_json::Value> {
         // Route based on tool capabilities
-        if tool.capabilities.contains(&ToolCapability::CommandExecution) {
+        if tool
+            .capabilities
+            .contains(&ToolCapability::CommandExecution)
+        {
             self.execute_command_tool(tool, request).await
         } else if tool.capabilities.contains(&ToolCapability::NetworkAccess) {
             self.execute_network_tool(tool, request).await
-        } else if tool.capabilities.contains(&ToolCapability::FileSystemAccess) {
+        } else if tool
+            .capabilities
+            .contains(&ToolCapability::FileSystemAccess)
+        {
             self.execute_filesystem_tool(tool, request).await
         } else {
             // Default to sandboxed execution for general tools
@@ -258,26 +273,36 @@ impl ToolRegistry {
         request: &ToolExecutionRequest,
     ) -> Result<serde_json::Value> {
         // Check if tool is marked as sandboxed
-        let sandboxed = tool.metadata
+        let sandboxed = tool
+            .metadata
             .get("sandboxed")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
         if !sandboxed {
-            return Err(anyhow::anyhow!("Command execution requires sandboxed=true in tool metadata"));
+            return Err(anyhow::anyhow!(
+                "Command execution requires sandboxed=true in tool metadata"
+            ));
         }
 
         // For now, simulate command execution
         // In production, this would use a proper sandboxing mechanism
-        info!("Executing command tool: {} (sandboxed: {})", tool.name, sandboxed);
+        info!(
+            "Executing command tool: {} (sandboxed: {})",
+            tool.name, sandboxed
+        );
 
         // Simulate execution time based on tool complexity
-        let execution_time_ms = tool.metadata
+        let execution_time_ms = tool
+            .metadata
             .get("estimated_execution_time_ms")
             .and_then(|v| v.as_u64())
             .unwrap_or(100);
 
-        tokio::time::sleep(std::time::Duration::from_millis(execution_time_ms.min(5000))).await;
+        tokio::time::sleep(std::time::Duration::from_millis(
+            execution_time_ms.min(5000),
+        ))
+        .await;
 
         Ok(serde_json::json!({
             "tool": tool.name,
@@ -332,7 +357,8 @@ impl ToolRegistry {
         info!("Executing filesystem tool: {}", tool.name);
 
         // Check allowed paths from tool metadata
-        let allowed_paths: Vec<String> = tool.metadata
+        let allowed_paths: Vec<String> = tool
+            .metadata
             .get("allowed_paths")
             .and_then(|p| serde_json::from_value(p.clone()).ok())
             .unwrap_or_default();
@@ -340,9 +366,10 @@ impl ToolRegistry {
         // Validate any path parameters against allowed paths
         if let Some(path_param) = request.parameters.get("path") {
             if let Some(path_str) = path_param.as_str() {
-                let is_allowed = allowed_paths.is_empty() || allowed_paths.iter().any(|allowed| {
-                    std::path::Path::new(path_str).starts_with(allowed)
-                });
+                let is_allowed = allowed_paths.is_empty()
+                    || allowed_paths
+                        .iter()
+                        .any(|allowed| std::path::Path::new(path_str).starts_with(allowed));
 
                 if !is_allowed {
                     return Err(anyhow::anyhow!("Path not in allowed list: {}", path_str));
