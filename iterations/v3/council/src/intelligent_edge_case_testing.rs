@@ -11,6 +11,26 @@ use std::collections::HashMap;
 use tracing::{debug, info};
 use uuid::Uuid;
 
+/// Input type enumeration for test parameters
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum InputType {
+    String,
+    Integer,
+    Float,
+    Boolean,
+    Array,
+    Object,
+}
+
+/// Test input specification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestInput {
+    pub name: String,
+    pub input_type: InputType,
+    pub required: bool,
+    pub description: String,
+}
+
 /// Intelligent Edge Case Testing System that surpasses V2's static testing
 #[derive(Debug)]
 pub struct IntelligentEdgeCaseTesting {
@@ -271,16 +291,25 @@ pub enum FailureType {
     DependencyError,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum EdgeCaseType {
     Boundary,
+    BoundaryCondition,
     NullHandling,
     EmptyData,
     InvalidInput,
+    InputValidation,
     ResourceExhaustion,
+    PerformanceIssue,
     Concurrency,
+    RaceCondition,
     Timeout,
+    TimingIssue,
     NetworkFailure,
+    NetworkIssue,
+    IOError,
+    ExceptionalCondition,
+    TypeCoercion,
 }
 
 /// Edge case analysis results
@@ -372,6 +401,9 @@ pub struct TestOptimization {
     pub redundancy_reduction: f64,
     pub optimization_confidence: f64,
     pub prioritized_tests: Vec<PrioritizedTest>,
+    pub maintenance_recommendations: Vec<String>,
+    pub execution_time_reduction: f64,
+    pub resource_usage_reduction: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -390,6 +422,9 @@ pub enum SuggestionType {
     OptimizeExecution,
     ImproveCoverage,
     ReduceComplexity,
+    OptimizePerformance,
+    RemoveLowValue,
+    GeneralOptimization,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -488,6 +523,7 @@ pub enum RecommendationType {
     RemoveRedundant,
     OptimizeExecution,
     EnhanceCoverage,
+    ImproveCode,
 }
 
 /// Test history for tracking test performance
@@ -557,6 +593,7 @@ pub struct TestSpecification {
     pub requirements: Vec<TestRequirement>,
     pub acceptance_criteria: Vec<AcceptanceCriterion>,
     pub dependencies: Vec<String>,
+    pub test_cases: Vec<GeneratedTest>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1969,7 +2006,7 @@ impl TestOptimizer {
 
         // Update execution order
         for (index, test) in prioritized_tests.iter_mut().enumerate() {
-            test.execution_order = index + 1;
+            test.execution_order = (index + 1) as u32;
         }
 
         Ok(prioritized_tests)
@@ -1977,7 +2014,7 @@ impl TestOptimizer {
 
     /// Calculate priority score for a test case
     fn calculate_test_priority(&self, test_case: &TestCase, analysis: &TestEfficiencyAnalysis) -> f64 {
-        let mut score = 0.0;
+        let mut score: f64 = 0.0;
 
         // Base score from coverage
         score += test_case.estimated_coverage * 0.3;
@@ -2166,9 +2203,9 @@ impl CoverageAnalyzer {
         let mut generation_confidence = 0.0;
 
         // Calculate coverage based on test requirements
-        if let Some(edge_case_reqs) = &test_spec.edge_case_requirements {
-            edge_case_coverage = edge_case_reqs.coverage_threshold;
-            coverage_improvement = edge_case_reqs.coverage_threshold * 0.2;
+        if let Some(edge_case_req) = test_spec.edge_case_requirements.first() {
+            edge_case_coverage = edge_case_req.coverage_threshold;
+            coverage_improvement = edge_case_req.coverage_threshold * 0.2;
             generation_confidence = 0.85;
         }
 
@@ -2211,9 +2248,9 @@ impl CoverageAnalyzer {
 
         // Generate coverage trends (simulated)
         trends.push(CoverageTrend {
-            trend_direction: "improving".to_string(),
+            trend_direction: TrendDirection::Increasing,
             trend_magnitude: 0.1,
-            trend_duration: "last_month".to_string(),
+            trend_duration: 30,
             trend_confidence: 0.8,
         });
 
@@ -2273,6 +2310,13 @@ impl CoverageAnalyzer {
                     expected_coverage_improvement: 0.25,
                     implementation_effort: ImplementationEffort::High,
                     priority: Priority::High,
+                },
+                _ => CoverageRecommendation {
+                    recommendation_type: RecommendationType::ImproveCode,
+                    description: "Address coverage gap in code".to_string(),
+                    expected_coverage_improvement: 0.1,
+                    implementation_effort: ImplementationEffort::Medium,
+                    priority: Priority::Medium,
                 },
             };
             recommendations.push(recommendation);
@@ -2525,6 +2569,12 @@ struct CoverageMetrics {
     coverage_improvement: f64,
     edge_case_coverage: f64,
     generation_confidence: f64,
+    total_edge_cases: u64,
+    tested_edge_cases: u64,
+    passed_tests: u64,
+    failed_tests: u64,
+    coverage_percentage: f64,
+    pass_rate: f64,
 }
 
 use std::sync::Arc;
@@ -2556,14 +2606,6 @@ struct CoveragePatterns {
     cold_spots: Vec<String>,
 }
 
-/// Coverage trend information
-#[derive(Debug, Clone)]
-struct CoverageTrend {
-    trend_type: TrendType,
-    description: String,
-    trend_value: f64,
-    time_period: String,
-}
 
 /// Coverage anomaly information
 #[derive(Debug, Clone)]

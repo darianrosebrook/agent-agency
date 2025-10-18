@@ -1961,7 +1961,7 @@ impl SemanticAnalyzer {
             gaps,
             supporting_evidence: Vec::new(),
             consistency_score: overall_coherence,
-        }
+        })
     }    async fn validate_domain_knowledge(
         &self,
         structure: &SemanticStructure,

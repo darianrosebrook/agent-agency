@@ -300,7 +300,7 @@ impl VectorSearchEngine {
         let embedding = self.generate_embedding_with_model(&processed_text).await?;
 
         // 4. Cache the embedding
-        self.cache_embedding(&processed_text, &embedding).await;
+        let _ = self.cache_embedding(&processed_text, &embedding).await;
 
         Ok(embedding)
     }

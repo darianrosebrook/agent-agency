@@ -2,7 +2,6 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::{
         detection, presets, ConfigLoader, ConfigValidator, DatabaseConfigValidation, Environment,
         EnvironmentManager, SecretsManager,
@@ -10,7 +9,6 @@ mod tests {
     use base64::Engine;
     use std::fs;
     use tempfile::TempDir;
-    use tokio_test;
 
     #[tokio::test]
     async fn test_config_loader_basic() {

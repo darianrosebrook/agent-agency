@@ -277,7 +277,7 @@ impl MemoryStorage {
         // Implement storage optimization strategies
         
         // 1. Clean up old states if storage is getting full
-        if self.states.len() > 1000 {
+        if self.states.read().unwrap().len() > 1000 {
             self.cleanup_old_states().await?;
         }
         
@@ -333,7 +333,7 @@ impl MemoryStorage {
 
     /// Update storage metrics
     async fn update_storage_metrics(&self) -> Result<(), WorkspaceError> {
-        let total_states = self.states.len();
+        let total_states = self.states.read().unwrap().len();
         let total_size: u64 = self.states.values().map(|s| s.total_size).sum();
         
         debug!("Storage metrics - States: {}, Total size: {} bytes", total_states, total_size);
@@ -442,7 +442,7 @@ impl StateStorage for MemoryStorage {
     }
 
     async fn get_diff(&self, from: StateId, to: StateId) -> Result<WorkspaceDiff, WorkspaceError> {
-        self.diffs.get(&(from, to)).cloned().ok_or_else(|| {
+        self.diffs.read().unwrap().get(&(from, to)).cloned().ok_or_else(|| {
             WorkspaceError::DiffComputation(format!(
                 "Diff not found between states {:?} and {:?}",
                 from, to
@@ -451,7 +451,7 @@ impl StateStorage for MemoryStorage {
     }
 
     async fn cleanup(&self, max_states: usize) -> Result<usize, WorkspaceError> {
-        let current_count = self.states.len();
+        let current_count = self.states.read().unwrap().len();
         if current_count <= max_states {
             return Ok(0);
         }
@@ -559,7 +559,7 @@ impl DatabaseStorage {
         // Implement storage optimization strategies
         
         // 1. Clean up old states if storage is getting full
-        if self.states.len() > 1000 {
+        if self.states.read().unwrap().len() > 1000 {
             self.cleanup_old_states().await?;
         }
         
@@ -615,7 +615,7 @@ impl DatabaseStorage {
 
     /// Update storage metrics
     async fn update_storage_metrics(&self) -> Result<(), WorkspaceError> {
-        let total_states = self.states.len();
+        let total_states = self.states.read().unwrap().len();
         let total_size: u64 = self.states.values().map(|s| s.total_size).sum();
         
         debug!("Storage metrics - States: {}, Total size: {} bytes", total_states, total_size);

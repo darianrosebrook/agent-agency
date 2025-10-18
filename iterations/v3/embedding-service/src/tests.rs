@@ -2,7 +2,6 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::cache::*;
     use crate::provider::*;
     use crate::service::*;
