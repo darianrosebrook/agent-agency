@@ -511,16 +511,6 @@ impl MetalGPUManager {
         }
     }
 
-            if line.contains("Memory:") {
-                if let Some(memory_mb) = self.parse_memory_size(line) {
-                    return Ok(memory_mb);
-                }
-            }
-        }
-
-        Ok(8192) // Default fallback
-    }
-
     /// Set up default compute pipelines
     async fn setup_default_pipelines(&self) -> Result<()> {
         let mut pipelines = self.pipelines.write().await;

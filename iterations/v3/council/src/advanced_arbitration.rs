@@ -7,6 +7,7 @@
 use crate::models::TaskSpec;
 use crate::todo_analyzer::{CouncilTodoAnalyzer, TodoAnalysisConfig, TodoAnalysisResult};
 use crate::types::*;
+use agent_agency_database::DatabaseClient;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -24,6 +25,7 @@ pub struct AdvancedArbitrationEngine {
     consensus_builder: Arc<ConsensusBuilder>,
     learning_integrator: Arc<LearningIntegrator>,
     performance_tracker: Arc<PerformanceTracker>,
+    database_client: Option<Arc<DatabaseClient>>,
 }
 
 /// Multi-dimensional confidence scoring system
@@ -536,6 +538,11 @@ pub struct ArbitrationFeedback {
 impl AdvancedArbitrationEngine {
     /// Create a new advanced arbitration engine
     pub fn new() -> Result<Self> {
+        Self::with_database_client(None)
+    }
+
+    /// Create a new advanced arbitration engine with database integration
+    pub fn with_database_client(database_client: Option<Arc<DatabaseClient>>) -> Result<Self> {
         Ok(Self {
             confidence_scorer: Arc::new(ConfidenceScorer::new()),
             pleading_workflow: Arc::new(PleadingWorkflow::new()),
@@ -543,6 +550,7 @@ impl AdvancedArbitrationEngine {
             consensus_builder: Arc::new(ConsensusBuilder::new()),
             learning_integrator: Arc::new(LearningIntegrator::new()),
             performance_tracker: Arc::new(PerformanceTracker::new()),
+            database_client,
         })
     }
 
@@ -5589,32 +5597,68 @@ impl ArbitrationFeedback {
         &self,
         outcome_analysis: &OutcomeAnalysis,
     ) -> Result<()> {
-        // Update database with historical performance data for learning
-        // In a real implementation, this would:
-        // 1. Store outcome analysis in performance_metrics table
-        // 2. Update judge evaluation records
-        // 3. Maintain historical success rates for decision strategies
-        // 4. Trigger model retraining when performance thresholds are met
-
         debug!(
             "Updating historical performance data with success rate: {:.2}",
             outcome_analysis.success_rate
         );
 
-        // Store key performance metrics for future learning
-        let performance_record = serde_json::json!({
-            "timestamp": chrono::Utc::now().to_rfc3339(),
-            "success_rate": outcome_analysis.success_rate,
-            "total_decisions": outcome_analysis.total_decisions,
-            "quality_score": outcome_analysis.quality_score,
-            "efficiency_score": outcome_analysis.efficiency_score,
-            "consensus_strength": outcome_analysis.consensus_strength,
-            "decision_strategy": outcome_analysis.decision_strategy,
-            "resolution_time_ms": outcome_analysis.resolution_time_ms,
-        });
+        // Store performance metrics in database if client is available
+        if let Some(ref db_client) = self.database_client {
+            let query = r#"
+                INSERT INTO performance_metrics (
+                    id, task_id, success_rate, total_decisions, quality_score,
+                    efficiency_score, consensus_strength, decision_strategy,
+                    resolution_time_ms, created_at, metadata
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+                )
+            "#;
 
-        // In a full implementation, this would be stored in the database
-        // For now, we log the performance data for monitoring
+            let performance_id = Uuid::new_v4();
+            let metadata = serde_json::json!({
+                "outcome_analysis": outcome_analysis,
+                "timestamp": chrono::Utc::now().to_rfc3339(),
+            });
+
+            match db_client
+                .execute_query(|pool| {
+                    Box::pin(async move {
+                        sqlx::query(query)
+                            .bind(performance_id)
+                            .bind(&outcome_analysis.task_id)
+                            .bind(outcome_analysis.success_rate)
+                            .bind(outcome_analysis.total_decisions as i32)
+                            .bind(outcome_analysis.quality_score)
+                            .bind(outcome_analysis.efficiency_score)
+                            .bind(outcome_analysis.consensus_strength)
+                            .bind(&outcome_analysis.decision_strategy)
+                            .bind(outcome_analysis.resolution_time_ms as i32)
+                            .bind(chrono::Utc::now())
+                            .bind(metadata)
+                            .execute(&pool)
+                            .await
+                            .map_err(|e| anyhow::anyhow!("Failed to insert performance metrics: {}", e))
+                    })
+                })
+                .await
+            {
+                Ok(_) => debug!("Successfully stored performance metrics in database"),
+                Err(e) => warn!("Failed to store performance metrics in database: {}", e),
+            }
+        } else {
+            // Fallback: log performance data for monitoring
+            let performance_record = serde_json::json!({
+                "timestamp": chrono::Utc::now().to_rfc3339(),
+                "success_rate": outcome_analysis.success_rate,
+                "total_decisions": outcome_analysis.total_decisions,
+                "quality_score": outcome_analysis.quality_score,
+                "efficiency_score": outcome_analysis.efficiency_score,
+                "consensus_strength": outcome_analysis.consensus_strength,
+                "decision_strategy": outcome_analysis.decision_strategy,
+                "resolution_time_ms": outcome_analysis.resolution_time_ms,
+            });
+            debug!("Performance record (not stored): {}", performance_record);
+        }
         info!(
             "Performance record: success_rate={:.2}, quality={:.2}, efficiency={:.2}",
             outcome_analysis.success_rate,

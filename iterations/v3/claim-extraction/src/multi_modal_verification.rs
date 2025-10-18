@@ -1,8 +1,7 @@
 //! Multi-Modal Verification Engine for V3
 //!
-//! This module implements V3's superior verification capabilities that surpass V2's
-//! basic claim verification with multi-modal analysis including mathematical validation,
-//! code behavior analysis, semantic analysis, and cross-reference validation.
+//! This module implements V3's verification capabilities for claim extraction
+//! and validation with multi-modal analysis.
 
 use crate::types::*;
 use anyhow::Result;
@@ -3460,3 +3459,95 @@ impl RustParser {
 
 impl LanguageParser for RustParser {
     fn parse_code(&self, code: &str) -> Result<AstAnalysis, String> {
+        // Basic Rust syntax validation
+        let mut syntax_valid = true;
+        let mut issues = Vec::new();
+
+        // Check for basic syntax issues
+        if code.contains("fn ") && !code.contains('{') {
+            issues.push(CodeIssue {
+                issue_type: CodeIssueType::SyntaxError,
+                severity: ErrorSeverity::High,
+                description: "Function declaration without body".to_string(),
+                location: None,
+                suggested_fix: Some("Add function body with braces".to_string()),
+            });
+            syntax_valid = false;
+        }
+
+        // Check for unmatched braces
+        let open_braces = code.chars().filter(|&c| c == '{').count();
+        let close_braces = code.chars().filter(|&c| c == '}').count();
+        if open_braces != close_braces {
+            issues.push(CodeIssue {
+                issue_type: CodeIssueType::SyntaxError,
+                severity: ErrorSeverity::Critical,
+                description: format!(
+                    "Unmatched braces: {} open, {} close",
+                    open_braces, close_braces
+                ),
+                location: None,
+                suggested_fix: Some("Check brace matching".to_string()),
+            });
+            syntax_valid = false;
+        }
+
+        let analysis = AstAnalysis {
+            functions: Vec::new(),
+            classes: Vec::new(),
+            variables: Vec::new(),
+            imports: Vec::new(),
+            complexity: 1.0,
+            maintainability_index: if syntax_valid { 0.8 } else { 0.3 },
+        };
+
+        if syntax_valid {
+            Ok(analysis)
+        } else {
+            Err(format!("Syntax validation failed with {} issues", issues.len()))
+        }
+    }
+
+    fn extract_functions(&self, code: &str) -> Vec<String> {
+        // Extract function names from fn declarations
+        code.lines()
+            .filter(|line| line.trim().starts_with("fn "))
+            .filter_map(|line| {
+                line.split("fn ").nth(1)?
+                    .split('(').next()?
+                    .trim()
+                    .split_whitespace().next()
+                    .map(|s| s.to_string())
+            })
+            .collect()
+    }
+
+    fn extract_variables(&self, code: &str) -> Vec<String> {
+        // Extract variable names from let statements
+        code.lines()
+            .filter(|line| line.trim().starts_with("let "))
+            .filter_map(|line| {
+                line.split("let ").nth(1)?
+                    .split('=').next()?
+                    .split(':').next()?
+                    .trim()
+                    .split_whitespace().next()
+                    .map(|s| s.to_string())
+            })
+            .collect()
+    }
+
+    fn calculate_complexity(&self, code: &str) -> f64 {
+        let mut complexity = 1.0;
+
+        // Count control structures
+        let control_keywords = ["if ", "else", "for ", "while ", "match ", "loop "];
+        for keyword in &control_keywords {
+            complexity += code.matches(keyword).count() as f64 * 0.1;
+        }
+
+        // Count function calls
+        complexity += code.matches('(').count() as f64 * 0.05;
+
+        complexity.min(10.0) // Cap at 10
+    }

@@ -719,7 +719,6 @@ impl CouncilIntegrator {
 
         format!("{:x}", hasher.finish())
     }
-}
 
 // Evidence collection tools (stubs for now)
 #[derive(Debug)]
