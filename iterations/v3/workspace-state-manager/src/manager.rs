@@ -975,12 +975,3 @@ enum ChangeType {
     Renamed,
 }
 
-/// Represents a change to a file in the workspace
-#[derive(Debug, Clone)]
-struct FileChange {
-    path: String,
-    change_type: ChangeType,
-    old_hash: Option<String>,
-    new_hash: Option<String>,
-    size_diff: i64,
-}
