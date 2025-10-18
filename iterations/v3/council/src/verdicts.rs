@@ -12,6 +12,7 @@ use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use sqlx::PgPool;
+use sqlx::Row;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
@@ -562,11 +563,12 @@ impl VerdictStorage for DatabaseVerdictStorage {
             let mut verdict_records = Vec::new();
 
             for row in records {
-                // Parse JSON fields
-                let consensus_result: ConsensusResult = serde_json::from_str(&row.consensus_result)
+                // Parse JSON fields using try_get for sqlx compatibility
+                let consensus_result_str: String = row.try_get("consensus_result")?;
+                let consensus_result: ConsensusResult = serde_json::from_str(&consensus_result_str)
                     .context("Failed to deserialize consensus result")?;
 
-                let debate_session = if let Some(debate_json) = row.debate_session {
+                let debate_session = if let Ok(debate_json) = row.try_get::<String, _>("debate_session") {
                     Some(serde_json::from_str(&debate_json)
                         .context("Failed to deserialize debate session")?)
                 } else {
@@ -574,13 +576,13 @@ impl VerdictStorage for DatabaseVerdictStorage {
                 };
 
                 let verdict_record = VerdictRecord {
-                    verdict_id: uuid::Uuid::parse_str(&row.verdict_id)?,
+                    verdict_id: uuid::Uuid::parse_str(&row.try_get::<String, _>("verdict_id")?)?,
                     consensus_result,
                     debate_session,
-                    created_at: row.created_at,
-                    accessed_at: row.accessed_at,
-                    access_count: row.access_count as u64,
-                    storage_location: row.storage_location,
+                    created_at: row.try_get("created_at")?,
+                    accessed_at: row.try_get("accessed_at")?,
+                    access_count: row.try_get::<i64, _>("access_count")? as u64,
+                    storage_location: row.try_get("storage_location")?,
                 };
 
                 verdict_records.push(verdict_record);
@@ -633,11 +635,11 @@ impl VerdictStorage for DatabaseVerdictStorage {
             .context("Failed to query storage statistics from database")?;
 
             Ok(StorageStats {
-                total_verdicts: stats.total_verdicts as u64,
-                total_debates: stats.total_debates as u64,
-                storage_size_bytes: stats.storage_size_bytes as u64,
-                oldest_verdict: stats.oldest_verdict,
-                newest_verdict: stats.newest_verdict,
+                total_verdicts: stats.try_get::<i64, _>("total_verdicts")? as u64,
+                total_debates: stats.try_get::<i64, _>("total_debates")? as u64,
+                storage_size_bytes: stats.try_get::<i64, _>("storage_size_bytes")? as u64,
+                oldest_verdict: stats.try_get("oldest_verdict")?,
+                newest_verdict: stats.try_get("newest_verdict")?,
             })
         })
     }

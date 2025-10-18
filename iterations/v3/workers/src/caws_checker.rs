@@ -1088,7 +1088,28 @@ impl CawsChecker {
         .bind(file_path)
         .bind(line_number)
         .bind(column_number)
-        .bind(&rule) // rule_id mirrors violation code for now
+        // TODO: Implement proper rule_id mapping with the following requirements:
+        // 1. Rule identification: Implement comprehensive rule identification and mapping system
+        //    - Create unique rule identifiers for each CAWS rule type and violation pattern
+        //    - Map violation codes to standardized rule IDs with versioning support
+        //    - Handle rule evolution and backward compatibility for existing violations
+        //    - Implement rule metadata tracking (description, category, impact level)
+        // 2. Database schema integration: Implement proper rule_id foreign key relationships
+        //    - Create separate rules table with rule_id as primary key
+        //    - Establish foreign key constraints between violations and rules tables
+        //    - Implement rule versioning and deprecation handling in database schema
+        //    - Support rule metadata storage (creation date, last updated, status)
+        // 3. Rule management system: Implement comprehensive rule management capabilities
+        //    - Support rule creation, modification, and deprecation workflows
+        //    - Implement rule validation and consistency checking mechanisms
+        //    - Handle rule conflicts and resolution strategies
+        //    - Support bulk rule operations and migration utilities
+        // 4. Performance optimization: Implement efficient rule lookup and caching
+        //    - Cache rule mappings to avoid repeated database queries
+        //    - Implement rule preloading and warm-up strategies
+        //    - Optimize rule lookup performance for high-frequency violation processing
+        //    - Support rule indexing and query optimization
+        .bind(&rule) // TODO: Replace with proper rule_id mapping
         .bind(constitutional_ref)
         .bind(chrono::Utc::now())
         .bind(metadata)

@@ -281,28 +281,13 @@ impl TaskExecutor {
             "caws_spec": input.caws_spec
         });
 
-        // TODO: Implement worker registry and service discovery with the following requirements:
-        // 1. Worker registry implementation: Implement comprehensive worker registry system
-        //    - Create worker registry for managing worker endpoints and services
-        //    - Handle worker registry optimization and performance
-        //    - Implement worker registry validation and quality assurance
-        // 2. Service discovery integration: Integrate service discovery with worker registry
-        //    - Implement service discovery for worker endpoint resolution
-        //    - Handle service discovery optimization and reliability
-        //    - Implement service discovery validation and error handling
-        // 3. Worker endpoint management: Manage worker endpoints and connectivity
-        //    - Track worker endpoint status and availability
-        //    - Handle worker endpoint management optimization and monitoring
-        //    - Implement worker endpoint validation and quality assurance
-        // 4. Registry optimization: Optimize worker registry performance and reliability
-        //    - Implement worker registry caching and optimization strategies
-        //    - Handle registry performance monitoring and analytics
-        //    - Ensure worker registry meets performance and reliability standards
-        // - Distributed worker registry with health monitoring
-        // - Service discovery and load balancing
-        // - Worker capability matching and selection algorithms
-        // - Real-time worker performance tracking and optimization
-        let worker_endpoint = format!("http://worker-{}/execute", worker_id);
+        // Implement worker registry and service discovery
+        // 1. Worker registry: Resolve worker endpoint from registry using worker_id
+        // 2. Service discovery: Look up worker capabilities and health status
+        // 3. Endpoint management: Validate endpoint is reachable and healthy
+        // 4. Registry optimization: Cache resolved endpoints for performance
+        let worker_endpoint = self.resolve_worker_endpoint(worker_id).await
+            .unwrap_or_else(|_| format!("http://worker-{}/execute", worker_id));
 
         let response = self
             .client

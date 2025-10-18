@@ -54,8 +54,27 @@ mod tests {
         let key_bytes = [0u8; 32]; // 32 bytes of zeros for testing
         let key = base64::engine::general_purpose::STANDARD.encode(key_bytes);
         let manager = SecretsManager::new(&key).unwrap();
-
-        // Test basic functionality without encryption for now
+        // TODO: Implement secrets manager encryption testing with the following requirements:
+        // 1. Encryption functionality testing: Implement comprehensive encryption testing
+        //    - Test secret encryption and decryption operations with various data types
+        //    - Validate encryption key generation and management
+        //    - Handle encryption performance testing and benchmarking
+        //    - Implement encryption error handling and edge case testing
+        // 2. Security validation: Implement robust security validation testing
+        //    - Test encryption strength and cryptographic algorithm validation
+        //    - Validate key rotation and security policy enforcement
+        //    - Handle security vulnerability testing and penetration testing
+        //    - Implement security compliance validation and audit testing
+        // 3. Integration testing: Implement comprehensive integration testing for secrets management
+        //    - Test secrets manager integration with configuration system
+        //    - Validate secrets persistence and retrieval across system restarts
+        //    - Handle secrets manager performance under load testing
+        //    - Implement secrets manager reliability and fault tolerance testing
+        // 4. Test data management: Implement proper test data management for secrets testing
+        //    - Create secure test fixtures and mock data for encryption testing
+        //    - Handle test data cleanup and security validation
+        //    - Implement test data isolation and environment separation
+        //    - Ensure test data meets security and privacy requirements
         let secrets = manager.list_secrets().await.unwrap();
         assert!(secrets.is_empty());
 
@@ -122,8 +141,27 @@ mod tests {
 
         // Manually trigger reload check
         let config = loader.get_config().await;
-        // Note: In a real test, we'd need to wait for the hot reload to trigger
-        // This is a simplified test
+        // TODO: Implement comprehensive hot reload testing with the following requirements:
+        // 1. File system monitoring: Implement robust file system change detection and monitoring
+        //    - Monitor config file modifications using inotify, FSEvents, or ReadDirectoryChangesW
+        //    - Handle file system events with proper debouncing and event filtering
+        //    - Implement cross-platform file monitoring support for Linux, macOS, and Windows
+        //    - Handle file locking, temporary files, and atomic write operations
+        // 2. Hot reload validation: Implement comprehensive hot reload functionality testing
+        //    - Test config reload triggers and timing accuracy with proper synchronization
+        //    - Validate config parsing and validation after hot reload events
+        //    - Test error handling and rollback mechanisms for invalid config changes
+        //    - Implement config change verification and consistency checking
+        // 3. Performance and reliability testing: Implement performance and reliability validation
+        //    - Test hot reload performance under high-frequency config change scenarios
+        //    - Validate memory usage and resource cleanup during hot reload operations
+        //    - Test concurrent access and thread safety during config reload processes
+        //    - Implement stress testing and edge case validation for hot reload functionality
+        // 4. Integration testing: Implement comprehensive integration testing framework
+        //    - Test hot reload integration with application components and services
+        //    - Validate config change propagation and notification mechanisms
+        //    - Test hot reload behavior in different environments and deployment scenarios
+        //    - Implement end-to-end testing workflows for complete hot reload validation
         assert!(config.contains_key("server"));
     }
 }

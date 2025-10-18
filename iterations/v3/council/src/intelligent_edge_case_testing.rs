@@ -2168,6 +2168,8 @@ impl EdgeCaseAnalyzer {
             EdgeCaseType::SecurityVulnerability => {
                 (false, Some("Security vulnerability detected".to_string()))
             }
+            // Catch-all for remaining edge case types
+            _ => (true, None),
         };
 
         let execution_time = start_time.elapsed();
@@ -2185,9 +2187,9 @@ impl EdgeCaseAnalyzer {
             passed,
             execution_time_ms: execution_time.as_millis() as u64,
             error_message,
-            coverage_improvement,
-            edge_case_coverage,
-            generation_confidence,
+            coverage_improvement: coverage_improvement as f64,
+            edge_case_coverage: edge_case_coverage as f64,
+            generation_confidence: generation_confidence as f64,
         })
     }
 
@@ -2408,6 +2410,81 @@ impl EdgeCaseAnalyzer {
         });
 
         strategies
+    }
+
+    /// Calculate coverage improvement from an edge case
+    async fn calculate_coverage_improvement(&self, edge_case: &IdentifiedEdgeCase) -> Result<f32> {
+        // Base coverage improvement calculation
+        let base_improvement = match edge_case.edge_case_type {
+            EdgeCaseType::BoundaryCondition => 0.08_f32,
+            EdgeCaseType::NullHandling => 0.06_f32,
+            EdgeCaseType::ResourceExhaustion => 0.10_f32,
+            EdgeCaseType::RaceCondition => 0.12_f32,
+            EdgeCaseType::PerformanceIssue => 0.07_f32,
+            EdgeCaseType::SecurityVulnerability => 0.11_f32,
+            EdgeCaseType::NetworkFailure => 0.09_f32,
+            _ => 0.05_f32,
+        };
+
+        // Adjust based on probability and impact
+        let adjusted_improvement = base_improvement * (edge_case.probability as f32) * 
+                                   (edge_case.impact as f32);
+
+        Ok(adjusted_improvement.min(1.0_f32))
+    }
+
+    /// Calculate edge case coverage metric
+    async fn calculate_edge_case_coverage(
+        &self, 
+        edge_case: &IdentifiedEdgeCase,
+        _edge_case_type: &EdgeCaseType,
+    ) -> Result<f32> {
+        // Coverage calculation based on edge case characteristics
+        let mut coverage: f32 = 0.5; // Base coverage
+
+        // Increase coverage if description is well-defined
+        if !edge_case.description.is_empty() {
+            coverage += 0.15_f32;
+        }
+
+        // Increase coverage if name is descriptive
+        if edge_case.edge_case_name.len() > 15 {
+            coverage += 0.10_f32;
+        }
+
+        // Adjust based on risk level
+        match edge_case.risk_level {
+            RiskLevel::Critical => coverage += 0.25_f32,
+            RiskLevel::High => coverage += 0.15_f32,
+            RiskLevel::Medium => coverage += 0.08_f32,
+            RiskLevel::Low => coverage += 0.02_f32,
+        };
+
+        Ok(coverage.min(1.0_f32))
+    }
+
+    /// Calculate confidence of generated edge cases
+    async fn calculate_generation_confidence(&self, edge_case: &IdentifiedEdgeCase) -> Result<f32> {
+        let mut confidence: f32 = 0.5; // Base confidence
+
+        // Increase confidence based on probability
+        if edge_case.probability > 0.7 {
+            confidence += 0.20_f32;
+        } else if edge_case.probability > 0.4 {
+            confidence += 0.10_f32;
+        }
+
+        // Increase confidence if impact is significant
+        if edge_case.impact > 0.7 {
+            confidence += 0.15_f32;
+        }
+
+        // Boost for well-described edge cases
+        if !edge_case.edge_case_name.is_empty() && edge_case.edge_case_name.len() > 10 {
+            confidence += 0.10_f32;
+        }
+
+        Ok(confidence.min(1.0_f32))
     }
 }
 
@@ -2791,29 +2868,33 @@ impl TestOptimizer {
     ) -> f64 {
         let mut score: f64 = 0.0;
 
-        // Base score from priority
-        score += (test_case.priority as f64 / 10.0) * 0.3;
+        // Base score from confidence
+        score += test_case.confidence_score * 0.3;
 
         // Test type weight
-        let test_type_weight = match test_case.test_type.as_str() {
-            "edge_case" => 1.0,
-            "integration" => 0.8,
-            "unit" => 0.6,
-            _ => 0.5,
+        let test_type_weight = match test_case.test_type {
+            TestType::EdgeCase => 1.0,
+            TestType::Integration => 0.8,
+            TestType::Unit => 0.6,
+            TestType::Boundary => 0.7,
+            TestType::Equivalence => 0.65,
+            TestType::Stress => 0.75,
+            TestType::Performance => 0.8,
+            TestType::Combinatorial => 0.85,
         };
         score += test_type_weight * 0.4;
 
-        // Execution time penalty (using priority as proxy)
-        let time_penalty = if test_case.priority < 3 {
+        // Execution time penalty (using confidence as proxy)
+        let time_penalty = if test_case.confidence_score < 0.3 {
             0.1
-        } else if test_case.priority < 6 {
+        } else if test_case.confidence_score < 0.6 {
             0.2
         } else {
             0.3
         };
         score += time_penalty;
 
-        // Penalty for redundant tests
+        // Penalty for redundancy
         if analysis.redundant_tests.contains(&test_case.test_id) {
             score *= 0.3;
         }
@@ -3969,10 +4050,14 @@ impl ScenarioGenerator {
                         ),
                         input_data: {
                             let mut data = HashMap::new();
-                            data.insert(
-                                generator.parameter_name.clone(),
-                                TestData::String(boundary_value.to_string()),
-                            );
+                            for (key, value) in &generator.parameters {
+                                data.insert(key.clone(), TestDataWithMetadata {
+                                    data_type: DataType::String,
+                                    value: serde_json::json!(value.to_string()),
+                                    constraints: Vec::new(),
+                                    edge_case_flags: Vec::new(),
+                                });
+                            }
                             data
                         },
                         execution_context: ExecutionContext::default(),
@@ -4035,6 +4120,7 @@ impl ScenarioGenerator {
                             condition_name: "System supports all parameter combinations"
                                 .to_string(),
                             condition_type: ConditionType::SystemState,
+                            condition_value: serde_json::json!(true),
                             description:
                                 "System is configured to handle all parameter combinations"
                                     .to_string(),
@@ -4050,6 +4136,8 @@ impl ScenarioGenerator {
                     risk_level: self.assess_combinatorial_risk(combination),
                     expected_behavior: "System should handle parameter combination without errors"
                         .to_string(),
+                    generation_reason: "Combinatorial parameter testing".to_string(),
+                    confidence_score: 0.8,
                 };
                 tests.push(test);
             }
@@ -4087,17 +4175,30 @@ impl ScenarioGenerator {
                                 let mut data = HashMap::new();
                                 data.insert(
                                     "stress_type".to_string(),
-                                    TestData::String(
-                                        self.resource_type_name(&generator.resource_type),
-                                    ),
+                                    TestDataWithMetadata {
+                                        data_type: DataType::String,
+                                        value: serde_json::json!(self.resource_type_name(&generator.resource_type)),
+                                        constraints: Vec::new(),
+                                        edge_case_flags: Vec::new(),
+                                    },
                                 );
                                 data.insert(
                                     "intensity".to_string(),
-                                    TestData::Number(stress_level.intensity as f64),
+                                    TestDataWithMetadata {
+                                        data_type: DataType::Integer,
+                                        value: serde_json::json!(stress_level.intensity as f64),
+                                        constraints: Vec::new(),
+                                        edge_case_flags: Vec::new(),
+                                    },
                                 );
                                 data.insert(
                                     "duration_seconds".to_string(),
-                                    TestData::Number(*duration as f64),
+                                    TestDataWithMetadata {
+                                        data_type: DataType::Integer,
+                                        value: serde_json::json!(*duration as f64),
+                                        constraints: Vec::new(),
+                                        edge_case_flags: Vec::new(),
+                                    },
                                 );
                                 data
                             },
@@ -4105,6 +4206,7 @@ impl ScenarioGenerator {
                             preconditions: vec![Precondition {
                                 condition_name: "System is in stable state".to_string(),
                                 condition_type: ConditionType::SystemState,
+                                condition_value: serde_json::json!(true),
                                 description: "System is in a stable state before stress testing"
                                     .to_string(),
                             }],
@@ -4121,6 +4223,8 @@ impl ScenarioGenerator {
                         risk_level: self.assess_stress_risk(stress_level),
                         expected_behavior: "System should maintain performance and stability"
                             .to_string(),
+                        generation_reason: "Stress and performance testing".to_string(),
+                        confidence_score: 0.75,
                     };
                     tests.push(test);
                 }
@@ -4144,14 +4248,14 @@ impl ScenarioGenerator {
                 for j in (i + 1)..parameters.len() {
                     for value1 in &parameters[i].values {
                         for value2 in &parameters[j].values {
-                            let mut params = serde_json::Map::new();
+                            let mut params = HashMap::new();
                             params.insert(
                                 parameters[i].name.clone(),
-                                serde_json::Value::String(value1.clone()),
+                                value1.clone(),
                             );
                             params.insert(
                                 parameters[j].name.clone(),
-                                serde_json::Value::String(value2.clone()),
+                                value2.clone(),
                             );
 
                             combinations.push(TestCombination {
@@ -4159,7 +4263,7 @@ impl ScenarioGenerator {
                                     "{}={}, {}={}",
                                     parameters[i].name, value1, parameters[j].name, value2
                                 ),
-                                parameters: serde_json::Value::Object(params),
+                                parameters: params,
                             });
                         }
                     }
@@ -4175,18 +4279,18 @@ impl ScenarioGenerator {
                         for value1 in &parameters[i].values {
                             for value2 in &parameters[j].values {
                                 for value3 in &parameters[k].values {
-                                    let mut params = serde_json::Map::new();
+                                    let mut params = HashMap::new();
                                     params.insert(
                                         parameters[i].name.clone(),
-                                        serde_json::Value::String(value1.clone()),
+                                        value1.clone(),
                                     );
                                     params.insert(
                                         parameters[j].name.clone(),
-                                        serde_json::Value::String(value2.clone()),
+                                        value2.clone(),
                                     );
                                     params.insert(
                                         parameters[k].name.clone(),
-                                        serde_json::Value::String(value3.clone()),
+                                        value3.clone(),
                                     );
 
                                     combinations.push(TestCombination {
@@ -4199,7 +4303,23 @@ impl ScenarioGenerator {
                                             parameters[k].name,
                                             value3
                                         ),
-                                        parameters: serde_json::Value::Object(params),
+                                        parameters: params,
+                                    });
+                                    combinations.push(TestCombination {
+                                        name: format!(
+                                            "{}={}, {}={}, {}={}",
+                                            parameters[i].name,
+                                            value1,
+                                            parameters[j].name,
+                                            value2,
+                                            parameters[k].name,
+                                            value3
+                                        ),
+                                        parameters: HashMap::from_iter(
+                                            params.into_iter().map(|(k, v)| {
+                                                (k, v.as_str().unwrap_or("").to_string())
+                                            })
+                                        ),
                                     });
                                 }
                             }

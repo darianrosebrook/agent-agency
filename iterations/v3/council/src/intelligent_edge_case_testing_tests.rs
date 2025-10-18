@@ -54,10 +54,31 @@ mod tests {
                 edge_case_coverage_threshold: 0.75,
                 integration_coverage_threshold: 0.7,
             },
-            requirements: vec![],        // Empty for now
-            acceptance_criteria: vec![], // Empty for now
-            dependencies: vec![],        // Empty for now
-            test_cases: vec![],          // Empty for now
+            // TODO: Implement comprehensive test specification fields with the following requirements:
+            // 1. Requirements management: Implement detailed requirements collection and validation
+            //    - Collect functional, non-functional, and performance requirements from stakeholders
+            //    - Validate requirement completeness, clarity, and testability
+            //    - Handle requirement dependencies and priority ordering
+            //    - Implement requirement traceability and change management
+            // 2. Acceptance criteria definition: Implement comprehensive acceptance criteria framework
+            //    - Define measurable acceptance criteria for each requirement
+            //    - Implement criteria validation and completeness checking
+            //    - Handle complex acceptance scenarios with multiple conditions
+            //    - Support automated acceptance criteria verification
+            // 3. Dependency management: Implement robust dependency tracking and resolution
+            //    - Identify and track component dependencies and integration points
+            //    - Handle dependency versioning and compatibility requirements
+            //    - Implement dependency conflict resolution and validation
+            //    - Support dependency testing and verification workflows
+            // 4. Test case generation: Implement intelligent test case generation and management
+            //    - Generate comprehensive test cases covering all requirements and edge cases
+            //    - Implement test case prioritization and risk-based testing strategies
+            //    - Handle test case maintenance and evolution with requirement changes
+            //    - Support automated test case execution and result analysis
+            requirements: vec![],        // TODO: Populate with comprehensive requirements
+            acceptance_criteria: vec![], // TODO: Define detailed acceptance criteria
+            dependencies: vec![],        // TODO: Track component dependencies
+            test_cases: vec![],          // TODO: Generate comprehensive test cases
         }
     }
 
@@ -369,10 +390,31 @@ mod tests {
                 edge_case_coverage_threshold: 0.0,
                 integration_coverage_threshold: 0.0,
             },
-            requirements: vec![],        // Empty for now
-            acceptance_criteria: vec![], // Empty for now
-            dependencies: vec![],        // Empty for now
-            test_cases: vec![],          // Empty for now
+            // TODO: Implement comprehensive test specification fields with the following requirements:
+            // 1. Requirements management: Implement detailed requirements collection and validation
+            //    - Collect functional, non-functional, and performance requirements from stakeholders
+            //    - Validate requirement completeness, clarity, and testability
+            //    - Handle requirement dependencies and priority ordering
+            //    - Implement requirement traceability and change management
+            // 2. Acceptance criteria definition: Implement comprehensive acceptance criteria framework
+            //    - Define measurable acceptance criteria for each requirement
+            //    - Implement criteria validation and completeness checking
+            //    - Handle complex acceptance scenarios with multiple conditions
+            //    - Support automated acceptance criteria verification
+            // 3. Dependency management: Implement robust dependency tracking and resolution
+            //    - Identify and track component dependencies and integration points
+            //    - Handle dependency versioning and compatibility requirements
+            //    - Implement dependency conflict resolution and validation
+            //    - Support dependency testing and verification workflows
+            // 4. Test case generation: Implement intelligent test case generation and management
+            //    - Generate comprehensive test cases covering all requirements and edge cases
+            //    - Implement test case prioritization and risk-based testing strategies
+            //    - Handle test case maintenance and evolution with requirement changes
+            //    - Support automated test case execution and result analysis
+            requirements: vec![],        // TODO: Populate with comprehensive requirements
+            acceptance_criteria: vec![], // TODO: Define detailed acceptance criteria
+            dependencies: vec![],        // TODO: Track component dependencies
+            test_cases: vec![],          // TODO: Generate comprehensive test cases
         };
 
         let insights = testing_system

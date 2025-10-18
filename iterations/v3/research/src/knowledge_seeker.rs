@@ -1703,8 +1703,7 @@ mod tests {
             },
         };
         let seeker = KnowledgeSeeker::new(config).await;
-
-        // In a real test, we'd assert successful creation
+ 
         // TODO: Implement comprehensive knowledge seeker testing with the following requirements:
         // 1. Knowledge seeker validation: Validate knowledge seeker creation and functionality
         //    - Verify knowledge seeker creation success and configuration

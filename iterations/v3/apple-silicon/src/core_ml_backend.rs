@@ -91,7 +91,24 @@ impl InferenceEngine for CoreMLBackend {
                 // Query schema
                 let schema_json = with_autorelease_pool(|| model.schema())?;
 
-                // Parse schema (mock: empty for now)
+                // TODO: Implement schema parsing with the following requirements:
+                // 1. Schema parsing implementation: Implement comprehensive schema parsing
+                //    - Parse CoreML model schema JSON to extract input/output specifications
+                //    - Handle schema parsing optimization and performance
+                //    - Implement schema parsing validation and quality assurance
+                // 2. Schema validation: Implement robust schema validation and error handling
+                //    - Validate schema format and structure before parsing
+                //    - Handle schema parsing failures gracefully
+                //    - Implement fallback mechanisms for schema parsing operations
+                //    - Add proper logging and diagnostics for schema parsing issues
+                // 3. Performance optimization: Optimize schema parsing performance and efficiency
+                //    - Implement schema parsing caching and optimization strategies
+                //    - Handle schema parsing performance monitoring and analytics
+                //    - Implement schema parsing optimization validation and quality assurance
+                // 4. I/O schema mapping: Map parsed schema to internal I/O schema structure
+                //    - Convert CoreML schema to internal IoSchema format
+                //    - Handle schema mapping optimization and performance
+                //    - Implement schema mapping validation and quality assurance
                 let io_schema = IoSchema {
                     inputs: vec![],
                     outputs: vec![],
@@ -172,7 +189,27 @@ impl InferenceEngine for CoreMLBackend {
             prepared.model.predict(inputs_json, timeout_ms)
         })?;
 
-        // Parse outputs (mock: empty for now)
+        // TODO: Implement output parsing with the following requirements:
+        // 1. Output parsing implementation: Implement comprehensive output parsing
+        //    - Parse CoreML prediction outputs from JSON format
+        //    - Handle output tensor extraction and validation
+        //    - Implement output format conversion and normalization
+        //    - Handle output parsing error detection and recovery
+        // 2. Tensor processing: Implement proper tensor processing for outputs
+        //    - Convert CoreML output tensors to internal tensor format
+        //    - Handle tensor shape validation and dimension checking
+        //    - Implement tensor data type conversion and validation
+        //    - Handle tensor memory management and optimization
+        // 3. Schema validation: Implement output schema validation
+        //    - Validate output tensors against model I/O schema
+        //    - Handle output schema mismatch detection and error reporting
+        //    - Implement output validation performance optimization
+        //    - Handle output validation error recovery and fallback mechanisms
+        // 4. Performance optimization: Optimize output parsing performance
+        //    - Implement output parsing caching and optimization strategies
+        //    - Handle output parsing performance monitoring and analytics
+        //    - Implement output parsing optimization validation and quality assurance
+        //    - Ensure output parsing meets performance and reliability standards
         let mut outputs = HashMap::new();
 
         Ok(outputs)

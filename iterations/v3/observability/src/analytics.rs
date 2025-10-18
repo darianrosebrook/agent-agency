@@ -863,8 +863,27 @@ impl AnalyticsEngine {
     async fn get_historical_data_for_metric(&self, metric_name: &str) -> Result<Vec<f64>> {
         let data = self.historical_data.read().await;
 
-        // This is a simplified implementation
-        // In a real system, you would have more sophisticated metric mapping
+        // TODO: Implement comprehensive metric mapping system with the following requirements:
+        // 1. Metric identification: Implement sophisticated metric identification and mapping system
+        //    - Create unique metric identifiers for each business and system metric type
+        //    - Map metric names to standardized metric IDs with versioning support
+        //    - Handle metric evolution and backward compatibility for existing analytics
+        //    - Implement metric metadata tracking (description, category, unit, aggregation method)
+        // 2. Data source integration: Implement comprehensive data source mapping and integration
+        //    - Support multiple data sources (time-series databases, metrics stores, business systems)
+        //    - Implement data source abstraction layer for consistent metric access
+        //    - Handle data source failover and redundancy for high availability
+        //    - Support real-time and batch data ingestion with configurable refresh rates
+        // 3. Metric transformation pipeline: Implement sophisticated metric transformation and processing
+        //    - Support metric aggregation, filtering, and normalization operations
+        //    - Implement metric correlation and cross-metric analysis capabilities
+        //    - Handle metric data quality validation and anomaly detection
+        //    - Support custom metric calculation formulas and derived metrics
+        // 4. Performance optimization: Implement efficient metric mapping and caching
+        //    - Cache metric mappings to avoid repeated data source queries
+        //    - Implement metric preloading and warm-up strategies
+        //    - Optimize metric lookup performance for high-frequency analytics operations
+        //    - Support metric indexing and query optimization for large-scale datasets
         match metric_name {
             "throughput" => Ok(data
                 .business_history

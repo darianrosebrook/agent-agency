@@ -68,6 +68,10 @@ export class LoadBalancer extends EventEmitter {
     // Sort by score (highest first)
     scoredCandidates.sort((a, b) => b.score - a.score);
 
+    if (scoredCandidates.length === 0) {
+      throw new Error("No healthy components available");
+    }
+
     const selected = scoredCandidates[0].component;
 
     // Track the request
@@ -111,6 +115,14 @@ export class LoadBalancer extends EventEmitter {
    */
   async redistributeLoad(): Promise<void> {
     const allComponents = this.coordinator.getAllComponents();
+    if (!allComponents || !Array.isArray(allComponents)) {
+      this.emit("load:redistribution-failed", {
+        reason: "no_components_available",
+        timestamp: new Date(),
+      });
+      return;
+    }
+    
     const healthyComponents = allComponents.filter(
       (component: ComponentRegistration) => {
         const health = this.coordinator.getComponentHealth(component.id);

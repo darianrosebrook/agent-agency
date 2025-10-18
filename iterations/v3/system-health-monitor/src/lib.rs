@@ -1233,8 +1233,28 @@ impl MetricsCollector {
             0.0
         };
 
-        // Disk usage (simplified - using system disk info)
-        let disk_usage = 0.0; // Simplified for now - sysinfo API changed
+        // TODO: Implement comprehensive disk usage monitoring with the following requirements:
+        // 1. Disk space monitoring: Implement accurate disk space usage calculation and tracking
+        //    - Calculate disk usage percentage for all mounted filesystems
+        //    - Monitor disk space trends and predict capacity issues
+        //    - Handle multiple disk partitions and filesystem types (ext4, NTFS, APFS, etc.)
+        //    - Implement disk space threshold alerts and notifications
+        // 2. Disk I/O performance monitoring: Implement comprehensive disk I/O performance metrics
+        //    - Monitor disk read/write operations per second (IOPS)
+        //    - Track disk throughput (MB/s) and latency metrics
+        //    - Monitor disk queue depth and utilization percentages
+        //    - Implement disk I/O bottleneck detection and analysis
+        // 3. Filesystem health monitoring: Implement filesystem health and integrity monitoring
+        //    - Monitor filesystem errors, corruption, and health status
+        //    - Track inode usage and filesystem fragmentation levels
+        //    - Monitor filesystem mount status and availability
+        //    - Implement filesystem maintenance recommendations
+        // 4. Cross-platform compatibility: Implement cross-platform disk monitoring support
+        //    - Support Windows, Linux, macOS, and other Unix-like systems
+        //    - Handle platform-specific disk monitoring APIs and system calls
+        //    - Implement fallback mechanisms for unsupported platforms
+        //    - Ensure consistent disk monitoring behavior across different operating systems
+        let disk_usage = Self::calculate_disk_usage(&system);
 
         // Load average
         let load_avg = sysinfo::System::load_average();
@@ -1255,6 +1275,22 @@ impl MetricsCollector {
             disk_io,
             timestamp: Utc::now(),
         })
+    }
+
+    fn calculate_disk_usage(system: &sysinfo::System) -> f64 {
+        let mut total_used_bytes = 0u64;
+        let mut total_total_bytes = 0u64;
+
+        for disk in system.disks() {
+            total_used_bytes += disk.total_space().saturating_sub(disk.available_space());
+            total_total_bytes += disk.total_space();
+        }
+
+        if total_total_bytes == 0 {
+            return 0.0;
+        }
+
+        (total_used_bytes as f64 / total_total_bytes as f64) * 100.0
     }
 }
 

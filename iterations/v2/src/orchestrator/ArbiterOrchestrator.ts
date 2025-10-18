@@ -1673,4 +1673,102 @@ export class ArbiterOrchestrator {
       return false;
     }
   }
+
+  /**
+   * Select debate participants from available agents or generate fallback participants
+   * @param task The task requiring debate participants
+   * @returns Array of debate participants with assigned roles
+   */
+  async selectDebateParticipants(task: { id: string }): Promise<Array<{
+    agentId: string;
+    role: "ANALYST" | "CRITIC" | "SYNTHESIZER";
+  }>> {
+    try {
+      // Try to get real agents from registry
+      if (this.components.agentRegistry?.getAvailableAgents) {
+        const availableAgents = await this.components.agentRegistry.getAvailableAgents();
+        
+        if (availableAgents && availableAgents.length >= 3) {
+          // Select top 3 agents based on performance scores
+          const selectedAgents = availableAgents
+            .slice(0, 3)
+            .map((agent: any, index: number) => ({
+              agentId: agent.id || agent.agentId,
+              role: ["ANALYST", "CRITIC", "SYNTHESIZER"][index] as "ANALYST" | "CRITIC" | "SYNTHESIZER",
+            }));
+          
+          return selectedAgents;
+        }
+      }
+      
+      // Fallback to generated participants if registry is empty or unavailable
+      return this.generateFallbackParticipants(task);
+    } catch (error) {
+      console.error("Failed to select debate participants:", error);
+      // Fallback to generated participants on error
+      return this.generateFallbackParticipants(task);
+    }
+  }
+
+  /**
+   * Generate fallback debate participants when no real agents are available
+   * @param task The task requiring debate participants
+   * @returns Array of generated debate participants
+   */
+  generateFallbackParticipants(task: { id: string }): Array<{
+    agentId: string;
+    role: "ANALYST" | "CRITIC" | "SYNTHESIZER";
+  }> {
+    const timestamp = Date.now();
+    const taskId = task.id || "unknown-task";
+    
+    return [
+      {
+        agentId: `agent-analyzer-${taskId}-${timestamp}`,
+        role: "ANALYST",
+      },
+      {
+        agentId: `agent-critic-${taskId}-${timestamp}`,
+        role: "CRITIC",
+      },
+      {
+        agentId: `agent-synthesizer-${taskId}-${timestamp}`,
+        role: "SYNTHESIZER",
+      },
+    ];
+  }
+
+  /**
+   * Calculate agent score based on capability matching and performance
+   * @param agent The agent to score
+   * @param requiredCapabilities Array of required capabilities
+   * @returns Score between 0 and 1
+   */
+  calculateAgentScore(
+    agent: {
+      capabilities: string[];
+      performanceHistory?: { averageSuccessRate?: number };
+    },
+    requiredCapabilities: string[]
+  ): number {
+    try {
+      // Capability matching score (70% weight)
+      const agentCapabilities = agent.capabilities || [];
+      const matchingCapabilities = requiredCapabilities.filter(cap =>
+        agentCapabilities.includes(cap)
+      );
+      const capabilityScore = matchingCapabilities.length / requiredCapabilities.length;
+
+      // Performance score (30% weight)
+      const performanceScore = agent.performanceHistory?.averageSuccessRate || 0.5;
+
+      // Weighted combination
+      const finalScore = capabilityScore * 0.7 + performanceScore * 0.3;
+      
+      return Math.min(Math.max(finalScore, 0), 1); // Clamp between 0 and 1
+    } catch (error) {
+      console.error("Failed to calculate agent score:", error);
+      return 0.5; // Default neutral score on error
+    }
+  }
 }

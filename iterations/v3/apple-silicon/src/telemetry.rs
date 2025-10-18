@@ -126,8 +126,27 @@ impl CoreMLMetrics {
                 .and_modify(|c| *c += 1)
                 .or_insert(1);
         }
-
-        // Update p99 (simplified: just track the max for now)
+        // TODO: Implement proper p99 percentile calculation with the following requirements:
+        // 1. Percentile calculation: Implement accurate p99 percentile calculation for compile times
+        //    - Maintain a rolling window of recent compile durations for percentile calculation
+        //    - Implement efficient percentile calculation algorithms (e.g., t-digest or histogram-based)
+        //    - Handle percentile calculation performance optimization and memory management
+        //    - Implement percentile calculation validation and quality assurance
+        // 2. Data structure optimization: Optimize data structures for percentile tracking
+        //    - Use efficient data structures for storing duration samples (circular buffer, sliding window)
+        //    - Implement memory-efficient storage for large numbers of samples
+        //    - Handle data structure performance monitoring and analytics
+        //    - Implement data structure optimization validation and quality assurance
+        // 3. Statistical accuracy: Ensure statistical accuracy of percentile calculations
+        //    - Validate percentile calculation accuracy against known distributions
+        //    - Handle edge cases in percentile calculation (small sample sizes, outliers)
+        //    - Implement statistical validation and quality assurance
+        //    - Handle statistical accuracy performance monitoring and analytics
+        // 4. Performance monitoring: Implement comprehensive performance monitoring for percentile tracking
+        //    - Monitor percentile calculation performance and resource usage
+        //    - Implement percentile tracking performance metrics and analytics
+        //    - Handle percentile tracking optimization validation and quality assurance
+        //    - Ensure percentile tracking meets performance and reliability standards
         if duration_ms > self.compile_p99_ms {
             self.compile_p99_ms = duration_ms;
         }

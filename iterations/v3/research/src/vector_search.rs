@@ -942,8 +942,7 @@ mod tests {
         let engine =
             VectorSearchEngine::new("http://localhost:6333", "test_collection", 1536, 0.7, 10)
                 .await;
-
-        // In a real test environment, we'd assert the engine was created successfully
+ 
         // TODO: Implement comprehensive vector search engine testing with the following requirements:
         // 1. Engine creation validation: Validate vector search engine creation and configuration
         //    - Verify vector search engine creation success and configuration

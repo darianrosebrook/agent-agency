@@ -9,7 +9,17 @@ on:
 jobs:
   verify:
     runs-on: macos-latest
-    # matrix example for CAWS tiers (disabled for now)
+
+    # matrix example for CAWS tiers  
+    # TODO: Implement matrix example for CAWS tiers with the following requirements:
+    #    - Implement matrix example for CAWS tiers
+    #    - Handle matrix example for CAWS tiers error detection and recovery
+    #    - Implement matrix example for CAWS tiers performance optimization
+    #    - Handle matrix example for CAWS tiers performance metrics and analytics
+    #    - Ensure matrix example for CAWS tiers operations meet performance requirements
+    #    - Handle matrix example for CAWS tiers creation failures gracefully
+    #    - Implement fallback mechanisms for matrix example for CAWS tiers operations
+    #   - Add proper logging and diagnostics for matrix example for CAWS tiers issues
     # strategy:
     #   matrix:
     #     tier: [t1, t2, t3]

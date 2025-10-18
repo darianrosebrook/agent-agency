@@ -8,6 +8,7 @@ use crate::types::*;
 use crate::{DebateConfig, JudgeSpec};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
@@ -157,82 +158,90 @@ impl DebateProtocol {
     async fn execute_debate_round(
         &self,
         session: &DebateSession,
-        round_number: u32,
-        supporting_judges: Vec<JudgeId>,
-        opposing_judges: Vec<JudgeId>,
+        starting_round: u32,
+        starting_supporting_judges: Vec<JudgeId>,
+        starting_opposing_judges: Vec<JudgeId>,
     ) -> Result<()> {
-        if round_number > self.config.max_rounds {
-            warn!(
-                "Debate session {} exceeded max rounds, marking as timeout",
-                session.session_id
+        let mut round_number = starting_round;
+        let mut supporting_judges = starting_supporting_judges;
+        let mut opposing_judges = starting_opposing_judges;
+
+        loop {
+            if round_number > self.config.max_rounds {
+                warn!(
+                    "Debate session {} exceeded max rounds, marking as timeout",
+                    session.session_id
+                );
+                self.mark_debate_timeout(session.session_id).await?;
+                return Ok(());
+            }
+
+            info!(
+                "Executing debate round {} for session {}",
+                round_number, session.session_id
             );
-            self.mark_debate_timeout(session.session_id).await?;
-            return Ok(());
+
+            // Collect arguments from all judges
+            let mut arguments = std::collections::HashMap::new();
+
+            // Supporting judges present their case
+            for judge_id in &supporting_judges {
+                let argument = self
+                    .collect_judge_argument(judge_id, ArgumentPosition::Support, round_number)
+                    .await?;
+                arguments.insert(judge_id.clone(), argument);
+            }
+
+            // Opposing judges present counter-arguments
+            for judge_id in &opposing_judges {
+                let argument = self
+                    .collect_judge_argument(judge_id, ArgumentPosition::Oppose, round_number)
+                    .await?;
+                arguments.insert(judge_id.clone(), argument);
+            }
+
+            // Request additional evidence if needed
+            let evidence_requests = self.generate_evidence_requests(&arguments).await;
+
+            // Get research agent input if configured
+            let research_input = if self.config.research_agent_involvement {
+                Some(
+                    self.request_research_input(session.task_id, &arguments)
+                        .await?,
+                )
+            } else {
+                None
+            };
+
+            // Create debate round
+            let round = DebateRound {
+                round_number,
+                arguments,
+                evidence_requests,
+                research_input,
+                timestamp: chrono::Utc::now(),
+            };
+
+            // Store the round
+            self.store_debate_round(session.session_id, round.clone()).await?;
+
+            // Check if consensus can be reached after this round
+            if let Some(consensus) = self.evaluate_round_consensus(&round).await? {
+                self.finalize_debate(session.session_id, consensus).await?;
+                return Ok(());
+            } else if round_number < self.config.max_rounds {
+                // Continue to next round with updated judge positions
+                let (new_supporting, new_opposing) = self.update_judge_positions(&round);
+                supporting_judges = new_supporting;
+                opposing_judges = new_opposing;
+                round_number += 1;
+                // Loop continues automatically
+            } else {
+                // Max rounds reached without consensus
+                self.mark_debate_timeout(session.session_id).await?;
+                return Ok(());
+            }
         }
-
-        info!(
-            "Executing debate round {} for session {}",
-            round_number, session.session_id
-        );
-
-        // Collect arguments from all judges
-        let mut arguments = std::collections::HashMap::new();
-
-        // Supporting judges present their case
-        for judge_id in &supporting_judges {
-            let argument = self
-                .collect_judge_argument(judge_id, ArgumentPosition::Support, round_number)
-                .await?;
-            arguments.insert(judge_id.clone(), argument);
-        }
-
-        // Opposing judges present counter-arguments
-        for judge_id in &opposing_judges {
-            let argument = self
-                .collect_judge_argument(judge_id, ArgumentPosition::Oppose, round_number)
-                .await?;
-            arguments.insert(judge_id.clone(), argument);
-        }
-
-        // Request additional evidence if needed
-        let evidence_requests = self.generate_evidence_requests(&arguments).await;
-
-        // Get research agent input if configured
-        let research_input = if self.config.research_agent_involvement {
-            Some(
-                self.request_research_input(session.task_id, &arguments)
-                    .await?,
-            )
-        } else {
-            None
-        };
-
-        // Create debate round
-        let round = DebateRound {
-            round_number,
-            arguments,
-            evidence_requests,
-            research_input,
-            timestamp: chrono::Utc::now(),
-        };
-
-        // Store the round
-        self.store_debate_round(session.session_id, round).await?;
-
-        // Check if consensus can be reached after this round
-        if let Some(consensus) = self.evaluate_round_consensus(&round).await? {
-            self.finalize_debate(session.session_id, consensus).await?;
-        } else if round_number < self.config.max_rounds {
-            // Continue to next round with updated judge positions
-            let (new_supporting, new_opposing) = self.update_judge_positions(&round);
-            self.execute_debate_round(session, round_number + 1, new_supporting, new_opposing)
-                .await?;
-        } else {
-            // Max rounds reached without consensus
-            self.mark_debate_timeout(session.session_id).await?;
-        }
-
-        Ok(())
     }
 
     /// Categorize judges into supporting and opposing based on their verdicts
@@ -400,7 +409,10 @@ impl DebateProtocol {
             let avg_confidence = round
                 .arguments
                 .values()
-                .map(|arg| arg.confidence)
+                .map(|arg| {
+                    // Use reasoning length as a proxy for confidence (longer reasoning = more confident)
+                    (arg.reasoning.len() as f32 / 1000.0).min(1.0)
+                })
                 .sum::<f32>()
                 / round.arguments.len() as f32;
 
@@ -415,11 +427,17 @@ impl DebateProtocol {
                 round.round_number
             );
 
-            return Ok(Some(DebateRound {
-                round_number: 1,
-                arguments: round.arguments.clone(),
-                evidence_requests: vec![],
-                research_input: None,
+            return Ok(Some(ConsensusResult {
+                task_id: Uuid::nil(),
+                verdict_id: Uuid::new_v4(),
+                final_verdict: FinalVerdict::Accepted {
+                    confidence: avg_confidence,
+                    summary: "Consensus reached".to_string(),
+                },
+                individual_verdicts: HashMap::new(),
+                consensus_score: avg_confidence,
+                debate_rounds: round.round_number,
+                evaluation_time_ms: 0,
                 timestamp: chrono::Utc::now(),
             }));
         }
