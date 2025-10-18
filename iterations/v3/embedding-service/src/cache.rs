@@ -147,22 +147,18 @@ impl EmbeddingIndex {
         self.by_id.iter().map(|entry| entry.value().clone()).collect()
     }
 
-    pub fn remove(&self, id: &str) -> Option<StoredEmbedding> {
+    pub fn remove(&mut self, id: &str) -> Option<StoredEmbedding> {
         if let Some((_, embedding)) = self.by_id.remove(id) {
             // Remove from content type index
-            self.by_content_type
-                .get(&embedding.metadata.content_type)
-                .map(|entry| {
-                    entry.value().retain(|stored_id| stored_id != id);
-                });
+            if let Some(mut entry) = self.by_content_type.get_mut(&embedding.metadata.content_type) {
+                entry.retain(|stored_id| stored_id != id);
+            }
             
             // Remove from tag indexes
             for tag in &embedding.metadata.tags {
-                self.by_tag
-                    .get(tag)
-                    .map(|entry| {
-                        entry.value().retain(|stored_id| stored_id != id);
-                    });
+                if let Some(mut entry) = self.by_tag.get_mut(tag) {
+                    entry.retain(|stored_id| stored_id != id);
+                }
             }
             
             Some(embedding)

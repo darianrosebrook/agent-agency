@@ -19,7 +19,7 @@ import {
 } from "./LocalModelProvider";
 
 /**
- * Ollama API response format
+ * Ollama API response types
  */
 interface OllamaGenerateResponse {
   model: string;
@@ -34,6 +34,23 @@ interface OllamaGenerateResponse {
   eval_count?: number;
   eval_duration?: number;
 }
+
+interface OllamaTagsResponse {
+  models?: Array<{
+    name: string;
+    size: number;
+    digest: string;
+    details?: {
+      format: string;
+      family: string;
+      families: string[] | null;
+      parameter_size: string;
+      quantization_level: string;
+    };
+    modified_at: string;
+  }>;
+}
+
 
 /**
  * Ollama provider error
@@ -109,7 +126,7 @@ export class OllamaProvider extends LocalModelProvider {
         );
       }
 
-      const data: OllamaGenerateResponse = await response.json();
+      const data = await response.json() as OllamaGenerateResponse;
 
       const endTime = Date.now();
       const generationTimeMs = endTime - startTime;
@@ -186,7 +203,7 @@ export class OllamaProvider extends LocalModelProvider {
         };
       }
 
-      const data = await response.json();
+      const data = await response.json() as OllamaTagsResponse;
       const models = data.models || [];
 
       // Check if our model is available

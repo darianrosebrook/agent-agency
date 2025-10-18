@@ -114,7 +114,7 @@ export class GoogleSearchProvider extends BaseSearchProvider {
         );
       }
 
-      const data: GoogleSearchResponse = await response.json();
+      const data = await response.json() as GoogleSearchResponse;
 
       // Parse and transform results
       const results = this.parseGoogleResults(data, query);

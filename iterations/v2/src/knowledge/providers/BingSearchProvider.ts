@@ -111,7 +111,7 @@ export class BingSearchProvider extends BaseSearchProvider {
         );
       }
 
-      const data: BingSearchResponse = await response.json();
+      const data = await response.json() as BingSearchResponse;
 
       // Parse and transform results
       const results = this.parseBingResults(data, query);

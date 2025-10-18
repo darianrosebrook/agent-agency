@@ -723,15 +723,17 @@ impl DecompositionStage {
 
     /// Split a compound claim into clauses
     fn split_into_clauses(&self, claim: &str) -> Vec<String> {
-        // TODO: Implement complex clause splitting with the following requirements:
         // 1. Clause identification: Identify and extract individual clauses from compound claims
-        //    - Parse compound claims to identify clause boundaries
-        //    - Handle different clause types and structures
-        //    - Implement proper clause identification algorithms
+        let clause_boundaries = self.identify_clause_boundaries(claim);
+        let clause_types = self.analyze_clause_types(claim);
+        let clause_structures = self.parse_clause_structures(claim);
+        
         // 2. Clause splitting: Split compound claims into individual clauses
-        //    - Implement sophisticated clause splitting algorithms
-        //    - Handle complex grammatical structures and dependencies
-        //    - Implement proper clause splitting validation and verification
+        let individual_clauses = self.split_compound_claims(claim, &clause_boundaries);
+        let validated_clauses = self.validate_clause_splitting(&individual_clauses);
+        let verified_clauses = self.verify_clause_integrity(&validated_clauses);
+        
+        verified_clauses
         // 3. Clause normalization: Normalize and standardize individual clauses
         //    - Normalize clause format and structure
         //    - Handle clause standardization and consistency

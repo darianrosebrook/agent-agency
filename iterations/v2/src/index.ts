@@ -160,7 +160,7 @@ async function initialize(): Promise<void> {
         port: 3001,
         host: "localhost",
       },
-      // healthMonitor: {
+      healthMonitor: {
         enabled: true,
         checkIntervalMs: 30000,
       },

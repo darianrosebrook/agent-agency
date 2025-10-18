@@ -8,6 +8,8 @@
  */
 
 import { EventEmitter } from "events";
+import * as os from "os";
+import { ConnectionPoolManager } from "../database/ConnectionPoolManager.js";
 import { circuitBreakerManager } from "../resilience/CircuitBreakerManager";
 
 export interface HealthCheck {
@@ -17,6 +19,7 @@ export interface HealthCheck {
   lastChecked: Date;
   responseTimeMs?: number;
   metadata?: Record<string, any>;
+  details?: Record<string, any>;
 }
 
 export interface SystemMetrics {
@@ -275,6 +278,7 @@ export class HealthMonitor extends EventEmitter {
         message: response.ok
           ? "Web interface responsive"
           : `Web interface returned status ${response.status}`,
+        lastChecked: new Date(),
         details: { responseTimeMs: responseTime, statusCode: response.status },
       });
 

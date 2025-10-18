@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt;
 
 /// Embedding vector type - 768 dimensions for embeddinggemma
 pub type EmbeddingVector = Vec<f32>;
@@ -17,6 +18,12 @@ impl EmbeddingId {
 
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+}
+
+impl fmt::Display for EmbeddingId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 

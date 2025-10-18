@@ -14,6 +14,59 @@ import type {
 } from "@/types/judge";
 
 /**
+ * OpenAI API response types
+ */
+interface OpenAIChatCompletion {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: Array<{
+    index: number;
+    message: {
+      role: string;
+      content: string;
+    };
+    finish_reason: string;
+  }>;
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+}
+
+interface AnthropicMessageResponse {
+  id: string;
+  type: string;
+  role: string;
+  content: Array<{
+    type: string;
+    text: string;
+  }>;
+  model: string;
+  stop_reason: string;
+  usage: {
+    input_tokens: number;
+    output_tokens: number;
+  };
+}
+
+interface OllamaGenerateResponse {
+  model: string;
+  created_at: string;
+  response: string;
+  done: boolean;
+  context?: number[];
+  total_duration?: number;
+  load_duration?: number;
+  prompt_eval_count?: number;
+  prompt_eval_duration?: number;
+  eval_count?: number;
+  eval_duration?: number;
+}
+
+/**
  * Abstract LLM provider interface
  */
 export abstract class LLMProvider {
@@ -80,7 +133,7 @@ export class OpenAIProvider extends LLMProvider {
         throw new Error(`OpenAI API error: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as OpenAIChatCompletion;
       const content = data.choices[0]?.message?.content;
 
       if (!content) {
@@ -186,7 +239,7 @@ export class AnthropicProvider extends LLMProvider {
         throw new Error(`Anthropic API error: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as AnthropicMessageResponse;
       const content = data.content?.[0]?.text;
 
       if (!content) {
@@ -319,7 +372,7 @@ export class OllamaProvider extends LLMProvider {
         );
       }
 
-      const data = await response.json();
+      const data = await response.json() as OllamaGenerateResponse;
       return this.parseEvaluationResponse(data.response, criterion);
     } catch (error) {
       const errorMessage = `Ollama API connection failed: ${
