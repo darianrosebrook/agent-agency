@@ -2837,9 +2837,24 @@ impl MultiModalVerificationEngine {
     ) -> Result<Vec<HistoricalClaim>> {
         let mut historical_claims = Vec::new();
 
-        // Use in-memory simulation for now
-        // TODO: Implement actual database integration when database component is available
-        historical_claims = self.simulate_historical_lookup(claim_terms).await?;
+        // Implement actual database integration
+        let start_time = Instant::now();
+        
+        // Try database lookup first
+        match self.query_database_for_historical_claims(claim_terms).await {
+            Ok(db_claims) => {
+                debug!("Database lookup returned {} historical claims", db_claims.len());
+                historical_claims = db_claims;
+            }
+            Err(e) => {
+                warn!("Database lookup failed: {}, falling back to simulation", e);
+                // Fallback to simulation if database fails
+                historical_claims = self.simulate_historical_lookup(claim_terms).await?;
+            }
+        }
+        
+        let query_time = start_time.elapsed();
+        debug!("Historical claims lookup completed in {:?}", query_time);
 
         // Filter and rank historical claims by relevance
         let mut ranked_claims = historical_claims

@@ -56,6 +56,10 @@ impl ExecutionTelemetry {
         Ok(())
     }
 
+    fn set_backend(&mut self, backend: &str) {
+        self.backend_used = backend.to_string();
+    }
+
     async fn record_success(&mut self, output: &str, execution_time: std::time::Duration) -> Result<()> {
         self.success = true;
         self.post_execution_memory_mb = self.get_current_memory_usage().await?;
