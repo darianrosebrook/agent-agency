@@ -16,6 +16,8 @@ tracing-subscriber = "0.3"
 thiserror = "1"
 lru = "0.12"
 tempfile = "3.8"
+regex = "1.10"
+sha2 = "0.10"
 
 [features]
 default = []

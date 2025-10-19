@@ -4,7 +4,8 @@
 //! with HNSW indices for efficient similarity search.
 
 use anyhow::{Context, Result};
-use indexers::database::{BlockVectorRecord, PostgresVectorStore, VectorStore};
+use indexers::database::{PostgresVectorStore, VectorStore};
+use indexers::types::{BlockVectorRecord, SearchAuditEntry};
 use sqlx::PgPool;
 use std::sync::Arc;
 use tracing::{debug, error, info};
@@ -100,10 +101,10 @@ impl DatabaseVectorStore {
         debug!("Logging search operation: query={}", query);
 
         // Convert results to SearchResult structs with default values
-        let search_results: Vec<indexers::database::SearchResult> = results
+        let search_results: Vec<indexers::SearchResult> = results
             .iter()
             .enumerate()
-            .map(|(i, block_id)| indexers::database::SearchResult {
+            .map(|(i, block_id)| indexers::SearchResult {
                 block_id: *block_id,
                 score: 1.0 - (i as f32 * 0.1), // Decreasing scores for results
                 text_snippet: String::new(),
@@ -123,7 +124,7 @@ impl DatabaseVectorStore {
             })
             .unwrap_or_default();
 
-        let entry = indexers::database::SearchAuditEntry {
+        let entry = SearchAuditEntry {
             query: query.to_string(),
             results: search_results,
             features: feature_map,
@@ -233,7 +234,7 @@ impl VectorStoreStats {
     pub fn get_modality_count(&self, modality: &str) -> i64 {
         self.modality_counts
             .iter()
-            .find(|(mod, _)| mod == modality)
+            .find(|(r#mod, _)| r#mod == modality)
             .map(|(_, count)| *count)
             .unwrap_or(0)
     }

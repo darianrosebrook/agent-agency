@@ -5,6 +5,9 @@ pub mod engine;
 pub mod multi_tenant;
 pub mod types;
 
+#[cfg(test)]
+mod encryption_tests;
+
 pub use context_manager::ContextManager;
 pub use context_store::ContextStore;
 pub use context_synthesizer::ContextSynthesizer;

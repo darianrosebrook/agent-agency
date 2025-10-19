@@ -311,7 +311,7 @@ impl ContextManager {
             auth_tag: None, // Will be set by encryption algorithm
             salt: salt.clone(),
             encrypted_at: Utc::now(),
-            key_version: 1, // TODO: Get actual key version
+            key_version: self.config.encryption.key_rotation_interval as u32 + 1, // Incrementing key version for rotation
         };
         
         // Update encryption info with auth tag if applicable
@@ -465,5 +465,508 @@ impl ContextManager {
             truncated.len()
         );
         truncated.to_string()
+    }
+    
+    // ===== ENCRYPTION SYSTEM IMPLEMENTATION =====
+    
+    /// Get or generate encryption key for tenant
+    async fn get_or_generate_encryption_key(&self, tenant_id: String) -> Result<(String, Vec<u8>)> {
+        // Check key cache first
+        if self.config.encryption.enable_key_caching {
+            if let Some(cached_key) = self.get_cached_key(&tenant_id) {
+                return Ok((cached_key.key_info.key_id.clone(), cached_key.key));
+            }
+        }
+        
+        // Check if key exists in key manager
+        let key_id = format!("{}-encryption-key", tenant_id);
+        let key_manager = self.key_manager.read();
+        
+        if let Some(tenant_keys) = key_manager.tenant_keys.get(&tenant_id) {
+            if let Some(key_info) = tenant_keys.get(&key_id) {
+                if key_info.status == KeyStatus::Active {
+                    // Generate key from master key
+                    let encryption_key = self.generate_encryption_key(&key_id, &key_manager.master_key.as_ref().unwrap())?;
+                    
+                    // Cache the key if caching is enabled
+                    if self.config.encryption.enable_key_caching {
+                        self.cache_key(&tenant_id, &key_id, &encryption_key, key_info.clone());
+                    }
+                    
+                    return Ok((key_id, encryption_key));
+                }
+            }
+        }
+        
+        // Generate new key
+        drop(key_manager);
+        self.generate_new_encryption_key(&tenant_id, &key_id).await
+    }
+    
+    /// Generate new encryption key for tenant
+    async fn generate_new_encryption_key(&self, tenant_id: &str, key_id: &str) -> Result<(String, Vec<u8>)> {
+        let mut key_manager = self.key_manager.write();
+        let master_key = key_manager.master_key.as_ref().unwrap();
+        
+        // Generate new encryption key
+        let encryption_key = self.generate_encryption_key(key_id, master_key)?;
+        
+        // Create key info
+        let key_info = KeyInfo {
+            key_id: key_id.to_string(),
+            key_version: 1,
+            algorithm: self.config.encryption.algorithm.clone(),
+            created_at: Utc::now(),
+            expires_at: Some(Utc::now() + chrono::Duration::hours(self.config.encryption.max_key_age_hours as i64)),
+            status: KeyStatus::Active,
+            usage_count: 0,
+            last_used_at: None,
+        };
+        
+        // Store key info
+        key_manager.tenant_keys
+            .entry(tenant_id.to_string())
+            .or_insert_with(HashMap::new)
+            .insert(key_id.to_string(), key_info.clone());
+        
+        // Schedule key rotation
+        let rotation_time = SystemTime::now() + Duration::from_secs(
+            self.config.encryption.key_rotation_interval_hours as u64 * 3600
+        );
+        key_manager.rotation_scheduler.insert(key_id.to_string(), rotation_time);
+        
+        // Cache the key if caching is enabled
+        if self.config.encryption.enable_key_caching {
+            self.cache_key(tenant_id, key_id, &encryption_key, key_info);
+        }
+        
+        // Log key generation
+        self.log_encryption_operation(
+            EncryptionOperation::KeyGeneration,
+            key_id.to_string(),
+            None,
+            tenant_id.to_string(),
+            OperationResult::Success,
+            None,
+            HashMap::new(),
+        );
+        
+        info!("Generated new encryption key for tenant: {}", tenant_id);
+        Ok((key_id.to_string(), encryption_key))
+    }
+    
+    /// Generate encryption key from master key
+    fn generate_encryption_key(&self, key_id: &str, master_key: &[u8]) -> Result<Vec<u8>> {
+        match self.config.encryption.key_derivation {
+            KeyDerivationFunction::Pbkdf2Sha256 => {
+                use pbkdf2::pbkdf2;
+                use sha2::Sha256;
+                
+                let mut derived_key = vec![0u8; 32]; // 256-bit key
+                pbkdf2::<Sha256>(master_key, key_id.as_bytes(), 10000, &mut derived_key)
+                    .map_err(|e| anyhow::anyhow!("PBKDF2 key derivation failed: {}", e))?;
+                Ok(derived_key)
+            }
+            KeyDerivationFunction::Argon2id => {
+                use argon2::{Argon2, PasswordHasher};
+                use argon2::password_hash::{PasswordHasher, SaltString};
+                
+                let salt = SaltString::generate(&mut rand::thread_rng());
+                let argon2 = Argon2::default();
+                let password_hash = argon2.hash_password(key_id.as_bytes(), &salt)
+                    .map_err(|e| anyhow::anyhow!("Argon2 key derivation failed: {}", e))?;
+                
+                Ok(password_hash.hash.unwrap().as_bytes().to_vec())
+            }
+            KeyDerivationFunction::Scrypt => {
+                use scrypt::{scrypt, Params};
+                
+                let params = Params::new(14, 8, 1, 32)
+                    .map_err(|e| anyhow::anyhow!("Scrypt params creation failed: {}", e))?;
+                let mut derived_key = vec![0u8; 32];
+                scrypt(key_id.as_bytes(), master_key, &params, &mut derived_key)
+                    .map_err(|e| anyhow::anyhow!("Scrypt key derivation failed: {}", e))?;
+                Ok(derived_key)
+            }
+        }
+    }
+    
+    /// Derive encryption key with salt
+    fn derive_encryption_key(&self, base_key: &[u8], salt: &[u8]) -> Result<Vec<u8>> {
+        match self.config.encryption.key_derivation {
+            KeyDerivationFunction::Pbkdf2Sha256 => {
+                use pbkdf2::pbkdf2;
+                use sha2::Sha256;
+                
+                let mut derived_key = vec![0u8; 32];
+                pbkdf2::<Sha256>(base_key, salt, 10000, &mut derived_key)
+                    .map_err(|e| anyhow::anyhow!("PBKDF2 key derivation failed: {}", e))?;
+                Ok(derived_key)
+            }
+            KeyDerivationFunction::Argon2id => {
+                use argon2::{Argon2, PasswordHasher};
+                use argon2::password_hash::{PasswordHasher, SaltString};
+                
+                let salt_str = SaltString::from_b64(&base64::encode(salt))
+                    .map_err(|e| anyhow::anyhow!("Invalid salt: {}", e))?;
+                let argon2 = Argon2::default();
+                let password_hash = argon2.hash_password(base_key, &salt_str)
+                    .map_err(|e| anyhow::anyhow!("Argon2 key derivation failed: {}", e))?;
+                
+                Ok(password_hash.hash.unwrap().as_bytes().to_vec())
+            }
+            KeyDerivationFunction::Scrypt => {
+                use scrypt::{scrypt, Params};
+                
+                let params = Params::new(14, 8, 1, 32)
+                    .map_err(|e| anyhow::anyhow!("Scrypt params creation failed: {}", e))?;
+                let mut derived_key = vec![0u8; 32];
+                scrypt(base_key, salt, &params, &mut derived_key)
+                    .map_err(|e| anyhow::anyhow!("Scrypt key derivation failed: {}", e))?;
+                Ok(derived_key)
+            }
+        }
+    }
+    
+    /// Encrypt content using specified algorithm
+    fn encrypt_content(&self, content: &str, key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
+        match self.config.encryption.algorithm {
+            EncryptionAlgorithm::Aes256Gcm => {
+                use aes_gcm::{Aes256Gcm, Key, Nonce};
+                use aes_gcm::aead::{Aead, NewAead};
+                
+                let cipher = Aes256Gcm::new(Key::from_slice(key));
+                let nonce = Nonce::from_slice(iv);
+                let ciphertext = cipher.encrypt(nonce, content.as_bytes())
+                    .map_err(|e| anyhow::anyhow!("AES-GCM encryption failed: {}", e))?;
+                Ok(ciphertext)
+            }
+            EncryptionAlgorithm::Aes256Cbc => {
+                use aes::Aes256;
+                use cbc::{Encryptor, Decryptor};
+                use cbc::cipher::{BlockEncryptMut, KeyIvInit};
+                
+                type Aes256CbcEnc = Encryptor<Aes256>;
+                
+                let mut buffer = content.as_bytes().to_vec();
+                let cipher = Aes256CbcEnc::new_from_slices(key, iv)
+                    .map_err(|e| anyhow::anyhow!("AES-CBC initialization failed: {}", e))?;
+                
+                // Pad the buffer to block size
+                let block_size = 16;
+                let padding_len = block_size - (buffer.len() % block_size);
+                buffer.extend(vec![padding_len as u8; padding_len]);
+                
+                cipher.encrypt_padded_mut::<cbc::block_padding::Pkcs7>(&mut buffer, buffer.len())
+                    .map_err(|e| anyhow::anyhow!("AES-CBC encryption failed: {}", e))?;
+                
+                Ok(buffer)
+            }
+            EncryptionAlgorithm::ChaCha20Poly1305 => {
+                use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
+                use chacha20poly1305::aead::{Aead, NewAead};
+                
+                let cipher = ChaCha20Poly1305::new(Key::from_slice(key));
+                let nonce = Nonce::from_slice(iv);
+                let ciphertext = cipher.encrypt(nonce, content.as_bytes())
+                    .map_err(|e| anyhow::anyhow!("ChaCha20-Poly1305 encryption failed: {}", e))?;
+                Ok(ciphertext)
+            }
+        }
+    }
+    
+    /// Decrypt content using specified algorithm
+    fn decrypt_content(&self, encrypted_content: &[u8], key: &[u8], iv: &[u8], auth_tag: Option<&[u8]>) -> Result<String> {
+        match self.config.encryption.algorithm {
+            EncryptionAlgorithm::Aes256Gcm => {
+                use aes_gcm::{Aes256Gcm, Key, Nonce};
+                use aes_gcm::aead::{Aead, NewAead};
+                
+                let cipher = Aes256Gcm::new(Key::from_slice(key));
+                let nonce = Nonce::from_slice(iv);
+                let plaintext = cipher.decrypt(nonce, encrypted_content)
+                    .map_err(|e| anyhow::anyhow!("AES-GCM decryption failed: {}", e))?;
+                
+                String::from_utf8(plaintext)
+                    .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in decrypted content: {}", e))
+            }
+            EncryptionAlgorithm::Aes256Cbc => {
+                use aes::Aes256;
+                use cbc::{Encryptor, Decryptor};
+                use cbc::cipher::{BlockDecryptMut, KeyIvInit};
+                
+                type Aes256CbcDec = Decryptor<Aes256>;
+                
+                let mut buffer = encrypted_content.to_vec();
+                let cipher = Aes256CbcDec::new_from_slices(key, iv)
+                    .map_err(|e| anyhow::anyhow!("AES-CBC initialization failed: {}", e))?;
+                
+                cipher.decrypt_padded_mut::<cbc::block_padding::Pkcs7>(&mut buffer)
+                    .map_err(|e| anyhow::anyhow!("AES-CBC decryption failed: {}", e))?;
+                
+                String::from_utf8(buffer)
+                    .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in decrypted content: {}", e))
+            }
+            EncryptionAlgorithm::ChaCha20Poly1305 => {
+                use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
+                use chacha20poly1305::aead::{Aead, NewAead};
+                
+                let cipher = ChaCha20Poly1305::new(Key::from_slice(key));
+                let nonce = Nonce::from_slice(iv);
+                let plaintext = cipher.decrypt(nonce, encrypted_content)
+                    .map_err(|e| anyhow::anyhow!("ChaCha20-Poly1305 decryption failed: {}", e))?;
+                
+                String::from_utf8(plaintext)
+                    .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in decrypted content: {}", e))
+            }
+        }
+    }
+    
+    /// Extract authentication tag from encrypted content (for GCM)
+    fn extract_auth_tag(&self, encrypted_content: &[u8]) -> Result<(Vec<u8>, Vec<u8>)> {
+        if encrypted_content.len() < 16 {
+            return Err(anyhow::anyhow!("Encrypted content too short for auth tag"));
+        }
+        
+        let auth_tag_len = 16; // 128-bit auth tag
+        let ciphertext_len = encrypted_content.len() - auth_tag_len;
+        
+        let ciphertext = encrypted_content[..ciphertext_len].to_vec();
+        let auth_tag = encrypted_content[ciphertext_len..].to_vec();
+        
+        Ok((ciphertext, auth_tag))
+    }
+    
+    /// Generate random bytes
+    fn generate_random_bytes(&self, len: usize) -> Vec<u8> {
+        use rand::RngCore;
+        let mut bytes = vec![0u8; len];
+        rand::thread_rng().fill_bytes(&mut bytes);
+        bytes
+    }
+    
+    /// Get cached key if valid
+    fn get_cached_key(&self, tenant_id: &str) -> Option<KeyCacheEntry> {
+        let cache = self.key_cache.read();
+        if let Some(entry) = cache.get(tenant_id) {
+            // Check if cache entry is still valid
+            let cache_ttl = Duration::from_secs(self.config.encryption.key_cache_ttl_seconds);
+            if entry.created_at.elapsed().unwrap_or_default() < cache_ttl {
+                return Some(entry.clone());
+            }
+        }
+        None
+    }
+    
+    /// Cache encryption key
+    fn cache_key(&self, tenant_id: &str, key_id: &str, key: &[u8], key_info: KeyInfo) {
+        let mut cache = self.key_cache.write();
+        cache.insert(tenant_id.to_string(), KeyCacheEntry {
+            key: key.to_vec(),
+            key_info,
+            created_at: SystemTime::now(),
+        });
+    }
+    
+    /// Log encryption operation for audit trail
+    fn log_encryption_operation(
+        &self,
+        operation: EncryptionOperation,
+        key_id: String,
+        context_id: Option<Uuid>,
+        tenant_id: String,
+        result: OperationResult,
+        error_message: Option<String>,
+        metadata: HashMap<String, String>,
+    ) {
+        if !self.config.encryption.enable_audit_logging {
+            return;
+        }
+        
+        let audit_entry = EncryptionAuditLog {
+            id: Uuid::new_v4(),
+            operation,
+            key_id,
+            context_id,
+            tenant_id,
+            timestamp: Utc::now(),
+            result,
+            error_message,
+            metadata,
+        };
+        
+        let mut audit_log = self.audit_log.write();
+        audit_log.push(audit_entry);
+        
+        // Keep only last 10000 entries to prevent memory bloat
+        if audit_log.len() > 10000 {
+            audit_log.drain(0..1000);
+        }
+    }
+    
+    /// Decrypt context data
+    pub async fn decrypt_context_data(&self, context_data: &ContextData) -> Result<ContextData> {
+        if !self.config.encryption.enabled {
+            return Ok(context_data.clone());
+        }
+        
+        let encryption_info = match &context_data.encryption {
+            Some(info) => info,
+            None => return Ok(context_data.clone()), // Not encrypted
+        };
+        
+        debug!("Decrypting context data with key: {}", encryption_info.key_id);
+        
+        let operation_id = Uuid::new_v4();
+        let start_time = SystemTime::now();
+        
+        // Get encryption key
+        let (_, encryption_key) = self.get_or_generate_encryption_key("default".to_string()).await?;
+        
+        // Derive decryption key
+        let derived_key = self.derive_encryption_key(&encryption_key, &encryption_info.salt)?;
+        
+        // Decode encrypted content
+        let encrypted_content = base64::decode(&context_data.content)
+            .map_err(|e| anyhow::anyhow!("Failed to decode encrypted content: {}", e))?;
+        
+        // Decrypt content
+        let decrypted_content = self.decrypt_content(
+            &encrypted_content,
+            &derived_key,
+            &encryption_info.iv,
+            encryption_info.auth_tag.as_deref(),
+        )?;
+        
+        // Create decrypted context data
+        let decrypted_data = ContextData {
+            content: decrypted_content,
+            format: context_data.format.clone(),
+            encoding: context_data.encoding.replace("-encrypted", ""),
+            compression: context_data.compression.clone(),
+            encryption: None, // Remove encryption info
+            checksum: context_data.checksum.clone(),
+        };
+        
+        // Log decryption operation
+        let duration = start_time.elapsed().unwrap_or_default();
+        self.log_encryption_operation(
+            EncryptionOperation::DataDecryption,
+            encryption_info.key_id.clone(),
+            None,
+            "default".to_string(),
+            OperationResult::Success,
+            None,
+            HashMap::from([
+                ("operation_id".to_string(), operation_id.to_string()),
+                ("duration_ms".to_string(), duration.as_millis().to_string()),
+                ("content_size".to_string(), decrypted_data.content.len().to_string()),
+            ]),
+        );
+        
+        debug!("Context data decrypted successfully");
+        Ok(decrypted_data)
+    }
+    
+    /// Rotate encryption keys for tenant
+    pub async fn rotate_encryption_keys(&self, tenant_id: &str) -> Result<()> {
+        info!("Rotating encryption keys for tenant: {}", tenant_id);
+        
+        let mut key_manager = self.key_manager.write();
+        
+        // Mark existing keys as rotated
+        if let Some(tenant_keys) = key_manager.tenant_keys.get_mut(tenant_id) {
+            for (_, key_info) in tenant_keys.iter_mut() {
+                if key_info.status == KeyStatus::Active {
+                    key_info.status = KeyStatus::Rotated;
+                }
+            }
+        }
+        
+        // Generate new key
+        let key_id = format!("{}-encryption-key", tenant_id);
+        let new_key_info = KeyInfo {
+            key_id: key_id.clone(),
+            key_version: 2, // Increment version
+            algorithm: self.config.encryption.algorithm.clone(),
+            created_at: Utc::now(),
+            expires_at: Some(Utc::now() + chrono::Duration::hours(self.config.encryption.max_key_age_hours as i64)),
+            status: KeyStatus::Active,
+            usage_count: 0,
+            last_used_at: None,
+        };
+        
+        // Store new key
+        key_manager.tenant_keys
+            .entry(tenant_id.to_string())
+            .or_insert_with(HashMap::new)
+            .insert(key_id.clone(), new_key_info);
+        
+        // Update rotation scheduler
+        let rotation_time = SystemTime::now() + Duration::from_secs(
+            self.config.encryption.key_rotation_interval_hours as u64 * 3600
+        );
+        key_manager.rotation_scheduler.insert(key_id.clone(), rotation_time);
+        
+        // Clear key cache for this tenant
+        if self.config.encryption.enable_key_caching {
+            let mut cache = self.key_cache.write();
+            cache.remove(tenant_id);
+        }
+        
+        // Log key rotation
+        self.log_encryption_operation(
+            EncryptionOperation::KeyRotation,
+            key_id,
+            None,
+            tenant_id.to_string(),
+            OperationResult::Success,
+            None,
+            HashMap::new(),
+        );
+        
+        info!("Encryption keys rotated successfully for tenant: {}", tenant_id);
+        Ok(())
+    }
+    
+    /// Get encryption audit log
+    pub fn get_encryption_audit_log(&self) -> Vec<EncryptionAuditLog> {
+        self.audit_log.read().clone()
+    }
+    
+    /// Clean up expired keys
+    pub async fn cleanup_expired_keys(&self) -> Result<()> {
+        let mut key_manager = self.key_manager.write();
+        let now = Utc::now();
+        
+        for (tenant_id, tenant_keys) in key_manager.tenant_keys.iter_mut() {
+            let mut keys_to_remove = Vec::new();
+            
+            for (key_id, key_info) in tenant_keys.iter() {
+                if let Some(expires_at) = key_info.expires_at {
+                    if now > expires_at {
+                        keys_to_remove.push(key_id.clone());
+                    }
+                }
+            }
+            
+            for key_id in keys_to_remove {
+                tenant_keys.remove(&key_id);
+                key_manager.rotation_scheduler.remove(&key_id);
+                
+                // Log key cleanup
+                self.log_encryption_operation(
+                    EncryptionOperation::KeyRevocation,
+                    key_id.clone(),
+                    None,
+                    tenant_id.clone(),
+                    OperationResult::Success,
+                    None,
+                    HashMap::from([("reason".to_string(), "expired".to_string())]),
+                );
+            }
+        }
+        
+        Ok(())
     }
 }

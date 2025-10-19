@@ -209,6 +209,187 @@ impl MetricsCollector {
             .await;
     }
 
+    // Multimodal RAG metrics
+    pub async fn record_multimodal_processing(
+        &self,
+        modality: &str,
+        job_type: &str,
+        duration_ms: f64,
+        success: bool,
+        quality_score: f64,
+    ) {
+        self.record_operation_duration("multimodal_processing", duration_ms, success, "multimodal")
+            .await;
+        self.increment_operation_count(
+            "multimodal_jobs_total",
+            if success { "success" } else { "failure" },
+            "multimodal",
+        )
+        .await;
+
+        self.update_gauge(
+            "multimodal_quality_score",
+            quality_score,
+            &[("modality", modality), ("job_type", job_type)],
+        )
+        .await;
+
+        self.record_histogram(
+            "multimodal_processing_duration_ms",
+            duration_ms,
+            &[("modality", modality), ("job_type", job_type)],
+        )
+        .await;
+    }
+
+    pub async fn record_vector_search(
+        &self,
+        model_id: &str,
+        query_type: &str,
+        result_count: u32,
+        duration_ms: f64,
+        success: bool,
+    ) {
+        self.record_operation_duration("vector_search", duration_ms, success, "database")
+            .await;
+        self.increment_operation_count(
+            "vector_searches_total",
+            if success { "success" } else { "failure" },
+            "database",
+        )
+        .await;
+
+        self.update_gauge(
+            "vector_search_result_count",
+            result_count as f64,
+            &[("model_id", model_id), ("query_type", query_type)],
+        )
+        .await;
+    }
+
+    pub async fn record_embedding_generation(
+        &self,
+        model_id: &str,
+        content_type: &str,
+        content_size: u32,
+        duration_ms: f64,
+        success: bool,
+    ) {
+        self.record_operation_duration("embedding_generation", duration_ms, success, "embedding")
+            .await;
+        self.increment_operation_count(
+            "embeddings_generated_total",
+            if success { "success" } else { "failure" },
+            "embedding",
+        )
+        .await;
+
+        self.update_gauge(
+            "embedding_content_size",
+            content_size as f64,
+            &[("model_id", model_id), ("content_type", content_type)],
+        )
+        .await;
+    }
+
+    pub async fn record_cross_modal_validation(
+        &self,
+        modalities: &str,
+        consistency_score: f64,
+        duration_ms: f64,
+        success: bool,
+    ) {
+        self.record_operation_duration("cross_modal_validation", duration_ms, success, "validation")
+            .await;
+        self.increment_operation_count(
+            "cross_modal_validations_total",
+            if success { "success" } else { "failure" },
+            "validation",
+        )
+        .await;
+
+        self.update_gauge(
+            "cross_modal_consistency_score",
+            consistency_score,
+            &[("modalities", modalities)],
+        )
+        .await;
+    }
+
+    pub async fn record_context_retrieval(
+        &self,
+        context_type: &str,
+        result_count: u32,
+        budget_used: f32,
+        duration_ms: f64,
+        success: bool,
+    ) {
+        self.record_operation_duration("context_retrieval", duration_ms, success, "research")
+            .await;
+        self.increment_operation_count(
+            "context_retrievals_total",
+            if success { "success" } else { "failure" },
+            "research",
+        )
+        .await;
+
+        self.update_gauge(
+            "context_retrieval_result_count",
+            result_count as f64,
+            &[("context_type", context_type)],
+        )
+        .await;
+
+        self.update_gauge(
+            "context_budget_usage",
+            budget_used as f64,
+            &[("context_type", context_type)],
+        )
+        .await;
+    }
+
+    pub async fn record_deduplication(
+        &self,
+        modality: &str,
+        input_count: u32,
+        output_count: u32,
+        duration_ms: f64,
+    ) {
+        let deduplication_rate = if input_count > 0 {
+            1.0 - (output_count as f64 / input_count as f64)
+        } else {
+            0.0
+        };
+
+        self.update_gauge(
+            "deduplication_rate",
+            deduplication_rate,
+            &[("modality", modality)],
+        )
+        .await;
+
+        self.update_gauge(
+            "deduplication_input_count",
+            input_count as f64,
+            &[("modality", modality)],
+        )
+        .await;
+
+        self.update_gauge(
+            "deduplication_output_count",
+            output_count as f64,
+            &[("modality", modality)],
+        )
+        .await;
+
+        self.record_histogram(
+            "deduplication_duration_ms",
+            duration_ms,
+            &[("modality", modality)],
+        )
+        .await;
+    }
+
     // Error metrics
     pub async fn record_error(&self, error_type: &str, component: &str, operation: &str) {
         self.increment_counter(

@@ -17,6 +17,7 @@ agent-agency-resilience = { path = "../resilience" }
 agent-agency-config = { path = "../config" }
 agent-agency-database = { path = "../database" }
 agent-agency-workers = { path = "../workers" }
+agent-agency-observability = { path = "../observability" }
 
 # Test framework and utilities
 tokio = { version = "1.0", features = ["full"] }

@@ -44,7 +44,7 @@ impl DataDetectionBridge {
         if let Some(email_match) = self.find_email(text) {
             detections.push(DataDetection {
                 data_type: "email".to_string(),
-                text: email_match.text,
+                text: email_match.text.clone(),
                 normalized: email_match.text.to_lowercase(),
                 confidence: 0.95,
                 is_pii: true,
@@ -56,7 +56,7 @@ impl DataDetectionBridge {
         if let Some(url_match) = self.find_url(text) {
             detections.push(DataDetection {
                 data_type: "url".to_string(),
-                text: url_match.text,
+                text: url_match.text.clone(),
                 normalized: url_match.text,
                 confidence: 0.98,
                 is_pii: false,
@@ -68,7 +68,7 @@ impl DataDetectionBridge {
         if let Some(phone_match) = self.find_phone(text) {
             detections.push(DataDetection {
                 data_type: "phone".to_string(),
-                text: phone_match.text,
+                text: phone_match.text.clone(),
                 normalized: self.normalize_phone(&phone_match.text),
                 confidence: 0.90,
                 is_pii: true,
@@ -80,7 +80,7 @@ impl DataDetectionBridge {
         if let Some(date_match) = self.find_date(text) {
             detections.push(DataDetection {
                 data_type: "date".to_string(),
-                text: date_match.text,
+                text: date_match.text.clone(),
                 normalized: date_match.text,
                 confidence: 0.85,
                 is_pii: false,
@@ -407,8 +407,8 @@ impl EntityEnricher {
         for ner_entity in ner_entities {
             let entity = ExtractedEntity {
                 id: Uuid::new_v4(),
-                entity_type: ner_entity.entity_type,
-                text: ner_entity.text,
+                entity_type: ner_entity.entity_type.clone(),
+                text: ner_entity.text.clone(),
                 normalized: ner_entity.text.to_lowercase(),
                 confidence: ner_entity.confidence,
                 pii: self.is_pii_entity(&ner_entity.entity_type),
@@ -429,7 +429,7 @@ impl EntityEnricher {
     /// Detect email addresses in text
     fn detect_email_patterns(&self, text: &str, entities: &mut Vec<ExtractedEntity>) {
         // Simple email pattern detection (placeholder)
-        for (i, word) in text.split_whitespace().enumerate() {
+        for (_i, word) in text.split_whitespace().enumerate() {
             if word.contains('@') && word.contains('.') {
                 entities.push(ExtractedEntity {
                     id: Uuid::new_v4(),

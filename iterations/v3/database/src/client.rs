@@ -406,6 +406,9 @@ impl DatabaseClient {
 
     /// Create database client with deadpool (alternative implementation)
     pub async fn with_deadpool(config: DatabaseConfig) -> Result<Self> {
+        // Initialize metrics
+        let metrics = Arc::new(DatabaseMetrics::new());
+        
         let mut pg_config = Config::new();
         pg_config.host = Some(config.host.clone());
         pg_config.port = Some(config.port);
@@ -3099,7 +3102,7 @@ impl DatabaseClient {
     ///
     /// # Returns
     /// Result indicating success or failure
-    pub async fn store_vector(&self, record: indexers::database::BlockVectorRecord) -> Result<()> {
+    pub async fn store_vector(&self, record: indexers::types::BlockVectorRecord) -> Result<()> {
         let vector_store = self.create_vector_store();
         vector_store.store_vector(record).await
     }

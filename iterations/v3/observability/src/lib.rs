@@ -14,6 +14,7 @@ pub mod analytics_dashboard;
 pub mod dashboard;
 pub mod logging;
 pub mod metrics;
+pub mod multimodal_metrics;
 pub mod slo;
 
 // Re-export specific types to avoid conflicts
@@ -42,4 +43,9 @@ pub use analytics_dashboard::{
 pub use dashboard::*;
 pub use logging::*;
 pub use metrics::*;
+pub use multimodal_metrics::{
+    MultimodalMetricsCollector, MultimodalProcessingMetrics, VectorSearchMetrics,
+    EmbeddingMetrics, CrossModalValidationMetrics, ContextRetrievalMetrics,
+    DeduplicationMetrics, MultimodalSystemHealth, PerformanceSummary,
+};
 pub use slo::*;
