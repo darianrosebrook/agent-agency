@@ -5,9 +5,9 @@
 //!
 //! @author @darianrosebrook
 
+use anyhow::{bail, Result};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use anyhow::{Result, bail};
 
 /// Configuration for buffer pool
 #[derive(Debug, Clone)]
@@ -113,12 +113,7 @@ impl BufferPool {
     ///
     /// # Returns
     /// `Ok(())` if the buffer was successfully obtained or allocated
-    pub fn get_or_allocate(
-        &self,
-        dtype: &str,
-        shape: Vec<usize>,
-        size_bytes: usize,
-    ) -> Result<()> {
+    pub fn get_or_allocate(&self, dtype: &str, shape: Vec<usize>, size_bytes: usize) -> Result<()> {
         let key = BufferKey {
             dtype: dtype.to_string(),
             shape,
@@ -277,7 +272,7 @@ mod tests {
         let pool = BufferPool::new();
         let result = pool.get_or_allocate("float32", vec![1, 3, 224, 224], 1024);
         assert!(result.is_ok());
-        
+
         let stats = pool.stats().unwrap();
         assert_eq!(stats.total_allocations, 1);
         assert_eq!(stats.cache_misses, 1);
@@ -286,14 +281,16 @@ mod tests {
     #[test]
     fn test_buffer_reuse() {
         let pool = BufferPool::new();
-        
+
         // First allocation
-        pool.get_or_allocate("float32", vec![1, 3, 224, 224], 1024).unwrap();
+        pool.get_or_allocate("float32", vec![1, 3, 224, 224], 1024)
+            .unwrap();
         let stats1 = pool.stats().unwrap();
         assert_eq!(stats1.cache_hits, 0);
-        
+
         // Second allocation with same parameters
-        pool.get_or_allocate("float32", vec![1, 3, 224, 224], 1024).unwrap();
+        pool.get_or_allocate("float32", vec![1, 3, 224, 224], 1024)
+            .unwrap();
         let stats2 = pool.stats().unwrap();
         // Should have a cache hit
         assert!(stats2.cache_hits >= 1 || stats2.cache_misses >= 2);
@@ -302,12 +299,14 @@ mod tests {
     #[test]
     fn test_buffer_pool_clear() {
         let pool = BufferPool::new();
-        pool.get_or_allocate("float32", vec![1, 3, 224, 224], 1024).unwrap();
-        pool.get_or_allocate("float16", vec![1, 3, 224, 224], 512).unwrap();
-        
+        pool.get_or_allocate("float32", vec![1, 3, 224, 224], 1024)
+            .unwrap();
+        pool.get_or_allocate("float16", vec![1, 3, 224, 224], 512)
+            .unwrap();
+
         let stats_before = pool.stats().unwrap();
         assert!(stats_before.current_buffer_count > 0);
-        
+
         pool.clear().unwrap();
         let stats_after = pool.stats().unwrap();
         assert_eq!(stats_after.current_buffer_count, 0);

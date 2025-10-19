@@ -8,7 +8,6 @@
 /// - No ObjC types escape this module
 /// - All errors translated to Rust Result types
 /// - Opaque pointers managed via Drop implementation
-
 use anyhow::{bail, Result};
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
@@ -138,7 +137,9 @@ impl CoreMLModel {
             };
 
             if ret != 0 {
-                let err_string = CStringOwned::from_ptr(out_err).to_string().unwrap_or_else(|_| "Unknown error".to_string());
+                let err_string = CStringOwned::from_ptr(out_err)
+                    .to_string()
+                    .unwrap_or_else(|_| "Unknown error".to_string());
                 bail!("Compile failed: {}", err_string);
             }
 
@@ -165,7 +166,9 @@ impl CoreMLModel {
             };
 
             if ret != 0 {
-                let err_string = CStringOwned::from_ptr(out_err).to_string().unwrap_or_else(|_| "Unknown error".to_string());
+                let err_string = CStringOwned::from_ptr(out_err)
+                    .to_string()
+                    .unwrap_or_else(|_| "Unknown error".to_string());
                 bail!("Load failed: {}", err_string);
             }
 
@@ -179,12 +182,13 @@ impl CoreMLModel {
             let mut out_schema_json: *mut c_char = std::ptr::null_mut();
             let mut out_err: *mut c_char = std::ptr::null_mut();
 
-            let ret = unsafe {
-                coreml_model_schema(self.handle, &mut out_schema_json, &mut out_err)
-            };
+            let ret =
+                unsafe { coreml_model_schema(self.handle, &mut out_schema_json, &mut out_err) };
 
             if ret != 0 {
-                let err_string = CStringOwned::from_ptr(out_err).to_string().unwrap_or_else(|_| "Unknown error".to_string());
+                let err_string = CStringOwned::from_ptr(out_err)
+                    .to_string()
+                    .unwrap_or_else(|_| "Unknown error".to_string());
                 bail!("Schema query failed: {}", err_string);
             }
 
@@ -211,7 +215,9 @@ impl CoreMLModel {
             };
 
             if ret != 0 {
-                let err_string = CStringOwned::from_ptr(out_err).to_string().unwrap_or_else(|_| "Unknown error".to_string());
+                let err_string = CStringOwned::from_ptr(out_err)
+                    .to_string()
+                    .unwrap_or_else(|_| "Unknown error".to_string());
                 bail!("Prediction failed: {}", err_string);
             }
 

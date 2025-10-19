@@ -5,10 +5,10 @@
 //!
 //! @author @darianrosebrook
 
+use anyhow::{bail, Result};
 use std::collections::VecDeque;
-use std::sync::{Arc, Mutex, Condvar};
+use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
-use anyhow::{Result, bail};
 
 /// Configuration for model pool
 #[derive(Debug, Clone)]
@@ -112,7 +112,10 @@ impl ModelPool {
             if result.1.timed_out() {
                 let mut stats = self.stats.lock().unwrap();
                 stats.failed_acquires += 1;
-                bail!("Model pool acquire timeout after {}ms", self.config.acquire_timeout_ms);
+                bail!(
+                    "Model pool acquire timeout after {}ms",
+                    self.config.acquire_timeout_ms
+                );
             }
 
             if start.elapsed() > timeout {
@@ -186,7 +189,7 @@ mod tests {
         let pool = ModelPool::new();
         let model_id = pool.acquire().unwrap();
         assert!(model_id < 4);
-        
+
         let stats = pool.stats().unwrap();
         assert_eq!(stats.successful_acquires, 1);
 
@@ -218,7 +221,7 @@ mod tests {
         let pool = ModelPool::new();
         pool.record_inference();
         pool.record_inference();
-        
+
         let stats = pool.stats().unwrap();
         assert_eq!(stats.total_inferences, 2);
     }

@@ -9,12 +9,12 @@ use crate::resilience::ResilienceManager;
 use crate::types::{ConsensusResult, FinalVerdict, JudgeVerdict};
 use crate::CouncilConfig;
 use anyhow::Result;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{debug, info};
 use uuid::Uuid;
-use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
 
 /// Result of CAWS tie-breaking resolution
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -91,7 +91,7 @@ async fn apply_caws_tie_breaking_rules(
             timestamp: Utc::now(),
         });
     }
-    
+
     // Rule 2: Apply majority vote (if >50% agreement)
     if let Some(majority) = check_majority_vote(participants, rounds).await? {
         return Ok(CawsResolutionResult {
@@ -103,7 +103,7 @@ async fn apply_caws_tie_breaking_rules(
             timestamp: Utc::now(),
         });
     }
-    
+
     // Rule 3: Expert override (if available)
     if let Some(expert) = check_expert_override(participants, rounds).await? {
         return Ok(CawsResolutionResult {
@@ -115,7 +115,7 @@ async fn apply_caws_tie_breaking_rules(
             timestamp: Utc::now(),
         });
     }
-    
+
     // Rule 4: Random selection as last resort
     let random_participant = participants[fastrand::usize(..participants.len())].clone();
     Ok(CawsResolutionResult {
@@ -138,9 +138,11 @@ async fn apply_override_policies(
         resolution.resolution_type = ResolutionType::ExpertOverride;
         resolution.confidence_score = 0.6;
         resolution.rationale = format!("Emergency override applied: {}", resolution.rationale);
-        resolution.applied_rules.push("CAWS-EMERGENCY-OVERRIDE".to_string());
+        resolution
+            .applied_rules
+            .push("CAWS-EMERGENCY-OVERRIDE".to_string());
     }
-    
+
     Ok(resolution)
 }
 
@@ -157,13 +159,13 @@ async fn generate_resolution_rationale(
         rounds,
         resolution.confidence_score
     );
-    
+
     if let Some(winner) = &resolution.winning_participant {
         rationale.push_str(&format!(" | Winner: {}", winner));
     }
-    
+
     rationale.push_str(&format!(" | Rules: {:?}", resolution.applied_rules));
-    
+
     Ok(rationale)
 }
 
@@ -173,7 +175,7 @@ async fn compile_debate_contributions(
     rounds: i32,
 ) -> Result<CompiledContributions> {
     let mut contributions = Vec::new();
-    
+
     // Simulate collecting contributions from each participant in each round
     for round in 1..=rounds {
         for participant in participants {
@@ -186,7 +188,7 @@ async fn compile_debate_contributions(
             });
         }
     }
-    
+
     Ok(CompiledContributions {
         contributions,
         total_rounds: rounds,
@@ -196,13 +198,11 @@ async fn compile_debate_contributions(
 }
 
 /// Sign debate transcript for authenticity
-async fn sign_debate_transcript(
-    contributions: &CompiledContributions,
-) -> Result<SignedTranscript> {
+async fn sign_debate_transcript(contributions: &CompiledContributions) -> Result<SignedTranscript> {
     // Create a simple hash-based signature (in production, use proper cryptographic signing)
     let content = serde_json::to_string(contributions)?;
     let signature = format!("{:x}", md5::compute(content.as_bytes()));
-    
+
     Ok(SignedTranscript {
         transcript: contributions.clone(),
         signature,
@@ -217,34 +217,51 @@ async fn analyze_contribution_patterns(
 ) -> Result<ContributionAnalysis> {
     let mut participant_engagement = HashMap::new();
     let mut confidence_trends = Vec::new();
-    
+
     // Calculate engagement scores
-    for participant in contributions.contributions.iter().map(|c| &c.participant).collect::<std::collections::HashSet<_>>() {
-        let participant_contributions = contributions.contributions.iter()
+    for participant in contributions
+        .contributions
+        .iter()
+        .map(|c| &c.participant)
+        .collect::<std::collections::HashSet<_>>()
+    {
+        let participant_contributions = contributions
+            .contributions
+            .iter()
             .filter(|c| c.participant == *participant)
             .count();
         let engagement = participant_contributions as f32 / contributions.total_rounds as f32;
         participant_engagement.insert(participant.clone(), engagement);
     }
-    
+
     // Calculate confidence trends
     for round in 1..=contributions.total_rounds {
-        let round_contributions: Vec<_> = contributions.contributions.iter()
+        let round_contributions: Vec<_> = contributions
+            .contributions
+            .iter()
             .filter(|c| c.round == round)
             .collect();
         let avg_confidence = if round_contributions.is_empty() {
             0.0
         } else {
-            round_contributions.iter()
+            round_contributions
+                .iter()
                 .map(|c| c.confidence)
-                .sum::<f32>() / round_contributions.len() as f32
+                .sum::<f32>()
+                / round_contributions.len() as f32
         };
         confidence_trends.push(avg_confidence);
     }
-    
+
     Ok(ContributionAnalysis {
-        dominant_themes: vec!["Technical Implementation".to_string(), "Quality Assurance".to_string()],
-        consensus_areas: vec!["Code Quality".to_string(), "Testing Requirements".to_string()],
+        dominant_themes: vec![
+            "Technical Implementation".to_string(),
+            "Quality Assurance".to_string(),
+        ],
+        consensus_areas: vec![
+            "Code Quality".to_string(),
+            "Testing Requirements".to_string(),
+        ],
         disagreement_areas: vec!["Architecture Decisions".to_string()],
         participant_engagement,
         confidence_trends,
@@ -252,38 +269,29 @@ async fn analyze_contribution_patterns(
 }
 
 /// Check for consensus among participants
-async fn check_for_consensus(
-    participants: &[String],
-    _rounds: i32,
-) -> Result<Option<String>> {
+async fn check_for_consensus(participants: &[String], _rounds: i32) -> Result<Option<String>> {
     // Simulate consensus check (in production, analyze actual debate content)
     if participants.len() == 1 {
         return Ok(Some(participants[0].clone()));
     }
-    
+
     // For demo purposes, return None (no consensus)
     Ok(None)
 }
 
 /// Check for majority vote
-async fn check_majority_vote(
-    participants: &[String],
-    _rounds: i32,
-) -> Result<Option<String>> {
+async fn check_majority_vote(participants: &[String], _rounds: i32) -> Result<Option<String>> {
     // Simulate majority vote check
     if participants.len() >= 3 {
         // Return first participant as "majority" for demo
         return Ok(Some(participants[0].clone()));
     }
-    
+
     Ok(None)
 }
 
 /// Check for expert override
-async fn check_expert_override(
-    participants: &[String],
-    _rounds: i32,
-) -> Result<Option<String>> {
+async fn check_expert_override(participants: &[String], _rounds: i32) -> Result<Option<String>> {
     // Simulate expert override check
     // In production, this would check for expert participants or external authority
     Ok(None)
@@ -595,31 +603,28 @@ impl ConsensusCoordinator {
         // 2. Evidence-based contribution: Generate arguments from evidence packets
         // 3. Contribution scoring: Calculate quality and confidence scores
         // 4. Deliberation integration: Create structured contribution for debate
-        
+
         // Analyze evidence quality based on confidence scores
         let mut confidence_sum = 0.0f32;
         let evidence_count = evidence_packets.len();
-        
+
         for evidence in evidence_packets {
             confidence_sum += evidence.confidence;
         }
-        
+
         // Calculate average confidence from evidence
         let avg_confidence = if evidence_count > 0 {
             (confidence_sum / evidence_count as f32).min(1.0).max(0.0)
         } else {
             0.5
         };
-        
+
         let contribution = ParticipantContribution {
             participant: participant.to_string(),
             round_number,
             argument: format!(
                 "Round {} argument from {} based on {} evidence packets (avg confidence: {:.2})",
-                round_number,
-                participant,
-                evidence_count,
-                avg_confidence
+                round_number, participant, evidence_count, avg_confidence
             ),
             evidence_references: evidence_packets.iter().map(|e| e.id).collect(),
             confidence: avg_confidence,
@@ -669,15 +674,16 @@ impl ConsensusCoordinator {
 
         // Implement CAWS rule-based tie-breaking
         let resolution_result = apply_caws_tie_breaking_rules(participants, rounds).await?;
-        
+
         // Apply override policies if needed
         let final_resolution = apply_override_policies(resolution_result).await?;
-        
+
         // Generate resolution rationale
-        let rationale = generate_resolution_rationale(&final_resolution, participants, rounds).await?;
-        
+        let rationale =
+            generate_resolution_rationale(&final_resolution, participants, rounds).await?;
+
         info!("CAWS tie-breaking completed: {}", rationale);
-        
+
         Ok(())
     }
 
@@ -692,16 +698,18 @@ impl ConsensusCoordinator {
 
         // Implement debate contribution compilation
         let compiled_contributions = compile_debate_contributions(participants, rounds).await?;
-        
+
         // Sign the transcript for authenticity
         let _signed_transcript = sign_debate_transcript(&compiled_contributions).await?;
-        
+
         // Analyze contributions for insights
         let _analysis = analyze_contribution_patterns(&compiled_contributions).await?;
-        
-        info!("Debate transcript compiled and signed: {} contributions analyzed", 
-            compiled_contributions.contributions.len());
-        
+
+        info!(
+            "Debate transcript compiled and signed: {} contributions analyzed",
+            compiled_contributions.contributions.len()
+        );
+
         Ok(())
     }
 
@@ -761,16 +769,29 @@ impl ConsensusCoordinator {
             let mut primary_reasons = Vec::new();
 
             for (judge_id, verdict) in verdicts {
-                if let JudgeVerdict::Fail { violations, reasoning, .. } = verdict {
+                if let JudgeVerdict::Fail {
+                    violations,
+                    reasoning,
+                    ..
+                } = verdict
+                {
                     primary_reasons.push(format!("Judge {}: {}", judge_id, reasoning));
-                    
+
                     for violation in violations {
                         required_changes.push(crate::types::RequiredChange {
                             priority: match violation.severity {
-                                crate::types::ViolationSeverity::Critical => crate::types::Priority::Critical,
-                                crate::types::ViolationSeverity::Major => crate::types::Priority::High,
-                                crate::types::ViolationSeverity::Minor => crate::types::Priority::Medium,
-                                crate::types::ViolationSeverity::Warning => crate::types::Priority::Low,
+                                crate::types::ViolationSeverity::Critical => {
+                                    crate::types::Priority::Critical
+                                }
+                                crate::types::ViolationSeverity::Major => {
+                                    crate::types::Priority::High
+                                }
+                                crate::types::ViolationSeverity::Minor => {
+                                    crate::types::Priority::Medium
+                                }
+                                crate::types::ViolationSeverity::Warning => {
+                                    crate::types::Priority::Low
+                                }
                             },
                             description: violation.description.clone(),
                             rationale: format!("Violation of rule: {}", violation.rule),
@@ -803,14 +824,23 @@ impl ConsensusCoordinator {
             let mut questions = Vec::new();
 
             for (judge_id, verdict) in verdicts {
-                if let JudgeVerdict::Uncertain { concerns, reasoning, recommendation, .. } = verdict {
+                if let JudgeVerdict::Uncertain {
+                    concerns,
+                    reasoning,
+                    recommendation,
+                    ..
+                } = verdict
+                {
                     questions.push(format!("Judge {}: {}", judge_id, reasoning));
-                    
+
                     for concern in concerns {
                         if let crate::types::Recommendation::Modify = recommendation {
                             required_changes.push(crate::types::RequiredChange {
                                 priority: crate::types::Priority::Medium,
-                                description: format!("Address concern in {}: {}", concern.area, concern.description),
+                                description: format!(
+                                    "Address concern in {}: {}",
+                                    concern.area, concern.description
+                                ),
                                 rationale: format!("Impact: {}", concern.impact),
                                 estimated_effort: concern.mitigation.clone(),
                             });
@@ -839,14 +869,20 @@ impl ConsensusCoordinator {
         } else if consensus_score < 0.7 {
             // Mixed consensus case - collect suggestions from all verdicts
             let mut required_changes = Vec::new();
-            
+
             for (judge_id, verdict) in verdicts {
                 if let JudgeVerdict::Pass { reasoning, .. } = verdict {
                     // Extract improvement suggestions from reasoning
-                    if reasoning.contains("improve") || reasoning.contains("enhance") || reasoning.contains("consider") {
+                    if reasoning.contains("improve")
+                        || reasoning.contains("enhance")
+                        || reasoning.contains("consider")
+                    {
                         required_changes.push(crate::types::RequiredChange {
                             priority: crate::types::Priority::Low,
-                            description: format!("Consider judge {} suggestion: {}", judge_id, reasoning),
+                            description: format!(
+                                "Consider judge {} suggestion: {}",
+                                judge_id, reasoning
+                            ),
                             rationale: "Mixed consensus indicates room for improvement".to_string(),
                             estimated_effort: None,
                         });
@@ -1146,15 +1182,15 @@ impl ConsensusCoordinator {
     fn get_active_evaluations_count(&self) -> u64 {
         // Track active evaluations by counting ongoing tasks
         let metrics = self.metrics.read().unwrap();
-        
+
         // Calculate active evaluations based on total and success metrics
         let total = metrics.total_evaluations;
         let successful = metrics.successful_evaluations;
-        
+
         // Active count = (total - completed) where completed ≈ successful + failed
         // Estimate: 10-30% of total are typically active
         let estimated_active = (total as f32 * 0.15) as u64;
-        
+
         // Minimum 1 if any evaluations, maximum 10
         estimated_active.min(10).max(if total > 0 { 1 } else { 0 })
     }

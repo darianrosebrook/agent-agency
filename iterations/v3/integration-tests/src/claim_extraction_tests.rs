@@ -108,7 +108,9 @@ impl ClaimExtractionIntegrationTests {
         let disambiguation_stage = self.initialize_disambiguation_stage().await?;
 
         // Test disambiguation
-        let disambiguation_result = self.test_disambiguation(&disambiguation_stage, &ambiguous_input).await?;
+        let disambiguation_result = self
+            .test_disambiguation(&disambiguation_stage, &ambiguous_input)
+            .await?;
         // assert!(!disambiguation_result.resolved_claims.is_empty());
         // assert!(disambiguation_result.confidence > 0.0);
 
@@ -137,7 +139,9 @@ impl ClaimExtractionIntegrationTests {
         let qualification_stage = self.initialize_qualification_stage().await?;
 
         // Test qualification
-        let qualification_result = self.test_qualification(&qualification_stage, &qualified_input).await?;
+        let qualification_result = self
+            .test_qualification(&qualification_stage, &qualified_input)
+            .await?;
         // let qualification_result = qualification_stage.process(&mixed_input).await?;
         // assert!(!qualification_result.verifiable_claims.is_empty());
         // assert!(!qualification_result.non_verifiable_claims.is_empty());
@@ -170,7 +174,9 @@ impl ClaimExtractionIntegrationTests {
         let decomposition_stage = self.initialize_decomposition_stage().await?;
 
         // Test decomposition
-        let decomposition_result = self.test_decomposition(&decomposition_stage, &complex_input).await?;
+        let decomposition_result = self
+            .test_decomposition(&decomposition_stage, &complex_input)
+            .await?;
         // let decomposition_result = decomposition_stage.process(&complex_input).await?;
         // assert!(!decomposition_result.atomic_claims.is_empty());
         // assert!(decomposition_result.atomic_claims.len() >= 4); // Should decompose into multiple atomic claims
@@ -221,7 +227,9 @@ impl ClaimExtractionIntegrationTests {
         let verification_stage = self.initialize_verification_stage().await?;
 
         // Test verification
-        let verification_result = self.test_verification(&verification_stage, &atomic_claims).await?;
+        let verification_result = self
+            .test_verification(&verification_stage, &atomic_claims)
+            .await?;
         // let verification_result = verification_stage.process(&atomic_claims).await?;
         // assert!(!verification_result.verified_claims.is_empty());
 
@@ -247,7 +255,9 @@ impl ClaimExtractionIntegrationTests {
         let pipeline = self.initialize_complete_pipeline().await?;
 
         // Test complete pipeline
-        let pipeline_result = self.test_complete_pipeline(&pipeline, &claim_extraction_input).await?;
+        let pipeline_result = self
+            .test_complete_pipeline(&pipeline, &claim_extraction_input)
+            .await?;
         // let pipeline_result = pipeline.process(&claim_extraction_input).await?;
         // assert!(!pipeline_result.verified_claims.is_empty());
         // assert!(pipeline_result.overall_confidence > 0.0);
@@ -285,7 +295,9 @@ impl ClaimExtractionIntegrationTests {
         let pipeline = self.initialize_error_handling_pipeline().await?;
 
         // Test error handling
-        let error_result = self.test_error_handling(&pipeline, &malformed_input).await?;
+        let error_result = self
+            .test_error_handling(&pipeline, &malformed_input)
+            .await?;
         // let result = pipeline.process(&invalid_input).await;
         // assert!(result.is_err());
 
@@ -334,7 +346,9 @@ mod tests {
     }
 
     // Claim extraction test implementation methods
-    async fn initialize_disambiguation_stage(&self) -> Result<MockDisambiguationStage, anyhow::Error> {
+    async fn initialize_disambiguation_stage(
+        &self,
+    ) -> Result<MockDisambiguationStage, anyhow::Error> {
         debug!("Initializing disambiguation stage for claim extraction test");
         // Simulate disambiguation stage initialization
         tokio::time::sleep(tokio::time::Duration::from_millis(80)).await;
@@ -344,17 +358,26 @@ mod tests {
         })
     }
 
-    async fn test_disambiguation(&self, stage: &MockDisambiguationStage, input: &serde_json::Value) -> Result<MockDisambiguationResult, anyhow::Error> {
+    async fn test_disambiguation(
+        &self,
+        stage: &MockDisambiguationStage,
+        input: &serde_json::Value,
+    ) -> Result<MockDisambiguationResult, anyhow::Error> {
         debug!("Testing disambiguation stage");
         // Simulate disambiguation testing
         tokio::time::sleep(tokio::time::Duration::from_millis(120)).await;
         Ok(MockDisambiguationResult {
-            resolved_claims: vec!["resolved_claim_1".to_string(), "resolved_claim_2".to_string()],
+            resolved_claims: vec![
+                "resolved_claim_1".to_string(),
+                "resolved_claim_2".to_string(),
+            ],
             confidence: 0.85,
         })
     }
 
-    async fn initialize_qualification_stage(&self) -> Result<MockQualificationStage, anyhow::Error> {
+    async fn initialize_qualification_stage(
+        &self,
+    ) -> Result<MockQualificationStage, anyhow::Error> {
         debug!("Initializing qualification stage for claim extraction test");
         // Simulate qualification stage initialization
         tokio::time::sleep(tokio::time::Duration::from_millis(90)).await;
@@ -364,7 +387,11 @@ mod tests {
         })
     }
 
-    async fn test_qualification(&self, stage: &MockQualificationStage, input: &serde_json::Value) -> Result<MockQualificationResult, anyhow::Error> {
+    async fn test_qualification(
+        &self,
+        stage: &MockQualificationStage,
+        input: &serde_json::Value,
+    ) -> Result<MockQualificationResult, anyhow::Error> {
         debug!("Testing qualification stage");
         // Simulate qualification testing
         tokio::time::sleep(tokio::time::Duration::from_millis(110)).await;
@@ -374,7 +401,9 @@ mod tests {
         })
     }
 
-    async fn initialize_decomposition_stage(&self) -> Result<MockDecompositionStage, anyhow::Error> {
+    async fn initialize_decomposition_stage(
+        &self,
+    ) -> Result<MockDecompositionStage, anyhow::Error> {
         debug!("Initializing decomposition stage for claim extraction test");
         // Simulate decomposition stage initialization
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -384,7 +413,11 @@ mod tests {
         })
     }
 
-    async fn test_decomposition(&self, stage: &MockDecompositionStage, input: &serde_json::Value) -> Result<MockDecompositionResult, anyhow::Error> {
+    async fn test_decomposition(
+        &self,
+        stage: &MockDecompositionStage,
+        input: &serde_json::Value,
+    ) -> Result<MockDecompositionResult, anyhow::Error> {
         debug!("Testing decomposition stage");
         // Simulate decomposition testing
         tokio::time::sleep(tokio::time::Duration::from_millis(130)).await;
@@ -408,16 +441,25 @@ mod tests {
         })
     }
 
-    async fn test_verification(&self, stage: &MockVerificationStage, claims: &[serde_json::Value]) -> Result<MockVerificationResult, anyhow::Error> {
+    async fn test_verification(
+        &self,
+        stage: &MockVerificationStage,
+        claims: &[serde_json::Value],
+    ) -> Result<MockVerificationResult, anyhow::Error> {
         debug!("Testing verification stage with {} claims", claims.len());
         // Simulate verification testing
         tokio::time::sleep(tokio::time::Duration::from_millis(140)).await;
         Ok(MockVerificationResult {
-            verified_claims: vec!["verified_claim_1".to_string(), "verified_claim_2".to_string()],
+            verified_claims: vec![
+                "verified_claim_1".to_string(),
+                "verified_claim_2".to_string(),
+            ],
         })
     }
 
-    async fn initialize_complete_pipeline(&self) -> Result<MockClaimExtractionPipeline, anyhow::Error> {
+    async fn initialize_complete_pipeline(
+        &self,
+    ) -> Result<MockClaimExtractionPipeline, anyhow::Error> {
         debug!("Initializing complete claim extraction pipeline");
         // Simulate complete pipeline initialization
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
@@ -428,17 +470,26 @@ mod tests {
         })
     }
 
-    async fn test_complete_pipeline(&self, pipeline: &MockClaimExtractionPipeline, input: &serde_json::Value) -> Result<MockPipelineResult, anyhow::Error> {
+    async fn test_complete_pipeline(
+        &self,
+        pipeline: &MockClaimExtractionPipeline,
+        input: &serde_json::Value,
+    ) -> Result<MockPipelineResult, anyhow::Error> {
         debug!("Testing complete claim extraction pipeline");
         // Simulate complete pipeline testing
         tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
         Ok(MockPipelineResult {
-            verified_claims: vec!["final_verified_claim_1".to_string(), "final_verified_claim_2".to_string()],
+            verified_claims: vec![
+                "final_verified_claim_1".to_string(),
+                "final_verified_claim_2".to_string(),
+            ],
             overall_confidence: 0.92,
         })
     }
 
-    async fn initialize_error_handling_pipeline(&self) -> Result<MockClaimExtractionPipeline, anyhow::Error> {
+    async fn initialize_error_handling_pipeline(
+        &self,
+    ) -> Result<MockClaimExtractionPipeline, anyhow::Error> {
         debug!("Initializing error handling pipeline for claim extraction test");
         // Simulate error handling pipeline initialization
         tokio::time::sleep(tokio::time::Duration::from_millis(85)).await;
@@ -449,7 +500,11 @@ mod tests {
         })
     }
 
-    async fn test_error_handling(&self, pipeline: &MockClaimExtractionPipeline, input: &serde_json::Value) -> Result<MockErrorResult, anyhow::Error> {
+    async fn test_error_handling(
+        &self,
+        pipeline: &MockClaimExtractionPipeline,
+        input: &serde_json::Value,
+    ) -> Result<MockErrorResult, anyhow::Error> {
         debug!("Testing error handling in claim extraction pipeline");
         // Simulate error handling testing
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;

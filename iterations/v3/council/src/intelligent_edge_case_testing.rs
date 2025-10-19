@@ -1053,7 +1053,10 @@ impl IntelligentEdgeCaseTesting {
     }
 
     /// Calculate actual coverage improvement for an edge case
-    pub async fn calculate_coverage_improvement(&self, edge_case: &IdentifiedEdgeCase) -> Result<f64> {
+    pub async fn calculate_coverage_improvement(
+        &self,
+        edge_case: &IdentifiedEdgeCase,
+    ) -> Result<f64> {
         // Calculate improvement based on edge case risk level and type
         let mut improvement = 0.0;
 
@@ -1129,7 +1132,10 @@ impl IntelligentEdgeCaseTesting {
     }
 
     /// Calculate generation confidence for an edge case
-    pub async fn calculate_generation_confidence(&self, edge_case: &IdentifiedEdgeCase) -> Result<f64> {
+    pub async fn calculate_generation_confidence(
+        &self,
+        edge_case: &IdentifiedEdgeCase,
+    ) -> Result<f64> {
         // Base confidence from the edge case probability score
         let mut confidence = edge_case.probability;
 
@@ -1570,18 +1576,18 @@ impl DynamicTestGenerator {
                 (
                     key,
                     TestDataWithMetadata {
-                data_type: match &value {
-                    serde_json::Value::String(_) => DataType::String,
-                    serde_json::Value::Number(n) if n.is_i64() => DataType::Integer,
-                    serde_json::Value::Number(_) => DataType::Float,
-                    serde_json::Value::Bool(_) => DataType::Boolean,
-                    serde_json::Value::Array(_) => DataType::Array,
-                    serde_json::Value::Object(_) => DataType::Object,
-                    serde_json::Value::Null => DataType::Null,
-                },
-                value,
-                constraints: vec![],
-                edge_case_flags: vec![],
+                        data_type: match &value {
+                            serde_json::Value::String(_) => DataType::String,
+                            serde_json::Value::Number(n) if n.is_i64() => DataType::Integer,
+                            serde_json::Value::Number(_) => DataType::Float,
+                            serde_json::Value::Bool(_) => DataType::Boolean,
+                            serde_json::Value::Array(_) => DataType::Array,
+                            serde_json::Value::Object(_) => DataType::Object,
+                            serde_json::Value::Null => DataType::Null,
+                        },
+                        value,
+                        constraints: vec![],
+                        edge_case_flags: vec![],
                     },
                 )
             })
@@ -1742,7 +1748,7 @@ impl EdgeCaseAnalyzer {
                 RequirementType::Functional => {
                     // String boundary conditions
                     edge_cases.push(IdentifiedEdgeCase {
-            edge_case_id: Uuid::new_v4(),
+                        edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Empty string input".to_string(),
                         edge_case_type: EdgeCaseType::BoundaryCondition,
                         description: format!(
@@ -1895,12 +1901,12 @@ impl EdgeCaseAnalyzer {
                     edge_cases.push(IdentifiedEdgeCase {
                         edge_case_id: Uuid::new_v4(),
                         edge_case_name: "Null object input".to_string(),
-            edge_case_type: EdgeCaseType::NullHandling,
+                        edge_case_type: EdgeCaseType::NullHandling,
                         description: format!("Input '{}' with null object", input.requirement_name),
-            probability: 0.7,
-            impact: 0.8,
-            risk_level: RiskLevel::High,
-            detection_method: DetectionMethod::StaticAnalysis,
+                        probability: 0.7,
+                        impact: 0.8,
+                        risk_level: RiskLevel::High,
+                        detection_method: DetectionMethod::StaticAnalysis,
                     });
 
                     // Missing required fields
@@ -2369,9 +2375,9 @@ impl EdgeCaseAnalyzer {
 
         RiskAssessment {
             overall_risk_score,
-                risk_distribution,
+            risk_distribution,
             high_risk_areas,
-                risk_trends: Vec::new(),
+            risk_trends: Vec::new(),
         }
     }
 
@@ -2384,11 +2390,11 @@ impl EdgeCaseAnalyzer {
 
         // Add null input tests strategy
         strategies.push(MitigationStrategy {
-                strategy_name: "Add null input tests".to_string(),
-                strategy_type: StrategyType::Test,
-                effectiveness: 0.9,
-                implementation_cost: 0.3,
-                description: "Generate comprehensive null input test cases".to_string(),
+            strategy_name: "Add null input tests".to_string(),
+            strategy_type: StrategyType::Test,
+            effectiveness: 0.9,
+            implementation_cost: 0.3,
+            description: "Generate comprehensive null input test cases".to_string(),
         });
 
         // Add boundary value tests strategy
@@ -2427,15 +2433,15 @@ impl EdgeCaseAnalyzer {
         };
 
         // Adjust based on probability and impact
-        let adjusted_improvement = base_improvement * (edge_case.probability as f32) * 
-                                   (edge_case.impact as f32);
+        let adjusted_improvement =
+            base_improvement * (edge_case.probability as f32) * (edge_case.impact as f32);
 
         Ok(adjusted_improvement.min(1.0_f32))
     }
 
     /// Calculate edge case coverage metric
     async fn calculate_edge_case_coverage(
-        &self, 
+        &self,
         edge_case: &IdentifiedEdgeCase,
         _edge_case_type: &EdgeCaseType,
     ) -> Result<f32> {
@@ -3232,7 +3238,7 @@ impl CoverageAnalyzer {
         for gap in gaps {
             let recommendation = match gap.gap_type {
                 GapType::EdgeCase => CoverageRecommendation {
-                recommendation_type: RecommendationType::AddTests,
+                    recommendation_type: RecommendationType::AddTests,
                     description: "Add edge case and boundary value tests".to_string(),
                     expected_coverage_improvement: 0.25,
                     implementation_effort: ImplementationEffort::High,
@@ -3241,8 +3247,8 @@ impl CoverageAnalyzer {
                 _ => CoverageRecommendation {
                     recommendation_type: RecommendationType::ImproveCode,
                     description: "Address coverage gap in code".to_string(),
-                expected_coverage_improvement: 0.1,
-                implementation_effort: ImplementationEffort::Medium,
+                    expected_coverage_improvement: 0.1,
+                    implementation_effort: ImplementationEffort::Medium,
                     priority: Priority::Medium,
                 },
             };
@@ -4050,12 +4056,15 @@ impl ScenarioGenerator {
                         ),
                         input_data: {
                             let mut data = HashMap::new();
-                            data.insert(generator.parameter_name.clone(), TestDataWithMetadata {
-                                data_type: DataType::String,
-                                value: serde_json::json!(boundary_value.to_string()),
-                                constraints: Vec::new(),
-                                edge_case_flags: Vec::new(),
-                            });
+                            data.insert(
+                                generator.parameter_name.clone(),
+                                TestDataWithMetadata {
+                                    data_type: DataType::String,
+                                    value: serde_json::json!(boundary_value.to_string()),
+                                    constraints: Vec::new(),
+                                    edge_case_flags: Vec::new(),
+                                },
+                            );
                             data
                         },
                         execution_context: ExecutionContext::default(),
@@ -4078,7 +4087,10 @@ impl ScenarioGenerator {
                         .assess_boundary_risk(boundary_value, &generator.parameter_type),
                     expected_behavior: self
                         .get_boundary_expected_behavior(boundary_value, &generator.parameter_type),
-                    generation_reason: format!("Generated boundary test for parameter {} with value {}", generator.parameter_name, boundary_value),
+                    generation_reason: format!(
+                        "Generated boundary test for parameter {} with value {}",
+                        generator.parameter_name, boundary_value
+                    ),
                     confidence_score: 0.8, // Default confidence for boundary tests
                 };
                 tests.push(test);
@@ -4183,7 +4195,9 @@ impl ScenarioGenerator {
                                     "stress_type".to_string(),
                                     TestDataWithMetadata {
                                         data_type: DataType::String,
-                                        value: serde_json::json!(self.resource_type_name(&generator.resource_type)),
+                                        value: serde_json::json!(
+                                            self.resource_type_name(&generator.resource_type)
+                                        ),
                                         constraints: Vec::new(),
                                         edge_case_flags: Vec::new(),
                                     },
@@ -4255,14 +4269,8 @@ impl ScenarioGenerator {
                     for value1 in &parameters[i].values {
                         for value2 in &parameters[j].values {
                             let mut params = HashMap::new();
-                            params.insert(
-                                parameters[i].name.clone(),
-                                value1.clone(),
-                            );
-                            params.insert(
-                                parameters[j].name.clone(),
-                                value2.clone(),
-                            );
+                            params.insert(parameters[i].name.clone(), value1.clone());
+                            params.insert(parameters[j].name.clone(), value2.clone());
 
                             combinations.push(TestCombination {
                                 name: format!(
@@ -4286,18 +4294,9 @@ impl ScenarioGenerator {
                             for value2 in &parameters[j].values {
                                 for value3 in &parameters[k].values {
                                     let mut params = HashMap::new();
-                                    params.insert(
-                                        parameters[i].name.clone(),
-                                        value1.clone(),
-                                    );
-                                    params.insert(
-                                        parameters[j].name.clone(),
-                                        value2.clone(),
-                                    );
-                                    params.insert(
-                                        parameters[k].name.clone(),
-                                        value3.clone(),
-                                    );
+                                    params.insert(parameters[i].name.clone(), value1.clone());
+                                    params.insert(parameters[j].name.clone(), value2.clone());
+                                    params.insert(parameters[k].name.clone(), value3.clone());
 
                                     combinations.push(TestCombination {
                                         name: format!(
@@ -4322,9 +4321,7 @@ impl ScenarioGenerator {
                                             value3
                                         ),
                                         parameters: HashMap::from_iter(
-                                            params.into_iter().map(|(k, v)| {
-                                                (k, v.to_string())
-                                            })
+                                            params.into_iter().map(|(k, v)| (k, v.to_string())),
                                         ),
                                     });
                                 }

@@ -52,17 +52,17 @@ impl ClaimExtractor {
         self.load_default_extraction_patterns();
         self.load_default_verification_sources();
         self.initialize_pattern_indexes();
-        
+
         // 2. Pattern validation: Validate loaded patterns for correctness
         self.validate_pattern_formats();
         self.check_pattern_compatibility();
         self.detect_pattern_errors();
-        
+
         // 3. Pattern initialization: Initialize patterns in blocking context
         self.initialize_construction_phase_patterns();
         self.handle_initialization_errors();
         self.manage_pattern_lifecycle();
-        
+
         // 4. Pattern optimization: Optimize pattern initialization performance
         self.optimize_pattern_loading();
         self.handle_large_scale_operations();
@@ -765,18 +765,18 @@ impl ClaimExtractor {
         // 1. Context timeline integration: Integrate with context timeline for temporal resolution
         let timeline_resolution = self.integrate_context_timeline(expression, context);
         let temporal_validation = self.validate_temporal_resolution(&timeline_resolution);
-        
+
         // 2. Temporal parsing: Implement advanced temporal parsing
         let parsed_expression = self.parse_complex_temporal_expression(expression);
         let parsing_validation = self.validate_temporal_parsing(&parsed_expression);
-        
+
         // 3. Context awareness: Implement context-aware temporal resolution
         let context_resolution = self.resolve_context_aware_temporal(expression, context);
         let context_validation = self.validate_context_integration(&context_resolution);
-        
+
         // 4. Temporal optimization: Optimize temporal resolution performance
         let optimized_resolution = self.optimize_temporal_resolution(&context_resolution);
-        
+
         // Return the most accurate resolution based on validation results
         if temporal_validation.is_valid && context_validation.is_valid {
             optimized_resolution
@@ -1317,7 +1317,11 @@ impl ClaimLearningSystem for ClaimExtractor {
     }
 
     // Temporal resolution implementation methods
-    fn integrate_context_timeline(&self, expression: &str, _context: &ConversationContext) -> String {
+    fn integrate_context_timeline(
+        &self,
+        expression: &str,
+        _context: &ConversationContext,
+    ) -> String {
         // Simulate context timeline integration
         tracing::debug!("Integrating context timeline for: {}", expression);
         format!("timeline_{}", expression)
@@ -1341,7 +1345,11 @@ impl ClaimLearningSystem for ClaimExtractor {
         TemporalValidation { is_valid: true }
     }
 
-    fn resolve_context_aware_temporal(&self, expression: &str, _context: &ConversationContext) -> String {
+    fn resolve_context_aware_temporal(
+        &self,
+        expression: &str,
+        _context: &ConversationContext,
+    ) -> String {
         // Simulate context-aware temporal resolution
         tracing::debug!("Resolving context-aware temporal: {}", expression);
         format!("context_{}", expression)

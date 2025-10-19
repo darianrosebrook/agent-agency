@@ -1,9 +1,9 @@
 //! Comprehensive unit tests for the Council System
-//! 
+//!
 //! Tests all judge types, consensus coordination, and evidence enrichment
 
-use crate::types::*;
 use crate::coordinator::ConsensusCoordinator;
+use crate::types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -22,25 +22,37 @@ mod judge_verdict_tests {
         let verdict = judge.evaluate(&task_spec, &evidence).await?;
 
         // Validate verdict reasoning
-        assert!(!verdict.reasoning.is_empty(), "Constitutional judge should provide reasoning");
-        assert!(verdict.confidence >= 0.0 && verdict.confidence <= 1.0, "Confidence should be between 0 and 1");
-        
+        assert!(
+            !verdict.reasoning.is_empty(),
+            "Constitutional judge should provide reasoning"
+        );
+        assert!(
+            verdict.confidence >= 0.0 && verdict.confidence <= 1.0,
+            "Confidence should be between 0 and 1"
+        );
+
         // Validate constitutional compliance
         match verdict.decision {
             VerdictDecision::Accept => {
-                assert!(verdict.reasoning.contains("constitutional") || 
-                       verdict.reasoning.contains("compliant"), 
-                       "Accept verdict should mention constitutional compliance");
+                assert!(
+                    verdict.reasoning.contains("constitutional")
+                        || verdict.reasoning.contains("compliant"),
+                    "Accept verdict should mention constitutional compliance"
+                );
             }
             VerdictDecision::Reject => {
-                assert!(verdict.reasoning.contains("violation") || 
-                       verdict.reasoning.contains("non-compliant"), 
-                       "Reject verdict should mention constitutional violations");
+                assert!(
+                    verdict.reasoning.contains("violation")
+                        || verdict.reasoning.contains("non-compliant"),
+                    "Reject verdict should mention constitutional violations"
+                );
             }
             VerdictDecision::RequireModification => {
-                assert!(verdict.reasoning.contains("modification") || 
-                       verdict.reasoning.contains("improvement"), 
-                       "Modification verdict should mention required changes");
+                assert!(
+                    verdict.reasoning.contains("modification")
+                        || verdict.reasoning.contains("improvement"),
+                    "Modification verdict should mention required changes"
+                );
             }
         }
 
@@ -57,15 +69,31 @@ mod judge_verdict_tests {
         let verdict = judge.evaluate(&task_spec, &evidence).await?;
 
         // Validate technical assessment
-        assert!(!verdict.reasoning.is_empty(), "Technical judge should provide reasoning");
-        assert!(verdict.confidence >= 0.0 && verdict.confidence <= 1.0, "Confidence should be between 0 and 1");
-        
-        // Validate technical focus
-        let technical_keywords = ["code", "implementation", "algorithm", "performance", "security", "architecture"];
-        let has_technical_focus = technical_keywords.iter().any(|keyword| 
-            verdict.reasoning.to_lowercase().contains(keyword)
+        assert!(
+            !verdict.reasoning.is_empty(),
+            "Technical judge should provide reasoning"
         );
-        assert!(has_technical_focus, "Technical judge reasoning should focus on technical aspects");
+        assert!(
+            verdict.confidence >= 0.0 && verdict.confidence <= 1.0,
+            "Confidence should be between 0 and 1"
+        );
+
+        // Validate technical focus
+        let technical_keywords = [
+            "code",
+            "implementation",
+            "algorithm",
+            "performance",
+            "security",
+            "architecture",
+        ];
+        let has_technical_focus = technical_keywords
+            .iter()
+            .any(|keyword| verdict.reasoning.to_lowercase().contains(keyword));
+        assert!(
+            has_technical_focus,
+            "Technical judge reasoning should focus on technical aspects"
+        );
 
         Ok(())
     }
@@ -80,15 +108,31 @@ mod judge_verdict_tests {
         let verdict = judge.evaluate(&task_spec, &evidence).await?;
 
         // Validate quality assessment
-        assert!(!verdict.reasoning.is_empty(), "Quality judge should provide reasoning");
-        assert!(verdict.confidence >= 0.0 && verdict.confidence <= 1.0, "Confidence should be between 0 and 1");
-        
-        // Validate quality focus
-        let quality_keywords = ["quality", "standards", "best practices", "maintainability", "readability", "testing"];
-        let has_quality_focus = quality_keywords.iter().any(|keyword| 
-            verdict.reasoning.to_lowercase().contains(keyword)
+        assert!(
+            !verdict.reasoning.is_empty(),
+            "Quality judge should provide reasoning"
         );
-        assert!(has_quality_focus, "Quality judge reasoning should focus on quality aspects");
+        assert!(
+            verdict.confidence >= 0.0 && verdict.confidence <= 1.0,
+            "Confidence should be between 0 and 1"
+        );
+
+        // Validate quality focus
+        let quality_keywords = [
+            "quality",
+            "standards",
+            "best practices",
+            "maintainability",
+            "readability",
+            "testing",
+        ];
+        let has_quality_focus = quality_keywords
+            .iter()
+            .any(|keyword| verdict.reasoning.to_lowercase().contains(keyword));
+        assert!(
+            has_quality_focus,
+            "Quality judge reasoning should focus on quality aspects"
+        );
 
         Ok(())
     }
@@ -103,15 +147,31 @@ mod judge_verdict_tests {
         let verdict = judge.evaluate(&task_spec, &evidence).await?;
 
         // Validate integration assessment
-        assert!(!verdict.reasoning.is_empty(), "Integration judge should provide reasoning");
-        assert!(verdict.confidence >= 0.0 && verdict.confidence <= 1.0, "Confidence should be between 0 and 1");
-        
-        // Validate integration focus
-        let integration_keywords = ["integration", "compatibility", "interface", "api", "dependencies", "system"];
-        let has_integration_focus = integration_keywords.iter().any(|keyword| 
-            verdict.reasoning.to_lowercase().contains(keyword)
+        assert!(
+            !verdict.reasoning.is_empty(),
+            "Integration judge should provide reasoning"
         );
-        assert!(has_integration_focus, "Integration judge reasoning should focus on integration aspects");
+        assert!(
+            verdict.confidence >= 0.0 && verdict.confidence <= 1.0,
+            "Confidence should be between 0 and 1"
+        );
+
+        // Validate integration focus
+        let integration_keywords = [
+            "integration",
+            "compatibility",
+            "interface",
+            "api",
+            "dependencies",
+            "system",
+        ];
+        let has_integration_focus = integration_keywords
+            .iter()
+            .any(|keyword| verdict.reasoning.to_lowercase().contains(keyword));
+        assert!(
+            has_integration_focus,
+            "Integration judge reasoning should focus on integration aspects"
+        );
 
         Ok(())
     }
@@ -121,21 +181,29 @@ mod judge_verdict_tests {
     async fn test_evidence_enrichment_integration() -> Result<()> {
         let enrichment = EvidenceEnrichment::new();
         let original_evidence = create_test_evidence();
-        
+
         let enriched_evidence = enrichment.enrich_evidence(&original_evidence).await?;
 
         // Validate evidence enrichment
-        assert!(enriched_evidence.sources.len() >= original_evidence.sources.len(), 
-               "Enriched evidence should have same or more sources");
-        assert!(enriched_evidence.confidence >= original_evidence.confidence, 
-               "Enriched evidence should have same or higher confidence");
-        
+        assert!(
+            enriched_evidence.sources.len() >= original_evidence.sources.len(),
+            "Enriched evidence should have same or more sources"
+        );
+        assert!(
+            enriched_evidence.confidence >= original_evidence.confidence,
+            "Enriched evidence should have same or higher confidence"
+        );
+
         // Validate source diversity
-        let source_types: std::collections::HashSet<_> = enriched_evidence.sources
+        let source_types: std::collections::HashSet<_> = enriched_evidence
+            .sources
             .iter()
             .map(|s| s.source_type.clone())
             .collect();
-        assert!(source_types.len() > 1, "Enriched evidence should have diverse source types");
+        assert!(
+            source_types.len() > 1,
+            "Enriched evidence should have diverse source types"
+        );
 
         Ok(())
     }
@@ -154,10 +222,15 @@ mod consensus_coordinator_tests {
         let consensus = coordinator.build_consensus(&verdicts).await?;
 
         // Validate consensus building
-        assert!(consensus.consensus_score >= 0.0 && consensus.consensus_score <= 1.0, 
-               "Consensus score should be between 0 and 1");
-        assert!(!consensus.final_decision.is_empty(), "Final decision should not be empty");
-        
+        assert!(
+            consensus.consensus_score >= 0.0 && consensus.consensus_score <= 1.0,
+            "Consensus score should be between 0 and 1"
+        );
+        assert!(
+            !consensus.final_decision.is_empty(),
+            "Final decision should not be empty"
+        );
+
         // Validate weighted voting
         let total_weight: f64 = verdicts.iter().map(|v| v.judge_weight).sum();
         assert!(total_weight > 0.0, "Total judge weights should be positive");
@@ -169,18 +242,22 @@ mod consensus_coordinator_tests {
     #[tokio::test]
     async fn test_consensus_score_calculations() -> Result<()> {
         let coordinator = ConsensusCoordinator::new();
-        
+
         // Test with unanimous verdicts
         let unanimous_verdicts = create_unanimous_verdicts();
         let unanimous_consensus = coordinator.build_consensus(&unanimous_verdicts).await?;
-        assert!(unanimous_consensus.consensus_score > 0.8, 
-               "Unanimous verdicts should have high consensus score");
+        assert!(
+            unanimous_consensus.consensus_score > 0.8,
+            "Unanimous verdicts should have high consensus score"
+        );
 
         // Test with split verdicts
         let split_verdicts = create_split_verdicts();
         let split_consensus = coordinator.build_consensus(&split_verdicts).await?;
-        assert!(split_consensus.consensus_score < 0.8, 
-               "Split verdicts should have lower consensus score");
+        assert!(
+            split_consensus.consensus_score < 0.8,
+            "Split verdicts should have lower consensus score"
+        );
 
         Ok(())
     }
@@ -189,16 +266,26 @@ mod consensus_coordinator_tests {
     #[tokio::test]
     async fn test_debate_protocol_triggers() -> Result<()> {
         let coordinator = ConsensusCoordinator::new();
-        
+
         // Test low consensus triggers debate
         let low_consensus_verdicts = create_low_consensus_verdicts();
-        let should_debate = coordinator.should_trigger_debate(&low_consensus_verdicts).await?;
-        assert!(should_debate, "Low consensus should trigger debate protocol");
+        let should_debate = coordinator
+            .should_trigger_debate(&low_consensus_verdicts)
+            .await?;
+        assert!(
+            should_debate,
+            "Low consensus should trigger debate protocol"
+        );
 
         // Test high consensus doesn't trigger debate
         let high_consensus_verdicts = create_high_consensus_verdicts();
-        let should_not_debate = coordinator.should_trigger_debate(&high_consensus_verdicts).await?;
-        assert!(!should_not_debate, "High consensus should not trigger debate protocol");
+        let should_not_debate = coordinator
+            .should_trigger_debate(&high_consensus_verdicts)
+            .await?;
+        assert!(
+            !should_not_debate,
+            "High consensus should not trigger debate protocol"
+        );
 
         Ok(())
     }
@@ -217,13 +304,21 @@ mod evidence_enrichment_tests {
         let enriched = enrichment.enrich_evidence(&evidence).await?;
 
         // Validate claim extraction integration
-        assert!(enriched.claims.len() > 0, "Enriched evidence should have extracted claims");
-        
+        assert!(
+            enriched.claims.len() > 0,
+            "Enriched evidence should have extracted claims"
+        );
+
         // Validate claim quality
         for claim in &enriched.claims {
-            assert!(!claim.content.is_empty(), "Claim content should not be empty");
-            assert!(claim.confidence >= 0.0 && claim.confidence <= 1.0, 
-                   "Claim confidence should be between 0 and 1");
+            assert!(
+                !claim.content.is_empty(),
+                "Claim content should not be empty"
+            );
+            assert!(
+                claim.confidence >= 0.0 && claim.confidence <= 1.0,
+                "Claim confidence should be between 0 and 1"
+            );
         }
 
         Ok(())
@@ -233,16 +328,26 @@ mod evidence_enrichment_tests {
     #[tokio::test]
     async fn test_evidence_confidence_calculations() -> Result<()> {
         let enrichment = EvidenceEnrichment::new();
-        
+
         // Test with high-quality sources
         let high_quality_evidence = create_high_quality_evidence();
-        let high_confidence = enrichment.calculate_evidence_confidence(&high_quality_evidence).await?;
-        assert!(high_confidence > 0.7, "High-quality evidence should have high confidence");
+        let high_confidence = enrichment
+            .calculate_evidence_confidence(&high_quality_evidence)
+            .await?;
+        assert!(
+            high_confidence > 0.7,
+            "High-quality evidence should have high confidence"
+        );
 
         // Test with low-quality sources
         let low_quality_evidence = create_low_quality_evidence();
-        let low_confidence = enrichment.calculate_evidence_confidence(&low_quality_evidence).await?;
-        assert!(low_confidence < 0.5, "Low-quality evidence should have low confidence");
+        let low_confidence = enrichment
+            .calculate_evidence_confidence(&low_quality_evidence)
+            .await?;
+        assert!(
+            low_confidence < 0.5,
+            "Low-quality evidence should have low confidence"
+        );
 
         Ok(())
     }
@@ -251,16 +356,26 @@ mod evidence_enrichment_tests {
     #[tokio::test]
     async fn test_evidence_source_diversity_scoring() -> Result<()> {
         let enrichment = EvidenceEnrichment::new();
-        
+
         // Test diverse sources
         let diverse_evidence = create_diverse_evidence();
-        let diversity_score = enrichment.calculate_source_diversity(&diverse_evidence).await?;
-        assert!(diversity_score > 0.7, "Diverse evidence sources should have high diversity score");
+        let diversity_score = enrichment
+            .calculate_source_diversity(&diverse_evidence)
+            .await?;
+        assert!(
+            diversity_score > 0.7,
+            "Diverse evidence sources should have high diversity score"
+        );
 
         // Test single source
         let single_source_evidence = create_single_source_evidence();
-        let single_diversity_score = enrichment.calculate_source_diversity(&single_source_evidence).await?;
-        assert!(single_diversity_score < 0.3, "Single source evidence should have low diversity score");
+        let single_diversity_score = enrichment
+            .calculate_source_diversity(&single_source_evidence)
+            .await?;
+        assert!(
+            single_diversity_score < 0.3,
+            "Single source evidence should have low diversity score"
+        );
 
         Ok(())
     }

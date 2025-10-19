@@ -22,11 +22,7 @@ impl Default for FileWatcherConfig {
         Self {
             debounce_ms: 1000,
             size_stability_check_ms: 2000,
-            ignore_patterns: vec![
-                "*.tmp".to_string(),
-                ".*".to_string(),
-                "*/.git".to_string(),
-            ],
+            ignore_patterns: vec!["*.tmp".to_string(), ".*".to_string(), "*/.git".to_string()],
         }
     }
 }
@@ -54,11 +50,7 @@ impl FileWatcher {
     }
 
     /// Start watching directory and emit file events
-    pub async fn watch<F>(
-        &mut self,
-        root: &Path,
-        callback: F,
-    ) -> Result<()>
+    pub async fn watch<F>(&mut self, root: &Path, callback: F) -> Result<()>
     where
         F: Fn(FileEvent) + Send + 'static,
     {
@@ -78,12 +70,7 @@ impl FileWatcher {
 
             loop {
                 // Check for channel messages with timeout
-                match tokio::time::timeout(
-                    Duration::from_millis(debounce_ms),
-                    rx.recv(),
-                )
-                .await
-                {
+                match tokio::time::timeout(Duration::from_millis(debounce_ms), rx.recv()).await {
                     Ok(Some(event)) => {
                         // Add to pending events
                         pending.insert(
@@ -129,10 +116,7 @@ impl FileWatcher {
                                     timestamp: chrono::Utc::now(),
                                 };
 
-                                debug!(
-                                    "Emitting file event: {:?} ({} bytes)",
-                                    path, file_size
-                                );
+                                debug!("Emitting file event: {:?} ({} bytes)", path, file_size);
 
                                 callback(file_event);
                             }
@@ -160,11 +144,7 @@ impl FileWatcher {
     }
 
     /// Scan directory for matching files (non-recursive to avoid async recursion issues)
-    async fn scan_directory(
-        &self,
-        root: &Path,
-        tx: &mpsc::Sender<FileEvent>,
-    ) -> Result<()> {
+    async fn scan_directory(&self, root: &Path, tx: &mpsc::Sender<FileEvent>) -> Result<()> {
         debug!("Scanning directory: {:?}", root);
 
         let mut dirs_to_scan = vec![root.to_path_buf()];
@@ -178,7 +158,8 @@ impl FileWatcher {
                 let entry = entry?;
                 let path = entry.path();
 
-                if path.is_file() && !Self::should_ignore_file(&path, &self.config.ignore_patterns) {
+                if path.is_file() && !Self::should_ignore_file(&path, &self.config.ignore_patterns)
+                {
                     if let Some(ingestor_type) = Self::get_ingestor_type(&path) {
                         if let Ok(metadata) = std::fs::metadata(&path) {
                             let file_event = FileEvent {
@@ -192,7 +173,9 @@ impl FileWatcher {
                             let _ = tx.send(file_event).await;
                         }
                     }
-                } else if path.is_dir() && !Self::should_ignore_file(&path, &self.config.ignore_patterns) {
+                } else if path.is_dir()
+                    && !Self::should_ignore_file(&path, &self.config.ignore_patterns)
+                {
                     // Queue directory for scanning
                     dirs_to_scan.push(path);
                 }
@@ -313,11 +296,7 @@ mod tests {
 
     #[test]
     fn test_should_ignore() {
-        let ignore_patterns = vec![
-            "*.tmp".to_string(),
-            ".*".to_string(),
-            "*/.git".to_string(),
-        ];
+        let ignore_patterns = vec!["*.tmp".to_string(), ".*".to_string(), "*/.git".to_string()];
         assert!(FileWatcher::should_ignore_file(
             Path::new(".gitignore"),
             &ignore_patterns

@@ -38,11 +38,7 @@ impl VideoIngestor {
     }
 
     /// Ingest video file and extract frames, audio, and speech
-    pub async fn ingest(
-        &self,
-        path: &Path,
-        project_scope: Option<&str>,
-    ) -> Result<IngestResult> {
+    pub async fn ingest(&self, path: &Path, project_scope: Option<&str>) -> Result<IngestResult> {
         tracing::debug!("Ingesting video from: {:?}", path);
 
         // Compute SHA256
@@ -117,11 +113,7 @@ impl SceneDetector {
 
 impl FrameSampler {
     /// Sample best frame from window of frames
-    pub fn select_best_frame(
-        &self,
-        _frames: &[Vec<u8>],
-        _quality_scores: &[f32],
-    ) -> Result<usize> {
+    pub fn select_best_frame(&self, _frames: &[Vec<u8>], _quality_scores: &[f32]) -> Result<usize> {
         // TODO: PLACEHOLDER - Select highest quality frame in window
         Ok(0)
     }

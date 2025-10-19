@@ -111,8 +111,12 @@ impl MultiTenantManager {
 
         // Implement tenant database validation
         let validation_result = self.validate_tenant_database(tenant_id).await?;
-        let cached_validation = self.cache_tenant_validation(tenant_id, &validation_result).await?;
-        let security_audit = self.audit_tenant_validation(tenant_id, &validation_result).await?;
+        let cached_validation = self
+            .cache_tenant_validation(tenant_id, &validation_result)
+            .await?;
+        let security_audit = self
+            .audit_tenant_validation(tenant_id, &validation_result)
+            .await?;
 
         // Cache successful validation
         self.tenant_cache.insert(
@@ -384,8 +388,10 @@ impl MultiTenantManager {
             }
         } else {
             // Fallback: check cached contexts using in-memory cache
-            let expired_count = self.check_in_memory_cache_retention(tenant_id, oldest_allowed).await?;
-            
+            let expired_count = self
+                .check_in_memory_cache_retention(tenant_id, oldest_allowed)
+                .await?;
+
             if expired_count > 0 {
                 warn!(
                     "Tenant {} has {} contexts older than retention limit ({} hours) in cache",
@@ -428,14 +434,19 @@ impl MultiTenantManager {
         // Check if database client is available
         if let Some(db_client) = &self.database_client {
             // Query database for current context counts
-            let context_count = self.query_database_context_count(tenant_id, db_client).await?;
-            
+            let context_count = self
+                .query_database_context_count(tenant_id, db_client)
+                .await?;
+
             // Validate context count accuracy
-            let validated_count = self.validate_context_count(tenant_id, context_count).await?;
-            
+            let validated_count = self
+                .validate_context_count(tenant_id, context_count)
+                .await?;
+
             // Update context count cache for performance optimization
-            self.update_context_count_cache(tenant_id, validated_count).await?;
-            
+            self.update_context_count_cache(tenant_id, validated_count)
+                .await?;
+
             Ok(validated_count)
         } else {
             // Fallback: use cached context count
@@ -443,7 +454,7 @@ impl MultiTenantManager {
             Ok(cached_count)
         }
     }
-    
+
     /// Validate tenant in database
     async fn validate_tenant_database(&self, tenant_id: &str) -> Result<TenantValidationResult> {
         let mut validation = TenantValidationResult {
@@ -453,7 +464,7 @@ impl MultiTenantManager {
             last_validated: chrono::Utc::now(),
             validation_errors: Vec::new(),
         };
-        
+
         // Check if database client is available
         if let Some(db_client) = &self.database_client {
             // Query tenant table for existence and status
@@ -462,11 +473,19 @@ impl MultiTenantManager {
                 FROM tenants
                 WHERE tenant_id = $1
             "#;
-            
-            match sqlx::query_as::<_, (String, String, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>)>(query)
-                .bind(tenant_id)
-                .fetch_one(db_client.pool())
-                .await
+
+            match sqlx::query_as::<
+                _,
+                (
+                    String,
+                    String,
+                    chrono::DateTime<chrono::Utc>,
+                    chrono::DateTime<chrono::Utc>,
+                ),
+            >(query)
+            .bind(tenant_id)
+            .fetch_one(db_client.pool())
+            .await
             {
                 Ok((id, status_str, created_at, updated_at)) => {
                     validation.exists = true;
@@ -476,28 +495,36 @@ impl MultiTenantManager {
                         "inactive" => TenantStatus::Inactive,
                         _ => TenantStatus::Unknown,
                     };
-                    
+
                     // Check if tenant is recently updated (within last 24 hours)
                     let now = chrono::Utc::now();
                     let hours_since_update = (now - updated_at).num_hours();
                     if hours_since_update > 24 {
-                        validation.validation_errors.push("Tenant not recently updated".to_string());
+                        validation
+                            .validation_errors
+                            .push("Tenant not recently updated".to_string());
                     }
-                },
+                }
                 Err(sqlx::Error::RowNotFound) => {
-                    validation.validation_errors.push("Tenant not found in database".to_string());
-                },
+                    validation
+                        .validation_errors
+                        .push("Tenant not found in database".to_string());
+                }
                 Err(e) => {
-                    validation.validation_errors.push(format!("Database query error: {}", e));
+                    validation
+                        .validation_errors
+                        .push(format!("Database query error: {}", e));
                 }
             }
         } else {
-            validation.validation_errors.push("Database client not available".to_string());
+            validation
+                .validation_errors
+                .push("Database client not available".to_string());
         }
-        
+
         Ok(validation)
     }
-    
+
     /// Cache tenant validation result
     async fn cache_tenant_validation(
         &self,
@@ -510,7 +537,7 @@ impl MultiTenantManager {
             cached_at: chrono::Utc::now(),
             cache_ttl: 300, // 5 minutes
         };
-        
+
         // Store in cache with TTL
         self.tenant_cache.insert(
             tenant_id.to_string(),
@@ -523,10 +550,10 @@ impl MultiTenantManager {
                 storage_usage: 0, // Will be updated separately
             },
         );
-        
+
         Ok(cached)
     }
-    
+
     /// Audit tenant validation for security compliance
     async fn audit_tenant_validation(
         &self,
@@ -540,7 +567,7 @@ impl MultiTenantManager {
             compliance_status: ComplianceStatus::Unknown,
             audit_trail: Vec::new(),
         };
-        
+
         // Security check 1: Tenant ID format validation
         if self.is_valid_tenant_id(tenant_id) {
             audit.security_checks.push(SecurityCheck {
@@ -555,7 +582,7 @@ impl MultiTenantManager {
                 details: "Tenant ID format is invalid".to_string(),
             });
         }
-        
+
         // Security check 2: Tenant status validation
         match validation_result.status {
             TenantStatus::Active => {
@@ -564,21 +591,21 @@ impl MultiTenantManager {
                     status: SecurityCheckStatus::Passed,
                     details: "Tenant is active".to_string(),
                 });
-            },
+            }
             TenantStatus::Suspended => {
                 audit.security_checks.push(SecurityCheck {
                     check_type: "tenant_status".to_string(),
                     status: SecurityCheckStatus::Warning,
                     details: "Tenant is suspended".to_string(),
                 });
-            },
+            }
             TenantStatus::Inactive => {
                 audit.security_checks.push(SecurityCheck {
                     check_type: "tenant_status".to_string(),
                     status: SecurityCheckStatus::Failed,
                     details: "Tenant is inactive".to_string(),
                 });
-            },
+            }
             TenantStatus::Unknown => {
                 audit.security_checks.push(SecurityCheck {
                     check_type: "tenant_status".to_string(),
@@ -587,7 +614,7 @@ impl MultiTenantManager {
                 });
             }
         }
-        
+
         // Security check 3: Validation errors
         if validation_result.validation_errors.is_empty() {
             audit.security_checks.push(SecurityCheck {
@@ -599,15 +626,20 @@ impl MultiTenantManager {
             audit.security_checks.push(SecurityCheck {
                 check_type: "validation_errors".to_string(),
                 status: SecurityCheckStatus::Failed,
-                details: format!("Validation errors: {:?}", validation_result.validation_errors),
+                details: format!(
+                    "Validation errors: {:?}",
+                    validation_result.validation_errors
+                ),
             });
         }
-        
+
         // Determine overall compliance status
-        let failed_checks = audit.security_checks.iter()
+        let failed_checks = audit
+            .security_checks
+            .iter()
             .filter(|check| check.status == SecurityCheckStatus::Failed)
             .count();
-        
+
         audit.compliance_status = if failed_checks == 0 {
             ComplianceStatus::Compliant
         } else if failed_checks <= 1 {
@@ -615,15 +647,18 @@ impl MultiTenantManager {
         } else {
             ComplianceStatus::NonCompliant
         };
-        
+
         // Add to audit trail
         audit.audit_trail.push(AuditTrailEntry {
             action: "tenant_validation".to_string(),
             timestamp: chrono::Utc::now(),
-            details: format!("Validated tenant {} with status {:?}", tenant_id, validation_result.status),
+            details: format!(
+                "Validated tenant {} with status {:?}",
+                tenant_id, validation_result.status
+            ),
             user_id: "system".to_string(),
         });
-        
+
         Ok(audit)
     }
 
@@ -879,7 +914,7 @@ impl MultiTenantManager {
         // Get tenant context cache
         let tenant_cache = self.get_tenant_context_cache(tenant_id).await?;
         let mut expired_count = 0;
-        
+
         // Check each context in the cache
         for (context_id, context_data) in tenant_cache.iter() {
             if context_data.created_at < oldest_allowed {
@@ -890,17 +925,21 @@ impl MultiTenantManager {
                 );
             }
         }
-        
+
         // If we found expired contexts, clean them up
         if expired_count > 0 {
-            self.cleanup_expired_cache_contexts(tenant_id, oldest_allowed).await?;
+            self.cleanup_expired_cache_contexts(tenant_id, oldest_allowed)
+                .await?;
         }
-        
+
         Ok(expired_count)
     }
 
     /// Get tenant context cache
-    async fn get_tenant_context_cache(&self, tenant_id: &str) -> Result<std::collections::HashMap<String, CachedContextData>> {
+    async fn get_tenant_context_cache(
+        &self,
+        tenant_id: &str,
+    ) -> Result<std::collections::HashMap<String, CachedContextData>> {
         // TODO: Implement actual tenant context cache retrieval
         // Acceptance criteria:
         // 1. Query the persistent cache storage for the given tenant_id
@@ -908,7 +947,7 @@ impl MultiTenantManager {
         // 3. Handle cache misses gracefully (return empty HashMap if no entries exist)
         // 4. Ensure thread-safe access to the underlying cache store
         let mut cache = std::collections::HashMap::new();
-        
+
         // Add some sample cached contexts
         cache.insert(
             "context_1".to_string(),
@@ -922,7 +961,7 @@ impl MultiTenantManager {
                 size_bytes: 1024,
             },
         );
-        
+
         cache.insert(
             "context_2".to_string(),
             CachedContextData {
@@ -935,7 +974,7 @@ impl MultiTenantManager {
                 size_bytes: 2048,
             },
         );
-        
+
         Ok(cache)
     }
 
@@ -947,22 +986,26 @@ impl MultiTenantManager {
     ) -> Result<()> {
         // Get tenant context cache
         let mut tenant_cache = self.get_tenant_context_cache(tenant_id).await?;
-        
+
         // Remove expired contexts
         let expired_contexts: Vec<String> = tenant_cache
             .iter()
             .filter(|(_, context_data)| context_data.created_at < oldest_allowed)
             .map(|(context_id, _)| context_id.clone())
             .collect();
-        
+
         for context_id in expired_contexts {
             tenant_cache.remove(&context_id);
-            debug!("Removed expired context {} for tenant {}", context_id, tenant_id);
+            debug!(
+                "Removed expired context {} for tenant {}",
+                context_id, tenant_id
+            );
         }
-        
+
         // Update cache statistics
-        self.update_cache_statistics(tenant_id, &tenant_cache).await?;
-        
+        self.update_cache_statistics(tenant_id, &tenant_cache)
+            .await?;
+
         Ok(())
     }
 
@@ -975,12 +1018,12 @@ impl MultiTenantManager {
         let total_contexts = cache.len();
         let total_size: u64 = cache.values().map(|c| c.size_bytes).sum();
         let total_accesses: u64 = cache.values().map(|c| c.access_count).sum();
-        
+
         debug!(
             "Updated cache statistics for tenant {}: {} contexts, {} bytes, {} total accesses",
             tenant_id, total_contexts, total_size, total_accesses
         );
-        
+
         // TODO: Implement persistent cache statistics storage
         // Acceptance criteria:
         // - Store total_contexts, total_size, and total_accesses to database
@@ -990,26 +1033,38 @@ impl MultiTenantManager {
     }
 
     /// Query database for context count
-    async fn query_database_context_count(&self, tenant_id: &str, db_client: &DatabaseClient) -> Result<u32> {
+    async fn query_database_context_count(
+        &self,
+        tenant_id: &str,
+        db_client: &DatabaseClient,
+    ) -> Result<u32> {
         // Query active contexts
-        let active_count = self.query_active_contexts_count(tenant_id, db_client).await?;
-        
+        let active_count = self
+            .query_active_contexts_count(tenant_id, db_client)
+            .await?;
+
         // Query archived contexts
-        let archived_count = self.query_archived_contexts_count(tenant_id, db_client).await?;
-        
+        let archived_count = self
+            .query_archived_contexts_count(tenant_id, db_client)
+            .await?;
+
         // Calculate total context count
         let total_count = active_count + archived_count;
-        
+
         debug!(
             "Database context count for tenant {}: {} active, {} archived, {} total",
             tenant_id, active_count, archived_count, total_count
         );
-        
+
         Ok(total_count)
     }
 
     /// Query active contexts count from database
-    async fn query_active_contexts_count(&self, tenant_id: &str, db_client: &DatabaseClient) -> Result<u32> {
+    async fn query_active_contexts_count(
+        &self,
+        tenant_id: &str,
+        db_client: &DatabaseClient,
+    ) -> Result<u32> {
         // TODO: Implement actual database query for active contexts
         // Acceptance criteria:
         // - Execute SQL query to count contexts where tenant_id matches and status is 'active'
@@ -1021,13 +1076,20 @@ impl MultiTenantManager {
             "tenant_3" => 32,
             _ => 15,
         };
-        
-        debug!("Active contexts query for tenant {}: {}", tenant_id, active_count);
+
+        debug!(
+            "Active contexts query for tenant {}: {}",
+            tenant_id, active_count
+        );
         Ok(active_count)
     }
 
     /// Query archived contexts count from database
-    async fn query_archived_contexts_count(&self, tenant_id: &str, db_client: &DatabaseClient) -> Result<u32> {
+    async fn query_archived_contexts_count(
+        &self,
+        tenant_id: &str,
+        db_client: &DatabaseClient,
+    ) -> Result<u32> {
         // TODO: Implement actual database query for archived contexts
         // Acceptance criteria:
         // - Execute SQL query to count contexts where tenant_id matches and status is 'archived'
@@ -1037,7 +1099,7 @@ impl MultiTenantManager {
             "SELECT COUNT(*) FROM contexts WHERE tenant_id = '{}' AND status = 'archived'",
             tenant_id
         );
-        
+
         // TODO: Implement actual database query for archived contexts
         // Acceptance criteria:
         // - Execute SQL query to count contexts where tenant_id matches and status is 'archived'
@@ -1049,8 +1111,11 @@ impl MultiTenantManager {
             "tenant_3" => 15,
             _ => 5,
         };
-        
-        debug!("Archived contexts query for tenant {}: {}", tenant_id, query);
+
+        debug!(
+            "Archived contexts query for tenant {}: {}",
+            tenant_id, query
+        );
         Ok(archived_count)
     }
 
@@ -1062,17 +1127,19 @@ impl MultiTenantManager {
                 "Context count for tenant {} seems unusually high: {}",
                 tenant_id, count
             );
-            return Err(anyhow::anyhow!("Context count validation failed: count too high"));
+            return Err(anyhow::anyhow!(
+                "Context count validation failed: count too high"
+            ));
         }
-        
+
         // Check for negative counts (shouldn't happen with u32, but good practice)
         if count == 0 {
             debug!("No contexts found for tenant {}", tenant_id);
         }
-        
+
         // Additional validation logic could be added here
         // e.g., cross-reference with other data sources, check for consistency
-        
+
         Ok(count)
     }
 
@@ -1088,7 +1155,7 @@ impl MultiTenantManager {
             "Updated context count cache for tenant {}: {} contexts",
             tenant_id, count
         );
-        
+
         Ok(())
     }
 
@@ -1106,12 +1173,12 @@ impl MultiTenantManager {
             "tenant_3" => 47,
             _ => 20,
         };
-        
+
         debug!(
             "Retrieved cached context count for tenant {}: {} contexts",
             tenant_id, cached_count
         );
-        
+
         Ok(cached_count)
     }
 }

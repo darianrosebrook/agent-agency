@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::time::{interval, Duration};
-use tracing::{error, info, warn, debug};
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 /// System Health Monitor - Comprehensive Health Assessment
@@ -478,10 +478,10 @@ impl SystemHealthMonitor {
     fn monitor_disk_io(&self, system: &sysinfo::System) -> u64 {
         // Get comprehensive disk I/O metrics
         let disk_io_metrics = self.collect_disk_io_metrics(system);
-        
+
         // Calculate total I/O activity score
         let total_io = disk_io_metrics.read_throughput + disk_io_metrics.write_throughput;
-        
+
         total_io
     }
 
@@ -502,7 +502,7 @@ impl SystemHealthMonitor {
         for disk in system.disks() {
             let disk_name = disk.name().to_string_lossy().to_string();
             let disk_metrics = self.collect_per_disk_metrics(disk);
-            
+
             total_read_iops += disk_metrics.read_iops;
             total_write_iops += disk_metrics.write_iops;
             total_read_throughput += disk_metrics.read_throughput;
@@ -512,14 +512,26 @@ impl SystemHealthMonitor {
             total_utilization += disk_metrics.utilization;
             total_queue_depth += disk_metrics.queue_depth;
             disk_count += 1;
-            
+
             per_disk_metrics.insert(disk_name, disk_metrics);
         }
 
         // Calculate averages
-        let avg_read_latency = if disk_count > 0 { total_avg_read_latency / disk_count as f64 } else { 0.0 };
-        let avg_write_latency = if disk_count > 0 { total_avg_write_latency / disk_count as f64 } else { 0.0 };
-        let avg_utilization = if disk_count > 0 { total_utilization / disk_count as f64 } else { 0.0 };
+        let avg_read_latency = if disk_count > 0 {
+            total_avg_read_latency / disk_count as f64
+        } else {
+            0.0
+        };
+        let avg_write_latency = if disk_count > 0 {
+            total_avg_write_latency / disk_count as f64
+        } else {
+            0.0
+        };
+        let avg_utilization = if disk_count > 0 {
+            total_utilization / disk_count as f64
+        } else {
+            0.0
+        };
 
         crate::types::DiskIOMetrics {
             read_iops: total_read_iops,
@@ -537,11 +549,19 @@ impl SystemHealthMonitor {
     /// Collect per-disk I/O metrics
     fn collect_per_disk_metrics(&self, disk: &sysinfo::Disk) -> crate::types::PerDiskMetrics {
         let disk_name = disk.name().to_string_lossy().to_string();
-        
+
         // Use system-specific APIs for detailed I/O metrics
-        let (read_iops, write_iops, read_throughput, write_throughput, 
-             avg_read_latency, avg_write_latency, utilization, queue_depth, health_status) = 
-            self.get_system_specific_disk_metrics(&disk_name);
+        let (
+            read_iops,
+            write_iops,
+            read_throughput,
+            write_throughput,
+            avg_read_latency,
+            avg_write_latency,
+            utilization,
+            queue_depth,
+            health_status,
+        ) = self.get_system_specific_disk_metrics(&disk_name);
 
         crate::types::PerDiskMetrics {
             disk_name: disk_name.clone(),
@@ -558,23 +578,36 @@ impl SystemHealthMonitor {
     }
 
     /// Get system-specific disk I/O metrics
-    fn get_system_specific_disk_metrics(&self, disk_name: &str) -> (u64, u64, u64, u64, f64, f64, f64, u32, crate::types::DiskHealthStatus) {
+    fn get_system_specific_disk_metrics(
+        &self,
+        disk_name: &str,
+    ) -> (
+        u64,
+        u64,
+        u64,
+        u64,
+        f64,
+        f64,
+        f64,
+        u32,
+        crate::types::DiskHealthStatus,
+    ) {
         // Cross-platform disk I/O monitoring implementation
         #[cfg(target_os = "linux")]
         {
             self.get_linux_disk_metrics(disk_name)
         }
-        
+
         #[cfg(target_os = "windows")]
         {
             self.get_windows_disk_metrics(disk_name)
         }
-        
+
         #[cfg(target_os = "macos")]
         {
             self.get_macos_disk_metrics(disk_name)
         }
-        
+
         #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
         {
             // Fallback for unsupported platforms
@@ -584,7 +617,20 @@ impl SystemHealthMonitor {
 
     /// Linux-specific disk I/O metrics using /proc/diskstats
     #[cfg(target_os = "linux")]
-    fn get_linux_disk_metrics(&self, disk_name: &str) -> (u64, u64, u64, u64, f64, f64, f64, u32, crate::types::DiskHealthStatus) {
+    fn get_linux_disk_metrics(
+        &self,
+        disk_name: &str,
+    ) -> (
+        u64,
+        u64,
+        u64,
+        u64,
+        f64,
+        f64,
+        f64,
+        u32,
+        crate::types::DiskHealthStatus,
+    ) {
         use std::fs;
         use std::io::{BufRead, BufReader};
 
@@ -611,35 +657,69 @@ impl SystemHealthMonitor {
                         write_iops = parts[7].parse().unwrap_or(0);
                         read_throughput = parts[5].parse::<u64>().unwrap_or(0) * 512; // Convert sectors to bytes
                         write_throughput = parts[9].parse::<u64>().unwrap_or(0) * 512;
-                        
+
                         // Calculate latencies (simplified)
                         let read_time = parts[6].parse::<u64>().unwrap_or(0);
                         let write_time = parts[10].parse::<u64>().unwrap_or(0);
-                        avg_read_latency = if read_iops > 0 { read_time as f64 / read_iops as f64 } else { 0.0 };
-                        avg_write_latency = if write_iops > 0 { write_time as f64 / write_iops as f64 } else { 0.0 };
-                        
+                        avg_read_latency = if read_iops > 0 {
+                            read_time as f64 / read_iops as f64
+                        } else {
+                            0.0
+                        };
+                        avg_write_latency = if write_iops > 0 {
+                            write_time as f64 / write_iops as f64
+                        } else {
+                            0.0
+                        };
+
                         // Calculate utilization
                         let io_time = parts[12].parse::<u64>().unwrap_or(0);
                         utilization = (io_time as f64 / 1000.0).min(100.0); // Convert to percentage
-                        
+
                         // Queue depth (simplified)
                         queue_depth = parts[11].parse().unwrap_or(0);
-                        
+
                         // Determine health status
-                        health_status = self.assess_disk_health(utilization, avg_read_latency, avg_write_latency);
+                        health_status = self.assess_disk_health(
+                            utilization,
+                            avg_read_latency,
+                            avg_write_latency,
+                        );
                         break;
                     }
                 }
             }
         }
 
-        (read_iops, write_iops, read_throughput, write_throughput, 
-         avg_read_latency, avg_write_latency, utilization, queue_depth, health_status)
+        (
+            read_iops,
+            write_iops,
+            read_throughput,
+            write_throughput,
+            avg_read_latency,
+            avg_write_latency,
+            utilization,
+            queue_depth,
+            health_status,
+        )
     }
 
     /// Windows-specific disk I/O metrics using Performance Counters
     #[cfg(target_os = "windows")]
-    fn get_windows_disk_metrics(&self, disk_name: &str) -> (u64, u64, u64, u64, f64, f64, f64, u32, crate::types::DiskHealthStatus) {
+    fn get_windows_disk_metrics(
+        &self,
+        disk_name: &str,
+    ) -> (
+        u64,
+        u64,
+        u64,
+        u64,
+        f64,
+        f64,
+        f64,
+        u32,
+        crate::types::DiskHealthStatus,
+    ) {
         // Windows implementation would use WMI or Performance Counters
         // For now, return simulated metrics
         let read_iops = 100;
@@ -652,13 +732,35 @@ impl SystemHealthMonitor {
         let queue_depth = 2;
         let health_status = crate::types::DiskHealthStatus::Healthy;
 
-        (read_iops, write_iops, read_throughput, write_throughput, 
-         avg_read_latency, avg_write_latency, utilization, queue_depth, health_status)
+        (
+            read_iops,
+            write_iops,
+            read_throughput,
+            write_throughput,
+            avg_read_latency,
+            avg_write_latency,
+            utilization,
+            queue_depth,
+            health_status,
+        )
     }
 
     /// macOS-specific disk I/O metrics using system calls
     #[cfg(target_os = "macos")]
-    fn get_macos_disk_metrics(&self, disk_name: &str) -> (u64, u64, u64, u64, f64, f64, f64, u32, crate::types::DiskHealthStatus) {
+    fn get_macos_disk_metrics(
+        &self,
+        disk_name: &str,
+    ) -> (
+        u64,
+        u64,
+        u64,
+        u64,
+        f64,
+        f64,
+        f64,
+        u32,
+        crate::types::DiskHealthStatus,
+    ) {
         // macOS implementation would use IOKit or system calls
         // For now, return simulated metrics
         let read_iops = 80;
@@ -671,13 +773,35 @@ impl SystemHealthMonitor {
         let queue_depth = 1;
         let health_status = crate::types::DiskHealthStatus::Healthy;
 
-        (read_iops, write_iops, read_throughput, write_throughput, 
-         avg_read_latency, avg_write_latency, utilization, queue_depth, health_status)
+        (
+            read_iops,
+            write_iops,
+            read_throughput,
+            write_throughput,
+            avg_read_latency,
+            avg_write_latency,
+            utilization,
+            queue_depth,
+            health_status,
+        )
     }
 
     /// Fallback disk metrics for unsupported platforms
     #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
-    fn get_fallback_disk_metrics(&self, _disk_name: &str) -> (u64, u64, u64, u64, f64, f64, f64, u32, crate::types::DiskHealthStatus) {
+    fn get_fallback_disk_metrics(
+        &self,
+        _disk_name: &str,
+    ) -> (
+        u64,
+        u64,
+        u64,
+        u64,
+        f64,
+        f64,
+        f64,
+        u32,
+        crate::types::DiskHealthStatus,
+    ) {
         // Fallback implementation using basic system info
         let read_iops = 50;
         let write_iops = 25;
@@ -689,12 +813,26 @@ impl SystemHealthMonitor {
         let queue_depth = 1;
         let health_status = crate::types::DiskHealthStatus::Unknown;
 
-        (read_iops, write_iops, read_throughput, write_throughput, 
-         avg_read_latency, avg_write_latency, utilization, queue_depth, health_status)
+        (
+            read_iops,
+            write_iops,
+            read_throughput,
+            write_throughput,
+            avg_read_latency,
+            avg_write_latency,
+            utilization,
+            queue_depth,
+            health_status,
+        )
     }
 
     /// Assess disk health based on metrics
-    fn assess_disk_health(&self, utilization: f64, read_latency: f64, write_latency: f64) -> crate::types::DiskHealthStatus {
+    fn assess_disk_health(
+        &self,
+        utilization: f64,
+        read_latency: f64,
+        write_latency: f64,
+    ) -> crate::types::DiskHealthStatus {
         if utilization > 90.0 || read_latency > 100.0 || write_latency > 100.0 {
             crate::types::DiskHealthStatus::Unhealthy
         } else if utilization > 70.0 || read_latency > 50.0 || write_latency > 50.0 {
@@ -1252,7 +1390,7 @@ impl SystemHealthMonitor {
             .iter()
             .map(|dp| (dp.timestamp - first_timestamp).num_seconds() as f64 / 86400.0) // Convert to days
             .collect();
-        
+
         let y_values: Vec<f64> = historical_usage
             .iter()
             .map(|dp| dp.used_space as f64)
@@ -1262,7 +1400,11 @@ impl SystemHealthMonitor {
         let n = x_values.len() as f64;
         let x_sum: f64 = x_values.iter().sum();
         let y_sum: f64 = y_values.iter().sum();
-        let xy_sum: f64 = x_values.iter().zip(y_values.iter()).map(|(x, y)| x * y).sum();
+        let xy_sum: f64 = x_values
+            .iter()
+            .zip(y_values.iter())
+            .map(|(x, y)| x * y)
+            .sum();
         let x_squared_sum: f64 = x_values.iter().map(|x| x * x).sum();
 
         let denominator = n * x_squared_sum - x_sum * x_sum;
@@ -1425,16 +1567,20 @@ impl SystemHealthMonitor {
     async fn query_embedding_service_metrics(&self) -> Result<EmbeddingMetrics> {
         // 1. Embedding service integration: Query the embedding service for metrics
         let service_metrics = self.query_embedding_service_performance().await?;
-        
+
         // 2. Service metrics retrieval: Retrieve embedding service metrics and data
         let performance_data = self.retrieve_embedding_performance_data().await?;
-        
+
         // 3. Embedding service monitoring: Monitor embedding service performance and health
-        let health_status = self.assess_embedding_service_health(&service_metrics, &performance_data).await?;
-        
+        let health_status = self
+            .assess_embedding_service_health(&service_metrics, &performance_data)
+            .await?;
+
         // 4. Embedding service optimization: Optimize embedding service querying performance
-        let optimized_metrics = self.optimize_embedding_metrics(service_metrics, performance_data).await?;
-        
+        let optimized_metrics = self
+            .optimize_embedding_metrics(service_metrics, performance_data)
+            .await?;
+
         Ok(optimized_metrics)
     }
 
@@ -1469,7 +1615,10 @@ impl SystemHealthMonitor {
                 .await
             {
                 Ok(performance) => {
-                    info!("Successfully fetched embedding service metrics (attempt {})", attempt + 1);
+                    info!(
+                        "Successfully fetched embedding service metrics (attempt {})",
+                        attempt + 1
+                    );
                     return Ok(performance);
                 }
                 Err(e) => {
@@ -1490,8 +1639,7 @@ impl SystemHealthMonitor {
         // Fallback to default metrics on failure
         warn!(
             "Could not fetch embedding service metrics after {} retries: {:?}",
-            max_retries,
-            last_error
+            max_retries, last_error
         );
 
         Ok(EmbeddingServicePerformance {
@@ -1514,7 +1662,7 @@ impl SystemHealthMonitor {
         timeout_ms: u64,
     ) -> Result<EmbeddingServicePerformance> {
         let endpoint = &self.config.embedding_service.endpoint;
-        
+
         match tokio::time::timeout(
             tokio::time::Duration::from_millis(timeout_ms),
             self.fetch_embedding_metrics_http(endpoint),
@@ -1534,7 +1682,7 @@ impl SystemHealthMonitor {
         endpoint: &str,
     ) -> Result<EmbeddingServicePerformance> {
         debug!("Making HTTP request to embedding service: {}", endpoint);
-        
+
         let client = reqwest::Client::new();
         let response = client
             .get(endpoint)
@@ -1555,7 +1703,10 @@ impl SystemHealthMonitor {
             .await
             .map_err(|e| anyhow::anyhow!("Failed to parse JSON response: {}", e))?;
 
-        debug!("Successfully fetched embedding service metrics: {:?}", metrics);
+        debug!(
+            "Successfully fetched embedding service metrics: {:?}",
+            metrics
+        );
 
         Ok(EmbeddingServicePerformance {
             total_requests: metrics.total_requests,
@@ -1588,7 +1739,7 @@ impl SystemHealthMonitor {
             embedding_dimension: 768,
             batch_size: 32,
         };
-        
+
         Ok(performance_data)
     }
 
@@ -1599,38 +1750,38 @@ impl SystemHealthMonitor {
         performance_data: &EmbeddingPerformanceData,
     ) -> Result<String> {
         let mut health_score = 1.0;
-        
+
         // Check error rate
         if performance_data.error_rate > 0.05 {
             health_score -= 0.3;
         } else if performance_data.error_rate > 0.02 {
             health_score -= 0.1;
         }
-        
+
         // Check availability
         if performance_data.availability_percentage < 99.0 {
             health_score -= 0.4;
         } else if performance_data.availability_percentage < 99.5 {
             health_score -= 0.2;
         }
-        
+
         // Check latency
         if performance_data.latency_p99_ms > 200.0 {
             health_score -= 0.2;
         } else if performance_data.latency_p99_ms > 150.0 {
             health_score -= 0.1;
         }
-        
+
         // Check memory usage
         if service_metrics.memory_usage_mb > 1024.0 {
             health_score -= 0.1;
         }
-        
+
         // Check queue depth
         if service_metrics.queue_depth > 20 {
             health_score -= 0.1;
         }
-        
+
         let health_status = if health_score >= 0.9 {
             "healthy"
         } else if health_score >= 0.7 {
@@ -1640,7 +1791,7 @@ impl SystemHealthMonitor {
         } else {
             "critical"
         };
-        
+
         Ok(health_status.to_string())
     }
 
@@ -1657,26 +1808,32 @@ impl SystemHealthMonitor {
         } else {
             0.0
         };
-        
+
         // Calculate success rate
         let total_requests = service_metrics.successful_requests + service_metrics.failed_requests;
         let successful_generations = service_metrics.successful_requests;
         let failed_generations = service_metrics.failed_requests;
-        
+
         // Use average response time as generation time
         let avg_generation_time_ms = service_metrics.avg_response_time_ms;
-        
+
         // Determine model health status based on performance
-        let model_health_status = if performance_data.error_rate < 0.01 && performance_data.availability_percentage > 99.5 {
+        let model_health_status = if performance_data.error_rate < 0.01
+            && performance_data.availability_percentage > 99.5
+        {
             "excellent"
-        } else if performance_data.error_rate < 0.02 && performance_data.availability_percentage > 99.0 {
+        } else if performance_data.error_rate < 0.02
+            && performance_data.availability_percentage > 99.0
+        {
             "healthy"
-        } else if performance_data.error_rate < 0.05 && performance_data.availability_percentage > 98.0 {
+        } else if performance_data.error_rate < 0.05
+            && performance_data.availability_percentage > 98.0
+        {
             "degraded"
         } else {
             "unhealthy"
         };
-        
+
         Ok(EmbeddingMetrics {
             total_requests,
             successful_generations,
@@ -1732,7 +1889,7 @@ impl MetricsCollector {
 
         // Monitor disk I/O
         let disk_io = self.monitor_disk_io(&system);
-        
+
         // Collect comprehensive disk I/O metrics
         let disk_io_metrics = self.collect_disk_io_metrics(&system);
 
@@ -1782,7 +1939,7 @@ impl MetricsCollector {
         for disk in system.disks() {
             let disk_name = disk.name().to_string_lossy().to_string();
             let disk_metrics = self.collect_per_disk_metrics(disk);
-            
+
             total_read_iops += disk_metrics.read_iops;
             total_write_iops += disk_metrics.write_iops;
             total_read_throughput += disk_metrics.read_throughput;
@@ -1792,14 +1949,26 @@ impl MetricsCollector {
             total_utilization += disk_metrics.utilization;
             total_queue_depth += disk_metrics.queue_depth;
             disk_count += 1;
-            
+
             per_disk_metrics.insert(disk_name, disk_metrics);
         }
 
         // Calculate averages
-        let avg_read_latency = if disk_count > 0 { total_avg_read_latency / disk_count as f64 } else { 0.0 };
-        let avg_write_latency = if disk_count > 0 { total_avg_write_latency / disk_count as f64 } else { 0.0 };
-        let avg_utilization = if disk_count > 0 { total_utilization / disk_count as f64 } else { 0.0 };
+        let avg_read_latency = if disk_count > 0 {
+            total_avg_read_latency / disk_count as f64
+        } else {
+            0.0
+        };
+        let avg_write_latency = if disk_count > 0 {
+            total_avg_write_latency / disk_count as f64
+        } else {
+            0.0
+        };
+        let avg_utilization = if disk_count > 0 {
+            total_utilization / disk_count as f64
+        } else {
+            0.0
+        };
 
         crate::types::DiskIOMetrics {
             read_iops: total_read_iops,
@@ -1817,11 +1986,19 @@ impl MetricsCollector {
     /// Collect per-disk I/O metrics
     fn collect_per_disk_metrics(&self, disk: &sysinfo::Disk) -> crate::types::PerDiskMetrics {
         let disk_name = disk.name().to_string_lossy().to_string();
-        
+
         // Use system-specific APIs for detailed I/O metrics
-        let (read_iops, write_iops, read_throughput, write_throughput, 
-             avg_read_latency, avg_write_latency, utilization, queue_depth, health_status) = 
-            self.get_system_specific_disk_metrics(&disk_name);
+        let (
+            read_iops,
+            write_iops,
+            read_throughput,
+            write_throughput,
+            avg_read_latency,
+            avg_write_latency,
+            utilization,
+            queue_depth,
+            health_status,
+        ) = self.get_system_specific_disk_metrics(&disk_name);
 
         crate::types::PerDiskMetrics {
             disk_name: disk_name.clone(),
@@ -1838,23 +2015,36 @@ impl MetricsCollector {
     }
 
     /// Get system-specific disk I/O metrics
-    fn get_system_specific_disk_metrics(&self, disk_name: &str) -> (u64, u64, u64, u64, f64, f64, f64, u32, crate::types::DiskHealthStatus) {
+    fn get_system_specific_disk_metrics(
+        &self,
+        disk_name: &str,
+    ) -> (
+        u64,
+        u64,
+        u64,
+        u64,
+        f64,
+        f64,
+        f64,
+        u32,
+        crate::types::DiskHealthStatus,
+    ) {
         // Cross-platform disk I/O monitoring implementation
         #[cfg(target_os = "linux")]
         {
             self.get_linux_disk_metrics(disk_name)
         }
-        
+
         #[cfg(target_os = "windows")]
         {
             self.get_windows_disk_metrics(disk_name)
         }
-        
+
         #[cfg(target_os = "macos")]
         {
             self.get_macos_disk_metrics(disk_name)
         }
-        
+
         #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
         {
             // Fallback for unsupported platforms
@@ -1864,7 +2054,20 @@ impl MetricsCollector {
 
     /// Linux-specific disk I/O metrics using /proc/diskstats
     #[cfg(target_os = "linux")]
-    fn get_linux_disk_metrics(&self, disk_name: &str) -> (u64, u64, u64, u64, f64, f64, f64, u32, crate::types::DiskHealthStatus) {
+    fn get_linux_disk_metrics(
+        &self,
+        disk_name: &str,
+    ) -> (
+        u64,
+        u64,
+        u64,
+        u64,
+        f64,
+        f64,
+        f64,
+        u32,
+        crate::types::DiskHealthStatus,
+    ) {
         use std::fs;
         use std::io::{BufRead, BufReader};
 
@@ -1891,35 +2094,69 @@ impl MetricsCollector {
                         write_iops = parts[7].parse().unwrap_or(0);
                         read_throughput = parts[5].parse::<u64>().unwrap_or(0) * 512; // Convert sectors to bytes
                         write_throughput = parts[9].parse::<u64>().unwrap_or(0) * 512;
-                        
+
                         // Calculate latencies (simplified)
                         let read_time = parts[6].parse::<u64>().unwrap_or(0);
                         let write_time = parts[10].parse::<u64>().unwrap_or(0);
-                        avg_read_latency = if read_iops > 0 { read_time as f64 / read_iops as f64 } else { 0.0 };
-                        avg_write_latency = if write_iops > 0 { write_time as f64 / write_iops as f64 } else { 0.0 };
-                        
+                        avg_read_latency = if read_iops > 0 {
+                            read_time as f64 / read_iops as f64
+                        } else {
+                            0.0
+                        };
+                        avg_write_latency = if write_iops > 0 {
+                            write_time as f64 / write_iops as f64
+                        } else {
+                            0.0
+                        };
+
                         // Calculate utilization
                         let io_time = parts[12].parse::<u64>().unwrap_or(0);
                         utilization = (io_time as f64 / 1000.0).min(100.0); // Convert to percentage
-                        
+
                         // Queue depth (simplified)
                         queue_depth = parts[11].parse().unwrap_or(0);
-                        
+
                         // Determine health status
-                        health_status = self.assess_disk_health(utilization, avg_read_latency, avg_write_latency);
+                        health_status = self.assess_disk_health(
+                            utilization,
+                            avg_read_latency,
+                            avg_write_latency,
+                        );
                         break;
                     }
                 }
             }
         }
 
-        (read_iops, write_iops, read_throughput, write_throughput, 
-         avg_read_latency, avg_write_latency, utilization, queue_depth, health_status)
+        (
+            read_iops,
+            write_iops,
+            read_throughput,
+            write_throughput,
+            avg_read_latency,
+            avg_write_latency,
+            utilization,
+            queue_depth,
+            health_status,
+        )
     }
 
     /// Windows-specific disk I/O metrics using Performance Counters
     #[cfg(target_os = "windows")]
-    fn get_windows_disk_metrics(&self, disk_name: &str) -> (u64, u64, u64, u64, f64, f64, f64, u32, crate::types::DiskHealthStatus) {
+    fn get_windows_disk_metrics(
+        &self,
+        disk_name: &str,
+    ) -> (
+        u64,
+        u64,
+        u64,
+        u64,
+        f64,
+        f64,
+        f64,
+        u32,
+        crate::types::DiskHealthStatus,
+    ) {
         // Windows implementation would use WMI or Performance Counters
         // For now, return simulated metrics
         let read_iops = 100;
@@ -1932,13 +2169,35 @@ impl MetricsCollector {
         let queue_depth = 2;
         let health_status = crate::types::DiskHealthStatus::Healthy;
 
-        (read_iops, write_iops, read_throughput, write_throughput, 
-         avg_read_latency, avg_write_latency, utilization, queue_depth, health_status)
+        (
+            read_iops,
+            write_iops,
+            read_throughput,
+            write_throughput,
+            avg_read_latency,
+            avg_write_latency,
+            utilization,
+            queue_depth,
+            health_status,
+        )
     }
 
     /// macOS-specific disk I/O metrics using system calls
     #[cfg(target_os = "macos")]
-    fn get_macos_disk_metrics(&self, disk_name: &str) -> (u64, u64, u64, u64, f64, f64, f64, u32, crate::types::DiskHealthStatus) {
+    fn get_macos_disk_metrics(
+        &self,
+        disk_name: &str,
+    ) -> (
+        u64,
+        u64,
+        u64,
+        u64,
+        f64,
+        f64,
+        f64,
+        u32,
+        crate::types::DiskHealthStatus,
+    ) {
         // macOS implementation would use IOKit or system calls
         // For now, return simulated metrics
         let read_iops = 80;
@@ -1951,13 +2210,35 @@ impl MetricsCollector {
         let queue_depth = 1;
         let health_status = crate::types::DiskHealthStatus::Healthy;
 
-        (read_iops, write_iops, read_throughput, write_throughput, 
-         avg_read_latency, avg_write_latency, utilization, queue_depth, health_status)
+        (
+            read_iops,
+            write_iops,
+            read_throughput,
+            write_throughput,
+            avg_read_latency,
+            avg_write_latency,
+            utilization,
+            queue_depth,
+            health_status,
+        )
     }
 
     /// Fallback disk metrics for unsupported platforms
     #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
-    fn get_fallback_disk_metrics(&self, _disk_name: &str) -> (u64, u64, u64, u64, f64, f64, f64, u32, crate::types::DiskHealthStatus) {
+    fn get_fallback_disk_metrics(
+        &self,
+        _disk_name: &str,
+    ) -> (
+        u64,
+        u64,
+        u64,
+        u64,
+        f64,
+        f64,
+        f64,
+        u32,
+        crate::types::DiskHealthStatus,
+    ) {
         // Fallback implementation using basic system info
         let read_iops = 50;
         let write_iops = 25;
@@ -1969,12 +2250,26 @@ impl MetricsCollector {
         let queue_depth = 1;
         let health_status = crate::types::DiskHealthStatus::Unknown;
 
-        (read_iops, write_iops, read_throughput, write_throughput, 
-         avg_read_latency, avg_write_latency, utilization, queue_depth, health_status)
+        (
+            read_iops,
+            write_iops,
+            read_throughput,
+            write_throughput,
+            avg_read_latency,
+            avg_write_latency,
+            utilization,
+            queue_depth,
+            health_status,
+        )
     }
 
     /// Assess disk health based on metrics
-    fn assess_disk_health(&self, utilization: f64, read_latency: f64, write_latency: f64) -> crate::types::DiskHealthStatus {
+    fn assess_disk_health(
+        &self,
+        utilization: f64,
+        read_latency: f64,
+        write_latency: f64,
+    ) -> crate::types::DiskHealthStatus {
         if utilization > 90.0 || read_latency > 100.0 || write_latency > 100.0 {
             crate::types::DiskHealthStatus::Unhealthy
         } else if utilization > 70.0 || read_latency > 50.0 || write_latency > 50.0 {
@@ -1988,20 +2283,20 @@ impl MetricsCollector {
     async fn collect_disk_usage_metrics(&self) -> Result<DiskUsageMetrics> {
         // 1. Disk space monitoring: Implement accurate disk space usage calculation and tracking
         let filesystem_usage = self.collect_filesystem_usage().await?;
-        
+
         // 2. Calculate totals across all filesystems
-        let (total_disk_space, total_used_space, total_available_space, overall_usage_percentage) = 
+        let (total_disk_space, total_used_space, total_available_space, overall_usage_percentage) =
             self.calculate_disk_totals(&filesystem_usage);
-        
+
         // 3. Disk usage trends and predictions
         let usage_trends = self.calculate_disk_usage_trends(&filesystem_usage).await?;
-        
+
         // 4. Filesystem health monitoring
         let filesystem_health = self.assess_filesystem_health(&filesystem_usage).await?;
-        
+
         // 5. Inode usage statistics
         let inode_usage = self.collect_inode_usage(&filesystem_usage).await?;
-        
+
         Ok(DiskUsageMetrics {
             filesystem_usage,
             total_disk_space,
@@ -2017,11 +2312,11 @@ impl MetricsCollector {
     /// Collect per-filesystem usage information
     async fn collect_filesystem_usage(&self) -> Result<HashMap<String, FilesystemUsage>> {
         let mut filesystem_usage = HashMap::new();
-        
+
         // Use sysinfo to get disk information
         let mut system = sysinfo::System::new_all();
         system.refresh_disks();
-        
+
         for disk in system.disks() {
             let mount_point = disk.mount_point().to_string_lossy().to_string();
             let filesystem_type = disk.file_system().to_string_lossy().to_string();
@@ -2033,10 +2328,10 @@ impl MetricsCollector {
             } else {
                 0.0
             };
-            
+
             let device_name = disk.name().to_string_lossy().to_string();
             let mount_options = "defaults".to_string(); // sysinfo doesn't provide mount options
-            
+
             let usage = FilesystemUsage {
                 mount_point: mount_point.clone(),
                 filesystem_type,
@@ -2047,32 +2342,40 @@ impl MetricsCollector {
                 device_name,
                 mount_options,
             };
-            
+
             filesystem_usage.insert(mount_point, usage);
         }
-        
+
         Ok(filesystem_usage)
     }
 
     /// Calculate totals across all filesystems
-    fn calculate_disk_totals(&self, filesystem_usage: &HashMap<String, FilesystemUsage>) -> (u64, u64, u64, f64) {
+    fn calculate_disk_totals(
+        &self,
+        filesystem_usage: &HashMap<String, FilesystemUsage>,
+    ) -> (u64, u64, u64, f64) {
         let mut total_disk_space = 0u64;
         let mut total_used_space = 0u64;
         let mut total_available_space = 0u64;
-        
+
         for usage in filesystem_usage.values() {
             total_disk_space += usage.total_space;
             total_used_space += usage.used_space;
             total_available_space += usage.available_space;
         }
-        
+
         let overall_usage_percentage = if total_disk_space > 0 {
             (total_used_space as f64 / total_disk_space as f64) * 100.0
         } else {
             0.0
         };
-        
-        (total_disk_space, total_used_space, total_available_space, overall_usage_percentage)
+
+        (
+            total_disk_space,
+            total_used_space,
+            total_available_space,
+            overall_usage_percentage,
+        )
     }
 
     /// Update disk usage history for trend analysis
@@ -2081,7 +2384,7 @@ impl MetricsCollector {
         metrics: &SystemMetrics,
     ) {
         let mut history = disk_usage_history.write();
-        
+
         // Store overall disk usage
         let overall_key = "overall".to_string();
         let overall_data_point = DiskUsageDataPoint {
@@ -2089,9 +2392,12 @@ impl MetricsCollector {
             usage_percentage: metrics.disk_usage,
             used_space: metrics.disk_usage_metrics.total_used_space,
         };
-        
-        history.entry(overall_key).or_insert_with(Vec::new).push(overall_data_point);
-        
+
+        history
+            .entry(overall_key)
+            .or_insert_with(Vec::new)
+            .push(overall_data_point);
+
         // Store per-filesystem usage
         for (mount_point, usage) in &metrics.disk_usage_metrics.filesystem_usage {
             let data_point = DiskUsageDataPoint {
@@ -2099,10 +2405,13 @@ impl MetricsCollector {
                 usage_percentage: usage.usage_percentage,
                 used_space: usage.used_space,
             };
-            
-            history.entry(mount_point.clone()).or_insert_with(Vec::new).push(data_point);
+
+            history
+                .entry(mount_point.clone())
+                .or_insert_with(Vec::new)
+                .push(data_point);
         }
-        
+
         // Cleanup old data (keep last 30 days)
         let cutoff = Utc::now() - chrono::Duration::days(30);
         for (_, data_points) in history.iter_mut() {
@@ -2111,34 +2420,35 @@ impl MetricsCollector {
     }
 
     /// Calculate disk usage trends and predictions
-    async fn calculate_disk_usage_trends(&self, filesystem_usage: &HashMap<String, FilesystemUsage>) -> Result<DiskUsageTrends> {
+    async fn calculate_disk_usage_trends(
+        &self,
+        filesystem_usage: &HashMap<String, FilesystemUsage>,
+    ) -> Result<DiskUsageTrends> {
         // Get historical data from storage
         let history = self.disk_usage_history.read();
         let overall_key = "overall".to_string();
-        
-        let historical_usage = history.get(&overall_key)
-            .cloned()
-            .unwrap_or_else(|| {
-                // Fallback to simulated data if no historical data available
-                vec![
-                    DiskUsageDataPoint {
-                        timestamp: Utc::now() - chrono::Duration::days(7),
-                        usage_percentage: 45.0,
-                        used_space: 450_000_000_000,
-                    },
-                    DiskUsageDataPoint {
-                        timestamp: Utc::now() - chrono::Duration::days(3),
-                        usage_percentage: 52.0,
-                        used_space: 520_000_000_000,
-                    },
-                    DiskUsageDataPoint {
-                        timestamp: Utc::now(),
-                        usage_percentage: 58.0,
-                        used_space: 580_000_000_000,
-                    },
-                ]
-            });
-        
+
+        let historical_usage = history.get(&overall_key).cloned().unwrap_or_else(|| {
+            // Fallback to simulated data if no historical data available
+            vec![
+                DiskUsageDataPoint {
+                    timestamp: Utc::now() - chrono::Duration::days(7),
+                    usage_percentage: 45.0,
+                    used_space: 450_000_000_000,
+                },
+                DiskUsageDataPoint {
+                    timestamp: Utc::now() - chrono::Duration::days(3),
+                    usage_percentage: 52.0,
+                    used_space: 520_000_000_000,
+                },
+                DiskUsageDataPoint {
+                    timestamp: Utc::now(),
+                    usage_percentage: 58.0,
+                    used_space: 580_000_000_000,
+                },
+            ]
+        });
+
         // Calculate growth rate using linear regression for more accurate predictions
         let growth_rate_bytes_per_day = if historical_usage.len() >= 3 {
             Self::calculate_linear_regression_growth_rate(&historical_usage)
@@ -2155,16 +2465,20 @@ impl MetricsCollector {
         } else {
             0.0
         };
-        
+
         // Calculate predictions using current total space and growth rate
-        let current_total_space = filesystem_usage.values().map(|u| u.total_space).sum::<u64>() as f64;
-        let current_used_space = filesystem_usage.values().map(|u| u.used_space).sum::<u64>() as f64;
+        let current_total_space = filesystem_usage
+            .values()
+            .map(|u| u.total_space)
+            .sum::<u64>() as f64;
+        let current_used_space =
+            filesystem_usage.values().map(|u| u.used_space).sum::<u64>() as f64;
         let current_usage_percentage = if current_total_space > 0.0 {
             (current_used_space / current_total_space) * 100.0
         } else {
             0.0
         };
-        
+
         // Calculate predicted usage percentages based on growth rate
         let predicted_usage_24h = if current_total_space > 0.0 {
             let predicted_used_space_24h = current_used_space + (growth_rate_bytes_per_day * 1.0);
@@ -2172,24 +2486,27 @@ impl MetricsCollector {
         } else {
             current_usage_percentage
         };
-        
+
         let predicted_usage_7d = if current_total_space > 0.0 {
             let predicted_used_space_7d = current_used_space + (growth_rate_bytes_per_day * 7.0);
             (predicted_used_space_7d / current_total_space * 100.0).min(100.0)
         } else {
             current_usage_percentage
         };
-        
+
         let predicted_usage_30d = if current_total_space > 0.0 {
             let predicted_used_space_30d = current_used_space + (growth_rate_bytes_per_day * 30.0);
             (predicted_used_space_30d / current_total_space * 100.0).min(100.0)
         } else {
             current_usage_percentage
         };
-        
+
         // Calculate days until capacity thresholds
         let days_until_90_percent = if growth_rate_bytes_per_day > 0.0 {
-            let current_total = filesystem_usage.values().map(|u| u.total_space).sum::<u64>() as f64;
+            let current_total = filesystem_usage
+                .values()
+                .map(|u| u.total_space)
+                .sum::<u64>() as f64;
             let current_used = filesystem_usage.values().map(|u| u.used_space).sum::<u64>() as f64;
             let target_used = current_total * 0.9;
             let bytes_needed = target_used - current_used;
@@ -2201,9 +2518,12 @@ impl MetricsCollector {
         } else {
             None
         };
-        
+
         let days_until_95_percent = if growth_rate_bytes_per_day > 0.0 {
-            let current_total = filesystem_usage.values().map(|u| u.total_space).sum::<u64>() as f64;
+            let current_total = filesystem_usage
+                .values()
+                .map(|u| u.total_space)
+                .sum::<u64>() as f64;
             let current_used = filesystem_usage.values().map(|u| u.used_space).sum::<u64>() as f64;
             let target_used = current_total * 0.95;
             let bytes_needed = target_used - current_used;
@@ -2215,7 +2535,7 @@ impl MetricsCollector {
         } else {
             None
         };
-        
+
         Ok(DiskUsageTrends {
             historical_usage,
             predicted_usage_24h,
@@ -2228,7 +2548,10 @@ impl MetricsCollector {
     }
 
     /// Assess filesystem health
-    async fn assess_filesystem_health(&self, filesystem_usage: &HashMap<String, FilesystemUsage>) -> Result<HashMap<String, FilesystemHealth>> {
+    async fn assess_filesystem_health(
+        &self,
+        filesystem_usage: &HashMap<String, FilesystemUsage>,
+    ) -> Result<HashMap<String, FilesystemHealth>> {
         // Check if filesystem monitoring is enabled
         if !self.config.filesystem.enabled {
             debug!("Filesystem monitoring is disabled");
@@ -2236,7 +2559,7 @@ impl MetricsCollector {
         }
 
         let mut filesystem_health = HashMap::new();
-        
+
         for (mount_point, usage) in filesystem_usage {
             let health_status = if usage.usage_percentage > 95.0 {
                 FilesystemHealthStatus::Error
@@ -2245,15 +2568,21 @@ impl MetricsCollector {
             } else {
                 FilesystemHealthStatus::Healthy
             };
-            
+
             let mount_status = MountStatus::Mounted; // Assume mounted if we can read it
-            
+
             // Parse filesystem errors from system logs
-            let (error_count, filesystem_errors) = self.parse_filesystem_errors(mount_point).await.unwrap_or((0, vec![]));
-            
+            let (error_count, filesystem_errors) = self
+                .parse_filesystem_errors(mount_point)
+                .await
+                .unwrap_or((0, vec![]));
+
             // Calculate fragmentation level
-            let fragmentation_level = self.calculate_fragmentation_level(mount_point, &usage.filesystem_type).await.unwrap_or(0.1);
-            
+            let fragmentation_level = self
+                .calculate_fragmentation_level(mount_point, &usage.filesystem_type)
+                .await
+                .unwrap_or(0.1);
+
             let health = FilesystemHealth {
                 mount_point: mount_point.clone(),
                 health_status,
@@ -2263,87 +2592,106 @@ impl MetricsCollector {
                 mount_status,
                 filesystem_errors,
             };
-            
+
             filesystem_health.insert(mount_point.clone(), health);
         }
-        
+
         Ok(filesystem_health)
     }
 
     /// Parse filesystem errors from system logs
-    async fn parse_filesystem_errors(&self, mount_point: &str) -> Result<(u32, Vec<FilesystemError>)> {
+    async fn parse_filesystem_errors(
+        &self,
+        mount_point: &str,
+    ) -> Result<(u32, Vec<FilesystemError>)> {
         // Check if filesystem monitoring is enabled
         if !self.config.filesystem.enabled {
             return Ok((0, vec![]));
         }
         let mut error_count = 0u32;
         let mut filesystem_errors = Vec::new();
-        
+
         // Define time window for error analysis (last 24 hours)
         let time_window = chrono::Duration::hours(24);
         let cutoff_time = Utc::now() - time_window;
-        
+
         // Platform-specific log parsing
         #[cfg(target_os = "linux")]
         {
-            let (count, errors) = self.parse_linux_filesystem_errors(mount_point, cutoff_time).await?;
+            let (count, errors) = self
+                .parse_linux_filesystem_errors(mount_point, cutoff_time)
+                .await?;
             error_count = count;
             filesystem_errors = errors;
         }
-        
+
         #[cfg(target_os = "macos")]
         {
-            let (count, errors) = self.parse_macos_filesystem_errors(mount_point, cutoff_time).await?;
+            let (count, errors) = self
+                .parse_macos_filesystem_errors(mount_point, cutoff_time)
+                .await?;
             error_count = count;
             filesystem_errors = errors;
         }
-        
+
         #[cfg(target_os = "windows")]
         {
-            let (count, errors) = self.parse_windows_filesystem_errors(mount_point, cutoff_time).await?;
+            let (count, errors) = self
+                .parse_windows_filesystem_errors(mount_point, cutoff_time)
+                .await?;
             error_count = count;
             filesystem_errors = errors;
         }
-        
+
         #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
         {
             // Fallback for unsupported platforms
             debug!("Filesystem error parsing not supported on this platform");
         }
-        
+
         Ok((error_count, filesystem_errors))
     }
 
     /// Parse Linux filesystem errors from system logs
     #[cfg(target_os = "linux")]
-    async fn parse_linux_filesystem_errors(&self, mount_point: &str, cutoff_time: DateTime<Utc>) -> Result<(u32, Vec<FilesystemError>)> {
+    async fn parse_linux_filesystem_errors(
+        &self,
+        mount_point: &str,
+        cutoff_time: DateTime<Utc>,
+    ) -> Result<(u32, Vec<FilesystemError>)> {
         use std::fs;
         use std::io::{BufRead, BufReader};
-        
+
         let mut error_count = 0u32;
         let mut filesystem_errors = Vec::new();
-        
+
         // Parse /var/log/syslog and /var/log/kern.log for filesystem errors
         let log_files = ["/var/log/syslog", "/var/log/kern.log", "/var/log/messages"];
-        
+
         for log_file in &log_files {
             if let Ok(file) = fs::File::open(log_file) {
                 let reader = BufReader::new(file);
                 for line in reader.lines().flatten() {
-                    if let Some(error) = self.parse_linux_log_line(&line, mount_point, cutoff_time) {
+                    if let Some(error) = self.parse_linux_log_line(&line, mount_point, cutoff_time)
+                    {
                         error_count += 1;
                         filesystem_errors.push(error);
                     }
                 }
             }
         }
-        
+
         Ok((error_count, filesystem_errors))
     }
 
     /// Parse a single Linux log line for filesystem errors
     #[cfg(target_os = "linux")]
-    fn parse_linux_log_line(&self, line: &str, mount_point: &str, cutoff_time: DateTime<Utc>) -> Option<FilesystemError> {
+    fn parse_linux_log_line(
+        &self,
+        line: &str,
+        mount_point: &str,
+        cutoff_time: DateTime<Utc>,
+    ) -> Option<FilesystemError> {
         // Look for filesystem error patterns
         let error_patterns = [
             "EXT4-fs error",
@@ -2354,15 +2702,16 @@ impl MetricsCollector {
             "read error",
             "write error",
         ];
-        
+
         // Check if line contains any error patterns and mentions the mount point
         let has_error = error_patterns.iter().any(|pattern| line.contains(pattern));
-        let mentions_mount = line.contains(mount_point) || line.contains(&mount_point.replace("/", ""));
-        
+        let mentions_mount =
+            line.contains(mount_point) || line.contains(&mount_point.replace("/", ""));
+
         if has_error && mentions_mount {
             // Parse timestamp (simplified - assumes standard syslog format)
             let timestamp = self.parse_log_timestamp(line).unwrap_or(Utc::now());
-            
+
             // Only include errors within the time window
             if timestamp >= cutoff_time {
                 let error_type = if line.contains("I/O error") {
@@ -2373,8 +2722,9 @@ impl MetricsCollector {
                     "Write Error"
                 } else {
                     "Filesystem Error"
-                }.to_string();
-                
+                }
+                .to_string();
+
                 let severity = if line.contains("critical") || line.contains("fatal") {
                     ErrorSeverity::Critical
                 } else if line.contains("error") {
@@ -2384,7 +2734,7 @@ impl MetricsCollector {
                 } else {
                     ErrorSeverity::Low
                 };
-                
+
                 return Some(FilesystemError {
                     error_type,
                     error_message: line.to_string(),
@@ -2393,7 +2743,7 @@ impl MetricsCollector {
                 });
             }
         }
-        
+
         None
     }
 
@@ -2404,7 +2754,9 @@ impl MetricsCollector {
         if line.len() > 15 {
             // Try to parse standard syslog timestamp format
             let timestamp_str = &line[0..15];
-            if let Ok(parsed) = chrono::NaiveDateTime::parse_from_str(timestamp_str, "%b %d %H:%M:%S") {
+            if let Ok(parsed) =
+                chrono::NaiveDateTime::parse_from_str(timestamp_str, "%b %d %H:%M:%S")
+            {
                 // Assume current year
                 let current_year = Utc::now().year();
                 if let Some(datetime) = parsed.and_local_timezone(Utc).single() {
@@ -2417,17 +2769,27 @@ impl MetricsCollector {
 
     /// Parse macOS filesystem errors from system logs
     #[cfg(target_os = "macos")]
-    async fn parse_macos_filesystem_errors(&self, mount_point: &str, cutoff_time: DateTime<Utc>) -> Result<(u32, Vec<FilesystemError>)> {
+    async fn parse_macos_filesystem_errors(
+        &self,
+        mount_point: &str,
+        cutoff_time: DateTime<Utc>,
+    ) -> Result<(u32, Vec<FilesystemError>)> {
         use std::process::Command;
-        
+
         let mut error_count = 0u32;
         let mut filesystem_errors = Vec::new();
-        
+
         // Use log command to query system logs
         let output = Command::new("log")
-            .args(&["show", "--predicate", "category == 'filesystem'", "--last", "24h"])
+            .args(&[
+                "show",
+                "--predicate",
+                "category == 'filesystem'",
+                "--last",
+                "24h",
+            ])
             .output();
-            
+
         if let Ok(output) = output {
             if output.status.success() {
                 let log_content = String::from_utf8_lossy(&output.stdout);
@@ -2439,13 +2801,18 @@ impl MetricsCollector {
                 }
             }
         }
-        
+
         Ok((error_count, filesystem_errors))
     }
 
     /// Parse a single macOS log line for filesystem errors
     #[cfg(target_os = "macos")]
-    fn parse_macos_log_line(&self, line: &str, mount_point: &str, cutoff_time: DateTime<Utc>) -> Option<FilesystemError> {
+    fn parse_macos_log_line(
+        &self,
+        line: &str,
+        mount_point: &str,
+        cutoff_time: DateTime<Utc>,
+    ) -> Option<FilesystemError> {
         // Look for filesystem error patterns in macOS logs
         let error_patterns = [
             "filesystem error",
@@ -2453,10 +2820,10 @@ impl MetricsCollector {
             "disk error",
             "volume error",
         ];
-        
+
         let has_error = error_patterns.iter().any(|pattern| line.contains(pattern));
         let mentions_mount = line.contains(mount_point);
-        
+
         if has_error && mentions_mount {
             let timestamp = self.parse_macos_log_timestamp(line).unwrap_or(Utc::now());
             if timestamp >= cutoff_time {
@@ -2468,7 +2835,7 @@ impl MetricsCollector {
                 });
             }
         }
-        
+
         None
     }
 
@@ -2482,14 +2849,22 @@ impl MetricsCollector {
 
     /// Parse Windows filesystem errors from Event Log
     #[cfg(target_os = "windows")]
-    async fn parse_windows_filesystem_errors(&self, mount_point: &str, cutoff_time: DateTime<Utc>) -> Result<(u32, Vec<FilesystemError>)> {
+    async fn parse_windows_filesystem_errors(
+        &self,
+        mount_point: &str,
+        cutoff_time: DateTime<Utc>,
+    ) -> Result<(u32, Vec<FilesystemError>)> {
         // Windows implementation would use Windows Event Log APIs
         // For now, return empty results
         Ok((0, vec![]))
     }
 
     /// Calculate fragmentation level for a filesystem
-    async fn calculate_fragmentation_level(&self, mount_point: &str, filesystem_type: &str) -> Result<f64> {
+    async fn calculate_fragmentation_level(
+        &self,
+        mount_point: &str,
+        filesystem_type: &str,
+    ) -> Result<f64> {
         // Check if filesystem monitoring is enabled
         if !self.config.filesystem.enabled {
             return Ok(0.0);
@@ -2497,19 +2872,22 @@ impl MetricsCollector {
         // Platform-specific fragmentation calculation
         #[cfg(target_os = "linux")]
         {
-            self.calculate_linux_fragmentation(mount_point, filesystem_type).await
+            self.calculate_linux_fragmentation(mount_point, filesystem_type)
+                .await
         }
-        
+
         #[cfg(target_os = "macos")]
         {
-            self.calculate_macos_fragmentation(mount_point, filesystem_type).await
+            self.calculate_macos_fragmentation(mount_point, filesystem_type)
+                .await
         }
-        
+
         #[cfg(target_os = "windows")]
         {
-            self.calculate_windows_fragmentation(mount_point, filesystem_type).await
+            self.calculate_windows_fragmentation(mount_point, filesystem_type)
+                .await
         }
-        
+
         #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
         {
             // Fallback for unsupported platforms
@@ -2520,16 +2898,20 @@ impl MetricsCollector {
 
     /// Calculate fragmentation level on Linux
     #[cfg(target_os = "linux")]
-    async fn calculate_linux_fragmentation(&self, mount_point: &str, filesystem_type: &str) -> Result<f64> {
+    async fn calculate_linux_fragmentation(
+        &self,
+        mount_point: &str,
+        filesystem_type: &str,
+    ) -> Result<f64> {
         use std::process::Command;
-        
+
         match filesystem_type {
             "ext4" | "ext3" | "ext2" => {
                 // Use e2fsck -f to check fragmentation (read-only)
                 let output = Command::new("e2fsck")
                     .args(&["-f", "-n", mount_point])
                     .output();
-                    
+
                 if let Ok(output) = output {
                     if output.status.success() {
                         let output_str = String::from_utf8_lossy(&output.stdout);
@@ -2542,7 +2924,7 @@ impl MetricsCollector {
                 let output = Command::new("xfs_db")
                     .args(&["-r", "-c", "frag", mount_point])
                     .output();
-                    
+
                 if let Ok(output) = output {
                     if output.status.success() {
                         let output_str = String::from_utf8_lossy(&output.stdout);
@@ -2555,7 +2937,7 @@ impl MetricsCollector {
                 let output = Command::new("btrfs")
                     .args(&["filesystem", "defrag", "-c", mount_point])
                     .output();
-                    
+
                 if let Ok(output) = output {
                     if output.status.success() {
                         let output_str = String::from_utf8_lossy(&output.stdout);
@@ -2564,10 +2946,13 @@ impl MetricsCollector {
                 }
             }
             _ => {
-                debug!("Fragmentation calculation not supported for filesystem type: {}", filesystem_type);
+                debug!(
+                    "Fragmentation calculation not supported for filesystem type: {}",
+                    filesystem_type
+                );
             }
         }
-        
+
         Ok(0.1) // Default low fragmentation
     }
 
@@ -2577,7 +2962,7 @@ impl MetricsCollector {
         // Look for fragmentation indicators in e2fsck output
         let lines: Vec<&str> = output.lines().collect();
         let mut fragmentation_score = 0.0;
-        
+
         for line in lines {
             if line.contains("fragmented") {
                 // Extract fragmentation percentage if available
@@ -2593,7 +2978,7 @@ impl MetricsCollector {
                 fragmentation_score = 0.2;
             }
         }
-        
+
         Ok(fragmentation_score.min(1.0))
     }
 
@@ -2603,7 +2988,7 @@ impl MetricsCollector {
         // XFS fragmentation is typically low, but we can check for specific indicators
         let lines: Vec<&str> = output.lines().collect();
         let mut fragmentation_score = 0.0;
-        
+
         for line in lines {
             if line.contains("fragmented") {
                 if let Some(percent_str) = self.extract_percentage(line) {
@@ -2615,7 +3000,7 @@ impl MetricsCollector {
                 fragmentation_score = 0.1; // XFS is generally less fragmented
             }
         }
-        
+
         Ok(fragmentation_score.min(1.0))
     }
 
@@ -2625,7 +3010,7 @@ impl MetricsCollector {
         // BTRFS has built-in defragmentation, so fragmentation is typically low
         let lines: Vec<&str> = output.lines().collect();
         let mut fragmentation_score = 0.0;
-        
+
         for line in lines {
             if line.contains("fragmented") {
                 if let Some(percent_str) = self.extract_percentage(line) {
@@ -2637,7 +3022,7 @@ impl MetricsCollector {
                 fragmentation_score = 0.05; // BTRFS is generally well-defragmented
             }
         }
-        
+
         Ok(fragmentation_score.min(1.0))
     }
 
@@ -2650,16 +3035,20 @@ impl MetricsCollector {
 
     /// Calculate fragmentation level on macOS
     #[cfg(target_os = "macos")]
-    async fn calculate_macos_fragmentation(&self, mount_point: &str, filesystem_type: &str) -> Result<f64> {
+    async fn calculate_macos_fragmentation(
+        &self,
+        mount_point: &str,
+        filesystem_type: &str,
+    ) -> Result<f64> {
         use std::process::Command;
-        
+
         match filesystem_type {
             "apfs" => {
                 // Use diskutil to check APFS fragmentation
                 let output = Command::new("diskutil")
                     .args(&["info", mount_point])
                     .output();
-                    
+
                 if let Ok(output) = output {
                     if output.status.success() {
                         let output_str = String::from_utf8_lossy(&output.stdout);
@@ -2672,7 +3061,7 @@ impl MetricsCollector {
                 let output = Command::new("diskutil")
                     .args(&["info", mount_point])
                     .output();
-                    
+
                 if let Ok(output) = output {
                     if output.status.success() {
                         let output_str = String::from_utf8_lossy(&output.stdout);
@@ -2681,10 +3070,13 @@ impl MetricsCollector {
                 }
             }
             _ => {
-                debug!("Fragmentation calculation not supported for filesystem type: {}", filesystem_type);
+                debug!(
+                    "Fragmentation calculation not supported for filesystem type: {}",
+                    filesystem_type
+                );
             }
         }
-        
+
         Ok(0.1) // Default low fragmentation
     }
 
@@ -2695,7 +3087,7 @@ impl MetricsCollector {
         // Look for specific indicators in diskutil output
         let lines: Vec<&str> = output.lines().collect();
         let mut fragmentation_score = 0.0;
-        
+
         for line in lines {
             if line.contains("fragmented") {
                 if let Some(percent_str) = self.extract_percentage(line) {
@@ -2707,7 +3099,7 @@ impl MetricsCollector {
                 fragmentation_score = 0.05; // APFS is generally well-optimized
             }
         }
-        
+
         Ok(fragmentation_score.min(1.0))
     }
 
@@ -2717,7 +3109,7 @@ impl MetricsCollector {
         // HFS+ can become fragmented over time
         let lines: Vec<&str> = output.lines().collect();
         let mut fragmentation_score = 0.0;
-        
+
         for line in lines {
             if line.contains("fragmented") {
                 if let Some(percent_str) = self.extract_percentage(line) {
@@ -2729,27 +3121,31 @@ impl MetricsCollector {
                 fragmentation_score = 0.2; // HFS+ can be moderately fragmented
             }
         }
-        
+
         Ok(fragmentation_score.min(1.0))
     }
 
     /// Calculate fragmentation level on Windows
     #[cfg(target_os = "windows")]
-    async fn calculate_windows_fragmentation(&self, mount_point: &str, filesystem_type: &str) -> Result<f64> {
+    async fn calculate_windows_fragmentation(
+        &self,
+        mount_point: &str,
+        filesystem_type: &str,
+    ) -> Result<f64> {
         use std::process::Command;
-        
+
         // Use defrag command to check fragmentation
         let output = Command::new("defrag")
             .args(&[mount_point, "/A"]) // Analyze only
             .output();
-            
+
         if let Ok(output) = output {
             if output.status.success() {
                 let output_str = String::from_utf8_lossy(&output.stdout);
                 return self.parse_windows_fragmentation(&output_str);
             }
         }
-        
+
         Ok(0.1) // Default low fragmentation
     }
 
@@ -2758,7 +3154,7 @@ impl MetricsCollector {
     fn parse_windows_fragmentation(&self, output: &str) -> Result<f64> {
         let lines: Vec<&str> = output.lines().collect();
         let mut fragmentation_score = 0.0;
-        
+
         for line in lines {
             if line.contains("fragmented") {
                 if let Some(percent_str) = self.extract_percentage(line) {
@@ -2770,18 +3166,21 @@ impl MetricsCollector {
                 fragmentation_score = 0.2; // Default moderate fragmentation
             }
         }
-        
+
         Ok(fragmentation_score.min(1.0))
     }
 
     /// Collect inode usage statistics
-    async fn collect_inode_usage(&self, filesystem_usage: &HashMap<String, FilesystemUsage>) -> Result<HashMap<String, InodeUsage>> {
+    async fn collect_inode_usage(
+        &self,
+        filesystem_usage: &HashMap<String, FilesystemUsage>,
+    ) -> Result<HashMap<String, InodeUsage>> {
         // Check if filesystem monitoring is enabled
         if !self.config.filesystem.enabled {
             return Ok(HashMap::new());
         }
         let mut inode_usage = HashMap::new();
-        
+
         for (mount_point, _usage) in filesystem_usage {
             // Platform-specific inode usage collection
             let inode_data = match self.collect_platform_inode_usage(mount_point).await {
@@ -2798,10 +3197,10 @@ impl MetricsCollector {
                     }
                 }
             };
-            
+
             inode_usage.insert(mount_point.clone(), inode_data);
         }
-        
+
         Ok(inode_usage)
     }
 
@@ -2812,17 +3211,17 @@ impl MetricsCollector {
         {
             self.collect_linux_inode_usage(mount_point).await
         }
-        
+
         #[cfg(target_os = "macos")]
         {
             self.collect_macos_inode_usage(mount_point).await
         }
-        
+
         #[cfg(target_os = "windows")]
         {
             self.collect_windows_inode_usage(mount_point).await
         }
-        
+
         #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
         {
             // Fallback for unsupported platforms
@@ -2841,18 +3240,16 @@ impl MetricsCollector {
     #[cfg(target_os = "linux")]
     async fn collect_linux_inode_usage(&self, mount_point: &str) -> Result<InodeUsage> {
         use std::process::Command;
-        
-        let output = Command::new("df")
-            .args(&["-i", mount_point])
-            .output();
-            
+
+        let output = Command::new("df").args(&["-i", mount_point]).output();
+
         if let Ok(output) = output {
             if output.status.success() {
                 let output_str = String::from_utf8_lossy(&output.stdout);
                 return self.parse_linux_df_output(&output_str, mount_point);
             }
         }
-        
+
         anyhow::bail!("Failed to execute df command for inode usage")
     }
 
@@ -2860,7 +3257,7 @@ impl MetricsCollector {
     #[cfg(target_os = "linux")]
     fn parse_linux_df_output(&self, output: &str, mount_point: &str) -> Result<InodeUsage> {
         let lines: Vec<&str> = output.lines().collect();
-        
+
         // Skip header line, look for the mount point line
         for line in lines.iter().skip(1) {
             let parts: Vec<&str> = line.split_whitespace().collect();
@@ -2873,7 +3270,7 @@ impl MetricsCollector {
                 } else {
                     0.0
                 };
-                
+
                 return Ok(InodeUsage {
                     mount_point: mount_point.to_string(),
                     total_inodes,
@@ -2883,7 +3280,7 @@ impl MetricsCollector {
                 });
             }
         }
-        
+
         anyhow::bail!("Mount point {} not found in df output", mount_point)
     }
 
@@ -2891,18 +3288,16 @@ impl MetricsCollector {
     #[cfg(target_os = "macos")]
     async fn collect_macos_inode_usage(&self, mount_point: &str) -> Result<InodeUsage> {
         use std::process::Command;
-        
-        let output = Command::new("df")
-            .args(&["-i", mount_point])
-            .output();
-            
+
+        let output = Command::new("df").args(&["-i", mount_point]).output();
+
         if let Ok(output) = output {
             if output.status.success() {
                 let output_str = String::from_utf8_lossy(&output.stdout);
                 return self.parse_macos_df_output(&output_str, mount_point);
             }
         }
-        
+
         anyhow::bail!("Failed to execute df command for inode usage")
     }
 
@@ -2910,7 +3305,7 @@ impl MetricsCollector {
     #[cfg(target_os = "macos")]
     fn parse_macos_df_output(&self, output: &str, mount_point: &str) -> Result<InodeUsage> {
         let lines: Vec<&str> = output.lines().collect();
-        
+
         // Skip header line, look for the mount point line
         for line in lines.iter().skip(1) {
             let parts: Vec<&str> = line.split_whitespace().collect();
@@ -2923,7 +3318,7 @@ impl MetricsCollector {
                 } else {
                     0.0
                 };
-                
+
                 return Ok(InodeUsage {
                     mount_point: mount_point.to_string(),
                     total_inodes,
@@ -2933,7 +3328,7 @@ impl MetricsCollector {
                 });
             }
         }
-        
+
         anyhow::bail!("Mount point {} not found in df output", mount_point)
     }
 
@@ -2941,19 +3336,19 @@ impl MetricsCollector {
     #[cfg(target_os = "windows")]
     async fn collect_windows_inode_usage(&self, mount_point: &str) -> Result<InodeUsage> {
         use std::process::Command;
-        
+
         // Windows doesn't have traditional inodes, but we can use dir command to count files
         let output = Command::new("cmd")
             .args(&["/c", "dir", mount_point, "/s", "/-c"])
             .output();
-            
+
         if let Ok(output) = output {
             if output.status.success() {
                 let output_str = String::from_utf8_lossy(&output.stdout);
                 return self.parse_windows_dir_output(&output_str, mount_point);
             }
         }
-        
+
         anyhow::bail!("Failed to execute dir command for file count")
     }
 
@@ -2963,7 +3358,7 @@ impl MetricsCollector {
         let lines: Vec<&str> = output.lines().collect();
         let mut file_count = 0u64;
         let mut dir_count = 0u64;
-        
+
         // Count files and directories from dir output
         for line in lines {
             if line.contains("<DIR>") {
@@ -2977,12 +3372,12 @@ impl MetricsCollector {
                 }
             }
         }
-        
+
         let total_inodes = file_count + dir_count;
         let used_inodes = total_inodes;
         let available_inodes = 0; // Windows doesn't have a traditional inode limit
         let inode_usage_percentage = 0.0; // Not applicable for Windows
-        
+
         Ok(InodeUsage {
             mount_point: mount_point.to_string(),
             total_inodes,
@@ -3042,8 +3437,8 @@ pub struct AlertSummaryItem {
 mod tests {
     use super::*;
     use std::time::Duration;
-    use tokio::time::timeout;
     use tempfile::TempDir;
+    use tokio::time::timeout;
 
     /// Create a test configuration that disables external calls
     fn create_test_config() -> SystemHealthMonitorConfig {
@@ -3089,7 +3484,7 @@ mod tests {
     async fn test_system_health_monitor_creation() {
         let config = create_test_config();
         let db_client = create_test_db_client().await;
-        
+
         let monitor = SystemHealthMonitor::with_database_client(config, db_client);
         assert!(monitor.is_ok());
     }
@@ -3098,29 +3493,38 @@ mod tests {
     async fn test_system_health_monitor_start_stop() {
         let config = create_test_config();
         let db_client = create_test_db_client().await;
-        
+
         let monitor = SystemHealthMonitor::with_database_client(config, db_client).unwrap();
-        
+
         // Test that start doesn't hang
         let start_result = timeout(Duration::from_secs(5), monitor.start()).await;
-        assert!(start_result.is_ok(), "Monitor start should complete within 5 seconds");
-        
+        assert!(
+            start_result.is_ok(),
+            "Monitor start should complete within 5 seconds"
+        );
+
         // Test that stop works
         let stop_result = timeout(Duration::from_secs(5), monitor.stop()).await;
-        assert!(stop_result.is_ok(), "Monitor stop should complete within 5 seconds");
+        assert!(
+            stop_result.is_ok(),
+            "Monitor stop should complete within 5 seconds"
+        );
     }
 
     #[tokio::test]
     async fn test_get_system_health() {
         let config = create_test_config();
         let db_client = create_test_db_client().await;
-        
+
         let monitor = SystemHealthMonitor::with_database_client(config, db_client).unwrap();
-        
+
         // Test that get_system_health doesn't hang
         let health_result = timeout(Duration::from_secs(5), monitor.get_system_health()).await;
-        assert!(health_result.is_ok(), "get_system_health should complete within 5 seconds");
-        
+        assert!(
+            health_result.is_ok(),
+            "get_system_health should complete within 5 seconds"
+        );
+
         let health = health_result.unwrap();
         assert_eq!(health.overall_health, SystemHealthStatus::Healthy);
     }
@@ -3129,13 +3533,16 @@ mod tests {
     async fn test_get_system_metrics() {
         let config = create_test_config();
         let db_client = create_test_db_client().await;
-        
+
         let monitor = SystemHealthMonitor::with_database_client(config, db_client).unwrap();
-        
+
         // Test that get_system_metrics doesn't hang
         let metrics_result = timeout(Duration::from_secs(5), monitor.get_system_metrics()).await;
-        assert!(metrics_result.is_ok(), "get_system_metrics should complete within 5 seconds");
-        
+        assert!(
+            metrics_result.is_ok(),
+            "get_system_metrics should complete within 5 seconds"
+        );
+
         let metrics = metrics_result.unwrap();
         assert!(metrics.cpu_usage_percentage >= 0.0);
         assert!(metrics.cpu_usage_percentage <= 100.0);
@@ -3145,13 +3552,16 @@ mod tests {
     async fn test_get_alerts() {
         let config = create_test_config();
         let db_client = create_test_db_client().await;
-        
+
         let monitor = SystemHealthMonitor::with_database_client(config, db_client).unwrap();
-        
+
         // Test that get_alerts doesn't hang
         let alerts_result = timeout(Duration::from_secs(5), monitor.get_alerts()).await;
-        assert!(alerts_result.is_ok(), "get_alerts should complete within 5 seconds");
-        
+        assert!(
+            alerts_result.is_ok(),
+            "get_alerts should complete within 5 seconds"
+        );
+
         let alerts = alerts_result.unwrap();
         assert!(alerts.is_empty()); // Should be empty for test config
     }
@@ -3160,7 +3570,10 @@ mod tests {
     async fn test_embedding_service_config() {
         let config = create_test_config();
         assert!(!config.embedding_service.enabled);
-        assert_eq!(config.embedding_service.endpoint, "http://localhost:9999/test");
+        assert_eq!(
+            config.embedding_service.endpoint,
+            "http://localhost:9999/test"
+        );
         assert_eq!(config.embedding_service.timeout_ms, 100);
         assert_eq!(config.embedding_service.max_retries, 1);
     }
@@ -3169,7 +3582,10 @@ mod tests {
     async fn test_database_config() {
         let config = create_test_config();
         assert!(!config.database.enabled);
-        assert_eq!(config.database.connection_string, "postgresql://test:test@localhost:5432/test");
+        assert_eq!(
+            config.database.connection_string,
+            "postgresql://test:test@localhost:5432/test"
+        );
         assert_eq!(config.database.timeout_ms, 100);
         assert_eq!(config.database.max_retries, 1);
     }
@@ -3188,7 +3604,7 @@ mod tests {
     async fn test_agent_integration_creation() {
         let base_config = create_test_config();
         let integration_config = AgentIntegrationConfig::default();
-        
+
         let monitor = AgentIntegratedHealthMonitor::new(base_config, integration_config);
         assert_eq!(monitor.config.enable_agent_tracking, true);
         assert_eq!(monitor.config.enable_coordination_metrics, true);
@@ -3199,25 +3615,31 @@ mod tests {
     async fn test_agent_integration_start() {
         let base_config = create_test_config();
         let integration_config = AgentIntegrationConfig::default();
-        
+
         let monitor = AgentIntegratedHealthMonitor::new(base_config, integration_config);
-        
+
         // Test that start doesn't hang
         let start_result = timeout(Duration::from_secs(5), monitor.start()).await;
-        assert!(start_result.is_ok(), "Agent integration start should complete within 5 seconds");
+        assert!(
+            start_result.is_ok(),
+            "Agent integration start should complete within 5 seconds"
+        );
     }
 
     #[tokio::test]
     async fn test_health_summary() {
         let base_config = create_test_config();
         let integration_config = AgentIntegrationConfig::default();
-        
+
         let monitor = AgentIntegratedHealthMonitor::new(base_config, integration_config);
-        
+
         // Test that get_health_summary doesn't hang
         let summary_result = timeout(Duration::from_secs(5), monitor.get_health_summary()).await;
-        assert!(summary_result.is_ok(), "get_health_summary should complete within 5 seconds");
-        
+        assert!(
+            summary_result.is_ok(),
+            "get_health_summary should complete within 5 seconds"
+        );
+
         let summary = summary_result.unwrap();
         assert!(!summary.overall_health.is_empty());
     }
@@ -3246,8 +3668,12 @@ mod tests {
             },
         ];
 
-        let growth_rate = SystemHealthMonitor::calculate_linear_regression_growth_rate(&data_points);
-        assert!(growth_rate > 0.0, "Growth rate should be positive for increasing data");
+        let growth_rate =
+            SystemHealthMonitor::calculate_linear_regression_growth_rate(&data_points);
+        assert!(
+            growth_rate > 0.0,
+            "Growth rate should be positive for increasing data"
+        );
         assert!(growth_rate < 10000.0, "Growth rate should be reasonable");
     }
 
@@ -3255,39 +3681,46 @@ mod tests {
     async fn test_disk_usage_trends_calculation() {
         let config = create_test_config();
         let db_client = create_test_db_client().await;
-        
+
         let monitor = SystemHealthMonitor::with_database_client(config, db_client).unwrap();
-        
+
         // Create test filesystem usage data
         let mut filesystem_usage = HashMap::new();
-        filesystem_usage.insert("/tmp".to_string(), FilesystemUsage {
-            mount_point: "/tmp".to_string(),
-            filesystem_type: "tmpfs".to_string(),
-            total_bytes: 1000000,
-            used_bytes: 500000,
-            available_bytes: 500000,
-            usage_percentage: 50.0,
-            health: FilesystemHealth {
-                error_count: 0,
-                filesystem_errors: vec![],
-                fragmentation_level: 10.0,
-                inode_usage: InodeUsage {
-                    mount_point: "/tmp".to_string(),
-                    total_inodes: 1000,
-                    used_inodes: 500,
-                    available_inodes: 500,
-                    inode_usage_percentage: 50.0,
+        filesystem_usage.insert(
+            "/tmp".to_string(),
+            FilesystemUsage {
+                mount_point: "/tmp".to_string(),
+                filesystem_type: "tmpfs".to_string(),
+                total_bytes: 1000000,
+                used_bytes: 500000,
+                available_bytes: 500000,
+                usage_percentage: 50.0,
+                health: FilesystemHealth {
+                    error_count: 0,
+                    filesystem_errors: vec![],
+                    fragmentation_level: 10.0,
+                    inode_usage: InodeUsage {
+                        mount_point: "/tmp".to_string(),
+                        total_inodes: 1000,
+                        used_inodes: 500,
+                        available_inodes: 500,
+                        inode_usage_percentage: 50.0,
+                    },
                 },
             },
-        });
+        );
 
         // Test that calculate_disk_usage_trends doesn't hang
         let trends_result = timeout(
-            Duration::from_secs(5), 
-            monitor.calculate_disk_usage_trends(&filesystem_usage)
-        ).await;
-        assert!(trends_result.is_ok(), "calculate_disk_usage_trends should complete within 5 seconds");
-        
+            Duration::from_secs(5),
+            monitor.calculate_disk_usage_trends(&filesystem_usage),
+        )
+        .await;
+        assert!(
+            trends_result.is_ok(),
+            "calculate_disk_usage_trends should complete within 5 seconds"
+        );
+
         let trends = trends_result.unwrap();
         assert!(trends.growth_rate_bytes_per_day >= 0.0);
         assert!(trends.days_until_80_percent >= 0.0);

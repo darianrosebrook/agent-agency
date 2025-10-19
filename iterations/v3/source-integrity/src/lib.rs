@@ -8,11 +8,11 @@
 //!
 //! @author @darianrosebrook
 
-pub mod service;
-pub mod types;
-pub mod storage;
 pub mod hasher;
+pub mod service;
+pub mod storage;
 pub mod tampering_detector;
+pub mod types;
 
 pub use service::SourceIntegrityService;
 pub use types::*;

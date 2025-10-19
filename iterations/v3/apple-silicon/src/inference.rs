@@ -7,7 +7,6 @@
 /// - All tensors are row-major, dtype-explicit
 /// - No ObjC/Swift types cross this boundary
 /// - Cache keys include OS build + Core ML version for reproducibility
-
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -59,9 +58,9 @@ pub enum ModelFmt {
 /// Metadata for compiled models
 #[derive(Debug, Clone)]
 pub struct CompiledMeta {
-    pub platform: String,      // "macos-m1", "macos-m2", etc.
+    pub platform: String,       // "macos-m1", "macos-m2", etc.
     pub coreml_version: String, // Core ML framework version
-    pub backend: String,       // "mlprogram" or "neuralnetwork"
+    pub backend: String,        // "mlprogram" or "neuralnetwork"
 }
 
 /// Model artifact – distinguishes authoring format from runtime format
@@ -74,24 +73,21 @@ pub enum ModelArtifact {
         sha256: [u8; 32],
     },
     /// Pre-compiled format (ready to load)
-    Compiled {
-        path: PathBuf,
-        meta: CompiledMeta,
-    },
+    Compiled { path: PathBuf, meta: CompiledMeta },
 }
 
 impl ModelArtifact {
     /// Compute hash for compiled model directory
     fn compute_compiled_hash(&self, path: &Path) -> Result<String, anyhow::Error> {
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
-        
+
         // Hash directory structure and key files
         if path.is_dir() {
             // Hash the directory structure
             let mut entries: Vec<_> = std::fs::read_dir(path)?.collect();
             entries.sort_by_key(|entry| entry.as_ref().unwrap().path());
-            
+
             for entry in entries {
                 let entry = entry?;
                 let path = entry.path();
@@ -105,7 +101,7 @@ impl ModelArtifact {
             let content = std::fs::read(path)?;
             hasher.update(&content);
         }
-        
+
         Ok(hex::encode(&hasher.finalize()))
     }
 
@@ -123,7 +119,11 @@ impl ModelArtifact {
                 let sha_hex = hex::encode(sha256);
                 Ok(format!(
                     "{}:unknown:unknown:{}:{}:{}:{}",
-                    sha_hex, compute_units_str(compute_units), quantization, shape_key, os_build
+                    sha_hex,
+                    compute_units_str(compute_units),
+                    quantization,
+                    shape_key,
+                    os_build
                 ))
             }
             ModelArtifact::Compiled { meta, path, .. } => {
@@ -196,14 +196,14 @@ pub struct TensorDescriptor {
     pub name: String,
     pub dtype: DType,
     pub shape: Vec<usize>,
-    pub data_offset: usize,  // Offset in binary blob
-    pub data_size: usize,    // Size in bytes
+    pub data_offset: usize, // Offset in binary blob
+    pub data_size: usize,   // Size in bytes
 }
 
 /// Tensor batch with metadata + binary data
 pub struct TensorBatch {
     pub descriptors: Vec<TensorDescriptor>,
-    pub data: Vec<u8>,  // Contiguous binary data
+    pub data: Vec<u8>,            // Contiguous binary data
     pub temp_files: Vec<PathBuf>, // Track temp files for cleanup
 }
 
@@ -212,12 +212,12 @@ impl TensorBatch {
     pub fn from_tensor_map(map: &TensorMap, schema: &IoSchema) -> Result<Self, anyhow::Error> {
         let mut descriptors = Vec::new();
         let mut data = Vec::new();
-        
+
         for input_spec in &schema.inputs {
             if let Some(tensor_data) = map.get(&input_spec.name) {
                 let offset = data.len();
                 let size = tensor_data.len();
-                
+
                 descriptors.push(TensorDescriptor {
                     name: input_spec.name.clone(),
                     dtype: input_spec.dtype,
@@ -225,13 +225,13 @@ impl TensorBatch {
                     data_offset: offset,
                     data_size: size,
                 });
-                
+
                 data.extend_from_slice(tensor_data);
             } else {
                 anyhow::bail!("Missing input tensor: {}", input_spec.name);
             }
         }
-        
+
         Ok(TensorBatch {
             descriptors,
             data,
@@ -242,17 +242,22 @@ impl TensorBatch {
     /// Deserialize binary format to TensorMap
     pub fn to_tensor_map(&self) -> Result<TensorMap, anyhow::Error> {
         let mut map = HashMap::new();
-        
+
         for desc in &self.descriptors {
             if desc.data_offset + desc.data_size > self.data.len() {
-                anyhow::bail!("Invalid tensor descriptor: offset {} + size {} > data len {}", 
-                    desc.data_offset, desc.data_size, self.data.len());
+                anyhow::bail!(
+                    "Invalid tensor descriptor: offset {} + size {} > data len {}",
+                    desc.data_offset,
+                    desc.data_size,
+                    self.data.len()
+                );
             }
-            
-            let tensor_data = self.data[desc.data_offset..desc.data_offset + desc.data_size].to_vec();
+
+            let tensor_data =
+                self.data[desc.data_offset..desc.data_offset + desc.data_size].to_vec();
             map.insert(desc.name.clone(), tensor_data);
         }
-        
+
         Ok(map)
     }
 
@@ -260,14 +265,14 @@ impl TensorBatch {
     pub fn to_json_with_data_path(&mut self, temp_dir: &Path) -> Result<String, anyhow::Error> {
         use std::fs;
         use std::io::Write;
-        
+
         // Create temp file for binary data
         let temp_file = temp_dir.join(format!("tensor_batch_{}.bin", uuid::Uuid::new_v4()));
         let mut file = fs::File::create(&temp_file)?;
         file.write_all(&self.data)?;
-        
+
         self.temp_files.push(temp_file.clone());
-        
+
         // Create JSON with tensor descriptors and file path
         let json_data = serde_json::json!({
             "data_path": temp_file.to_string_lossy(),
@@ -281,41 +286,50 @@ impl TensorBatch {
                 })
             }).collect::<Vec<_>>()
         });
-        
+
         Ok(json_data.to_string())
     }
 
     /// Create TensorBatch from JSON with data file path
     pub fn from_json_with_data_path(json_str: &str) -> Result<Self, anyhow::Error> {
         use std::fs;
-        
+
         let json_data: serde_json::Value = serde_json::from_str(json_str)?;
-        let data_path = json_data["data_path"].as_str()
+        let data_path = json_data["data_path"]
+            .as_str()
             .ok_or_else(|| anyhow::anyhow!("Missing data_path in JSON"))?;
-        
+
         // Read binary data from file
         let data = fs::read(data_path)?;
-        
+
         // Parse descriptors
-        let descriptors_value = json_data["descriptors"].as_array()
+        let descriptors_value = json_data["descriptors"]
+            .as_array()
             .ok_or_else(|| anyhow::anyhow!("Missing descriptors array"))?;
-        
+
         let mut descriptors = Vec::new();
         for desc_value in descriptors_value {
-            let name = desc_value["name"].as_str()
+            let name = desc_value["name"]
+                .as_str()
                 .ok_or_else(|| anyhow::anyhow!("Missing name in descriptor"))?;
-            let dtype_str = desc_value["dtype"].as_str()
+            let dtype_str = desc_value["dtype"]
+                .as_str()
                 .ok_or_else(|| anyhow::anyhow!("Missing dtype in descriptor"))?;
-            let shape = desc_value["shape"].as_array()
+            let shape = desc_value["shape"]
+                .as_array()
                 .ok_or_else(|| anyhow::anyhow!("Missing shape in descriptor"))?
                 .iter()
                 .map(|v| v.as_u64().unwrap_or(0) as usize)
                 .collect::<Vec<_>>();
-            let data_offset = desc_value["data_offset"].as_u64()
-                .ok_or_else(|| anyhow::anyhow!("Missing data_offset in descriptor"))? as usize;
-            let data_size = desc_value["data_size"].as_u64()
-                .ok_or_else(|| anyhow::anyhow!("Missing data_size in descriptor"))? as usize;
-            
+            let data_offset = desc_value["data_offset"]
+                .as_u64()
+                .ok_or_else(|| anyhow::anyhow!("Missing data_offset in descriptor"))?
+                as usize;
+            let data_size = desc_value["data_size"]
+                .as_u64()
+                .ok_or_else(|| anyhow::anyhow!("Missing data_size in descriptor"))?
+                as usize;
+
             let dtype = match dtype_str {
                 "f32" => DType::F32,
                 "f16" => DType::F16,
@@ -324,7 +338,7 @@ impl TensorBatch {
                 "u8" => DType::U8,
                 _ => anyhow::bail!("Unknown dtype: {}", dtype_str),
             };
-            
+
             descriptors.push(TensorDescriptor {
                 name: name.to_string(),
                 dtype,
@@ -333,7 +347,7 @@ impl TensorBatch {
                 data_size,
             });
         }
-        
+
         Ok(TensorBatch {
             descriptors,
             data,
@@ -344,13 +358,13 @@ impl TensorBatch {
     /// Clean up temporary files
     pub fn cleanup_temp_files(&self) -> Result<(), anyhow::Error> {
         use std::fs;
-        
+
         for temp_file in &self.temp_files {
             if temp_file.exists() {
                 fs::remove_file(temp_file)?;
             }
         }
-        
+
         Ok(())
     }
 }
@@ -391,12 +405,12 @@ pub trait InferenceEngine: Send + Sync {
 /// Device capability report (requested vs actual dispatch, ANE op coverage, etc.)
 #[derive(Debug, Clone)]
 pub struct CapabilityReport {
-    pub device_class: String,              // "M1", "M2", "M3"
+    pub device_class: String, // "M1", "M2", "M3"
     pub supported_dtypes: Vec<DType>,
     pub max_batch_size: usize,
-    pub ane_op_coverage_pct: u32,          // % of model ops supported on ANE
+    pub ane_op_coverage_pct: u32, // % of model ops supported on ANE
     pub compute_units_requested: ComputeUnits,
-    pub compute_units_actual: ComputeUnits,  // reported by telemetry
+    pub compute_units_actual: ComputeUnits, // reported by telemetry
     pub compile_p99_ms: u64,
     pub infer_p99_ms: u64,
 }

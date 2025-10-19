@@ -231,9 +231,7 @@ impl WorkspaceStateManager {
             files_modified: files_modified_count,
             computed_at: chrono::Utc::now(),
             timestamp: chrono::Utc::now(),
-            changes: self
-                .collect_actual_diff_changes(&to, &from)
-                .await,
+            changes: self.collect_actual_diff_changes(&to, &from).await,
         };
 
         // Store the diff
@@ -701,9 +699,9 @@ impl WorkspaceStateManager {
             &mut |delta, _| {
                 // Skip certain delta types
                 match delta.status() {
-                    git2::Delta::Ignored => return true,      // Skip ignored files
-                    git2::Delta::Untracked => return true,    // Skip untracked files
-                    _ => {} // Continue processing other types
+                    git2::Delta::Ignored => return true,   // Skip ignored files
+                    git2::Delta::Untracked => return true, // Skip untracked files
+                    _ => {}                                // Continue processing other types
                 };
 
                 let new_file_path = delta
@@ -720,15 +718,16 @@ impl WorkspaceStateManager {
                             Ok(t) => t,
                             Err(_) => return true,
                         };
-                        let content = self.get_content_from_git_tree(repo, &tree, &new_file_path)
+                        let content = self
+                            .get_content_from_git_tree(repo, &tree, &new_file_path)
                             .unwrap_or_else(|_| Vec::new());
                         DiffChange::Add {
                             path: new_file_path,
-                            content
+                            content,
                         }
-                    },
-                    git2::Delta::Deleted => DiffChange::Remove { 
-                        path: old_file_path.unwrap_or_else(|| new_file_path.clone())
+                    }
+                    git2::Delta::Deleted => DiffChange::Remove {
+                        path: old_file_path.unwrap_or_else(|| new_file_path.clone()),
                     },
                     git2::Delta::Modified => {
                         let from_tree = match from_commit.tree() {
@@ -739,16 +738,22 @@ impl WorkspaceStateManager {
                             Ok(t) => t,
                             Err(_) => return true,
                         };
-                        let old_content = self.get_content_from_git_tree(repo, &from_tree, &old_file_path.unwrap_or(new_file_path.clone()))
+                        let old_content = self
+                            .get_content_from_git_tree(
+                                repo,
+                                &from_tree,
+                                &old_file_path.unwrap_or(new_file_path.clone()),
+                            )
                             .ok();
-                        let new_content = self.get_content_from_git_tree(repo, &to_tree, &new_file_path)
+                        let new_content = self
+                            .get_content_from_git_tree(repo, &to_tree, &new_file_path)
                             .unwrap_or_else(|_| Vec::new());
                         DiffChange::Modify {
                             path: new_file_path,
                             old_content,
                             new_content,
                         }
-                    },
+                    }
                     git2::Delta::Renamed => {
                         let from_tree = match from_commit.tree() {
                             Ok(t) => t,
@@ -758,27 +763,33 @@ impl WorkspaceStateManager {
                             Ok(t) => t,
                             Err(_) => return true,
                         };
-                        let old_content = self.get_content_from_git_tree(repo, &from_tree, &old_file_path.unwrap_or(new_file_path.clone()))
+                        let old_content = self
+                            .get_content_from_git_tree(
+                                repo,
+                                &from_tree,
+                                &old_file_path.unwrap_or(new_file_path.clone()),
+                            )
                             .ok();
-                        let new_content = self.get_content_from_git_tree(repo, &to_tree, &new_file_path)
+                        let new_content = self
+                            .get_content_from_git_tree(repo, &to_tree, &new_file_path)
                             .unwrap_or_else(|_| Vec::new());
                         DiffChange::Modify {
                             path: new_file_path,
                             old_content,
                             new_content,
                         }
-                    },
-                    _ => return true, // TODO: 
-                    // 1. Delta type classification: Implement comprehensive delta type classification
-                    //    - Classify git diff deltas into Add, Delete, Modify, Rename, Copy, etc.
-                    //    - Handle delta type validation and consistency checking
-                    //    - Implement delta type performance optimization strategies
-                    //    - Handle delta type error detection and recovery
-                    // 2. Performance optimization: Implement efficient delta type processing
-                    //    - Implement delta type caching and optimization strategies
-                    //    - Handle delta type performance monitoring and analytics
-                    //    - Implement delta type optimization validation and quality assurance
-                    //    - Ensure delta type processing meets performance and reliability standards
+                    }
+                    _ => return true, // TODO:
+                                      // 1. Delta type classification: Implement comprehensive delta type classification
+                                      //    - Classify git diff deltas into Add, Delete, Modify, Rename, Copy, etc.
+                                      //    - Handle delta type validation and consistency checking
+                                      //    - Implement delta type performance optimization strategies
+                                      //    - Handle delta type error detection and recovery
+                                      // 2. Performance optimization: Implement efficient delta type processing
+                                      //    - Implement delta type caching and optimization strategies
+                                      //    - Handle delta type performance monitoring and analytics
+                                      //    - Implement delta type optimization validation and quality assurance
+                                      //    - Ensure delta type processing meets performance and reliability standards
                 };
 
                 changes.push(change);
@@ -822,20 +833,26 @@ impl WorkspaceStateManager {
     }
 
     /// Get the current commit hash from the repository
-    fn get_current_commit_hash(&self, repo: &git2::Repository) -> Result<Option<String>, WorkspaceError> {
+    fn get_current_commit_hash(
+        &self,
+        repo: &git2::Repository,
+    ) -> Result<Option<String>, WorkspaceError> {
         match repo.head() {
-            Ok(head) => {
-                match head.peel_to_commit() {
-                    Ok(commit) => Ok(Some(commit.id().to_string())),
-                    Err(_) => Ok(None),
-                }
+            Ok(head) => match head.peel_to_commit() {
+                Ok(commit) => Ok(Some(commit.id().to_string())),
+                Err(_) => Ok(None),
             },
             Err(_) => Ok(None), // No HEAD, possibly empty repo
         }
     }
 
     /// Get content of a file from a git tree
-    fn get_content_from_git_tree(&self, repo: &git2::Repository, tree: &git2::Tree, path: &Path) -> Result<Vec<u8>> {
+    fn get_content_from_git_tree(
+        &self,
+        repo: &git2::Repository,
+        tree: &git2::Tree,
+        path: &Path,
+    ) -> Result<Vec<u8>> {
         let entry = tree.get_path(path)?;
         let blob = repo.find_blob(entry.id())?;
         Ok(blob.content().to_vec())
@@ -856,7 +873,9 @@ impl WorkspaceStateManager {
                     .modified()
                     .map_err(WorkspaceError::from)?
                     .duration_since(std::time::UNIX_EPOCH)
-                    .map_err(|e| WorkspaceError::from(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+                    .map_err(|e| {
+                        WorkspaceError::from(std::io::Error::new(std::io::ErrorKind::Other, e))
+                    })?;
 
                 let content_hash = self.calculate_file_hash(&full_path).await?;
                 let permissions = if cfg!(unix) {
@@ -877,8 +896,10 @@ impl WorkspaceStateManager {
                     content: Some(content.clone()),
                     compressed: false,
                 })
-            },
-            DiffChange::Modify { path, new_content, .. } => {
+            }
+            DiffChange::Modify {
+                path, new_content, ..
+            } => {
                 let full_path = self.workspace_root.join(path);
                 let metadata = std::fs::metadata(&full_path).map_err(WorkspaceError::from)?;
                 let size = metadata.len();
@@ -886,7 +907,9 @@ impl WorkspaceStateManager {
                     .modified()
                     .map_err(WorkspaceError::from)?
                     .duration_since(std::time::UNIX_EPOCH)
-                    .map_err(|e| WorkspaceError::from(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+                    .map_err(|e| {
+                        WorkspaceError::from(std::io::Error::new(std::io::ErrorKind::Other, e))
+                    })?;
 
                 let content_hash = self.calculate_file_hash(&full_path).await?;
                 let permissions = if cfg!(unix) {
@@ -907,13 +930,15 @@ impl WorkspaceStateManager {
                     content: Some(new_content.clone()),
                     compressed: false,
                 })
-            },
-            DiffChange::Remove { .. } => {
-                Err(WorkspaceError::DiffComputation("Cannot build file state from remove change".to_string()))
-            },
+            }
+            DiffChange::Remove { .. } => Err(WorkspaceError::DiffComputation(
+                "Cannot build file state from remove change".to_string(),
+            )),
             DiffChange::AddDirectory { .. } | DiffChange::RemoveDirectory { .. } => {
-                Err(WorkspaceError::DiffComputation("Cannot build file state from directory change".to_string()))
-            },
+                Err(WorkspaceError::DiffComputation(
+                    "Cannot build file state from directory change".to_string(),
+                ))
+            }
         }
     }
 
@@ -1026,6 +1051,4 @@ impl WorkspaceStateManager {
     fn get_file_size(&self, file_path: &PathBuf, state: &WorkspaceState) -> u64 {
         state.files.get(file_path).map(|f| f.size).unwrap_or(0)
     }
-
 }
-

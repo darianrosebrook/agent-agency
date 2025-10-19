@@ -225,7 +225,11 @@ impl ProvenanceService {
         format: ExportFormat,
     ) -> Result<ProvenanceExport> {
         let records = self.storage.query_records(&query).await?;
-        let filters_applied = self.extract_filters_from_query(&query)?.iter().map(|f| format!("{:?}", f)).collect();
+        let filters_applied = self
+            .extract_filters_from_query(&query)?
+            .iter()
+            .map(|f| format!("{:?}", f))
+            .collect();
         let time_range = query.time_range.unwrap_or_else(|| TimeRange {
             start: chrono::DateTime::from_timestamp(0, 0).unwrap_or_else(Utc::now),
             end: Utc::now(),

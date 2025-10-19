@@ -6,14 +6,15 @@
 use crate::types::*;
 use crate::ContentProcessingConfig;
 use crate::{
-    ConfigurationUpdate, ContentProcessor, ContextBuilder, VectorSearchEngine, WebScraper,
-    MultimodalContextProvider, MultimodalContext, MultimodalRetriever,
+    ConfigurationUpdate, ContentProcessor, ContextBuilder, MultimodalContext,
+    MultimodalContextProvider, MultimodalRetriever, VectorSearchEngine, WebScraper,
 };
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use dashmap::DashMap;
 use std::collections::HashMap;
 use std::sync::Arc;
+use strsim::jaro_winkler;
 use tokio::sync::{mpsc, RwLock};
 use tracing::{error, info, warn};
 use uuid::Uuid;
@@ -101,6 +102,7 @@ impl KnowledgeSeeker {
                 vector_search_accuracy: 0.0,
                 web_scraping_success_rate: 0.0,
                 context_synthesis_quality: 0.0,
+                fuzzy_match_adjustments: 0,
                 last_updated: chrono::Utc::now(),
             })),
             event_sender,
@@ -1126,7 +1128,7 @@ impl KnowledgeSeeker {
             .await?;
 
         // 3. Search optimization: Optimize search performance and accuracy
-        let optimized_results = self.optimize_search_results(search_results).await?;
+        let optimized_results = self.optimize_search_results(query, search_results).await?;
 
         // 4. Search integration: Integrate keyword search with vector search
         let hybrid_results = self
@@ -1199,6 +1201,7 @@ impl KnowledgeSeeker {
     /// Optimize search results for performance and accuracy
     async fn optimize_search_results(
         &self,
+        query: &ResearchQuery,
         results: Vec<SearchResult>,
     ) -> Result<Vec<SearchResult>> {
         let mut optimized = results;
@@ -1207,7 +1210,7 @@ impl KnowledgeSeeker {
         optimized.dedup_by(|a, b| a.document_id == b.document_id);
 
         // Apply fuzzy matching for typo tolerance
-        optimized = self.apply_fuzzy_matching(optimized).await?;
+        optimized = self.apply_fuzzy_matching(query, optimized).await?;
 
         // Re-rank results
         optimized.sort_by(|a, b| b.relevance_score.partial_cmp(&a.relevance_score).unwrap());
@@ -1292,25 +1295,72 @@ impl KnowledgeSeeker {
     }
 
     /// Apply fuzzy matching for typo tolerance
-    async fn apply_fuzzy_matching(&self, results: Vec<SearchResult>) -> Result<Vec<SearchResult>> {
-        // TODO: Implement fuzzy matching algorithms with the following requirements:
-        // 1. Fuzzy matching implementation: Implement fuzzy matching algorithms for search results
-        //    - Apply fuzzy matching algorithms (Levenshtein, Jaro-Winkler, etc.)
-        //    - Handle fuzzy matching optimization and performance
-        //    - Implement fuzzy matching validation and quality assurance
-        // 2. Search result optimization: Optimize search results using fuzzy matching
-        //    - Improve search result relevance using fuzzy matching
-        //    - Handle search result optimization and ranking
-        //    - Implement search result optimization validation
-        // 3. Fuzzy matching configuration: Configure fuzzy matching parameters and thresholds
-        //    - Configure fuzzy matching sensitivity and thresholds
-        //    - Handle fuzzy matching configuration optimization
-        //    - Implement fuzzy matching configuration validation
-        // 4. Performance optimization: Optimize fuzzy matching performance and accuracy
-        //    - Implement fuzzy matching caching and optimization strategies
-        //    - Handle fuzzy matching performance monitoring and analytics
-        //    - Ensure fuzzy matching meets performance and accuracy standards
-        Ok(results)
+    async fn apply_fuzzy_matching(
+        &self,
+        query: &ResearchQuery,
+        results: Vec<SearchResult>,
+    ) -> Result<Vec<SearchResult>> {
+        if results.is_empty() {
+            return Ok(results);
+        }
+
+        let config = &self.config.fuzzy_matching;
+        if !config.enabled {
+            return Ok(results);
+        }
+
+        let query_tokens = self.tokenize_text(&query.query);
+        if query_tokens.is_empty() {
+            return Ok(results);
+        }
+
+        let mut token_cache: HashMap<usize, Vec<String>> = HashMap::new();
+        let mut adjusted_results = Vec::with_capacity(results.len());
+        let mut adjustments_applied = 0u64;
+
+        for mut result in results {
+            let doc_tokens = token_cache
+                .entry(result.document_id)
+                .or_insert_with(|| self.tokenize_text(&result.document.content));
+
+            let mut boost = 0.0;
+            let mut matched_terms = 0usize;
+
+            for query_token in &query_tokens {
+                if doc_tokens.iter().any(|token| token == query_token) {
+                    matched_terms += 1;
+                    continue;
+                }
+
+                let best_similarity = doc_tokens
+                    .iter()
+                    .map(|token| jaro_winkler(query_token, token))
+                    .fold(0.0f64, f64::max) as f32;
+
+                if best_similarity >= config.similarity_threshold {
+                    matched_terms += 1;
+                    boost += config.boost_per_match * best_similarity;
+                }
+            }
+
+            if boost > 0.0 {
+                let coverage = matched_terms as f32 / query_tokens.len() as f32;
+                boost += config.coverage_boost * coverage;
+                let capped_boost = boost.min(config.max_total_boost);
+                result.relevance_score = (result.relevance_score + capped_boost).min(1.0);
+                adjustments_applied += 1;
+            }
+
+            adjusted_results.push(result);
+        }
+
+        if adjustments_applied > 0 {
+            let mut metrics = self.metrics.write().await;
+            metrics.fuzzy_match_adjustments += adjustments_applied;
+            metrics.last_updated = chrono::Utc::now();
+        }
+
+        Ok(adjusted_results)
     }
 
     /// Apply hybrid ranking to combine keyword and vector results
@@ -1549,7 +1599,7 @@ impl KnowledgeSeeker {
                 similarity_threshold: 0.7,
                 fusion_method: "late_fusion_rrf".to_string(),
                 reranking_enabled: true,
-            }
+            },
         );
 
         // Search multimodal content
@@ -1599,14 +1649,12 @@ impl KnowledgeSeeker {
         info!("Getting decision context for: {}", decision_point);
 
         // Create multimodal retriever
-        let retriever = MultimodalRetriever::new(
-            MultimodalRetrieverConfig {
-                max_results: 100,
-                similarity_threshold: 0.4, // Lower threshold for decisions
-                fusion_method: "late_fusion_rrf".to_string(),
-                reranking_enabled: true,
-            }
-        );
+        let retriever = MultimodalRetriever::new(MultimodalRetrieverConfig {
+            max_results: 100,
+            similarity_threshold: 0.4, // Lower threshold for decisions
+            fusion_method: "late_fusion_rrf".to_string(),
+            reranking_enabled: true,
+        });
 
         let mut context_provider = MultimodalContextProvider::new(retriever);
 
@@ -1644,17 +1692,18 @@ impl KnowledgeSeeker {
         claim: &str,
         context_type: &str,
     ) -> Result<MultimodalContext> {
-        info!("Getting evidence context for claim: {} (type: {})", claim, context_type);
+        info!(
+            "Getting evidence context for claim: {} (type: {})",
+            claim, context_type
+        );
 
         // Create multimodal retriever
-        let retriever = MultimodalRetriever::new(
-            MultimodalRetrieverConfig {
-                max_results: 20,
-                similarity_threshold: 0.6,
-                fusion_method: "late_fusion_rrf".to_string(),
-                reranking_enabled: true,
-            }
-        );
+        let retriever = MultimodalRetriever::new(MultimodalRetrieverConfig {
+            max_results: 20,
+            similarity_threshold: 0.6,
+            fusion_method: "late_fusion_rrf".to_string(),
+            reranking_enabled: true,
+        });
 
         let mut context_provider = MultimodalContextProvider::new(retriever);
 
@@ -1753,6 +1802,13 @@ impl KnowledgeSeeker {
                 max_concurrent_requests: 2,
                 request_timeout_ms: 5_000,
             },
+            fuzzy_matching: FuzzyMatchingConfig {
+                enabled: true,
+                similarity_threshold: 0.85,
+                boost_per_match: 0.15,
+                coverage_boost: 0.1,
+                max_total_boost: 0.3,
+            },
         };
 
         let vector_search = Arc::new(VectorSearchEngine::new_mock());
@@ -1777,6 +1833,7 @@ impl KnowledgeSeeker {
             vector_search_accuracy: 0.0,
             web_scraping_success_rate: 0.0,
             context_synthesis_quality: 0.0,
+            fuzzy_match_adjustments: 0,
             last_updated: chrono::Utc::now(),
         }));
 
@@ -1834,6 +1891,13 @@ mod tests {
             performance: crate::types::PerformanceConfig {
                 max_concurrent_requests: 10,
                 request_timeout_ms: 30000,
+            },
+            fuzzy_matching: crate::types::FuzzyMatchingConfig {
+                enabled: true,
+                similarity_threshold: 0.85,
+                boost_per_match: 0.15,
+                coverage_boost: 0.1,
+                max_total_boost: 0.3,
             },
         };
         let seeker = KnowledgeSeeker::new(config).await;
@@ -1893,6 +1957,13 @@ mod tests {
                 max_concurrent_requests: 10,
                 request_timeout_ms: 30000,
             },
+            fuzzy_matching: crate::types::FuzzyMatchingConfig {
+                enabled: true,
+                similarity_threshold: 0.85,
+                boost_per_match: 0.15,
+                coverage_boost: 0.1,
+                max_total_boost: 0.3,
+            },
         };
         let seeker = KnowledgeSeeker::new(config)
             .await
@@ -1906,6 +1977,114 @@ mod tests {
         let session = session.unwrap();
         assert_eq!(session.session_name, "test session");
         assert!(session.is_active);
+    }
+
+    #[tokio::test]
+    async fn fuzzy_matching_boosts_similar_terms() {
+        let seeker = KnowledgeSeeker::minimal_for_tests();
+        let query = ResearchQuery {
+            id: Uuid::new_v4(),
+            query: "authentication tokens".to_string(),
+            query_type: QueryType::Knowledge,
+            max_results: Some(5),
+            context: None,
+            priority: ResearchPriority::Normal,
+            sources: vec![],
+            created_at: chrono::Utc::now(),
+            deadline: None,
+            metadata: HashMap::new(),
+        };
+
+        let entry = KnowledgeEntry {
+            id: Uuid::new_v4(),
+            title: "Secure auth best practices".to_string(),
+            content: "This document covers authntication toknes implementation details."
+                .to_string(),
+            source: KnowledgeSource::Documentation("auth-guide".to_string()),
+            source_url: Some("https://example.com/auth".to_string()),
+            content_type: ContentType::Text,
+            language: Some("en".to_string()),
+            tags: vec![],
+            embedding: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            access_count: 0,
+            last_accessed: None,
+            metadata: HashMap::new(),
+        };
+
+        let baseline_score = 0.2;
+        let results = vec![SearchResult {
+            document_id: 0,
+            relevance_score: baseline_score,
+            match_positions: vec![0],
+            document: entry,
+        }];
+
+        let adjusted = seeker
+            .apply_fuzzy_matching(&query, results)
+            .await
+            .expect("fuzzy matching should succeed");
+        assert!(
+            adjusted[0].relevance_score > baseline_score,
+            "expected fuzzy matching to increase relevance score"
+        );
+
+        let metrics = seeker.metrics.read().await;
+        assert_eq!(metrics.fuzzy_match_adjustments, 1);
+    }
+
+    #[tokio::test]
+    async fn fuzzy_matching_respects_threshold_configuration() {
+        let mut seeker = KnowledgeSeeker::minimal_for_tests();
+        seeker.config.fuzzy_matching.similarity_threshold = 0.98;
+
+        let query = ResearchQuery {
+            id: Uuid::new_v4(),
+            query: "distributed systems".to_string(),
+            query_type: QueryType::Knowledge,
+            max_results: Some(5),
+            context: None,
+            priority: ResearchPriority::Normal,
+            sources: vec![],
+            created_at: chrono::Utc::now(),
+            deadline: None,
+            metadata: HashMap::new(),
+        };
+
+        let entry = KnowledgeEntry {
+            id: Uuid::new_v4(),
+            title: "Systems overview".to_string(),
+            content: "Discusses distrbuted architectures and messaging models.".to_string(),
+            source: KnowledgeSource::Documentation("systems".to_string()),
+            source_url: None,
+            content_type: ContentType::Text,
+            language: Some("en".to_string()),
+            tags: vec![],
+            embedding: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            access_count: 0,
+            last_accessed: None,
+            metadata: HashMap::new(),
+        };
+
+        let baseline_score = 0.4;
+        let results = vec![SearchResult {
+            document_id: 0,
+            relevance_score: baseline_score,
+            match_positions: vec![0],
+            document: entry,
+        }];
+
+        let adjusted = seeker
+            .apply_fuzzy_matching(&query, results)
+            .await
+            .expect("fuzzy matching should succeed");
+        assert!(
+            (adjusted[0].relevance_score - baseline_score).abs() < f32::EPSILON,
+            "expected no boost with strict threshold"
+        );
     }
 }
 

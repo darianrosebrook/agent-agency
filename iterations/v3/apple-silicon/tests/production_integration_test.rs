@@ -1,18 +1,18 @@
 /// Production Integration Tests for Core ML Implementation
-/// 
+///
 /// Tests the complete end-to-end functionality of the Core ML integration
 /// including autorelease pool management, binary tensor serialization,
 /// t-digest percentile calculation, and circuit breaker functionality.
 
 #[cfg(all(test, target_os = "macos", feature = "coreml"))]
 mod production_tests {
-    use apple_silicon::core_ml_backend::CoreMLBackend;
     use apple_silicon::candle_backend::CandleBackend;
+    use apple_silicon::core_ml_backend::CoreMLBackend;
     use apple_silicon::inference::{
-        InferenceEngine, ModelArtifact, ModelFmt, PrepareOptions, ComputeUnits,
-        TensorMap, TensorBatch, IoSchema, TensorSpec, DType
+        ComputeUnits, DType, InferenceEngine, IoSchema, ModelArtifact, ModelFmt, PrepareOptions,
+        TensorBatch, TensorMap, TensorSpec,
     };
-    use apple_silicon::telemetry::{TelemetryCollector, FailureMode};
+    use apple_silicon::telemetry::{FailureMode, TelemetryCollector};
     use std::collections::HashMap;
     use std::path::PathBuf;
     use std::time::Duration;
@@ -43,7 +43,7 @@ mod production_tests {
         // Test Core ML backend
         let coreml_backend = CoreMLBackend::new();
         let result = coreml_backend.prepare(&artifact, opts.clone());
-        
+
         if let Ok(prepared_model) = result {
             // Create test input tensor (224x224x3 image)
             let mut inputs = TensorMap::new();
@@ -53,7 +53,7 @@ mod production_tests {
             // Run 100 inference cycles
             let mut total_time = Duration::new(0, 0);
             let mut success_count = 0;
-            
+
             for i in 0..100 {
                 let start = std::time::Instant::now();
                 match coreml_backend.infer(&*prepared_model, &inputs, Duration::from_millis(1000)) {
@@ -72,12 +72,22 @@ mod production_tests {
             }
 
             // Verify performance metrics
-            assert!(success_count >= 95, "Success rate too low: {}/100", success_count);
+            assert!(
+                success_count >= 95,
+                "Success rate too low: {}/100",
+                success_count
+            );
             let avg_time = total_time.as_millis() / 100;
-            assert!(avg_time <= 20, "Average inference time too high: {}ms", avg_time);
+            assert!(
+                avg_time <= 20,
+                "Average inference time too high: {}ms",
+                avg_time
+            );
 
-            println!("✅ End-to-end test passed: {}/100 successful, avg {}ms", 
-                     success_count, avg_time);
+            println!(
+                "✅ End-to-end test passed: {}/100 successful, avg {}ms",
+                success_count, avg_time
+            );
         } else {
             println!("⚠️ Core ML preparation failed, skipping inference test");
         }
@@ -120,15 +130,18 @@ mod production_tests {
             inputs.insert("input".to_string(), vec![0u8; image_size]);
 
             // Run inference on both backends
-            let coreml_output = coreml_backend.infer(&*coreml_model, &inputs, Duration::from_millis(1000));
-            let candle_output = candle_backend.infer(&*candle_model, &inputs, Duration::from_millis(1000));
+            let coreml_output =
+                coreml_backend.infer(&*coreml_model, &inputs, Duration::from_millis(1000));
+            let candle_output =
+                candle_backend.infer(&*candle_model, &inputs, Duration::from_millis(1000));
 
             if let (Ok(coreml_out), Ok(candle_out)) = (coreml_output, candle_output) {
                 // Verify outputs match within tolerance (L∞ < 0.01)
-                if let (Some(coreml_data), Some(candle_data)) = 
-                    (coreml_out.get("output"), candle_out.get("output")) {
-                    
-                    let max_diff = coreml_data.iter()
+                if let (Some(coreml_data), Some(candle_data)) =
+                    (coreml_out.get("output"), candle_out.get("output"))
+                {
+                    let max_diff = coreml_data
+                        .iter()
                         .zip(candle_data.iter())
                         .map(|(a, b)| (*a as i32 - *b as i32).abs())
                         .max()
@@ -149,14 +162,14 @@ mod production_tests {
     #[test]
     fn test_long_running_stability() {
         let telemetry = TelemetryCollector::new();
-        
+
         // Simulate 1000 inference operations
         for i in 0..1000 {
             let duration_ms = 10 + (i % 20); // Vary between 10-30ms
             let success = i % 100 != 99; // 99% success rate
-            
+
             telemetry.record_inference(duration_ms, success, "ane");
-            
+
             // Test autorelease pool every 100 iterations
             if i % 100 == 0 {
                 // This would test actual autorelease pool flushing
@@ -173,13 +186,18 @@ mod production_tests {
 
         // Verify t-digest p99 calculation
         let stats = telemetry.get_percentile_stats();
-        assert!(stats.infer_p99 >= 25 && stats.infer_p99 <= 35, 
-                "P99 outside expected range: {}", stats.infer_p99);
+        assert!(
+            stats.infer_p99 >= 25 && stats.infer_p99 <= 35,
+            "P99 outside expected range: {}",
+            stats.infer_p99
+        );
 
         println!("✅ Long-running stability test passed");
         println!("   - Total operations: {}", metrics.infer_count);
-        println!("   - Success rate: {:.1}%", 
-                 (metrics.infer_success as f64 / metrics.infer_count as f64) * 100.0);
+        println!(
+            "   - Success rate: {:.1}%",
+            (metrics.infer_success as f64 / metrics.infer_count as f64) * 100.0
+        );
         println!("   - P99 latency: {}ms", stats.infer_p99);
     }
 
@@ -209,15 +227,20 @@ mod production_tests {
 
         // Test serialization
         let batch = TensorBatch::from_tensor_map(&inputs, &schema).expect("Serialization failed");
-        
+
         // Test temp file serialization
         let temp_dir = std::env::temp_dir();
-        let json_str = batch.to_json_with_data_path(&temp_dir).expect("JSON serialization failed");
-        
+        let json_str = batch
+            .to_json_with_data_path(&temp_dir)
+            .expect("JSON serialization failed");
+
         // Test deserialization
-        let deserialized = TensorBatch::from_json_with_data_path(&json_str).expect("Deserialization failed");
-        let outputs = deserialized.to_tensor_map().expect("Tensor map conversion failed");
-        
+        let deserialized =
+            TensorBatch::from_json_with_data_path(&json_str).expect("Deserialization failed");
+        let outputs = deserialized
+            .to_tensor_map()
+            .expect("Tensor map conversion failed");
+
         // Verify data integrity
         assert_eq!(outputs.len(), 1);
         if let Some(output_data) = outputs.get("input") {
@@ -235,7 +258,7 @@ mod production_tests {
     #[test]
     fn test_circuit_breaker() {
         let mut telemetry = TelemetryCollector::new();
-        
+
         // Simulate failures to trigger circuit breaker
         for i in 0..100 {
             let success = i < 90; // 90% success rate (below 95% threshold)
@@ -243,11 +266,17 @@ mod production_tests {
         }
 
         // Verify circuit breaker triggers
-        assert!(telemetry.should_fallback_to_cpu(), "Circuit breaker should be active");
-        
+        assert!(
+            telemetry.should_fallback_to_cpu(),
+            "Circuit breaker should be active"
+        );
+
         // Reset and test recovery
         telemetry.reset_circuit_breaker();
-        assert!(!telemetry.should_fallback_to_cpu(), "Circuit breaker should be reset");
+        assert!(
+            !telemetry.should_fallback_to_cpu(),
+            "Circuit breaker should be reset"
+        );
 
         println!("✅ Circuit breaker test passed");
     }
@@ -256,7 +285,7 @@ mod production_tests {
     #[test]
     fn test_tdigest_percentile_accuracy() {
         let mut telemetry = TelemetryCollector::new();
-        
+
         // Generate test data with known distribution
         let mut durations = Vec::new();
         for i in 1..=1000 {
@@ -270,18 +299,27 @@ mod production_tests {
 
         // Verify percentile calculations
         let stats = telemetry.get_percentile_stats();
-        
+
         // P50 should be around 500ms (median)
-        assert!(stats.infer_p50 >= 490 && stats.infer_p50 <= 510, 
-                "P50 outside expected range: {}", stats.infer_p50);
-        
+        assert!(
+            stats.infer_p50 >= 490 && stats.infer_p50 <= 510,
+            "P50 outside expected range: {}",
+            stats.infer_p50
+        );
+
         // P95 should be around 950ms
-        assert!(stats.infer_p95 >= 940 && stats.infer_p95 <= 960, 
-                "P95 outside expected range: {}", stats.infer_p95);
-        
+        assert!(
+            stats.infer_p95 >= 940 && stats.infer_p95 <= 960,
+            "P95 outside expected range: {}",
+            stats.infer_p95
+        );
+
         // P99 should be around 990ms
-        assert!(stats.infer_p99 >= 980 && stats.infer_p99 <= 1000, 
-                "P99 outside expected range: {}", stats.infer_p99);
+        assert!(
+            stats.infer_p99 >= 980 && stats.infer_p99 <= 1000,
+            "P99 outside expected range: {}",
+            stats.infer_p99
+        );
 
         println!("✅ T-digest percentile accuracy test passed");
         println!("   - P50: {}ms", stats.infer_p50);
@@ -294,22 +332,24 @@ mod production_tests {
     fn test_memory_leak_detection() {
         // This test would monitor memory usage over many iterations
         // In a real implementation, we'd use Instruments or similar tools
-        
+
         let telemetry = TelemetryCollector::new();
-        
+
         // Simulate memory allocation and deallocation
         for i in 0..10000 {
             telemetry.record_memory_usage(i % 1000); // Vary memory usage
-            
+
             if i % 1000 == 0 {
                 // Check memory growth (should be minimal)
                 let metrics = telemetry.get_metrics();
-                assert!(metrics.memory_current_mb < 100, 
-                        "Memory usage too high: {}MB", metrics.memory_current_mb);
+                assert!(
+                    metrics.memory_current_mb < 100,
+                    "Memory usage too high: {}MB",
+                    metrics.memory_current_mb
+                );
             }
         }
 
         println!("✅ Memory leak detection test passed");
     }
 }
-

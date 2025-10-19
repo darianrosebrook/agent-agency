@@ -130,54 +130,54 @@ impl DatabaseTestUtils {
 
     pub async fn setup_test_database(&self) -> Result<()> {
         info!("Setting up test database: {}", self.connection_string);
-        
+
         // 1. Database initialization: Initialize test database for integration tests
         self.create_test_schema().await?;
         self.setup_test_tables().await?;
         self.configure_database_connection().await?;
-        
+
         // 2. Test data preparation: Prepare test data for integration tests
         self.seed_test_data().await?;
         self.setup_test_scenarios().await?;
         self.validate_test_data().await?;
-        
+
         // 3. Database configuration: Configure test database settings
         self.configure_connection_parameters().await?;
         self.optimize_database_performance().await?;
         self.validate_database_configuration().await?;
-        
+
         // 4. Database monitoring: Monitor test database health
         self.track_database_performance().await?;
         self.monitor_resource_usage().await?;
         self.report_database_status().await?;
-        
+
         info!("Test database setup completed successfully");
         Ok(())
     }
 
     pub async fn cleanup_test_database(&self) -> Result<()> {
         info!("Cleaning up test database");
-        
+
         // 1. Database cleanup: Clean up test database after integration tests
         self.remove_test_data().await?;
         self.cleanup_test_schema().await?;
         self.handle_cleanup_errors().await?;
-        
+
         // 2. Test data cleanup: Clean up test data and resources
         self.remove_temporary_files().await?;
         self.cleanup_test_scenarios().await?;
         self.validate_data_cleanup().await?;
-        
+
         // 3. Database resource cleanup: Clean up database resources
         self.close_database_connections().await?;
         self.cleanup_database_resources().await?;
         self.validate_resource_cleanup().await?;
-        
+
         // 4. Database monitoring cleanup: Clean up database monitoring
         self.stop_database_monitoring().await?;
         self.cleanup_monitoring_resources().await?;
         self.report_monitoring_cleanup().await?;
-        
+
         info!("Test database cleanup completed successfully");
         Ok(())
     }
@@ -372,79 +372,79 @@ impl RedisTestUtils {
 
     pub async fn setup_test_redis(&self) -> Result<()> {
         info!("Setting up test Redis: {}", self.connection_string);
-        
+
         // 1. Redis initialization: Initialize Redis for integration tests
         self.initialize_redis_connection().await?;
         self.initialize_redis_test_data().await?;
         self.handle_redis_connection_configuration().await?;
-        
+
         // 2. Redis test data preparation: Prepare Redis test data
         self.seed_redis_test_data().await?;
         self.setup_redis_test_scenarios().await?;
         self.validate_redis_test_data().await?;
-        
+
         // 3. Redis configuration: Configure Redis settings
         self.configure_redis_connection_parameters().await?;
         self.configure_redis_performance_optimization().await?;
         self.validate_redis_configuration().await?;
-        
+
         // 4. Redis monitoring: Monitor Redis health
         self.track_redis_performance().await?;
         self.monitor_redis_resource_usage().await?;
         self.report_redis_monitoring_status().await?;
-        
+
         Ok(())
     }
 
     pub async fn cleanup_test_redis(&self) -> Result<()> {
         info!("Cleaning up test Redis");
-        
+
         // 1. Redis cleanup: Clean up Redis after integration tests
         self.remove_redis_test_data().await?;
         self.cleanup_redis_test_resources().await?;
         self.handle_redis_cleanup_errors().await?;
-        
+
         // 2. Redis test data cleanup: Clean up Redis test data
         self.remove_redis_temporary_files().await?;
         self.cleanup_redis_test_scenarios().await?;
         self.validate_redis_test_data_cleanup().await?;
-        
+
         // 3. Redis resource cleanup: Clean up Redis resources
         self.close_redis_connections().await?;
         self.cleanup_redis_memory_resources().await?;
         self.validate_redis_resource_cleanup().await?;
-        
+
         // 4. Redis monitoring cleanup: Clean up Redis monitoring
         self.stop_redis_monitoring().await?;
         self.cleanup_redis_monitoring_resources().await?;
         self.report_redis_monitoring_cleanup().await?;
-        
+
         Ok(())
     }
 
     pub async fn flush_all(&self) -> Result<()> {
         info!("Flushing all Redis data");
-        
+
         // 1. Redis flush: Flush all Redis data for integration tests
         self.clear_all_redis_keys().await?;
         self.reset_redis_to_clean_state().await?;
         self.handle_redis_flush_errors().await?;
-        
+
         // 2. Redis data validation: Validate Redis flush results
         self.verify_all_redis_data_cleared().await?;
         self.check_redis_state_consistency().await?;
         self.handle_redis_data_validation_errors().await?;
-        
+
         // 3. Redis flush optimization: Optimize Redis flush performance
         self.implement_efficient_redis_flush().await?;
         self.handle_large_scale_redis_clearing().await?;
         self.optimize_redis_flush_speed().await?;
-        
+
         // 4. Redis flush monitoring: Monitor Redis flush process
         self.track_redis_flush_progress().await?;
         self.monitor_redis_flush_effectiveness().await?;
         self.report_redis_flush_monitoring().await?;
-        
+
         Ok(())
     }
 

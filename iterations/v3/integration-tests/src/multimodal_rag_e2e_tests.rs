@@ -46,14 +46,22 @@ impl MultimodalRagE2eTests {
         let ingest_start = Instant::now();
         let documents = self.simulate_ingestion().await?;
         let ingest_time = ingest_start.elapsed().as_millis() as u64;
-        info!("Ingested {} documents in {}ms", documents.len(), ingest_time);
+        info!(
+            "Ingested {} documents in {}ms",
+            documents.len(),
+            ingest_time
+        );
 
         // Stage 2: Enrich
         info!("Stage 2: Enrichment pipeline");
         let enrich_start = Instant::now();
         let enriched_blocks = self.simulate_enrichment(&documents).await?;
         let enrich_time = enrich_start.elapsed().as_millis() as u64;
-        info!("Enriched {} blocks in {}ms", enriched_blocks.len(), enrich_time);
+        info!(
+            "Enriched {} blocks in {}ms",
+            enriched_blocks.len(),
+            enrich_time
+        );
 
         // Stage 3: Index
         info!("Stage 3: Indexing pipeline");
@@ -74,7 +82,11 @@ impl MultimodalRagE2eTests {
         let council_start = Instant::now();
         let council_decisions = self.simulate_council_decisions(&results).await?;
         let council_time = council_start.elapsed().as_millis() as u64;
-        info!("Generated {} council decisions in {}ms", council_decisions.len(), council_time);
+        info!(
+            "Generated {} council decisions in {}ms",
+            council_decisions.len(),
+            council_time
+        );
 
         let total_time = workflow_start.elapsed().as_millis() as u64;
         let throughput = (indexed_count as f64 / total_time as f64) * 1000.0;
@@ -159,11 +171,7 @@ impl MultimodalRagE2eTests {
 
             // Validate consistency
             let is_consistent = self
-                .validate_cross_modal_consistency(&[
-                    text_evidence,
-                    image_evidence,
-                    video_evidence,
-                ])
+                .validate_cross_modal_consistency(&[text_evidence, image_evidence, video_evidence])
                 .await?;
 
             info!(
@@ -201,7 +209,11 @@ impl MultimodalRagE2eTests {
         }
 
         // Verify SLA compliance (P95 < 500ms)
-        let max_latency = results.iter().map(|(_, lat)| lat).cloned().fold(0.0, f64::max);
+        let max_latency = results
+            .iter()
+            .map(|(_, lat)| lat)
+            .cloned()
+            .fold(0.0, f64::max);
         if max_latency > 500.0 {
             println!(
                 "Performance Warning: Max latency {:.2}ms exceeds SLA of 500ms",
@@ -228,9 +240,8 @@ impl MultimodalRagE2eTests {
                 budget_name, token_limit, item_limit
             );
 
-            let (actual_tokens, actual_items) = self
-                .retrieve_with_budget(token_limit, item_limit)
-                .await?;
+            let (actual_tokens, actual_items) =
+                self.retrieve_with_budget(token_limit, item_limit).await?;
 
             assert!(
                 actual_tokens <= token_limit,
@@ -317,10 +328,7 @@ impl MultimodalRagE2eTests {
 
     async fn simulate_council_decisions(&self, results: &[String]) -> Result<Vec<String>> {
         tokio::time::sleep(tokio::time::Duration::from_millis(60)).await;
-        Ok(results
-            .iter()
-            .map(|r| format!("decision_{}", r))
-            .collect())
+        Ok(results.iter().map(|r| format!("decision_{}", r)).collect())
     }
 
     async fn ingest_video_samples(&self) -> Result<usize> {
@@ -367,7 +375,11 @@ impl MultimodalRagE2eTests {
         Ok("result".to_string())
     }
 
-    async fn retrieve_with_budget(&self, _token_limit: usize, _item_limit: usize) -> Result<(usize, usize)> {
+    async fn retrieve_with_budget(
+        &self,
+        _token_limit: usize,
+        _item_limit: usize,
+    ) -> Result<(usize, usize)> {
         tokio::time::sleep(tokio::time::Duration::from_millis(25)).await;
         Ok((6000, 35))
     }
@@ -465,7 +477,10 @@ impl PerformanceMetrics {
         }
 
         if !violations.is_empty() {
-            return Err(anyhow::anyhow!("SLA Violations:\n{}", violations.join("\n")));
+            return Err(anyhow::anyhow!(
+                "SLA Violations:\n{}",
+                violations.join("\n")
+            ));
         }
 
         Ok(())

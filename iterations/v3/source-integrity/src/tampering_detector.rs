@@ -6,7 +6,7 @@ use anyhow::Result;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-use crate::types::{TamperingIndicator, SourceType};
+use crate::types::{SourceType, TamperingIndicator};
 
 /// Advanced tampering detector with multiple detection algorithms
 pub struct TamperingDetector {
@@ -71,14 +71,14 @@ impl TamperingDetector {
     }
 
     /// Perform comprehensive tampering detection analysis
-    /// 
+    ///
     /// # Arguments
     /// * `content` - The content to analyze
     /// * `stored_hash` - The stored hash to compare against
     /// * `stored_size` - The stored content size
     /// * `source_type` - The type of source being analyzed
     /// * `metadata` - Additional metadata for analysis
-    /// 
+    ///
     /// # Returns
     /// * `Result<TamperingDetectionResult>` - Comprehensive detection result
     pub async fn detect_tampering(
@@ -127,7 +127,10 @@ impl TamperingDetector {
         }
 
         // Source-specific analysis
-        if let Some(source_result) = self.perform_source_specific_analysis(content, source_type).await? {
+        if let Some(source_result) = self
+            .perform_source_specific_analysis(content, source_type)
+            .await?
+        {
             if !source_result.indicators.is_empty() {
                 indicators.extend(source_result.indicators);
                 confidence_scores.push(source_result.confidence);
@@ -190,7 +193,11 @@ impl TamperingDetector {
 
             if size_diff > 0 {
                 Ok(Some(DetectionAnalysis {
-                    confidence: if size_change_percentage > 10.0 { 0.9 } else { 0.6 },
+                    confidence: if size_change_percentage > 10.0 {
+                        0.9
+                    } else {
+                        0.6
+                    },
                     details: serde_json::json!({
                         "current_size": current_size,
                         "stored_size": stored_size,
@@ -242,10 +249,13 @@ impl TamperingDetector {
 
         // Check for suspicious metadata fields
         let suspicious_fields = ["tampered", "modified", "injected", "unauthorized"];
-        
+
         for (key, value) in metadata {
             let key_lower = key.to_lowercase();
-            if suspicious_fields.iter().any(|field| key_lower.contains(field)) {
+            if suspicious_fields
+                .iter()
+                .any(|field| key_lower.contains(field))
+            {
                 inconsistencies.push(format!("Suspicious field: {}", key));
                 confidence += 0.2;
             }
@@ -330,7 +340,10 @@ impl TamperingDetector {
     }
 
     /// Analyze document content for tampering indicators
-    async fn analyze_document_content(&self, content: &str) -> Result<Option<SourceSpecificAnalysis>> {
+    async fn analyze_document_content(
+        &self,
+        content: &str,
+    ) -> Result<Option<SourceSpecificAnalysis>> {
         let mut indicators = Vec::new();
         let mut confidence: f64 = 0.0;
 
@@ -371,28 +384,26 @@ impl TamperingDetector {
     fn detect_obfuscated_code(&self, content: &str) -> bool {
         // Simple heuristics for obfuscated code detection
         let obfuscation_indicators = [
-            "\\x", // Hex encoding
-            "\\u", // Unicode encoding
-            "eval(", // Dynamic code execution
+            "\\x",    // Hex encoding
+            "\\u",    // Unicode encoding
+            "eval(",  // Dynamic code execution
             "base64", // Base64 encoding
-            "rot13", // ROT13 encoding
+            "rot13",  // ROT13 encoding
         ];
 
-        obfuscation_indicators.iter().any(|indicator| content.contains(indicator))
+        obfuscation_indicators
+            .iter()
+            .any(|indicator| content.contains(indicator))
     }
 
     /// Detect unexpected markup changes
     fn detect_unexpected_markup_changes(&self, content: &str) -> bool {
         // Check for suspicious HTML/XML modifications
-        let suspicious_markup = [
-            "<script>",
-            "<iframe>",
-            "javascript:",
-            "onload=",
-            "onerror=",
-        ];
+        let suspicious_markup = ["<script>", "<iframe>", "javascript:", "onload=", "onerror="];
 
-        suspicious_markup.iter().any(|markup| content.contains(markup))
+        suspicious_markup
+            .iter()
+            .any(|markup| content.contains(markup))
     }
 
     /// Simulate hash calculation (in production, this would use actual hashing)
@@ -427,16 +438,21 @@ mod tests {
         let detector = TamperingDetector::new();
         let content = "test content";
         let stored_hash = "different_hash";
-        
-        let result = detector.detect_tampering(
-            content,
-            stored_hash,
-            None,
-            &SourceType::Content,
-            &HashMap::new(),
-        ).await.unwrap();
-        
-        assert!(result.indicators.contains(&TamperingIndicator::HashMismatch));
+
+        let result = detector
+            .detect_tampering(
+                content,
+                stored_hash,
+                None,
+                &SourceType::Content,
+                &HashMap::new(),
+            )
+            .await
+            .unwrap();
+
+        assert!(result
+            .indicators
+            .contains(&TamperingIndicator::HashMismatch));
         assert!(result.confidence_score > 0.0);
     }
 
@@ -446,15 +462,18 @@ mod tests {
         let content = "this is longer content";
         let stored_hash = "some_hash";
         let stored_size = Some(5); // Much smaller than current content
-        
-        let result = detector.detect_tampering(
-            content,
-            stored_hash,
-            stored_size,
-            &SourceType::Content,
-            &HashMap::new(),
-        ).await.unwrap();
-        
+
+        let result = detector
+            .detect_tampering(
+                content,
+                stored_hash,
+                stored_size,
+                &SourceType::Content,
+                &HashMap::new(),
+            )
+            .await
+            .unwrap();
+
         assert!(result.indicators.contains(&TamperingIndicator::SizeChange));
     }
 
@@ -463,16 +482,21 @@ mod tests {
         let detector = TamperingDetector::new();
         let content = "normal content <!-- TAMPERED --> with suspicious pattern";
         let stored_hash = "some_hash";
-        
-        let result = detector.detect_tampering(
-            content,
-            stored_hash,
-            None,
-            &SourceType::Content,
-            &HashMap::new(),
-        ).await.unwrap();
-        
-        assert!(result.indicators.contains(&TamperingIndicator::ContentPattern));
+
+        let result = detector
+            .detect_tampering(
+                content,
+                stored_hash,
+                None,
+                &SourceType::Content,
+                &HashMap::new(),
+            )
+            .await
+            .unwrap();
+
+        assert!(result
+            .indicators
+            .contains(&TamperingIndicator::ContentPattern));
     }
 
     #[tokio::test]
@@ -480,15 +504,18 @@ mod tests {
         let detector = TamperingDetector::new();
         let content = "eval('malicious code');";
         let stored_hash = "some_hash";
-        
-        let result = detector.detect_tampering(
-            content,
-            stored_hash,
-            None,
-            &SourceType::Code,
-            &HashMap::new(),
-        ).await.unwrap();
-        
+
+        let result = detector
+            .detect_tampering(
+                content,
+                stored_hash,
+                None,
+                &SourceType::Code,
+                &HashMap::new(),
+            )
+            .await
+            .unwrap();
+
         // Should detect suspicious code patterns
         assert!(result.confidence_score > 0.0);
     }

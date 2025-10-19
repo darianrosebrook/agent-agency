@@ -8,7 +8,6 @@
 /// - Circuit breaker triggers on <95% success rate or p99 > SLA
 /// - Per-model metrics tracked separately
 /// - Zero panics in metric recording
-
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -127,7 +126,7 @@ impl Default for CoreMLMetrics {
             failure_modes: HashMap::new(),
 
             sla_ms: 20, // 20ms target for FastViT
-            
+
             compile_samples: Arc::new(Mutex::new(Vec::new())),
             infer_samples: Arc::new(Mutex::new(Vec::new())),
         }
@@ -143,7 +142,8 @@ impl CoreMLMetrics {
         if success {
             self.compile_success += 1;
         } else {
-            self.failure_modes.entry(FailureMode::CompileError)
+            self.failure_modes
+                .entry(FailureMode::CompileError)
                 .and_modify(|c| *c += 1)
                 .or_insert(1);
         }
@@ -173,7 +173,8 @@ impl CoreMLMetrics {
         if success {
             self.infer_success += 1;
         } else {
-            self.failure_modes.entry(FailureMode::RuntimeError)
+            self.failure_modes
+                .entry(FailureMode::RuntimeError)
                 .and_modify(|c| *c += 1)
                 .or_insert(1);
         }
@@ -210,7 +211,8 @@ impl CoreMLMetrics {
 
     /// Record a failure
     pub fn record_failure(&mut self, mode: FailureMode) {
-        self.failure_modes.entry(mode)
+        self.failure_modes
+            .entry(mode)
             .and_modify(|c| *c += 1)
             .or_insert(1);
     }
@@ -223,13 +225,15 @@ impl CoreMLMetrics {
         }
     }
 
-
-
     /// Get percentile statistics for monitoring
     pub fn get_percentile_stats(&self) -> PercentileStats {
-        let compile_p50 = self.compile_samples.lock()
+        let compile_p50 = self
+            .compile_samples
+            .lock()
             .map(|samples| {
-                if samples.is_empty() { 0 } else {
+                if samples.is_empty() {
+                    0
+                } else {
                     let mut sorted = samples.clone();
                     sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
                     let p50_idx = ((sorted.len() - 1) as f64 * 0.5) as usize;
@@ -237,9 +241,13 @@ impl CoreMLMetrics {
                 }
             })
             .unwrap_or(0);
-        let compile_p95 = self.compile_samples.lock()
+        let compile_p95 = self
+            .compile_samples
+            .lock()
             .map(|samples| {
-                if samples.is_empty() { 0 } else {
+                if samples.is_empty() {
+                    0
+                } else {
                     let mut sorted = samples.clone();
                     sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
                     let p95_idx = ((sorted.len() - 1) as f64 * 0.95) as usize;
@@ -247,10 +255,14 @@ impl CoreMLMetrics {
                 }
             })
             .unwrap_or(0);
-        
-        let infer_p50 = self.infer_samples.lock()
+
+        let infer_p50 = self
+            .infer_samples
+            .lock()
             .map(|samples| {
-                if samples.is_empty() { 0 } else {
+                if samples.is_empty() {
+                    0
+                } else {
                     let mut sorted = samples.clone();
                     sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
                     let p50_idx = ((sorted.len() - 1) as f64 * 0.5) as usize;
@@ -258,9 +270,13 @@ impl CoreMLMetrics {
                 }
             })
             .unwrap_or(0);
-        let infer_p95 = self.infer_samples.lock()
+        let infer_p95 = self
+            .infer_samples
+            .lock()
             .map(|samples| {
-                if samples.is_empty() { 0 } else {
+                if samples.is_empty() {
+                    0
+                } else {
                     let mut sorted = samples.clone();
                     sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
                     let p95_idx = ((sorted.len() - 1) as f64 * 0.95) as usize;
@@ -268,7 +284,7 @@ impl CoreMLMetrics {
                 }
             })
             .unwrap_or(0);
-        
+
         PercentileStats {
             compile_p50,
             compile_p95,
@@ -506,6 +522,9 @@ mod tests {
         metrics.record_failure(FailureMode::CompileError);
 
         assert_eq!(metrics.failure_modes.get(&FailureMode::Timeout), Some(&2));
-        assert_eq!(metrics.failure_modes.get(&FailureMode::CompileError), Some(&1));
+        assert_eq!(
+            metrics.failure_modes.get(&FailureMode::CompileError),
+            Some(&1)
+        );
     }
 }

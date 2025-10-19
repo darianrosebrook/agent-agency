@@ -180,7 +180,7 @@ impl EvidenceCollector {
         // Check if multi-modal verification engine is available
         if let Some(_mmv_engine) = context.metadata.get("multi_modal_engine") {
             // Integrate with actual multi-modal verification engine
-            
+
             // Analyze claim against available modalities (text, visual, audio, structured data)
             let modality_analyses = vec![
                 self.analyze_text_modality(&claim.claim_text).await,
@@ -255,30 +255,40 @@ impl EvidenceCollector {
     /// Analyze semantic consistency of claim
     async fn analyze_semantic_consistency(&self, claim_text: &str) -> Result<f32> {
         // Analyze claim structure and logical consistency
-        
+
         // Check claim length (too short may indicate low confidence)
         let is_short = claim_text.len() < 20;
         let is_long = claim_text.len() > 1000;
-        
-        let length_penalty = if is_short { 0.3_f32 } else if is_long { 0.1_f32 } else { 0.0_f32 };
-        
+
+        let length_penalty = if is_short {
+            0.3_f32
+        } else if is_long {
+            0.1_f32
+        } else {
+            0.0_f32
+        };
+
         // Check for causal relationships
-        let has_causal = claim_text.contains("because") || claim_text.contains("caused") 
-            || claim_text.contains("leads to") || claim_text.contains("results in");
-        
+        let has_causal = claim_text.contains("because")
+            || claim_text.contains("caused")
+            || claim_text.contains("leads to")
+            || claim_text.contains("results in");
+
         let causal_bonus = if has_causal { 0.15_f32 } else { 0.0_f32 };
-        
+
         // Check sentence structure
         let sentences = claim_text.split('.').count();
         let avg_sentence_length = claim_text.len() / sentences.max(1);
-        
+
         let structure_bonus = if avg_sentence_length > 30 && avg_sentence_length < 200 {
             0.2_f32
         } else {
             -0.1_f32
         };
-        
-        let confidence = (0.7_f32 - length_penalty + causal_bonus + structure_bonus).max(0.2_f32).min(0.95_f32);
+
+        let confidence = (0.7_f32 - length_penalty + causal_bonus + structure_bonus)
+            .max(0.2_f32)
+            .min(0.95_f32);
         Ok(confidence)
     }
 

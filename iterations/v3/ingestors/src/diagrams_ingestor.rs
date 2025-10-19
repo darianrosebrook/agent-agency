@@ -27,11 +27,7 @@ impl DiagramsIngestor {
     }
 
     /// Ingest diagram file (SVG/GraphML)
-    pub async fn ingest(
-        &self,
-        path: &Path,
-        project_scope: Option<&str>,
-    ) -> Result<IngestResult> {
+    pub async fn ingest(&self, path: &Path, project_scope: Option<&str>) -> Result<IngestResult> {
         tracing::debug!("Ingesting diagram from: {:?}", path);
 
         // Compute SHA256
@@ -56,12 +52,7 @@ impl DiagramsIngestor {
         let diagram_data = match extension.as_str() {
             "svg" => self.parse_svg(path).await?,
             "graphml" => self.parse_graphml(path).await?,
-            _ => {
-                return Err(anyhow!(
-                    "Unsupported diagram format: {}",
-                    extension
-                ))
-            }
+            _ => return Err(anyhow!("Unsupported diagram format: {}", extension)),
         };
 
         let segment = Segment {

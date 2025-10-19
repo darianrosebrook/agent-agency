@@ -2,8 +2,8 @@
 //! Shared types for indexing
 
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use std::collections::HashMap;
+use uuid::Uuid;
 
 /// Full-text search query
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -101,4 +101,3 @@ pub struct SearchAuditEntry {
     pub features: HashMap<String, f32>,
     pub timestamp: String,
 }
-

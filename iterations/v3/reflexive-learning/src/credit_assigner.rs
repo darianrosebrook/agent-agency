@@ -306,51 +306,43 @@ impl CreditAssigner {
 
     /// Validate credit assignments for consistency
     pub async fn validate_credit_assignments(&self) -> Result<ValidationReport, Box<dyn std::error::Error + Send + Sync>> {
-        let records = self.credit_records.read().await;
+        let mut records = self.credit_records.write().await;
         let mut validation_issues = Vec::new();
         let mut validated_records = 0;
 
-        for (session_id, session_records) in records.iter() {
-            for record in session_records {
-                // Validate credit distribution sums
+        for (session_id, session_records) in records.iter_mut() {
+            for record in session_records.iter_mut() {
+                let mut record_valid = true;
+
                 let distributed_total: f64 = record.credit_distribution.values().sum();
                 if (distributed_total - record.total_credit).abs() > 0.01 {
                     validation_issues.push(format!(
-                        "Credit distribution mismatch in session {}: expected {:.2}, got {:.2}",
-                        session_id, record.total_credit, distributed_total
+                        "Credit distribution mismatch in session {} for participant {}: expected {:.2}, got {:.2}",
+                        session_id,
+                        record.participant_id,
+                        record.total_credit,
+                        distributed_total
                     ));
+                    record_valid = false;
                 }
 
-                // Validate action sequence integrity
                 if record.action_sequence.is_empty() {
                     validation_issues.push(format!(
-                        "Empty action sequence in session {}", session_id
+                        "Empty action sequence in session {} for participant {}",
+                        session_id,
+                        record.participant_id
                     ));
+                    record_valid = false;
                 }
 
-                // Mark as validated
-                // TODO: Implement record update with the following requirements:
-                // 1. Record update implementation: Update the record in real implementation
-                //    - Update the record in real implementation for proper data management
-                //    - Handle record update implementation optimization and performance
-                //    - Implement record update implementation validation and quality assurance
-                //    - Support record update implementation customization and configuration
-                // 2. Record management: Manage record lifecycle and operations
-                //    - Manage record lifecycle and operational management
-                //    - Handle record management optimization and performance
-                //    - Implement record management validation and quality assurance
-                //    - Support record management customization and configuration
-                // 3. Record update optimization: Optimize record update performance and reliability
-                //    - Optimize record update performance and reliability for efficiency
-                //    - Handle record update optimization and performance
-                //    - Implement record update optimization validation and quality assurance
-                //    - Support record update optimization customization and configuration
-                // 4. Record update system optimization: Optimize record update system performance
-                //    - Implement record update system optimization strategies
-                //    - Handle record update system monitoring and analytics
-                //    - Implement record update system validation and quality assurance
-                //    - Ensure record update system meets performance and reliability standards
-                validated_records += 1;
+                if record_valid {
+                    if !record.validated {
+                        record.validated = true;
+                    }
+                    validated_records += 1;
+                } else {
+                    record.validated = false;
+                }
             }
         }
 

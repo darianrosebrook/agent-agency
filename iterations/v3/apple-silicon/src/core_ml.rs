@@ -67,10 +67,14 @@ impl CoreMLModel {
             }
 
             let error: *mut *mut std::ffi::c_void = std::ptr::null_mut();
-            let model: *mut std::ffi::c_void = msg_send![class!(MLModel), modelWithContentsOfURL:url error:error];
+            let model: *mut std::ffi::c_void =
+                msg_send![class!(MLModel), modelWithContentsOfURL:url error:error];
 
             if model.is_null() {
-                anyhow::bail!("Failed to load Core ML model from path: {}", model_path.display());
+                anyhow::bail!(
+                    "Failed to load Core ML model from path: {}",
+                    model_path.display()
+                );
             }
         }
 
@@ -456,23 +460,25 @@ impl CoreMLManager {
                         let mut cache = self.model_cache.write().await;
                         if let Some(model) = cache.get_mut(model_name) {
                             model.optimization_status = OptimizationStatus::Optimized;
-                            
+
                             // Add timestamps for optimization tracking and monitoring
                             let optimization_timestamp = chrono::Utc::now();
                             let optimization_start = std::time::Instant::now();
                             model.last_optimized_at = Some(optimization_timestamp);
-                            
+
                             // Implement optimization target tracking and analysis
                             model.optimization_targets.push(target.clone());
                             model.optimization_history.push(OptimizationRecord {
                                 timestamp: optimization_timestamp,
                                 target: target.clone(),
-                                quantization: quantization.clone().unwrap_or(QuantizationMethod::None),
+                                quantization: quantization
+                                    .clone()
+                                    .unwrap_or(QuantizationMethod::None),
                                 success: true,
                                 duration_ms: optimization_start.elapsed().as_millis() as u64,
                                 performance_improvement: None,
                             });
-                            
+
                             // Handle optimization performance metrics and reporting
                             let mut metrics = self.performance_metrics.write().await;
                             if let Some(model_metrics) = metrics.get_mut(model_name) {
@@ -481,14 +487,19 @@ impl CoreMLManager {
                                 model_metrics.optimization_targets.insert(target.clone());
                             } else {
                                 // Create new metrics entry if it doesn't exist
-                                metrics.insert(model_name.to_string(), ModelPerformanceMetrics {
-                                    optimization_count: 1,
-                                    last_optimization_at: Some(optimization_timestamp),
-                                    optimization_targets: std::collections::HashSet::from([target.clone()]),
-                                    ..Default::default()
-                                });
+                                metrics.insert(
+                                    model_name.to_string(),
+                                    ModelPerformanceMetrics {
+                                        optimization_count: 1,
+                                        last_optimization_at: Some(optimization_timestamp),
+                                        optimization_targets: std::collections::HashSet::from([
+                                            target.clone(),
+                                        ]),
+                                        ..Default::default()
+                                    },
+                                );
                             }
-                            
+
                             // Support optimization history and trend analysis
                             // Keep only the last 100 optimization records to prevent memory bloat
                             if model.optimization_history.len() > 100 {
@@ -501,7 +512,7 @@ impl CoreMLManager {
                             "Core ML optimization failed, using software optimization: {}",
                             e
                         );
-                        
+
                         // Track failed optimization attempt
                         let mut cache = self.model_cache.write().await;
                         if let Some(model) = cache.get_mut(model_name) {
@@ -509,13 +520,15 @@ impl CoreMLManager {
                             model.optimization_history.push(OptimizationRecord {
                                 timestamp: failure_timestamp,
                                 target: target.clone(),
-                                quantization: quantization.clone().unwrap_or(QuantizationMethod::None),
+                                quantization: quantization
+                                    .clone()
+                                    .unwrap_or(QuantizationMethod::None),
                                 success: false,
                                 duration_ms: 0,
                                 performance_improvement: None,
                             });
                         }
-                        
+
                         self.perform_software_optimization(&target, &quantization)
                             .await;
                     }
@@ -638,7 +651,8 @@ impl CoreMLManager {
             unsafe {
                 // 1. Model loading: load Core ML model from source URL
                 let model_cf_path = CFString::new("/tmp/model.mlmodel");
-                let source_url: *mut Object = msg_send![class!(NSURL), fileURLWithPath: model_cf_path.as_concrete_TypeRef()];
+                let source_url: *mut Object =
+                    msg_send![class!(NSURL), fileURLWithPath: model_cf_path.as_concrete_TypeRef()];
                 if source_url.is_null() {
                     anyhow::bail!("Failed to create NSURL for Core ML model");
                 }
@@ -653,7 +667,8 @@ impl CoreMLManager {
                 let _: () = msg_send![model, setConfiguration: config];
 
                 // 3. Compile the model for the requested hardware target
-                let compiled_url: *mut Object = msg_send![class!(MLModel), compileModelAtURL: source_url error: &mut error];
+                let compiled_url: *mut Object =
+                    msg_send![class!(MLModel), compileModelAtURL: source_url error: &mut error];
                 if compiled_url.is_null() {
                     anyhow::bail!("Core ML compilation failed for target {:?}", target);
                 }
@@ -661,7 +676,8 @@ impl CoreMLManager {
                 // 4. Persist compiled model to temporary location
                 let fm: *mut Object = msg_send![class!(NSFileManager), defaultManager];
                 let destination_cf = CFString::new("/tmp/optimized.mlmodelc");
-                let destination_url: *mut Object = msg_send![class!(NSURL), fileURLWithPath: destination_cf.as_concrete_TypeRef()];
+                let destination_url: *mut Object =
+                    msg_send![class!(NSURL), fileURLWithPath: destination_cf.as_concrete_TypeRef()];
 
                 let _: () = msg_send![fm, removeItemAtURL: destination_url error: std::ptr::null_mut::<*mut std::ffi::c_void>()];
                 let success: bool = msg_send![fm, copyItemAtURL: compiled_url toURL: destination_url error: &mut error];

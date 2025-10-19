@@ -9,11 +9,11 @@
 //!
 //! @author @darianrosebrook
 
+use anyhow::{bail, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use anyhow::{Result, bail};
-use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
 /// A model variant with performance characteristics
@@ -42,18 +42,11 @@ pub enum RoutingMode {
         variant_b: String,
     },
     /// Canary: gradually roll out candidate variant, fallback to stable
-    Canary {
-        stable: String,
-        candidate: String,
-    },
+    Canary { stable: String, candidate: String },
     /// Affinity: route based on device characteristics
-    Affinity {
-        device_pool: Vec<String>,
-    },
+    Affinity { device_pool: Vec<String> },
     /// Load balance: distribute across variants based on weights
-    LoadBalance {
-        weights: HashMap<String, f32>,
-    },
+    LoadBalance { weights: HashMap<String, f32> },
 }
 
 /// Policy for routing decisions
@@ -144,10 +137,7 @@ pub struct ModelRouter {
 
 impl ModelRouter {
     /// Create a new model router
-    pub fn new(
-        devices: Vec<DeviceId>,
-        variants: Vec<ModelVariant>,
-    ) -> Self {
+    pub fn new(devices: Vec<DeviceId>, variants: Vec<ModelVariant>) -> Self {
         let mut variant_map = HashMap::new();
         for variant in variants {
             variant_map.insert(variant.id.clone(), variant);
@@ -155,10 +145,9 @@ impl ModelRouter {
 
         let mut stats = RoutingStats::default();
         for variant in variant_map.values() {
-            stats.variant_performance.insert(
-                variant.id.clone(),
-                VariantPerformance::default(),
-            );
+            stats
+                .variant_performance
+                .insert(variant.id.clone(), VariantPerformance::default());
         }
 
         Self {
@@ -174,7 +163,10 @@ impl ModelRouter {
         let policy = self.policy.read().await;
 
         match &policy.mode {
-            RoutingMode::ABTest { variant_a, variant_b } => {
+            RoutingMode::ABTest {
+                variant_a,
+                variant_b,
+            } => {
                 // 50/50 split for A/B testing
                 let rand_val = Uuid::new_v4().as_bytes()[0] as f32 / 255.0;
                 let selected = if rand_val < 0.5 {
@@ -200,7 +192,8 @@ impl ModelRouter {
 
             RoutingMode::Affinity { device_pool } => {
                 // Route based on device affinity
-                let device_id = device_pool.first()
+                let device_id = device_pool
+                    .first()
                     .map(|d| DeviceId::new(d.clone()))
                     .ok_or_else(|| anyhow::anyhow!("Empty device pool"))?;
 
@@ -253,10 +246,7 @@ impl ModelRouter {
     }
 
     /// Select variant based on weights
-    async fn select_weighted_variant(
-        &self,
-        weights: &HashMap<String, f32>,
-    ) -> Result<String> {
+    async fn select_weighted_variant(&self, weights: &HashMap<String, f32>) -> Result<String> {
         if weights.is_empty() {
             bail!("No weights provided");
         }
@@ -300,13 +290,11 @@ impl ModelRouter {
             }
 
             // Update latency (simple exponential moving average)
-            perf.average_latency_ms =
-                perf.average_latency_ms * 0.9 + latency_ms as f64 * 0.1;
+            perf.average_latency_ms = perf.average_latency_ms * 0.9 + latency_ms as f64 * 0.1;
 
             // Update p99
             if latency_ms as f64 > perf.p99_latency_ms {
-                perf.p99_latency_ms =
-                    perf.p99_latency_ms * 0.9 + latency_ms as f64 * 0.1;
+                perf.p99_latency_ms = perf.p99_latency_ms * 0.9 + latency_ms as f64 * 0.1;
             }
 
             // Update accuracy

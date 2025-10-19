@@ -17,11 +17,7 @@ impl CaptionsIngestor {
     }
 
     /// Ingest caption file (SRT/VTT)
-    pub async fn ingest(
-        &self,
-        path: &Path,
-        project_scope: Option<&str>,
-    ) -> Result<IngestResult> {
+    pub async fn ingest(&self, path: &Path, project_scope: Option<&str>) -> Result<IngestResult> {
         tracing::debug!("Ingesting captions from: {:?}", path);
 
         // Compute SHA256
@@ -45,12 +41,7 @@ impl CaptionsIngestor {
         let speech_turns = match extension.as_str() {
             "srt" => self.parse_srt(path).await?,
             "vtt" => self.parse_vtt(path).await?,
-            _ => {
-                return Err(anyhow!(
-                    "Unsupported captions format: {}",
-                    extension
-                ))
-            }
+            _ => return Err(anyhow!("Unsupported captions format: {}", extension)),
         };
 
         // Create a minimal segment for captions

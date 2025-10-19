@@ -79,7 +79,10 @@ impl CouncilIntegrationTests {
         // Test consensus algorithms (majority, weighted, multi-criteria)
         results.push(
             self.executor
-                .execute("council_consensus_algorithms", self.test_consensus_algorithms())
+                .execute(
+                    "council_consensus_algorithms",
+                    self.test_consensus_algorithms(),
+                )
                 .await,
         );
 
@@ -499,7 +502,9 @@ impl CouncilIntegrationTests {
         let coordinator = self.initialize_judge_coordinator().await?;
 
         // Test judge coordination
-        let verdicts = self.test_judge_coordination(&coordinator, &task_spec, &evidence).await?;
+        let verdicts = self
+            .test_judge_coordination(&coordinator, &task_spec, &evidence)
+            .await?;
 
         // Assertions
         // assert!(!verdicts.is_empty());
@@ -541,7 +546,9 @@ impl CouncilIntegrationTests {
         let learning_system = self.initialize_learning_system().await?;
 
         // Test learning signal processing
-        let processed_signals = self.test_learning_signal_processing(&learning_system, &learning_signals).await?;
+        let processed_signals = self
+            .test_learning_signal_processing(&learning_system, &learning_signals)
+            .await?;
 
         // Assertions
         // assert_eq!(processed_signals.len(), 2);
@@ -569,7 +576,9 @@ impl CouncilIntegrationTests {
         let start_time = std::time::Instant::now();
 
         // Process tasks concurrently
-        let concurrent_results = self.process_tasks_concurrently(&council, &task_specs, &evidence_items).await?;
+        let concurrent_results = self
+            .process_tasks_concurrently(&council, &task_specs, &evidence_items)
+            .await?;
         // let handles: Vec<_> = task_specs.iter()
         //     .zip(evidence_items.iter())
         //     .map(|(spec, evidence)| {
@@ -607,15 +616,28 @@ impl CouncilIntegrationTests {
 
         // Test 1: Majority voting (>50% threshold)
         let majority_result = self.test_majority_voting_algorithm().await?;
-        info!("✅ Majority voting test: {}", if majority_result { "PASSED" } else { "FAILED" });
+        info!(
+            "✅ Majority voting test: {}",
+            if majority_result { "PASSED" } else { "FAILED" }
+        );
 
         // Test 2: Weighted consensus (60% threshold)
         let weighted_result = self.test_weighted_consensus_algorithm().await?;
-        info!("✅ Weighted consensus test: {}", if weighted_result { "PASSED" } else { "FAILED" });
+        info!(
+            "✅ Weighted consensus test: {}",
+            if weighted_result { "PASSED" } else { "FAILED" }
+        );
 
         // Test 3: Multi-criteria analysis (70% threshold)
         let multicriteria_result = self.test_multicriteria_analysis_algorithm().await?;
-        info!("✅ Multi-criteria analysis test: {}", if multicriteria_result { "PASSED" } else { "FAILED" });
+        info!(
+            "✅ Multi-criteria analysis test: {}",
+            if multicriteria_result {
+                "PASSED"
+            } else {
+                "FAILED"
+            }
+        );
 
         // All must pass
         if majority_result && weighted_result && multicriteria_result {
@@ -628,7 +650,7 @@ impl CouncilIntegrationTests {
     /// Validate majority voting: >50% judge acceptance
     async fn test_majority_voting_algorithm(&self) -> Result<bool> {
         debug!("Testing majority voting algorithm");
-        
+
         // Scenario 1: 3/4 judges pass (75% > 50%) -> consensus
         let pass_count_1 = 3;
         let total_count_1 = 4;
@@ -654,7 +676,7 @@ impl CouncilIntegrationTests {
     /// Validate weighted consensus: 60% confidence-weighted threshold
     async fn test_weighted_consensus_algorithm(&self) -> Result<bool> {
         debug!("Testing weighted consensus algorithm");
-        
+
         // Scenario 1: High confidence judges
         // All 4 judges at 0.8 confidence = (1.0 * 0.8 * 4) / (0.8 * 4) = 1.0 > 0.6 -> consensus
         let mut weighted_score = 0.0;
@@ -665,17 +687,25 @@ impl CouncilIntegrationTests {
             total_weight += confidence;
         }
         let result_1 = (weighted_score / total_weight) > 0.6;
-        assert!(result_1, "Weighted consensus should pass with high confidence judges");
+        assert!(
+            result_1,
+            "Weighted consensus should pass with high confidence judges"
+        );
 
         // Scenario 2: Mixed confidence
         // 2 judges at 0.9 (pass), 2 judges at 0.3 (fail) = (0.9*2 + 0*0.3*2) / (0.9*2 + 0.3*2) = 1.8/2.4 = 0.75 > 0.6
         weighted_score = 0.0;
         total_weight = 0.0;
-        weighted_score += 1.0 * 0.9; weighted_score += 1.0 * 0.9;
-        weighted_score += 0.0 * 0.3; weighted_score += 0.0 * 0.3;
+        weighted_score += 1.0 * 0.9;
+        weighted_score += 1.0 * 0.9;
+        weighted_score += 0.0 * 0.3;
+        weighted_score += 0.0 * 0.3;
         total_weight += 0.9 + 0.9 + 0.3 + 0.3;
         let result_2 = (weighted_score / total_weight) > 0.6;
-        assert!(result_2, "Weighted consensus should pass with mixed confidence");
+        assert!(
+            result_2,
+            "Weighted consensus should pass with mixed confidence"
+        );
 
         // Scenario 3: Low confidence judges
         // All 4 judges at 0.2 confidence failing = 0.0 / (0.2*4) = 0.0 < 0.6
@@ -687,7 +717,10 @@ impl CouncilIntegrationTests {
             total_weight += confidence;
         }
         let result_3 = (weighted_score / total_weight) > 0.6;
-        assert!(!result_3, "Weighted consensus should fail with low confidence judges");
+        assert!(
+            !result_3,
+            "Weighted consensus should fail with low confidence judges"
+        );
 
         info!("Weighted consensus algorithm validated");
         Ok(true)
@@ -696,7 +729,7 @@ impl CouncilIntegrationTests {
     /// Validate multi-criteria analysis: 70% role-weighted threshold
     async fn test_multicriteria_analysis_algorithm(&self) -> Result<bool> {
         debug!("Testing multi-criteria analysis algorithm");
-        
+
         // Role weights: Constitutional 40%, Technical 30%, Quality 20%, Integration 10%
         let role_weights = [
             ("constitutional", 0.40),
@@ -724,7 +757,10 @@ impl CouncilIntegrationTests {
         }
         total_weight = 1.0;
         let result_2 = (weighted_sum / total_weight) > 0.70;
-        assert!(!result_2, "Multi-criteria should fail with only constitutional passing");
+        assert!(
+            !result_2,
+            "Multi-criteria should fail with only constitutional passing"
+        );
 
         // Scenario 3: Constitutional + Technical pass = (0.40 + 0.30 + 0 + 0) / 1.0 = 0.7 (not > 0.7)
         weighted_sum = 0.0;
@@ -798,14 +834,28 @@ mod tests {
         })
     }
 
-    async fn test_judge_coordination(&self, coordinator: &MockJudgeCoordinator, task_spec: &serde_json::Value, evidence: &serde_json::Value) -> Result<Vec<MockVerdict>, anyhow::Error> {
+    async fn test_judge_coordination(
+        &self,
+        coordinator: &MockJudgeCoordinator,
+        task_spec: &serde_json::Value,
+        evidence: &serde_json::Value,
+    ) -> Result<Vec<MockVerdict>, anyhow::Error> {
         debug!("Testing judge coordination");
         // Simulate judge coordination testing
         tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
         Ok(vec![
-            MockVerdict { judge_type: "constitutional".to_string(), decision: "approved".to_string() },
-            MockVerdict { judge_type: "technical".to_string(), decision: "approved".to_string() },
-            MockVerdict { judge_type: "quality".to_string(), decision: "approved".to_string() },
+            MockVerdict {
+                judge_type: "constitutional".to_string(),
+                decision: "approved".to_string(),
+            },
+            MockVerdict {
+                judge_type: "technical".to_string(),
+                decision: "approved".to_string(),
+            },
+            MockVerdict {
+                judge_type: "quality".to_string(),
+                decision: "approved".to_string(),
+            },
         ])
     }
 
@@ -819,11 +869,21 @@ mod tests {
         })
     }
 
-    async fn test_learning_signal_processing(&self, learning_system: &MockLearningSystem, signals: &[serde_json::Value]) -> Result<Vec<MockProcessedSignal>, anyhow::Error> {
-        debug!("Testing learning signal processing with {} signals", signals.len());
+    async fn test_learning_signal_processing(
+        &self,
+        learning_system: &MockLearningSystem,
+        signals: &[serde_json::Value],
+    ) -> Result<Vec<MockProcessedSignal>, anyhow::Error> {
+        debug!(
+            "Testing learning signal processing with {} signals",
+            signals.len()
+        );
         // Simulate learning signal processing
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-        Ok(signals.iter().map(|_| MockProcessedSignal { processed: true }).collect())
+        Ok(signals
+            .iter()
+            .map(|_| MockProcessedSignal { processed: true })
+            .collect())
     }
 
     async fn initialize_council_system(&self) -> Result<MockCouncilSystem, anyhow::Error> {
@@ -837,11 +897,19 @@ mod tests {
         })
     }
 
-    async fn process_tasks_concurrently(&self, council: &MockCouncilSystem, task_specs: &[serde_json::Value], evidence_items: &[serde_json::Value]) -> Result<Vec<MockConcurrentResult>, anyhow::Error> {
+    async fn process_tasks_concurrently(
+        &self,
+        council: &MockCouncilSystem,
+        task_specs: &[serde_json::Value],
+        evidence_items: &[serde_json::Value],
+    ) -> Result<Vec<MockConcurrentResult>, anyhow::Error> {
         debug!("Processing {} tasks concurrently", task_specs.len());
         // Simulate concurrent task processing
         tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
-        Ok(task_specs.iter().map(|_| MockConcurrentResult { success: true }).collect())
+        Ok(task_specs
+            .iter()
+            .map(|_| MockConcurrentResult { success: true })
+            .collect())
     }
 }
 

@@ -18,7 +18,7 @@ pub struct OcrResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OcrBlock {
     pub id: Uuid,
-    pub role: String,  // "title", "bullet", "paragraph", etc.
+    pub role: String, // "title", "bullet", "paragraph", etc.
     pub text: String,
     pub bbox: BoundingBox,
     pub confidence: f32,
@@ -105,7 +105,7 @@ pub struct EntityResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExtractedEntity {
     pub id: Uuid,
-    pub entity_type: String,  // "person", "organization", "location", "date", etc.
+    pub entity_type: String, // "person", "organization", "location", "date", etc.
     pub text: String,
     pub normalized: String,
     pub confidence: f32,
@@ -143,7 +143,7 @@ pub struct CaptionResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnricherConfig {
     pub vision_timeout_ms: u64,
-    pub asr_provider: String,  // "whisperx", "apple", etc.
+    pub asr_provider: String, // "whisperx", "apple", etc.
     pub entity_ner_enabled: bool,
     pub caption_max_tokens: usize,
     pub circuit_breaker_threshold: usize,
@@ -162,5 +162,3 @@ impl Default for EnricherConfig {
         }
     }
 }
-
-

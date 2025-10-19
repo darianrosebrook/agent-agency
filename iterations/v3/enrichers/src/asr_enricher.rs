@@ -7,7 +7,7 @@
 //! - Cloud providers (optional, off by default)
 
 use crate::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
-use crate::types::{AsrResult, SpeechSegment, Speaker, WordTiming, EnricherConfig};
+use crate::types::{AsrResult, EnricherConfig, Speaker, SpeechSegment, WordTiming};
 use anyhow::{anyhow, Result};
 use std::time::Instant;
 use uuid::Uuid;
@@ -75,9 +75,9 @@ impl AsrEnricher {
         match self.provider {
             AsrProvider::WhisperX => self.transcribe_whisperx(audio_data, language).await,
             AsrProvider::AppleSpeech => self.transcribe_apple(audio_data, language).await,
-            AsrProvider::CloudProvider(_) => {
-                Err(anyhow!("Cloud providers not available in local-first setup"))
-            }
+            AsrProvider::CloudProvider(_) => Err(anyhow!(
+                "Cloud providers not available in local-first setup"
+            )),
         }
     }
 
@@ -175,5 +175,3 @@ mod tests {
         matches!(enricher.provider, AsrProvider::AppleSpeech);
     }
 }
-
-

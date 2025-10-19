@@ -1,13 +1,13 @@
 //! @darianrosebrook
 //! HNSW (Hierarchical Navigable Small World) approximate nearest neighbor search
 
-use crate::types::{VectorQuery, VectorSearchResult, HnswMetadata};
+use crate::types::{HnswMetadata, VectorQuery, VectorSearchResult};
 use anyhow::{Context, Result};
-use std::sync::Arc;
-use uuid::Uuid;
-use tracing::{debug, info, warn};
-use std::collections::HashMap;
 use parking_lot::Mutex;
+use std::collections::HashMap;
+use std::sync::Arc;
+use tracing::{debug, info, warn};
+use uuid::Uuid;
 
 /// Simplified HNSW index for vector search
 struct SimpleHnswIndex {
@@ -33,7 +33,7 @@ impl SimpleHnswIndex {
                 vector.len()
             ));
         }
-        
+
         let id = self.vectors.len();
         self.vectors.push(vector.to_vec());
         Ok(id)
@@ -48,7 +48,8 @@ impl SimpleHnswIndex {
             ));
         }
 
-        let mut results: Vec<(usize, f32)> = self.vectors
+        let mut results: Vec<(usize, f32)> = self
+            .vectors
             .iter()
             .enumerate()
             .map(|(id, vector)| {
@@ -60,7 +61,7 @@ impl SimpleHnswIndex {
         // Sort by distance (ascending) and take top k
         results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
         results.truncate(k);
-        
+
         Ok(results)
     }
 
@@ -118,11 +119,7 @@ impl HnswIndexer {
     }
 
     /// Insert a vector into the index
-    pub async fn insert(
-        &mut self,
-        block_id: Uuid,
-        vector: &[f32],
-    ) -> Result<()> {
+    pub async fn insert(&mut self, block_id: Uuid, vector: &[f32]) -> Result<()> {
         debug!(
             "Inserting vector for block {} ({}d)",
             block_id,
@@ -156,7 +153,7 @@ impl HnswIndexer {
         {
             let mut id_to_uuid = self.id_to_uuid.lock();
             let mut uuid_to_id = self.uuid_to_id.lock();
-            
+
             id_to_uuid.insert(actual_id, block_id);
             uuid_to_id.insert(block_id, actual_id);
         }
@@ -164,7 +161,10 @@ impl HnswIndexer {
         // Update metadata
         self.metadata.node_count += 1;
 
-        debug!("Successfully inserted vector for block {} with ID {}", block_id, actual_id);
+        debug!(
+            "Successfully inserted vector for block {} with ID {}",
+            block_id, actual_id
+        );
         Ok(())
     }
 
@@ -189,23 +189,23 @@ impl HnswIndexer {
         // Perform HNSW search
         let index = self.index.lock();
         let neighbors = index
-            .search(query.vector, query.k)
+            .search(&query.vector, query.k)
             .context("Failed to perform HNSW search")?;
 
         // Convert results to VectorSearchResult
-        let results = neighbors
+        let results: Vec<crate::types::VectorSearchResult> = neighbors
             .into_iter()
             .filter_map(|(id, distance)| {
                 // Get UUID from ID mapping
                 let id_to_uuid = self.id_to_uuid.lock();
                 let block_id = id_to_uuid.get(&id)?;
-                
+
                 // Convert distance to similarity score
                 let similarity = match self.metadata.metric.as_str() {
-                    "cosine" => 1.0 - distance,  // Cosine distance to similarity
-                    "l2" => 1.0 / (1.0 + distance),  // L2 distance to similarity
-                    "ip" => distance,  // Inner product is already similarity-like
-                    _ => 1.0 - distance,  // Default to cosine-like conversion
+                    "cosine" => 1.0 - distance,     // Cosine distance to similarity
+                    "l2" => 1.0 / (1.0 + distance), // L2 distance to similarity
+                    "ip" => distance,               // Inner product is already similarity-like
+                    _ => 1.0 - distance,            // Default to cosine-like conversion
                 };
 
                 Some(VectorSearchResult {
@@ -269,4 +269,3 @@ mod tests {
         assert_eq!(indexer.node_count(), 0);
     }
 }
-

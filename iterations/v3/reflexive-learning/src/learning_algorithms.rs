@@ -294,7 +294,18 @@ impl LearningAlgorithms {
         statistics: EnsembleComponentStatistics,
     ) {
         let mut stats = self.ensemble_component_stats.write().await;
-        stats.insert(component.to_string(), statistics);
+        stats
+            .entry(component.to_string())
+            .and_modify(|existing| {
+                let total_samples = existing.samples.saturating_add(statistics.samples).max(1);
+                let alpha = if statistics.samples == 0 { 0.2 } else { statistics.samples as f64 / total_samples as f64 };
+                existing.accuracy = existing.accuracy * (1.0 - alpha) + statistics.accuracy * alpha;
+                existing.precision = existing.precision * (1.0 - alpha) + statistics.precision * alpha;
+                existing.recall = existing.recall * (1.0 - alpha) + statistics.recall * alpha;
+                existing.confidence = existing.confidence * (1.0 - alpha) + statistics.confidence * alpha;
+                existing.samples = total_samples;
+            })
+            .or_insert(statistics);
     }
 
     /// Retrieve the most recent ensemble analytics snapshot
@@ -327,6 +338,16 @@ impl LearningAlgorithms {
         q_table.set(state, action, new_q);
 
         Ok(())
+    }
+
+    /// Retrieve Q-value prediction for a given state-action pair
+    pub async fn predict_q_value(
+        &self,
+        state: &str,
+        action: &str,
+    ) -> Result<f64, Box<dyn std::error::Error + Send + Sync>> {
+        let table = self.q_table.read().await;
+        Ok(table.get(state, action))
     }
 
     /// Get best action using epsilon-greedy policy
@@ -430,48 +451,143 @@ impl LearningAlgorithms {
 
     /// Advanced ensemble learning with multiple algorithms
     pub async fn ensemble_predict(&self, features: &[f64]) -> Result<f64, Box<dyn std::error::Error + Send + Sync>> {
-        let mut predictions = Vec::new();
+        if features.is_empty() {
+            return Err("Features cannot be empty for ensemble prediction".into());
+        }
 
-        // Get predictions from different algorithms
+        let mut components = Vec::new();
+
         if let Ok(q_prediction) = self.predict_q_value(&format!("{:?}", features), "default_action") {
-            predictions.push(q_prediction);
+            components.push(ComponentContribution {
+                name: "policy_q".to_string(),
+                prediction: q_prediction,
+                weight: 0.0,
+                confidence: 0.65,
+            });
         }
 
         if let Ok(reg_prediction) = self.predict_regression(features).await {
-            predictions.push(reg_prediction);
+            components.push(ComponentContribution {
+                name: "regression".to_string(),
+                prediction: reg_prediction,
+                weight: 0.0,
+                confidence: 0.8,
+            });
         }
 
-        // Add some noise-based predictions for diversity
-        predictions.push(features.iter().sum::<f64>() / features.len() as f64);
-        predictions.push(features.iter().fold(0.0, |acc, x| acc + x * x).sqrt());
+        let mean_feature = features.iter().copied().sum::<f64>() / features.len() as f64;
+        components.push(ComponentContribution {
+            name: "feature_mean".to_string(),
+            prediction: mean_feature,
+            weight: 0.0,
+            confidence: 0.55,
+        });
 
-        if predictions.is_empty() {
+        let feature_energy = features.iter().fold(0.0, |acc, value| acc + value.powi(2)).sqrt();
+        components.push(ComponentContribution {
+            name: "feature_energy".to_string(),
+            prediction: feature_energy,
+            weight: 0.0,
+            confidence: 0.5,
+        });
+
+        if components.is_empty() {
             return Err("No predictions available".into());
         }
 
-        // TODO: Implement weighted ensemble learning with the following requirements:
-        // 1. Dynamic weight calculation: Implement sophisticated weight calculation algorithms for ensemble predictions
-        //    - Calculate weights based on individual algorithm performance metrics (accuracy, precision, recall)
-        //    - Implement adaptive weighting that adjusts based on recent performance history
-        //    - Handle algorithm-specific confidence scores and uncertainty quantification
-        //    - Support both static and dynamic weight assignment strategies
-        // 2. Performance-based weighting: Implement performance-driven weight optimization
-        //    - Track individual algorithm performance on validation datasets
-        //    - Implement cross-validation based weight calculation for robust performance estimation
-        //    - Handle algorithm performance degradation and weight adjustment mechanisms
-        //    - Support ensemble diversity metrics to prevent over-reliance on single algorithms
-        // 3. Uncertainty quantification: Implement comprehensive uncertainty quantification for ensemble predictions
-        //    - Calculate prediction intervals and confidence bounds for ensemble outputs
-        //    - Implement Bayesian ensemble methods for uncertainty-aware predictions
-        //    - Handle prediction disagreement analysis and conflict resolution
-        //    - Support ensemble calibration and reliability assessment
-        // 4. Advanced ensemble strategies: Implement sophisticated ensemble combination methods
-        //    - Support weighted voting, weighted averaging, and stacking ensemble methods
-        //    - Implement ensemble pruning and selection algorithms for optimal subset selection
-        //    - Handle heterogeneous ensemble combinations with different algorithm types
-        //    - Support online ensemble learning and incremental weight updates
-        let ensemble_prediction = predictions.iter().sum::<f64>() / predictions.len() as f64;
-        Ok(ensemble_prediction)
+        let baseline_mean = components.iter().map(|c| c.prediction).sum::<f64>() / components.len() as f64;
+        let baseline_variance = components
+            .iter()
+            .map(|c| (c.prediction - baseline_mean).powi(2))
+            .sum::<f64>()
+            / components.len() as f64;
+        let baseline_std = baseline_variance.sqrt();
+
+        let stats_map = self.ensemble_component_stats.read().await;
+        let mut missing_components = Vec::new();
+        let mut total_weight = 0.0;
+
+        for component in components.iter_mut() {
+            let stats = match stats_map.get(&component.name) {
+                Some(entry) => entry.clone(),
+                None => {
+                    missing_components.push(component.name.clone());
+                    EnsembleComponentStatistics::baseline()
+                }
+            };
+
+            let reliability = self.component_reliability(&stats);
+            let disagreement_penalty = if baseline_std > f64::EPSILON {
+                1.0 / (1.0 + ((component.prediction - baseline_mean).abs() / (baseline_std + 1e-9)))
+            } else {
+                1.0
+            };
+
+            let mut weight = ((component.confidence + reliability) / 2.0) * disagreement_penalty;
+
+            if stats.samples == 0 {
+                weight *= 0.9;
+            }
+
+            component.weight = weight.max(1e-6);
+            total_weight += component.weight;
+        }
+        drop(stats_map);
+
+        if !missing_components.is_empty() {
+            let mut stats_map_mut = self.ensemble_component_stats.write().await;
+            for name in missing_components {
+                stats_map_mut
+                    .entry(name)
+                    .or_insert_with(EnsembleComponentStatistics::baseline);
+            }
+        }
+
+        if total_weight <= f64::EPSILON {
+            let equal_weight = 1.0 / components.len() as f64;
+            for component in components.iter_mut() {
+                component.weight = equal_weight;
+            }
+            total_weight = 1.0;
+        } else {
+            for component in components.iter_mut() {
+                component.weight /= total_weight;
+            }
+        }
+
+        let weighted_prediction = components
+            .iter()
+            .map(|component| component.prediction * component.weight)
+            .sum::<f64>();
+
+        let weighted_variance = components
+            .iter()
+            .map(|component| component.weight * (component.prediction - weighted_prediction).powi(2))
+            .sum::<f64>()
+            .max(0.0);
+
+        let interval_margin = 1.96 * weighted_variance.sqrt();
+        let analytics = EnsembleAnalytics {
+            timestamp: Utc::now(),
+            weighted_prediction,
+            variance: weighted_variance,
+            lower_bound: weighted_prediction - interval_margin,
+            upper_bound: weighted_prediction + interval_margin,
+            components: components.clone(),
+        };
+
+        *self.last_ensemble_analysis.write().await = Some(analytics);
+
+        Ok(weighted_prediction)
+    }
+
+    fn component_reliability(&self, stats: &EnsembleComponentStatistics) -> f64 {
+        let performance = ((stats.accuracy + stats.precision + stats.recall) / 3.0).clamp(0.0, 1.0);
+        let confidence = stats.confidence.clamp(0.0, 1.0);
+        let history_factor = 1.0 - (1.0 / (1.0 + stats.samples as f64));
+
+        let blended = performance * 0.7 + confidence * 0.3;
+        (blended * (0.6 + history_factor * 0.4)).clamp(0.0, 1.0)
     }
 
     /// Meta-learning: Learn which algorithm works best for different problem types

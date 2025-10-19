@@ -9,14 +9,14 @@
 //!
 //! @author @darianrosebrook
 
+use anyhow::{bail, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use std::time::Duration;
-use anyhow::{Result, bail};
-use serde::{Serialize, Deserialize};
-use uuid::Uuid;
 use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
+use uuid::Uuid;
 
 // Use placeholder types for now - will integrate with actual types later
 pub type TensorMap = HashMap<String, Vec<f32>>;
@@ -267,16 +267,12 @@ pub struct AsyncInferenceEngine {
 
 impl AsyncInferenceEngine {
     /// Create a new async inference engine
-    pub fn new(
-        model_pool: Arc<()>,
-        telemetry: Arc<()>,
-        config: AsyncConfig,
-    ) -> Result<Self> {
+    pub fn new(model_pool: Arc<()>, telemetry: Arc<()>, config: AsyncConfig) -> Result<Self> {
         let runtime = Arc::new(
             tokio::runtime::Builder::new_multi_thread()
                 .worker_threads(config.max_concurrent_requests)
                 .thread_name("async-inference")
-                .build()?
+                .build()?,
         );
 
         Ok(Self {
@@ -284,7 +280,9 @@ impl AsyncInferenceEngine {
                 runtime,
                 model_pool,
                 telemetry,
-                priority_queue: Arc::new(Mutex::new(PriorityQueue::new(config.max_queued_requests))),
+                priority_queue: Arc::new(Mutex::new(PriorityQueue::new(
+                    config.max_queued_requests,
+                ))),
                 config,
             }),
         })
@@ -376,23 +374,29 @@ mod tests {
     fn test_priority_queue_ordering() {
         let mut queue = PriorityQueue::new(100);
 
-        queue.enqueue(QueuedRequest {
-            id: "1".to_string(),
-            priority: Priority::Low,
-            enqueued_at: std::time::Instant::now(),
-        }).unwrap();
+        queue
+            .enqueue(QueuedRequest {
+                id: "1".to_string(),
+                priority: Priority::Low,
+                enqueued_at: std::time::Instant::now(),
+            })
+            .unwrap();
 
-        queue.enqueue(QueuedRequest {
-            id: "2".to_string(),
-            priority: Priority::Critical,
-            enqueued_at: std::time::Instant::now(),
-        }).unwrap();
+        queue
+            .enqueue(QueuedRequest {
+                id: "2".to_string(),
+                priority: Priority::Critical,
+                enqueued_at: std::time::Instant::now(),
+            })
+            .unwrap();
 
-        queue.enqueue(QueuedRequest {
-            id: "3".to_string(),
-            priority: Priority::Normal,
-            enqueued_at: std::time::Instant::now(),
-        }).unwrap();
+        queue
+            .enqueue(QueuedRequest {
+                id: "3".to_string(),
+                priority: Priority::Normal,
+                enqueued_at: std::time::Instant::now(),
+            })
+            .unwrap();
 
         // Verify critical is dequeued first
         let item = queue.dequeue().unwrap();
@@ -414,17 +418,21 @@ mod tests {
     fn test_queue_full() {
         let mut queue = PriorityQueue::new(2);
 
-        queue.enqueue(QueuedRequest {
-            id: "1".to_string(),
-            priority: Priority::Normal,
-            enqueued_at: std::time::Instant::now(),
-        }).unwrap();
+        queue
+            .enqueue(QueuedRequest {
+                id: "1".to_string(),
+                priority: Priority::Normal,
+                enqueued_at: std::time::Instant::now(),
+            })
+            .unwrap();
 
-        queue.enqueue(QueuedRequest {
-            id: "2".to_string(),
-            priority: Priority::Normal,
-            enqueued_at: std::time::Instant::now(),
-        }).unwrap();
+        queue
+            .enqueue(QueuedRequest {
+                id: "2".to_string(),
+                priority: Priority::Normal,
+                enqueued_at: std::time::Instant::now(),
+            })
+            .unwrap();
 
         // Third should fail
         let result = queue.enqueue(QueuedRequest {
@@ -440,23 +448,29 @@ mod tests {
     fn test_queue_stats() {
         let mut queue = PriorityQueue::new(100);
 
-        queue.enqueue(QueuedRequest {
-            id: "1".to_string(),
-            priority: Priority::Critical,
-            enqueued_at: std::time::Instant::now(),
-        }).unwrap();
+        queue
+            .enqueue(QueuedRequest {
+                id: "1".to_string(),
+                priority: Priority::Critical,
+                enqueued_at: std::time::Instant::now(),
+            })
+            .unwrap();
 
-        queue.enqueue(QueuedRequest {
-            id: "2".to_string(),
-            priority: Priority::High,
-            enqueued_at: std::time::Instant::now(),
-        }).unwrap();
+        queue
+            .enqueue(QueuedRequest {
+                id: "2".to_string(),
+                priority: Priority::High,
+                enqueued_at: std::time::Instant::now(),
+            })
+            .unwrap();
 
-        queue.enqueue(QueuedRequest {
-            id: "3".to_string(),
-            priority: Priority::Normal,
-            enqueued_at: std::time::Instant::now(),
-        }).unwrap();
+        queue
+            .enqueue(QueuedRequest {
+                id: "3".to_string(),
+                priority: Priority::Normal,
+                enqueued_at: std::time::Instant::now(),
+            })
+            .unwrap();
 
         let stats = queue.stats();
         assert_eq!(stats.critical, 1);
@@ -476,7 +490,10 @@ mod tests {
         assert_eq!(request.model_id, "model-1");
         assert_eq!(request.priority, Priority::High);
         assert_eq!(request.timeout, Duration::from_secs(60));
-        assert_eq!(request.metadata.get("user_id"), Some(&"user-123".to_string()));
+        assert_eq!(
+            request.metadata.get("user_id"),
+            Some(&"user-123".to_string())
+        );
     }
 
     #[test]

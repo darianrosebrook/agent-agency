@@ -4,10 +4,9 @@
 /// This backend loads `.safetensors` models and runs inference on CPU using Candle.
 /// Used for ground-truth parity validation and as fallback when Core ML unavailable.
 /// Establishes numeric baselines: L∞ < 1e-5, RMSE < 1e-6 (FP32).
-
 use crate::inference::{
-    CapabilityReport, ComputeUnits, DType, InferenceEngine, IoSchema, ModelArtifact,
-    ModelFmt, PreparedModel, PrepareOptions, TensorMap, TensorSpec,
+    CapabilityReport, ComputeUnits, DType, InferenceEngine, IoSchema, ModelArtifact, ModelFmt,
+    PrepareOptions, PreparedModel, TensorMap, TensorSpec,
 };
 use anyhow::{bail, Context, Result};
 use std::collections::HashMap;
@@ -48,10 +47,10 @@ impl CandleBackend {
     /// Load .safetensors file and extract I/O schema
     fn load_safetensors(&self, path: &std::path::Path) -> Result<(Arc<Vec<u8>>, IoSchema)> {
         use std::fs;
-        
+
         // Read the safetensors file
         let model_data = Arc::new(fs::read(path)?);
-        
+
         // Parse safetensors metadata to extract I/O schema
         // For now, create a default schema - in production this would parse the actual metadata
         let io_schema = IoSchema {
@@ -68,17 +67,17 @@ impl CandleBackend {
                 batch_capable: true,
             }],
         };
-        
+
         Ok((model_data, io_schema))
     }
 
     /// Load ONNX model and extract I/O schema
     fn load_onnx(&self, path: &std::path::Path) -> Result<(Arc<Vec<u8>>, IoSchema)> {
         use std::fs;
-        
+
         // Read the ONNX file
         let model_data = Arc::new(fs::read(path)?);
-        
+
         // Parse ONNX metadata to extract I/O schema
         // For now, create a default schema - in production this would parse the actual ONNX model
         let io_schema = IoSchema {
@@ -95,17 +94,26 @@ impl CandleBackend {
                 batch_capable: true,
             }],
         };
-        
+
         Ok((model_data, io_schema))
     }
 
     /// Generate shape key from schema for cache key generation
     fn compute_shape_key(&self, schema: &IoSchema) -> String {
-        schema.inputs.iter()
-            .map(|spec| format!("{}_{}", spec.name, spec.shape.iter()
-                .map(|d| d.to_string())
-                .collect::<Vec<_>>()
-                .join("x")))
+        schema
+            .inputs
+            .iter()
+            .map(|spec| {
+                format!(
+                    "{}_{}",
+                    spec.name,
+                    spec.shape
+                        .iter()
+                        .map(|d| d.to_string())
+                        .collect::<Vec<_>>()
+                        .join("x")
+                )
+            })
             .collect::<Vec<_>>()
             .join("_")
     }
@@ -115,9 +123,7 @@ impl CandleBackend {
         #[cfg(target_os = "macos")]
         {
             use std::process::Command;
-            if let Ok(output) = Command::new("sw_vers")
-                .arg("-buildVersion")
-                .output() {
+            if let Ok(output) = Command::new("sw_vers").arg("-buildVersion").output() {
                 return String::from_utf8_lossy(&output.stdout).trim().to_string();
             }
         }
@@ -196,9 +202,9 @@ impl InferenceEngine for CandleBackend {
         // 2. Load the model from model_data
         // 3. Run forward pass
         // 4. Convert outputs back to TensorMap
-        
+
         let mut outputs = HashMap::new();
-        
+
         // Create mock output tensor based on schema
         for output_spec in &model.io_schema.outputs {
             let element_count = output_spec.shape.iter().product::<usize>();
@@ -209,7 +215,7 @@ impl InferenceEngine for CandleBackend {
                 DType::I8 => 1,
                 DType::U8 => 1,
             };
-            
+
             // Create zero-filled output tensor
             let output_data = vec![0u8; element_count * bytes_per_element];
             outputs.insert(output_spec.name.clone(), output_data);

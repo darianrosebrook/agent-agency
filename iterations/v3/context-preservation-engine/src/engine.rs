@@ -989,7 +989,9 @@ impl ContextPreservationEngine {
         // 3. Context monitoring: Start monitoring context usage and preservation
         // Set up any monitoring timers or background tasks here
         // Implement context monitoring
-        let monitoring_system = self.setup_context_monitoring(tenant_id, &session_id).await?;
+        let monitoring_system = self
+            .setup_context_monitoring(tenant_id, &session_id)
+            .await?;
         let performance_tracking = self.start_performance_tracking(&session_id).await?;
         let alerting_system = self.setup_alerting_system(tenant_id).await?;
         let maintenance_automation = self.setup_maintenance_automation(tenant_id).await?;
@@ -1010,23 +1012,31 @@ impl ContextPreservationEngine {
         debug!("Retrieving performance history for session {}", session_id);
 
         // Query performance metrics from storage systems
-        let performance_metrics = self.query_performance_metrics_from_storage(session_id).await?;
-        
+        let performance_metrics = self
+            .query_performance_metrics_from_storage(session_id)
+            .await?;
+
         // Calculate performance metrics and KPIs
-        let calculated_metrics = self.calculate_performance_kpis(&performance_metrics).await?;
-        
+        let calculated_metrics = self
+            .calculate_performance_kpis(&performance_metrics)
+            .await?;
+
         // Validate performance data quality
         self.validate_performance_data(&calculated_metrics)?;
-        
+
         // Generate performance reports and insights
-        let performance_insights = self.generate_performance_insights(&calculated_metrics).await?;
-        
+        let performance_insights = self
+            .generate_performance_insights(&calculated_metrics)
+            .await?;
+
         // Combine metrics with insights
-        let performance_data = self.combine_metrics_with_insights(calculated_metrics, performance_insights).await?;
-        
+        let performance_data = self
+            .combine_metrics_with_insights(calculated_metrics, performance_insights)
+            .await?;
+
         Ok(performance_data)
     }
-    
+
     /// Set up context monitoring system
     async fn setup_context_monitoring(
         &self,
@@ -1046,13 +1056,13 @@ impl ContextPreservationEngine {
             },
             created_at: chrono::Utc::now(),
         };
-        
+
         // Start background monitoring task
         self.start_monitoring_task(&monitoring_system).await?;
-        
+
         Ok(monitoring_system)
     }
-    
+
     /// Start performance tracking for a session
     async fn start_performance_tracking(&self, session_id: &str) -> Result<PerformanceTracker> {
         let tracker = PerformanceTracker {
@@ -1067,13 +1077,13 @@ impl ContextPreservationEngine {
             },
             tracking_enabled: true,
         };
-        
+
         // Initialize performance tracking
         self.initialize_performance_tracking(&tracker).await?;
-        
+
         Ok(tracker)
     }
-    
+
     /// Set up alerting system for context monitoring
     async fn setup_alerting_system(&self, tenant_id: &str) -> Result<AlertingSystem> {
         let alerting_system = AlertingSystem {
@@ -1099,18 +1109,15 @@ impl ContextPreservationEngine {
                     enabled: true,
                 },
             ],
-            notification_channels: vec![
-                NotificationChannel::Log,
-                NotificationChannel::Dashboard,
-            ],
+            notification_channels: vec![NotificationChannel::Log, NotificationChannel::Dashboard],
         };
-        
+
         // Initialize alerting system
         self.initialize_alerting_system(&alerting_system).await?;
-        
+
         Ok(alerting_system)
     }
-    
+
     /// Set up maintenance automation
     async fn setup_maintenance_automation(&self, tenant_id: &str) -> Result<MaintenanceAutomation> {
         let maintenance = MaintenanceAutomation {
@@ -1137,15 +1144,18 @@ impl ContextPreservationEngine {
                 },
             ],
         };
-        
+
         // Initialize maintenance automation
         self.initialize_maintenance_automation(&maintenance).await?;
-        
+
         Ok(maintenance)
     }
-    
+
     /// Start background monitoring task
-    async fn start_monitoring_task(&self, monitoring_system: &ContextMonitoringSystem) -> Result<()> {
+    async fn start_monitoring_task(
+        &self,
+        monitoring_system: &ContextMonitoringSystem,
+    ) -> Result<()> {
         // TODO: Implement background monitoring task
         // Acceptance criteria:
         // 1. Start a tokio task that runs independently
@@ -1159,20 +1169,20 @@ impl ContextPreservationEngine {
             "Started monitoring task for tenant {} session {}",
             monitoring_system.tenant_id, monitoring_system.session_id
         );
-        
+
         Ok(())
     }
-    
+
     /// Initialize performance tracking
     async fn initialize_performance_tracking(&self, tracker: &PerformanceTracker) -> Result<()> {
         debug!(
             "Initialized performance tracking for session {}",
             tracker.session_id
         );
-        
+
         Ok(())
     }
-    
+
     /// Initialize alerting system
     async fn initialize_alerting_system(&self, alerting_system: &AlertingSystem) -> Result<()> {
         debug!(
@@ -1180,18 +1190,21 @@ impl ContextPreservationEngine {
             alerting_system.tenant_id,
             alerting_system.alert_rules.len()
         );
-        
+
         Ok(())
     }
-    
+
     /// Initialize maintenance automation
-    async fn initialize_maintenance_automation(&self, maintenance: &MaintenanceAutomation) -> Result<()> {
+    async fn initialize_maintenance_automation(
+        &self,
+        maintenance: &MaintenanceAutomation,
+    ) -> Result<()> {
         debug!(
             "Initialized maintenance automation for tenant {} with {} tasks",
             maintenance.tenant_id,
             maintenance.maintenance_tasks.len()
         );
-        
+
         Ok(())
     }
 }
@@ -1334,7 +1347,10 @@ pub struct PerformanceInsight {
 
 impl ContextPreservationEngine {
     /// Query performance metrics from storage systems
-    async fn query_performance_metrics_from_storage(&self, session_id: Uuid) -> Result<PerformanceMetricsRaw> {
+    async fn query_performance_metrics_from_storage(
+        &self,
+        session_id: Uuid,
+    ) -> Result<PerformanceMetricsRaw> {
         // TODO: Implement performance metrics storage query
         // Acceptance criteria:
         // 1. Connect to performance metrics database using configured connection pool
@@ -1351,7 +1367,7 @@ impl ContextPreservationEngine {
             context_hit_rate: 0.87,
             average_response_time_ms: 45.2,
             memory_usage_bytes: 1024 * 1024 * 256, // 256MB
-            cache_size: 1024 * 1024 * 128, // 128MB
+            cache_size: 1024 * 1024 * 128,         // 128MB
             last_accessed: chrono::Utc::now(),
             context_freshness_hours: 2.5,
             error_count: 3,
@@ -1360,20 +1376,24 @@ impl ContextPreservationEngine {
     }
 
     /// Calculate performance KPIs
-    async fn calculate_performance_kpis(&self, raw_metrics: &PerformanceMetricsRaw) -> Result<CalculatedPerformanceMetrics> {
+    async fn calculate_performance_kpis(
+        &self,
+        raw_metrics: &PerformanceMetricsRaw,
+    ) -> Result<CalculatedPerformanceMetrics> {
         // Calculate effectiveness score based on hit rate and response time
-        let effectiveness_score = (raw_metrics.context_hit_rate * 0.6 + 
-            (1.0 - (raw_metrics.average_response_time_ms / 100.0).min(1.0)) * 0.4)
-            .max(0.0).min(1.0);
+        let effectiveness_score = (raw_metrics.context_hit_rate * 0.6
+            + (1.0 - (raw_metrics.average_response_time_ms / 100.0).min(1.0)) * 0.4)
+            .max(0.0)
+            .min(1.0);
 
         // Calculate utilization rate based on cache usage and access patterns
-        let utilization_rate = (raw_metrics.context_access_count as f64 / 1000.0)
-            .min(1.0) * 0.7 + (raw_metrics.cache_size as f64 / (1024.0 * 1024.0 * 512.0))
-            .min(1.0) * 0.3;
+        let utilization_rate = (raw_metrics.context_access_count as f64 / 1000.0).min(1.0) * 0.7
+            + (raw_metrics.cache_size as f64 / (1024.0 * 1024.0 * 512.0)).min(1.0) * 0.3;
 
         // Calculate freshness score based on last access time and context age
         let freshness_score = (1.0 - (raw_metrics.context_freshness_hours / 24.0).min(1.0))
-            .max(0.0).min(1.0);
+            .max(0.0)
+            .min(1.0);
 
         // Calculate reliability score based on error rate
         let total_requests = raw_metrics.error_count + raw_metrics.success_count;
@@ -1389,7 +1409,9 @@ impl ContextPreservationEngine {
             freshness_score,
             reliability_score,
             performance_trend: self.calculate_performance_trend(raw_metrics).await?,
-            optimization_opportunities: self.identify_optimization_opportunities(raw_metrics).await?,
+            optimization_opportunities: self
+                .identify_optimization_opportunities(raw_metrics)
+                .await?,
         })
     }
 
@@ -1397,28 +1419,43 @@ impl ContextPreservationEngine {
     fn validate_performance_data(&self, metrics: &CalculatedPerformanceMetrics) -> Result<()> {
         // Validate score ranges
         if metrics.effectiveness_score < 0.0 || metrics.effectiveness_score > 1.0 {
-            return Err(anyhow::anyhow!("Invalid effectiveness score: {}", metrics.effectiveness_score));
+            return Err(anyhow::anyhow!(
+                "Invalid effectiveness score: {}",
+                metrics.effectiveness_score
+            ));
         }
-        
+
         if metrics.utilization_rate < 0.0 || metrics.utilization_rate > 1.0 {
-            return Err(anyhow::anyhow!("Invalid utilization rate: {}", metrics.utilization_rate));
+            return Err(anyhow::anyhow!(
+                "Invalid utilization rate: {}",
+                metrics.utilization_rate
+            ));
         }
-        
+
         if metrics.freshness_score < 0.0 || metrics.freshness_score > 1.0 {
-            return Err(anyhow::anyhow!("Invalid freshness score: {}", metrics.freshness_score));
+            return Err(anyhow::anyhow!(
+                "Invalid freshness score: {}",
+                metrics.freshness_score
+            ));
         }
-        
+
         if metrics.reliability_score < 0.0 || metrics.reliability_score > 1.0 {
-            return Err(anyhow::anyhow!("Invalid reliability score: {}", metrics.reliability_score));
+            return Err(anyhow::anyhow!(
+                "Invalid reliability score: {}",
+                metrics.reliability_score
+            ));
         }
-        
+
         Ok(())
     }
 
     /// Generate performance insights
-    async fn generate_performance_insights(&self, metrics: &CalculatedPerformanceMetrics) -> Result<Vec<PerformanceInsight>> {
+    async fn generate_performance_insights(
+        &self,
+        metrics: &CalculatedPerformanceMetrics,
+    ) -> Result<Vec<PerformanceInsight>> {
         let mut insights = Vec::new();
-        
+
         // Effectiveness insights
         if metrics.effectiveness_score < 0.7 {
             insights.push(PerformanceInsight {
@@ -1429,7 +1466,7 @@ impl ContextPreservationEngine {
                 impact_score: 0.8,
             });
         }
-        
+
         // Utilization insights
         if metrics.utilization_rate > 0.9 {
             insights.push(PerformanceInsight {
@@ -1440,7 +1477,7 @@ impl ContextPreservationEngine {
                 impact_score: 0.6,
             });
         }
-        
+
         // Freshness insights
         if metrics.freshness_score < 0.5 {
             insights.push(PerformanceInsight {
@@ -1451,7 +1488,7 @@ impl ContextPreservationEngine {
                 impact_score: 0.7,
             });
         }
-        
+
         // Reliability insights
         if metrics.reliability_score < 0.95 {
             insights.push(PerformanceInsight {
@@ -1462,7 +1499,7 @@ impl ContextPreservationEngine {
                 impact_score: 0.9,
             });
         }
-        
+
         Ok(insights)
     }
 
@@ -1481,7 +1518,10 @@ impl ContextPreservationEngine {
     }
 
     /// Calculate performance trend
-    async fn calculate_performance_trend(&self, _raw_metrics: &PerformanceMetricsRaw) -> Result<String> {
+    async fn calculate_performance_trend(
+        &self,
+        _raw_metrics: &PerformanceMetricsRaw,
+    ) -> Result<String> {
         // TODO: Implement proper trend calculation
         // Acceptance criteria:
         // 1. Analyze historical performance data points
@@ -1492,21 +1532,25 @@ impl ContextPreservationEngine {
     }
 
     /// Identify optimization opportunities
-    async fn identify_optimization_opportunities(&self, raw_metrics: &PerformanceMetricsRaw) -> Result<Vec<String>> {
+    async fn identify_optimization_opportunities(
+        &self,
+        raw_metrics: &PerformanceMetricsRaw,
+    ) -> Result<Vec<String>> {
         let mut opportunities = Vec::new();
-        
+
         if raw_metrics.average_response_time_ms > 50.0 {
             opportunities.push("Optimize context retrieval algorithms".to_string());
         }
-        
+
         if raw_metrics.context_hit_rate < 0.8 {
             opportunities.push("Improve context caching strategy".to_string());
         }
-        
-        if raw_metrics.memory_usage_bytes > 1024 * 1024 * 512 { // 512MB
+
+        if raw_metrics.memory_usage_bytes > 1024 * 1024 * 512 {
+            // 512MB
             opportunities.push("Optimize memory usage".to_string());
         }
-        
+
         Ok(opportunities)
     }
 }

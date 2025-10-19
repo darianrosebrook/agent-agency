@@ -11,10 +11,10 @@ use std::path::Path;
 #[test]
 fn test_fastvit_model_structure_exists() {
     let model_path = "../tests/fixtures/models/FastViTT8F16.mlpackage";
-    
+
     assert!(
         Path::new(model_path).exists(),
-        "FastViT T8 model not found at {}", 
+        "FastViT T8 model not found at {}",
         model_path
     );
 
@@ -41,7 +41,7 @@ fn test_fastvit_model_structure_exists() {
 #[test]
 fn test_model_metadata_available() {
     let manifest_path = "../tests/fixtures/models/FastViTT8F16.mlpackage/Manifest.json";
-    
+
     if Path::new(manifest_path).exists() {
         match std::fs::read_to_string(manifest_path) {
             Ok(content) => {

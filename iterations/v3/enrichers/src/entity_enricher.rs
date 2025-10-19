@@ -7,7 +7,7 @@
 //! - Chapter boundaries from topic transitions
 //! - PII detection and hashing for privacy
 
-use crate::types::{EntityResult, ExtractedEntity, Topic, Chapter, EnricherConfig};
+use crate::types::{Chapter, EnricherConfig, EntityResult, ExtractedEntity, Topic};
 use anyhow::Result;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -29,7 +29,11 @@ impl EntityEnricher {
     ///
     /// # Returns
     /// EntityResult with entities, topics, and chapter boundaries
-    pub async fn extract_entities(&self, text: &str, _timestamps: Option<Vec<(f32, f32)>>) -> Result<EntityResult> {
+    pub async fn extract_entities(
+        &self,
+        text: &str,
+        _timestamps: Option<Vec<(f32, f32)>>,
+    ) -> Result<EntityResult> {
         tracing::debug!(
             "Extracting entities with NER enabled: {}",
             self.config.entity_ner_enabled
@@ -208,5 +212,3 @@ mod tests {
         assert!(!entity_result.topics.is_empty());
     }
 }
-
-

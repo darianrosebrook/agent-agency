@@ -11,11 +11,11 @@
 //!
 //! @author @darianrosebrook
 
+use anyhow::{bail, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use anyhow::{Result, bail};
-use serde::{Serialize, Deserialize};
 
 /// Quantization data type
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -177,17 +177,16 @@ impl QuantizationLab {
         strategy: QuantizationStrategy,
     ) -> Result<QuantizationResult> {
         // Simulate quantization (in production, this would call coremltools)
-        let compressed_size = baseline_metrics.original_size_mb
-            * strategy.target_type.compression_ratio();
-        let compression_ratio =
-            baseline_metrics.original_size_mb / compressed_size.max(0.001);
+        let compressed_size =
+            baseline_metrics.original_size_mb * strategy.target_type.compression_ratio();
+        let compression_ratio = baseline_metrics.original_size_mb / compressed_size.max(0.001);
 
         // Estimate accuracy loss based on quantization type
         let accuracy_loss = match strategy.target_type {
             QuantizationType::FP32 => 0.0,
-            QuantizationType::FP16 => 0.1,  // ~0.1% loss
-            QuantizationType::INT8 => 0.5,  // ~0.5% loss
-            QuantizationType::INT4 => 2.0,  // ~2% loss
+            QuantizationType::FP16 => 0.1, // ~0.1% loss
+            QuantizationType::INT8 => 0.5, // ~0.5% loss
+            QuantizationType::INT4 => 2.0, // ~2% loss
         };
 
         // With per-channel quantization, reduce accuracy loss
@@ -197,20 +196,18 @@ impl QuantizationLab {
             accuracy_loss
         };
 
-        let quantized_accuracy = (baseline_metrics.baseline_accuracy
-            * (1.0 - final_accuracy_loss / 100.0))
-            .max(0.0);
+        let quantized_accuracy =
+            (baseline_metrics.baseline_accuracy * (1.0 - final_accuracy_loss / 100.0)).max(0.0);
 
         // Estimate latency improvement
         let speedup = match strategy.target_type {
             QuantizationType::FP32 => 1.0,
-            QuantizationType::FP16 => 1.5,  // 1.5x faster
-            QuantizationType::INT8 => 3.0,  // 3x faster
-            QuantizationType::INT4 => 4.0,  // 4x faster (with grouping)
+            QuantizationType::FP16 => 1.5, // 1.5x faster
+            QuantizationType::INT8 => 3.0, // 3x faster
+            QuantizationType::INT4 => 4.0, // 4x faster (with grouping)
         };
 
-        let quantized_latency =
-            baseline_metrics.baseline_latency_ms / speedup;
+        let quantized_latency = baseline_metrics.baseline_latency_ms / speedup;
 
         let metrics = QuantizationMetrics {
             original_size_mb: baseline_metrics.original_size_mb,
@@ -229,24 +226,18 @@ impl QuantizationLab {
         // Generate recommendations
         let mut recommendations = Vec::new();
         if metrics.accuracy_loss_percent > 1.0 {
-            recommendations.push(
-                "Consider per-channel quantization to reduce accuracy loss"
-                    .to_string(),
-            );
+            recommendations
+                .push("Consider per-channel quantization to reduce accuracy loss".to_string());
         }
         if metrics.achieved_compression_ratio < 2.0 {
-            recommendations
-                .push("Try INT4 or pruning for better compression".to_string());
+            recommendations.push("Try INT4 or pruning for better compression".to_string());
         }
         if metrics.speedup_factor < 2.0 {
-            recommendations.push(
-                "Mixed precision may yield better speedup".to_string(),
-            );
+            recommendations.push("Mixed precision may yield better speedup".to_string());
         }
 
         let production_ready =
-            metrics.meets_accuracy_threshold(1.0)
-                && metrics.has_meaningful_speedup(1.5);
+            metrics.meets_accuracy_threshold(1.0) && metrics.has_meaningful_speedup(1.5);
 
         let result = QuantizationResult {
             variant_id: variant_id.to_string(),
@@ -269,19 +260,15 @@ impl QuantizationLab {
     }
 
     /// Compare two quantization variants
-    pub async fn compare_variants(
-        &self,
-        variant_a: &str,
-        variant_b: &str,
-    ) -> Result<String> {
+    pub async fn compare_variants(&self, variant_a: &str, variant_b: &str) -> Result<String> {
         let results = self.results.read().await;
 
-        let result_a = results.get(variant_a).ok_or_else(|| {
-            anyhow::anyhow!("Variant {} not found", variant_a)
-        })?;
-        let result_b = results.get(variant_b).ok_or_else(|| {
-            anyhow::anyhow!("Variant {} not found", variant_b)
-        })?;
+        let result_a = results
+            .get(variant_a)
+            .ok_or_else(|| anyhow::anyhow!("Variant {} not found", variant_a))?;
+        let result_b = results
+            .get(variant_b)
+            .ok_or_else(|| anyhow::anyhow!("Variant {} not found", variant_b))?;
 
         let comparison = format!(
             "Variant Comparison:\n\
@@ -433,11 +420,7 @@ mod tests {
             ..Default::default()
         };
 
-        assert!(
-            baseline.meets_accuracy_threshold(
-                10.0
-            )
-        );
+        assert!(baseline.meets_accuracy_threshold(10.0));
         assert!(baseline.has_meaningful_speedup(1.0));
     }
 

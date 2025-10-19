@@ -44,6 +44,7 @@ encoding_rs = "0.8"
 pulldown-cmark = "0.10"
 ammonia = "3.3"
 regex = "1.10"
+strsim = "0.10"
 
 [dev-dependencies]
 tokio-test = "0.4"

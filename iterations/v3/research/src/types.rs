@@ -265,6 +265,7 @@ pub struct ResearchMetrics {
     pub vector_search_accuracy: f32,
     pub web_scraping_success_rate: f32,
     pub context_synthesis_quality: f32,
+    pub fuzzy_match_adjustments: u64,
     pub last_updated: DateTime<Utc>,
 }
 
@@ -332,6 +333,7 @@ pub struct ResearchAgentConfig {
     pub web_scraping: WebScrapingConfig,
     pub context_synthesis: ContextSynthesisConfig,
     pub performance: PerformanceConfig,
+    pub fuzzy_matching: FuzzyMatchingConfig,
 }
 
 /// Vector search configuration
@@ -369,4 +371,14 @@ pub struct ContextSynthesisConfig {
     pub max_cross_references: usize,
     pub max_context_size: usize,
     pub synthesis_timeout_ms: u64,
+}
+
+/// Fuzzy matching configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FuzzyMatchingConfig {
+    pub enabled: bool,
+    pub similarity_threshold: f32,
+    pub boost_per_match: f32,
+    pub coverage_boost: f32,
+    pub max_total_boost: f32,
 }

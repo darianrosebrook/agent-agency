@@ -111,7 +111,11 @@ impl MultimodalIndexer {
         modality: &str,
         embeddings: HashMap<String, EmbeddingVector>,
     ) -> Result<IndexedBlock> {
-        tracing::debug!("Indexing block {} with {} embeddings", block_id, embeddings.len());
+        tracing::debug!(
+            "Indexing block {} with {} embeddings",
+            block_id,
+            embeddings.len()
+        );
 
         // Store per-model vectors in database (if client available)
         if let Some(db_client) = &self.db_client {
@@ -121,7 +125,8 @@ impl MultimodalIndexer {
         // Index by modality
         match modality {
             "text" | "speech" => {
-                self.index_text_modality(block_id, text, &embeddings).await?;
+                self.index_text_modality(block_id, text, &embeddings)
+                    .await?;
             }
             "image" | "video_frame" => {
                 self.index_visual_modality(block_id, &embeddings).await?;
@@ -212,7 +217,11 @@ impl MultimodalIndexer {
                 .node_count += 1;
         }
 
-        tracing::debug!("Indexed text block {} with {} terms", block_id, term_frequencies.len());
+        tracing::debug!(
+            "Indexed text block {} with {} terms",
+            block_id,
+            term_frequencies.len()
+        );
 
         Ok(())
     }
@@ -289,7 +298,10 @@ impl MultimodalIndexer {
         query_embeddings: HashMap<String, EmbeddingVector>,
         project_scope: Option<&str>,
     ) -> Result<Vec<MultimodalSearchResult>> {
-        tracing::debug!("Multimodal search with {} embeddings", query_embeddings.len());
+        tracing::debug!(
+            "Multimodal search with {} embeddings",
+            query_embeddings.len()
+        );
 
         let mut all_results: HashMap<Uuid, MultimodalSearchResult> = HashMap::new();
 
@@ -322,22 +334,23 @@ impl MultimodalIndexer {
             let visual_results = self.search_visual_index(clip_query).await?;
             for (block_id, score) in visual_results {
                 let ref_id = block_id.to_string();
-                let result = all_results
-                    .entry(block_id)
-                    .or_insert_with(|| MultimodalSearchResult {
-                        ref_id: ref_id.clone(),
-                        kind: ContentType::VideoFrame,
-                        snippet: String::new(),
-                        citation: None,
-                        feature: SearchResultFeature {
-                            score_text: None,
-                            score_image: Some(score * 0.4),
-                            score_graph: None,
-                            fused_score: score * 0.4,
-                            features_json: serde_json::json!({}),
-                        },
-                        project_scope: project_scope.map(|s| s.to_string()),
-                    });
+                let result =
+                    all_results
+                        .entry(block_id)
+                        .or_insert_with(|| MultimodalSearchResult {
+                            ref_id: ref_id.clone(),
+                            kind: ContentType::VideoFrame,
+                            snippet: String::new(),
+                            citation: None,
+                            feature: SearchResultFeature {
+                                score_text: None,
+                                score_image: Some(score * 0.4),
+                                score_graph: None,
+                                fused_score: score * 0.4,
+                                features_json: serde_json::json!({}),
+                            },
+                            project_scope: project_scope.map(|s| s.to_string()),
+                        });
 
                 // Update fused score
                 result.feature.fused_score += score * 0.4;
@@ -345,12 +358,15 @@ impl MultimodalIndexer {
         }
 
         // 3. Fuse results via Reciprocal Rank Fusion (RRF)
-        let mut fused_results: Vec<MultimodalSearchResult> = all_results
-            .into_values()
-            .collect();
+        let mut fused_results: Vec<MultimodalSearchResult> = all_results.into_values().collect();
 
         // Sort by relevance score descending
-        fused_results.sort_by(|a, b| b.feature.fused_score.partial_cmp(&a.feature.fused_score).unwrap());
+        fused_results.sort_by(|a, b| {
+            b.feature
+                .fused_score
+                .partial_cmp(&a.feature.fused_score)
+                .unwrap()
+        });
 
         // 4. Apply project scope filtering
         if let Some(_scope) = project_scope {
@@ -395,7 +411,10 @@ impl MultimodalIndexer {
     }
 
     /// Search visual index using HNSW nearest neighbors
-    async fn search_visual_index(&self, query_embedding: &EmbeddingVector) -> Result<Vec<(Uuid, f32)>> {
+    async fn search_visual_index(
+        &self,
+        query_embedding: &EmbeddingVector,
+    ) -> Result<Vec<(Uuid, f32)>> {
         // HNSW nearest neighbor search using cosine similarity
         let mut similarities: Vec<(Uuid, f32)> = self
             .visual_indexer
@@ -470,7 +489,12 @@ mod tests {
         embeddings.insert("e5-small-v2".to_string(), vec![0.1, 0.2, 0.3]);
 
         indexer
-            .index_block(block_id1, "machine learning neural networks", "text", embeddings.clone())
+            .index_block(
+                block_id1,
+                "machine learning neural networks",
+                "text",
+                embeddings.clone(),
+            )
             .await
             .unwrap();
         indexer
@@ -478,7 +502,10 @@ mod tests {
             .await
             .unwrap();
 
-        let results = indexer.search(Some("learning"), HashMap::new(), None).await.unwrap();
+        let results = indexer
+            .search(Some("learning"), HashMap::new(), None)
+            .await
+            .unwrap();
         assert!(!results.is_empty());
     }
 

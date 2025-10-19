@@ -167,10 +167,6 @@ impl Default for CouncilConfig {
 
 pub use claim_extraction::ClaimExtractor;
 pub use claim_extraction_multimodal::{
-    MultimodalEvidenceEnricher,
-    MultimodalEvidence,
-    ModalityEvidence,
-    ModalityCitation,
-    ClaimWithMultimodalEvidence,
-    CrossModalValidation,
+    ClaimWithMultimodalEvidence, CrossModalValidation, ModalityCitation, ModalityEvidence,
+    MultimodalEvidence, MultimodalEvidenceEnricher,
 };

@@ -21,8 +21,8 @@ pub struct SpeechTranscriptionResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpeechSegment {
     pub text: String,
-    pub start_time: f32,      // In seconds
-    pub end_time: f32,        // In seconds
+    pub start_time: f32, // In seconds
+    pub end_time: f32,   // In seconds
     pub speaker_id: Option<String>,
     pub confidence: f32,
     pub words: Vec<WordTiming>,
@@ -32,8 +32,8 @@ pub struct SpeechSegment {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WordTiming {
     pub word: String,
-    pub start_time: f32,      // In seconds
-    pub end_time: f32,        // In seconds
+    pub start_time: f32, // In seconds
+    pub end_time: f32,   // In seconds
     pub confidence: f32,
 }
 
@@ -116,17 +116,14 @@ impl SpeechBridge {
             }
 
             // Convert C string to Rust string
-            let result_str = CStr::from_ptr(result_ptr)
-                .to_string_lossy()
-                .to_string();
+            let result_str = CStr::from_ptr(result_ptr).to_string_lossy().to_string();
 
             // Free the C string memory allocated by Swift
             libc::free(result_ptr as *mut libc::c_void);
 
             // Parse JSON result
-            let transcription: SpeechTranscriptionResult =
-                serde_json::from_str(&result_str)
-                    .map_err(|e| anyhow!("Failed to parse transcription: {}", e))?;
+            let transcription: SpeechTranscriptionResult = serde_json::from_str(&result_str)
+                .map_err(|e| anyhow!("Failed to parse transcription: {}", e))?;
 
             Ok(transcription)
         }
@@ -157,26 +154,19 @@ impl SpeechBridge {
 
         // Safety: Call Swift bridge
         unsafe {
-            let result_ptr = diarize_audio_request(
-                audio_data.as_ptr(),
-                audio_data.len(),
-                num,
-                timeout,
-            );
+            let result_ptr =
+                diarize_audio_request(audio_data.as_ptr(), audio_data.len(), num, timeout);
 
             if result_ptr.is_null() {
                 return Err(anyhow!("Diarization returned null pointer"));
             }
 
-            let result_str = CStr::from_ptr(result_ptr)
-                .to_string_lossy()
-                .to_string();
+            let result_str = CStr::from_ptr(result_ptr).to_string_lossy().to_string();
 
             libc::free(result_ptr as *mut libc::c_void);
 
-            let speakers: Vec<Speaker> =
-                serde_json::from_str(&result_str)
-                    .map_err(|e| anyhow!("Failed to parse diarization: {}", e))?;
+            let speakers: Vec<Speaker> = serde_json::from_str(&result_str)
+                .map_err(|e| anyhow!("Failed to parse diarization: {}", e))?;
 
             Ok(speakers)
         }
@@ -189,15 +179,21 @@ impl SpeechBridge {
         }
 
         // WAV: "RIFF" header (52 49 46 46)
-        if audio_data[0] == 0x52 && audio_data[1] == 0x49 &&
-           audio_data[2] == 0x46 && audio_data[3] == 0x46 {
+        if audio_data[0] == 0x52
+            && audio_data[1] == 0x49
+            && audio_data[2] == 0x46
+            && audio_data[3] == 0x46
+        {
             return true;
         }
 
         // M4A: "ftyp" box (66 74 79 70)
-        if audio_data.len() > 11 &&
-           audio_data[4] == 0x66 && audio_data[5] == 0x74 &&
-           audio_data[6] == 0x79 && audio_data[7] == 0x70 {
+        if audio_data.len() > 11
+            && audio_data[4] == 0x66
+            && audio_data[5] == 0x74
+            && audio_data[6] == 0x79
+            && audio_data[7] == 0x70
+        {
             return true;
         }
 
@@ -208,7 +204,7 @@ impl SpeechBridge {
     pub fn is_language_valid(language: &str) -> bool {
         // Basic BCP 47 validation (e.g., "en-US", "fr-FR", "zh-Hans-CN")
         let parts: Vec<&str> = language.split('-').collect();
-        
+
         if parts.is_empty() || parts.len() > 3 {
             return false;
         }
@@ -219,7 +215,9 @@ impl SpeechBridge {
         }
 
         // All parts should be alphanumeric
-        parts.iter().all(|p| p.chars().all(|c| c.is_ascii_alphanumeric()))
+        parts
+            .iter()
+            .all(|p| p.chars().all(|c| c.is_ascii_alphanumeric()))
     }
 }
 
@@ -260,7 +258,7 @@ mod tests {
     #[test]
     fn test_invalid_language_codes() {
         assert!(!SpeechBridge::is_language_valid(""));
-        assert!(!SpeechBridge::is_language_valid("a"));      // Too short
+        assert!(!SpeechBridge::is_language_valid("a")); // Too short
         assert!(!SpeechBridge::is_language_valid("en-US-CA-XX")); // Too many parts
         assert!(!SpeechBridge::is_language_valid("en_US")); // Invalid separator
     }

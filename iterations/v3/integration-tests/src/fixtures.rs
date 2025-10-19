@@ -1,10 +1,10 @@
 //! Test fixtures and sample data for integration tests
 
+use chrono;
+use rand::{Rng, SeedableRng, StdRng};
 use serde_json::Value;
 use std::collections::HashMap;
 use uuid::Uuid;
-use chrono;
-use rand::{Rng, SeedableRng, StdRng};
 
 /// Test fixtures for various V3 components
 pub struct TestFixtures;
@@ -304,9 +304,8 @@ impl TestFixtures {
 
         let consensus_variation = (rng.gen::<f64>() * 0.01).round(4);
         let consensus_score = (0.79 + consensus_variation).min(0.99);
-        let confidence_offsets: Vec<f64> = (0..4)
-            .map(|_| (rng.gen::<f64>() * 0.03).round(4))
-            .collect();
+        let confidence_offsets: Vec<f64> =
+            (0..4).map(|_| (rng.gen::<f64>() * 0.03).round(4)).collect();
         let runtime_timings: [u64; 4] = [
             45u64 + rng.gen_range(0u64..3u64),
             32u64 + rng.gen_range(0u64..3u64),
@@ -319,7 +318,8 @@ impl TestFixtures {
         let total_execution_time_ms = all_timings.iter().copied().sum::<u64>();
         let max_response_time_ms = all_timings.iter().copied().max().unwrap_or(0);
         let min_response_time_ms = all_timings.iter().copied().min().unwrap_or(0);
-        let average_response_time_ms = (total_execution_time_ms as f64) / (all_timings.len() as f64);
+        let average_response_time_ms =
+            (total_execution_time_ms as f64) / (all_timings.len() as f64);
 
         json!({
             "metadata": {
@@ -336,7 +336,7 @@ impl TestFixtures {
                     "risk_tier": "Medium",
                     "acceptance_criteria": [
                         "A1: User can register with email and password",
-                        "A2: User can login with valid credentials", 
+                        "A2: User can login with valid credentials",
                         "A3: JWT tokens are properly generated and validated",
                         "A4: Passwords are hashed using bcrypt",
                         "A5: Rate limiting prevents brute force attacks",
@@ -359,7 +359,7 @@ impl TestFixtures {
                         "evidence_references": [evidence_id.to_string()]
                     },
                     "technical": {
-                        "verdict": "Pass", 
+                        "verdict": "Pass",
                         "reasoning": "JWT implementation follows industry best practices with proper key management",
                         "confidence": (0.80 + confidence_offsets[1]).min(0.99),
                         "evidence_references": [evidence_id.to_string()]
@@ -422,7 +422,7 @@ impl TestFixtures {
                             "type": "implementation_detail"
                         },
                         {
-                            "id": "atomic_002", 
+                            "id": "atomic_002",
                             "text": "JWT tokens contain user_id, expiration time, and issued at time",
                             "type": "data_structure"
                         },
@@ -483,7 +483,7 @@ impl TestFixtures {
                     },
                     "A2": {
                         "description": "User can login with valid credentials",
-                        "status": "verified", 
+                        "status": "verified",
                         "evidence_count": 3
                     },
                     "A3": {
@@ -532,14 +532,14 @@ impl TestFixtures {
                         "details": "User registration endpoint responds correctly with 201 status"
                     },
                     {
-                        "checkpoint": "A2", 
+                        "checkpoint": "A2",
                         "status": "passed",
                         "execution_time_ms": runtime_timings[1],
                         "details": "Login endpoint validates credentials and returns JWT token"
                     },
                     {
                         "checkpoint": "A3",
-                        "status": "passed", 
+                        "status": "passed",
                         "execution_time_ms": runtime_timings[2],
                         "details": "JWT token validation middleware correctly processes valid tokens"
                     },
@@ -618,7 +618,7 @@ impl TestFixtures {
                         "type": "task_to_evidence_link"
                     },
                     {
-                        "from": "claim_pipeline.verification.evidence[0].id", 
+                        "from": "claim_pipeline.verification.evidence[0].id",
                         "to": "provenance_ledger.evidence_links[0].evidence_id",
                         "type": "evidence_consistency"
                     },

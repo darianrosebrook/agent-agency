@@ -5,14 +5,14 @@
 use crate::types::*;
 use anyhow::Result;
 use glob;
+use reqwest::{Client, StatusCode};
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 use uuid::Uuid;
-use reqwest::{Client, StatusCode};
-use std::time::{Duration, Instant};
-use std::collections::HashMap;
 
 /// Tool discovery service
 #[derive(Debug)]
@@ -333,16 +333,21 @@ impl ToolDiscovery {
         // 2. Health check metrics: Collect response time and availability metrics
         // 3. Error handling: Handle network errors, timeouts, and connection failures
         // 4. Performance optimization: Implement efficient health check scheduling and batching
-        
+
         let health_result = self.perform_comprehensive_health_check(tool).await?;
-        
+
         if !health_result.is_healthy {
-            warn!("Health check failed for tool {}: {}", tool.name, health_result.error_message);
+            warn!(
+                "Health check failed for tool {}: {}",
+                tool.name, health_result.error_message
+            );
             return Ok(false);
         }
-        
-        info!("Health check passed for tool {}: {}ms response time", 
-              tool.name, health_result.response_time_ms);
+
+        info!(
+            "Health check passed for tool {}: {}ms response time",
+            tool.name, health_result.response_time_ms
+        );
         let endpoint = &tool.endpoint;
 
         // For HTTP endpoints, try a HEAD request
@@ -568,15 +573,20 @@ impl Default for ToolDiscoveryConfig {
 
 impl ToolDiscovery {
     /// Perform comprehensive health check on MCP tool
-    async fn perform_comprehensive_health_check(&self, tool: &MCPTool) -> Result<HealthCheckResult> {
+    async fn perform_comprehensive_health_check(
+        &self,
+        tool: &MCPTool,
+    ) -> Result<HealthCheckResult> {
         let start_time = Instant::now();
-        
+
         // Create HTTP client with timeout
         let client = Client::builder()
-            .timeout(Duration::from_secs(self.config.health_check_timeout_seconds as u64))
+            .timeout(Duration::from_secs(
+                self.config.health_check_timeout_seconds as u64,
+            ))
             .build()
             .map_err(|e| anyhow::anyhow!("Failed to create HTTP client: {}", e))?;
-        
+
         // Perform health check based on endpoint type
         let health_result = if tool.endpoint.starts_with("http") {
             self.check_http_endpoint(&client, tool).await?
@@ -586,9 +596,9 @@ impl ToolDiscovery {
             // For non-HTTP endpoints, perform basic connectivity check
             self.check_generic_endpoint(tool).await?
         };
-        
+
         let response_time = start_time.elapsed();
-        
+
         Ok(HealthCheckResult {
             is_healthy: health_result.is_healthy,
             response_time_ms: response_time.as_millis() as u64,
@@ -597,12 +607,16 @@ impl ToolDiscovery {
             metrics: health_result.metrics,
         })
     }
-    
+
     /// Check HTTP endpoint health
-    async fn check_http_endpoint(&self, client: &Client, tool: &MCPTool) -> Result<InternalHealthResult> {
+    async fn check_http_endpoint(
+        &self,
+        client: &Client,
+        tool: &MCPTool,
+    ) -> Result<InternalHealthResult> {
         // Try HEAD request first (lightweight)
         let head_result = self.perform_head_request(client, &tool.endpoint).await;
-        
+
         if head_result.is_ok() {
             return Ok(InternalHealthResult {
                 is_healthy: true,
@@ -611,15 +625,19 @@ impl ToolDiscovery {
                 metrics: HashMap::new(),
             });
         }
-        
+
         // Fallback to GET request if HEAD fails
         let get_result = self.perform_get_request(client, &tool.endpoint).await;
-        
+
         match get_result {
             Ok(status) => Ok(InternalHealthResult {
                 is_healthy: status.is_success(),
                 status_code: Some(status.as_u16()),
-                error_message: if status.is_success() { String::new() } else { format!("HTTP {}", status) },
+                error_message: if status.is_success() {
+                    String::new()
+                } else {
+                    format!("HTTP {}", status)
+                },
                 metrics: HashMap::new(),
             }),
             Err(e) => Ok(InternalHealthResult {
@@ -630,19 +648,19 @@ impl ToolDiscovery {
             }),
         }
     }
-    
+
     /// Perform HEAD request
     async fn perform_head_request(&self, client: &Client, endpoint: &str) -> Result<StatusCode> {
         let response = client.head(endpoint).send().await?;
         Ok(response.status())
     }
-    
+
     /// Perform GET request
     async fn perform_get_request(&self, client: &Client, endpoint: &str) -> Result<StatusCode> {
         let response = client.get(endpoint).send().await?;
         Ok(response.status())
     }
-    
+
     /// Check WebSocket endpoint health
     async fn check_websocket_endpoint(&self, tool: &MCPTool) -> Result<InternalHealthResult> {
         // TODO: Implement WebSocket health checking with the following requirements:
@@ -662,7 +680,7 @@ impl ToolDiscovery {
         //    - Connect WebSocket health checking to tool discovery system
         //    - Handle WebSocket integration testing and validation
         //    - Ensure WebSocket health checking meets reliability and performance standards
-        
+
         if tool.endpoint.starts_with("ws://") || tool.endpoint.starts_with("wss://") {
             Ok(InternalHealthResult {
                 is_healthy: true,
@@ -679,7 +697,7 @@ impl ToolDiscovery {
             })
         }
     }
-    
+
     /// Check generic endpoint health
     async fn check_generic_endpoint(&self, tool: &MCPTool) -> Result<InternalHealthResult> {
         // For non-HTTP endpoints, perform basic validation
@@ -691,7 +709,7 @@ impl ToolDiscovery {
                 metrics: HashMap::new(),
             });
         }
-        
+
         // Check if endpoint format is valid
         if tool.endpoint.contains("://") {
             Ok(InternalHealthResult {

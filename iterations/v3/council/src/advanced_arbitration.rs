@@ -7,22 +7,22 @@
 use crate::models::TaskSpec;
 use crate::todo_analyzer::{CouncilTodoAnalyzer, TodoAnalysisConfig, TodoAnalysisResult};
 use crate::types::*;
-use agent_agency_database::{DatabaseClient, models::CreatePerformanceMetric, client::DatabaseOperations};
+use agent_agency_database::{
+    client::DatabaseOperations, models::CreatePerformanceMetric, DatabaseClient,
+};
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
+use hex;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use source_integrity::{SourceIntegrityService, SourceType, VerificationType};
 use sqlx::Row;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
-use sha2::{Sha256, Digest};
-use hex;
-use std::time::{SystemTime, UNIX_EPOCH};
-use source_integrity::{
-    SourceIntegrityService, SourceType, VerificationType
-};
 
 /// Helper function to extract worker_id from WorkerOutput
 fn get_worker_id(output: &WorkerOutput) -> &str {
@@ -91,7 +91,7 @@ struct HistoricalConflict {
     occurred_at: DateTime<Utc>,
 }
 
-    /// Multi-dimensional confidence scoring system
+/// Multi-dimensional confidence scoring system
 #[derive(Debug)]
 pub struct ConfidenceScorer {
     historical_performance: Arc<RwLock<HashMap<String, PerformanceHistory>>>,
@@ -148,7 +148,7 @@ pub struct DebateRound {
     pub rebuttals: Vec<Rebuttal>,
     pub argument_scores: HashMap<String, f32>,
     pub consensus_reached: bool,
-    pub quality_scores: HashMap<String, f32>,  // Add this field
+    pub quality_scores: HashMap<String, f32>, // Add this field
 }
 
 /// Consistency analyzer for confidence scoring
@@ -1091,7 +1091,6 @@ impl ConfidenceScorer {
         }
     }
 
-
     /// Score outputs using multi-dimensional analysis (V2 had basic scoring)
     pub async fn score_multi_dimensional(
         &self,
@@ -1206,7 +1205,10 @@ impl PatternDetector {
 
     /// Detect patterns in worker output using advanced multi-dimensional analysis
     pub async fn detect_patterns(&self, output: &WorkerOutput) -> Result<f32> {
-        info!("Detecting patterns in worker output: {}", get_worker_id(output));
+        info!(
+            "Detecting patterns in worker output: {}",
+            get_worker_id(output)
+        );
 
         // Use the advanced TODO analyzer for comprehensive pattern detection
         let todo_analysis = self
@@ -1676,7 +1678,9 @@ impl PleadingWorkflow {
         let evidence_collection = self.evidence_collector.collect_evidence(_outputs).await?;
 
         // 2. Implement comprehensive debate protocol with evidence integration
-        let debate_result = self.conduct_debate_protocol(&evidence_collection, confidence_scores).await?;
+        let debate_result = self
+            .conduct_debate_protocol(&evidence_collection, confidence_scores)
+            .await?;
 
         // 3. Resolve conflicts using advanced algorithms
         let conflict_resolution = self
@@ -1704,25 +1708,25 @@ impl PleadingWorkflow {
         evidence_collection: &EvidenceCollection,
         confidence_scores: &HashMap<String, f32>,
     ) -> Result<DebateResult> {
-        info!("Conducting debate protocol with {} evidence items", evidence_collection.evidence.len());
-        
+        info!(
+            "Conducting debate protocol with {} evidence items",
+            evidence_collection.evidence.len()
+        );
+
         const MAX_DEBATE_ROUNDS: usize = 3;
         let mut rounds = Vec::new();
         let mut final_arguments = HashMap::new();
-        
+
         // Conduct multi-round debate
         for round_num in 1..=MAX_DEBATE_ROUNDS {
             debug!("Starting debate round {}/{}", round_num, MAX_DEBATE_ROUNDS);
-            
-            let round_result = self.conduct_debate_round(
-                round_num,
-                evidence_collection,
-                confidence_scores,
-                &rounds,
-            ).await?;
-            
+
+            let round_result = self
+                .conduct_debate_round(round_num, evidence_collection, confidence_scores, &rounds)
+                .await?;
+
             rounds.push(round_result.clone());
-            
+
             // Check for early consensus based on quality score variance
             let consensus_reached = self.detect_consensus_in_round(&round_result);
             if consensus_reached {
@@ -1730,30 +1734,31 @@ impl PleadingWorkflow {
                 break;
             }
         }
-        
+
         // Build final arguments from debate rounds
         for (participant, argument) in self.synthesize_final_arguments(&rounds) {
             final_arguments.insert(participant, argument);
         }
-        
+
         // Determine if consensus was reached
-        let consensus_reached = rounds.last()
+        let consensus_reached = rounds
+            .last()
             .map(|r| self.detect_consensus_in_round(r))
             .unwrap_or(false);
-        
+
         info!(
             "Debate protocol completed: rounds={}, consensus={}",
             rounds.len(),
             consensus_reached
         );
-        
+
         Ok(DebateResult {
             rounds,
             final_arguments,
             consensus_reached,
         })
     }
-    
+
     /// Conduct a single debate round
     async fn conduct_debate_round(
         &self,
@@ -1765,65 +1770,64 @@ impl PleadingWorkflow {
         let mut arguments = HashMap::new();
         let mut counter_arguments = HashMap::new();
         let mut quality_scores = HashMap::new();
-        
+
         // Present arguments with evidence
         for (source, evidence_list) in &evidence_collection.evidence {
             let argument = format!("Evidence from {}: {} items", source, evidence_list.len());
             arguments.insert(source.clone(), argument);
-            
+
             // Add quality score from confidence
             let quality = confidence_scores.get(source).copied().unwrap_or(0.5);
             quality_scores.insert(source.clone(), quality);
-            
+
             // Generate counter-arguments for low quality evidence
             if quality < 0.6 {
                 counter_arguments.insert(
                     source.clone(),
-                    format!("Weak evidence quality: {:.2}", quality)
+                    format!("Weak evidence quality: {:.2}", quality),
                 );
             }
         }
-        
+
         Ok(DebateRound {
-        round_number: round_num as usize,  // Changed to usize
-        arguments: arguments.into_iter().map(|(k, v)| v).collect(),  // Convert HashMap to Vec
-        rebuttals: Vec::new(),  // No rebuttals in this context
-        argument_scores: HashMap::new(),  // Empty for now
-        consensus_reached: false,
-        quality_scores,  // Use provided quality_scores
-    })
+            round_number: round_num as usize, // Changed to usize
+            arguments: arguments.into_iter().map(|(k, v)| v).collect(), // Convert HashMap to Vec
+            rebuttals: Vec::new(),            // No rebuttals in this context
+            argument_scores: HashMap::new(),  // Empty for now
+            consensus_reached: false,
+            quality_scores, // Use provided quality_scores
+        })
     }
-    
+
     /// Detect consensus in a debate round
     fn detect_consensus_in_round(&self, round: &DebateRound) -> bool {
         if round.quality_scores.is_empty() {
             return false;
         }
-        
+
         // Calculate variance in quality scores
         let scores: Vec<f32> = round.quality_scores.values().copied().collect();
         let mean: f32 = scores.iter().sum::<f32>() / scores.len() as f32;
-        let variance: f32 = scores.iter()
-            .map(|s| (s - mean).powi(2))
-            .sum::<f32>() / scores.len() as f32;
-        
+        let variance: f32 =
+            scores.iter().map(|s| (s - mean).powi(2)).sum::<f32>() / scores.len() as f32;
+
         // Low variance indicates consensus
         variance < 0.05
     }
-    
+
     /// Synthesize final arguments from debate rounds
     fn synthesize_final_arguments(&self, rounds: &[DebateRound]) -> HashMap<String, String> {
         let mut final_args = HashMap::new();
-        
+
         if let Some(last_round) = rounds.last() {
             for (source, score) in &last_round.quality_scores {
                 final_args.insert(
                     source.clone(),
-                    format!("Final argument with quality score: {:.2}", score)
+                    format!("Final argument with quality score: {:.2}", score),
                 );
             }
         }
-        
+
         final_args
     }
 }
@@ -2169,30 +2173,36 @@ impl SourceValidator {
     async fn validate_historical_performance(&self, source: &str) -> Result<bool> {
         // Query historical performance data from database if available
         if let Some(ref db_client) = self.database_client {
-            match self.query_historical_performance_metrics(db_client, source).await {
+            match self
+                .query_historical_performance_metrics(db_client, source)
+                .await
+            {
                 Ok(metrics) => {
                     if metrics.is_empty() {
-                        debug!("No historical performance data found for source: {}", source);
+                        debug!(
+                            "No historical performance data found for source: {}",
+                            source
+                        );
                         return Ok(true); // No data means we can't validate, default to true
                     }
-                    
+
                     // Analyze performance metrics
                     let performance_score = self.analyze_performance_metrics(&metrics);
-                    
+
                     // Define validation thresholds
                     const MIN_PERFORMANCE_SCORE: f32 = 0.6;
                     const MIN_RELIABILITY_SCORE: f32 = 0.7;
-                    
+
                     // Calculate reliability score based on consistency
                     let reliability_score = self.calculate_reliability_score(&metrics);
-                    
+
                     // Check for performance anomalies
                     let has_anomalies = self.detect_performance_anomalies(&metrics);
-                    
+
                     let is_valid = performance_score >= MIN_PERFORMANCE_SCORE
                         && reliability_score >= MIN_RELIABILITY_SCORE
                         && !has_anomalies;
-                    
+
                     if is_valid {
                         debug!(
                             "Historical performance validation passed: source={}, perf_score={:.2}, reliability={:.2}",
@@ -2204,7 +2214,7 @@ impl SourceValidator {
                             source, performance_score, reliability_score, has_anomalies
                         );
                     }
-                    
+
                     Ok(is_valid)
                 }
                 Err(e) => {
@@ -2218,7 +2228,7 @@ impl SourceValidator {
             Ok(true)
         }
     }
-    
+
     /// Query historical performance metrics from database
     async fn query_historical_performance_metrics(
         &self,
@@ -2228,64 +2238,78 @@ impl SourceValidator {
         // Query performance metrics for this source
         // Using a placeholder entity_id since we don't have the actual source ID
         let entity_id = Uuid::new_v4(); // In production, this would be derived from source
-        
-        db_client.get_performance_metrics("source", entity_id).await
+
+        db_client
+            .get_performance_metrics("source", entity_id)
+            .await
             .context("Failed to query historical performance metrics")
     }
-    
+
     /// Analyze performance metrics to calculate overall score
-    fn analyze_performance_metrics(&self, metrics: &[agent_agency_database::models::PerformanceMetric]) -> f32 {
+    fn analyze_performance_metrics(
+        &self,
+        metrics: &[agent_agency_database::models::PerformanceMetric],
+    ) -> f32 {
         if metrics.is_empty() {
             return 0.5; // Neutral score for no data
         }
-        
+
         // Calculate average metric value
         let total: f64 = metrics.iter().map(|m| m.metric_value).sum();
         let average = total / metrics.len() as f64;
-        
+
         // Normalize to 0-1 range (assuming metrics are already in reasonable range)
         (average.min(1.0).max(0.0)) as f32
     }
-    
+
     /// Calculate reliability score based on metric consistency
-    fn calculate_reliability_score(&self, metrics: &[agent_agency_database::models::PerformanceMetric]) -> f32 {
+    fn calculate_reliability_score(
+        &self,
+        metrics: &[agent_agency_database::models::PerformanceMetric],
+    ) -> f32 {
         if metrics.len() < 2 {
             return 0.5; // Neutral score for insufficient data
         }
-        
+
         // Calculate standard deviation of metric values
         let values: Vec<f64> = metrics.iter().map(|m| m.metric_value).collect();
         let mean = values.iter().sum::<f64>() / values.len() as f64;
         let variance = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64;
         let std_dev = variance.sqrt();
-        
+
         // Lower standard deviation = higher reliability
         // Normalize to 0-1 range (assuming std_dev < 1.0 is good)
         (1.0 - std_dev.min(1.0)).max(0.0) as f32
     }
-    
+
     /// Detect performance anomalies in metrics
-    fn detect_performance_anomalies(&self, metrics: &[agent_agency_database::models::PerformanceMetric]) -> bool {
+    fn detect_performance_anomalies(
+        &self,
+        metrics: &[agent_agency_database::models::PerformanceMetric],
+    ) -> bool {
         if metrics.len() < 3 {
             return false; // Not enough data to detect anomalies
         }
-        
+
         // Check for sudden drops in performance
         let values: Vec<f64> = metrics.iter().map(|m| m.metric_value).collect();
-        
+
         for i in 1..values.len() {
-            let change_ratio = (values[i] - values[i-1]).abs() / values[i-1].max(0.01);
-            
+            let change_ratio = (values[i] - values[i - 1]).abs() / values[i - 1].max(0.01);
+
             // Flag as anomaly if performance drops by more than 50%
-            if change_ratio > 0.5 && values[i] < values[i-1] {
-                warn!("Performance anomaly detected: drop of {:.1}%", change_ratio * 100.0);
+            if change_ratio > 0.5 && values[i] < values[i - 1] {
+                warn!(
+                    "Performance anomaly detected: drop of {:.1}%",
+                    change_ratio * 100.0
+                );
                 return true;
             }
         }
-        
+
         false
     }
-    
+
     /// Query trusted registry from database
     async fn query_trusted_registry(
         &self,
@@ -2294,26 +2318,29 @@ impl SourceValidator {
     ) -> Result<Option<RegistryData>> {
         // Query knowledge entries that might contain registry information
         // In a production system, this would query a dedicated trusted_registries table
-        
+
         // For now, we'll use knowledge entries as a proxy for registry data
         // and extract trust information from the metadata
-        
+
         // Create a simple hash of the source to use as a lookup key
         let source_hash = self.calculate_source_hash(source);
-        
+
         // In production, this would be a proper registry query
         // For now, we'll return None to indicate no registry data found
         // This allows the system to fall back to static registry checks
-        
-        debug!("Querying trusted registry for source: {} (hash: {})", source, source_hash);
-        
+
+        debug!(
+            "Querying trusted registry for source: {} (hash: {})",
+            source, source_hash
+        );
+
         // Placeholder: In production, query actual registry table
         Ok(None)
     }
-    
+
     /// Calculate hash of source for registry lookup
     fn calculate_source_hash(&self, source: &str) -> String {
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(source.as_bytes());
         format!("{:x}", hasher.finalize())
@@ -2361,17 +2388,17 @@ impl SourceValidator {
         // 2. Certificate chain validation: Validate certificate chains and trust
         // 3. Timestamp and expiration: Check timestamps and expiration validation
         // 4. Non-repudiation checks: Perform non-repudiation validation and verification
-        
+
         // Perform comprehensive cryptographic validation
         // Inline implementations for cryptographic checks
-        
+
         // 1. Digital signature verification
         let mut hasher = Sha256::new();
         hasher.update(source.as_bytes());
         let hash = hasher.finalize();
         let signature = hex::encode(hash);
         let signature_valid = signature.len() == 64 && hex::decode(&signature).is_ok();
-        
+
         // 2. Certificate chain validation
         let mut hasher = Sha256::new();
         hasher.update(source.as_bytes());
@@ -2379,21 +2406,24 @@ impl SourceValidator {
         let hash = hasher.finalize();
         let certificate_hash = hex::encode(hash);
         let certificate_valid = certificate_hash.len() == 64;
-        
+
         // 3. Timestamp validation
         let timestamp_valid = !source.contains("9999");
-        
+
         // 4. Non-repudiation check
         let mut hasher = Sha256::new();
         hasher.update(source.as_bytes());
         let hash = hasher.finalize();
         let hash_str = hex::encode(hash);
-        let non_repudiation_valid = !hash_str.eq("0000000000000000000000000000000000000000000000000000000000000000") 
-            && !source.is_empty() && source.len() >= 3;
-        
+        let non_repudiation_valid = !hash_str
+            .eq("0000000000000000000000000000000000000000000000000000000000000000")
+            && !source.is_empty()
+            && source.len() >= 3;
+
         // All cryptographic checks must pass
-        let is_valid = signature_valid && certificate_valid && timestamp_valid && non_repudiation_valid;
-        
+        let is_valid =
+            signature_valid && certificate_valid && timestamp_valid && non_repudiation_valid;
+
         if !is_valid {
             warn!("Cryptographic validation failed for source: {}", source);
             return Ok(false);
@@ -2428,28 +2458,28 @@ impl SourceValidator {
                     return Ok(false);
                 }
             }
-            
+
             // 2. Verify cryptographic signature authenticity using HMAC
             let signature_authentic = self.verify_signature_authenticity(source).await?;
             if !signature_authentic {
                 debug!("Signature authenticity verification failed");
                 return Ok(false);
             }
-            
+
             // 3. Validate certificate chain and trust
             let certificate_valid = self.validate_certificate_chain(source).await?;
             if !certificate_valid {
                 debug!("Certificate chain validation failed");
                 return Ok(false);
             }
-            
+
             // 4. Ensure non-repudiation
             let has_non_repudiation = self.check_non_repudiation_integrity(source).await?;
             if !has_non_repudiation {
                 debug!("Non-repudiation check failed");
                 return Ok(false);
             }
-            
+
             debug!("Signature validation passed: format OK, authentic, certificate valid, non-repudiation OK");
         } else {
             debug!("No cryptographic signature indicators found");
@@ -2480,14 +2510,16 @@ impl SourceValidator {
 
         // Check for proper line structure (simplified PKCS#1 / PEM format)
         let lines: Vec<&str> = source.lines().collect();
-        
+
         // At minimum: BEGIN line, content, END line
         if lines.len() < 3 {
             return Some(false);
         }
 
         // Verify BEGIN and END markers are on separate lines
-        let has_begin = lines.iter().any(|l| l.contains("BEGIN") && l.contains("---"));
+        let has_begin = lines
+            .iter()
+            .any(|l| l.contains("BEGIN") && l.contains("---"));
         let has_end = lines.iter().any(|l| l.contains("END") && l.contains("---"));
 
         if has_begin && has_end {
@@ -2507,9 +2539,12 @@ impl SourceValidator {
         if let Some(start) = source.find("BEGIN") {
             if let Some(end) = source[start..].find("END") {
                 let signature_content = &source[start..start + end + 3]; // Include END
-                
+
                 // Validate signature format
-                if signature_content.len() > 10 && signature_content.contains("BEGIN") && signature_content.contains("END") {
+                if signature_content.len() > 10
+                    && signature_content.contains("BEGIN")
+                    && signature_content.contains("END")
+                {
                     return Ok(true);
                 }
             }
@@ -2526,9 +2561,9 @@ impl SourceValidator {
     /// Validate certificate chain trust
     async fn validate_certificate_chain(&self, source: &str) -> Result<bool> {
         // Check for certificate indicators in source
-        let has_cert_indicators = source.contains("CERTIFICATE") || 
-                                   source.contains("certificate") ||
-                                   source.contains("cert");
+        let has_cert_indicators = source.contains("CERTIFICATE")
+            || source.contains("certificate")
+            || source.contains("cert");
 
         if !has_cert_indicators {
             // No certificate data, but not invalid
@@ -2549,7 +2584,7 @@ impl SourceValidator {
             if let Some(end) = source[start..].find("-----END") {
                 let cert_data = &source[start..start + end];
                 let cert_lines: Vec<&str> = cert_data.lines().collect();
-                
+
                 // Valid certificate should have multiple lines of base64 data
                 if cert_lines.len() < 5 {
                     debug!("Certificate appears truncated");
@@ -2557,15 +2592,17 @@ impl SourceValidator {
                 }
 
                 // 3. Verify base64 encoding quality
-                let base64_content: String = cert_lines[1..cert_lines.len() - 1]
-                    .join("");
-                
-                let is_valid_base64 = base64_content.chars()
+                let base64_content: String = cert_lines[1..cert_lines.len() - 1].join("");
+
+                let is_valid_base64 = base64_content
+                    .chars()
                     .all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '/' || c == '=');
-                
-                debug!("Certificate validation: pem_format={}, base64_valid={}", 
-                       is_pem_encoded, is_valid_base64);
-                
+
+                debug!(
+                    "Certificate validation: pem_format={}, base64_valid={}",
+                    is_pem_encoded, is_valid_base64
+                );
+
                 Ok(is_valid_base64)
             } else {
                 Ok(false)
@@ -2584,15 +2621,17 @@ impl SourceValidator {
 
         // Check 1: Signature indicators
         let has_signature = source.contains("BEGIN") && source.contains("END");
-        
+
         // Check 2: Signer identification indicators
-        let has_signer_id = source.contains("cn=") || source.contains("CN=") ||
-                            source.contains("issuer") || source.contains("subject");
-        
+        let has_signer_id = source.contains("cn=")
+            || source.contains("CN=")
+            || source.contains("issuer")
+            || source.contains("subject");
+
         // Check 3: Timestamp indicators
-        let has_timestamp = source.contains("timestamp") || 
-                            source.contains("notBefore") || 
-                            source.contains("notAfter");
+        let has_timestamp = source.contains("timestamp")
+            || source.contains("notBefore")
+            || source.contains("notAfter");
 
         // At least 2 of 3 checks should pass for non-repudiation
         let checks_passed = [has_signature, has_signer_id, has_timestamp]
@@ -2601,8 +2640,10 @@ impl SourceValidator {
             .count();
 
         let is_valid = checks_passed >= 2;
-        debug!("Non-repudiation check: signature={}, signer_id={}, timestamp={}, valid={}", 
-               has_signature, has_signer_id, has_timestamp, is_valid);
+        debug!(
+            "Non-repudiation check: signature={}, signer_id={}, timestamp={}, valid={}",
+            has_signature, has_signer_id, has_timestamp, is_valid
+        );
 
         Ok(is_valid)
     }
@@ -2627,7 +2668,7 @@ impl SourceValidator {
                         trust_score = trust_score.max(data.trust_score);
                         trust_sources.insert("database_registry".to_string());
                         certificate_is_valid = data.is_verified;
-                        
+
                         debug!(
                             "Database registry match found: source={}, trust_score={:.2}, verified={}",
                             source, data.trust_score, data.is_verified
@@ -2734,9 +2775,7 @@ impl SourceValidator {
         if let Some(row) = registry_row {
             registry_match = true;
 
-            let trust_level: f64 = row
-                .try_get("trust_level")
-                .unwrap_or(0.0);
+            let trust_level: f64 = row.try_get("trust_level").unwrap_or(0.0);
 
             normalized_trust_score = (trust_level / 100.0).clamp(0.0, 1.0) as f32;
 
@@ -2864,7 +2903,7 @@ impl SourceValidator {
 
         let mut total_score = 0.0;
         let mut count = 0.0;
-        
+
         for (idx, row) in rows.iter().enumerate() {
             if let Ok(score) = row.try_get::<f64, _>("trust_score") {
                 // Weight recent scores more heavily (exponential decay)
@@ -2958,7 +2997,7 @@ impl ConflictResolver {
         // 1. Query the database for current judge verdicts
         // 2. Filter by active judges in current debate session
         // 3. Return only verdicts from the current round
-        // 
+        //
         // For now, return None to indicate no verdicts available
         // This allows the consensus algorithms to use default fallback behavior
         None
@@ -3195,7 +3234,7 @@ impl ConflictResolver {
         if let Some(verdicts) = self.get_active_judge_verdicts().await {
             let pass_votes = verdicts.iter().filter(|v| v.is_accepting()).count();
             let total_votes = verdicts.len();
-            
+
             // Simple majority: >50% acceptance
             if total_votes > 0 && pass_votes > (total_votes / 2) {
                 return true;
@@ -3214,16 +3253,16 @@ impl ConflictResolver {
         if let Some(verdicts) = self.get_active_judge_verdicts().await {
             let mut weighted_score = 0.0f32;
             let mut total_weight = 0.0f32;
-            
+
             for verdict in &verdicts {
                 // Weight by judge confidence in their verdict
                 let weight = verdict.confidence();
                 let vote_value = if verdict.is_accepting() { 1.0 } else { 0.0 };
-                
+
                 weighted_score += vote_value * weight;
                 total_weight += weight;
             }
-            
+
             // Threshold: 60% weighted acceptance (0.6 weighted average)
             if total_weight > 0.0 && (weighted_score / total_weight) > 0.6 {
                 return true;
@@ -3246,7 +3285,7 @@ impl ConflictResolver {
         if let Some(verdicts) = self.get_active_judge_verdicts().await {
             let mut weighted_sum = 0.0f32;
             let mut total_weight = 0.0f32;
-            
+
             // Map judge roles to weights and verdicts (simplified for 4-judge council)
             let role_weights: &[(&str, f32)] = &[
                 ("constitutional", 0.40),
@@ -3254,7 +3293,7 @@ impl ConflictResolver {
                 ("quality", 0.20),
                 ("integration", 0.10),
             ];
-            
+
             // Calculate score across all verdicts, applying role weights
             let mut role_index = 0;
             for verdict in &verdicts {
@@ -3266,7 +3305,7 @@ impl ConflictResolver {
                     role_index += 1;
                 }
             }
-            
+
             // Threshold: 70% multi-criteria score
             if total_weight > 0.0 && (weighted_sum / total_weight) > 0.70 {
                 return true;
@@ -3288,20 +3327,21 @@ impl ConflictResolver {
                             "Found {} similar historical conflicts for precedent analysis",
                             historical_conflicts.len()
                         );
-                        
+
                         // Analyze resolution outcomes from historical conflicts
-                        let resolution_success_rate = self.analyze_historical_resolution_outcomes(&historical_conflicts);
-                        
+                        let resolution_success_rate =
+                            self.analyze_historical_resolution_outcomes(&historical_conflicts);
+
                         debug!(
                             "Historical precedent analysis: conflict_similarity_count={}, success_rate={:.2}",
                             historical_conflicts.len(),
                             resolution_success_rate
                         );
-                        
+
                         // Apply precedent-based prediction
                         // If historical success rate is high, predict success
                         const PRECEDENT_SUCCESS_THRESHOLD: f32 = 0.7;
-                        
+
                         if resolution_success_rate >= PRECEDENT_SUCCESS_THRESHOLD {
                             info!(
                                 "Historical precedent suggests high likelihood of resolution (success_rate={:.2})",
@@ -3417,21 +3457,39 @@ impl ConflictResolver {
         // Create human review ticket for escalation
         let ticket_id = Uuid::new_v4();
         let ticket_created_at = Utc::now();
-        
+
         info!(
             "Creating human escalation ticket {} for conflict resolution",
             ticket_id
         );
-        
+
         // Create ticket data structure
         let mut ticket_metadata = HashMap::new();
-        ticket_metadata.insert("conflict_description".to_string(), serde_json::Value::String(conflict.to_string()));
-        ticket_metadata.insert("ticket_id".to_string(), serde_json::Value::String(ticket_id.to_string()));
-        ticket_metadata.insert("created_at".to_string(), serde_json::Value::String(ticket_created_at.to_rfc3339()));
-        ticket_metadata.insert("status".to_string(), serde_json::Value::String("pending_human_review".to_string()));
-        ticket_metadata.insert("priority".to_string(), serde_json::Value::String("high".to_string()));
-        ticket_metadata.insert("escalation_reason".to_string(), serde_json::Value::String("automated_resolution_failed".to_string()));
-        
+        ticket_metadata.insert(
+            "conflict_description".to_string(),
+            serde_json::Value::String(conflict.to_string()),
+        );
+        ticket_metadata.insert(
+            "ticket_id".to_string(),
+            serde_json::Value::String(ticket_id.to_string()),
+        );
+        ticket_metadata.insert(
+            "created_at".to_string(),
+            serde_json::Value::String(ticket_created_at.to_rfc3339()),
+        );
+        ticket_metadata.insert(
+            "status".to_string(),
+            serde_json::Value::String("pending_human_review".to_string()),
+        );
+        ticket_metadata.insert(
+            "priority".to_string(),
+            serde_json::Value::String("high".to_string()),
+        );
+        ticket_metadata.insert(
+            "escalation_reason".to_string(),
+            serde_json::Value::String("automated_resolution_failed".to_string()),
+        );
+
         // Log ticket creation for audit trail
         debug!(
             "Human escalation ticket created: ticket_id={}, conflict_length={}, timestamp={}",
@@ -3439,43 +3497,58 @@ impl ConflictResolver {
             conflict.len(),
             ticket_created_at
         );
-        
+
         // Store ticket in database if available
         if let Some(ref db_client) = self.database_client {
-            match self.create_escalation_ticket_in_db(db_client, &ticket_id, conflict, &ticket_metadata).await {
+            match self
+                .create_escalation_ticket_in_db(db_client, &ticket_id, conflict, &ticket_metadata)
+                .await
+            {
                 Ok(_) => {
-                    info!("Successfully stored escalation ticket {} in database", ticket_id);
+                    info!(
+                        "Successfully stored escalation ticket {} in database",
+                        ticket_id
+                    );
                 }
                 Err(e) => {
                     warn!("Failed to store escalation ticket in database: {}", e);
                 }
             }
         }
-        
+
         // Send notification to human arbitrators
         let notification_sent = self.notify_human_arbitrators(&ticket_id, conflict).await;
-        
+
         if notification_sent {
             info!("Human arbitrators notified for ticket {}", ticket_id);
         } else {
-            warn!("Failed to notify human arbitrators for ticket {}", ticket_id);
+            warn!(
+                "Failed to notify human arbitrators for ticket {}",
+                ticket_id
+            );
         }
-        
+
         // Simulate human resolution success rate (80%)
         // In production, this would wait for actual human decision
         use rand::Rng;
         let mut rng = rand::thread_rng();
         let resolution_success = rng.gen::<f32>() < 0.8;
-        
+
         if resolution_success {
-            info!("Human escalation ticket {} resolved successfully", ticket_id);
+            info!(
+                "Human escalation ticket {} resolved successfully",
+                ticket_id
+            );
         } else {
-            warn!("Human escalation ticket {} could not be resolved", ticket_id);
+            warn!(
+                "Human escalation ticket {} could not be resolved",
+                ticket_id
+            );
         }
-        
+
         resolution_success
     }
-    
+
     /// Create escalation ticket in database
     async fn create_escalation_ticket_in_db(
         &self,
@@ -3494,14 +3567,19 @@ impl ConflictResolver {
             ip_address: None,
             timestamp: Some(Utc::now()),
         };
-        
-        db_client.create_audit_trail_entry(audit_entry).await
+
+        db_client
+            .create_audit_trail_entry(audit_entry)
+            .await
             .context("Failed to create audit trail entry for escalation ticket")?;
-        
-        debug!("Created audit trail entry for escalation ticket {}", ticket_id);
+
+        debug!(
+            "Created audit trail entry for escalation ticket {}",
+            ticket_id
+        );
         Ok(())
     }
-    
+
     /// Notify human arbitrators about escalation
     async fn notify_human_arbitrators(&self, ticket_id: &Uuid, conflict: &str) -> bool {
         // Log notification attempt
@@ -3510,19 +3588,19 @@ impl ConflictResolver {
             ticket_id,
             &conflict.chars().take(100).collect::<String>()
         );
-        
+
         // In production, this would:
         // 1. Query database for available human arbitrators
         // 2. Send notifications via email/Slack/webhook
         // 3. Track notification delivery status
         // 4. Handle notification failures and retries
-        
+
         // For now, log the notification and simulate success
         debug!(
             "Human arbitrator notification sent for ticket {}: method=log, status=simulated_success",
             ticket_id
         );
-        
+
         true
     }
 
@@ -3544,7 +3622,7 @@ impl ConflictResolver {
         // Match patterns in conflict description to find similar historical conflicts
         let conflict_lower = conflict.to_lowercase();
         let mut results = Vec::new();
-        
+
         if conflict_lower.contains("confidence") || conflict_lower.contains("score") {
             results.push(HistoricalConflict {
                 conflict_id: Uuid::new_v4(),
@@ -3583,19 +3661,32 @@ impl ConflictResolver {
         if historical_conflicts.is_empty() {
             return 0.8;
         }
-        
-        let successful = historical_conflicts.iter().filter(|c| c.was_resolved).count();
+
+        let successful = historical_conflicts
+            .iter()
+            .filter(|c| c.was_resolved)
+            .count();
         let success_rate = successful as f32 / historical_conflicts.len() as f32;
-        
+
         // Apply recency weighting: more recent conflicts matter more
         let now = Utc::now();
-        let weighted_rate: f32 = historical_conflicts.iter().map(|c| {
-            let days_old = (now - c.occurred_at).num_days().max(1) as f32;
-            let weight = 1.0 / (1.0 + days_old / 7.0);
-            if c.was_resolved { weight } else { 0.0 }
-        }).sum::<f32>() / historical_conflicts.len() as f32;
-        
-        ((success_rate * 0.7) + (weighted_rate * 0.3)).min(0.99).max(0.1)
+        let weighted_rate: f32 = historical_conflicts
+            .iter()
+            .map(|c| {
+                let days_old = (now - c.occurred_at).num_days().max(1) as f32;
+                let weight = 1.0 / (1.0 + days_old / 7.0);
+                if c.was_resolved {
+                    weight
+                } else {
+                    0.0
+                }
+            })
+            .sum::<f32>()
+            / historical_conflicts.len() as f32;
+
+        ((success_rate * 0.7) + (weighted_rate * 0.3))
+            .min(0.99)
+            .max(0.1)
     }
 }
 
@@ -3776,7 +3867,8 @@ impl CompletenessChecker {
 
         debug!(
             "Completeness score for worker {}: {:.3}",
-            get_worker_id(output), final_score
+            get_worker_id(output),
+            final_score
         );
         Ok(final_score)
     }
@@ -4204,7 +4296,8 @@ impl ConsistencyAnalyzer {
         };
 
         // Calculate median response time
-        let mut response_times: Vec<u64> = outputs.iter()
+        let mut response_times: Vec<u64> = outputs
+            .iter()
             .filter_map(|o| get_response_time_ms(o))
             .collect();
         response_times.sort();
@@ -4377,21 +4470,22 @@ impl ConsistencyAnalyzer {
                             .collect();
                         if !struct_lines.is_empty() {
                             pattern_matches += 1;
-                            
+
                             // Implement PascalCase struct validation
                             let mut valid_pascal_case_count = 0;
                             let mut total_struct_count = 0;
-                            
+
                             for line in &struct_lines {
                                 total_struct_count += 1;
                                 if self.validate_pascal_case_struct_name(line) {
                                     valid_pascal_case_count += 1;
                                 }
                             }
-                            
+
                             // Apply bonus for high percentage of valid PascalCase structs
                             if total_struct_count > 0 {
-                                let pascal_case_ratio = valid_pascal_case_count as f32 / total_struct_count as f32;
+                                let pascal_case_ratio =
+                                    valid_pascal_case_count as f32 / total_struct_count as f32;
                                 if pascal_case_ratio >= 0.9 {
                                     pattern_matches += 1; // Bonus for excellent naming
                                 } else if pascal_case_ratio >= 0.7 {
@@ -4453,14 +4547,14 @@ impl ConsistencyAnalyzer {
     fn validate_pascal_case_struct_name(&self, line: &str) -> bool {
         // Extract struct name from the line
         let trimmed = line.trim();
-        
+
         // Handle various struct definition formats:
         // "struct Name {", "struct Name<T> {", "struct Name(", "pub struct Name"
         let struct_keyword_pos = match trimmed.find("struct ") {
             Some(pos) => pos + 7, // Length of "struct "
             None => return false,
         };
-        
+
         let after_struct = &trimmed[struct_keyword_pos..];
         let name_part = after_struct
             .split_whitespace()
@@ -4476,11 +4570,11 @@ impl ConsistencyAnalyzer {
             .next()
             .unwrap_or("")
             .trim();
-        
+
         if name_part.is_empty() {
             return false;
         }
-        
+
         // Validate PascalCase:
         // 1. Must start with uppercase letter
         // 2. Can contain letters, numbers, and underscores
@@ -4490,12 +4584,12 @@ impl ConsistencyAnalyzer {
             Some(c) => c,
             None => return false,
         };
-        
+
         // Must start with uppercase
         if !first_char.is_uppercase() {
             return false;
         }
-        
+
         // Check remaining characters
         let mut prev_was_underscore = false;
         for c in chars {
@@ -4512,7 +4606,7 @@ impl ConsistencyAnalyzer {
                 return false;
             }
         }
-        
+
         true
     }
 
@@ -5118,15 +5212,12 @@ impl PredictiveAnalyzer {
         let mut trends = Vec::new();
 
         // Analyze response time patterns
-        let response_times: Vec<u64> = outputs.iter()
-            .filter_map(|o| o.response_time_ms)
-            .collect();
-        let avg_response_time =
-            if !response_times.is_empty() {
-                response_times.iter().sum::<u64>() as f64 / response_times.len() as f64
-            } else {
-                0.0
-            };
+        let response_times: Vec<u64> = outputs.iter().filter_map(|o| o.response_time_ms).collect();
+        let avg_response_time = if !response_times.is_empty() {
+            response_times.iter().sum::<u64>() as f64 / response_times.len() as f64
+        } else {
+            0.0
+        };
 
         if avg_response_time > 2000.0 {
             trends.push("Performance optimization needed for slow response times".to_string());
@@ -5395,7 +5486,7 @@ impl QualityWeighter {
         }
 
         // Implement recency bonus calculation with timestamp-based decay
-        let recency_bonus = self.calculate_recency_bonus(worker_id, assessment).await?;  
+        let recency_bonus = self.calculate_recency_bonus(worker_id, assessment).await?;
         let final_weight = weighted_score * recency_bonus;
 
         Ok(final_weight.min(1.0_f32))
@@ -5421,32 +5512,34 @@ impl QualityWeighter {
         const MAX_BONUS: f32 = 1.2; // Maximum 20% bonus for very recent outputs
         const BASE_BONUS: f32 = 1.0; // No bonus for old outputs
         const DECAY_HALF_LIFE_HOURS: f32 = 24.0; // Bonus halves every 24 hours
-        
+
         // Try to extract timestamp from assessment metadata or use current time as fallback
         let current_time = Utc::now();
-        let output_time = self.extract_worker_timestamp(worker_id, assessment)
+        let output_time = self
+            .extract_worker_timestamp(worker_id, assessment)
             .unwrap_or(current_time);
-        
+
         // Calculate time difference in hours
         let time_diff = current_time.signed_duration_since(output_time);
         let hours_ago = time_diff.num_hours() as f32;
-        
+
         // Handle edge cases
         if hours_ago < 0.0 {
             // Future timestamp - treat as very recent
             return Ok(MAX_BONUS);
         }
-        
-        if hours_ago > 168.0 { // 1 week
+
+        if hours_ago > 168.0 {
+            // 1 week
             // Very old output - no bonus
             return Ok(BASE_BONUS);
         }
-        
+
         // Calculate exponential decay bonus
         // Formula: bonus = max_bonus * (0.5 ^ (hours_ago / half_life))
         let decay_factor = 0.5_f32.powf(hours_ago / DECAY_HALF_LIFE_HOURS);
         let recency_bonus = BASE_BONUS + (MAX_BONUS - BASE_BONUS) * decay_factor;
-        
+
         // Apply graduated bonus scales for specific time intervals
         let graduated_bonus = if hours_ago <= 1.0 {
             // Last hour - maximum bonus
@@ -5464,12 +5557,12 @@ impl QualityWeighter {
             // Last week - minimal bonus
             BASE_BONUS + (MAX_BONUS - BASE_BONUS) * 0.1
         };
-        
+
         debug!(
             "Recency bonus for worker {}: {:.3} (hours_ago: {:.1})",
             worker_id, graduated_bonus, hours_ago
         );
-        
+
         Ok(graduated_bonus)
     }
 
@@ -5481,7 +5574,7 @@ impl QualityWeighter {
     ) -> Option<DateTime<Utc>> {
         // Try to extract timestamp from various possible metadata fields
         // This is a simplified implementation - in practice, you'd need access to the actual WorkerOutput
-        
+
         // For now, we'll use a placeholder that simulates recent timestamps
         // In a real implementation, you'd extract this from the worker output metadata
         let simulated_hours_ago = match worker_id.chars().last() {
@@ -5491,7 +5584,7 @@ impl QualityWeighter {
             Some('4') => 48.0, // Old
             _ => 6.0,          // Default
         };
-        
+
         Some(Utc::now() - chrono::Duration::hours(simulated_hours_ago as i64))
     }
 }
@@ -6896,10 +6989,10 @@ impl ArbitrationFeedback {
 
         // Analyze debate patterns
         if self.consensus.debate_rounds <= 2 {
-                successful_patterns.push("Efficient debate resolution".to_string());
+            successful_patterns.push("Efficient debate resolution".to_string());
         } else if self.consensus.debate_rounds > 5 {
-                failed_approaches.push("Prolonged debate indicates disagreement".to_string());
-            }
+            failed_approaches.push("Prolonged debate indicates disagreement".to_string());
+        }
 
         // Analyze evaluation time patterns
         if self.consensus.evaluation_time_ms < 1000 {
@@ -6973,10 +7066,27 @@ impl ArbitrationFeedback {
         if let Some(ref db_client) = self.database_client {
             // Insert outcome_analysis metrics into performance_metrics table
             let mut metadata = serde_json::Map::new();
-            metadata.insert("decision_strategy".to_string(), serde_json::Value::String(outcome_analysis.decision_strategy.clone()));
-            metadata.insert("confidence_score".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(outcome_analysis.decision_confidence as f64).unwrap_or(serde_json::Number::from(0))));
-            metadata.insert("evaluation_time_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(outcome_analysis.resolution_time_ms)));
-            metadata.insert("timestamp".to_string(), serde_json::Value::String(Utc::now().to_rfc3339()));
+            metadata.insert(
+                "decision_strategy".to_string(),
+                serde_json::Value::String(outcome_analysis.decision_strategy.clone()),
+            );
+            metadata.insert(
+                "confidence_score".to_string(),
+                serde_json::Value::Number(
+                    serde_json::Number::from_f64(outcome_analysis.decision_confidence as f64)
+                        .unwrap_or(serde_json::Number::from(0)),
+                ),
+            );
+            metadata.insert(
+                "evaluation_time_ms".to_string(),
+                serde_json::Value::Number(serde_json::Number::from(
+                    outcome_analysis.resolution_time_ms,
+                )),
+            );
+            metadata.insert(
+                "timestamp".to_string(),
+                serde_json::Value::String(Utc::now().to_rfc3339()),
+            );
 
             // Insert success rate metric
             let success_rate_metric = CreatePerformanceMetric {
@@ -7024,17 +7134,26 @@ impl ArbitrationFeedback {
             };
 
             // Insert metrics with error handling
-            match db_client.create_performance_metric(success_rate_metric).await {
+            match db_client
+                .create_performance_metric(success_rate_metric)
+                .await
+            {
                 Ok(_) => debug!("Successfully recorded success rate metric"),
                 Err(e) => warn!("Failed to record success rate metric: {}", e),
             }
 
-            match db_client.create_performance_metric(quality_score_metric).await {
+            match db_client
+                .create_performance_metric(quality_score_metric)
+                .await
+            {
                 Ok(_) => debug!("Successfully recorded quality score metric"),
                 Err(e) => warn!("Failed to record quality score metric: {}", e),
             }
 
-            match db_client.create_performance_metric(consensus_score_metric).await {
+            match db_client
+                .create_performance_metric(consensus_score_metric)
+                .await
+            {
                 Ok(_) => debug!("Successfully recorded consensus score metric"),
                 Err(e) => warn!("Failed to record consensus score metric: {}", e),
             }
@@ -7476,9 +7595,8 @@ impl PerformancePredictor {
 
         consistency_score
     }
-
 }
-    /// Perform comprehensive signature verification
+/// Perform comprehensive signature verification
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformancePrediction {
     pub predicted_confidence: f32,
@@ -7639,7 +7757,6 @@ impl Default for SignatureExtractionConfig {
         }
     }
 }
-
 
 /// Signature verification result
 #[derive(Debug, Clone)]
@@ -7968,7 +8085,7 @@ pub struct ExtractedTimestamp {
 impl Default for TimestampValidationConfig {
     fn default() -> Self {
         Self {
-            max_age_seconds: 24 * 60 * 60, // 24 hours
+            max_age_seconds: 24 * 60 * 60,                  // 24 hours
             near_expiration_threshold_seconds: 2 * 60 * 60, // 2 hours
             supported_formats: vec![
                 TimestampFormat::UnixTimestamp,
@@ -7983,9 +8100,6 @@ impl Default for TimestampValidationConfig {
         }
     }
 }
-
-
-
 
 // Re-export the main types
 pub use AdvancedArbitrationEngine as ArbitrationEngine;

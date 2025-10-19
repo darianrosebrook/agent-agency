@@ -53,7 +53,10 @@ async fn test_config_creation() {
 async fn test_embedding_service_config() {
     let config = create_test_config();
     assert!(!config.embedding_service.enabled);
-    assert_eq!(config.embedding_service.endpoint, "http://localhost:9999/test");
+    assert_eq!(
+        config.embedding_service.endpoint,
+        "http://localhost:9999/test"
+    );
     assert_eq!(config.embedding_service.timeout_ms, 100);
     assert_eq!(config.embedding_service.max_retries, 1);
 }
@@ -62,7 +65,10 @@ async fn test_embedding_service_config() {
 async fn test_database_config() {
     let config = create_test_config();
     assert!(!config.database.enabled);
-    assert_eq!(config.database.connection_string, "postgresql://test:test@localhost:5432/test");
+    assert_eq!(
+        config.database.connection_string,
+        "postgresql://test:test@localhost:5432/test"
+    );
     assert_eq!(config.database.timeout_ms, 100);
     assert_eq!(config.database.max_retries, 1);
 }
@@ -102,7 +108,10 @@ async fn test_linear_regression_calculation() {
     ];
 
     let growth_rate = agent_agency_system_health_monitor::SystemHealthMonitor::calculate_linear_regression_growth_rate(&data_points);
-    assert!(growth_rate > 0.0, "Growth rate should be positive for increasing data");
+    assert!(
+        growth_rate > 0.0,
+        "Growth rate should be positive for increasing data"
+    );
     assert!(growth_rate < 10000.0, "Growth rate should be reasonable");
 }
 
@@ -114,7 +123,7 @@ async fn test_disk_usage_data_point() {
         total_bytes: 10000,
         usage_percentage: 50.0,
     };
-    
+
     assert_eq!(data_point.used_bytes, 5000);
     assert_eq!(data_point.total_bytes, 10000);
     assert_eq!(data_point.usage_percentage, 50.0);
@@ -131,7 +140,7 @@ async fn test_health_alert_creation() {
         component: "test-component".to_string(),
         metadata: std::collections::HashMap::new(),
     };
-    
+
     assert_eq!(alert.id, "test-alert-1");
     assert_eq!(alert.alert_type, AlertType::SystemHealth);
     assert_eq!(alert.severity, AlertSeverity::Warning);
@@ -150,7 +159,7 @@ async fn test_system_metrics_creation() {
         load_average: [0.5, 0.6, 0.7],
         timestamp: chrono::Utc::now(),
     };
-    
+
     assert_eq!(metrics.cpu_usage_percentage, 25.5);
     assert_eq!(metrics.memory_usage_percentage, 60.0);
     assert_eq!(metrics.disk_usage_percentage, 45.0);
@@ -173,7 +182,7 @@ async fn test_embedding_service_performance() {
         queue_depth: 5,
         timestamp: chrono::Utc::now(),
     };
-    
+
     assert_eq!(performance.total_requests, 1000);
     assert_eq!(performance.successful_requests, 950);
     assert_eq!(performance.failed_requests, 50);
@@ -196,7 +205,7 @@ async fn test_disk_usage_trends() {
         predicted_usage_30_days: 0.8,
         confidence: 0.85,
     };
-    
+
     assert_eq!(trends.growth_rate_bytes_per_day, 1000.0);
     assert_eq!(trends.days_until_80_percent, 10.0);
     assert_eq!(trends.days_until_90_percent, 5.0);

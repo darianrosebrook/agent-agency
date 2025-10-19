@@ -4,30 +4,30 @@
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use std::collections::HashMap;
+use uuid::Uuid;
 
 /// Multimodal evidence for a claim
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MultimodalEvidence {
     /// Unique identifier for this evidence set
     pub id: Uuid,
-    
+
     /// Claim ID that this evidence supports
     pub claim_id: String,
-    
+
     /// Evidence items from different modalities
     pub evidence_items: Vec<ModalityEvidence>,
-    
+
     /// Overall evidence confidence (0-1)
     pub overall_confidence: f32,
-    
+
     /// Cross-modal fusion score
     pub fusion_score: f32,
-    
+
     /// Whether evidence supports (true) or refutes (false) the claim
     pub is_supportive: bool,
-    
+
     /// Collection timestamp
     pub collected_at: String,
 }
@@ -37,16 +37,16 @@ pub struct MultimodalEvidence {
 pub struct ModalityEvidence {
     /// Modality type (text, image, video, diagram, speech)
     pub modality: String,
-    
+
     /// Confidence score for this modality's evidence
     pub confidence: f32,
-    
+
     /// Similarity score between claim and evidence
     pub similarity: f32,
-    
+
     /// Evidence text or description
     pub content: String,
-    
+
     /// Source citation
     pub citation: ModalityCitation,
 }
@@ -56,19 +56,19 @@ pub struct ModalityEvidence {
 pub struct ModalityCitation {
     /// Document/source identifier
     pub source_id: String,
-    
+
     /// Source URI or path
     pub source_uri: String,
-    
+
     /// Page/slide number (if applicable)
     pub page_number: Option<u32>,
-    
+
     /// Time range in milliseconds [start, end] for video/audio
     pub time_range: Option<[u64; 2]>,
-    
+
     /// Bounding box [x, y, width, height] for visual content
     pub bbox: Option<[f32; 4]>,
-    
+
     /// Confidence in citation accuracy
     pub citation_confidence: f32,
 }
@@ -78,16 +78,16 @@ pub struct ModalityCitation {
 pub struct ClaimWithMultimodalEvidence {
     /// Original claim ID
     pub claim_id: String,
-    
+
     /// Claim statement
     pub claim_statement: String,
-    
+
     /// Evidence from different modalities
     pub multimodal_evidence: MultimodalEvidence,
-    
+
     /// Evidence coverage by modality type
     pub modality_coverage: HashMap<String, ModilityCoverage>,
-    
+
     /// Cross-modal validation result
     pub cross_modal_validation: CrossModalValidation,
 }
@@ -97,10 +97,10 @@ pub struct ClaimWithMultimodalEvidence {
 pub struct ModilityCoverage {
     /// Number of evidence items from this modality
     pub item_count: usize,
-    
+
     /// Average confidence for this modality
     pub average_confidence: f32,
-    
+
     /// Whether this modality provided supporting evidence
     pub provides_support: bool,
 }
@@ -110,16 +110,16 @@ pub struct ModilityCoverage {
 pub struct CrossModalValidation {
     /// Whether evidence is consistent across modalities
     pub is_consistent: bool,
-    
+
     /// Consistency score (0-1)
     pub consistency_score: f32,
-    
+
     /// Modalities that provided consistent evidence
     pub consistent_modalities: Vec<String>,
-    
+
     /// Modalities that provided conflicting evidence
     pub conflicting_modalities: Vec<String>,
-    
+
     /// Validation reasoning
     pub reasoning: String,
 }
@@ -156,9 +156,8 @@ impl MultimodalEvidenceEnricher {
         claim_statement: &str,
         modalities_to_query: Option<Vec<&str>>,
     ) -> Result<ClaimWithMultimodalEvidence> {
-        let modalities = modalities_to_query.unwrap_or_else(|| {
-            vec!["text", "image", "video", "diagram", "speech"]
-        });
+        let modalities = modalities_to_query
+            .unwrap_or_else(|| vec!["text", "image", "video", "diagram", "speech"]);
 
         let mut evidence_items = Vec::new();
         let mut modality_coverage = HashMap::new();
@@ -173,7 +172,7 @@ impl MultimodalEvidenceEnricher {
             if !evidence.is_empty() {
                 let avg_confidence: f32 =
                     evidence.iter().map(|e| e.confidence).sum::<f32>() / evidence.len() as f32;
-                
+
                 all_confidences.extend(evidence.iter().map(|e| e.confidence));
 
                 modality_coverage.insert(
@@ -235,70 +234,62 @@ impl MultimodalEvidenceEnricher {
         // PLACEHOLDER: In production, this would call the MultimodalRetriever
         // For now, return mock evidence for testing
         let mock_evidence = match modality {
-            "text" => vec![
-                ModalityEvidence {
-                    modality: "text".to_string(),
-                    confidence: 0.92,
-                    similarity: 0.88,
-                    content: format!("Text evidence supporting: {}", claim),
-                    citation: ModalityCitation {
-                        source_id: "doc-001".to_string(),
-                        source_uri: "doc:article-123".to_string(),
-                        page_number: Some(5),
-                        time_range: None,
-                        bbox: None,
-                        citation_confidence: 0.95,
-                    },
+            "text" => vec![ModalityEvidence {
+                modality: "text".to_string(),
+                confidence: 0.92,
+                similarity: 0.88,
+                content: format!("Text evidence supporting: {}", claim),
+                citation: ModalityCitation {
+                    source_id: "doc-001".to_string(),
+                    source_uri: "doc:article-123".to_string(),
+                    page_number: Some(5),
+                    time_range: None,
+                    bbox: None,
+                    citation_confidence: 0.95,
                 },
-            ],
-            "image" => vec![
-                ModalityEvidence {
-                    modality: "image".to_string(),
-                    confidence: 0.85,
-                    similarity: 0.82,
-                    content: format!("Visual content related to: {}", claim),
-                    citation: ModalityCitation {
-                        source_id: "img-001".to_string(),
-                        source_uri: "doc:image-456".to_string(),
-                        page_number: Some(3),
-                        time_range: None,
-                        bbox: Some([0.1, 0.2, 0.3, 0.4]),
-                        citation_confidence: 0.88,
-                    },
+            }],
+            "image" => vec![ModalityEvidence {
+                modality: "image".to_string(),
+                confidence: 0.85,
+                similarity: 0.82,
+                content: format!("Visual content related to: {}", claim),
+                citation: ModalityCitation {
+                    source_id: "img-001".to_string(),
+                    source_uri: "doc:image-456".to_string(),
+                    page_number: Some(3),
+                    time_range: None,
+                    bbox: Some([0.1, 0.2, 0.3, 0.4]),
+                    citation_confidence: 0.88,
                 },
-            ],
-            "video" => vec![
-                ModalityEvidence {
-                    modality: "video".to_string(),
-                    confidence: 0.88,
-                    similarity: 0.85,
-                    content: format!("Video segment discussing: {}", claim),
-                    citation: ModalityCitation {
-                        source_id: "vid-001".to_string(),
-                        source_uri: "doc:video-789".to_string(),
-                        page_number: None,
-                        time_range: Some([12000, 18000]), // 12s - 18s
-                        bbox: None,
-                        citation_confidence: 0.90,
-                    },
+            }],
+            "video" => vec![ModalityEvidence {
+                modality: "video".to_string(),
+                confidence: 0.88,
+                similarity: 0.85,
+                content: format!("Video segment discussing: {}", claim),
+                citation: ModalityCitation {
+                    source_id: "vid-001".to_string(),
+                    source_uri: "doc:video-789".to_string(),
+                    page_number: None,
+                    time_range: Some([12000, 18000]), // 12s - 18s
+                    bbox: None,
+                    citation_confidence: 0.90,
                 },
-            ],
-            "speech" => vec![
-                ModalityEvidence {
-                    modality: "speech".to_string(),
-                    confidence: 0.83,
-                    similarity: 0.79,
-                    content: format!("Speech excerpt mentioning: {}", claim),
-                    citation: ModalityCitation {
-                        source_id: "speech-001".to_string(),
-                        source_uri: "doc:transcript-321".to_string(),
-                        page_number: None,
-                        time_range: Some([5000, 8000]), // 5s - 8s
-                        bbox: None,
-                        citation_confidence: 0.85,
-                    },
+            }],
+            "speech" => vec![ModalityEvidence {
+                modality: "speech".to_string(),
+                confidence: 0.83,
+                similarity: 0.79,
+                content: format!("Speech excerpt mentioning: {}", claim),
+                citation: ModalityCitation {
+                    source_id: "speech-001".to_string(),
+                    source_uri: "doc:transcript-321".to_string(),
+                    page_number: None,
+                    time_range: Some([5000, 8000]), // 5s - 8s
+                    bbox: None,
+                    citation_confidence: 0.85,
                 },
-            ],
+            }],
             _ => vec![],
         };
 
@@ -463,22 +454,20 @@ mod tests {
         let evidence = MultimodalEvidence {
             id: Uuid::new_v4(),
             claim_id: "claim-001".to_string(),
-            evidence_items: vec![
-                ModalityEvidence {
-                    modality: "text".to_string(),
-                    confidence: 0.92,
-                    similarity: 0.88,
-                    content: "Text evidence".to_string(),
-                    citation: ModalityCitation {
-                        source_id: "doc-001".to_string(),
-                        source_uri: "doc:article".to_string(),
-                        page_number: Some(5),
-                        time_range: None,
-                        bbox: None,
-                        citation_confidence: 0.95,
-                    },
+            evidence_items: vec![ModalityEvidence {
+                modality: "text".to_string(),
+                confidence: 0.92,
+                similarity: 0.88,
+                content: "Text evidence".to_string(),
+                citation: ModalityCitation {
+                    source_id: "doc-001".to_string(),
+                    source_uri: "doc:article".to_string(),
+                    page_number: Some(5),
+                    time_range: None,
+                    bbox: None,
+                    citation_confidence: 0.95,
                 },
-            ],
+            }],
             overall_confidence: 0.92,
             fusion_score: 0.88,
             is_supportive: true,

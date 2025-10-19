@@ -94,18 +94,25 @@ impl FileStorage {
 
         serde_json::from_slice(&json).map_err(Into::into)
     }
-    
+
     /// Validate state before serialization
-    fn validate_state_for_serialization(&self, state: &WorkspaceState) -> Result<(), WorkspaceError> {
+    fn validate_state_for_serialization(
+        &self,
+        state: &WorkspaceState,
+    ) -> Result<(), WorkspaceError> {
         // Validate required fields
         if state.id.0 == uuid::Uuid::nil() {
-            return Err(WorkspaceError::Validation("State ID cannot be empty".to_string()));
+            return Err(WorkspaceError::Validation(
+                "State ID cannot be empty".to_string(),
+            ));
         }
-        
+
         if state.workspace_root.as_os_str().is_empty() {
-            return Err(WorkspaceError::Validation("Workspace root cannot be empty".to_string()));
+            return Err(WorkspaceError::Validation(
+                "Workspace root cannot be empty".to_string(),
+            ));
         }
-        
+
         // Validate file counts match actual files
         if state.files.len() != state.total_files {
             return Err(WorkspaceError::Validation(format!(
@@ -114,61 +121,73 @@ impl FileStorage {
                 state.files.len()
             )));
         }
-        
+
         // Validate timestamp consistency
         if state.captured_at != state.timestamp {
-            warn!("Timestamp mismatch in workspace state: captured_at={}, timestamp={}", 
-                  state.captured_at, state.timestamp);
+            warn!(
+                "Timestamp mismatch in workspace state: captured_at={}, timestamp={}",
+                state.captured_at, state.timestamp
+            );
         }
-        
+
         Ok(())
     }
-    
+
     /// Serialize state to compressed JSON
-    fn serialize_to_json_compressed(&self, state: &WorkspaceState) -> Result<Vec<u8>, WorkspaceError> {
+    fn serialize_to_json_compressed(
+        &self,
+        state: &WorkspaceState,
+    ) -> Result<Vec<u8>, WorkspaceError> {
         // Serialize to JSON
-        let json_data = serde_json::to_vec(state)
-            .map_err(|e| WorkspaceError::Serialization(e))?;
-        
+        let json_data = serde_json::to_vec(state).map_err(|e| WorkspaceError::Serialization(e))?;
+
         // Compress the JSON data
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-        encoder.write_all(&json_data)
+        encoder
+            .write_all(&json_data)
             .map_err(|e| WorkspaceError::Io(e))?;
-        
-        let compressed_data = encoder.finish()
-            .map_err(|e| WorkspaceError::Io(e))?;
-        
-        debug!("Serialized state {}: {} bytes -> {} bytes (compression ratio: {:.2})",
-               state.id,
-               json_data.len(),
-               compressed_data.len(),
-               json_data.len() as f64 / compressed_data.len() as f64);
-        
+
+        let compressed_data = encoder.finish().map_err(|e| WorkspaceError::Io(e))?;
+
+        debug!(
+            "Serialized state {}: {} bytes -> {} bytes (compression ratio: {:.2})",
+            state.id,
+            json_data.len(),
+            compressed_data.len(),
+            json_data.len() as f64 / compressed_data.len() as f64
+        );
+
         Ok(compressed_data)
     }
-    
+
     /// Verify serialization integrity
     fn verify_serialization_integrity(&self, serialized_data: &[u8]) -> Result<(), WorkspaceError> {
         // Check if data is not empty
         if serialized_data.is_empty() {
-            return Err(WorkspaceError::Validation("Serialized data cannot be empty".to_string()));
+            return Err(WorkspaceError::Validation(
+                "Serialized data cannot be empty".to_string(),
+            ));
         }
-        
+
         // Check minimum size (compressed data should be at least some bytes)
         if serialized_data.len() < 10 {
-            return Err(WorkspaceError::Validation("Serialized data too small to be valid".to_string()));
+            return Err(WorkspaceError::Validation(
+                "Serialized data too small to be valid".to_string(),
+            ));
         }
-        
+
         // Verify we can decompress the data
         let mut decoder = GzDecoder::new(serialized_data);
         let mut decompressed = Vec::new();
-        decoder.read_to_end(&mut decompressed)
-            .map_err(|e| WorkspaceError::Validation(format!("Decompression verification failed: {}", e)))?;
-        
+        decoder.read_to_end(&mut decompressed).map_err(|e| {
+            WorkspaceError::Validation(format!("Decompression verification failed: {}", e))
+        })?;
+
         // Verify we can parse the JSON
-        serde_json::from_slice::<WorkspaceState>(&decompressed)
-            .map_err(|e| WorkspaceError::Validation(format!("JSON parsing verification failed: {}", e)))?;
-        
+        serde_json::from_slice::<WorkspaceState>(&decompressed).map_err(|e| {
+            WorkspaceError::Validation(format!("JSON parsing verification failed: {}", e))
+        })?;
+
         Ok(())
     }
 }
@@ -332,33 +351,51 @@ impl StateStorage for FileStorage {
         match change {
             DiffChange::Add { path, content } => {
                 if path.to_string_lossy().is_empty() {
-                    return Err(WorkspaceError::DiffComputation("Add change has empty path".to_string()));
+                    return Err(WorkspaceError::DiffComputation(
+                        "Add change has empty path".to_string(),
+                    ));
                 }
                 if content.is_empty() {
-                    return Err(WorkspaceError::DiffComputation("Add change has empty content".to_string()));
+                    return Err(WorkspaceError::DiffComputation(
+                        "Add change has empty content".to_string(),
+                    ));
                 }
             }
             DiffChange::Remove { path } => {
                 if path.to_string_lossy().is_empty() {
-                    return Err(WorkspaceError::DiffComputation("Remove change has empty path".to_string()));
+                    return Err(WorkspaceError::DiffComputation(
+                        "Remove change has empty path".to_string(),
+                    ));
                 }
             }
-            DiffChange::Modify { path, old_content: _, new_content } => {
+            DiffChange::Modify {
+                path,
+                old_content: _,
+                new_content,
+            } => {
                 if path.to_string_lossy().is_empty() {
-                    return Err(WorkspaceError::DiffComputation("Modify change has empty path".to_string()));
+                    return Err(WorkspaceError::DiffComputation(
+                        "Modify change has empty path".to_string(),
+                    ));
                 }
                 if new_content.is_empty() {
-                    return Err(WorkspaceError::DiffComputation("Modify change has empty new content".to_string()));
+                    return Err(WorkspaceError::DiffComputation(
+                        "Modify change has empty new content".to_string(),
+                    ));
                 }
             }
             DiffChange::AddDirectory { path } => {
                 if path.to_string_lossy().is_empty() {
-                    return Err(WorkspaceError::DiffComputation("AddDirectory change has empty path".to_string()));
+                    return Err(WorkspaceError::DiffComputation(
+                        "AddDirectory change has empty path".to_string(),
+                    ));
                 }
             }
             DiffChange::RemoveDirectory { path } => {
                 if path.to_string_lossy().is_empty() {
-                    return Err(WorkspaceError::DiffComputation("RemoveDirectory change has empty path".to_string()));
+                    return Err(WorkspaceError::DiffComputation(
+                        "RemoveDirectory change has empty path".to_string(),
+                    ));
                 }
             }
         }
@@ -469,16 +506,16 @@ impl MemoryStorage {
         // 2. State validation: Validate state integrity during serialization
         // 3. Performance optimization: Use efficient serialization with compression
         // 4. Error handling: Handle serialization errors gracefully
-        
+
         // Validate state before serialization
         self.validate_state_for_serialization(state)?;
-        
+
         // Serialize to JSON with compression
         let serialized_data = self.serialize_to_json_compressed(state)?;
-        
+
         // Verify serialization integrity
         self.verify_serialization_integrity(&serialized_data)?;
-        
+
         // Return the original state (serialization is for storage, not transformation)
         Ok(state.clone())
     }
@@ -721,14 +758,15 @@ impl MemoryStorage {
 
     async fn cleanup_old_diffs(&self) -> Result<(), WorkspaceError> {
         let cutoff_time = chrono::Utc::now() - chrono::Duration::hours(24);
-        
+
         // For MemoryStorage, we don't have a base_path, so we'll clean up old diffs from memory
         let mut diffs = self.diffs.write().await;
-        let old_diffs: Vec<_> = diffs.iter()
+        let old_diffs: Vec<_> = diffs
+            .iter()
             .filter(|(_, diff)| diff.computed_at < cutoff_time)
             .map(|(key, _)| key.clone())
             .collect();
-        
+
         for key in old_diffs {
             diffs.remove(&key);
         }
@@ -736,18 +774,25 @@ impl MemoryStorage {
         debug!("Cleaned up old diffs from memory storage");
         Ok(())
     }
-    
+
     /// Validate state before serialization
-    fn validate_state_for_serialization(&self, state: &WorkspaceState) -> Result<(), WorkspaceError> {
+    fn validate_state_for_serialization(
+        &self,
+        state: &WorkspaceState,
+    ) -> Result<(), WorkspaceError> {
         // Validate required fields
         if state.id.0 == uuid::Uuid::nil() {
-            return Err(WorkspaceError::Validation("State ID cannot be empty".to_string()));
+            return Err(WorkspaceError::Validation(
+                "State ID cannot be empty".to_string(),
+            ));
         }
-        
+
         if state.workspace_root.as_os_str().is_empty() {
-            return Err(WorkspaceError::Validation("Workspace root cannot be empty".to_string()));
+            return Err(WorkspaceError::Validation(
+                "Workspace root cannot be empty".to_string(),
+            ));
         }
-        
+
         // Validate file counts match actual files
         if state.files.len() != state.total_files {
             return Err(WorkspaceError::Validation(format!(
@@ -756,61 +801,73 @@ impl MemoryStorage {
                 state.files.len()
             )));
         }
-        
+
         // Validate timestamp consistency
         if state.captured_at != state.timestamp {
-            warn!("Timestamp mismatch in workspace state: captured_at={}, timestamp={}", 
-                  state.captured_at, state.timestamp);
+            warn!(
+                "Timestamp mismatch in workspace state: captured_at={}, timestamp={}",
+                state.captured_at, state.timestamp
+            );
         }
-        
+
         Ok(())
     }
-    
+
     /// Serialize state to compressed JSON
-    fn serialize_to_json_compressed(&self, state: &WorkspaceState) -> Result<Vec<u8>, WorkspaceError> {
+    fn serialize_to_json_compressed(
+        &self,
+        state: &WorkspaceState,
+    ) -> Result<Vec<u8>, WorkspaceError> {
         // Serialize to JSON
-        let json_data = serde_json::to_vec(state)
-            .map_err(|e| WorkspaceError::Serialization(e))?;
-        
+        let json_data = serde_json::to_vec(state).map_err(|e| WorkspaceError::Serialization(e))?;
+
         // Compress the JSON data
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-        encoder.write_all(&json_data)
+        encoder
+            .write_all(&json_data)
             .map_err(|e| WorkspaceError::Io(e))?;
-        
-        let compressed_data = encoder.finish()
-            .map_err(|e| WorkspaceError::Io(e))?;
-        
-        debug!("Serialized state {}: {} bytes -> {} bytes (compression ratio: {:.2})",
-               state.id,
-               json_data.len(),
-               compressed_data.len(),
-               json_data.len() as f64 / compressed_data.len() as f64);
-        
+
+        let compressed_data = encoder.finish().map_err(|e| WorkspaceError::Io(e))?;
+
+        debug!(
+            "Serialized state {}: {} bytes -> {} bytes (compression ratio: {:.2})",
+            state.id,
+            json_data.len(),
+            compressed_data.len(),
+            json_data.len() as f64 / compressed_data.len() as f64
+        );
+
         Ok(compressed_data)
     }
-    
+
     /// Verify serialization integrity
     fn verify_serialization_integrity(&self, serialized_data: &[u8]) -> Result<(), WorkspaceError> {
         // Check if data is not empty
         if serialized_data.is_empty() {
-            return Err(WorkspaceError::Validation("Serialized data cannot be empty".to_string()));
+            return Err(WorkspaceError::Validation(
+                "Serialized data cannot be empty".to_string(),
+            ));
         }
-        
+
         // Check minimum size (compressed data should be at least some bytes)
         if serialized_data.len() < 10 {
-            return Err(WorkspaceError::Validation("Serialized data too small to be valid".to_string()));
+            return Err(WorkspaceError::Validation(
+                "Serialized data too small to be valid".to_string(),
+            ));
         }
-        
+
         // Verify we can decompress the data
         let mut decoder = GzDecoder::new(serialized_data);
         let mut decompressed = Vec::new();
-        decoder.read_to_end(&mut decompressed)
-            .map_err(|e| WorkspaceError::Validation(format!("Decompression verification failed: {}", e)))?;
-        
+        decoder.read_to_end(&mut decompressed).map_err(|e| {
+            WorkspaceError::Validation(format!("Decompression verification failed: {}", e))
+        })?;
+
         // Verify we can parse the JSON
-        serde_json::from_slice::<WorkspaceState>(&decompressed)
-            .map_err(|e| WorkspaceError::Validation(format!("JSON parsing verification failed: {}", e)))?;
-        
+        serde_json::from_slice::<WorkspaceState>(&decompressed).map_err(|e| {
+            WorkspaceError::Validation(format!("JSON parsing verification failed: {}", e))
+        })?;
+
         Ok(())
     }
 }
@@ -824,31 +881,32 @@ impl StateStorage for MemoryStorage {
 
         // Store in memory with proper serialization and thread-safe synchronization
         let serialized_state = self.serialize_state(state)?;
-        
+
         // Use timeout to prevent deadlocks and implement efficient locking
-        let store_result = tokio::time::timeout(
-            std::time::Duration::from_secs(5),
-            async {
-                let mut states = self.states.write().await;
-                states.insert(state.id.clone(), serialized_state);
-                
-                // Update metrics atomically
-                let mut metrics = self.metrics.write().await;
-                metrics.total_states_stored += 1;
-                metrics.total_storage_size_bytes += state.estimated_size_bytes();
-            }
-        ).await;
+        let store_result = tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            let mut states = self.states.write().await;
+            states.insert(state.id.clone(), serialized_state);
+
+            // Update metrics atomically
+            let mut metrics = self.metrics.write().await;
+            metrics.total_states_stored += 1;
+            metrics.total_storage_size_bytes += state.estimated_size_bytes();
+        })
+        .await;
 
         match store_result {
             Ok(_) => {
                 debug!("Stored workspace state {:?} in memory", state.id);
-                
+
                 // 4. Performance optimization: Optimize storage performance and scalability
                 self.optimize_storage_performance().await?;
                 Ok(())
             }
             Err(_) => {
-                error!("Timeout while storing state {:?} - possible deadlock", state.id);
+                error!(
+                    "Timeout while storing state {:?} - possible deadlock",
+                    state.id
+                );
                 Err(WorkspaceError::StorageTimeout(state.id.clone()))
             }
         }
@@ -856,13 +914,11 @@ impl StateStorage for MemoryStorage {
 
     async fn get_state(&self, id: StateId) -> Result<WorkspaceState, WorkspaceError> {
         // Use timeout to prevent deadlocks during read operations
-        let read_result = tokio::time::timeout(
-            std::time::Duration::from_secs(3),
-            async {
-                let states = self.states.read().await;
-                states.get(&id).cloned()
-            }
-        ).await;
+        let read_result = tokio::time::timeout(std::time::Duration::from_secs(3), async {
+            let states = self.states.read().await;
+            states.get(&id).cloned()
+        })
+        .await;
 
         match read_result {
             Ok(Some(state)) => {
@@ -886,41 +942,41 @@ impl StateStorage for MemoryStorage {
 
     async fn delete_state(&self, id: StateId) -> Result<(), WorkspaceError> {
         // Use timeout to prevent deadlocks during deletion
-        let delete_result = tokio::time::timeout(
-            std::time::Duration::from_secs(3),
-            async {
-                // 1. State validation: Validate state exists before deletion
-                let exists = {
-                    let states = self.states.read().await;
-                    states.contains_key(&id)
-                };
+        let delete_result = tokio::time::timeout(std::time::Duration::from_secs(3), async {
+            // 1. State validation: Validate state exists before deletion
+            let exists = {
+                let states = self.states.read().await;
+                states.contains_key(&id)
+            };
 
-                if !exists {
-                    return Err(WorkspaceError::StateNotFound(id));
-                }
-
-                // 2. State deletion: Delete state from memory storage atomically
-                let deleted_state = {
-                    let mut states = self.states.write().await;
-                    states.remove(&id)
-                };
-
-                // 3. Update metrics if deletion was successful
-                if deleted_state.is_some() {
-                    let mut metrics = self.metrics.write().await;
-                    metrics.total_states_stored = metrics.total_states_stored.saturating_sub(1);
-                    if let Some(state) = deleted_state {
-                        metrics.total_storage_size_bytes = metrics.total_storage_size_bytes.saturating_sub(state.estimated_size_bytes());
-                    }
-                    debug!("Deleted workspace state {:?} from memory", id);
-                    Ok(())
-                } else {
-                    Err(WorkspaceError::Storage(
-                        "Failed to delete state".to_string(),
-                    ))
-                }
+            if !exists {
+                return Err(WorkspaceError::StateNotFound(id));
             }
-        ).await;
+
+            // 2. State deletion: Delete state from memory storage atomically
+            let deleted_state = {
+                let mut states = self.states.write().await;
+                states.remove(&id)
+            };
+
+            // 3. Update metrics if deletion was successful
+            if deleted_state.is_some() {
+                let mut metrics = self.metrics.write().await;
+                metrics.total_states_stored = metrics.total_states_stored.saturating_sub(1);
+                if let Some(state) = deleted_state {
+                    metrics.total_storage_size_bytes = metrics
+                        .total_storage_size_bytes
+                        .saturating_sub(state.estimated_size_bytes());
+                }
+                debug!("Deleted workspace state {:?} from memory", id);
+                Ok(())
+            } else {
+                Err(WorkspaceError::Storage(
+                    "Failed to delete state".to_string(),
+                ))
+            }
+        })
+        .await;
 
         match delete_result {
             Ok(result) => {
@@ -977,7 +1033,6 @@ impl StateStorage for MemoryStorage {
         );
         Ok(())
     }
-
 
     async fn get_diff(&self, from: StateId, to: StateId) -> Result<WorkspaceDiff, WorkspaceError> {
         self.diffs
@@ -1048,7 +1103,11 @@ impl StateStorage for MemoryStorage {
                     ));
                 }
             }
-            DiffChange::Modify { path, old_content, new_content } => {
+            DiffChange::Modify {
+                path,
+                old_content,
+                new_content,
+            } => {
                 if path.as_os_str().is_empty() {
                     return Err(WorkspaceError::DiffComputation(
                         "Modify change path cannot be empty".to_string(),
@@ -1091,7 +1150,10 @@ impl StateStorage for MemoryStorage {
         // Estimate storage size (rough calculation)
         metrics.total_storage_size_bytes = (states_len * 1000 + diffs_len * 500) as u64;
 
-        debug!("Updated memory storage metrics: {} states, {} diffs, {} bytes", states_len, diffs_len, metrics.total_storage_size_bytes);
+        debug!(
+            "Updated memory storage metrics: {} states, {} diffs, {} bytes",
+            states_len, diffs_len, metrics.total_storage_size_bytes
+        );
         Ok(())
     }
 
@@ -1205,16 +1267,16 @@ impl DatabaseStorage {
         // 2. State validation: Validate state integrity during serialization
         // 3. Performance optimization: Use efficient serialization with compression
         // 4. Error handling: Handle serialization errors gracefully
-        
+
         // Validate state before serialization
         self.validate_state_for_serialization(state)?;
-        
+
         // Serialize to JSON with compression
         let serialized_data = self.serialize_to_json_compressed(state)?;
-        
+
         // Verify serialization integrity
         self.verify_serialization_integrity(&serialized_data)?;
-        
+
         // Return the original state (serialization is for storage, not transformation)
         Ok(state.clone())
     }
@@ -1318,18 +1380,25 @@ impl DatabaseStorage {
 
         Ok(())
     }
-    
+
     /// Validate state before serialization
-    fn validate_state_for_serialization(&self, state: &WorkspaceState) -> Result<(), WorkspaceError> {
+    fn validate_state_for_serialization(
+        &self,
+        state: &WorkspaceState,
+    ) -> Result<(), WorkspaceError> {
         // Validate required fields
         if state.id.0 == uuid::Uuid::nil() {
-            return Err(WorkspaceError::Validation("State ID cannot be empty".to_string()));
+            return Err(WorkspaceError::Validation(
+                "State ID cannot be empty".to_string(),
+            ));
         }
-        
+
         if state.workspace_root.as_os_str().is_empty() {
-            return Err(WorkspaceError::Validation("Workspace root cannot be empty".to_string()));
+            return Err(WorkspaceError::Validation(
+                "Workspace root cannot be empty".to_string(),
+            ));
         }
-        
+
         // Validate file counts match actual files
         if state.files.len() != state.total_files {
             return Err(WorkspaceError::Validation(format!(
@@ -1338,61 +1407,73 @@ impl DatabaseStorage {
                 state.files.len()
             )));
         }
-        
+
         // Validate timestamp consistency
         if state.captured_at != state.timestamp {
-            warn!("Timestamp mismatch in workspace state: captured_at={}, timestamp={}", 
-                  state.captured_at, state.timestamp);
+            warn!(
+                "Timestamp mismatch in workspace state: captured_at={}, timestamp={}",
+                state.captured_at, state.timestamp
+            );
         }
-        
+
         Ok(())
     }
-    
+
     /// Serialize state to compressed JSON
-    fn serialize_to_json_compressed(&self, state: &WorkspaceState) -> Result<Vec<u8>, WorkspaceError> {
+    fn serialize_to_json_compressed(
+        &self,
+        state: &WorkspaceState,
+    ) -> Result<Vec<u8>, WorkspaceError> {
         // Serialize to JSON
-        let json_data = serde_json::to_vec(state)
-            .map_err(|e| WorkspaceError::Serialization(e))?;
-        
+        let json_data = serde_json::to_vec(state).map_err(|e| WorkspaceError::Serialization(e))?;
+
         // Compress the JSON data
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-        encoder.write_all(&json_data)
+        encoder
+            .write_all(&json_data)
             .map_err(|e| WorkspaceError::Io(e))?;
-        
-        let compressed_data = encoder.finish()
-            .map_err(|e| WorkspaceError::Io(e))?;
-        
-        debug!("Serialized state {}: {} bytes -> {} bytes (compression ratio: {:.2})",
-               state.id,
-               json_data.len(),
-               compressed_data.len(),
-               json_data.len() as f64 / compressed_data.len() as f64);
-        
+
+        let compressed_data = encoder.finish().map_err(|e| WorkspaceError::Io(e))?;
+
+        debug!(
+            "Serialized state {}: {} bytes -> {} bytes (compression ratio: {:.2})",
+            state.id,
+            json_data.len(),
+            compressed_data.len(),
+            json_data.len() as f64 / compressed_data.len() as f64
+        );
+
         Ok(compressed_data)
     }
-    
+
     /// Verify serialization integrity
     fn verify_serialization_integrity(&self, serialized_data: &[u8]) -> Result<(), WorkspaceError> {
         // Check if data is not empty
         if serialized_data.is_empty() {
-            return Err(WorkspaceError::Validation("Serialized data cannot be empty".to_string()));
+            return Err(WorkspaceError::Validation(
+                "Serialized data cannot be empty".to_string(),
+            ));
         }
-        
+
         // Check minimum size (compressed data should be at least some bytes)
         if serialized_data.len() < 10 {
-            return Err(WorkspaceError::Validation("Serialized data too small to be valid".to_string()));
+            return Err(WorkspaceError::Validation(
+                "Serialized data too small to be valid".to_string(),
+            ));
         }
-        
+
         // Verify we can decompress the data
         let mut decoder = GzDecoder::new(serialized_data);
         let mut decompressed = Vec::new();
-        decoder.read_to_end(&mut decompressed)
-            .map_err(|e| WorkspaceError::Validation(format!("Decompression verification failed: {}", e)))?;
-        
+        decoder.read_to_end(&mut decompressed).map_err(|e| {
+            WorkspaceError::Validation(format!("Decompression verification failed: {}", e))
+        })?;
+
         // Verify we can parse the JSON
-        serde_json::from_slice::<WorkspaceState>(&decompressed)
-            .map_err(|e| WorkspaceError::Validation(format!("JSON parsing verification failed: {}", e)))?;
-        
+        serde_json::from_slice::<WorkspaceState>(&decompressed).map_err(|e| {
+            WorkspaceError::Validation(format!("JSON parsing verification failed: {}", e))
+        })?;
+
         Ok(())
     }
 }
@@ -1599,7 +1680,11 @@ impl StateStorage for DatabaseStorage {
             DiffChange::Remove { path: _ } => {
                 // Remove operations are always valid
             }
-            DiffChange::Modify { path: _, old_content, new_content } => {
+            DiffChange::Modify {
+                path: _,
+                old_content,
+                new_content,
+            } => {
                 if let Some(ref old) = old_content {
                     if old == new_content {
                         return Err(WorkspaceError::DiffComputation(
@@ -1627,13 +1712,11 @@ impl StateStorage for DatabaseStorage {
     async fn cleanup_old_diffs(&self) -> Result<(), WorkspaceError> {
         let cutoff_time = chrono::Utc::now() - chrono::Duration::hours(24);
 
-        let result = sqlx::query(
-            "DELETE FROM workspace_diffs WHERE computed_at < $1"
-        )
-        .bind(cutoff_time)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| WorkspaceError::Storage(format!("Failed to cleanup old diffs: {}", e)))?;
+        let result = sqlx::query("DELETE FROM workspace_diffs WHERE computed_at < $1")
+            .bind(cutoff_time)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| WorkspaceError::Storage(format!("Failed to cleanup old diffs: {}", e)))?;
 
         let deleted = result.rows_affected() as usize;
         if deleted > 0 {
@@ -1642,5 +1725,4 @@ impl StateStorage for DatabaseStorage {
 
         Ok(())
     }
-
 }

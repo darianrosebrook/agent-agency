@@ -4,9 +4,9 @@
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::fs;
 use uuid::Uuid;
 
 /// WhisperX transcription output structure
@@ -70,7 +70,7 @@ impl PythonBridge {
         // Write audio to temporary file
         let temp_dir = std::env::temp_dir();
         let audio_path = temp_dir.join(format!("audio_{}.wav", Uuid::new_v4()));
-        
+
         fs::write(&audio_path, audio_data)
             .map_err(|e| anyhow!("Failed to write temp audio file: {}", e))?;
 
@@ -89,7 +89,11 @@ impl PythonBridge {
             .arg("--output_format")
             .arg("json")
             .arg("--output_dir")
-            .arg(output_dir.to_str().ok_or_else(|| anyhow!("Invalid output path"))?)
+            .arg(
+                output_dir
+                    .to_str()
+                    .ok_or_else(|| anyhow!("Invalid output path"))?,
+            )
             .output()
             .map_err(|e| anyhow!("WhisperX subprocess failed: {}", e))?;
 
@@ -102,9 +106,8 @@ impl PythonBridge {
         let stdout_str = String::from_utf8(output.stdout)
             .map_err(|e| anyhow!("Failed to read WhisperX output: {}", e))?;
 
-        let whisperx_result: WhisperXOutput =
-            serde_json::from_str(&stdout_str)
-                .map_err(|e| anyhow!("Failed to parse WhisperX JSON: {}", e))?;
+        let whisperx_result: WhisperXOutput = serde_json::from_str(&stdout_str)
+            .map_err(|e| anyhow!("Failed to parse WhisperX JSON: {}", e))?;
 
         // Convert to AsrResult
         Self::convert_whisperx_to_asr_result(whisperx_result)
@@ -130,7 +133,7 @@ impl PythonBridge {
         // Write image to temporary file
         let temp_dir = std::env::temp_dir();
         let image_path = temp_dir.join(format!("image_{}.jpg", Uuid::new_v4()));
-        
+
         fs::write(&image_path, image_data)
             .map_err(|e| anyhow!("Failed to write temp image file: {}", e))?;
 
@@ -190,9 +193,8 @@ except Exception as e:
         let stdout_str = String::from_utf8(output.stdout)
             .map_err(|e| anyhow!("Failed to read BLIP output: {}", e))?;
 
-        let blip_result: BLIPCaptionResult =
-            serde_json::from_str(&stdout_str)
-                .map_err(|e| anyhow!("Failed to parse BLIP JSON: {}", e))?;
+        let blip_result: BLIPCaptionResult = serde_json::from_str(&stdout_str)
+            .map_err(|e| anyhow!("Failed to parse BLIP JSON: {}", e))?;
 
         // Convert to CaptionResult
         Ok(crate::types::CaptionResult {
@@ -204,11 +206,10 @@ except Exception as e:
     }
 
     /// Convert WhisperX output to AsrResult
-    fn convert_whisperx_to_asr_result(
-        whisperx: WhisperXOutput,
-    ) -> Result<crate::types::AsrResult> {
+    fn convert_whisperx_to_asr_result(whisperx: WhisperXOutput) -> Result<crate::types::AsrResult> {
         let mut segments = Vec::new();
-        let mut speaker_map: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        let mut speaker_map: std::collections::HashMap<String, usize> =
+            std::collections::HashMap::new();
 
         for segment in whisperx.segments {
             let mut word_timings = Vec::new();
@@ -288,11 +289,15 @@ except Exception as e:
             .output();
 
         if whisperx_check.is_err() {
-            return Err(anyhow!("whisperx not installed. Install with: pip install whisperx"));
+            return Err(anyhow!(
+                "whisperx not installed. Install with: pip install whisperx"
+            ));
         }
 
         if transformers_check.is_err() {
-            return Err(anyhow!("transformers not installed. Install with: pip install transformers"));
+            return Err(anyhow!(
+                "transformers not installed. Install with: pip install transformers"
+            ));
         }
 
         Ok(())
@@ -333,7 +338,7 @@ mod tests {
 
         let result = PythonBridge::convert_whisperx_to_asr_result(whisperx);
         assert!(result.is_ok());
-        
+
         let asr = result.unwrap();
         assert_eq!(asr.text, "Hello world");
         assert_eq!(asr.speech_turns.len(), 1);

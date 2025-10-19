@@ -328,7 +328,8 @@ impl DebateProtocol {
             };
 
             // Store the round
-            self.store_debate_round(session.session_id, round.clone()).await?;
+            self.store_debate_round(session.session_id, round.clone())
+                .await?;
 
             // Check if consensus can be reached after this round
             if let Some(consensus) = self.evaluate_round_consensus(&round).await? {
@@ -361,9 +362,14 @@ impl DebateProtocol {
             match verdict {
                 JudgeVerdict::Pass { .. } => supporting.push(judge_id.clone()),
                 JudgeVerdict::Fail { .. } => opposing.push(judge_id.clone()),
-                JudgeVerdict::Uncertain { concerns, recommendation, .. } => {
+                JudgeVerdict::Uncertain {
+                    concerns,
+                    recommendation,
+                    ..
+                } => {
                     // Intelligent assignment of uncertain judges based on analysis
-                    let assignment = self.assign_uncertain_judge(judge_id, verdict, &supporting, &opposing);
+                    let assignment =
+                        self.assign_uncertain_judge(judge_id, verdict, &supporting, &opposing);
                     match assignment {
                         JudgeAssignment::Supporting => supporting.push(judge_id.clone()),
                         JudgeAssignment::Opposing => opposing.push(judge_id.clone()),
@@ -387,21 +393,29 @@ impl DebateProtocol {
         supporting: &[JudgeId],
         opposing: &[JudgeId],
     ) -> JudgeAssignment {
-        if let JudgeVerdict::Uncertain { concerns, recommendation, reasoning, .. } = verdict {
+        if let JudgeVerdict::Uncertain {
+            concerns,
+            recommendation,
+            reasoning,
+            ..
+        } = verdict
+        {
             // Analyze uncertainty factors and make assignment decision
-            let assignment_score = self.calculate_assignment_score(concerns, recommendation, reasoning);
-            
+            let assignment_score =
+                self.calculate_assignment_score(concerns, recommendation, reasoning);
+
             // Consider debate balance when making assignment
             let balance_factor = self.calculate_balance_factor(supporting.len(), opposing.len());
-            
+
             // Make final assignment decision
-            let final_assignment = self.determine_final_assignment(assignment_score, balance_factor);
-            
+            let final_assignment =
+                self.determine_final_assignment(assignment_score, balance_factor);
+
             debug!(
                 "Assigned uncertain judge {} to {:?} (score: {:.2}, balance: {:.2})",
                 judge_id, final_assignment, assignment_score, balance_factor
             );
-            
+
             final_assignment
         } else {
             // Fallback for non-uncertain verdicts (shouldn't happen)
@@ -418,15 +432,15 @@ impl DebateProtocol {
         reasoning: &str,
     ) -> f32 {
         let mut score: f32 = 0.0;
-        
+
         // Analyze recommendation bias
         match recommendation {
-            Recommendation::Accept => score += 0.3,  // Leans supporting
-            Recommendation::Reject => score -= 0.3,  // Leans opposing
-            Recommendation::Modify => score += 0.1,  // Slightly supporting (wants improvement)
+            Recommendation::Accept => score += 0.3, // Leans supporting
+            Recommendation::Reject => score -= 0.3, // Leans opposing
+            Recommendation::Modify => score += 0.1, // Slightly supporting (wants improvement)
             Recommendation::Investigate => score += 0.0, // Neutral
         }
-        
+
         // Analyze concern severity and type
         for concern in concerns {
             let concern_weight = match concern.area.to_lowercase().as_str() {
@@ -434,19 +448,25 @@ impl DebateProtocol {
                 "performance" | "efficiency" | "optimization" => 0.1, // Performance concerns lean supporting
                 "usability" | "user_experience" => 0.05, // UX concerns slightly supporting
                 "maintainability" | "code_quality" => 0.1, // Code quality concerns lean supporting
-                _ => 0.0, // Neutral for unknown concern types
+                _ => 0.0,                                // Neutral for unknown concern types
             };
             score += concern_weight;
         }
-        
+
         // Analyze reasoning sentiment (simplified)
         let reasoning_lower = reasoning.to_lowercase();
-        if reasoning_lower.contains("acceptable") || reasoning_lower.contains("good") || reasoning_lower.contains("positive") {
+        if reasoning_lower.contains("acceptable")
+            || reasoning_lower.contains("good")
+            || reasoning_lower.contains("positive")
+        {
             score += 0.1;
-        } else if reasoning_lower.contains("problematic") || reasoning_lower.contains("concerning") || reasoning_lower.contains("risky") {
+        } else if reasoning_lower.contains("problematic")
+            || reasoning_lower.contains("concerning")
+            || reasoning_lower.contains("risky")
+        {
             score -= 0.1;
         }
-        
+
         // Clamp score to [-1.0, 1.0] range
         score.max(-1.0_f32).min(1.0_f32)
     }
@@ -456,15 +476,15 @@ impl DebateProtocol {
         if supporting_count == 0 && opposing_count == 0 {
             return 0.0; // No preference when no judges assigned yet
         }
-        
+
         let total = supporting_count + opposing_count;
         if total == 0 {
             return 0.0;
         }
-        
+
         let supporting_ratio = supporting_count as f32 / total as f32;
         let opposing_ratio = opposing_count as f32 / total as f32;
-        
+
         // Prefer assignment to the smaller side to maintain balance
         if supporting_ratio < opposing_ratio {
             0.2 // Bias toward supporting
@@ -476,9 +496,13 @@ impl DebateProtocol {
     }
 
     /// Determine final assignment based on score and balance
-    fn determine_final_assignment(&self, assignment_score: f32, balance_factor: f32) -> JudgeAssignment {
+    fn determine_final_assignment(
+        &self,
+        assignment_score: f32,
+        balance_factor: f32,
+    ) -> JudgeAssignment {
         let final_score = assignment_score + balance_factor;
-        
+
         if final_score > 0.2 {
             JudgeAssignment::Supporting
         } else if final_score < -0.2 {
@@ -543,10 +567,18 @@ impl DebateProtocol {
         // - Research result integration with debate arguments
         // - Multi-source research coordination and synthesis
         // Implement comprehensive research findings integration
-        let research_coordination = self.coordinate_multi_source_research(task_id, arguments).await?;
-        let research_integration = self.integrate_research_with_arguments(&research_coordination, arguments).await?;
-        let research_validation = self.validate_research_findings(&research_integration).await?;
-        let research_analytics = self.analyze_research_effectiveness(&research_validation).await?;
+        let research_coordination = self
+            .coordinate_multi_source_research(task_id, arguments)
+            .await?;
+        let research_integration = self
+            .integrate_research_with_arguments(&research_coordination, arguments)
+            .await?;
+        let research_validation = self
+            .validate_research_findings(&research_integration)
+            .await?;
+        let research_analytics = self
+            .analyze_research_effectiveness(&research_validation)
+            .await?;
 
         Ok(ResearchInput {
             research_agent_id: "research-agent-001".to_string(),
@@ -622,7 +654,10 @@ impl DebateProtocol {
         let coordination_quality = if research_sources.is_empty() {
             0.0
         } else {
-            let avg_reliability: f32 = research_sources.iter().map(|s| s.reliability_score).sum::<f32>()
+            let avg_reliability: f32 = research_sources
+                .iter()
+                .map(|s| s.reliability_score)
+                .sum::<f32>()
                 / research_sources.len() as f32;
             let source_diversity = (research_sources.len() as f32 / 5.0).min(1.0); // Max 5 source types
             (avg_reliability + source_diversity) / 2.0
@@ -661,8 +696,7 @@ impl DebateProtocol {
                 // Check if finding is relevant to this argument's evidence
                 let is_relevant = argument.evidence_cited.iter().any(|e| {
                     let source_str = format!("{:?}", e.source);
-                    finding.sources.contains(&source_str)
-                        || finding.topic.contains(&source_str)
+                    finding.sources.contains(&source_str) || finding.topic.contains(&source_str)
                 });
 
                 if is_relevant {
@@ -798,12 +832,16 @@ impl DebateProtocol {
         // Calculate average effectiveness metrics
         if !research_validation.validated_findings.is_empty() {
             let finding_count = research_validation.validated_findings.len() as f32;
-            effectiveness_metrics.average_relevance = effectiveness_metrics.total_relevance / finding_count;
-            effectiveness_metrics.average_impact = effectiveness_metrics.total_impact / finding_count;
+            effectiveness_metrics.average_relevance =
+                effectiveness_metrics.total_relevance / finding_count;
+            effectiveness_metrics.average_impact =
+                effectiveness_metrics.total_impact / finding_count;
         }
 
         // Generate overall confidence score
-        let overall_confidence = (research_validation.overall_confidence + effectiveness_metrics.average_relevance) / 2.0;
+        let overall_confidence = (research_validation.overall_confidence
+            + effectiveness_metrics.average_relevance)
+            / 2.0;
 
         tracing::info!(
             "Effectiveness analysis: avg_relevance={:.2}, avg_impact={:.2}, overall_confidence={:.2}",
@@ -1029,7 +1067,7 @@ impl DebateProtocol {
 
         // Analyze argument reasoning to identify research gaps
         let reasoning_lower = argument.reasoning.to_lowercase();
-        
+
         // Identify potential research sources based on argument content
         if reasoning_lower.contains("security") || reasoning_lower.contains("safety") {
             sources.push(ResearchSource {
@@ -1068,7 +1106,10 @@ impl DebateProtocol {
     }
 
     /// Execute multi-source research
-    async fn execute_multi_source_research(&self, sources: &[ResearchSource]) -> Result<Vec<ResearchFinding>> {
+    async fn execute_multi_source_research(
+        &self,
+        sources: &[ResearchSource],
+    ) -> Result<Vec<ResearchFinding>> {
         let mut findings = Vec::new();
 
         for source in sources {
@@ -1076,31 +1117,46 @@ impl DebateProtocol {
             let finding = match source.source_type {
                 SourceType::Academic => ResearchFinding {
                     topic: "Academic Research".to_string(),
-                    finding: format!("Academic research supports the argument with {} confidence", source.reliability_score),
+                    finding: format!(
+                        "Academic research supports the argument with {} confidence",
+                        source.reliability_score
+                    ),
                     relevance: source.reliability_score,
                     sources: vec![source.source_id.clone()],
                 },
                 SourceType::Industry => ResearchFinding {
                     topic: "Industry Practice".to_string(),
-                    finding: format!("Industry practices align with the argument (reliability: {})", source.reliability_score),
+                    finding: format!(
+                        "Industry practices align with the argument (reliability: {})",
+                        source.reliability_score
+                    ),
                     relevance: source.reliability_score,
                     sources: vec![source.source_id.clone()],
                 },
                 SourceType::Technical => ResearchFinding {
                     topic: "Technical Analysis".to_string(),
-                    finding: format!("Technical analysis confirms the argument (score: {})", source.reliability_score),
+                    finding: format!(
+                        "Technical analysis confirms the argument (score: {})",
+                        source.reliability_score
+                    ),
                     relevance: source.reliability_score,
                     sources: vec![source.source_id.clone()],
                 },
                 SourceType::Government => ResearchFinding {
                     topic: "Regulatory Compliance".to_string(),
-                    finding: format!("Regulatory requirements support the argument (compliance: {})", source.reliability_score),
+                    finding: format!(
+                        "Regulatory requirements support the argument (compliance: {})",
+                        source.reliability_score
+                    ),
                     relevance: source.reliability_score,
                     sources: vec![source.source_id.clone()],
                 },
                 SourceType::Community => ResearchFinding {
                     topic: "Community Feedback".to_string(),
-                    finding: format!("Community consensus aligns with the argument (support: {})", source.reliability_score),
+                    finding: format!(
+                        "Community consensus aligns with the argument (support: {})",
+                        source.reliability_score
+                    ),
                     relevance: source.reliability_score,
                     sources: vec![source.source_id.clone()],
                 },
@@ -1122,18 +1178,29 @@ impl DebateProtocol {
         // Group findings by topic and synthesize
         let mut topic_groups: HashMap<String, Vec<&ResearchFinding>> = HashMap::new();
         for finding in findings {
-            topic_groups.entry(finding.topic.clone()).or_insert_with(Vec::new).push(finding);
+            topic_groups
+                .entry(finding.topic.clone())
+                .or_insert_with(Vec::new)
+                .push(finding);
         }
 
         for (topic, topic_findings) in topic_groups {
             if topic_findings.len() > 1 {
                 // Synthesize multiple findings for the same topic
-                let avg_relevance = topic_findings.iter().map(|f| f.relevance).sum::<f32>() / topic_findings.len() as f32;
-                let all_sources: Vec<String> = topic_findings.iter().flat_map(|f| f.sources.clone()).collect();
-                
+                let avg_relevance = topic_findings.iter().map(|f| f.relevance).sum::<f32>()
+                    / topic_findings.len() as f32;
+                let all_sources: Vec<String> = topic_findings
+                    .iter()
+                    .flat_map(|f| f.sources.clone())
+                    .collect();
+
                 synthesized.push(ResearchFinding {
                     topic: format!("Synthesized: {}", topic),
-                    finding: format!("Synthesized findings from {} sources with average relevance {:.2}", topic_findings.len(), avg_relevance),
+                    finding: format!(
+                        "Synthesized findings from {} sources with average relevance {:.2}",
+                        topic_findings.len(),
+                        avg_relevance
+                    ),
                     relevance: avg_relevance,
                     sources: all_sources,
                 });
@@ -1152,9 +1219,14 @@ impl DebateProtocol {
             return 0.0;
         }
 
-        let avg_relevance = findings.iter().map(|f| f.relevance).sum::<f32>() / findings.len() as f32;
-        let source_diversity = findings.iter().flat_map(|f| &f.sources).collect::<std::collections::HashSet<_>>().len() as f32;
-        
+        let avg_relevance =
+            findings.iter().map(|f| f.relevance).sum::<f32>() / findings.len() as f32;
+        let source_diversity = findings
+            .iter()
+            .flat_map(|f| &f.sources)
+            .collect::<std::collections::HashSet<_>>()
+            .len() as f32;
+
         // Quality score based on relevance and source diversity
         (avg_relevance + (source_diversity / 10.0).min(0.3)) / 1.3
     }
@@ -1171,7 +1243,7 @@ impl DebateProtocol {
         // Add research findings to reasoning
         for finding in findings {
             enhanced_reasoning.push_str(&format!("\n\nResearch Finding: {}", finding.finding));
-            
+
             // Convert research finding to evidence
             enhanced_evidence.push(crate::types::Evidence {
                 source: crate::types::EvidenceSource::CodeAnalysis, // PLACEHOLDER: Use appropriate source
@@ -1200,13 +1272,14 @@ impl DebateProtocol {
             return 0.0;
         }
 
-        let total_evidence = enhanced_arguments.values()
+        let total_evidence = enhanced_arguments
+            .values()
             .map(|arg| arg.evidence_cited.len())
             .sum::<usize>() as f32;
-        
+
         let avg_evidence_per_argument = total_evidence / enhanced_arguments.len() as f32;
         let findings_utilization = (avg_evidence_per_argument / findings.len() as f32).min(1.0);
-        
+
         findings_utilization
     }
 
@@ -1235,15 +1308,22 @@ impl DebateProtocol {
 
         Ok(ValidationResult {
             is_valid,
-            error_message: if error_message.is_empty() { "Valid".to_string() } else { error_message },
+            error_message: if error_message.is_empty() {
+                "Valid".to_string()
+            } else {
+                error_message
+            },
         })
     }
 
     /// Analyze finding effectiveness
-    async fn analyze_finding_effectiveness(&self, finding: &ResearchFinding) -> Result<FindingEffectiveness> {
+    async fn analyze_finding_effectiveness(
+        &self,
+        finding: &ResearchFinding,
+    ) -> Result<FindingEffectiveness> {
         let relevance_score = finding.relevance;
         let impact_score = (finding.finding.len() as f32 / 100.0).min(1.0); // Based on content length
-        
+
         let mut effectiveness_factors = Vec::new();
         if relevance_score > 0.8 {
             effectiveness_factors.push("high-relevance".to_string());

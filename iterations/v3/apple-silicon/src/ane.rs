@@ -3,19 +3,19 @@
 //! Manages Apple Neural Engine for optimized inference on Apple Silicon.
 
 use anyhow::Result;
-use core_foundation::runloop::CFRunLoopGetCurrent;
-use once_cell::sync::Lazy;
-use std::os::raw::c_void;
-use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
-use std::path::Path;
 use core_foundation::bundle::CFBundle;
+use core_foundation::runloop::CFRunLoopGetCurrent;
 use core_foundation::string::CFString;
 use core_foundation::url::CFURL;
 #[cfg(target_os = "macos")]
 use objc::runtime::Class;
+use once_cell::sync::Lazy;
+use std::collections::HashMap;
+use std::os::raw::c_void;
+use std::path::Path;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use tracing::{debug, info, warn};
 
 /// Apple Neural Engine manager for ANE-accelerated inference
 #[derive(Debug)]
@@ -107,7 +107,7 @@ unsafe impl Sync for AneDeviceClassHandle {}
 struct ANEDeviceHandle {
     device_id: String,
     compute_units: u32,
-    memory_size: u32,
+    memory_size: u64,
     is_initialized: bool,
     created_at: std::time::Instant,
 }
@@ -140,11 +140,12 @@ enum QueuePriority {
 }
 
 #[cfg(target_os = "macos")]
-static ANE_DEVICE_CLASS: Lazy<std::result::Result<AneDeviceClassHandle, &'static str>> = Lazy::new(|| {
-    Class::get("ANEDevice")
-        .map(AneDeviceClassHandle::new)
-        .ok_or("ANEDevice Objective-C class not found")
-});
+static ANE_DEVICE_CLASS: Lazy<std::result::Result<AneDeviceClassHandle, &'static str>> =
+    Lazy::new(|| {
+        Class::get("ANEDevice")
+            .map(AneDeviceClassHandle::new)
+            .ok_or("ANEDevice Objective-C class not found")
+    });
 
 impl ANEManager {
     /// Create a new ANE manager
@@ -438,7 +439,7 @@ impl ANEManager {
                 // 2. Runtime integration: Integrate with Objective-C runtime for ANE operations
                 // 3. Security and permissions: Validate framework loading permissions and security
                 // 4. Error handling: Handle framework loading failures and edge cases gracefully
-                
+
                 match self.load_ane_framework_sync(path) {
                     Ok(_) => {
                         info!("Successfully loaded ANE framework from: {}", path);
@@ -512,10 +513,7 @@ impl ANEManager {
                 Ok(handle) => handle,
                 Err(err) => {
                     let err = *err;
-                    warn!(
-                        "Failed to resolve ANEDevice Objective-C class: {}",
-                        err
-                    );
+                    warn!("Failed to resolve ANEDevice Objective-C class: {}", err);
                     return Err(anyhow::anyhow!(
                         "Failed to resolve ANEDevice Objective-C class: {}",
                         err
@@ -543,7 +541,8 @@ impl ANEManager {
             // Configure device with detected capabilities
             let compute_units = self.device_capabilities.compute_units as u32;
             let precision = CFString::new("fp16");
-            self.configure_ane_device(&ane_device, compute_units, &precision).await?;
+            self.configure_ane_device(&ane_device, compute_units, &precision)
+                .await?;
 
             // 2. Configure device parameters and performance settings
             let performance_queue = self.create_performance_queue().await?;
@@ -557,7 +556,10 @@ impl ANEManager {
 
             // Ensure device context remains valid for lifecycle of manager
             let run_loop = unsafe { CFRunLoopGetCurrent() };
-            debug!("ANE device context registered with run loop: {:p}", run_loop);
+            debug!(
+                "ANE device context registered with run loop: {:p}",
+                run_loop
+            );
         }
 
         #[cfg(not(target_os = "macos"))]
@@ -1068,8 +1070,8 @@ impl ANEManager {
             request_id: request.id,
             output: raw_output,
             inference_time_ms,
-        tokens_generated: 100, // Mock value for now
-        tokens_per_second: 1000.0 / (inference_time_ms as f32 / 1000.0), // Mock calculation
+            tokens_generated: 100, // Mock value for now
+            tokens_per_second: 1000.0 / (inference_time_ms as f32 / 1000.0), // Mock calculation
             optimization_target_used: crate::types::OptimizationTarget::ANE,
             resource_usage: crate::types::ResourceUsage {
                 cpu_percent: 5.0,
@@ -1485,73 +1487,80 @@ impl ANEManager {
         );
         Ok(())
     }
-    
+
     /// Load ANE framework using Objective-C runtime (synchronous version)
     fn load_ane_framework_sync(&self, framework_path: &str) -> Result<()> {
         // Validate framework path and permissions
         self.validate_framework_path(framework_path)?;
-        
+
         // Load framework bundle
         let bundle = self.load_framework_bundle(framework_path)?;
-        
+
         // Initialize ANE runtime
         self.initialize_ane_runtime(&bundle)?;
-        
+
         // Verify framework functionality
         self.verify_framework_functionality()?;
-        
+
         info!("ANE framework loaded successfully from: {}", framework_path);
         Ok(())
     }
-    
+
     /// Validate framework path and permissions
     fn validate_framework_path(&self, path: &str) -> Result<()> {
         let framework_path = Path::new(path);
-        
+
         // Check if path exists
         if !framework_path.exists() {
             return Err(anyhow::anyhow!("Framework path does not exist: {}", path));
         }
-        
+
         // Check if it's a directory
         if !framework_path.is_dir() {
-            return Err(anyhow::anyhow!("Framework path is not a directory: {}", path));
+            return Err(anyhow::anyhow!(
+                "Framework path is not a directory: {}",
+                path
+            ));
         }
-        
+
         // Check for Info.plist (required for framework bundles)
         let info_plist = framework_path.join("Info.plist");
         if !info_plist.exists() {
             return Err(anyhow::anyhow!("Framework missing Info.plist: {}", path));
         }
-        
+
         // Check for executable binary
-        let framework_name = framework_path.file_stem()
+        let framework_name = framework_path
+            .file_stem()
             .and_then(|s| s.to_str())
             .ok_or_else(|| anyhow::anyhow!("Invalid framework name"))?;
-        
+
         let binary_path = framework_path.join(framework_name);
         if !binary_path.exists() {
-            return Err(anyhow::anyhow!("Framework binary not found: {}", binary_path.display()));
+            return Err(anyhow::anyhow!(
+                "Framework binary not found: {}",
+                binary_path.display()
+            ));
         }
-        
+
         debug!("Framework path validation passed: {}", path);
         Ok(())
     }
-    
+
     /// Load framework bundle using Core Foundation
     fn load_framework_bundle(&self, framework_path: &str) -> Result<CFBundle> {
         // Convert path to CFURL
         let cf_string = CFString::new(framework_path);
         let url = CFURL::from_file_system_path(cf_string, 0, true);
-        
+
         // Load the framework bundle
         let bundle = CFBundle::new(url)
             .ok_or_else(|| anyhow::anyhow!("Failed to create CFBundle from URL"))?;
-        
+
         debug!("Framework bundle loaded successfully: {}", framework_path);
         Ok(bundle)
     }
-    
+
     /// Initialize ANE runtime
     fn initialize_ane_runtime(&self, _bundle: &CFBundle) -> Result<()> {
         // TODO: Implement ANE runtime initialization with the following requirements:
@@ -1576,20 +1585,20 @@ impl ANEManager {
         //    - Implement runtime validation and quality assurance
         //    - Ensure ANE runtime initialization meets performance and reliability standards
         debug!("Initializing ANE runtime for framework bundle");
-        
+
         // Load framework symbols (simulated - would use actual ANE APIs)
         self.load_framework_symbols(_bundle)?;
-        
+
         // Initialize ANE device context
         self.initialize_device_context_sync()?;
-        
+
         // Set up error handling
         self.setup_error_handling()?;
-        
+
         info!("ANE runtime initialized successfully");
         Ok(())
     }
-    
+
     /// Load framework symbols (simulated implementation)
     fn load_framework_symbols(&self, _bundle: &CFBundle) -> Result<()> {
         // TODO: Implement ANE framework symbol loading with the following requirements:
@@ -1613,11 +1622,11 @@ impl ANEManager {
         //    - Handle framework symbol monitoring and analytics
         //    - Implement framework symbol validation and quality assurance
         //    - Ensure ANE framework symbol loading meets performance and reliability standards
-        
+
         debug!("Framework symbols loaded (simulated)");
         Ok(())
     }
-    
+
     /// Initialize ANE device context (synchronous version)
     fn initialize_device_context_sync(&self) -> Result<()> {
         // TODO: Implement ANE device context initialization with the following requirements:
@@ -1641,11 +1650,11 @@ impl ANEManager {
         //    - Handle device context monitoring and analytics
         //    - Implement device context validation and quality assurance
         //    - Ensure ANE device context initialization meets performance and reliability standards
-        
+
         debug!("ANE device context initialized (simulated)");
         Ok(())
     }
-    
+
     /// Set up error handling for ANE operations
     fn setup_error_handling(&self) -> Result<()> {
         // TODO: Implement ANE error handling setup with the following requirements:
@@ -1669,11 +1678,11 @@ impl ANEManager {
         //    - Handle error handling monitoring and analytics
         //    - Implement error handling validation and quality assurance
         //    - Ensure ANE error handling setup meets performance and reliability standards
-        
+
         debug!("ANE error handling configured (simulated)");
         Ok(())
     }
-    
+
     /// Verify framework functionality
     fn verify_framework_functionality(&self) -> Result<()> {
         // TODO: Implement ANE framework functionality verification with the following requirements:
@@ -1697,7 +1706,7 @@ impl ANEManager {
         //    - Handle framework verification monitoring and analytics
         //    - Implement framework verification validation and quality assurance
         //    - Ensure ANE framework functionality verification meets performance and reliability standards
-        
+
         debug!("ANE framework functionality verified (simulated)");
         Ok(())
     }
@@ -1706,9 +1715,9 @@ impl ANEManager {
     async fn create_ane_device_instance(&self) -> Result<ANEDeviceHandle> {
         // Simulate ANE device creation with proper error handling
         // In a real implementation, this would use proper Objective-C interop
-        
+
         // Check if ANE is available on this system
-        if !self.is_ane_available().await? {
+        if !self.is_ane_available().await {
             return Err(anyhow::anyhow!("ANE not available on this system"));
         }
 
@@ -1716,7 +1725,7 @@ impl ANEManager {
         let device_handle = ANEDeviceHandle {
             device_id: uuid::Uuid::new_v4().to_string(),
             compute_units: self.device_capabilities.compute_units as u32,
-            memory_size: self.device_capabilities.memory_size,
+            memory_size: self.device_capabilities.max_memory_mb as u64,
             is_initialized: true,
             created_at: std::time::Instant::now(),
         };
@@ -1743,7 +1752,7 @@ impl ANEManager {
         // In a real implementation, this would configure the actual ANE device
         // For now, we'll simulate the configuration
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-        
+
         debug!("ANE device configuration completed");
         Ok(())
     }
@@ -1765,12 +1774,15 @@ impl ANEManager {
     /// Configure memory management for ANE device
     async fn configure_memory_management(&self, device: &ANEDeviceHandle) -> Result<()> {
         // Configure memory management for the ANE device
-        debug!("Configuring memory management for ANE device: {}", device.device_id);
-        
+        debug!(
+            "Configuring memory management for ANE device: {}",
+            device.device_id
+        );
+
         // In a real implementation, this would configure memory pools and allocation strategies
         // For now, we'll simulate the configuration
         tokio::time::sleep(std::time::Duration::from_millis(5)).await;
-        
+
         debug!("Memory management configuration completed");
         Ok(())
     }
@@ -1787,34 +1799,6 @@ impl ANEManager {
 
         debug!("ANE command queue created: {}", command_queue.queue_id);
         Ok(command_queue)
-    }
-
-    /// Check if ANE is available on this system
-    async fn is_ane_available(&self) -> Result<bool> {
-        // Check if ANE is available on this system
-        // In a real implementation, this would check system capabilities
-        
-        #[cfg(target_os = "macos")]
-        {
-            // Check if we're running on Apple Silicon
-            let arch = std::env::consts::ARCH;
-            let is_apple_silicon = arch == "aarch64" || arch == "arm64";
-            
-            if !is_apple_silicon {
-                warn!("ANE not available: not running on Apple Silicon (arch: {})", arch);
-                return Ok(false);
-            }
-            
-            // Check if ANE framework is available
-            // This is a simplified check - in reality, you'd check for the actual framework
-            Ok(true)
-        }
-        
-        #[cfg(not(target_os = "macos"))]
-        {
-            warn!("ANE not available: not running on macOS");
-            Ok(false)
-        }
     }
 }
 

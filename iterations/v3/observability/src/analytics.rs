@@ -329,27 +329,21 @@ impl AnalyticsEngine {
 
         // Extract values based on metric name
         let values = match metric_name {
-            "throughput" => {
-                data
-                    .business_metrics_history
-                    .iter()
-                    .map(|snapshot| snapshot.throughput_tasks_per_hour)
-                    .collect::<Vec<f64>>()
-            }
-            "completion_rate" => {
-                data
-                    .agent_performance_history
-                    .iter()
-                    .map(|snapshot| snapshot.success_rate)
-                    .collect::<Vec<f64>>()
-            }
-            "quality_score" => {
-                data
-                    .business_metrics_history
-                    .iter()
-                    .map(|snapshot| snapshot.customer_satisfaction)
-                    .collect::<Vec<f64>>()
-            }
+            "throughput" => data
+                .business_metrics_history
+                .iter()
+                .map(|snapshot| snapshot.throughput_tasks_per_hour)
+                .collect::<Vec<f64>>(),
+            "completion_rate" => data
+                .agent_performance_history
+                .iter()
+                .map(|snapshot| snapshot.success_rate)
+                .collect::<Vec<f64>>(),
+            "quality_score" => data
+                .business_metrics_history
+                .iter()
+                .map(|snapshot| snapshot.customer_satisfaction)
+                .collect::<Vec<f64>>(),
             _ => {
                 return Ok(TrendAnalysis {
                     direction: TrendDirection::Stable,
@@ -410,27 +404,21 @@ impl AnalyticsEngine {
 
         // Extract values based on metric name
         let values = match metric_name {
-            "throughput" => {
-                data
-                    .business_metrics_history
-                    .iter()
-                    .map(|snapshot| snapshot.throughput_tasks_per_hour)
-                    .collect::<Vec<f64>>()
-            }
-            "completion_rate" => {
-                data
-                    .agent_performance_history
-                    .iter()
-                    .map(|snapshot| snapshot.success_rate)
-                    .collect::<Vec<f64>>()
-            }
-            "quality_score" => {
-                data
-                    .business_metrics_history
-                    .iter()
-                    .map(|snapshot| snapshot.customer_satisfaction)
-                    .collect::<Vec<f64>>()
-            }
+            "throughput" => data
+                .business_metrics_history
+                .iter()
+                .map(|snapshot| snapshot.throughput_tasks_per_hour)
+                .collect::<Vec<f64>>(),
+            "completion_rate" => data
+                .agent_performance_history
+                .iter()
+                .map(|snapshot| snapshot.success_rate)
+                .collect::<Vec<f64>>(),
+            "quality_score" => data
+                .business_metrics_history
+                .iter()
+                .map(|snapshot| snapshot.customer_satisfaction)
+                .collect::<Vec<f64>>(),
             _ => return Ok(Vec::new()),
         };
 
@@ -440,11 +428,7 @@ impl AnalyticsEngine {
 
         // Calculate statistical measures
         let mean = values.iter().sum::<f64>() / values.len() as f64;
-        let variance = values
-            .iter()
-            .map(|x| (x - mean).powi(2))
-            .sum::<f64>()
-            / values.len() as f64;
+        let variance = values.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / values.len() as f64;
         let std_dev = variance.sqrt();
 
         let mut anomalies = Vec::new();
@@ -495,27 +479,21 @@ impl AnalyticsEngine {
 
         // Extract values based on metric name
         let values = match metric_name {
-            "throughput" => {
-                data
-                    .business_metrics_history
-                    .iter()
-                    .map(|snapshot| snapshot.throughput_tasks_per_hour)
-                    .collect::<Vec<f64>>()
-            }
-            "completion_rate" => {
-                data
-                    .agent_performance_history
-                    .iter()
-                    .map(|snapshot| snapshot.success_rate)
-                    .collect::<Vec<f64>>()
-            }
-            "quality_score" => {
-                data
-                    .business_metrics_history
-                    .iter()
-                    .map(|snapshot| snapshot.customer_satisfaction)
-                    .collect::<Vec<f64>>()
-            }
+            "throughput" => data
+                .business_metrics_history
+                .iter()
+                .map(|snapshot| snapshot.throughput_tasks_per_hour)
+                .collect::<Vec<f64>>(),
+            "completion_rate" => data
+                .agent_performance_history
+                .iter()
+                .map(|snapshot| snapshot.success_rate)
+                .collect::<Vec<f64>>(),
+            "quality_score" => data
+                .business_metrics_history
+                .iter()
+                .map(|snapshot| snapshot.customer_satisfaction)
+                .collect::<Vec<f64>>(),
             _ => {
                 return Ok(PredictiveModelResult {
                     model_name: "default".to_string(),
@@ -552,9 +530,7 @@ impl AnalyticsEngine {
             .enumerate()
             .map(|(i, &y)| i as f64 * y)
             .sum::<f64>();
-        let sum_x2 = (0..values.len())
-            .map(|i| (i as f64).powi(2))
-            .sum::<f64>();
+        let sum_x2 = (0..values.len()).map(|i| (i as f64).powi(2)).sum::<f64>();
 
         let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x.powi(2));
         let intercept = (sum_y - slope * sum_x) / n;
@@ -609,18 +585,21 @@ impl AnalyticsEngine {
     }
 
     /// Get optimization recommendations
-    pub async fn get_optimization_recommendations(&self) -> Result<Vec<OptimizationRecommendation>> {
+    pub async fn get_optimization_recommendations(
+        &self,
+    ) -> Result<Vec<OptimizationRecommendation>> {
         let mut recommendations = Vec::new();
 
         // Analyze throughput trends
         let throughput_trend = self.analyze_trends("throughput").await?;
         if throughput_trend.direction == TrendDirection::Decreasing {
-                recommendations.push(OptimizationRecommendation {
+            recommendations.push(OptimizationRecommendation {
                 optimization_type: OptimizationType::LoadBalancing,
-                    priority: PriorityLevel::High,
+                priority: PriorityLevel::High,
                 effort: EffortLevel::Medium,
-                    expected_improvement: 15.0,
-                description: "Throughput is declining, consider load balancing optimization".to_string(),
+                expected_improvement: 15.0,
+                description: "Throughput is declining, consider load balancing optimization"
+                    .to_string(),
                 implementation_steps: vec![
                     "Analyze current load distribution".to_string(),
                     "Implement dynamic load balancing".to_string(),
@@ -633,12 +612,13 @@ impl AnalyticsEngine {
         // Analyze completion rate trends
         let completion_trend = self.analyze_trends("completion_rate").await?;
         if completion_trend.direction == TrendDirection::Decreasing {
-                recommendations.push(OptimizationRecommendation {
+            recommendations.push(OptimizationRecommendation {
                 optimization_type: OptimizationType::ResourceAllocation,
-                    priority: PriorityLevel::Critical,
+                priority: PriorityLevel::Critical,
                 effort: EffortLevel::High,
-                    expected_improvement: 25.0,
-                description: "Completion rate is declining, optimize resource allocation".to_string(),
+                expected_improvement: 25.0,
+                description: "Completion rate is declining, optimize resource allocation"
+                    .to_string(),
                 implementation_steps: vec![
                     "Review resource allocation policies".to_string(),
                     "Implement priority-based scheduling".to_string(),
@@ -651,12 +631,13 @@ impl AnalyticsEngine {
         // Analyze quality trends
         let quality_trend = self.analyze_trends("quality_score").await?;
         if quality_trend.direction == TrendDirection::Decreasing {
-                recommendations.push(OptimizationRecommendation {
+            recommendations.push(OptimizationRecommendation {
                 optimization_type: OptimizationType::ConfigurationOptimization,
-                    priority: PriorityLevel::Medium,
+                priority: PriorityLevel::Medium,
                 effort: EffortLevel::Low,
-                    expected_improvement: 10.0,
-                description: "Quality score is declining, review configuration settings".to_string(),
+                expected_improvement: 10.0,
+                description: "Quality score is declining, review configuration settings"
+                    .to_string(),
                 implementation_steps: vec![
                     "Review quality thresholds".to_string(),
                     "Adjust validation parameters".to_string(),
@@ -680,28 +661,29 @@ impl AnalyticsEngine {
             update_timestamp: chrono::Utc::now(),
             update_reason: "prediction_optimization".to_string(),
         };
-        
+
         // Analyze prediction accuracy and adjust parameters
         let accuracy = prediction.model_accuracy;
         if accuracy < 0.8 {
-                // Low accuracy, need to adjust parameters
-                updates.parameter_changes.push(ParameterChange {
-                    parameter_name: "learning_rate".to_string(),
-                    old_value: 0.01,
-                    new_value: 0.005,
-                    change_reason: "accuracy_improvement".to_string(),
-                });
-                
-                updates.parameter_changes.push(ParameterChange {
-                    parameter_name: "regularization".to_string(),
-                    old_value: 0.1,
-                    new_value: 0.2,
-                    change_reason: "overfitting_prevention".to_string(),
-                });
-            }
-        
+            // Low accuracy, need to adjust parameters
+            updates.parameter_changes.push(ParameterChange {
+                parameter_name: "learning_rate".to_string(),
+                old_value: 0.01,
+                new_value: 0.005,
+                change_reason: "accuracy_improvement".to_string(),
+            });
+
+            updates.parameter_changes.push(ParameterChange {
+                parameter_name: "regularization".to_string(),
+                old_value: 0.1,
+                new_value: 0.2,
+                change_reason: "overfitting_prevention".to_string(),
+            });
+        }
+
         // Adjust parameters based on prediction confidence
-        let confidence = (prediction.confidence_interval.0 + prediction.confidence_interval.1) / 2.0;
+        let confidence =
+            (prediction.confidence_interval.0 + prediction.confidence_interval.1) / 2.0;
         if confidence < 0.7 {
             updates.parameter_changes.push(ParameterChange {
                 parameter_name: "ensemble_size".to_string(),
@@ -710,10 +692,10 @@ impl AnalyticsEngine {
                 change_reason: "confidence_improvement".to_string(),
             });
         }
-        
+
         Ok(updates)
     }
-    
+
     /// Get trend cache for dashboard access
     pub async fn get_trend_cache(&self) -> std::collections::HashMap<String, TrendAnalysis> {
         self.trend_cache.read().await.clone()

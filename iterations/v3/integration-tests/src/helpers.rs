@@ -2,6 +2,7 @@
 
 use anyhow::{anyhow, Context, Result};
 use redis::AsyncCommands;
+use reqwest::Url;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::sqlite::SqlitePoolOptions;
 use std::io::ErrorKind;
@@ -11,7 +12,6 @@ use tokio::fs;
 use tokio::net::TcpStream;
 use tokio::time::sleep;
 use tracing::{debug, info};
-use reqwest::Url;
 
 /// Wait for a condition to be true with timeout
 pub async fn wait_for_condition<F, Fut>(
@@ -189,7 +189,9 @@ impl TestEnvironmentUtils {
                 Ok(Ok(_)) => {
                     debug!("Connectivity check passed: {} ({})", name, addr);
                 }
-                Ok(Err(err)) => return Err(anyhow!("Cannot connect to {} at {}: {}", name, addr, err)),
+                Ok(Err(err)) => {
+                    return Err(anyhow!("Cannot connect to {} at {}: {}", name, addr, err))
+                }
                 Err(_) => return Err(anyhow!("Timeout connecting to {} at {}", name, addr)),
             }
         }
@@ -377,8 +379,8 @@ impl TestEnvironmentUtils {
             }
         };
 
-        let url =
-            Url::parse(&database_url).with_context(|| format!("Invalid DATABASE_URL: {database_url}"))?;
+        let url = Url::parse(&database_url)
+            .with_context(|| format!("Invalid DATABASE_URL: {database_url}"))?;
         match url.scheme() {
             "postgres" | "postgresql" => Self::clear_postgres_database(&database_url).await?,
             "sqlite" | "file" => Self::clear_sqlite_database(&database_url).await?,

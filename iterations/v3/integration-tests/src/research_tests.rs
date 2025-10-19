@@ -126,6 +126,13 @@ impl ResearchIntegrationTests {
                     max_concurrent_requests: 10,
                     request_timeout_ms: 30000,
                 },
+                fuzzy_matching: agent_agency_research::FuzzyMatchingConfig {
+                    enabled: true,
+                    similarity_threshold: 0.85,
+                    boost_per_match: 0.15,
+                    coverage_boost: 0.1,
+                    max_total_boost: 0.3,
+                },
             }
         ).await.unwrap_or_else(|_| agent_agency_research::KnowledgeSeeker::minimal_for_tests());
 

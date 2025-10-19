@@ -37,11 +37,7 @@ impl SlidesIngestor {
     }
 
     /// Ingest PDF or Keynote slides
-    pub async fn ingest(
-        &self,
-        path: &Path,
-        project_scope: Option<&str>,
-    ) -> Result<IngestResult> {
+    pub async fn ingest(&self, path: &Path, project_scope: Option<&str>) -> Result<IngestResult> {
         tracing::debug!("Ingesting slides from: {:?}", path);
 
         // Compute SHA256
@@ -66,12 +62,7 @@ impl SlidesIngestor {
         let segments = match extension.as_str() {
             "pdf" => self.ingest_pdf(path).await?,
             "key" => self.ingest_keynote(path).await?,
-            _ => {
-                return Err(anyhow!(
-                    "Unsupported slides format: {}",
-                    extension
-                ))
-            }
+            _ => return Err(anyhow!("Unsupported slides format: {}", extension)),
         };
 
         Ok(IngestResult {

@@ -4,18 +4,17 @@
 /// This backend implements InferenceEngine by routing model compilation, loading,
 /// and inference through the Swift C-ABI bridge (coreml-bridge).
 /// Integrates with telemetry for circuit breaker logic.
-
 use crate::core_ml_bridge::{with_autorelease_pool, CoreMLModel};
 use crate::inference::{
     CapabilityReport, ComputeUnits, DType, InferenceEngine, IoSchema, ModelArtifact,
-    PreparedModel, PrepareOptions, TensorMap, TensorSpec, TensorBatch,
+    PrepareOptions, PreparedModel, TensorBatch, TensorMap, TensorSpec,
 };
-use crate::telemetry::{TelemetryCollector, FailureMode};
+use crate::telemetry::{FailureMode, TelemetryCollector};
 use anyhow::Result;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use tracing::{debug, warn};
 use std::time::{Duration, Instant};
+use tracing::{debug, warn};
 
 /// Prepared Core ML model (loaded and ready for inference)
 pub struct PreparedCoreMLModel {
@@ -60,7 +59,8 @@ impl CoreMLBackend {
 
     /// Record an inference operation in telemetry
     fn record_inference(&self, duration_ms: u64, success: bool, compute_unit: &str) {
-        self.telemetry.record_inference(duration_ms, success, compute_unit);
+        self.telemetry
+            .record_inference(duration_ms, success, compute_unit);
     }
 
     /// Check if should fallback to CPU due to circuit breaker
@@ -70,11 +70,20 @@ impl CoreMLBackend {
 
     /// Generate shape key from schema for cache key generation
     fn compute_shape_key(&self, schema: &IoSchema) -> String {
-        schema.inputs.iter()
-            .map(|spec| format!("{}_{}", spec.name, spec.shape.iter()
-                .map(|d| d.to_string())
-                .collect::<Vec<_>>()
-                .join("x")))
+        schema
+            .inputs
+            .iter()
+            .map(|spec| {
+                format!(
+                    "{}_{}",
+                    spec.name,
+                    spec.shape
+                        .iter()
+                        .map(|d| d.to_string())
+                        .collect::<Vec<_>>()
+                        .join("x")
+                )
+            })
             .collect::<Vec<_>>()
             .join("_")
     }
@@ -84,9 +93,7 @@ impl CoreMLBackend {
         #[cfg(target_os = "macos")]
         {
             use std::process::Command;
-            if let Ok(output) = Command::new("sw_vers")
-                .arg("-buildVersion")
-                .output() {
+            if let Ok(output) = Command::new("sw_vers").arg("-buildVersion").output() {
                 return String::from_utf8_lossy(&output.stdout).trim().to_string();
             }
         }
@@ -119,20 +126,20 @@ impl CoreMLBackend {
 
         // Extract input specifications
         let inputs = self.parse_input_specifications(&schema_value)?;
-        
+
         // Extract output specifications
         let outputs = self.parse_output_specifications(&schema_value)?;
-        
+
         // Validate parsed schema
         self.validate_parsed_schema(&inputs, &outputs)?;
-        
+
         Ok(IoSchema { inputs, outputs })
     }
 
     /// Parse input specifications from schema
     fn parse_input_specifications(&self, schema: &serde_json::Value) -> Result<Vec<TensorSpec>> {
         let mut inputs = Vec::new();
-        
+
         if let Some(inputs_array) = schema.get("inputs").and_then(|v| v.as_array()) {
             for input in inputs_array {
                 let spec = self.parse_tensor_specification(input, "input")?;
@@ -147,14 +154,14 @@ impl CoreMLBackend {
                 batch_capable: true,
             });
         }
-        
+
         Ok(inputs)
     }
 
     /// Parse output specifications from schema
     fn parse_output_specifications(&self, schema: &serde_json::Value) -> Result<Vec<TensorSpec>> {
         let mut outputs = Vec::new();
-        
+
         if let Some(outputs_array) = schema.get("outputs").and_then(|v| v.as_array()) {
             for output in outputs_array {
                 let spec = self.parse_tensor_specification(output, "output")?;
@@ -169,23 +176,29 @@ impl CoreMLBackend {
                 batch_capable: true,
             });
         }
-        
+
         Ok(outputs)
     }
 
     /// Parse individual tensor specification
-    fn parse_tensor_specification(&self, spec_value: &serde_json::Value, default_name: &str) -> Result<TensorSpec> {
-        let name = spec_value.get("name")
+    fn parse_tensor_specification(
+        &self,
+        spec_value: &serde_json::Value,
+        default_name: &str,
+    ) -> Result<TensorSpec> {
+        let name = spec_value
+            .get("name")
             .and_then(|v| v.as_str())
             .unwrap_or(default_name)
             .to_string();
-        
+
         let dtype = self.parse_data_type(spec_value)?;
         let shape = self.parse_shape(spec_value)?;
-        let batch_capable = spec_value.get("batch_capable")
+        let batch_capable = spec_value
+            .get("batch_capable")
             .and_then(|v| v.as_bool())
             .unwrap_or(true);
-        
+
         Ok(TensorSpec {
             name,
             dtype,
@@ -225,9 +238,9 @@ impl CoreMLBackend {
                     // Handle dynamic dimensions like "batch_size", "height", etc.
                     match dim_str {
                         "batch_size" | "batch" => shape.push(1), // Default batch size
-                        "height" | "h" => shape.push(224), // Default height
-                        "width" | "w" => shape.push(224), // Default width
-                        "channels" | "c" => shape.push(3), // Default channels
+                        "height" | "h" => shape.push(224),       // Default height
+                        "width" | "w" => shape.push(224),        // Default width
+                        "channels" | "c" => shape.push(3),       // Default channels
                         _ => {
                             warn!("Unknown dynamic dimension: {}, defaulting to 1", dim_str);
                             shape.push(1);
@@ -251,33 +264,47 @@ impl CoreMLBackend {
         if inputs.is_empty() {
             return Err(anyhow::anyhow!("Schema validation failed: no inputs found"));
         }
-        
+
         // Validate outputs
         if outputs.is_empty() {
-            return Err(anyhow::anyhow!("Schema validation failed: no outputs found"));
+            return Err(anyhow::anyhow!(
+                "Schema validation failed: no outputs found"
+            ));
         }
-        
+
         // Validate input specifications
         for input in inputs {
             if input.name.is_empty() {
-                return Err(anyhow::anyhow!("Schema validation failed: empty input name"));
+                return Err(anyhow::anyhow!(
+                    "Schema validation failed: empty input name"
+                ));
             }
             if input.shape.is_empty() {
-                return Err(anyhow::anyhow!("Schema validation failed: empty input shape"));
+                return Err(anyhow::anyhow!(
+                    "Schema validation failed: empty input shape"
+                ));
             }
         }
-        
+
         // Validate output specifications
         for output in outputs {
             if output.name.is_empty() {
-                return Err(anyhow::anyhow!("Schema validation failed: empty output name"));
+                return Err(anyhow::anyhow!(
+                    "Schema validation failed: empty output name"
+                ));
             }
             if output.shape.is_empty() {
-                return Err(anyhow::anyhow!("Schema validation failed: empty output shape"));
+                return Err(anyhow::anyhow!(
+                    "Schema validation failed: empty output shape"
+                ));
             }
         }
-        
-        debug!("Schema validation passed: {} inputs, {} outputs", inputs.len(), outputs.len());
+
+        debug!(
+            "Schema validation passed: {} inputs, {} outputs",
+            inputs.len(),
+            outputs.len()
+        );
         Ok(())
     }
 
@@ -303,10 +330,18 @@ impl CoreMLBackend {
     }
 
     /// Extract tensor data from CoreML output JSON
-    fn extract_tensor_from_output(&self, output_data: &serde_json::Value, output_spec: &TensorSpec) -> Result<Vec<u8>> {
+    fn extract_tensor_from_output(
+        &self,
+        output_data: &serde_json::Value,
+        output_spec: &TensorSpec,
+    ) -> Result<Vec<u8>> {
         // Try to find the output tensor in the JSON data
-        let tensor_value = output_data.get(&output_spec.name)
-            .ok_or_else(|| anyhow::anyhow!("Output tensor '{}' not found in CoreML response", output_spec.name))?;
+        let tensor_value = output_data.get(&output_spec.name).ok_or_else(|| {
+            anyhow::anyhow!(
+                "Output tensor '{}' not found in CoreML response",
+                output_spec.name
+            )
+        })?;
 
         // Convert tensor data based on data type
         match output_spec.dtype {
@@ -319,9 +354,13 @@ impl CoreMLBackend {
     }
 
     /// Convert F32 tensor data to bytes
-    fn convert_f32_tensor(&self, tensor_value: &serde_json::Value, shape: &[usize]) -> Result<Vec<u8>> {
+    fn convert_f32_tensor(
+        &self,
+        tensor_value: &serde_json::Value,
+        shape: &[usize],
+    ) -> Result<Vec<u8>> {
         let mut tensor_bytes = Vec::new();
-        
+
         if let Some(array) = tensor_value.as_array() {
             // Flatten the array and convert to bytes
             for value in array {
@@ -343,16 +382,24 @@ impl CoreMLBackend {
         // Validate tensor size matches expected shape
         let expected_size = shape.iter().product::<usize>() * 4; // 4 bytes per f32
         if tensor_bytes.len() != expected_size {
-            warn!("Tensor size mismatch: expected {} bytes, got {} bytes", expected_size, tensor_bytes.len());
+            warn!(
+                "Tensor size mismatch: expected {} bytes, got {} bytes",
+                expected_size,
+                tensor_bytes.len()
+            );
         }
 
         Ok(tensor_bytes)
     }
 
     /// Convert F16 tensor data to bytes
-    fn convert_f16_tensor(&self, tensor_value: &serde_json::Value, shape: &[usize]) -> Result<Vec<u8>> {
+    fn convert_f16_tensor(
+        &self,
+        tensor_value: &serde_json::Value,
+        shape: &[usize],
+    ) -> Result<Vec<u8>> {
         let mut tensor_bytes = Vec::new();
-        
+
         if let Some(array) = tensor_value.as_array() {
             for value in array {
                 if let Some(f64_val) = value.as_f64() {
@@ -376,16 +423,24 @@ impl CoreMLBackend {
 
         let expected_size = shape.iter().product::<usize>() * 2; // 2 bytes per f16
         if tensor_bytes.len() != expected_size {
-            warn!("Tensor size mismatch: expected {} bytes, got {} bytes", expected_size, tensor_bytes.len());
+            warn!(
+                "Tensor size mismatch: expected {} bytes, got {} bytes",
+                expected_size,
+                tensor_bytes.len()
+            );
         }
 
         Ok(tensor_bytes)
     }
 
     /// Convert I32 tensor data to bytes
-    fn convert_i32_tensor(&self, tensor_value: &serde_json::Value, shape: &[usize]) -> Result<Vec<u8>> {
+    fn convert_i32_tensor(
+        &self,
+        tensor_value: &serde_json::Value,
+        shape: &[usize],
+    ) -> Result<Vec<u8>> {
         let mut tensor_bytes = Vec::new();
-        
+
         if let Some(array) = tensor_value.as_array() {
             for value in array {
                 if let Some(i64_val) = value.as_i64() {
@@ -404,16 +459,24 @@ impl CoreMLBackend {
 
         let expected_size = shape.iter().product::<usize>() * 4; // 4 bytes per i32
         if tensor_bytes.len() != expected_size {
-            warn!("Tensor size mismatch: expected {} bytes, got {} bytes", expected_size, tensor_bytes.len());
+            warn!(
+                "Tensor size mismatch: expected {} bytes, got {} bytes",
+                expected_size,
+                tensor_bytes.len()
+            );
         }
 
         Ok(tensor_bytes)
     }
 
     /// Convert I8 tensor data to bytes
-    fn convert_i8_tensor(&self, tensor_value: &serde_json::Value, shape: &[usize]) -> Result<Vec<u8>> {
+    fn convert_i8_tensor(
+        &self,
+        tensor_value: &serde_json::Value,
+        shape: &[usize],
+    ) -> Result<Vec<u8>> {
         let mut tensor_bytes = Vec::new();
-        
+
         if let Some(array) = tensor_value.as_array() {
             for value in array {
                 if let Some(i64_val) = value.as_i64() {
@@ -430,16 +493,24 @@ impl CoreMLBackend {
 
         let expected_size = shape.iter().product::<usize>(); // 1 byte per i8
         if tensor_bytes.len() != expected_size {
-            warn!("Tensor size mismatch: expected {} bytes, got {} bytes", expected_size, tensor_bytes.len());
+            warn!(
+                "Tensor size mismatch: expected {} bytes, got {} bytes",
+                expected_size,
+                tensor_bytes.len()
+            );
         }
 
         Ok(tensor_bytes)
     }
 
     /// Convert U8 tensor data to bytes
-    fn convert_u8_tensor(&self, tensor_value: &serde_json::Value, shape: &[usize]) -> Result<Vec<u8>> {
+    fn convert_u8_tensor(
+        &self,
+        tensor_value: &serde_json::Value,
+        shape: &[usize],
+    ) -> Result<Vec<u8>> {
         let mut tensor_bytes = Vec::new();
-        
+
         if let Some(array) = tensor_value.as_array() {
             for value in array {
                 if let Some(u64_val) = value.as_u64() {
@@ -456,7 +527,11 @@ impl CoreMLBackend {
 
         let expected_size = shape.iter().product::<usize>(); // 1 byte per u8
         if tensor_bytes.len() != expected_size {
-            warn!("Tensor size mismatch: expected {} bytes, got {} bytes", expected_size, tensor_bytes.len());
+            warn!(
+                "Tensor size mismatch: expected {} bytes, got {} bytes",
+                expected_size,
+                tensor_bytes.len()
+            );
         }
 
         Ok(tensor_bytes)
@@ -467,7 +542,10 @@ impl CoreMLBackend {
         // Check that all expected outputs are present
         for output_spec in &io_schema.outputs {
             if !tensor_map.contains_key(&output_spec.name) {
-                return Err(anyhow::anyhow!("Missing output tensor: {}", output_spec.name));
+                return Err(anyhow::anyhow!(
+                    "Missing output tensor: {}",
+                    output_spec.name
+                ));
             }
         }
 
@@ -480,10 +558,15 @@ impl CoreMLBackend {
             // Find corresponding output spec
             if let Some(output_spec) = io_schema.outputs.iter().find(|spec| &spec.name == name) {
                 // Validate tensor size based on expected shape and data type
-                let expected_size = self.calculate_expected_tensor_size(&output_spec.shape, output_spec.dtype);
+                let expected_size =
+                    self.calculate_expected_tensor_size(&output_spec.shape, output_spec.dtype);
                 if tensor_data.len() != expected_size {
-                    warn!("Tensor '{}' size mismatch: expected {} bytes, got {} bytes", 
-                          name, expected_size, tensor_data.len());
+                    warn!(
+                        "Tensor '{}' size mismatch: expected {} bytes, got {} bytes",
+                        name,
+                        expected_size,
+                        tensor_data.len()
+                    );
                 }
             }
         }
@@ -543,7 +626,8 @@ impl InferenceEngine for CoreMLBackend {
                 // Attempt compilation with telemetry recording
                 let compile_result = with_autorelease_pool(|| {
                     CoreMLModel::compile(
-                        path.to_str().ok_or_else(|| anyhow::anyhow!("Invalid path"))?,
+                        path.to_str()
+                            .ok_or_else(|| anyhow::anyhow!("Invalid path"))?,
                         opts.compute_units.to_coreml_code(),
                     )
                 });
@@ -595,10 +679,7 @@ impl InferenceEngine for CoreMLBackend {
 
                 Ok(Box::new(prepared))
             }
-            ModelArtifact::Compiled {
-                path,
-                meta: _,
-            } => {
+            ModelArtifact::Compiled { path, meta: _ } => {
                 // Load pre-compiled model directly
                 if !path.exists() {
                     self.telemetry.record_failure(FailureMode::LoadError);
@@ -608,7 +689,8 @@ impl InferenceEngine for CoreMLBackend {
                 let load_start = Instant::now();
                 let load_result = with_autorelease_pool(|| {
                     CoreMLModel::load(
-                        path.to_str().ok_or_else(|| anyhow::anyhow!("Invalid path"))?,
+                        path.to_str()
+                            .ok_or_else(|| anyhow::anyhow!("Invalid path"))?,
                         opts.compute_units.to_coreml_code(),
                     )
                 });
@@ -679,9 +761,8 @@ impl InferenceEngine for CoreMLBackend {
         // Run prediction with timeout and track latency
         let infer_start = Instant::now();
         let timeout_ms = timeout.as_millis() as i32;
-        let predict_result = with_autorelease_pool(|| {
-            prepared.model.predict(&inputs_json, timeout_ms)
-        });
+        let predict_result =
+            with_autorelease_pool(|| prepared.model.predict(&inputs_json, timeout_ms));
 
         let infer_time_ms = infer_start.elapsed().as_millis() as u64;
 
@@ -689,10 +770,7 @@ impl InferenceEngine for CoreMLBackend {
             Ok(ref outputs_json) => {
                 // Track successful inference with ANE dispatch (assumed for now)
                 self.record_inference(infer_time_ms, true, "ane");
-                tracing::debug!(
-                    "Core ML inference completed in {}ms",
-                    infer_time_ms
-                );
+                tracing::debug!("Core ML inference completed in {}ms", infer_time_ms);
             }
             Err(ref e) => {
                 // Track failure
@@ -707,10 +785,8 @@ impl InferenceEngine for CoreMLBackend {
 
                 // Check if should trip circuit breaker
                 if self.check_circuit_breaker() {
-                    let reason = format!(
-                        "Circuit breaker triggered after inference failure: {}",
-                        e
-                    );
+                    let reason =
+                        format!("Circuit breaker triggered after inference failure: {}", e);
                     self.telemetry.trip_breaker(&reason);
                     tracing::warn!("⚠️ {}", reason);
                 }
@@ -743,7 +819,6 @@ impl InferenceEngine for CoreMLBackend {
             infer_p99_ms: 50,
         }
     }
-
 }
 
 #[cfg(test)]
@@ -769,12 +844,12 @@ mod tests {
     #[test]
     fn test_core_ml_backend_telemetry_integration() {
         let backend = CoreMLBackend::new();
-        
+
         // Simulate recording operations
         backend.record_compile(100, true);
         backend.record_inference(15, true, "ane");
         backend.record_inference(18, true, "ane");
-        
+
         // Verify telemetry was recorded (would need metrics accessor for full validation)
         let summary = backend.telemetry_summary();
         assert!(!summary.is_empty());
@@ -784,20 +859,19 @@ mod tests {
     #[test]
     fn test_core_ml_backend_circuit_breaker_integration() {
         let backend = CoreMLBackend::new();
-        
+
         // Need minimum of 10 inferences before circuit breaker can trip
         for _ in 0..10 {
             backend.record_inference(10, true, "cpu");
         }
         assert!(!backend.check_circuit_breaker()); // All successful, no trip
-        
+
         // Now record failures to trigger <95% success rate
         for _ in 0..10 {
             backend.record_inference(10, false, "cpu");
         }
-        
+
         // After 10 failures out of 20 total = 50% success rate < 95%
         assert!(backend.check_circuit_breaker()); // Should trip now
     }
-
 }

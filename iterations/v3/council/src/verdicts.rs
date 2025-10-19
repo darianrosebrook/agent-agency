@@ -60,16 +60,30 @@ pub struct VerdictRecord {
 
 /// Storage backend trait for verdict persistence
 pub trait VerdictStorage: Send + Sync + std::fmt::Debug {
-    fn store_verdict(&self, record: &VerdictRecord) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>>;
-    fn load_verdict(&self, verdict_id: VerdictId) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<VerdictRecord>>> + Send>>;
-    fn load_verdicts_by_task(&self, task_id: TaskId) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<VerdictRecord>>> + Send>>;
+    fn store_verdict(
+        &self,
+        record: &VerdictRecord,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>>;
+    fn load_verdict(
+        &self,
+        verdict_id: VerdictId,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<VerdictRecord>>> + Send>>;
+    fn load_verdicts_by_task(
+        &self,
+        task_id: TaskId,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<VerdictRecord>>> + Send>>;
     fn load_verdicts_by_time_range(
         &self,
         start: chrono::DateTime<chrono::Utc>,
         end: chrono::DateTime<chrono::Utc>,
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<VerdictRecord>>> + Send>>;
-    fn delete_verdict(&self, verdict_id: VerdictId) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>>;
-    fn get_storage_stats(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<StorageStats>> + Send>>;
+    fn delete_verdict(
+        &self,
+        verdict_id: VerdictId,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>>;
+    fn get_storage_stats(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<StorageStats>> + Send>>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -84,7 +98,10 @@ pub struct StorageStats {
 impl VerdictStore {
     /// Create a new verdict store
     pub fn new() -> Self {
-        Self::with_storage(Arc::new(MemoryVerdictStorage::new()), CacheConfig::default())
+        Self::with_storage(
+            Arc::new(MemoryVerdictStorage::new()),
+            CacheConfig::default(),
+        )
     }
 
     /// Create a new verdict store with custom storage backend
@@ -129,7 +146,10 @@ impl VerdictStore {
         // Clean up cache if needed
         self.cleanup_cache().await;
 
-        info!("Stored verdict {} for task {}", verdict_id, record.consensus_result.task_id);
+        info!(
+            "Stored verdict {} for task {}",
+            verdict_id, record.consensus_result.task_id
+        );
         Ok(verdict_id)
     }
 
@@ -238,15 +258,14 @@ impl VerdictStore {
         let ttl = chrono::Duration::seconds(self.cache_config.cache_ttl_seconds as i64);
 
         // Remove expired entries
-        self.cache.retain(|_, record| {
-            now.signed_duration_since(record.accessed_at) < ttl
-        });
+        self.cache
+            .retain(|_, record| now.signed_duration_since(record.accessed_at) < ttl);
 
         // If still over limit, remove least recently accessed
         if self.cache.len() > self.cache_config.max_cached_verdicts {
             let mut entries: Vec<_> = self.cache.iter().collect();
             entries.sort_by_key(|entry| entry.value().accessed_at);
-            
+
             let to_remove = entries.len() - self.cache_config.max_cached_verdicts;
             for entry in entries.into_iter().take(to_remove) {
                 self.cache.remove(entry.key());
@@ -283,7 +302,10 @@ impl MemoryVerdictStorage {
 }
 
 impl VerdictStorage for MemoryVerdictStorage {
-    fn store_verdict(&self, record: &VerdictRecord) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>> {
+    fn store_verdict(
+        &self,
+        record: &VerdictRecord,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>> {
         let verdicts = self.verdicts.clone();
         let record = record.clone();
         Box::pin(async move {
@@ -293,7 +315,11 @@ impl VerdictStorage for MemoryVerdictStorage {
         })
     }
 
-    fn load_verdict(&self, verdict_id: VerdictId) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<VerdictRecord>>> + Send>> {
+    fn load_verdict(
+        &self,
+        verdict_id: VerdictId,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<VerdictRecord>>> + Send>>
+    {
         let verdicts = self.verdicts.clone();
         Box::pin(async move {
             let verdicts = verdicts.read().await;
@@ -301,7 +327,11 @@ impl VerdictStorage for MemoryVerdictStorage {
         })
     }
 
-    fn load_verdicts_by_task(&self, task_id: TaskId) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<VerdictRecord>>> + Send>> {
+    fn load_verdicts_by_task(
+        &self,
+        task_id: TaskId,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<VerdictRecord>>> + Send>>
+    {
         let verdicts = self.verdicts.clone();
         Box::pin(async move {
             let verdicts = verdicts.read().await;
@@ -317,7 +347,8 @@ impl VerdictStorage for MemoryVerdictStorage {
         &self,
         start: chrono::DateTime<chrono::Utc>,
         end: chrono::DateTime<chrono::Utc>,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<VerdictRecord>>> + Send>> {
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<VerdictRecord>>> + Send>>
+    {
         let verdicts = self.verdicts.clone();
         Box::pin(async move {
             let verdicts = verdicts.read().await;
@@ -332,7 +363,10 @@ impl VerdictStorage for MemoryVerdictStorage {
         })
     }
 
-    fn delete_verdict(&self, verdict_id: VerdictId) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>> {
+    fn delete_verdict(
+        &self,
+        verdict_id: VerdictId,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>> {
         let verdicts = self.verdicts.clone();
         Box::pin(async move {
             let mut verdicts = verdicts.write().await;
@@ -341,7 +375,9 @@ impl VerdictStorage for MemoryVerdictStorage {
         })
     }
 
-    fn get_storage_stats(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<StorageStats>> + Send>> {
+    fn get_storage_stats(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<StorageStats>> + Send>> {
         let verdicts = self.verdicts.clone();
         Box::pin(async move {
             let verdicts = verdicts.read().await;
@@ -357,7 +393,10 @@ impl VerdictStorage for MemoryVerdictStorage {
 
             Ok(StorageStats {
                 total_verdicts,
-                total_debates: verdicts.values().filter(|r| r.debate_session.is_some()).count() as u64,
+                total_debates: verdicts
+                    .values()
+                    .filter(|r| r.debate_session.is_some())
+                    .count() as u64,
                 storage_size_bytes: total_verdicts * 1024, // Rough estimate
                 oldest_verdict: oldest,
                 newest_verdict: newest,
@@ -381,19 +420,26 @@ impl DatabaseVerdictStorage {
 }
 
 impl VerdictStorage for DatabaseVerdictStorage {
-    fn store_verdict(&self, record: &VerdictRecord) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>> {
+    fn store_verdict(
+        &self,
+        record: &VerdictRecord,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>> {
         let db_client = self.db_client.clone();
         let record = record.clone();
         Box::pin(async move {
             // Serialize the verdict record to JSON
             let consensus_json = serde_json::to_string(&record.consensus_result)
                 .context("Failed to serialize consensus result")?;
-            let debate_json = record.debate_session.as_ref()
+            let debate_json = record
+                .debate_session
+                .as_ref()
                 .map(|ds| serde_json::to_string(ds))
                 .transpose()
                 .context("Failed to serialize debate session")?;
 
-            let storage_location = record.storage_location.clone()
+            let storage_location = record
+                .storage_location
+                .clone()
                 .unwrap_or_else(|| format!("verdict_{}", record.verdict_id));
 
             // Prepare parameters for database insertion
@@ -401,7 +447,9 @@ impl VerdictStorage for DatabaseVerdictStorage {
                 serde_json::Value::String(record.verdict_id.to_string()),
                 serde_json::Value::String(record.consensus_result.task_id.to_string()),
                 serde_json::Value::String(consensus_json),
-                debate_json.map(serde_json::Value::String).unwrap_or(serde_json::Value::Null),
+                debate_json
+                    .map(serde_json::Value::String)
+                    .unwrap_or(serde_json::Value::Null),
                 serde_json::Value::String(record.created_at.to_rfc3339()),
                 serde_json::Value::String(record.accessed_at.to_rfc3339()),
                 serde_json::Value::Number(record.access_count.into()),
@@ -419,7 +467,9 @@ impl VerdictStorage for DatabaseVerdictStorage {
                     access_count = EXCLUDED.access_count
             "#;
 
-            db_client.execute_parameterized_query(query, params).await
+            db_client
+                .execute_parameterized_query(query, params)
+                .await
                 .context("Failed to store verdict in database")?;
 
             info!("Stored verdict {} in database", record.verdict_id);
@@ -427,7 +477,11 @@ impl VerdictStorage for DatabaseVerdictStorage {
         })
     }
 
-    fn load_verdict(&self, verdict_id: VerdictId) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<VerdictRecord>>> + Send>> {
+    fn load_verdict(
+        &self,
+        verdict_id: VerdictId,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<VerdictRecord>>> + Send>>
+    {
         let db_client = self.db_client.clone();
         let verdict_id_clone = verdict_id;
         Box::pin(async move {
@@ -439,7 +493,7 @@ impl VerdictStorage for DatabaseVerdictStorage {
                     created_at, accessed_at, access_count, storage_location
                 FROM council_verdicts
                 WHERE verdict_id = $1
-                "#
+                "#,
             )
             .bind(verdict_id_clone)
             .fetch_optional(db_client.pool())
@@ -450,18 +504,24 @@ impl VerdictStorage for DatabaseVerdictStorage {
                 Some(row) => {
                     // Parse JSON fields using try_get for sqlx compatibility
                     let consensus_result_str: String = row.try_get("consensus_result")?;
-                    let consensus_result: ConsensusResult = serde_json::from_str(&consensus_result_str)
-                        .context("Failed to deserialize consensus result")?;
+                    let consensus_result: ConsensusResult =
+                        serde_json::from_str(&consensus_result_str)
+                            .context("Failed to deserialize consensus result")?;
 
-                    let debate_session = if let Ok(debate_json) = row.try_get::<String, _>("debate_session") {
-                        Some(serde_json::from_str(&debate_json)
-                            .context("Failed to deserialize debate session")?)
-                    } else {
-                        None
-                    };
+                    let debate_session =
+                        if let Ok(debate_json) = row.try_get::<String, _>("debate_session") {
+                            Some(
+                                serde_json::from_str(&debate_json)
+                                    .context("Failed to deserialize debate session")?,
+                            )
+                        } else {
+                            None
+                        };
 
                     let verdict_record = VerdictRecord {
-                        verdict_id: uuid::Uuid::parse_str(&row.try_get::<String, _>("verdict_id")?)?,
+                        verdict_id: uuid::Uuid::parse_str(
+                            &row.try_get::<String, _>("verdict_id")?,
+                        )?,
                         consensus_result,
                         debate_session,
                         created_at: row.try_get("created_at")?,
@@ -481,7 +541,11 @@ impl VerdictStorage for DatabaseVerdictStorage {
         })
     }
 
-    fn load_verdicts_by_task(&self, task_id: TaskId) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<VerdictRecord>>> + Send>> {
+    fn load_verdicts_by_task(
+        &self,
+        task_id: TaskId,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<VerdictRecord>>> + Send>>
+    {
         let db_client = self.db_client.clone();
         let task_id_clone = task_id;
         Box::pin(async move {
@@ -494,7 +558,7 @@ impl VerdictStorage for DatabaseVerdictStorage {
                 FROM council_verdicts
                 WHERE task_id = $1
                 ORDER BY created_at DESC
-                "#
+                "#,
             )
             .bind(task_id_clone)
             .fetch_all(db_client.pool())
@@ -509,12 +573,15 @@ impl VerdictStorage for DatabaseVerdictStorage {
                 let consensus_result: ConsensusResult = serde_json::from_str(&consensus_result_str)
                     .context("Failed to deserialize consensus result")?;
 
-                let debate_session = if let Ok(debate_json) = row.try_get::<String, _>("debate_session") {
-                    Some(serde_json::from_str(&debate_json)
-                        .context("Failed to deserialize debate session")?)
-                } else {
-                    None
-                };
+                let debate_session =
+                    if let Ok(debate_json) = row.try_get::<String, _>("debate_session") {
+                        Some(
+                            serde_json::from_str(&debate_json)
+                                .context("Failed to deserialize debate session")?,
+                        )
+                    } else {
+                        None
+                    };
 
                 let verdict_record = VerdictRecord {
                     verdict_id: uuid::Uuid::parse_str(&row.try_get::<String, _>("verdict_id")?)?,
@@ -529,7 +596,11 @@ impl VerdictStorage for DatabaseVerdictStorage {
                 verdict_records.push(verdict_record);
             }
 
-            debug!("Loaded {} verdicts for task {} from database", verdict_records.len(), task_id_clone);
+            debug!(
+                "Loaded {} verdicts for task {} from database",
+                verdict_records.len(),
+                task_id_clone
+            );
             Ok(verdict_records)
         })
     }
@@ -538,7 +609,8 @@ impl VerdictStorage for DatabaseVerdictStorage {
         &self,
         start: chrono::DateTime<chrono::Utc>,
         end: chrono::DateTime<chrono::Utc>,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<VerdictRecord>>> + Send>> {
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<VerdictRecord>>> + Send>>
+    {
         let db_client = self.db_client.clone();
         let start_clone = start;
         let end_clone = end;
@@ -552,7 +624,7 @@ impl VerdictStorage for DatabaseVerdictStorage {
                 FROM council_verdicts
                 WHERE created_at >= $1 AND created_at <= $2
                 ORDER BY created_at DESC
-                "#
+                "#,
             )
             .bind(start_clone)
             .bind(end_clone)
@@ -568,12 +640,15 @@ impl VerdictStorage for DatabaseVerdictStorage {
                 let consensus_result: ConsensusResult = serde_json::from_str(&consensus_result_str)
                     .context("Failed to deserialize consensus result")?;
 
-                let debate_session = if let Ok(debate_json) = row.try_get::<String, _>("debate_session") {
-                    Some(serde_json::from_str(&debate_json)
-                        .context("Failed to deserialize debate session")?)
-                } else {
-                    None
-                };
+                let debate_session =
+                    if let Ok(debate_json) = row.try_get::<String, _>("debate_session") {
+                        Some(
+                            serde_json::from_str(&debate_json)
+                                .context("Failed to deserialize debate session")?,
+                        )
+                    } else {
+                        None
+                    };
 
                 let verdict_record = VerdictRecord {
                     verdict_id: uuid::Uuid::parse_str(&row.try_get::<String, _>("verdict_id")?)?,
@@ -588,13 +663,20 @@ impl VerdictStorage for DatabaseVerdictStorage {
                 verdict_records.push(verdict_record);
             }
 
-            debug!("Loaded {} verdicts in time range {} to {} from database",
-                   verdict_records.len(), start_clone, end_clone);
+            debug!(
+                "Loaded {} verdicts in time range {} to {} from database",
+                verdict_records.len(),
+                start_clone,
+                end_clone
+            );
             Ok(verdict_records)
         })
     }
 
-    fn delete_verdict(&self, verdict_id: VerdictId) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>> {
+    fn delete_verdict(
+        &self,
+        verdict_id: VerdictId,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>> {
         let db_client = self.db_client.clone();
         let verdict_id_clone = verdict_id;
         Box::pin(async move {
@@ -602,7 +684,9 @@ impl VerdictStorage for DatabaseVerdictStorage {
 
             let query = "DELETE FROM council_verdicts WHERE verdict_id = $1";
 
-            let result = db_client.execute_parameterized_query(query, params).await
+            let result = db_client
+                .execute_parameterized_query(query, params)
+                .await
                 .context("Failed to delete verdict from database")?;
 
             if result.rows_affected() == 0 {
@@ -615,7 +699,9 @@ impl VerdictStorage for DatabaseVerdictStorage {
         })
     }
 
-    fn get_storage_stats(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<StorageStats>> + Send>> {
+    fn get_storage_stats(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<StorageStats>> + Send>> {
         let db_client = self.db_client.clone();
         Box::pin(async move {
             // Query storage statistics from database
@@ -663,8 +749,8 @@ mod tests {
     mod test_utils {
         use super::*;
         use agent_agency_database::DatabaseClient;
-        use std::env;
         use sqlx::PgPool;
+        use std::env;
 
         /// Test database setup utility
         pub struct TestDatabase {
@@ -684,8 +770,12 @@ mod tests {
                     database: env::var("TEST_DB_NAME").unwrap_or("agent_agency_test".to_string()),
                     username: env::var("TEST_DB_USER").unwrap_or("postgres".to_string()),
                     password: env::var("TEST_DB_PASSWORD").unwrap_or("password".to_string()),
-                    server_url: env::var("TEST_DB_URL").unwrap_or("postgresql://localhost:5432".to_string()),
-                    database_url: env::var("TEST_DATABASE_URL").unwrap_or("postgresql://postgres:password@localhost:5432/agent_agency_test".to_string()),
+                    server_url: env::var("TEST_DB_URL")
+                        .unwrap_or("postgresql://localhost:5432".to_string()),
+                    database_url: env::var("TEST_DATABASE_URL").unwrap_or(
+                        "postgresql://postgres:password@localhost:5432/agent_agency_test"
+                            .to_string(),
+                    ),
                     pool_max: 5,
                     pool_min: 1,
                     pool_timeout_seconds: 30,
@@ -798,15 +888,13 @@ mod tests {
                     serde_json::json!("constitutional-judge"),
                     serde_json::json!("quality-judge"),
                 ],
-                rounds: vec![
-                    serde_json::json!({
-                        "round": 1,
-                        "arguments": [
-                            {"judge": "constitutional-judge", "argument": "Task violates scope constraints"},
-                            {"judge": "quality-judge", "argument": "Scope constraints are acceptable given context"}
-                        ]
-                    }),
-                ],
+                rounds: vec![serde_json::json!({
+                    "round": 1,
+                    "arguments": [
+                        {"judge": "constitutional-judge", "argument": "Task violates scope constraints"},
+                        {"judge": "quality-judge", "argument": "Scope constraints are acceptable given context"}
+                    ]
+                })],
                 status: "resolved".to_string(),
                 final_consensus: Some(serde_json::json!({
                     "decision": "approved",
@@ -843,13 +931,19 @@ mod tests {
 
             // Test loading verdict
             let loaded_verdict = storage.load_verdict(verdict_id).await?;
-            assert!(loaded_verdict.is_some(), "Verdict should be found after storing");
+            assert!(
+                loaded_verdict.is_some(),
+                "Verdict should be found after storing"
+            );
 
             let loaded = loaded_verdict.unwrap();
             assert_eq!(loaded.verdict_id, verdict_id);
             assert_eq!(loaded.consensus_result.task_id, task_id);
             assert_eq!(loaded.consensus_result.consensus_score, 0.85);
-            assert!(loaded.debate_session.is_some(), "Debate session should be present");
+            assert!(
+                loaded.debate_session.is_some(),
+                "Debate session should be present"
+            );
 
             // Clean up
             test_db.cleanup().await?;
@@ -867,7 +961,9 @@ mod tests {
             // Create multiple verdict records for the same task
             let mut verdict_ids = Vec::new();
             for i in 0..3 {
-                let verdict_id = VerdictId(Uuid::parse_str(&test_db.unique_id(&format!("verdict_{}", i))).unwrap());
+                let verdict_id = VerdictId(
+                    Uuid::parse_str(&test_db.unique_id(&format!("verdict_{}", i))).unwrap(),
+                );
                 verdict_ids.push(verdict_id);
 
                 let mut consensus_result = create_test_consensus_result(task_id, verdict_id);
@@ -888,12 +984,18 @@ mod tests {
 
             // Test loading verdicts by task
             let loaded_verdicts = storage.load_verdicts_by_task(task_id).await?;
-            assert_eq!(loaded_verdicts.len(), 3, "Should load all 3 verdicts for the task");
+            assert_eq!(
+                loaded_verdicts.len(),
+                3,
+                "Should load all 3 verdicts for the task"
+            );
 
             // Verify they are ordered by creation time (most recent first)
             for i in 0..loaded_verdicts.len() - 1 {
-                assert!(loaded_verdicts[i].created_at >= loaded_verdicts[i + 1].created_at,
-                       "Verdicts should be ordered by creation time descending");
+                assert!(
+                    loaded_verdicts[i].created_at >= loaded_verdicts[i + 1].created_at,
+                    "Verdicts should be ordered by creation time descending"
+                );
             }
 
             // Clean up
@@ -908,7 +1010,8 @@ mod tests {
             let storage = DatabaseVerdictStorage::new(Arc::new(test_db.client));
 
             let task_id = TaskId(Uuid::new_v4());
-            let verdict_id = VerdictId(Uuid::parse_str(&test_db.unique_id("delete_verdict")).unwrap());
+            let verdict_id =
+                VerdictId(Uuid::parse_str(&test_db.unique_id("delete_verdict")).unwrap());
             let consensus_result = create_test_consensus_result(task_id, verdict_id);
 
             let verdict_record = VerdictRecord {
@@ -933,7 +1036,10 @@ mod tests {
 
             // Verify it no longer exists
             let loaded_after_delete = storage.load_verdict(verdict_id).await?;
-            assert!(loaded_after_delete.is_none(), "Verdict should not exist after deletion");
+            assert!(
+                loaded_after_delete.is_none(),
+                "Verdict should not exist after deletion"
+            );
 
             // Clean up
             test_db.cleanup().await?;
@@ -953,10 +1059,16 @@ mod tests {
             // Create and store test verdicts
             for i in 0..2 {
                 let task_id = TaskId(Uuid::new_v4());
-                let verdict_id = VerdictId(Uuid::parse_str(&test_db.unique_id(&format!("stats_verdict_{}", i))).unwrap());
+                let verdict_id = VerdictId(
+                    Uuid::parse_str(&test_db.unique_id(&format!("stats_verdict_{}", i))).unwrap(),
+                );
 
                 let consensus_result = create_test_consensus_result(task_id, verdict_id);
-                let debate_session = if i == 0 { Some(create_test_debate_session()) } else { None };
+                let debate_session = if i == 0 {
+                    Some(create_test_debate_session())
+                } else {
+                    None
+                };
 
                 let verdict_record = VerdictRecord {
                     verdict_id,
@@ -973,16 +1085,28 @@ mod tests {
 
             // Get updated stats
             let updated_stats = storage.get_storage_stats().await?;
-            assert_eq!(updated_stats.total_verdicts, initial_count + 2,
-                      "Should have 2 more verdicts");
-            assert_eq!(updated_stats.total_debates, initial_count + 1,
-                      "Should have 1 debate session");
-            assert!(updated_stats.storage_size_bytes > 0,
-                   "Storage size should be greater than 0");
-            assert!(updated_stats.oldest_verdict.is_some(),
-                   "Should have oldest verdict timestamp");
-            assert!(updated_stats.newest_verdict.is_some(),
-                   "Should have newest verdict timestamp");
+            assert_eq!(
+                updated_stats.total_verdicts,
+                initial_count + 2,
+                "Should have 2 more verdicts"
+            );
+            assert_eq!(
+                updated_stats.total_debates,
+                initial_count + 1,
+                "Should have 1 debate session"
+            );
+            assert!(
+                updated_stats.storage_size_bytes > 0,
+                "Storage size should be greater than 0"
+            );
+            assert!(
+                updated_stats.oldest_verdict.is_some(),
+                "Should have oldest verdict timestamp"
+            );
+            assert!(
+                updated_stats.newest_verdict.is_some(),
+                "Should have newest verdict timestamp"
+            );
 
             // Clean up
             test_db.cleanup().await?;
@@ -1000,7 +1124,9 @@ mod tests {
 
             // Create verdicts at different times
             for i in 0..3 {
-                let verdict_id = VerdictId(Uuid::parse_str(&test_db.unique_id(&format!("time_verdict_{}", i))).unwrap());
+                let verdict_id = VerdictId(
+                    Uuid::parse_str(&test_db.unique_id(&format!("time_verdict_{}", i))).unwrap(),
+                );
                 let consensus_result = create_test_consensus_result(task_id, verdict_id);
 
                 // Create verdict with different creation times
@@ -1023,16 +1149,26 @@ mod tests {
             let start_time = base_time - chrono::Duration::minutes(1);
             let end_time = base_time + chrono::Duration::hours(2);
 
-            let time_range_verdicts = storage.load_verdicts_by_time_range(start_time, end_time).await?;
-            assert_eq!(time_range_verdicts.len(), 2,
-                      "Should load verdicts within time range (first 2 hours)");
+            let time_range_verdicts = storage
+                .load_verdicts_by_time_range(start_time, end_time)
+                .await?;
+            assert_eq!(
+                time_range_verdicts.len(),
+                2,
+                "Should load verdicts within time range (first 2 hours)"
+            );
 
             // Test with narrower time range
             let narrow_start = base_time + chrono::Duration::hours(1);
             let narrow_end = base_time + chrono::Duration::hours(2);
-            let narrow_verdicts = storage.load_verdicts_by_time_range(narrow_start, narrow_end).await?;
-            assert_eq!(narrow_verdicts.len(), 1,
-                      "Should load only 1 verdict in narrow time range");
+            let narrow_verdicts = storage
+                .load_verdicts_by_time_range(narrow_start, narrow_end)
+                .await?;
+            assert_eq!(
+                narrow_verdicts.len(),
+                1,
+                "Should load only 1 verdict in narrow time range"
+            );
 
             // Clean up
             test_db.cleanup().await?;
@@ -1046,15 +1182,21 @@ mod tests {
             let storage = DatabaseVerdictStorage::new(Arc::new(test_db.client));
 
             // Test loading non-existent verdict
-            let nonexistent_id = VerdictId(Uuid::parse_str(&test_db.unique_id("nonexistent")).unwrap());
+            let nonexistent_id =
+                VerdictId(Uuid::parse_str(&test_db.unique_id("nonexistent")).unwrap());
             let loaded = storage.load_verdict(nonexistent_id).await?;
-            assert!(loaded.is_none(), "Loading non-existent verdict should return None");
+            assert!(
+                loaded.is_none(),
+                "Loading non-existent verdict should return None"
+            );
 
             // Test loading verdicts for non-existent task
             let nonexistent_task_id = TaskId(Uuid::new_v4());
             let task_verdicts = storage.load_verdicts_by_task(nonexistent_task_id).await?;
-            assert!(task_verdicts.is_empty(),
-                   "Loading verdicts for non-existent task should return empty vector");
+            assert!(
+                task_verdicts.is_empty(),
+                "Loading verdicts for non-existent task should return empty vector"
+            );
 
             Ok(())
         }
@@ -1065,7 +1207,8 @@ mod tests {
             let storage = DatabaseVerdictStorage::new(Arc::new(test_db.client));
 
             let task_id = TaskId(Uuid::new_v4());
-            let verdict_id = VerdictId(Uuid::parse_str(&test_db.unique_id("audit_verdict")).unwrap());
+            let verdict_id =
+                VerdictId(Uuid::parse_str(&test_db.unique_id("audit_verdict")).unwrap());
             let consensus_result = create_test_consensus_result(task_id, verdict_id);
 
             let verdict_record = VerdictRecord {
@@ -1089,8 +1232,11 @@ mod tests {
             .fetch_one(test_db.pool())
             .await?;
 
-            assert_eq!(audit_count.unwrap_or(0), 1,
-                      "Should have created one audit trail entry for verdict creation");
+            assert_eq!(
+                audit_count.unwrap_or(0),
+                1,
+                "Should have created one audit trail entry for verdict creation"
+            );
 
             // Delete verdict (should create another audit trail entry)
             storage.delete_verdict(verdict_id).await?;
@@ -1102,8 +1248,11 @@ mod tests {
             .fetch_one(test_db.pool())
             .await?;
 
-            assert_eq!(audit_count_after_delete.unwrap_or(0), 2,
-                      "Should have two audit trail entries after create and delete");
+            assert_eq!(
+                audit_count_after_delete.unwrap_or(0),
+                2,
+                "Should have two audit trail entries after create and delete"
+            );
 
             // Clean up
             test_db.cleanup().await?;
@@ -1121,7 +1270,9 @@ mod tests {
             // Test successful transaction - store multiple verdicts atomically
             let mut verdict_ids = Vec::new();
             for i in 0..3 {
-                let verdict_id = VerdictId(Uuid::parse_str(&test_db.unique_id(&format!("tx_verdict_{}", i))).unwrap());
+                let verdict_id = VerdictId(
+                    Uuid::parse_str(&test_db.unique_id(&format!("tx_verdict_{}", i))).unwrap(),
+                );
                 verdict_ids.push(verdict_id);
 
                 let consensus_result = create_test_consensus_result(task_id, verdict_id);
@@ -1146,7 +1297,11 @@ mod tests {
 
             // Test load by task returns all verdicts
             let task_verdicts = storage.load_verdicts_by_task(task_id).await?;
-            assert_eq!(task_verdicts.len(), 3, "Should load all 3 verdicts for the task");
+            assert_eq!(
+                task_verdicts.len(),
+                3,
+                "Should load all 3 verdicts for the task"
+            );
 
             // Test deletion transaction integrity
             for verdict_id in &verdict_ids {
@@ -1161,7 +1316,10 @@ mod tests {
 
             // Verify task loading returns empty
             let task_verdicts_after_delete = storage.load_verdicts_by_task(task_id).await?;
-            assert!(task_verdicts_after_delete.is_empty(), "Should have no verdicts after deletion");
+            assert!(
+                task_verdicts_after_delete.is_empty(),
+                "Should have no verdicts after deletion"
+            );
 
             // Clean up
             test_db.cleanup().await?;
@@ -1175,7 +1333,8 @@ mod tests {
             let storage = DatabaseVerdictStorage::new(Arc::new(test_db.client));
 
             let task_id = TaskId(Uuid::new_v4());
-            let verdict_id = VerdictId(Uuid::parse_str(&test_db.unique_id("concurrent_verdict")).unwrap());
+            let verdict_id =
+                VerdictId(Uuid::parse_str(&test_db.unique_id("concurrent_verdict")).unwrap());
             let consensus_result = create_test_consensus_result(task_id, verdict_id);
 
             let verdict_record = VerdictRecord {
@@ -1196,9 +1355,8 @@ mod tests {
             for _ in 0..5 {
                 let storage_clone = DatabaseVerdictStorage::new(Arc::new(test_db.client.clone()));
                 let verdict_id_clone = verdict_id;
-                let handle = tokio::spawn(async move {
-                    storage_clone.load_verdict(verdict_id_clone).await
-                });
+                let handle =
+                    tokio::spawn(async move { storage_clone.load_verdict(verdict_id_clone).await });
                 handles.push(handle);
             }
 
@@ -1221,9 +1379,13 @@ mod tests {
             let storage = DatabaseVerdictStorage::new(Arc::new(test_db.client));
 
             // Test loading non-existent verdict
-            let nonexistent_id = VerdictId(Uuid::parse_str(&test_db.unique_id("error_test")).unwrap());
+            let nonexistent_id =
+                VerdictId(Uuid::parse_str(&test_db.unique_id("error_test")).unwrap());
             let result = storage.load_verdict(nonexistent_id).await?;
-            assert!(result.is_none(), "Loading non-existent verdict should return None");
+            assert!(
+                result.is_none(),
+                "Loading non-existent verdict should return None"
+            );
 
             // Test deleting non-existent verdict (should not error)
             storage.delete_verdict(nonexistent_id).await?;
@@ -1231,12 +1393,17 @@ mod tests {
             // Test loading verdicts for non-existent task
             let nonexistent_task = TaskId(Uuid::new_v4());
             let task_verdicts = storage.load_verdicts_by_task(nonexistent_task).await?;
-            assert!(task_verdicts.is_empty(), "Loading verdicts for non-existent task should return empty");
+            assert!(
+                task_verdicts.is_empty(),
+                "Loading verdicts for non-existent task should return empty"
+            );
 
             // Test time range with no results
             let past_time = chrono::Utc::now() - chrono::Duration::days(365);
             let future_time = chrono::Utc::now() + chrono::Duration::days(365);
-            let time_range_verdicts = storage.load_verdicts_by_time_range(past_time, future_time).await?;
+            let time_range_verdicts = storage
+                .load_verdicts_by_time_range(past_time, future_time)
+                .await?;
             // This might return existing verdicts from other tests, so we just ensure it doesn't error
 
             Ok(())
@@ -1248,12 +1415,14 @@ mod tests {
             let storage = DatabaseVerdictStorage::new(Arc::new(test_db.client));
 
             let task_id = TaskId(Uuid::new_v4());
-            let verdict_id = VerdictId(Uuid::parse_str(&test_db.unique_id("consistency_verdict")).unwrap());
+            let verdict_id =
+                VerdictId(Uuid::parse_str(&test_db.unique_id("consistency_verdict")).unwrap());
             let mut consensus_result = create_test_consensus_result(task_id, verdict_id);
 
             // Modify consensus result to test data consistency
             consensus_result.consensus_score = 0.95;
-            consensus_result.final_verdict = serde_json::json!({"type": "approved", "confidence": 0.95});
+            consensus_result.final_verdict =
+                serde_json::json!({"type": "approved", "confidence": 0.95});
 
             let verdict_record = VerdictRecord {
                 verdict_id,
@@ -1277,7 +1446,10 @@ mod tests {
             assert_eq!(loaded_record.consensus_result.task_id, task_id);
             assert_eq!(loaded_record.consensus_result.consensus_score, 0.95);
             assert_eq!(loaded_record.access_count, 5);
-            assert!(loaded_record.debate_session.is_some(), "Debate session should be preserved");
+            assert!(
+                loaded_record.debate_session.is_some(),
+                "Debate session should be preserved"
+            );
 
             // Verify JSON serialization/deserialization consistency
             let loaded_consensus = &loaded_record.consensus_result;
@@ -1302,14 +1474,20 @@ mod tests {
             let mut verdict_ids = Vec::new();
 
             for i in 0..100 {
-                let verdict_id = VerdictId(Uuid::parse_str(&test_db.unique_id(&format!("perf_verdict_{}", i))).unwrap());
+                let verdict_id = VerdictId(
+                    Uuid::parse_str(&test_db.unique_id(&format!("perf_verdict_{}", i))).unwrap(),
+                );
                 verdict_ids.push(verdict_id);
 
                 let consensus_result = create_test_consensus_result(task_id, verdict_id);
                 let verdict_record = VerdictRecord {
                     verdict_id,
                     consensus_result,
-                    debate_session: if i % 10 == 0 { Some(create_test_debate_session()) } else { None },
+                    debate_session: if i % 10 == 0 {
+                        Some(create_test_debate_session())
+                    } else {
+                        None
+                    },
                     created_at: chrono::Utc::now(),
                     accessed_at: chrono::Utc::now(),
                     access_count: i as u64,
@@ -1340,18 +1518,32 @@ mod tests {
             let task_verdicts = storage.load_verdicts_by_task(task_id).await?;
             let task_load_duration = task_load_start.elapsed();
 
-            println!("Loaded {} verdicts by task in {:?}", task_verdicts.len(), task_load_duration);
-            assert_eq!(task_verdicts.len(), 100, "Should load all verdicts for the task");
+            println!(
+                "Loaded {} verdicts by task in {:?}",
+                task_verdicts.len(),
+                task_load_duration
+            );
+            assert_eq!(
+                task_verdicts.len(),
+                100,
+                "Should load all verdicts for the task"
+            );
 
             // Time range performance test
             let time_start = chrono::Utc::now() - chrono::Duration::hours(1);
             let time_end = chrono::Utc::now() + chrono::Duration::hours(1);
 
             let time_load_start = std::time::Instant::now();
-            let time_verdicts = storage.load_verdicts_by_time_range(time_start, time_end).await?;
+            let time_verdicts = storage
+                .load_verdicts_by_time_range(time_start, time_end)
+                .await?;
             let time_load_duration = time_load_start.elapsed();
 
-            println!("Loaded {} verdicts by time range in {:?}", time_verdicts.len(), time_load_duration);
+            println!(
+                "Loaded {} verdicts by time range in {:?}",
+                time_verdicts.len(),
+                time_load_duration
+            );
 
             // Statistics performance test
             let stats_start = std::time::Instant::now();
@@ -1363,10 +1555,22 @@ mod tests {
             assert!(stats.total_debates >= 10, "Should have at least 10 debates");
 
             // Performance assertions
-            assert!(store_duration.as_millis() < 5000, "Storing 100 verdicts should take less than 5 seconds");
-            assert!(load_duration.as_millis() < 3000, "Loading 100 verdicts should take less than 3 seconds");
-            assert!(task_load_duration.as_millis() < 1000, "Task-based loading should be fast");
-            assert!(stats_duration.as_millis() < 500, "Statistics query should be fast");
+            assert!(
+                store_duration.as_millis() < 5000,
+                "Storing 100 verdicts should take less than 5 seconds"
+            );
+            assert!(
+                load_duration.as_millis() < 3000,
+                "Loading 100 verdicts should take less than 3 seconds"
+            );
+            assert!(
+                task_load_duration.as_millis() < 1000,
+                "Task-based loading should be fast"
+            );
+            assert!(
+                stats_duration.as_millis() < 500,
+                "Statistics query should be fast"
+            );
 
             // Cleanup
             test_db.cleanup().await?;
@@ -1378,10 +1582,10 @@ mod tests {
     #[tokio::test]
     async fn test_store_and_retrieve_verdict() {
         let store = VerdictStore::new();
-        
+
         let task_id = Uuid::new_v4();
         let verdict_id = Uuid::new_v4();
-        
+
         let consensus_result = ConsensusResult {
             task_id,
             verdict_id,
@@ -1396,7 +1600,10 @@ mod tests {
             timestamp: chrono::Utc::now(),
         };
 
-        let stored_id = store.store_consensus(consensus_result.clone(), None).await.unwrap();
+        let stored_id = store
+            .store_consensus(consensus_result.clone(), None)
+            .await
+            .unwrap();
         assert_eq!(stored_id, verdict_id);
 
         let retrieved = store.get_verdict(verdict_id).await.unwrap();
@@ -1408,7 +1615,7 @@ mod tests {
     async fn test_verdict_not_found() {
         let store = VerdictStore::new();
         let verdict_id = Uuid::new_v4();
-        
+
         let result = store.get_verdict(verdict_id).await.unwrap();
         assert!(result.is_none());
     }
@@ -1420,14 +1627,14 @@ mod tests {
             cache_ttl_seconds: 1,
             enable_persistence: false,
         };
-        
+
         let store = VerdictStore::with_storage(Arc::new(MemoryVerdictStorage::new()), config);
-        
+
         // Store 3 verdicts (exceeds cache limit)
         for i in 0..3 {
             let task_id = Uuid::new_v4();
             let verdict_id = Uuid::new_v4();
-            
+
             let consensus_result = ConsensusResult {
                 task_id,
                 verdict_id,

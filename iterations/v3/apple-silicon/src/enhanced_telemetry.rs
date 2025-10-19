@@ -12,12 +12,12 @@
 //!
 //! @author @darianrosebrook
 
+use anyhow::Result;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
-use anyhow::Result;
-use serde::{Serialize, Deserialize};
 
 /// Metric value with timestamp
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -84,11 +84,7 @@ impl TelemetryMetric {
         self.mean = values.iter().sum::<f64>() / n;
 
         // Standard deviation
-        let variance = values
-            .iter()
-            .map(|v| (v - self.mean).powi(2))
-            .sum::<f64>()
-            / n;
+        let variance = values.iter().map(|v| (v - self.mean).powi(2)).sum::<f64>() / n;
         self.stddev = variance.sqrt();
 
         // Min/Max
@@ -218,7 +214,10 @@ impl EnhancedTelemetry {
             z_score,
             threshold,
             reason: if z_score > threshold {
-                format!("Value {} is {} standard deviations from mean", last_value, z_score)
+                format!(
+                    "Value {} is {} standard deviations from mean",
+                    last_value, z_score
+                )
             } else {
                 "Normal".to_string()
             },
@@ -261,7 +260,10 @@ impl EnhancedTelemetry {
 
         let alert = PerformanceAlert {
             level,
-            message: format!("Metric {} = {} (threshold: {})", metric_name, value, threshold),
+            message: format!(
+                "Metric {} = {} (threshold: {})",
+                metric_name, value, threshold
+            ),
             timestamp,
             metric_name: metric_name.to_string(),
             current_value: value,
@@ -314,14 +316,18 @@ impl EnhancedTelemetry {
 
         report.push_str(&format!("Metrics ({} total):\n", metrics.len()));
         for (name, metric) in metrics.iter() {
-            report.push_str(&format!("  {}: mean={:.2}, p99={:.2}, stddev={:.2}\n",
-                name, metric.mean, metric.p99, metric.stddev));
+            report.push_str(&format!(
+                "  {}: mean={:.2}, p99={:.2}, stddev={:.2}\n",
+                name, metric.mean, metric.p99, metric.stddev
+            ));
         }
 
         report.push_str(&format!("\nAlerts ({} total):\n", alerts.len()));
         for alert in alerts.iter().take(10) {
-            report.push_str(&format!("  [{:?}] {} = {}\n",
-                alert.level, alert.metric_name, alert.current_value));
+            report.push_str(&format!(
+                "  [{:?}] {} = {}\n",
+                alert.level, alert.metric_name, alert.current_value
+            ));
         }
 
         report
@@ -387,8 +393,14 @@ mod tests {
     #[tokio::test]
     async fn test_record_metric() {
         let telemetry = EnhancedTelemetry::new();
-        telemetry.record_metric("latency", "ms", 50.0).await.unwrap();
-        telemetry.record_metric("latency", "ms", 55.0).await.unwrap();
+        telemetry
+            .record_metric("latency", "ms", 50.0)
+            .await
+            .unwrap();
+        telemetry
+            .record_metric("latency", "ms", 55.0)
+            .await
+            .unwrap();
 
         let metric = telemetry.get_metric("latency").await;
         assert!(metric.is_some());
@@ -402,7 +414,10 @@ mod tests {
 
         // Record normal values
         for i in 0..10 {
-            telemetry.record_metric("metric", "unit", (i * 10) as f64).await.ok();
+            telemetry
+                .record_metric("metric", "unit", (i * 10) as f64)
+                .await
+                .ok();
         }
 
         // Record anomalous value

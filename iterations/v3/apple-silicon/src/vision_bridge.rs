@@ -90,28 +90,22 @@ impl VisionBridge {
 
         // Safety: Call Swift bridge with proper memory management
         unsafe {
-            let result_ptr = analyze_document_request(
-                image_data.as_ptr(),
-                image_data.len(),
-                timeout,
-            );
+            let result_ptr =
+                analyze_document_request(image_data.as_ptr(), image_data.len(), timeout);
 
             if result_ptr.is_null() {
                 return Err(anyhow!("Vision Framework returned null pointer"));
             }
 
             // Convert C string to Rust string
-            let result_str = CStr::from_ptr(result_ptr)
-                .to_string_lossy()
-                .to_string();
+            let result_str = CStr::from_ptr(result_ptr).to_string_lossy().to_string();
 
             // Free the C string memory allocated by Swift
             libc::free(result_ptr as *mut libc::c_void);
 
             // Parse JSON result
-            let analysis: VisionAnalysisResult =
-                serde_json::from_str(&result_str)
-                    .map_err(|e| anyhow!("Failed to parse Vision result: {}", e))?;
+            let analysis: VisionAnalysisResult = serde_json::from_str(&result_str)
+                .map_err(|e| anyhow!("Failed to parse Vision result: {}", e))?;
 
             Ok(analysis)
         }

@@ -6,9 +6,9 @@ use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CircuitState {
-    Closed,    // Normal operation
-    Open,      // Too many failures, reject calls
-    HalfOpen,  // Testing if service recovered
+    Closed,   // Normal operation
+    Open,     // Too many failures, reject calls
+    HalfOpen, // Testing if service recovered
 }
 
 #[derive(Debug, Clone)]
@@ -182,5 +182,3 @@ mod tests {
         assert_eq!(cb.state(), CircuitState::Closed);
     }
 }
-
-

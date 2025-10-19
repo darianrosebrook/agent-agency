@@ -4,10 +4,10 @@
 
 use crate::types::*;
 use anyhow::Result;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
-use std::collections::HashMap;
 
 /// Model usage statistics for tracking access patterns
 #[derive(Debug, Clone)]
@@ -446,7 +446,7 @@ impl MemoryManager {
     /// Perform model memory optimization
     async fn perform_model_memory_optimization(&self, status: &mut MemoryStatus) -> Result<u64> {
         // Implement actual model memory optimization
-        
+
         // 1. Identify and unload least-used models
         let unloaded_memory = self.unload_unused_models().await?;
 
@@ -483,14 +483,14 @@ impl MemoryManager {
 
         // Get model usage statistics and identify candidates for unloading
         let unload_candidates = self.identify_unload_candidates().await;
-        
+
         let mut total_freed = 0u64;
-        
+
         for candidate in unload_candidates {
             if total_freed >= memory_to_free {
                 break;
             }
-            
+
             info!(
                 "Unloading model '{}' (unused for {:.1}s, frequency: {:.2} accesses/min, size: {} MB)",
                 candidate.model_name,
@@ -498,9 +498,9 @@ impl MemoryManager {
                 candidate.access_frequency_per_minute,
                 candidate.size_mb
             );
-            
+
             total_freed += candidate.size_mb * 1024 * 1024;
-            
+
             // Remove from tracking
             self.untrack_model(&candidate.model_name).await;
         }
@@ -518,36 +518,41 @@ impl MemoryManager {
     /// Identify models that should be unloaded based on usage patterns
     async fn identify_unload_candidates(&self) -> Vec<ModelUsageStats> {
         let usage = self.model_usage.read().await;
-        
+
         let mut candidates: Vec<_> = usage
             .values()
             .filter_map(|stats| {
                 let inactivity_secs = stats.last_accessed.elapsed().as_secs();
-                
+
                 // Candidate if:
                 // 1. Inactive for more than threshold OR
                 // 2. Very low access frequency (< 0.1 accesses per minute) AND been loaded a while
-                if inactivity_secs > self.model_inactivity_threshold_secs ||
-                   (stats.access_frequency_per_minute < 0.1 && 
-                    stats.created_at.elapsed().as_secs() > 600) { // > 10 minutes old with low frequency
+                if inactivity_secs > self.model_inactivity_threshold_secs
+                    || (stats.access_frequency_per_minute < 0.1
+                        && stats.created_at.elapsed().as_secs() > 600)
+                {
+                    // > 10 minutes old with low frequency
                     Some(stats.clone())
                 } else {
                     None
                 }
             })
             .collect();
-        
+
         // Sort by: inactivity time (desc) → frequency (asc) → size (desc)
         // This prioritizes older, less-frequently-used, larger models first
         candidates.sort_by(|a, b| {
             let a_inactivity = a.last_accessed.elapsed().as_secs();
             let b_inactivity = b.last_accessed.elapsed().as_secs();
-            
+
             // Primary: by inactivity (longer is better to unload)
             match b_inactivity.cmp(&a_inactivity) {
                 std::cmp::Ordering::Equal => {
                     // Secondary: by frequency (lower is better to unload)
-                    match a.access_frequency_per_minute.partial_cmp(&b.access_frequency_per_minute) {
+                    match a
+                        .access_frequency_per_minute
+                        .partial_cmp(&b.access_frequency_per_minute)
+                    {
                         Some(std::cmp::Ordering::Equal) | None => {
                             // Tertiary: by size (larger first to free more memory)
                             b.size_mb.cmp(&a.size_mb)
@@ -558,11 +563,8 @@ impl MemoryManager {
                 order => order,
             }
         });
-        
-        debug!(
-            "Identified {} model unload candidates",
-            candidates.len()
-        );
+
+        debug!("Identified {} model unload candidates", candidates.len());
         candidates
     }
 
@@ -570,30 +572,30 @@ impl MemoryManager {
     async fn optimize_model_layouts(&self) -> Result<u64> {
         // Get all loaded models for analysis
         let models = self.get_all_model_usage_stats().await;
-        
+
         if models.is_empty() {
             debug!("No models to optimize");
             return Ok(0);
         }
-        
+
         let mut total_optimized = 0u64;
-        
+
         // Calculate potential savings through better memory layout
         // Typical optimization: 10-20% reduction through:
         // 1. Cache-aligned allocation (64-byte boundaries on Apple Silicon)
         // 2. Reorganizing model weights for better SIMD access
         // 3. Removing padding and aligning structures
         let optimization_ratio = 0.15; // 15% potential savings
-        
+
         for model in models {
             // Estimate memory that can be freed through layout optimization
             let potential_savings = (model.size_mb as f64 * optimization_ratio) as u64;
-            
+
             debug!(
                 "Optimizing layout for model '{}': size {} MB → potential savings {} MB",
                 model.model_name, model.size_mb, potential_savings
             );
-            
+
             // TODO: Implement model data compression with the following requirements:
             // 1. Model binary parsing: Parse the model binary to identify data structures
             //    - Parse model binary format and extract data structures
@@ -614,15 +616,15 @@ impl MemoryManager {
             // 3. Align allocations to cache line boundaries (64 bytes on Apple Silicon)
             // 4. Use memory pooling for weight tensors
             // 5. Compress redundant metadata
-            
+
             total_optimized += potential_savings;
         }
-        
+
         info!(
             "Model layout optimization completed: {} MB potential memory savings identified",
             total_optimized
         );
-        
+
         // Return conservative estimate (actual savings may vary)
         Ok((total_optimized as f32 * 0.8) as u64) // Account for actual effectiveness
     }
@@ -1000,15 +1002,17 @@ impl MemoryManager {
     pub async fn record_model_access(&self, model_name: &str, size_mb: u64) {
         let mut usage = self.model_usage.write().await;
         let now = std::time::Instant::now();
-        
-        usage.entry(model_name.to_string())
+
+        usage
+            .entry(model_name.to_string())
             .and_modify(|stats| {
                 stats.access_count += 1;
                 stats.last_accessed = now;
                 // Update frequency estimate (accesses per minute)
                 let elapsed_secs = stats.created_at.elapsed().as_secs() as f32;
                 if elapsed_secs > 0.0 {
-                    stats.access_frequency_per_minute = (stats.access_count as f32 / elapsed_secs) * 60.0;
+                    stats.access_frequency_per_minute =
+                        (stats.access_count as f32 / elapsed_secs) * 60.0;
                 }
             })
             .or_insert_with(|| {
@@ -1163,6 +1167,9 @@ mod tests {
         let cleaned = manager.cleanup_memory().await.unwrap();
         // cleanup_memory sums 4 operations: cache, defrag, model, buffer
         // Just verify it returns a non-zero value indicating cleanup occurred
-        assert!(cleaned > 0, "cleanup_memory should return non-zero bytes freed");
+        assert!(
+            cleaned > 0,
+            "cleanup_memory should return non-zero bytes freed"
+        );
     }
 }

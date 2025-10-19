@@ -8,18 +8,16 @@
 //!
 //! @author @darianrosebrook
 
+use anyhow::{bail, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use anyhow::{Result, bail};
-use serde::{Serialize, Deserialize};
 
 use crate::async_inference::{
-    AsyncInferenceEngine, InferenceRequest, InferenceResult, AsyncConfig,
+    AsyncConfig, AsyncInferenceEngine, InferenceRequest, InferenceResult,
 };
-use crate::model_router::{
-    ModelRouter, ModelVariant, RoutingPolicy, DeviceId, RoutingStats,
-};
+use crate::model_router::{DeviceId, ModelRouter, ModelVariant, RoutingPolicy, RoutingStats};
 
 /// Integrated inference request with routing metadata
 #[derive(Debug, Clone)]
@@ -110,10 +108,7 @@ pub struct IntegratedInferenceEngine {
 
 impl IntegratedInferenceEngine {
     /// Create a new integrated inference engine
-    pub fn new(
-        async_engine: Arc<AsyncInferenceEngine>,
-        router: Arc<ModelRouter>,
-    ) -> Self {
+    pub fn new(async_engine: Arc<AsyncInferenceEngine>, router: Arc<ModelRouter>) -> Self {
         Self {
             async_engine,
             router,
@@ -131,7 +126,9 @@ impl IntegratedInferenceEngine {
         // Determine which variant to use
         let (variant, device) = if let Some(preferred) = &routed_request.preferred_variant {
             // Manual variant override
-            let device_str = routed_request.preferred_device.clone()
+            let device_str = routed_request
+                .preferred_device
+                .clone()
                 .unwrap_or_else(|| "default".to_string());
             (preferred.clone(), DeviceId::new(device_str))
         } else {
@@ -140,23 +137,24 @@ impl IntegratedInferenceEngine {
         };
 
         // Execute inference via async engine
-        let result = self.async_engine.infer(
-            routed_request.request.clone(),
-            tokio_util::sync::CancellationToken::new(),
-        ).await;
+        let result = self
+            .async_engine
+            .infer(
+                routed_request.request.clone(),
+                tokio_util::sync::CancellationToken::new(),
+            )
+            .await;
 
         let elapsed = start.elapsed().as_millis() as u64;
 
         // Record outcome
         if routed_request.track_for_ab_test {
             let success = result.is_ok();
-            self.router.record_outcome(
-                &variant,
-                &device,
-                success,
-                elapsed,
-                None, // accuracy not yet tracked
-            ).await?;
+            self.router
+                .record_outcome(
+                    &variant, &device, success, elapsed, None, // accuracy not yet tracked
+                )
+                .await?;
 
             // Update integration stats
             let mut stats = self.stats.write().await;
@@ -211,10 +209,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_routed_request_builder() {
-        let base_req = InferenceRequest::new(
-            "test-model".to_string(),
-            HashMap::new(),
-        );
+        let base_req = InferenceRequest::new("test-model".to_string(), HashMap::new());
 
         let routed = RoutedInferenceRequest::new(base_req)
             .with_variant("fp16")
@@ -227,10 +222,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_routed_request_no_tracking() {
-        let base_req = InferenceRequest::new(
-            "test-model".to_string(),
-            HashMap::new(),
-        );
+        let base_req = InferenceRequest::new("test-model".to_string(), HashMap::new());
 
         let routed = RoutedInferenceRequest::new(base_req).no_ab_tracking();
         assert!(!routed.track_for_ab_test);

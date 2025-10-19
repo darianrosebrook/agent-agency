@@ -6,28 +6,28 @@
 pub mod adaptive_resource_manager;
 pub mod ane;
 pub mod async_inference;
+pub mod buffer_pool;
 pub mod candle_backend;
 pub mod core_ml;
 #[cfg(target_os = "macos")]
 pub mod core_ml_backend;
 #[cfg(target_os = "macos")]
 pub mod core_ml_bridge;
+pub mod enhanced_telemetry;
 pub mod inference;
 pub mod memory;
 pub mod metal_gpu;
+pub mod model_pool;
 pub mod model_router;
+pub mod operator_fusion;
 pub mod quantization;
 pub mod quantization_lab;
-pub mod operator_fusion;
-pub mod enhanced_telemetry;
+pub mod router_integration;
 pub mod routing;
 #[cfg(target_os = "macos")]
 pub mod telemetry;
 pub mod thermal;
 pub mod types;
-pub mod buffer_pool;
-pub mod model_pool;
-pub mod router_integration;
 
 pub use adaptive_resource_manager::{
     AllocationPlan, AllocationPlanner, AllocationRequest, DeviceKind, DeviceSensors, ModelRegistry,
@@ -38,41 +38,45 @@ pub use async_inference::{
     AsyncConfig, AsyncInferenceEngine, InferenceRequest, InferenceResult, Priority, PriorityQueue,
     QueueStats,
 };
+pub use buffer_pool::{BufferPool, BufferPoolConfig, BufferPoolStats};
 pub use candle_backend::CandleBackend;
+pub use core_ml::CoreMLManager;
 #[cfg(target_os = "macos")]
 pub use core_ml_backend::CoreMLBackend;
 #[cfg(target_os = "macos")]
 pub use core_ml_bridge::CoreMLModel;
-#[cfg(target_os = "macos")]
-pub use telemetry::{CoreMLMetrics, TelemetryCollector, FailureMode};
-pub use core_ml::CoreMLManager;
+pub use enhanced_telemetry::{
+    AlertLevel, AnomalyDetectionResult, EnhancedTelemetry, MetricPoint, PerformanceAlert,
+    SLAConfig, TelemetryMetric,
+};
 pub use inference::{
-    CapabilityReport, ComputeUnits, DType, InferenceEngine, IoSchema, ModelArtifact, ModelFmt, PreparedModel,
-    PrepareOptions, TensorMap, TensorSpec,
+    CapabilityReport, ComputeUnits, DType, InferenceEngine, IoSchema, ModelArtifact, ModelFmt,
+    PrepareOptions, PreparedModel, TensorMap, TensorSpec,
 };
 pub use memory::MemoryManager;
 pub use metal_gpu::MetalGPUManager;
+pub use model_pool::{ModelPool, ModelPoolConfig, ModelPoolStats};
 pub use model_router::{
-    ModelRouter, ModelVariant, RoutingMode, RoutingPolicy, DeviceId, VariantPerformance, RoutingStats,
+    DeviceId, ModelRouter, ModelVariant, RoutingMode, RoutingPolicy, RoutingStats,
+    VariantPerformance,
+};
+pub use operator_fusion::{
+    FusionDecision, FusionPattern, FusionResult, Operator, OperatorFusionEngine, OperatorType,
 };
 pub use quantization::QuantizationManager;
 pub use quantization_lab::{
-    QuantizationLab, QuantizationType, QuantizationStrategy, QuantizationMetrics, QuantizationResult,
+    QuantizationLab, QuantizationMetrics, QuantizationResult, QuantizationStrategy,
+    QuantizationType,
 };
-pub use operator_fusion::{
-    OperatorFusionEngine, Operator, OperatorType, FusionPattern, FusionResult, FusionDecision,
-};
-pub use enhanced_telemetry::{
-    EnhancedTelemetry, TelemetryMetric, MetricPoint, SLAConfig, PerformanceAlert, AlertLevel, AnomalyDetectionResult,
+pub use router_integration::{
+    IntegratedInferenceEngine, RouteIntegrationStats, RoutedInferenceOutcome,
+    RoutedInferenceRequest,
 };
 pub use routing::InferenceRouter;
+#[cfg(target_os = "macos")]
+pub use telemetry::{CoreMLMetrics, FailureMode, TelemetryCollector};
 pub use thermal::ThermalManager;
 pub use types::*;
-pub use buffer_pool::{BufferPool, BufferPoolConfig, BufferPoolStats};
-pub use model_pool::{ModelPool, ModelPoolConfig, ModelPoolStats};
-pub use router_integration::{
-    IntegratedInferenceEngine, RoutedInferenceRequest, RoutedInferenceOutcome, RouteIntegrationStats,
-};
 
 /// Convenience function to plan an allocation using a provided planner.
 pub fn adaptive_plan_for<P: AllocationPlanner>(
@@ -181,8 +185,12 @@ impl Default for AppleSiliconConfig {
 // Apple Silicon optimizations for V3 system
 // Includes native macOS framework bridges for Vision, Speech, and Core ML
 
-pub mod vision_bridge;
 pub mod speech_bridge;
+pub mod vision_bridge;
 
-pub use vision_bridge::{VisionBridge, VisionAnalysisResult, VisionBlock, VisionTable, BoundingBox};
-pub use speech_bridge::{SpeechBridge, SpeechTranscriptionResult, SpeechSegment, WordTiming, Speaker};
+pub use speech_bridge::{
+    Speaker, SpeechBridge, SpeechSegment, SpeechTranscriptionResult, WordTiming,
+};
+pub use vision_bridge::{
+    BoundingBox, VisionAnalysisResult, VisionBlock, VisionBridge, VisionTable,
+};

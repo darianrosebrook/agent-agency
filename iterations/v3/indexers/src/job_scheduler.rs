@@ -2,11 +2,11 @@
 //! Job scheduler with concurrency caps for ingestion pipeline
 
 use anyhow::Result;
+use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
-use uuid::Uuid;
 use tracing::{debug, info, warn};
-use parking_lot::Mutex;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum JobType {
@@ -30,9 +30,9 @@ impl JobType {
             JobType::DiagramIngest => 3,
             JobType::CaptionsIngest => 5,
             JobType::VisionOcr => 2,
-            JobType::AsrTranscription => 1,      // ASR is expensive
+            JobType::AsrTranscription => 1, // ASR is expensive
             JobType::EntityExtraction => 4,
-            JobType::VisualCaptioning => 1,      // Expensive model inference
+            JobType::VisualCaptioning => 1, // Expensive model inference
             JobType::Embedding => 2,
         }
     }
@@ -41,14 +41,14 @@ impl JobType {
     pub fn timeout_ms(&self) -> u64 {
         match self {
             JobType::VideoIngest => 300_000,      // 5 minutes
-            JobType::SlidesIngest => 60_000,       // 1 minute
-            JobType::DiagramIngest => 30_000,      // 30 seconds
-            JobType::CaptionsIngest => 15_000,     // 15 seconds
-            JobType::VisionOcr => 10_000,          // 10 seconds
-            JobType::AsrTranscription => 120_000,  // 2 minutes
-            JobType::EntityExtraction => 30_000,   // 30 seconds
-            JobType::VisualCaptioning => 30_000,   // 30 seconds
-            JobType::Embedding => 60_000,          // 1 minute
+            JobType::SlidesIngest => 60_000,      // 1 minute
+            JobType::DiagramIngest => 30_000,     // 30 seconds
+            JobType::CaptionsIngest => 15_000,    // 15 seconds
+            JobType::VisionOcr => 10_000,         // 10 seconds
+            JobType::AsrTranscription => 120_000, // 2 minutes
+            JobType::EntityExtraction => 30_000,  // 30 seconds
+            JobType::VisualCaptioning => 30_000,  // 30 seconds
+            JobType::Embedding => 60_000,         // 1 minute
         }
     }
 }
@@ -100,7 +100,10 @@ impl JobScheduler {
             );
         }
 
-        info!("Job scheduler initialized with queue limit: {}", queue_size_limit);
+        info!(
+            "Job scheduler initialized with queue limit: {}",
+            queue_size_limit
+        );
 
         Self {
             stats: Arc::new(Mutex::new(stats)),
@@ -173,7 +176,12 @@ impl JobScheduler {
             .map(|(k, v)| {
                 (
                     *k,
-                    (v.active_count, v.queued_count, v.total_completed, v.total_failed),
+                    (
+                        v.active_count,
+                        v.queued_count,
+                        v.total_completed,
+                        v.total_failed,
+                    ),
                 )
             })
             .collect()
@@ -251,4 +259,3 @@ mod tests {
         assert!(!scheduler.try_acquire(JobType::VideoIngest).unwrap());
     }
 }
-

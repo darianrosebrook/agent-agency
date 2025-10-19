@@ -6,9 +6,9 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
-use uuid::Uuid;
 use std::collections::HashMap;
 use tracing::{debug, warn};
+use uuid::Uuid;
 
 /// Database connection pool wrapper
 pub struct DatabasePool {
@@ -30,7 +30,10 @@ impl DatabasePool {
             .await
             .map_err(|e| anyhow!("Failed to connect to database: {}", e))?;
 
-        debug!("Database pool initialized with max {} connections", max_connections);
+        debug!(
+            "Database pool initialized with max {} connections",
+            max_connections
+        );
 
         Ok(Self { pool })
     }
@@ -132,10 +135,10 @@ impl VectorStore for PostgresVectorStore {
     ) -> Result<Vec<(Uuid, f32)>> {
         // Determine similarity operator based on model type
         let operator = match self.get_model_metric(model_id).await?.as_str() {
-            "cosine" => "<=>",     // Cosine similarity (normalized)
-            "ip" => "<#>",         // Inner product
-            "l2" => "<->",         // L2 distance
-            _ => "<=>",            // Default to cosine
+            "cosine" => "<=>", // Cosine similarity (normalized)
+            "ip" => "<#>",     // Inner product
+            "l2" => "<->",     // L2 distance
+            _ => "<=>",        // Default to cosine
         };
 
         // Build dynamic SQL based on operator
@@ -174,7 +177,7 @@ impl VectorStore for PostgresVectorStore {
             r#"
             INSERT INTO search_logs (query, results, features, created_at)
             VALUES ($1, $2::jsonb, $3::jsonb, NOW())
-            "#
+            "#,
         )
         .bind(&entry.query)
         .bind(serde_json::to_value(&entry.results)?)
@@ -198,7 +201,7 @@ impl PostgresVectorStore {
     // Helper method to get metric type for a model
     async fn get_model_metric(&self, model_id: &str) -> Result<String> {
         let metric = sqlx::query_scalar::<_, String>(
-            "SELECT metric FROM embedding_models WHERE model_id = $1"
+            "SELECT metric FROM embedding_models WHERE model_id = $1",
         )
         .bind(model_id)
         .fetch_optional(&self.pool)

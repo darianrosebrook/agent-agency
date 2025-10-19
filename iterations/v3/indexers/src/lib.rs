@@ -7,14 +7,13 @@
 //! - Job scheduler with concurrency governance
 
 pub mod bm25_indexer;
-pub mod hnsw_indexer;
 pub mod database;
+pub mod hnsw_indexer;
 pub mod job_scheduler;
 pub mod types;
 
 pub use bm25_indexer::Bm25Indexer;
-pub use hnsw_indexer::HnswIndexer;
 pub use database::{DatabasePool, VectorStore};
-pub use job_scheduler::{JobScheduler, JobType, IngestionJob};
+pub use hnsw_indexer::HnswIndexer;
+pub use job_scheduler::{IngestionJob, JobScheduler, JobType};
 pub use types::*;
-

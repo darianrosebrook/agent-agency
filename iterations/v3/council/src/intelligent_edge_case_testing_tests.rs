@@ -128,7 +128,7 @@ mod tests {
                     expected_result: "Passes at 1000 req/s".to_string(),
                     priority: Priority::Medium,
                 },
-            ]
+            ],
         }
     }
 
@@ -514,7 +514,7 @@ mod tests {
                     expected_result: "Passes at 1000 req/s".to_string(),
                     priority: Priority::Medium,
                 },
-            ]
+            ],
         };
 
         let insights = testing_system

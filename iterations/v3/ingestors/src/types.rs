@@ -47,12 +47,12 @@ impl std::fmt::Display for DocumentKind {
 pub struct Segment {
     pub id: Uuid,
     pub segment_type: SegmentType,
-    pub t0: Option<f32>,  // seconds
+    pub t0: Option<f32>, // seconds
     pub t1: Option<f32>,
     pub bbox: Option<BoundingBox>,
     pub content_hash: String,
     pub quality_score: f32,
-    pub stability_score: Option<f32>,  // for video keyframes
+    pub stability_score: Option<f32>, // for video keyframes
     pub blocks: Vec<Block>,
 }
 
@@ -84,7 +84,7 @@ pub struct Block {
     pub text: String,
     pub bbox: Option<BoundingBox>,
     pub ocr_confidence: Option<f32>,
-    pub raw_bytes: Option<Vec<u8>>,  // for visual content
+    pub raw_bytes: Option<Vec<u8>>, // for visual content
 }
 
 /// Block role
@@ -125,7 +125,7 @@ pub struct BoundingBox {
 pub struct SpeechTurn {
     pub id: Uuid,
     pub speaker_id: Option<String>,
-    pub provider: String,  // 'whisperx', 'apple', etc.
+    pub provider: String, // 'whisperx', 'apple', etc.
     pub t0: f32,
     pub t1: f32,
     pub text: String,
@@ -153,7 +153,7 @@ pub struct DiagramData {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiagramEntity {
     pub id: Uuid,
-    pub entity_type: String,  // 'node', 'edge', 'label'
+    pub entity_type: String, // 'node', 'edge', 'label'
     pub normalized_name: String,
     pub attributes: HashMap<String, serde_json::Value>,
 }

@@ -9,11 +9,11 @@
 //!
 //! @author @darianrosebrook
 
+use anyhow::{bail, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use anyhow::{Result, bail};
-use serde::{Serialize, Deserialize};
 
 /// Operator type for fusion patterns
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -219,8 +219,7 @@ impl OperatorFusionEngine {
 
                 if matching_ops.len() >= pattern.operators.len() {
                     let improvement =
-                        (pattern.speedup_estimate - 1.0) * 100.0
-                            + pattern.memory_reduction_percent;
+                        (pattern.speedup_estimate - 1.0) * 100.0 + pattern.memory_reduction_percent;
 
                     decisions.push(FusionDecision {
                         pattern_name: pattern.name.clone(),
@@ -296,9 +295,10 @@ impl OperatorFusionEngine {
     pub async fn get_fusion_stats(&self) -> (u64, f32, f32) {
         let fusions = self.fusions.read().await;
 
-        let total_flops_saved: u64 = fusions.iter().map(|f| {
-            (f.total_flops as f32 * (f.speedup - 1.0) / f.speedup) as u64
-        }).sum();
+        let total_flops_saved: u64 = fusions
+            .iter()
+            .map(|f| (f.total_flops as f32 * (f.speedup - 1.0) / f.speedup) as u64)
+            .sum();
 
         let avg_speedup = if !fusions.is_empty() {
             fusions.iter().map(|f| f.speedup).sum::<f32>() / fusions.len() as f32
@@ -399,7 +399,7 @@ mod tests {
     #[tokio::test]
     async fn test_operator_fusion_engine_creation() {
         let engine = OperatorFusionEngine::new();
-        
+
         // Should have default patterns
         let recommendations = engine.get_fusion_recommendations().await.unwrap();
         // No operators registered yet, so no recommendations
