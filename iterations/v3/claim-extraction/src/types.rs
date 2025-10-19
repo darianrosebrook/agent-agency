@@ -153,8 +153,8 @@ pub enum SourceType {
     TestSuite,
     ToolOutput,
     Analysis,
-    External,        // External API sources
-    Documentation,   // Documentation sources
+    External,      // External API sources
+    Documentation, // Documentation sources
 }
 
 /// Metadata about the processing operation

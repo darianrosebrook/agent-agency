@@ -68,6 +68,31 @@ impl CoreMLBackend {
         self.telemetry.should_fallback_to_cpu()
     }
 
+    /// Generate shape key from schema for cache key generation
+    fn compute_shape_key(&self, schema: &IoSchema) -> String {
+        schema.inputs.iter()
+            .map(|spec| format!("{}_{}", spec.name, spec.shape.iter()
+                .map(|d| d.to_string())
+                .collect::<Vec<_>>()
+                .join("x")))
+            .collect::<Vec<_>>()
+            .join("_")
+    }
+
+    /// Get macOS build number for cache key
+    fn get_os_build(&self) -> String {
+        #[cfg(target_os = "macos")]
+        {
+            use std::process::Command;
+            if let Ok(output) = Command::new("sw_vers")
+                .arg("-buildVersion")
+                .output() {
+                return String::from_utf8_lossy(&output.stdout).trim().to_string();
+            }
+        }
+        "unknown".to_string()
+    }
+
     /// Get telemetry summary for diagnostics
     pub fn telemetry_summary(&self) -> String {
         self.telemetry.summary()

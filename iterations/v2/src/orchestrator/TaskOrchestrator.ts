@@ -1070,6 +1070,12 @@ export class TaskOrchestrator extends EventEmitter {
       throw new Error("Invalid task: missing required fields");
     }
 
+    // Validate task ID format
+    if (typeof task.id !== "string" || task.id.length === 0) {
+      throw new Error("Invalid task: id must be a non-empty string");
+    }
+
+    // Validate task type
     if (
       ![
         "script",
@@ -1081,6 +1087,103 @@ export class TaskOrchestrator extends EventEmitter {
       ].includes(task.type)
     ) {
       throw new Error(`Unsupported task type: ${task.type}`);
+    }
+
+    // SECURITY: Validate task payload to prevent code injection attacks
+    this.validateTaskPayload(task.type, task.payload);
+  }
+
+  /**
+   * SECURITY: Comprehensive payload validation to prevent code injection attacks
+   * Validates script content, API calls, and data processing payloads
+   */
+  private validateTaskPayload(taskType: string, payload: any): void {
+    if (!payload || typeof payload !== "object") {
+      throw new Error("Invalid task: payload must be an object");
+    }
+
+    // Dangerous patterns that suggest code injection attempts
+    const dangerousPatterns = [
+      /eval\s*\(/i,
+      /exec\s*\(/i,
+      /system\s*\(/i,
+      /spawn\s*\(/i,
+      /shell\s*\(/i,
+      /require\s*\(/i,
+      /import\s*\(/i,
+      /process\./i,
+      /child_process/i,
+      /vm\./i,
+      /script\./i,
+    ];
+
+    switch (taskType) {
+      case "script":
+        this.validateScriptPayload(payload, dangerousPatterns);
+        break;
+      case "api_call":
+        this.validateApiCallPayload(payload);
+        break;
+      case "data_processing":
+        this.validateDataProcessingPayload(payload);
+        break;
+      case "file_editing":
+        this.validateFileEditingPayload(payload);
+        break;
+      default:
+        // Minimal validation for other types
+        if (payload.script && typeof payload.script === "string") {
+          this.checkDangerousPatterns(payload.script, dangerousPatterns);
+        }
+    }
+  }
+
+  private validateScriptPayload(payload: any, dangerousPatterns: RegExp[]): void {
+    if (!payload.script || typeof payload.script !== "string") {
+      throw new Error("Invalid script task: script field must be a string");
+    }
+    this.checkDangerousPatterns(payload.script, dangerousPatterns);
+  }
+
+  private validateApiCallPayload(payload: any): void {
+    if (!payload.url || typeof payload.url !== "string") {
+      throw new Error("Invalid API call task: url field must be a string");
+    }
+    try {
+      new URL(payload.url);
+    } catch {
+      throw new Error("Invalid API call task: invalid url format");
+    }
+  }
+
+  private validateDataProcessingPayload(payload: any): void {
+    if (!payload.data) {
+      throw new Error("Invalid data processing task: data field is required");
+    }
+  }
+
+  private validateFileEditingPayload(payload: any): void {
+    if (!payload.filePath || typeof payload.filePath !== "string") {
+      throw new Error(
+        "Invalid file editing task: filePath field must be a string"
+      );
+    }
+    // Prevent path traversal attacks
+    if (payload.filePath.includes("..") || path.isAbsolute(payload.filePath)) {
+      throw new Error(
+        "Invalid file editing task: path traversal or absolute paths not allowed"
+      );
+    }
+  }
+
+  private checkDangerousPatterns(content: string, patterns: RegExp[]): void {
+    for (const pattern of patterns) {
+      if (pattern.test(content)) {
+        throw new Error(
+          `SECURITY VIOLATION: Task payload contains dangerous pattern: ${pattern.source}. ` +
+            `Code injection attempt detected and blocked.`
+        );
+      }
     }
   }
 

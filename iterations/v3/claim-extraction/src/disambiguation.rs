@@ -6,11 +6,13 @@
 use crate::types::*;
 use anyhow::Result;
 use regex::Regex;
-use std::collections::HashMap;
-use tracing::{debug, warn};
 use serde_json::Value;
-use std::sync::Arc;
+use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::sync::{Arc, OnceLock};
+use tokio::runtime::{Builder as RuntimeBuilder, Handle};
 use tokio::sync::RwLock;
+use tracing::{debug, warn};
 
 /// Stage 1: Contextual disambiguation of sentences
 #[derive(Debug)]
@@ -603,32 +605,36 @@ impl ContextResolver {
     /// Extract conversation entities from conversation history
     fn extract_conversation_entities(&self, context: &ProcessingContext) -> Vec<String> {
         let mut entities = Vec::new();
-        
+
         // 1. Conversation history analysis
         if let Some(conversation_history) = context.metadata.get("conversation_history") {
             entities.extend(self.analyze_conversation_history(conversation_history, context));
         }
-        
+
         // 2. Named entity recognition
         entities.extend(self.perform_named_entity_recognition(&context.input_text, context));
-        
+
         // 3. Entity linking and disambiguation
         let linked_entities = self.link_entities_to_knowledge_bases(&entities);
         entities.extend(linked_entities);
-        
+
         // 4. Context integration and tracking
         entities.extend(self.integrate_entity_context(&entities, context));
-        
+
         // Remove duplicates and return
         entities.sort();
         entities.dedup();
         entities
     }
-    
+
     /// Analyze conversation history for entity mentions
-    fn analyze_conversation_history(&self, conversation_history: &serde_json::Value, context: &ProcessingContext) -> Vec<String> {
+    fn analyze_conversation_history(
+        &self,
+        conversation_history: &serde_json::Value,
+        context: &ProcessingContext,
+    ) -> Vec<String> {
         let mut entities = Vec::new();
-        
+
         if let Some(messages) = conversation_history.as_array() {
             for message in messages {
                 if let Some(text) = message.get("content").and_then(|v| v.as_str()) {
@@ -638,85 +644,148 @@ impl ContextResolver {
                 }
             }
         }
-        
+
         entities
     }
-    
+
     /// Perform named entity recognition on text
-    fn perform_named_entity_recognition(&self, text: &str, context: &ProcessingContext) -> Vec<String> {
+    fn perform_named_entity_recognition(
+        &self,
+        text: &str,
+        context: &ProcessingContext,
+    ) -> Vec<String> {
+        if text.trim().is_empty() {
+            return Vec::new();
+        }
+
+        let recognizer = &self.named_entity_recognizer;
+        let recognition_result = if let Ok(handle) = Handle::try_current() {
+            handle.block_on(async { recognizer.recognize_entities(text, context).await })
+        } else {
+            match RuntimeBuilder::new_current_thread().enable_all().build() {
+                Ok(runtime) => {
+                    runtime.block_on(async { recognizer.recognize_entities(text, context).await })
+                }
+                Err(error) => {
+                    warn!(
+                        ?error,
+                        "Failed to initialize Tokio runtime for NER; using fallback heuristics"
+                    );
+                    return self.heuristic_entity_fallback(text);
+                }
+            }
+        };
+
+        match recognition_result {
+            Ok(mut entities) => {
+                entities.sort_by(|a, b| {
+                    let text_cmp = a.text.to_lowercase().cmp(&b.text.to_lowercase());
+                    if text_cmp == Ordering::Equal {
+                        b.confidence
+                            .partial_cmp(&a.confidence)
+                            .unwrap_or(Ordering::Equal)
+                    } else {
+                        text_cmp
+                    }
+                });
+
+                entities.dedup_by(|a, b| {
+                    if a.text.eq_ignore_ascii_case(&b.text) {
+                        if b.confidence > a.confidence {
+                            *a = b.clone();
+                        }
+                        true
+                    } else {
+                        false
+                    }
+                });
+
+                let mut results: Vec<String> = entities
+                    .into_iter()
+                    .filter(|entity| {
+                        matches!(
+                            entity.entity_type,
+                            EntityType::Person
+                                | EntityType::Organization
+                                | EntityType::Location
+                                | EntityType::Date
+                                | EntityType::Time
+                                | EntityType::Money
+                                | EntityType::Percent
+                                | EntityType::TechnicalTerm
+                        ) && entity.confidence >= 0.5
+                    })
+                    .map(|entity| entity.text)
+                    .collect();
+
+                if results.is_empty() {
+                    results = self.heuristic_entity_fallback(text);
+                } else {
+                    results.sort();
+                    results.dedup();
+                }
+
+                results
+            }
+            Err(error) => {
+                warn!(?error, "NER pipeline failed; using heuristic fallback");
+                self.heuristic_entity_fallback(text)
+            }
+        }
+    }
+
+    /// Lightweight heuristic fallback when NER pipeline is unavailable
+    fn heuristic_entity_fallback(&self, text: &str) -> Vec<String> {
         let mut entities = Vec::new();
-        
-        // TODO: Implement proper Named Entity Recognition (NER) with the following requirements:
-        // 1. NLP library integration: Integrate a proper NLP library for NER
-        //    - Replace pattern-based heuristics with a robust NLP library (spaCy, Stanford NER, or Hugging Face transformers)
-        //    - Handle NLP library initialization and model loading
-        //    - Implement proper error handling for NLP library failures
-        // 2. Entity type classification: Implement comprehensive entity type classification
-        //    - Support PERSON, ORGANIZATION, LOCATION, DATE, TIME, MONEY, PERCENT, and TECHNICAL_TERM entities
-        //    - Handle entity type confidence scoring and validation
-        //    - Implement entity type disambiguation and resolution
-        // 3. Context-aware entity extraction: Implement context-aware entity extraction
-        //    - Use conversation history and domain context for improved entity recognition
-        //    - Handle entity co-reference resolution and entity linking
-        //    - Implement entity relationship extraction and mapping
-        // 4. Performance optimization: Optimize NER performance and accuracy
-        //    - Implement NER caching and optimization strategies
-        //    - Handle NER monitoring and analytics
-        //    - Ensure NER meets performance and reliability standards
-        
-        // Person names (capitalized words that could be names)
         let words: Vec<&str> = text.split_whitespace().collect();
+
         for (i, word) in words.iter().enumerate() {
-            if word.len() > 2 && word.chars().next().unwrap().is_uppercase() {
-                // Check if it's likely a person name
+            if word.len() > 2 && word.chars().next().unwrap_or_default().is_uppercase() {
                 if self.is_likely_person_name(word, &words, i) {
                     entities.push(word.to_string());
                 }
             }
         }
-        
-        // Organization names (patterns like "Company Inc", "Corp", etc.)
+
         for (i, word) in words.iter().enumerate() {
-            if word.eq_ignore_ascii_case("inc") || word.eq_ignore_ascii_case("corp") || 
-               word.eq_ignore_ascii_case("llc") || word.eq_ignore_ascii_case("ltd") {
-                if i > 0 {
-                    entities.push(words[i-1].to_string());
-                }
+            if matches!(
+                word.to_ascii_lowercase().as_str(),
+                "inc" | "corp" | "llc" | "ltd" | "company" | "co"
+            ) && i > 0
+            {
+                entities.push(words[i - 1].to_string());
             }
         }
-        
-        // Technical terms and concepts
-        let technical_terms = [
-            "API", "HTTP", "JSON", "XML", "SQL", "REST", "GraphQL",
-            "Docker", "Kubernetes", "AWS", "Azure", "GCP",
-            "React", "Vue", "Angular", "Node.js", "Python", "Rust", "Go"
-        ];
-        
-        for term in &technical_terms {
-            if text.to_uppercase().contains(term) {
-                entities.push(term.to_string());
-            }
-        }
-        
+
+        static DATE_PATTERN: OnceLock<Regex> = OnceLock::new();
+        let date_pattern =
+            DATE_PATTERN.get_or_init(|| Regex::new(r"\b\d{4}-\d{2}-\d{2}\b").unwrap());
+        entities.extend(date_pattern.find_iter(text).map(|m| m.as_str().to_string()));
+
+        entities.sort();
+        entities.dedup();
         entities
     }
-    
+
     /// Check if a word is likely a person name
     fn is_likely_person_name(&self, word: &str, words: &[&str], index: usize) -> bool {
         // Simple heuristics for person name detection
         if word.len() < 2 || word.len() > 20 {
             return false;
         }
-        
+
         // Check for common name patterns
         let name_indicators = ["Mr.", "Ms.", "Dr.", "Prof.", "Sir", "Madam"];
         if index > 0 {
             let prev_word = words[index - 1];
-            if name_indicators.iter().any(|indicator| prev_word.eq_ignore_ascii_case(indicator)) {
+            if name_indicators
+                .iter()
+                .any(|indicator| prev_word.eq_ignore_ascii_case(indicator))
+            {
                 return true;
             }
         }
-        
+
         // Check if it's followed by a last name
         if index + 1 < words.len() {
             let next_word = words[index + 1];
@@ -724,99 +793,102 @@ impl ContextResolver {
                 return true;
             }
         }
-        
+
         // Check for common first names
         let common_first_names = [
-            "John", "Jane", "Mike", "Sarah", "David", "Lisa", "Chris", "Amy",
-            "Alex", "Sam", "Tom", "Kate", "Ben", "Emma", "Ryan", "Anna"
+            "John", "Jane", "Mike", "Sarah", "David", "Lisa", "Chris", "Amy", "Alex", "Sam", "Tom",
+            "Kate", "Ben", "Emma", "Ryan", "Anna",
         ];
-        
-        common_first_names.iter().any(|name| word.eq_ignore_ascii_case(name))
+
+        common_first_names
+            .iter()
+            .any(|name| word.eq_ignore_ascii_case(name))
     }
-    
+
     /// Link entities to knowledge bases
     fn link_entities_to_knowledge_bases(&self, entities: &[String]) -> Vec<String> {
         let mut linked_entities = Vec::new();
-        
+
         for entity in entities {
             // TODO: Implement knowledge base integration with the following requirements:
-            // 1. Wikipedia API integration: Query Wikipedia API for entity information
-            //    - Implement Wikipedia API client with proper rate limiting and error handling
-            //    - Handle Wikipedia API response parsing and entity disambiguation
-            //    - Implement Wikipedia API caching and optimization strategies
-            // 2. Wikidata integration: Query Wikidata for structured entity data
+            // 1. Wikidata integration: Query Wikidata for structured entity data
             // JSYK, wikidata and wordnet are available at the root of agent-agency. We can ingest this in our own hybrid RAG database for both knowledge graph and vector search.
-            
-            
+            // Then we should use the hybrid RAG database to link entities to knowledge bases via vector search and knowledge graph.
+            // For our knowledge seeker from v2, this system used this same setup along with access to search engines for patching world knowledge. I'd start in v2 and then port to v3.
+
             // For now, add related entities based on simple rules
             match entity.to_lowercase().as_str() {
                 "api" => linked_entities.extend(vec![
                     "REST API".to_string(),
                     "GraphQL".to_string(),
-                    "HTTP".to_string()
+                    "HTTP".to_string(),
                 ]),
                 "database" => linked_entities.extend(vec![
                     "SQL".to_string(),
                     "PostgreSQL".to_string(),
-                    "MySQL".to_string()
+                    "MySQL".to_string(),
                 ]),
                 "javascript" => linked_entities.extend(vec![
                     "Node.js".to_string(),
                     "TypeScript".to_string(),
-                    "React".to_string()
+                    "React".to_string(),
                 ]),
                 _ => {}
             }
         }
-        
+
         linked_entities
     }
-    
+
     /// Integrate entity context with conversation context
-    fn integrate_entity_context(&self, entities: &[String], context: &ProcessingContext) -> Vec<String> {
+    fn integrate_entity_context(
+        &self,
+        entities: &[String],
+        context: &ProcessingContext,
+    ) -> Vec<String> {
         let mut contextual_entities = Vec::new();
-        
+
         // Add entities based on conversation context
         if let Some(domain) = context.metadata.get("domain").and_then(|v| v.as_str()) {
             match domain {
                 "software_development" => contextual_entities.extend(vec![
                     "code".to_string(),
                     "programming".to_string(),
-                    "development".to_string()
+                    "development".to_string(),
                 ]),
                 "data_science" => contextual_entities.extend(vec![
                     "machine learning".to_string(),
                     "analytics".to_string(),
-                    "statistics".to_string()
+                    "statistics".to_string(),
                 ]),
                 "devops" => contextual_entities.extend(vec![
                     "deployment".to_string(),
                     "infrastructure".to_string(),
-                    "monitoring".to_string()
+                    "monitoring".to_string(),
                 ]),
                 _ => {}
             }
         }
-        
+
         // Add entities based on conversation topic
         if let Some(topic) = context.metadata.get("topic").and_then(|v| v.as_str()) {
             contextual_entities.push(topic.to_string());
         }
-        
+
         contextual_entities
     }
-    
+
     /// Analyze conversation history entities
     fn analyze_conversation_history_entities(&self, context: &ProcessingContext) -> Vec<String> {
         let mut entities = Vec::new();
-        
+
         if let Some(conversation_history) = context.metadata.get("conversation_history") {
             entities.extend(self.analyze_conversation_history(conversation_history, context));
         }
-        
+
         entities
     }
-    
+
     /// Analyze historical entities for patterns and evolution
     fn analyze_historical_entities(&self, entities: &[String]) -> HistoricalEntityAnalysis {
         let mut analysis = HistoricalEntityAnalysis {
@@ -825,12 +897,12 @@ impl ContextResolver {
             entity_relationships: Vec::new(),
             entity_evolution: Vec::new(),
         };
-        
+
         // Count entity frequency
         for entity in entities {
             *analysis.entity_frequency.entry(entity.clone()).or_insert(0) += 1;
         }
-        
+
         // Find entity relationships (simplified)
         for (i, entity1) in entities.iter().enumerate() {
             for (j, entity2) in entities.iter().enumerate() {
@@ -844,10 +916,10 @@ impl ContextResolver {
                 }
             }
         }
-        
+
         analysis
     }
-    
+
     /// Perform context-aware disambiguation using conversation history
     fn perform_context_aware_disambiguation(
         &self,
@@ -859,31 +931,33 @@ impl ContextResolver {
             disambiguation_confidence: 0.0,
             context_utilization: Vec::new(),
         };
-        
+
         // Use historical entity frequency for disambiguation
         let mut total_confidence = 0.0;
         let mut resolved_count = 0;
-        
+
         for (entity, frequency) in &historical_analysis.entity_frequency {
             if *frequency > 1 {
                 // Entity mentioned multiple times, likely important
                 disambiguation.resolved_entities.push(ResolvedEntity {
                     entity: entity.clone(),
-                    confidence: (*frequency as f64 / historical_analysis.total_entities as f64).min(1.0),
+                    confidence: (*frequency as f64 / historical_analysis.total_entities as f64)
+                        .min(1.0),
                     resolution_method: "frequency_analysis".to_string(),
                 });
-                total_confidence += (*frequency as f64 / historical_analysis.total_entities as f64).min(1.0);
+                total_confidence +=
+                    (*frequency as f64 / historical_analysis.total_entities as f64).min(1.0);
                 resolved_count += 1;
             }
         }
-        
+
         if resolved_count > 0 {
             disambiguation.disambiguation_confidence = total_confidence / resolved_count as f64;
         }
-        
+
         disambiguation
     }
-    
+
     /// Integrate domain hints with conversation context
     fn integrate_domain_hints_with_context(
         &self,
@@ -895,7 +969,7 @@ impl ContextResolver {
             integration_confidence: 0.0,
             domain_specific_terms: Vec::new(),
         };
-        
+
         // Get domain from context
         if let Some(domain) = context.metadata.get("domain").and_then(|v| v.as_str()) {
             // Add domain-specific entities
@@ -913,7 +987,7 @@ impl ContextResolver {
                         "method".to_string(),
                         "variable".to_string(),
                     ]);
-                },
+                }
                 "data_science" => {
                     integration.domain_entities.extend(vec![
                         "data".to_string(),
@@ -927,7 +1001,7 @@ impl ContextResolver {
                         "dataset".to_string(),
                         "prediction".to_string(),
                     ]);
-                },
+                }
                 "devops" => {
                     integration.domain_entities.extend(vec![
                         "deployment".to_string(),
@@ -941,37 +1015,42 @@ impl ContextResolver {
                         "server".to_string(),
                         "configuration".to_string(),
                     ]);
-                },
+                }
                 _ => {}
             }
-            
+
             // Calculate integration confidence based on overlap
-            let conversation_set: std::collections::HashSet<_> = conversation_entities.iter().collect();
-            let domain_set: std::collections::HashSet<_> = integration.domain_entities.iter().collect();
-            let intersection: std::collections::HashSet<_> = conversation_set.intersection(&domain_set).collect();
-            
+            let conversation_set: std::collections::HashSet<_> =
+                conversation_entities.iter().collect();
+            let domain_set: std::collections::HashSet<_> =
+                integration.domain_entities.iter().collect();
+            let intersection: std::collections::HashSet<_> =
+                conversation_set.intersection(&domain_set).collect();
+
             if !conversation_set.is_empty() {
-                integration.integration_confidence = intersection.len() as f64 / conversation_set.len() as f64;
+                integration.integration_confidence =
+                    intersection.len() as f64 / conversation_set.len() as f64;
             }
         }
-        
+
         integration
     }
-    
+
     /// Check if two entities are related
     fn are_entities_related(&self, entity1: &str, entity2: &str) -> bool {
         // Simple relationship detection based on common patterns
         let entity1_lower = entity1.to_lowercase();
         let entity2_lower = entity2.to_lowercase();
-        
+
         // Check for common prefixes/suffixes
         if entity1_lower.len() > 3 && entity2_lower.len() > 3 {
-            if entity1_lower.starts_with(&entity2_lower[..3]) || 
-               entity2_lower.starts_with(&entity1_lower[..3]) {
+            if entity1_lower.starts_with(&entity2_lower[..3])
+                || entity2_lower.starts_with(&entity1_lower[..3])
+            {
                 return true;
             }
         }
-        
+
         // Check for semantic relationships
         let semantic_pairs = [
             ("api", "endpoint"),
@@ -981,14 +1060,15 @@ impl ContextResolver {
             ("code", "function"),
             ("test", "specification"),
         ];
-        
+
         for (term1, term2) in &semantic_pairs {
-            if (entity1_lower.contains(term1) && entity2_lower.contains(term2)) ||
-               (entity1_lower.contains(term2) && entity2_lower.contains(term1)) {
+            if (entity1_lower.contains(term1) && entity2_lower.contains(term2))
+                || (entity1_lower.contains(term2) && entity2_lower.contains(term1))
+            {
                 return true;
             }
         }
-        
+
         false
     }
 
@@ -1178,8 +1258,10 @@ impl ContextResolver {
         // Implement conversation history analysis
         let conversation_entities = self.analyze_conversation_history_entities(context);
         let historical_analysis = self.analyze_historical_entities(&conversation_entities);
-        let context_aware_disambiguation = self.perform_context_aware_disambiguation(context, &historical_analysis);
-        let domain_integration = self.integrate_domain_hints_with_context(context, &conversation_entities);
+        let context_aware_disambiguation =
+            self.perform_context_aware_disambiguation(context, &historical_analysis);
+        let domain_integration =
+            self.integrate_domain_hints_with_context(context, &conversation_entities);
 
         referent_map
     }
@@ -1283,7 +1365,11 @@ impl NamedEntityRecognizer {
     }
 
     /// Perform comprehensive Named Entity Recognition on text
-    pub async fn recognize_entities(&self, text: &str, context: &ProcessingContext) -> Result<Vec<NamedEntity>> {
+    pub async fn recognize_entities(
+        &self,
+        text: &str,
+        context: &ProcessingContext,
+    ) -> Result<Vec<NamedEntity>> {
         // Check cache first for performance optimization
         if let Some(cached_entities) = self.get_cached_entities(text).await {
             return Ok(cached_entities);
@@ -1325,15 +1411,20 @@ impl NamedEntityRecognizer {
     }
 
     /// Extract person entities with context awareness
-    async fn extract_person_entities(&self, text: &str, context: &ProcessingContext) -> Result<Vec<NamedEntity>> {
+    async fn extract_person_entities(
+        &self,
+        text: &str,
+        context: &ProcessingContext,
+    ) -> Result<Vec<NamedEntity>> {
         let mut entities = Vec::new();
         let words: Vec<&str> = text.split_whitespace().collect();
 
         for pattern in &self.entity_patterns.person_patterns {
             for mat in pattern.find_iter(text) {
                 let entity_text = mat.as_str();
-                let confidence = self.calculate_person_confidence(entity_text, &words, mat.start(), context);
-                
+                let confidence =
+                    self.calculate_person_confidence(entity_text, &words, mat.start(), context);
+
                 if confidence > 0.5 {
                     entities.push(NamedEntity {
                         text: entity_text.to_string(),
@@ -1351,14 +1442,18 @@ impl NamedEntityRecognizer {
     }
 
     /// Extract organization entities
-    async fn extract_organization_entities(&self, text: &str, context: &ProcessingContext) -> Result<Vec<NamedEntity>> {
+    async fn extract_organization_entities(
+        &self,
+        text: &str,
+        context: &ProcessingContext,
+    ) -> Result<Vec<NamedEntity>> {
         let mut entities = Vec::new();
 
         for pattern in &self.entity_patterns.organization_patterns {
             for mat in pattern.find_iter(text) {
                 let entity_text = mat.as_str();
                 let confidence = self.calculate_organization_confidence(entity_text, context);
-                
+
                 if confidence > 0.5 {
                     entities.push(NamedEntity {
                         text: entity_text.to_string(),
@@ -1376,14 +1471,18 @@ impl NamedEntityRecognizer {
     }
 
     /// Extract location entities
-    async fn extract_location_entities(&self, text: &str, context: &ProcessingContext) -> Result<Vec<NamedEntity>> {
+    async fn extract_location_entities(
+        &self,
+        text: &str,
+        context: &ProcessingContext,
+    ) -> Result<Vec<NamedEntity>> {
         let mut entities = Vec::new();
 
         for pattern in &self.entity_patterns.location_patterns {
             for mat in pattern.find_iter(text) {
                 let entity_text = mat.as_str();
                 let confidence = self.calculate_location_confidence(entity_text, context);
-                
+
                 if confidence > 0.5 {
                     entities.push(NamedEntity {
                         text: entity_text.to_string(),
@@ -1401,7 +1500,11 @@ impl NamedEntityRecognizer {
     }
 
     /// Extract temporal entities (dates and times)
-    async fn extract_temporal_entities(&self, text: &str, context: &ProcessingContext) -> Result<Vec<NamedEntity>> {
+    async fn extract_temporal_entities(
+        &self,
+        text: &str,
+        context: &ProcessingContext,
+    ) -> Result<Vec<NamedEntity>> {
         let mut entities = Vec::new();
 
         // Date patterns
@@ -1436,7 +1539,11 @@ impl NamedEntityRecognizer {
     }
 
     /// Extract numerical entities (money and percentages)
-    async fn extract_numerical_entities(&self, text: &str, context: &ProcessingContext) -> Result<Vec<NamedEntity>> {
+    async fn extract_numerical_entities(
+        &self,
+        text: &str,
+        context: &ProcessingContext,
+    ) -> Result<Vec<NamedEntity>> {
         let mut entities = Vec::new();
 
         // Money patterns
@@ -1471,14 +1578,18 @@ impl NamedEntityRecognizer {
     }
 
     /// Extract technical entities with domain awareness
-    async fn extract_technical_entities(&self, text: &str, context: &ProcessingContext) -> Result<Vec<NamedEntity>> {
+    async fn extract_technical_entities(
+        &self,
+        text: &str,
+        context: &ProcessingContext,
+    ) -> Result<Vec<NamedEntity>> {
         let mut entities = Vec::new();
 
         for pattern in &self.entity_patterns.technical_term_patterns {
             for mat in pattern.find_iter(text) {
                 let entity_text = mat.as_str();
                 let confidence = self.calculate_technical_confidence(entity_text, context);
-                
+
                 if confidence > 0.6 {
                     entities.push(NamedEntity {
                         text: entity_text.to_string(),
@@ -1496,11 +1607,16 @@ impl NamedEntityRecognizer {
     }
 
     /// Resolve entity co-references
-    async fn resolve_entity_coreferences(&self, entities: Vec<NamedEntity>, context: &ProcessingContext) -> Result<Vec<NamedEntity>> {
+    async fn resolve_entity_coreferences(
+        &self,
+        entities: Vec<NamedEntity>,
+        context: &ProcessingContext,
+    ) -> Result<Vec<NamedEntity>> {
         let mut resolved_entities = entities;
 
         // Group entities by type for co-reference resolution
-        let mut person_entities: Vec<&mut NamedEntity> = resolved_entities.iter_mut()
+        let mut person_entities: Vec<&mut NamedEntity> = resolved_entities
+            .iter_mut()
             .filter(|e| e.entity_type == EntityType::Person)
             .collect();
 
@@ -1521,27 +1637,27 @@ impl NamedEntityRecognizer {
     }
 
     /// Disambiguate entities using context
-    async fn disambiguate_entities(&self, entities: Vec<NamedEntity>, context: &ProcessingContext) -> Result<Vec<NamedEntity>> {
+    async fn disambiguate_entities(
+        &self,
+        entities: Vec<NamedEntity>,
+        context: &ProcessingContext,
+    ) -> Result<Vec<NamedEntity>> {
         let mut disambiguated = Vec::new();
 
         for entity in entities {
             let mut disambiguated_entity = entity;
-            
+
             // Use conversation history for disambiguation
             if let Some(conversation_history) = context.metadata.get("conversation_history") {
-                disambiguated_entity.confidence *= self.calculate_context_boost(
-                    &disambiguated_entity.text,
-                    conversation_history
-                );
+                disambiguated_entity.confidence *=
+                    self.calculate_context_boost(&disambiguated_entity.text, conversation_history);
             }
 
             // Use domain context for technical terms
             if disambiguated_entity.entity_type == EntityType::TechnicalTerm {
                 if let Some(domain) = context.metadata.get("domain") {
-                    disambiguated_entity.confidence *= self.calculate_domain_boost(
-                        &disambiguated_entity.text,
-                        domain
-                    );
+                    disambiguated_entity.confidence *=
+                        self.calculate_domain_boost(&disambiguated_entity.text, domain);
                 }
             }
 
@@ -1552,8 +1668,14 @@ impl NamedEntityRecognizer {
     }
 
     /// Calculate confidence for person entities
-    fn calculate_person_confidence(&self, entity_text: &str, words: &[&str], position: usize, context: &ProcessingContext) -> f64 {
-        let mut confidence = 0.5;
+    fn calculate_person_confidence(
+        &self,
+        entity_text: &str,
+        words: &[&str],
+        position: usize,
+        context: &ProcessingContext,
+    ) -> f64 {
+        let mut confidence: f64 = 0.5;
 
         // Check for title indicators
         let titles = ["Mr.", "Ms.", "Dr.", "Prof.", "Sir", "Madam", "Mrs."];
@@ -1569,8 +1691,13 @@ impl NamedEntityRecognizer {
         }
 
         // Check against common names
-        let common_names = ["John", "Jane", "Mike", "Sarah", "David", "Lisa", "Chris", "Amy"];
-        if common_names.iter().any(|&name| entity_text.eq_ignore_ascii_case(name)) {
+        let common_names = [
+            "John", "Jane", "Mike", "Sarah", "David", "Lisa", "Chris", "Amy",
+        ];
+        if common_names
+            .iter()
+            .any(|&name| entity_text.eq_ignore_ascii_case(name))
+        {
             confidence += 0.2;
         }
 
@@ -1578,12 +1705,19 @@ impl NamedEntityRecognizer {
     }
 
     /// Calculate confidence for organization entities
-    fn calculate_organization_confidence(&self, entity_text: &str, context: &ProcessingContext) -> f64 {
-        let mut confidence = 0.6;
+    fn calculate_organization_confidence(
+        &self,
+        entity_text: &str,
+        context: &ProcessingContext,
+    ) -> f64 {
+        let mut confidence: f64 = 0.6;
 
         // Check for organization suffixes
         let org_suffixes = ["Inc", "Corp", "LLC", "Ltd", "Company", "Co"];
-        if org_suffixes.iter().any(|&suffix| entity_text.contains(suffix)) {
+        if org_suffixes
+            .iter()
+            .any(|&suffix| entity_text.contains(suffix))
+        {
             confidence += 0.3;
         }
 
@@ -1599,11 +1733,14 @@ impl NamedEntityRecognizer {
 
     /// Calculate confidence for location entities
     fn calculate_location_confidence(&self, entity_text: &str, context: &ProcessingContext) -> f64 {
-        let mut confidence = 0.6;
+        let mut confidence: f64 = 0.6;
 
         // Check for location indicators
         let location_indicators = ["City", "State", "Country", "Street", "Avenue", "Road"];
-        if location_indicators.iter().any(|&indicator| entity_text.contains(indicator)) {
+        if location_indicators
+            .iter()
+            .any(|&indicator| entity_text.contains(indicator))
+        {
             confidence += 0.2;
         }
 
@@ -1611,8 +1748,12 @@ impl NamedEntityRecognizer {
     }
 
     /// Calculate confidence for technical entities
-    fn calculate_technical_confidence(&self, entity_text: &str, context: &ProcessingContext) -> f64 {
-        let mut confidence = 0.7;
+    fn calculate_technical_confidence(
+        &self,
+        entity_text: &str,
+        context: &ProcessingContext,
+    ) -> f64 {
+        let mut confidence: f64 = 0.7;
 
         // Check domain context
         if let Some(domain) = context.metadata.get("domain").and_then(|v| v.as_str()) {
@@ -1632,7 +1773,7 @@ impl NamedEntityRecognizer {
         let context_window = 50;
         let context_start = start.saturating_sub(context_window);
         let context_end = (end + context_window).min(text.len());
-        
+
         text[context_start..context_end].to_string()
     }
 
@@ -1641,7 +1782,7 @@ impl NamedEntityRecognizer {
         // Simple heuristic - check if names share common parts
         let parts1: Vec<&str> = name1.split_whitespace().collect();
         let parts2: Vec<&str> = name2.split_whitespace().collect();
-        
+
         for part1 in &parts1 {
             for part2 in &parts2 {
                 if part1.eq_ignore_ascii_case(part2) && part1.len() > 2 {
@@ -1649,31 +1790,37 @@ impl NamedEntityRecognizer {
                 }
             }
         }
-        
+
         false
     }
 
     /// Calculate context boost from conversation history
     fn calculate_context_boost(&self, entity_text: &str, conversation_history: &Value) -> f64 {
         let mut boost = 1.0;
-        
+
         if let Some(messages) = conversation_history.as_array() {
-            let mention_count = messages.iter()
+            let mention_count = messages
+                .iter()
                 .filter_map(|msg| msg.get("content").and_then(|v| v.as_str()))
                 .filter(|content| content.contains(entity_text))
                 .count();
-            
+
             // Boost confidence based on mention frequency
             boost += (mention_count as f64 * 0.1).min(0.3);
         }
-        
+
         boost
     }
 
     /// Calculate domain boost for technical terms
     fn calculate_domain_boost(&self, entity_text: &str, domain: &Value) -> f64 {
         if let Some(domain_str) = domain.as_str() {
-            let technical_domains = ["software_development", "technology", "data_science", "devops"];
+            let technical_domains = [
+                "software_development",
+                "technology",
+                "data_science",
+                "devops",
+            ];
             if technical_domains.contains(&domain_str) {
                 return 1.2;
             }
@@ -1691,7 +1838,7 @@ impl NamedEntityRecognizer {
     async fn cache_entities(&self, text: &str, entities: &[NamedEntity]) {
         let mut cache = self.entity_cache.write().await;
         cache.insert(text.to_string(), entities.to_vec());
-        
+
         // Limit cache size to prevent memory issues
         if cache.len() > 1000 {
             let keys_to_remove: Vec<String> = cache.keys().take(100).cloned().collect();

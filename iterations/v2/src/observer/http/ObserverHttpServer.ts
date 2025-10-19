@@ -1,5 +1,6 @@
 import fs from "fs";
 import http, { IncomingMessage, Server, ServerResponse } from "http";
+import https from "https";
 import { AddressInfo } from "net";
 import { URL } from "url";
 import { authorizeRequest, ObserverAuthError } from "../auth";
@@ -47,11 +48,37 @@ export class ObserverHttpServer {
       return;
     }
 
-    this.server = http.createServer((req, res) => {
+    // SECURITY: Middleware to enforce HTTPS and add security headers
+    const securityMiddleware = (req: IncomingMessage, res: ServerResponse) => {
+      // Add security headers to all responses
+      res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("X-Frame-Options", "DENY");
+      res.setHeader("X-XSS-Protection", "1; mode=block");
+      res.setHeader(
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+      );
+
+      // In production, redirect HTTP to HTTPS
+      if (
+        process.env.NODE_ENV === "production" &&
+        req.headers["x-forwarded-proto"] !== "https" &&
+        req.url !== "/health"
+      ) {
+        const host = req.headers.host || "localhost";
+        const redirectUrl = `https://${host}${req.url}`;
+        res.writeHead(301, { Location: redirectUrl });
+        res.end();
+        return;
+      }
+
       this.handleRequest(req, res).catch((error) => {
         this.handleError(res, error);
       });
-    });
+    };
+
+    this.server = http.createServer(securityMiddleware);
 
     const listenPromise = new Promise<void>((resolve, reject) => {
       if (this.config.socketPath) {

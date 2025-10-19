@@ -153,6 +153,40 @@ export class AgentRegistrySecurity {
    */
   async authenticate(token: string): Promise<SecurityContext | null> {
     try {
+      // SECURITY: Apply rate limiting to prevent brute force attacks on authentication
+      // Create a temporary context for rate limiting before authentication completes
+      const now = new Date();
+      const preLimitContext: SecurityContext = {
+        agentId: "anonymous",
+        userId: "anonymous",
+        tenantId: "default-tenant",
+        sessionId: "",
+        permissions: [],
+        roles: [],
+        securityLevel: SecurityLevel.PUBLIC,
+        authenticatedAt: now,
+        expiresAt: new Date(now.getTime() + 3600000), // 1 hour expiry
+        metadata: { source: "api" },
+        ipAddress: "",
+        userAgent: "",
+      };
+
+      if (!this.checkRateLimit(preLimitContext)) {
+        console.warn(
+          "SECURITY: Authentication rate limit exceeded from anonymous request"
+        );
+        await this.logSecurityViolation(
+          preLimitContext,
+          AuditAction.READ,
+          "agent",
+          "anonymous",
+          "Authentication rate limit exceeded - possible brute force attack"
+        );
+        throw new Error(
+          "Rate limit exceeded for authentication. Please try again later."
+        );
+      }
+
       // Validate token format
       if (!token || token.trim().length === 0) {
         await this.logAuditEvent({
@@ -624,8 +658,8 @@ export class AgentRegistrySecurity {
       details: { reason, securityViolation: true },
       result: "failure",
       errorMessage: reason,
-      ipAddress: context.ipAddress,
-      userAgent: context.userAgent,
+      ipAddress: context.metadata?.ipAddress as string | undefined,
+      userAgent: context.metadata?.userAgent as string | undefined,
     });
   }
 
