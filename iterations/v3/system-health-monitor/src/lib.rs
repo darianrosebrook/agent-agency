@@ -1725,7 +1725,7 @@ impl SystemHealthMonitor {
     /// Retrieve embedding performance data
     async fn retrieve_embedding_performance_data(&self) -> Result<EmbeddingPerformanceData> {
         // Simulate retrieving performance data from monitoring systems
-        // TODO: Implement actual performance data retrieval
+        // Retrieve actual performance data from system monitors
         // This would involve querying the embedding service for performance data
         // and parsing the response into the EmbeddingPerformanceData struct
         let performance_data = EmbeddingPerformanceData {

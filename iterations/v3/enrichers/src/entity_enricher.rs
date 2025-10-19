@@ -8,9 +8,11 @@
 //! - PII detection and hashing for privacy
 
 use crate::types::{Chapter, EnricherConfig, EntityResult, ExtractedEntity, Topic};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::collections::HashMap;
 use uuid::Uuid;
+use regex::Regex;
+use sha2::{Sha256, Digest};
 
 pub struct EntityEnricher {
     config: EnricherConfig,
