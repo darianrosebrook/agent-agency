@@ -24,3 +24,9 @@ agent-agency-resilience = { path = "../resilience" }
 agent-agency-database = { path = "../database" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 tracing = "0.1"
+
+# Multimodal RAG integration dependencies
+ingestors = { path = "../ingestors" }
+enrichers = { path = "../enrichers" }
+indexers = { path = "../indexers" }
+agent-agency-research = { path = "../research" }

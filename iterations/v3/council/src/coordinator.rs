@@ -8,6 +8,8 @@ use crate::models::{EvidencePacket, ParticipantContribution, RiskTier, TaskSpec}
 use crate::resilience::ResilienceManager;
 use crate::types::{ConsensusResult, FinalVerdict, JudgeVerdict};
 use crate::CouncilConfig;
+use crate::{MultimodalEvidenceEnricher, ClaimWithMultimodalEvidence};
+use agent_agency_research::{MultimodalContextProvider, MultimodalContext, KnowledgeSeeker};
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -305,6 +307,10 @@ pub struct ConsensusCoordinator {
     resilience_manager: Arc<ResilienceManager>, // V2 production resilience
     /// Basic metrics tracking for the coordinator
     metrics: Arc<std::sync::RwLock<CoordinatorMetrics>>,
+    /// Multimodal evidence enricher for claim enhancement
+    multimodal_evidence_enricher: MultimodalEvidenceEnricher,
+    /// Knowledge seeker for multimodal context retrieval
+    knowledge_seeker: Option<Arc<KnowledgeSeeker>>,
 }
 
 /// Internal metrics for tracking coordinator performance
@@ -368,7 +374,182 @@ impl ConsensusCoordinator {
             evidence_enrichment: EvidenceEnrichmentCoordinator::new(),
             resilience_manager: Arc::new(ResilienceManager::new()), // V2 production resilience
             metrics: Arc::new(std::sync::RwLock::new(CoordinatorMetrics::default())),
+            multimodal_evidence_enricher: MultimodalEvidenceEnricher::new(),
+            knowledge_seeker: None, // Will be set via set_knowledge_seeker
         }
+    }
+
+    /// Set the knowledge seeker for multimodal context retrieval
+    pub fn set_knowledge_seeker(&mut self, knowledge_seeker: Arc<KnowledgeSeeker>) {
+        self.knowledge_seeker = Some(knowledge_seeker);
+    }
+
+    // ============================================================================
+    // MULTIMODAL RAG INTEGRATION METHODS
+    // ============================================================================
+
+    /// Get multimodal context for decision-making
+    ///
+    /// # Arguments
+    /// * `decision_point` - Description of the decision point
+    /// * `project_scope` - Optional project scope for filtering
+    ///
+    /// # Returns
+    /// Multimodal context with evidence from multiple modalities
+    pub async fn get_multimodal_decision_context(
+        &self,
+        decision_point: &str,
+        project_scope: Option<&str>,
+    ) -> Result<MultimodalContext> {
+        info!("Getting multimodal decision context for: {}", decision_point);
+
+        let knowledge_seeker = self.knowledge_seeker.as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Knowledge seeker not configured"))?;
+
+        let context = knowledge_seeker
+            .get_decision_context(decision_point, project_scope)
+            .await
+            .context("Failed to get multimodal decision context")?;
+
+        info!(
+            "Retrieved multimodal decision context: {} evidence items",
+            context.evidence_items.len()
+        );
+
+        Ok(context)
+    }
+
+    /// Enrich claims with multimodal evidence
+    ///
+    /// # Arguments
+    /// * `claim_id` - Claim identifier
+    /// * `claim_statement` - The claim text
+    /// * `modalities_to_query` - Which modalities to search
+    ///
+    /// # Returns
+    /// Claim enriched with multimodal evidence
+    pub async fn enrich_claim_with_multimodal_evidence(
+        &self,
+        claim_id: &str,
+        claim_statement: &str,
+        modalities_to_query: Option<Vec<&str>>,
+    ) -> Result<ClaimWithMultimodalEvidence> {
+        info!("Enriching claim with multimodal evidence: {}", claim_id);
+
+        let enriched_claim = self.multimodal_evidence_enricher
+            .enrich_claim_with_multimodal_evidence(claim_id, claim_statement, modalities_to_query)
+            .await
+            .context("Failed to enrich claim with multimodal evidence")?;
+
+        info!(
+            "Enriched claim {} with {} evidence items from {} modalities",
+            claim_id,
+            enriched_claim.multimodal_evidence.evidence_items.len(),
+            enriched_claim.modality_coverage.len()
+        );
+
+        Ok(enriched_claim)
+    }
+
+    /// Get evidence context for claim validation
+    ///
+    /// # Arguments
+    /// * `claim` - Claim statement to validate
+    /// * `context_type` - Type of evidence needed ("citation", "support", "refutation")
+    ///
+    /// # Returns
+    /// Multimodal context for claim validation
+    pub async fn get_evidence_context_for_claim(
+        &self,
+        claim: &str,
+        context_type: &str,
+    ) -> Result<MultimodalContext> {
+        info!("Getting evidence context for claim validation: {} (type: {})", claim, context_type);
+
+        let knowledge_seeker = self.knowledge_seeker.as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Knowledge seeker not configured"))?;
+
+        let context = knowledge_seeker
+            .get_evidence_context(claim, context_type)
+            .await
+            .context("Failed to get evidence context for claim")?;
+
+        info!(
+            "Retrieved evidence context: {} evidence items",
+            context.evidence_items.len()
+        );
+
+        Ok(context)
+    }
+
+    /// Enhance verdict with multimodal evidence
+    ///
+    /// # Arguments
+    /// * `verdict` - Base verdict to enhance
+    /// * `decision_point` - Decision point description
+    ///
+    /// # Returns
+    /// Enhanced verdict with multimodal evidence
+    pub async fn enhance_verdict_with_multimodal_evidence(
+        &self,
+        verdict: &FinalVerdict,
+        decision_point: &str,
+    ) -> Result<FinalVerdict> {
+        info!("Enhancing verdict with multimodal evidence for decision: {}", decision_point);
+
+        // Get multimodal context for the decision
+        let multimodal_context = self
+            .get_multimodal_decision_context(decision_point, None)
+            .await?;
+
+        // Create enhanced verdict with multimodal evidence
+        let mut enhanced_verdict = verdict.clone();
+        
+        // Add multimodal evidence to verdict metadata
+        enhanced_verdict.metadata.insert(
+            "multimodal_evidence_count".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(multimodal_context.evidence_items.len())),
+        );
+        
+        enhanced_verdict.metadata.insert(
+            "multimodal_budget_utilization".to_string(),
+            serde_json::Value::Number(serde_json::Number::from_f64(multimodal_context.budget_utilization as f64).unwrap_or(serde_json::Number::from(0))),
+        );
+        
+        enhanced_verdict.metadata.insert(
+            "multimodal_dedup_score".to_string(),
+            serde_json::Value::Number(serde_json::Number::from_f64(multimodal_context.dedup_score as f64).unwrap_or(serde_json::Number::from(0))),
+        );
+
+        // Add evidence items summary
+        let evidence_summary: Vec<serde_json::Value> = multimodal_context
+            .evidence_items
+            .iter()
+            .take(5) // Limit to top 5 evidence items
+            .map(|item| serde_json::json!({
+                "modality": item.modality,
+                "confidence": item.confidence,
+                "similarity_score": item.similarity_score,
+                "is_global": item.is_global,
+                "content_preview": if item.content.len() > 100 {
+                    format!("{}...", &item.content[..100])
+                } else {
+                    item.content.clone()
+                }
+            }))
+            .collect();
+
+        enhanced_verdict.metadata.insert(
+            "multimodal_evidence_summary".to_string(),
+            serde_json::Value::Array(evidence_summary),
+        );
+
+        info!(
+            "Enhanced verdict with {} multimodal evidence items",
+            multimodal_context.evidence_items.len()
+        );
+
+        Ok(enhanced_verdict)
     }
 
     /// Inject a provenance emitter

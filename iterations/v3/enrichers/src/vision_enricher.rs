@@ -296,7 +296,7 @@ impl VisionEnricher {
         for block in vision_result.document_blocks {
             let ocr_block = OcrBlock {
                 id: Uuid::new_v4(),
-                role: self.map_vision_role(block.role),
+                role: self.map_vision_role(&block.role),
                 text: block.text,
                 bbox: BoundingBox {
                     x: block.bounding_box.x,

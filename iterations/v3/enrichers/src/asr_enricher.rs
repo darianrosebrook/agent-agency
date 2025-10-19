@@ -13,7 +13,6 @@ use std::time::Instant;
 use uuid::Uuid;
 use tokio::process::Command;
 use serde_json;
-use std::path::Path;
 use tempfile::NamedTempFile;
 
 /// WhisperX JSON output structure

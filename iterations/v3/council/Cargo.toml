@@ -47,6 +47,9 @@ agent-agency-database = { path = "../database" }
 # Source integrity integration
 source-integrity = { path = "../source-integrity" }
 
+# Research integration for multimodal context
+agent-agency-research = { path = "../research" }
+
 [dev-dependencies]
 jsonschema = "0.17"
 serde_json = "1"
