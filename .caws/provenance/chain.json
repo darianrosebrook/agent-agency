@@ -12162,5 +12162,77 @@
     },
     "previous_hash": "0ad3207dd1ce43bae660f3f28e5b131bafdec49ee15dfd5b987761b543c79241",
     "hash": "c33f7f985664a9baad1c1fc5d78a8b048ee3c8eaa9c285d084c6ab01f3d47dbc"
+  },
+  {
+    "id": "prov-1760863280587",
+    "timestamp": "2025-10-19T08:41:20.587Z",
+    "commit": {
+      "hash": "bfa693eaf91c742dad3c1046bf2ee7f12d7a9c68",
+      "message": "Implement context-preservation-engine TODOs: 4 items completed",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-19T08:41:20.588Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "c33f7f985664a9baad1c1fc5d78a8b048ee3c8eaa9c285d084c6ab01f3d47dbc",
+    "hash": "de27f2ecef1c0bd22e8dc32c8613a833a9ac7eaea920e77a1f7f8eb2741dd055"
+  },
+  {
+    "id": "prov-1760863312772",
+    "timestamp": "2025-10-19T08:41:52.772Z",
+    "commit": {
+      "hash": "e1a7e04d2bf01e8e8709de43e560921bc831f748",
+      "message": "Add context-preservation-engine implementation documentation",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-19T08:41:52.772Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "de27f2ecef1c0bd22e8dc32c8613a833a9ac7eaea920e77a1f7f8eb2741dd055",
+    "hash": "dae292b10e744dc9c8c9100cf62d9da3ce1982799a9bc2cafc1e81467108e974"
   }
 ]

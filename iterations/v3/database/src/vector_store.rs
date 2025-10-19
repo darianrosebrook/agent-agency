@@ -12,7 +12,6 @@ use tracing::{debug, error, info};
 use uuid::Uuid;
 
 /// Database-backed vector store for multimodal RAG
-#[derive(Debug, Clone)]
 pub struct DatabaseVectorStore {
     /// PostgreSQL connection pool
     pool: Arc<PgPool>,
@@ -40,12 +39,13 @@ impl DatabaseVectorStore {
     pub async fn store_vector(&self, record: BlockVectorRecord) -> Result<()> {
         debug!("Storing vector for block: {}", record.block_id);
         
+        let block_id = record.block_id;
         self.vector_store
             .store_vector(record)
             .await
             .context("Failed to store vector in database")?;
-            
-        info!("Successfully stored vector for block: {}", record.block_id);
+
+        info!("Successfully stored vector for block: {}", block_id);
         Ok(())
     }
 

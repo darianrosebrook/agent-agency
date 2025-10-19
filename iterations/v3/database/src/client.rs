@@ -440,9 +440,6 @@ impl DatabaseClient {
         // Initialize circuit breaker
         let circuit_breaker = Arc::new(CircuitBreaker::new());
 
-        // Initialize metrics
-        let metrics = Arc::new(DatabaseMetrics::new());
-
         // Initialize connection semaphore
         let connection_semaphore = Arc::new(Semaphore::new(config.pool_max as usize));
 

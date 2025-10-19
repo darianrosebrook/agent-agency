@@ -311,6 +311,8 @@ pub struct ConsensusCoordinator {
     multimodal_evidence_enricher: MultimodalEvidenceEnricher,
     /// Knowledge seeker for multimodal context retrieval
     knowledge_seeker: Option<Arc<KnowledgeSeeker>>,
+    /// Queue tracking for evaluation task management
+    queue_tracker: Arc<std::sync::RwLock<QueueTracker>>,
 }
 
 /// Internal metrics for tracking coordinator performance
@@ -325,6 +327,143 @@ struct CoordinatorMetrics {
     total_debate_time_ms: u64,
     sla_violations: u64,
     judge_performance: HashMap<String, JudgePerformanceStats>,
+    /// Queue tracking metrics for evaluation management
+    queue_metrics: QueueMetrics,
+}
+
+/// Queue tracking metrics for evaluation management
+#[derive(Debug, Clone, Default)]
+struct QueueMetrics {
+    /// Current queue depth (number of pending evaluations)
+    current_depth: u64,
+    /// Maximum queue depth reached
+    max_depth: u64,
+    /// Total tasks processed through queue
+    total_processed: u64,
+    /// Average processing time per task (ms)
+    avg_processing_time_ms: u64,
+    /// Queue processing rate (tasks per second)
+    processing_rate: f64,
+    /// Queue bottlenecks detected
+    bottlenecks_detected: u64,
+    /// Queue optimization events
+    optimization_events: u64,
+    /// Queue management operations
+    management_operations: u64,
+    /// Last queue depth update timestamp
+    last_update: DateTime<Utc>,
+}
+
+/// Queue task status for tracking individual evaluation tasks
+#[derive(Debug, Clone)]
+enum QueueTaskStatus {
+    Pending,
+    Processing,
+    Completed,
+    Failed,
+    Cancelled,
+}
+
+/// Queue task information for tracking individual evaluation tasks
+#[derive(Debug, Clone)]
+struct QueueTask {
+    task_id: Uuid,
+    status: QueueTaskStatus,
+    created_at: DateTime<Utc>,
+    started_at: Option<DateTime<Utc>>,
+    completed_at: Option<DateTime<Utc>>,
+    priority: u8, // 1-10, higher is more urgent
+    estimated_duration_ms: u64,
+    actual_duration_ms: Option<u64>,
+}
+
+/// Queue analytics for performance analysis
+#[derive(Debug, Clone)]
+struct QueueAnalytics {
+    /// Queue processing efficiency (0.0-1.0)
+    efficiency: f64,
+    /// Queue backlog trend (positive = growing, negative = shrinking)
+    backlog_trend: f64,
+    /// Average wait time for tasks (ms)
+    avg_wait_time_ms: u64,
+    /// Queue utilization percentage
+    utilization_percentage: f64,
+    /// Bottleneck identification results
+    bottlenecks: Vec<String>,
+    /// Optimization recommendations
+    recommendations: Vec<String>,
+}
+
+/// Queue tracker for managing evaluation task queue
+#[derive(Debug, Clone)]
+struct QueueTracker {
+    /// Active queue tasks
+    active_tasks: HashMap<Uuid, QueueTask>,
+    /// Queue processing history for analytics
+    processing_history: Vec<QueueProcessingEvent>,
+    /// Queue performance metrics
+    performance_metrics: QueuePerformanceMetrics,
+    /// Queue configuration and limits
+    config: QueueConfig,
+}
+
+/// Queue processing event for tracking task lifecycle
+#[derive(Debug, Clone)]
+struct QueueProcessingEvent {
+    task_id: Uuid,
+    event_type: QueueEventType,
+    timestamp: DateTime<Utc>,
+    duration_ms: Option<u64>,
+    metadata: HashMap<String, String>,
+}
+
+/// Types of queue processing events
+#[derive(Debug, Clone)]
+enum QueueEventType {
+    TaskEnqueued,
+    TaskStarted,
+    TaskCompleted,
+    TaskFailed,
+    TaskCancelled,
+    QueueOptimized,
+    BottleneckDetected,
+    LoadBalanced,
+}
+
+/// Queue performance metrics for monitoring
+#[derive(Debug, Clone, Default)]
+struct QueuePerformanceMetrics {
+    /// Total tasks processed
+    total_processed: u64,
+    /// Total tasks failed
+    total_failed: u64,
+    /// Average processing time (ms)
+    avg_processing_time_ms: u64,
+    /// Peak queue depth
+    peak_depth: u64,
+    /// Current processing rate (tasks/second)
+    current_rate: f64,
+    /// Queue efficiency score (0.0-1.0)
+    efficiency_score: f64,
+    /// Last performance update
+    last_update: DateTime<Utc>,
+}
+
+/// Queue configuration and limits
+#[derive(Debug, Clone)]
+struct QueueConfig {
+    /// Maximum queue depth
+    max_depth: u64,
+    /// Maximum processing time per task (ms)
+    max_processing_time_ms: u64,
+    /// Queue optimization threshold
+    optimization_threshold: f64,
+    /// Bottleneck detection threshold
+    bottleneck_threshold: f64,
+    /// Load balancing enabled
+    load_balancing_enabled: bool,
+    /// Priority handling enabled
+    priority_handling_enabled: bool,
 }
 
 /// Performance statistics for individual judges

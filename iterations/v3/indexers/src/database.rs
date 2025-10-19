@@ -117,13 +117,22 @@ impl VectorStore for PostgresVectorStore {
     }
 
     async fn get_block_vectors(&self, block_id: Uuid, model_id: &str) -> Result<Option<Vec<f32>>> {
-        // TODO: PLACEHOLDER - SELECT vec FROM block_vectors WHERE block_id = $1 AND model_id = $2
+        // Query vectors from database for a specific block and model
+        let vector = sqlx::query_scalar::<_, Vec<f32>>(
+            "SELECT vec FROM block_vectors WHERE block_id = $1 AND model_id = $2"
+        )
+        .bind(block_id)
+        .bind(model_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| anyhow!("Failed to fetch block vectors: {}", e))?;
+
         debug!(
-            "Retrieving vectors for block {} with model {}",
+            "Retrieved vectors for block {} with model {}",
             block_id, model_id
         );
 
-        Ok(None)
+        Ok(vector)
     }
 
     async fn search_similar(
@@ -190,10 +199,22 @@ impl VectorStore for PostgresVectorStore {
     }
 
     async fn get_search_logs(&self, limit: usize) -> Result<Vec<SearchAuditEntry>> {
-        // TODO: PLACEHOLDER - SELECT * FROM search_logs ORDER BY created_at DESC LIMIT $1
-        debug!("Retrieving {} search logs", limit);
+        // Query recent search logs from audit table
+        let logs = sqlx::query_as::<_, SearchAuditEntry>(
+            "SELECT id, query_vector, model_id, k, results_count, 
+                    execution_time_ms, created_at, project_scope
+             FROM search_logs 
+             ORDER BY created_at DESC 
+             LIMIT $1"
+        )
+        .bind(limit as i64)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| anyhow!("Failed to fetch search logs: {}", e))?;
 
-        Ok(vec![])
+        debug!("Retrieved {} search logs", logs.len());
+
+        Ok(logs)
     }
 }
 
