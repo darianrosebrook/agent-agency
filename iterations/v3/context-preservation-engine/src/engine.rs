@@ -510,6 +510,41 @@ impl ContextPreservationEngine {
         Ok(())
     }
 
+    /// Store context data with tenant and session information
+    pub async fn store_context(
+        &self,
+        context_data: &ContextData,
+        tenant_id: &str,
+        session_id: Option<&str>,
+    ) -> Result<()> {
+        let context_id = Uuid::new_v4();
+
+        // Create metadata with session information
+        let mut metadata = HashMap::new();
+        if let Some(session_id) = session_id {
+            metadata.insert("session_id".to_string(), session_id.to_string());
+        }
+        metadata.insert("stored_at".to_string(), Utc::now().to_rfc3339());
+        metadata.insert("tenant_id".to_string(), tenant_id.to_string());
+
+        // Store the context using the context store
+        let storage_result = self
+            .context_store
+            .store_context(&context_id, tenant_id, context_data, &metadata)
+            .await?;
+
+        if !storage_result.stored {
+            return Err(anyhow::anyhow!("Failed to store context: {}", context_id));
+        }
+
+        info!(
+            "Context stored successfully - ID: {}, Tenant: {}, Session: {:?}",
+            context_id, tenant_id, session_id
+        );
+
+        Ok(())
+    }
+
     /// Get cache statistics
     pub async fn get_cache_stats(&self) -> ContextCacheStats {
         let cache = self.snapshot_cache.read().await;

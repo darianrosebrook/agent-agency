@@ -22,7 +22,16 @@ if [[ -n "$RUSTC_WRAPPER" ]]; then
     export SCCACHE_DIR="${SCCACHE_DIR:-$HOME/.cache/sccache}"
     export SCCACHE_NAMESPACE="${SCCACHE_NAMESPACE:-agent-agency}"
     export SCCACHE_CACHE_SIZE="${SCCACHE_CACHE_SIZE:-50G}"
-    
+
+    # Distributed caching support
+    if [[ -n "${SCCACHE_BUCKET:-}" ]]; then
+        export SCCACHE_BUCKET="$SCCACHE_BUCKET"
+        export SCCACHE_REGION="${SCCACHE_REGION:-us-east-1}"
+        if [[ "$VERBOSE" == "true" ]]; then
+            echo "✅ Using distributed sccache with bucket: $SCCACHE_BUCKET"
+        fi
+    fi
+
     if [[ "$VERBOSE" == "true" ]]; then
         echo "✅ Using sccache: $RUSTC_WRAPPER"
         echo "   Cache dir: $SCCACHE_DIR"

@@ -29,5 +29,9 @@ chrono = { version = "0.4", features = ["serde"] }
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
 sqlx-cli = "0.7"
 
+# XML parsing dependencies for graph modality
+quick-xml = "0.31"
+roxmltree = "0.19"
+
 [dev-dependencies]
 tokio-test = "0.4"

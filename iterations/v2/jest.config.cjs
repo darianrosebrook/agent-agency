@@ -15,8 +15,8 @@ module.exports = {
   roots: ["<rootDir>/src", "<rootDir>/tests"],
   testMatch: ["**/__tests__/**/*.ts", "**/?(*.)+(spec|test).ts"],
 
-  // CRITICAL: Limit parallel workers to prevent system overload
-  maxWorkers: 2,
+  // Optimized parallel workers for performance
+  maxWorkers: "50%",
 
   // Timeout settings
   testTimeout: 30000,
@@ -25,20 +25,28 @@ module.exports = {
   forceExit: true,
   detectOpenHandles: false,
 
-  // Transform configuration
+  // Transform configuration with SWC for speed
   transform: {
-    "^.+\\.ts$": [
-      "ts-jest",
-      {
-        tsconfig: {
-          ...require("./tsconfig.json").compilerOptions,
-          module: "ES2022",
-          target: "ES2022",
+    "^.+\\.ts$": ["@swc/jest", {
+      "jsc": {
+        "parser": {
+          "syntax": "typescript",
+          "tsx": false,
+          "decorators": true,
+          "dynamicImport": true
         },
-        useESM: true,
+        "target": "es2022",
+        "transform": {
+          "legacyDecorator": true,
+          "decoratorMetadata": true
+        }
       },
-    ],
-    "^.+\\.js$": "ts-jest",
+      "module": {
+        "type": "commonjs"
+      },
+      "sourceMaps": true
+    }],
+    "^.+\\.js$": ["@swc/jest"],
   },
 
   // Coverage settings

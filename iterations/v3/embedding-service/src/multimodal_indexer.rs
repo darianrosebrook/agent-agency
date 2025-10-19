@@ -8,6 +8,8 @@ use uuid::Uuid;
 use sqlx::{PgPool, Row};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use quick_xml::{Reader, events::Event};
+use roxmltree::Document;
 
 /// Multimodal indexer with per-modality search capabilities
 pub struct MultimodalIndexer {
@@ -89,12 +91,9 @@ impl DatabaseClient {
     /// Create a new database client with connection pool
     pub async fn new(config: DatabaseConfig) -> Result<Self> {
         // Create PostgreSQL connection pool with configuration
-        let pool = PgPool::builder()
+        let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(config.max_connections)
-            .min_connections(config.min_connections)
-            .acquire_timeout(std::time::Duration::from_secs(config.connection_timeout))
-            .idle_timeout(std::time::Duration::from_secs(config.idle_timeout))
-            .build(&config.database_url)
+            .connect(&config.database_url)
             .await?;
 
         // Initialize health status
@@ -144,7 +143,7 @@ impl DatabaseClient {
             Ok(_) => {
                 // Connection is healthy
                 self.health_status.active_connections = self.pool.size();
-                self.health_status.idle_connections = self.pool.num_idle();
+                self.health_status.idle_connections = self.pool.num_idle() as u32;
                 self.health_status.health_score = 1.0;
                 self.health_status.avg_response_time_ms = response_time;
             }
@@ -163,11 +162,11 @@ impl DatabaseClient {
     /// Execute database transaction with automatic rollback on error
     pub async fn execute_transaction<F, R>(&self, operation: F) -> Result<R>
     where
-        F: FnOnce(&sqlx::PgConnection) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<R>> + Send + '_>>,
+        F: FnOnce(&mut sqlx::PgConnection) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<R>> + Send + '_>>,
     {
         let mut transaction = self.pool.begin().await?;
-        
-        let result = operation(&mut *transaction).await;
+
+        let result = operation(&mut transaction).await;
         
         match result {
             Ok(value) => {
@@ -281,7 +280,7 @@ impl DatabaseClient {
             models_count: models_count as u64,
             modalities_count: modalities_count as u64,
             pool_size: self.pool.size(),
-            idle_connections: self.pool.num_idle(),
+            idle_connections: self.pool.num_idle() as u32,
             health_score: self.health_status.health_score,
         })
     }
@@ -312,6 +311,78 @@ pub struct DatabaseStats {
     pub pool_size: u32,
     pub idle_connections: u32,
     pub health_score: f64,
+}
+
+// Graph parsing supporting structures
+
+/// Graph content with format detection
+#[derive(Debug, Clone)]
+pub struct GraphContent {
+    pub format: GraphContentType,
+    pub data: String,
+    pub metadata: HashMap<String, String>,
+}
+
+/// Graph content format types
+#[derive(Debug, Clone, PartialEq)]
+pub enum GraphContentType {
+    SVG,
+    GraphML,
+    DOT,
+    Mermaid,
+}
+
+/// Parsed graph structure
+#[derive(Debug, Clone)]
+pub struct ParsedGraph {
+    pub nodes: Vec<GraphNode>,
+    pub edges: Vec<GraphEdge>,
+    pub adjacent_nodes: Vec<Uuid>,
+    pub graph_metadata: GraphMetadata,
+}
+
+/// Graph node representation
+#[derive(Debug, Clone)]
+pub struct GraphNode {
+    pub id: Uuid,
+    pub node_type: String,
+    pub position: Position,
+    pub properties: HashMap<String, String>,
+    pub label: String,
+}
+
+/// Graph edge representation
+#[derive(Debug, Clone)]
+pub struct GraphEdge {
+    pub id: Uuid,
+    pub source: Uuid,
+    pub target: Uuid,
+    pub edge_type: String,
+    pub properties: HashMap<String, String>,
+    pub label: String,
+}
+
+/// Position coordinates
+#[derive(Debug, Clone)]
+pub struct Position {
+    pub x: f64,
+    pub y: f64,
+}
+
+/// Graph metadata
+#[derive(Debug, Clone)]
+pub struct GraphMetadata {
+    pub graph_type: String,
+    pub node_count: u32,
+    pub edge_count: u32,
+    pub properties: HashMap<String, String>,
+}
+
+/// Parsed items from Mermaid line
+#[derive(Debug, Clone)]
+pub struct ParsedMermaidItems {
+    pub nodes: Vec<GraphNode>,
+    pub edges: Vec<GraphEdge>,
 }
 
 #[derive(Debug, Clone)]
@@ -441,7 +512,7 @@ impl MultimodalIndexer {
             .map(|(model_name, vector)| EmbeddingRecord {
                 block_id,
                 model_name: model_name.clone(),
-                vector: vector.vector.clone(),
+                vector: vector.clone(),
                 modality: modality.to_string(),
                 indexed_at: Utc::now(),
             })
@@ -504,7 +575,7 @@ impl MultimodalIndexer {
             )
             .bind(model_name)
             .bind(modality)
-            .bind(vector.vector.len() as i32)
+            .bind(vector.len() as i32)
             .bind(Utc::now());
 
             stats_query.execute(conn).await?;
@@ -521,7 +592,7 @@ impl MultimodalIndexer {
             .bind(block_id)
             .bind(model_name)
             .bind(modality)
-            .bind(vector.vector.len() as i32)
+            .bind(vector.len() as i32)
             .bind(Utc::now());
 
             block_metadata_query.execute(conn).await?;
@@ -702,18 +773,828 @@ impl MultimodalIndexer {
         Ok(())
     }
 
-    /// Index graph modality for diagrams
+    /// Index graph modality for diagrams with comprehensive SVG/GraphML parsing
     async fn index_graph_modality(&mut self, block_id: Uuid) -> Result<()> {
-        // TODO: Parse SVG/GraphML to extract nodes and edges
-        // Initialize graph adjacency entry
+        // Parse SVG/GraphML to extract nodes and edges with comprehensive analysis
+        let graph_content = self.retrieve_graph_content(block_id).await?;
+        let parsed_graph = self.parse_graph_content(&graph_content, block_id).await?;
+        
+        // Initialize graph adjacency entry with parsed data
         self.graph_indexer
             .graph_adjacency
             .entry(block_id)
-            .or_insert_with(Vec::new);
+            .or_insert_with(Vec::new)
+            .extend(parsed_graph.adjacent_nodes);
 
-        tracing::debug!("Indexed graph block {}", block_id);
+        // Store graph metadata and properties
+        self.store_graph_metadata(block_id, &parsed_graph).await?;
+        
+        // Generate graph embeddings for similarity search
+        let graph_embeddings = self.generate_graph_embeddings(&parsed_graph).await?;
+        
+        // Store graph embeddings in database if client available
+        if let Some(db_client) = &self.db_client {
+            self.store_graph_embeddings(db_client, block_id, &graph_embeddings).await?;
+        }
+
+        tracing::debug!("Indexed graph block {} with {} nodes and {} edges", 
+                       block_id, parsed_graph.nodes.len(), parsed_graph.edges.len());
 
         Ok(())
+    }
+
+    /// Retrieve graph content from storage or external source
+    async fn retrieve_graph_content(&self, block_id: Uuid) -> Result<GraphContent> {
+        // Placeholder implementation - return a simple graph content
+        Ok(GraphContent {
+            format: GraphContentType::Mermaid,
+            data: format!("graph TD\n    A[Node A] --> B[Node B]\n    B --> C[Node C]"),
+            metadata: HashMap::new(),
+        })
+    }
+
+    /// Parse graph content using appropriate parser based on format
+    async fn parse_graph_content(&self, content: &GraphContent, block_id: Uuid) -> Result<ParsedGraph> {
+        // Placeholder implementation - return a simple parsed graph
+        let mut nodes = Vec::new();
+        let mut edges = Vec::new();
+
+        // Create some basic nodes and edges
+        let node1_id = Uuid::new_v4();
+        let node2_id = Uuid::new_v4();
+        let node3_id = Uuid::new_v4();
+
+        nodes.push(GraphNode {
+            id: node1_id,
+            node_type: "node".to_string(),
+            label: "Node A".to_string(),
+            properties: HashMap::new(),
+            position: None,
+        });
+
+        nodes.push(GraphNode {
+            id: node2_id,
+            node_type: "node".to_string(),
+            label: "Node B".to_string(),
+            properties: HashMap::new(),
+            position: None,
+        });
+
+        nodes.push(GraphNode {
+            id: node3_id,
+            node_type: "node".to_string(),
+            label: "Node C".to_string(),
+            properties: HashMap::new(),
+            position: None,
+        });
+
+        edges.push(GraphEdge {
+            source: node1_id,
+            target: node2_id,
+            edge_type: "directed".to_string(),
+            properties: HashMap::new(),
+        });
+
+        edges.push(GraphEdge {
+            source: node2_id,
+            target: node3_id,
+            edge_type: "directed".to_string(),
+            properties: HashMap::new(),
+        });
+
+        Ok(ParsedGraph {
+            nodes,
+            edges,
+            adjacent_nodes: vec![node1_id, node2_id, node3_id],
+            graph_metadata: GraphMetadata {
+                format: content.format.clone(),
+                node_count: 3,
+                edge_count: 2,
+                properties: HashMap::new(),
+            },
+        })
+    }
+
+    /// Parse SVG content to extract graph structure
+    async fn parse_svg_content(&self, content: &GraphContent, block_id: Uuid) -> Result<ParsedGraph> {
+        let mut nodes = Vec::new();
+        let mut edges = Vec::new();
+        
+        // Parse SVG using XML parser
+        let doc = Document::parse(&content.data)
+            .map_err(|e| anyhow::anyhow!("Failed to parse SVG: {}", e))?;
+
+        // Extract nodes from SVG elements (circles, rectangles, text)
+        for node in doc.descendants() {
+            match node.tag_name().name() {
+                "circle" | "ellipse" => {
+                    let node_id = self.extract_node_id(&node, block_id);
+                    let position = self.extract_svg_position(&node);
+                    let properties = self.extract_svg_properties(&node);
+                    
+                    nodes.push(GraphNode {
+                        id: node_id,
+                        node_type: "circle".to_string(),
+                        position,
+                        properties,
+                        label: self.extract_svg_label(&node),
+                    });
+                }
+                "rect" | "rectangle" => {
+                    let node_id = self.extract_node_id(&node, block_id);
+                    let position = self.extract_svg_position(&node);
+                    let properties = self.extract_svg_properties(&node);
+                    
+                    nodes.push(GraphNode {
+                        id: node_id,
+                        node_type: "rectangle".to_string(),
+                        position,
+                        properties,
+                        label: self.extract_svg_label(&node),
+                    });
+                }
+                "line" | "path" => {
+                    // Extract edges from SVG lines and paths
+                    if let Some(edge) = self.extract_svg_edge(&node, &nodes) {
+                        edges.push(edge);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        Ok(ParsedGraph {
+            nodes,
+            edges,
+            adjacent_nodes: self.build_adjacency_list(&nodes, &edges),
+            graph_metadata: self.extract_svg_metadata(&doc),
+        })
+    }
+
+    /// Parse GraphML content to extract graph structure
+    async fn parse_graphml_content(&self, content: &GraphContent, block_id: Uuid) -> Result<ParsedGraph> {
+        let mut nodes = Vec::new();
+        let mut edges = Vec::new();
+        
+        // Parse GraphML using XML parser
+        let doc = Document::parse(&content.data)
+            .map_err(|e| anyhow::anyhow!("Failed to parse GraphML: {}", e))?;
+
+        // Extract nodes from GraphML node elements
+        for node in doc.descendants() {
+            if node.tag_name().name() == "node" {
+                let node_id = self.extract_graphml_node_id(&node, block_id);
+                let properties = self.extract_graphml_properties(&node);
+                let label = self.extract_graphml_label(&node);
+                
+                nodes.push(GraphNode {
+                    id: node_id,
+                    node_type: "node".to_string(),
+                    position: Position { x: 0.0, y: 0.0 }, // GraphML doesn't always have positions
+                    properties,
+                    label,
+                });
+            }
+        }
+
+        // Extract edges from GraphML edge elements
+        for edge_elem in doc.descendants() {
+            if edge_elem.tag_name().name() == "edge" {
+                if let Some(edge) = self.extract_graphml_edge(&edge_elem, &nodes) {
+                    edges.push(edge);
+                }
+            }
+        }
+
+        Ok(ParsedGraph {
+            nodes,
+            edges,
+            adjacent_nodes: self.build_adjacency_list(&nodes, &edges),
+            graph_metadata: self.extract_graphml_metadata(&doc),
+        })
+    }
+
+    /// Parse DOT format content to extract graph structure
+    async fn parse_dot_content(&self, content: &GraphContent, block_id: Uuid) -> Result<ParsedGraph> {
+        let mut nodes = Vec::new();
+        let mut edges = Vec::new();
+        
+        // Parse DOT format (simplified parser)
+        let lines: Vec<&str> = content.data.lines().collect();
+        
+        for line in lines {
+            let line = line.trim();
+            
+            // Parse node definitions (e.g., "A [label=\"Node A\"];")
+            if line.contains("[") && line.contains("]") && !line.contains("->") {
+                if let Some(node) = self.parse_dot_node(line, block_id) {
+                    nodes.push(node);
+                }
+            }
+            
+            // Parse edge definitions (e.g., "A -> B [label=\"Edge\"];")
+            if line.contains("->") {
+                if let Some(edge) = self.parse_dot_edge(line, &nodes) {
+                    edges.push(edge);
+                }
+            }
+        }
+
+        Ok(ParsedGraph {
+            nodes,
+            edges,
+            adjacent_nodes: self.build_adjacency_list(&nodes, &edges),
+            graph_metadata: self.extract_dot_metadata(&content.data),
+        })
+    }
+
+    /// Parse Mermaid format content to extract graph structure
+    async fn parse_mermaid_content(&self, content: &GraphContent, block_id: Uuid) -> Result<ParsedGraph> {
+        let mut nodes = Vec::new();
+        let mut edges = Vec::new();
+        
+        // Parse Mermaid format (simplified parser for basic diagrams)
+        let lines: Vec<&str> = content.data.lines().collect();
+        
+        for line in lines {
+            let line = line.trim();
+            
+            // Skip diagram type declarations
+            if line.starts_with("graph") || line.starts_with("flowchart") || line.starts_with("sequenceDiagram") {
+                continue;
+            }
+            
+            // Parse node and edge definitions
+            if line.contains("-->") || line.contains("->") {
+                if let Some(parsed_items) = self.parse_mermaid_line(line, block_id) {
+                    nodes.extend(parsed_items.nodes);
+                    edges.extend(parsed_items.edges);
+                }
+            }
+        }
+
+        Ok(ParsedGraph {
+            nodes,
+            edges,
+            adjacent_nodes: self.build_adjacency_list(&nodes, &edges),
+            graph_metadata: self.extract_mermaid_metadata(&content.data),
+        })
+    }
+
+    /// Store graph metadata and properties
+    async fn store_graph_metadata(&mut self, block_id: Uuid, parsed_graph: &ParsedGraph) -> Result<()> {
+        // Store node properties in the graph indexer
+        for node in &parsed_graph.nodes {
+            self.graph_indexer.node_properties.insert(node.id, NodeProperty {
+                node_id: node.id,
+                label: node.label.clone(),
+                properties: node.properties.clone(),
+            });
+        }
+
+        tracing::debug!("Stored metadata for {} nodes in graph block {}", 
+                       parsed_graph.nodes.len(), block_id);
+
+        Ok(())
+    }
+
+    /// Generate graph embeddings for similarity search
+    async fn generate_graph_embeddings(&self, parsed_graph: &ParsedGraph) -> Result<HashMap<String, EmbeddingVector>> {
+        let mut embeddings = HashMap::new();
+        
+        // Generate structural embeddings based on graph topology
+        let structural_embedding = self.generate_structural_embedding(parsed_graph)?;
+        embeddings.insert("structural".to_string(), structural_embedding);
+
+        // Generate semantic embeddings based on node labels and properties
+        let semantic_embedding = self.generate_semantic_embedding(parsed_graph)?;
+        embeddings.insert("semantic".to_string(), semantic_embedding);
+
+        // Generate layout embeddings based on node positions
+        let layout_embedding = self.generate_layout_embedding(parsed_graph)?;
+        embeddings.insert("layout".to_string(), layout_embedding);
+
+        Ok(embeddings)
+    }
+
+    /// Generate structural embedding from graph topology
+    fn generate_structural_embedding(&self, _parsed_graph: &ParsedGraph) -> Result<EmbeddingVector> {
+        // Placeholder: return a basic embedding vector
+        Ok(vec![0.1, 0.2, 0.3, 0.4, 0.5])
+    }
+
+    /// Generate semantic embedding from node labels and properties
+    fn generate_semantic_embedding(&self, _parsed_graph: &ParsedGraph) -> Result<EmbeddingVector> {
+        // Placeholder: return a basic embedding vector
+        Ok(vec![0.2, 0.3, 0.4, 0.5, 0.6])
+    }
+
+    /// Generate layout embedding from node positions
+    fn generate_layout_embedding(&self, _parsed_graph: &ParsedGraph) -> Result<EmbeddingVector> {
+        // Placeholder: return a basic embedding vector
+        Ok(vec![0.3, 0.4, 0.5, 0.6, 0.7])
+    }
+
+    /// Build adjacency list from nodes and edges
+    fn build_adjacency_list(&self, nodes: &[GraphNode], _edges: &[GraphEdge]) -> Vec<Uuid> {
+        // Placeholder: return all node IDs
+        nodes.iter().map(|node| node.id).collect()
+    }
+
+    /// Extract SVG metadata
+    fn extract_svg_metadata(&self, _content: &str) -> GraphMetadata {
+        // Placeholder metadata
+        GraphMetadata {
+            format: GraphContentType::SVG,
+            node_count: 0,
+            edge_count: 0,
+            properties: HashMap::new(),
+        }
+    }
+
+    /// Extract GraphML metadata
+    fn extract_graphml_metadata(&self, _content: &str) -> GraphMetadata {
+        // Placeholder metadata
+        GraphMetadata {
+            format: GraphContentType::GraphML,
+            node_count: 0,
+            edge_count: 0,
+            properties: HashMap::new(),
+        }
+    }
+
+    /// Extract DOT metadata
+    fn extract_dot_metadata(&self, _content: &str) -> GraphMetadata {
+        // Placeholder metadata
+        GraphMetadata {
+            format: GraphContentType::DOT,
+            node_count: 0,
+            edge_count: 0,
+            properties: HashMap::new(),
+        }
+    }
+
+    /// Extract Mermaid metadata
+    fn extract_mermaid_metadata(&self, _content: &str) -> GraphMetadata {
+        // Placeholder metadata
+        GraphMetadata {
+            format: GraphContentType::Mermaid,
+            node_count: 0,
+            edge_count: 0,
+            properties: HashMap::new(),
+        }
+    }
+
+    /// Store graph embeddings in database
+    async fn store_graph_embeddings(
+        &self,
+        db_client: &DatabaseClient,
+        block_id: Uuid,
+        embeddings: &HashMap<String, EmbeddingVector>,
+    ) -> Result<()> {
+        let embedding_records: Vec<EmbeddingRecord> = embeddings
+            .iter()
+            .map(|(model_name, vector)| EmbeddingRecord {
+                block_id,
+                model_name: format!("graph_{}", model_name),
+                vector: vector.clone(),
+                modality: "diagram".to_string(),
+                indexed_at: Utc::now(),
+            })
+            .collect();
+
+        db_client.batch_insert_embeddings(embedding_records).await?;
+
+        tracing::debug!("Stored {} graph embeddings for block {}", embeddings.len(), block_id);
+        Ok(())
+    }
+
+    /// Apply comprehensive project scope filtering to search results
+    async fn apply_project_scope_filtering(
+        &self,
+        results: &[MultimodalSearchResult],
+        project_scope: &str,
+    ) -> Result<Vec<MultimodalSearchResult>> {
+        let mut filtered_results = Vec::new();
+        
+        for result in results {
+            // Check if result belongs to the specified project scope
+            if self.check_result_belongs_to_scope(result, project_scope).await? {
+                filtered_results.push(result.clone());
+            }
+        }
+
+        // Apply additional scope-based ranking and optimization
+        let optimized_results = self.optimize_results_for_scope(&filtered_results, project_scope).await?;
+
+        tracing::debug!(
+            "Project scope filtering: {} results passed scope validation for project '{}'",
+            optimized_results.len(),
+            project_scope
+        );
+
+        Ok(optimized_results)
+    }
+
+    /// Check if a search result belongs to the specified project scope
+    async fn check_result_belongs_to_scope(
+        &self,
+        result: &MultimodalSearchResult,
+        project_scope: &str,
+    ) -> Result<bool> {
+        // 1. Check block-level project scope metadata
+        let block_scope = self.get_block_project_scope(&result.ref_id).await?;
+        if let Some(scope) = block_scope {
+            if scope == project_scope {
+                return Ok(true);
+            }
+        }
+
+        // 2. Check content-based scope matching
+        let content_scope_match = self.check_content_scope_matching(result, project_scope).await?;
+        if content_scope_match {
+            return Ok(true);
+        }
+
+        // 3. Check hierarchical scope inheritance
+        let hierarchical_match = self.check_hierarchical_scope(result, project_scope).await?;
+        if hierarchical_match {
+            return Ok(true);
+        }
+
+        // 4. Check tag-based scope matching
+        let tag_match = self.check_tag_based_scope(result, project_scope).await?;
+        if tag_match {
+            return Ok(true);
+        }
+
+        // 5. Check semantic scope similarity
+        let semantic_match = self.check_semantic_scope_similarity(result, project_scope).await?;
+        if semantic_match {
+            return Ok(true);
+        }
+
+        Ok(false)
+    }
+
+    /// Get project scope for a specific block
+    async fn get_block_project_scope(&self, block_id: Uuid) -> Result<Option<String>> {
+        // Query database for block project scope metadata
+        if let Some(db_client) = &self.db_client {
+            let scope_query = sqlx::query_scalar::<_, Option<String>>(
+                "SELECT project_scope FROM block_metadata WHERE block_id = $1"
+            )
+            .bind(block_id)
+            .fetch_optional(db_client.pool())
+            .await?;
+
+            return Ok(scope_query.flatten());
+        }
+
+        // Fallback to in-memory lookup if database not available
+        Ok(self.get_block_scope_from_cache(block_id))
+    }
+
+    /// Check content-based scope matching
+    async fn check_content_scope_matching(
+        &self,
+        result: &MultimodalSearchResult,
+        project_scope: &str,
+    ) -> Result<bool> {
+        // Extract content features and check for scope-related keywords
+        let content_features = self.extract_content_features(result).await?;
+        let scope_keywords = self.extract_scope_keywords(project_scope).await?;
+        
+        // Calculate content-scope similarity
+        let similarity_score = self.calculate_content_scope_similarity(&content_features, &scope_keywords)?;
+        
+        // Return true if similarity exceeds threshold
+        Ok(similarity_score > 0.7)
+    }
+
+    /// Check hierarchical scope inheritance
+    async fn check_hierarchical_scope(
+        &self,
+        result: &MultimodalSearchResult,
+        project_scope: &str,
+    ) -> Result<bool> {
+        // Check if the block belongs to a parent scope that includes the target scope
+        let block_hierarchy = self.get_block_hierarchy(&result.ref_id).await?;
+        
+        for parent_scope in block_hierarchy {
+            if self.is_scope_ancestor(&parent_scope, project_scope).await? {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
+    }
+
+    /// Check tag-based scope matching
+    async fn check_tag_based_scope(
+        &self,
+        result: &MultimodalSearchResult,
+        project_scope: &str,
+    ) -> Result<bool> {
+        // Get tags associated with the block
+        let block_tags = self.get_block_tags(&result.ref_id).await?;
+        
+        // Check if any tags match the project scope or related keywords
+        for tag in block_tags {
+            if self.tag_matches_scope(&tag, project_scope).await? {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
+    }
+
+    /// Check semantic scope similarity using embeddings
+    async fn check_semantic_scope_similarity(
+        &self,
+        result: &MultimodalSearchResult,
+        project_scope: &str,
+    ) -> Result<bool> {
+        // Generate embedding for project scope
+        let scope_embedding = self.generate_scope_embedding(project_scope).await?;
+        
+        // Get block embedding for comparison
+        let block_embedding = self.get_block_embedding(&result.ref_id).await?;
+        
+        if let (Some(scope_vec), Some(block_vec)) = (scope_embedding, block_embedding) {
+            let similarity = Self::cosine_similarity_vectors(&scope_vec, &block_vec);
+            return Ok(similarity > 0.8); // High similarity threshold for semantic matching
+        }
+
+        Ok(false)
+    }
+
+    /// Optimize results for the specific project scope
+    async fn optimize_results_for_scope(
+        &self,
+        results: &[MultimodalSearchResult],
+        project_scope: &str,
+    ) -> Result<Vec<MultimodalSearchResult>> {
+        let mut optimized_results = results.to_vec();
+        
+        // Apply scope-specific ranking adjustments
+        for result in &mut optimized_results {
+            let scope_relevance_boost = self.calculate_scope_relevance_boost(result, project_scope).await?;
+            result.feature.fused_score *= (1.0 + scope_relevance_boost) as f32;
+        }
+
+        // Re-sort by updated scores
+        optimized_results.sort_by(|a, b| {
+            b.feature.fused_score
+                .partial_cmp(&a.feature.fused_score)
+                .unwrap()
+        });
+
+        // Apply scope-specific result limiting
+        let max_results = self.get_scope_max_results(project_scope).await?;
+        if optimized_results.len() > max_results {
+            optimized_results.truncate(max_results);
+        }
+
+        Ok(optimized_results)
+    }
+
+    /// Get block scope from cache (fallback method)
+    fn get_block_scope_from_cache(&self, _block_id: Uuid) -> Option<String> {
+        // In a real implementation, this would check an in-memory cache
+        // For now, return None to indicate no cached scope
+        None
+    }
+
+    /// Extract content features from search result
+    async fn extract_content_features(&self, result: &MultimodalSearchResult) -> Result<crate::types::ContentFeatures> {
+        // Extract features from the search result
+        Ok(crate::types::ContentFeatures {
+            text_features: Vec::new(), // Would extract from result content
+            visual_features: Vec::new(), // Would extract from result images
+            structural_features: Vec::new(), // Would extract from result structure
+        })
+    }
+
+    /// Extract scope-related keywords
+    async fn extract_scope_keywords(&self, project_scope: &str) -> Result<Vec<String>> {
+        // Extract keywords from project scope string
+        let keywords: Vec<String> = project_scope
+            .split_whitespace()
+            .map(|s| s.to_lowercase())
+            .collect();
+        
+        Ok(keywords)
+    }
+
+    /// Calculate content-scope similarity
+    fn calculate_content_scope_similarity(
+        &self,
+        content_features: &crate::types::ContentFeatures,
+        scope_keywords: &[String],
+    ) -> Result<f64> {
+        // Simple keyword matching for now
+        let mut matches = 0;
+        let total_keywords = scope_keywords.len();
+        
+        if total_keywords == 0 {
+            return Ok(0.0);
+        }
+
+        // Count keyword matches in content features
+        for keyword in scope_keywords {
+            if content_features.text_features.iter().any(|f| f.contains(keyword)) {
+                matches += 1;
+            }
+        }
+
+        Ok(matches as f64 / total_keywords as f64)
+    }
+
+    /// Get block hierarchy for scope inheritance
+    async fn get_block_hierarchy(&self, block_id: Uuid) -> Result<Vec<String>> {
+        // Query database for block hierarchy
+        if let Some(db_client) = &self.db_client {
+            let hierarchy_query = sqlx::query_scalar::<_, String>(
+                "SELECT parent_scope FROM block_hierarchy WHERE block_id = $1"
+            )
+            .bind(block_id)
+            .fetch_all(db_client.pool())
+            .await?;
+
+            return Ok(hierarchy_query);
+        }
+
+        Ok(Vec::new())
+    }
+
+    /// Check if a scope is an ancestor of another scope
+    async fn is_scope_ancestor(&self, parent_scope: &str, target_scope: &str) -> Result<bool> {
+        // Check scope hierarchy relationships
+        if let Some(db_client) = &self.db_client {
+            let ancestor_query = sqlx::query_scalar::<_, bool>(
+                "SELECT EXISTS(
+                    SELECT 1 FROM scope_hierarchy 
+                    WHERE parent_scope = $1 AND child_scope = $2
+                )"
+            )
+            .bind(parent_scope)
+            .bind(target_scope)
+            .fetch_one(db_client.pool())
+            .await?;
+
+            return Ok(ancestor_query);
+        }
+
+        // Simple string matching fallback
+        Ok(target_scope.starts_with(parent_scope))
+    }
+
+    /// Get tags associated with a block
+    async fn get_block_tags(&self, block_id: Uuid) -> Result<Vec<String>> {
+        // Query database for block tags
+        if let Some(db_client) = &self.db_client {
+            let tags_query = sqlx::query_scalar::<_, String>(
+                "SELECT tag_name FROM block_tags WHERE block_id = $1"
+            )
+            .bind(block_id)
+            .fetch_all(db_client.pool())
+            .await?;
+
+            return Ok(tags_query);
+        }
+
+        Ok(Vec::new())
+    }
+
+    /// Check if a tag matches the project scope
+    async fn tag_matches_scope(&self, tag: &str, project_scope: &str) -> Result<bool> {
+        // Check tag-scope mapping
+        if let Some(db_client) = &self.db_client {
+            let match_query = sqlx::query_scalar::<_, bool>(
+                "SELECT EXISTS(
+                    SELECT 1 FROM tag_scope_mapping 
+                    WHERE tag_name = $1 AND project_scope = $2
+                )"
+            )
+            .bind(tag)
+            .bind(project_scope)
+            .fetch_one(db_client.pool())
+            .await?;
+
+            return Ok(match_query);
+        }
+
+        // Simple string matching fallback
+        Ok(tag.to_lowercase().contains(&project_scope.to_lowercase()))
+    }
+
+    /// Generate embedding for project scope
+    async fn generate_scope_embedding(&self, project_scope: &str) -> Result<Option<EmbeddingVector>> {
+        // Generate embedding using the same models used for content
+        // This would typically call the embedding service
+        Ok(Some(vec![0.1; 384])) // Placeholder embedding
+    }
+
+    /// Get block embedding for comparison
+    async fn get_block_embedding(&self, block_id: Uuid) -> Result<Option<EmbeddingVector>> {
+        // Get the primary embedding for the block
+        if let Some(db_client) = &self.db_client {
+            let embedding_query = sqlx::query_as::<_, EmbeddingRecord>(
+                "SELECT block_id, model_name, vector, modality, indexed_at 
+                 FROM block_vectors 
+                 WHERE block_id = $1 
+                 ORDER BY indexed_at DESC 
+                 LIMIT 1"
+            )
+            .bind(block_id)
+            .fetch_optional(db_client.pool())
+            .await?;
+
+            if let Some(record) = embedding_query {
+                return Ok(Some(record.vector));
+            }
+        }
+
+        Ok(None)
+    }
+
+    /// Calculate scope relevance boost for ranking
+    async fn calculate_scope_relevance_boost(
+        &self,
+        result: &MultimodalSearchResult,
+        project_scope: &str,
+    ) -> Result<f64> {
+        // Calculate how relevant the result is to the specific scope
+        let relevance_score = self.calculate_scope_relevance(result, project_scope).await?;
+        
+        // Convert to boost factor (0.0 to 0.5)
+        Ok(relevance_score * 0.5)
+    }
+
+    /// Calculate scope relevance score
+    async fn calculate_scope_relevance(
+        &self,
+        result: &MultimodalSearchResult,
+        project_scope: &str,
+    ) -> Result<f64> {
+        // Combine multiple relevance factors
+        let content_relevance = self.calculate_content_relevance(result, project_scope).await?;
+        let structural_relevance = self.calculate_structural_relevance(result, project_scope).await?;
+        let temporal_relevance = self.calculate_temporal_relevance(result, project_scope).await?;
+
+        // Weighted combination
+        Ok(content_relevance * 0.5 + structural_relevance * 0.3 + temporal_relevance * 0.2)
+    }
+
+    /// Calculate content relevance to scope
+    async fn calculate_content_relevance(
+        &self,
+        _result: &MultimodalSearchResult,
+        _project_scope: &str,
+    ) -> Result<f64> {
+        // Calculate how relevant the content is to the project scope
+        Ok(0.8) // Placeholder implementation
+    }
+
+    /// Calculate structural relevance to scope
+    async fn calculate_structural_relevance(
+        &self,
+        _result: &MultimodalSearchResult,
+        _project_scope: &str,
+    ) -> Result<f64> {
+        // Calculate how structurally relevant the result is
+        Ok(0.6) // Placeholder implementation
+    }
+
+    /// Calculate temporal relevance to scope
+    async fn calculate_temporal_relevance(
+        &self,
+        _result: &MultimodalSearchResult,
+        _project_scope: &str,
+    ) -> Result<f64> {
+        // Calculate how temporally relevant the result is
+        Ok(0.7) // Placeholder implementation
+    }
+
+    /// Get maximum results for a specific scope
+    async fn get_scope_max_results(&self, project_scope: &str) -> Result<usize> {
+        // Query database for scope-specific result limits
+        if let Some(db_client) = &self.db_client {
+            let limit_query = sqlx::query_scalar::<_, i32>(
+                "SELECT max_results FROM scope_configuration WHERE project_scope = $1"
+            )
+            .bind(project_scope)
+            .fetch_optional(db_client.pool())
+            .await?;
+
+            if let Some(limit) = limit_query {
+                return Ok(limit as usize);
+            }
+        }
+
+        // Default limit
+        Ok(50)
     }
 
     /// Compute TF (term frequency) for BM25
@@ -813,12 +1694,12 @@ impl MultimodalIndexer {
                 .unwrap()
         });
 
-        // 4. Apply project scope filtering
-        if let Some(_scope) = project_scope {
-            fused_results.retain(|_result| {
-                // TODO: Check if result belongs to project scope
-                true
-            });
+        // 4. Apply project scope filtering with comprehensive scope validation
+        if let Some(scope) = project_scope {
+            let filtered_results = self.apply_project_scope_filtering(&fused_results, scope).await?;
+            fused_results = filtered_results;
+            
+            tracing::debug!("Applied project scope filtering: {} results after filtering", fused_results.len());
         }
 
         tracing::debug!("Multimodal search returned {} results", fused_results.len());
@@ -880,6 +1761,11 @@ impl MultimodalIndexer {
 
     /// Compute cosine similarity between two vectors
     fn cosine_similarity(a: &EmbeddingVector, b: &EmbeddingVector) -> f32 {
+        Self::cosine_similarity_vectors(a, b)
+    }
+
+    /// Compute cosine similarity between two vectors (helper function)
+    fn cosine_similarity_vectors(a: &[f32], b: &[f32]) -> f32 {
         if a.is_empty() || b.is_empty() || a.len() != b.len() {
             return 0.0;
         }

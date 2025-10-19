@@ -1,0 +1,20 @@
+packages:
+  - 'iterations/*'
+  - 'apps/*'
+  - 'apps/tools/caws/packages/*'
+
+# Shared settings for all workspaces
+settings:
+  # Use global store for faster installs
+  global-bin-dir: ~/.pnpm/bin
+  global-dir: ~/.pnpm/global
+  cache-dir: ~/.pnpm/cache
+
+  # Parallel installation
+  parallel-install: true
+
+  # Faster resolution
+  resolution-mode: highest
+
+  # Node linker for better performance
+  node-linker: isolated

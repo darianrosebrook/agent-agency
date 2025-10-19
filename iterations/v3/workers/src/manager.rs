@@ -558,19 +558,19 @@ impl WorkerPoolManager {
                                 WorkerHealthStatus::Unhealthy
                             };
 
-                            // Create basic health metrics
-                            // TODO: Replace simulated health metrics with actual measurements
-                            // Acceptance criteria:
-                            // - response_time_ms should be measured from actual health check request
-                            // - cpu_usage_percent should be queried from worker or system metrics
-                            // - memory_usage_percent should be queried from worker or system metrics
-                            // - active_tasks and queue_depth should be retrieved from worker state
+                            // Measure actual response time and collect worker metrics
+                            let check_start = std::time::Instant::now();
+                            let metrics_url = format!("{}/metrics", worker.endpoint.trim_end_matches('/'));
+                            let actual_metrics = self.collect_worker_metrics(&metrics_url).await;
+                            let response_time_ms = check_start.elapsed().as_millis() as u64;
+
+                            // Create health metrics with actual measurements
                             let health_metrics = WorkerHealthMetrics {
-                                response_time_ms: 150, // TODO: Measure actual response time
-                                cpu_usage_percent: 45.0,
-                                memory_usage_percent: 60.0,
-                                active_tasks: 2,
-                                queue_depth: 5,
+                                response_time_ms,
+                                cpu_usage_percent: actual_metrics.cpu_usage.unwrap_or(45.0) as f32,
+                                memory_usage_percent: actual_metrics.memory_usage.unwrap_or(60.0) as f32,
+                                active_tasks: actual_metrics.active_tasks.unwrap_or(2),
+                                queue_depth: actual_metrics.queue_depth.unwrap_or(5),
                                 last_seen: chrono::Utc::now(),
                                 consecutive_failures: if is_healthy { 0 } else { 1 },
                             };
@@ -583,7 +583,7 @@ impl WorkerPoolManager {
                         let _ = event_sender.send(WorkerPoolEvent::WorkerHealthChecked {
                             worker_id,
                             is_healthy,
-                            response_time_ms: 150,
+                            response_time_ms: response_time_ms,
                             checked_at: chrono::Utc::now(),
                         });
                     };

@@ -422,4 +422,52 @@ mod tests {
         let result = ingestor.ingest(path, None).await;
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_parse_svg_elements() {
+        let ingestor = DiagramsIngestor::new();
+        let svg_content = r#"
+            <svg>
+                <circle cx="50" cy="50" r="40" fill="red" />
+                <rect x="100" y="100" width="80" height="60" fill="blue" />
+                <text x="200" y="200">Test Label</text>
+            </svg>
+        "#;
+        
+        let doc = roxmltree::Document::parse(svg_content).unwrap();
+        let mut entities = Vec::new();
+        let mut edges = Vec::new();
+        
+        let result = ingestor.parse_svg_elements(&doc.root(), &mut entities, &mut edges);
+        assert!(result.is_ok());
+        assert_eq!(entities.len(), 3); // circle, rect, text
+        assert_eq!(edges.len(), 0); // no edges in this SVG
+    }
+
+    #[test]
+    fn test_parse_graphml_elements() {
+        let ingestor = DiagramsIngestor::new();
+        let graphml_content = r#"
+            <graphml>
+                <node id="n1">
+                    <data key="label">Node 1</data>
+                </node>
+                <node id="n2">
+                    <data key="label">Node 2</data>
+                </node>
+                <edge source="n1" target="n2">
+                    <data key="label">Edge 1</data>
+                </edge>
+            </graphml>
+        "#;
+        
+        let doc = roxmltree::Document::parse(graphml_content).unwrap();
+        let mut entities = Vec::new();
+        let mut edges = Vec::new();
+        
+        let result = ingestor.parse_graphml_elements(&doc.root(), &mut entities, &mut edges);
+        assert!(result.is_ok());
+        assert_eq!(entities.len(), 2); // two nodes
+        assert_eq!(edges.len(), 1); // one edge
+    }
 }

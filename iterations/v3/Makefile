@@ -1,6 +1,19 @@
 SHELL := /bin/bash
 
-.PHONY: verify verify-tier1 verify-tier2 verify-tier3 test-coverage coverage-report schema-validate clean mutants-mcp mutants-mcp-list mutants-mcp-files test-contract test-e2e gates install-hooks build build-dev build-test build-release check check-fast install-tools
+# Build timing and metrics
+TIMING_LOG := .build-timing.log
+PERF_METRICS := .build-metrics.json
+
+define log_timing
+	@echo "[$$(date +%s)] START: $(1)" >> $(TIMING_LOG)
+	@start=$$(date +%s%3N); \
+	$(2); \
+	end=$$(date +%s%3N); \
+	duration=$$((end - start)); \
+	echo "[$$(date +%s)] END: $(1) - $${duration}ms" >> $(TIMING_LOG)
+endef
+
+.PHONY: verify verify-tier1 verify-tier2 verify-tier3 test-coverage coverage-report schema-validate clean mutants-mcp mutants-mcp-list mutants-mcp-files test-contract test-e2e gates install-hooks build build-dev build-test build-release check check-fast install-tools timing-report perf-report clean-timing
 
 # Build targets using optimized wrapper
 build: build-dev

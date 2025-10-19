@@ -173,3 +173,11 @@ pub struct MultimodalSearchResult {
     pub feature: SearchResultFeature,
     pub project_scope: Option<String>, // scoping info for filtering
 }
+
+/// Content features extracted from search results for scope matching
+#[derive(Debug, Clone)]
+pub struct ContentFeatures {
+    pub text_features: Vec<String>,
+    pub visual_features: Vec<String>,
+    pub structural_features: Vec<String>,
+}

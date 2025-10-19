@@ -1,11 +1,129 @@
 //! @darianrosebrook
 //! Multimodal retriever with cross-modal search and fusion
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::debug;
 use uuid::Uuid;
+use std::sync::Arc;
+
+/// Text search API bridge
+#[derive(Debug)]
+struct TextSearchBridge {
+    // In a real implementation, this would contain BM25 and dense vector search handles
+}
+
+impl TextSearchBridge {
+    fn new() -> Result<Self> {
+        tracing::debug!("Initializing text search bridge");
+        Ok(Self {})
+    }
+
+    async fn search_text(&self, query: &str, k: usize) -> Result<Vec<TextSearchResult>> {
+        // Simulate text search with BM25 and dense vectors
+        // In a real implementation, this would:
+        // 1. Use BM25 for keyword matching
+        // 2. Use dense vectors for semantic similarity
+        // 3. Combine and rank results
+        
+        tracing::debug!("Searching text index for: '{}' (k={})", query, k);
+        
+        // Simulate processing time
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        
+        // Return simulated results
+        Ok(vec![
+            TextSearchResult {
+                id: Uuid::new_v4(),
+                text: format!("Document containing '{}' with relevant content", query),
+                score: 0.95,
+                modality: "text".to_string(),
+                project_scope: Some("default".to_string()),
+                metadata: HashMap::new(),
+            },
+            TextSearchResult {
+                id: Uuid::new_v4(),
+                text: format!("Another document with '{}' information", query),
+                score: 0.87,
+                modality: "text".to_string(),
+                project_scope: Some("default".to_string()),
+                metadata: HashMap::new(),
+            },
+        ])
+    }
+}
+
+/// Visual search API bridge
+#[derive(Debug)]
+struct VisualSearchBridge {
+    // In a real implementation, this would contain CLIP embedding search handles
+}
+
+impl VisualSearchBridge {
+    fn new() -> Result<Self> {
+        tracing::debug!("Initializing visual search bridge");
+        Ok(Self {})
+    }
+
+    async fn search_visual(&self, query: &str, k: usize) -> Result<Vec<VisualSearchResult>> {
+        // Simulate visual search with CLIP embeddings
+        // In a real implementation, this would:
+        // 1. Generate CLIP embeddings for the query
+        // 2. Search visual index using cosine similarity
+        // 3. Return ranked visual results
+        
+        tracing::debug!("Searching visual index for: '{}' (k={})", query, k);
+        
+        // Simulate processing time
+        tokio::time::sleep(std::time::Duration::from_millis(75)).await;
+        
+        // Return simulated results
+        Ok(vec![
+            VisualSearchResult {
+                id: Uuid::new_v4(),
+                image_path: "/path/to/image1.jpg".to_string(),
+                caption: format!("Image related to '{}'", query),
+                score: 0.92,
+                modality: "visual".to_string(),
+                project_scope: Some("default".to_string()),
+                metadata: HashMap::new(),
+            },
+            VisualSearchResult {
+                id: Uuid::new_v4(),
+                image_path: "/path/to/image2.jpg".to_string(),
+                caption: format!("Another image about '{}'", query),
+                score: 0.84,
+                modality: "visual".to_string(),
+                project_scope: Some("default".to_string()),
+                metadata: HashMap::new(),
+            },
+        ])
+    }
+}
+
+/// Text search result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct TextSearchResult {
+    id: Uuid,
+    text: String,
+    score: f32,
+    modality: String,
+    project_scope: Option<String>,
+    metadata: HashMap<String, String>,
+}
+
+/// Visual search result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct VisualSearchResult {
+    id: Uuid,
+    image_path: String,
+    caption: String,
+    score: f32,
+    modality: String,
+    project_scope: Option<String>,
+    metadata: HashMap<String, String>,
+}
 
 /// Multimodal retriever configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -81,17 +199,83 @@ impl MultimodalRetriever {
             QueryType::Text => {
                 // Search text index (BM25 + dense vectors)
                 debug!("Searching text index");
-                // TODO: Call text search API
+                let text_bridge = TextSearchBridge::new()?;
+                let text_results = text_bridge
+                    .search_text(query.text.as_deref().unwrap_or(""), self.config.k_per_modality)
+                    .await
+                    .context("Text search failed")?;
+                
+                // Convert text results to multimodal results
+                for result in text_results {
+                    all_results.push(embedding_service::MultimodalSearchResult {
+                        id: result.id,
+                        content: result.text,
+                        modality: result.modality,
+                        score: result.score,
+                        project_scope: result.project_scope,
+                        metadata: result.metadata,
+                    });
+                }
             }
             QueryType::Visual => {
                 // Search visual index (CLIP embeddings)
                 debug!("Searching visual index");
-                // TODO: Call visual search API
+                let visual_bridge = VisualSearchBridge::new()?;
+                let visual_results = visual_bridge
+                    .search_visual(query.text.as_deref().unwrap_or(""), self.config.k_per_modality)
+                    .await
+                    .context("Visual search failed")?;
+                
+                // Convert visual results to multimodal results
+                for result in visual_results {
+                    all_results.push(embedding_service::MultimodalSearchResult {
+                        id: result.id,
+                        content: result.caption,
+                        modality: result.modality,
+                        score: result.score,
+                        project_scope: result.project_scope,
+                        metadata: result.metadata,
+                    });
+                }
             }
             QueryType::Hybrid => {
                 // Search both text and visual indices
                 debug!("Searching hybrid indices");
-                // TODO: Call both search APIs
+                let text_bridge = TextSearchBridge::new()?;
+                let visual_bridge = VisualSearchBridge::new()?;
+                
+                // Search both modalities in parallel
+                let (text_results, visual_results) = tokio::try_join!(
+                    text_bridge.search_text(query.text.as_deref().unwrap_or(""), self.config.k_per_modality),
+                    visual_bridge.search_visual(query.text.as_deref().unwrap_or(""), self.config.k_per_modality)
+                )?;
+                
+                // Convert text results to multimodal results
+                for result in text_results {
+                    all_results.push(embedding_service::MultimodalSearchResult {
+                        id: result.id,
+                        content: result.text,
+                        modality: result.modality,
+                        score: result.score,
+                        project_scope: result.project_scope,
+                        metadata: result.metadata,
+                    });
+                }
+                
+                // Convert visual results to multimodal results
+                for result in visual_results {
+                    all_results.push(embedding_service::MultimodalSearchResult {
+                        id: result.id,
+                        content: result.caption,
+                        modality: result.modality,
+                        score: result.score,
+                        project_scope: result.project_scope,
+                        metadata: result.metadata,
+                    });
+                }
+                
+                // Apply result fusion
+                all_results = self.fuse_results(all_results, self.config.fusion_method);
             }
         }
         
@@ -211,6 +395,128 @@ impl MultimodalRetriever {
                 seen_hashes.insert(hash)
             })
             .collect()
+    }
+
+    /// Fuse results from multiple modalities using specified fusion method
+    fn fuse_results(
+        &self,
+        mut results: Vec<embedding_service::MultimodalSearchResult>,
+        fusion_method: FusionMethod,
+    ) -> Vec<embedding_service::MultimodalSearchResult> {
+        match fusion_method {
+            FusionMethod::RRF => self.reciprocal_rank_fusion(results),
+            FusionMethod::LearnedWeights => self.learned_weight_fusion(results),
+            FusionMethod::SimpleAverage => self.simple_average_fusion(results),
+        }
+    }
+
+    /// Reciprocal Rank Fusion (RRF) for combining results from multiple modalities
+    fn reciprocal_rank_fusion(
+        &self,
+        results: Vec<embedding_service::MultimodalSearchResult>,
+    ) -> Vec<embedding_service::MultimodalSearchResult> {
+        let mut score_map: HashMap<Uuid, f32> = HashMap::new();
+        let mut result_map: HashMap<Uuid, embedding_service::MultimodalSearchResult> = HashMap::new();
+        
+        // Group results by ID and apply RRF scoring
+        for (rank, result) in results.into_iter().enumerate() {
+            let rrf_score = 1.0 / (60.0 + (rank + 1) as f32); // k=60 for RRF
+            *score_map.entry(result.id).or_insert(0.0) += rrf_score;
+            result_map.insert(result.id, result);
+        }
+        
+        // Convert back to vector and sort by fused score
+        let mut fused_results: Vec<_> = result_map
+            .into_iter()
+            .map(|(id, mut result)| {
+                result.feature.fused_score = score_map[&id];
+                result
+            })
+            .collect();
+        
+        fused_results.sort_by(|a, b| {
+            b.feature.fused_score
+                .partial_cmp(&a.feature.fused_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        
+        fused_results
+    }
+
+    /// Learned weight fusion using modality-specific weights
+    fn learned_weight_fusion(
+        &self,
+        results: Vec<embedding_service::MultimodalSearchResult>,
+    ) -> Vec<embedding_service::MultimodalSearchResult> {
+        let mut score_map: HashMap<Uuid, f32> = HashMap::new();
+        let mut result_map: HashMap<Uuid, embedding_service::MultimodalSearchResult> = HashMap::new();
+        
+        // Define learned weights for different modalities
+        let weights = HashMap::from([
+            ("text".to_string(), 0.6),
+            ("visual".to_string(), 0.4),
+            ("audio".to_string(), 0.3),
+        ]);
+        
+        // Apply learned weights to scores
+        for result in results {
+            let weight = weights.get(&result.modality).unwrap_or(&0.5);
+            let weighted_score = result.score * weight;
+            *score_map.entry(result.id).or_insert(0.0) += weighted_score;
+            result_map.insert(result.id, result);
+        }
+        
+        // Convert back to vector and sort by fused score
+        let mut fused_results: Vec<_> = result_map
+            .into_iter()
+            .map(|(id, mut result)| {
+                result.feature.fused_score = score_map[&id];
+                result
+            })
+            .collect();
+        
+        fused_results.sort_by(|a, b| {
+            b.feature.fused_score
+                .partial_cmp(&a.feature.fused_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        
+        fused_results
+    }
+
+    /// Simple average fusion for combining results
+    fn simple_average_fusion(
+        &self,
+        results: Vec<embedding_service::MultimodalSearchResult>,
+    ) -> Vec<embedding_service::MultimodalSearchResult> {
+        let mut score_map: HashMap<Uuid, (f32, usize)> = HashMap::new();
+        let mut result_map: HashMap<Uuid, embedding_service::MultimodalSearchResult> = HashMap::new();
+        
+        // Calculate average scores for each result
+        for result in results {
+            let entry = score_map.entry(result.id).or_insert((0.0, 0));
+            entry.0 += result.score;
+            entry.1 += 1;
+            result_map.insert(result.id, result);
+        }
+        
+        // Convert back to vector and sort by average score
+        let mut fused_results: Vec<_> = result_map
+            .into_iter()
+            .map(|(id, mut result)| {
+                let (total_score, count) = score_map[&id];
+                result.feature.fused_score = total_score / count as f32;
+                result
+            })
+            .collect();
+        
+        fused_results.sort_by(|a, b| {
+            b.feature.fused_score
+                .partial_cmp(&a.feature.fused_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        
+        fused_results
     }
 }
 

@@ -20,7 +20,17 @@
     "types": ["node", "jest"],
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "composite": true,
+    "incremental": true,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "removeComments": false,
+    "importHelpers": false,
+    "noEmitOnError": true,
+    "isolatedModules": true
   },
   "include": ["src/**/*", "scripts/**/*"],
   "exclude": ["node_modules", "dist", "coverage", "apps/**/*", "tests/**/*"]
