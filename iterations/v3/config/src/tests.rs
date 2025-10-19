@@ -54,32 +54,198 @@ mod tests {
         let key_bytes = [0u8; 32]; // 32 bytes of zeros for testing
         let key = base64::engine::general_purpose::STANDARD.encode(key_bytes);
         let manager = SecretsManager::new(&key).unwrap();
-        // TODO: Implement secrets manager encryption testing with the following requirements:
-        // 1. Encryption functionality testing: Implement comprehensive encryption testing
-        //    - Test secret encryption and decryption operations with various data types
-        //    - Validate encryption key generation and management
-        //    - Handle encryption performance testing and benchmarking
-        //    - Implement encryption error handling and edge case testing
-        // 2. Security validation: Implement robust security validation testing
-        //    - Test encryption strength and cryptographic algorithm validation
-        //    - Validate key rotation and security policy enforcement
-        //    - Handle security vulnerability testing and penetration testing
-        //    - Implement security compliance validation and audit testing
-        // 3. Integration testing: Implement comprehensive integration testing for secrets management
-        //    - Test secrets manager integration with configuration system
-        //    - Validate secrets persistence and retrieval across system restarts
-        //    - Handle secrets manager performance under load testing
-        //    - Implement secrets manager reliability and fault tolerance testing
-        // 4. Test data management: Implement proper test data management for secrets testing
-        //    - Create secure test fixtures and mock data for encryption testing
-        //    - Handle test data cleanup and security validation
-        //    - Implement test data isolation and environment separation
-        //    - Ensure test data meets security and privacy requirements
+        // 1. Test basic encryption/decryption functionality
+        test_basic_encryption_decryption(&manager).await;
+
+        // 2. Test various data types
+        test_encryption_different_data_types(&manager).await;
+
+        // 3. Test encryption key validation
+        test_encryption_key_validation().await;
+
+        // 4. Test error handling and edge cases
+        test_encryption_error_handling(&manager).await;
+
+        // 5. Test security properties
+        test_encryption_security_properties(&manager).await;
+
+        // 6. Test concurrent access
+        test_concurrent_secret_access(&manager).await;
+
+        // 7. Test integration with list functionality
         let secrets = manager.list_secrets().await.unwrap();
-        assert!(secrets.is_empty());
+        assert!(secrets.is_empty()); // Should be empty initially
 
         // Test that we can create the manager successfully
         assert!(manager.get_secret("nonexistent").await.unwrap().is_none());
+    }
+
+    async fn test_basic_encryption_decryption(manager: &SecretsManager) {
+        let test_secret = "my-super-secret-password";
+        let secret_name = "test-secret";
+
+        // Store a secret
+        manager
+            .store_secret(secret_name, test_secret, Some("Test secret"), vec!["test".to_string()])
+            .await
+            .expect("Failed to store secret");
+
+        // Retrieve the secret
+        let retrieved = manager
+            .get_secret(secret_name)
+            .await
+            .expect("Failed to get secret")
+            .expect("Secret not found");
+
+        assert_eq!(retrieved.value.as_str(), test_secret);
+        assert_eq!(retrieved.metadata.name, secret_name);
+        assert_eq!(retrieved.metadata.description, Some("Test secret".to_string()));
+        assert!(retrieved.metadata.tags.contains(&"test".to_string()));
+    }
+
+    async fn test_encryption_different_data_types(manager: &SecretsManager) {
+        let test_cases = vec![
+            ("simple-string", "hello world"),
+            ("with-special-chars", "password!@#$%^&*()"),
+            ("json-data", r#"{"key": "value", "number": 123}"#),
+            ("long-string", &"A".repeat(1000)), // 1KB string
+            ("unicode", "héllo wörld 🌍"),
+            ("empty-string", ""),
+        ];
+
+        for (name, value) in test_cases {
+            // Store secret
+            manager
+                .store_secret(name, value, None, vec![])
+                .await
+                .expect(&format!("Failed to store secret: {}", name));
+
+            // Retrieve and verify
+            let retrieved = manager
+                .get_secret(name)
+                .await
+                .expect(&format!("Failed to get secret: {}", name))
+                .expect(&format!("Secret not found: {}", name));
+
+            assert_eq!(retrieved.value.as_str(), value, "Secret value mismatch for: {}", name);
+        }
+    }
+
+    async fn test_encryption_key_validation() {
+        // Test invalid key lengths
+        let invalid_keys = vec![
+            "", // Empty
+            "short", // Too short
+            &"A".repeat(31), // 31 bytes
+            &"A".repeat(33), // 33 bytes
+        ];
+
+        for invalid_key in invalid_keys {
+            let result = SecretsManager::new(invalid_key);
+            assert!(result.is_err(), "Should reject invalid key length: {}", invalid_key.len());
+        }
+
+        // Test valid key
+        let valid_key_bytes = [42u8; 32]; // 32 bytes
+        let valid_key = base64::engine::general_purpose::STANDARD.encode(valid_key_bytes);
+        let result = SecretsManager::new(&valid_key);
+        assert!(result.is_ok(), "Should accept valid 32-byte key");
+    }
+
+    async fn test_encryption_error_handling(manager: &SecretsManager) {
+        // Test retrieving non-existent secret
+        let result = manager.get_secret("non-existent").await;
+        assert!(result.is_ok(), "Getting non-existent secret should not error");
+        assert!(result.unwrap().is_none(), "Non-existent secret should return None");
+
+        // Test overwriting existing secret
+        manager
+            .store_secret("overwrite-test", "original", None, vec![])
+            .await
+            .expect("Failed to store original secret");
+
+        let original = manager
+            .get_secret("overwrite-test")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(original.value.as_str(), "original");
+
+        // Overwrite
+        manager
+            .store_secret("overwrite-test", "updated", None, vec![])
+            .await
+            .expect("Failed to overwrite secret");
+
+        let updated = manager
+            .get_secret("overwrite-test")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(updated.value.as_str(), "updated");
+    }
+
+    async fn test_encryption_security_properties(manager: &SecretsManager) {
+        let secret_value = "ultra-secret-password-12345";
+
+        // Store secret
+        manager
+            .store_secret("security-test", secret_value, None, vec![])
+            .await
+            .expect("Failed to store secret for security test");
+
+        // Retrieve secret
+        let retrieved = manager
+            .get_secret("security-test")
+            .await
+            .expect("Failed to retrieve secret for security test")
+            .expect("Secret not found for security test");
+
+        // Verify the secret value is correct
+        assert_eq!(retrieved.value.as_str(), secret_value);
+
+        // Verify metadata is properly set
+        assert_eq!(retrieved.metadata.name, "security-test");
+        assert!(retrieved.metadata.created_at <= chrono::Utc::now());
+        assert!(retrieved.metadata.updated_at <= chrono::Utc::now());
+    }
+
+    async fn test_concurrent_secret_access(manager: &SecretsManager) {
+        use std::sync::Arc;
+        use tokio::task;
+
+        let manager = Arc::new(manager);
+        let mut handles = vec![];
+
+        // Spawn multiple tasks that concurrently access secrets
+        for i in 0..10 {
+            let manager_clone = Arc::clone(&manager);
+            let handle = task::spawn(async move {
+                let secret_name = format!("concurrent-test-{}", i);
+                let secret_value = format!("value-{}", i);
+
+                // Store secret
+                manager_clone
+                    .store_secret(&secret_name, &secret_value, None, vec![])
+                    .await
+                    .expect(&format!("Failed to store concurrent secret {}", i));
+
+                // Retrieve and verify
+                let retrieved = manager_clone
+                    .get_secret(&secret_name)
+                    .await
+                    .expect(&format!("Failed to get concurrent secret {}", i))
+                    .expect(&format!("Concurrent secret {} not found", i));
+
+                assert_eq!(retrieved.value.as_str(), secret_value);
+            });
+            handles.push(handle);
+        }
+
+        // Wait for all concurrent operations to complete
+        for handle in handles {
+            handle.await.expect("Concurrent secret access task failed");
+        }
     }
 
     #[tokio::test]
@@ -139,29 +305,162 @@ mod tests {
         // Wait a bit for file system to update
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        // Manually trigger reload check
-        let config = loader.get_config().await;
-        // TODO: Implement comprehensive hot reload testing with the following requirements:
-        // 1. File system monitoring: Implement robust file system change detection and monitoring
-        //    - Monitor config file modifications using inotify, FSEvents, or ReadDirectoryChangesW
-        //    - Handle file system events with proper debouncing and event filtering
-        //    - Implement cross-platform file monitoring support for Linux, macOS, and Windows
-        //    - Handle file locking, temporary files, and atomic write operations
-        // 2. Hot reload validation: Implement comprehensive hot reload functionality testing
-        //    - Test config reload triggers and timing accuracy with proper synchronization
-        //    - Validate config parsing and validation after hot reload events
-        //    - Test error handling and rollback mechanisms for invalid config changes
-        //    - Implement config change verification and consistency checking
-        // 3. Performance and reliability testing: Implement performance and reliability validation
-        //    - Test hot reload performance under high-frequency config change scenarios
-        //    - Validate memory usage and resource cleanup during hot reload operations
-        //    - Test concurrent access and thread safety during config reload processes
-        //    - Implement stress testing and edge case validation for hot reload functionality
-        // 4. Integration testing: Implement comprehensive integration testing framework
-        //    - Test hot reload integration with application components and services
-        //    - Validate config change propagation and notification mechanisms
-        //    - Test hot reload behavior in different environments and deployment scenarios
-        //    - Implement end-to-end testing workflows for complete hot reload validation
-        assert!(config.contains_key("server"));
+        // Test 1: Basic reload functionality
+        test_basic_hot_reload(&loader, &config_path).await;
+
+        // Test 2: Invalid config handling
+        test_invalid_config_handling(&loader, &config_path).await;
+
+        // Test 3: Concurrent access during reload
+        test_concurrent_reload_access(&loader, &config_path).await;
+
+        // Test 4: Rapid successive changes
+        test_rapid_config_changes(&loader, &config_path).await;
+
+        // Test 5: Large config files
+        test_large_config_handling(&loader, &config_path).await;
+    }
+
+    async fn test_basic_hot_reload(loader: &ConfigLoader, config_path: &std::path::Path) {
+        // Test basic config reload functionality
+        let config1 = loader.get_config().await;
+        assert_eq!(config1.get("server.port").unwrap().as_u64().unwrap(), 3000);
+
+        // Update config file
+        let updated_config = r#"{"server": {"port": 4000, "host": "localhost"}}"#;
+        fs::write(config_path, updated_config).unwrap();
+
+        // Wait for file system and reload
+        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+
+        // Reload and verify
+        loader.reload().await.unwrap();
+        let config2 = loader.get_config().await;
+        assert_eq!(config2.get("server.port").unwrap().as_u64().unwrap(), 4000);
+        assert_eq!(config2.get("server.host").unwrap().as_str().unwrap(), "localhost");
+
+        // Verify old values are gone
+        assert!(config2.get("server.port").unwrap().as_u64().unwrap() != 3000);
+    }
+
+    async fn test_invalid_config_handling(loader: &ConfigLoader, config_path: &std::path::Path) {
+        // Write valid config first
+        let valid_config = r#"{"server": {"port": 3000}}"#;
+        fs::write(config_path, valid_config).unwrap();
+        loader.reload().await.unwrap();
+
+        let config_before = loader.get_config().await;
+        assert_eq!(config_before.get("server.port").unwrap().as_u64().unwrap(), 3000);
+
+        // Write invalid JSON
+        let invalid_config = r#"{"server": {"port": 4000, "invalid": }"#; // Missing value
+        fs::write(config_path, invalid_config).unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+
+        // Attempt reload - should handle error gracefully and keep old config
+        let reload_result = loader.reload().await;
+        assert!(reload_result.is_err(), "Should fail to reload invalid config");
+
+        // Config should remain unchanged
+        let config_after = loader.get_config().await;
+        assert_eq!(config_after.get("server.port").unwrap().as_u64().unwrap(), 3000);
+
+        // Restore valid config
+        fs::write(config_path, valid_config).unwrap();
+        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+        loader.reload().await.unwrap();
+    }
+
+    async fn test_concurrent_reload_access(loader: &ConfigLoader, config_path: &std::path::Path) {
+        use std::sync::Arc;
+        use tokio::task;
+
+        let loader = Arc::new(loader);
+        let mut handles = vec![];
+
+        // Spawn multiple tasks that concurrently access config during reload
+        for i in 0..5 {
+            let loader_clone = Arc::clone(&loader);
+            let config_path = config_path.to_path_buf();
+            let handle = task::spawn(async move {
+                // Write new config
+                let new_config = format!(r#"{{"server": {{"port": {}}}}}"#, 3000 + i);
+                fs::write(&config_path, new_config).unwrap();
+
+                // Small delay to simulate concurrent access
+                tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+                // Try to reload
+                let _ = loader_clone.reload().await;
+
+                // Read config
+                let config = loader_clone.get_config().await;
+                let port = config.get("server.port").unwrap().as_u64().unwrap();
+                assert!(port >= 3000 && port <= 3004, "Port should be within expected range: {}", port);
+            });
+            handles.push(handle);
+        }
+
+        // Wait for all concurrent operations
+        for handle in handles {
+            handle.await.expect("Concurrent reload task failed");
+        }
+    }
+
+    async fn test_rapid_config_changes(loader: &ConfigLoader, config_path: &std::path::Path) {
+        let initial_config = r#"{"server": {"port": 3000}}"#;
+        fs::write(config_path, initial_config).unwrap();
+        loader.reload().await.unwrap();
+
+        // Rapidly change config multiple times
+        for port in 3001..3011 {
+            let config = format!(r#"{{"server": {{"port": {}}}}}"#, port);
+            fs::write(config_path, config).unwrap();
+
+            // Very short delay between changes
+            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+            // Try to reload
+            let _ = loader.reload().await;
+        }
+
+        // Final check - should have some reasonable port value
+        let final_config = loader.get_config().await;
+        let final_port = final_config.get("server.port").unwrap().as_u64().unwrap();
+        assert!(final_port >= 3000 && final_port <= 3010, "Final port should be reasonable: {}", final_port);
+    }
+
+    async fn test_large_config_handling(loader: &ConfigLoader, config_path: &std::path::Path) {
+        // Create a large config with many entries
+        let mut large_config = serde_json::Map::new();
+        let mut server_config = serde_json::Map::new();
+
+        server_config.insert("port".to_string(), serde_json::Value::Number(3000.into()));
+        server_config.insert("host".to_string(), serde_json::Value::String("localhost".to_string()));
+
+        // Add many dummy entries to make it large
+        for i in 0..1000 {
+            server_config.insert(format!("dummy_{}", i), serde_json::Value::String(format!("value_{}", i)));
+        }
+
+        large_config.insert("server".to_string(), serde_json::Value::Object(server_config));
+
+        let config_json = serde_json::to_string(&large_config).unwrap();
+        fs::write(config_path, config_json).unwrap();
+
+        // Test loading large config
+        let start_time = std::time::Instant::now();
+        loader.reload().await.expect("Should handle large config");
+        let load_time = start_time.elapsed();
+
+        // Should load within reasonable time (less than 1 second for 1000 entries)
+        assert!(load_time < std::time::Duration::from_secs(1), "Large config took too long: {:?}", load_time);
+
+        // Verify config is accessible
+        let loaded_config = loader.get_config().await;
+        assert_eq!(loaded_config.get("server.port").unwrap().as_u64().unwrap(), 3000);
+        assert_eq!(loaded_config.get("server.host").unwrap().as_str().unwrap(), "localhost");
+        assert!(loaded_config.get("server.dummy_999").is_some());
     }
 }

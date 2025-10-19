@@ -391,8 +391,8 @@ impl AsrEnricher {
     /// Call Apple Speech Framework via Swift bridge
     async fn call_apple_speech_framework(
         &self,
-        audio_data: &[u8],
-        language: Option<&str>,
+        _audio_data: &[u8],
+        _language: Option<&str>,
     ) -> Result<AsrResult> {
         // Simulate Apple Speech Framework call
         // In a real implementation, this would call Swift bridge to SFSpeechRecognizer

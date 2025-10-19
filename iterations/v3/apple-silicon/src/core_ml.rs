@@ -1538,7 +1538,7 @@ impl CoreMLManager {
             utilization += 10.0;
         }
 
-        utilization.min(100.0f32).max(0.0)
+        utilization.min(100.0f32).max(0.0f32)
     }
 
     /// Monitor GPU memory usage
@@ -1718,7 +1718,7 @@ impl CoreMLManager {
                 let activity_factor = if output_str.contains("active") { 20.0 } else { 0.0 };
                 let busy_factor = if output_str.contains("busy") { 15.0 } else { 0.0 };
                 
-                return (base_utilization + activity_factor + busy_factor).min(100.0);
+                return (base_utilization + activity_factor + busy_factor).min(100.0f32);
             }
         }
 

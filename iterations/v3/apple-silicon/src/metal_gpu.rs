@@ -635,7 +635,7 @@ impl MetalGPUManager {
             debug!(
                 "Technique '{}': {}",
                 technique_name,
-                if enabled { "enabled" } else { "disabled" }
+                if *enabled { "enabled" } else { "disabled" }
             );
         }
 

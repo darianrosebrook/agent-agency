@@ -25,7 +25,8 @@ members = [
     "agent-agency-contracts",
     "ingestors",
     "enrichers",
-    "indexers"
+    "indexers",
+    "knowledge-ingestor"
 ]
 
 [workspace.package]

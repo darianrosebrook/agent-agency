@@ -1,98 +1,85 @@
-# Agent Agency - Intelligent Multi-Agent Orchestration Platform
-
-> **Implementation Status**: 🟡 **In Development (70% Complete)** - All TODOs implemented, security hardening required before MVP  
-> **Last Updated**: October 2025  
-> **Quality Score**: Code Quality 100% ✅ | Architecture 100% ✅ | Security 62% ⚠️ | Overall 70% of critical path
-
----
+# Agent Agency - Research in Constitutional AI Agent Governance
 
 ## Overview
 
-**Agent Agency** is an intelligent, learning, and adaptive multi-agent orchestration platform built with TypeScript and following CAWS (Coding Agent Workflow System) standards. The project uses a **mono-repo structure with iterations** to support progressive development from proof-of-concept to production-ready systems.
+**Agent Agency** is a research framework investigating constitutional approaches to AI agent governance and orchestration. The project explores how specialized judge models can evaluate, constrain, and improve agent behaviors in real-time, addressing the fundamental challenge of trustworthy AI agent deployment.
 
-This mono-repo contains multiple iterations of the Agent Agency platform:
+This mono-repo structure supports progressive research through multiple iterations, examining different approaches to constitutional concurrency where agents coordinate through agreed-upon principles rather than competing for resources or following fixed hierarchies.
 
-- **`iterations/v2/`**: 🟡 **MVP-Ready (70% Complete)** - Complete Arbiter orchestration with comprehensive external service integration. Code quality is enterprise-grade (TypeScript 0 errors, ESLint clean). Requires 6 hours of security hardening and test fixture fixes for MVP deployment.
-- **`iterations/v3/`**: 🚧 **Next Generation** - Rust-based implementation with advanced AI capabilities (in development)
-- **`iterations/poc/`**: 📚 **Reference Implementation** - Foundational proof-of-concept with multi-tenant memory systems
-- **`iterations/main/`**: 📋 **Reserved** - For stable production releases
+This mono-repo contains multiple iterations examining different approaches to constitutional AI agent governance:
+
+- **`iterations/v2/`**: TypeScript implementation investigating multi-component agent orchestration with external service integration
+- **`iterations/v3/`**: Rust-based implementation exploring advanced AI capabilities and hardware acceleration
+- **`iterations/poc/`**: Reference implementation examining multi-tenant memory systems and federated learning concepts
+- **`iterations/main/`**: Reserved for stable research artifacts
 
 ## Project Structure
 
 ```
 agent-agency/
 ├── iterations/
-│   ├── v2/               # 🟡 MVP-Ready - Enterprise-grade TypeScript, needs hardening
-│   ├── v3/               # 🚧 Next Generation - Rust-based with advanced AI
-│   ├── poc/              # 📚 Reference Implementation - Multi-tenant memory systems
-│   ├── main/             # 📋 Reserved - Future stable releases
-│   └── arbiter-poc/      # 🔬 Research - Arbiter-specific experiments
-├── docs/                 # 📖 Comprehensive documentation
-├── FINAL_PRODUCTION_ROADMAP.md    # 🚀 4-phase roadmap to production
-├── SECURITY_HARDENING_AUDIT.md    # 🔒 Security assessment (15 issues, 6 critical)
-├── NEXT_ACTIONS.md                # ✅ Immediate action items
-├── scripts/              # 🛠️ Shared build/deployment scripts
-├── apps/                 # 🔧 MCP tools and utilities
-├── package.json          # 📦 Mono-repo management
-└── tsconfig.json         # ⚙️ Base TypeScript configuration
+│   ├── v2/               # TypeScript multi-component agent orchestration
+│   ├── v3/               # Rust-based advanced AI capabilities
+│   ├── poc/              # Multi-tenant memory systems reference
+│   ├── main/             # Reserved for stable research artifacts
+│   └── arbiter-poc/      # Arbiter-specific research experiments
+├── docs/                 # Research documentation and findings
+├── scripts/              # Shared build and utility scripts
+├── apps/                 # MCP tools and utilities
+├── package.json          # Mono-repo dependency management
+└── tsconfig.json         # Base TypeScript configuration
 ```
 
-## Production-Ready Status: V2
+## Research Questions
 
-The **V2 iteration** (`iterations/v2/`) has **enterprise-grade code quality** but requires **focused hardening** before production:
+This project investigates several key questions in constitutional AI agent governance:
 
-### ✅ **What's Complete (100%)**
-- **Code Quality**: TypeScript 0 errors, ESLint 0 violations, 315 files fully typed
-- **Architecture**: Complete agent orchestration, registry, task routing, infrastructure management
-- **Core Features**: All 100% implemented with comprehensive error handling
-- **Database Layer**: 17 PostgreSQL migrations, connection pooling, transactions
-- **Security Framework**: JWT authentication, input validation, XSS/SQL injection prevention
+### Constitutional Concurrency
+How can AI agents coordinate through agreed-upon constitutional principles rather than competing for resources or following fixed command structures?
 
-### ⚠️ **What Needs Work (6-40 hours)**
-- **Phase 1 (TODAY - 4 hours)**: Critical security hardening (6 blockers)
-- **Phase 2 (THIS WEEK - 2 hours)**: Test fixture fixes and database validation
-- **Phase 3 (NEXT WEEK - 8 hours)**: Monitoring setup (Prometheus, Grafana)
-- **Phase 4 (WEEK 3 - 20 hours)**: Deployment infrastructure (CI/CD, Docker, K8s)
+### Judge Model Effectiveness
+What approaches to specialized judge models provide the most effective evaluation and constraint of agent behaviors?
 
-### 📋 **Comprehensive Assessment & Roadmap**
+### Runtime Compliance Enforcement
+How can constitutional principles be enforced at runtime without compromising agent performance or flexibility?
 
-See the following documents for detailed production readiness assessment:
+### Hardware-Accelerated Governance
+What optimizations are possible when leveraging Apple Silicon's Neural Engine for both agent execution and governance operations?
 
-- **[FINAL_PRODUCTION_ROADMAP.md](./FINAL_PRODUCTION_ROADMAP.md)** - Complete 4-phase roadmap to production with team assignments, timelines, and success criteria
-- **[SECURITY_HARDENING_AUDIT.md](./SECURITY_HARDENING_AUDIT.md)** - Detailed security audit identifying 15 issues (6 critical, 4 high, 5 medium/low) with specific code fixes
-- **[NEXT_ACTIONS.md](./NEXT_ACTIONS.md)** - Immediate action items for test fixture fixes with exact code changes
-- **[PRODUCTION_READINESS.md](./PRODUCTION_READINESS.md)** - Overall production readiness status and metrics
-- **[DEPLOYMENT_READINESS.md](./DEPLOYMENT_READINESS.md)** - Deployment checklist and guide
+## Research Iterations
 
-**Timeline**: MVP release in 1-2 weeks (after Phase 1-2), Production release in 3-4 weeks (all phases)
+### V3: Rust-Based Constitutional Governance
 
-## Next Generation: V3 (Rust Implementation)
+The **V3 iteration** examines constitutional AI governance through a Rust implementation, investigating:
 
-The **V3 iteration** (`iterations/v3/`) represents the next generation of Agent Agency, built in Rust for maximum performance and safety:
+- **Memory Safety**: How Rust's ownership model prevents governance failures
+- **Performance Characteristics**: Native performance implications for real-time governance
+- **Hardware Integration**: Apple Silicon optimization for governance operations
+- **Type Safety**: Compile-time enforcement of constitutional constraints
 
-### 🚧 **Current Development**
-- **Rust-Based Architecture**: High-performance, memory-safe implementation
-- **Advanced AI Integration**: CoreML bridge for Apple Silicon optimization
-- **Enhanced Security**: Rust's memory safety with advanced security policies
-- **Performance Optimization**: Native performance with comprehensive benchmarking
-- **Advanced Reasoning**: Multi-agent conflict resolution and decision-making
+#### Key Research Components
+- **Council System**: Multi-agent decision-making with constitutional oversight
+- **Claim Extraction**: Evidence-based verification and validation approaches
+- **Context Preservation**: Memory management strategies for governance state
+- **Reflexive Learning**: Self-improvement mechanisms for judge models
 
-### 🔬 **Key Components in Development**
-- **Council System**: Multi-agent decision-making and conflict resolution
-- **Claim Extraction**: Advanced verification and validation systems
-- **Context Preservation**: Enhanced memory management and context offloading
-- **Reflexive Learning**: Self-improving agent capabilities
-- **Embedding Service**: High-performance vector operations
+### V2: TypeScript Multi-Component Orchestration
 
-## Reference Implementation: POC
+The **V2 iteration** investigates multi-component agent orchestration, examining:
 
-The **POC iteration** (`iterations/poc/`) serves as a reference implementation with foundational concepts:
+- **External Service Integration**: Patterns for connecting AI agents with enterprise services
+- **Component Architecture**: Modular design for agent capabilities and coordination
+- **Quality Assurance**: Automated testing and validation approaches
+- **Infrastructure Management**: Resource allocation and monitoring strategies
 
-- **Multi-Tenant Memory Systems**: Context offloading and federated learning
-- **MCP Integration**: Model Context Protocol for autonomous AI reasoning
-- **Agentic RL Concepts**: GRPO-style training for tool optimization
-- **Thinking Budget Management**: Adaptive token allocation strategies
-- **Enhanced Evaluation**: Minimal-diff checking and reward hacking prevention
+### POC: Multi-Tenant Memory Systems
+
+The **POC iteration** explores foundational concepts for agent memory and learning:
+
+- **Multi-Tenant Memory**: Context isolation and sharing mechanisms
+- **Federated Learning**: Privacy-preserving cross-agent knowledge transfer
+- **MCP Integration**: Model Context Protocol for agent communication
+- **Reinforcement Learning**: Tool optimization and adaptive behavior patterns
 
 ## Use Cases
 

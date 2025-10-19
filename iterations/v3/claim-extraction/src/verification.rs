@@ -423,32 +423,6 @@ impl EvidenceCollector {
         })
     }
 
-    /// Collect evidence from external APIs
-    async fn collect_external_api_evidence(
-        &self,
-        claim: &AtomicClaim,
-        context: &ProcessingContext,
-    ) -> Result<Option<Vec<Evidence>>> {
-        let mut evidence = Vec::new();
-
-        // Check if external API integration is enabled
-        if context
-            .metadata
-            .get("external_apis_enabled")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false)
-        {
-            // Implement actual external API calls
-            let api_evidence = self.collect_external_api_evidence(claim, context).await?;
-            evidence.extend(api_evidence);
-        }
-
-        Ok(if evidence.is_empty() {
-            None
-        } else {
-            Some(evidence)
-        })
-    }
 
     /// Collect evidence from documentation sources
     async fn collect_documentation_evidence(

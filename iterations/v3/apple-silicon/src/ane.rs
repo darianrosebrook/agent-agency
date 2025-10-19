@@ -914,7 +914,7 @@ impl ANEManager {
             debug!(
                 "Cache optimization '{}': {}",
                 opt_name,
-                if enabled { "enabled" } else { "disabled" }
+                if *enabled { "enabled" } else { "disabled" }
             );
         }
 
@@ -984,7 +984,7 @@ impl ANEManager {
             debug!(
                 "DMA optimization '{}': {}",
                 opt_name,
-                if enabled { "enabled" } else { "disabled" }
+                if *enabled { "enabled" } else { "disabled" }
             );
         }
 
@@ -1042,7 +1042,7 @@ impl ANEManager {
             debug!(
                 "Transformation pass '{}': {}",
                 pass_name,
-                if enabled { "enabled" } else { "disabled" }
+                if *enabled { "enabled" } else { "disabled" }
             );
         }
 

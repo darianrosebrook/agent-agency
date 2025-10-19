@@ -4,7 +4,7 @@
 //! claim extraction. Based on V2 disambiguation logic with Rust adaptations.
 
 use crate::types::*;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use regex::Regex;
 use serde_json::Value;
 use std::cmp::Ordering;
@@ -13,6 +13,7 @@ use std::sync::{Arc, OnceLock};
 use tokio::runtime::{Builder as RuntimeBuilder, Handle};
 use tokio::sync::RwLock;
 use tracing::{debug, warn};
+use std::time::{Duration, Instant};
 
 /// Stage 1: Contextual disambiguation of sentences
 #[derive(Debug)]
@@ -825,52 +826,42 @@ impl ContextResolver {
         let mut linked_entities = Vec::new();
 
         for entity in entities {
-            // TODO: Full implementation requires database client and embedding service
-            // 
-            // Planned implementation:
+            // Implement entity linking to knowledge bases
+            let start_time = Instant::now();
+            
             // 1. Generate embedding for entity
-            // 2. Query kb_semantic_search for similar entities
-            // 3. Extract related concepts from properties
-            // 4. Get related entities via kb_get_related
+            if let Some(embedding) = self.generate_entity_embedding(entity).await {
+                // 2. Query kb_semantic_search for similar entities
+                if let Ok(search_results) = self.query_knowledge_base_semantic_search(&embedding, entity).await {
+                    for result in search_results {
+                        // 6. Record usage via kb_record_usage
+                        self.record_knowledge_base_usage(&result.id).await.ok();
+                        linked_entities.push(result.canonical_name.clone());
+                        
+                        // 4. Get related entities via kb_get_related
+                        if let Ok(related_entities) = self.get_related_entities(&result.id).await {
+                            for related in related_entities {
+                                linked_entities.push(related.canonical_name);
+                            }
+                        }
+                        
+                        // 3. Extract related concepts from properties
+                        self.extract_related_concepts_from_properties(&result, &mut linked_entities).await;
+                    }
+                }
+            }
+            
             // 5. Trigger on-demand ingestion if not found
-            // 6. Record usage via kb_record_usage
-            //
-            // Example code (requires context with db_client and embedding_service):
-            //
-            // if let Some(embedding) = generate_embedding(entity, embedding_service).await {
-            //     let results = db_client
-            //         .kb_semantic_search(&embedding, "kb-text-default", None, 5, 0.7)
-            //         .await
-            //         .unwrap_or_default();
-            //     
-            //     for result in results {
-            //         db_client.kb_record_usage(result.id.unwrap()).await.ok();
-            //         linked_entities.push(result.canonical_name.clone());
-            //         
-            //         // Get related entities
-            //         if let Ok(related) = db_client.kb_get_related(result.id.unwrap(), None, 1).await {
-            //             for rel in related {
-            //                 linked_entities.push(rel.canonical_name);
-            //             }
-            //         }
-            //         
-            //         // Extract from properties based on source
-            //         match result.source {
-            //             KnowledgeSource::Wikidata => {
-            //                 // Extract senses, forms, translations
-            //                 if let Some(senses) = result.properties.get("senses") {
-            //                     // Process Wikidata senses
-            //                 }
-            //             }
-            //             KnowledgeSource::WordNet => {
-            //                 // Extract synonyms, hypernyms, examples
-            //                 if let Some(synonyms) = result.properties.get("synonyms") {
-            //                     // Process WordNet synonyms
-            //                 }
-            //             }
-            //         }
-            //     }
-            // }
+            if linked_entities.is_empty() {
+                if let Err(e) = self.trigger_on_demand_ingestion(entity).await {
+                    warn!("Failed to trigger ingestion for entity '{}': {}", entity, e);
+                }
+                // Fallback to original entity if no linking found
+                linked_entities.push(entity.clone());
+            }
+            
+            let processing_time = start_time.elapsed();
+            debug!("Entity linking for '{}' completed in {:?}", entity, processing_time);
 
             // Fallback to rule-based expansion until full integration
             match entity.to_lowercase().as_str() {
@@ -1947,70 +1938,4 @@ impl EntityPatterns {
             ],
         }
     }
-    /// Query hybrid RAG database for knowledge base relationships
-    /// This simulates the v2 knowledge seeker integration with Wikidata/WordNet
-    fn query_hybrid_rag_knowledge_base(&self, entity: &str) -> Result<Vec<String>> {
-        let mut related_entities = Vec::new();
-
-        // Simulate hybrid RAG queries to knowledge base
-        // In production: Query vector search + knowledge graph
-        match entity.to_lowercase().as_str() {
-            "rust" => {
-                related_entities.extend(vec![
-                    "programming language".to_string(),
-                    "systems programming".to_string(),
-                    "memory safety".to_string(),
-                    "Cargo".to_string(),
-                    "Mozilla".to_string(),
-                ]);
-            }
-            "python" => {
-                related_entities.extend(vec![
-                    "programming language".to_string(),
-                    "data science".to_string(),
-                    "machine learning".to_string(),
-                    "Django".to_string(),
-                    "Flask".to_string(),
-                    "NumPy".to_string(),
-                ]);
-            }
-            "api" => {
-                related_entities.extend(vec![
-                    "Application Programming Interface".to_string(),
-                    "REST".to_string(),
-                    "GraphQL".to_string(),
-                    "web services".to_string(),
-                    "HTTP".to_string(),
-                ]);
-            }
-            "database" => {
-                related_entities.extend(vec![
-                    "data storage".to_string(),
-                    "SQL".to_string(),
-                    "NoSQL".to_string(),
-                    "PostgreSQL".to_string(),
-                    "MySQL".to_string(),
-                    "MongoDB".to_string(),
-                ]);
-            }
-            "machine learning" => {
-                related_entities.extend(vec![
-                    "artificial intelligence".to_string(),
-                    "neural networks".to_string(),
-                    "deep learning".to_string(),
-                    "TensorFlow".to_string(),
-                    "PyTorch".to_string(),
-                    "scikit-learn".to_string(),
-                ]);
-            }
-            _ => {
-                // For unknown entities, try semantic similarity search
-                // Simulate vector search in knowledge base
-                related_entities.push(format!("{} technology", entity));
-            }
-        }
-
-        Ok(related_entities)
-    }
-
 }

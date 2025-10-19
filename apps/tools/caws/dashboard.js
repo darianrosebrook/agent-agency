@@ -8,6 +8,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const minimatch = require('minimatch');
 
 /**
  * Generate real provenance data for trust score calculation
@@ -130,9 +131,314 @@ function checkPerformanceCompliance() {
  * @returns {number} Flake rate (0-1)
  */
 function getRealFlakeRate() {
-  // This would analyze test run history for flakiness
-  // For now, return a reasonable estimate
-  return 0.02; // 2% flake rate estimate
+  try {
+    // 1. Look for test result directories and files
+    const testResults = findTestResultFiles();
+
+    if (testResults.length === 0) {
+      // No test history found, return conservative estimate
+      return 0.05; // 5% default when no data available
+    }
+
+    // 2. Analyze test results for flakiness patterns
+    const flakeAnalysis = analyzeTestFlakiness(testResults);
+
+    // 3. Calculate overall flake rate
+    return calculateFlakeRate(flakeAnalysis);
+
+  } catch (error) {
+    console.warn('Failed to analyze test flakiness:', error.message);
+    // Return conservative estimate on error
+    return 0.03; // 3% conservative estimate
+  }
+}
+
+/**
+ * Find test result files in the project
+ * @returns {string[]} Array of test result file paths
+ */
+function findTestResultFiles() {
+  const resultFiles = [];
+
+  // Common test result directories and files
+  const searchPaths = [
+    'test-results',
+    'coverage',
+    'reports',
+    'junit',
+    '.nyc_output',
+    'target/debug/deps', // Rust test results
+    'target/surefire-reports', // Java/Maven test results
+    'build/test-results', // Gradle test results
+  ];
+
+  // Common test result file patterns
+  const filePatterns = [
+    'test-results.xml',
+    'junit.xml',
+    '*.xml', // JUnit XML files
+    'lcov.info', // Coverage files that might indicate test runs
+    '*.json', // Test result JSON files
+  ];
+
+  try {
+    // Search for test result files
+    for (const searchPath of searchPaths) {
+      const fullPath = path.join(process.cwd(), searchPath);
+      if (fs.existsSync(fullPath)) {
+        const files = findFilesRecursive(fullPath, filePatterns);
+        resultFiles.push(...files);
+      }
+    }
+
+    // Also look for recent test runs in common locations
+    const commonTestDirs = ['tests', 'test', '__tests__', 'spec'];
+    for (const testDir of commonTestDirs) {
+      const fullPath = path.join(process.cwd(), testDir);
+      if (fs.existsSync(fullPath)) {
+        // Look for test result files in test directories
+        const files = findFilesRecursive(fullPath, ['*.xml', '*.json', '*.log']);
+        resultFiles.push(...files);
+      }
+    }
+
+    return resultFiles;
+  } catch (error) {
+    console.warn('Error finding test result files:', error.message);
+    return [];
+  }
+}
+
+/**
+ * Analyze test results for flakiness patterns
+ * @param {string[]} testResultFiles - Array of test result file paths
+ * @returns {object} Flakiness analysis results
+ */
+function analyzeTestFlakiness(testResultFiles) {
+  const testRuns = [];
+  const flakyTests = new Map();
+  const totalTests = new Map();
+
+  for (const filePath of testResultFiles) {
+    try {
+      const content = fs.readFileSync(filePath, 'utf8');
+
+      // Parse different test result formats
+      if (filePath.endsWith('.xml')) {
+        const xmlResults = parseJUnitXML(content);
+        testRuns.push(...xmlResults);
+      } else if (filePath.endsWith('.json')) {
+        const jsonResults = parseTestJson(content);
+        testRuns.push(...jsonResults);
+      }
+
+    } catch (error) {
+      // Skip files that can't be parsed
+      continue;
+    }
+  }
+
+  // Analyze test runs for flakiness
+  const testHistory = new Map();
+
+  for (const testRun of testRuns) {
+    const key = `${testRun.suite}.${testRun.name}`;
+
+    if (!testHistory.has(key)) {
+      testHistory.set(key, []);
+    }
+
+    testHistory.get(key).push(testRun);
+  }
+
+  // Identify flaky tests (tests that have both passed and failed runs)
+  for (const [testKey, runs] of testHistory) {
+    if (runs.length < 3) continue; // Need multiple runs to detect flakiness
+
+    const hasPassed = runs.some(r => r.status === 'passed');
+    const hasFailed = runs.some(r => r.status === 'failed');
+
+    if (hasPassed && hasFailed) {
+      const failureRate = runs.filter(r => r.status === 'failed').length / runs.length;
+
+      if (failureRate > 0.1 && failureRate < 0.9) { // Between 10% and 90% failure rate
+        flakyTests.set(testKey, {
+          failureRate,
+          totalRuns: runs.length,
+          recentFailures: runs.slice(-5).filter(r => r.status === 'failed').length
+        });
+      }
+    }
+
+    totalTests.set(testKey, runs.length);
+  }
+
+  return {
+    totalTestRuns: testRuns.length,
+    uniqueTests: testHistory.size,
+    flakyTests,
+    totalTestsAnalyzed: totalTests.size
+  };
+}
+
+/**
+ * Calculate overall flake rate from analysis
+ * @param {object} flakeAnalysis - Results from analyzeTestFlakiness
+ * @returns {number} Flake rate between 0 and 1
+ */
+function calculateFlakeRate(flakeAnalysis) {
+  const { flakyTests, totalTestsAnalyzed } = flakeAnalysis;
+
+  if (totalTestsAnalyzed === 0) {
+    return 0.02; // Conservative default
+  }
+
+  // Weight flake rate by severity
+  let weightedFlakeRate = 0;
+  let totalWeight = 0;
+
+  for (const [testKey, flakeData] of flakyTests) {
+    // Weight by failure rate and recency
+    const weight = flakeData.failureRate * (flakeData.recentFailures + 1);
+    weightedFlakeRate += flakeData.failureRate * weight;
+    totalWeight += weight;
+  }
+
+  if (totalWeight === 0) {
+    // No flaky tests detected
+    return Math.min(0.01, 1 / totalTestsAnalyzed); // Very low rate for stable tests
+  }
+
+  const rawFlakeRate = weightedFlakeRate / totalWeight;
+
+  // Apply bounds and adjustments
+  let finalFlakeRate = Math.max(0.005, Math.min(0.15, rawFlakeRate)); // Between 0.5% and 15%
+
+  // Adjust based on sample size
+  if (totalTestsAnalyzed < 10) {
+    finalFlakeRate *= 1.5; // Increase estimate for small samples
+  } else if (totalTestsAnalyzed > 100) {
+    finalFlakeRate *= 0.8; // Decrease estimate for large samples (more reliable)
+  }
+
+  return Math.round(finalFlakeRate * 10000) / 10000; // Round to 4 decimal places
+}
+
+/**
+ * Parse JUnit XML test results
+ * @param {string} xmlContent - XML content from test results
+ * @returns {object[]} Array of test run objects
+ */
+function parseJUnitXML(xmlContent) {
+  const results = [];
+
+  try {
+    // Simple XML parsing - look for testcase elements
+    const testcaseRegex = /<testcase[^>]*classname="([^"]*)"[^>]*name="([^"]*)"[^>]*>/g;
+    const failureRegex = /<\/testcase>/g;
+
+    let match;
+    while ((match = testcaseRegex.exec(xmlContent)) !== null) {
+      const suite = match[1];
+      const name = match[2];
+
+      // Check if this test failed (look for failure element)
+      const testStart = match.index;
+      const testEndMatch = failureRegex.exec(xmlContent.substring(testStart));
+      const hasFailure = testEndMatch && xmlContent.substring(testStart, testStart + testEndMatch.index).includes('<failure');
+
+      results.push({
+        suite,
+        name,
+        status: hasFailure ? 'failed' : 'passed',
+        timestamp: Date.now()
+      });
+    }
+  } catch (error) {
+    // If XML parsing fails, return empty array
+  }
+
+  return results;
+}
+
+/**
+ * Parse JSON test results
+ * @param {string} jsonContent - JSON content from test results
+ * @returns {object[]} Array of test run objects
+ */
+function parseTestJson(jsonContent) {
+  const results = [];
+
+  try {
+    const data = JSON.parse(jsonContent);
+
+    // Handle different JSON formats
+    if (data.testResults) {
+      // Jest format
+      for (const suite of data.testResults) {
+        for (const test of suite.testResults || []) {
+          results.push({
+            suite: suite.name || 'unknown',
+            name: test.title,
+            status: test.status === 'passed' ? 'passed' : 'failed',
+            timestamp: Date.now()
+          });
+        }
+      }
+    } else if (Array.isArray(data)) {
+      // Generic test result array
+      for (const test of data) {
+        if (test.name && test.status) {
+          results.push({
+            suite: test.suite || 'unknown',
+            name: test.name,
+            status: test.status,
+            timestamp: test.timestamp || Date.now()
+          });
+        }
+      }
+    }
+  } catch (error) {
+    // If JSON parsing fails, return empty array
+  }
+
+  return results;
+}
+
+/**
+ * Recursively find files matching patterns
+ * @param {string} dir - Directory to search
+ * @param {string[]} patterns - File patterns to match
+ * @returns {string[]} Array of matching file paths
+ */
+function findFilesRecursive(dir, patterns) {
+  const results = [];
+
+  try {
+    const items = fs.readdirSync(dir);
+
+    for (const item of items) {
+      const fullPath = path.join(dir, item);
+      const stat = fs.statSync(fullPath);
+
+      if (stat.isDirectory()) {
+        // Recurse into subdirectories
+        results.push(...findFilesRecursive(fullPath, patterns));
+      } else if (stat.isFile()) {
+        // Check if file matches any pattern
+        for (const pattern of patterns) {
+          if (minimatch(item, pattern)) {
+            results.push(fullPath);
+            break;
+          }
+        }
+      }
+    }
+  } catch (error) {
+    // Ignore directories we can't read
+  }
+
+  return results;
 }
 
 /**

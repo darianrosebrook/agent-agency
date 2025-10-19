@@ -2999,7 +2999,18 @@ enum SourceType {
 /// Historical claim validation record
 #[derive(Debug, Clone)]
 struct HistoricalClaim {
+    id: Uuid,
     claim_text: String,
+    confidence_score: f32,
+    source_count: usize,
+    verification_status: VerificationStatus,
+    last_verified: chrono::DateTime<chrono::Utc>,
+    related_entities: Vec<String>,
+    claim_type: ClaimType,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
+    metadata: std::collections::HashMap<String, serde_json::Value>,
+    // Keep existing fields for backward compatibility
     validation_confidence: f64,
     validation_timestamp: chrono::DateTime<chrono::Utc>,
     validation_outcome: ValidationOutcome,
@@ -3056,6 +3067,10 @@ impl MultiModalVerificationEngine {
                 created_at: chrono::Utc::now() - chrono::Duration::days(i as i64 * 30),
                 updated_at: chrono::Utc::now(),
                 metadata: std::collections::HashMap::new(),
+                // Backward compatibility fields
+                validation_confidence: (0.75 + (i as f32 * 0.05).min(0.2f32)) as f64,
+                validation_timestamp: chrono::Utc::now() - chrono::Duration::days(i as i64 * 7),
+                validation_outcome: ValidationOutcome::Validated,
             };
             historical_claims.push(claim);
         }

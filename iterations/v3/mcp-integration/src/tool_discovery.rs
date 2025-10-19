@@ -715,7 +715,7 @@ impl ToolDiscovery {
     }
 
     /// Establish WebSocket connection
-    async fn establish_websocket_connection(&self, endpoint: &str) -> Result<(tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>, tokio_tungstenite::tungstenite::handshake::client::Response<()>)> {
+    async fn establish_websocket_connection(&self, endpoint: &str) -> Result<(tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>, tokio_tungstenite::tungstenite::handshake::client::Response)> {
         let url = url::Url::parse(endpoint)
             .map_err(|e| anyhow::anyhow!("Invalid WebSocket URL: {}", e))?;
         
